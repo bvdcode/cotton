@@ -60,23 +60,23 @@ namespace Cotton.Server.Auth
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
             var authHeader = Request.Headers.Authorization.ToString();
-            if (TryGetBasicAuthHeaderFailure(authHeader, out var headerFailure))
+            if (TryGetBasicAuthHeaderFailure(authHeader, out AuthenticateResult? headerFailure))
             {
                 return headerFailure;
             }
 
-            if (!TryParseAndValidateCredentials(authHeader, out var username, out var token, out var credentialsFailure))
+            if (!TryParseAndValidateCredentials(authHeader, out var username, out var token, out AuthenticateResult? credentialsFailure))
             {
                 return credentialsFailure;
             }
 
             var cacheKey = authCache.GetCacheKey(username, token);
-            if (TryAuthenticateFromCache(cacheKey, username, out var cachedResult))
+            if (TryAuthenticateFromCache(cacheKey, username, out AuthenticateResult? cachedResult))
             {
                 return cachedResult;
             }
 
-            var rateLimitResult = TryRejectRateLimitedCredentials(username);
+            AuthenticateResult? rateLimitResult = TryRejectRateLimitedCredentials(username);
             if (rateLimitResult is not null)
             {
                 return rateLimitResult;
@@ -84,7 +84,7 @@ namespace Cotton.Server.Auth
 
             Logger.LogDebug("WebDAV auth: cache miss for username '{Username}'.", username);
 
-            var user = await dbContext.Users
+            User? user = await dbContext.Users
                 .FirstOrDefaultAsync(x => x.Username == username || x.Email == username);
             if (user is null)
             {
@@ -95,7 +95,7 @@ namespace Cotton.Server.Auth
 
             integrity.RequireValid(dbContext, user, "webdav.auth");
 
-            var tokenResult = await VerifyTokenOrFailAsync(user, username, token);
+            AuthenticateResult? tokenResult = await VerifyTokenOrFailAsync(user, username, token);
             if (tokenResult is not null)
             {
                 return tokenResult;
@@ -286,7 +286,7 @@ namespace Cotton.Server.Auth
 
         private AuthenticateResult? TryRejectRateLimitedCredentials(string username)
         {
-            var counter = GetFailureCounter(username);
+            FailureCounter? counter = GetFailureCounter(username);
             if (counter is null || counter.Count < FailedAttemptLimit)
             {
                 return null;
@@ -339,7 +339,7 @@ namespace Cotton.Server.Auth
 
         private AuthenticateResult AuthenticateSuccess(Guid userId, string username)
         {
-            var principal = CreatePrincipal(userId, username);
+            ClaimsPrincipal principal = CreatePrincipal(userId, username);
             return AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name));
         }
 

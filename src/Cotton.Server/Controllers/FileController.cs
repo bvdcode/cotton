@@ -36,6 +36,8 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Net.Http.Headers;
 using Quartz;
 using FileVersionDto = Cotton.Files.FileVersionDto;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Primitives;
 
 namespace Cotton.Server.Controllers
 {
@@ -72,7 +74,7 @@ namespace Cotton.Server.Controllers
             [FromQuery] string? view = null,
             [FromQuery] bool preview = false)
         {
-            var result = await _mediator.Send(new ShareFileQuery(token, view, preview, Request));
+            ShareFileResult result = await _mediator.Send(new ShareFileQuery(token, view, preview, Request));
 
             switch (result.Kind)
             {
@@ -112,7 +114,7 @@ namespace Cotton.Server.Controllers
                     {
                         Response.OnCompleted(async () =>
                         {
-                            var tokenEntity = await _dbContext.DownloadTokens
+                            DownloadToken? tokenEntity = await _dbContext.DownloadTokens
                                 .FirstOrDefaultAsync(x => x.Id == result.DeleteTokenId.Value);
                             if (tokenEntity is not null)
                             {
@@ -173,7 +175,7 @@ namespace Cotton.Server.Controllers
             Guid userId = User.GetUserId();
             request ??= new RestoreItemRequestDto();
 
-            var outcome = await _mediator.Send(new RestoreFileQuery(
+            RestoreOutcomeDto outcome = await _mediator.Send(new RestoreFileQuery(
                 userId,
                 nodeFileId,
                 request.CreateMissingParents,
@@ -230,7 +232,7 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
-            var layoutId = await _dbContext.NodeFiles
+            Guid? layoutId = await _dbContext.NodeFiles
                 .AsNoTracking()
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
                 .Select(x => (Guid?)x.Node.LayoutId)
@@ -242,10 +244,10 @@ namespace Cotton.Server.Controllers
 
             // Per-layout namespace serialization for rename — same rationale as
             // CreateFile / CreateNode / MoveFile / MoveNode.
-            await using var tx = await _dbContext.Database.BeginTransactionAsync();
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId.Value, default);
 
-            var nodeFile = await _dbContext.NodeFiles
+            NodeFile? nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
@@ -287,7 +289,7 @@ namespace Cotton.Server.Controllers
             _syncChanges.StageFileChange(SyncChangeKind.FileRenamed, nodeFile, nodeFile.Node.LayoutId);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
-            var mapped = nodeFile.Adapt<NodeFileManifestDto>();
+            NodeFileManifestDto mapped = nodeFile.Adapt<NodeFileManifestDto>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileRenamed", mapped);
             return Ok(mapped);
         }
@@ -320,7 +322,7 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
-            var nodeFile = await _dbContext.NodeFiles
+            NodeFile? nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
@@ -330,10 +332,10 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("File not found.");
             }
 
-            var metadata = nodeFile.Metadata is null
+            Dictionary<string, string> metadata = nodeFile.Metadata is null
                 ? []
                 : new Dictionary<string, string>(nodeFile.Metadata);
-            foreach (var (key, value) in patch)
+            foreach ((string? key, string? value) in patch)
             {
                 metadata[key] = value!;
             }
@@ -342,7 +344,7 @@ namespace Cotton.Server.Controllers
             _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, nodeFile.Node.LayoutId);
             await _dbContext.SaveChangesAsync();
 
-            var mapped = nodeFile.Adapt<NodeFileManifestDto>();
+            NodeFileManifestDto mapped = nodeFile.Adapt<NodeFileManifestDto>();
             try
             {
                 await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
@@ -448,8 +450,8 @@ namespace Cotton.Server.Controllers
                 }
             }
 
-            var userId = User.GetUserId();
-            var nodeFile = await _dbContext.NodeFiles
+            Guid userId = User.GetUserId();
+            NodeFile? nodeFile = await _dbContext.NodeFiles
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
@@ -587,7 +589,7 @@ namespace Cotton.Server.Controllers
             byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
             FileManifest newFile = await ResolveUpdateManifestAsync(request, proposedHash, userId);
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync();
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId.Value, default);
 
             NodeFile? nodeFile = await LoadEditableNodeFileAsync(nodeFileId, userId);
@@ -629,7 +631,7 @@ namespace Cotton.Server.Controllers
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
 
-            var mapped = nodeFile.Adapt<NodeFileManifestDto>();
+            NodeFileManifestDto mapped = nodeFile.Adapt<NodeFileManifestDto>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
             return Ok(mapped);
         }
@@ -826,12 +828,12 @@ namespace Cotton.Server.Controllers
 
         private bool ClientHasCurrentPreview(EntityTagHeaderValue etagHeader)
         {
-            if (!Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var inmValues))
+            if (!Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out StringValues inmValues))
             {
                 return false;
             }
 
-            var clientEtags = EntityTagHeaderValue.ParseList([.. inmValues!]);
+            IList<EntityTagHeaderValue> clientEtags = EntityTagHeaderValue.ParseList([.. inmValues!]);
             return clientEtags.Any(x => x.Compare(etagHeader, useStrongComparison: true));
         }
 
@@ -952,7 +954,7 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeFileId,
             [FromQuery] string token)
         {
-            var lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
+            TranscodableLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
             if (lookup.Failure is not null)
             {
                 return lookup.Failure;
@@ -963,7 +965,7 @@ namespace Cotton.Server.Controllers
                 Routes.V1.Files + $"/{nodeFileId}/hls/playlist.m3u8?token={encodedToken}&quality={qualityName}";
 
             const string variantCodecs = "avc1.640029,mp4a.40.2";
-            var variants = new[]
+            HlsManifestBuilder.HlsVariant[] variants = new[]
             {
                 new HlsManifestBuilder.HlsVariant(
                     Name: "Source",
@@ -1012,7 +1014,7 @@ namespace Cotton.Server.Controllers
             [FromQuery] string token,
             [FromQuery] string? quality = null)
         {
-            var lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
+            TranscodableLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
             if (lookup.Failure is not null)
             {
                 return lookup.Failure;
@@ -1047,7 +1049,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Segment index must be non-negative.");
             }
 
-            var lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
+            TranscodableLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
             if (lookup.Failure is not null)
             {
                 return lookup.Failure;
@@ -1059,7 +1061,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Could not determine source duration for HLS segmentation.");
             }
 
-            var manifestPlan = HlsManifestBuilder.Plan(probe.DurationSeconds.Value);
+            HlsManifestBuilder.HlsManifestPlan manifestPlan = HlsManifestBuilder.Plan(probe.DurationSeconds.Value);
             if (segmentIndex >= manifestPlan.SegmentCount)
             {
                 return CottonResult.NotFound("Segment index out of range.");
@@ -1083,7 +1085,7 @@ namespace Cotton.Server.Controllers
 
             double startSeconds = HlsManifestBuilder.StartTimeOf(segmentIndex);
             double segmentDuration = manifestPlan.DurationOf(segmentIndex);
-            var encoderPlan = HlsRenditionProfile.Plan(
+            HlsRenditionProfile.EncoderPlan encoderPlan = HlsRenditionProfile.Plan(
                 rendition,
                 probe.VideoCodec,
                 probe.AudioCodec);
@@ -1096,7 +1098,7 @@ namespace Cotton.Server.Controllers
             var tee = new TeeStream(Response.Body, captureStream);
             bool transcodeSucceeded = false;
 
-            await using var sourceStream = OpenSourceStream(lookup.NodeFile);
+            await using Stream sourceStream = OpenSourceStream(lookup.NodeFile);
             try
             {
                 await _videoTranscoder.TranscodeSegmentAsync(
@@ -1144,7 +1146,7 @@ namespace Cotton.Server.Controllers
                 return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
             }
 
-            var nodeFile = await _dbContext.NodeFiles
+            NodeFile? nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
@@ -1155,7 +1157,7 @@ namespace Cotton.Server.Controllers
                 return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
             }
 
-            var downloadToken = await _dbContext.DownloadTokens
+            DownloadToken? downloadToken = await _dbContext.DownloadTokens
                 .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFile.Id);
             if (downloadToken is null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
             {
@@ -1168,7 +1170,7 @@ namespace Cotton.Server.Controllers
                 return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
             }
 
-            var playbackMode = VideoPlaybackResolver.Resolve(
+            VideoPlaybackMode playbackMode = VideoPlaybackResolver.Resolve(
                 nodeFile.FileManifest.ContentType,
                 hasPreview: nodeFile.FileManifest.SmallFilePreviewHash is not null);
             if (playbackMode != VideoPlaybackMode.Transcode)
@@ -1182,7 +1184,7 @@ namespace Cotton.Server.Controllers
 
         private Stream OpenSourceStream(NodeFile nodeFile)
         {
-            var manifest = nodeFile.FileManifest;
+            FileManifest manifest = nodeFile.FileManifest;
             string[] uids = manifest.FileManifestChunks.GetChunkHashes();
             PipelineContext context = new()
             {
@@ -1196,13 +1198,13 @@ namespace Cotton.Server.Controllers
         private async Task<MediaProbeInfo?> ProbeMediaAsync(NodeFile nodeFile)
         {
             string cacheKey = $"hls-media-probe:{nodeFile.FileManifest.Id}";
-            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out var cached))
+            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out MediaProbeInfo? cached))
             {
                 return cached;
             }
 
             MediaProbeInfo? probe;
-            await using (var probeStream = OpenSourceStream(nodeFile))
+            await using (Stream probeStream = OpenSourceStream(nodeFile))
             await using (var probeServer = new RangeStreamServer(probeStream, _logger))
             {
                 probe = await FfmpegBinary.TryGetMediaProbeAsync(

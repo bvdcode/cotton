@@ -15,6 +15,7 @@ using EasyExtensions.Helpers;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using FileVersionDto = Cotton.Files.FileVersionDto;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Services
 {
@@ -105,7 +106,7 @@ namespace Cotton.Server.Services
             Guid versionId,
             CancellationToken ct = default)
         {
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
 
             NodeFile current = await LoadCurrentFileOrThrowAsync(userId, nodeFileId, tracking: true, ct);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, current.Node.LayoutId, ct);
@@ -148,7 +149,7 @@ namespace Cotton.Server.Services
             Guid versionId,
             CancellationToken ct = default)
         {
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
 
             NodeFile current = await LoadCurrentFileOrThrowAsync(userId, nodeFileId, tracking: true, ct);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, current.Node.LayoutId, ct);
@@ -177,7 +178,7 @@ namespace Cotton.Server.Services
             Guid versionId,
             CancellationToken ct = default)
         {
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
 
             NodeFile version = await LoadHistoricalVersionByIdOrThrowAsync(userId, versionId, tracking: true, ct);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, version.Node.LayoutId, ct);

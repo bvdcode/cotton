@@ -73,7 +73,7 @@ namespace Cotton.Storage.Streams
 
         private (int chunkIndex, long offsetInChunk) GetChunkAtPosition(long position)
         {
-            var index = Index;
+            ChunkIndexEntry[]? index = Index;
             if (index is null || index.Length == 0)
             {
                 return (Hashes.Count, 0);
@@ -113,7 +113,7 @@ namespace Cotton.Storage.Streams
                 return (0, position);
             }
 
-            var entry = index[idx];
+            ChunkIndexEntry entry = index[idx];
             long offsetInChunk = position - entry.StartOffset;
             if (offsetInChunk < 0)
             {

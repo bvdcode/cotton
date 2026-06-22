@@ -13,6 +13,7 @@ using EasyExtensions.Models.Enums;
 using NUnit.Framework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -30,7 +31,7 @@ public class DatabaseIntegrityFoundationTests
                 ["a"] = "first"
             }
         };
-        var second = first with
+        IntegrityTestEntity second = first with
         {
             Metadata = new Dictionary<string, string>
             {
@@ -55,7 +56,7 @@ public class DatabaseIntegrityFoundationTests
             Name = "file.txt",
             Transports = ["usb", "nfc"]
         };
-        var second = first with
+        IntegrityTestEntity second = first with
         {
             Transports = ["nfc", "usb"]
         };
@@ -70,11 +71,11 @@ public class DatabaseIntegrityFoundationTests
     public void CanonicalWriter_NormalizesDateTimeToDatabasePrecision()
     {
         var descriptor = new IntegrityTestEntityDescriptor();
-        var first = CreateEntity() with
+        IntegrityTestEntity first = CreateEntity() with
         {
             SeenAt = new DateTime(2026, 5, 22, 12, 0, 0, DateTimeKind.Utc).AddTicks(1)
         };
-        var second = first with
+        IntegrityTestEntity second = first with
         {
             SeenAt = first.SeenAt!.Value.AddTicks(TimeSpan.TicksPerMicrosecond - 2)
         };
@@ -88,9 +89,9 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void Protector_VerifiesSignedEntity()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new IntegrityTestEntityDescriptor();
-        var entity = CreateEntity();
+        IntegrityTestEntity entity = CreateEntity();
 
         byte[] mac = protector.Sign(entity, descriptor);
 
@@ -104,9 +105,9 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void Protector_DetectsTamperedEntity()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new IntegrityTestEntityDescriptor();
-        var entity = CreateEntity();
+        IntegrityTestEntity entity = CreateEntity();
         byte[] mac = protector.Sign(entity, descriptor);
 
         IntegrityTestEntity tampered = entity with { Name = "evil.txt" };
@@ -122,9 +123,9 @@ public class DatabaseIntegrityFoundationTests
     public void Protector_UsesPurposeSeparatedMasterDerivedKey()
     {
         var descriptor = new IntegrityTestEntityDescriptor();
-        var entity = CreateEntity();
-        var firstProtector = CreateProtector("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-        var secondProtector = CreateProtector("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        IntegrityTestEntity entity = CreateEntity();
+        DatabaseIntegrityProtector firstProtector = CreateProtector("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        DatabaseIntegrityProtector secondProtector = CreateProtector("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
 
         byte[] firstMac = firstProtector.Sign(entity, descriptor);
         byte[] secondMac = secondProtector.Sign(entity, descriptor);
@@ -135,18 +136,18 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void Verifier_AcceptsSignedProtectedEntity()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new UserIntegrityDescriptor();
-        var user = CreateUser();
+        User user = CreateUser();
 
-        using var dbContext = CreateDbContext();
+        using CottonDbContext dbContext = CreateDbContext();
         dbContext.Users.Add(user);
         var signer = new DatabaseIntegrityChangeSigner(
             protector,
             new DatabaseIntegrityDescriptorRegistry([descriptor]),
             NullDatabaseIntegrityFailureReporter.Instance);
         signer.SignPendingChanges(dbContext);
-        var verifier = CreateVerifier(protector, descriptor);
+        DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
 
         Assert.DoesNotThrow(() => verifier.RequireValid(dbContext, user, "test.signed"));
     }
@@ -154,13 +155,13 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void Verifier_RejectsUnsignedProtectedEntity()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new UserIntegrityDescriptor();
-        var user = CreateUser();
+        User user = CreateUser();
 
-        using var dbContext = CreateDbContext();
+        using CottonDbContext dbContext = CreateDbContext();
         dbContext.Attach(user);
-        var verifier = CreateVerifier(protector, descriptor);
+        DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
 
         Assert.Throws<DatabaseIntegrityException>(() =>
             verifier.RequireValid(dbContext, user, "test.unsigned"));
@@ -169,12 +170,12 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void ChangeSigner_RejectsModifiedEntityWhenOriginalMacDoesNotMatch()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new UserIntegrityDescriptor();
-        var tamperedUser = CreateUser();
+        User tamperedUser = CreateUser();
 
-        using var dbContext = CreateDbContext();
-        var entry = dbContext.Attach(tamperedUser);
+        using CottonDbContext dbContext = CreateDbContext();
+        EntityEntry<User> entry = dbContext.Attach(tamperedUser);
         entry.State = EntityState.Unchanged;
         byte[] originalMac = protector.Sign(tamperedUser, descriptor);
         tamperedUser.Role = UserRole.Admin;
@@ -206,12 +207,12 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void ChangeSigner_AcceptsModifiedEntityWhenOriginalMacMatches()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new UserIntegrityDescriptor();
-        var user = CreateUser();
+        User user = CreateUser();
 
-        using var dbContext = CreateDbContext();
-        var entry = dbContext.Attach(user);
+        using CottonDbContext dbContext = CreateDbContext();
+        EntityEntry<User> entry = dbContext.Attach(user);
         entry.State = EntityState.Unchanged;
         byte[] originalMac = protector.Sign(user, descriptor);
         entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue = descriptor.SchemaVersion;
@@ -240,7 +241,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void UserDescriptor_DetectsRoleTampering()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new UserIntegrityDescriptor();
         var user = new User
         {
@@ -261,7 +262,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void PasskeyDescriptor_DetectsPublicKeyTampering()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new UserPasskeyCredentialIntegrityDescriptor();
         var credential = new UserPasskeyCredential
         {
@@ -283,7 +284,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void ServerSettingsDescriptor_DetectsStorageCredentialTampering()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new CottonServerSettingsIntegrityDescriptor();
         var settings = new CottonServerSettings
         {
@@ -305,7 +306,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void DownloadTokenDescriptor_DetectsNodeFileTampering()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new DownloadTokenIntegrityDescriptor();
         var token = new DownloadToken
         {
@@ -323,7 +324,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void NodeShareTokenDescriptor_DetectsNodeTampering()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new NodeShareTokenIntegrityDescriptor();
         var token = new NodeShareToken
         {
@@ -341,7 +342,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void RefreshTokenDescriptor_DetectsSessionTampering()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new ExtendedRefreshTokenIntegrityDescriptor();
         var token = new ExtendedRefreshToken
         {
@@ -367,7 +368,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void NodeDescriptor_DetectsParentTampering()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new NodeIntegrityDescriptor();
         var node = new Node
         {
@@ -387,7 +388,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void NodeFileDescriptor_DetectsManifestTampering()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new NodeFileIntegrityDescriptor();
         var file = new NodeFile
         {
@@ -407,7 +408,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void FileManifestDescriptor_DetectsContentHashTampering()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new FileManifestIntegrityDescriptor();
         var manifest = new FileManifest
         {
@@ -427,7 +428,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void FileManifestDescriptor_IgnoresOperationalPreviewState()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new FileManifestIntegrityDescriptor();
         var manifest = new FileManifest
         {
@@ -449,7 +450,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void FileManifestChunkDescriptor_DetectsOrderTampering()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new FileManifestChunkIntegrityDescriptor();
         var mapping = new FileManifestChunk
         {
@@ -467,7 +468,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void ChunkDescriptor_DetectsSizeTampering()
     {
-        var protector = CreateProtector();
+        DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new ChunkIntegrityDescriptor();
         var chunk = new Chunk
         {
@@ -486,7 +487,7 @@ public class DatabaseIntegrityFoundationTests
     [Test]
     public void FileGraphVerifier_RejectsNonContiguousChunkOrder()
     {
-        var options = new DbContextOptionsBuilder<CottonDbContext>()
+        DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
             .UseNpgsql("Host=localhost;Database=cotton_dev;Username=postgres;Password=postgres")
             .Options;
         using var dbContext = new CottonDbContext(options);
@@ -540,13 +541,13 @@ public class DatabaseIntegrityFoundationTests
     private static DatabaseIntegrityProtector CreateProtector(
         string rootMasterKey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     {
-        var settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey);
+        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey);
         return new DatabaseIntegrityProtector(new DatabaseIntegrityKeyProvider(settings));
     }
 
     private static CottonDbContext CreateDbContext()
     {
-        var options = new DbContextOptionsBuilder<CottonDbContext>()
+        DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
             .UseNpgsql("Host=localhost;Database=cotton_dev;Username=postgres;Password=postgres")
             .Options;
         return new CottonDbContext(options);

@@ -41,7 +41,7 @@ namespace Cotton.Server.Providers
         /// </summary>
         public StorageType Get()
         {
-            return TryGet(out var type)
+            return TryGet(out StorageType type)
                 ? type
                 : throw new InvalidOperationException("Storage backend type cache is not initialized.");
         }
@@ -93,7 +93,7 @@ namespace Cotton.Server.Providers
         /// </summary>
         public global::Cotton.Storage.Abstractions.IStorageBackend GetBackend()
         {
-            if (!_storageTypeCache.TryGet(out var type))
+            if (!_storageTypeCache.TryGet(out StorageType type))
             {
                 type = _settings.GetServerSettings().StorageType;
                 _storageTypeCache.Set(type);

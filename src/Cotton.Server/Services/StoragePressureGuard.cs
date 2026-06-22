@@ -41,7 +41,7 @@ namespace Cotton.Server.Services
         /// </summary>
         public async Task EnsureCanAcceptWriteAsync(long incomingBytes, CancellationToken ct = default)
         {
-            using var reservation = await ReserveWriteAsync(incomingBytes, ct);
+            using StoragePressureReservation reservation = await ReserveWriteAsync(incomingBytes, ct);
             reservation.Commit();
         }
 
@@ -130,7 +130,7 @@ namespace Cotton.Server.Services
 
         private StorageCapacitySnapshot? ReadCapacitySnapshot()
         {
-            var backend = _backendProvider.GetBackend();
+            IStorageBackend backend = _backendProvider.GetBackend();
             if (backend is not IStorageCapacityReporter reporter)
             {
                 return null;
@@ -165,7 +165,7 @@ namespace Cotton.Server.Services
                     return;
                 }
 
-                var adminIds = await _dbContext.Users
+                List<Guid> adminIds = await _dbContext.Users
                     .AsNoTracking()
                     .Where(x => x.Role == UserRole.Admin)
                     .OrderBy(x => x.Id)

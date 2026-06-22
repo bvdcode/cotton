@@ -24,8 +24,8 @@ namespace Cotton.Server.Services
         /// </summary>
         public async Task<(Layout Layout, Node Root)> GetLayoutAndRootAsync(Guid userId, NodeType nodeType, CancellationToken ct = default)
         {
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
-            var root = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, nodeType, ct);
+            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
+            Node root = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, nodeType, ct);
             return (layout, root);
         }
 
@@ -44,7 +44,7 @@ namespace Cotton.Server.Services
             foreach (var part in parts)
             {
                 var nameKey = NameValidator.NormalizeAndGetNameKey(part);
-                var nextNode = await _dbContext.Nodes
+                Node? nextNode = await _dbContext.Nodes
                     .AsNoTracking()
                     .Where(x => x.LayoutId == layout.Id
                         && x.ParentId == currentNode.Id

@@ -12,7 +12,7 @@ public class HlsSegmentCacheTests
     [Test]
     public void Set_StoresSegmentUnderContentAddressedKey()
     {
-        using var cache = CreateCache(sizeLimitBytes: 1024);
+        using HlsSegmentCache cache = CreateCache(sizeLimitBytes: 1024);
         string key = HlsSegmentCache.BuildKey(Guid.NewGuid(), "source", 2);
         byte[] bytes = [1, 2, 3, 4];
 
@@ -28,7 +28,7 @@ public class HlsSegmentCacheTests
     [Test]
     public void Set_SkipsEntriesLargerThanCacheLimit()
     {
-        using var cache = CreateCache(sizeLimitBytes: 3);
+        using HlsSegmentCache cache = CreateCache(sizeLimitBytes: 3);
         string key = HlsSegmentCache.BuildKey(Guid.NewGuid(), "low", 0);
 
         cache.Set(key, [1, 2, 3, 4]);

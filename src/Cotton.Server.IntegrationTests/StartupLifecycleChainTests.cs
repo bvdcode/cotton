@@ -53,7 +53,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         NpgsqlConnection.ClearAllPools();
         ResetSettingsProviderCaches();
 
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
         NpgsqlConnection.ClearAllPools();
@@ -107,7 +107,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
     [Test]
     public async Task Startup_OnCleanDatabase_AppliesMigrations_AndCreatesInitialAdminWithinWindow()
     {
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         Assert.That(creator.HasTables(), Is.False, "DB should start with no user tables in this test setup.");
 
         TokenPairResponseDto login = await LoginAsync();
@@ -125,7 +125,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
     [Test]
     public async Task Startup_FromPreRestoreDatabase_AppliesRestoredMigrationTrail()
     {
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         Assert.That(creator.HasTables(), Is.False, "DB should start with no user tables in this test setup.");
 
         DbContext.GetService<IMigrator>().Migrate(PreRestoredMigrationId);
@@ -233,7 +233,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         bool before = await GetIsServerInitializedAsync();
         Assert.That(before, Is.False);
 
-        var response = await _client!.PatchAsJsonAsync(
+        HttpResponseMessage response = await _client!.PatchAsJsonAsync(
             "/api/v1/server/settings/timezone",
             "Mars/OlympusMons");
 
@@ -250,7 +250,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         TokenPairResponseDto login = await LoginAsync();
         SetBearer(login.AccessToken);
 
-        var response = await _client!.PatchAsync("/api/v1/server/settings/email-mode/Cloud", null);
+        HttpResponseMessage response = await _client!.PatchAsync("/api/v1/server/settings/email-mode/Cloud", null);
 
         await AssertBadRequestProblemDetailsAsync(
             response,
@@ -264,7 +264,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         TokenPairResponseDto login = await LoginAsync();
         SetBearer(login.AccessToken);
 
-        var response = await _client!.PatchAsync("/api/v1/server/settings/compution-mode/Cloud", null);
+        HttpResponseMessage response = await _client!.PatchAsync("/api/v1/server/settings/compution-mode/Cloud", null);
 
         await AssertBadRequestProblemDetailsAsync(
             response,
@@ -278,7 +278,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         TokenPairResponseDto login = await LoginAsync();
         SetBearer(login.AccessToken);
 
-        var response = await _client!.PatchAsync("/api/v1/server/settings/email-mode/Custom", null);
+        HttpResponseMessage response = await _client!.PatchAsync("/api/v1/server/settings/email-mode/Custom", null);
 
         await AssertBadRequestProblemDetailsAsync(
             response,
@@ -292,7 +292,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         TokenPairResponseDto login = await LoginAsync();
         SetBearer(login.AccessToken);
 
-        var response = await _client!.PatchAsync("/api/v1/server/settings/storage-type/S3", null);
+        HttpResponseMessage response = await _client!.PatchAsync("/api/v1/server/settings/storage-type/S3", null);
 
         await AssertBadRequestProblemDetailsAsync(
             response,
@@ -333,7 +333,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
     {
         EnsureClientCreated();
 
-        var response = await _client!.GetFromJsonAsync<IsServerInitializedResponse>("/api/v1/server/settings/is-setup-complete");
+        IsServerInitializedResponse? response = await _client!.GetFromJsonAsync<IsServerInitializedResponse>("/api/v1/server/settings/is-setup-complete");
         Assert.That(response, Is.Not.Null);
         return response!.IsServerInitialized;
     }

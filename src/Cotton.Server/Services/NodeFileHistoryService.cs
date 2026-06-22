@@ -33,7 +33,7 @@ namespace Cotton.Server.Services
 
             if (shouldSaveVersion)
             {
-                var trashNode = await _layouts.CreateTrashItemAsync(userId, ct);
+                Node trashNode = await _layouts.CreateTrashItemAsync(userId, ct);
 
                 var versionFile = new NodeFile
                 {

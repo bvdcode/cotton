@@ -17,7 +17,7 @@ public class CottonAuthClientTests
         var handler = new QueuedHttpMessageHandler();
         handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "access", refreshToken = "refresh" });
         var store = new InMemoryCottonTokenStore();
-        var client = CreateClient(handler, store);
+        CottonCloudClient client = CreateClient(handler, store);
 
         TokenPairDto tokens = await client.Auth.LoginAsync(new LoginRequestDto
         {
@@ -48,7 +48,7 @@ public class CottonAuthClientTests
         handler.Enqueue(HttpStatusCode.OK);
         var store = new InMemoryCottonTokenStore();
         await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "refresh token" });
-        var client = CreateClient(handler, store);
+        CottonCloudClient client = CreateClient(handler, store);
 
         await client.Auth.LogoutAsync();
 
@@ -145,7 +145,7 @@ public class CottonAuthClientTests
         handler.Enqueue(HttpStatusCode.Unauthorized);
         var store = new InMemoryCottonTokenStore();
         await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "revoked" });
-        var client = CreateClient(handler, store);
+        CottonCloudClient client = CreateClient(handler, store);
 
         Assert.ThrowsAsync<CottonApiException>(async () => await client.Auth.LogoutAsync());
 

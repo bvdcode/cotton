@@ -80,13 +80,13 @@ namespace Cotton.Server.Services.Search
 
             foreach (Match match in GuidRegex.Matches(value))
             {
-                if (Guid.TryParse(match.Value, out var guid) && !result.Contains(guid))
+                if (Guid.TryParse(match.Value, out Guid guid) && !result.Contains(guid))
                 {
                     result.Add(guid);
                 }
             }
 
-            if (result.Count == 0 && Guid.TryParse(value, out var parsed))
+            if (result.Count == 0 && Guid.TryParse(value, out Guid parsed))
             {
                 result.Add(parsed);
             }

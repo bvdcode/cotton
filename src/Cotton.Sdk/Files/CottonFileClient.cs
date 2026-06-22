@@ -5,6 +5,7 @@ using Cotton;
 using Cotton.Files;
 using Cotton.Sdk.Internal;
 using System.Net;
+using System.Net.Http.Headers;
 
 namespace Cotton.Sdk.Files;
 
@@ -254,7 +255,7 @@ public class CottonFileClient : ICottonFileClient
         long length,
         string? expectedETag)
     {
-        var contentRange = response.Content.Headers.ContentRange
+        ContentRangeHeaderValue contentRange = response.Content.Headers.ContentRange
             ?? throw CreateInvalidRangeResponseException(response, "missing Content-Range header");
         if (!string.Equals(contentRange.Unit, "bytes", StringComparison.OrdinalIgnoreCase)
             || contentRange.From != offset

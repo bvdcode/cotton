@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
@@ -44,7 +45,7 @@ namespace Cotton.Server.Handlers.WebDav
         /// </summary>
         public async Task<WebDavPropFindResult> Handle(WebDavPropFindQuery request, CancellationToken ct)
         {
-            var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
+            WebDavResolveResult resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
 
             if (!resolveResult.Found)
             {
@@ -60,7 +61,7 @@ namespace Cotton.Server.Handlers.WebDav
 
             if (resolveResult.IsCollection && resolveResult.Node is not null)
             {
-                var node = resolveResult.Node;
+                Node node = resolveResult.Node;
                 var nodePath = await BuildNodePathAsync(node, pathCache, ct);
                 var nodeHref = BuildHref(hrefBase, nodePath);
 
@@ -82,8 +83,8 @@ namespace Cotton.Server.Handlers.WebDav
             }
             else if (resolveResult.NodeFile is not null)
             {
-                var nodeFile = resolveResult.NodeFile;
-                var parentNode = await _dbContext.Nodes
+                NodeFile nodeFile = resolveResult.NodeFile;
+                Node? parentNode = await _dbContext.Nodes
                     .AsNoTracking()
                     .FirstOrDefaultAsync(n => n.Id == nodeFile.NodeId, ct);
 
@@ -125,7 +126,7 @@ namespace Cotton.Server.Handlers.WebDav
             CancellationToken ct)
         {
             // Get child nodes (folders)
-            var childNodes = await _dbContext.Nodes
+            List<Node> childNodes = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(n => n.ParentId == parentNode.Id
                     && n.Type == WebDavPathResolver.DefaultNodeType
@@ -134,7 +135,7 @@ namespace Cotton.Server.Handlers.WebDav
                 .OrderBy(n => n.NameKey)
                 .ToListAsync(ct);
 
-            foreach (var childNode in childNodes)
+            foreach (Node? childNode in childNodes)
             {
                 var childPath = string.IsNullOrEmpty(parentPath)
                     ? childNode.Name
@@ -155,7 +156,7 @@ namespace Cotton.Server.Handlers.WebDav
             }
 
             // Get child files
-            var childFiles = await _dbContext.NodeFiles
+            List<NodeFile> childFiles = await _dbContext.NodeFiles
                 .AsNoTracking()
                 .Include(f => f.FileManifest)
                 .Where(f => f.NodeId == parentNode.Id
@@ -163,7 +164,7 @@ namespace Cotton.Server.Handlers.WebDav
                 .OrderBy(f => f.NameKey)
                 .ToListAsync(ct);
 
-            foreach (var childFile in childFiles)
+            foreach (NodeFile? childFile in childFiles)
             {
                 var filePath = string.IsNullOrEmpty(parentPath)
                     ? childFile.Name
@@ -190,14 +191,14 @@ namespace Cotton.Server.Handlers.WebDav
                 cache[node.Id] = node;
             }
             var parts = new List<string>();
-            var current = node;
+            Node? current = node;
 
             // Don't include root node in path
             while (current.ParentId is not null)
             {
                 parts.Add(current.Name);
 
-                if (!cache.TryGetValue(current.ParentId.Value, out var parent))
+                if (!cache.TryGetValue(current.ParentId.Value, out Node? parent))
                 {
                     parent = await _dbContext.Nodes
                         .AsNoTracking()

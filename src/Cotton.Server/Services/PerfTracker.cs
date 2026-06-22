@@ -39,9 +39,9 @@ namespace Cotton.Server.Services
         /// </summary>
         public bool IsNightTime()
         {
-            using var scope = _scopeFactory.CreateScope();
-            var settings = scope.ServiceProvider.GetRequiredService<SettingsProvider>();
-            var tzInfo = settings.GetServerSettings().GetTimezoneInfo();
+            using IServiceScope scope = _scopeFactory.CreateScope();
+            SettingsProvider settings = scope.ServiceProvider.GetRequiredService<SettingsProvider>();
+            TimeZoneInfo tzInfo = settings.GetServerSettings().GetTimezoneInfo();
             DateTime localTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tzInfo);
             return localTime.Hour < 7 || localTime.Hour >= 22;
         }

@@ -60,7 +60,7 @@ namespace Cotton.Server.Controllers
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandlePropFindAsync(string? path)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             var depth = GetDepthHeader();
             var hrefBase = Url.Content("~" + WebDavRoute) ?? WebDavRoute;
 
@@ -68,7 +68,7 @@ namespace Cotton.Server.Controllers
                 path ?? "/", depth, userId, Request.GetRemoteAddress());
 
             var query = new WebDavPropFindQuery(userId, path ?? string.Empty, hrefBase, depth);
-            var result = await _mediator.Send(query, HttpContext.RequestAborted);
+            WebDavPropFindResult result = await _mediator.Send(query, HttpContext.RequestAborted);
 
             if (!result.Found)
             {
@@ -91,13 +91,13 @@ namespace Cotton.Server.Controllers
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleGetAsync(string? path)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
 
             _logger.LogDebug("WebDAV GET: {Path}, user: {UserId}, ip: {Ip}",
                 path ?? "/", userId, Request.GetRemoteAddress());
 
             var query = new WebDavGetFileQuery(userId, path ?? string.Empty);
-            var result = await _mediator.Send(query, HttpContext.RequestAborted);
+            WebDavGetFileResult result = await _mediator.Send(query, HttpContext.RequestAborted);
 
             if (!result.Found)
             {
@@ -114,7 +114,7 @@ namespace Cotton.Server.Controllers
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
 
-            var entityTag = result.ETag is not null
+            EntityTagHeaderValue entityTag = result.ETag is not null
                 ? EntityTagHeaderValue.Parse(result.ETag)
                 : throw new InvalidOperationException("ETag is required for file response");
 
@@ -134,9 +134,9 @@ namespace Cotton.Server.Controllers
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleHeadAsync(string? path)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             var query = new WebDavHeadQuery(userId, path ?? string.Empty);
-            var result = await _mediator.Send(query, HttpContext.RequestAborted);
+            WebDavHeadResult result = await _mediator.Send(query, HttpContext.RequestAborted);
 
             if (!result.Found)
             {
@@ -177,7 +177,7 @@ namespace Cotton.Server.Controllers
         [DisableRequestSizeLimit]
         public async Task<IActionResult> HandlePutAsync(string? path)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             if (!IsLockSatisfied(userId, path ?? string.Empty))
             {
                 AddDavHeaders();
@@ -194,7 +194,7 @@ namespace Cotton.Server.Controllers
                 overwrite,
                 Request.ContentLength);
 
-            var result = await _mediator.Send(command, HttpContext.RequestAborted);
+            WebDavPutFileResult result = await _mediator.Send(command, HttpContext.RequestAborted);
             if (!result.Success)
             {
                 if (result.Error == WebDavPutFileError.IsCollection)
@@ -226,11 +226,11 @@ namespace Cotton.Server.Controllers
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandlePropPatchAsync(string? path)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             path ??= string.Empty;
 
             var query = new WebDavHeadQuery(userId, path);
-            var result = await _mediator.Send(query, HttpContext.RequestAborted);
+            WebDavHeadResult result = await _mediator.Send(query, HttpContext.RequestAborted);
             if (!result.Found)
             {
                 return NotFound();
@@ -259,12 +259,12 @@ namespace Cotton.Server.Controllers
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleLockAsync(string? path)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             path ??= string.Empty;
 
             // Allow lock-null resources (common behavior in Windows WebDAV)
             var query = new WebDavHeadQuery(userId, path);
-            var result = await _mediator.Send(query, HttpContext.RequestAborted);
+            WebDavHeadResult result = await _mediator.Send(query, HttpContext.RequestAborted);
 
             AddDavHeaders();
 
@@ -310,7 +310,7 @@ namespace Cotton.Server.Controllers
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public IActionResult HandleUnlock(string? path)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             path ??= string.Empty;
 
             AddDavHeaders();
@@ -321,7 +321,7 @@ namespace Cotton.Server.Controllers
                 var token = tokenHeader.Trim().Trim('<', '>');
                 var key = GetLockKey(userId, path.Trim(WebDavPathResolver.PathSeparator));
 
-                if (_locks.TryGetValue(key, out var info)
+                if (_locks.TryGetValue(key, out WebDavLock? info)
                     && string.Equals(info.Token, token, StringComparison.Ordinal))
                 {
                     _locks.TryRemove(key, out _);
@@ -338,14 +338,14 @@ namespace Cotton.Server.Controllers
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleDeleteAsync(string? path)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             if (!IsLockSatisfied(userId, path ?? string.Empty))
             {
                 AddDavHeaders();
                 return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
             }
             var command = new WebDavDeleteRequest(userId, path ?? string.Empty);
-            var result = await _mediator.Send(command, HttpContext.RequestAborted);
+            WebDavDeleteResult result = await _mediator.Send(command, HttpContext.RequestAborted);
 
             AddDavHeaders();
 
@@ -369,14 +369,14 @@ namespace Cotton.Server.Controllers
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleMkColAsync(string? path)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             if (!IsLockSatisfied(userId, path ?? string.Empty))
             {
                 AddDavHeaders();
                 return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
             }
             var command = new WebDavMkColRequest(userId, path ?? string.Empty);
-            var result = await _mediator.Send(command, HttpContext.RequestAborted);
+            WebDavMkColResult result = await _mediator.Send(command, HttpContext.RequestAborted);
             AddDavHeaders();
             if (!result.Success)
             {
@@ -399,7 +399,7 @@ namespace Cotton.Server.Controllers
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleMoveAsync(string? path)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             if (!IsLockSatisfied(userId, path ?? string.Empty))
             {
                 AddDavHeaders();
@@ -414,7 +414,7 @@ namespace Cotton.Server.Controllers
             }
 
             var command = new WebDavMoveRequest(userId, path ?? string.Empty, destination, overwrite);
-            var result = await _mediator.Send(command, HttpContext.RequestAborted);
+            WebDavMoveResult result = await _mediator.Send(command, HttpContext.RequestAborted);
             AddDavHeaders();
             if (!result.Success)
             {
@@ -439,7 +439,7 @@ namespace Cotton.Server.Controllers
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleCopyAsync(string? path)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             if (!IsLockSatisfied(userId, path ?? string.Empty))
             {
                 AddDavHeaders();
@@ -453,7 +453,7 @@ namespace Cotton.Server.Controllers
                 return BadRequest("Destination header is required");
             }
             var command = new WebDavCopyRequest(userId, path ?? string.Empty, destination, overwrite);
-            var result = await _mediator.Send(command, HttpContext.RequestAborted);
+            WebDavCopyResult result = await _mediator.Send(command, HttpContext.RequestAborted);
             AddDavHeaders();
             if (!result.Success)
             {
@@ -496,7 +496,7 @@ namespace Cotton.Server.Controllers
             for (var p = path; ; p = ParentPath(p))
             {
                 var key = GetLockKey(userId, p);
-                if (_locks.TryGetValue(key, out var lockInfo))
+                if (_locks.TryGetValue(key, out WebDavLock? lockInfo))
                 {
                     var lockToken = ExtractLockToken();
                     return lockToken is not null
@@ -529,8 +529,8 @@ namespace Cotton.Server.Controllers
 
             if (System.Threading.Interlocked.Exchange(ref _lastLocksCleanupTicks, nowTicks) == last || force)
             {
-                var now = DateTimeOffset.UtcNow;
-                foreach (var (key, value) in _locks)
+                DateTimeOffset now = DateTimeOffset.UtcNow;
+                foreach ((string? key, WebDavLock? value) in _locks)
                 {
                     if (value.ExpiresAt <= now)
                     {
@@ -606,7 +606,7 @@ namespace Cotton.Server.Controllers
             }
 
             // Parse the destination URL and extract the path
-            if (Uri.TryCreate(destination, UriKind.RelativeOrAbsolute, out var uri))
+            if (Uri.TryCreate(destination, UriKind.RelativeOrAbsolute, out Uri? uri))
             {
                 destination = uri.IsAbsoluteUri ? uri.AbsolutePath : uri.OriginalString;
             }

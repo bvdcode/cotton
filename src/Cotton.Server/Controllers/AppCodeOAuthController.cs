@@ -210,7 +210,7 @@ public class AppCodeOAuthController(
     [HttpPost("poll")]
     public async Task<IActionResult> Poll([FromBody] AppCodePollRequestDto request, CancellationToken cancellationToken)
     {
-        (Guid approvalId, string pollSecret) = ParsePollToken(request.PollToken);
+        var (approvalId, pollSecret) = ParsePollToken(request.PollToken);
         if (!Requests.TryGetValue(GetCacheKey(approvalId), out AppCodeRequestState? cachedState)
             || cachedState is null
             || !IsPollSecretValid(cachedState, pollSecret))

@@ -20,7 +20,7 @@ public class CottonFileAndChunkClientTests
     {
         var handler = new QueuedHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.Created);
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("chunk"));
 
         await client.Chunks.UploadRawAsync("abc123", stream);
@@ -94,7 +94,7 @@ public class CottonFileAndChunkClientTests
             requiresVideoTranscoding = false,
             previewHashEncryptedHex = (string?)null,
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         NodeFileManifestDto file = await client.Files.CreateFromChunksAsync(new CreateFileFromChunksRequestDto
         {
@@ -124,7 +124,7 @@ public class CottonFileAndChunkClientTests
         Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var handler = new QueuedHttpMessageHandler();
         handler.EnqueueJson(HttpStatusCode.OK, FileManifestPayload(fileId, nodeId, "updated.txt", "sha256-new"));
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         await client.Files.UpdateContentAsync(
             fileId,
@@ -153,7 +153,7 @@ public class CottonFileAndChunkClientTests
         Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var handler = new QueuedHttpMessageHandler();
         handler.Enqueue(HttpStatusCode.NoContent);
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         await client.Files.DeleteAsync(fileId, skipTrash: true, expectedETag: "\"sha256-current\"");
 
@@ -172,7 +172,7 @@ public class CottonFileAndChunkClientTests
         Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var handler = new QueuedHttpMessageHandler();
         handler.EnqueueJson(HttpStatusCode.OK, FileManifestPayload(fileId, nodeId, "moved.txt", "moved-hash"));
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         await client.Files.MoveAsync(fileId, nodeId, expectedETag: "sha256-current");
 
@@ -191,7 +191,7 @@ public class CottonFileAndChunkClientTests
         Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var handler = new QueuedHttpMessageHandler();
         handler.EnqueueJson(HttpStatusCode.OK, FileManifestPayload(fileId, nodeId, "renamed.txt", "renamed-hash"));
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         await client.Files.RenameAsync(fileId, " renamed.txt ", expectedETag: "sha256-current");
 
@@ -216,7 +216,7 @@ public class CottonFileAndChunkClientTests
             originalParentPath = "/Archive",
             restoredFile = FileManifestPayload(fileId, nodeId, "restored.txt", "restored-hash"),
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         RestoreOutcomeDto outcome = await client.Files.RestoreAsync(
             fileId,
@@ -247,7 +247,7 @@ public class CottonFileAndChunkClientTests
         {
             Content = new ByteArrayContent(Encoding.UTF8.GetBytes("downloaded")),
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
         using var destination = new MemoryStream();
         var progress = new RecordingProgress();
 
@@ -276,7 +276,7 @@ public class CottonFileAndChunkClientTests
             response.Headers.AcceptRanges.Add("bytes");
             return response;
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
         using var destination = new MemoryStream();
         var progress = new RecordingProgress();
 
@@ -306,7 +306,7 @@ public class CottonFileAndChunkClientTests
         {
             Content = new ByteArrayContent(Encoding.UTF8.GetBytes("0123456789abcdef")),
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
         using var destination = new MemoryStream();
 
         CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
@@ -339,7 +339,7 @@ public class CottonFileAndChunkClientTests
             response.Content.Headers.ContentLength = null;
             return response;
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
         using var destination = new MemoryStream();
 
         CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
@@ -360,7 +360,7 @@ public class CottonFileAndChunkClientTests
     [Test]
     public async Task DownloadContentRangeAsync_ValidatesArguments()
     {
-        var client = await CreateAuthorizedClientAsync(new QueuedHttpMessageHandler());
+        CottonCloudClient client = await CreateAuthorizedClientAsync(new QueuedHttpMessageHandler());
         using var destination = new MemoryStream();
 
         Assert.Multiple(() =>
@@ -394,7 +394,7 @@ public class CottonFileAndChunkClientTests
                 new { index = 1, offset = 4, length = 3, hash = "chunk-b", chunkId = "chunk-b" },
             },
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         FileContentManifestDto manifest = await client.Files.GetContentManifestAsync(fileId, expectedETag: "sha256-full-hash");
 

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Services;
@@ -45,7 +46,7 @@ namespace Cotton.Server.Handlers.WebDav
         /// </summary>
         public async Task<WebDavDeleteResult> Handle(WebDavDeleteRequest request, CancellationToken ct)
         {
-            var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
+            WebDavResolveResult resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
 
             if (!resolveResult.Found)
             {
@@ -63,7 +64,7 @@ namespace Cotton.Server.Handlers.WebDav
                 }
 
                 // Get the tracked entity for deletion
-                var node = await _dbContext.Nodes
+                Node? node = await _dbContext.Nodes
                     .FirstOrDefaultAsync(n => n.Id == resolveResult.Node.Id, ct);
 
                 if (node is null)
@@ -85,7 +86,7 @@ namespace Cotton.Server.Handlers.WebDav
             else if (resolveResult.NodeFile is not null)
             {
                 // Get the tracked entity for deletion
-                var nodeFile = await _dbContext.NodeFiles
+                NodeFile? nodeFile = await _dbContext.NodeFiles
                     .FirstOrDefaultAsync(f => f.Id == resolveResult.NodeFile.Id, ct);
 
                 if (nodeFile is null)

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Providers;
@@ -49,7 +50,7 @@ namespace Cotton.Server.Handlers.Users
             }
 
             string input = request.UsernameOrEmail.Trim();
-            var user = await _dbContext.Users
+            User? user = await _dbContext.Users
                 .FirstOrDefaultAsync(
                     x => x.Username == input || x.Email == input,
                     cancellationToken);

@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database.Models;
 using Cotton.Models.Enums;
 using Cotton.Server.Providers;
 
@@ -27,9 +28,9 @@ namespace Cotton.Server.Services
             ILogger<CottonPublicEmailProvider> logger)
         {
             _logger = logger;
-            using var scope = serviceProvider.CreateScope();
-            var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider>();
-            var settings = settingsProvider.GetServerSettings();
+            using IServiceScope scope = serviceProvider.CreateScope();
+            SettingsProvider settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider>();
+            CottonServerSettings settings = settingsProvider.GetServerSettings();
             _instanceId = settings.InstanceId;
             _httpClient = new HttpClient
             {
@@ -45,7 +46,7 @@ namespace Cotton.Server.Services
         {
             try
             {
-                var response = await _httpClient.GetFromJsonAsync<HealthResponse>("health");
+                HealthResponse? response = await _httpClient.GetFromJsonAsync<HealthResponse>("health");
                 return response is not null && response.Status == "Healthy";
             }
             catch (Exception ex)
@@ -79,7 +80,7 @@ namespace Cotton.Server.Services
                     Parameters = parameters,
                 };
 
-                var response = await _httpClient.PostAsJsonAsync("email/send", request);
+                HttpResponseMessage response = await _httpClient.PostAsJsonAsync("email/send", request);
                 if (!response.IsSuccessStatusCode)
                 {
                     string body = await response.Content.ReadAsStringAsync();

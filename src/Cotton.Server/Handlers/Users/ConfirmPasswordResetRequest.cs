@@ -10,6 +10,7 @@ using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Users
 {
@@ -55,7 +56,7 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("New password is required");
             }
 
-            var user = await _dbContext.Users
+            User user = await _dbContext.Users
                 .FirstOrDefaultAsync(x => x.PasswordResetToken == request.Token, cancellationToken)
                 ?? throw new BadRequestException<User>("Invalid or expired token");
             _integrity.RequireValid(_dbContext, user, "user.password-reset");
@@ -69,7 +70,7 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("Token has expired");
             }
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             user.PasswordPhc = _hasher.Hash(request.NewPassword);
             user.PasswordResetToken = null;

@@ -9,6 +9,7 @@ using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Quartz;
 using System.Collections.Concurrent;
 
@@ -91,7 +92,7 @@ namespace Cotton.Server.Jobs
 
         private async Task DeleteOrphanedManifestsAsync(CancellationToken ct)
         {
-            var manifestIds = await _dbContext.FileManifests
+            List<Guid> manifestIds = await _dbContext.FileManifests
                 .Where(fm => !fm.NodeFiles.Any())
                 .OrderBy(fm => fm.Id)
                 .Select(fm => fm.Id)
@@ -103,7 +104,7 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(ct);
             try
             {
                 await _dbContext.DownloadTokens
@@ -167,7 +168,7 @@ namespace Cotton.Server.Jobs
 
             int totalScheduled = 0;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            var lastProgressLogAt = TimeSpan.Zero;
+            TimeSpan lastProgressLogAt = TimeSpan.Zero;
 
             while (totalScheduled < batchSize)
             {
@@ -176,7 +177,7 @@ namespace Cotton.Server.Jobs
                 IQueryable<Chunk> baseQuery = _chunkUsage.WhereUnreferencedByDatabase(_dbContext.Chunks);
                 IQueryable<Chunk> filteredQuery = _chunkUsage.WhereNotProtectedByStorageKeys(baseQuery, protectedStorageKeys);
 
-                var candidateHashes = await filteredQuery
+                List<byte[]> candidateHashes = await filteredQuery
                     .AsNoTracking()
                     .Where(c => c.GCScheduledAfter == null)
                     .OrderBy(c => c.Hash)
@@ -217,7 +218,7 @@ namespace Cotton.Server.Jobs
 
         private async Task DeleteScheduledChunksAsync(DateTime now, int batchSize, HashSet<string> protectedStorageKeys, CancellationToken ct)
         {
-            var hashesToDelete = await _chunkUsage
+            List<byte[]> hashesToDelete = await _chunkUsage
                 .WhereUnreferencedByDatabase(_dbContext.Chunks)
                 .Where(c => c.GCScheduledAfter != null
                     && c.GCScheduledAfter <= now)
@@ -271,7 +272,7 @@ namespace Cotton.Server.Jobs
             int deletedChunksCounter = 0;
             int processedCounter = 0;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            var lastProgressLogAt = TimeSpan.Zero;
+            TimeSpan lastProgressLogAt = TimeSpan.Zero;
 
             try
             {
@@ -328,7 +329,7 @@ namespace Cotton.Server.Jobs
             HashSet<string> protectedStorageKeys,
             CancellationToken ct)
         {
-            var stillScheduledHashes = await _dbContext.Chunks
+            List<byte[]> stillScheduledHashes = await _dbContext.Chunks
                 .AsNoTracking()
                 .Where(c => batchHashes.Contains(c.Hash))
                 .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= now)
@@ -340,7 +341,7 @@ namespace Cotton.Server.Jobs
                 return 0;
             }
 
-            var nowReferencedHashes = await _chunkUsage
+            List<byte[]> nowReferencedHashes = await _chunkUsage
                 .WhereReferencedByDatabase(_dbContext.Chunks)
                 .AsNoTracking()
                 .Where(c => stillScheduledHashes.Contains(c.Hash))
@@ -376,7 +377,7 @@ namespace Cotton.Server.Jobs
             }
 
             int dbDeleted;
-            await using (var transaction = await _dbContext.Database.BeginTransactionAsync(ct))
+            await using (IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(ct))
             {
                 try
                 {

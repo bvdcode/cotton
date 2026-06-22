@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Providers;
 using Cotton.Topology.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Services
 {
@@ -42,13 +43,13 @@ namespace Cotton.Server.Services
                 return;
             }
 
-            var strategy = _dbContext.Database.CreateExecutionStrategy();
+            IExecutionStrategy strategy = _dbContext.Database.CreateExecutionStrategy();
             await strategy.ExecuteAsync(async () =>
             {
-                await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+                await using IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(ct);
 
-                var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
-                var targetRoot = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, NodeType.Default, ct);
+                Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
+                Node targetRoot = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, NodeType.Default, ct);
                 await CopyNodeContentsAsync(templateNodeId.Value, targetRoot, layout.Id, userId, ct);
 
                 await transaction.CommitAsync(ct);

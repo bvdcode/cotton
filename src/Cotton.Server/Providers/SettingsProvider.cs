@@ -1,6 +1,8 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Amazon.S3;
+using Amazon.S3.Model;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
@@ -165,7 +167,7 @@ namespace Cotton.Server.Providers
         /// </summary>
         public async Task<bool> IsServerInitializedAsync()
         {
-            var now = DateTimeOffset.UtcNow;
+            DateTimeOffset now = DateTimeOffset.UtcNow;
             lock (_cacheLock)
             {
                 if (_isServerInitializedCache is { } cached && now - cached.CachedAt < _boolCacheTtl)
@@ -196,7 +198,7 @@ namespace Cotton.Server.Providers
         /// </summary>
         public async Task<bool> ServerHasUsersAsync()
         {
-            var now = DateTimeOffset.UtcNow;
+            DateTimeOffset now = DateTimeOffset.UtcNow;
             lock (_cacheLock)
             {
                 if (_serverHasUsersCache is { } cached && now - cached.CachedAt < _boolCacheTtl)
@@ -250,7 +252,7 @@ namespace Cotton.Server.Providers
                 return null;
             }
 
-            var settings = GetServerSettings();
+            CottonServerSettings settings = GetServerSettings();
 
             if (settings.EmailMode == EmailMode.Cloud)
             {
@@ -275,7 +277,7 @@ namespace Cotton.Server.Providers
         /// </summary>
         public async Task<string?> ValidateEmailModeAsync(EmailMode mode)
         {
-            var settings = GetServerSettings();
+            CottonServerSettings settings = GetServerSettings();
 
             if (mode == EmailMode.Cloud)
             {
@@ -328,7 +330,7 @@ namespace Cotton.Server.Providers
         /// </summary>
         public string? ValidateGeoIpLookupMode(GeoIpLookupMode mode)
         {
-            var settings = GetServerSettings();
+            CottonServerSettings settings = GetServerSettings();
 
             if (mode == GeoIpLookupMode.CottonCloud && !settings.TelemetryEnabled)
             {
@@ -355,7 +357,7 @@ namespace Cotton.Server.Providers
             try
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                var response = await client.GetFromJsonAsync<HealthResponse>(global::Cotton.Constants.CottonBridgeHealthUrl);
+                HealthResponse? response = await client.GetFromJsonAsync<HealthResponse>(global::Cotton.Constants.CottonBridgeHealthUrl);
                 return response is not null && response.Status == "Healthy";
             }
             catch
@@ -379,7 +381,7 @@ namespace Cotton.Server.Providers
                 return "Invalid storage type: " + type;
             }
 
-            var settings = GetServerSettings();
+            CottonServerSettings settings = GetServerSettings();
             var s3Config = new S3Config
             {
                 AccessKey = settings.S3AccessKeyId ?? string.Empty,
@@ -424,7 +426,7 @@ namespace Cotton.Server.Providers
                 return "S3 endpoint URL must be provided.";
             }
 
-            if (!Uri.TryCreate(s3Config.Endpoint, UriKind.Absolute, out var endpoint) ||
+            if (!Uri.TryCreate(s3Config.Endpoint, UriKind.Absolute, out Uri? endpoint) ||
                 (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps))
             {
                 return "S3 endpoint URL must be an absolute HTTP or HTTPS URL.";
@@ -468,7 +470,7 @@ namespace Cotton.Server.Providers
 
         private static async Task ValidateS3Async(S3Config s3Config)
         {
-            var s3 = S3CompatibilityFactory.BuildClient(
+            AmazonS3Client s3 = S3CompatibilityFactory.BuildClient(
                 s3Config.Endpoint,
                 s3Config.Region,
                 s3Config.AccessKey,
@@ -486,7 +488,7 @@ namespace Cotton.Server.Providers
             }.WithInMemoryBodyCompatibility());
 
             // try read access by getting the test object
-            var getResponse = await s3.GetObjectAsync(s3Config.Bucket, testKey);
+            GetObjectResponse getResponse = await s3.GetObjectAsync(s3Config.Bucket, testKey);
             using (var reader = new StreamReader(getResponse.ResponseStream))
             {
                 string content = await reader.ReadToEndAsync();
@@ -497,7 +499,7 @@ namespace Cotton.Server.Providers
             }
 
             // try list all objects in the bucket
-            var listResponse = await s3.ListObjectsV2Async(new Amazon.S3.Model.ListObjectsV2Request
+            ListObjectsV2Response listResponse = await s3.ListObjectsV2Async(new Amazon.S3.Model.ListObjectsV2Request
             {
                 BucketName = s3Config.Bucket,
                 MaxKeys = 1
@@ -705,7 +707,7 @@ namespace Cotton.Server.Providers
             }
 
             string trimmed = url.Trim().TrimEnd('/');
-            if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+            if (!Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri))
             {
                 return false;
             }

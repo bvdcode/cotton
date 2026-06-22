@@ -12,32 +12,32 @@ namespace Cotton.Server.Helpers
         /// Indicates whether downgrade.
         /// </summary>
         public static bool IsDowngrade(string currentVersion, string latestVersion)
-            => TryParse(currentVersion, out var current)
-                && TryParse(latestVersion, out var latest)
+            => TryParse(currentVersion, out ParsedVersion current)
+                && TryParse(latestVersion, out ParsedVersion latest)
                 && Compare(latest, current) > 0;
 
         /// <summary>
         /// Indicates whether newer.
         /// </summary>
         public static bool IsNewer(string candidateVersion, string currentVersion)
-            => TryParse(candidateVersion, out var candidate)
-                && TryParse(currentVersion, out var current)
+            => TryParse(candidateVersion, out ParsedVersion candidate)
+                && TryParse(currentVersion, out ParsedVersion current)
                 && Compare(candidate, current) > 0;
 
         /// <summary>
         /// Indicates whether the left version is greater than or equal to the right version.
         /// </summary>
         public static bool IsGreaterThanOrEqual(string leftVersion, string rightVersion)
-            => TryParse(leftVersion, out var left)
-                && TryParse(rightVersion, out var right)
+            => TryParse(leftVersion, out ParsedVersion left)
+                && TryParse(rightVersion, out ParsedVersion right)
                 && Compare(left, right) >= 0;
 
         /// <summary>
         /// Indicates whether the left version is lower than the right version.
         /// </summary>
         public static bool IsLessThan(string leftVersion, string rightVersion)
-            => TryParse(leftVersion, out var left)
-                && TryParse(rightVersion, out var right)
+            => TryParse(leftVersion, out ParsedVersion left)
+                && TryParse(rightVersion, out ParsedVersion right)
                 && Compare(left, right) < 0;
 
         private static bool TryParse(string value, out ParsedVersion parsed)

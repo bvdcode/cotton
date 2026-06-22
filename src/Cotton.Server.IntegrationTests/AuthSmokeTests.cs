@@ -37,7 +37,7 @@ public class AuthSmokeTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
         Assert.Multiple(() =>
@@ -75,7 +75,7 @@ public class AuthSmokeTests : IntegrationTestBase
         {
             builder.ConfigureServices(services =>
             {
-                var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IStoragePipeline));
+                ServiceDescriptor? existing = services.FirstOrDefault(d => d.ServiceType == typeof(IStoragePipeline));
                 if (existing != null) services.Remove(existing);
                 services.AddSingleton<IStoragePipeline, InMemoryStorage>();
             });

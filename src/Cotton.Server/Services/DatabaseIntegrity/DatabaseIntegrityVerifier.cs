@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Integrity;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Cotton.Server.Services.DatabaseIntegrity
 {
@@ -31,7 +32,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
                 return;
             }
 
-            var entry = dbContext.Entry(entity);
+            EntityEntry<TEntity> entry = dbContext.Entry(entity);
             if (entry.State == Microsoft.EntityFrameworkCore.EntityState.Detached)
             {
                 throw new InvalidOperationException(

@@ -61,12 +61,12 @@ namespace Cotton.Server.Handlers.Files
         {
             Guid layoutId = await GetLayoutIdOrThrowAsync(request, ct);
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId, ct);
 
-            var nodeFile = await LoadFileOrThrowAsync(request, ct);
-            var wrapper = nodeFile.Node;
-            var topLevelFailure = await ValidateTopLevelTrashFileAsync(request.UserId, wrapper, tx, ct);
+            NodeFile nodeFile = await LoadFileOrThrowAsync(request, ct);
+            Node wrapper = nodeFile.Node;
+            RestoreOutcomeDto? topLevelFailure = await ValidateTopLevelTrashFileAsync(request.UserId, wrapper, tx, ct);
             if (topLevelFailure is not null)
             {
                 return topLevelFailure;
@@ -115,7 +115,7 @@ namespace Cotton.Server.Handlers.Files
             IDbContextTransaction tx,
             CancellationToken ct)
         {
-            var trashRoot = await _layouts.GetUserTrashRootAsync(userId, ct);
+            Node trashRoot = await _layouts.GetUserTrashRootAsync(userId, ct);
             if (wrapper.Type == NodeType.Trash && wrapper.ParentId == trashRoot.Id)
             {
                 return null;
@@ -133,14 +133,14 @@ namespace Cotton.Server.Handlers.Files
             IDbContextTransaction tx,
             CancellationToken ct)
         {
-            var parentOutcome = await ResolveRestoreParentAsync(request, originalParentPath, tx, ct);
+            RestoreParentOutcome parentOutcome = await ResolveRestoreParentAsync(request, originalParentPath, tx, ct);
             if (parentOutcome.Failure is not null)
             {
                 return parentOutcome.Failure;
             }
 
             Node targetParent = parentOutcome.Parent!;
-            var conflictOutcome = await ResolveConflictAsync(request, targetParent.Id, nodeFile.NameKey, originalParentPath, tx, ct);
+            RestoreOutcomeDto? conflictOutcome = await ResolveConflictAsync(request, targetParent.Id, nodeFile.NameKey, originalParentPath, tx, ct);
             if (conflictOutcome is not null)
             {
                 return conflictOutcome;
@@ -175,7 +175,7 @@ namespace Cotton.Server.Handlers.Files
             IDbContextTransaction tx,
             CancellationToken ct)
         {
-            var resolution = await _restore.ResolveOrCreateParentAsync(
+            TrashRestoreCoordinator.ParentResolution resolution = await _restore.ResolveOrCreateParentAsync(
                 request.UserId,
                 originalParentPath,
                 request.CreateMissingParents,
@@ -220,7 +220,7 @@ namespace Cotton.Server.Handlers.Files
             IDbContextTransaction tx,
             CancellationToken ct)
         {
-            var conflict = await _restore.FindConflictAsync(request.UserId, targetParentId, nameKey, ct);
+            TrashRestoreCoordinator.ConflictInfo? conflict = await _restore.FindConflictAsync(request.UserId, targetParentId, nameKey, ct);
             if (!conflict.HasValue)
             {
                 return null;

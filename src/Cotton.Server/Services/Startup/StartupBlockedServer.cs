@@ -11,12 +11,12 @@ namespace Cotton.Server.Services.Startup
             string[] args,
             StartupBlocker blocker)
         {
-            var builder = WebApplication.CreateBuilder(args);
+            WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
             builder.Logging.AddFilter(
                 "Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager",
                 LogLevel.Error);
 
-            var app = builder.Build();
+            WebApplication app = builder.Build();
             ILogger logger = app.Services
                 .GetRequiredService<ILoggerFactory>()
                 .CreateLogger("Cotton.Server.Startup");

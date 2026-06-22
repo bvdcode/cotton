@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
@@ -87,8 +87,8 @@ namespace Cotton.Server.Services
         {
             HttpRequest request = GetRequest();
             IPAddress ipAddress = GetRequestIpAddress(request);
-            var lookup = await _geoLookup.TryLookupAsync(ipAddress);
-            var geo = ResolveRefreshTokenGeoFields(lookup);
+            GeoLookupResult? lookup = await _geoLookup.TryLookupAsync(ipAddress);
+            (string City, string Region, string Country) geo = ResolveRefreshTokenGeoFields(lookup);
             sessionId ??= StringHelpers.CreateRandomString(AuthController.RefreshTokenLength);
             string refreshToken = StringHelpers.CreateRandomString(AuthController.RefreshTokenLength);
             ExtendedRefreshToken dbToken = new()

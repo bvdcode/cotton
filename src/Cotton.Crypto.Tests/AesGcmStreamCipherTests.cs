@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Crypto.Models;
@@ -88,7 +88,7 @@ public class AesGcmStreamCipherTests
     public void Encrypt_InvalidChunkSize_Throws_BelowMin()
     {
         var mk = ValidMasterKey();
-        var cipher = CreateCipher(mk);
+        AesGcmStreamCipher cipher = CreateCipher(mk);
         using var input = new MemoryStream(CreateRandomBytes(1024));
         using var output = new MemoryStream();
         Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await cipher.EncryptAsync(input, output, MinChunkSize - 1));
@@ -98,7 +98,7 @@ public class AesGcmStreamCipherTests
     public void Encrypt_InvalidChunkSize_Throws_AboveMax()
     {
         var mk = ValidMasterKey();
-        var cipher = CreateCipher(mk);
+        AesGcmStreamCipher cipher = CreateCipher(mk);
         using var input = new MemoryStream(CreateRandomBytes(1024));
         using var output = new MemoryStream();
         Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await cipher.EncryptAsync(input, output, MaxChunkSize + 1));
@@ -108,14 +108,14 @@ public class AesGcmStreamCipherTests
     public async Task RoundTrip_SmallData_DefaultChunk()
     {
         var mk = ValidMasterKey();
-        var cipher = CreateCipher(mk, keyId: 7);
+        AesGcmStreamCipher cipher = CreateCipher(mk, keyId: 7);
 
         var plaintext = Encoding.UTF8.GetBytes("Hello AES-GCM streaming!");
         using var input = new MemoryStream(plaintext);
-        var encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize: 1_048_576);
+        MemoryStream encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize: 1_048_576);
 
         encrypted.Position = 0;
-        var decrypted = await DecryptToMemoryAsync(cipher, encrypted);
+        MemoryStream decrypted = await DecryptToMemoryAsync(cipher, encrypted);
 
         Assert.That(plaintext, Is.EqualTo(decrypted.ToArray()));
     }
@@ -134,7 +134,7 @@ public class AesGcmStreamCipherTests
         byte[] legacyBytes = legacyEncrypted.ToArray();
         Assert.That(Encoding.ASCII.GetString(legacyBytes, 0, 4), Is.EqualTo("CTN1"));
 
-        using var currentCipher = CreateCipher(mk, keyId: 1);
+        using AesGcmStreamCipher currentCipher = CreateCipher(mk, keyId: 1);
         using var currentInput = new MemoryStream(legacyBytes, writable: false);
         using var output = new MemoryStream();
         await currentCipher.DecryptAsync(currentInput, output);
@@ -148,16 +148,16 @@ public class AesGcmStreamCipherTests
     public async Task RoundTrip_LargeData_CustomChunkSizes(int chunkSize)
     {
         var mk = ValidMasterKey();
-        var cipher = CreateCipher(mk, keyId: 3);
+        AesGcmStreamCipher cipher = CreateCipher(mk, keyId: 3);
 
         int dataLen = (int)((chunkSize * 2.5) + 123); // guarantee multiple chunks
         var data = CreateRandomBytes(dataLen);
         using var input = new MemoryStream(data);
 
-        var encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize);
+        MemoryStream encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize);
 
         encrypted.Position = 0;
-        var decrypted = await DecryptToMemoryAsync(cipher, encrypted);
+        MemoryStream decrypted = await DecryptToMemoryAsync(cipher, encrypted);
 
         Assert.That(data, Is.EqualTo(decrypted.ToArray()));
     }
@@ -167,11 +167,11 @@ public class AesGcmStreamCipherTests
     {
         var mk = ValidMasterKey();
         int keyId = 42;
-        var cipher = CreateCipher(mk, keyId);
+        AesGcmStreamCipher cipher = CreateCipher(mk, keyId);
 
         var data = CreateRandomBytes(200_000);
         using var input = new MemoryStream(data);
-        var encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize: 65_536);
+        MemoryStream encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize: 65_536);
 
         var bytes = encrypted.ToArray();
         var (fileHeader, firstChunkHeader, _) = ParseHeaders(bytes);
@@ -197,7 +197,7 @@ public class AesGcmStreamCipherTests
     public async Task Encrypt_WritesHeader_NonSeekable_DataLengthZero()
     {
         var mk = ValidMasterKey();
-        var cipher = CreateCipher(mk, keyId: 9);
+        AesGcmStreamCipher cipher = CreateCipher(mk, keyId: 9);
 
         var data = CreateRandomBytes(100_000);
         using var inner = new MemoryStream(data);
@@ -215,11 +215,11 @@ public class AesGcmStreamCipherTests
     public void Decrypt_Fails_OnTamperedCiphertext()
     {
         var mk = ValidMasterKey();
-        var cipher = CreateCipher(mk);
+        AesGcmStreamCipher cipher = CreateCipher(mk);
 
         var data = CreateRandomBytes(120_000);
         using var input = new MemoryStream(data);
-        var encrypted = EncryptToMemoryAsync(cipher, input, chunkSize: 65_536).GetAwaiter().GetResult();
+        MemoryStream encrypted = EncryptToMemoryAsync(cipher, input, chunkSize: 65_536).GetAwaiter().GetResult();
 
         var bytes = encrypted.ToArray();
         var (_, firstChunkHeader, firstCipherOffset) = ParseHeaders(bytes);
@@ -240,7 +240,7 @@ public class AesGcmStreamCipherTests
     public void Encrypt_Cancellation_Throws()
     {
         var mk = ValidMasterKey();
-        var cipher = CreateCipher(mk);
+        AesGcmStreamCipher cipher = CreateCipher(mk);
 
         var data = CreateRandomBytes(1_000_000);
         using var input = new MemoryStream(data);

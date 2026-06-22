@@ -15,6 +15,7 @@ using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Nodes
 {
@@ -55,17 +56,17 @@ namespace Cotton.Server.Handlers.Nodes
             ValidateRequest(request);
             Guid sourceLayoutId = await GetSourceLayoutIdOrThrowAsync(request, cancellationToken);
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, cancellationToken);
 
-            var node = await LoadSourceNodeOrThrowAsync(request, cancellationToken);
+            Node node = await LoadSourceNodeOrThrowAsync(request, cancellationToken);
             ValidateSourceNode(node);
             if (node.ParentId == request.ParentId)
             {
                 return node.Adapt<NodeDto>();
             }
 
-            var targetParent = await LoadTargetParentOrThrowAsync(request, cancellationToken);
+            Node targetParent = await LoadTargetParentOrThrowAsync(request, cancellationToken);
             await ValidateTargetParentAsync(request, node, targetParent, cancellationToken);
 
             Guid oldParentId = node.ParentId!.Value;

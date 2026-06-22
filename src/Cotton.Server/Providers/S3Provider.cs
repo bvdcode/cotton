@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Amazon.S3;
+using Cotton.Database.Models;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Helpers;
 
@@ -43,7 +44,7 @@ namespace Cotton.Server.Providers
                 return _s3Client;
             }
 
-            var settings = _settingsProvider.GetServerSettings();
+            CottonServerSettings settings = _settingsProvider.GetServerSettings();
             ArgumentNullException.ThrowIfNull(settings.S3EndpointUrl, nameof(settings.S3EndpointUrl));
             ArgumentNullException.ThrowIfNull(settings.S3AccessKeyId, nameof(settings.S3AccessKeyId));
             ArgumentNullException.ThrowIfNull(settings.S3SecretAccessKeyEncrypted, nameof(settings.S3SecretAccessKeyEncrypted));

@@ -72,7 +72,7 @@ public class TestAppFactory : WebApplicationFactory<Program>
                     (d.ImplementationType == typeof(QuartzHostedService) ||
                         d.ImplementationFactory?.Method.ReturnType == typeof(QuartzHostedService)))
                 .ToList();
-            foreach (var d in quartzHosted)
+            foreach (ServiceDescriptor? d in quartzHosted)
             {
                 services.Remove(d);
             }
@@ -80,7 +80,7 @@ public class TestAppFactory : WebApplicationFactory<Program>
             var schedulerFactoryDescriptors = services
                 .Where(d => d.ServiceType == typeof(ISchedulerFactory))
                 .ToList();
-            foreach (var d in schedulerFactoryDescriptors)
+            foreach (ServiceDescriptor? d in schedulerFactoryDescriptors)
             {
                 services.Remove(d);
             }

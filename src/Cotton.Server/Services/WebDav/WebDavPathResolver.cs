@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
@@ -66,7 +67,7 @@ namespace Cotton.Server.Services.WebDav
                 .Select(SafeUnescapePathSegment)
                 .ToArray();
             var parentPath = string.Join(PathSeparator, parts.Take(parts.Length - 1));
-            var currentNode = await _navigator.ResolveNodeByPathAsync(userId, parentPath, DefaultNodeType, ct);
+            Node? currentNode = await _navigator.ResolveNodeByPathAsync(userId, parentPath, DefaultNodeType, ct);
             if (currentNode is null)
             {
                 return new WebDavResolveResult { Found = false };
@@ -76,10 +77,10 @@ namespace Cotton.Server.Services.WebDav
             var lastName = parts[^1];
             var lastNameKey = NameValidator.NormalizeAndGetNameKey(lastName);
 
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
+            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
 
             // Try to find as node first
-            var childNode = await _dbContext.Nodes
+            Node? childNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.LayoutId == layout.Id
                     && x.ParentId == currentNode.Id
@@ -99,7 +100,7 @@ namespace Cotton.Server.Services.WebDav
             }
 
             // Try to find as file
-            var fileQuery = _dbContext.NodeFiles
+            IQueryable<NodeFile> fileQuery = _dbContext.NodeFiles
                 .Where(x => x.NodeId == currentNode.Id
                     && x.OwnerId == userId
                     && x.NameKey == lastNameKey);
@@ -119,7 +120,7 @@ namespace Cotton.Server.Services.WebDav
                     .Include(x => x.FileManifest);
             }
 
-            var nodeFile = await fileQuery.SingleOrDefaultAsync(ct);
+            NodeFile? nodeFile = await fileQuery.SingleOrDefaultAsync(ct);
 
             if (nodeFile is not null)
             {
@@ -142,7 +143,7 @@ namespace Cotton.Server.Services.WebDav
             // Decode percent-encoded sequences so Windows WebDAV clients can upload names containing
             // reserved URL characters like '#' and '%' (sent as %23, %25).
             var decodedPath = Uri.UnescapeDataString(path ?? string.Empty);
-            var resolved = await _navigator.ResolveParentAndNameAsync(userId, decodedPath, DefaultNodeType, ct);
+            (Node Parent, string ResourceName)? resolved = await _navigator.ResolveParentAndNameAsync(userId, decodedPath, DefaultNodeType, ct);
             if (resolved is null)
             {
                 return new WebDavParentResult { Found = false };

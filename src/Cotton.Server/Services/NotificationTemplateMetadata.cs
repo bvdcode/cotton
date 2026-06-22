@@ -14,7 +14,7 @@ namespace Cotton.Server.Services
             string contentKey,
             IReadOnlyDictionary<string, string>? metadata = null)
         {
-            var result = metadata is null
+            Dictionary<string, string> result = metadata is null
                 ? new Dictionary<string, string>()
                 : new Dictionary<string, string>(metadata);
 

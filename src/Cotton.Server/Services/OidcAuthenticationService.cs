@@ -125,13 +125,13 @@ namespace Cotton.Server.Services
         /// <summary>Lists external identities linked to a user.</summary>
         public async Task<IReadOnlyList<UserExternalIdentityDto>> ListLinkedAsync(Guid userId, CancellationToken ct)
         {
-            var identities = await _dbContext.UserExternalIdentities
+            List<UserExternalIdentity> identities = await _dbContext.UserExternalIdentities
                 .Include(x => x.Provider)
                 .Where(x => x.UserId == userId)
                 .OrderBy(x => x.Provider.Name)
                 .ToListAsync(ct);
 
-            foreach (var identity in identities)
+            foreach (UserExternalIdentity? identity in identities)
             {
                 _integrity.RequireValid(_dbContext, identity, "oidc.link-list");
                 _integrity.RequireValid(_dbContext, identity.Provider, "oidc.link-list-provider");
@@ -265,7 +265,7 @@ namespace Cotton.Server.Services
                 WebDavTokenPhc = _hasher.Hash(randomSecret),
             };
             await _dbContext.Users.AddAsync(user, ct);
-            var newIdentity = CreateIdentity(user.Id, provider.Id, provider.Issuer, claims);
+            UserExternalIdentity newIdentity = CreateIdentity(user.Id, provider.Id, provider.Issuer, claims);
             newIdentity.User = user;
             await _dbContext.UserExternalIdentities.AddAsync(newIdentity, ct);
             await TryImportUserAvatarAsync(user, provider, claims, ct);
@@ -308,7 +308,7 @@ namespace Cotton.Server.Services
                 return user;
             }
 
-            var identity = CreateIdentity(user.Id, provider.Id, provider.Issuer, claims);
+            UserExternalIdentity identity = CreateIdentity(user.Id, provider.Id, provider.Issuer, claims);
             await _dbContext.UserExternalIdentities.AddAsync(identity, ct);
             await ApplyUserSyncAsync(user, provider, claims, ct);
             return user;

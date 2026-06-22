@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Amazon.Runtime;
+using Amazon.S3;
 using Amazon.S3.Model;
 using Cotton.Storage.Helpers;
 
@@ -13,7 +14,7 @@ namespace Cotton.Storage.Tests.Helpers
         [Test]
         public void BuildConfig_UsesS3CompatibleDefaults()
         {
-            var config = S3CompatibilityFactory.BuildConfig(
+            AmazonS3Config config = S3CompatibilityFactory.BuildConfig(
                 "https://s3.example.test",
                 "auto",
                 timeout: TimeSpan.FromSeconds(30),
@@ -35,7 +36,7 @@ namespace Cotton.Storage.Tests.Helpers
         [Test]
         public void WithFileBodyCompatibility_DisablesChunkEncodingOnly()
         {
-            var request = new PutObjectRequest().WithFileBodyCompatibility();
+            PutObjectRequest request = new PutObjectRequest().WithFileBodyCompatibility();
 
             Assert.Multiple(() =>
             {
@@ -47,7 +48,7 @@ namespace Cotton.Storage.Tests.Helpers
         [Test]
         public void WithInMemoryBodyCompatibility_DisablesChunkEncodingAndPayloadSigning()
         {
-            var request = new PutObjectRequest().WithInMemoryBodyCompatibility();
+            PutObjectRequest request = new PutObjectRequest().WithInMemoryBodyCompatibility();
 
             Assert.Multiple(() =>
             {

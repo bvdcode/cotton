@@ -28,7 +28,7 @@ namespace Cotton.Server.Extensions
         {
             return services.AddScoped<IStreamCipher>(sp =>
             {
-                var settings = sp.GetRequiredService<CottonEncryptionSettings>();
+                CottonEncryptionSettings settings = sp.GetRequiredService<CottonEncryptionSettings>();
                 return StreamCipherFactory.Create(settings, SettingsProvider.GetCachedEncryptionThreads());
             });
         }

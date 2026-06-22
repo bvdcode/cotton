@@ -42,7 +42,7 @@ public class CottonSyncClientTests
                 }
             }
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         SyncChangesResponseDto page = await client.Sync.GetChangesAsync(41, 25);
 
@@ -62,7 +62,7 @@ public class CottonSyncClientTests
     public async Task GetChangesAsync_RejectsNegativeCursor()
     {
         var handler = new QueuedHttpMessageHandler();
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.Sync.GetChangesAsync(-1));
     }
@@ -72,7 +72,7 @@ public class CottonSyncClientTests
     public async Task GetChangesAsync_RejectsNonPositiveLimit(int limit)
     {
         var handler = new QueuedHttpMessageHandler();
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.Sync.GetChangesAsync(0, limit));
     }
@@ -85,7 +85,7 @@ public class CottonSyncClientTests
         {
             Content = new StringContent("<!doctype html><html>App</html>", Encoding.UTF8, "text/html"),
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
             async () => await client.Sync.GetChangesAsync(0, 10));

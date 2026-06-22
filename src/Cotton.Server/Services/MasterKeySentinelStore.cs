@@ -68,7 +68,7 @@ namespace Cotton.Server.Services
         {
             try
             {
-                using var cipher = CreateCipher(encryptionSettings);
+                using AesGcmStreamCipher cipher = CreateCipher(encryptionSettings);
                 bool storageDependsOnEncryptedConfiguration = _backend is IStorageBackendUsesEncryptedConfiguration;
 
                 MasterKeySentinelResult? existing = await TryValidateExistingStorageSentinelAsync(

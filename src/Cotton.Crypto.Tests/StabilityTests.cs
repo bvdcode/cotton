@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Crypto.Models;
@@ -30,7 +30,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Truncation_Fails_OnFileHeader()
         {
-            var cipher = Cipher(keyId: 3);
+            AesGcmStreamCipher cipher = Cipher(keyId: 3);
             byte[] data = RandomBytes(MinChunk + 123, 55);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -47,7 +47,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Tamper_FileHeader_NoncePrefix_ShouldFailEarly_NoPayload()
         {
-            var cipher = Cipher(keyId: 17);
+            AesGcmStreamCipher cipher = Cipher(keyId: 17);
             byte[] data = RandomBytes(MinChunk + 10_000, 106);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -66,7 +66,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Tamper_ChunkHeader_Length_ShouldFail_NoPayload()
         {
-            var cipher = Cipher(keyId: 18);
+            AesGcmStreamCipher cipher = Cipher(keyId: 18);
             byte[] data = RandomBytes((MinChunk * 2) + 999, 107);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -90,7 +90,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Tamper_ChunkHeader_KeyId_ShouldFail_NoPayload()
         {
-            var cipher = Cipher(keyId: 19);
+            AesGcmStreamCipher cipher = Cipher(keyId: 19);
             byte[] data = RandomBytes((MinChunk * 2) + 777, 108);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -113,7 +113,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Duplicate_SecondChunk_ShouldFail_WithoutWritingUnauthenticatedPayload()
         {
-            var cipher = Cipher(keyId: 20);
+            AesGcmStreamCipher cipher = Cipher(keyId: 20);
             byte[] data = RandomBytes((MinChunk * 2) + 123, 109);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -144,7 +144,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Skip_SecondChunk_ShouldFail_WithoutWritingUnauthenticatedPayload()
         {
-            var cipher = Cipher(keyId: 22);
+            AesGcmStreamCipher cipher = Cipher(keyId: 22);
             byte[] data = RandomBytes((MinChunk * 3) + 321, 110);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -182,14 +182,14 @@ namespace Cotton.Crypto.Tests
         private static (AesGcmKeyHeader fileHeader, List<(AesGcmKeyHeader hdr, int cipherOffset)> chunks) ParseAllHeaders(byte[] encrypted)
         {
             using var ms = new MemoryStream(encrypted, writable: false);
-            var fileHeader = ReadHeader(ms);
+            AesGcmKeyHeader fileHeader = ReadHeader(ms);
             var chunks = new List<(AesGcmKeyHeader, int)>();
             while (ms.Position < ms.Length)
             {
                 long posBefore = ms.Position;
                 try
                 {
-                    var ch = ReadHeader(ms);
+                    AesGcmKeyHeader ch = ReadHeader(ms);
                     int cipherOffset = (int)ms.Position;
                     chunks.Add((ch, cipherOffset));
                     ms.Position += ch.DataLength;
@@ -221,7 +221,7 @@ namespace Cotton.Crypto.Tests
             using var encrypted = new MemoryStream();
             using var decrypted = new MemoryStream();
 
-            var cipher = Cipher(keyId: 11, threads: threads);
+            AesGcmStreamCipher cipher = Cipher(keyId: 11, threads: threads);
             await cipher.EncryptAsync(input, encrypted, chunk);
             encrypted.Position = 0;
             await cipher.DecryptAsync(encrypted, decrypted);
@@ -270,7 +270,7 @@ namespace Cotton.Crypto.Tests
         public async Task Nonce_Composition_MatchesChunkHeaders()
         {
             int keyId = 21;
-            var cipher = Cipher(keyId, threads: 3);
+            AesGcmStreamCipher cipher = Cipher(keyId, threads: 3);
             byte[] data = RandomBytes((MinChunk * 2) + 111, 99);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -288,7 +288,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Truncation_Fails_OnChunkHeaderOrCiphertext()
         {
-            var cipher = Cipher(keyId: 2);
+            AesGcmStreamCipher cipher = Cipher(keyId: 2);
             byte[] data = RandomBytes(MinChunk + 10_000, 123);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -314,7 +314,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Tamper_EachChunk_ShouldFail()
         {
-            var cipher = Cipher(keyId: 8);
+            AesGcmStreamCipher cipher = Cipher(keyId: 8);
             byte[] data = RandomBytes((MinChunk * 2) + 50_000, 222);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -348,7 +348,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Decrypt_Cancellation_Throws()
         {
-            var cipher = Cipher();
+            AesGcmStreamCipher cipher = Cipher();
             byte[] data = RandomBytes(500_000, 314);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -364,7 +364,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public async Task SlowOutput_Backpressure_RoundTrip()
         {
-            var cipher = Cipher(threads: 3);
+            AesGcmStreamCipher cipher = Cipher(threads: 3);
             byte[] data = RandomBytes(700_000, 2718);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -381,7 +381,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Tamper_FileHeader_KeyId_ShouldFailEarly()
         {
-            var cipher = Cipher(keyId: 12);
+            AesGcmStreamCipher cipher = Cipher(keyId: 12);
             byte[] data = RandomBytes(MinChunk + 5_000, 100);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -399,7 +399,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Tamper_FileHeader_EncryptedKey_ShouldFail()
         {
-            var cipher = Cipher(keyId: 13);
+            AesGcmStreamCipher cipher = Cipher(keyId: 13);
             byte[] data = RandomBytes(MinChunk + 1, 101);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -417,7 +417,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Tamper_FileHeader_TagOrNonce_ShouldFail()
         {
-            var cipher = Cipher(keyId: 14);
+            AesGcmStreamCipher cipher = Cipher(keyId: 14);
             byte[] data = RandomBytes(MinChunk + 2, 102);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -445,7 +445,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Tamper_Chunk_Tag_ShouldFail()
         {
-            var cipher = Cipher(keyId: 15);
+            AesGcmStreamCipher cipher = Cipher(keyId: 15);
             byte[] data = RandomBytes(MinChunk + 10_000, 103);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
@@ -469,7 +469,7 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Tamper_Reorder_FirstTwoChunks_ShouldFail()
         {
-            var cipher = Cipher(keyId: 16);
+            AesGcmStreamCipher cipher = Cipher(keyId: 16);
             byte[] data = RandomBytes((MinChunk * 2) + 123, 104);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();

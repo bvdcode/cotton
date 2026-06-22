@@ -141,7 +141,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Act
             await _backend.WriteAsync(uid, new MemoryStream(originalData));
-            await using var readStream = await _backend.ReadAsync(uid);
+            await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
             using var result = new MemoryStream();
@@ -175,7 +175,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Act
             await pipeline.WriteAsync(uid, new MemoryStream(originalData));
-            await using var readStream = await pipeline.ReadAsync(uid);
+            await using Stream readStream = await pipeline.ReadAsync(uid);
 
             // Assert
             var result = new MemoryStream();
@@ -211,7 +211,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Act
             await pipeline.WriteAsync(uid, nonSeekableStream);
-            await using var readStream = await pipeline.ReadAsync(uid);
+            await using Stream readStream = await pipeline.ReadAsync(uid);
 
             // Assert
             var result = new MemoryStream();
@@ -247,7 +247,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Act
             await pipeline.WriteAsync(uid, new MemoryStream(originalData));
-            await using var readStream = await pipeline.ReadAsync(uid);
+            await using Stream readStream = await pipeline.ReadAsync(uid);
 
             // Assert
             var result = new MemoryStream();
@@ -297,7 +297,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Act
             await _backend.WriteAsync(uid, new MemoryStream(data));
-            await using var readStream = await _backend.ReadAsync(uid);
+            await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
             var result = new MemoryStream();
@@ -316,7 +316,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Act
             await _backend.WriteAsync(uid, nonSeekableStream);
-            await using var readStream = await _backend.ReadAsync(uid);
+            await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
             var result = new MemoryStream();
@@ -335,7 +335,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Act
             await _backend.WriteAsync(uid, stream);
-            await using var readStream = await _backend.ReadAsync(uid);
+            await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
             var result = new MemoryStream();
@@ -361,7 +361,7 @@ namespace Cotton.Storage.Tests.Backends
             // Act & Assert
             foreach (var uid in uids)
             {
-                await using var readStream = await _backend.ReadAsync(uid);
+                await using Stream readStream = await _backend.ReadAsync(uid);
                 var result = new MemoryStream();
                 await readStream.CopyToAsync(result);
                 Assert.That(result.ToArray(), Is.EqualTo(dataMap[uid]));
@@ -394,7 +394,7 @@ namespace Cotton.Storage.Tests.Backends
             {
                 Assert.DoesNotThrowAsync(async () =>
                 {
-                    await using var stream = await _backend.ReadAsync(uid);
+                    await using Stream stream = await _backend.ReadAsync(uid);
                     var result = new MemoryStream();
                     await stream.CopyToAsync(result);
                     Assert.That(result.Length, Is.GreaterThan(0));

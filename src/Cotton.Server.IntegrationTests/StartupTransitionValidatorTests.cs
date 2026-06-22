@@ -32,7 +32,7 @@ namespace Cotton.Server.IntegrationTests
             Environment.SetEnvironmentVariable(AppVersionHelpers.AppVersionEnvironmentVariable, null);
 
             NpgsqlConnection.ClearAllPools();
-            var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+            IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
             creator.EnsureDeleted();
             creator.Create();
             NpgsqlConnection.ClearAllPools();

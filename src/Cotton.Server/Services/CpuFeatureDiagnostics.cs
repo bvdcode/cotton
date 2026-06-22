@@ -21,8 +21,8 @@ namespace Cotton.Server.Services
         public static CpuFeatureDiagnosticsDto Snapshot()
         {
             LinuxCpuInfo cpuInfo = ReadLinuxCpuInfo();
-            var aesNi = CreateRuntimeAndLinuxFeature("Aes", cpuInfo, "aes");
-            var pclmulqdq = CreateRuntimeAndLinuxFeature("Pclmulqdq", cpuInfo, "pclmulqdq");
+            CpuFeatureAvailabilityDto aesNi = CreateRuntimeAndLinuxFeature("Aes", cpuInfo, "aes");
+            CpuFeatureAvailabilityDto pclmulqdq = CreateRuntimeAndLinuxFeature("Pclmulqdq", cpuInfo, "pclmulqdq");
 
             return new CpuFeatureDiagnosticsDto
             {

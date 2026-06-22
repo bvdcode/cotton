@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
@@ -25,12 +26,12 @@ namespace Cotton.Server.Jobs
         {
             await Task.Delay(600_000); // Wait for 10 minutes for the server to start up and stabilize
 
-            var cutoffDate = DateTime.UtcNow - RetentionPeriod;
-            var tokensToRefresh = await _dbContext.RefreshTokens
+            DateTime cutoffDate = DateTime.UtcNow - RetentionPeriod;
+            List<ExtendedRefreshToken> tokensToRefresh = await _dbContext.RefreshTokens
                 .Where(rt => rt.RevokedAt == null)
                 .Where(rt => rt.CreatedAt < cutoffDate)
                 .ToListAsync(context.CancellationToken);
-            foreach (var token in tokensToRefresh)
+            foreach (ExtendedRefreshToken? token in tokensToRefresh)
             {
                 token.RevokedAt = DateTime.UtcNow;
             }

@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using System.Reflection;
 using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Attributes;
@@ -8,6 +9,7 @@ using EasyExtensions.Abstractions;
 using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Logging;
 
@@ -119,17 +121,17 @@ namespace Cotton.Database
                 value => EncryptString(value),
                 value => DecryptString(value));
 
-            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes())
             {
-                var clrType = entityType.ClrType;
+                Type? clrType = entityType.ClrType;
                 if (clrType is null)
                 {
                     continue;
                 }
 
-                foreach (var property in entityType.GetProperties())
+                foreach (IMutableProperty property in entityType.GetProperties())
                 {
-                    var propertyInfo = property.PropertyInfo;
+                    PropertyInfo? propertyInfo = property.PropertyInfo;
                     if (propertyInfo is null)
                     {
                         continue;

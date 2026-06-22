@@ -69,7 +69,7 @@ namespace Cotton.Server.Jobs
 
             while (true)
             {
-                var batch = await _dbContext.Chunks
+                List<byte[]> batch = await _dbContext.Chunks
                     .OrderBy(c => c.Hash)
                     .Skip(offset)
                     .Take(BatchSize)
@@ -179,18 +179,18 @@ namespace Cotton.Server.Jobs
 
         private async Task NotifyMissingFileDataOwnersAsync(byte[] chunkHash, CancellationToken ct)
         {
-            var affectedManifestIds = await _dbContext.FileManifestChunks
+            List<Guid> affectedManifestIds = await _dbContext.FileManifestChunks
                 .Where(fmc => fmc.ChunkHash == chunkHash)
                 .Select(fmc => fmc.FileManifestId)
                 .Distinct()
                 .ToListAsync(ct);
 
-            var affectedNodeFiles = await _dbContext.NodeFiles
+            List<NodeFile> affectedNodeFiles = await _dbContext.NodeFiles
                 .Where(nf => affectedManifestIds.Contains(nf.FileManifestId))
                 .ToListAsync(ct);
 
             HashSet<(Guid OwnerId, string FileName)> notified = [];
-            foreach (var nodeFile in affectedNodeFiles)
+            foreach (NodeFile? nodeFile in affectedNodeFiles)
             {
                 await NotifyMissingFileDataOwnerOnceAsync(nodeFile, notified);
             }

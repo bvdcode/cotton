@@ -20,7 +20,7 @@ public class HlsManifestBuilderTests
     [TestCase(3601.25, 601, 1.25)]
     public void Plan_UsesFixedSegmentBoundaries(double duration, int expectedSegments, double expectedLast)
     {
-        var plan = HlsManifestBuilder.Plan(duration);
+        HlsManifestBuilder.HlsManifestPlan plan = HlsManifestBuilder.Plan(duration);
 
         Assert.Multiple(() =>
         {
@@ -95,7 +95,7 @@ public class HlsManifestBuilderTests
     [Test]
     public void BuildMaster_EmitsStreamInfoEntriesInDeclaredOrder()
     {
-        var variants = new[]
+        HlsManifestBuilder.HlsVariant[] variants = new[]
         {
             new HlsManifestBuilder.HlsVariant(
                 Name: "Source",

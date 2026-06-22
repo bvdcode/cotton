@@ -54,7 +54,7 @@ namespace Cotton.Server.Handlers.Nodes
         /// </summary>
         public async Task Handle(DeleteNodeQuery request, CancellationToken ct)
         {
-            var node = await _dbContext.Nodes
+            Node node = await _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(cancellationToken: ct)
                     ?? throw new EntityNotFoundException(nameof(Node));
@@ -121,7 +121,7 @@ namespace Cotton.Server.Handlers.Nodes
 
         private async Task MoveDescendantsToTrashAsync(Guid userId, Guid rootId, CancellationToken ct)
         {
-            var ids = (await _subtree.CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();
+            Guid[] ids = (await _subtree.CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();
 
             List<Node> nodes = await _dbContext.Nodes
                 .Where(x => x.OwnerId == userId && ids.Contains(x.Id))
@@ -144,20 +144,20 @@ namespace Cotton.Server.Handlers.Nodes
 
         private async Task DeletePermanentlyAsync(DeleteNodeQuery command, Node node, CancellationToken ct)
         {
-            var nodeIds = await _subtree.CollectSubtreeIdsAsync(command.UserId, node.Id, ct);
+            HashSet<Guid> nodeIds = await _subtree.CollectSubtreeIdsAsync(command.UserId, node.Id, ct);
 
             if (await _versions.ContainsHistoricalVersionsAsync(command.UserId, nodeIds, ct))
             {
                 throw new BadRequestException<Node>("File version containers cannot be deleted directly.");
             }
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
 
             await _dbContext.DownloadTokens
                 .Where(t => t.CreatedByUserId == command.UserId && nodeIds.Contains(t.NodeFile.NodeId))
                 .ExecuteDeleteAsync(ct);
 
-            var nodeFiles = await _dbContext.NodeFiles
+            List<NodeFile> nodeFiles = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
                 .Where(x => x.OwnerId == command.UserId && nodeIds.Contains(x.NodeId))
                 .ToListAsync(ct);
@@ -169,7 +169,7 @@ namespace Cotton.Server.Handlers.Nodes
             long removedBytes = nodeFiles.Sum(x => x.FileManifest.SizeBytes) + removedVersionBytes;
             _dbContext.NodeFiles.RemoveRange(nodeFiles);
 
-            var nodesToDelete = await _dbContext.Nodes
+            List<Node> nodesToDelete = await _dbContext.Nodes
                 .Where(x => x.OwnerId == command.UserId && nodeIds.Contains(x.Id))
                 .ToListAsync(ct);
 

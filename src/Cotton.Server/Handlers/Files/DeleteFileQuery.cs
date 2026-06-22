@@ -143,10 +143,10 @@ namespace Cotton.Server.Handlers.Files
                     originalParentPath);
             }
 
-            var trashItem = await _layouts.CreateTrashItemAsync(command.UserId, ct);
+            Node trashItem = await _layouts.CreateTrashItemAsync(command.UserId, ct);
             _syncChanges.StageFileChange(SyncChangeKind.FileDeleted, nodeFile, nodeFile.Node.LayoutId);
             nodeFile.NodeId = trashItem.Id;
-            foreach (var share in nodeFile.DownloadTokens)
+            foreach (DownloadToken share in nodeFile.DownloadTokens)
             {
                 if (!share.ExpiresAt.HasValue || share.ExpiresAt.Value > DateTime.UtcNow)
                 {

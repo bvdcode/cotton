@@ -69,9 +69,9 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            var foundUser = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken)
+            User foundUser = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken)
                 ?? throw new EntityNotFoundException<User>();
-            foreach (var kvp in request)
+            foreach (KeyValuePair<string, string> kvp in request)
             {
                 foundUser.Preferences[kvp.Key] = kvp.Value;
             }
@@ -91,8 +91,8 @@ namespace Cotton.Server.Controllers
         [HttpGet("me")]
         public IActionResult GetCurrentUser()
         {
-            var userId = User.GetUserId();
-            var user = _dbContext.Users.Find(userId);
+            Guid userId = User.GetUserId();
+            User? user = _dbContext.Users.Find(userId);
             if (user is null)
             {
                 return NotFound();

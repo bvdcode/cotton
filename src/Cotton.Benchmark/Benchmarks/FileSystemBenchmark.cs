@@ -35,7 +35,7 @@ namespace Cotton.Benchmark.Benchmarks
             await _backend.WriteAsync(uid, writeStream);
 
             // Read from disk
-            await using var readStream = await _backend.ReadAsync(uid);
+            await using Stream readStream = await _backend.ReadAsync(uid);
             await using var outputStream = new MemoryStream();
             await readStream.CopyToAsync(outputStream, cancellationToken);
 
@@ -56,7 +56,7 @@ namespace Cotton.Benchmark.Benchmarks
             }
 
             // Read phase
-            await using (var readStream = await _backend.ReadAsync(uid))
+            await using (Stream readStream = await _backend.ReadAsync(uid))
             {
                 await using var outputStream = new MemoryStream();
                 await readStream.CopyToAsync(outputStream, cancellationToken);
@@ -74,7 +74,7 @@ namespace Cotton.Benchmark.Benchmarks
         /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
-            var baseMetrics = base.AggregateMetrics(metrics);
+            Dictionary<string, object> baseMetrics = base.AggregateMetrics(metrics);
             baseMetrics["Backend"] = "Cotton.Storage.Backends.FileSystemStorageBackend";
             baseMetrics["StoragePath"] = _testBasePath;
             baseMetrics["Operation"] = "Write + Read + Delete";

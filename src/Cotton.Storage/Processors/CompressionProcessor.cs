@@ -80,12 +80,12 @@ namespace Cotton.Storage.Processors
                 minimumSegmentSize: 4096,
                 useSynchronizationContext: false));
 
-            var readerStream = pipe.Reader.AsStream(leaveOpen: false);
+            Stream readerStream = pipe.Reader.AsStream(leaveOpen: false);
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await using var writerStream = pipe.Writer.AsStream(leaveOpen: true);
+                    await using Stream writerStream = pipe.Writer.AsStream(leaveOpen: true);
                     await using (var compressor = new CompressionStream(
                         writerStream,
                         level: _compressionLevelProvider.Level,

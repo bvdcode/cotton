@@ -70,8 +70,8 @@ namespace Cotton.Server.Services
                 .Select(x => new { x.CredentialId, x.Transports })
                 .ToListAsync(ct);
 
-            var fido = await CreateFido2Async(ct);
-            var options = fido.RequestNewCredential(new RequestNewCredentialParams
+            Fido2 fido = await CreateFido2Async(ct);
+            CredentialCreateOptions options = fido.RequestNewCredential(new RequestNewCredentialParams
             {
                 User = new Fido2User
                 {
@@ -118,8 +118,8 @@ namespace Cotton.Server.Services
             }
 
             _cache.Remove(RegistrationCacheKey(request.RequestId));
-            var attestation = ToAttestationResponse(request.Credential);
-            var fido = await CreateFido2Async(ct);
+            AuthenticatorAttestationRawResponse attestation = ToAttestationResponse(request.Credential);
+            Fido2 fido = await CreateFido2Async(ct);
             RegisteredPublicKeyCredential result;
             try
             {
@@ -193,8 +193,8 @@ namespace Cotton.Server.Services
                 }
             }
 
-            var fido = await CreateFido2Async(ct);
-            var options = fido.GetAssertionOptions(new GetAssertionOptionsParams
+            Fido2 fido = await CreateFido2Async(ct);
+            AssertionOptions options = fido.GetAssertionOptions(new GetAssertionOptionsParams
             {
                 AllowedCredentials = allowedCredentials,
                 UserVerification = UserVerificationRequirement.Required
@@ -224,7 +224,7 @@ namespace Cotton.Server.Services
             }
 
             _cache.Remove(AssertionCacheKey(request.RequestId));
-            var assertion = ToAssertionResponse(request.Credential);
+            AuthenticatorAssertionRawResponse assertion = ToAssertionResponse(request.Credential);
             byte[] credentialId = assertion.RawId.Length > 0
                 ? assertion.RawId
                 : DecodeBrowserBuffer(request.Credential.Id);
@@ -241,7 +241,7 @@ namespace Cotton.Server.Services
                 throw new UnauthorizedAccessException("Passkey credential does not belong to the requested user");
             }
 
-            var fido = await CreateFido2Async(ct);
+            Fido2 fido = await CreateFido2Async(ct);
             VerifyAssertionResult result;
             try
             {

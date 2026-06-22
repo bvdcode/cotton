@@ -26,15 +26,15 @@ namespace Cotton.Server.Services
             DateTimeOffset startedAtUtc = DateTimeOffset.UtcNow;
             DateTimeOffset firstUnlockExpiresAtUtc = startedAtUtc.Add(FirstUnlockWindow);
             string bootstrapToken = GenerateBootstrapToken();
-            var builder = WebApplication.CreateBuilder(args);
+            WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
             builder.Logging.AddFilter(
                 "Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager",
                 LogLevel.Error);
 
-            var app = builder.Build();
+            WebApplication app = builder.Build();
             ILoggerFactory loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
-            var logger = loggerFactory.CreateLogger("Cotton.Server.Unlock");
-            var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+            ILogger logger = loggerFactory.CreateLogger("Cotton.Server.Unlock");
+            IHostApplicationLifetime lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             IWebHostEnvironment environment = app.Services.GetRequiredService<IWebHostEnvironment>();
 
             app.UseDefaultFiles();
@@ -113,7 +113,7 @@ namespace Cotton.Server.Services
 
             app.MapFallbackToFile("/index.html");
 
-            using var stoppingRegistration = lifetime.ApplicationStopping.Register(
+            using CancellationTokenRegistration stoppingRegistration = lifetime.ApplicationStopping.Register(
                 () => completion.TrySetCanceled());
 
             await app.StartAsync();

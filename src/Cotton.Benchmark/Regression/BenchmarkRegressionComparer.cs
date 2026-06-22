@@ -79,7 +79,7 @@ namespace Cotton.Benchmark.Regression
             bool passed = true;
             var tolerance = RegressionTolerance.ForProfile(current.Profile);
 
-            foreach (var currentResult in current.Results)
+            foreach (BenchmarkResultSnapshot currentResult in current.Results)
             {
                 if (!currentResult.Succeeded)
                 {
@@ -88,7 +88,7 @@ namespace Cotton.Benchmark.Regression
                     continue;
                 }
 
-                if (!baselineByName.TryGetValue(currentResult.Name, out var baselineResult))
+                if (!baselineByName.TryGetValue(currentResult.Name, out BenchmarkResultSnapshot? baselineResult))
                 {
                     messages.Add($"{currentResult.Name}: no baseline yet; run with --update-baseline after reviewing the result.");
                     continue;

@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Models;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Server.Services;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,7 +19,7 @@ public class StoragePipelineProbeServiceTests
             storage,
             NullLogger<StoragePipelineProbeService>.Instance);
 
-        var result = await service.RunAsync("local", CancellationToken.None);
+        StoragePipelineProbeResult result = await service.RunAsync("local", CancellationToken.None);
 
         var keys = new List<string>();
         await foreach (string key in storage.ListAllKeysAsync())

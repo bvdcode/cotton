@@ -28,7 +28,7 @@ namespace Cotton.Benchmark.Reporting
                 sb.AppendLine($"| {"Result".PadRight(NameWidth)} | {"SUCCESS".PadRight(ValueWidth)} |");
                 sb.AppendLine($"| {"Total Duration".PadRight(NameWidth)} | {FormatDuration(result.TotalDuration).PadRight(ValueWidth)} |");
 
-                foreach (var metric in result.Metrics.OrderBy(m => m.Key))
+                foreach (KeyValuePair<string, object> metric in result.Metrics.OrderBy(m => m.Key))
                 {
                     sb.AppendLine($"| {metric.Key.PadRight(NameWidth)} | {FormatValue(metric.Value).PadRight(ValueWidth)} |");
                 }
@@ -54,7 +54,7 @@ namespace Cotton.Benchmark.Reporting
             sb.AppendLine("                    BENCHMARK RESULTS SUMMARY                   ");
             sb.AppendLine(new string('=', 70));
 
-            foreach (var result in results)
+            foreach (IBenchmarkResult result in results)
             {
                 sb.Append(Format(result));
             }

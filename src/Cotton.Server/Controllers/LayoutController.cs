@@ -35,6 +35,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Controllers
 {
@@ -68,7 +69,7 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             GetRecentNodesQuery request = new(userId, layoutId, count);
-            var result = await _mediator.Send(request);
+            IEnumerable<NodeFileManifestDto> result = await _mediator.Send(request);
             return Ok(result);
         }
 
@@ -85,7 +86,7 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             SearchLayoutsQuery request = new(userId, layoutId, query, page, pageSize);
-            var result = await _mediator.Send(request);
+            SearchLayoutsResultDto result = await _mediator.Send(request);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
             return Ok(result);
         }
@@ -98,7 +99,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetLayoutStats([FromRoute] Guid layoutId)
         {
             Guid userId = User.GetUserId();
-            var layout = await _dbContext.UserLayouts
+            Layout? layout = await _dbContext.UserLayouts
                 .AsNoTracking()
                 .Where(x => x.Id == layoutId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
@@ -144,7 +145,7 @@ namespace Cotton.Server.Controllers
                 ParentId = request.ParentId,
                 UserId = User.GetUserId(),
             };
-            var dto = await _mediator.Send(command);
+            NodeDto dto = await _mediator.Send(command);
             return Ok(dto);
         }
 
@@ -166,7 +167,7 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
-            var layoutId = await _dbContext.Nodes
+            Guid? layoutId = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == nodeId && x.OwnerId == userId)
                 .Select(x => (Guid?)x.LayoutId)
@@ -179,10 +180,10 @@ namespace Cotton.Server.Controllers
             // Serialize per-layout: rename changes NameKey, which can collide with
             // a concurrent move/create/rename of a same-key entry in the same parent
             // (cross-table) under shared namespace rules.
-            await using var tx = await _dbContext.Database.BeginTransactionAsync();
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId.Value, default);
 
-            var node = await _dbContext.Nodes
+            Node? node = await _dbContext.Nodes
                 .Where(x => x.Id == nodeId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
             if (node is null)
@@ -225,7 +226,7 @@ namespace Cotton.Server.Controllers
             }
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
-            var mapped = node.Adapt<NodeDto>();
+            NodeDto mapped = node.Adapt<NodeDto>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", mapped);
             return Ok(mapped);
         }
@@ -238,7 +239,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
         {
             Guid userId = User.GetUserId();
-            var node = await _dbContext.Nodes
+            Node? node = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == nodeId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
@@ -246,7 +247,7 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("Node not found.");
             }
-            var mapped = node.Adapt<NodeDto>();
+            NodeDto mapped = node.Adapt<NodeDto>();
             return Ok(mapped);
         }
 
@@ -278,7 +279,7 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
-            var node = await _dbContext.Nodes
+            Node? node = await _dbContext.Nodes
                 .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync();
             if (node is null)
@@ -286,10 +287,10 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("Node not found.");
             }
 
-            var metadata = node.Metadata is null
+            Dictionary<string, string> metadata = node.Metadata is null
                 ? []
                 : new Dictionary<string, string>(node.Metadata);
-            foreach (var (key, value) in patch)
+            foreach ((string? key, string? value) in patch)
             {
                 metadata[key] = value!;
             }
@@ -297,7 +298,7 @@ namespace Cotton.Server.Controllers
             node.Metadata = metadata;
             await _dbContext.SaveChangesAsync();
 
-            var mapped = node.Adapt<NodeDto>();
+            NodeDto mapped = node.Adapt<NodeDto>();
             try
             {
                 await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeMetadataUpdated", mapped);
@@ -348,7 +349,7 @@ namespace Cotton.Server.Controllers
             Guid userId = User.GetUserId();
             request ??= new RestoreItemRequestDto();
 
-            var outcome = await _mediator.Send(new RestoreNodeQuery(
+            RestoreOutcomeDto outcome = await _mediator.Send(new RestoreNodeQuery(
                 userId,
                 nodeId,
                 request.CreateMissingParents,
@@ -383,8 +384,8 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, HttpContext.RequestAborted);
-            var preLockParentNode = await _dbContext.Nodes
+            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, HttpContext.RequestAborted);
+            Node? preLockParentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == request.ParentId
                     && x.OwnerId == userId
@@ -401,10 +402,10 @@ namespace Cotton.Server.Controllers
             // Per-layout namespace serialization: a concurrent move/rename/create with
             // the same NameKey under the same parent can otherwise commit a cross-table
             // duplicate (folder + file with identical normalized name).
-            await using var tx = await _dbContext.Database.BeginTransactionAsync();
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, layout.Id, default);
 
-            var parentNode = await _dbContext.Nodes
+            Node? parentNode = await _dbContext.Nodes
                 .Where(x => x.Id == request.ParentId
                     && x.OwnerId == userId
                     && x.LayoutId == layout.Id
@@ -449,7 +450,7 @@ namespace Cotton.Server.Controllers
             _syncChanges.StageFolderChange(SyncChangeKind.FolderCreated, newNode, parentNode.Id);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
-            var mapped = newNode.Adapt<NodeDto>();
+            NodeDto mapped = newNode.Adapt<NodeDto>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeCreated", mapped);
             return Ok(mapped);
         }
@@ -464,15 +465,15 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType nodeType = NodeType.Default)
         {
             Guid userId = User.GetUserId();
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, HttpContext.RequestAborted);
+            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, HttpContext.RequestAborted);
 
-            var nodesQuery = _dbContext.Nodes
+            IQueryable<Node> nodesQuery = _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.OwnerId == userId
                     && x.LayoutId == layout.Id
                     && x.Type == nodeType);
 
-            var currentNode = await nodesQuery
+            Node? currentNode = await nodesQuery
                 .SingleOrDefaultAsync(x => x.Id == nodeId);
 
             if (currentNode is null)
@@ -490,12 +491,12 @@ namespace Cotton.Server.Controllers
                 {
                     return this.ApiConflict("Maximum node hierarchy depth exceeded.");
                 }
-                var parentId = currentNode.ParentId.Value;
+                Guid parentId = currentNode.ParentId.Value;
                 if (!visited.Add(parentId))
                 {
                     return this.ApiConflict("Circular reference detected in node hierarchy.");
                 }
-                var parentNode = await nodesQuery
+                Node? parentNode = await nodesQuery
                     .SingleOrDefaultAsync(x => x.Id == parentId);
                 if (parentNode is null)
                 {
@@ -522,7 +523,7 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize, depth);
-            var result = await _mediator.Send(query);
+            NodeContentDto result = await _mediator.Send(query);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
             return Ok(result);
         }
@@ -542,7 +543,7 @@ namespace Cotton.Server.Controllers
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expireAfterMinutes, nameof(expireAfterMinutes));
 
             Guid userId = User.GetUserId();
-            var node = await _dbContext.Nodes
+            Node? node = await _dbContext.Nodes
                 .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync();
             if (node is null)
@@ -588,7 +589,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("shared/{token}")]
         public async Task<IActionResult> GetSharedNodeInfo([FromRoute] string token)
         {
-            var nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
+            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
                 return this.ApiNotFound("Shared folder not found.");
@@ -617,7 +618,7 @@ namespace Cotton.Server.Controllers
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
 
-            var nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
+            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
                 return this.ApiNotFound("Shared folder not found.");
@@ -634,7 +635,7 @@ namespace Cotton.Server.Controllers
                 return this.ApiNotFound("Folder not found.");
             }
 
-            var targetNode = await _dbContext.Nodes
+            Node? targetNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == targetNodeId
                     && x.OwnerId == nodeShareToken.CreatedByUserId
@@ -655,7 +656,7 @@ namespace Cotton.Server.Controllers
                     && x.Type == NodeType.Default)
                 .ProjectToType<NodeDto>();
 
-            var filesBaseQuery = _dbContext.NodeFiles
+            IQueryable<NodeFile> filesBaseQuery = _dbContext.NodeFiles
                 .AsNoTracking()
                 .Where(x => x.NodeId == targetNodeId
                     && x.OwnerId == nodeShareToken.CreatedByUserId);
@@ -667,10 +668,10 @@ namespace Cotton.Server.Controllers
             int filesSkip = Math.Max(0, skip - nodesCount);
             int filesToTake = Math.Max(0, pageSize - nodesToTake);
 
-            var nodes = nodesToTake == 0 ? []
+            List<NodeDto> nodes = nodesToTake == 0 ? []
                 : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync();
 
-            var files = filesToTake == 0 ? [] : await LoadSharedFilesAsync(filesBaseQuery, filesSkip, filesToTake);
+            List<SharedNodeFileDto> files = filesToTake == 0 ? [] : await LoadSharedFilesAsync(filesBaseQuery, filesSkip, filesToTake);
 
             SharedNodeContentDto response = new()
             {
@@ -695,7 +696,7 @@ namespace Cotton.Server.Controllers
             [FromRoute] string token,
             [FromRoute] Guid nodeId)
         {
-            var nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
+            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
                 return this.ApiNotFound("Shared folder not found.");
@@ -710,7 +711,7 @@ namespace Cotton.Server.Controllers
                 return this.ApiNotFound("Folder not found.");
             }
 
-            var currentNode = await _dbContext.Nodes
+            Node? currentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == nodeId
                     && x.OwnerId == nodeShareToken.CreatedByUserId
@@ -739,7 +740,7 @@ namespace Cotton.Server.Controllers
                     return this.ApiConflict("Circular reference detected in node hierarchy.");
                 }
 
-                var parentNode = await _dbContext.Nodes
+                Node? parentNode = await _dbContext.Nodes
                     .AsNoTracking()
                     .Where(x => x.Id == parentId
                         && x.OwnerId == nodeShareToken.CreatedByUserId
@@ -776,7 +777,7 @@ namespace Cotton.Server.Controllers
             [FromQuery] Guid? nodeId,
             CancellationToken cancellationToken)
         {
-            var nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
+            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
                 return this.ApiNotFound("Shared folder not found.");
@@ -821,13 +822,13 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool download = true,
             [FromQuery] bool preview = false)
         {
-            var nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
+            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
                 return this.ApiNotFound("File not found.");
             }
 
-            var nodeFile = await _dbContext.NodeFiles
+            NodeFile? nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
@@ -867,12 +868,12 @@ namespace Cotton.Server.Controllers
             if (preview && nodeFile.FileManifest.LargeFilePreviewHash is not null)
             {
                 string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash);
-                var previewStream = _storage.GetBlobStream([previewHashHex]);
+                Stream previewStream = _storage.GetBlobStream([previewHashHex]);
                 string etag = $"\"sha256-{previewHashHex}\"";
                 var etagHeader = new EntityTagHeaderValue(etag);
-                if (Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var inmValues))
+                if (Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out Microsoft.Extensions.Primitives.StringValues inmValues))
                 {
-                    var clientEtags = EntityTagHeaderValue.ParseList([.. inmValues!]);
+                    IList<EntityTagHeaderValue> clientEtags = EntityTagHeaderValue.ParseList([.. inmValues!]);
                     if (clientEtags.Any(x => x.Compare(etagHeader, useStrongComparison: true)))
                     {
                         Response.Headers.ETag = etagHeader.ToString();
@@ -895,7 +896,7 @@ namespace Cotton.Server.Controllers
             Stream stream = _storage.GetBlobStream(uids, context);
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
-            var entityTag = FileETags.CreateContentEntityTag(nodeFile);
+            EntityTagHeaderValue entityTag = FileETags.CreateContentEntityTag(nodeFile);
             bool requestedInline = !download;
             FileResponseSecurity.ApplyFileResponseHeaders(Response, nodeFile.FileManifest.ContentType, requestedInline);
 
@@ -922,7 +923,7 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType nodeType = NodeType.Default)
         {
             Guid userId = User.GetUserId();
-            var currentNode = await _navigator.ResolveNodeByPathAsync(userId, path, nodeType);
+            Node? currentNode = await _navigator.ResolveNodeByPathAsync(userId, path, nodeType);
             if (currentNode is null)
             {
                 return CottonResult.NotFound("Layout node was not found.");
@@ -934,7 +935,7 @@ namespace Cotton.Server.Controllers
         private async Task<NodeShareToken?> ResolveActiveNodeShareTokenAsync(string token)
         {
             DateTime now = DateTime.UtcNow;
-            var nodeShareToken = await _dbContext.NodeShareTokens
+            NodeShareToken? nodeShareToken = await _dbContext.NodeShareTokens
                 .Include(x => x.Node)
                 .Where(x => x.Token == token
                     && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
@@ -1017,7 +1018,7 @@ namespace Cotton.Server.Controllers
             Guid ownerId,
             string boundary)
         {
-            var node = await _dbContext.Nodes
+            Node? node = await _dbContext.Nodes
                 .Where(x => x.Id == nodeId
                     && x.OwnerId == ownerId
                     && x.Type == NodeType.Default)
@@ -1067,7 +1068,7 @@ namespace Cotton.Server.Controllers
             int filesSkip,
             int filesToTake)
         {
-            var fileEntities = await filesBaseQuery
+            List<NodeFile> fileEntities = await filesBaseQuery
                 .OrderBy(x => x.NameKey)
                 .Include(x => x.FileManifest)
                 .Skip(filesSkip)

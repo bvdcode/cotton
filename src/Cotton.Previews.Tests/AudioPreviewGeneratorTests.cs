@@ -80,7 +80,7 @@ public class AudioPreviewGeneratorTests
             ("case-c", 300, 900),
         ];
 
-        foreach (var (Name, LowFreq, HighFreq) in cases)
+        foreach ((string? Name, int LowFreq, int HighFreq) in cases)
         {
             byte[] wavBytes = CreatePcm16MonoWavBytes(
                 sampleRate: 8000,

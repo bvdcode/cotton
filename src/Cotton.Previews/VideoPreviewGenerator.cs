@@ -108,7 +108,7 @@ namespace Cotton.Previews
                     return null;
                 }
 
-                var stderrTask = process.StandardError.ReadToEndAsync();
+                Task<string> stderrTask = process.StandardError.ReadToEndAsync();
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
                 try
@@ -168,10 +168,10 @@ namespace Cotton.Previews
                 throw new InvalidOperationException("Failed to start ffmpeg for video preview.");
             }
 
-            await using var stdout = process.StandardOutput.BaseStream;
+            await using Stream stdout = process.StandardOutput.BaseStream;
             await using var outputMs = new MemoryStream();
-            var copyOutputTask = stdout.CopyToAsync(outputMs);
-            var errorTask = process.StandardError.ReadToEndAsync();
+            Task copyOutputTask = stdout.CopyToAsync(outputMs);
+            Task<string> errorTask = process.StandardError.ReadToEndAsync();
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             try

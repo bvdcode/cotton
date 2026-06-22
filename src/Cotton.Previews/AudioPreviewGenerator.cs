@@ -107,7 +107,7 @@ namespace Cotton.Previews
                 float centerY = size / 2f;
                 float minBarHeight = Math.Max(4f, size * 0.06f);
                 float maxBarHeight = size * 0.82f;
-                var barBrush = Brushes.Solid(Color.FromPixel(new Rgba32(
+                SolidBrush barBrush = Brushes.Solid(Color.FromPixel(new Rgba32(
                     PreviewColorPalette.AccentGreenRed,
                     PreviewColorPalette.AccentGreenGreen,
                     PreviewColorPalette.AccentGreenBlue)));
@@ -171,8 +171,8 @@ namespace Cotton.Previews
             }
 
             await using var outputMs = new MemoryStream();
-            var copyOutputTask = process.StandardOutput.BaseStream.CopyToAsync(outputMs);
-            var errorTask = process.StandardError.ReadToEndAsync();
+            Task copyOutputTask = process.StandardOutput.BaseStream.CopyToAsync(outputMs);
+            Task<string> errorTask = process.StandardError.ReadToEndAsync();
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(WaveformExtractionTimeoutSeconds));
             try
@@ -279,10 +279,10 @@ namespace Cotton.Previews
                 throw new InvalidOperationException("Failed to start ffmpeg for audio cover art extraction.");
             }
 
-            await using var stdout = process.StandardOutput.BaseStream;
+            await using Stream stdout = process.StandardOutput.BaseStream;
             await using var outputMs = new MemoryStream();
-            var copyOutputTask = stdout.CopyToAsync(outputMs);
-            var errorTask = process.StandardError.ReadToEndAsync();
+            Task copyOutputTask = stdout.CopyToAsync(outputMs);
+            Task<string> errorTask = process.StandardError.ReadToEndAsync();
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(CoverArtExtractionTimeoutSeconds));
             try

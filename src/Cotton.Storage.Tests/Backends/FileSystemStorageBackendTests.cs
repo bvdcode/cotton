@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -63,7 +64,7 @@ namespace Cotton.Storage.Tests.Backends
         [Test]
         public void FileSystemBackend_GetCapacitySnapshot_ReturnsBackingVolumeCapacity()
         {
-            var snapshot = _backend.GetCapacitySnapshot();
+            StorageCapacitySnapshot snapshot = _backend.GetCapacitySnapshot();
 
             Assert.Multiple(() =>
             {
@@ -84,7 +85,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Act
             await _backend.WriteAsync(uid, new MemoryStream(originalData));
-            await using var readStream = await _backend.ReadAsync(uid);
+            await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
             using var result = new MemoryStream();
@@ -160,7 +161,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Assert
             string filePath = Path.Combine(_testBasePath, uid[..2], uid.Substring(2, 2), string.Concat(uid.AsSpan(4), ".ctn"));
-            var attributes = File.GetAttributes(filePath);
+            FileAttributes attributes = File.GetAttributes(filePath);
             Assert.That(attributes.HasFlag(FileAttributes.ReadOnly), Is.True);
         }
 
@@ -187,7 +188,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Act
             await _backend.WriteAsync(uid, new MemoryStream(data));
-            await using var readStream = await _backend.ReadAsync(uid);
+            await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
             var result = new MemoryStream();
@@ -233,7 +234,7 @@ namespace Cotton.Storage.Tests.Backends
             // Act & Assert
             foreach (var uid in uids)
             {
-                await using var readStream = await _backend.ReadAsync(uid);
+                await using Stream readStream = await _backend.ReadAsync(uid);
                 var result = new MemoryStream();
                 await readStream.CopyToAsync(result);
                 Assert.That(result.ToArray(), Is.EqualTo(dataMap[uid]));
@@ -250,7 +251,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Act
             await _backend.WriteAsync(uid, stream);
-            await using var readStream = await _backend.ReadAsync(uid);
+            await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
             var result = new MemoryStream();
@@ -289,14 +290,14 @@ namespace Cotton.Storage.Tests.Backends
             var data = new byte[2 * 1024 * 1024];
             RandomNumberGenerator.Fill(data);
 
-            var tasks = Enumerable.Range(0, 16)
+            Task[] tasks = Enumerable.Range(0, 16)
                 .Select(_ => _backend.WriteAsync(uid, new MemoryStream(data)))
                 .ToArray();
 
             // Act & Assert
             Assert.DoesNotThrowAsync(() => Task.WhenAll(tasks));
 
-            await using var readStream = await _backend.ReadAsync(uid);
+            await using Stream readStream = await _backend.ReadAsync(uid);
             var result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(data));

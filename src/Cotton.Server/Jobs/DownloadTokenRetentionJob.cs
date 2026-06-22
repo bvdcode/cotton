@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
@@ -25,7 +26,7 @@ namespace Cotton.Server.Jobs
 
             DateTime now = DateTime.UtcNow;
             DateTime removalThreshold = now.AddDays(-30);
-            var expiredTokens = await _dbContext.DownloadTokens
+            List<DownloadToken> expiredTokens = await _dbContext.DownloadTokens
                 .Where(dt => dt.ExpiresAt != null && dt.ExpiresAt <= removalThreshold)
                 .ToListAsync();
             if (expiredTokens.Count == 0)

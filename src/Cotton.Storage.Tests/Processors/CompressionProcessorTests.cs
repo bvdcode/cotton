@@ -26,8 +26,8 @@ namespace Cotton.Storage.Tests.Processors
             var originalStream = new MemoryStream(originalData);
 
             // Act
-            var compressed = await _processor.WriteAsync("test-uid", originalStream);
-            var decompressed = await _processor.ReadAsync("test-uid", compressed);
+            Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
+            Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
             var result = new MemoryStream();
@@ -43,8 +43,8 @@ namespace Cotton.Storage.Tests.Processors
             var originalStream = new MemoryStream(originalData);
 
             // Act
-            var compressed = await _processor.WriteAsync("test-uid", originalStream);
-            var decompressed = await _processor.ReadAsync("test-uid", compressed);
+            Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
+            Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
             var result = new MemoryStream();
@@ -60,8 +60,8 @@ namespace Cotton.Storage.Tests.Processors
             var originalStream = new MemoryStream(originalData);
 
             // Act
-            var compressed = await _processor.WriteAsync("test-uid", originalStream);
-            var decompressed = await _processor.ReadAsync("test-uid", compressed);
+            Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
+            Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
             var result = new MemoryStream();
@@ -81,8 +81,8 @@ namespace Cotton.Storage.Tests.Processors
             var originalStream = new MemoryStream(originalData);
 
             // Act
-            var compressed = await _processor.WriteAsync("test-uid", originalStream);
-            var decompressed = await _processor.ReadAsync("test-uid", compressed);
+            Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
+            Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
             var result = new MemoryStream();
@@ -99,8 +99,8 @@ namespace Cotton.Storage.Tests.Processors
             var originalStream = new MemoryStream(originalData);
 
             // Act
-            var compressed = await _processor.WriteAsync("test-uid", originalStream);
-            var decompressed = await _processor.ReadAsync("test-uid", compressed);
+            Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
+            Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
             var result = new MemoryStream();
@@ -117,8 +117,8 @@ namespace Cotton.Storage.Tests.Processors
             var originalStream = new MemoryStream(originalData);
 
             // Act
-            var compressed = await _processor.WriteAsync("test-uid", originalStream);
-            var decompressed = await _processor.ReadAsync("test-uid", compressed);
+            Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
+            Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
             var result = new MemoryStream();
@@ -134,7 +134,7 @@ namespace Cotton.Storage.Tests.Processors
             var stream = new MemoryStream(data);
 
             // Act
-            var result = await _processor.WriteAsync("test-uid", stream);
+            Stream result = await _processor.WriteAsync("test-uid", stream);
 
             // Assert
             Assert.That(result, Is.Not.Null);
@@ -148,10 +148,10 @@ namespace Cotton.Storage.Tests.Processors
             // Arrange
             var data = Encoding.UTF8.GetBytes("Test data");
             var stream = new MemoryStream(data);
-            var compressed = await _processor.WriteAsync("test-uid", stream);
+            Stream compressed = await _processor.WriteAsync("test-uid", stream);
 
             // Act
-            var result = await _processor.ReadAsync("test-uid", compressed);
+            Stream result = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
             Assert.That(result, Is.Not.Null);
@@ -167,7 +167,7 @@ namespace Cotton.Storage.Tests.Processors
             var stream = new MemoryStream(data);
 
             // Act
-            var result = await _processor.WriteAsync("test-uid", stream);
+            Stream result = await _processor.WriteAsync("test-uid", stream);
 
             // Assert
             if (result.CanSeek)
@@ -187,10 +187,10 @@ namespace Cotton.Storage.Tests.Processors
             // Arrange
             var data = Encoding.UTF8.GetBytes("Test data");
             var stream = new MemoryStream(data);
-            var compressed = await _processor.WriteAsync("test-uid", stream);
+            Stream compressed = await _processor.WriteAsync("test-uid", stream);
 
             // Act
-            var result = await _processor.ReadAsync("test-uid", compressed);
+            Stream result = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
             Assert.That(result.CanRead, Is.True);
@@ -212,7 +212,7 @@ namespace Cotton.Storage.Tests.Processors
             var originalStream = new MemoryStream(originalData);
 
             // Act
-            var compressed = await _processor.WriteAsync("test-uid", originalStream);
+            Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
 
             // Read compressed stream to measure size
             var compressedData = new MemoryStream();

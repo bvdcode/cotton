@@ -23,10 +23,10 @@ namespace Cotton.Server.Services
 
             while (frontier.Count > 0)
             {
-                var batch = frontier.ToArray();
+                Guid[] batch = frontier.ToArray();
                 frontier.Clear();
 
-                var children = await _dbContext.Nodes
+                List<Guid> children = await _dbContext.Nodes
                     .AsNoTracking()
                     .Where(x => x.OwnerId == userId
                         && x.ParentId != null
@@ -34,7 +34,7 @@ namespace Cotton.Server.Services
                     .Select(x => x.Id)
                     .ToListAsync(ct);
 
-                foreach (var childId in children)
+                foreach (Guid childId in children)
                 {
                     if (visited.Add(childId))
                     {
@@ -51,7 +51,7 @@ namespace Cotton.Server.Services
         /// </summary>
         public async Task SetSubtreeTypeAsync(Guid userId, Guid rootId, NodeType newType, CancellationToken ct)
         {
-            var ids = (await CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();
+            Guid[] ids = (await CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();
             List<Node> nodes = await _dbContext.Nodes
                 .Where(x => x.OwnerId == userId && ids.Contains(x.Id))
                 .ToListAsync(ct);

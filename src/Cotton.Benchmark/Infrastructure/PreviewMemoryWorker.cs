@@ -75,7 +75,7 @@ namespace Cotton.Benchmark.Infrastructure
 
         public static async Task<int> RunAsync(string[] args, CancellationToken cancellationToken)
         {
-            var options = Parse(args);
+            PreviewMemoryWorkerOptions options = Parse(args);
             var stopwatch = Stopwatch.StartNew();
             PreviewMemoryWorkerResult result;
 

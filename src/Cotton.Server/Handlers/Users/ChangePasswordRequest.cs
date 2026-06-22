@@ -8,6 +8,7 @@ using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Users
 {
@@ -54,7 +55,7 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("New password is required");
             }
 
-            var user = await _dbContext.Users.FindAsync([request.UserId], cancellationToken)
+            User user = await _dbContext.Users.FindAsync([request.UserId], cancellationToken)
                 ?? throw new EntityNotFoundException<User>();
 
             if (!_hasher.Verify(request.OldPassword, user.PasswordPhc))
@@ -62,7 +63,7 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("Old password is incorrect");
             }
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             user.PasswordPhc = _hasher.Hash(request.NewPassword);
             await _dbContext.SaveChangesAsync(cancellationToken);

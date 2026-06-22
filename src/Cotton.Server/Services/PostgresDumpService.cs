@@ -32,7 +32,7 @@ namespace Cotton.Server.Services
             Directory.CreateDirectory(outputDirectory);
 
             DbSettings settings = ReadDbSettings();
-            var processStartInfo = CreateProcessStartInfo(settings, outputFilePath);
+            ProcessStartInfo processStartInfo = CreateProcessStartInfo(settings, outputFilePath);
 
             using var process = new Process { StartInfo = processStartInfo };
             _logger.LogInformation("Creating PostgreSQL dump to {OutputFilePath}.", outputFilePath);
@@ -80,7 +80,7 @@ namespace Cotton.Server.Services
             }
 
             DbSettings settings = ReadDbSettings();
-            var processStartInfo = CreateRestoreProcessStartInfo(settings, inputFilePath);
+            ProcessStartInfo processStartInfo = CreateRestoreProcessStartInfo(settings, inputFilePath);
 
             using var process = new Process { StartInfo = processStartInfo };
             _logger.LogInformation("Restoring PostgreSQL database from {InputFilePath}.", inputFilePath);

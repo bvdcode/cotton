@@ -90,14 +90,14 @@ namespace Cotton.Storage.Tests.Integration
             await pipeline.WriteAsync(uid, new MemoryStream(originalData));
 
             // Verify data on disk is encrypted (not plaintext)
-            var diskStream = await backend.ReadAsync(uid);
+            Stream diskStream = await backend.ReadAsync(uid);
             var diskData = new MemoryStream();
             await diskStream.CopyToAsync(diskData);
             Assert.That(diskData.ToArray(), Is.Not.EqualTo(originalData),
                 "Data on disk should be encrypted");
 
             // Read through pipeline should decrypt
-            var readStream = await pipeline.ReadAsync(uid);
+            Stream readStream = await pipeline.ReadAsync(uid);
             var result = new MemoryStream();
             await readStream.CopyToAsync(result);
 
@@ -127,7 +127,7 @@ namespace Cotton.Storage.Tests.Integration
 
             // Act
             await pipeline.WriteAsync(uid, new MemoryStream(originalData));
-            var readStream = await pipeline.ReadAsync(uid);
+            Stream readStream = await pipeline.ReadAsync(uid);
             var result = new MemoryStream();
             await readStream.CopyToAsync(result);
 
@@ -156,15 +156,15 @@ namespace Cotton.Storage.Tests.Integration
                 .ToList();
 
             // Act - Write all
-            foreach (var (uid, data) in testData)
+            foreach ((string? uid, byte[]? data) in testData)
             {
                 await pipeline.WriteAsync(uid, new MemoryStream(data));
             }
 
             // Act - Read all
-            foreach (var (uid, data) in testData)
+            foreach ((string? uid, byte[]? data) in testData)
             {
-                var readStream = await pipeline.ReadAsync(uid);
+                Stream readStream = await pipeline.ReadAsync(uid);
                 using var result = new MemoryStream();
                 await readStream.CopyToAsync(result);
 
@@ -196,7 +196,7 @@ namespace Cotton.Storage.Tests.Integration
 
             // Act
             await pipeline.WriteAsync(uid, new MemoryStream(originalData));
-            var readStream = await pipeline.ReadAsync(uid);
+            Stream readStream = await pipeline.ReadAsync(uid);
 
             // Assert - read in chunks to verify streaming works
             var buffer = new byte[1024 * 1024]; // 1MB buffer
@@ -235,7 +235,7 @@ namespace Cotton.Storage.Tests.Integration
             await pipeline.WriteAsync(uid, new MemoryStream(originalData));
 
             // Verify full round trip
-            var readStream = await pipeline.ReadAsync(uid);
+            Stream readStream = await pipeline.ReadAsync(uid);
             using var result = new MemoryStream();
             await readStream.CopyToAsync(result);
 
@@ -263,23 +263,23 @@ namespace Cotton.Storage.Tests.Integration
                 .ToList();
 
             // Act - Parallel writes
-            var writeTasks = testData.Select(item =>
+            IEnumerable<Task> writeTasks = testData.Select(item =>
                 pipeline.WriteAsync(item.uid, new MemoryStream(item.data)));
             await Task.WhenAll(writeTasks);
 
             // Act - Parallel reads
-            var readTasks = testData.Select(async item =>
+            IEnumerable<Task<(string uid, byte[] actual, byte[] expected)>> readTasks = testData.Select(async item =>
             {
-                var readStream = await pipeline.ReadAsync(item.uid);
+                Stream readStream = await pipeline.ReadAsync(item.uid);
                 using var result = new MemoryStream();
                 await readStream.CopyToAsync(result);
                 return (item.uid, actual: result.ToArray(), expected: item.data);
             });
 
-            var results = await Task.WhenAll(readTasks);
+            (string uid, byte[] actual, byte[] expected)[] results = await Task.WhenAll(readTasks);
 
             // Assert
-            foreach (var (uid, actual, expected) in results)
+            foreach ((string? uid, byte[]? actual, byte[]? expected) in results)
             {
                 Assert.That(actual, Is.EqualTo(expected), $"Data mismatch for UID: {uid}");
             }

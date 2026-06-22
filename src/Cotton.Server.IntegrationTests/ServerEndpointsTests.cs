@@ -34,7 +34,7 @@ public class ServerEndpointsTests : IntegrationTestBase
     {
         ResetSettingsProviderCaches();
 
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
         Assert.Multiple(() =>
@@ -83,9 +83,9 @@ public class ServerEndpointsTests : IntegrationTestBase
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var res = await _client!.GetAsync("/api/v1/server/settings");
+        HttpResponseMessage res = await _client!.GetAsync("/api/v1/server/settings");
         res.EnsureSuccessStatusCode();
-        var settings = await res.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        Dictionary<string, object>? settings = await res.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         Assert.That(settings, Is.Not.Null);
         Assert.That(settings!.ContainsKey("maxChunkSizeBytes"), Is.True);
         Assert.That(settings!.ContainsKey("supportedHashAlgorithm"), Is.True);
@@ -166,7 +166,7 @@ public class ServerEndpointsTests : IntegrationTestBase
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var me = await _client.GetFromJsonAsync<UserDto>("/api/v1/users/me");
+        UserDto? me = await _client.GetFromJsonAsync<UserDto>("/api/v1/users/me");
         Assert.That(me, Is.Not.Null);
         Assert.That(me!.Username, Is.EqualTo("testuser"));
     }
@@ -174,14 +174,14 @@ public class ServerEndpointsTests : IntegrationTestBase
     [Test]
     public async Task Get_SecurityStatus_IsAdminOnly_AndReturnsDiagnostics()
     {
-        var unauthenticatedResponse = await _client!.GetAsync("/api/v1/server/security/status");
+        HttpResponseMessage unauthenticatedResponse = await _client!.GetAsync("/api/v1/server/security/status");
         Assert.That(unauthenticatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
         var token = await LoginAsync();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/server/security/status");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await _client!.SendAsync(request);
+        HttpResponseMessage response = await _client!.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         JsonElement payload = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -222,7 +222,7 @@ public class ServerEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await _client.GetAsync("/api/v1/server/database-backup/latest");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/server/database-backup/latest");
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.NotFound));
     }
@@ -240,8 +240,8 @@ public class ServerEndpointsTests : IntegrationTestBase
 
     private int GetResolvedEncryptionThreads()
     {
-        using var scope = _factory!.Services.CreateScope();
-        var cipher = scope.ServiceProvider.GetRequiredService<IStreamCipher>();
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        IStreamCipher cipher = scope.ServiceProvider.GetRequiredService<IStreamCipher>();
         FieldInfo? field = cipher.GetType().GetField("ConcurrencyLevel", BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.That(field, Is.Not.Null);
         return (int)field!.GetValue(cipher)!;
@@ -258,9 +258,9 @@ public class ServerEndpointsTests : IntegrationTestBase
             })
         };
         request.Headers.Add("X-Forwarded-For", "8.8.8.8");
-        var res = await _client!.SendAsync(request);
+        HttpResponseMessage res = await _client!.SendAsync(request);
         res.EnsureSuccessStatusCode();
-        var login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+        TokenPairResponseDto? login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         Assert.That(login, Is.Not.Null);
         return login!.AccessToken;
     }

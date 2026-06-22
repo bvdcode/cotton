@@ -88,7 +88,7 @@ namespace Cotton.Crypto.Models
             if (remaining >= (sizeof(uint) + nonceSize + tagSize))
             {
                 int encKeyLen = remaining - (sizeof(uint) + nonceSize + tagSize);
-                if (encKeyLen >= 0 && FileHeader.TryRead(full, nonceSize, tagSize, encKeyLen, out var fh))
+                if (encKeyLen >= 0 && FileHeader.TryRead(full, nonceSize, tagSize, encKeyLen, out FileHeader fh))
                 {
                     // DTO
                     byte[] tagBytes = new byte[tagSize];
@@ -98,7 +98,7 @@ namespace Cotton.Crypto.Models
             }
 
             // Fallback: compact chunk header (no nonce, no encrypted key)
-            if (!ChunkHeader.TryRead(full, tagSize, out var ch))
+            if (!ChunkHeader.TryRead(full, tagSize, out ChunkHeader ch))
             {
                 throw new InvalidDataException("Unsupported header layout or length.");
             }

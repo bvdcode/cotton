@@ -70,7 +70,7 @@ namespace Cotton.Server.Services
         {
             ArgumentNullException.ThrowIfNull(segmentUrlFactory);
 
-            var plan = Plan(durationSeconds);
+            HlsManifestPlan plan = Plan(durationSeconds);
             int targetDuration = (int)Math.Ceiling(SegmentDurationSeconds);
             var sb = new StringBuilder(256 + (64 * plan.SegmentCount));
 
@@ -106,7 +106,7 @@ namespace Cotton.Server.Services
             sb.Append("#EXT-X-VERSION:4\n");
             sb.Append("#EXT-X-INDEPENDENT-SEGMENTS\n");
 
-            foreach (var variant in variants)
+            foreach (HlsVariant variant in variants)
             {
                 sb.Append("#EXT-X-STREAM-INF:");
                 sb.Append("BANDWIDTH=").Append(variant.BandwidthBitsPerSecond.ToString(CultureInfo.InvariantCulture));

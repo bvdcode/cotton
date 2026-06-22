@@ -8,6 +8,8 @@ using Cotton.Server.Providers;
 using EasyExtensions.Clients;
 using System.Text.Json;
 using System.Net;
+using Cotton.Database.Models;
+using EasyExtensions.Clients.Models;
 
 namespace Cotton.Server.Services
 {
@@ -24,7 +26,7 @@ namespace Cotton.Server.Services
         /// </summary>
         public async Task<GeoLookupResult?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default)
         {
-            var settings = _settings.GetServerSettings();
+            CottonServerSettings settings = _settings.GetServerSettings();
             ArgumentNullException.ThrowIfNull(ipAddress);
 
             if (settings.GeoIpLookupMode == GeoIpLookupMode.Disabled)
@@ -34,7 +36,7 @@ namespace Cotton.Server.Services
 
             if (settings.GeoIpLookupMode == GeoIpLookupMode.CustomHttp)
             {
-                var attempt = await TryLookupWithCustomHttpAsync(settings.CustomGeoIpLookupUrl, ipAddress.ToString(), cancellationToken);
+                CustomLookupAttemptResult attempt = await TryLookupWithCustomHttpAsync(settings.CustomGeoIpLookupUrl, ipAddress.ToString(), cancellationToken);
                 return attempt.Result;
             }
 
@@ -44,7 +46,7 @@ namespace Cotton.Server.Services
                 return null;
             }
 
-            var geo = await CottonBridgeGeoIpClient.TryLookupAsync(ipAddress.ToString(), cancellationToken);
+            GeoIpInfo? geo = await CottonBridgeGeoIpClient.TryLookupAsync(ipAddress.ToString(), cancellationToken);
             if (geo is null)
             {
                 return null;
@@ -63,7 +65,7 @@ namespace Cotton.Server.Services
             string serverBaseUrl,
             CancellationToken cancellationToken = default)
         {
-            var settings = _settings.GetServerSettings();
+            CottonServerSettings settings = _settings.GetServerSettings();
             string? lookupUrl = settings.CustomGeoIpLookupUrl;
             if (string.IsNullOrWhiteSpace(lookupUrl))
             {
@@ -74,7 +76,7 @@ namespace Cotton.Server.Services
                     Result: null);
             }
 
-            var attempts = new[]
+            CustomLookupTestInput[] attempts = new[]
             {
                 new CustomLookupTestInput(serverBaseUrl, "instance URL"),
                 new CustomLookupTestInput(GoogleDnsIpAddress, "Google DNS IP"),
@@ -82,9 +84,9 @@ namespace Cotton.Server.Services
             };
 
             var failureDetails = new List<string>(attempts.Length);
-            foreach (var attemptInput in attempts)
+            foreach (CustomLookupTestInput? attemptInput in attempts)
             {
-                var attempt = await TryLookupWithCustomHttpAsync(
+                CustomLookupAttemptResult attempt = await TryLookupWithCustomHttpAsync(
                     lookupUrl,
                     attemptInput.Value,
                     cancellationToken);
@@ -125,7 +127,7 @@ namespace Cotton.Server.Services
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
                 string url = BuildCustomLookupUrl(lookupUrl, ipValue);
-                var json = await client.GetFromJsonAsync<JsonElement>(url, cancellationToken);
+                JsonElement json = await client.GetFromJsonAsync<JsonElement>(url, cancellationToken);
                 if (json.ValueKind == JsonValueKind.Undefined || json.ValueKind == JsonValueKind.Null)
                 {
                     return new CustomLookupAttemptResult(
@@ -133,7 +135,7 @@ namespace Cotton.Server.Services
                         Error: "response body is empty");
                 }
 
-                var match = FindGeoFields(json);
+                GeoFieldMatch match = FindGeoFields(json);
                 var country = match.Country;
                 var region = match.Region;
                 var city = match.City;
@@ -189,7 +191,7 @@ namespace Cotton.Server.Services
         {
             if (element.ValueKind == JsonValueKind.Object)
             {
-                foreach (var property in element.EnumerateObject())
+                foreach (JsonProperty property in element.EnumerateObject())
                 {
                     if (property.Value.ValueKind == JsonValueKind.String || property.Value.ValueKind == JsonValueKind.Number)
                     {
@@ -201,7 +203,7 @@ namespace Cotton.Server.Services
             }
             else if (element.ValueKind == JsonValueKind.Array)
             {
-                foreach (var item in element.EnumerateArray())
+                foreach (JsonElement item in element.EnumerateArray())
                 {
                     FillGeoFields(item, match);
                 }

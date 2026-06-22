@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
+using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Services
@@ -98,7 +99,7 @@ namespace Cotton.Server.Services
         public static string? ReadIfMatch(HttpRequest request)
         {
             ArgumentNullException.ThrowIfNull(request);
-            return request.Headers.TryGetValue(HeaderNames.IfMatch, out var value) ? value.ToString() : null;
+            return request.Headers.TryGetValue(HeaderNames.IfMatch, out StringValues value) ? value.ToString() : null;
         }
 
         private static string QuoteETag(string value)

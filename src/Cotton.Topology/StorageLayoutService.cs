@@ -20,7 +20,7 @@ namespace Cotton.Topology
         /// <inheritdoc />
         public async Task<Node> GetUserTrashRootAsync(Guid ownerId, CancellationToken ct = default)
         {
-            var layout = await GetOrCreateLatestUserLayoutAsync(ownerId, ct);
+            Layout layout = await GetOrCreateLatestUserLayoutAsync(ownerId, ct);
             return await GetOrCreateRootNodeAsync(layout.Id, ownerId, NodeType.Trash, ct);
         }
 
@@ -30,7 +30,7 @@ namespace Cotton.Topology
             await _layoutSemaphore.WaitAsync(ct);
             try
             {
-                var currentNode = await _dbContext.Nodes
+                Node? currentNode = await _dbContext.Nodes
                     .AsNoTracking()
                     .Include(x => x.Layout)
                     .Where(x => x.Layout.OwnerId == ownerId
@@ -65,7 +65,7 @@ namespace Cotton.Topology
             await _layoutSemaphore.WaitAsync(ct);
             try
             {
-                var found = await _dbContext.UserLayouts
+                Layout? found = await _dbContext.UserLayouts
                     .Where(x => x.OwnerId == ownerId && x.IsActive)
                     .OrderByDescending(x => x.CreatedAt)
                     .FirstOrDefaultAsync(ct);

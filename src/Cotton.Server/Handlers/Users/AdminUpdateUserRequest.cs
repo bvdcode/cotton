@@ -81,10 +81,10 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>(usernameError);
             }
 
-            var foundAdmin = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == request.AdminUserId, cancellationToken)
+            User foundAdmin = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == request.AdminUserId, cancellationToken)
                 ?? throw new EntityNotFoundException<User>();
 
-            var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken)
+            User user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken)
                 ?? throw new EntityNotFoundException<User>();
 
             if (user.Role != request.Role && foundAdmin.Role < user.Role)

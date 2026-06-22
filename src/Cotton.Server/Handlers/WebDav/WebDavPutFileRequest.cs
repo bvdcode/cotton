@@ -17,6 +17,7 @@ using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using EasyExtensions.Quartz.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Quartz;
 using System.Security.Cryptography;
 
@@ -121,7 +122,7 @@ namespace Cotton.Server.Handlers.WebDav
                 return targetError;
             }
 
-            var quotaPreflightError = await TryPreflightKnownLengthQuotaAsync(request, target!, ct);
+            WebDavPutFileResult? quotaPreflightError = await TryPreflightKnownLengthQuotaAsync(request, target!, ct);
             if (quotaPreflightError is not null)
             {
                 return quotaPreflightError;
@@ -134,7 +135,7 @@ namespace Cotton.Server.Handlers.WebDav
             }
 
             string contentType = FileManifestService.ResolveContentType(target!.ResourceName, request.ContentType);
-            var fileManifest = await GetOrCreateFileManifestAsync(
+            FileManifest fileManifest = await GetOrCreateFileManifestAsync(
                 chunks: content!.Chunks,
                 fileHash: content.FileHash,
                 userId: request.UserId,
@@ -148,7 +149,7 @@ namespace Cotton.Server.Handlers.WebDav
             // Re-resolve the target inside the lock: the pre-lock path result can be
             // stale after a long upload stream, and must not drive the final upsert.
             Guid lockedLayoutId = target.Parent.ParentNode!.LayoutId;
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
 
             var (lockedTarget, lockedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
@@ -157,7 +158,7 @@ namespace Cotton.Server.Handlers.WebDav
                 return lockedTargetError;
             }
 
-            var finalTarget = lockedTarget!;
+            PutTarget finalTarget = lockedTarget!;
             if (finalTarget.Parent.ParentNode!.LayoutId != lockedLayoutId)
             {
                 _logger.LogDebug("WebDAV PUT: Parent layout changed while waiting for lock: {Path}", request.Path);
@@ -189,10 +190,10 @@ namespace Cotton.Server.Handlers.WebDav
 
         private async Task<(PutTarget? Target, WebDavPutFileResult? Error)> TryResolveAndValidateTargetAsync(WebDavPutFileRequest request, CancellationToken ct)
         {
-            var existing = await ResolveExistingAsync(request, ct);
-            var parentResult = await ResolveParentAsync(request, ct);
+            WebDavResolveResult existing = await ResolveExistingAsync(request, ct);
+            WebDavParentResult parentResult = await ResolveParentAsync(request, ct);
 
-            var preValidationFailure = TryGetExistingValidationFailure(existing)
+            WebDavPutFileResult? preValidationFailure = TryGetExistingValidationFailure(existing)
                 ?? TryGetParentValidationFailure(parentResult);
             if (preValidationFailure is not null)
             {
@@ -200,7 +201,7 @@ namespace Cotton.Server.Handlers.WebDav
             }
 
             string resourceName = parentResult.ResourceName!;
-            var nameFailure = TryGetNameValidationFailure(resourceName);
+            WebDavPutFileResult? nameFailure = TryGetNameValidationFailure(resourceName);
             if (nameFailure is not null)
             {
                 return (null, nameFailure);
@@ -208,7 +209,7 @@ namespace Cotton.Server.Handlers.WebDav
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(resourceName);
 
-            var validationFailure = await TryGetFolderConflictFailureAsync(
+            WebDavPutFileResult? validationFailure = await TryGetFolderConflictFailureAsync(
                     userId: request.UserId,
                     parentNodeId: parentResult.ParentNode!.Id,
                     nameKey: nameKey,
@@ -357,7 +358,7 @@ namespace Cotton.Server.Handlers.WebDav
             string contentType,
             CancellationToken ct)
         {
-            var fileManifest = await _fileManifestService.GetReusableOwnedManifestAsync(fileHash, userId, cancellationToken: ct);
+            FileManifest? fileManifest = await _fileManifestService.GetReusableOwnedManifestAsync(fileHash, userId, cancellationToken: ct);
 
             if (fileManifest is not null)
             {
@@ -426,10 +427,10 @@ namespace Cotton.Server.Handlers.WebDav
         {
             if (target.Existing.Found && target.Existing.NodeFile is not null)
             {
-                var nodeFile = await _dbContext.NodeFiles
+                NodeFile nodeFile = await _dbContext.NodeFiles
                     .FirstAsync(f => f.Id == target.Existing.NodeFile.Id, ct);
 
-                var previousManifest = await _dbContext.FileManifests
+                FileManifest? previousManifest = await _dbContext.FileManifests
                     .AsNoTracking()
                     .FirstOrDefaultAsync(m => m.Id == nodeFile.FileManifestId, ct);
 
@@ -497,7 +498,7 @@ namespace Cotton.Server.Handlers.WebDav
             Guid userId,
             CancellationToken ct)
         {
-            var settings = _settings.GetServerSettings();
+            CottonServerSettings settings = _settings.GetServerSettings();
             int chunkSize = settings.MaxChunkSizeBytes;
             var chunks = new List<Chunk>();
 
@@ -511,7 +512,7 @@ namespace Cotton.Server.Handlers.WebDav
                 while ((bytesRead = await ReadExactlyAsync(inputStream, buffer, chunkSize, ct)) > 0)
                 {
                     fileHasher.AppendData(buffer, 0, bytesRead);
-                    var chunk = await ProcessSingleChunkAsync(buffer, bytesRead, userId, ct);
+                    Chunk chunk = await ProcessSingleChunkAsync(buffer, bytesRead, userId, ct);
                     chunks.Add(chunk);
                 }
             }
@@ -552,7 +553,7 @@ namespace Cotton.Server.Handlers.WebDav
         /// </summary>
         private async Task<List<Chunk>> CreateEmptyChunkAsync(Guid userId, CancellationToken ct)
         {
-            var chunk = await _chunkIngest.UpsertChunkAsync(userId, [], 0, ct);
+            Chunk chunk = await _chunkIngest.UpsertChunkAsync(userId, [], 0, ct);
             return [chunk];
         }
     }

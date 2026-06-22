@@ -37,10 +37,10 @@ namespace Cotton.Storage.Pipelines
         /// <inheritdoc />
         public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
-            var backend = _backendProvider.GetBackend();
-            var orderedProcessors = _processors.OrderBy(p => p.Priority);
+            IStorageBackend backend = _backendProvider.GetBackend();
+            IOrderedEnumerable<IStorageProcessor> orderedProcessors = _processors.OrderBy(p => p.Priority);
             Stream currentStream = await backend.ReadAsync(uid);
-            foreach (var processor in orderedProcessors)
+            foreach (IStorageProcessor? processor in orderedProcessors)
             {
                 currentStream = await processor.ReadAsync(uid, currentStream, context);
                 if (currentStream == Stream.Null)
@@ -61,8 +61,8 @@ namespace Cotton.Storage.Pipelines
             await _maxParallel.WaitAsync().ConfigureAwait(false);
             try
             {
-                var backend = _backendProvider.GetBackend();
-                var orderedProcessors = _processors.OrderByDescending(p => p.Priority).ToArray();
+                IStorageBackend backend = _backendProvider.GetBackend();
+                IStorageProcessor[] orderedProcessors = _processors.OrderByDescending(p => p.Priority).ToArray();
                 if (orderedProcessors.Length == 0)
                 {
                     _logger.LogWarning("No storage processors are registered. Writing the stream directly to the backend.");
@@ -73,7 +73,7 @@ namespace Cotton.Storage.Pipelines
                     return;
                 }
                 Stream currentStream = stream;
-                foreach (var processor in orderedProcessors)
+                foreach (IStorageProcessor? processor in orderedProcessors)
                 {
                     if (currentStream == Stream.Null)
                     {

@@ -34,7 +34,7 @@ namespace Cotton.Storage.Backends
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
 
-            var response = await _s3.DeleteObjectAsync(new DeleteObjectRequest
+            DeleteObjectResponse response = await _s3.DeleteObjectAsync(new DeleteObjectRequest
             {
                 Key = key,
                 BucketName = bucket
@@ -49,7 +49,7 @@ namespace Cotton.Storage.Backends
             IAmazonS3 _s3 = _s3Provider.GetS3Client();
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
-            var result = await _s3.GetObjectAsync(new GetObjectRequest
+            GetObjectResponse result = await _s3.GetObjectAsync(new GetObjectRequest
             {
                 Key = key,
                 BucketName = bucket,
@@ -74,7 +74,7 @@ namespace Cotton.Storage.Backends
 
             try
             {
-                var res = await _s3.GetObjectMetadataAsync(req);
+                GetObjectMetadataResponse res = await _s3.GetObjectMetadataAsync(req);
                 return res.HttpStatusCode == HttpStatusCode.OK;
             }
             catch (AmazonS3Exception s3Ex) when (s3Ex.StatusCode == HttpStatusCode.NotFound)
@@ -100,7 +100,7 @@ namespace Cotton.Storage.Backends
 
             try
             {
-                var res = await s3.GetObjectMetadataAsync(req).ConfigureAwait(false);
+                GetObjectMetadataResponse res = await s3.GetObjectMetadataAsync(req).ConfigureAwait(false);
                 return res.ContentLength;
             }
             catch (AmazonS3Exception s3Ex) when (s3Ex.StatusCode == HttpStatusCode.NotFound)
@@ -115,7 +115,7 @@ namespace Cotton.Storage.Backends
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
             ArgumentNullException.ThrowIfNull(source);
 
-            var s3 = _s3Provider.GetS3Client();
+            IAmazonS3 s3 = _s3Provider.GetS3Client();
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
             if (await ExistsAsync(uid).ConfigureAwait(false))
@@ -142,7 +142,7 @@ namespace Cotton.Storage.Backends
                     await source.CopyToAsync(fs).ConfigureAwait(false);
                     await fs.FlushAsync().ConfigureAwait(false);
                 }
-                var req = new PutObjectRequest
+                PutObjectRequest req = new PutObjectRequest
                 {
                     BucketName = bucket,
                     Key = key,
@@ -186,9 +186,9 @@ namespace Cotton.Storage.Backends
                     ContinuationToken = continuationToken
                 };
 
-                var response = await s3.ListObjectsV2Async(request, ct);
+                ListObjectsV2Response response = await s3.ListObjectsV2Async(request, ct);
 
-                foreach (var obj in response.S3Objects)
+                foreach (S3Object? obj in response.S3Objects)
                 {
                     ct.ThrowIfCancellationRequested();
 

@@ -12,6 +12,7 @@ using Cotton.Validators;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.WebDav
 {
@@ -69,14 +70,14 @@ namespace Cotton.Server.Handlers.WebDav
         /// </summary>
         public async Task<WebDavMkColResult> Handle(WebDavMkColRequest request, CancellationToken ct)
         {
-            var parent = await ResolveValidatedParentAsync(request, "path", ct);
+            WebDavMkColParent parent = await ResolveValidatedParentAsync(request, "path", ct);
             if (parent.Failure is not null)
             {
                 return parent.Failure;
             }
 
             Guid lockedLayoutId = parent.Result!.ParentNode!.LayoutId;
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
 
             WebDavMkColResult result = await CreateCollectionInsideLockAsync(request, lockedLayoutId, ct);
@@ -94,14 +95,14 @@ namespace Cotton.Server.Handlers.WebDav
             string context,
             CancellationToken ct)
         {
-            var parentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
-            var parentFailure = TryGetParentFailure(request.Path, parentResult, context);
+            WebDavParentResult parentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
+            WebDavMkColResult? parentFailure = TryGetParentFailure(request.Path, parentResult, context);
             if (parentFailure is not null)
             {
                 return new WebDavMkColParent(null, parentFailure);
             }
 
-            var nameFailure = ValidateResourceName(parentResult.ResourceName!);
+            WebDavMkColResult? nameFailure = ValidateResourceName(parentResult.ResourceName!);
             return new WebDavMkColParent(parentResult, nameFailure);
         }
 
@@ -124,7 +125,7 @@ namespace Cotton.Server.Handlers.WebDav
             Guid lockedLayoutId,
             CancellationToken ct)
         {
-            var parent = await ResolveValidatedParentAsync(request, "path after locking", ct);
+            WebDavMkColParent parent = await ResolveValidatedParentAsync(request, "path after locking", ct);
             if (parent.Failure is not null)
             {
                 return parent.Failure;
@@ -137,7 +138,7 @@ namespace Cotton.Server.Handlers.WebDav
                 return new WebDavMkColResult(false, WebDavMkColError.ParentNotFound);
             }
 
-            var conflict = await TryGetCreateConflictAsync(request, parentResult, ct);
+            WebDavMkColResult? conflict = await TryGetCreateConflictAsync(request, parentResult, ct);
             if (conflict is not null)
             {
                 return conflict;
@@ -158,7 +159,7 @@ namespace Cotton.Server.Handlers.WebDav
             WebDavParentResult parentResult,
             CancellationToken ct)
         {
-            var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
+            WebDavResolveResult existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
             if (existing.Found)
             {
                 _logger.LogDebug("WebDAV MKCOL: Path already exists: {Path}", request.Path);

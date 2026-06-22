@@ -60,13 +60,13 @@ namespace Cotton.Server.Handlers.Server
             string normalizedBucket = NormalizeBucket(request.Bucket);
             TimeZoneInfo effectiveTimeZone = ResolveTimelineTimeZone(request.TimezoneId, _settings);
             DateTime now = DateTime.UtcNow;
-            var range = ResolveRange(request, now);
+            TimelineRange range = ResolveRange(request, now);
 
             HashSet<string> protectedStorageKeys = await _chunkUsage.GetProtectedStorageKeysAsync(cancellationToken);
-            var gcBaseQuery = BuildGcBaseQuery(protectedStorageKeys, range.EndUtc);
-            var aggregates = await LoadHourlyAggregatesAsync(gcBaseQuery, range.StartUtc, cancellationToken);
+            IQueryable<Chunk> gcBaseQuery = BuildGcBaseQuery(protectedStorageKeys, range.EndUtc);
+            List<HourlyGcAggregate> aggregates = await LoadHourlyAggregatesAsync(gcBaseQuery, range.StartUtc, cancellationToken);
             List<GcChunkTimelineBucketDto> buckets = BuildTimelineBuckets(aggregates, normalizedBucket, effectiveTimeZone);
-            var storageStats = await _storageUsageStats.GetAsync(now, protectedStorageKeys, cancellationToken);
+            StorageUsageStatsDto storageStats = await _storageUsageStats.GetAsync(now, protectedStorageKeys, cancellationToken);
 
             return BuildTimelineDto(normalizedBucket, range, now, buckets, storageStats);
         }
@@ -138,7 +138,7 @@ namespace Cotton.Server.Handlers.Server
             TimeZoneInfo timeZone)
         {
             Dictionary<DateTime, (long ChunkCount, long SizeBytes)> bucketsMap = [];
-            foreach (var item in hourlyAggregates)
+            foreach (HourlyGcAggregate item in hourlyAggregates)
             {
                 AddAggregateToBucket(bucketsMap, item, bucket, timeZone);
             }
@@ -160,7 +160,7 @@ namespace Cotton.Server.Handlers.Server
             TimeZoneInfo timeZone)
         {
             DateTime bucketUtc = ResolveBucketStartUtc(item, bucket, timeZone);
-            bucketsMap[bucketUtc] = bucketsMap.TryGetValue(bucketUtc, out var existing)
+            bucketsMap[bucketUtc] = bucketsMap.TryGetValue(bucketUtc, out (long ChunkCount, long SizeBytes) existing)
                 ? (existing.ChunkCount + item.ChunkCount, existing.SizeBytes + item.SizeBytes)
                 : (item.ChunkCount, item.SizeBytes);
         }
@@ -181,8 +181,8 @@ namespace Cotton.Server.Handlers.Server
             DateTime rangeStartUtc,
             CancellationToken cancellationToken)
         {
-            var hourlyAggregates = await LoadScheduledHourlyAggregatesAsync(gcBaseQuery, rangeStartUtc, cancellationToken);
-            var overdueAggregate = await LoadOverdueAggregateAsync(gcBaseQuery, rangeStartUtc, cancellationToken);
+            List<HourlyGcAggregate> hourlyAggregates = await LoadScheduledHourlyAggregatesAsync(gcBaseQuery, rangeStartUtc, cancellationToken);
+            HourlyGcAggregate? overdueAggregate = await LoadOverdueAggregateAsync(gcBaseQuery, rangeStartUtc, cancellationToken);
             if (overdueAggregate is not null && overdueAggregate.ChunkCount > 0)
             {
                 hourlyAggregates.Add(HourlyGcAggregate.From(rangeStartUtc, overdueAggregate.ChunkCount, overdueAggregate.SizeBytes));

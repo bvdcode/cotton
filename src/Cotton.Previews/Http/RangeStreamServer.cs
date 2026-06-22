@@ -103,7 +103,7 @@ namespace Cotton.Previews.Http
                 ConfigureResponseBase(ctx);
 
                 var rangeHeader = ctx.Request.Headers["Range"];
-                if (!TryParseRange(rangeHeader, out var range, out var statusCode, out var contentRangeHeaderValue))
+                if (!TryParseRange(rangeHeader, out ByteRange? range, out var statusCode, out var contentRangeHeaderValue))
                 {
                     ctx.Response.StatusCode = statusCode;
                     if (!string.IsNullOrEmpty(contentRangeHeaderValue))

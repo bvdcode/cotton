@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Storage.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
@@ -121,7 +122,7 @@ namespace Cotton.Server.Services
                 return protectedStorageKeys;
             }
 
-            var latestBackup = await _backupManifestService.TryGetLatestManifestAsync(ct);
+            ResolvedBackupManifest? latestBackup = await _backupManifestService.TryGetLatestManifestAsync(ct);
             if (latestBackup is null)
             {
                 throw new InvalidOperationException(
@@ -129,7 +130,7 @@ namespace Cotton.Server.Services
             }
 
             protectedStorageKeys.Add(latestBackup.ManifestStorageKey);
-            foreach (var chunk in latestBackup.Manifest.Chunks)
+            foreach (BackupChunkInfo chunk in latestBackup.Manifest.Chunks)
             {
                 if (!string.IsNullOrWhiteSpace(chunk.StorageKey))
                 {

@@ -3,6 +3,7 @@
 
 using Docnet.Core;
 using Docnet.Core.Models;
+using Docnet.Core.Readers;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -28,13 +29,13 @@ namespace Cotton.Previews
             // pageIndex: 0-based
             const int pageIndex = 0;
             const int dpi = 150;
-            using var docReader = _docLib.GetDocReader(pdfBytes, new PageDimensions(dpi, dpi));
+            using IDocReader docReader = _docLib.GetDocReader(pdfBytes, new PageDimensions(dpi, dpi));
             if (docReader.GetPageCount() <= pageIndex)
             {
                 throw new InvalidOperationException("PDF has no pages.");
             }
 
-            using var pageReader = docReader.GetPageReader(pageIndex);
+            using IPageReader pageReader = docReader.GetPageReader(pageIndex);
 
             int width = pageReader.GetPageWidth();
             int height = pageReader.GetPageHeight();

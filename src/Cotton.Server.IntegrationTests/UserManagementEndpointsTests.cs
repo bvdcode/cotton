@@ -29,7 +29,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
         Assert.Multiple(() =>
@@ -78,7 +78,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         string token = await LoginAsync();
         SetBearer(token);
 
-        var createResponse = await _client!.PostAsJsonAsync(
+        HttpResponseMessage createResponse = await _client!.PostAsJsonAsync(
             "/api/v1/users",
             new
             {
@@ -110,7 +110,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         string token = await LoginAsync();
         SetBearer(token);
 
-        var createResponse = await _client!.PostAsJsonAsync(
+        HttpResponseMessage createResponse = await _client!.PostAsJsonAsync(
             "/api/v1/users",
             new
             {
@@ -135,7 +135,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         string token = await LoginAsync();
         SetBearer(token);
 
-        var createResponse = await _client!.PostAsJsonAsync(
+        HttpResponseMessage createResponse = await _client!.PostAsJsonAsync(
             "/api/v1/users",
             new
             {
@@ -156,7 +156,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
 
         UserDto created = await CreateUserAsync("edituser1", "edit.user1@example.com");
 
-        var updateResponse = await _client!.PutAsJsonAsync(
+        HttpResponseMessage updateResponse = await _client!.PutAsJsonAsync(
             $"/api/v1/users/{created.Id}",
             new
             {
@@ -195,7 +195,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
 
         UserDto created = await CreateUserAsync("updatebase", "update.base@example.com");
 
-        var updateResponse = await _client!.PutAsJsonAsync(
+        HttpResponseMessage updateResponse = await _client!.PutAsJsonAsync(
             $"/api/v1/users/{created.Id}",
             new
             {
@@ -228,7 +228,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
 
         UserDto created = await CreateUserAsync("underscoretarget", "underscore.target@example.com");
 
-        var updateResponse = await _client!.PutAsJsonAsync(
+        HttpResponseMessage updateResponse = await _client!.PutAsJsonAsync(
             $"/api/v1/users/{created.Id}",
             new
             {
@@ -257,7 +257,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         string token = await LoginAsync();
         SetBearer(token);
 
-        var updateResponse = await _client!.PutAsJsonAsync(
+        HttpResponseMessage updateResponse = await _client!.PutAsJsonAsync(
             "/api/v1/users/me",
             new
             {
@@ -285,7 +285,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
             })
         };
 
-        var response = await _client!.SendAsync(request);
+        HttpResponseMessage response = await _client!.SendAsync(request);
 
         response.EnsureSuccessStatusCode();
         Dictionary<string, string>? preferences =
@@ -304,7 +304,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
 
         UserDto created = await CreateUserAsync("targetuser", "target.user@example.com");
 
-        var updateResponse = await _client!.PutAsJsonAsync(
+        HttpResponseMessage updateResponse = await _client!.PutAsJsonAsync(
             $"/api/v1/users/{created.Id}",
             new
             {
@@ -329,7 +329,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         UserDto first = await CreateUserAsync("firstuser", "first.user@example.com");
         UserDto second = await CreateUserAsync("seconduser", "second.user@example.com");
 
-        var updateResponse = await _client!.PutAsJsonAsync(
+        HttpResponseMessage updateResponse = await _client!.PutAsJsonAsync(
             $"/api/v1/users/{second.Id}",
             new
             {
@@ -347,7 +347,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
 
     private async Task<UserDto> CreateUserAsync(string username, string email)
     {
-        var createResponse = await _client!.PostAsJsonAsync(
+        HttpResponseMessage createResponse = await _client!.PostAsJsonAsync(
             "/api/v1/users",
             new
             {
@@ -376,7 +376,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         };
 
         request.Headers.Add("X-Forwarded-For", "8.8.8.8");
-        var response = await _client!.SendAsync(request);
+        HttpResponseMessage response = await _client!.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         TokenPairResponseDto? login = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();

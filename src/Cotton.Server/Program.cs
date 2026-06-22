@@ -95,7 +95,7 @@ namespace Cotton.Server
             MasterKeyRuntimeState masterKeyRuntimeState,
             ProcessHardeningStatus processHardeningStatus)
         {
-            var builder = WebApplication.CreateBuilder(args);
+            WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddCottonOptions(encryptionSettings);
             if (OperatingSystem.IsWindows() && !builder.Environment.IsProduction())
             {
@@ -202,7 +202,7 @@ namespace Cotton.Server
             builder.Services.AddAuthHardening();
             builder.Services.AddHostedService<AppVersionTrackerService>();
 
-            var app = builder.Build();
+            WebApplication app = builder.Build();
             StartupBlocker? startupBlocker = await ValidateStartupAsync(app);
             if (startupBlocker is not null)
             {
@@ -223,7 +223,7 @@ namespace Cotton.Server
             app.ApplyMigrations<CottonDbContext>();
             using (IServiceScope scope = app.Services.CreateScope())
             {
-                var autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
+                IDatabaseAutoRestoreService autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
                 autoRestore.TryRestoreIfEmptyAsync().GetAwaiter().GetResult();
                 scope.ServiceProvider.GetRequiredService<SettingsProvider>().GetServerSettings();
             }
@@ -234,7 +234,7 @@ namespace Cotton.Server
         private static async Task<StartupBlocker?> ValidateStartupAsync(WebApplication app)
         {
             using IServiceScope scope = app.Services.CreateScope();
-            var validator = scope.ServiceProvider.GetRequiredService<IStartupPreflightValidator>();
+            IStartupPreflightValidator validator = scope.ServiceProvider.GetRequiredService<IStartupPreflightValidator>();
             return await validator.ValidateAsync(CancellationToken.None);
         }
     }

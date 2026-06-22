@@ -80,7 +80,7 @@ namespace Cotton.Previews
             float padding = renderSize * PaddingRatio;
             float paddingTop = padding * 1.3f;
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
-            var font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
+            Font font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
             float wrapWidth = renderSize - (padding * 2);
             float maxHeight = renderSize - paddingTop - padding;
             float lineAdvance = fontSize * 1.25f;
@@ -96,7 +96,7 @@ namespace Cotton.Previews
                     null));
             });
 
-            using var output = canvas.Clone(x => x.Resize(new ResizeOptions
+            using Image<Rgba32> output = canvas.Clone(x => x.Resize(new ResizeOptions
             {
                 Size = new Size(size, size),
                 Mode = ResizeMode.Crop,
@@ -163,7 +163,7 @@ namespace Cotton.Previews
                 return string.Empty;
             }
 
-            var measure = TextMeasurer.MeasureAdvance("M", new TextOptions(font));
+            FontRectangle measure = TextMeasurer.MeasureAdvance("M", new TextOptions(font));
             float charWidth = Math.Max(1f, measure.Width);
 
             int cols = Math.Max(1, (int)Math.Floor(wrapWidth / charWidth));

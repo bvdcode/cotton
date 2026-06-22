@@ -104,7 +104,7 @@ namespace Cotton.Server.Services
 
             try
             {
-                await using var stdout = process.StandardOutput.BaseStream;
+                await using Stream stdout = process.StandardOutput.BaseStream;
                 await stdout.CopyToAsync(destination, PipeBufferSize, cancellationToken).ConfigureAwait(false);
                 await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 

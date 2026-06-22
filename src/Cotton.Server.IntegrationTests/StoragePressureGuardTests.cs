@@ -26,7 +26,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         DbContext.Database.Migrate();
     }
@@ -41,7 +41,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
     public void EnsureCanAcceptWriteAsync_WhenBackendDoesNotReportCapacity_DoesNotBlock()
     {
         var notifications = new RecordingNotificationsProvider();
-        var guard = CreateGuard(
+        StoragePressureGuard guard = CreateGuard(
             new NonReportingBackend(),
             notifications,
             new StoragePressureOptions
@@ -57,7 +57,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
     [Test]
     public async Task EnsureCanAcceptWriteAsync_WhenFilesystemReserveWouldBeCrossed_ThrowsAndNotifiesAdmins()
     {
-        var admin = CreateUser("adminuser", UserRole.Admin);
+        User admin = CreateUser("adminuser", UserRole.Admin);
         DbContext.Users.Add(admin);
         await DbContext.SaveChangesAsync();
 
@@ -67,7 +67,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
             RootPath: "/storage",
             TotalBytes: 1_000,
             AvailableBytes: 100));
-        var guard = CreateGuard(
+        StoragePressureGuard guard = CreateGuard(
             backend,
             notifications,
             new StoragePressureOptions
@@ -76,7 +76,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
                 MinFreeBytes = 100,
             });
 
-        var ex = Assert.ThrowsAsync<StoragePressureException>(
+        StoragePressureException? ex = Assert.ThrowsAsync<StoragePressureException>(
             async () => await guard.EnsureCanAcceptWriteAsync(1));
 
         Assert.That(ex, Is.Not.Null);
@@ -99,7 +99,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
             RootPath: "/storage",
             TotalBytes: 1_000,
             AvailableBytes: 900));
-        var guard = CreateGuard(
+        StoragePressureGuard guard = CreateGuard(
             backend,
             notifications,
             new StoragePressureOptions
@@ -125,7 +125,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
             RootPath: "/storage",
             TotalBytes: 1_000,
             AvailableBytes: 200));
-        var guard = CreateGuard(
+        StoragePressureGuard guard = CreateGuard(
             backend,
             notifications,
             new StoragePressureOptions

@@ -11,6 +11,7 @@ using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Topology.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Npgsql;
 using System.Buffers;
 using System.Security.Cryptography;
@@ -47,8 +48,8 @@ namespace Cotton.Server.Services
 
             await WaitForGarbageCollectionAsync(storageKey, ct);
 
-            var settings = _settingsProvider.GetServerSettings();
-            var chunk = await _layouts.FindChunkAsync(chunkHash, ct);
+            CottonServerSettings settings = _settingsProvider.GetServerSettings();
+            Chunk? chunk = await _layouts.FindChunkAsync(chunkHash, ct);
             bool existsInStorage = await _storage.ExistsAsync(storageKey);
 
             Chunk? reusedChunk = await TryReuseDeduplicatedChunkAsync(
@@ -118,7 +119,7 @@ namespace Cotton.Server.Services
 
         private void DetachPendingChunkUpsert(byte[] chunkHash, Guid userId)
         {
-            foreach (var entry in _dbContext.ChangeTracker.Entries().ToArray())
+            foreach (EntityEntry? entry in _dbContext.ChangeTracker.Entries().ToArray())
             {
                 if (entry.State != EntityState.Added)
                 {
@@ -208,7 +209,7 @@ namespace Cotton.Server.Services
 
         private async Task WriteChunkAsync(string storageKey, byte[] buffer, int length, CancellationToken ct)
         {
-            using var writeReservation = await _storagePressure.ReserveWriteAsync(length, ct);
+            using StoragePressureReservation writeReservation = await _storagePressure.ReserveWriteAsync(length, ct);
             using var chunkStream = new MemoryStream(buffer, 0, length, writable: false);
             await _storage.WriteAsync(storageKey, chunkStream, new PipelineContext());
             writeReservation.Commit();

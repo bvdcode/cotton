@@ -42,7 +42,7 @@ namespace Cotton.Server.Handlers.Users
         /// </summary>
         public async Task Handle(SendEmailVerificationRequest request, CancellationToken cancellationToken)
         {
-            var user = await _dbContext.Users
+            User user = await _dbContext.Users
                 .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken)
                 ?? throw new EntityNotFoundException<User>();
 

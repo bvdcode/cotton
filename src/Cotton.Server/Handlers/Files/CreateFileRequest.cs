@@ -21,6 +21,7 @@ using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Files
 {
@@ -85,16 +86,16 @@ namespace Cotton.Server.Handlers.Files
         /// </summary>
         public async Task<NodeFileManifestDto> Handle(CreateFileRequest request, CancellationToken cancellationToken)
         {
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, cancellationToken);
+            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, cancellationToken);
 
             // Resolve once before expensive manifest/hash work so invalid targets fail fast.
             // The target is re-read inside the layout lock before the namespace write.
-            var preLockNode = await GetTargetNodeAsync(request, layout.Id, tracking: false, cancellationToken);
+            Node preLockNode = await GetTargetNodeAsync(request, layout.Id, tracking: false, cancellationToken);
             string nameKey = ValidateNameAndGetKey(request.Name);
 
             List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, request.UserId, cancellationToken);
             byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
-            var fileManifest = await GetOrCreateFileManifestAsync(chunks, request, proposedHash, cancellationToken);
+            FileManifest fileManifest = await GetOrCreateFileManifestAsync(chunks, request, proposedHash, cancellationToken);
 
             await ValidateContentHashIfRequestedAsync(request, fileManifest, proposedHash, cancellationToken);
 
@@ -102,14 +103,14 @@ namespace Cotton.Server.Handlers.Files
             // Keep the lock scoped to the actual namespace mutation; chunk lookup,
             // manifest dedup and optional hash validation can be slow but do not
             // depend on per-parent NameKey state.
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, preLockNode.LayoutId, cancellationToken);
 
-            var node = await GetTargetNodeAsync(request, preLockNode.LayoutId, tracking: true, cancellationToken);
+            Node node = await GetTargetNodeAsync(request, preLockNode.LayoutId, tracking: true, cancellationToken);
             await EnsureNoDuplicatesAsync(node.Id, request.UserId, nameKey, cancellationToken);
             long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifest.Id, cancellationToken);
 
-            var nodeFile = await CreateNodeFileAsync(node, fileManifest, request, cancellationToken);
+            NodeFile nodeFile = await CreateNodeFileAsync(node, fileManifest, request, cancellationToken);
             await tx.CommitAsync(cancellationToken);
             _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
             return nodeFile.Adapt<NodeFileManifestDto>();
@@ -117,7 +118,7 @@ namespace Cotton.Server.Handlers.Files
 
         private async Task<Node> GetTargetNodeAsync(CreateFileRequest request, Guid layoutId, bool tracking, CancellationToken ct)
         {
-            var query = _dbContext.Nodes
+            IQueryable<Node> query = _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId
                     && x.Type == NodeType.Default
                     && x.OwnerId == request.UserId
@@ -128,7 +129,7 @@ namespace Cotton.Server.Handlers.Files
                 query = query.AsNoTracking();
             }
 
-            var node = await query.SingleOrDefaultAsync(cancellationToken: ct);
+            Node? node = await query.SingleOrDefaultAsync(cancellationToken: ct);
 
             return node ?? throw new EntryPointNotFoundException("Layout node not found.");
         }
@@ -174,7 +175,7 @@ namespace Cotton.Server.Handlers.Files
             byte[] proposedHash,
             CancellationToken ct)
         {
-            var fileManifest = await _fileManifestService.GetReusableOwnedManifestAsync(
+            FileManifest? fileManifest = await _fileManifestService.GetReusableOwnedManifestAsync(
                 proposedHash,
                 request.UserId,
                 includeChunks: request.Validate,
@@ -183,7 +184,7 @@ namespace Cotton.Server.Handlers.Files
             {
                 await _fileManifestService.ClearGcSchedulesForManifestReferencesAsync(fileManifest.Id, ct);
 
-                var settings = _settingsProvider.GetServerSettings();
+                CottonServerSettings settings = _settingsProvider.GetServerSettings();
                 if (!settings.AllowCrossUserDeduplication
                     && (fileManifest.SmallFilePreviewHash is not null
                         || fileManifest.SmallFilePreviewHashEncrypted is not null

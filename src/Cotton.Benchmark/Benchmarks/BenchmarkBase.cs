@@ -40,7 +40,7 @@ namespace Cotton.Benchmark.Benchmarks
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     long allocatedBefore = GC.GetTotalAllocatedBytes(precise: false);
-                    var iterationMetrics = await MeasureIterationAsync(cancellationToken);
+                    PerformanceMetrics iterationMetrics = await MeasureIterationAsync(cancellationToken);
                     long managedAllocatedBytes = Math.Max(0, GC.GetTotalAllocatedBytes(precise: false) - allocatedBefore);
                     using var process = Process.GetCurrentProcess();
                     process.Refresh();
@@ -52,7 +52,7 @@ namespace Cotton.Benchmark.Benchmarks
 
                 stopwatch.Stop();
 
-                var aggregatedMetrics = AggregateMetrics(metrics);
+                Dictionary<string, object> aggregatedMetrics = AggregateMetrics(metrics);
                 return BenchmarkResult.Success(Name, stopwatch.Elapsed, aggregatedMetrics);
             }
             catch (Exception ex)

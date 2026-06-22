@@ -93,8 +93,8 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             // Notifications are rendered from template metadata on the client when translations are available. The plain
             // strings remain as a safe display value for clients that do not yet know the template.
             using IServiceScope scope = _scopeFactory.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            var notifications = scope.ServiceProvider.GetRequiredService<INotificationsProvider>();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            INotificationsProvider notifications = scope.ServiceProvider.GetRequiredService<INotificationsProvider>();
 
             List<Guid> adminIds = await dbContext.Users
                 .Where(x => x.Role == UserRole.Admin)
@@ -110,7 +110,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
                 return;
             }
 
-            var metadata = NotificationTemplateMetadata.Create(
+            Dictionary<string, string> metadata = NotificationTemplateMetadata.Create(
                 NotificationTemplateKeys.DatabaseIntegrityFailureTitle,
                 NotificationTemplateKeys.DatabaseIntegrityFailureContent,
                 new Dictionary<string, string>

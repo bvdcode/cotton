@@ -73,7 +73,7 @@ namespace Cotton.Server.Services
                 throw new BadRequestException<OidcProvider>("OIDC token exchange failed.");
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            await using Stream stream = await response.Content.ReadAsStreamAsync(ct);
             OidcTokenResponse? tokenResponse = await JsonSerializer.DeserializeAsync<OidcTokenResponse>(
                 stream,
                 JsonOptions,
@@ -106,7 +106,7 @@ namespace Cotton.Server.Services
                 return null;
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            await using Stream stream = await response.Content.ReadAsStreamAsync(ct);
             using JsonDocument document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
             JsonElement root = document.RootElement;
             return new(

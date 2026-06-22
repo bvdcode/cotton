@@ -11,7 +11,7 @@ namespace Cotton.Benchmark.Infrastructure
     {
         public static List<IBenchmark> Create(BenchmarkConfiguration configuration, BenchmarkOptions options)
         {
-            var benchmarks = options.Mode switch
+            List<IBenchmark> benchmarks = options.Mode switch
             {
                 BenchmarkMode.Machine => CreateMachineBenchmarks(configuration, options),
                 BenchmarkMode.Development => CreateDevelopmentBenchmarks(configuration, options.Profile),

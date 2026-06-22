@@ -62,8 +62,8 @@ namespace Cotton.Server.Handlers.Nodes
         /// </summary>
         public async Task<NodeContentDto> Handle(GetChildrenQuery request, CancellationToken ct)
         {
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, ct);
-            var parentNode = await _dbContext.Nodes
+            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, ct);
+            Node parentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == request.NodeId
                     && x.OwnerId == request.UserId
@@ -148,10 +148,10 @@ namespace Cotton.Server.Handlers.Nodes
             int filesSkip = Math.Max(0, skip - nodesCount);
             int filesToTake = Math.Max(0, request.PageSize - nodesToTake);
 
-            var nodes = nodesToTake == 0 ? []
+            List<NodeDto> nodes = nodesToTake == 0 ? []
                 : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync(cancellationToken: ct);
 
-            var files = filesToTake == 0 ? []
+            List<NodeFileManifestDto> files = filesToTake == 0 ? []
                 : await filesBaseQuery
                     .OrderBy(x => x.NameKey)
                     .Include(x => x.FileManifest)

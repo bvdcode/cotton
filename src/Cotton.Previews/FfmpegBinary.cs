@@ -256,7 +256,7 @@ namespace Cotton.Previews
                 return null;
             }
 
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
             bool completed = await WaitForProcessAsync(process, timeout, cancellationToken).ConfigureAwait(false);
             if (!completed || process.ExitCode != 0)
             {

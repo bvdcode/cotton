@@ -28,7 +28,7 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            var backend = _backendProvider.GetBackend();
+            IStorageBackend backend = _backendProvider.GetBackend();
             backend.CleanupTempFiles(_ttl);
         }
     }

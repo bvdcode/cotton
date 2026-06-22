@@ -64,7 +64,7 @@ namespace Cotton.Previews
                 return null;
             }
             return GeneratorsByContentType
-                .TryGetValue(contentType, out var generator) ? generator : null;
+                .TryGetValue(contentType, out IPreviewGenerator? generator) ? generator : null;
         }
 
         /// <summary>Returns preview generator versions keyed by MIME type.</summary>

@@ -84,8 +84,8 @@ namespace Cotton.Server.Handlers.Users
             bool emailChanged = IsEmailChanged(user, newEmail);
             await EnsureEmailAvailableAsync(user, newEmail, emailChanged, cancellationToken);
 
-            var usernameUpdate = await ResolveUsernameUpdateAsync(user, request.Username, cancellationToken);
-            var avatarUpdate = await ResolveAvatarUpdateAsync(user, request.AvatarHash, cancellationToken);
+            UsernameUpdate usernameUpdate = await ResolveUsernameUpdateAsync(user, request.Username, cancellationToken);
+            AvatarUpdate avatarUpdate = await ResolveAvatarUpdateAsync(user, request.AvatarHash, cancellationToken);
 
             ApplyProfileFields(user, request);
             ApplyEmailUpdate(user, newEmail, emailChanged);

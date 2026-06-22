@@ -43,13 +43,13 @@ namespace Cotton.Benchmark
                 return 0;
             }
 
-            var configuration = ApplyConfigurationOverrides(
+            BenchmarkConfiguration configuration = ApplyConfigurationOverrides(
                 BenchmarkConfigurationFactory.Create(options.Profile),
                 options);
-            var hardwareFingerprint = new HardwareFingerprintProvider().Create();
+            HardwareFingerprint hardwareFingerprint = new HardwareFingerprintProvider().Create();
             List<IBenchmark> benchmarks = BenchmarkSuiteFactory.Create(configuration, options);
 
-            await using var serviceProvider = CreateServiceProvider();
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
 
             PrintHeader();
             SystemInfo.PrintSystemInfo();
@@ -117,10 +117,10 @@ namespace Cotton.Benchmark
         {
             try
             {
-                var runner = serviceProvider.GetRequiredService<IBenchmarkRunner>();
-                var results = (await runner.RunBenchmarksAsync(benchmarks)).ToArray();
+                IBenchmarkRunner runner = serviceProvider.GetRequiredService<IBenchmarkRunner>();
+                IBenchmarkResult[] results = (await runner.RunBenchmarksAsync(benchmarks)).ToArray();
 
-                var reporter = serviceProvider.GetRequiredService<IReporter>();
+                IReporter reporter = serviceProvider.GetRequiredService<IReporter>();
                 await reporter.ReportAsync(results);
 
                 PrintMemoryStatistics();
@@ -229,7 +229,7 @@ namespace Cotton.Benchmark
         private static void PrintBenchmarkList(IEnumerable<IBenchmark> benchmarks)
         {
             Console.WriteLine("Available benchmarks:");
-            foreach (var benchmark in benchmarks)
+            foreach (IBenchmark benchmark in benchmarks)
             {
                 Console.WriteLine($"  - {benchmark.Name}: {benchmark.Description}");
             }

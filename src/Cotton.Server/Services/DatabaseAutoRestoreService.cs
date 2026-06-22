@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Buffers;
 using System.Data;
+using System.Data.Common;
 using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
@@ -123,11 +124,11 @@ namespace Cotton.Server.Services
                 """;
 
             await EnsureConnectionOpenAsync(cancellationToken);
-            using var command = dbContext.Database.GetDbConnection().CreateCommand();
+            using DbCommand command = dbContext.Database.GetDbConnection().CreateCommand();
             command.CommandText = sql;
             command.CommandType = CommandType.Text;
 
-            var parameter = command.CreateParameter();
+            DbParameter parameter = command.CreateParameter();
             parameter.ParameterName = "@tableName";
             parameter.Value = tableName;
             command.Parameters.Add(parameter);
@@ -139,7 +140,7 @@ namespace Cotton.Server.Services
         private async Task<bool> ExecuteScalarBooleanAsync(string sql, CancellationToken cancellationToken)
         {
             await EnsureConnectionOpenAsync(cancellationToken);
-            using var command = dbContext.Database.GetDbConnection().CreateCommand();
+            using DbCommand command = dbContext.Database.GetDbConnection().CreateCommand();
             command.CommandText = sql;
             command.CommandType = CommandType.Text;
             object? result = await command.ExecuteScalarAsync(cancellationToken);

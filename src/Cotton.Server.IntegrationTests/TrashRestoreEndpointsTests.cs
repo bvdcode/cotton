@@ -33,7 +33,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
 
@@ -76,14 +76,14 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
     public async Task RestoreFile_FromTrash_ReturnsItToOriginalParentAndRemovesWrapper()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var folder = await CreateFolderAsync(root.Id, "docs");
-        var file = await CreateFileAsync(folder.Id, "readme.txt", "hello");
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "docs");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "readme.txt", "hello");
 
-        var delete = await _client!.DeleteAsync($"/api/v1/files/{file.Id}");
+        HttpResponseMessage delete = await _client!.DeleteAsync($"/api/v1/files/{file.Id}");
         Assert.That(delete.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
 
-        await using (var db = NewReadOnlyDbContext())
+        await using (CottonDbContext db = NewReadOnlyDbContext())
         {
             var trashed = await db.NodeFiles
                 .AsNoTracking()
@@ -94,13 +94,13 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
             Assert.That(await GetMetadataValueAsync("node_files", file.Id, OriginalParentPathMetadataKey), Is.EqualTo("docs"));
         }
 
-        var outcome = await RestoreFileAsync(file.Id);
+        RestoreOutcomeDto outcome = await RestoreFileAsync(file.Id);
 
         Assert.That(outcome.Status, Is.EqualTo(RestoreStatus.Restored));
         Assert.That(outcome.OriginalParentPath, Is.EqualTo("docs"));
         Assert.That(outcome.RestoredFile?.Id, Is.EqualTo(file.Id));
 
-        await using (var db = NewReadOnlyDbContext())
+        await using (CottonDbContext db = NewReadOnlyDbContext())
         {
             var restored = await db.NodeFiles
                 .AsNoTracking()
@@ -121,23 +121,23 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
     public async Task RestoreFile_WhenOriginalParentMissing_CanRecreateParentPath()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var folder = await CreateFolderAsync(root.Id, "docs");
-        var file = await CreateFileAsync(folder.Id, "readme.txt", "hello");
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "docs");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "readme.txt", "hello");
 
         (await _client!.DeleteAsync($"/api/v1/files/{file.Id}")).EnsureSuccessStatusCode();
         (await _client.DeleteAsync($"/api/v1/layouts/nodes/{folder.Id}?skipTrash=true")).EnsureSuccessStatusCode();
 
-        var missing = await RestoreFileAsync(file.Id);
+        RestoreOutcomeDto missing = await RestoreFileAsync(file.Id);
         Assert.That(missing.Status, Is.EqualTo(RestoreStatus.ParentMissing));
         Assert.That(missing.MissingPath, Is.EqualTo("docs"));
 
-        var restored = await RestoreFileAsync(file.Id, createMissingParents: true);
+        RestoreOutcomeDto restored = await RestoreFileAsync(file.Id, createMissingParents: true);
         Assert.That(restored.Status, Is.EqualTo(RestoreStatus.Restored));
 
-        var newDocs = await ResolveDefaultNodeAsync("docs");
+        NodeDto? newDocs = await ResolveDefaultNodeAsync("docs");
         Assert.That(newDocs, Is.Not.Null);
-        await using var db = NewReadOnlyDbContext();
+        await using CottonDbContext db = NewReadOnlyDbContext();
         var restoredFile = await db.NodeFiles
             .AsNoTracking()
             .Where(x => x.Id == file.Id)
@@ -150,21 +150,21 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
     public async Task RestoreFile_WithNameConflict_CanOverwriteByMovingConflictToTrash()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var folder = await CreateFolderAsync(root.Id, "docs");
-        var original = await CreateFileAsync(folder.Id, "readme.txt", "original");
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "docs");
+        NodeFileManifestDto original = await CreateFileAsync(folder.Id, "readme.txt", "original");
 
         (await _client!.DeleteAsync($"/api/v1/files/{original.Id}")).EnsureSuccessStatusCode();
-        var blocker = await CreateFileAsync(folder.Id, "readme.txt", "blocker");
+        NodeFileManifestDto blocker = await CreateFileAsync(folder.Id, "readme.txt", "blocker");
 
-        var conflict = await RestoreFileAsync(original.Id);
+        RestoreOutcomeDto conflict = await RestoreFileAsync(original.Id);
         Assert.That(conflict.Status, Is.EqualTo(RestoreStatus.Conflict));
         Assert.That(conflict.ConflictKind, Is.EqualTo(RestoreConflictKind.File));
 
-        var restored = await RestoreFileAsync(original.Id, overwrite: true);
+        RestoreOutcomeDto restored = await RestoreFileAsync(original.Id, overwrite: true);
         Assert.That(restored.Status, Is.EqualTo(RestoreStatus.Restored));
 
-        await using var db = NewReadOnlyDbContext();
+        await using CottonDbContext db = NewReadOnlyDbContext();
         var restoredFile = await db.NodeFiles
             .AsNoTracking()
             .Where(x => x.Id == original.Id)
@@ -184,15 +184,15 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
     public async Task RestoreNode_RestoresSubtreeTypesAndOriginalParent()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var parent = await CreateFolderAsync(root.Id, "parent");
-        var folder = await CreateFolderAsync(parent.Id, "project");
-        var child = await CreateFolderAsync(folder.Id, "child");
-        var file = await CreateFileAsync(child.Id, "note.txt", "nested");
+        NodeDto root = await GetRootAsync();
+        NodeDto parent = await CreateFolderAsync(root.Id, "parent");
+        NodeDto folder = await CreateFolderAsync(parent.Id, "project");
+        NodeDto child = await CreateFolderAsync(folder.Id, "child");
+        NodeFileManifestDto file = await CreateFileAsync(child.Id, "note.txt", "nested");
 
         (await _client!.DeleteAsync($"/api/v1/layouts/nodes/{folder.Id}")).EnsureSuccessStatusCode();
 
-        await using (var db = NewReadOnlyDbContext())
+        await using (CottonDbContext db = NewReadOnlyDbContext())
         {
             var trashedFolder = await db.Nodes
                 .AsNoTracking()
@@ -210,11 +210,11 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
             await AssertNoMixedNodeTypesAsync();
         }
 
-        var restored = await RestoreNodeAsync(folder.Id);
+        RestoreOutcomeDto restored = await RestoreNodeAsync(folder.Id);
         Assert.That(restored.Status, Is.EqualTo(RestoreStatus.Restored));
         Assert.That(restored.RestoredNode?.Id, Is.EqualTo(folder.Id));
 
-        await using (var db = NewReadOnlyDbContext())
+        await using (CottonDbContext db = NewReadOnlyDbContext())
         {
             var restoredFolder = await db.Nodes
                 .AsNoTracking()
@@ -253,22 +253,22 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
         };
         request.Headers.Add("X-Forwarded-For", "8.8.8.8");
 
-        var response = await _client!.SendAsync(request);
+        HttpResponseMessage response = await _client!.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
-        var login = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+        TokenPairResponseDto? login = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login!.AccessToken);
     }
 
     private async Task<NodeDto> GetRootAsync()
     {
-        var root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         return root!;
     }
 
     private async Task<NodeDto?> ResolveDefaultNodeAsync(string path)
     {
-        var response = await _client!.GetAsync($"/api/v1/layouts/resolver/{Uri.EscapeDataString(path)}");
+        HttpResponseMessage response = await _client!.GetAsync($"/api/v1/layouts/resolver/{Uri.EscapeDataString(path)}");
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             return null;
@@ -280,7 +280,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
 
     private async Task<NodeDto> CreateFolderAsync(Guid parentId, string name)
     {
-        var response = await _client!.PutAsJsonAsync(
+        HttpResponseMessage response = await _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
             new CreateNodeRequestDto { ParentId = parentId, Name = name });
         response.EnsureSuccessStatusCode();
@@ -298,10 +298,10 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
             Hash = hash,
             NodeId = nodeId,
         };
-        var response = await _client!.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        HttpResponseMessage response = await _client!.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         response.EnsureSuccessStatusCode();
 
-        var children = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
+        NodeContentDto? children = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
         return children!.Files.Single(x => x.Name == name);
     }
 
@@ -322,7 +322,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
             { new StringContent(hash), "hash" },
         };
 
-        var response = await _client!.PostAsync("/api/v1/chunks", form);
+        HttpResponseMessage response = await _client!.PostAsync("/api/v1/chunks", form);
         response.EnsureSuccessStatusCode();
         return hash;
     }
@@ -332,7 +332,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
         bool createMissingParents = false,
         bool overwrite = false)
     {
-        var response = await _client!.PostAsJsonAsync(
+        HttpResponseMessage response = await _client!.PostAsJsonAsync(
             $"/api/v1/files/{fileId}/restore",
             new RestoreItemRequestDto
             {
@@ -348,7 +348,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
         bool createMissingParents = false,
         bool overwrite = false)
     {
-        var response = await _client!.PostAsJsonAsync(
+        HttpResponseMessage response = await _client!.PostAsJsonAsync(
             $"/api/v1/layouts/nodes/{nodeId}/restore",
             new RestoreItemRequestDto
             {
@@ -361,7 +361,7 @@ public class TrashRestoreEndpointsTests : IntegrationTestBase
 
     private async Task AssertNoMixedNodeTypesAsync()
     {
-        await using var db = NewReadOnlyDbContext();
+        await using CottonDbContext db = NewReadOnlyDbContext();
         var mismatches = await db.Nodes
             .AsNoTracking()
             .Where(child => child.ParentId != null)

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -30,7 +31,7 @@ namespace Cotton.Server.Handlers.Users
         /// </summary>
         public async Task<IEnumerable<AdminUserDto>> Handle(AdminGetUsersQuery request, CancellationToken cancellationToken)
         {
-            var users = await _dbContext.Users
+            List<User> users = await _dbContext.Users
                 .AsNoTracking()
                 .OrderBy(x => x.Username)
                 .ToListAsync(cancellationToken);

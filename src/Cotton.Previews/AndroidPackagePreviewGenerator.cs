@@ -585,7 +585,7 @@ namespace Cotton.Previews
         {
             try
             {
-                var info = Image.Identify(imageBytes);
+                ImageInfo? info = Image.Identify(imageBytes);
                 return info is null ? null : (info.Width, info.Height);
             }
             catch

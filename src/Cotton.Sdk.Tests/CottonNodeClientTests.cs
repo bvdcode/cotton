@@ -4,6 +4,7 @@
 using System.Net;
 using Cotton.Auth;
 using Cotton.Files;
+using Cotton.Nodes;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Tests.Fakes;
 
@@ -26,9 +27,9 @@ public class CottonNodeClientTests
             name = "docs",
             metadata = new Dictionary<string, string>(),
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
-        var node = await client.Nodes.ResolveAsync("docs/reports");
+        NodeDto node = await client.Nodes.ResolveAsync("docs/reports");
 
         Assert.Multiple(() =>
         {
@@ -53,9 +54,9 @@ public class CottonNodeClientTests
             name = "reports",
             metadata = new Dictionary<string, string>(),
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
-        var node = await client.Nodes.CreateAsync(parentId, " reports ");
+        NodeDto node = await client.Nodes.CreateAsync(parentId, " reports ");
 
         Assert.Multiple(() =>
         {
@@ -77,7 +78,7 @@ public class CottonNodeClientTests
             originalParentPath = "/Projects/Old",
             missingPath = "/Projects",
         });
-        var client = await CreateAuthorizedClientAsync(handler);
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
         RestoreOutcomeDto outcome = await client.Nodes.RestoreAsync(nodeId);
 

@@ -63,7 +63,7 @@ namespace Cotton.Server.Handlers.Files
         /// </summary>
         public async Task<ShareFileResult> Handle(ShareFileQuery request, CancellationToken ct)
         {
-            var viewMode = TryParseViewMode(request.View);
+            (bool IsHtml, bool IsInlineFile)? viewMode = TryParseViewMode(request.View);
             if (viewMode is null)
             {
                 return ShareFileResult.AsBadRequest("Invalid view mode. Valid values: page, download, inline.");
@@ -88,7 +88,7 @@ namespace Cotton.Server.Handlers.Files
             }
 
             bool includeChunks = !viewMode.Value.IsHtml && !isHead && !requestsPreview;
-            var downloadToken = await LoadDownloadTokenAsync(request.Token, now, includeChunks, ct);
+            DownloadToken? downloadToken = await LoadDownloadTokenAsync(request.Token, now, includeChunks, ct);
             if (downloadToken is null)
             {
                 return await BuildMissingTokenResultAsync(request.Token, now, viewMode.Value.IsHtml, baseAppUrl, ct);
@@ -124,7 +124,7 @@ namespace Cotton.Server.Handlers.Files
             bool includeChunks,
             CancellationToken ct)
         {
-            var query = BuildTokenQuery(token, now, includeChunks);
+            IQueryable<DownloadToken> query = BuildTokenQuery(token, now, includeChunks);
             return await query.FirstOrDefaultAsync(cancellationToken: ct);
         }
 
@@ -134,7 +134,7 @@ namespace Cotton.Server.Handlers.Files
             string baseAppUrl,
             CancellationToken ct)
         {
-            var nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
+            NodeShareToken? nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
             if (nodeShareToken is null)
             {
                 return null;
@@ -161,7 +161,7 @@ namespace Cotton.Server.Handlers.Files
                 return ShareFileResult.AsNotFound("File not found");
             }
 
-            var nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
+            NodeShareToken? nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
             if (nodeShareToken is null || nodeShareToken.Node.Type != NodeType.Default)
             {
                 return ShareFileResult.AsRedirect($"{baseAppUrl}/404");
@@ -207,7 +207,7 @@ namespace Cotton.Server.Handlers.Files
             string baseAppUrl,
             CancellationToken ct)
         {
-            var file = downloadToken.NodeFile.FileManifest;
+            FileManifest file = downloadToken.NodeFile.FileManifest;
             if (viewMode.IsHtml)
             {
                 return BuildFileRedirect(downloadToken, file, request.Token, baseAppUrl);
@@ -218,7 +218,7 @@ namespace Cotton.Server.Handlers.Files
                 return CreatePreviewStreamResult(downloadToken, file);
             }
 
-            var entityTag = CreateEntityTag(file);
+            EntityTagHeaderValue entityTag = CreateEntityTag(file);
             if (isHead)
             {
                 return ShareFileResult.AsHead(

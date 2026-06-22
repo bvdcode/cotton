@@ -314,13 +314,13 @@ namespace Cotton.Crypto
                 minimumSegmentSize: 4096,
                 useSynchronizationContext: false));
 
-            var readerStream = pipe.Reader.AsStream(leaveOpen: leaveOpen);
+            Stream readerStream = pipe.Reader.AsStream(leaveOpen: leaveOpen);
 
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    var writerStream = pipe.Writer.AsStream(leaveOpen: true);
+                    Stream writerStream = pipe.Writer.AsStream(leaveOpen: true);
                     await EncryptAsync(input, writerStream, chunkSize, leaveInputOpen: leaveOpen, leaveOutputOpen: true, ct).ConfigureAwait(false);
                     await pipe.Writer.CompleteAsync().ConfigureAwait(false);
                 }
@@ -364,13 +364,13 @@ namespace Cotton.Crypto
                 minimumSegmentSize: 4096,
                 useSynchronizationContext: false));
 
-            var readerStream = pipe.Reader.AsStream(leaveOpen: leaveOpen);
+            Stream readerStream = pipe.Reader.AsStream(leaveOpen: leaveOpen);
 
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    var writerStream = pipe.Writer.AsStream(leaveOpen: true);
+                    Stream writerStream = pipe.Writer.AsStream(leaveOpen: true);
                     await DecryptAsync(input, writerStream, leaveInputOpen: leaveOpen, leaveOutputOpen: true, ct).ConfigureAwait(false);
                     await pipe.Writer.CompleteAsync().ConfigureAwait(false);
                 }

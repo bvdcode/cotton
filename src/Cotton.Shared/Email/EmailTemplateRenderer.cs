@@ -64,7 +64,7 @@ namespace Cotton.Email
                 }
             }
 
-            foreach (var kvp in variables)
+            foreach (KeyValuePair<string, string> kvp in variables)
             {
                 html = html.Replace("{{" + kvp.Key + "}}", kvp.Value);
             }

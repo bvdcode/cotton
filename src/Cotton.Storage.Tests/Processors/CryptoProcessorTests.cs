@@ -41,10 +41,10 @@ namespace Cotton.Storage.Tests.Processors
         {
             // Arrange
             var originalData = Array.Empty<byte>();
-            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
+            Stream encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var decrypted = await _processor.ReadAsync("test-uid", encrypted);
+            Stream decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
             var result = await ReadAllAsync(decrypted);
@@ -56,10 +56,10 @@ namespace Cotton.Storage.Tests.Processors
         {
             // Arrange
             var originalData = "*"u8.ToArray();
-            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
+            Stream encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var decrypted = await _processor.ReadAsync("test-uid", encrypted);
+            Stream decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
             var result = await ReadAllAsync(decrypted);
@@ -71,10 +71,10 @@ namespace Cotton.Storage.Tests.Processors
         {
             // Arrange
             var originalData = Encoding.UTF8.GetBytes("Hello, World!");
-            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
+            Stream encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var decrypted = await _processor.ReadAsync("test-uid", encrypted);
+            Stream decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
             var result = await ReadAllAsync(decrypted);
@@ -87,10 +87,10 @@ namespace Cotton.Storage.Tests.Processors
             // Arrange
             var originalData = new byte[1024];
             for (int i = 0; i < originalData.Length; i++) originalData[i] = (byte)(i % 256);
-            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
+            Stream encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var decrypted = await _processor.ReadAsync("test-uid", encrypted);
+            Stream decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
             var result = await ReadAllAsync(decrypted);
@@ -103,10 +103,10 @@ namespace Cotton.Storage.Tests.Processors
             // Arrange
             var originalData = new byte[1024 * 1024];
             RandomNumberGenerator.Fill(originalData);
-            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
+            Stream encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var decrypted = await _processor.ReadAsync("test-uid", encrypted);
+            Stream decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
             var result = await ReadAllAsync(decrypted);
@@ -119,10 +119,10 @@ namespace Cotton.Storage.Tests.Processors
             // Arrange
             var originalData = new byte[4096];
             RandomNumberGenerator.Fill(originalData);
-            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
+            Stream encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var decrypted = await _processor.ReadAsync("test-uid", encrypted);
+            Stream decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
             var result = await ReadAllAsync(decrypted);
@@ -134,7 +134,7 @@ namespace Cotton.Storage.Tests.Processors
         {
             // Arrange
             var originalData = Encoding.UTF8.GetBytes("Sensitive Data");
-            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
+            Stream encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
             var encryptedBytes = await ReadAllAsync(encrypted);

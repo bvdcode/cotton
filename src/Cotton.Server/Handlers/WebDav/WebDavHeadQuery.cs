@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database.Models;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions.Mediator;
@@ -39,7 +40,7 @@ namespace Cotton.Server.Handlers.WebDav
         /// </summary>
         public async Task<WebDavHeadResult> Handle(WebDavHeadQuery request, CancellationToken ct)
         {
-            var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
+            WebDavResolveResult resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
 
             if (!resolveResult.Found)
             {
@@ -60,7 +61,7 @@ namespace Cotton.Server.Handlers.WebDav
 
             if (resolveResult.NodeFile is not null)
             {
-                var manifest = resolveResult.NodeFile.FileManifest;
+                FileManifest manifest = resolveResult.NodeFile.FileManifest;
                 return new WebDavHeadResult(
                     Found: true,
                     IsCollection: false,

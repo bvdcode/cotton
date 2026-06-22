@@ -42,7 +42,7 @@ namespace Cotton.Storage.Helpers
             int maxErrorRetry = 3)
         {
             var credentials = new BasicAWSCredentials(accessKey, secretKey);
-            var config = BuildConfig(endpoint, region, timeout, maxErrorRetry);
+            AmazonS3Config config = BuildConfig(endpoint, region, timeout, maxErrorRetry);
             return new AmazonS3Client(credentials, config);
         }
 

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
@@ -43,14 +44,14 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            var unprocessedManifests = await _dbContext.FileManifests
+            List<FileManifest> unprocessedManifests = await _dbContext.FileManifests
                 .Where(fm => fm.ComputedContentHash == null)
                 .Include(fm => fm.FileManifestChunks)
                 .OrderBy(fm => fm.Id)
                 .Take(MaxItemsPerRun)
                 .ToListAsync(context.CancellationToken);
 
-            foreach (var manifest in unprocessedManifests)
+            foreach (FileManifest? manifest in unprocessedManifests)
             {
                 if (_perf.IsPreviewGenerating() || _perf.IsUploading())
                 {

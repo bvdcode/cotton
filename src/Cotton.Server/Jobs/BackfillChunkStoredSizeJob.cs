@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.Quartz.Attributes;
@@ -34,7 +35,7 @@ namespace Cotton.Server.Jobs
 
             while (true)
             {
-                var batch = await _dbContext.Chunks
+                List<Chunk> batch = await _dbContext.Chunks
                     .Where(c => c.StoredSizeBytes <= 0)
                     .OrderBy(c => c.Hash)
                     .Take(BatchSize)
@@ -45,7 +46,7 @@ namespace Cotton.Server.Jobs
                     break;
                 }
 
-                foreach (var chunk in batch)
+                foreach (Chunk? chunk in batch)
                 {
                     ct.ThrowIfCancellationRequested();
 

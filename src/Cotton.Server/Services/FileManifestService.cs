@@ -170,7 +170,7 @@ namespace Cotton.Server.Services
         {
             string extension = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
             if (!string.IsNullOrWhiteSpace(extension)
-                && extensionContentTypeOverrides.TryGetValue(extension, out var overrideMetadata)
+                && extensionContentTypeOverrides.TryGetValue(extension, out (string ContentType, bool ForceContentType) overrideMetadata)
                 && (overrideMetadata.ForceContentType
                     || string.IsNullOrWhiteSpace(normalizedContentType)
                     || string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase)))
@@ -266,7 +266,7 @@ namespace Cotton.Server.Services
 
         private static string BuildSourceTextFileNameRegexPattern()
         {
-            var extensions = sourceTextExtensions
+            IOrderedEnumerable<string> extensions = sourceTextExtensions
                 .Select(extension => Regex.Escape(extension.TrimStart('.')))
                 .OrderByDescending(extension => extension.Length)
                 .ThenBy(extension => extension, StringComparer.Ordinal);
@@ -276,7 +276,7 @@ namespace Cotton.Server.Services
 
         private static string BuildPreviewableFileNameRegexPattern()
         {
-            var extensions = sourceTextExtensions
+            IOrderedEnumerable<string> extensions = sourceTextExtensions
                 .Concat(extensionContentTypeOverrides.Keys)
                 .Select(extension => Regex.Escape(extension.TrimStart('.')))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -339,7 +339,7 @@ namespace Cotton.Server.Services
             List<Chunk> result = [];
             foreach (var hash in chunkHashes)
             {
-                if (!chunkMap.TryGetValue(hash, out var chunk))
+                if (!chunkMap.TryGetValue(hash, out Chunk? chunk))
                 {
                     throw new EntityNotFoundException(nameof(Chunk));
                 }

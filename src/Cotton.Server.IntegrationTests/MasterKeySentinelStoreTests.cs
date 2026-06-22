@@ -32,7 +32,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task ValidateOrInitializeAsync_Creates_And_Reuses_Sentinel()
         {
-            var store = CreateStore();
+            MasterKeySentinelStore store = CreateStore();
             CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
@@ -57,7 +57,7 @@ namespace Cotton.Server.IntegrationTests
 
             var probe = new DelegateCompatibilityProbe((_, _) =>
                 MasterKeyCompatibilityResult.Fail("probe should not block a valid sentinel"));
-            var store = CreateStore(probe);
+            MasterKeySentinelStore store = CreateStore(probe);
 
             MasterKeySentinelResult result = await store.ValidateOrInitializeAsync(settings);
 
@@ -94,7 +94,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task ValidateOrInitializeAsync_Rejects_Wrong_MasterKey()
         {
-            var store = CreateStore();
+            MasterKeySentinelStore store = CreateStore();
             CottonEncryptionSettings original = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
             CottonEncryptionSettings wrong = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
@@ -117,7 +117,7 @@ namespace Cotton.Server.IntegrationTests
                 mode == MasterKeyCompatibilityMode.RequireEvidenceForExistingData
                     ? MasterKeyCompatibilityResult.Fail("probe required")
                     : MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: false));
-            var store = CreateStore(probe);
+            MasterKeySentinelStore store = CreateStore(probe);
             CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
@@ -146,7 +146,7 @@ namespace Cotton.Server.IntegrationTests
                 mode == MasterKeyCompatibilityMode.RequireEvidenceForExistingData
                     ? MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true)
                     : MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: false));
-            var store = CreateStore(probe);
+            MasterKeySentinelStore store = CreateStore(probe);
 
             MasterKeySentinelResult repaired = await store.ValidateOrInitializeAsync(correct);
             MasterKeySentinelResult reused = await store.ValidateOrInitializeAsync(correct);
@@ -172,7 +172,7 @@ namespace Cotton.Server.IntegrationTests
 
             var probe = new DelegateCompatibilityProbe((_, _) =>
                 MasterKeyCompatibilityResult.Compatible(existingDataFound: false, evidenceFound: false));
-            var store = CreateStore(probe);
+            MasterKeySentinelStore store = CreateStore(probe);
 
             MasterKeySentinelResult rejected = await store.ValidateOrInitializeAsync(correct);
 

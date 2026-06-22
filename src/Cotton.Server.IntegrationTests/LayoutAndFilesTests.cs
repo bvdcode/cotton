@@ -33,7 +33,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
     public void SetUp()
     {
         // Reset DB to empty state
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
         Assert.Multiple(() =>
@@ -85,7 +85,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var node = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? node = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(node, Is.Not.Null);
         Assert.That(node!.Name, Is.EqualTo(NodeType.Default.ToString()));
         Assert.That(node.ParentId, Is.Null);
@@ -99,15 +99,15 @@ public class LayoutAndFilesTests : IntegrationTestBase
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         // Create a new child node under root
         var nodeName = "test";
         var createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = nodeName };
-        var createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
+        HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
         createNodeRes.EnsureSuccessStatusCode();
-        var child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
+        NodeDto? child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(child, Is.Not.Null);
         TestContext.Progress.WriteLine($"Created node '{nodeName}' with Id={child!.Id}");
 
@@ -129,7 +129,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
                 },
                 { new StringContent(chunkHashLower), "hash" }
             };
-            var upRes = await _client.PostAsync("/api/v1/chunks", form);
+            HttpResponseMessage upRes = await _client.PostAsync("/api/v1/chunks", form);
             upRes.EnsureSuccessStatusCode();
             TestContext.Progress.WriteLine($"Uploaded chunk {i}: {chunkHashLower[..16]}...");
 
@@ -143,12 +143,12 @@ public class LayoutAndFilesTests : IntegrationTestBase
                 Hash = chunkHashLower,
                 NodeId = child.Id
             };
-            var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+            HttpResponseMessage createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
             createFileRes.EnsureSuccessStatusCode();
         }
 
         // Verify children listing shows 10 files
-        var list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{child!.Id}/children");
+        NodeContentDto? list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{child!.Id}/children");
         Assert.That(list, Is.Not.Null);
         Assert.That(list!.Files.Count, Is.EqualTo(10));
         var names = list.Files
@@ -167,14 +167,14 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
-        var sharedRoot = await CreateNodeAsync(root!.Id, "shared-root");
-        var outsideParent = await CreateNodeAsync(root.Id, "outside-parent");
-        var outsideChild = await CreateNodeAsync(outsideParent.Id, "outside-child");
+        NodeDto sharedRoot = await CreateNodeAsync(root!.Id, "shared-root");
+        NodeDto outsideParent = await CreateNodeAsync(root.Id, "outside-parent");
+        NodeDto outsideChild = await CreateNodeAsync(outsideParent.Id, "outside-child");
 
-        var shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
+        HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
         shareLinkRes.EnsureSuccessStatusCode();
         string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
         string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
@@ -184,7 +184,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
 
         _client.DefaultRequestHeaders.Authorization = null;
 
-        var response = await _client.GetAsync(
+        HttpResponseMessage response = await _client.GetAsync(
             $"/api/v1/layouts/shared/{shareToken}/children?nodeId={outsideChild.Id}");
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
@@ -196,30 +196,30 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
-        var sharedRoot = await CreateNodeAsync(root!.Id, "shared-root");
-        var nested = await CreateNodeAsync(sharedRoot.Id, "nested");
-        var outside = await CreateNodeAsync(root.Id, "outside");
+        NodeDto sharedRoot = await CreateNodeAsync(root!.Id, "shared-root");
+        NodeDto nested = await CreateNodeAsync(sharedRoot.Id, "nested");
+        NodeDto outside = await CreateNodeAsync(root.Id, "outside");
         await UploadTextFileAsync(sharedRoot.Id, "root.txt", "root body");
         await UploadTextFileAsync(nested.Id, "deep.txt", "deep body");
 
-        var shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
+        HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
         shareLinkRes.EnsureSuccessStatusCode();
         string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
         string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
 
         _client.DefaultRequestHeaders.Authorization = null;
 
-        var linkResponse = await _client.PostAsync(
+        HttpResponseMessage linkResponse = await _client.PostAsync(
             $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={sharedRoot.Id}",
             null);
         linkResponse.EnsureSuccessStatusCode();
-        var archive = await linkResponse.Content.ReadFromJsonAsync<ArchiveDownloadLinkDto>();
+        ArchiveDownloadLinkDto? archive = await linkResponse.Content.ReadFromJsonAsync<ArchiveDownloadLinkDto>();
         Assert.That(archive, Is.Not.Null);
 
-        var download = await _client.GetAsync(archive!.Url);
+        HttpResponseMessage download = await _client.GetAsync(archive!.Url);
         download.EnsureSuccessStatusCode();
         byte[] bytes = await download.Content.ReadAsByteArrayAsync();
 
@@ -227,7 +227,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         AssertZipEntry(zip, "shared-root/root.txt", "root body");
         AssertZipEntry(zip, "shared-root/nested/deep.txt", "deep body");
 
-        var outsideResponse = await _client.PostAsync(
+        HttpResponseMessage outsideResponse = await _client.PostAsync(
             $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={outside.Id}",
             null);
         Assert.That(outsideResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
@@ -239,10 +239,10 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
-        var sharedRoot = await CreateNodeAsync(root!.Id, "huge-shared-root");
+        NodeDto sharedRoot = await CreateNodeAsync(root!.Id, "huge-shared-root");
         var sharedRootEntity = await DbContext.Nodes
             .AsNoTracking()
             .Select(x => new { x.Id, x.LayoutId, x.OwnerId })
@@ -263,13 +263,13 @@ public class LayoutAndFilesTests : IntegrationTestBase
                 NULL
             FROM generate_series(0, 4999) AS s(i)");
 
-        var shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
+        HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
         shareLinkRes.EnsureSuccessStatusCode();
         string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
         string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
 
         _client.DefaultRequestHeaders.Authorization = null;
-        var linkResponse = await _client.PostAsync(
+        HttpResponseMessage linkResponse = await _client.PostAsync(
             $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={sharedRoot.Id}",
             null);
 
@@ -284,29 +284,29 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var publicBaseUrlRes = await _client.PatchAsJsonAsync(
+        HttpResponseMessage publicBaseUrlRes = await _client.PatchAsJsonAsync(
             "/api/v1/server/settings/public-base-url",
             "https://public.example");
         publicBaseUrlRes.EnsureSuccessStatusCode();
 
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = "shared-folder" };
-        var createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
+        HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
         createNodeRes.EnsureSuccessStatusCode();
 
-        var child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
+        NodeDto? child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(child, Is.Not.Null);
 
-        var shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{child!.Id}/share-link");
+        HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{child!.Id}/share-link");
         shareLinkRes.EnsureSuccessStatusCode();
         var shareLink = await shareLinkRes.Content.ReadAsStringAsync();
         Assert.That(shareLink, Is.Not.Null.And.Not.Empty);
 
         _client.DefaultRequestHeaders.Authorization = null;
 
-        var sharedPageRes = await _client.GetAsync(shareLink.Trim('"'));
+        HttpResponseMessage sharedPageRes = await _client.GetAsync(shareLink.Trim('"'));
         sharedPageRes.EnsureSuccessStatusCode();
 
         Assert.That(sharedPageRes.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
@@ -326,11 +326,11 @@ public class LayoutAndFilesTests : IntegrationTestBase
 
     private async Task<NodeDto> CreateNodeAsync(Guid parentId, string name)
     {
-        var response = await _client!.PutAsJsonAsync(
+        HttpResponseMessage response = await _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
             new CreateNodeRequestDto { ParentId = parentId, Name = name });
         response.EnsureSuccessStatusCode();
-        var node = await response.Content.ReadFromJsonAsync<NodeDto>();
+        NodeDto? node = await response.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(node, Is.Not.Null);
         return node!;
     }
@@ -352,7 +352,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
             { new StringContent(hash), "hash" }
         };
 
-        var uploadResponse = await _client!.PostAsync("/api/v1/chunks", form);
+        HttpResponseMessage uploadResponse = await _client!.PostAsync("/api/v1/chunks", form);
         uploadResponse.EnsureSuccessStatusCode();
 
         var fileReq = new CreateFileFromChunksRequestDto
@@ -363,9 +363,9 @@ public class LayoutAndFilesTests : IntegrationTestBase
             Hash = hash,
             NodeId = nodeId
         };
-        var createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        HttpResponseMessage createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createResponse.EnsureSuccessStatusCode();
-        var file = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        NodeFileManifestDto? file = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
         Assert.That(file, Is.Not.Null);
         return file!;
     }
@@ -389,9 +389,9 @@ public class LayoutAndFilesTests : IntegrationTestBase
             })
         };
         request.Headers.Add("X-Forwarded-For", "8.8.8.8");
-        var res = await _client!.SendAsync(request);
+        HttpResponseMessage res = await _client!.SendAsync(request);
         res.EnsureSuccessStatusCode();
-        var login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+        TokenPairResponseDto? login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         Assert.That(login, Is.Not.Null);
         TestContext.Progress.WriteLine($"Login OK. Token: {login!.AccessToken[..Math.Min(16, login.AccessToken.Length)]}...");
         return login.AccessToken;
@@ -403,14 +403,14 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
-        var createNodeRes = await _client.PutAsJsonAsync(
+        HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
             new CreateNodeRequestDto { ParentId = root!.Id, Name = "null-meta" });
         createNodeRes.EnsureSuccessStatusCode();
-        var folder = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
+        NodeDto? folder = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(folder, Is.Not.Null);
 
         var content = Encoding.UTF8.GetBytes("payload");
@@ -427,7 +427,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
             },
             { new StringContent(hash), "hash" }
         };
-        var uploadRes = await _client.PostAsync("/api/v1/chunks", form);
+        HttpResponseMessage uploadRes = await _client.PostAsync("/api/v1/chunks", form);
         uploadRes.EnsureSuccessStatusCode();
 
         var fileReq = new CreateFileFromChunksRequestDto
@@ -438,7 +438,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
             Hash = hash,
             NodeId = folder!.Id
         };
-        var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        HttpResponseMessage createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createFileRes.EnsureSuccessStatusCode();
 
         int updated = await DbContext.NodeFiles
@@ -448,16 +448,16 @@ public class LayoutAndFilesTests : IntegrationTestBase
                 (Dictionary<string, string>?)null));
         Assert.That(updated, Is.EqualTo(1));
 
-        var listRes = await _client.GetAsync($"/api/v1/layouts/nodes/{folder.Id}/children");
+        HttpResponseMessage listRes = await _client.GetAsync($"/api/v1/layouts/nodes/{folder.Id}/children");
         listRes.EnsureSuccessStatusCode();
         var rawJson = await listRes.Content.ReadAsStringAsync();
         Assert.That(rawJson, Does.Not.Contain("\"metadata\":null"));
 
-        var list = JsonSerializer.Deserialize<NodeContentDto>(
+        NodeContentDto? list = JsonSerializer.Deserialize<NodeContentDto>(
             rawJson,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         Assert.That(list, Is.Not.Null);
-        var files = list!.Files.ToArray();
+        NodeFileManifestDto[] files = list!.Files.ToArray();
         Assert.That(files, Has.Length.EqualTo(1));
         Assert.That(files[0].Metadata, Is.Not.Null);
         Assert.That(files[0].Metadata, Is.Empty);
@@ -468,16 +468,16 @@ public class LayoutAndFilesTests : IntegrationTestBase
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var name = "dup";
         var req = new CreateNodeRequestDto { ParentId = root!.Id, Name = name };
         // First create should succeed
-        var r1 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
+        HttpResponseMessage r1 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
         r1.EnsureSuccessStatusCode();
         // Second create with same name under same parent should return conflict (409)
-        var r2 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
+        HttpResponseMessage r2 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
         Assert.That(r2.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
         TestContext.Progress.WriteLine($"Duplicate create returned status: {(int)r2.StatusCode} {r2.StatusCode}");
 

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
@@ -41,7 +42,7 @@ namespace Cotton.Server.Jobs
 
             while (true)
             {
-                var nodes = await _dbContext.Nodes
+                List<Node> nodes = await _dbContext.Nodes
                     .Where(x => x.Metadata == null)
                     .OrderBy(x => x.Id)
                     .Take(BatchSize)
@@ -52,7 +53,7 @@ namespace Cotton.Server.Jobs
                     return totalUpdated;
                 }
 
-                foreach (var node in nodes)
+                foreach (Node? node in nodes)
                 {
                     node.Metadata = [];
                 }
@@ -69,7 +70,7 @@ namespace Cotton.Server.Jobs
 
             while (true)
             {
-                var nodeFiles = await _dbContext.NodeFiles
+                List<NodeFile> nodeFiles = await _dbContext.NodeFiles
                     .Where(x => x.Metadata == null)
                     .OrderBy(x => x.Id)
                     .Take(BatchSize)
@@ -80,7 +81,7 @@ namespace Cotton.Server.Jobs
                     return totalUpdated;
                 }
 
-                foreach (var nodeFile in nodeFiles)
+                foreach (NodeFile? nodeFile in nodeFiles)
                 {
                     nodeFile.Metadata = [];
                 }

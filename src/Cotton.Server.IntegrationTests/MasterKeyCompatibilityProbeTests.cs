@@ -45,7 +45,7 @@ namespace Cotton.Server.IntegrationTests
             CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
             await StoreEncryptedChunkAsync(settings);
-            var probe = CreateProbe();
+            MasterKeyCompatibilityProbe probe = CreateProbe();
 
             MasterKeyCompatibilityResult result = await probe.ValidateAsync(
                 settings,
@@ -74,7 +74,7 @@ namespace Cotton.Server.IntegrationTests
             });
             await DbContext.SaveChangesAsync();
             await StoreEncryptedChunkAsync(settings);
-            var probe = CreateProbe();
+            MasterKeyCompatibilityProbe probe = CreateProbe();
 
             MasterKeyCompatibilityResult result = await probe.ValidateAsync(
                 settings,
@@ -102,7 +102,7 @@ namespace Cotton.Server.IntegrationTests
                 AvatarHashEncrypted = RandomNumberGenerator.GetBytes(48)
             });
             await DbContext.SaveChangesAsync();
-            var probe = CreateProbe(new ThrowingEncryptedConfigurationStorageBackend());
+            MasterKeyCompatibilityProbe probe = CreateProbe(new ThrowingEncryptedConfigurationStorageBackend());
 
             MasterKeyCompatibilityResult result = await probe.ValidateAsync(
                 settings,
@@ -124,7 +124,7 @@ namespace Cotton.Server.IntegrationTests
                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
             await StoreRawChunkAsync(RandomNumberGenerator.GetBytes(12), plainSizeBytes: 12);
             await StoreEncryptedChunkAsync(settings);
-            var probe = CreateProbe();
+            MasterKeyCompatibilityProbe probe = CreateProbe();
 
             MasterKeyCompatibilityResult result = await probe.ValidateAsync(
                 settings,
@@ -146,7 +146,7 @@ namespace Cotton.Server.IntegrationTests
             CottonEncryptionSettings wrong = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
                 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
             await StoreEncryptedChunkAsync(original);
-            var probe = CreateProbe();
+            MasterKeyCompatibilityProbe probe = CreateProbe();
 
             MasterKeyCompatibilityResult result = await probe.ValidateAsync(
                 wrong,
@@ -173,7 +173,7 @@ namespace Cotton.Server.IntegrationTests
             await DbContext.SaveChangesAsync();
             CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-            var probe = CreateProbe();
+            MasterKeyCompatibilityProbe probe = CreateProbe();
 
             MasterKeyCompatibilityResult result = await probe.ValidateAsync(
                 settings,

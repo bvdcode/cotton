@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using EasyExtensions;
@@ -42,13 +43,13 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetNotifications([FromQuery] GridifyQuery query)
         {
             Guid userId = User.GetUserId();
-            var notifications = await _dbContext.Notifications
+            Paging<Notification> notifications = await _dbContext.Notifications
                 .AsNoTracking()
                 .Where(n => n.UserId == userId)
                 .OrderByDescending(n => n.CreatedAt)
                 .GridifyAsync(query);
             Response.Headers.Append("X-Total-Count", notifications.Count.ToString());
-            var dto = notifications.Data.Adapt<IEnumerable<NotificationDto>>();
+            IEnumerable<NotificationDto> dto = notifications.Data.Adapt<IEnumerable<NotificationDto>>();
             return Ok(dto);
         }
 
@@ -60,14 +61,14 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> MarkAllNotificationsAsRead()
         {
             Guid userId = User.GetUserId();
-            var unreadNotifications = await _dbContext.Notifications
+            List<Notification> unreadNotifications = await _dbContext.Notifications
                 .Where(n => n.UserId == userId && !n.ReadAt.HasValue)
                 .ToListAsync();
             if (unreadNotifications.Count == 0)
             {
                 return Ok();
             }
-            foreach (var notification in unreadNotifications)
+            foreach (Notification? notification in unreadNotifications)
             {
                 notification.ReadAt = DateTime.UtcNow;
             }
@@ -97,7 +98,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> MarkNotificationAsRead(Guid id)
         {
             Guid userId = User.GetUserId();
-            var notification = await _dbContext.Notifications
+            Notification? notification = await _dbContext.Notifications
                 .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
             if (notification is null || notification.ReadAt.HasValue)
             {

@@ -86,7 +86,7 @@ namespace Cotton.Server.Services
                     IsStreamCopy: true);
             }
 
-            (string preset, int crf, string videoFilter) = rendition switch
+            var (preset, crf, videoFilter) = rendition switch
             {
                 HlsRendition.Low => ("veryfast", 28, "scale=w=trunc(min(854\\,iw)/2)*2:h=-2"),
                 HlsRendition.Medium => ("veryfast", 25, "scale=w=trunc(min(1280\\,iw)/2)*2:h=-2"),

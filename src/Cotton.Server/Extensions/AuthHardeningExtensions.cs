@@ -130,7 +130,7 @@ namespace Cotton.Server.Extensions
                         return;
                     }
 
-                    var revocations = context.HttpContext.RequestServices
+                    SessionAccessTokenRevocationStore revocations = context.HttpContext.RequestServices
                         .GetRequiredService<SessionAccessTokenRevocationStore>();
                     bool isRevoked = await revocations.IsRevokedAsync(
                         userId,

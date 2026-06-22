@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Models;
 using Cotton.Server.Helpers;
 using Cotton.Server.Providers;
@@ -30,7 +31,7 @@ namespace Cotton.Server.Jobs
         {
             await Task.Delay(360_000); // Wait for 6 minutes for the server to start up and stabilize
 
-            var settings = _settingsProvider.GetServerSettings();
+            CottonServerSettings settings = _settingsProvider.GetServerSettings();
             if (!settings.TelemetryEnabled)
             {
                 _logger.LogInformation("Performance data collection skipped: telemetry is disabled.");

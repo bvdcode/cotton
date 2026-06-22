@@ -40,7 +40,7 @@ public class StreamingTests
         using var cts = new CancellationTokenSource();
 
         long before = GC.GetAllocatedBytesForCurrentThread();
-        var task = cipher.EncryptAsync(input, slowOut, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
+        Task task = cipher.EncryptAsync(input, slowOut, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
         // cancel after small delay to let pipeline spin up
         Task.Delay(30).ContinueWith(_ => cts.Cancel());
 
@@ -68,7 +68,7 @@ public class StreamingTests
 
         long before = GC.GetAllocatedBytesForCurrentThread();
         // Kick off decryption; request cancellation soon after to interrupt mid-pipeline
-        var task = dec.DecryptAsync(ciphertext, slowOut, ct: cts.Token);
+        Task task = dec.DecryptAsync(ciphertext, slowOut, ct: cts.Token);
         cts.CancelAfter(50);
         Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
         long after = GC.GetAllocatedBytesForCurrentThread();

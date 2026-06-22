@@ -78,7 +78,7 @@ namespace Cotton.Crypto.Internals.Pipelines
                     int slot = (int)(_nextToWrite % _window);
                     if (_filled[slot] && _slotIndex[slot] == _nextToWrite)
                     {
-                        var res = _ring[slot];
+                        DecryptionResult res = _ring[slot];
                         _ring[slot] = default;
                         _filled[slot] = false;
                         await WriteAndRecycleAsync(res, ct).ConfigureAwait(false);
@@ -179,11 +179,11 @@ namespace Cotton.Crypto.Internals.Pipelines
             using var pipelineCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             CancellationToken pipelineCt = pipelineCts.Token;
 
-            var producer = ProduceAsync(jobCh.Writer, scope, pipelineCt);
-            var workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, scope, pipelineCt);
+            Task producer = ProduceAsync(jobCh.Writer, scope, pipelineCt);
+            Task[] workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, scope, pipelineCt);
             var workersDone = Task.WhenAll(workers);
-            var resultsDone = PipelineTaskHelpers.CompleteWhenFinishedAsync(workersDone, resCh.Writer);
-            var consumerTask = ConsumeAsync(resCh.Reader, scope, pipelineCt);
+            Task resultsDone = PipelineTaskHelpers.CompleteWhenFinishedAsync(workersDone, resCh.Writer);
+            Task<long> consumerTask = ConsumeAsync(resCh.Reader, scope, pipelineCt);
 
             PipelineTaskHelpers.CancelOnFailure(producer, pipelineCts);
             PipelineTaskHelpers.CancelOnFailure(workersDone, pipelineCts);
@@ -472,7 +472,7 @@ namespace Cotton.Crypto.Internals.Pipelines
                     byte[] nonceBuffer = new byte[nonceSize];
                     byte[] aad = new byte[32];
                     AesGcmStreamFormat.InitAadPrefix(aad, keyId, formatVersion);
-                    await foreach (var job in reader.ReadAllAsync(ct))
+                    await foreach (DecryptionJob job in reader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
                         byte[] plain = scope.Rent(job.DataLength);
@@ -511,7 +511,7 @@ namespace Cotton.Crypto.Internals.Pipelines
                 var writer = new ReorderWriter(output, scope, threads, windowCap);
                 try
                 {
-                    await foreach (var result in reader.ReadAllAsync(ct))
+                    await foreach (DecryptionResult result in reader.ReadAllAsync(ct))
                     {
                         await writer.AcceptAsync(result, ct).ConfigureAwait(false);
                     }

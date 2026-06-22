@@ -17,6 +17,7 @@ using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using Cotton.Server.Models;
 
 namespace Cotton.Server.Controllers
 {
@@ -50,7 +51,7 @@ namespace Cotton.Server.Controllers
         [Authorize]
         public IActionResult GetClientSettings()
         {
-            var settings = _settings.GetServerSettings();
+            CottonServerSettings settings = _settings.GetServerSettings();
             string? currentVersion = AppVersionHelpers.GetAppVersion();
             return Ok(new
             {
@@ -213,7 +214,7 @@ namespace Cotton.Server.Controllers
 
         private object CreateStoragePipelineResponse()
         {
-            var settings = _settings.GetServerSettings();
+            CottonServerSettings settings = _settings.GetServerSettings();
             int maxEncryptionThreads = GetMaxEncryptionThreads();
             return new
             {
@@ -328,7 +329,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_settings.ValidateCustomGeoIpLookupUrl(_settings.GetServerSettings().CustomGeoIpLookupUrl));
-            var testResult = await _geoLookup.TestCustomLookupAsync(GetFallbackPublicBaseUrl(), cancellationToken);
+            CustomGeoLookupTestResult testResult = await _geoLookup.TestCustomLookupAsync(GetFallbackPublicBaseUrl(), cancellationToken);
             ThrowIfInvalid(testResult.Error);
             return Ok(new CustomGeoLookupTestResultDto
             {
@@ -666,7 +667,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("s3-config")]
         public IActionResult GetS3Config()
         {
-            var settings = _settings.GetServerSettings();
+            CottonServerSettings settings = _settings.GetServerSettings();
             var s3Config = new S3Config
             {
                 AccessKey = settings.S3AccessKeyId ?? string.Empty,
@@ -732,7 +733,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("email-config")]
         public IActionResult GetEmailConfig()
         {
-            var settings = _settings.GetServerSettings();
+            CottonServerSettings settings = _settings.GetServerSettings();
             var emailConfig = new EmailConfig
             {
                 Username = settings.SmtpUsername ?? string.Empty,

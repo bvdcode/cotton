@@ -126,7 +126,7 @@ namespace Cotton.Crypto.Internals
                     {
                         headerPrefix.AsSpan(0, 8).CopyTo(full);
                         headerData.AsSpan(0, remainingHeader).CopyTo(full.AsSpan(8));
-                        if (!FileHeader.TryRead(full, nonceSize, tagSize, keySize, out var fh))
+                        if (!FileHeader.TryRead(full, nonceSize, tagSize, keySize, out FileHeader fh))
                             throw new InvalidDataException("Invalid file header contents.");
                         return fh;
                     }
@@ -154,7 +154,7 @@ namespace Cotton.Crypto.Internals
             {
                 await ReadExactlyAsync(input, header, headerLen, ct).ConfigureAwait(false);
                 // Explicit format check for fast-fail on mixed legacy/current chunks.
-                if (!ChunkHeader.TryRead(header, tagSize, formatVersion, out var ch))
+                if (!ChunkHeader.TryRead(header, tagSize, formatVersion, out ChunkHeader ch))
                 {
                     throw new InvalidDataException("Invalid or corrupted chunk header.");
                 }
@@ -181,7 +181,7 @@ namespace Cotton.Crypto.Internals
                 {
                     throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
                 }
-                if (!ChunkHeader.TryRead(header, tagSize, formatVersion, out var ch))
+                if (!ChunkHeader.TryRead(header, tagSize, formatVersion, out ChunkHeader ch))
                 {
                     throw new InvalidDataException("Invalid or corrupted chunk header.");
                 }

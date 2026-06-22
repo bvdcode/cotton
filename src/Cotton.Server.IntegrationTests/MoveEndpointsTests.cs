@@ -22,6 +22,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using Cotton.Database.Models;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -34,7 +35,7 @@ public class MoveEndpointsTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
 
@@ -80,18 +81,18 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveFile_ToAnotherFolder_Succeeds()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var src = await CreateFolderAsync(root.Id, "src");
-        var dst = await CreateFolderAsync(root.Id, "dst");
-        var file = await CreateFileAsync(src.Id, "doc.txt", "hello-1");
+        NodeDto root = await GetRootAsync();
+        NodeDto src = await CreateFolderAsync(root.Id, "src");
+        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+        NodeFileManifestDto file = await CreateFileAsync(src.Id, "doc.txt", "hello-1");
 
-        var res = await MoveFileAsync(file.Id, dst.Id);
+        HttpResponseMessage res = await MoveFileAsync(file.Id, dst.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        var children = await GetChildrenAsync(dst.Id);
+        NodeContentDto children = await GetChildrenAsync(dst.Id);
         Assert.That(children.Files.Any(f => f.Id == file.Id), Is.True, "moved file must appear in destination");
 
-        var srcChildren = await GetChildrenAsync(src.Id);
+        NodeContentDto srcChildren = await GetChildrenAsync(src.Id);
         Assert.That(srcChildren.Files.Any(f => f.Id == file.Id), Is.False, "moved file must not remain in source");
     }
 
@@ -99,14 +100,14 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveFile_SameParent_IsNoOp()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var folder = await CreateFolderAsync(root.Id, "folder");
-        var file = await CreateFileAsync(folder.Id, "doc.txt", "hello-2");
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "folder");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "doc.txt", "hello-2");
 
-        var res = await MoveFileAsync(file.Id, folder.Id);
+        HttpResponseMessage res = await MoveFileAsync(file.Id, folder.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        var children = await GetChildrenAsync(folder.Id);
+        NodeContentDto children = await GetChildrenAsync(folder.Id);
         Assert.That(children.Files.Count(f => f.Id == file.Id), Is.EqualTo(1));
     }
 
@@ -114,13 +115,13 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveFile_NameCollisionWithSiblingFile_Returns409()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var src = await CreateFolderAsync(root.Id, "src");
-        var dst = await CreateFolderAsync(root.Id, "dst");
-        var moving = await CreateFileAsync(src.Id, "doc.txt", "moving-content");
+        NodeDto root = await GetRootAsync();
+        NodeDto src = await CreateFolderAsync(root.Id, "src");
+        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+        NodeFileManifestDto moving = await CreateFileAsync(src.Id, "doc.txt", "moving-content");
         await CreateFileAsync(dst.Id, "doc.txt", "blocker-content");
 
-        var res = await MoveFileAsync(moving.Id, dst.Id);
+        HttpResponseMessage res = await MoveFileAsync(moving.Id, dst.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
     }
 
@@ -128,13 +129,13 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveFile_NameCollisionWithSiblingFolder_Returns409()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var src = await CreateFolderAsync(root.Id, "src");
-        var dst = await CreateFolderAsync(root.Id, "dst");
-        var moving = await CreateFileAsync(src.Id, "thing", "moving-content");
+        NodeDto root = await GetRootAsync();
+        NodeDto src = await CreateFolderAsync(root.Id, "src");
+        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+        NodeFileManifestDto moving = await CreateFileAsync(src.Id, "thing", "moving-content");
         await CreateFolderAsync(dst.Id, "thing");
 
-        var res = await MoveFileAsync(moving.Id, dst.Id);
+        HttpResponseMessage res = await MoveFileAsync(moving.Id, dst.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
     }
 
@@ -142,11 +143,11 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveFile_TargetNotFound_Returns404()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var src = await CreateFolderAsync(root.Id, "src");
-        var file = await CreateFileAsync(src.Id, "doc.txt", "hello-3");
+        NodeDto root = await GetRootAsync();
+        NodeDto src = await CreateFolderAsync(root.Id, "src");
+        NodeFileManifestDto file = await CreateFileAsync(src.Id, "doc.txt", "hello-3");
 
-        var res = await MoveFileAsync(file.Id, Guid.NewGuid());
+        HttpResponseMessage res = await MoveFileAsync(file.Id, Guid.NewGuid());
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
@@ -154,15 +155,15 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveFile_AcrossLayouts_Returns400()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var src = await CreateFolderAsync(root.Id, "src");
-        var file = await CreateFileAsync(src.Id, "doc.txt", "across-layouts");
+        NodeDto root = await GetRootAsync();
+        NodeDto src = await CreateFolderAsync(root.Id, "src");
+        NodeFileManifestDto file = await CreateFileAsync(src.Id, "doc.txt", "across-layouts");
 
         Guid otherLayoutRootId;
-        using (var scope = _factory!.Services.CreateScope())
+        using (IServiceScope scope = _factory!.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            var ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
+            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            Guid ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
             var newLayout = new Cotton.Database.Models.Layout { OwnerId = ownerId, IsActive = false };
             db.UserLayouts.Add(newLayout);
             await db.SaveChangesAsync();
@@ -180,7 +181,7 @@ public class MoveEndpointsTests : IntegrationTestBase
             otherLayoutRootId = newRoot.Id;
         }
 
-        var res = await MoveFileAsync(file.Id, otherLayoutRootId);
+        HttpResponseMessage res = await MoveFileAsync(file.Id, otherLayoutRootId);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
@@ -188,11 +189,11 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveFile_EmptyParentId_Returns400()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var folder = await CreateFolderAsync(root.Id, "src");
-        var file = await CreateFileAsync(folder.Id, "doc.txt", "hello-4");
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "src");
+        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "doc.txt", "hello-4");
 
-        var res = await MoveFileAsync(file.Id, Guid.Empty);
+        HttpResponseMessage res = await MoveFileAsync(file.Id, Guid.Empty);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
@@ -204,15 +205,15 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_ToAnotherFolder_Succeeds()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var src = await CreateFolderAsync(root.Id, "src");
-        var dst = await CreateFolderAsync(root.Id, "dst");
-        var moving = await CreateFolderAsync(src.Id, "moving");
+        NodeDto root = await GetRootAsync();
+        NodeDto src = await CreateFolderAsync(root.Id, "src");
+        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+        NodeDto moving = await CreateFolderAsync(src.Id, "moving");
 
-        var res = await MoveNodeAsync(moving.Id, dst.Id);
+        HttpResponseMessage res = await MoveNodeAsync(moving.Id, dst.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        var dstChildren = await GetChildrenAsync(dst.Id);
+        NodeContentDto dstChildren = await GetChildrenAsync(dst.Id);
         Assert.That(dstChildren.Nodes.Any(n => n.Id == moving.Id), Is.True);
     }
 
@@ -220,11 +221,11 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_SameParent_IsNoOp()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var folder = await CreateFolderAsync(root.Id, "folder");
-        var child = await CreateFolderAsync(folder.Id, "child");
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "folder");
+        NodeDto child = await CreateFolderAsync(folder.Id, "child");
 
-        var res = await MoveNodeAsync(child.Id, folder.Id);
+        HttpResponseMessage res = await MoveNodeAsync(child.Id, folder.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
     }
 
@@ -232,10 +233,10 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_RootNode_Returns403()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var dst = await CreateFolderAsync(root.Id, "dst");
+        NodeDto root = await GetRootAsync();
+        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
 
-        var res = await MoveNodeAsync(root.Id, dst.Id);
+        HttpResponseMessage res = await MoveNodeAsync(root.Id, dst.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
 
@@ -243,10 +244,10 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_IntoSelf_Returns400()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var folder = await CreateFolderAsync(root.Id, "folder");
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "folder");
 
-        var res = await MoveNodeAsync(folder.Id, folder.Id);
+        HttpResponseMessage res = await MoveNodeAsync(folder.Id, folder.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
@@ -254,12 +255,12 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_IntoDescendant_Returns400()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var parent = await CreateFolderAsync(root.Id, "parent");
-        var middle = await CreateFolderAsync(parent.Id, "middle");
-        var leaf = await CreateFolderAsync(middle.Id, "leaf");
+        NodeDto root = await GetRootAsync();
+        NodeDto parent = await CreateFolderAsync(root.Id, "parent");
+        NodeDto middle = await CreateFolderAsync(parent.Id, "middle");
+        NodeDto leaf = await CreateFolderAsync(middle.Id, "leaf");
 
-        var res = await MoveNodeAsync(parent.Id, leaf.Id);
+        HttpResponseMessage res = await MoveNodeAsync(parent.Id, leaf.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
@@ -267,14 +268,14 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_IntoDeepUnrelatedFolder_Succeeds()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var moving = await CreateFolderAsync(root.Id, "moving");
+        NodeDto root = await GetRootAsync();
+        NodeDto moving = await CreateFolderAsync(root.Id, "moving");
 
         Guid deepestId;
-        using (var scope = _factory!.Services.CreateScope())
+        using (IServiceScope scope = _factory!.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            var rootEntity = await db.Nodes.AsNoTracking().SingleAsync(n => n.Id == root.Id);
+            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            Node rootEntity = await db.Nodes.AsNoTracking().SingleAsync(n => n.Id == root.Id);
             Guid parentId = root.Id;
 
             for (int i = 0; i < 300; i++)
@@ -295,12 +296,12 @@ public class MoveEndpointsTests : IntegrationTestBase
             deepestId = parentId;
         }
 
-        var res = await MoveNodeAsync(moving.Id, deepestId);
+        HttpResponseMessage res = await MoveNodeAsync(moving.Id, deepestId);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        using var verifyScope = _factory!.Services.CreateScope();
-        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<CottonDbContext>();
-        var moved = await verifyDb.Nodes.AsNoTracking().SingleAsync(n => n.Id == moving.Id);
+        using IServiceScope verifyScope = _factory!.Services.CreateScope();
+        CottonDbContext verifyDb = verifyScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        Node moved = await verifyDb.Nodes.AsNoTracking().SingleAsync(n => n.Id == moving.Id);
         Assert.That(moved.ParentId, Is.EqualTo(deepestId));
     }
 
@@ -308,13 +309,13 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_NameCollisionWithSiblingFolder_Returns409()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var src = await CreateFolderAsync(root.Id, "src");
-        var dst = await CreateFolderAsync(root.Id, "dst");
-        var moving = await CreateFolderAsync(src.Id, "thing");
+        NodeDto root = await GetRootAsync();
+        NodeDto src = await CreateFolderAsync(root.Id, "src");
+        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+        NodeDto moving = await CreateFolderAsync(src.Id, "thing");
         await CreateFolderAsync(dst.Id, "thing");
 
-        var res = await MoveNodeAsync(moving.Id, dst.Id);
+        HttpResponseMessage res = await MoveNodeAsync(moving.Id, dst.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
     }
 
@@ -322,13 +323,13 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_NameCollisionWithSiblingFile_Returns409()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var src = await CreateFolderAsync(root.Id, "src");
-        var dst = await CreateFolderAsync(root.Id, "dst");
-        var moving = await CreateFolderAsync(src.Id, "thing");
+        NodeDto root = await GetRootAsync();
+        NodeDto src = await CreateFolderAsync(root.Id, "src");
+        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+        NodeDto moving = await CreateFolderAsync(src.Id, "thing");
         await CreateFileAsync(dst.Id, "thing", "blocker");
 
-        var res = await MoveNodeAsync(moving.Id, dst.Id);
+        HttpResponseMessage res = await MoveNodeAsync(moving.Id, dst.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
     }
 
@@ -336,10 +337,10 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_TargetNotFound_Returns404()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var folder = await CreateFolderAsync(root.Id, "folder");
+        NodeDto root = await GetRootAsync();
+        NodeDto folder = await CreateFolderAsync(root.Id, "folder");
 
-        var res = await MoveNodeAsync(folder.Id, Guid.NewGuid());
+        HttpResponseMessage res = await MoveNodeAsync(folder.Id, Guid.NewGuid());
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
@@ -347,27 +348,27 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task ConcurrentMoveFileAndCreateFolder_SameNameSameTarget_OnlyOneWins()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var src = await CreateFolderAsync(root.Id, "src");
-        var dst = await CreateFolderAsync(root.Id, "dst");
-        var movingFile = await CreateFileAsync(src.Id, "thing", "cross-handler-race");
+        NodeDto root = await GetRootAsync();
+        NodeDto src = await CreateFolderAsync(root.Id, "src");
+        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+        NodeFileManifestDto movingFile = await CreateFileAsync(src.Id, "thing", "cross-handler-race");
 
         // Without the lock applied to CreateNode too, MoveFile would see no folder
         // "thing" in dst and CreateNode would see no file "thing" in dst — both
         // pre-checks pass independently and dst would end up with both.
-        var moveFile = MoveFileAsync(movingFile.Id, dst.Id);
-        var createFolder = _client!.PutAsJsonAsync(
+        Task<HttpResponseMessage> moveFile = MoveFileAsync(movingFile.Id, dst.Id);
+        Task<HttpResponseMessage> createFolder = _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
             new CreateNodeRequestDto { ParentId = dst.Id, Name = "thing" });
-        var results = await Task.WhenAll(moveFile, createFolder);
+        HttpResponseMessage[] results = await Task.WhenAll(moveFile, createFolder);
 
         int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
         int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
         Assert.That(oks, Is.EqualTo(1), "Exactly one cross-handler write must win.");
         Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
 
-        using var scope = _factory!.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
         int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == dst.Id && f.NameKey == "thing");
         int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == dst.Id && n.NameKey == "thing");
         Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
@@ -378,11 +379,11 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task ConcurrentCreateFileAndCreateFolder_SameNameSameTarget_OnlyOneWins()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var target = await CreateFolderAsync(root.Id, "dst");
+        NodeDto root = await GetRootAsync();
+        NodeDto target = await CreateFolderAsync(root.Id, "dst");
         var hash = await UploadChunkViaClientAsync(_client!, "create-file-folder-race");
 
-        var createFile = _client!.PostAsJsonAsync(
+        Task<HttpResponseMessage> createFile = _client!.PostAsJsonAsync(
             "/api/v1/files/from-chunks",
             new CreateFileFromChunksRequestDto
             {
@@ -392,19 +393,19 @@ public class MoveEndpointsTests : IntegrationTestBase
                 Hash = hash,
                 NodeId = target.Id
             });
-        var createFolder = _client!.PutAsJsonAsync(
+        Task<HttpResponseMessage> createFolder = _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
             new CreateNodeRequestDto { ParentId = target.Id, Name = "thing" });
 
-        var results = await Task.WhenAll(createFile, createFolder);
+        HttpResponseMessage[] results = await Task.WhenAll(createFile, createFolder);
 
         int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
         int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
         Assert.That(oks, Is.EqualTo(1), "Exactly one cross-table create must win.");
         Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
 
-        using var scope = _factory!.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
         int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == target.Id && f.NameKey == "thing");
         int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == target.Id && n.NameKey == "thing");
         Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
@@ -415,28 +416,28 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task ConcurrentMoveFileAndMoveNode_SameNameSameTarget_OnlyOneWins()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var src1 = await CreateFolderAsync(root.Id, "src1");
-        var src2 = await CreateFolderAsync(root.Id, "src2");
-        var dst = await CreateFolderAsync(root.Id, "dst");
-        var movingFile = await CreateFileAsync(src1.Id, "thing", "cross-table-race");
-        var movingFolder = await CreateFolderAsync(src2.Id, "thing");
+        NodeDto root = await GetRootAsync();
+        NodeDto src1 = await CreateFolderAsync(root.Id, "src1");
+        NodeDto src2 = await CreateFolderAsync(root.Id, "src2");
+        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+        NodeFileManifestDto movingFile = await CreateFileAsync(src1.Id, "thing", "cross-table-race");
+        NodeDto movingFolder = await CreateFolderAsync(src2.Id, "thing");
 
         // Without the per-layout advisory lock, file's collision pre-check and
         // folder's collision pre-check would both pass on the pre-update tree
         // and both commits would land — dst would end up with both a file and a
         // folder named "thing", which the create/rename paths normally forbid.
-        var moveFile = MoveFileAsync(movingFile.Id, dst.Id);
-        var moveFolder = MoveNodeAsync(movingFolder.Id, dst.Id);
-        var results = await Task.WhenAll(moveFile, moveFolder);
+        Task<HttpResponseMessage> moveFile = MoveFileAsync(movingFile.Id, dst.Id);
+        Task<HttpResponseMessage> moveFolder = MoveNodeAsync(movingFolder.Id, dst.Id);
+        HttpResponseMessage[] results = await Task.WhenAll(moveFile, moveFolder);
 
         int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
         int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
         Assert.That(oks, Is.EqualTo(1), "Exactly one cross-table move must win.");
         Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
 
-        using var scope = _factory!.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
         int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == dst.Id && f.NameKey == "thing");
         int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == dst.Id && n.NameKey == "thing");
         Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
@@ -447,25 +448,25 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_ConcurrentSwap_DoesNotCreateCycle()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var a = await CreateFolderAsync(root.Id, "a");
-        var b = await CreateFolderAsync(root.Id, "b");
+        NodeDto root = await GetRootAsync();
+        NodeDto a = await CreateFolderAsync(root.Id, "a");
+        NodeDto b = await CreateFolderAsync(root.Id, "b");
 
         // Without the per-layout advisory lock, both descendant checks could pass
         // on the pre-update tree and both commits would land — leaving A.parent=B
         // and B.parent=A. With the lock the second request re-runs the descendant
         // check inside the lock and rejects as into-descendant.
-        var moveAIntoB = MoveNodeAsync(a.Id, b.Id);
-        var moveBIntoA = MoveNodeAsync(b.Id, a.Id);
-        var results = await Task.WhenAll(moveAIntoB, moveBIntoA);
+        Task<HttpResponseMessage> moveAIntoB = MoveNodeAsync(a.Id, b.Id);
+        Task<HttpResponseMessage> moveBIntoA = MoveNodeAsync(b.Id, a.Id);
+        HttpResponseMessage[] results = await Task.WhenAll(moveAIntoB, moveBIntoA);
 
         int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
         int bads = results.Count(r => r.StatusCode == HttpStatusCode.BadRequest);
         Assert.That(oks, Is.EqualTo(1), "Exactly one swap leg must succeed.");
         Assert.That(bads, Is.EqualTo(1), "The losing leg must be rejected (into-descendant).");
 
-        using var scope = _factory!.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
         Assert.That(await ParentWalkReachesRoot(db, a.Id), Is.True, "A must reach the root with no cycle.");
         Assert.That(await ParentWalkReachesRoot(db, b.Id), Is.True, "B must reach the root with no cycle.");
     }
@@ -491,17 +492,17 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_NonDefaultType_Returns404()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var dst = await CreateFolderAsync(root.Id, "dst");
+        NodeDto root = await GetRootAsync();
+        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
 
         // Build a Trash-type sibling under root via the DI scope — the API does
         // not expose creation of non-Default nodes.
         Guid trashNodeId;
-        using (var scope = _factory!.Services.CreateScope())
+        using (IServiceScope scope = _factory!.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            var ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
-            var rootEntity = await db.Nodes.AsNoTracking().SingleAsync(n => n.Id == root.Id);
+            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            Guid ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
+            Node rootEntity = await db.Nodes.AsNoTracking().SingleAsync(n => n.Id == root.Id);
             var trash = new Cotton.Database.Models.Node
             {
                 LayoutId = rootEntity.LayoutId,
@@ -515,7 +516,7 @@ public class MoveEndpointsTests : IntegrationTestBase
             trashNodeId = trash.Id;
         }
 
-        var res = await MoveNodeAsync(trashNodeId, dst.Id);
+        HttpResponseMessage res = await MoveNodeAsync(trashNodeId, dst.Id);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound),
             "Move endpoint must reject non-Default node types as not-found (no leak).");
     }
@@ -524,16 +525,16 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task MoveNode_AcrossLayouts_Returns400()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var moving = await CreateFolderAsync(root.Id, "moving");
+        NodeDto root = await GetRootAsync();
+        NodeDto moving = await CreateFolderAsync(root.Id, "moving");
 
         // Same user, second layout: API only auto-creates one layout per user, so
         // we manufacture the second one directly via the factory's DI scope.
         Guid otherLayoutRootId;
-        using (var scope = _factory!.Services.CreateScope())
+        using (IServiceScope scope = _factory!.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            var ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
+            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            Guid ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
             var newLayout = new Cotton.Database.Models.Layout { OwnerId = ownerId, IsActive = false };
             db.UserLayouts.Add(newLayout);
             await db.SaveChangesAsync();
@@ -551,7 +552,7 @@ public class MoveEndpointsTests : IntegrationTestBase
             otherLayoutRootId = newRoot.Id;
         }
 
-        var res = await MoveNodeAsync(moving.Id, otherLayoutRootId);
+        HttpResponseMessage res = await MoveNodeAsync(moving.Id, otherLayoutRootId);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
@@ -563,14 +564,14 @@ public class MoveEndpointsTests : IntegrationTestBase
     public async Task ConcurrentWebDavPutAndMkCol_SameNameSameTarget_OnlyOneWins()
     {
         await AuthenticateAsync();
-        var root = await GetRootAsync();
-        var target = await CreateFolderAsync(root.Id, "webdav-race");
+        NodeDto root = await GetRootAsync();
+        NodeDto target = await CreateFolderAsync(root.Id, "webdav-race");
 
         await UseWebDavBasicAuthAsync(_client!);
 
-        var putFile = SendWebDavPutAsync(_client!, "/api/v1/webdav/webdav-race/thing", "webdav-put-race");
-        var mkcol = SendWebDavMkColAsync(_client!, "/api/v1/webdav/webdav-race/thing");
-        var results = await Task.WhenAll(putFile, mkcol);
+        Task<HttpResponseMessage> putFile = SendWebDavPutAsync(_client!, "/api/v1/webdav/webdav-race/thing", "webdav-put-race");
+        Task<HttpResponseMessage> mkcol = SendWebDavMkColAsync(_client!, "/api/v1/webdav/webdav-race/thing");
+        HttpResponseMessage[] results = await Task.WhenAll(putFile, mkcol);
 
         int successes = results.Count(r => r.StatusCode is HttpStatusCode.Created or HttpStatusCode.NoContent);
         int rejections = results.Count(r => r.StatusCode is HttpStatusCode.Conflict
@@ -579,8 +580,8 @@ public class MoveEndpointsTests : IntegrationTestBase
         Assert.That(successes, Is.EqualTo(1), "Exactly one WebDAV namespace write must win.");
         Assert.That(rejections, Is.EqualTo(1), "The other WebDAV write must be rejected.");
 
-        using var scope = _factory!.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
         int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == target.Id && f.NameKey == "thing");
         int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == target.Id && n.NameKey == "thing");
         Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
@@ -595,7 +596,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         _factory?.Dispose();
 
         using var factory = new TestAppFactory(_overrides);
-        using var customFactory = factory.WithWebHostBuilder(builder =>
+        using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureTestServices(services =>
             {
@@ -603,15 +604,15 @@ public class MoveEndpointsTests : IntegrationTestBase
                 services.AddScoped<IEventNotificationService, ThrowingEventNotificationService>();
             });
         });
-        using var client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
         // Provision the user + source/destination folders + a file via REST first.
         var token = await LoginViaClientAsync(client);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        var src = await CreateFolderViaClientAsync(client, root!.Id, "src");
-        var dst = await CreateFolderViaClientAsync(client, root.Id, "dst");
-        var file = await CreateFileViaClientAsync(client, src.Id, "doc.txt", "webdav-fail-notify");
+        NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto src = await CreateFolderViaClientAsync(client, root!.Id, "src");
+        NodeDto dst = await CreateFolderViaClientAsync(client, root.Id, "dst");
+        NodeFileManifestDto file = await CreateFileViaClientAsync(client, src.Id, "doc.txt", "webdav-fail-notify");
 
         // Switch to WebDAV basic auth for the MOVE request.
         await UseWebDavBasicAuthAsync(client);
@@ -619,7 +620,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         using var moveRequest = new HttpRequestMessage(new HttpMethod("MOVE"), "/api/v1/webdav/src/doc.txt");
         moveRequest.Headers.Add("Destination", "/api/v1/webdav/dst/doc.txt");
         moveRequest.Headers.Add("Overwrite", "F");
-        var res = await client.SendAsync(moveRequest);
+        HttpResponseMessage res = await client.SendAsync(moveRequest);
 
         // WebDAV MOVE returns 201 Created when the destination did not previously exist,
         // or 204 NoContent on overwrite. Either is success — but it MUST NOT fail
@@ -627,10 +628,10 @@ public class MoveEndpointsTests : IntegrationTestBase
         Assert.That((int)res.StatusCode, Is.AnyOf(201, 204),
             $"WebDAV MOVE must succeed despite notification failure (got {(int)res.StatusCode}).");
 
-        using (var scope = customFactory.Services.CreateScope())
+        using (IServiceScope scope = customFactory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            var moved = await db.NodeFiles.AsNoTracking().SingleAsync(x => x.Id == file.Id);
+            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            NodeFile moved = await db.NodeFiles.AsNoTracking().SingleAsync(x => x.Id == file.Id);
             Assert.That(moved.NodeId, Is.EqualTo(dst.Id), "File must have been moved despite notification failure.");
         }
     }
@@ -642,7 +643,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         _factory?.Dispose();
 
         using var factory = new TestAppFactory(_overrides);
-        using var customFactory = factory.WithWebHostBuilder(builder =>
+        using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureTestServices(services =>
             {
@@ -651,26 +652,26 @@ public class MoveEndpointsTests : IntegrationTestBase
                 services.AddScoped<IEventNotificationService, RecordingWebDavDeleteEventNotificationService>();
             });
         });
-        using var client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
         var token = await LoginViaClientAsync(client);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        var fileParent = await CreateFolderViaClientAsync(client, root!.Id, "delete-file-parent");
-        var file = await CreateFileViaClientAsync(client, fileParent.Id, "doc.txt", "webdav-delete-file");
-        var folder = await CreateFolderViaClientAsync(client, root.Id, "delete-folder-parent");
+        NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto fileParent = await CreateFolderViaClientAsync(client, root!.Id, "delete-file-parent");
+        NodeFileManifestDto file = await CreateFileViaClientAsync(client, fileParent.Id, "doc.txt", "webdav-delete-file");
+        NodeDto folder = await CreateFolderViaClientAsync(client, root.Id, "delete-folder-parent");
 
         await UseWebDavBasicAuthAsync(client);
 
         using var deleteFileRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-file-parent/doc.txt");
-        var deleteFileResponse = await client.SendAsync(deleteFileRequest);
+        HttpResponseMessage deleteFileResponse = await client.SendAsync(deleteFileRequest);
         Assert.That(deleteFileResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
 
         using var deleteFolderRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-folder-parent");
-        var deleteFolderResponse = await client.SendAsync(deleteFolderRequest);
+        HttpResponseMessage deleteFolderResponse = await client.SendAsync(deleteFolderRequest);
         Assert.That(deleteFolderResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
 
-        var recorder = customFactory.Services.GetRequiredService<WebDavDeleteEventRecorder>();
+        WebDavDeleteEventRecorder recorder = customFactory.Services.GetRequiredService<WebDavDeleteEventRecorder>();
         Assert.Multiple(() =>
         {
             Assert.That(recorder.FileDeletedNodeFileId, Is.EqualTo(file.Id));
@@ -688,7 +689,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         _factory?.Dispose();
 
         using var factory = new TestAppFactory(_overrides);
-        using var customFactory = factory.WithWebHostBuilder(builder =>
+        using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureTestServices(services =>
             {
@@ -696,19 +697,19 @@ public class MoveEndpointsTests : IntegrationTestBase
                 services.AddScoped<IEventNotificationService, ThrowingEventNotificationService>();
             });
         });
-        using var client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
         // Authenticate via this client.
         var token = await LoginViaClientAsync(client);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
-        var src = await CreateFolderViaClientAsync(client, root!.Id, "src");
-        var dst = await CreateFolderViaClientAsync(client, root.Id, "dst");
-        var file = await CreateFileViaClientAsync(client, src.Id, "doc.txt", "fail-notify-content");
+        NodeDto src = await CreateFolderViaClientAsync(client, root!.Id, "src");
+        NodeDto dst = await CreateFolderViaClientAsync(client, root.Id, "dst");
+        NodeFileManifestDto file = await CreateFileViaClientAsync(client, src.Id, "doc.txt", "fail-notify-content");
 
-        var res = await client.PatchAsJsonAsync(
+        HttpResponseMessage res = await client.PatchAsJsonAsync(
             $"/api/v1/files/{file.Id}/move",
             new MoveFileRequestDto { ParentId = dst.Id });
 
@@ -717,8 +718,8 @@ public class MoveEndpointsTests : IntegrationTestBase
             "Notification failure must not turn a committed move into a failed response.");
 
         // Verify the move actually happened in DB.
-        await using var db = NewReadOnlyDbContext();
-        var moved = await db.NodeFiles.AsNoTracking().SingleAsync(x => x.Id == file.Id);
+        await using CottonDbContext db = NewReadOnlyDbContext();
+        NodeFile moved = await db.NodeFiles.AsNoTracking().SingleAsync(x => x.Id == file.Id);
         Assert.That(moved.NodeId, Is.EqualTo(dst.Id));
     }
 
@@ -762,9 +763,9 @@ public class MoveEndpointsTests : IntegrationTestBase
             })
         };
         request.Headers.Add("X-Forwarded-For", "8.8.8.8");
-        var res = await client.SendAsync(request);
+        HttpResponseMessage res = await client.SendAsync(request);
         res.EnsureSuccessStatusCode();
-        var login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+        TokenPairResponseDto? login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         return login!.AccessToken;
     }
 
@@ -779,7 +780,7 @@ public class MoveEndpointsTests : IntegrationTestBase
 
     private async Task<NodeDto> GetRootAsync()
     {
-        var root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         return root!;
     }
 
@@ -788,9 +789,9 @@ public class MoveEndpointsTests : IntegrationTestBase
 
     private static async Task<NodeDto> CreateFolderViaClientAsync(HttpClient client, Guid parentId, string name)
     {
-        var res = await client.PutAsJsonAsync("/api/v1/layouts/nodes", new CreateNodeRequestDto { ParentId = parentId, Name = name });
+        HttpResponseMessage res = await client.PutAsJsonAsync("/api/v1/layouts/nodes", new CreateNodeRequestDto { ParentId = parentId, Name = name });
         res.EnsureSuccessStatusCode();
-        var node = await res.Content.ReadFromJsonAsync<NodeDto>();
+        NodeDto? node = await res.Content.ReadFromJsonAsync<NodeDto>();
         return node!;
     }
 
@@ -809,12 +810,12 @@ public class MoveEndpointsTests : IntegrationTestBase
             Hash = hash,
             NodeId = nodeId
         };
-        var createRes = await client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        HttpResponseMessage createRes = await client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createRes.EnsureSuccessStatusCode();
 
         // Read back from the folder so callers get the same projection as the files UI.
-        var children = await client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
-        var dto = children!.Files.SingleOrDefault(f => f.Name == name)
+        NodeContentDto? children = await client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
+        NodeFileManifestDto dto = children!.Files.SingleOrDefault(f => f.Name == name)
             ?? throw new InvalidOperationException($"Created file '{name}' not found in node {nodeId}.");
         return dto;
     }
@@ -835,7 +836,7 @@ public class MoveEndpointsTests : IntegrationTestBase
             },
             { new StringContent(hash), "hash" }
         };
-        var upRes = await client.PostAsync("/api/v1/chunks", form);
+        HttpResponseMessage upRes = await client.PostAsync("/api/v1/chunks", form);
         upRes.EnsureSuccessStatusCode();
         return hash;
     }
@@ -858,7 +859,7 @@ public class MoveEndpointsTests : IntegrationTestBase
 
     private async Task<NodeContentDto> GetChildrenAsync(Guid nodeId)
     {
-        var res = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
+        NodeContentDto? res = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
         return res!;
     }
 

@@ -33,7 +33,7 @@ public class GarbageCollectorJobTests : IntegrationTestBase
     {
         ResetSettingsProviderCaches();
 
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         DbContext.Database.Migrate();
     }
@@ -128,10 +128,10 @@ public class GarbageCollectorJobTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
         DbContext.ChangeTracker.Clear();
 
-        var backup = CreateBackupManifest(Hasher.ToHexStringHash(backupHash));
-        var usage = CreateChunkUsageService(DbContext, storage, keyProvider, backup);
+        ResolvedBackupManifest backup = CreateBackupManifest(Hasher.ToHexStringHash(backupHash));
+        ChunkUsageService usage = CreateChunkUsageService(DbContext, storage, keyProvider, backup);
         var settingsProvider = new SettingsProvider(DbContext);
-        using var services = new ServiceCollection()
+        using ServiceProvider services = new ServiceCollection()
             .AddSingleton(settingsProvider)
             .BuildServiceProvider();
         var job = new GarbageCollectorJob(
@@ -188,9 +188,9 @@ public class GarbageCollectorJobTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
         DbContext.ChangeTracker.Clear();
 
-        var usage = CreateChunkUsageService(DbContext, storage, keyProvider, latestBackup: null);
+        ChunkUsageService usage = CreateChunkUsageService(DbContext, storage, keyProvider, latestBackup: null);
         var settingsProvider = new SettingsProvider(DbContext);
-        using var services = new ServiceCollection()
+        using ServiceProvider services = new ServiceCollection()
             .AddSingleton(settingsProvider)
             .BuildServiceProvider();
         var job = new GarbageCollectorJob(
@@ -236,8 +236,8 @@ public class GarbageCollectorJobTests : IntegrationTestBase
         await storage.WriteAsync(keyProvider.GetScopedPointerStorageKey(), new MemoryStream([1, 2, 3]));
         await storage.WriteAsync(MasterKeySentinelStore.SentinelStorageKey, new MemoryStream([7, 8, 9]));
 
-        var backup = CreateBackupManifest(Hasher.ToHexStringHash(backupHash), manifestStorageKey);
-        var usage = CreateChunkUsageService(DbContext, storage, keyProvider, backup);
+        ResolvedBackupManifest backup = CreateBackupManifest(Hasher.ToHexStringHash(backupHash), manifestStorageKey);
+        ChunkUsageService usage = CreateChunkUsageService(DbContext, storage, keyProvider, backup);
         var job = new StorageConsistencyJob(
             storage,
             DbContext,
@@ -291,7 +291,7 @@ public class GarbageCollectorJobTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
         DbContext.ChangeTracker.Clear();
 
-        var usage = CreateChunkUsageService(DbContext, storage, keyProvider, latestBackup: null);
+        ChunkUsageService usage = CreateChunkUsageService(DbContext, storage, keyProvider, latestBackup: null);
         var job = new StorageConsistencyJob(
             storage,
             DbContext,

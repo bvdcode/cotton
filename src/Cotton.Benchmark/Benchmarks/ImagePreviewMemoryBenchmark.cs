@@ -44,7 +44,7 @@ namespace Cotton.Benchmark.Benchmarks
                 WorkerObservation observation = await RunWorkerAsync(sourcePath, resultPath, cancellationToken).ConfigureAwait(false);
                 stopwatch.Stop();
 
-                var metrics = CreateMetrics(sourceStopwatch.Elapsed, observation);
+                Dictionary<string, object> metrics = CreateMetrics(sourceStopwatch.Elapsed, observation);
                 return BenchmarkResult.Success(Name, stopwatch.Elapsed, metrics);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)

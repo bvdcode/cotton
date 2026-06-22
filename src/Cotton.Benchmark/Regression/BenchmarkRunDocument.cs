@@ -62,7 +62,7 @@ namespace Cotton.Benchmark.Regression
             var numericMetrics = new Dictionary<string, double>(StringComparer.Ordinal);
             var textMetrics = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            foreach (var metric in result.Metrics)
+            foreach (KeyValuePair<string, object> metric in result.Metrics)
             {
                 if (TryConvertToDouble(metric.Value, out double value))
                 {

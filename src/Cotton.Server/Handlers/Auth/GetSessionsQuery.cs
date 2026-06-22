@@ -28,9 +28,9 @@ namespace Cotton.Server.Handlers.Auth
         /// </summary>
         public async Task<IEnumerable<SessionDto>> Handle(GetSessionsQuery request, CancellationToken cancellationToken)
         {
-            var tokens = await LoadTokensAsync(request.UserId, cancellationToken);
-            var tokenLifetime = _tokens.TokenLifetime;
-            var now = DateTime.UtcNow;
+            List<ExtendedRefreshToken> tokens = await LoadTokensAsync(request.UserId, cancellationToken);
+            TimeSpan tokenLifetime = _tokens.TokenLifetime;
+            DateTime now = DateTime.UtcNow;
 
             return tokens
                 .GroupBy(x => x.SessionId!)
@@ -59,17 +59,17 @@ namespace Cotton.Server.Handlers.Auth
             string currentSessionId,
             TimeSpan tokenLifetime)
         {
-            var latestActive = tokens
+            ExtendedRefreshToken? latestActive = tokens
                 .Where(x => x.RevokedAt == null)
                 .OrderByDescending(x => x.CreatedAt)
                 .FirstOrDefault();
 
-            var latestAny = tokens
+            ExtendedRefreshToken latestAny = tokens
                 .OrderByDescending(x => x.CreatedAt)
                 .First();
 
-            var source = latestActive ?? latestAny;
-            var totalSessionDuration = CalculateTotalSessionDuration(tokens, tokenLifetime);
+            ExtendedRefreshToken source = latestActive ?? latestAny;
+            TimeSpan totalSessionDuration = CalculateTotalSessionDuration(tokens, tokenLifetime);
 
             return new SessionDto
             {
@@ -95,10 +95,10 @@ namespace Cotton.Server.Handlers.Auth
             var intervals = tokens
                 .Select(t =>
                 {
-                    var start = t.CreatedAt;
-                    var endByTtl = t.CreatedAt + tokenLifetime;
-                    var endByRevoke = t.RevokedAt ?? endByTtl;
-                    var end = endByRevoke < endByTtl ? endByRevoke : endByTtl;
+                    DateTime start = t.CreatedAt;
+                    DateTime endByTtl = t.CreatedAt + tokenLifetime;
+                    DateTime endByRevoke = t.RevokedAt ?? endByTtl;
+                    DateTime end = endByRevoke < endByTtl ? endByRevoke : endByTtl;
                     return (start, end);
                 })
                 .Where(x => x.end > x.start)
@@ -115,8 +115,8 @@ namespace Cotton.Server.Handlers.Auth
                 return TimeSpan.Zero;
             }
 
-            var currentStart = intervals[0].start;
-            var currentEnd = intervals[0].end;
+            DateTime currentStart = intervals[0].start;
+            DateTime currentEnd = intervals[0].end;
             TimeSpan total = TimeSpan.Zero;
 
             for (int i = 1; i < intervals.Count; i++)

@@ -22,7 +22,7 @@ namespace Cotton.Storage.Backends
         {
             Directory.CreateDirectory(_basePath);
             string rootPath = Path.GetFullPath(_basePath);
-            var drive = ResolveDrive(rootPath);
+            DriveInfo drive = ResolveDrive(rootPath);
 
             return new StorageCapacitySnapshot(
                 Backend: "filesystem",
@@ -76,14 +76,14 @@ namespace Cotton.Storage.Backends
             try
             {
                 string tmpDir = GetTempDirectory();
-                var cutoff = DateTimeOffset.UtcNow - ttl;
+                DateTimeOffset cutoff = DateTimeOffset.UtcNow - ttl;
 
                 foreach (var file in Directory.EnumerateFiles(tmpDir, "*.tmp", SearchOption.TopDirectoryOnly))
                 {
                     try
                     {
                         var info = new FileInfo(file);
-                        var lastWrite = info.LastWriteTimeUtc;
+                        DateTime lastWrite = info.LastWriteTimeUtc;
                         if (lastWrite <= cutoff.UtcDateTime)
                         {
                             info.Attributes = FileAttributes.Normal;

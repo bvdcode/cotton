@@ -36,7 +36,7 @@ public class RawChunkUploadThroughputTests : IntegrationTestBase
     {
         ResetSettingsProviderCaches();
 
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
 
@@ -151,7 +151,7 @@ public class RawChunkUploadThroughputTests : IntegrationTestBase
     private async Task SetMaxChunkSizeAsync(int maxChunkSizeBytes)
     {
         using IServiceScope scope = _factory!.Services.CreateScope();
-        var settings = scope.ServiceProvider.GetRequiredService<SettingsProvider>();
+        SettingsProvider settings = scope.ServiceProvider.GetRequiredService<SettingsProvider>();
         await settings.SetPropertyAsync(x => x.MaxChunkSizeBytes, maxChunkSizeBytes);
     }
 
@@ -169,7 +169,7 @@ public class RawChunkUploadThroughputTests : IntegrationTestBase
 
         using HttpResponseMessage response = await _client!.SendAsync(request);
         response.EnsureSuccessStatusCode();
-        var login = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+        TokenPairResponseDto? login = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         Assert.That(login, Is.Not.Null);
         return login!.AccessToken;
     }

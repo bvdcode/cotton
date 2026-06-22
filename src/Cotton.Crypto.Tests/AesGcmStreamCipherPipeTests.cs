@@ -26,7 +26,7 @@ public class AesGcmStreamCipherPipeTests
         await cipher.DecryptAsync(directOut, directPlain);
 
         using var input2 = new MemoryStream(data);
-        var pipeStream = await cipher.EncryptAsync(input2, chunkSize: AesGcmStreamCipher.MinChunkSize);
+        Stream pipeStream = await cipher.EncryptAsync(input2, chunkSize: AesGcmStreamCipher.MinChunkSize);
         using var collected = new MemoryStream();
         await pipeStream.CopyToAsync(collected);
         collected.Position = 0;
@@ -48,12 +48,12 @@ public class AesGcmStreamCipherPipeTests
         byte[] data = [.. Enumerable.Range(0, (5 * AesGcmStreamCipher.MinChunkSize) + 777).Select(i => (byte)(i & 0xFF))];
 
         using var input = new MemoryStream(data);
-        var encStream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize);
+        Stream encStream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize);
         using var ciphertextCollected = new MemoryStream();
         await encStream.CopyToAsync(ciphertextCollected);
 
         ciphertextCollected.Position = 0;
-        var decStream = await cipher.DecryptAsync(ciphertextCollected);
+        Stream decStream = await cipher.DecryptAsync(ciphertextCollected);
         using var plaintextCollected = new MemoryStream();
         await decStream.CopyToAsync(plaintextCollected);
 
@@ -71,7 +71,7 @@ public class AesGcmStreamCipherPipeTests
         using var cts = new CancellationTokenSource();
         cts.CancelAfter(25);
 
-        var stream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
+        Stream stream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
         byte[] buffer = new byte[8 * 1024];
         OperationCanceledException? caught = null;
         long totalRead = 0;
@@ -103,7 +103,7 @@ public class AesGcmStreamCipherPipeTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var stream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
+        Stream stream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
         using var sink = new MemoryStream();
 
         Assert.That(
@@ -125,7 +125,7 @@ public class AesGcmStreamCipherPipeTests
 
         using var cts = new CancellationTokenSource();
         cts.CancelAfter(25);
-        var decStream = await decCipher.DecryptAsync(encrypted, ct: cts.Token);
+        Stream decStream = await decCipher.DecryptAsync(encrypted, ct: cts.Token);
         byte[] buffer = new byte[8 * 1024];
         OperationCanceledException? caught = null;
         long totalRead = 0;
@@ -161,7 +161,7 @@ public class AesGcmStreamCipherPipeTests
 
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        var stream = await decCipher.DecryptAsync(encrypted, ct: cts.Token);
+        Stream stream = await decCipher.DecryptAsync(encrypted, ct: cts.Token);
         using var sink = new MemoryStream();
 
         Assert.That(
@@ -178,12 +178,12 @@ public class AesGcmStreamCipherPipeTests
         using var inner = new MemoryStream(data);
         using var nonSeek = new NonSeekableReadStream(inner);
 
-        var stream = await cipher.EncryptAsync(nonSeek, chunkSize: AesGcmStreamCipher.MinChunkSize);
+        Stream stream = await cipher.EncryptAsync(nonSeek, chunkSize: AesGcmStreamCipher.MinChunkSize);
         using var collected = new MemoryStream();
         await stream.CopyToAsync(collected);
 
         collected.Position = 0;
-        var decStream = await cipher.DecryptAsync(collected);
+        Stream decStream = await cipher.DecryptAsync(collected);
         using var plainCollected = new MemoryStream();
         await decStream.CopyToAsync(plainCollected);
 
@@ -197,7 +197,7 @@ public class AesGcmStreamCipherPipeTests
         var cipher = new AesGcmStreamCipher(key, keyId: 16);
         byte[] data = [.. Enumerable.Range(0, (3 * AesGcmStreamCipher.MinChunkSize) + 10).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
-        var encStream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize);
+        Stream encStream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize);
         using var ciphertextCollected = new MemoryStream();
         await encStream.CopyToAsync(ciphertextCollected);
 
@@ -205,7 +205,7 @@ public class AesGcmStreamCipherPipeTests
         int headerLen = Cotton.Crypto.Internals.AesGcmStreamFormat.ComputeFileHeaderLength(AesGcmStreamCipher.NonceSize, AesGcmStreamCipher.TagSize, AesGcmStreamCipher.KeySize);
         if (bytes.Length > headerLen + 5) bytes[headerLen + 5] ^= 0xFF; // corrupt
         using var tampered = new MemoryStream(bytes);
-        var decStream = await cipher.DecryptAsync(tampered);
+        Stream decStream = await cipher.DecryptAsync(tampered);
         using var sink = new MemoryStream();
         Assert.That(async () => await decStream.CopyToAsync(sink),
             Throws.TypeOf<InvalidDataException>().Or.TypeOf<CryptographicException>());

@@ -115,7 +115,7 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken = default)
         {
             string? timezoneId = Request.Headers["X-Timezone"].FirstOrDefault();
-            var result = await _mediator.Send(
+            GcChunkTimelineDto result = await _mediator.Send(
                 new GetGcChunksTimelineQuery(fromUtc, toUtc, bucket, timezoneId),
                 cancellationToken);
             return Ok(result);

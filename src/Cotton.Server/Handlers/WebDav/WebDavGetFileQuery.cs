@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
@@ -50,7 +51,7 @@ namespace Cotton.Server.Handlers.WebDav
         /// </summary>
         public async Task<WebDavGetFileResult> Handle(WebDavGetFileQuery request, CancellationToken ct)
         {
-            var resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
+            WebDavResolveResult resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
 
             if (!resolveResult.Found)
             {
@@ -64,10 +65,10 @@ namespace Cotton.Server.Handlers.WebDav
                 return new WebDavGetFileResult(true, true);
             }
 
-            var nodeFile = resolveResult.NodeFile!;
+            NodeFile nodeFile = resolveResult.NodeFile!;
             _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "webdav.get");
 
-            var manifest = nodeFile.FileManifest;
+            FileManifest manifest = nodeFile.FileManifest;
 
             var chunkHashes = manifest.FileManifestChunks
                 .OrderBy(c => c.ChunkOrder)
@@ -80,7 +81,7 @@ namespace Cotton.Server.Handlers.WebDav
                 ChunkLengths = manifest.FileManifestChunks.GetChunkLengths()
             };
 
-            var stream = _storage.GetBlobStream(chunkHashes, context);
+            Stream stream = _storage.GetBlobStream(chunkHashes, context);
 
             return new WebDavGetFileResult(
                 Found: true,

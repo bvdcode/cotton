@@ -131,20 +131,20 @@ namespace Cotton.Server.Services.Search
             IReadOnlyList<LayoutSearchHit> hits,
             CancellationToken cancellationToken)
         {
-            var nodeIds = hits
+            Guid[] nodeIds = hits
                 .Where(x => x.Kind == LayoutSearchHitKind.Node)
                 .Select(x => x.Id)
                 .Distinct()
                 .ToArray();
 
-            var fileIds = hits
+            Guid[] fileIds = hits
                 .Where(x => x.Kind == LayoutSearchHitKind.File)
                 .Select(x => x.Id)
                 .Distinct()
                 .ToArray();
 
-            var nodes = await LoadNodesAsync(nodeIds, cancellationToken);
-            var files = await LoadFilesAsync(fileIds, cancellationToken);
+            List<NodeDto> nodes = await LoadNodesAsync(nodeIds, cancellationToken);
+            List<NodeFileManifestDto> files = await LoadFilesAsync(fileIds, cancellationToken);
             return (OrderNodesLikeHits(nodes, nodeIds), OrderFilesLikeHits(files, fileIds));
         }
 
@@ -236,7 +236,7 @@ namespace Cotton.Server.Services.Search
                 return ([], []);
             }
 
-            var allNodePaths = await ResolveNodePathsAsync(
+            Dictionary<Guid, string> allNodePaths = await ResolveNodePathsAsync(
                 userId,
                 layoutId,
                 allNodeIdsNeededForPaths,
@@ -287,7 +287,7 @@ namespace Cotton.Server.Services.Search
                 return [];
             }
 
-            var nodeInfo = await LoadNodeLineageAsync(userId, layoutId, nodeIds, cancellationToken);
+            Dictionary<Guid, (Guid? ParentId, string Name, int Type)> nodeInfo = await LoadNodeLineageAsync(userId, layoutId, nodeIds, cancellationToken);
 
             Dictionary<Guid, string> nodePaths = new(nodeIds.Count);
             foreach (Guid id in nodeIds)
@@ -336,10 +336,10 @@ namespace Cotton.Server.Services.Search
                 }
             }
 
-            foreach (var (id, info) in nodeInfo.ToArray())
+            foreach ((Guid id, (Guid? ParentId, string Name, int Type) info) in nodeInfo.ToArray())
             {
                 if (info.ParentId.HasValue
-                    && nodeInfo.TryGetValue(info.ParentId.Value, out var parent)
+                    && nodeInfo.TryGetValue(info.ParentId.Value, out (Guid? ParentId, string Name, int Type) parent)
                     && parent.Type != info.Type)
                 {
                     nodeInfo[id] = (null, info.Name, info.Type);
@@ -361,7 +361,7 @@ namespace Cotton.Server.Services.Search
             Guid currentId = id;
             int depth = 0;
 
-            while (nodeInfo.TryGetValue(currentId, out var info))
+            while (nodeInfo.TryGetValue(currentId, out (Guid? ParentId, string Name, int Type) info))
             {
                 if (!visited.Add(currentId) || depth++ >= MaxDepth)
                 {

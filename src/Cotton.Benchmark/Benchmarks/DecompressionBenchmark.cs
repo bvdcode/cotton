@@ -29,7 +29,7 @@ namespace Cotton.Benchmark.Benchmarks
             _originalSize = testData.Length;
 
             using var inputStream = new MemoryStream(testData);
-            var compressedStream = _processor.WriteAsync("test-uid", inputStream).Result;
+            Stream compressedStream = _processor.WriteAsync("test-uid", inputStream).Result;
             using var outputStream = new MemoryStream();
             compressedStream.CopyTo(outputStream);
             _compressedData = outputStream.ToArray();
@@ -45,7 +45,7 @@ namespace Cotton.Benchmark.Benchmarks
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
             await using var inputStream = new MemoryStream(_compressedData);
-            var outputStream = await _processor.ReadAsync("test-uid", inputStream);
+            Stream outputStream = await _processor.ReadAsync("test-uid", inputStream);
             await outputStream.DisposeAsync();
         }
 
@@ -55,7 +55,7 @@ namespace Cotton.Benchmark.Benchmarks
             var stopwatch = Stopwatch.StartNew();
 
             await using var inputStream = new MemoryStream(_compressedData);
-            var outputStream = await _processor.ReadAsync("test-uid", inputStream);
+            Stream outputStream = await _processor.ReadAsync("test-uid", inputStream);
 
             // Read all decompressed data
             await using var resultStream = new MemoryStream();
@@ -69,7 +69,7 @@ namespace Cotton.Benchmark.Benchmarks
         /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
-            var baseMetrics = base.AggregateMetrics(metrics);
+            Dictionary<string, object> baseMetrics = base.AggregateMetrics(metrics);
             baseMetrics["Implementation"] = "Cotton.Storage.Processors.CompressionProcessor";
             baseMetrics["CompressedSize"] = FormatBytes(_compressedData.Length);
             baseMetrics["CompressionRatio"] = $"{(double)_originalSize / _compressedData.Length:F2}x";

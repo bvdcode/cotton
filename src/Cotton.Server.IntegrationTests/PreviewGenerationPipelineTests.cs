@@ -55,7 +55,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
 
@@ -132,7 +132,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         byte[] smallPreview = await ReadPreviewBlobAsync(manifest.SmallFilePreviewHash!);
         AssertWebpSignature(smallPreview);
 
-        (int smallWidth, int smallHeight) = GetImageSize(smallPreview);
+        var (smallWidth, smallHeight) = GetImageSize(smallPreview);
         Assert.That(Math.Max(smallWidth, smallHeight), Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultSmallPreviewSize));
 
         NodeFileManifestDto listedFile = await GetNodeFileAsync(root.Id, "notes.txt");
@@ -221,8 +221,8 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             Assert.That(largePreview.Length, Is.GreaterThan(0));
         });
 
-        (int smallWidth, int smallHeight) = GetImageSize(smallPreview);
-        (int largeWidth, int largeHeight) = GetImageSize(largePreview);
+        var (smallWidth, smallHeight) = GetImageSize(smallPreview);
+        var (largeWidth, largeHeight) = GetImageSize(largePreview);
 
         Assert.Multiple(() =>
         {
@@ -269,7 +269,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         byte[] smallPreview = await ReadPreviewBlobAsync(manifest.SmallFilePreviewHash!);
         AssertWebpSignature(smallPreview);
 
-        (int width, int height) = GetImageSize(smallPreview);
+        var (width, height) = GetImageSize(smallPreview);
         Assert.That(Math.Max(width, height), Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultSmallPreviewSize));
 
         HttpResponseMessage response = await _client!.GetAsync($"{PreviewRouteBase}/{GetPreviewHashEncryptedHex(manifest.Id, manifest.SmallFilePreviewHashEncrypted)}");
@@ -365,7 +365,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
             byte[] smallPreview = await ReadPreviewBlobAsync(manifest.SmallFilePreviewHash!);
             AssertWebpSignature(smallPreview);
-            (int smallWidth, int smallHeight) = GetImageSize(smallPreview);
+            var (smallWidth, smallHeight) = GetImageSize(smallPreview);
             Assert.That(Math.Max(smallWidth, smallHeight), Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultSmallPreviewSize));
 
             if (manifest.LargeFilePreviewHash is not null)
@@ -373,7 +373,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
                 byte[] largePreview = await ReadPreviewBlobAsync(manifest.LargeFilePreviewHash);
                 AssertWebpSignature(largePreview);
 
-                (int largeWidth, int largeHeight) = GetImageSize(largePreview);
+                var (largeWidth, largeHeight) = GetImageSize(largePreview);
                 Assert.That(Math.Max(largeWidth, largeHeight), Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultLargePreviewSize));
                 Assert.That(largeWidth * largeHeight, Is.GreaterThanOrEqualTo(smallWidth * smallHeight));
                 Assert.That(largePreview.Length, Is.GreaterThan(0));
@@ -548,7 +548,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
     private static (int Width, int Height) GetImageSize(byte[] imageBytes)
     {
-        var info = Image.Identify(imageBytes);
+        ImageInfo info = Image.Identify(imageBytes);
         Assert.That(info, Is.Not.Null, "Failed to identify preview image format and dimensions.");
         return (info!.Width, info.Height);
     }

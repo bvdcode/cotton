@@ -23,14 +23,14 @@ namespace Cotton.Benchmark.Infrastructure
 
             _logger.LogInformation("Starting benchmark suite with {Count} benchmarks", benchmarkList.Count);
 
-            foreach (var benchmark in benchmarkList)
+            foreach (IBenchmark? benchmark in benchmarkList)
             {
                 try
                 {
                     _logger.LogInformation("Running benchmark: {Name}", benchmark.Name);
                     _logger.LogInformation("Description: {Description}", benchmark.Description);
 
-                    var result = await benchmark.RunAsync(cancellationToken);
+                    IBenchmarkResult result = await benchmark.RunAsync(cancellationToken);
                     results.Add(result);
 
                     if (result.IsSuccess)

@@ -12,6 +12,7 @@ using EasyExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Cotton.Database.Models;
 
 namespace Cotton.Server.Controllers
 {
@@ -44,7 +45,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Invalid hash format.");
             }
             Guid userId = User.GetUserId();
-            var chunkOwnership = await _dbContext.ChunkOwnerships
+            ChunkOwnership? chunkOwnership = await _dbContext.ChunkOwnerships
                 .FirstOrDefaultAsync(co =>
                     co.ChunkHash == hashBytes &&
                     co.OwnerId == userId);
@@ -84,7 +85,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Invalid hash format.");
             }
 
-            using var stream = file.OpenReadStream();
+            using Stream stream = file.OpenReadStream();
             Guid userId = User.GetUserId();
             try
             {

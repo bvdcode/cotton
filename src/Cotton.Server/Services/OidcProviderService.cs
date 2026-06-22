@@ -25,7 +25,7 @@ namespace Cotton.Server.Services
         /// <summary>Lists enabled providers safe to show on the public login screen.</summary>
         public async Task<IReadOnlyList<PublicOidcProviderDto>> ListPublicAsync(CancellationToken ct)
         {
-            var providers = await _dbContext.OidcProviders
+            List<PublicOidcProviderDto> providers = await _dbContext.OidcProviders
                 .AsNoTracking()
                 .Where(x => x.IsEnabled)
                 .OrderBy(x => x.Name)
@@ -42,11 +42,11 @@ namespace Cotton.Server.Services
         /// <summary>Lists all configured providers for administrators.</summary>
         public async Task<IReadOnlyList<OidcProviderDto>> ListAdminAsync(CancellationToken ct)
         {
-            var providers = await _dbContext.OidcProviders
+            List<OidcProvider> providers = await _dbContext.OidcProviders
                 .OrderBy(x => x.Name)
                 .ToListAsync(ct);
 
-            foreach (var provider in providers)
+            foreach (OidcProvider? provider in providers)
             {
                 _integrity.RequireValid(_dbContext, provider, "oidc.admin-list");
             }

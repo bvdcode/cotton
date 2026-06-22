@@ -41,7 +41,7 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("Token is required");
             }
 
-            var user = await _dbContext.Users
+            User user = await _dbContext.Users
                 .FirstOrDefaultAsync(x => x.EmailVerificationToken == request.Token, cancellationToken)
                 ?? throw new BadRequestException<User>("Invalid or expired token");
             _integrity.RequireValid(_dbContext, user, "user.email-verification");

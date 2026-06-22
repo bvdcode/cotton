@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Server.Providers;
@@ -137,14 +138,14 @@ namespace Cotton.Server.Jobs
                 {
                     fileHasher.AppendData(buffer, 0, bytesRead);
 
-                    var chunk = await _chunkIngest.UpsertChunkAsync(ownerId, buffer, bytesRead, ct);
+                    Chunk chunk = await _chunkIngest.UpsertChunkAsync(ownerId, buffer, bytesRead, ct);
                     chunks.Add(new BackupChunkInfo(order, Hasher.ToHexStringHash(chunk.Hash), (int)chunk.PlainSizeBytes));
                     order++;
                 }
 
                 if (chunks.Count == 0)
                 {
-                    var empty = await _chunkIngest.UpsertChunkAsync(ownerId, [], 0, ct);
+                    Chunk empty = await _chunkIngest.UpsertChunkAsync(ownerId, [], 0, ct);
                     chunks.Add(new BackupChunkInfo(0, Hasher.ToHexStringHash(empty.Hash), 0));
                 }
             }

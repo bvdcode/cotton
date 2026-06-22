@@ -20,8 +20,8 @@ public class LayoutNavigator(
     /// <inheritdoc />
     public async Task<(Layout Layout, Node Root)> GetLayoutAndRootAsync(Guid userId, NodeType nodeType, CancellationToken ct = default)
     {
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
-        var root = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, nodeType, ct);
+        Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
+        Node root = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, nodeType, ct);
         return (layout, root);
     }
 
@@ -41,7 +41,7 @@ public class LayoutNavigator(
         foreach (var part in parts)
         {
             var nameKey = NameValidator.NormalizeAndGetNameKey(part);
-            var nextNode = await _dbContext.Nodes
+            Node? nextNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.LayoutId == layout.Id
                     && x.ParentId == currentNode.Id
@@ -115,7 +115,7 @@ public class LayoutNavigator(
         var resourceName = parts[^1];
         var parentPath = parts.Length == 1 ? null : string.Join(Constants.DefaultPathSeparator, parts.Take(parts.Length - 1));
 
-        var parent = await ResolveNodeByPathAsync(userId, parentPath, nodeType, ct);
+        Node? parent = await ResolveNodeByPathAsync(userId, parentPath, nodeType, ct);
         return parent is null ? null : (parent, resourceName);
     }
 }

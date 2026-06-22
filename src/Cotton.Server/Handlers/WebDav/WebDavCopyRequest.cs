@@ -15,6 +15,7 @@ using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.WebDav
 {
@@ -86,22 +87,22 @@ namespace Cotton.Server.Handlers.WebDav
         /// </summary>
         public async Task<WebDavCopyResult> Handle(WebDavCopyRequest request, CancellationToken ct)
         {
-            var preconditions = await ResolvePreLockPreconditionsAsync(request, ct);
+            PreLockCopyOutcome preconditions = await ResolvePreLockPreconditionsAsync(request, ct);
             if (preconditions.Failure is not null)
             {
                 return preconditions.Failure;
             }
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, preconditions.LayoutId!.Value, ct);
 
-            var lockedCopy = await PrepareLockedCopyAsync(request, preconditions.LayoutId.Value, ct);
+            LockedCopyOutcome lockedCopy = await PrepareLockedCopyAsync(request, preconditions.LayoutId.Value, ct);
             if (lockedCopy.Failure is not null)
             {
                 return lockedCopy.Failure;
             }
 
-            var copyResult = await TryPerformCopyAsync(request, lockedCopy.Source!, lockedCopy.DestinationParent!, ct);
+            CopyOperationOutcome copyResult = await TryPerformCopyAsync(request, lockedCopy.Source!, lockedCopy.DestinationParent!, ct);
             if (copyResult.Failure is not null)
             {
                 return copyResult.Failure;
@@ -117,15 +118,15 @@ namespace Cotton.Server.Handlers.WebDav
 
         private async Task<PreLockCopyOutcome> ResolvePreLockPreconditionsAsync(WebDavCopyRequest request, CancellationToken ct)
         {
-            var source = await ResolveSourceAsync(request, ct);
-            var sourceFailure = ValidateSourceOrGetFailure(request, source);
+            WebDavResolveResult source = await ResolveSourceAsync(request, ct);
+            WebDavCopyResult? sourceFailure = ValidateSourceOrGetFailure(request, source);
             if (sourceFailure is not null)
             {
                 return PreLockCopyOutcome.Failed(sourceFailure);
             }
 
-            var destinationParent = await GetAndValidateDestinationParentAsync(request, ct);
-            var destinationFailure = TryGetDestinationParentFailure(destinationParent);
+            WebDavParentResult destinationParent = await GetAndValidateDestinationParentAsync(request, ct);
+            WebDavCopyResult? destinationFailure = TryGetDestinationParentFailure(destinationParent);
             return destinationFailure is null
                 ? PreLockCopyOutcome.Success(destinationParent.ParentNode!.LayoutId)
                 : PreLockCopyOutcome.Failed(destinationFailure);
@@ -136,21 +137,21 @@ namespace Cotton.Server.Handlers.WebDav
             Guid lockedLayoutId,
             CancellationToken ct)
         {
-            var source = await ResolveSourceAsync(request, ct);
-            var sourceFailure = await ValidateLockedSourceAsync(request, source, lockedLayoutId, ct);
+            WebDavResolveResult source = await ResolveSourceAsync(request, ct);
+            WebDavCopyResult? sourceFailure = await ValidateLockedSourceAsync(request, source, lockedLayoutId, ct);
             if (sourceFailure is not null)
             {
                 return LockedCopyOutcome.Failed(sourceFailure);
             }
 
-            var destinationParent = await GetAndValidateDestinationParentAsync(request, ct);
-            var destinationFailure = ValidateLockedDestination(destinationParent, request, lockedLayoutId);
+            WebDavParentResult destinationParent = await GetAndValidateDestinationParentAsync(request, ct);
+            WebDavCopyResult? destinationFailure = ValidateLockedDestination(destinationParent, request, lockedLayoutId);
             if (destinationFailure is not null)
             {
                 return LockedCopyOutcome.Failed(destinationFailure);
             }
 
-            var overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
+            (bool Created, bool Allowed) overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
             return overwriteResult.Allowed
                 ? LockedCopyOutcome.Success(source, destinationParent, overwriteResult.Created)
                 : LockedCopyOutcome.Failed(Fail(WebDavCopyError.DestinationExists));
@@ -162,7 +163,7 @@ namespace Cotton.Server.Handlers.WebDav
             Guid lockedLayoutId,
             CancellationToken ct)
         {
-            var sourceFailure = ValidateSourceOrGetFailure(request, source);
+            WebDavCopyResult? sourceFailure = ValidateSourceOrGetFailure(request, source);
             if (sourceFailure is not null)
             {
                 return sourceFailure;
@@ -182,7 +183,7 @@ namespace Cotton.Server.Handlers.WebDav
             WebDavCopyRequest request,
             Guid lockedLayoutId)
         {
-            var destinationFailure = TryGetDestinationParentFailure(destinationParent);
+            WebDavCopyResult? destinationFailure = TryGetDestinationParentFailure(destinationParent);
             if (destinationFailure is not null)
             {
                 return destinationFailure;
@@ -343,7 +344,7 @@ namespace Cotton.Server.Handlers.WebDav
 
         private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavCopyRequest request, CancellationToken ct)
         {
-            var sourceResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.SourcePath, ct);
+            WebDavResolveResult sourceResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.SourcePath, ct);
             if (!sourceResult.Found)
             {
                 _logger.LogDebug("WebDAV COPY: Source not found: {Path}", request.SourcePath);
@@ -353,7 +354,7 @@ namespace Cotton.Server.Handlers.WebDav
 
         private async Task<WebDavParentResult> GetAndValidateDestinationParentAsync(WebDavCopyRequest request, CancellationToken ct)
         {
-            var destParentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.DestinationPath, ct);
+            WebDavParentResult destParentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.DestinationPath, ct);
             if (!destParentResult.Found || destParentResult.ParentNode is null || destParentResult.ResourceName is null)
             {
                 _logger.LogDebug("WebDAV COPY: Destination parent not found: {Path}", request.DestinationPath);
@@ -371,7 +372,7 @@ namespace Cotton.Server.Handlers.WebDav
 
         private async Task<(bool Created, bool Allowed)> HandleDestinationOverwriteAsync(WebDavCopyRequest request, CancellationToken ct)
         {
-            var destExists = await _pathResolver.ResolveMetadataAsync(request.UserId, request.DestinationPath, ct);
+            WebDavResolveResult destExists = await _pathResolver.ResolveMetadataAsync(request.UserId, request.DestinationPath, ct);
             if (destExists.Found && !request.Overwrite)
             {
                 _logger.LogDebug("WebDAV COPY: Destination exists and overwrite is false: {Path}", request.DestinationPath);
@@ -453,7 +454,7 @@ namespace Cotton.Server.Handlers.WebDav
             Guid layoutId,
             CancellationToken ct)
         {
-            var sourceNode = await _dbContext.Nodes
+            Node sourceNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .FirstAsync(n => n.Id == sourceNodeId, ct);
 
@@ -474,7 +475,7 @@ namespace Cotton.Server.Handlers.WebDav
             long addedBytes = 0;
 
             // Copy child nodes
-            var childNodes = await _dbContext.Nodes
+            List<Node> childNodes = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(n => n.ParentId == sourceNodeId
                     && n.OwnerId == userId
@@ -482,19 +483,19 @@ namespace Cotton.Server.Handlers.WebDav
                     && n.Type == sourceNode.Type)
                 .ToListAsync(ct);
 
-            foreach (var child in childNodes)
+            foreach (Node? child in childNodes)
             {
                 var (_, childAddedBytes) = await CopyNodeRecursivelyAsync(child.Id, newNode, child.Name, userId, layoutId, ct);
                 addedBytes += childAddedBytes;
             }
 
             // Copy files
-            var childFiles = await _dbContext.NodeFiles
+            List<NodeFile> childFiles = await _dbContext.NodeFiles
                 .AsNoTracking()
                 .Where(f => f.NodeId == sourceNodeId && f.OwnerId == userId)
                 .ToListAsync(ct);
 
-            foreach (var file in childFiles)
+            foreach (NodeFile? file in childFiles)
             {
                 addedBytes += await _quota.EnsureCanAddFileReferenceAsync(userId, file.FileManifestId, ct);
 

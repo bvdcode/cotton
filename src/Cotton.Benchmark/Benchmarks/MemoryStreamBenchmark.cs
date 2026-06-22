@@ -44,7 +44,7 @@ namespace Cotton.Benchmark.Benchmarks
         /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
-            var baseMetrics = base.AggregateMetrics(metrics);
+            Dictionary<string, object> baseMetrics = base.AggregateMetrics(metrics);
             baseMetrics["Operation"] = "Stream Copy";
             return baseMetrics;
         }

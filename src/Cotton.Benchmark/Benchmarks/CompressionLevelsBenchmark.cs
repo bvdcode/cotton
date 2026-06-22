@@ -95,7 +95,7 @@ namespace Cotton.Benchmark.Benchmarks
             };
 
             // Add per-level metrics
-            foreach (var (level, result) in resultsByLevel.OrderBy(kvp => kvp.Key))
+            foreach ((int level, LevelResult? result) in resultsByLevel.OrderBy(kvp => kvp.Key))
             {
                 var levelNote = GetLevelNote(level);
                 dict[$"L{level}_Throughput"] = $"{result.ThroughputMBps:F2} MB/s";
@@ -106,8 +106,8 @@ namespace Cotton.Benchmark.Benchmarks
             }
 
             // Calculate boundary summaries
-            var fastest = resultsByLevel.Values.OrderByDescending(r => r.ThroughputMBps).First();
-            var bestCompression = resultsByLevel.Values.OrderByDescending(r => r.CompressionRatio).First();
+            LevelResult fastest = resultsByLevel.Values.OrderByDescending(r => r.ThroughputMBps).First();
+            LevelResult bestCompression = resultsByLevel.Values.OrderByDescending(r => r.CompressionRatio).First();
 
             dict["FastestLevel"] = $"Level {fastest.Level} ({fastest.ThroughputMBps:F2} MB/s)";
             dict["BestCompressionLevel"] = $"Level {bestCompression.Level} ({bestCompression.CompressionRatio:F2}x)";
@@ -135,9 +135,9 @@ namespace Cotton.Benchmark.Benchmarks
             Console.WriteLine(" Level |  Throughput  |   Time   |  Compressed  | Reduction |  Ratio  |  Time vs L-5  |  Category");
             Console.WriteLine(new string('-', 100));
 
-            var baseline = results[-5];
+            LevelResult baseline = results[-5];
 
-            foreach (var (level, result) in results.OrderBy(kvp => kvp.Key))
+            foreach ((int level, LevelResult? result) in results.OrderBy(kvp => kvp.Key))
             {
                 var speedVsBaseline = level == -5
                     ? "baseline"

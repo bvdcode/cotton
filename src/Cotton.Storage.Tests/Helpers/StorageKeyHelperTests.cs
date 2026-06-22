@@ -29,7 +29,7 @@ namespace Cotton.Storage.Tests.Helpers
             string input = "abc";
 
             // Act & Assert
-            var ex = Assert.Throws<ArgumentException>(() => StorageKeyHelper.NormalizeUid(input));
+            ArgumentException? ex = Assert.Throws<ArgumentException>(() => StorageKeyHelper.NormalizeUid(input));
             Assert.That(ex.Message, Does.Contain("too short"));
             Assert.That(ex.Message, Does.Contain("6"));
         }
@@ -52,7 +52,7 @@ namespace Cotton.Storage.Tests.Helpers
             // Act & Assert
             foreach (var input in invalidInputs)
             {
-                var ex = Assert.Throws<ArgumentException>(() => StorageKeyHelper.NormalizeUid(input),
+                ArgumentException? ex = Assert.Throws<ArgumentException>(() => StorageKeyHelper.NormalizeUid(input),
                     $"Should throw for input: {input}");
                 Assert.That(ex.Message, Does.Contain("invalid character"),
                     $"Exception message should mention invalid character for: {input}");

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Services;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
@@ -31,7 +32,7 @@ namespace Cotton.Server.Jobs
 
             while (!context.CancellationToken.IsCancellationRequested)
             {
-                var manifests = await _dbContext.FileManifests
+                List<FileManifest> manifests = await _dbContext.FileManifests
                     .Include(m => m.NodeFiles)
                     .Where(m =>
                         (m.ContentType == FileManifestService.DefaultContentType
@@ -46,7 +47,7 @@ namespace Cotton.Server.Jobs
                     break;
                 }
 
-                foreach (var manifest in manifests)
+                foreach (FileManifest? manifest in manifests)
                 {
                     var fileName = manifest.NodeFiles.FirstOrDefault()?.Name;
                     if (string.IsNullOrWhiteSpace(fileName))

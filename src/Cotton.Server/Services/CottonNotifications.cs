@@ -39,7 +39,7 @@ namespace Cotton.Server.Services
             Dictionary<string, string> parameters,
             string serverBaseUrl)
         {
-            var settings = _settingsProvider.GetServerSettings();
+            CottonServerSettings settings = _settingsProvider.GetServerSettings();
             switch (settings.EmailMode)
             {
                 case EmailMode.None:
@@ -83,7 +83,7 @@ namespace Cotton.Server.Services
                 throw new ArgumentException(validationError);
             }
 
-            var user = await _dbContext.Users.FindAsync(userId);
+            User? user = await _dbContext.Users.FindAsync(userId);
             if (user is null || string.IsNullOrWhiteSpace(user.Email))
             {
                 throw new EntityNotFoundException<User>("User not found or does not have an email address.");
@@ -122,7 +122,7 @@ namespace Cotton.Server.Services
                 _logger.LogInformation("Telemetry is disabled — skipping {Template} for user {UserId}.", template, userId);
                 return false;
             }
-            var user = await _dbContext.Users.FindAsync(userId);
+            User? user = await _dbContext.Users.FindAsync(userId);
             if (user is null || string.IsNullOrWhiteSpace(user.Email))
             {
                 return false;
@@ -156,7 +156,7 @@ namespace Cotton.Server.Services
             string serverBaseUrl,
             CottonServerSettings settings)
         {
-            var user = await _dbContext.Users.FindAsync(userId);
+            User? user = await _dbContext.Users.FindAsync(userId);
             if (user is null || string.IsNullOrWhiteSpace(user.Email))
             {
                 return false;
@@ -164,13 +164,13 @@ namespace Cotton.Server.Services
 
             string token = parameters.GetValueOrDefault("token") ?? string.Empty;
             string recipientName = GetRecipientDisplayName(user);
-            var variables = EmailTemplateRenderer.BuildVariables(
+            Dictionary<string, string> variables = EmailTemplateRenderer.BuildVariables(
                 recipientName,
                 user.Email,
                 token,
                 serverBaseUrl);
 
-            foreach (var kvp in parameters)
+            foreach (KeyValuePair<string, string> kvp in parameters)
             {
                 if (!variables.ContainsKey(kvp.Key))
                 {

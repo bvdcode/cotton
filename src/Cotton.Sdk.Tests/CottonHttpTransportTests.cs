@@ -6,6 +6,7 @@ using System.Text;
 using Cotton.Auth;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Tests.Fakes;
+using Cotton.Settings;
 using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sdk.Tests;
@@ -38,7 +39,7 @@ public class CottonHttpTransportTests
                 BaseAddress = baseAddress,
             });
 
-        var settings = await client.Settings.GetAsync();
+        ClientSettingsDto settings = await client.Settings.GetAsync();
 
         Assert.Multiple(() =>
         {
@@ -156,7 +157,7 @@ public class CottonHttpTransportTests
             BaseAddress = new Uri("https://cotton.test"),
         });
 
-        var settings = await client.Settings.GetAsync();
+        ClientSettingsDto settings = await client.Settings.GetAsync();
         TokenPairDto? stored = await store.GetAsync();
 
         Assert.Multiple(() =>
@@ -215,9 +216,9 @@ public class CottonHttpTransportTests
             BaseAddress = new Uri("https://cotton.test"),
         });
 
-        var first = client.Settings.GetAsync();
-        var second = client.Settings.GetAsync();
-        var results = await Task.WhenAll(first, second);
+        Task<ClientSettingsDto> first = client.Settings.GetAsync();
+        Task<ClientSettingsDto> second = client.Settings.GetAsync();
+        ClientSettingsDto[] results = await Task.WhenAll(first, second);
         TokenPairDto? stored = await store.GetAsync();
 
         Assert.Multiple(() =>

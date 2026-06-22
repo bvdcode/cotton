@@ -45,7 +45,7 @@ namespace Cotton.Benchmark.Reporting
             sb.AppendLine("Summary:");
             sb.AppendLine(new string('-', 70));
 
-            foreach (var result in results)
+            foreach (IBenchmarkResult result in results)
             {
                 sb.AppendLine(Format(result));
             }

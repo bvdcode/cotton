@@ -81,7 +81,7 @@ public class VideoPlaybackResolverTests
         };
         nodeFile.SetName("sample.bin");
 
-        var dto = nodeFile.Adapt<NodeFileManifestDto>();
+        NodeFileManifestDto dto = nodeFile.Adapt<NodeFileManifestDto>();
 
         Assert.Multiple(() =>
         {

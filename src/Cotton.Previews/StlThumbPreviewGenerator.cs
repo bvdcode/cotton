@@ -122,7 +122,7 @@ namespace Cotton.Previews
                 return null;
             }
 
-            var normalizedRender = await TryRenderNormalizedThreeMfAsync(modelFilePath, renderedPngPath, size, renderResult.Diagnostics)
+            (F3dRenderResult Result, string? NormalizedPath) normalizedRender = await TryRenderNormalizedThreeMfAsync(modelFilePath, renderedPngPath, size, renderResult.Diagnostics)
                 .ConfigureAwait(false);
             if (normalizedRender.Result.Success)
             {

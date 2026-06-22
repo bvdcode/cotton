@@ -61,7 +61,7 @@ namespace Cotton.Benchmark.Benchmarks
         {
             await using var inputStream = new MemoryStream(_testData);
             await _pipeline.WriteAsync("test-uid", inputStream);
-            var outputStream = await _pipeline.ReadAsync("test-uid");
+            Stream outputStream = await _pipeline.ReadAsync("test-uid");
             await outputStream.DisposeAsync();
         }
 
@@ -75,7 +75,7 @@ namespace Cotton.Benchmark.Benchmarks
             await _pipeline.WriteAsync("test-uid", inputStream);
 
             // Read back through pipeline
-            var outputStream = await _pipeline.ReadAsync("test-uid");
+            Stream outputStream = await _pipeline.ReadAsync("test-uid");
             await using var resultStream = new MemoryStream();
             await outputStream.CopyToAsync(resultStream, cancellationToken);
 
@@ -88,7 +88,7 @@ namespace Cotton.Benchmark.Benchmarks
         /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
-            var baseMetrics = base.AggregateMetrics(metrics);
+            Dictionary<string, object> baseMetrics = base.AggregateMetrics(metrics);
             baseMetrics["Pipeline"] = "Cotton.Storage.Pipelines.FileStoragePipeline";
             baseMetrics["Processors"] = "CompressionProcessor + CryptoProcessor";
             baseMetrics["DataType"] = "Compressible JSON";

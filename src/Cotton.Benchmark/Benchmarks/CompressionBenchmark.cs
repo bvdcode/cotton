@@ -26,7 +26,7 @@ namespace Cotton.Benchmark.Benchmarks
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
             await using var inputStream = new MemoryStream(_testData);
-            var outputStream = await _processor.WriteAsync("test-uid", inputStream);
+            Stream outputStream = await _processor.WriteAsync("test-uid", inputStream);
             await outputStream.DisposeAsync();
         }
 
@@ -36,7 +36,7 @@ namespace Cotton.Benchmark.Benchmarks
             var stopwatch = Stopwatch.StartNew();
 
             await using var inputStream = new MemoryStream(_testData);
-            var outputStream = await _processor.WriteAsync("test-uid", inputStream);
+            Stream outputStream = await _processor.WriteAsync("test-uid", inputStream);
 
             // Read all compressed data to ensure compression is complete
             await using var resultStream = new MemoryStream();
@@ -50,7 +50,7 @@ namespace Cotton.Benchmark.Benchmarks
         /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
-            var baseMetrics = base.AggregateMetrics(metrics);
+            Dictionary<string, object> baseMetrics = base.AggregateMetrics(metrics);
             baseMetrics["Implementation"] = "Cotton.Storage.Processors.CompressionProcessor";
             baseMetrics["DataType"] = "Compressible Text (Logs)";
             baseMetrics["CompressionLevel"] = _configuration.CompressionLevel;

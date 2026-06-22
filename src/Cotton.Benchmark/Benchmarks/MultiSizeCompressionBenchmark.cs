@@ -74,7 +74,7 @@ namespace Cotton.Benchmark.Benchmarks
                 ["InputSize"] = FormatBytes(_testData.Length),
             };
 
-            foreach (var (level, value) in resultsByLevel.OrderBy(kvp => kvp.Key))
+            foreach ((int level, (double mbps, int compressedBytes) value) in resultsByLevel.OrderBy(kvp => kvp.Key))
             {
                 dict[$"L{level}_Throughput"] = $"{value.mbps:F2} MB/s";
                 dict[$"L{level}_Compressed"] = FormatBytes(value.compressedBytes);

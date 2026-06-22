@@ -29,7 +29,7 @@ public class HlsRenditionProfileTests
     [TestCase(HlsRendition.Low)]
     public void Plan_WithoutProbeInfo_UsesBrowserCompatibleCodecs(HlsRendition rendition)
     {
-        var plan = HlsRenditionProfile.Plan(rendition);
+        HlsRenditionProfile.EncoderPlan plan = HlsRenditionProfile.Plan(rendition);
 
         Assert.Multiple(() =>
         {
@@ -48,7 +48,7 @@ public class HlsRenditionProfileTests
         string videoCodec,
         string? audioCodec)
     {
-        var plan = HlsRenditionProfile.Plan(HlsRendition.Source, videoCodec, audioCodec);
+        HlsRenditionProfile.EncoderPlan plan = HlsRenditionProfile.Plan(HlsRendition.Source, videoCodec, audioCodec);
 
         Assert.Multiple(() =>
         {
@@ -68,7 +68,7 @@ public class HlsRenditionProfileTests
         string? videoCodec,
         string? audioCodec)
     {
-        var plan = HlsRenditionProfile.Plan(HlsRendition.Source, videoCodec, audioCodec);
+        HlsRenditionProfile.EncoderPlan plan = HlsRenditionProfile.Plan(HlsRendition.Source, videoCodec, audioCodec);
 
         Assert.Multiple(() =>
         {
@@ -81,7 +81,7 @@ public class HlsRenditionProfileTests
     [Test]
     public void Plan_NonSourceRenditionsAlwaysReencode()
     {
-        var plan = HlsRenditionProfile.Plan(HlsRendition.Medium, "h264", "aac");
+        HlsRenditionProfile.EncoderPlan plan = HlsRenditionProfile.Plan(HlsRendition.Medium, "h264", "aac");
 
         Assert.Multiple(() =>
         {
@@ -94,7 +94,7 @@ public class HlsRenditionProfileTests
     [Test]
     public void Plan_Source_KeepsOriginalResolution()
     {
-        var plan = HlsRenditionProfile.Plan(HlsRendition.Source);
+        HlsRenditionProfile.EncoderPlan plan = HlsRenditionProfile.Plan(HlsRendition.Source);
 
         Assert.Multiple(() =>
         {
@@ -111,7 +111,7 @@ public class HlsRenditionProfileTests
         string expectedWidth,
         string expectedAudioBitrate)
     {
-        var plan = HlsRenditionProfile.Plan(rendition);
+        HlsRenditionProfile.EncoderPlan plan = HlsRenditionProfile.Plan(rendition);
 
         Assert.Multiple(() =>
         {

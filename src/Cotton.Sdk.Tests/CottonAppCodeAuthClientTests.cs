@@ -24,7 +24,7 @@ namespace Cotton.Sdk.Tests
                 expiresAt,
                 pollIntervalSeconds = 2,
             });
-            var client = CreateClient(handler, new InMemoryCottonTokenStore());
+            CottonCloudClient client = CreateClient(handler, new InMemoryCottonTokenStore());
 
             AppCodeAuthorizationSession session = await client.Auth.StartAppCodeAsync(new AppCodeStartRequestDto
             {
@@ -89,7 +89,7 @@ namespace Cotton.Sdk.Tests
             var handler = new QueuedHttpMessageHandler();
             var store = new InMemoryCottonTokenStore();
             handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "access", refreshToken = "refresh" });
-            var client = CreateClient(handler, store);
+            CottonCloudClient client = CreateClient(handler, store);
 
             AppCodePollResult result = await client.Auth.PollAppCodeAsync("poll-token");
 
@@ -113,7 +113,7 @@ namespace Cotton.Sdk.Tests
             var handler = new QueuedHttpMessageHandler();
             var store = new InMemoryCottonTokenStore();
             handler.EnqueueJson(HttpStatusCode.Accepted, new { error = "pending", retryAfterSeconds = 2 });
-            var client = CreateClient(handler, store);
+            CottonCloudClient client = CreateClient(handler, store);
 
             AppCodePollResult result = await client.Auth.PollAppCodeAsync("poll-token");
 
@@ -139,7 +139,7 @@ namespace Cotton.Sdk.Tests
         {
             var handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(statusCode, new { error, retryAfterSeconds = 3 });
-            var client = CreateClient(handler, new InMemoryCottonTokenStore());
+            CottonCloudClient client = CreateClient(handler, new InMemoryCottonTokenStore());
 
             AppCodePollResult result = await client.Auth.PollAppCodeAsync("poll-token");
 
@@ -156,7 +156,7 @@ namespace Cotton.Sdk.Tests
         public void PollAppCodeAsync_RejectsBlankPollToken()
         {
             var handler = new QueuedHttpMessageHandler();
-            var client = CreateClient(handler, new InMemoryCottonTokenStore());
+            CottonCloudClient client = CreateClient(handler, new InMemoryCottonTokenStore());
 
             Assert.ThrowsAsync<ArgumentException>(async () => await client.Auth.PollAppCodeAsync(" "));
             Assert.That(handler.Requests, Is.Empty);

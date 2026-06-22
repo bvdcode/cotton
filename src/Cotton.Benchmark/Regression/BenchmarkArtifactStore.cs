@@ -23,7 +23,7 @@ namespace Cotton.Benchmark.Regression
                 return null;
             }
 
-            await using var stream = File.OpenRead(path);
+            await using FileStream stream = File.OpenRead(path);
             return await JsonSerializer.DeserializeAsync<BenchmarkRunDocument>(stream, JsonOptions, cancellationToken);
         }
 
@@ -65,7 +65,7 @@ namespace Cotton.Benchmark.Regression
 
         private static async Task SaveJsonAsync(string path, BenchmarkRunDocument runDocument, CancellationToken cancellationToken)
         {
-            await using var stream = File.Create(path);
+            await using FileStream stream = File.Create(path);
             await JsonSerializer.SerializeAsync(stream, runDocument, JsonOptions, cancellationToken);
             await stream.WriteAsync("\n"u8.ToArray(), cancellationToken);
         }

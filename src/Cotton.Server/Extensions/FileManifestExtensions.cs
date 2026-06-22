@@ -19,7 +19,7 @@ namespace Cotton.Server.Extensions
             ArgumentNullException.ThrowIfNull(fileManifestChunks);
 
             Dictionary<string, long> result = new(StringComparer.OrdinalIgnoreCase);
-            foreach (var fileManifestChunk in fileManifestChunks)
+            foreach (FileManifestChunk fileManifestChunk in fileManifestChunks)
             {
                 ArgumentNullException.ThrowIfNull(fileManifestChunk.ChunkHash);
                 ArgumentNullException.ThrowIfNull(fileManifestChunk.Chunk);
@@ -46,7 +46,7 @@ namespace Cotton.Server.Extensions
             List<string> result = [];
             ArgumentNullException.ThrowIfNull(chunks);
             int? lastOrder = null;
-            foreach (var chunk in chunks.OrderBy(x => x.ChunkOrder))
+            foreach (FileManifestChunk? chunk in chunks.OrderBy(x => x.ChunkOrder))
             {
                 lastOrder ??= chunk.ChunkOrder - 1;
                 ArgumentNullException.ThrowIfNull(chunk.ChunkHash);

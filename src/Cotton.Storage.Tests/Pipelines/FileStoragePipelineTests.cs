@@ -130,7 +130,7 @@ namespace Cotton.Storage.Tests.Pipelines
             await backend.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var stream = await pipeline.ReadAsync("test-uid");
+            Stream stream = await pipeline.ReadAsync("test-uid");
 
             // Assert
             var result = new MemoryStream();
@@ -153,7 +153,7 @@ namespace Cotton.Storage.Tests.Pipelines
             await pipeline.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Assert
-            var stream = await backend.ReadAsync("test-uid");
+            Stream stream = await backend.ReadAsync("test-uid");
             var result = new MemoryStream();
             await stream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
@@ -182,7 +182,7 @@ namespace Cotton.Storage.Tests.Pipelines
             await backend.WriteAsync("test-uid", new MemoryStream(backendData));
 
             // Act
-            var stream = await pipeline.ReadAsync("test-uid");
+            Stream stream = await pipeline.ReadAsync("test-uid");
 
             // Assert
             var result = new MemoryStream();
@@ -214,7 +214,7 @@ namespace Cotton.Storage.Tests.Pipelines
             await pipeline.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Assert
-            var backendStream = await backend.ReadAsync("test-uid");
+            Stream backendStream = await backend.ReadAsync("test-uid");
             var result = new MemoryStream();
             await backendStream.CopyToAsync(result);
             // Processors add markers in reverse order: BB (200), AA (100), CC (50)
@@ -239,7 +239,7 @@ namespace Cotton.Storage.Tests.Pipelines
             await pipeline.WriteAsync("test-uid", new MemoryStream(duplicateData));
 
             // Assert
-            var stream = await backend.ReadAsync("test-uid");
+            Stream stream = await backend.ReadAsync("test-uid");
             var result = new MemoryStream();
             await stream.CopyToAsync(result);
             using (Assert.EnterMultipleScope())
@@ -268,7 +268,7 @@ namespace Cotton.Storage.Tests.Pipelines
             backend.WriteAsync("test-uid", new MemoryStream(data)).Wait();
 
             // Act & Assert
-            var ex = Assert.ThrowsAsync<InvalidOperationException>(
+            InvalidOperationException? ex = Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await pipeline.ReadAsync("test-uid"));
             Assert.That(ex.Message, Does.Contain("Stream.Null"));
         }
@@ -291,7 +291,7 @@ namespace Cotton.Storage.Tests.Pipelines
             var data = Encoding.UTF8.GetBytes("Test");
 
             // Act & Assert
-            var ex = Assert.ThrowsAsync<InvalidOperationException>(
+            InvalidOperationException? ex = Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await pipeline.WriteAsync("test-uid", new MemoryStream(data)));
             Assert.That(ex.Message, Does.Contain("No registered processor produced a valid stream"));
         }
@@ -316,7 +316,7 @@ namespace Cotton.Storage.Tests.Pipelines
 
             // Act
             await pipeline.WriteAsync("test-uid", new MemoryStream(originalData));
-            var readStream = await pipeline.ReadAsync("test-uid");
+            Stream readStream = await pipeline.ReadAsync("test-uid");
 
             // Assert
             var result = new MemoryStream();

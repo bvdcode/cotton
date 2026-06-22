@@ -59,7 +59,7 @@ namespace Cotton.Server.Services
             }
 
             using IServiceScope scope = _serviceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
 
             AppVersion currentVersionRecord = await TrackVersionAsync(
                 dbContext,
@@ -157,7 +157,7 @@ namespace Cotton.Server.Services
                 return;
             }
 
-            var adminIds = await dbContext.Users
+            List<Guid> adminIds = await dbContext.Users
                 .AsNoTracking()
                 .Where(x => x.Role == UserRole.Admin)
                 .OrderBy(x => x.Id)
@@ -174,7 +174,7 @@ namespace Cotton.Server.Services
                 return;
             }
 
-            var notifications = serviceProvider.GetRequiredService<INotificationsProvider>();
+            INotificationsProvider notifications = serviceProvider.GetRequiredService<INotificationsProvider>();
             string releaseNotes = NotificationTemplates.FormatReleaseNotes(latestRelease.Notes);
             var metadata = new Dictionary<string, string>
             {
@@ -211,8 +211,8 @@ namespace Cotton.Server.Services
         {
             try
             {
-                var client = _httpClientFactory.CreateClient(GitHubHttpClientName);
-                using var response = await client.GetAsync(LatestReleasePath, cancellationToken);
+                HttpClient client = _httpClientFactory.CreateClient(GitHubHttpClientName);
+                using HttpResponseMessage response = await client.GetAsync(LatestReleasePath, cancellationToken);
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning(
@@ -221,7 +221,7 @@ namespace Cotton.Server.Services
                     return null;
                 }
 
-                var release = await response.Content.ReadFromJsonAsync<GitHubReleaseResponse>(cancellationToken);
+                GitHubReleaseResponse? release = await response.Content.ReadFromJsonAsync<GitHubReleaseResponse>(cancellationToken);
                 if (release is null || release.Draft || release.Prerelease || string.IsNullOrWhiteSpace(release.TagName))
                 {
                     return null;

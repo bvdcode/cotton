@@ -27,7 +27,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
-        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
         Assert.Multiple(() =>
@@ -76,27 +76,27 @@ public class LayoutEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         // create child
-        var createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", new CreateNodeRequestDto { ParentId = root!.Id, Name = "child" });
+        HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", new CreateNodeRequestDto { ParentId = root!.Id, Name = "child" });
         createNodeRes.EnsureSuccessStatusCode();
-        var child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
+        NodeDto? child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(child, Is.Not.Null);
 
         // resolve path
-        var resolved = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver/child");
+        NodeDto? resolved = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver/child");
         Assert.That(resolved, Is.Not.Null);
         Assert.That(resolved!.Id, Is.EqualTo(child!.Id));
 
         // list ancestors
-        var ancestors = await _client.GetFromJsonAsync<IEnumerable<NodeDto>>($"/api/v1/layouts/nodes/{child!.Id}/ancestors");
+        IEnumerable<NodeDto>? ancestors = await _client.GetFromJsonAsync<IEnumerable<NodeDto>>($"/api/v1/layouts/nodes/{child!.Id}/ancestors");
         Assert.That(ancestors, Is.Not.Null);
         Assert.That(ancestors!.Any(a => a.Id == root!.Id), Is.True);
 
         // list children for root
-        var children = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
+        NodeContentDto? children = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
         Assert.That(children, Is.Not.Null);
         Assert.That(children!.Nodes.Any(n => n.Id == child!.Id), Is.True);
     }
@@ -107,17 +107,17 @@ public class LayoutEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
-        var createNodeRes = await _client.PutAsJsonAsync(
+        HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
             new CreateNodeRequestDto { ParentId = root!.Id, Name = "encrypted" });
         createNodeRes.EnsureSuccessStatusCode();
-        var child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
+        NodeDto? child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(child, Is.Not.Null);
 
-        var firstPatch = await _client.PatchAsJsonAsync(
+        HttpResponseMessage firstPatch = await _client.PatchAsJsonAsync(
             $"/api/v1/layouts/nodes/{child!.Id}/metadata",
             new Dictionary<string, string>
             {
@@ -125,7 +125,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
                 ["color"] = "blue"
             });
         firstPatch.EnsureSuccessStatusCode();
-        var first = await firstPatch.Content.ReadFromJsonAsync<NodeDto>();
+        NodeDto? first = await firstPatch.Content.ReadFromJsonAsync<NodeDto>();
 
         Assert.Multiple(() =>
         {
@@ -133,14 +133,14 @@ public class LayoutEndpointsTests : IntegrationTestBase
             Assert.That(first.Metadata["color"], Is.EqualTo("blue"));
         });
 
-        var secondPatch = await _client.PatchAsJsonAsync(
+        HttpResponseMessage secondPatch = await _client.PatchAsJsonAsync(
             $"/api/v1/layouts/nodes/{child.Id}/metadata",
             new Dictionary<string, string>
             {
                 ["isClientEncryptionEnabled"] = "false"
             });
         secondPatch.EnsureSuccessStatusCode();
-        var second = await secondPatch.Content.ReadFromJsonAsync<NodeDto>();
+        NodeDto? second = await secondPatch.Content.ReadFromJsonAsync<NodeDto>();
 
         Assert.Multiple(() =>
         {
@@ -148,7 +148,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
             Assert.That(second.Metadata["color"], Is.EqualTo("blue"));
         });
 
-        var persisted = await _client.GetFromJsonAsync<NodeDto>($"/api/v1/layouts/nodes/{child.Id}");
+        NodeDto? persisted = await _client.GetFromJsonAsync<NodeDto>($"/api/v1/layouts/nodes/{child.Id}");
         Assert.Multiple(() =>
         {
             Assert.That(persisted!.Metadata["isClientEncryptionEnabled"], Is.EqualTo("false"));
@@ -162,22 +162,22 @@ public class LayoutEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
-        var targetResponse = await _client.PutAsJsonAsync(
+        HttpResponseMessage targetResponse = await _client.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
             new CreateNodeRequestDto { ParentId = root!.Id, Name = "target" });
         targetResponse.EnsureSuccessStatusCode();
-        var target = await targetResponse.Content.ReadFromJsonAsync<NodeDto>();
+        NodeDto? target = await targetResponse.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(target, Is.Not.Null);
 
-        var textMatchResponse = await _client.PutAsJsonAsync(
+        HttpResponseMessage textMatchResponse = await _client.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
             new CreateNodeRequestDto { ParentId = root.Id, Name = "why-log" });
         textMatchResponse.EnsureSuccessStatusCode();
 
-        var exact = await SearchAsync(root.LayoutId, target!.Id.ToString());
+        SearchLayoutsResultDto exact = await SearchAsync(root.LayoutId, target!.Id.ToString());
         Assert.Multiple(() =>
         {
             Assert.That(exact.TotalCount, Is.EqualTo(1));
@@ -185,7 +185,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
             Assert.That(exact.Files, Is.Empty);
         });
 
-        var copiedLogLine = await SearchAsync(root.LayoutId, $"{target.Id} why");
+        SearchLayoutsResultDto copiedLogLine = await SearchAsync(root.LayoutId, $"{target.Id} why");
         Assert.Multiple(() =>
         {
             Assert.That(copiedLogLine.TotalCount, Is.EqualTo(1));
@@ -200,16 +200,16 @@ public class LayoutEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
-        var exactFolder = await CreateNodeAsync(root!.Id, "demo");
-        var fileParent = await CreateNodeAsync(root.Id, "file-parent");
-        var exactFile = await CreateFileAsync(fileParent.Id, "demo", "file exact");
-        var prefixFolder = await CreateNodeAsync(root.Id, "demo archive");
-        var substringFolder = await CreateNodeAsync(root.Id, "old demo backup");
+        NodeDto exactFolder = await CreateNodeAsync(root!.Id, "demo");
+        NodeDto fileParent = await CreateNodeAsync(root.Id, "file-parent");
+        NodeFileManifestDto exactFile = await CreateFileAsync(fileParent.Id, "demo", "file exact");
+        NodeDto prefixFolder = await CreateNodeAsync(root.Id, "demo archive");
+        NodeDto substringFolder = await CreateNodeAsync(root.Id, "old demo backup");
 
-        var firstPage = await SearchAsync(root.LayoutId, "demo", page: 1, pageSize: 2);
+        SearchLayoutsResultDto firstPage = await SearchAsync(root.LayoutId, "demo", page: 1, pageSize: 2);
         Assert.Multiple(() =>
         {
             Assert.That(firstPage.TotalCount, Is.EqualTo(4));
@@ -219,7 +219,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
             Assert.That(firstPage.FilePaths[exactFile.Id], Is.EqualTo($"/{root.Name}/file-parent/demo"));
         });
 
-        var secondPage = await SearchAsync(root.LayoutId, "demo", page: 2, pageSize: 2);
+        SearchLayoutsResultDto secondPage = await SearchAsync(root.LayoutId, "demo", page: 2, pageSize: 2);
         Assert.Multiple(() =>
         {
             Assert.That(secondPage.TotalCount, Is.EqualTo(4));
@@ -238,19 +238,19 @@ public class LayoutEndpointsTests : IntegrationTestBase
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
-        var visible = await CreateNodeAsync(root!.Id, "archive-visible");
-        var trashedFolder = await CreateNodeAsync(root.Id, "archive-trash-folder");
+        NodeDto visible = await CreateNodeAsync(root!.Id, "archive-visible");
+        NodeDto trashedFolder = await CreateNodeAsync(root.Id, "archive-trash-folder");
         _ = await CreateNodeAsync(trashedFolder.Id, "archive-trash-child");
-        var trashedFile = await CreateFileAsync(root.Id, "archive-trash-file.txt", "trash me");
+        NodeFileManifestDto trashedFile = await CreateFileAsync(root.Id, "archive-trash-file.txt", "trash me");
 
         (await _client.DeleteAsync($"/api/v1/layouts/nodes/{trashedFolder.Id}")).EnsureSuccessStatusCode();
         (await _client.DeleteAsync($"/api/v1/files/{trashedFile.Id}")).EnsureSuccessStatusCode();
 
-        var visibleResult = await SearchAsync(root.LayoutId, "archive-visible");
-        var trashResult = await SearchAsync(root.LayoutId, "archive-trash");
+        SearchLayoutsResultDto visibleResult = await SearchAsync(root.LayoutId, "archive-visible");
+        SearchLayoutsResultDto trashResult = await SearchAsync(root.LayoutId, "archive-trash");
 
         Assert.Multiple(() =>
         {
@@ -264,7 +264,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
 
     private async Task<SearchLayoutsResultDto> SearchAsync(Guid layoutId, string query, int page = 1, int pageSize = 20)
     {
-        var response = await _client!.GetAsync(
+        HttpResponseMessage response = await _client!.GetAsync(
             $"/api/v1/layouts/{layoutId}/search?query={Uri.EscapeDataString(query)}&page={page}&pageSize={pageSize}");
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<SearchLayoutsResultDto>())!;
@@ -272,7 +272,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
 
     private async Task<NodeDto> CreateNodeAsync(Guid parentId, string name)
     {
-        var response = await _client!.PutAsJsonAsync(
+        HttpResponseMessage response = await _client!.PutAsJsonAsync(
             "/api/v1/layouts/nodes",
             new CreateNodeRequestDto { ParentId = parentId, Name = name });
         response.EnsureSuccessStatusCode();
@@ -290,10 +290,10 @@ public class LayoutEndpointsTests : IntegrationTestBase
             Hash = hash,
             NodeId = nodeId,
         };
-        var response = await _client!.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        HttpResponseMessage response = await _client!.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         response.EnsureSuccessStatusCode();
 
-        var children = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
+        NodeContentDto? children = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
         return children!.Files.Single(x => x.Name == name);
     }
 
@@ -314,7 +314,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
             { new StringContent(hash), "hash" },
         };
 
-        var response = await _client!.PostAsync("/api/v1/chunks", form);
+        HttpResponseMessage response = await _client!.PostAsync("/api/v1/chunks", form);
         response.EnsureSuccessStatusCode();
         return hash;
     }
@@ -330,9 +330,9 @@ public class LayoutEndpointsTests : IntegrationTestBase
             })
         };
         request.Headers.Add("X-Forwarded-For", "8.8.8.8");
-        var res = await _client!.SendAsync(request);
+        HttpResponseMessage res = await _client!.SendAsync(request);
         res.EnsureSuccessStatusCode();
-        var login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+        TokenPairResponseDto? login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         Assert.That(login, Is.Not.Null);
         return login!.AccessToken;
     }

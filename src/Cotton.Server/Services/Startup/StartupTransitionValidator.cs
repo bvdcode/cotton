@@ -75,7 +75,7 @@ namespace Cotton.Server.Services.Startup
 
         private async Task<bool> HasExistingTablesAsync(CancellationToken cancellationToken)
         {
-            var creator = _dbContext.GetService<IRelationalDatabaseCreator>();
+            IRelationalDatabaseCreator creator = _dbContext.GetService<IRelationalDatabaseCreator>();
             if (!await creator.ExistsAsync(cancellationToken))
             {
                 return false;

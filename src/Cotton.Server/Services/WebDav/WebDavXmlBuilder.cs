@@ -32,7 +32,7 @@ namespace Cotton.Server.Services.WebDav
             {
                 writer.WriteStartElement("d", "multistatus", DavNamespace);
 
-                foreach (var resource in resources)
+                foreach (WebDavResource resource in resources)
                 {
                     WriteResourceResponse(writer, resource);
                 }

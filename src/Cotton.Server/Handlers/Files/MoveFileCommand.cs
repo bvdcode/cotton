@@ -15,6 +15,7 @@ using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Files
 {
@@ -63,12 +64,12 @@ namespace Cotton.Server.Handlers.Files
             // serialization point, a concurrent file move + folder move can both
             // pass their pre-checks and commit a same-name cross-type duplicate.
             // We take the same per-layout advisory lock that MoveNodeCommand uses.
-            var sourceLayoutId = await GetSourceLayoutIdAsync(request, cancellationToken);
+            Guid sourceLayoutId = await GetSourceLayoutIdAsync(request, cancellationToken);
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, cancellationToken);
 
-            var nodeFile = await GetMovableFileAsync(request, cancellationToken);
+            NodeFile nodeFile = await GetMovableFileAsync(request, cancellationToken);
             ValidateMovableFile(request, nodeFile);
 
             Guid? oldParentId = await MoveFileToTargetParentAsync(request, nodeFile, sourceLayoutId, cancellationToken);
@@ -98,7 +99,7 @@ namespace Cotton.Server.Handlers.Files
 
         private async Task<NodeFile> GetMovableFileAsync(MoveFileCommand request, CancellationToken cancellationToken)
         {
-            var nodeFile = await _dbContext.NodeFiles
+            NodeFile nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .Where(x => x.Id == request.NodeFileId && x.OwnerId == request.UserId)
@@ -132,7 +133,7 @@ namespace Cotton.Server.Handlers.Files
                 return null;
             }
 
-            var targetParent = await GetTargetParentAsync(request, cancellationToken);
+            Node targetParent = await GetTargetParentAsync(request, cancellationToken);
             ValidateTargetParent(nodeFile, targetParent);
 
             await EnsureNoSiblingCollisionAsync(targetParent.Id, request.UserId, nodeFile.NameKey, nodeFile.Id, cancellationToken);

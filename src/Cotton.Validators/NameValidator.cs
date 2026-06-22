@@ -147,7 +147,7 @@ namespace Cotton.Validators
         private static bool ContainsForbiddenZeroWidth(string s)
         {
             // Quick check using explicit list + general ban for U+200B..U+200D and U+2060, U+FEFF
-            foreach (var ch in s.EnumerateRunes())
+            foreach (Rune ch in s.EnumerateRunes())
             {
                 int cp = ch.Value;
                 // explicit
@@ -164,7 +164,7 @@ namespace Cotton.Validators
         private static int CountGraphemes(string s)
         {
             // StringInfo counts text elements (grapheme clusters)
-            var e = StringInfo.GetTextElementEnumerator(s);
+            TextElementEnumerator e = StringInfo.GetTextElementEnumerator(s);
             int count = 0;
             while (e.MoveNext())
             {
@@ -207,15 +207,15 @@ namespace Cotton.Validators
         public static string GetNameKey(string normalized)
         {
             var sb = new StringBuilder();
-            var enumr = StringInfo.GetTextElementEnumerator(normalized);
+            TextElementEnumerator enumr = StringInfo.GetTextElementEnumerator(normalized);
             while (enumr.MoveNext())
             {
                 var element = enumr.GetTextElement();
                 var folded = element.Normalize(NormalizationForm.FormD);
                 var sbFolded = new StringBuilder();
-                foreach (var ch in folded.EnumerateRunes())
+                foreach (Rune ch in folded.EnumerateRunes())
                 {
-                    var category = CharUnicodeInfo.GetUnicodeCategory(ch.Value);
+                    UnicodeCategory category = CharUnicodeInfo.GetUnicodeCategory(ch.Value);
                     if (category == UnicodeCategory.NonSpacingMark ||
                         category == UnicodeCategory.SpacingCombiningMark ||
                         category == UnicodeCategory.EnclosingMark)

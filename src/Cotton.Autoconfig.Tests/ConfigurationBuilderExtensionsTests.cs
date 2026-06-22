@@ -35,7 +35,7 @@ namespace Cotton.Autoconfig.Tests
         {
             Environment.SetEnvironmentVariable(EnvVar, null);
             var builder = new ConfigurationBuilder();
-            var ex = Assert.Throws<InvalidOperationException>(() => builder.AddCottonOptions());
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => builder.AddCottonOptions());
             Assert.That(ex!.Message, Does.Contain("COTTON_MASTER_KEY"));
         }
 
@@ -44,7 +44,7 @@ namespace Cotton.Autoconfig.Tests
         {
             Environment.SetEnvironmentVariable(EnvVar, "too-short");
             var builder = new ConfigurationBuilder();
-            var ex = Assert.Throws<InvalidOperationException>(() => builder.AddCottonOptions());
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => builder.AddCottonOptions());
             Assert.That(ex!.Message, Does.Contain(ConfigurationBuilderExtensions.DefaultKeyLength.ToString()));
         }
 
@@ -59,7 +59,7 @@ namespace Cotton.Autoconfig.Tests
             string expectedMaster = KeyDerivation.DeriveSubkeyBase64(root, "CottonMasterEncryptionKey", ConfigurationBuilderExtensions.DefaultKeyLength);
 
             // Act
-            var cfg = new ConfigurationBuilder().AddCottonOptions().Build();
+            IConfigurationRoot cfg = new ConfigurationBuilder().AddCottonOptions().Build();
 
             using (Assert.EnterMultipleScope())
             {
@@ -86,12 +86,12 @@ namespace Cotton.Autoconfig.Tests
             const string rootB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; // 32 chars
 
             Environment.SetEnvironmentVariable(EnvVar, rootA);
-            var cfgA = new ConfigurationBuilder().AddCottonOptions().Build();
+            IConfigurationRoot cfgA = new ConfigurationBuilder().AddCottonOptions().Build();
             string pepperA = cfgA[nameof(CottonEncryptionSettings.Pepper)]!;
             string masterA = cfgA[nameof(CottonEncryptionSettings.MasterEncryptionKey)]!;
 
             Environment.SetEnvironmentVariable(EnvVar, rootB);
-            var cfgB = new ConfigurationBuilder().AddCottonOptions().Build();
+            IConfigurationRoot cfgB = new ConfigurationBuilder().AddCottonOptions().Build();
             string pepperB = cfgB[nameof(CottonEncryptionSettings.Pepper)]!;
             string masterB = cfgB[nameof(CottonEncryptionSettings.MasterEncryptionKey)]!;
 
@@ -109,7 +109,7 @@ namespace Cotton.Autoconfig.Tests
             const string root = "cccccccccccccccccccccccccccccccc";
             CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(root);
 
-            var cfg = new ConfigurationBuilder().AddCottonOptions(settings).Build();
+            IConfigurationRoot cfg = new ConfigurationBuilder().AddCottonOptions(settings).Build();
 
             using (Assert.EnterMultipleScope())
             {

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
@@ -13,6 +14,7 @@ using Cotton.Validators;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.WebDav
 {
@@ -83,22 +85,22 @@ namespace Cotton.Server.Handlers.WebDav
         /// </summary>
         public async Task<WebDavMoveResult> Handle(WebDavMoveRequest request, CancellationToken ct)
         {
-            var preLock = await ResolvePreLockSourceAsync(request, ct);
+            PreLockSourceOutcome preLock = await ResolvePreLockSourceAsync(request, ct);
             if (preLock.Failure is not null)
             {
                 return preLock.Failure;
             }
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, preLock.LayoutId!.Value, ct);
 
-            var lockedMove = await PrepareLockedMoveAsync(request, preLock.LayoutId.Value, ct);
+            LockedMoveOutcome lockedMove = await PrepareLockedMoveAsync(request, preLock.LayoutId.Value, ct);
             if (lockedMove.Failure is not null)
             {
                 return lockedMove.Failure;
             }
 
-            var moveFailure = await TryPerformMoveAsync(
+            WebDavMoveResult? moveFailure = await TryPerformMoveAsync(
                 request,
                 lockedMove.Source!,
                 lockedMove.DestinationParent!,
@@ -113,14 +115,14 @@ namespace Cotton.Server.Handlers.WebDav
             await tx.CommitAsync(ct);
             await NotifyAfterCommitAsync(request, lockedMove.Source!, lockedMove.OldParentId, ct);
 
-            var movedIds = GetMovedIds(lockedMove.Source!);
+            (Guid? NodeId, Guid? NodeFileId) movedIds = GetMovedIds(lockedMove.Source!);
             return Ok(lockedMove.Created, movedIds.NodeId, movedIds.NodeFileId);
         }
 
         private async Task<PreLockSourceOutcome> ResolvePreLockSourceAsync(WebDavMoveRequest request, CancellationToken ct)
         {
-            var source = await ResolveSourceAsync(request, ct);
-            var failure = TryGetSourceValidationFailure(request, source);
+            WebDavResolveResult source = await ResolveSourceAsync(request, ct);
+            WebDavMoveResult? failure = TryGetSourceValidationFailure(request, source);
             if (failure is not null)
             {
                 return PreLockSourceOutcome.Failed(failure);
@@ -135,21 +137,21 @@ namespace Cotton.Server.Handlers.WebDav
             Guid sourceLayoutId,
             CancellationToken ct)
         {
-            var source = await ResolveSourceAsync(request, ct);
-            var sourceFailure = await ValidateLockedSourceAsync(request, source, sourceLayoutId, ct);
+            WebDavResolveResult source = await ResolveSourceAsync(request, ct);
+            WebDavMoveResult? sourceFailure = await ValidateLockedSourceAsync(request, source, sourceLayoutId, ct);
             if (sourceFailure is not null)
             {
                 return LockedMoveOutcome.Failed(sourceFailure);
             }
 
-            var destination = await GetAndValidateDestinationParentAsync(request, ct);
-            var destinationFailure = ValidateLockedDestination(destination, request, sourceLayoutId);
+            WebDavParentResult destination = await GetAndValidateDestinationParentAsync(request, ct);
+            WebDavMoveResult? destinationFailure = ValidateLockedDestination(destination, request, sourceLayoutId);
             if (destinationFailure is not null)
             {
                 return LockedMoveOutcome.Failed(destinationFailure);
             }
 
-            var overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
+            (bool Created, bool Allowed) overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
             if (!overwriteResult.Allowed)
             {
                 return LockedMoveOutcome.Failed(Fail(WebDavMoveError.DestinationExists));
@@ -164,7 +166,7 @@ namespace Cotton.Server.Handlers.WebDav
             Guid sourceLayoutId,
             CancellationToken ct)
         {
-            var sourceFailure = TryGetSourceValidationFailure(request, source);
+            WebDavMoveResult? sourceFailure = TryGetSourceValidationFailure(request, source);
             if (sourceFailure is not null)
             {
                 return sourceFailure;
@@ -184,7 +186,7 @@ namespace Cotton.Server.Handlers.WebDav
             WebDavMoveRequest request,
             Guid sourceLayoutId)
         {
-            var destinationFailure = TryGetDestinationParentFailure(destination);
+            WebDavMoveResult? destinationFailure = TryGetDestinationParentFailure(destination);
             if (destinationFailure is not null)
             {
                 return destinationFailure;
@@ -289,7 +291,7 @@ namespace Cotton.Server.Handlers.WebDav
 
         private static (Guid? NodeId, Guid? NodeFileId) GetMovedIds(WebDavResolveResult sourceResult)
         {
-            var movedNodeId = sourceResult.IsCollection && sourceResult.Node is not null
+            Guid? movedNodeId = sourceResult.IsCollection && sourceResult.Node is not null
                 ? sourceResult.Node.Id
                 : (Guid?)null;
 
@@ -308,7 +310,7 @@ namespace Cotton.Server.Handlers.WebDav
                 request.DestinationPath,
                 request.UserId);
 
-            var movedIds = GetMovedIds(sourceResult);
+            (Guid? NodeId, Guid? NodeFileId) movedIds = GetMovedIds(sourceResult);
             // Best-effort: a notification failure must not turn an already-committed move into a failed response.
             try
             {
@@ -331,7 +333,7 @@ namespace Cotton.Server.Handlers.WebDav
 
         private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavMoveRequest request, CancellationToken ct)
         {
-            var sourceResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.SourcePath, ct);
+            WebDavResolveResult sourceResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.SourcePath, ct);
             if (!sourceResult.Found)
             {
                 _logger.LogDebug("WebDAV MOVE: Source not found: {Path}", request.SourcePath);
@@ -341,7 +343,7 @@ namespace Cotton.Server.Handlers.WebDav
 
         private async Task<WebDavParentResult> GetAndValidateDestinationParentAsync(WebDavMoveRequest request, CancellationToken ct)
         {
-            var destParentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.DestinationPath, ct);
+            WebDavParentResult destParentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.DestinationPath, ct);
             if (!destParentResult.Found || destParentResult.ParentNode is null || destParentResult.ResourceName is null)
             {
                 _logger.LogDebug("WebDAV MOVE: Destination parent not found: {Path}", request.DestinationPath);
@@ -359,7 +361,7 @@ namespace Cotton.Server.Handlers.WebDav
 
         private async Task<(bool Created, bool Allowed)> HandleDestinationOverwriteAsync(WebDavMoveRequest request, CancellationToken ct)
         {
-            var destExists = await _pathResolver.ResolveMetadataAsync(request.UserId, request.DestinationPath, ct);
+            WebDavResolveResult destExists = await _pathResolver.ResolveMetadataAsync(request.UserId, request.DestinationPath, ct);
             if (destExists.Found && !request.Overwrite)
             {
                 _logger.LogDebug("WebDAV MOVE: Destination exists and overwrite is false: {Path}", request.DestinationPath);
@@ -405,7 +407,7 @@ namespace Cotton.Server.Handlers.WebDav
                     return Fail(WebDavMoveError.CannotMoveIntoDescendant);
                 }
 
-                var node = await _dbContext.Nodes
+                Node node = await _dbContext.Nodes
                     .FirstAsync(n => n.Id == sourceResult.Node.Id, ct);
 
                 node.SetParent(destParentResult.ParentNode!);
@@ -420,7 +422,7 @@ namespace Cotton.Server.Handlers.WebDav
 
             if (sourceResult.NodeFile is not null)
             {
-                var nodeFile = await _dbContext.NodeFiles
+                NodeFile nodeFile = await _dbContext.NodeFiles
                     .FirstAsync(f => f.Id == sourceResult.NodeFile.Id, ct);
 
                 nodeFile.NodeId = destParentResult.ParentNode!.Id;

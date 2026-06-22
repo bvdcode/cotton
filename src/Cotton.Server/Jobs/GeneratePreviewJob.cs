@@ -46,7 +46,7 @@ namespace Cotton.Server.Jobs
         public async Task Execute(IJobExecutionContext context)
         {
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
-            var generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
+            IReadOnlyDictionary<string, int> generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
 
             await NormalizeLegacyPreviewableContentTypesAsync(allSupportedMimeTypes, cancellationToken);
@@ -234,7 +234,7 @@ namespace Cotton.Server.Jobs
 
         private async Task NotifyPreviewGeneratedAsync(FileManifest item, CancellationToken cancellationToken)
         {
-            foreach (var nodeFile in item.NodeFiles)
+            foreach (NodeFile nodeFile in item.NodeFiles)
             {
                 // Note: a regenerated preview hash can leak that another user already had this file even when cross-user dedup is disabled.
                 await _hubContext.Clients
@@ -303,14 +303,14 @@ namespace Cotton.Server.Jobs
             IReadOnlyCollection<string> allSupportedMimeTypes,
             IReadOnlyDictionary<string, int> generatorVersionsByContentType)
         {
-            var processableItemsQuery = _dbContext.FileManifests
+            IQueryable<FileManifest> processableItemsQuery = _dbContext.FileManifests
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType));
 
-            var itemsToProcessQuery = processableItemsQuery
+            IQueryable<FileManifest> itemsToProcessQuery = processableItemsQuery
                 .Where(fm => fm.SmallFilePreviewHash == null || fm.SmallFilePreviewHashEncrypted == null)
                 .Where(fm => fm.PreviewGenerationError == null);
 
-            foreach (var versionGroup in generatorVersionsByContentType.GroupBy(x => x.Value))
+            foreach (IGrouping<int, KeyValuePair<string, int>> versionGroup in generatorVersionsByContentType.GroupBy(x => x.Value))
             {
                 int generatorVersion = versionGroup.Key;
                 string[] contentTypes = [.. versionGroup.Select(x => x.Key)];
@@ -336,7 +336,7 @@ namespace Cotton.Server.Jobs
                 return [];
             }
 
-            var itemIds = await CreateItemsToProcessQuery(allSupportedMimeTypes, generatorVersionsByContentType)
+            List<Guid> itemIds = await CreateItemsToProcessQuery(allSupportedMimeTypes, generatorVersionsByContentType)
                 .OrderByDescending(fm => fm.CreatedAt)
                 .Select(fm => fm.Id)
                 .Take(limit)
@@ -355,7 +355,7 @@ namespace Cotton.Server.Jobs
                 return [];
             }
 
-            var itemsToProcess = await _dbContext.FileManifests
+            List<FileManifest> itemsToProcess = await _dbContext.FileManifests
                 .Where(fm => itemIds.Contains(fm.Id))
                 .Include(fm => fm.NodeFiles)
                 .Include(fm => fm.FileManifestChunks)
@@ -417,7 +417,7 @@ namespace Cotton.Server.Jobs
 
         private void DetachPreviewItem(FileManifest item)
         {
-            foreach (var manifestChunk in item.FileManifestChunks)
+            foreach (FileManifestChunk manifestChunk in item.FileManifestChunks)
             {
                 if (manifestChunk.Chunk is not null)
                 {
@@ -427,7 +427,7 @@ namespace Cotton.Server.Jobs
                 _dbContext.Entry(manifestChunk).State = EntityState.Detached;
             }
 
-            foreach (var nodeFile in item.NodeFiles)
+            foreach (NodeFile nodeFile in item.NodeFiles)
             {
                 _dbContext.Entry(nodeFile).State = EntityState.Detached;
             }
@@ -446,7 +446,7 @@ namespace Cotton.Server.Jobs
             IReadOnlyCollection<string> supportedContentTypes,
             CancellationToken cancellationToken)
         {
-            var manifests = await _dbContext.FileManifests
+            List<FileManifest> manifests = await _dbContext.FileManifests
                 .Include(m => m.NodeFiles)
                 .Where(m =>
                     (m.ContentType == FileManifestService.DefaultContentType
@@ -460,7 +460,7 @@ namespace Cotton.Server.Jobs
                 .ToListAsync(cancellationToken);
 
             int updated = 0;
-            foreach (var manifest in manifests)
+            foreach (FileManifest? manifest in manifests)
             {
                 string? fileName = manifest.NodeFiles.FirstOrDefault(nodeFile => Regex.IsMatch(
                     nodeFile.Name,
@@ -490,7 +490,7 @@ namespace Cotton.Server.Jobs
 
         private async Task EnsureChunkExistsAsync(byte[] hash, long sizeBytes, CancellationToken cancellationToken)
         {
-            var existing = await _dbContext.Chunks.FindAsync(new object?[] { hash }, cancellationToken);
+            Chunk? existing = await _dbContext.Chunks.FindAsync(new object?[] { hash }, cancellationToken);
             string storageKey = Hasher.ToHexStringHash(hash);
             long storedSizeBytes = await _storage.GetSizeAsync(storageKey);
             if (existing is null)

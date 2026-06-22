@@ -127,7 +127,7 @@ namespace Cotton.Server.Services
             Dictionary<string, string>? metadata,
             string originalParentPath)
         {
-            var copy = metadata is null
+            Dictionary<string, string> copy = metadata is null
                 ? []
                 : new Dictionary<string, string>(metadata);
             copy[TrashMetadataKeys.OriginalParentPath] = originalParentPath;
@@ -139,7 +139,7 @@ namespace Cotton.Server.Services
         /// </summary>
         public static Dictionary<string, string> RemoveOriginalParentPath(Dictionary<string, string>? metadata)
         {
-            var copy = metadata is null
+            Dictionary<string, string> copy = metadata is null
                 ? []
                 : new Dictionary<string, string>(metadata);
             copy.Remove(TrashMetadataKeys.OriginalParentPath);
@@ -171,7 +171,7 @@ namespace Cotton.Server.Services
 
         private async Task<ParentResolution> CreateMissingParentsAsync(Guid userId, string originalParentPath, CancellationToken ct)
         {
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
+            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
             var (_, current) = await _navigator.GetLayoutAndRootAsync(userId, NodeType.Default, ct);
 
             if (string.IsNullOrWhiteSpace(originalParentPath))
@@ -196,7 +196,7 @@ namespace Cotton.Server.Services
                 }
 
                 string nameKey = NameValidator.GetNameKey(normalized);
-                var existing = await _dbContext.Nodes
+                Node? existing = await _dbContext.Nodes
                     .Where(x => x.LayoutId == layout.Id
                         && x.ParentId == current.Id
                         && x.OwnerId == userId

@@ -63,11 +63,11 @@ namespace Cotton.Server.Handlers.Nodes
         {
             Guid layoutId = await GetLayoutIdOrThrowAsync(request, ct);
 
-            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId, ct);
 
-            var node = await LoadNodeOrThrowAsync(request, ct);
-            var wrapperOutcome = await ResolveTopLevelTrashWrapperAsync(request, node, ct);
+            Node node = await LoadNodeOrThrowAsync(request, ct);
+            TopLevelTrashWrapperOutcome wrapperOutcome = await ResolveTopLevelTrashWrapperAsync(request, node, ct);
             if (wrapperOutcome.Failure is not null)
             {
                 await tx.RollbackAsync(ct);
@@ -77,14 +77,14 @@ namespace Cotton.Server.Handlers.Nodes
             string originalParentPath = TrashRestoreCoordinator.GetOriginalParentPath(node.Metadata);
             try
             {
-                var parentOutcome = await ResolveRestoreParentAsync(request, originalParentPath, ct);
+                RestoreParentOutcome parentOutcome = await ResolveRestoreParentAsync(request, originalParentPath, ct);
                 if (parentOutcome.Failure is not null)
                 {
                     await tx.RollbackAsync(ct);
                     return parentOutcome.Failure;
                 }
 
-                var conflictOutcome = await ResolveConflictAsync(request, parentOutcome.Parent!, node, originalParentPath, ct);
+                RestoreOutcomeDto? conflictOutcome = await ResolveConflictAsync(request, parentOutcome.Parent!, node, originalParentPath, ct);
                 if (conflictOutcome is not null)
                 {
                     await tx.RollbackAsync(ct);
@@ -140,8 +140,8 @@ namespace Cotton.Server.Handlers.Nodes
                 return TopLevelTrashWrapperOutcome.NotRestorable("Node is not in trash.");
             }
 
-            var wrapper = await LoadWrapperAsync(request.UserId, node.ParentId, ct);
-            var trashRoot = await _layouts.GetUserTrashRootAsync(request.UserId, ct);
+            Node? wrapper = await LoadWrapperAsync(request.UserId, node.ParentId, ct);
+            Node trashRoot = await _layouts.GetUserTrashRootAsync(request.UserId, ct);
             if (wrapper is null || wrapper.ParentId != trashRoot.Id)
             {
                 return TopLevelTrashWrapperOutcome.NotRestorable("Item can only be restored from the top level of trash.");
@@ -167,7 +167,7 @@ namespace Cotton.Server.Handlers.Nodes
             string originalParentPath,
             CancellationToken ct)
         {
-            var resolution = await _restore.ResolveOrCreateParentAsync(
+            TrashRestoreCoordinator.ParentResolution resolution = await _restore.ResolveOrCreateParentAsync(
                 request.UserId,
                 originalParentPath,
                 request.CreateMissingParents,
@@ -190,7 +190,7 @@ namespace Cotton.Server.Handlers.Nodes
             string originalParentPath,
             CancellationToken ct)
         {
-            var conflict = await _restore.FindConflictAsync(request.UserId, targetParent.Id, node.NameKey, ct);
+            TrashRestoreCoordinator.ConflictInfo? conflict = await _restore.FindConflictAsync(request.UserId, targetParent.Id, node.NameKey, ct);
             if (!conflict.HasValue)
             {
                 return null;

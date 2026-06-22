@@ -54,7 +54,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         {
             // Keep this query on the database side: we only need counts for the check-up score, not entity materialization
             // or cryptographic verification.
-            var genericMethod = CountUnsignedRowsCoreMethod.MakeGenericMethod(descriptor.EntityType);
+            MethodInfo genericMethod = CountUnsignedRowsCoreMethod.MakeGenericMethod(descriptor.EntityType);
             var task = (Task<int>)genericMethod.Invoke(this, [descriptor, cancellationToken])!;
             return await task;
         }

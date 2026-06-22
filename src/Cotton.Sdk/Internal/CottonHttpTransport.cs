@@ -127,7 +127,7 @@ internal class CottonHttpTransport
     {
         ArgumentNullException.ThrowIfNull(content);
         long retryPosition = content.CanSeek ? content.Position : 0;
-        (HttpResponseMessage response, string? requestAccessToken) = await SendRawUploadOnceAsync(
+        var (response, requestAccessToken) = await SendRawUploadOnceAsync(
             path,
             content,
             contentType,
@@ -144,7 +144,7 @@ internal class CottonHttpTransport
 
         await RefreshAndLogRetryAsync(HttpMethod.Post, path, requestAccessToken, cancellationToken).ConfigureAwait(false);
         content.Position = retryPosition;
-        (HttpResponseMessage retry, _) = await SendRawUploadOnceAsync(
+        var (retry, _) = await SendRawUploadOnceAsync(
             path,
             content,
             contentType,

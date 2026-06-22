@@ -80,7 +80,7 @@ namespace Cotton.Server.Services
 
                 var readStopwatch = Stopwatch.StartNew();
                 await using Stream output = await _storage.ReadAsync(uid, context).ConfigureAwait(false);
-                (long readBytes, byte[] actualHash) = await ReadAndHashAsync(output, cancellationToken).ConfigureAwait(false);
+                var (readBytes, actualHash) = await ReadAndHashAsync(output, cancellationToken).ConfigureAwait(false);
                 readStopwatch.Stop();
                 roundtrip.Stop();
 
