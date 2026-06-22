@@ -160,7 +160,7 @@ namespace Cotton.Server.Controllers
             }
             var userId = User.GetUserId();
             var user = await _dbContext.Users.FindAsync(userId);
-            if (user == null)
+            if (user is null)
             {
                 return this.ApiUnauthorized("User not found");
             }
@@ -198,7 +198,7 @@ namespace Cotton.Server.Controllers
             }
             var userId = User.GetUserId();
             var user = await _dbContext.Users.FindAsync(userId);
-            if (user == null)
+            if (user is null)
             {
                 return this.ApiUnauthorized("User not found");
             }
@@ -207,7 +207,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiConflict("TOTP is already enabled for this user");
             }
-            if (user.TotpSecretEncrypted == null)
+            if (user.TotpSecretEncrypted is null)
             {
                 return this.ApiBadRequest("TOTP setup has not been initiated for this user");
             }
@@ -237,7 +237,7 @@ namespace Cotton.Server.Controllers
         {
             var userId = User.GetUserId();
             var user = await _dbContext.Users.FindAsync(userId);
-            if (user == null)
+            if (user is null)
             {
                 return this.ApiUnauthorized("User not found");
             }
@@ -265,7 +265,7 @@ namespace Cotton.Server.Controllers
         {
             var userId = User.GetUserId();
             var user = await _dbContext.Users.FindAsync(userId);
-            if (user == null)
+            if (user is null)
             {
                 return this.ApiUnauthorized("User not found");
             }
@@ -389,7 +389,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> Login(CottonLoginRequestDto request)
         {
             var user = await GetUserOrTryGetNewAsync(request);
-            if (user == null)
+            if (user is null)
             {
                 return this.ApiUnauthorized("Invalid username or password");
             }
@@ -401,7 +401,7 @@ namespace Cotton.Server.Controllers
             }
 
             var totpFailure = await ValidateTotpOrGetFailureAsync(user, request);
-            if (totpFailure != null)
+            if (totpFailure is not null)
             {
                 return totpFailure;
             }
@@ -419,7 +419,7 @@ namespace Cotton.Server.Controllers
             request.Username = request.Username.Trim();
             var user = await _dbContext.Users
                 .FirstOrDefaultAsync(x => x.Username == request.Username || x.Email == request.Username);
-            if (user != null)
+            if (user is not null)
             {
                 _integrity.RequireValid(_dbContext, user, "auth.login");
                 return user;
@@ -456,7 +456,7 @@ namespace Cotton.Server.Controllers
                 return this.ApiForbidden("Two-factor authentication code is required");
             }
 
-            if (user.TotpSecretEncrypted == null)
+            if (user.TotpSecretEncrypted is null)
             {
                 throw new InvalidOperationException("TOTP is enabled but secret is missing");
             }
@@ -513,13 +513,13 @@ namespace Cotton.Server.Controllers
 
             string refreshTokenHash = AuthSessionIssuer.HashRefreshToken(refreshToken);
             var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshTokenHash);
-            if (dbToken == null || dbToken.RevokedAt != null)
+            if (dbToken is null || dbToken.RevokedAt is not null)
             {
                 return NotFound();
             }
             _integrity.RequireValid(_dbContext, dbToken, "auth.refresh-token");
             var user = await _dbContext.Users.FindAsync(dbToken.UserId);
-            if (user == null)
+            if (user is null)
             {
                 return NotFound();
             }
@@ -558,7 +558,7 @@ namespace Cotton.Server.Controllers
             {
                 string refreshTokenHash = AuthSessionIssuer.HashRefreshToken(refreshToken);
                 var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshTokenHash);
-                if (dbToken != null && dbToken.RevokedAt == null)
+                if (dbToken is not null && dbToken.RevokedAt is null)
                 {
                     _integrity.RequireValid(_dbContext, dbToken, "auth.logout");
                     dbToken.RevokedAt = DateTime.UtcNow;

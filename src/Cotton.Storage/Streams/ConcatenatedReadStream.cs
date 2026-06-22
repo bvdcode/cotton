@@ -12,7 +12,7 @@ namespace Cotton.Storage.Streams
         PipelineContext? pipelineContext = null) : Stream
     {
         private readonly Materialized _materialized = Materialize(hashes, pipelineContext);
-        private readonly bool _canSeek = pipelineContext?.ChunkLengths != null;
+        private readonly bool _canSeek = pipelineContext?.ChunkLengths is not null;
         private Stream? _current;
         private int _currentChunkIndex = -1;
         private long _position;
@@ -42,7 +42,7 @@ namespace Cotton.Storage.Streams
         {
             var list = new List<string>(hashes);
 
-            if (context?.ChunkLengths == null)
+            if (context?.ChunkLengths is null)
             {
                 return new(list, null, null);
             }
@@ -74,7 +74,7 @@ namespace Cotton.Storage.Streams
         private (int chunkIndex, long offsetInChunk) GetChunkAtPosition(long position)
         {
             var index = Index;
-            if (index == null || index.Length == 0)
+            if (index is null || index.Length == 0)
             {
                 return (Hashes.Count, 0);
             }
@@ -135,7 +135,7 @@ namespace Cotton.Storage.Streams
                 return false;
             }
 
-            if (_currentChunkIndex != targetChunkIndex || _current == null)
+            if (_currentChunkIndex != targetChunkIndex || _current is null)
             {
                 _current?.Dispose();
                 _current = storage.ReadAsync(Hashes[targetChunkIndex], pipelineContext).GetAwaiter().GetResult()
@@ -180,9 +180,9 @@ namespace Cotton.Storage.Streams
                 return false;
             }
 
-            if (_currentChunkIndex != targetChunkIndex || _current == null)
+            if (_currentChunkIndex != targetChunkIndex || _current is null)
             {
-                if (_current != null)
+                if (_current is not null)
                 {
                     await _current.DisposeAsync().ConfigureAwait(false);
                 }
@@ -315,7 +315,7 @@ namespace Cotton.Storage.Streams
                 _current = storage.ReadAsync(Hashes[0], pipelineContext).GetAwaiter().GetResult();
             }
 
-            if (_current == null)
+            if (_current is null)
             {
                 return 0;
             }
@@ -391,7 +391,7 @@ namespace Cotton.Storage.Streams
                 _current = await storage.ReadAsync(Hashes[0], pipelineContext).ConfigureAwait(false);
             }
 
-            if (_current == null)
+            if (_current is null)
             {
                 return 0;
             }

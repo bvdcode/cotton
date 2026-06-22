@@ -38,7 +38,7 @@ namespace Cotton.Topology
                         && x.ParentId == null
                         && x.Type == nodeType)
                     .FirstOrDefaultAsync(ct);
-                if (currentNode == null)
+                if (currentNode is null)
                 {
                     Node newNode = new()
                     {
@@ -69,7 +69,7 @@ namespace Cotton.Topology
                     .Where(x => x.OwnerId == ownerId && x.IsActive)
                     .OrderByDescending(x => x.CreatedAt)
                     .FirstOrDefaultAsync(ct);
-                if (found == null)
+                if (found is null)
                 {
                     Layout newLayout = new()
                     {

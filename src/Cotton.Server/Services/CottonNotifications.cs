@@ -123,7 +123,7 @@ namespace Cotton.Server.Services
                 return false;
             }
             var user = await _dbContext.Users.FindAsync(userId);
-            if (user == null || string.IsNullOrWhiteSpace(user.Email))
+            if (user is null || string.IsNullOrWhiteSpace(user.Email))
             {
                 return false;
             }
@@ -157,7 +157,7 @@ namespace Cotton.Server.Services
             CottonServerSettings settings)
         {
             var user = await _dbContext.Users.FindAsync(userId);
-            if (user == null || string.IsNullOrWhiteSpace(user.Email))
+            if (user is null || string.IsNullOrWhiteSpace(user.Email))
             {
                 return false;
             }

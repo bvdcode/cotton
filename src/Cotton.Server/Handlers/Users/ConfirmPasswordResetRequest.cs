@@ -60,7 +60,7 @@ namespace Cotton.Server.Handlers.Users
                 ?? throw new BadRequestException<User>("Invalid or expired token");
             _integrity.RequireValid(_dbContext, user, "user.password-reset");
 
-            if (user.PasswordResetTokenSentAt == null ||
+            if (user.PasswordResetTokenSentAt is null ||
                 DateTime.UtcNow - user.PasswordResetTokenSentAt.Value > TokenExpiration)
             {
                 user.PasswordResetToken = null;

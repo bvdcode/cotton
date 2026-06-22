@@ -178,7 +178,7 @@ namespace Cotton.Server.Services
                 User? user = await _dbContext.Users
                     .FirstOrDefaultAsync(x => x.Username == normalizedUsername || x.Email == normalizedUsername, ct);
 
-                if (user != null)
+                if (user is not null)
                 {
                     _integrity.RequireValid(_dbContext, user, "passkey.assertion-options");
                     scopedUserId = user.Id;

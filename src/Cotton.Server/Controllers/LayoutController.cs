@@ -102,7 +102,7 @@ namespace Cotton.Server.Controllers
                 .AsNoTracking()
                 .Where(x => x.Id == layoutId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
-            if (layout == null)
+            if (layout is null)
             {
                 return CottonResult.NotFound("Layout not found.");
             }
@@ -185,7 +185,7 @@ namespace Cotton.Server.Controllers
             var node = await _dbContext.Nodes
                 .Where(x => x.Id == nodeId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
-            if (node == null)
+            if (node is null)
             {
                 return CottonResult.NotFound("Node not found.");
             }
@@ -242,7 +242,7 @@ namespace Cotton.Server.Controllers
                 .AsNoTracking()
                 .Where(x => x.Id == nodeId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
-            if (node == null)
+            if (node is null)
             {
                 return CottonResult.NotFound("Node not found.");
             }
@@ -281,7 +281,7 @@ namespace Cotton.Server.Controllers
             var node = await _dbContext.Nodes
                 .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync();
-            if (node == null)
+            if (node is null)
             {
                 return CottonResult.NotFound("Node not found.");
             }
@@ -391,7 +391,7 @@ namespace Cotton.Server.Controllers
                     && x.LayoutId == layout.Id
                     && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync();
-            if (preLockParentNode == null)
+            if (preLockParentNode is null)
             {
                 return CottonResult.NotFound("Parent node not found.");
             }
@@ -410,7 +410,7 @@ namespace Cotton.Server.Controllers
                     && x.LayoutId == layout.Id
                     && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync();
-            if (parentNode == null)
+            if (parentNode is null)
             {
                 return CottonResult.NotFound("Parent node not found.");
             }
@@ -475,7 +475,7 @@ namespace Cotton.Server.Controllers
             var currentNode = await nodesQuery
                 .SingleOrDefaultAsync(x => x.Id == nodeId);
 
-            if (currentNode == null)
+            if (currentNode is null)
             {
                 return this.ApiNotFound("Node not found.");
             }
@@ -484,7 +484,7 @@ namespace Cotton.Server.Controllers
             var visited = new HashSet<Guid> { currentNode.Id };
             int depth = 0;
             List<NodeDto> ancestors = [];
-            while (currentNode.ParentId != null)
+            while (currentNode.ParentId is not null)
             {
                 if (depth++ >= MaxDepth)
                 {
@@ -497,7 +497,7 @@ namespace Cotton.Server.Controllers
                 }
                 var parentNode = await nodesQuery
                     .SingleOrDefaultAsync(x => x.Id == parentId);
-                if (parentNode == null)
+                if (parentNode is null)
                 {
                     break;
                 }
@@ -545,7 +545,7 @@ namespace Cotton.Server.Controllers
             var node = await _dbContext.Nodes
                 .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync();
-            if (node == null)
+            if (node is null)
             {
                 return CottonResult.NotFound("Node not found.");
             }
@@ -589,7 +589,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetSharedNodeInfo([FromRoute] string token)
         {
             var nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken == null)
+            if (nodeShareToken is null)
             {
                 return this.ApiNotFound("Shared folder not found.");
             }
@@ -618,7 +618,7 @@ namespace Cotton.Server.Controllers
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
 
             var nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken == null)
+            if (nodeShareToken is null)
             {
                 return this.ApiNotFound("Shared folder not found.");
             }
@@ -640,7 +640,7 @@ namespace Cotton.Server.Controllers
                     && x.OwnerId == nodeShareToken.CreatedByUserId
                     && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync();
-            if (targetNode == null)
+            if (targetNode is null)
             {
                 return this.ApiNotFound("Folder not found.");
             }
@@ -696,7 +696,7 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeId)
         {
             var nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken == null)
+            if (nodeShareToken is null)
             {
                 return this.ApiNotFound("Shared folder not found.");
             }
@@ -716,7 +716,7 @@ namespace Cotton.Server.Controllers
                     && x.OwnerId == nodeShareToken.CreatedByUserId
                     && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync();
-            if (currentNode == null)
+            if (currentNode is null)
             {
                 return this.ApiNotFound("Folder not found.");
             }
@@ -746,7 +746,7 @@ namespace Cotton.Server.Controllers
                         && x.Type == NodeType.Default)
                     .SingleOrDefaultAsync();
 
-                if (parentNode == null)
+                if (parentNode is null)
                 {
                     break;
                 }
@@ -777,7 +777,7 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             var nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken == null)
+            if (nodeShareToken is null)
             {
                 return this.ApiNotFound("Shared folder not found.");
             }
@@ -822,7 +822,7 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool preview = false)
         {
             var nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken == null)
+            if (nodeShareToken is null)
             {
                 return this.ApiNotFound("File not found.");
             }
@@ -835,12 +835,12 @@ namespace Cotton.Server.Controllers
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId
                     && x.OwnerId == nodeShareToken.CreatedByUserId);
 
-            if (nodeFile == null)
+            if (nodeFile is null)
             {
                 return this.ApiNotFound("File not found.");
             }
 
-            bool servesPreview = preview && nodeFile.FileManifest.LargeFilePreviewHash != null;
+            bool servesPreview = preview && nodeFile.FileManifest.LargeFilePreviewHash is not null;
             if (servesPreview)
             {
                 _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "shared-folder.preview");
@@ -864,7 +864,7 @@ namespace Cotton.Server.Controllers
                 return this.ApiNotFound("File not found.");
             }
 
-            if (preview && nodeFile.FileManifest.LargeFilePreviewHash != null)
+            if (preview && nodeFile.FileManifest.LargeFilePreviewHash is not null)
             {
                 string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash);
                 var previewStream = _storage.GetBlobStream([previewHashHex]);
@@ -940,7 +940,7 @@ namespace Cotton.Server.Controllers
                     && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
                 .SingleOrDefaultAsync();
 
-            if (nodeShareToken == null)
+            if (nodeShareToken is null)
             {
                 return null;
             }
@@ -967,7 +967,7 @@ namespace Cotton.Server.Controllers
                 ownerId,
                 "shared-folder.subtree.node");
 
-            if (currentNode == null)
+            if (currentNode is null)
             {
                 return false;
             }
@@ -998,7 +998,7 @@ namespace Cotton.Server.Controllers
                     ownerId,
                     "shared-folder.subtree.ancestor");
 
-                if (currentNode == null)
+                if (currentNode is null)
                 {
                     return false;
                 }
@@ -1023,7 +1023,7 @@ namespace Cotton.Server.Controllers
                     && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync();
 
-            if (node == null)
+            if (node is null)
             {
                 return null;
             }

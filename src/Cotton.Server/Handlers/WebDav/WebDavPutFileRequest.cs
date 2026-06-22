@@ -116,19 +116,19 @@ namespace Cotton.Server.Handlers.WebDav
         public async Task<WebDavPutFileResult> Handle(WebDavPutFileRequest request, CancellationToken ct)
         {
             var (target, targetError) = await TryResolveAndValidateTargetAsync(request, ct);
-            if (targetError != null)
+            if (targetError is not null)
             {
                 return targetError;
             }
 
             var quotaPreflightError = await TryPreflightKnownLengthQuotaAsync(request, target!, ct);
-            if (quotaPreflightError != null)
+            if (quotaPreflightError is not null)
             {
                 return quotaPreflightError;
             }
 
             var (content, contentError) = await TryReadAndValidateContentAsync(request, ct);
-            if (contentError != null)
+            if (contentError is not null)
             {
                 return contentError;
             }
@@ -152,7 +152,7 @@ namespace Cotton.Server.Handlers.WebDav
             await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
 
             var (lockedTarget, lockedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
-            if (lockedTargetError != null)
+            if (lockedTargetError is not null)
             {
                 return lockedTargetError;
             }
@@ -165,7 +165,7 @@ namespace Cotton.Server.Handlers.WebDav
             }
 
             var (quotaError, addedBytes) = await TryEnsureQuotaAsync(request, finalTarget, fileManifest.Id, ct);
-            if (quotaError != null)
+            if (quotaError is not null)
             {
                 return quotaError;
             }

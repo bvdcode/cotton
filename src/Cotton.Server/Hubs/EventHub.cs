@@ -35,7 +35,7 @@ namespace Cotton.Server.Hubs
         /// <inheritdoc />
         public override async Task OnConnectedAsync()
         {
-            if (Context.User == null)
+            if (Context.User is null)
             {
                 Context.Abort();
                 return;

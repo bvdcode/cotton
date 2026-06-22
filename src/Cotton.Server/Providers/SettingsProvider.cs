@@ -356,7 +356,7 @@ namespace Cotton.Server.Providers
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
                 var response = await client.GetFromJsonAsync<HealthResponse>(global::Cotton.Constants.CottonBridgeHealthUrl);
-                return response != null && response.Status == "Healthy";
+                return response is not null && response.Status == "Healthy";
             }
             catch
             {

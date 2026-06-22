@@ -38,7 +38,7 @@ namespace Cotton.Server.Providers
         /// </summary>
         public IAmazonS3 GetS3Client()
         {
-            if (_s3Client != null)
+            if (_s3Client is not null)
             {
                 return _s3Client;
             }

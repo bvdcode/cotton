@@ -48,7 +48,7 @@ namespace Cotton.Server.Controllers
                 .FirstOrDefaultAsync(co =>
                     co.ChunkHash == hashBytes &&
                     co.OwnerId == userId);
-            if (chunkOwnership == null)
+            if (chunkOwnership is null)
             {
                 return Ok(false);
             }
@@ -65,7 +65,7 @@ namespace Cotton.Server.Controllers
         [RequestSizeLimit(AesGcmStreamCipher.MaxChunkSize + ushort.MaxValue)]
         public async Task<IActionResult> UploadChunk([FromForm] IFormFile file, [FromForm] string hash)
         {
-            if (file == null)
+            if (file is null)
             {
                 return CottonResult.BadRequest("No file uploaded.");
             }

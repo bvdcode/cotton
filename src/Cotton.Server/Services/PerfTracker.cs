@@ -27,7 +27,7 @@ namespace Cotton.Server.Services
         /// </summary>
         public bool IsUploading()
         {
-            if (_lastChunkCreated == null)
+            if (_lastChunkCreated is null)
             {
                 return false;
             }
@@ -59,7 +59,7 @@ namespace Cotton.Server.Services
         /// </summary>
         public bool IsPreviewGenerating()
         {
-            if (_lastPreviewGenerating == null)
+            if (_lastPreviewGenerating is null)
             {
                 return false;
             }

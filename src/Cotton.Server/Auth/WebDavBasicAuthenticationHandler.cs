@@ -145,7 +145,7 @@ namespace Cotton.Server.Auth
             }
             var bytes = Convert.FromBase64String(encoded);
             string? decoded = Encoding.UTF8.GetString(bytes).Split('\n').FirstOrDefault(x => x.Contains(':'));
-            if (decoded == null)
+            if (decoded is null)
             {
                 return null;
             }

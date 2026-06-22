@@ -206,7 +206,7 @@ namespace Cotton.Server.Handlers.Files
             byte[] proposedHash,
             CancellationToken ct)
         {
-            if (!request.Validate || fileManifest.ComputedContentHash != null)
+            if (!request.Validate || fileManifest.ComputedContentHash is not null)
             {
                 return;
             }

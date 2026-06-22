@@ -114,7 +114,7 @@ namespace Cotton.Server.Controllers
                         {
                             var tokenEntity = await _dbContext.DownloadTokens
                                 .FirstOrDefaultAsync(x => x.Id == result.DeleteTokenId.Value);
-                            if (tokenEntity != null)
+                            if (tokenEntity is not null)
                             {
                                 _dbContext.DownloadTokens.Remove(tokenEntity);
                                 await _dbContext.SaveChangesAsync();
@@ -250,7 +250,7 @@ namespace Cotton.Server.Controllers
                 .Include(x => x.FileManifest)
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
-            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
             {
                 return CottonResult.NotFound("File not found.");
             }
@@ -325,7 +325,7 @@ namespace Cotton.Server.Controllers
                 .Include(x => x.FileManifest)
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
-            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
             {
                 return CottonResult.NotFound("File not found.");
             }
@@ -455,7 +455,7 @@ namespace Cotton.Server.Controllers
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .SingleOrDefaultAsync();
-            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
             {
                 return CottonResult.NotFound("Node file not found");
             }
@@ -1150,14 +1150,14 @@ namespace Cotton.Server.Controllers
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile == null)
+            if (nodeFile is null)
             {
                 return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
             }
 
             var downloadToken = await _dbContext.DownloadTokens
                 .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFile.Id);
-            if (downloadToken == null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
+            if (downloadToken is null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
             {
                 return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
             }
@@ -1170,7 +1170,7 @@ namespace Cotton.Server.Controllers
 
             var playbackMode = VideoPlaybackResolver.Resolve(
                 nodeFile.FileManifest.ContentType,
-                hasPreview: nodeFile.FileManifest.SmallFilePreviewHash != null);
+                hasPreview: nodeFile.FileManifest.SmallFilePreviewHash is not null);
             if (playbackMode != VideoPlaybackMode.Transcode)
             {
                 return new TranscodableLookup(null, null, CottonResult.BadRequest(

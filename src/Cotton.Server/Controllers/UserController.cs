@@ -93,7 +93,7 @@ namespace Cotton.Server.Controllers
         {
             var userId = User.GetUserId();
             var user = _dbContext.Users.Find(userId);
-            if (user == null)
+            if (user is null)
             {
                 return NotFound();
             }

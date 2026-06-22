@@ -397,7 +397,7 @@ namespace Cotton.Server.Handlers.Files
             Stream stream = _storage.GetBlobStream(uids, context);
             string? downloadName = inline ? null : downloadToken.FileName;
 
-            if (notifyDownload && _httpContextAccessor.HttpContext != null)
+            if (notifyDownload && _httpContextAccessor.HttpContext is not null)
             {
                 await _sharedFileDownloadNotifier.NotifyOnceAsync(
                     downloadToken.NodeFile.OwnerId,

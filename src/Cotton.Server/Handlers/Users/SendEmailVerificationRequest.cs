@@ -56,7 +56,7 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("Email is already verified.");
             }
 
-            if (user.EmailVerificationTokenSentAt != null &&
+            if (user.EmailVerificationTokenSentAt is not null &&
                 DateTime.UtcNow - user.EmailVerificationTokenSentAt.Value < CooldownPeriod)
             {
                 throw new BadRequestException<User>("Verification email was already sent. Please wait before requesting again.");

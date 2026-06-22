@@ -99,7 +99,7 @@ namespace Cotton.Server.Controllers
             Guid userId = User.GetUserId();
             var notification = await _dbContext.Notifications
                 .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
-            if (notification == null || notification.ReadAt.HasValue)
+            if (notification is null || notification.ReadAt.HasValue)
             {
                 return Ok();
             }

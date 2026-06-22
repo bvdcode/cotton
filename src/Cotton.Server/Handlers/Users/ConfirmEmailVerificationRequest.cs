@@ -46,7 +46,7 @@ namespace Cotton.Server.Handlers.Users
                 ?? throw new BadRequestException<User>("Invalid or expired token");
             _integrity.RequireValid(_dbContext, user, "user.email-verification");
 
-            if (user.EmailVerificationTokenSentAt == null ||
+            if (user.EmailVerificationTokenSentAt is null ||
                 DateTime.UtcNow - user.EmailVerificationTokenSentAt.Value > TokenExpiration)
             {
                 user.EmailVerificationToken = null;

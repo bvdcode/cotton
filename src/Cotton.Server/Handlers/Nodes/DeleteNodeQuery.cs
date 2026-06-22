@@ -58,7 +58,7 @@ namespace Cotton.Server.Handlers.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(cancellationToken: ct)
                     ?? throw new EntityNotFoundException(nameof(Node));
-            if (node.ParentId == null)
+            if (node.ParentId is null)
             {
                 throw new InvalidOperationException("Cannot delete root node.");
             }

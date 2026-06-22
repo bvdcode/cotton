@@ -46,7 +46,7 @@ namespace Cotton.Server.Services
             try
             {
                 var response = await _httpClient.GetFromJsonAsync<HealthResponse>("health");
-                return response != null && response.Status == "Healthy";
+                return response is not null && response.Status == "Healthy";
             }
             catch (Exception ex)
             {

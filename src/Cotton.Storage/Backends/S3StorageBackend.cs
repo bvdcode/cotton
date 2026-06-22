@@ -213,7 +213,7 @@ namespace Cotton.Storage.Backends
 
                 continuationToken = response.IsTruncated == true ? response.NextContinuationToken : null;
             }
-            while (continuationToken != null);
+            while (continuationToken is not null);
         }
     }
 }

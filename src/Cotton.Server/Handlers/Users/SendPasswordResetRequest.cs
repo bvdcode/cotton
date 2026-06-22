@@ -54,12 +54,12 @@ namespace Cotton.Server.Handlers.Users
                     x => x.Username == input || x.Email == input,
                     cancellationToken);
 
-            if (user == null || string.IsNullOrWhiteSpace(user.Email))
+            if (user is null || string.IsNullOrWhiteSpace(user.Email))
             {
                 return;
             }
 
-            if (user.PasswordResetTokenSentAt != null &&
+            if (user.PasswordResetTokenSentAt is not null &&
                 DateTime.UtcNow - user.PasswordResetTokenSentAt.Value < CooldownPeriod)
             {
                 return;

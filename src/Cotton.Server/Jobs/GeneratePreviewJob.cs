@@ -493,7 +493,7 @@ namespace Cotton.Server.Jobs
             var existing = await _dbContext.Chunks.FindAsync(new object?[] { hash }, cancellationToken);
             string storageKey = Hasher.ToHexStringHash(hash);
             long storedSizeBytes = await _storage.GetSizeAsync(storageKey);
-            if (existing == null)
+            if (existing is null)
             {
                 _dbContext.Chunks.Add(new Chunk
                 {
