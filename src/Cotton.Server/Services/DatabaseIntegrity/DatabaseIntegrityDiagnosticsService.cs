@@ -66,9 +66,14 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             CancellationToken cancellationToken)
             where TEntity : class
         {
+            int?[] acceptedVersions =
+                [.. DatabaseIntegrityDescriptorVersions.GetAcceptedSchemaVersions(descriptor).Select(x => (int?)x)];
+
             return _dbContext.Set<TEntity>()
                 .CountAsync(x => EF.Property<byte[]?>(x, DatabaseIntegrityColumns.MacProperty) == null
-                    || EF.Property<int?>(x, DatabaseIntegrityColumns.VersionProperty) != descriptor.SchemaVersion,
+                    || !acceptedVersions.Contains(EF.Property<int?>(
+                        x,
+                        DatabaseIntegrityColumns.VersionProperty)),
                     cancellationToken);
         }
     }

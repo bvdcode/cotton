@@ -103,8 +103,11 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             object originalEntity = entry.OriginalValues.ToObject();
             if (versionValue is int version
                 && macValue is byte[] mac
-                && version == descriptor.SchemaVersion
-                && _protector.Verify(originalEntity, descriptor, mac))
+                && DatabaseIntegrityDescriptorVersions.TryResolve(
+                    descriptor,
+                    version,
+                    out IDatabaseIntegrityDescriptor resolvedDescriptor)
+                && _protector.Verify(originalEntity, resolvedDescriptor, mac))
             {
                 return;
             }
