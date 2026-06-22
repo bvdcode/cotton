@@ -159,6 +159,7 @@ namespace Cotton.Server
                 .AddScoped<OidcProviderService>()
                 .AddScoped<OidcAuthenticationService>()
                 .AddScoped(sp => new OidcDiscoveryService(sp.GetRequiredService<IHttpClientFactory>().CreateClient(OidcDiscoveryService.HttpClientName)))
+                .AddScoped<PushDeviceTokenRevocationService>()
                 .AddScoped<RefreshTokenRevocationService>()
                 .AddScoped<SessionRevocationNotifier>()
                 .AddScoped<DownloadTokenExpirationService>()

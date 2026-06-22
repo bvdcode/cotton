@@ -1,10 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Database;
-using EasyExtensions.EntityFrameworkCore.Database;
-using Microsoft.EntityFrameworkCore;
-
 namespace Cotton.Server.Services
 {
     /// <summary>
@@ -12,5 +8,6 @@ namespace Cotton.Server.Services
     /// </summary>
     public record RefreshTokenRevocationResult(
         int RevokedTokens,
-        IReadOnlyList<string> SessionIds);
+        IReadOnlyList<string> SessionIds,
+        int RevokedPushDeviceTokens);
 }

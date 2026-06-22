@@ -25,7 +25,6 @@ namespace Cotton.Server.Services
         private const string SharesChannelId = "cotton.shares";
         private const string SecurityChannelId = "cotton.security";
         private const string UnregisteredErrorCode = "UNREGISTERED";
-        private const string InvalidArgumentErrorCode = "INVALID_ARGUMENT";
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
         /// <inheritdoc />
@@ -47,7 +46,7 @@ namespace Cotton.Server.Services
             {
                 return PushNotificationDeliveryResult.InvalidToken(
                     HttpStatusCode.BadRequest,
-                    InvalidArgumentErrorCode,
+                    "EMPTY_TOKEN",
                     "Provider token is empty.");
             }
 
@@ -252,10 +251,8 @@ namespace Cotton.Server.Services
 
         private static bool IsInvalidTokenResponse(HttpStatusCode statusCode, string? errorCode)
         {
-            return (statusCode == HttpStatusCode.NotFound
-                    && string.Equals(errorCode, UnregisteredErrorCode, StringComparison.Ordinal))
-                || (statusCode == HttpStatusCode.BadRequest
-                    && string.Equals(errorCode, InvalidArgumentErrorCode, StringComparison.Ordinal));
+            return statusCode == HttpStatusCode.NotFound
+                && string.Equals(errorCode, UnregisteredErrorCode, StringComparison.Ordinal);
         }
 
         private static bool IsTransientFailure(HttpStatusCode statusCode)

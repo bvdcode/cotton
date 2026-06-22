@@ -12,7 +12,7 @@ namespace Cotton.Database.Models
     /// <summary>
     /// Represents one mobile device token registered for server push notifications.
     /// </summary>
-    [Index(nameof(UserId), nameof(Provider), nameof(TokenHash), IsUnique = true)]
+    [Index(nameof(Provider), nameof(TokenHash), IsUnique = true)]
     [Index(nameof(UserId), nameof(SessionId), nameof(Provider), nameof(Platform))]
     [Table("push_device_tokens")]
     public class PushDeviceToken : BaseEntity<Guid>

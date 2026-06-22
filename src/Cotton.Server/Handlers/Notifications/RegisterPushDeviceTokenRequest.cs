@@ -65,8 +65,7 @@ namespace Cotton.Server.Handlers.Notifications
 
             PushDeviceToken? deviceToken = await _dbContext.PushDeviceTokens
                 .FirstOrDefaultAsync(
-                    x => x.UserId == request.UserId
-                        && x.Provider == request.Payload.Provider
+                    x => x.Provider == request.Payload.Provider
                         && x.TokenHash == tokenHash,
                     cancellationToken);
 
@@ -79,6 +78,10 @@ namespace Cotton.Server.Handlers.Notifications
                     TokenHash = tokenHash,
                 };
                 await _dbContext.PushDeviceTokens.AddAsync(deviceToken, cancellationToken);
+            }
+            else
+            {
+                deviceToken.UserId = request.UserId;
             }
 
             await RevokeSupersededSessionTokensAsync(request, sessionId, tokenHash, now, cancellationToken);

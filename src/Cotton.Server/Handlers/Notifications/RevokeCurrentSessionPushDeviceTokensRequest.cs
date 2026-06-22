@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
-using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Notifications
 {
@@ -32,7 +31,8 @@ namespace Cotton.Server.Handlers.Notifications
     /// Handles current-session push device token revocation requests in the mediator pipeline.
     /// </summary>
     public class RevokeCurrentSessionPushDeviceTokensRequestHandler(
-        CottonDbContext _dbContext) : IRequestHandler<RevokeCurrentSessionPushDeviceTokensRequest, PushDeviceTokenRevocationResultDto>
+        PushDeviceTokenRevocationService _pushDeviceTokenRevocations)
+        : IRequestHandler<RevokeCurrentSessionPushDeviceTokensRequest, PushDeviceTokenRevocationResultDto>
     {
         /// <summary>
         /// Handles the request through the mediator pipeline.
@@ -47,21 +47,14 @@ namespace Cotton.Server.Handlers.Notifications
             }
 
             DateTime revokedAt = DateTime.UtcNow;
-            List<PushDeviceToken> tokens = await _dbContext.PushDeviceTokens
-                .Where(x => x.UserId == request.UserId
-                    && x.SessionId == request.SessionId
-                    && x.RevokedAt == null)
-                .ToListAsync(cancellationToken);
-
-            foreach (PushDeviceToken token in tokens)
-            {
-                token.RevokedAt = revokedAt;
-            }
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            int revokedTokens = await _pushDeviceTokenRevocations.RevokeSessionAsync(
+                request.UserId,
+                request.SessionId,
+                revokedAt,
+                cancellationToken);
             return new PushDeviceTokenRevocationResultDto
             {
-                RevokedTokens = tokens.Count
+                RevokedTokens = revokedTokens
             };
         }
     }

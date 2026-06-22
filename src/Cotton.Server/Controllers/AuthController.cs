@@ -125,7 +125,7 @@ namespace Cotton.Server.Controllers
                 sessionId,
                 revokedAt,
                 cancellationToken);
-            if (revocation.RevokedTokens > 0)
+            if (revocation.RevokedTokens > 0 || revocation.RevokedPushDeviceTokens > 0)
             {
                 await _sessionRevocationNotifier.NotifyRevokedAsync(
                     userId,
@@ -564,11 +564,14 @@ namespace Cotton.Server.Controllers
                 if (dbToken is not null && dbToken.RevokedAt is null)
                 {
                     _integrity.RequireValid(_dbContext, dbToken, "auth.logout");
-                    dbToken.RevokedAt = DateTime.UtcNow;
-                    await _dbContext.SaveChangesAsync();
+                    RefreshTokenRevocationResult revocation = await _refreshTokenRevocations.RevokeSessionAsync(
+                        dbToken.UserId,
+                        dbToken.SessionId!,
+                        DateTime.UtcNow,
+                        HttpContext.RequestAborted);
                     await _sessionRevocationNotifier.NotifyRevokedAsync(
                         dbToken.UserId,
-                        dbToken.SessionId,
+                        revocation.SessionIds,
                         HttpContext.RequestAborted);
                 }
             }
