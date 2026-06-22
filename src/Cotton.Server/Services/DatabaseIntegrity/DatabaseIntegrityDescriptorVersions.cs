@@ -24,19 +24,16 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             ArgumentNullException.ThrowIfNull(mac);
             ArgumentNullException.ThrowIfNull(protector);
 
-            foreach (IDatabaseIntegrityDescriptor descriptor in EnumerateCandidateDescriptors(
+            if (!TryResolve(
                 currentDescriptor,
-                schemaVersion))
+                schemaVersion,
+                out resolvedDescriptor))
             {
-                if (protector.Verify(entity, descriptor, mac))
-                {
-                    resolvedDescriptor = descriptor;
-                    return true;
-                }
+                return false;
             }
 
-            resolvedDescriptor = null!;
-            return false;
+            return IsEntityStateAllowed(resolvedDescriptor, entity)
+                && protector.Verify(entity, resolvedDescriptor, mac);
         }
 
         /// <summary>
@@ -59,28 +56,45 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             return [.. versions.Distinct()];
         }
 
-        private static IEnumerable<IDatabaseIntegrityDescriptor> EnumerateCandidateDescriptors(
+        private static bool TryResolve(
             IDatabaseIntegrityDescriptor currentDescriptor,
-            int schemaVersion)
+            int schemaVersion,
+            out IDatabaseIntegrityDescriptor resolvedDescriptor)
         {
+            IDatabaseIntegrityDescriptor? match = null;
             if (currentDescriptor.SchemaVersion == schemaVersion)
             {
-                yield return currentDescriptor;
+                match = currentDescriptor;
             }
 
-            if (currentDescriptor is not IDatabaseIntegrityDescriptorVersionSet versionSet)
+            if (currentDescriptor is IDatabaseIntegrityDescriptorVersionSet versionSet)
             {
-                yield break;
-            }
-
-            foreach (IDatabaseIntegrityDescriptor legacyDescriptor in versionSet.LegacyDescriptors)
-            {
-                ValidateLegacyDescriptor(currentDescriptor, legacyDescriptor);
-                if (legacyDescriptor.SchemaVersion == schemaVersion)
+                foreach (IDatabaseIntegrityDescriptor legacyDescriptor in versionSet.LegacyDescriptors)
                 {
-                    yield return legacyDescriptor;
+                    ValidateLegacyDescriptor(currentDescriptor, legacyDescriptor);
+                    if (legacyDescriptor.SchemaVersion != schemaVersion)
+                    {
+                        continue;
+                    }
+
+                    if (match is not null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Multiple integrity descriptors are registered for {currentDescriptor.EntityName} schema version {schemaVersion}.");
+                    }
+
+                    match = legacyDescriptor;
                 }
             }
+
+            resolvedDescriptor = match!;
+            return match is not null;
+        }
+
+        private static bool IsEntityStateAllowed(IDatabaseIntegrityDescriptor descriptor, object entity)
+        {
+            return descriptor is not IDatabaseIntegrityDescriptorStatePolicy statePolicy
+                || statePolicy.IsEntityStateAllowed(entity);
         }
 
         private static void ValidateLegacyDescriptor(

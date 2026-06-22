@@ -15,11 +15,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         IDatabaseIntegrityDescriptorVersionSet
     {
         private static readonly IReadOnlyCollection<IDatabaseIntegrityDescriptor> LegacyDescriptorVersions =
-            [
-                new CottonServerSettingsV2IntegrityDescriptor(),
-                new CottonServerSettingsPipelineV1IntegrityDescriptor(),
-                new CottonServerSettingsInitialV1IntegrityDescriptor(),
-            ];
+            [new CottonServerSettingsV2IntegrityDescriptor()];
 
         /// <inheritdoc />
         public override int SchemaVersion => 3;

@@ -1,6 +1,8 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database.Models;
+
 namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
 {
     /// <summary>
@@ -16,5 +18,12 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
 
         /// <inheritdoc />
         protected override bool IncludeFirebaseCloudMessagingFields => false;
+
+        /// <inheritdoc />
+        protected override bool IsEntityStateAllowed(CottonServerSettings settings)
+        {
+            return string.IsNullOrWhiteSpace(settings.FcmProjectId)
+                && string.IsNullOrWhiteSpace(settings.FcmServiceAccountJsonEncrypted);
+        }
     }
 }

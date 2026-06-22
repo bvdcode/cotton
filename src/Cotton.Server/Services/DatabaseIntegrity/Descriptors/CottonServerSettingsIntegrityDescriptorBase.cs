@@ -10,7 +10,8 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// Base descriptor for server-wide settings integrity schema versions.
     /// </summary>
     public abstract class CottonServerSettingsIntegrityDescriptorBase :
-        DatabaseIntegrityDescriptor<CottonServerSettings>
+        DatabaseIntegrityDescriptor<CottonServerSettings>,
+        IDatabaseIntegrityDescriptorStatePolicy
     {
         /// <inheritdoc />
         public override string EntityName => "server_settings";
@@ -24,6 +25,19 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         /// Gets a value indicating whether Firebase Cloud Messaging settings participate in the canonical payload.
         /// </summary>
         protected abstract bool IncludeFirebaseCloudMessagingFields { get; }
+
+        /// <inheritdoc />
+        public bool IsEntityStateAllowed(object entity)
+        {
+            if (entity is not CottonServerSettings settings)
+            {
+                throw new ArgumentException(
+                    $"Expected entity of type {typeof(CottonServerSettings).FullName}, got {entity.GetType().FullName}.",
+                    nameof(entity));
+            }
+
+            return IsEntityStateAllowed(settings);
+        }
 
         /// <inheritdoc />
         public override string GetEntityKey(CottonServerSettings entity)
@@ -90,6 +104,14 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
                 nameof(entity.DefaultUserStorageQuotaBytes),
                 entity.DefaultUserStorageQuotaBytes ?? -1);
             writer.WriteNullableGuidField(nameof(entity.DefaultUserTemplateNodeId), entity.DefaultUserTemplateNodeId);
+        }
+
+        /// <summary>
+        /// Checks whether the settings state can be accepted by this descriptor schema.
+        /// </summary>
+        protected virtual bool IsEntityStateAllowed(CottonServerSettings settings)
+        {
+            return true;
         }
     }
 }
