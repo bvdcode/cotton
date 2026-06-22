@@ -24,8 +24,6 @@ namespace Cotton.Models
         /// <summary>
         /// Gets or sets a value indicating whether the initial administrator can be created.
         /// </summary>
-        /// <remarks>This property is typically used during the setup process to determine if the
-        /// application allows the creation of an initial admin user.</remarks>
         public bool CanCreateInitialAdmin { get; set; }
     }
 }

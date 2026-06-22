@@ -23,37 +23,33 @@ namespace Cotton.Crypto
     public class AesGcmStreamCipher : IStreamCipher, IDisposable
     {
         /// <summary>
-        /// Represents the size, in bytes, of the authentication tag used in cryptographic operations.
+        /// Authentication tag size in bytes.
         /// </summary>
         public const int TagSize = 16;
 
         /// <summary>
-        /// Specifies the size, in bytes, of the cryptographic key.
+        /// AES key size in bytes.
         /// </summary>
         public const int KeySize = 32;
 
         /// <summary>
-        /// Specifies the size, in bytes, of the nonce used for encryption operations.
+        /// Nonce (IV) size in bytes.
         /// </summary>
         public const int NonceSize = 12;
 
         /// <summary>
-        /// Represents the minimum allowed chunk size, in bytes, for data operations.
+        /// Minimum allowed chunk size in bytes.
         /// </summary>
         public const int MinChunkSize = 8 * 1024;
 
         /// <summary>
-        /// Represents the maximum allowed size, in bytes, for a single data chunk.
+        /// Maximum allowed chunk size in bytes.
         /// </summary>
-        /// <remarks>This constant can be used to enforce limits when processing or transmitting large
-        /// data blocks to prevent excessive memory usage or to comply with protocol constraints.</remarks>
         public const int MaxChunkSize = 64 * 1024 * 1024;
 
         /// <summary>
-        /// Represents the default chunk size, in bytes, used for data processing or transfer operations.
+        /// Default chunk size in bytes (1 MiB).
         /// </summary>
-        /// <remarks>The value is set to 1 megabyte (1 * 1024 * 1024 bytes). This constant can be used
-        /// as a standard buffer or segment size when working with large data streams or files.</remarks>
         public const int DefaultChunkSize = 1 * 1024 * 1024;
 
         private readonly int _keyId;
