@@ -20,539 +20,540 @@ using Microsoft.EntityFrameworkCore;
 using Quartz;
 using System.Security.Cryptography;
 
-namespace Cotton.Server.Handlers.WebDav;
-
-/// <summary>
-/// Command for WebDAV PUT operation (upload file)
-/// </summary>
-public record WebDavPutFileRequest(
-    Guid UserId,
-    string Path,
-    Stream Content,
-    string? ContentType,
-    bool Overwrite = true,
-    long? ContentLength = null) : IRequest<WebDavPutFileResult>;
-
-/// <summary>
-/// Result of WebDAV PUT operation
-/// </summary>
-public record WebDavPutFileResult(
-    bool Success,
-    bool Created,
-    WebDavPutFileError? Error = null,
-    Guid? NodeFileId = null);
-
-/// <summary>
-/// Lists the supported web dav put file error values.
-/// </summary>
-public enum WebDavPutFileError
+namespace Cotton.Server.Handlers.WebDav
 {
     /// <summary>
-    /// Represents the parent not found option.
+    /// Command for WebDAV PUT operation (upload file)
     /// </summary>
-    ParentNotFound,
-    /// <summary>
-    /// Represents the is collection option.
-    /// </summary>
-    IsCollection,
-    /// <summary>
-    /// Represents the invalid name option.
-    /// </summary>
-    InvalidName,
-    /// <summary>
-    /// Represents the conflict option.
-    /// </summary>
-    Conflict,
-    /// <summary>
-    /// Represents the precondition failed option.
-    /// </summary>
-    PreconditionFailed,
-    /// <summary>
-    /// Represents the upload aborted option.
-    /// </summary>
-    UploadAborted,
-    /// <summary>
-    /// Represents the quota exceeded option.
-    /// </summary>
-    QuotaExceeded,
-    /// <summary>
-    /// Represents the storage pressure option.
-    /// </summary>
-    StoragePressure
-}
-
-/// <summary>
-/// Handler for WebDAV PUT operation with streaming chunk processing.
-/// Processes large files without loading them entirely into memory.
-/// </summary>
-public class WebDavPutFileRequestHandler(
-    CottonDbContext _dbContext,
-    SettingsProvider _settings,
-    ISchedulerFactory _scheduler,
-    FileVersionService _versions,
-    IChunkIngestService _chunkIngest,
-    IWebDavPathResolver _pathResolver,
-    FileManifestService _fileManifestService,
-    UserStorageQuotaService _quota,
-    IEventNotificationService _eventNotification,
-    ISyncChangeRecorder _syncChanges,
-    ILogger<WebDavPutFileRequestHandler> _logger)
-    : IRequestHandler<WebDavPutFileRequest, WebDavPutFileResult>
-{
-    private sealed record PutTarget(
-        WebDavResolveResult Existing,
-        WebDavParentResult Parent,
-        string ResourceName,
-        string NameKey,
-        bool Created);
-
-    private sealed record PutContent(List<Chunk> Chunks, byte[] FileHash, long TotalBytes);
-
-    private static WebDavPutFileResult Fail(WebDavPutFileError error) => new(false, false, error);
+    public record WebDavPutFileRequest(
+        Guid UserId,
+        string Path,
+        Stream Content,
+        string? ContentType,
+        bool Overwrite = true,
+        long? ContentLength = null) : IRequest<WebDavPutFileResult>;
 
     /// <summary>
-    /// Handles the request through the mediator pipeline.
+    /// Result of WebDAV PUT operation
     /// </summary>
-    public async Task<WebDavPutFileResult> Handle(WebDavPutFileRequest request, CancellationToken ct)
+    public record WebDavPutFileResult(
+        bool Success,
+        bool Created,
+        WebDavPutFileError? Error = null,
+        Guid? NodeFileId = null);
+
+    /// <summary>
+    /// Lists the supported web dav put file error values.
+    /// </summary>
+    public enum WebDavPutFileError
     {
-        var (target, targetError) = await TryResolveAndValidateTargetAsync(request, ct);
-        if (targetError != null)
-        {
-            return targetError;
-        }
-
-        var quotaPreflightError = await TryPreflightKnownLengthQuotaAsync(request, target!, ct);
-        if (quotaPreflightError != null)
-        {
-            return quotaPreflightError;
-        }
-
-        var (content, contentError) = await TryReadAndValidateContentAsync(request, ct);
-        if (contentError != null)
-        {
-            return contentError;
-        }
-
-        string contentType = FileManifestService.ResolveContentType(target!.ResourceName, request.ContentType);
-        var fileManifest = await GetOrCreateFileManifestAsync(
-            chunks: content!.Chunks,
-            fileHash: content.FileHash,
-            userId: request.UserId,
-            resourceName: target.ResourceName,
-            contentType: contentType,
-            ct);
-
-        // Per-layout namespace serialization for the final insert/update phase.
-        // Streaming and manifest dedup happened above - they are long-running and
-        // not namespace-sensitive (manifest dedup is by content hash, not NameKey).
-        // Re-resolve the target inside the lock: the pre-lock path result can be
-        // stale after a long upload stream, and must not drive the final upsert.
-        Guid lockedLayoutId = target.Parent.ParentNode!.LayoutId;
-        await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
-        await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
-
-        var (lockedTarget, lockedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
-        if (lockedTargetError != null)
-        {
-            return lockedTargetError;
-        }
-
-        var finalTarget = lockedTarget!;
-        if (finalTarget.Parent.ParentNode!.LayoutId != lockedLayoutId)
-        {
-            _logger.LogDebug("WebDAV PUT: Parent layout changed while waiting for lock: {Path}", request.Path);
-            return Fail(WebDavPutFileError.ParentNotFound);
-        }
-
-        var (quotaError, addedBytes) = await TryEnsureQuotaAsync(request, finalTarget, fileManifest.Id, ct);
-        if (quotaError != null)
-        {
-            return quotaError;
-        }
-
-        var (resultNodeFile, capture) = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
-        _syncChanges.StageFileChange(
-            finalTarget.Created ? SyncChangeKind.FileCreated : SyncChangeKind.FileContentUpdated,
-            resultNodeFile,
-            finalTarget.Parent.ParentNode.LayoutId);
-        await _dbContext.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-        _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
-        if (capture.RemovedBytes > 0)
-        {
-            _quota.RecordLogicalBytesRemoved(request.UserId, capture.RemovedBytes);
-        }
-
-        await NotifyPutCompletedAsync(request, created: finalTarget.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
-        return new WebDavPutFileResult(true, finalTarget.Created, null, resultNodeFile.Id);
+        /// <summary>
+        /// Represents the parent not found option.
+        /// </summary>
+        ParentNotFound,
+        /// <summary>
+        /// Represents the is collection option.
+        /// </summary>
+        IsCollection,
+        /// <summary>
+        /// Represents the invalid name option.
+        /// </summary>
+        InvalidName,
+        /// <summary>
+        /// Represents the conflict option.
+        /// </summary>
+        Conflict,
+        /// <summary>
+        /// Represents the precondition failed option.
+        /// </summary>
+        PreconditionFailed,
+        /// <summary>
+        /// Represents the upload aborted option.
+        /// </summary>
+        UploadAborted,
+        /// <summary>
+        /// Represents the quota exceeded option.
+        /// </summary>
+        QuotaExceeded,
+        /// <summary>
+        /// Represents the storage pressure option.
+        /// </summary>
+        StoragePressure
     }
 
-    private async Task<(PutTarget? Target, WebDavPutFileResult? Error)> TryResolveAndValidateTargetAsync(WebDavPutFileRequest request, CancellationToken ct)
+    /// <summary>
+    /// Handler for WebDAV PUT operation with streaming chunk processing.
+    /// Processes large files without loading them entirely into memory.
+    /// </summary>
+    public class WebDavPutFileRequestHandler(
+        CottonDbContext _dbContext,
+        SettingsProvider _settings,
+        ISchedulerFactory _scheduler,
+        FileVersionService _versions,
+        IChunkIngestService _chunkIngest,
+        IWebDavPathResolver _pathResolver,
+        FileManifestService _fileManifestService,
+        UserStorageQuotaService _quota,
+        IEventNotificationService _eventNotification,
+        ISyncChangeRecorder _syncChanges,
+        ILogger<WebDavPutFileRequestHandler> _logger)
+        : IRequestHandler<WebDavPutFileRequest, WebDavPutFileResult>
     {
-        var existing = await ResolveExistingAsync(request, ct);
-        var parentResult = await ResolveParentAsync(request, ct);
+        private sealed record PutTarget(
+            WebDavResolveResult Existing,
+            WebDavParentResult Parent,
+            string ResourceName,
+            string NameKey,
+            bool Created);
 
-        var preValidationFailure = TryGetExistingValidationFailure(existing)
-            ?? TryGetParentValidationFailure(parentResult);
-        if (preValidationFailure is not null)
+        private sealed record PutContent(List<Chunk> Chunks, byte[] FileHash, long TotalBytes);
+
+        private static WebDavPutFileResult Fail(WebDavPutFileError error) => new(false, false, error);
+
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
+        public async Task<WebDavPutFileResult> Handle(WebDavPutFileRequest request, CancellationToken ct)
         {
-            return (null, preValidationFailure);
-        }
+            var (target, targetError) = await TryResolveAndValidateTargetAsync(request, ct);
+            if (targetError != null)
+            {
+                return targetError;
+            }
 
-        string resourceName = parentResult.ResourceName!;
-        var nameFailure = TryGetNameValidationFailure(resourceName);
-        if (nameFailure is not null)
-        {
-            return (null, nameFailure);
-        }
+            var quotaPreflightError = await TryPreflightKnownLengthQuotaAsync(request, target!, ct);
+            if (quotaPreflightError != null)
+            {
+                return quotaPreflightError;
+            }
 
-        string nameKey = NameValidator.NormalizeAndGetNameKey(resourceName);
+            var (content, contentError) = await TryReadAndValidateContentAsync(request, ct);
+            if (contentError != null)
+            {
+                return contentError;
+            }
 
-        var validationFailure = await TryGetFolderConflictFailureAsync(
+            string contentType = FileManifestService.ResolveContentType(target!.ResourceName, request.ContentType);
+            var fileManifest = await GetOrCreateFileManifestAsync(
+                chunks: content!.Chunks,
+                fileHash: content.FileHash,
                 userId: request.UserId,
-                parentNodeId: parentResult.ParentNode!.Id,
-                nameKey: nameKey,
-                layoutId: parentResult.ParentNode.LayoutId,
-                ct)
-            ?? TryGetOverwriteValidationFailure(existing, request.Overwrite);
-
-        if (validationFailure is not null)
-        {
-            return (null, validationFailure);
-        }
-
-        return (new PutTarget(existing, parentResult, resourceName, nameKey, Created: !existing.Found), null);
-    }
-
-    private Task<WebDavResolveResult> ResolveExistingAsync(WebDavPutFileRequest request, CancellationToken ct)
-    {
-        return _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
-    }
-
-    private Task<WebDavParentResult> ResolveParentAsync(WebDavPutFileRequest request, CancellationToken ct)
-    {
-        return _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
-    }
-
-    private static WebDavPutFileResult? TryGetExistingValidationFailure(WebDavResolveResult existing)
-    {
-        if (existing.Found && existing.IsCollection)
-        {
-            return Fail(WebDavPutFileError.IsCollection);
-        }
-
-        return null;
-    }
-
-    private static WebDavPutFileResult? TryGetParentValidationFailure(WebDavParentResult parentResult)
-    {
-        if (!parentResult.Found || parentResult.ParentNode is null || parentResult.ResourceName is null)
-        {
-            return Fail(WebDavPutFileError.ParentNotFound);
-        }
-
-        return null;
-    }
-
-    private static WebDavPutFileResult? TryGetNameValidationFailure(string resourceName)
-    {
-        if (!NameValidator.TryNormalizeAndValidate(resourceName, out _, out _))
-        {
-            return Fail(WebDavPutFileError.InvalidName);
-        }
-
-        return null;
-    }
-
-    private async Task<WebDavPutFileResult?> TryGetFolderConflictFailureAsync(
-        Guid userId,
-        Guid parentNodeId,
-        string nameKey,
-        Guid layoutId,
-        CancellationToken ct)
-    {
-        var folderExists = await _dbContext.Nodes
-            .AnyAsync(n => n.ParentId == parentNodeId
-                && n.OwnerId == userId
-                && n.NameKey == nameKey
-                && n.LayoutId == layoutId
-                && n.Type == WebDavPathResolver.DefaultNodeType, ct);
-
-        return folderExists ? Fail(WebDavPutFileError.Conflict) : null;
-    }
-
-    private static WebDavPutFileResult? TryGetOverwriteValidationFailure(WebDavResolveResult existing, bool overwrite)
-    {
-        if (existing.Found && existing.NodeFile is not null && !overwrite)
-        {
-            return Fail(WebDavPutFileError.PreconditionFailed);
-        }
-
-        return null;
-    }
-
-    private async Task<(PutContent? Content, WebDavPutFileResult? Error)> TryReadAndValidateContentAsync(WebDavPutFileRequest request, CancellationToken ct)
-    {
-        List<Chunk> chunks;
-        byte[] fileHash;
-        try
-        {
-            (chunks, fileHash) = await ProcessStreamInChunksAndHashAsync(request.Content, request.UserId, ct);
-        }
-        catch (StoragePressureException ex)
-        {
-            _logger.LogWarning(ex, "WebDAV PUT rejected because storage free space is below the configured reserve. Path: {Path}, User: {UserId}", request.Path, request.UserId);
-            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.StoragePressure));
-        }
-
-        long totalBytes = 0;
-        for (int i = 0; i < chunks.Count; i++)
-        {
-            totalBytes += chunks[i].PlainSizeBytes;
-        }
-
-        if (request.ContentLength.HasValue && request.ContentLength.Value > 0)
-        {
-            if (totalBytes == 0 || totalBytes != request.ContentLength.Value)
-            {
-                _logger.LogWarning(
-                    "WebDAV PUT aborted/truncated: expected length {Expected}, got {Actual} bytes. Path: {Path}, User: {UserId}",
-                    request.ContentLength.Value,
-                    totalBytes,
-                    request.Path,
-                    request.UserId);
-
-                return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted));
-            }
-        }
-
-        if (totalBytes == 0)
-        {
-            if (request.ContentLength.HasValue && request.ContentLength.Value == 0)
-            {
-                chunks = await CreateEmptyChunkAsync(request.UserId, ct);
-                fileHash = Hasher.HashData([]);
-                totalBytes = 0;
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "WebDAV PUT got 0 bytes but Content-Length was {CL}. Treating as aborted. Path: {Path}, User: {UserId}",
-                    request.ContentLength,
-                    request.Path,
-                    request.UserId);
-
-                return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted));
-            }
-        }
-
-        return (new PutContent(chunks, fileHash, totalBytes), null);
-    }
-
-    private async Task<FileManifest> GetOrCreateFileManifestAsync(
-        List<Chunk> chunks,
-        byte[] fileHash,
-        Guid userId,
-        string resourceName,
-        string contentType,
-        CancellationToken ct)
-    {
-        var fileManifest = await _fileManifestService.GetReusableOwnedManifestAsync(fileHash, userId, cancellationToken: ct);
-
-        if (fileManifest is not null)
-        {
-            await _fileManifestService.ClearGcSchedulesForManifestReferencesAsync(fileManifest.Id, ct);
-        }
-        else
-        {
-            fileManifest = await _fileManifestService.CreateNewFileManifestAsync(
-                chunks,
-                resourceName,
-                contentType,
-                fileHash,
+                resourceName: target.ResourceName,
+                contentType: contentType,
                 ct);
+
+            // Per-layout namespace serialization for the final insert/update phase.
+            // Streaming and manifest dedup happened above - they are long-running and
+            // not namespace-sensitive (manifest dedup is by content hash, not NameKey).
+            // Re-resolve the target inside the lock: the pre-lock path result can be
+            // stale after a long upload stream, and must not drive the final upsert.
+            Guid lockedLayoutId = target.Parent.ParentNode!.LayoutId;
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
+
+            var (lockedTarget, lockedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
+            if (lockedTargetError != null)
+            {
+                return lockedTargetError;
+            }
+
+            var finalTarget = lockedTarget!;
+            if (finalTarget.Parent.ParentNode!.LayoutId != lockedLayoutId)
+            {
+                _logger.LogDebug("WebDAV PUT: Parent layout changed while waiting for lock: {Path}", request.Path);
+                return Fail(WebDavPutFileError.ParentNotFound);
+            }
+
+            var (quotaError, addedBytes) = await TryEnsureQuotaAsync(request, finalTarget, fileManifest.Id, ct);
+            if (quotaError != null)
+            {
+                return quotaError;
+            }
+
+            var (resultNodeFile, capture) = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
+            _syncChanges.StageFileChange(
+                finalTarget.Created ? SyncChangeKind.FileCreated : SyncChangeKind.FileContentUpdated,
+                resultNodeFile,
+                finalTarget.Parent.ParentNode.LayoutId);
+            await _dbContext.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+            _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
+            if (capture.RemovedBytes > 0)
+            {
+                _quota.RecordLogicalBytesRemoved(request.UserId, capture.RemovedBytes);
+            }
+
+            await NotifyPutCompletedAsync(request, created: finalTarget.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
+            return new WebDavPutFileResult(true, finalTarget.Created, null, resultNodeFile.Id);
         }
 
-        return fileManifest;
-    }
-
-    private async Task<WebDavPutFileResult?> TryPreflightKnownLengthQuotaAsync(
-        WebDavPutFileRequest request,
-        PutTarget target,
-        CancellationToken ct)
-    {
-        if (request.ContentLength is not long contentLength || contentLength < 0)
+        private async Task<(PutTarget? Target, WebDavPutFileResult? Error)> TryResolveAndValidateTargetAsync(WebDavPutFileRequest request, CancellationToken ct)
         {
+            var existing = await ResolveExistingAsync(request, ct);
+            var parentResult = await ResolveParentAsync(request, ct);
+
+            var preValidationFailure = TryGetExistingValidationFailure(existing)
+                ?? TryGetParentValidationFailure(parentResult);
+            if (preValidationFailure is not null)
+            {
+                return (null, preValidationFailure);
+            }
+
+            string resourceName = parentResult.ResourceName!;
+            var nameFailure = TryGetNameValidationFailure(resourceName);
+            if (nameFailure is not null)
+            {
+                return (null, nameFailure);
+            }
+
+            string nameKey = NameValidator.NormalizeAndGetNameKey(resourceName);
+
+            var validationFailure = await TryGetFolderConflictFailureAsync(
+                    userId: request.UserId,
+                    parentNodeId: parentResult.ParentNode!.Id,
+                    nameKey: nameKey,
+                    layoutId: parentResult.ParentNode.LayoutId,
+                    ct)
+                ?? TryGetOverwriteValidationFailure(existing, request.Overwrite);
+
+            if (validationFailure is not null)
+            {
+                return (null, validationFailure);
+            }
+
+            return (new PutTarget(existing, parentResult, resourceName, nameKey, Created: !existing.Found), null);
+        }
+
+        private Task<WebDavResolveResult> ResolveExistingAsync(WebDavPutFileRequest request, CancellationToken ct)
+        {
+            return _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
+        }
+
+        private Task<WebDavParentResult> ResolveParentAsync(WebDavPutFileRequest request, CancellationToken ct)
+        {
+            return _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
+        }
+
+        private static WebDavPutFileResult? TryGetExistingValidationFailure(WebDavResolveResult existing)
+        {
+            if (existing.Found && existing.IsCollection)
+            {
+                return Fail(WebDavPutFileError.IsCollection);
+            }
+
             return null;
         }
 
-        try
+        private static WebDavPutFileResult? TryGetParentValidationFailure(WebDavParentResult parentResult)
         {
-            if (target.Existing.Found)
+            if (!parentResult.Found || parentResult.ParentNode is null || parentResult.ResourceName is null)
+            {
+                return Fail(WebDavPutFileError.ParentNotFound);
+            }
+
+            return null;
+        }
+
+        private static WebDavPutFileResult? TryGetNameValidationFailure(string resourceName)
+        {
+            if (!NameValidator.TryNormalizeAndValidate(resourceName, out _, out _))
+            {
+                return Fail(WebDavPutFileError.InvalidName);
+            }
+
+            return null;
+        }
+
+        private async Task<WebDavPutFileResult?> TryGetFolderConflictFailureAsync(
+            Guid userId,
+            Guid parentNodeId,
+            string nameKey,
+            Guid layoutId,
+            CancellationToken ct)
+        {
+            var folderExists = await _dbContext.Nodes
+                .AnyAsync(n => n.ParentId == parentNodeId
+                    && n.OwnerId == userId
+                    && n.NameKey == nameKey
+                    && n.LayoutId == layoutId
+                    && n.Type == WebDavPathResolver.DefaultNodeType, ct);
+
+            return folderExists ? Fail(WebDavPutFileError.Conflict) : null;
+        }
+
+        private static WebDavPutFileResult? TryGetOverwriteValidationFailure(WebDavResolveResult existing, bool overwrite)
+        {
+            if (existing.Found && existing.NodeFile is not null && !overwrite)
+            {
+                return Fail(WebDavPutFileError.PreconditionFailed);
+            }
+
+            return null;
+        }
+
+        private async Task<(PutContent? Content, WebDavPutFileResult? Error)> TryReadAndValidateContentAsync(WebDavPutFileRequest request, CancellationToken ct)
+        {
+            List<Chunk> chunks;
+            byte[] fileHash;
+            try
+            {
+                (chunks, fileHash) = await ProcessStreamInChunksAndHashAsync(request.Content, request.UserId, ct);
+            }
+            catch (StoragePressureException ex)
+            {
+                _logger.LogWarning(ex, "WebDAV PUT rejected because storage free space is below the configured reserve. Path: {Path}, User: {UserId}", request.Path, request.UserId);
+                return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.StoragePressure));
+            }
+
+            long totalBytes = 0;
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                totalBytes += chunks[i].PlainSizeBytes;
+            }
+
+            if (request.ContentLength.HasValue && request.ContentLength.Value > 0)
+            {
+                if (totalBytes == 0 || totalBytes != request.ContentLength.Value)
+                {
+                    _logger.LogWarning(
+                        "WebDAV PUT aborted/truncated: expected length {Expected}, got {Actual} bytes. Path: {Path}, User: {UserId}",
+                        request.ContentLength.Value,
+                        totalBytes,
+                        request.Path,
+                        request.UserId);
+
+                    return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted));
+                }
+            }
+
+            if (totalBytes == 0)
+            {
+                if (request.ContentLength.HasValue && request.ContentLength.Value == 0)
+                {
+                    chunks = await CreateEmptyChunkAsync(request.UserId, ct);
+                    fileHash = Hasher.HashData([]);
+                    totalBytes = 0;
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "WebDAV PUT got 0 bytes but Content-Length was {CL}. Treating as aborted. Path: {Path}, User: {UserId}",
+                        request.ContentLength,
+                        request.Path,
+                        request.UserId);
+
+                    return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted));
+                }
+            }
+
+            return (new PutContent(chunks, fileHash, totalBytes), null);
+        }
+
+        private async Task<FileManifest> GetOrCreateFileManifestAsync(
+            List<Chunk> chunks,
+            byte[] fileHash,
+            Guid userId,
+            string resourceName,
+            string contentType,
+            CancellationToken ct)
+        {
+            var fileManifest = await _fileManifestService.GetReusableOwnedManifestAsync(fileHash, userId, cancellationToken: ct);
+
+            if (fileManifest is not null)
+            {
+                await _fileManifestService.ClearGcSchedulesForManifestReferencesAsync(fileManifest.Id, ct);
+            }
+            else
+            {
+                fileManifest = await _fileManifestService.CreateNewFileManifestAsync(
+                    chunks,
+                    resourceName,
+                    contentType,
+                    fileHash,
+                    ct);
+            }
+
+            return fileManifest;
+        }
+
+        private async Task<WebDavPutFileResult?> TryPreflightKnownLengthQuotaAsync(
+            WebDavPutFileRequest request,
+            PutTarget target,
+            CancellationToken ct)
+        {
+            if (request.ContentLength is not long contentLength || contentLength < 0)
             {
                 return null;
             }
 
-            await _quota.EnsureCanAddKnownFileSizeAsync(request.UserId, contentLength, ct);
+            try
+            {
+                if (target.Existing.Found)
+                {
+                    return null;
+                }
 
-            return null;
+                await _quota.EnsureCanAddKnownFileSizeAsync(request.UserId, contentLength, ct);
+
+                return null;
+            }
+            catch (StorageQuotaExceededException<User>)
+            {
+                return Fail(WebDavPutFileError.QuotaExceeded);
+            }
         }
-        catch (StorageQuotaExceededException<User>)
+
+        private async Task<(WebDavPutFileResult? Error, long AddedBytes)> TryEnsureQuotaAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
         {
-            return Fail(WebDavPutFileError.QuotaExceeded);
-        }
-    }
+            try
+            {
+                if (target.Existing.Found && target.Existing.NodeFile is not null)
+                {
+                    long changedBytes = await _quota.EnsureCanChangeFileManifestAsync(request.UserId, target.Existing.NodeFile.Id, fileManifestId, ct);
+                    return (null, changedBytes);
+                }
 
-    private async Task<(WebDavPutFileResult? Error, long AddedBytes)> TryEnsureQuotaAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
-    {
-        try
+                long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifestId, ct);
+                return (null, addedBytes);
+            }
+            catch (StorageQuotaExceededException<User>)
+            {
+                return (Fail(WebDavPutFileError.QuotaExceeded), 0);
+            }
+        }
+
+        private async Task<(NodeFile NodeFile, FileVersionCaptureResult Capture)> UpsertNodeFileAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
         {
             if (target.Existing.Found && target.Existing.NodeFile is not null)
             {
-                long changedBytes = await _quota.EnsureCanChangeFileManifestAsync(request.UserId, target.Existing.NodeFile.Id, fileManifestId, ct);
-                return (null, changedBytes);
+                var nodeFile = await _dbContext.NodeFiles
+                    .FirstAsync(f => f.Id == target.Existing.NodeFile.Id, ct);
+
+                var previousManifest = await _dbContext.FileManifests
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m => m.Id == nodeFile.FileManifestId, ct);
+
+                if (previousManifest?.SizeBytes == 0)
+                {
+                    nodeFile.FileManifestId = fileManifestId;
+                    return (nodeFile, FileVersionCaptureResult.Empty);
+                }
+
+                FileVersionCaptureResult capture = await _versions.CaptureAndUpdateManifestAsync(
+                    nodeFile,
+                    fileManifestId,
+                    request.UserId,
+                    ct);
+                return (nodeFile, capture);
             }
 
-            long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifestId, ct);
-            return (null, addedBytes);
-        }
-        catch (StorageQuotaExceededException<User>)
-        {
-            return (Fail(WebDavPutFileError.QuotaExceeded), 0);
-        }
-    }
-
-    private async Task<(NodeFile NodeFile, FileVersionCaptureResult Capture)> UpsertNodeFileAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
-    {
-        if (target.Existing.Found && target.Existing.NodeFile is not null)
-        {
-            var nodeFile = await _dbContext.NodeFiles
-                .FirstAsync(f => f.Id == target.Existing.NodeFile.Id, ct);
-
-            var previousManifest = await _dbContext.FileManifests
-                .AsNoTracking()
-                .FirstOrDefaultAsync(m => m.Id == nodeFile.FileManifestId, ct);
-
-            if (previousManifest?.SizeBytes == 0)
+            var createdNodeFile = new NodeFile
             {
-                nodeFile.FileManifestId = fileManifestId;
-                return (nodeFile, FileVersionCaptureResult.Empty);
-            }
+                OwnerId = request.UserId,
+                NodeId = target.Parent.ParentNode!.Id,
+                FileManifestId = fileManifestId,
+            };
+            createdNodeFile.SetName(target.ResourceName);
 
-            FileVersionCaptureResult capture = await _versions.CaptureAndUpdateManifestAsync(
-                nodeFile,
-                fileManifestId,
-                request.UserId,
-                ct);
-            return (nodeFile, capture);
+            await _dbContext.NodeFiles.AddAsync(createdNodeFile, ct);
+            await _dbContext.SaveChangesAsync(ct);
+
+            createdNodeFile.OriginalNodeFileId = createdNodeFile.Id;
+            return (createdNodeFile, FileVersionCaptureResult.Empty);
         }
 
-        var createdNodeFile = new NodeFile
+        private async Task NotifyPutCompletedAsync(
+            WebDavPutFileRequest request,
+            bool created,
+            int chunkCount,
+            Guid nodeFileId,
+            CancellationToken ct)
         {
-            OwnerId = request.UserId,
-            NodeId = target.Parent.ParentNode!.Id,
-            FileManifestId = fileManifestId,
-        };
-        createdNodeFile.SetName(target.ResourceName);
+            _logger.LogInformation(
+                "WebDAV PUT: {Action} file {Path} ({ChunkCount} chunks) for user {UserId}",
+                created ? "Created" : "Updated",
+                request.Path,
+                chunkCount,
+                request.UserId);
 
-        await _dbContext.NodeFiles.AddAsync(createdNodeFile, ct);
-        await _dbContext.SaveChangesAsync(ct);
+            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
 
-        createdNodeFile.OriginalNodeFileId = createdNodeFile.Id;
-        return (createdNodeFile, FileVersionCaptureResult.Empty);
-    }
-
-    private async Task NotifyPutCompletedAsync(
-        WebDavPutFileRequest request,
-        bool created,
-        int chunkCount,
-        Guid nodeFileId,
-        CancellationToken ct)
-    {
-        _logger.LogInformation(
-            "WebDAV PUT: {Action} file {Path} ({ChunkCount} chunks) for user {UserId}",
-            created ? "Created" : "Updated",
-            request.Path,
-            chunkCount,
-            request.UserId);
-
-        await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
-
-        if (created)
-        {
-            await _eventNotification.NotifyFileCreatedAsync(nodeFileId, ct);
-        }
-        else
-        {
-            await _eventNotification.NotifyFileUpdatedAsync(nodeFileId, ct);
-        }
-    }
-
-    /// <summary>
-    /// Processes the input stream in chunks, creating and storing each chunk on the fly.
-    /// Uses a rented buffer to avoid allocations.
-    /// </summary>
-    private async Task<(List<Chunk> Chunks, byte[] FileHash)> ProcessStreamInChunksAndHashAsync(
-        Stream inputStream,
-        Guid userId,
-        CancellationToken ct)
-    {
-        var settings = _settings.GetServerSettings();
-        int chunkSize = settings.MaxChunkSizeBytes;
-        var chunks = new List<Chunk>();
-
-        using var fileHasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
-
-        // Rent a buffer from the array pool to avoid allocations
-        byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(chunkSize);
-        try
-        {
-            int bytesRead;
-            while ((bytesRead = await ReadExactlyAsync(inputStream, buffer, chunkSize, ct)) > 0)
+            if (created)
             {
-                fileHasher.AppendData(buffer, 0, bytesRead);
-                var chunk = await ProcessSingleChunkAsync(buffer, bytesRead, userId, ct);
-                chunks.Add(chunk);
+                await _eventNotification.NotifyFileCreatedAsync(nodeFileId, ct);
+            }
+            else
+            {
+                await _eventNotification.NotifyFileUpdatedAsync(nodeFileId, ct);
             }
         }
-        finally
+
+        /// <summary>
+        /// Processes the input stream in chunks, creating and storing each chunk on the fly.
+        /// Uses a rented buffer to avoid allocations.
+        /// </summary>
+        private async Task<(List<Chunk> Chunks, byte[] FileHash)> ProcessStreamInChunksAndHashAsync(
+            Stream inputStream,
+            Guid userId,
+            CancellationToken ct)
         {
-            System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+            var settings = _settings.GetServerSettings();
+            int chunkSize = settings.MaxChunkSizeBytes;
+            var chunks = new List<Chunk>();
+
+            using var fileHasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
+
+            // Rent a buffer from the array pool to avoid allocations
+            byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(chunkSize);
+            try
+            {
+                int bytesRead;
+                while ((bytesRead = await ReadExactlyAsync(inputStream, buffer, chunkSize, ct)) > 0)
+                {
+                    fileHasher.AppendData(buffer, 0, bytesRead);
+                    var chunk = await ProcessSingleChunkAsync(buffer, bytesRead, userId, ct);
+                    chunks.Add(chunk);
+                }
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+            }
+
+            return (chunks, fileHasher.GetHashAndReset());
         }
 
-        return (chunks, fileHasher.GetHashAndReset());
-    }
-
-    /// <summary>
-    /// Reads exactly the specified number of bytes or until end of stream.
-    /// </summary>
-    private static async Task<int> ReadExactlyAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)
-    {
-        int totalRead = 0;
-        while (totalRead < count)
+        /// <summary>
+        /// Reads exactly the specified number of bytes or until end of stream.
+        /// </summary>
+        private static async Task<int> ReadExactlyAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)
         {
-            int read = await stream.ReadAsync(buffer.AsMemory(totalRead, count - totalRead), ct);
-            if (read == 0)
-                break;
-            totalRead += read;
+            int totalRead = 0;
+            while (totalRead < count)
+            {
+                int read = await stream.ReadAsync(buffer.AsMemory(totalRead, count - totalRead), ct);
+                if (read == 0)
+                    break;
+                totalRead += read;
+            }
+            return totalRead;
         }
-        return totalRead;
-    }
 
-    /// <summary>
-    /// Processes a single chunk: computes hash, stores if new, creates ownership.
-    /// </summary>
-    private async Task<Chunk> ProcessSingleChunkAsync(byte[] buffer, int length, Guid userId, CancellationToken ct)
-    {
-        return await _chunkIngest.UpsertChunkAsync(userId, buffer, length, ct);
-    }
+        /// <summary>
+        /// Processes a single chunk: computes hash, stores if new, creates ownership.
+        /// </summary>
+        private async Task<Chunk> ProcessSingleChunkAsync(byte[] buffer, int length, Guid userId, CancellationToken ct)
+        {
+            return await _chunkIngest.UpsertChunkAsync(userId, buffer, length, ct);
+        }
 
-    /// <summary>
-    /// Creates an empty chunk for empty files.
-    /// </summary>
-    private async Task<List<Chunk>> CreateEmptyChunkAsync(Guid userId, CancellationToken ct)
-    {
-        var chunk = await _chunkIngest.UpsertChunkAsync(userId, [], 0, ct);
-        return [chunk];
+        /// <summary>
+        /// Creates an empty chunk for empty files.
+        /// </summary>
+        private async Task<List<Chunk>> CreateEmptyChunkAsync(Guid userId, CancellationToken ct)
+        {
+            var chunk = await _chunkIngest.UpsertChunkAsync(userId, [], 0, ct);
+            return [chunk];
+        }
     }
 }

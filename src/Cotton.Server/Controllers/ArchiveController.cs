@@ -12,94 +12,95 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 
-namespace Cotton.Server.Controllers;
-
-/// <summary>
-/// Exposes HTTP endpoints for archive operations.
-/// </summary>
-[ApiController]
-[Route(Routes.V1.Archives)]
-public sealed class ArchiveController(
-    ArchiveDownloadService _archives,
-    ArchiveDownloadTicketStore _tickets,
-    StoredZipArchiveWriter _zipWriter,
-    IStoragePipeline _storage) : ControllerBase
+namespace Cotton.Server.Controllers
 {
     /// <summary>
-    /// Creates download link.
+    /// Exposes HTTP endpoints for archive operations.
     /// </summary>
-    [Authorize]
-    [HttpPost("download-link")]
-    public async Task<IActionResult> CreateDownloadLink(
-        [FromBody] CreateArchiveDownloadLinkRequest request,
-        CancellationToken cancellationToken)
+    [ApiController]
+    [Route(Routes.V1.Archives)]
+    public sealed class ArchiveController(
+        ArchiveDownloadService _archives,
+        ArchiveDownloadTicketStore _tickets,
+        StoredZipArchiveWriter _zipWriter,
+        IStoragePipeline _storage) : ControllerBase
     {
-        CreateArchiveDownloadLinkResult result = await _archives.CreateDownloadLinkAsync(
-            User.GetUserId(),
-            request,
-            cancellationToken);
-
-        return result.StatusCode switch
+        /// <summary>
+        /// Creates download link.
+        /// </summary>
+        [Authorize]
+        [HttpPost("download-link")]
+        public async Task<IActionResult> CreateDownloadLink(
+            [FromBody] CreateArchiveDownloadLinkRequest request,
+            CancellationToken cancellationToken)
         {
-            StatusCodes.Status200OK => Ok(result.Link),
-            StatusCodes.Status400BadRequest => BadRequest(result.Error),
-            StatusCodes.Status404NotFound => NotFound(result.Error),
-            _ => StatusCode(result.StatusCode, result.Error),
-        };
-    }
+            CreateArchiveDownloadLinkResult result = await _archives.CreateDownloadLinkAsync(
+                User.GetUserId(),
+                request,
+                cancellationToken);
 
-    /// <summary>
-    /// Streams a previously prepared archive download by one-time ticket.
-    /// </summary>
-    [AllowAnonymous]
-    [HttpGet("{token}")]
-    public async Task<IActionResult> Download([FromRoute] string token, CancellationToken cancellationToken)
-    {
-        if (!_tickets.TryGet(token, out ArchiveDownloadTicket? ticket))
-        {
-            return NotFound("Archive download link not found.");
+            return result.StatusCode switch
+            {
+                StatusCodes.Status200OK => Ok(result.Link),
+                StatusCodes.Status400BadRequest => BadRequest(result.Error),
+                StatusCodes.Status404NotFound => NotFound(result.Error),
+                _ => StatusCode(result.StatusCode, result.Error),
+            };
         }
 
-        IReadOnlyList<StoredZipSourceEntry> entries = [.. ticket.Entries.Select(ToSourceEntry)];
-        Response.ContentType = "application/zip";
-        Response.ContentLength = ticket.SizeBytes;
-        Response.Headers.ContentEncoding = "identity";
-        Response.Headers.CacheControl = "private, no-store, no-transform";
-        Response.Headers["X-Content-Type-Options"] = "nosniff";
-        Response.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+        /// <summary>
+        /// Streams a previously prepared archive download by one-time ticket.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("{token}")]
+        public async Task<IActionResult> Download([FromRoute] string token, CancellationToken cancellationToken)
         {
-            FileNameStar = ticket.FileName,
-        }.ToString();
+            if (!_tickets.TryGet(token, out ArchiveDownloadTicket? ticket))
+            {
+                return NotFound("Archive download link not found.");
+            }
 
-        await _zipWriter.WriteAsync(Response.Body, entries, cancellationToken);
-        return new EmptyResult();
-    }
+            IReadOnlyList<StoredZipSourceEntry> entries = [.. ticket.Entries.Select(ToSourceEntry)];
+            Response.ContentType = "application/zip";
+            Response.ContentLength = ticket.SizeBytes;
+            Response.Headers.ContentEncoding = "identity";
+            Response.Headers.CacheControl = "private, no-store, no-transform";
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+            Response.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileNameStar = ticket.FileName,
+            }.ToString();
 
-    private StoredZipSourceEntry ToSourceEntry(ArchiveDownloadEntry entry)
-    {
-        return entry switch
+            await _zipWriter.WriteAsync(Response.Body, entries, cancellationToken);
+            return new EmptyResult();
+        }
+
+        private StoredZipSourceEntry ToSourceEntry(ArchiveDownloadEntry entry)
         {
-            ArchiveDownloadDirectoryEntry directory => new StoredZipSourceEntry(
-                directory.Path,
-                0,
-                true,
-                _ => ValueTask.FromResult<Stream>(Stream.Null)),
-            ArchiveDownloadFileEntry file => new StoredZipSourceEntry(
-                file.Path,
-                file.SizeBytes,
-                false,
-                _ => ValueTask.FromResult(OpenFileStream(file))),
-            _ => throw new InvalidOperationException($"Unsupported archive entry type '{entry.GetType().Name}'."),
-        };
-    }
+            return entry switch
+            {
+                ArchiveDownloadDirectoryEntry directory => new StoredZipSourceEntry(
+                    directory.Path,
+                    0,
+                    true,
+                    _ => ValueTask.FromResult<Stream>(Stream.Null)),
+                ArchiveDownloadFileEntry file => new StoredZipSourceEntry(
+                    file.Path,
+                    file.SizeBytes,
+                    false,
+                    _ => ValueTask.FromResult(OpenFileStream(file))),
+                _ => throw new InvalidOperationException($"Unsupported archive entry type '{entry.GetType().Name}'."),
+            };
+        }
 
-    private Stream OpenFileStream(ArchiveDownloadFileEntry file)
-    {
-        PipelineContext context = new()
+        private Stream OpenFileStream(ArchiveDownloadFileEntry file)
         {
-            FileSizeBytes = file.SizeBytes,
-            ChunkLengths = new Dictionary<string, long>(file.ChunkLengths, StringComparer.OrdinalIgnoreCase),
-        };
-        return _storage.GetBlobStream([.. file.ChunkHashes], context);
+            PipelineContext context = new()
+            {
+                FileSizeBytes = file.SizeBytes,
+                ChunkLengths = new Dictionary<string, long>(file.ChunkLengths, StringComparer.OrdinalIgnoreCase),
+            };
+            return _storage.GetBlobStream([.. file.ChunkHashes], context);
+        }
     }
 }

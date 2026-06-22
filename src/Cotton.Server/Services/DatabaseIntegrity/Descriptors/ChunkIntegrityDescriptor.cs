@@ -4,34 +4,35 @@
 using Cotton.Database.Models;
 using EasyExtensions.EntityFrameworkCore.Database;
 
-namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors;
-
-/// <summary>
-/// Describes storage chunk identity and immutable serving metadata.
-/// </summary>
-/// <remarks>
-/// The GC schedule is intentionally excluded: it is mutable housekeeping state and does not affect the bytes a reader
-/// receives. File download verification checks chunk references and sizes through the manifest graph instead.
-/// </remarks>
-public sealed class ChunkIntegrityDescriptor : DatabaseIntegrityDescriptor<Chunk>
+namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
 {
-    /// <inheritdoc />
-    public override string EntityName => "chunks";
-    /// <inheritdoc />
-    public override int SchemaVersion => 1;
-
-    /// <inheritdoc />
-    public override string GetEntityKey(Chunk entity)
+    /// <summary>
+    /// Describes storage chunk identity and immutable serving metadata.
+    /// </summary>
+    /// <remarks>
+    /// The GC schedule is intentionally excluded: it is mutable housekeeping state and does not affect the bytes a reader
+    /// receives. File download verification checks chunk references and sizes through the manifest graph instead.
+    /// </remarks>
+    public sealed class ChunkIntegrityDescriptor : DatabaseIntegrityDescriptor<Chunk>
     {
-        return Hasher.ToHexStringHash(entity.Hash);
-    }
+        /// <inheritdoc />
+        public override string EntityName => "chunks";
+        /// <inheritdoc />
+        public override int SchemaVersion => 1;
 
-    /// <inheritdoc />
-    public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, Chunk entity)
-    {
-        writer.WriteBytesField(nameof(entity.Hash), entity.Hash);
-        writer.WriteInt64Field(nameof(entity.PlainSizeBytes), entity.PlainSizeBytes);
-        writer.WriteInt64Field(nameof(entity.StoredSizeBytes), entity.StoredSizeBytes);
-        writer.WriteInt32Field(nameof(entity.CompressionAlgorithm), (int)entity.CompressionAlgorithm);
+        /// <inheritdoc />
+        public override string GetEntityKey(Chunk entity)
+        {
+            return Hasher.ToHexStringHash(entity.Hash);
+        }
+
+        /// <inheritdoc />
+        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, Chunk entity)
+        {
+            writer.WriteBytesField(nameof(entity.Hash), entity.Hash);
+            writer.WriteInt64Field(nameof(entity.PlainSizeBytes), entity.PlainSizeBytes);
+            writer.WriteInt64Field(nameof(entity.StoredSizeBytes), entity.StoredSizeBytes);
+            writer.WriteInt32Field(nameof(entity.CompressionAlgorithm), (int)entity.CompressionAlgorithm);
+        }
     }
 }

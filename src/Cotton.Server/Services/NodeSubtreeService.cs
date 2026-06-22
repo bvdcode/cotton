@@ -6,59 +6,60 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cotton.Server.Services;
-
-/// <summary>
-/// Coordinates node subtree.
-/// </summary>
-public class NodeSubtreeService(CottonDbContext _dbContext)
+namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Collects subtree ids.
+    /// Coordinates node subtree.
     /// </summary>
-    public async Task<HashSet<Guid>> CollectSubtreeIdsAsync(Guid userId, Guid rootId, CancellationToken ct)
+    public class NodeSubtreeService(CottonDbContext _dbContext)
     {
-        var visited = new HashSet<Guid> { rootId };
-        var frontier = new List<Guid> { rootId };
-
-        while (frontier.Count > 0)
+        /// <summary>
+        /// Collects subtree ids.
+        /// </summary>
+        public async Task<HashSet<Guid>> CollectSubtreeIdsAsync(Guid userId, Guid rootId, CancellationToken ct)
         {
-            var batch = frontier.ToArray();
-            frontier.Clear();
+            var visited = new HashSet<Guid> { rootId };
+            var frontier = new List<Guid> { rootId };
 
-            var children = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.OwnerId == userId
-                    && x.ParentId != null
-                    && batch.Contains(x.ParentId.Value))
-                .Select(x => x.Id)
-                .ToListAsync(ct);
-
-            foreach (var childId in children)
+            while (frontier.Count > 0)
             {
-                if (visited.Add(childId))
+                var batch = frontier.ToArray();
+                frontier.Clear();
+
+                var children = await _dbContext.Nodes
+                    .AsNoTracking()
+                    .Where(x => x.OwnerId == userId
+                        && x.ParentId != null
+                        && batch.Contains(x.ParentId.Value))
+                    .Select(x => x.Id)
+                    .ToListAsync(ct);
+
+                foreach (var childId in children)
                 {
-                    frontier.Add(childId);
+                    if (visited.Add(childId))
+                    {
+                        frontier.Add(childId);
+                    }
                 }
             }
+
+            return visited;
         }
 
-        return visited;
-    }
-
-    /// <summary>
-    /// Sets subtree type async.
-    /// </summary>
-    public async Task SetSubtreeTypeAsync(Guid userId, Guid rootId, NodeType newType, CancellationToken ct)
-    {
-        var ids = (await CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();
-        List<Node> nodes = await _dbContext.Nodes
-            .Where(x => x.OwnerId == userId && ids.Contains(x.Id))
-            .ToListAsync(ct);
-
-        foreach (Node node in nodes)
+        /// <summary>
+        /// Sets subtree type async.
+        /// </summary>
+        public async Task SetSubtreeTypeAsync(Guid userId, Guid rootId, NodeType newType, CancellationToken ct)
         {
-            node.Type = newType;
+            var ids = (await CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();
+            List<Node> nodes = await _dbContext.Nodes
+                .Where(x => x.OwnerId == userId && ids.Contains(x.Id))
+                .ToListAsync(ct);
+
+            foreach (Node node in nodes)
+            {
+                node.Type = newType;
+            }
         }
     }
 }

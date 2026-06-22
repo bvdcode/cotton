@@ -13,195 +13,196 @@ using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cotton.Server.Handlers.WebDav;
-
-/// <summary>
-/// Command for WebDAV MKCOL operation (create directory)
-/// </summary>
-public record WebDavMkColRequest(
-    Guid UserId,
-    string Path) : IRequest<WebDavMkColResult>;
-
-/// <summary>
-/// Result of WebDAV MKCOL operation
-/// </summary>
-public record WebDavMkColResult(
-    bool Success,
-    WebDavMkColError? Error = null,
-    Guid? NodeId = null);
-
-/// <summary>
-/// Lists the supported web dav mk col error values.
-/// </summary>
-public enum WebDavMkColError
+namespace Cotton.Server.Handlers.WebDav
 {
     /// <summary>
-    /// Represents the parent not found option.
+    /// Command for WebDAV MKCOL operation (create directory)
     /// </summary>
-    ParentNotFound,
-    /// <summary>
-    /// Represents the already exists option.
-    /// </summary>
-    AlreadyExists,
-    /// <summary>
-    /// Represents the invalid name option.
-    /// </summary>
-    InvalidName,
-    /// <summary>
-    /// Represents the conflict option.
-    /// </summary>
-    Conflict
-}
+    public record WebDavMkColRequest(
+        Guid UserId,
+        string Path) : IRequest<WebDavMkColResult>;
 
-/// <summary>
-/// Handler for WebDAV MKCOL operation
-/// </summary>
-public class WebDavMkColRequestHandler(
-    CottonDbContext _dbContext,
-    IWebDavPathResolver _pathResolver,
-    IEventNotificationService _eventNotification,
-    ISyncChangeRecorder _syncChanges,
-    ILogger<WebDavMkColRequestHandler> _logger)
-    : IRequestHandler<WebDavMkColRequest, WebDavMkColResult>
-{
     /// <summary>
-    /// Handles the request through the mediator pipeline.
+    /// Result of WebDAV MKCOL operation
     /// </summary>
-    public async Task<WebDavMkColResult> Handle(WebDavMkColRequest request, CancellationToken ct)
+    public record WebDavMkColResult(
+        bool Success,
+        WebDavMkColError? Error = null,
+        Guid? NodeId = null);
+
+    /// <summary>
+    /// Lists the supported web dav mk col error values.
+    /// </summary>
+    public enum WebDavMkColError
     {
-        var parent = await ResolveValidatedParentAsync(request, "path", ct);
-        if (parent.Failure is not null)
-        {
-            return parent.Failure;
-        }
+        /// <summary>
+        /// Represents the parent not found option.
+        /// </summary>
+        ParentNotFound,
+        /// <summary>
+        /// Represents the already exists option.
+        /// </summary>
+        AlreadyExists,
+        /// <summary>
+        /// Represents the invalid name option.
+        /// </summary>
+        InvalidName,
+        /// <summary>
+        /// Represents the conflict option.
+        /// </summary>
+        Conflict
+    }
 
-        Guid lockedLayoutId = parent.Result!.ParentNode!.LayoutId;
-        await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
-        await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
-
-        WebDavMkColResult result = await CreateCollectionInsideLockAsync(request, lockedLayoutId, ct);
-        if (!result.Success)
+    /// <summary>
+    /// Handler for WebDAV MKCOL operation
+    /// </summary>
+    public class WebDavMkColRequestHandler(
+        CottonDbContext _dbContext,
+        IWebDavPathResolver _pathResolver,
+        IEventNotificationService _eventNotification,
+        ISyncChangeRecorder _syncChanges,
+        ILogger<WebDavMkColRequestHandler> _logger)
+        : IRequestHandler<WebDavMkColRequest, WebDavMkColResult>
+    {
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
+        public async Task<WebDavMkColResult> Handle(WebDavMkColRequest request, CancellationToken ct)
         {
+            var parent = await ResolveValidatedParentAsync(request, "path", ct);
+            if (parent.Failure is not null)
+            {
+                return parent.Failure;
+            }
+
+            Guid lockedLayoutId = parent.Result!.ParentNode!.LayoutId;
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
+
+            WebDavMkColResult result = await CreateCollectionInsideLockAsync(request, lockedLayoutId, ct);
+            if (!result.Success)
+            {
+                return result;
+            }
+
+            await tx.CommitAsync(ct);
             return result;
         }
 
-        await tx.CommitAsync(ct);
-        return result;
-    }
-
-    private async Task<WebDavMkColParent> ResolveValidatedParentAsync(
-        WebDavMkColRequest request,
-        string context,
-        CancellationToken ct)
-    {
-        var parentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
-        var parentFailure = TryGetParentFailure(request.Path, parentResult, context);
-        if (parentFailure is not null)
+        private async Task<WebDavMkColParent> ResolveValidatedParentAsync(
+            WebDavMkColRequest request,
+            string context,
+            CancellationToken ct)
         {
-            return new WebDavMkColParent(null, parentFailure);
+            var parentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
+            var parentFailure = TryGetParentFailure(request.Path, parentResult, context);
+            if (parentFailure is not null)
+            {
+                return new WebDavMkColParent(null, parentFailure);
+            }
+
+            var nameFailure = ValidateResourceName(parentResult.ResourceName!);
+            return new WebDavMkColParent(parentResult, nameFailure);
         }
 
-        var nameFailure = ValidateResourceName(parentResult.ResourceName!);
-        return new WebDavMkColParent(parentResult, nameFailure);
-    }
-
-    private WebDavMkColResult? TryGetParentFailure(
-        string path,
-        WebDavParentResult parentResult,
-        string context)
-    {
-        if (parentResult.Found && parentResult.ParentNode is not null && parentResult.ResourceName is not null)
+        private WebDavMkColResult? TryGetParentFailure(
+            string path,
+            WebDavParentResult parentResult,
+            string context)
         {
-            return null;
-        }
+            if (parentResult.Found && parentResult.ParentNode is not null && parentResult.ResourceName is not null)
+            {
+                return null;
+            }
 
-        _logger.LogDebug("WebDAV MKCOL: Parent not found for {Context}: {Path}", context, path);
-        return new WebDavMkColResult(false, WebDavMkColError.ParentNotFound);
-    }
-
-    private async Task<WebDavMkColResult> CreateCollectionInsideLockAsync(
-        WebDavMkColRequest request,
-        Guid lockedLayoutId,
-        CancellationToken ct)
-    {
-        var parent = await ResolveValidatedParentAsync(request, "path after locking", ct);
-        if (parent.Failure is not null)
-        {
-            return parent.Failure;
-        }
-
-        WebDavParentResult parentResult = parent.Result!;
-        if (parentResult.ParentNode!.LayoutId != lockedLayoutId)
-        {
-            _logger.LogDebug("WebDAV MKCOL: Parent layout changed while waiting for lock: {Path}", request.Path);
+            _logger.LogDebug("WebDAV MKCOL: Parent not found for {Context}: {Path}", context, path);
             return new WebDavMkColResult(false, WebDavMkColError.ParentNotFound);
         }
 
-        var conflict = await TryGetCreateConflictAsync(request, parentResult, ct);
-        if (conflict is not null)
+        private async Task<WebDavMkColResult> CreateCollectionInsideLockAsync(
+            WebDavMkColRequest request,
+            Guid lockedLayoutId,
+            CancellationToken ct)
         {
-            return conflict;
+            var parent = await ResolveValidatedParentAsync(request, "path after locking", ct);
+            if (parent.Failure is not null)
+            {
+                return parent.Failure;
+            }
+
+            WebDavParentResult parentResult = parent.Result!;
+            if (parentResult.ParentNode!.LayoutId != lockedLayoutId)
+            {
+                _logger.LogDebug("WebDAV MKCOL: Parent layout changed while waiting for lock: {Path}", request.Path);
+                return new WebDavMkColResult(false, WebDavMkColError.ParentNotFound);
+            }
+
+            var conflict = await TryGetCreateConflictAsync(request, parentResult, ct);
+            if (conflict is not null)
+            {
+                return conflict;
+            }
+
+            Node newNode = BuildNode(request.UserId, parentResult);
+            await _dbContext.Nodes.AddAsync(newNode, ct);
+            _syncChanges.StageFolderChange(SyncChangeKind.FolderCreated, newNode, parentResult.ParentNode.Id);
+            await _dbContext.SaveChangesAsync(ct);
+
+            _logger.LogInformation("WebDAV MKCOL: Created directory {Path} for user {UserId}", request.Path, request.UserId);
+            await _eventNotification.NotifyNodeCreatedAsync(newNode.Id, ct);
+            return new WebDavMkColResult(true, null, newNode.Id);
         }
 
-        Node newNode = BuildNode(request.UserId, parentResult);
-        await _dbContext.Nodes.AddAsync(newNode, ct);
-        _syncChanges.StageFolderChange(SyncChangeKind.FolderCreated, newNode, parentResult.ParentNode.Id);
-        await _dbContext.SaveChangesAsync(ct);
-
-        _logger.LogInformation("WebDAV MKCOL: Created directory {Path} for user {UserId}", request.Path, request.UserId);
-        await _eventNotification.NotifyNodeCreatedAsync(newNode.Id, ct);
-        return new WebDavMkColResult(true, null, newNode.Id);
-    }
-
-    private async Task<WebDavMkColResult?> TryGetCreateConflictAsync(
-        WebDavMkColRequest request,
-        WebDavParentResult parentResult,
-        CancellationToken ct)
-    {
-        var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
-        if (existing.Found)
+        private async Task<WebDavMkColResult?> TryGetCreateConflictAsync(
+            WebDavMkColRequest request,
+            WebDavParentResult parentResult,
+            CancellationToken ct)
         {
-            _logger.LogDebug("WebDAV MKCOL: Path already exists: {Path}", request.Path);
-            return new WebDavMkColResult(false, WebDavMkColError.AlreadyExists);
+            var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
+            if (existing.Found)
+            {
+                _logger.LogDebug("WebDAV MKCOL: Path already exists: {Path}", request.Path);
+                return new WebDavMkColResult(false, WebDavMkColError.AlreadyExists);
+            }
+
+            string nameKey = NameValidator.NormalizeAndGetNameKey(parentResult.ResourceName!);
+            bool fileExists = await _dbContext.NodeFiles.AnyAsync(f =>
+                f.NodeId == parentResult.ParentNode!.Id &&
+                f.OwnerId == request.UserId &&
+                f.NameKey == nameKey, ct);
+            if (!fileExists)
+            {
+                return null;
+            }
+
+            _logger.LogDebug("WebDAV MKCOL: Conflict with existing file: {Path}", request.Path);
+            return new WebDavMkColResult(false, WebDavMkColError.Conflict);
         }
 
-        string nameKey = NameValidator.NormalizeAndGetNameKey(parentResult.ResourceName!);
-        bool fileExists = await _dbContext.NodeFiles.AnyAsync(f =>
-            f.NodeId == parentResult.ParentNode!.Id &&
-            f.OwnerId == request.UserId &&
-            f.NameKey == nameKey, ct);
-        if (!fileExists)
+        private static Node BuildNode(Guid userId, WebDavParentResult parentResult)
         {
-            return null;
+            var newNode = new Node
+            {
+                OwnerId = userId,
+                Type = WebDavPathResolver.DefaultNodeType,
+                LayoutId = parentResult.ParentNode!.LayoutId,
+            };
+            newNode.SetParent(parentResult.ParentNode);
+            newNode.SetName(parentResult.ResourceName!);
+            return newNode;
         }
 
-        _logger.LogDebug("WebDAV MKCOL: Conflict with existing file: {Path}", request.Path);
-        return new WebDavMkColResult(false, WebDavMkColError.Conflict);
-    }
+        private sealed record WebDavMkColParent(WebDavParentResult? Result, WebDavMkColResult? Failure);
 
-    private static Node BuildNode(Guid userId, WebDavParentResult parentResult)
-    {
-        var newNode = new Node
+        private WebDavMkColResult? ValidateResourceName(string resourceName)
         {
-            OwnerId = userId,
-            Type = WebDavPathResolver.DefaultNodeType,
-            LayoutId = parentResult.ParentNode!.LayoutId,
-        };
-        newNode.SetParent(parentResult.ParentNode);
-        newNode.SetName(parentResult.ResourceName!);
-        return newNode;
-    }
+            if (NameValidator.TryNormalizeAndValidate(resourceName, out _, out var errorMessage))
+            {
+                return null;
+            }
 
-    private sealed record WebDavMkColParent(WebDavParentResult? Result, WebDavMkColResult? Failure);
-
-    private WebDavMkColResult? ValidateResourceName(string resourceName)
-    {
-        if (NameValidator.TryNormalizeAndValidate(resourceName, out _, out var errorMessage))
-        {
-            return null;
+            _logger.LogDebug("WebDAV MKCOL: Invalid name: {Name}, Error: {Error}", resourceName, errorMessage);
+            return new WebDavMkColResult(false, WebDavMkColError.InvalidName);
         }
-
-        _logger.LogDebug("WebDAV MKCOL: Invalid name: {Name}, Error: {Error}", resourceName, errorMessage);
-        return new WebDavMkColResult(false, WebDavMkColError.InvalidName);
     }
 }

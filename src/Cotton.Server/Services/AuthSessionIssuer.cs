@@ -24,163 +24,164 @@ using System.Net;
 using System.Security.Claims;
 using System.Text;
 
-namespace Cotton.Server.Services;
-
-/// <summary>Issues Cotton access and refresh sessions after an authentication factor succeeds.</summary>
-public sealed class AuthSessionIssuer(
-    CottonDbContext _dbContext,
-    ITokenProvider _tokens,
-    SettingsProvider _settings,
-    IHttpContextAccessor _httpContextAccessor,
-    INotificationsProvider _notifications,
-    IGeoLookupService _geoLookup)
+namespace Cotton.Server.Services
 {
-    private const string UnknownGeoLabel = "Unknown";
-    private const string DemoGeoLabel = "Demo";
-
-    /// <summary>Creates a refresh cookie and returns the API token response.</summary>
-    public async Task<TokenPairResponseDto> SignInAsync(
-        User user,
-        bool trustDevice,
-        AuthType authType,
-        CancellationToken cancellationToken = default)
+    /// <summary>Issues Cotton access and refresh sessions after an authentication factor succeeds.</summary>
+    public sealed class AuthSessionIssuer(
+        CottonDbContext _dbContext,
+        ITokenProvider _tokens,
+        SettingsProvider _settings,
+        IHttpContextAccessor _httpContextAccessor,
+        INotificationsProvider _notifications,
+        IGeoLookupService _geoLookup)
     {
-        var (dbToken, refreshToken) = await CreateRefreshTokenAsync(user, trustDevice, authType);
-        string accessToken = CreateAccessToken(user, dbToken.SessionId!);
-        await _dbContext.RefreshTokens.AddAsync(dbToken, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        AddRefreshTokenToCookies(refreshToken, trustDevice);
+        private const string UnknownGeoLabel = "Unknown";
+        private const string DemoGeoLabel = "Demo";
 
-        HttpRequest request = GetRequest();
-        await _notifications.SendSuccessfulLoginAsync(
-            _geoLookup,
-            user.Id,
-            GetRequestIpAddress(request),
-            request.Headers.UserAgent);
-
-        return new()
+        /// <summary>Creates a refresh cookie and returns the API token response.</summary>
+        public async Task<TokenPairResponseDto> SignInAsync(
+            User user,
+            bool trustDevice,
+            AuthType authType,
+            CancellationToken cancellationToken = default)
         {
-            AccessToken = accessToken,
-            RefreshToken = refreshToken
-        };
-    }
+            var (dbToken, refreshToken) = await CreateRefreshTokenAsync(user, trustDevice, authType);
+            string accessToken = CreateAccessToken(user, dbToken.SessionId!);
+            await _dbContext.RefreshTokens.AddAsync(dbToken, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            AddRefreshTokenToCookies(refreshToken, trustDevice);
 
-    /// <summary>Creates a signed JWT access token for an existing session id.</summary>
-    public string CreateAccessToken(User user, string sessionId)
-    {
-        return _tokens.CreateToken(x =>
-        {
-            return x.Add(JwtRegisteredClaimNames.Sub, user.Id.ToString())
-                .Add(JwtRegisteredClaimNames.Name, user.Username)
-                .Add(JwtRegisteredClaimNames.Sid, sessionId)
-                .Add(ClaimTypes.Name, user.Username)
-                .Add(ClaimTypes.Role, user.Role.ToString());
-        });
-    }
+            HttpRequest request = GetRequest();
+            await _notifications.SendSuccessfulLoginAsync(
+                _geoLookup,
+                user.Id,
+                GetRequestIpAddress(request),
+                request.Headers.UserAgent);
 
-    /// <summary>Creates a stored refresh-token row and returns its plaintext token value.</summary>
-    public async Task<(ExtendedRefreshToken DbToken, string RefreshToken)> CreateRefreshTokenAsync(
-        User user,
-        bool trustDevice,
-        AuthType authType,
-        string? sessionId = null)
-    {
-        HttpRequest request = GetRequest();
-        IPAddress ipAddress = GetRequestIpAddress(request);
-        var lookup = await _geoLookup.TryLookupAsync(ipAddress);
-        var geo = ResolveRefreshTokenGeoFields(lookup);
-        sessionId ??= StringHelpers.CreateRandomString(AuthController.RefreshTokenLength);
-        string refreshToken = StringHelpers.CreateRandomString(AuthController.RefreshTokenLength);
-        ExtendedRefreshToken dbToken = new()
-        {
-            RevokedAt = null,
-            UserId = user.Id,
-            City = geo.City,
-            SessionId = sessionId,
-            Region = geo.Region,
-            IsTrusted = trustDevice,
-            Country = geo.Country,
-            AuthType = authType,
-            IpAddress = ipAddress,
-            UserAgent = request.Headers.UserAgent.ToString(),
-            Token = HashRefreshToken(refreshToken),
-            Device = ResolveDeviceName(request),
-        };
-        return (dbToken, refreshToken);
-    }
-
-    /// <summary>Adds the refresh token to the current response cookies.</summary>
-    public void AddRefreshTokenToCookies(string refreshToken, bool trustDevice)
-    {
-        const int yearHours = 24 * 365;
-        int sessionTimeoutHours = _settings.GetServerSettings().SessionTimeoutHours;
-        GetResponse().Cookies.Append(AuthController.CookieRefreshTokenKey, refreshToken, new CookieOptions
-        {
-            Secure = true,
-            HttpOnly = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddHours(trustDevice ? yearHours : sessionTimeoutHours)
-        });
-    }
-
-    /// <summary>Hashes a plaintext refresh token for storage and lookup.</summary>
-    public static string HashRefreshToken(string refreshToken)
-    {
-        return Hasher.ToHexStringHash(Hasher.HashData(Encoding.UTF8.GetBytes(refreshToken)));
-    }
-
-    private HttpRequest GetRequest()
-    {
-        return _httpContextAccessor.HttpContext?.Request
-            ?? throw new InvalidOperationException("HTTP request is required to issue an auth session.");
-    }
-
-    private HttpResponse GetResponse()
-    {
-        return _httpContextAccessor.HttpContext?.Response
-            ?? throw new InvalidOperationException("HTTP response is required to issue an auth session.");
-    }
-
-    private static IPAddress GetRequestIpAddress(HttpRequest request)
-    {
-        return Constants.IsPublicInstance
-            ? IPAddress.Loopback
-            : request.GetRemoteIPAddress();
-    }
-
-    private static (string City, string Region, string Country) ResolveRefreshTokenGeoFields(
-        GeoLookupResult? lookup)
-    {
-        if (lookup is null && Constants.IsPublicInstance)
-        {
-            return (DemoGeoLabel, string.Empty, string.Empty);
+            return new()
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            };
         }
 
-        return (
-            NormalizeGeoField(lookup?.City),
-            NormalizeGeoField(lookup?.Region),
-            NormalizeGeoField(lookup?.Country));
-    }
-
-    private static string NormalizeGeoField(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? UnknownGeoLabel : value;
-    }
-
-    private static string ResolveDeviceName(HttpRequest request)
-    {
-        string? clientDeviceName = NormalizeDeviceName(request.Headers[CottonClientHeaders.DeviceName].FirstOrDefault());
-        return clientDeviceName ?? UserAgentHelpers.GetDevice(request.Headers.UserAgent.ToString());
-    }
-
-    private static string? NormalizeDeviceName(string? value)
-    {
-        string? normalized = value?.Trim();
-        if (string.IsNullOrEmpty(normalized))
+        /// <summary>Creates a signed JWT access token for an existing session id.</summary>
+        public string CreateAccessToken(User user, string sessionId)
         {
-            return null;
+            return _tokens.CreateToken(x =>
+            {
+                return x.Add(JwtRegisteredClaimNames.Sub, user.Id.ToString())
+                    .Add(JwtRegisteredClaimNames.Name, user.Username)
+                    .Add(JwtRegisteredClaimNames.Sid, sessionId)
+                    .Add(ClaimTypes.Name, user.Username)
+                    .Add(ClaimTypes.Role, user.Role.ToString());
+            });
         }
 
-        return normalized;
+        /// <summary>Creates a stored refresh-token row and returns its plaintext token value.</summary>
+        public async Task<(ExtendedRefreshToken DbToken, string RefreshToken)> CreateRefreshTokenAsync(
+            User user,
+            bool trustDevice,
+            AuthType authType,
+            string? sessionId = null)
+        {
+            HttpRequest request = GetRequest();
+            IPAddress ipAddress = GetRequestIpAddress(request);
+            var lookup = await _geoLookup.TryLookupAsync(ipAddress);
+            var geo = ResolveRefreshTokenGeoFields(lookup);
+            sessionId ??= StringHelpers.CreateRandomString(AuthController.RefreshTokenLength);
+            string refreshToken = StringHelpers.CreateRandomString(AuthController.RefreshTokenLength);
+            ExtendedRefreshToken dbToken = new()
+            {
+                RevokedAt = null,
+                UserId = user.Id,
+                City = geo.City,
+                SessionId = sessionId,
+                Region = geo.Region,
+                IsTrusted = trustDevice,
+                Country = geo.Country,
+                AuthType = authType,
+                IpAddress = ipAddress,
+                UserAgent = request.Headers.UserAgent.ToString(),
+                Token = HashRefreshToken(refreshToken),
+                Device = ResolveDeviceName(request),
+            };
+            return (dbToken, refreshToken);
+        }
+
+        /// <summary>Adds the refresh token to the current response cookies.</summary>
+        public void AddRefreshTokenToCookies(string refreshToken, bool trustDevice)
+        {
+            const int yearHours = 24 * 365;
+            int sessionTimeoutHours = _settings.GetServerSettings().SessionTimeoutHours;
+            GetResponse().Cookies.Append(AuthController.CookieRefreshTokenKey, refreshToken, new CookieOptions
+            {
+                Secure = true,
+                HttpOnly = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddHours(trustDevice ? yearHours : sessionTimeoutHours)
+            });
+        }
+
+        /// <summary>Hashes a plaintext refresh token for storage and lookup.</summary>
+        public static string HashRefreshToken(string refreshToken)
+        {
+            return Hasher.ToHexStringHash(Hasher.HashData(Encoding.UTF8.GetBytes(refreshToken)));
+        }
+
+        private HttpRequest GetRequest()
+        {
+            return _httpContextAccessor.HttpContext?.Request
+                ?? throw new InvalidOperationException("HTTP request is required to issue an auth session.");
+        }
+
+        private HttpResponse GetResponse()
+        {
+            return _httpContextAccessor.HttpContext?.Response
+                ?? throw new InvalidOperationException("HTTP response is required to issue an auth session.");
+        }
+
+        private static IPAddress GetRequestIpAddress(HttpRequest request)
+        {
+            return Constants.IsPublicInstance
+                ? IPAddress.Loopback
+                : request.GetRemoteIPAddress();
+        }
+
+        private static (string City, string Region, string Country) ResolveRefreshTokenGeoFields(
+            GeoLookupResult? lookup)
+        {
+            if (lookup is null && Constants.IsPublicInstance)
+            {
+                return (DemoGeoLabel, string.Empty, string.Empty);
+            }
+
+            return (
+                NormalizeGeoField(lookup?.City),
+                NormalizeGeoField(lookup?.Region),
+                NormalizeGeoField(lookup?.Country));
+        }
+
+        private static string NormalizeGeoField(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? UnknownGeoLabel : value;
+        }
+
+        private static string ResolveDeviceName(HttpRequest request)
+        {
+            string? clientDeviceName = NormalizeDeviceName(request.Headers[CottonClientHeaders.DeviceName].FirstOrDefault());
+            return clientDeviceName ?? UserAgentHelpers.GetDevice(request.Headers.UserAgent.ToString());
+        }
+
+        private static string? NormalizeDeviceName(string? value)
+        {
+            string? normalized = value?.Trim();
+            if (string.IsNullOrEmpty(normalized))
+            {
+                return null;
+            }
+
+            return normalized;
+        }
     }
 }

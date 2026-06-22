@@ -4,13 +4,14 @@
 using Cotton.Server.Providers;
 using Cotton.Storage.Processors;
 
-namespace Cotton.Server.Services;
-
-/// <summary>
-/// Reads the runtime AES-GCM plaintext chunk size from server settings.
-/// </summary>
-public sealed class SettingsEncryptionChunkSizeProvider(SettingsProvider settings) : IEncryptionChunkSizeProvider
+namespace Cotton.Server.Services
 {
-    /// <inheritdoc />
-    public int ChunkSizeBytes => settings.GetServerSettings().CipherChunkSizeBytes;
+    /// <summary>
+    /// Reads the runtime AES-GCM plaintext chunk size from server settings.
+    /// </summary>
+    public sealed class SettingsEncryptionChunkSizeProvider(SettingsProvider settings) : IEncryptionChunkSizeProvider
+    {
+        /// <inheritdoc />
+        public int ChunkSizeBytes => settings.GetServerSettings().CipherChunkSizeBytes;
+    }
 }

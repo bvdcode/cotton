@@ -12,84 +12,85 @@ using Cotton.Storage.Pipelines;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 
-namespace Cotton.Server.Handlers.WebDav;
-
-/// <summary>
-/// Query for WebDAV GET operation
-/// </summary>
-public record WebDavGetFileQuery(
-    Guid UserId,
-    string Path) : IRequest<WebDavGetFileResult>;
-
-/// <summary>
-/// Result of WebDAV GET operation
-/// </summary>
-public record WebDavGetFileResult(
-    bool Found,
-    bool IsCollection,
-    Stream? Content = null,
-    string? ContentType = null,
-    long ContentLength = 0,
-    string? FileName = null,
-    DateTimeOffset? LastModified = null,
-    string? ETag = null);
-
-/// <summary>
-/// Handler for WebDAV GET operation
-/// </summary>
-public class WebDavGetFileQueryHandler(
-    IWebDavPathResolver _pathResolver,
-    IStoragePipeline _storage,
-    CottonDbContext _dbContext,
-    FileGraphIntegrityVerifier _fileGraphIntegrity,
-    ILogger<WebDavGetFileQueryHandler> _logger)
-    : IRequestHandler<WebDavGetFileQuery, WebDavGetFileResult>
+namespace Cotton.Server.Handlers.WebDav
 {
     /// <summary>
-    /// Handles the request through the mediator pipeline.
+    /// Query for WebDAV GET operation
     /// </summary>
-    public async Task<WebDavGetFileResult> Handle(WebDavGetFileQuery request, CancellationToken ct)
+    public record WebDavGetFileQuery(
+        Guid UserId,
+        string Path) : IRequest<WebDavGetFileResult>;
+
+    /// <summary>
+    /// Result of WebDAV GET operation
+    /// </summary>
+    public record WebDavGetFileResult(
+        bool Found,
+        bool IsCollection,
+        Stream? Content = null,
+        string? ContentType = null,
+        long ContentLength = 0,
+        string? FileName = null,
+        DateTimeOffset? LastModified = null,
+        string? ETag = null);
+
+    /// <summary>
+    /// Handler for WebDAV GET operation
+    /// </summary>
+    public class WebDavGetFileQueryHandler(
+        IWebDavPathResolver _pathResolver,
+        IStoragePipeline _storage,
+        CottonDbContext _dbContext,
+        FileGraphIntegrityVerifier _fileGraphIntegrity,
+        ILogger<WebDavGetFileQueryHandler> _logger)
+        : IRequestHandler<WebDavGetFileQuery, WebDavGetFileResult>
     {
-        var resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
-
-        if (!resolveResult.Found)
+        /// <summary>
+        /// Handles the request through the mediator pipeline.
+        /// </summary>
+        public async Task<WebDavGetFileResult> Handle(WebDavGetFileQuery request, CancellationToken ct)
         {
-            _logger.LogDebug("WebDAV GET: Path not found: {Path}", request.Path);
-            return new WebDavGetFileResult(false, false);
+            var resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
+
+            if (!resolveResult.Found)
+            {
+                _logger.LogDebug("WebDAV GET: Path not found: {Path}", request.Path);
+                return new WebDavGetFileResult(false, false);
+            }
+
+            if (resolveResult.IsCollection)
+            {
+                // Collections don't have content to download
+                return new WebDavGetFileResult(true, true);
+            }
+
+            var nodeFile = resolveResult.NodeFile!;
+            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "webdav.get");
+
+            var manifest = nodeFile.FileManifest;
+
+            var chunkHashes = manifest.FileManifestChunks
+                .OrderBy(c => c.ChunkOrder)
+                .Select(c => Convert.ToHexString(c.ChunkHash).ToLowerInvariant())
+                .ToArray();
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = manifest.SizeBytes,
+                ChunkLengths = manifest.FileManifestChunks.GetChunkLengths()
+            };
+
+            var stream = _storage.GetBlobStream(chunkHashes, context);
+
+            return new WebDavGetFileResult(
+                Found: true,
+                IsCollection: false,
+                Content: stream,
+                ContentType: manifest.ContentType,
+                ContentLength: manifest.SizeBytes,
+                FileName: nodeFile.Name,
+                LastModified: nodeFile.UpdatedAt,
+                ETag: FileETags.GetQuotedContentETag(manifest));
         }
-
-        if (resolveResult.IsCollection)
-        {
-            // Collections don't have content to download
-            return new WebDavGetFileResult(true, true);
-        }
-
-        var nodeFile = resolveResult.NodeFile!;
-        _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "webdav.get");
-
-        var manifest = nodeFile.FileManifest;
-
-        var chunkHashes = manifest.FileManifestChunks
-            .OrderBy(c => c.ChunkOrder)
-            .Select(c => Convert.ToHexString(c.ChunkHash).ToLowerInvariant())
-            .ToArray();
-
-        var context = new PipelineContext
-        {
-            FileSizeBytes = manifest.SizeBytes,
-            ChunkLengths = manifest.FileManifestChunks.GetChunkLengths()
-        };
-
-        var stream = _storage.GetBlobStream(chunkHashes, context);
-
-        return new WebDavGetFileResult(
-            Found: true,
-            IsCollection: false,
-            Content: stream,
-            ContentType: manifest.ContentType,
-            ContentLength: manifest.SizeBytes,
-            FileName: nodeFile.Name,
-            LastModified: nodeFile.UpdatedAt,
-            ETag: FileETags.GetQuotedContentETag(manifest));
     }
 }

@@ -3,68 +3,69 @@
 
 using Cotton.Database.Models;
 
-namespace Cotton.Server.Services.WebDav;
-
-/// <summary>
-/// Resolves WebDAV paths to nodes and files
-/// </summary>
-public interface IWebDavPathResolver
+namespace Cotton.Server.Services.WebDav
 {
     /// <summary>
-    /// Resolves a WebDAV path to a node or file
+    /// Resolves WebDAV paths to nodes and files
     /// </summary>
-    Task<WebDavResolveResult> ResolvePathAsync(Guid userId, string path, CancellationToken ct = default);
+    public interface IWebDavPathResolver
+    {
+        /// <summary>
+        /// Resolves a WebDAV path to a node or file
+        /// </summary>
+        Task<WebDavResolveResult> ResolvePathAsync(Guid userId, string path, CancellationToken ct = default);
+
+        /// <summary>
+        /// Resolves a WebDAV path to a node or file without loading heavy file content graph.
+        /// Intended for operations that only need metadata (DELETE/MOVE/COPY/PUT checks/etc.).
+        /// </summary>
+        Task<WebDavResolveResult> ResolveMetadataAsync(Guid userId, string path, CancellationToken ct = default);
+
+        /// <summary>
+        /// Gets the parent node for a given path (for creating new resources)
+        /// </summary>
+        Task<WebDavParentResult> GetParentNodeAsync(Guid userId, string path, CancellationToken ct = default);
+    }
 
     /// <summary>
-    /// Resolves a WebDAV path to a node or file without loading heavy file content graph.
-    /// Intended for operations that only need metadata (DELETE/MOVE/COPY/PUT checks/etc.).
+    /// Result of resolving a WebDAV path
     /// </summary>
-    Task<WebDavResolveResult> ResolveMetadataAsync(Guid userId, string path, CancellationToken ct = default);
+    public record WebDavResolveResult
+    {
+        /// <summary>
+        /// Gets or sets whether the WebDAV resource was found.
+        /// </summary>
+        public bool Found { get; init; }
+        /// <summary>
+        /// True when the resolved resource is a collection (directory).
+        /// </summary>
+        public bool IsCollection { get; init; }
+        /// <summary>
+        /// Gets or sets the node.
+        /// </summary>
+        public Node? Node { get; init; }
+        /// <summary>
+        /// Gets or sets the node file.
+        /// </summary>
+        public NodeFile? NodeFile { get; init; }
+    }
 
     /// <summary>
-    /// Gets the parent node for a given path (for creating new resources)
+    /// Result of getting parent node for a path
     /// </summary>
-    Task<WebDavParentResult> GetParentNodeAsync(Guid userId, string path, CancellationToken ct = default);
-}
-
-/// <summary>
-/// Result of resolving a WebDAV path
-/// </summary>
-public record WebDavResolveResult
-{
-    /// <summary>
-    /// Gets or sets whether the WebDAV resource was found.
-    /// </summary>
-    public bool Found { get; init; }
-    /// <summary>
-    /// True when the resolved resource is a collection (directory).
-    /// </summary>
-    public bool IsCollection { get; init; }
-    /// <summary>
-    /// Gets or sets the node.
-    /// </summary>
-    public Node? Node { get; init; }
-    /// <summary>
-    /// Gets or sets the node file.
-    /// </summary>
-    public NodeFile? NodeFile { get; init; }
-}
-
-/// <summary>
-/// Result of getting parent node for a path
-/// </summary>
-public record WebDavParentResult
-{
-    /// <summary>
-    /// Gets or sets whether the WebDAV resource was found.
-    /// </summary>
-    public bool Found { get; init; }
-    /// <summary>
-    /// Gets or sets the resolved WebDAV parent node.
-    /// </summary>
-    public Node? ParentNode { get; init; }
-    /// <summary>
-    /// Gets or sets the final WebDAV path segment.
-    /// </summary>
-    public string? ResourceName { get; init; }
+    public record WebDavParentResult
+    {
+        /// <summary>
+        /// Gets or sets whether the WebDAV resource was found.
+        /// </summary>
+        public bool Found { get; init; }
+        /// <summary>
+        /// Gets or sets the resolved WebDAV parent node.
+        /// </summary>
+        public Node? ParentNode { get; init; }
+        /// <summary>
+        /// Gets or sets the final WebDAV path segment.
+        /// </summary>
+        public string? ResourceName { get; init; }
+    }
 }

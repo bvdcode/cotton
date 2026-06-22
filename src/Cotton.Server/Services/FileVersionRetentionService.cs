@@ -7,68 +7,69 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Providers;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cotton.Server.Services;
-
-/// <summary>
-/// Coordinates file version retention.
-/// </summary>
-public sealed class FileVersionRetentionService(
-    CottonDbContext _dbContext,
-    SettingsProvider _settingsProvider,
-    FileVersionStorageService _storage)
+namespace Cotton.Server.Services
 {
-    private const int LimitedHistoricalVersionCount = 2;
-    private const int OptimalHistoricalVersionCount = 10;
-
     /// <summary>
-    /// Prunes historical versions of the given lineage down to the configured
-    /// retention limit and returns the total number of bytes removed.
+    /// Coordinates file version retention.
     /// </summary>
-    public async Task<long> ApplyAsync(
-        Guid userId,
-        Guid lineageId,
-        IReadOnlySet<Guid>? protectedVersionIds = null,
-        CancellationToken ct = default)
+    public sealed class FileVersionRetentionService(
+        CottonDbContext _dbContext,
+        SettingsProvider _settingsProvider,
+        FileVersionStorageService _storage)
     {
-        int? maxHistoricalVersions = ResolveMaxHistoricalVersions();
-        if (!maxHistoricalVersions.HasValue)
+        private const int LimitedHistoricalVersionCount = 2;
+        private const int OptimalHistoricalVersionCount = 10;
+
+        /// <summary>
+        /// Prunes historical versions of the given lineage down to the configured
+        /// retention limit and returns the total number of bytes removed.
+        /// </summary>
+        public async Task<long> ApplyAsync(
+            Guid userId,
+            Guid lineageId,
+            IReadOnlySet<Guid>? protectedVersionIds = null,
+            CancellationToken ct = default)
         {
-            return 0;
+            int? maxHistoricalVersions = ResolveMaxHistoricalVersions();
+            if (!maxHistoricalVersions.HasValue)
+            {
+                return 0;
+            }
+
+            List<NodeFile> historicalVersions = await _dbContext.NodeFiles
+                .Include(x => x.FileManifest)
+                .Where(x => x.OwnerId == userId
+                    && x.OriginalNodeFileId == lineageId
+                    && x.Id != lineageId)
+                .OrderBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id)
+                .ToListAsync(ct);
+
+            if (historicalVersions.Count <= maxHistoricalVersions.Value)
+            {
+                return 0;
+            }
+
+            int pruneCount = historicalVersions.Count - maxHistoricalVersions.Value;
+            NodeFile[] versionsToPrune =
+            [
+                .. historicalVersions
+                    .Skip(1)
+                    .Where(x => protectedVersionIds is null || !protectedVersionIds.Contains(x.Id))
+                    .Take(pruneCount),
+            ];
+            return await _storage.DeleteHistoricalVersionsAsync(userId, versionsToPrune, ct);
         }
 
-        List<NodeFile> historicalVersions = await _dbContext.NodeFiles
-            .Include(x => x.FileManifest)
-            .Where(x => x.OwnerId == userId
-                && x.OriginalNodeFileId == lineageId
-                && x.Id != lineageId)
-            .OrderBy(x => x.CreatedAt)
-            .ThenBy(x => x.Id)
-            .ToListAsync(ct);
-
-        if (historicalVersions.Count <= maxHistoricalVersions.Value)
+        private int? ResolveMaxHistoricalVersions()
         {
-            return 0;
+            return _settingsProvider.GetServerSettings().StorageSpaceMode switch
+            {
+                StorageSpaceMode.Limited => LimitedHistoricalVersionCount,
+                StorageSpaceMode.Optimal => OptimalHistoricalVersionCount,
+                StorageSpaceMode.Unlimited => null,
+                _ => OptimalHistoricalVersionCount,
+            };
         }
-
-        int pruneCount = historicalVersions.Count - maxHistoricalVersions.Value;
-        NodeFile[] versionsToPrune =
-        [
-            .. historicalVersions
-                .Skip(1)
-                .Where(x => protectedVersionIds is null || !protectedVersionIds.Contains(x.Id))
-                .Take(pruneCount),
-        ];
-        return await _storage.DeleteHistoricalVersionsAsync(userId, versionsToPrune, ct);
-    }
-
-    private int? ResolveMaxHistoricalVersions()
-    {
-        return _settingsProvider.GetServerSettings().StorageSpaceMode switch
-        {
-            StorageSpaceMode.Limited => LimitedHistoricalVersionCount,
-            StorageSpaceMode.Optimal => OptimalHistoricalVersionCount,
-            StorageSpaceMode.Unlimited => null,
-            _ => OptimalHistoricalVersionCount,
-        };
     }
 }

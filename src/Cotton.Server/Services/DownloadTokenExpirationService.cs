@@ -5,45 +5,46 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cotton.Server.Services;
-
-/// <summary>
-/// Coordinates download token expiration.
-/// </summary>
-public sealed class DownloadTokenExpirationService(CottonDbContext _dbContext)
+namespace Cotton.Server.Services
 {
-    private const int BatchSize = 1_000;
-
     /// <summary>
-    /// Expires active tokens created by user.
+    /// Coordinates download token expiration.
     /// </summary>
-    public async Task<int> ExpireActiveTokensCreatedByUserAsync(
-        Guid userId,
-        DateTime expiresAt,
-        CancellationToken cancellationToken)
+    public sealed class DownloadTokenExpirationService(CottonDbContext _dbContext)
     {
-        int expired = 0;
-        while (true)
+        private const int BatchSize = 1_000;
+
+        /// <summary>
+        /// Expires active tokens created by user.
+        /// </summary>
+        public async Task<int> ExpireActiveTokensCreatedByUserAsync(
+            Guid userId,
+            DateTime expiresAt,
+            CancellationToken cancellationToken)
         {
-            List<DownloadToken> tokens = await _dbContext.DownloadTokens
-                .Where(x => x.CreatedByUserId == userId
-                    && (x.ExpiresAt == null || x.ExpiresAt > expiresAt))
-                .OrderBy(x => x.Id)
-                .Take(BatchSize)
-                .ToListAsync(cancellationToken);
-            if (tokens.Count == 0)
+            int expired = 0;
+            while (true)
             {
-                return expired;
-            }
+                List<DownloadToken> tokens = await _dbContext.DownloadTokens
+                    .Where(x => x.CreatedByUserId == userId
+                        && (x.ExpiresAt == null || x.ExpiresAt > expiresAt))
+                    .OrderBy(x => x.Id)
+                    .Take(BatchSize)
+                    .ToListAsync(cancellationToken);
+                if (tokens.Count == 0)
+                {
+                    return expired;
+                }
 
-            foreach (DownloadToken token in tokens)
-            {
-                token.ExpiresAt = expiresAt;
-            }
+                foreach (DownloadToken token in tokens)
+                {
+                    token.ExpiresAt = expiresAt;
+                }
 
-            expired += tokens.Count;
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            _dbContext.ChangeTracker.Clear();
+                expired += tokens.Count;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                _dbContext.ChangeTracker.Clear();
+            }
         }
     }
 }
