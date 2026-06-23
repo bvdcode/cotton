@@ -65,45 +65,52 @@ namespace Cotton.Server.Jobs
         private async Task CheckDbChunksAgainstStorageAsync(HashSet<string> storageKeys, CancellationToken ct)
         {
             int missingCount = 0;
-            int offset = 0;
+            int initialListingMissCount = 0;
+            List<byte[]> missingChunkHashes = [];
+            List<string> initialListingMissSamples = [];
 
-            while (true)
+            await foreach (byte[] chunkHash in _dbContext.Chunks
+                .AsNoTracking()
+                .OrderBy(c => c.Hash)
+                .Select(c => c.Hash)
+                .AsAsyncEnumerable()
+                .WithCancellation(ct))
             {
-                List<byte[]> batch = await _dbContext.Chunks
-                    .OrderBy(c => c.Hash)
-                    .Skip(offset)
-                    .Take(BatchSize)
-                    .Select(c => c.Hash)
-                    .ToListAsync(ct);
+                string uid = Hasher.ToHexStringHash(chunkHash);
 
-                if (batch.Count == 0)
+                if (storageKeys.Remove(uid))
                 {
-                    break;
+                    continue;
                 }
 
-                foreach (byte[] chunkHash in batch)
+                // Double-check storage in case the backend listing raced with a concurrent write.
+                bool stillExists = await _storage.ExistsAsync(uid);
+                if (stillExists)
                 {
-                    string uid = Hasher.ToHexStringHash(chunkHash);
-
-                    if (storageKeys.Remove(uid))
+                    initialListingMissCount++;
+                    if (initialListingMissSamples.Count < 10)
                     {
-                        continue;
+                        initialListingMissSamples.Add(uid);
                     }
-
-                    // double-check storage in case of race condition
-                    var stillExists = await _storage.ExistsAsync(uid);
-                    if (stillExists)
-                    {
-                        _logger.LogWarning("Chunk {Uid} was missing from initial storage listing but exists on double-check - skipping.", uid);
-                        continue;
-                    }
-
-                    _logger.LogWarning("Chunk {Uid} exists in DB but missing from storage - handling as missing.", uid);
-                    await HandleMissingChunkAsync(chunkHash, ct);
-                    missingCount++;
+                    continue;
                 }
 
-                offset += batch.Count;
+                _logger.LogWarning("Chunk {Uid} exists in DB but missing from storage - handling as missing.", uid);
+                missingChunkHashes.Add(chunkHash);
+                missingCount++;
+            }
+
+            foreach (byte[] chunkHash in missingChunkHashes)
+            {
+                await HandleMissingChunkAsync(chunkHash, ct);
+            }
+
+            if (initialListingMissCount > 0)
+            {
+                _logger.LogWarning(
+                    "Storage consistency check found {Count} DB chunks missing from the initial storage listing but present on direct lookup. Sample: {Sample}.",
+                    initialListingMissCount,
+                    string.Join(", ", initialListingMissSamples));
             }
 
             if (missingCount > 0)
