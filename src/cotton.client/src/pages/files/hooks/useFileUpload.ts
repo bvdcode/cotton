@@ -107,9 +107,8 @@ export const useFileUpload = (
   });
   const { dialogState, showConflictDialog, handleResolve, handleExited } =
     useFileConflictDialog();
-  const [skippedItemsDialog, setSkippedItemsDialog] = useState<SkippedItemsDialogState>(
-    emptySkippedItemsDialog,
-  );
+  const [skippedItemsDialog, setSkippedItemsDialog] =
+    useState<SkippedItemsDialogState>(emptySkippedItemsDialog);
   const skipAllConflictsRef = useRef<boolean>(false);
   const skippedItemsToastIdRef = useRef<string | null>(null);
   const skippedItemsToastSequenceRef = useRef(0);
@@ -132,9 +131,8 @@ export const useFileUpload = (
         const target = findNodeById(state, targetNodeId);
         if (!target) return false;
 
-        return getFolderEncryptionPolicyStateFromParentResolver(
-          target,
-          (id) => findNodeById(state, id),
+        return getFolderEncryptionPolicyStateFromParentResolver(target, (id) =>
+          findNodeById(state, id),
         ).effectiveEnabled;
       },
     [],
@@ -142,9 +140,7 @@ export const useFileUpload = (
 
   const decideEncrypt = useMemo(
     () =>
-      (
-        targetNodeId: string,
-      ): { encrypt: boolean; vaultLocked: boolean } => {
+      (targetNodeId: string): { encrypt: boolean; vaultLocked: boolean } => {
         if (!isPolicyEnabledForNode(targetNodeId)) {
           return { encrypt: false, vaultLocked: false };
         }
@@ -459,7 +455,10 @@ export const useFileUpload = (
         }));
         const decision = decideDroppedTargetEncryption(targetNodeId);
         if (decision.vaultLocked) {
-          onToast?.(t("uploadDrop.toasts.vaultLocked", { ns: "files" }), "error");
+          onToast?.(
+            t("uploadDrop.toasts.vaultLocked", { ns: "files" }),
+            "error",
+          );
           continue;
         }
 
@@ -807,10 +806,7 @@ type NodesStateView = {
   contentByNodeId: Record<string, NodeContentDto | undefined>;
 };
 
-function findNodeById(
-  state: NodesStateView,
-  id: string,
-): NodeDto | undefined {
+function findNodeById(state: NodesStateView, id: string): NodeDto | undefined {
   if (state.currentNode?.id === id) {
     return state.currentNode;
   }

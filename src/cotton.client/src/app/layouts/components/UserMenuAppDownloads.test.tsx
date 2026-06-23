@@ -35,7 +35,9 @@ describe("UserMenuAppDownloads", () => {
     }
 
     expect(
-      screen.getAllByRole("link").map((element) => element.getAttribute("aria-label")),
+      screen
+        .getAllByRole("link")
+        .map((element) => element.getAttribute("aria-label")),
     ).toEqual(downloadLinks.map((link) => link.label));
   });
 

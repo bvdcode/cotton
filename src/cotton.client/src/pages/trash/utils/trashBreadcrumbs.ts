@@ -12,10 +12,7 @@ const hasOriginalParentPath = (
 ): boolean => Boolean(node?.metadata?.[originalParentPathMetadataKey]);
 
 export const isTrashWrapperNode = (
-  node:
-    | Pick<NodeDto, "name" | "parentId" | "metadata">
-    | null
-    | undefined,
+  node: Pick<NodeDto, "name" | "parentId" | "metadata"> | null | undefined,
   trashRootId: string | null | undefined,
 ): boolean => {
   if (!node || !trashRootId || !hasTrashWrapperName(node)) {
@@ -62,5 +59,7 @@ export const isCurrentTrashWrapper = (
   }
 
   const trashRootId = ancestors.find((node) => !hasTrashWrapperName(node))?.id;
-  return trashRootId ? currentNode.parentId === trashRootId : ancestors.length === 0;
+  return trashRootId
+    ? currentNode.parentId === trashRootId
+    : ancestors.length === 0;
 };

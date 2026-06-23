@@ -25,13 +25,18 @@ const parseIpv4Address = (value: string): number[] | null => {
     return Number(part);
   });
 
-  return bytes.every((byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255)
+  return bytes.every(
+    (byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255,
+  )
     ? bytes
     : null;
 };
 
 const isLocalNetworkIp = (value: string | undefined): boolean => {
-  const normalized = value?.trim().toLowerCase().replace(/^\[|\]$/g, "");
+  const normalized = value
+    ?.trim()
+    .toLowerCase()
+    .replace(/^\[|\]$/g, "");
   if (!normalized) return false;
 
   const ipv4Value = normalized.startsWith("::ffff:")

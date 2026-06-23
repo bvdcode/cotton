@@ -82,7 +82,10 @@ const toConsoleMessage = (value: unknown): string => {
 const formatConsoleArgs = (args: unknown[]): string =>
   args.map((arg) => toConsoleMessage(arg)).join(" ");
 
-const pushConsoleError = (source: ConsoleErrorSource, message: string): void => {
+const pushConsoleError = (
+  source: ConsoleErrorSource,
+  message: string,
+): void => {
   const state = getConsoleCaptureState();
   state.errors.push({
     timestamp: new Date().toISOString(),
@@ -91,10 +94,7 @@ const pushConsoleError = (source: ConsoleErrorSource, message: string): void => 
   });
 
   if (state.errors.length > MAX_CAPTURED_CONSOLE_ERRORS) {
-    state.errors.splice(
-      0,
-      state.errors.length - MAX_CAPTURED_CONSOLE_ERRORS,
-    );
+    state.errors.splice(0, state.errors.length - MAX_CAPTURED_CONSOLE_ERRORS);
   }
 };
 

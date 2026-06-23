@@ -1,4 +1,9 @@
-import { Box, CircularProgress, Typography, type TypographyProps } from "@mui/material";
+import {
+  Box,
+  CircularProgress,
+  Typography,
+  type TypographyProps,
+} from "@mui/material";
 import * as React from "react";
 
 interface ModelPreviewStatusProps {

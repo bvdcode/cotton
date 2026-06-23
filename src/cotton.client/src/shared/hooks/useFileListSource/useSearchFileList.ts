@@ -51,7 +51,10 @@ export const useSearchFileList = ({
       return `/${parts.slice(0, -1).join("/")}`;
     };
 
-    const replacePathFileName = (fullPath: string, fileName: string): string => {
+    const replacePathFileName = (
+      fullPath: string,
+      fileName: string,
+    ): string => {
       const normalized = fullPath.trim();
       const slashIndex = normalized.lastIndexOf("/");
       if (slashIndex < 0) return fileName;
@@ -80,7 +83,9 @@ export const useSearchFileList = ({
       return paths[idx];
     };
 
-    const getFullPathForFile = (file: NodeFileManifestDto): string | undefined => {
+    const getFullPathForFile = (
+      file: NodeFileManifestDto,
+    ): string | undefined => {
       const byId = filePaths[file.id];
       if (byId) return byId;
       return consumeNextPath(file.name);

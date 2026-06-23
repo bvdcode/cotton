@@ -192,18 +192,14 @@ export const settingsApi = {
     getValidated("server/settings", serverSettingsResponseSchema),
 
   getChunkSizeSettings: (): Promise<ChunkSizeSettings> =>
-    getValidated(
-      "server/settings/chunk-size",
-      chunkSizeSettingsResponseSchema,
-    ),
+    getValidated("server/settings/chunk-size", chunkSizeSettingsResponseSchema),
 
   getChunkSize: (): Promise<number> =>
-    getValidated(
-      "server/settings/chunk-size",
-      chunkSizeResponseSchema,
-    ),
+    getValidated("server/settings/chunk-size", chunkSizeResponseSchema),
 
-  setChunkSize: async (maxChunkSizeBytes: number): Promise<ChunkSizeSettings> => {
+  setChunkSize: async (
+    maxChunkSizeBytes: number,
+  ): Promise<ChunkSizeSettings> => {
     const response = await httpClient.patch<unknown>(
       `server/settings/chunk-size/${maxChunkSizeBytes}`,
     );
@@ -220,7 +216,9 @@ export const settingsApi = {
       storagePipelineSettingsResponseSchema,
     ),
 
-  setCompressionLevel: async (compressionLevel: number): Promise<StoragePipelineSettings> => {
+  setCompressionLevel: async (
+    compressionLevel: number,
+  ): Promise<StoragePipelineSettings> => {
     const response = await httpClient.patch<unknown>(
       `server/settings/compression-level/${compressionLevel}`,
     );
@@ -231,7 +229,9 @@ export const settingsApi = {
     );
   },
 
-  setCipherChunkSize: async (cipherChunkSizeBytes: number): Promise<StoragePipelineSettings> => {
+  setCipherChunkSize: async (
+    cipherChunkSizeBytes: number,
+  ): Promise<StoragePipelineSettings> => {
     const response = await httpClient.patch<unknown>(
       `server/settings/cipher-chunk-size/${cipherChunkSizeBytes}`,
     );
@@ -242,7 +242,9 @@ export const settingsApi = {
     );
   },
 
-  setEncryptionThreads: async (encryptionThreads: number): Promise<StoragePipelineSettings> => {
+  setEncryptionThreads: async (
+    encryptionThreads: number,
+  ): Promise<StoragePipelineSettings> => {
     const response = await httpClient.patch<unknown>(
       `server/settings/encryption-threads/${encryptionThreads}`,
     );
@@ -284,10 +286,7 @@ export const settingsApi = {
   },
 
   getServerUsage: (): Promise<ServerUsage[]> =>
-    getValidated(
-      "server/settings/server-usage",
-      serverUsageListSchema,
-    ),
+    getValidated("server/settings/server-usage", serverUsageListSchema),
 
   setServerUsage: async (usage: ServerUsage[]): Promise<void> => {
     await httpClient.patch("server/settings/server-usage", usage);
@@ -301,10 +300,7 @@ export const settingsApi = {
   },
 
   getPublicBaseUrl: (): Promise<string> =>
-    getValidated(
-      "server/settings/public-base-url",
-      publicBaseUrlSchema,
-    ),
+    getValidated("server/settings/public-base-url", publicBaseUrlSchema),
 
   setPublicBaseUrl: async (url: string): Promise<void> => {
     await httpClient.patch("server/settings/public-base-url", url);
@@ -344,34 +340,28 @@ export const settingsApi = {
   setDefaultUserTemplateNodeId: async (
     nodeId: string | null,
   ): Promise<void> => {
-    await httpClient.patch("server/settings/default-user-template-node", nodeId);
+    await httpClient.patch(
+      "server/settings/default-user-template-node",
+      nodeId,
+    );
   },
 
   getComputionMode: (): Promise<ComputionMode> =>
-    getValidated(
-      "server/settings/compution-mode",
-      computionModeResponseSchema,
-    ),
+    getValidated("server/settings/compution-mode", computionModeResponseSchema),
 
   setComputionMode: async (mode: ComputionMode): Promise<void> => {
     await httpClient.patch(`server/settings/compution-mode/${mode}`);
   },
 
   getStorageType: (): Promise<StorageType> =>
-    getValidated(
-      "server/settings/storage-type",
-      storageTypeResponseSchema,
-    ),
+    getValidated("server/settings/storage-type", storageTypeResponseSchema),
 
   setStorageType: async (type: StorageType): Promise<void> => {
     await httpClient.patch(`server/settings/storage-type/${type}`);
   },
 
   getS3Config: (): Promise<S3Config> =>
-    getValidated(
-      "server/settings/s3-config",
-      s3ConfigSchema,
-    ),
+    getValidated("server/settings/s3-config", s3ConfigSchema),
 
   setS3Config: async (config: S3Config): Promise<void> => {
     await httpClient.patch("server/settings/s3-config", config);
@@ -385,10 +375,7 @@ export const settingsApi = {
   },
 
   getEmailConfig: (): Promise<EmailConfig> =>
-    getValidated(
-      "server/settings/email-config",
-      emailConfigSchema,
-    ),
+    getValidated("server/settings/email-config", emailConfigSchema),
 
   setEmailConfig: async (config: EmailConfig): Promise<void> => {
     await httpClient.patch("server/settings/email-config", config);
@@ -421,7 +408,11 @@ export const settingsApi = {
   testCustomGeoIpLookupUrl: async (): Promise<CustomGeoIpLookupTestResult> => {
     const url = "server/settings/custom-geoip-lookup-url/test";
     const response = await httpClient.post<unknown>(url);
-    return parseValidated(url, response.data, customGeoIpLookupTestResultSchema);
+    return parseValidated(
+      url,
+      response.data,
+      customGeoIpLookupTestResultSchema,
+    );
   },
 
   saveSetupStep: async (
@@ -430,10 +421,8 @@ export const settingsApi = {
   ): Promise<void> => {
     switch (stepKey) {
       case "trustedMode": {
-        const {
-          allowCrossUserDeduplication,
-          allowGlobalIndexing,
-        } = resolveTrustedModeSettings(answers.trustedMode);
+        const { allowCrossUserDeduplication, allowGlobalIndexing } =
+          resolveTrustedModeSettings(answers.trustedMode);
         await saveBestEffort([
           () =>
             settingsApi.setAllowCrossUserDeduplication(

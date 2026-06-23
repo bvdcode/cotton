@@ -38,9 +38,10 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     <>
       <GlobalStyles
         styles={{
-          [`.${NOTIFICATION_CONTAINER_CLASS}.${NOTIFICATION_CONTAINER_CLASS}`]: {
-            zIndex: `${FOREGROUND_OVERLAY_Z_INDEX} !important`,
-          },
+          [`.${NOTIFICATION_CONTAINER_CLASS}.${NOTIFICATION_CONTAINER_CLASS}`]:
+            {
+              zIndex: `${FOREGROUND_OVERLAY_Z_INDEX} !important`,
+            },
         }}
       />
       <SnackbarProvider
@@ -102,7 +103,10 @@ const ThemedNotificationContent = forwardRef<
               height: 30,
               flex: "0 0 auto",
               borderRadius: "50%",
-              bgcolor: alpha(tone.main, theme.palette.mode === "dark" ? 0.18 : 0.12),
+              bgcolor: alpha(
+                tone.main,
+                theme.palette.mode === "dark" ? 0.18 : 0.12,
+              ),
               color: tone.main,
             }}
           >
@@ -150,10 +154,7 @@ const notificationComponents = {
   info: ThemedNotificationContent,
 };
 
-function getTone(
-  palette: Palette,
-  variant: VariantType,
-): PaletteColor {
+function getTone(palette: Palette, variant: VariantType): PaletteColor {
   switch (variant) {
     case "success":
       return palette.primary;

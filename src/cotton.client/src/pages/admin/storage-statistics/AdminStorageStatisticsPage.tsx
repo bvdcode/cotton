@@ -18,14 +18,8 @@ import {
   useGcChunksTimelineQuery,
   useTriggerGarbageCollectorMutation,
 } from "@shared/api/queries/admin";
-import {
-  settingsApi,
-  type StorageSpaceMode,
-} from "@shared/api/settingsApi";
-import {
-  getApiErrorMessage,
-  showApiErrorToast,
-} from "@shared/api/httpClient";
+import { settingsApi, type StorageSpaceMode } from "@shared/api/settingsApi";
+import { getApiErrorMessage, showApiErrorToast } from "@shared/api/httpClient";
 import { AdminStorageBackendSettings } from "../settings/AdminStorageBackendSettings";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 import type { SaveStatus } from "../settings/useAutoSavedSetting";
@@ -184,8 +178,8 @@ export const AdminStorageStatisticsPage = () => {
 
   const isLoading = timelineQuery.isPending || timelineQuery.isFetching;
   const loadErrorMessage = timelineQuery.isError
-    ? getApiErrorMessage(timelineQuery.error) ??
-      t("storageStatistics.errors.loadFailed")
+    ? (getApiErrorMessage(timelineQuery.error) ??
+      t("storageStatistics.errors.loadFailed"))
     : null;
   const isTriggering = triggerState.kind === "loading";
   const storageSpaceModeDisabled =

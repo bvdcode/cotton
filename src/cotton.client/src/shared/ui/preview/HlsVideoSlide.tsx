@@ -13,9 +13,7 @@ interface HlsInstance {
 }
 
 interface HlsConstructor {
-  new (config: {
-    autoStartLoad?: boolean;
-  }): HlsInstance;
+  new (config: { autoStartLoad?: boolean }): HlsInstance;
   isSupported(): boolean;
   Events: {
     MEDIA_ATTACHED: string;
@@ -171,12 +169,12 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
 
         if (!cancelled) {
           setStatusState((current) => {
-          const base =
-            current.key === statusKey
-              ? current
-              : createHlsSlideStatusState(statusKey, active);
-          return { ...base, loadFailed: true, noticeVisible: false };
-        });
+            const base =
+              current.key === statusKey
+                ? current
+                : createHlsSlideStatusState(statusKey, active);
+            return { ...base, loadFailed: true, noticeVisible: false };
+          });
         }
         return;
       }

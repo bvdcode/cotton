@@ -200,7 +200,9 @@ export const getFileTypeInfo = (
   const ext = getFileExtension(fileName);
   const requiresVideoTranscoding = options?.requiresVideoTranscoding === true;
 
-  if (shouldSuppressUnplayableVideo(ext, contentType, requiresVideoTranscoding)) {
+  if (
+    shouldSuppressUnplayableVideo(ext, contentType, requiresVideoTranscoding)
+  ) {
     return toFileTypeInfo("other");
   }
 

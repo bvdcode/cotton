@@ -47,9 +47,12 @@ describe("uploadBlobToChunks", () => {
       throw new Error("file hash update was not queued");
     };
     const worker = {
-      updateFileHash: vi.fn(() => new Promise<void>((resolve) => {
-        releaseFileHashUpdate = resolve;
-      })),
+      updateFileHash: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            releaseFileHashUpdate = resolve;
+          }),
+      ),
       digestFile: vi.fn(async () => "file-hash"),
     };
     mocks.acquire.mockResolvedValue(worker);

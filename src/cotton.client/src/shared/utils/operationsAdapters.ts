@@ -22,9 +22,7 @@ export const buildFolderOperations = (
     folderId: string,
     currentlyEnabled: boolean,
   ) => Promise<void> | void,
-  getEncryptionPolicyState?: (
-    folder: NodeDto,
-  ) => FolderEncryptionPolicyState,
+  getEncryptionPolicyState?: (folder: NodeDto) => FolderEncryptionPolicyState,
   onFolderDownload?: (folderId: string, folderName: string) => Promise<void>,
 ): FolderOperations => {
   return {

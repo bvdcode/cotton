@@ -58,7 +58,10 @@ export const LoginPage = () => {
   }
 
   const showRestoreOverlay =
-    auth.hydrated && auth.refreshEnabled && !auth.isAuthenticated && !auth.hasChecked;
+    auth.hydrated &&
+    auth.refreshEnabled &&
+    !auth.isAuthenticated &&
+    !auth.hasChecked;
   const showFirstRunAlert =
     serverInfo !== null && serverInfo.canCreateInitialAdmin;
   const isFirstRunMode = showFirstRunAlert && !form.requiresTwoFactor;
@@ -66,9 +69,21 @@ export const LoginPage = () => {
   return (
     <>
       <LoginRestoreLoader visible={auth.isInitializing || showRestoreOverlay} />
-      <LoginShell footer={<LoginForgotPasswordLink form={form} show={!form.requiresTwoFactor && !showFirstRunAlert} />}>
+      <LoginShell
+        footer={
+          <LoginForgotPasswordLink
+            form={form}
+            show={!form.requiresTwoFactor && !showFirstRunAlert}
+          />
+        }
+      >
         <LoginHeader form={form} />
-        <Box component="form" onSubmit={form.handleSubmit} noValidate autoComplete="off">
+        <Box
+          component="form"
+          onSubmit={form.handleSubmit}
+          noValidate
+          autoComplete="off"
+        >
           <Stack spacing={2.5}>
             <LoginFormFields form={form} />
             {showFirstRunAlert && <FirstRunNotice />}
@@ -93,8 +108,7 @@ const shouldRestoreSession = ({
   refreshEnabled,
   isAuthenticated,
   hasChecked,
-}: AuthState) =>
-  hydrated && refreshEnabled && !isAuthenticated && !hasChecked;
+}: AuthState) => hydrated && refreshEnabled && !isAuthenticated && !hasChecked;
 
 type LoginRestoreLoaderProps = {
   visible: boolean;
@@ -149,7 +163,12 @@ const LoginHeader = ({ form }: LoginHeaderProps) => {
   const { t } = useTranslation("login");
 
   return (
-    <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+    <Box
+      display="flex"
+      justifyContent="space-between"
+      alignItems="center"
+      sx={{ mb: 3 }}
+    >
       <Typography variant="h4" component="h1">
         {form.requiresTwoFactor ? t("twoFactor.title") : t("title")}
       </Typography>
@@ -271,7 +290,10 @@ type LoginSubmitButtonProps = {
   isFirstRunMode: boolean;
 };
 
-const LoginSubmitButton = ({ form, isFirstRunMode }: LoginSubmitButtonProps) => {
+const LoginSubmitButton = ({
+  form,
+  isFirstRunMode,
+}: LoginSubmitButtonProps) => {
   const { t } = useTranslation("login");
   const submitButtonLabel = isFirstRunMode
     ? t("firstRun.continueButton")
@@ -350,7 +372,10 @@ type LoginForgotPasswordLinkProps = {
   show: boolean;
 };
 
-const LoginForgotPasswordLink = ({ form, show }: LoginForgotPasswordLinkProps) => {
+const LoginForgotPasswordLink = ({
+  form,
+  show,
+}: LoginForgotPasswordLinkProps) => {
   const { t } = useTranslation("login");
 
   return show ? (

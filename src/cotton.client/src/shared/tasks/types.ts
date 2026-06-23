@@ -63,5 +63,9 @@ export interface AppTaskHandle {
   readonly id: string;
   update: (options: UpdateAppTaskOptions) => void;
   complete: () => void;
-  fail: (error?: { message?: string; key?: string; params?: Record<string, string | number> }) => void;
+  fail: (error?: {
+    message?: string;
+    key?: string;
+    params?: Record<string, string | number>;
+  }) => void;
 }

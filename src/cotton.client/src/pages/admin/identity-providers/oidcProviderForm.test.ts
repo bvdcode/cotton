@@ -7,10 +7,7 @@ import {
 describe("oidcProviderForm", () => {
   it("uses the browser origin when the public base URL is not configured", () => {
     expect(
-      resolveOidcCallbackBaseUrl(
-        "http://localhost",
-        "https://cotton.example/",
-      ),
+      resolveOidcCallbackBaseUrl("http://localhost", "https://cotton.example/"),
     ).toBe("https://cotton.example");
   });
 

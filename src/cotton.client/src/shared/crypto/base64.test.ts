@@ -12,13 +12,17 @@ describe("base64 helpers", () => {
     const bytes = new TextEncoder().encode(text);
 
     expect(bytesToBase64(bytes)).toBe("TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu");
-    expect(new TextDecoder().decode(base64ToBytes(bytesToBase64(bytes)))).toBe(text);
+    expect(new TextDecoder().decode(base64ToBytes(bytesToBase64(bytes)))).toBe(
+      text,
+    );
   });
 
   it("round-trips arbitrary bytes", () => {
     const bytes = new Uint8Array(256);
     crypto.getRandomValues(bytes);
 
-    expect(Array.from(base64ToBytes(bytesToBase64(bytes)))).toEqual(Array.from(bytes));
+    expect(Array.from(base64ToBytes(bytesToBase64(bytes)))).toEqual(
+      Array.from(bytes),
+    );
   });
 });

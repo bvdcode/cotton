@@ -59,7 +59,11 @@ async function resolvePdfPreviewUrl(source: PdfPreviewSource): Promise<string> {
   return fullUrl + (fullUrl.includes("?") ? "&" : "?") + "download=false";
 }
 
-export const PdfPreview = ({ source, fileName, fileSizeBytes }: PdfPreviewProps) => {
+export const PdfPreview = ({
+  source,
+  fileName,
+  fileSizeBytes,
+}: PdfPreviewProps) => {
   const { t } = useTranslation(["files", "common"]);
   const isMobile =
     typeof navigator !== "undefined" &&

@@ -1,11 +1,18 @@
 /**
  * Editor Mode Selector Component
- * 
+ *
  * Single Responsibility: Provides UI for switching between editor modes
  * Open/Closed: Easy to add new modes by extending configuration
  */
 
-import { Box, ToggleButtonGroup, ToggleButton, Tooltip, Typography, useMediaQuery } from "@mui/material";
+import {
+  Box,
+  ToggleButtonGroup,
+  ToggleButton,
+  Tooltip,
+  Typography,
+  useMediaQuery,
+} from "@mui/material";
 import { TextFields, Code, Article } from "@mui/icons-material";
 import { EditorMode, type IEditorModeConfig } from "./types";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
@@ -62,9 +69,9 @@ export const EditorModeSelector: React.FC<EditorModeSelectorProps> = ({
       }}
       size="small"
       disabled={disabled}
-      sx={{ 
-        bgcolor: 'background.paper',
-        '& .MuiToggleButton-root': {
+      sx={{
+        bgcolor: "background.paper",
+        "& .MuiToggleButton-root": {
           px: { xs: 1, sm: 1.5 },
           py: 0.5,
           minWidth: { xs: 36, sm: "auto" },
@@ -77,7 +84,9 @@ export const EditorModeSelector: React.FC<EditorModeSelectorProps> = ({
           value={config.mode}
           aria-label={t(config.label, { ns: "files" })}
         >
-          <Tooltip title={t(config.description || config.label, { ns: "files" })}>
+          <Tooltip
+            title={t(config.description || config.label, { ns: "files" })}
+          >
             <Box
               sx={{
                 display: "flex",

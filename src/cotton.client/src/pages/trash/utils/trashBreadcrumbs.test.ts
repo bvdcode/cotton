@@ -27,7 +27,9 @@ describe("trashBreadcrumbs", () => {
   const nestedFolder = makeNode("nested-1", "Screens", deletedFolder.id);
 
   it("hides the service wrapper between trash root and a deleted top-level folder", () => {
-    expect(buildVisibleTrashBreadcrumbs([root, wrapper], deletedFolder)).toEqual([
+    expect(
+      buildVisibleTrashBreadcrumbs([root, wrapper], deletedFolder),
+    ).toEqual([
       { id: root.id, name: root.name },
       { id: deletedFolder.id, name: deletedFolder.name },
     ]);
@@ -35,7 +37,10 @@ describe("trashBreadcrumbs", () => {
 
   it("keeps real descendants while hiding only the trash wrapper", () => {
     expect(
-      buildVisibleTrashBreadcrumbs([root, wrapper, deletedFolder], nestedFolder),
+      buildVisibleTrashBreadcrumbs(
+        [root, wrapper, deletedFolder],
+        nestedFolder,
+      ),
     ).toEqual([
       { id: root.id, name: root.name },
       { id: deletedFolder.id, name: deletedFolder.name },

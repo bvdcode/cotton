@@ -61,7 +61,15 @@ export function FloatingBlobs() {
   );
 }
 
-function Blob({ size, shape, sx }: { size: number; shape: "circle" | "ellipse"; sx: object }) {
+function Blob({
+  size,
+  shape,
+  sx,
+}: {
+  size: number;
+  shape: "circle" | "ellipse";
+  sx: object;
+}) {
   const isEllipse = shape === "ellipse";
   return (
     <Box

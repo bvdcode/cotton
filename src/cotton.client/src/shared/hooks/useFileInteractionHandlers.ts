@@ -25,7 +25,11 @@ interface UseFileInteractionHandlersArgs {
 interface UseFileInteractionHandlersResult {
   previewState: ReturnType<typeof useFilePreview>["previewState"];
   closePreview: ReturnType<typeof useFilePreview>["closePreview"];
-  handleFileClick: (fileId: string, fileName: string, fileSizeBytes?: number) => void;
+  handleFileClick: (
+    fileId: string,
+    fileName: string,
+    fileSizeBytes?: number,
+  ) => void;
   handleDownloadFile: (fileId: string, fileName: string) => Promise<void>;
   handleShareFile: (fileId: string, fileName: string) => Promise<void>;
   lightboxOpen: boolean;
@@ -98,14 +102,16 @@ export const useFileInteractionHandlers = ({
         if (decryptTaskRef.current && !decryptTaskFinished) {
           decryptTaskRef.current.fail({
             message: error instanceof Error ? error.message : undefined,
-            key: error instanceof NoKeyError
-              ? "encryptionVaultLocked"
-              : error instanceof ClientEncryptionSizeLimitError
-                ? "clientEncryptionFileTooLarge"
-                : "decryptionFailed",
-            params: error instanceof ClientEncryptionSizeLimitError
-              ? { maxSize: formatBytes(error.maxBytes) }
-              : undefined,
+            key:
+              error instanceof NoKeyError
+                ? "encryptionVaultLocked"
+                : error instanceof ClientEncryptionSizeLimitError
+                  ? "clientEncryptionFileTooLarge"
+                  : "decryptionFailed",
+            params:
+              error instanceof ClientEncryptionSizeLimitError
+                ? { maxSize: formatBytes(error.maxBytes) }
+                : undefined,
           });
         }
 

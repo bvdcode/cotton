@@ -33,7 +33,8 @@ const createInitialColumnVisibilityModels = (): Record<
 export const AdminUsersPage = () => {
   const { t } = useTranslation(["admin", "common"]);
 
-  const { users, loadState, storageUsageLoading, refresh } = useAdminUsersData();
+  const { users, loadState, storageUsageLoading, refresh } =
+    useAdminUsersData();
   const [editingUser, setEditingUser] = useState<AdminUserDto | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -48,7 +49,9 @@ export const AdminUsersPage = () => {
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const columnVisibilityTarget: ColumnVisibilityTarget = isMobile ? "mobile" : "desktop";
+  const columnVisibilityTarget: ColumnVisibilityTarget = isMobile
+    ? "mobile"
+    : "desktop";
   const [columnVisibilityModels, setColumnVisibilityModels] = useState(
     createInitialColumnVisibilityModels,
   );

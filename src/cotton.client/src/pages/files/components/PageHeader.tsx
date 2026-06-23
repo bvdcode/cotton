@@ -288,7 +288,9 @@ const appendSelectionActions = (
     actions.push({
       key: "selection-mode",
       icon: options.selectionMode ? <CheckBox /> : <CheckBoxOutlineBlank />,
-      title: options.t(options.selectionMode ? "selection.exit" : "selection.enter"),
+      title: options.t(
+        options.selectionMode ? "selection.exit" : "selection.enter",
+      ),
       onClick: options.onToggleSelectionMode,
       disabled: false,
       active: options.selectionMode,
@@ -305,7 +307,11 @@ const appendSelectionActions = (
     });
   }
 
-  if (options.selectionMode && (options.selectedCount ?? 0) > 0 && options.onDeselectAll) {
+  if (
+    options.selectionMode &&
+    (options.selectedCount ?? 0) > 0 &&
+    options.onDeselectAll
+  ) {
     actions.push({
       key: "deselect-all",
       icon: <Deselect />,
@@ -324,7 +330,9 @@ const buildStatsSummary = (
   const parts: string[] = [];
 
   if (stats.folders > 0) {
-    parts.push(t("stats.folders", { ns: statsNamespace, count: stats.folders }));
+    parts.push(
+      t("stats.folders", { ns: statsNamespace, count: stats.folders }),
+    );
   }
 
   if (stats.files > 0) {
@@ -374,8 +382,12 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const { t } = useTranslation(["files", "trash", "common"]);
   const nextViewTitleKey = getNextFileBrowserViewTitleKey(viewMode);
   const actionsContainerRef = React.useRef<HTMLDivElement | null>(null);
-  const actionButtonRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
-  const [menuAnchorEl, setMenuAnchorEl] = React.useState<HTMLElement | null>(null);
+  const actionButtonRefs = React.useRef<
+    Record<string, HTMLButtonElement | null>
+  >({});
+  const [menuAnchorEl, setMenuAnchorEl] = React.useState<HTMLElement | null>(
+    null,
+  );
   const statsSummary = React.useMemo(
     () => buildStatsSummary(stats, statsNamespace, t),
     [stats, statsNamespace, t],
@@ -431,7 +443,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   });
 
   const overflowActions = React.useMemo(
-    () => actionTabs.filter((action) => !visibleActionKeys.includes(action.key)),
+    () =>
+      actionTabs.filter((action) => !visibleActionKeys.includes(action.key)),
     [actionTabs, visibleActionKeys],
   );
 

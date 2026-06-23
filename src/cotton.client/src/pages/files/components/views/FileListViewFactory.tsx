@@ -19,10 +19,10 @@ export const FileListViewFactory: React.FC<FileListViewFactoryProps> = ({
   switch (layoutType) {
     case InterfaceLayoutType.Tiles:
       return <TilesView {...viewProps} />;
-    
+
     case InterfaceLayoutType.List:
       return <ListView {...viewProps} />;
-    
+
     default:
       // Fallback to Tiles view if unknown type
       return <TilesView {...viewProps} />;

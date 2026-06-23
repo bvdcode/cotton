@@ -18,7 +18,9 @@ const makeEnumSchema = <T extends string>(values: readonly T[], fallback: T) =>
   });
 
 const nullableStringSchema = z.string().nullable().optional();
-const configStringSchema = nullableStringSchema.transform((value) => value ?? "");
+const configStringSchema = nullableStringSchema.transform(
+  (value) => value ?? "",
+);
 
 export const storageTypeValues = ["Local", "S3"] as const;
 export const emailModeValues = ["None", "Cloud", "Custom"] as const;
@@ -94,8 +96,9 @@ export const chunkSizeSettingsResponseSchema = z
         : value.supportedMaxChunkSizeBytes;
     const normalizedSupportedMaxChunkSizeBytes = Array.from(
       new Set(
-        (supportedMaxChunkSizeBytes ?? defaultSupportedMaxChunkSizeBytes)
-          .filter((entry) => Number.isFinite(entry) && entry > 0),
+        (
+          supportedMaxChunkSizeBytes ?? defaultSupportedMaxChunkSizeBytes
+        ).filter((entry) => Number.isFinite(entry) && entry > 0),
       ),
     ).sort((left, right) => left - right);
 
@@ -122,10 +125,14 @@ export const storagePipelineSettingsResponseSchema = z.object({
   maxEncryptionThreads: z.number().finite().positive(),
   supportedEncryptionThreads: z.array(z.number().finite().positive()),
 });
-export type StoragePipelineSettings = z.infer<typeof storagePipelineSettingsResponseSchema>;
+export type StoragePipelineSettings = z.infer<
+  typeof storagePipelineSettingsResponseSchema
+>;
 
-export const chunkSizeResponseSchema = chunkSizeSettingsResponseSchema
-  .transform((value): number => value.maxChunkSizeBytes);
+export const chunkSizeResponseSchema =
+  chunkSizeSettingsResponseSchema.transform(
+    (value): number => value.maxChunkSizeBytes,
+  );
 
 const selectSupportedHashAlgorithm = (value: {
   supportedHashAlgorithms?: string[];
@@ -206,13 +213,22 @@ export const storageSpaceModeResponseSchema = z
 
 export const defaultUserStorageQuotaBytesSchema = z
   .object({
-    defaultUserStorageQuotaBytes: z.number().finite().nonnegative().nullable().optional(),
+    defaultUserStorageQuotaBytes: z
+      .number()
+      .finite()
+      .nonnegative()
+      .nullable()
+      .optional(),
   })
   .transform((value) => value.defaultUserStorageQuotaBytes ?? null);
 
 export const defaultUserTemplateNodeIdSchema = z
   .object({
-    defaultUserTemplateNodeId: z.string().regex(GUID_PATTERN).nullable().optional(),
+    defaultUserTemplateNodeId: z
+      .string()
+      .regex(GUID_PATTERN)
+      .nullable()
+      .optional(),
   })
   .transform((value) => value.defaultUserTemplateNodeId ?? null);
 
@@ -243,7 +259,9 @@ export const customGeoIpLookupTestResultSchema = z.object({
   region: nullableStringSchema,
   city: nullableStringSchema,
 });
-export type CustomGeoIpLookupTestResult = z.infer<typeof customGeoIpLookupTestResultSchema>;
+export type CustomGeoIpLookupTestResult = z.infer<
+  typeof customGeoIpLookupTestResultSchema
+>;
 
 export const s3ConfigSchema = z.object({
   accessKey: configStringSchema,

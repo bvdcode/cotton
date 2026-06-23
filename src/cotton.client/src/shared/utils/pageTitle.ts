@@ -2,7 +2,9 @@ export const APP_TITLE = "Cotton Cloud";
 
 const TITLE_SEPARATOR = " - ";
 
-const normalizeTitlePart = (title: string | null | undefined): string | null => {
+const normalizeTitlePart = (
+  title: string | null | undefined,
+): string | null => {
   const normalized = title?.trim();
   return normalized ? normalized : null;
 };

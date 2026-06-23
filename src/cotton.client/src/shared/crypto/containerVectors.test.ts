@@ -20,7 +20,8 @@ import { importMasterKey, wrapFileKey } from "./keys";
 import sharedVectors from "../../../../Cotton.Crypto.Tests/TestData/cotton-container-vectors.json";
 
 const GOLDEN_CONTAINER_HEX = sharedVectors.vectors.legacyCtn1TwoChunk.hex;
-const COTTON_CTN2_SINGLE_CHUNK_HEX = sharedVectors.vectors.cottonCtn2SingleChunk.hex;
+const COTTON_CTN2_SINGLE_CHUNK_HEX =
+  sharedVectors.vectors.cottonCtn2SingleChunk.hex;
 const EASY_EXTENSIONS_SINGLE_CHUNK_HEX =
   sharedVectors.vectors.legacyEasyExtensionsSingleChunk.hex;
 
@@ -112,11 +113,11 @@ describe("Cotton container golden vectors", () => {
     {
       name: "file plaintext length",
       mutate: (bytes: Uint8Array) => {
-        new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).setBigInt64(
-          8,
-          BigInt(GOLDEN_PLAINTEXT.length - 1),
-          true,
-        );
+        new DataView(
+          bytes.buffer,
+          bytes.byteOffset,
+          bytes.byteLength,
+        ).setBigInt64(8, BigInt(GOLDEN_PLAINTEXT.length - 1), true);
       },
     },
     {
@@ -128,7 +129,11 @@ describe("Cotton container golden vectors", () => {
     {
       name: "chunk plaintext length",
       mutate: (bytes: Uint8Array) => {
-        new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).setBigInt64(
+        new DataView(
+          bytes.buffer,
+          bytes.byteOffset,
+          bytes.byteLength,
+        ).setBigInt64(
           FILE_HEADER_BYTES + 8,
           BigInt(GOLDEN_CHUNK_SIZE - 1),
           true,
@@ -182,7 +187,11 @@ describe("Cotton container golden vectors", () => {
           FILE_HEADER_BYTES,
           FILE_HEADER_BYTES + chunkRecordBytes,
         );
-        return concatBytes(bytes.slice(0, FILE_HEADER_BYTES), firstChunk, firstChunk);
+        return concatBytes(
+          bytes.slice(0, FILE_HEADER_BYTES),
+          firstChunk,
+          firstChunk,
+        );
       },
     },
   ])("rejects $name", async ({ build }) => {
@@ -272,7 +281,9 @@ function hexToBytes(hex: string): Uint8Array {
 }
 
 function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
 }
 
 async function blobToBytes(blob: Blob): Promise<Uint8Array> {

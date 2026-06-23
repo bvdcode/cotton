@@ -10,10 +10,7 @@ import {
   ensureMeshNormals,
   normalizeModelScale,
 } from "./orientation";
-import {
-  loadModelObjectFromSource,
-  simplifyObjectGeometry,
-} from "./loader";
+import { loadModelObjectFromSource, simplifyObjectGeometry } from "./loader";
 
 /**
  * Orchestrator for the model preview pipeline. The implementation pieces

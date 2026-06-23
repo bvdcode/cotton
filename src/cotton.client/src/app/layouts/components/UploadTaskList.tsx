@@ -9,33 +9,34 @@ interface UploadTaskListProps {
   listHeight: number;
 }
 
-const UploadTaskListScroller = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(
-  (props, ref) => {
-    return (
-      <Box
-        ref={ref}
-        {...props}
-        sx={{
-          overflowX: "hidden",
-          scrollbarWidth: "thin",
-          "&::-webkit-scrollbar": {
-            width: 8,
-          },
-          "&::-webkit-scrollbar-track": {
-            bgcolor: "transparent",
-          },
-          "&::-webkit-scrollbar-thumb": {
-            bgcolor: "action.disabled",
-            borderRadius: 1,
-          },
-          "&::-webkit-scrollbar-thumb:hover": {
-            bgcolor: "action.active",
-          },
-        }}
-      />
-    );
-  },
-);
+const UploadTaskListScroller = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div">
+>((props, ref) => {
+  return (
+    <Box
+      ref={ref}
+      {...props}
+      sx={{
+        overflowX: "hidden",
+        scrollbarWidth: "thin",
+        "&::-webkit-scrollbar": {
+          width: 8,
+        },
+        "&::-webkit-scrollbar-track": {
+          bgcolor: "transparent",
+        },
+        "&::-webkit-scrollbar-thumb": {
+          bgcolor: "action.disabled",
+          borderRadius: 1,
+        },
+        "&::-webkit-scrollbar-thumb:hover": {
+          bgcolor: "action.active",
+        },
+      }}
+    />
+  );
+});
 
 UploadTaskListScroller.displayName = "UploadTaskListScroller";
 

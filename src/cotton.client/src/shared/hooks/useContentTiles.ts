@@ -49,9 +49,7 @@ const sortItems = <T extends { name: string; updatedAt: string }>(
   items: T[],
   sortMode: ContentTilesSortMode,
 ): T[] =>
-  sortMode === "updatedAtDesc"
-    ? sortByUpdatedAtDesc(items)
-    : sortByName(items);
+  sortMode === "updatedAtDesc" ? sortByUpdatedAtDesc(items) : sortByName(items);
 
 const getTileUpdatedAt = (tile: FileSystemTile): string =>
   tile.kind === "folder" ? tile.node.updatedAt : tile.file.updatedAt;
@@ -59,7 +57,9 @@ const getTileUpdatedAt = (tile: FileSystemTile): string =>
 const getTileName = (tile: FileSystemTile): string =>
   tile.kind === "folder" ? tile.node.name : tile.file.name;
 
-const sortTilesByUpdatedAtDesc = (tiles: FileSystemTile[]): FileSystemTile[] => {
+const sortTilesByUpdatedAtDesc = (
+  tiles: FileSystemTile[],
+): FileSystemTile[] => {
   const sorted = tiles.slice();
   sorted.sort((a, b) =>
     compareUpdatedAtDesc(

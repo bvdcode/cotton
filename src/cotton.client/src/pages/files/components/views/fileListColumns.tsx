@@ -81,7 +81,10 @@ interface ColumnOptions {
   onCancelNewFolder: () => void;
   folderNamePlaceholder: string;
   fileNamePlaceholder: string;
-  onGoToFileLocation?: (target: { nodeId?: string; containerPath?: string }) => void;
+  onGoToFileLocation?: (target: {
+    nodeId?: string;
+    containerPath?: string;
+  }) => void;
   columnFlex?: {
     name: number;
     location: number;
@@ -98,10 +101,7 @@ interface ColumnOptions {
     onDownload?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
     onCut?: (id: string) => void;
-    onToggleEncryptionPolicy?: (
-      id: string,
-      currentlyEnabled: boolean,
-    ) => void;
+    onToggleEncryptionPolicy?: (id: string, currentlyEnabled: boolean) => void;
   };
   fileOperations: {
     isRenaming: (id: string) => boolean;
@@ -447,10 +447,7 @@ const actionsCell = (
 
 const buildFolderActionButtons = (
   row: FileListRow,
-  options: Pick<
-    ColumnOptions,
-    "labels" | "folderOperations" | "readOnly"
-  >,
+  options: Pick<ColumnOptions, "labels" | "folderOperations" | "readOnly">,
 ): RowActionButton[] => {
   const operations = options.folderOperations;
   const actions: RowActionButton[] = [];

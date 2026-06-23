@@ -39,10 +39,10 @@ describe("admin query cache helpers", () => {
     const first = createAdminUser("first", 0);
     const second = createAdminUser("second", 0);
 
-    const merged = mergeUsersWithStorageUsage([first, second], [
-      createAdminUser("first", 1024),
-      createAdminUser("unknown", 2048),
-    ]);
+    const merged = mergeUsersWithStorageUsage(
+      [first, second],
+      [createAdminUser("first", 1024), createAdminUser("unknown", 2048)],
+    );
 
     expect(merged.map((user) => [user.id, user.storageUsedBytes])).toEqual([
       ["first", 1024],

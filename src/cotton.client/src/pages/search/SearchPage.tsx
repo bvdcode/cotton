@@ -64,9 +64,9 @@ export const SearchPage: React.FC = () => {
   } = useSearchHistory();
   const showSearchHistory = Boolean(
     layoutId &&
-      !trimmedSearchQuery &&
-      !results &&
-      searchHistoryEntries.length > 0,
+    !trimmedSearchQuery &&
+    !results &&
+    searchHistoryEntries.length > 0,
   );
 
   // Reset to the first page when query changes.
@@ -210,24 +210,28 @@ export const SearchPage: React.FC = () => {
         </Box>
       )}
 
-      {!loading && layoutId && !trimmedSearchQuery && !results && !showSearchHistory && (
-        <Box
-          flex={1}
-          minHeight={0}
-          display="flex"
-          flexDirection="column"
-          alignItems="center"
-          justifyContent="center"
-          textAlign="center"
-          gap={1.5}
-          sx={{ color: "text.secondary" }}
-        >
-          <SearchIcon sx={{ fontSize: 48, opacity: 0.5 }} />
-          <Typography color="text.secondary">
-            {t("enterQueryHint", { ns: "search" })}
-          </Typography>
-        </Box>
-      )}
+      {!loading &&
+        layoutId &&
+        !trimmedSearchQuery &&
+        !results &&
+        !showSearchHistory && (
+          <Box
+            flex={1}
+            minHeight={0}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="center"
+            textAlign="center"
+            gap={1.5}
+            sx={{ color: "text.secondary" }}
+          >
+            <SearchIcon sx={{ fontSize: 48, opacity: 0.5 }} />
+            <Typography color="text.secondary">
+              {t("enterQueryHint", { ns: "search" })}
+            </Typography>
+          </Box>
+        )}
 
       {(loading || results) && (
         <Box ref={gridHostRef} sx={{ width: "100%", flex: 1, minHeight: 0 }}>

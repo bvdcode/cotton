@@ -6,7 +6,10 @@ import {
 } from "../../shared/api/queries/notifications";
 import { notificationSchema } from "../../shared/api/schemas/notification";
 import { eventHub, HUB_METHODS } from "../../shared/signalr";
-import { selectNotificationSoundEnabled, useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
+import {
+  selectNotificationSoundEnabled,
+  useUserPreferencesStore,
+} from "../../shared/store/userPreferencesStore";
 import { useAuth } from "../auth";
 
 const playNotificationSound = () => {

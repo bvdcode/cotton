@@ -63,9 +63,7 @@ export interface FolderOperations {
     folderId: string,
     currentlyEnabled: boolean,
   ) => void;
-  getEncryptionPolicyState?: (
-    folder: NodeDto,
-  ) => FolderEncryptionPolicyState;
+  getEncryptionPolicyState?: (folder: NodeDto) => FolderEncryptionPolicyState;
   onClick: (folderId: string) => void;
 }
 

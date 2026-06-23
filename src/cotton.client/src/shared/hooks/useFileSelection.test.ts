@@ -70,9 +70,7 @@ describe("useFileSelection", () => {
     act(() => result.current.toggleSelectionMode());
 
     act(() => result.current.toggleItem("b"));
-    act(() =>
-      result.current.toggleItem("d", { shiftKey: true, orderedIds }),
-    );
+    act(() => result.current.toggleItem("d", { shiftKey: true, orderedIds }));
 
     expect(result.current.selectedCount).toBe(3);
     expect(result.current.isSelected("b")).toBe(true);

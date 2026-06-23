@@ -63,7 +63,10 @@ export interface OidcProviderRequestDto {
 const normalizeStringArray = (values: readonly string[]): string[] =>
   values
     .map((value) => value.trim())
-    .filter((value, index, array) => value.length > 0 && array.indexOf(value) === index);
+    .filter(
+      (value, index, array) =>
+        value.length > 0 && array.indexOf(value) === index,
+    );
 
 const normalizeProviderRequest = (
   request: OidcProviderRequestDto,
@@ -119,18 +122,21 @@ export const oidcApi = {
   },
 
   deleteProvider: async (providerId: string): Promise<void> => {
-    await httpClient.delete(`auth/oidc/providers/${encodeURIComponent(providerId)}`);
+    await httpClient.delete(
+      `auth/oidc/providers/${encodeURIComponent(providerId)}`,
+    );
   },
 
   listLinks: async (): Promise<UserExternalIdentityDto[]> => {
-    const response = await httpClient.get<UserExternalIdentityDto[]>(
-      "auth/oidc/links",
-    );
+    const response =
+      await httpClient.get<UserExternalIdentityDto[]>("auth/oidc/links");
     return response.data;
   },
 
   unlink: async (identityId: string): Promise<void> => {
-    await httpClient.delete(`auth/oidc/links/${encodeURIComponent(identityId)}`);
+    await httpClient.delete(
+      `auth/oidc/links/${encodeURIComponent(identityId)}`,
+    );
   },
 
   createSignInAuthorizationUrl: async (
@@ -140,7 +146,9 @@ export const oidcApi = {
     const response = await httpClient.post<OidcAuthorizationUrlDto>(
       `auth/oidc/start/${encodeURIComponent(providerSlug)}/authorization-url`,
       {
-        returnUrl: request.returnUrl ? normalizeReturnUrl(request.returnUrl) : null,
+        returnUrl: request.returnUrl
+          ? normalizeReturnUrl(request.returnUrl)
+          : null,
         trustDevice: request.trustDevice,
       },
     );

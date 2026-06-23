@@ -34,7 +34,8 @@ export const AdminIdentityProvidersPage = () => {
   const confirm = useConfirm();
   const providersQuery = useAdminOidcProvidersQuery();
   const deleteMutation = useDeleteOidcProviderMutation();
-  const [editingProvider, setEditingProvider] = useState<OidcProviderDto | null>(null);
+  const [editingProvider, setEditingProvider] =
+    useState<OidcProviderDto | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
@@ -65,7 +66,9 @@ export const AdminIdentityProvidersPage = () => {
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const columnVisibilityTarget: ColumnVisibilityTarget = isMobile ? "mobile" : "desktop";
+  const columnVisibilityTarget: ColumnVisibilityTarget = isMobile
+    ? "mobile"
+    : "desktop";
   const [columnVisibilityModels, setColumnVisibilityModels] = useState(
     createInitialColumnVisibilityModels,
   );

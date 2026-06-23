@@ -91,8 +91,9 @@ const hasWizardAnswer = (answer: JsonValue | undefined): boolean => {
   return Object.values(answer).some((value) => hasWizardAnswer(value));
 };
 
-const toUsageAnswerKeys = (usage: Awaited<ReturnType<typeof settingsApi.getServerUsage>>): string[] =>
-  usage.map((value) => value.toLowerCase());
+const toUsageAnswerKeys = (
+  usage: Awaited<ReturnType<typeof settingsApi.getServerUsage>>,
+): string[] => usage.map((value) => value.toLowerCase());
 
 const toGeoIpLookupAnswerKey = (
   mode: Awaited<ReturnType<typeof settingsApi.getGeoIpLookupMode>>,
@@ -228,10 +229,7 @@ export function SetupWizardPage() {
         );
       })
       .catch((error) => {
-        console.warn(
-          `Failed to prefill setup step "${currentStepKey}"`,
-          error,
-        );
+        console.warn(`Failed to prefill setup step "${currentStepKey}"`, error);
       });
 
     return () => {

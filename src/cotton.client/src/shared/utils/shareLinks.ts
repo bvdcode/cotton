@@ -20,7 +20,9 @@ export const shareLinks = {
     try {
       const url = new URL(
         downloadUrl,
-        typeof window !== "undefined" ? window.location.origin : "http://localhost",
+        typeof window !== "undefined"
+          ? window.location.origin
+          : "http://localhost",
       );
 
       const qpToken = url.searchParams.get("token");
@@ -50,7 +52,10 @@ export const shareLinks = {
    * Backend public share endpoint for serving a file by share token.
    * Use view=download for download button, view=inline for preview.
    */
-  buildTokenDownloadUrl: (token: string, view?: "download" | "inline"): string => {
+  buildTokenDownloadUrl: (
+    token: string,
+    view?: "download" | "inline",
+  ): string => {
     const encoded = encodeURIComponent(token);
     const viewParam = view ? `?view=${view}` : "";
     return `/s/${encoded}${viewParam}`;

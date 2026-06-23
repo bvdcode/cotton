@@ -115,9 +115,10 @@ export const SharePage: React.FC = () => {
     return shareLinks.buildShareUrl(token);
   }, [token]);
 
-  const title = targetKind === "folder"
-    ? t("folder.title", { ns: "share" })
-    : t("title", { ns: "share" });
+  const title =
+    targetKind === "folder"
+      ? t("folder.title", { ns: "share" })
+      : t("title", { ns: "share" });
   usePageTitle(title);
 
   const {
@@ -358,4 +359,3 @@ export const SharePage: React.FC = () => {
     </Box>
   );
 };
-

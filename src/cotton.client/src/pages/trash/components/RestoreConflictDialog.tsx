@@ -16,7 +16,11 @@ import type { PromptDecision } from "../hooks/useTrashRestoreActions";
 type Prompt =
   | { kind: "confirm"; restorePath: string }
   | { kind: "parentMissing"; missingPath: string }
-  | { kind: "conflict"; conflictKind: RestoreConflictKind; conflictName: string };
+  | {
+      kind: "conflict";
+      conflictKind: RestoreConflictKind;
+      conflictName: string;
+    };
 
 type RestoreConflictDialogProps = {
   open: boolean;
@@ -37,11 +41,12 @@ export const RestoreConflictDialog: React.FC<RestoreConflictDialogProps> = ({
     return null;
   }
 
-  const promptKey = prompt.kind === "confirm"
-    ? `${itemName}:confirm:${prompt.restorePath}`
-    : prompt.kind === "parentMissing"
-      ? `${itemName}:parent:${prompt.missingPath}`
-      : `${itemName}:conflict:${prompt.conflictKind}:${prompt.conflictName}`;
+  const promptKey =
+    prompt.kind === "confirm"
+      ? `${itemName}:confirm:${prompt.restorePath}`
+      : prompt.kind === "parentMissing"
+        ? `${itemName}:parent:${prompt.missingPath}`
+        : `${itemName}:conflict:${prompt.conflictKind}:${prompt.conflictName}`;
 
   return (
     <RestoreConflictDialogContent
@@ -57,13 +62,7 @@ export const RestoreConflictDialog: React.FC<RestoreConflictDialogProps> = ({
 
 const RestoreConflictDialogContent: React.FC<
   Omit<RestoreConflictDialogProps, "prompt"> & { prompt: Prompt }
-> = ({
-  open,
-  itemName,
-  prompt,
-  showApplyToAll,
-  onAnswer,
-}) => {
+> = ({ open, itemName, prompt, showApplyToAll, onAnswer }) => {
   const { t } = useTranslation(["trash", "common"]);
   const [applyToAll, setApplyToAll] = useState(false);
 

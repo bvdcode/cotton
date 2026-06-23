@@ -14,9 +14,10 @@ export interface VaultState {
   lock: () => void;
 }
 
-let metadataKeyCache:
-  | { masterKey: CryptoKey; metadataKey: Promise<CryptoKey> }
-  | null = null;
+let metadataKeyCache: {
+  masterKey: CryptoKey;
+  metadataKey: Promise<CryptoKey>;
+} | null = null;
 let sessionPersistenceVersion = 0;
 
 export const useVault = create<VaultState>((set) => ({

@@ -25,7 +25,9 @@ const createQueryClient = () =>
 
 afterEach(() => {
   vi.restoreAllMocks();
-  defaultQueryClient.removeQueries({ queryKey: queryKeys.serverSettings.all() });
+  defaultQueryClient.removeQueries({
+    queryKey: queryKeys.serverSettings.all(),
+  });
 });
 
 describe("server settings query helpers", () => {
@@ -38,9 +40,9 @@ describe("server settings query helpers", () => {
     );
 
     expect(get).toHaveBeenCalledTimes(1);
-    expect(
-      queryClient.getQueryData(queryKeys.serverSettings.all()),
-    ).toEqual(sampleSettings);
+    expect(queryClient.getQueryData(queryKeys.serverSettings.all())).toEqual(
+      sampleSettings,
+    );
   });
 
   it("returns cached settings from an explicit client", () => {

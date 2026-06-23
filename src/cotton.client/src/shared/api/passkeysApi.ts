@@ -60,10 +60,15 @@ export const passkeysApi = {
   },
 
   delete: async (credentialId: string): Promise<void> => {
-    await httpClient.delete(`auth/passkeys/${encodeURIComponent(credentialId)}`);
+    await httpClient.delete(
+      `auth/passkeys/${encodeURIComponent(credentialId)}`,
+    );
   },
 
-  rename: async (credentialId: string, name: string): Promise<PasskeyCredential> => {
+  rename: async (
+    credentialId: string,
+    name: string,
+  ): Promise<PasskeyCredential> => {
     const response = await httpClient.put<PasskeyCredential>(
       `auth/passkeys/${encodeURIComponent(credentialId)}`,
       { name: name.trim() },

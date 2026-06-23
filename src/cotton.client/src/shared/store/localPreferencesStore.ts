@@ -66,8 +66,8 @@ export const useLocalPreferencesStore = create<LocalPreferencesState>()(
         let unlocked = false;
         set((state) => {
           const withinWindow =
-            state.developerSettingsUnlockClickExpiresAt !== null
-            && now <= state.developerSettingsUnlockClickExpiresAt;
+            state.developerSettingsUnlockClickExpiresAt !== null &&
+            now <= state.developerSettingsUnlockClickExpiresAt;
           const clickCount = withinWindow
             ? state.developerSettingsUnlockClickCount + 1
             : 1;

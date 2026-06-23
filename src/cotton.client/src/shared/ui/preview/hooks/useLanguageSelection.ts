@@ -1,14 +1,12 @@
 /**
  * Language Selection Hook
- * 
+ *
  * Single Responsibility: Manages programming language selection state
  * Encapsulates language detection and override logic
  */
 
 import { useCallback, useMemo } from "react";
-import {
-  useLocalPreferencesStore,
-} from "../../../store/localPreferencesStore";
+import { useLocalPreferencesStore } from "../../../store/localPreferencesStore";
 import { detectMonacoLanguageFromFileName } from "../../../utils/languageDetection";
 
 interface UseLanguageSelectionOptions {
@@ -29,28 +27,29 @@ export function useLanguageSelection({
   fileName,
   fileId,
 }: UseLanguageSelectionOptions): UseLanguageSelectionResult {
-  const setLanguageOverride = useLocalPreferencesStore((s) => s.setLanguageOverride);
+  const setLanguageOverride = useLocalPreferencesStore(
+    (s) => s.setLanguageOverride,
+  );
   const removeLanguageOverride = useLocalPreferencesStore(
     (s) => s.removeLanguageOverride,
   );
 
   const storedOverride = useLocalPreferencesStore(
-    useMemo(
-      () =>
-        (s) =>
-          s.languageOverrides[fileId] ?? null,
-      [fileId],
-    ),
+    useMemo(() => (s) => s.languageOverrides[fileId] ?? null, [fileId]),
   );
 
   const language = useMemo(() => {
-    if (storedOverride && storedOverride.trim().length > 0) return storedOverride;
+    if (storedOverride && storedOverride.trim().length > 0)
+      return storedOverride;
     return detectMonacoLanguageFromFileName(fileName);
   }, [fileName, storedOverride]);
 
-  const setLanguage = useCallback((newLanguage: string) => {
-    setLanguageOverride(fileId, newLanguage);
-  }, [fileId, setLanguageOverride]);
+  const setLanguage = useCallback(
+    (newLanguage: string) => {
+      setLanguageOverride(fileId, newLanguage);
+    },
+    [fileId, setLanguageOverride],
+  );
 
   const resetLanguage = useCallback(() => {
     removeLanguageOverride(fileId);

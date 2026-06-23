@@ -52,12 +52,14 @@ export const TextPreviewError: React.FC<TextPreviewErrorProps> = ({
               color="inherit"
               size="small"
               onClick={() => {
-                void filesApi.getDownloadLink(nodeFileId).then((url: string) => {
-                  const link = document.createElement("a");
-                  link.href = url;
-                  link.download = fileName;
-                  link.click();
-                });
+                void filesApi
+                  .getDownloadLink(nodeFileId)
+                  .then((url: string) => {
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = fileName;
+                    link.click();
+                  });
               }}
             >
               {t("common:actions.download")}

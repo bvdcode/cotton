@@ -43,7 +43,11 @@ export function TextPreview({
     isFileTooLarge,
   } = useTextFileContent(nodeFileId, fileSizeBytes, sourceFile);
 
-  const { saving, error: saveError, handleSave } = useTextFileSave(
+  const {
+    saving,
+    error: saveError,
+    handleSave,
+  } = useTextFileSave(
     nodeFileId,
     fileName,
     originalContent,

@@ -28,11 +28,13 @@ export const userPreferencesApi = {
     options?: { token?: string },
   ): Promise<UserPreferences> => {
     const token = options?.token ?? PREFERENCE_UPDATE_TOKEN;
-    const response = await httpClient.patch<unknown>(
+    const response = await httpClient.patch<unknown>(PREFERENCES_URL, patch, {
+      params: { token },
+    });
+    return parseValidated(
       PREFERENCES_URL,
-      patch,
-      { params: { token } },
+      response.data,
+      userPreferencesSchema,
     );
-    return parseValidated(PREFERENCES_URL, response.data, userPreferencesSchema);
   },
 };

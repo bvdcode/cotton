@@ -1,4 +1,10 @@
-import { Dialog, IconButton, Box, Typography, useMediaQuery } from "@mui/material";
+import {
+  Dialog,
+  IconButton,
+  Box,
+  Typography,
+  useMediaQuery,
+} from "@mui/material";
 import { Close } from "@mui/icons-material";
 import type { ReactNode } from "react";
 import { useTheme } from "@mui/material/styles";
@@ -91,7 +97,11 @@ export const PreviewModal = ({
               borderColor: "divider",
             }}
           >
-            <Typography variant="subtitle2" sx={{ flex: 1, minWidth: 0 }} noWrap>
+            <Typography
+              variant="subtitle2"
+              sx={{ flex: 1, minWidth: 0 }}
+              noWrap
+            >
               {title}
             </Typography>
             {headerActions}

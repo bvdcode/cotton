@@ -57,7 +57,9 @@ const createIdleTextPreviewState = (key: string): SharedTextPreviewState => ({
   content: null,
 });
 
-const createLoadingTextPreviewState = (key: string): SharedTextPreviewState => ({
+const createLoadingTextPreviewState = (
+  key: string,
+): SharedTextPreviewState => ({
   key,
   loading: true,
   error: null,
@@ -72,7 +74,12 @@ const buildTextPreviewKey = (args: {
   fileType: FileType | null;
   fileSizeBytes: number | null;
 }): string => {
-  if (!args.open || args.fileType !== "text" || !args.fileId || !args.fileName) {
+  if (
+    !args.open ||
+    args.fileType !== "text" ||
+    !args.fileId ||
+    !args.fileName
+  ) {
     return "";
   }
 
@@ -132,7 +139,8 @@ const useSharedTextPreview = ({
     return t("preview.errors.fileTooLarge", {
       ns: "files",
       size: formatTextPreviewSize(sizeBytes),
-      maxSize: Math.round(previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES / 1024) + " KB",
+      maxSize:
+        Math.round(previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES / 1024) + " KB",
     });
   }, [fileSizeBytes, t, textPreviewKey]);
   const [state, setState] = React.useState<SharedTextPreviewState>(() =>
@@ -158,7 +166,9 @@ const useSharedTextPreview = ({
         if (cancelled) return;
 
         if (!response.ok) {
-          throw new Error(t("preview.errors.loadFailed", { ns: "files", error: "" }));
+          throw new Error(
+            t("preview.errors.loadFailed", { ns: "files", error: "" }),
+          );
         }
 
         const content = await response.text();
@@ -217,7 +227,9 @@ const SharedModelHeaderActions = ({
       <Tooltip
         title={t("preview.model.actions.cycleLighting", {
           ns: "files",
-          preset: t("preview.model.lighting." + controls.lightingPreset, { ns: "files" }),
+          preset: t("preview.model.lighting." + controls.lightingPreset, {
+            ns: "files",
+          }),
         })}
       >
         <IconButton onClick={controls.cycleLightingPreset}>
@@ -245,7 +257,9 @@ const SharedModelHeaderActions = ({
       <Tooltip
         title={t("preview.model.actions.cycleSurface", {
           ns: "files",
-          preset: t("preview.model.surface." + controls.surfacePreset, { ns: "files" }),
+          preset: t("preview.model.surface." + controls.surfacePreset, {
+            ns: "files",
+          }),
         })}
       >
         <IconButton onClick={controls.cycleSurfacePreset}>
@@ -267,7 +281,9 @@ const SharedModelHeaderActions = ({
           <VerticalAlignBottom />
         </IconButton>
       </Tooltip>
-      <Tooltip title={t("preview.model.actions.togglePalette", { ns: "files" })}>
+      <Tooltip
+        title={t("preview.model.actions.togglePalette", { ns: "files" })}
+      >
         <IconButton
           onClick={(event) => {
             controls.togglePaletteAnchor(event.currentTarget);
@@ -471,15 +487,18 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     fileSizeBytes,
   });
   const modelControlsKey =
-    open && isModel && fileId
-      ? [fileId, defaultModelColor].join("\u0000")
-      : "";
+    open && isModel && fileId ? [fileId, defaultModelColor].join("\u0000") : "";
   const modelControls = useModelPreviewControls({
     stateKey: modelControlsKey,
     defaultMaterialColor: defaultModelColor,
   });
 
-  if (!open || !fileId || !fileName || !isSupportedSharedPreviewType(fileType)) {
+  if (
+    !open ||
+    !fileId ||
+    !fileName ||
+    !isSupportedSharedPreviewType(fileType)
+  ) {
     return null;
   }
 
@@ -493,7 +512,9 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
       title={headerLayout ? fileName : undefined}
       forceFullScreen={isModel}
       headerActions={
-        isModel ? <SharedModelHeaderActions controls={modelControls} /> : undefined
+        isModel ? (
+          <SharedModelHeaderActions controls={modelControls} />
+        ) : undefined
       }
     >
       {fileType === "pdf" && (

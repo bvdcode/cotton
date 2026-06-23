@@ -59,7 +59,8 @@ export const ClientEncryptionUnlockForm = ({
 
   const phraseWordCount = phrase.trim().split(/\s+/).filter(Boolean).length;
   const canSubmit =
-    !pending && (mode === "password" ? password.length > 0 : phraseWordCount === 24);
+    !pending &&
+    (mode === "password" ? password.length > 0 : phraseWordCount === 24);
 
   const handleSubmit = async () => {
     setError(null);
@@ -95,7 +96,9 @@ export const ClientEncryptionUnlockForm = ({
     }
   };
 
-  const visibilityLabel = passwordVisible ? t("password.hide") : t("password.show");
+  const visibilityLabel = passwordVisible
+    ? t("password.hide")
+    : t("password.show");
 
   return (
     <>
@@ -160,7 +163,9 @@ export const ClientEncryptionUnlockForm = ({
             sx={{ alignSelf: "flex-start", textTransform: "none" }}
             disabled={pending}
             onClick={() => {
-              setMode((value) => (value === "password" ? "phrase" : "password"));
+              setMode((value) =>
+                value === "password" ? "phrase" : "password",
+              );
               setError(null);
             }}
           >
@@ -174,7 +179,11 @@ export const ClientEncryptionUnlockForm = ({
         <Button onClick={onCancel} disabled={pending}>
           {cancelLabel ?? t("clientEncryption.unlockDialog.cancel")}
         </Button>
-        <Button variant="contained" disabled={!canSubmit} onClick={handleSubmit}>
+        <Button
+          variant="contained"
+          disabled={!canSubmit}
+          onClick={handleSubmit}
+        >
           {pending ? (
             <Stack direction="row" spacing={1} alignItems="center">
               <CircularProgress size={16} />

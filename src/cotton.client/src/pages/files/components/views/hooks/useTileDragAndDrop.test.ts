@@ -243,9 +243,7 @@ describe("useTileDragAndDrop drag over and leave", () => {
     );
     const dataTransfer = new FakeDataTransfer();
     writeMoveDragPayload(dataTransfer as unknown as DataTransfer, {
-      items: [
-        { id: "target", kind: "folder", sourceParentId: "parent-1" },
-      ],
+      items: [{ id: "target", kind: "folder", sourceParentId: "parent-1" }],
     });
     const itemEvent = makeDragEvent(dataTransfer);
 
@@ -341,10 +339,7 @@ describe("useTileDragAndDrop drop", () => {
     dataTransfer.setData(MOVE_DRAG_DATA_MIME, "{not-json");
 
     act(() =>
-      result.current.handleMoveDrop(
-        "target",
-        makeDragEvent(dataTransfer),
-      ),
+      result.current.handleMoveDrop("target", makeDragEvent(dataTransfer)),
     );
 
     expect(moveSupport.onMove).not.toHaveBeenCalled();

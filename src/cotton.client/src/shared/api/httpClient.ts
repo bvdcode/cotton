@@ -47,7 +47,9 @@ const collectStringMessages = (value: unknown, output: string[]): void => {
   Object.values(value).forEach((entry) => collectStringMessages(entry, output));
 };
 
-const extractApiValidationErrorMessage = (responseData: unknown): string | null => {
+const extractApiValidationErrorMessage = (
+  responseData: unknown,
+): string | null => {
   if (!isRecord(responseData)) {
     return null;
   }
@@ -62,7 +64,9 @@ const extractApiValidationErrorMessage = (responseData: unknown): string | null 
   return messages[0] ?? null;
 };
 
-export const extractApiErrorMessage = (responseData: unknown): string | null => {
+export const extractApiErrorMessage = (
+  responseData: unknown,
+): string | null => {
   const plainTextMessage = normalizeMessage(responseData);
   if (plainTextMessage) {
     return plainTextMessage;
@@ -88,10 +92,7 @@ export const getApiErrorMessage = (error: unknown): string | null => {
   return extractApiErrorMessage(error.response?.data);
 };
 
-const dispatchApiErrorToast = (
-  error: AxiosError,
-  message: string,
-): void => {
+const dispatchApiErrorToast = (error: AxiosError, message: string): void => {
   if (typeof window === "undefined") {
     return;
   }
@@ -148,7 +149,10 @@ export const showApiErrorToast = (
 };
 
 const resolveBrowserTimeZone = (): string | null => {
-  if (typeof Intl === "undefined" || typeof Intl.DateTimeFormat !== "function") {
+  if (
+    typeof Intl === "undefined" ||
+    typeof Intl.DateTimeFormat !== "function"
+  ) {
     return null;
   }
 

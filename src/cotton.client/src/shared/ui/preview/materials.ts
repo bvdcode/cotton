@@ -46,7 +46,9 @@ export const disposeObject3D = (object: THREE.Object3D): void => {
 const hasColorProperty = (
   material: THREE.Material,
 ): material is THREE.Material & { color: THREE.Color } => {
-  const materialWithColor = material as THREE.Material & { color?: THREE.Color };
+  const materialWithColor = material as THREE.Material & {
+    color?: THREE.Color;
+  };
   return "color" in material && materialWithColor.color instanceof THREE.Color;
 };
 
@@ -490,11 +492,31 @@ const applySurfacePresetToMaterial = (
     return;
   }
 
-  applyStandardSurfacePreset(material, surfacePreset, originalState, hasColorOverride);
+  applyStandardSurfacePreset(
+    material,
+    surfacePreset,
+    originalState,
+    hasColorOverride,
+  );
   applyEnvMapPreset(material, surfacePreset, originalState, hasColorOverride);
-  applyShininessPreset(material, surfacePreset, originalState, hasColorOverride);
-  applyReflectivityPreset(material, surfacePreset, originalState, hasColorOverride);
-  applyPhysicalSurfacePreset(material, surfacePreset, originalState, hasColorOverride);
+  applyShininessPreset(
+    material,
+    surfacePreset,
+    originalState,
+    hasColorOverride,
+  );
+  applyReflectivityPreset(
+    material,
+    surfacePreset,
+    originalState,
+    hasColorOverride,
+  );
+  applyPhysicalSurfacePreset(
+    material,
+    surfacePreset,
+    originalState,
+    hasColorOverride,
+  );
   applyFlatShadingPreset(material, surfacePreset, originalState);
   material.needsUpdate = true;
 };

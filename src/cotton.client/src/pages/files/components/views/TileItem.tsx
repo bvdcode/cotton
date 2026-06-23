@@ -295,7 +295,8 @@ const FolderTileItem = ({
         onCancelRename={folderOperations.onCancelRename}
         onStartRename={
           folderOperations.onStartRename
-            ? () => folderOperations.onStartRename?.(tile.node.id, tile.node.name)
+            ? () =>
+                folderOperations.onStartRename?.(tile.node.id, tile.node.name)
             : undefined
         }
         onDelete={
@@ -388,7 +389,9 @@ const FilePreviewIcon = ({
     <BlurredPreviewImage
       previewUrl={previewUrl}
       alt={file.name}
-      blurOpacity={typeInfo.type === "image" || typeInfo.type === "video" ? 0.6 : 0.5}
+      blurOpacity={
+        typeInfo.type === "image" || typeInfo.type === "video" ? 0.6 : 0.5
+      }
       cursor="inherit"
       shouldLightenBackdrop={shouldLightenPreviewBackdrop}
       invertInDark={typeInfo.type === "text"}
@@ -404,11 +407,12 @@ const useFileIconContainerSx = (
   const typeInfo = getFileTypeInfo(file.name, file.contentType, {
     requiresVideoTranscoding: file.requiresVideoTranscoding ?? false,
   });
-  const hasPreviewUrl = typeof getFileIcon(
-    file.previewHashEncryptedHex ?? null,
-    file.name,
-    file.contentType,
-  ) === "string";
+  const hasPreviewUrl =
+    typeof getFileIcon(
+      file.previewHashEncryptedHex ?? null,
+      file.name,
+      file.contentType,
+    ) === "string";
 
   if (!hasPreviewUrl || !isDarkMode) {
     return undefined;
@@ -530,7 +534,10 @@ const FileTileItem = ({
       onToggle?.(shiftKey);
       return;
     }
-    if ((typeInfo.type === "image" || typeInfo.type === "video") && fileOperations.onMediaClick) {
+    if (
+      (typeInfo.type === "image" || typeInfo.type === "video") &&
+      fileOperations.onMediaClick
+    ) {
       fileOperations.onMediaClick(tile.file.id);
       return;
     }

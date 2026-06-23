@@ -46,9 +46,12 @@ export const useTrashListData = ({
     enabled: isListLayout && !!nodeId,
   });
 
-  const handlePaginationChange = useCallback((page: number, pageSize: number) => {
-    setPagination({ nodeId, page, pageSize });
-  }, [nodeId]);
+  const handlePaginationChange = useCallback(
+    (page: number, pageSize: number) => {
+      setPagination({ nodeId, page, pageSize });
+    },
+    [nodeId],
+  );
 
   const reloadListPage = useCallback(() => {
     if (!isListLayout || !nodeId) {

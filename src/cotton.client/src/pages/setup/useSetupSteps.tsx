@@ -20,77 +20,89 @@ const answerMatchesCondition = (
   answer: JsonValue | undefined,
   expected: string,
 ): boolean =>
-  Array.isArray(answer)
-    ? answer.includes(expected)
-    : answer === expected;
+  Array.isArray(answer) ? answer.includes(expected) : answer === expected;
 
 export function useSetupSteps(
   answers: Record<string, JsonValue>,
   updateAnswer: (key: string, value: JsonValue) => void,
-  updateFormField: (stepKey: string, fieldKey: string, value: string | boolean) => void,
+  updateFormField: (
+    stepKey: string,
+    fieldKey: string,
+    value: string | boolean,
+  ) => void,
 ) {
   const { t } = useTranslation();
 
-  const checkRequires = useCallback((requires?: string): { met: boolean; requiredLabel?: string; questionTitle?: string } => {
-    if (!requires) return { met: true };
-    
-    const [reqKey, reqValue] = requires.split(":");
-    const currentValue = answers[reqKey];
-    
-    // Check if it's an array (multi-select)
-    const met = answerMatchesCondition(currentValue, reqValue);
-    
-    // If not met, get the label of the required option and question title
-    if (!met) {
-      const step = setupStepDefinitions.find((s) => s.key === reqKey);
-      if (step && step.type === "single") {
-        const optionsList = "getOptions" in step && step.getOptions 
-          ? step.getOptions() 
-          : step.options;
-        const option = optionsList.find((o) => o.key === reqValue);
-        if (option) {
-          return { 
-            met: false, 
-            requiredLabel: option.label(),
-            questionTitle: step.title()
-          };
-        }
-      }
-    }
-    
-    return { met };
-  }, [answers]);
+  const checkRequires = useCallback(
+    (
+      requires?: string,
+    ): { met: boolean; requiredLabel?: string; questionTitle?: string } => {
+      if (!requires) return { met: true };
 
-  const checkDisabled = useCallback((disabledIfAny?: string[]) => {
-    if (!disabledIfAny || disabledIfAny.length === 0) {
-      return { disabled: false, reasons: [] };
-    }
+      const [reqKey, reqValue] = requires.split(":");
+      const currentValue = answers[reqKey];
 
-    const reasons: string[] = [];
-    for (const condition of disabledIfAny) {
-      const [key, value] = condition.split(":");
-      const currentValue = answers[key];
-      
-      if (answerMatchesCondition(currentValue, value)) {
-        // Find the label for this option
-        const step = setupStepDefinitions.find((s) => s.key === key);
+      // Check if it's an array (multi-select)
+      const met = answerMatchesCondition(currentValue, reqValue);
+
+      // If not met, get the label of the required option and question title
+      if (!met) {
+        const step = setupStepDefinitions.find((s) => s.key === reqKey);
         if (step && step.type === "single") {
-          const optionsList = "getOptions" in step && step.getOptions 
-            ? step.getOptions() 
-            : step.options;
-          const option = optionsList.find((o) => o.key === value);
+          const optionsList =
+            "getOptions" in step && step.getOptions
+              ? step.getOptions()
+              : step.options;
+          const option = optionsList.find((o) => o.key === reqValue);
           if (option) {
-            reasons.push(option.label());
+            return {
+              met: false,
+              requiredLabel: option.label(),
+              questionTitle: step.title(),
+            };
           }
         }
       }
-    }
 
-    return {
-      disabled: reasons.length > 0,
-      reasons,
-    };
-  }, [answers]);
+      return { met };
+    },
+    [answers],
+  );
+
+  const checkDisabled = useCallback(
+    (disabledIfAny?: string[]) => {
+      if (!disabledIfAny || disabledIfAny.length === 0) {
+        return { disabled: false, reasons: [] };
+      }
+
+      const reasons: string[] = [];
+      for (const condition of disabledIfAny) {
+        const [key, value] = condition.split(":");
+        const currentValue = answers[key];
+
+        if (answerMatchesCondition(currentValue, value)) {
+          // Find the label for this option
+          const step = setupStepDefinitions.find((s) => s.key === key);
+          if (step && step.type === "single") {
+            const optionsList =
+              "getOptions" in step && step.getOptions
+                ? step.getOptions()
+                : step.options;
+            const option = optionsList.find((o) => o.key === value);
+            if (option) {
+              reasons.push(option.label());
+            }
+          }
+        }
+      }
+
+      return {
+        disabled: reasons.length > 0,
+        reasons,
+      };
+    },
+    [answers],
+  );
 
   const buildSteps = useCallback((): BuiltStep[] => {
     const steps: BuiltStep[] = [];
@@ -100,7 +112,7 @@ export function useSetupSteps(
       if (def.requires) {
         const [reqKey, reqValue] = def.requires.split(":");
         const currentValue = answers[reqKey];
-        
+
         // Check if it's an array (multi-select)
         if (Array.isArray(currentValue)) {
           if (!currentValue.includes(reqValue)) {
@@ -117,16 +129,20 @@ export function useSetupSteps(
         const options = optionsList.map((opt) => {
           const requiresCheck = checkRequires(opt.requires);
           const { disabled, reasons } = checkDisabled(opt.disabledIfAny);
-          
+
           const isDisabled = !requiresCheck.met || disabled;
           let disabledTooltip: string | undefined;
-          
-          if (!requiresCheck.met && requiresCheck.requiredLabel && requiresCheck.questionTitle) {
+
+          if (
+            !requiresCheck.met &&
+            requiresCheck.requiredLabel &&
+            requiresCheck.questionTitle
+          ) {
             disabledTooltip = `${t("setup:questions.requiresTooltip")} "${requiresCheck.requiredLabel}" ${t("setup:questions.inQuestion")} "${requiresCheck.questionTitle}"`;
           } else if (disabled && reasons.length > 0) {
             disabledTooltip = `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`;
           }
-          
+
           return {
             key: opt.key,
             label: opt.label(),
@@ -150,7 +166,9 @@ export function useSetupSteps(
             } else if (def.getDefaultValue && answers[def.key] === undefined) {
               // Set default value on first render
               const initialValue = def.getDefaultValue();
-              const defaultOption = options.find(opt => opt.value === initialValue);
+              const defaultOption = options.find(
+                (opt) => opt.value === initialValue,
+              );
               if (defaultOption) {
                 selectedKey = defaultOption.key;
                 updateAnswer(def.key, selectedKey);
@@ -214,16 +232,20 @@ export function useSetupSteps(
         const options = def.options.map((opt) => {
           const requiresCheck = checkRequires(opt.requires);
           const { disabled, reasons } = checkDisabled(opt.disabledIfAny);
-          
+
           const isDisabled = !requiresCheck.met || disabled;
           let disabledTooltip: string | undefined;
-          
-          if (!requiresCheck.met && requiresCheck.requiredLabel && requiresCheck.questionTitle) {
+
+          if (
+            !requiresCheck.met &&
+            requiresCheck.requiredLabel &&
+            requiresCheck.questionTitle
+          ) {
             disabledTooltip = `${t("setup:questions.requiresTooltip")} "${requiresCheck.requiredLabel}" ${t("setup:questions.inQuestion")} "${requiresCheck.questionTitle}"`;
           } else if (disabled && reasons.length > 0) {
             disabledTooltip = `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`;
           }
-          
+
           return {
             key: opt.key,
             label: opt.label(),
@@ -295,11 +317,15 @@ export function useSetupSteps(
             if (!formData || typeof formData !== "object") return false;
             // All fields must be filled (except boolean which are optional)
             return def.fields.every((field) => {
-              const value = (formData as Record<string, string | boolean>)[field.key];
+              const value = (formData as Record<string, string | boolean>)[
+                field.key
+              ];
               // Boolean fields are always valid
               if (field.type === "boolean") return true;
               // For text fields, check if value exists and is not empty
-              return value && typeof value === "string" && value.trim().length > 0;
+              return (
+                value && typeof value === "string" && value.trim().length > 0
+              );
             });
           },
         });

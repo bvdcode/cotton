@@ -39,7 +39,9 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
 }) => {
   const urlCacheRef = React.useRef<Map<string, string>>(new Map());
 
-  const effectivePlaylist = React.useMemo<ReadonlyArray<AudioPlaylistItem>>(() => {
+  const effectivePlaylist = React.useMemo<
+    ReadonlyArray<AudioPlaylistItem>
+  >(() => {
     const list = playlist ?? [];
     if (list.length > 0 && list.some((item) => item.id === nodeFileId)) {
       return list;
@@ -47,14 +49,18 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
     return [{ id: nodeFileId, name: fileName }];
   }, [fileName, nodeFileId, playlist]);
 
-  const [selectedFileId, setSelectedFileId] = React.useState<string>(nodeFileId);
+  const [selectedFileId, setSelectedFileId] =
+    React.useState<string>(nodeFileId);
   const selectedFileStillPresent = effectivePlaylist.some(
     (item) => item.id === selectedFileId,
   );
   const effectiveSelectedFileId = selectedFileStillPresent
     ? selectedFileId
     : nodeFileId;
-  const currentIndex = findIndexById(effectivePlaylist, effectiveSelectedFileId);
+  const currentIndex = findIndexById(
+    effectivePlaylist,
+    effectiveSelectedFileId,
+  );
 
   const currentItem = effectivePlaylist[currentIndex];
 
@@ -122,13 +128,17 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
 
   const handleNext = React.useCallback(() => {
     const nextIndex =
-      currentIndex + 1 < effectivePlaylist.length ? currentIndex + 1 : currentIndex;
+      currentIndex + 1 < effectivePlaylist.length
+        ? currentIndex + 1
+        : currentIndex;
     selectIndex(nextIndex);
   }, [currentIndex, effectivePlaylist.length, selectIndex]);
 
   const handleEnded = React.useCallback(() => {
     const nextIndex =
-      currentIndex + 1 < effectivePlaylist.length ? currentIndex + 1 : currentIndex;
+      currentIndex + 1 < effectivePlaylist.length
+        ? currentIndex + 1
+        : currentIndex;
     selectIndex(nextIndex);
   }, [currentIndex, effectivePlaylist.length, selectIndex]);
 
@@ -160,9 +170,10 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
         "& .rhap_main-controls-button, & .rhap_volume-button": {
           color: theme.palette.text.primary,
         },
-        "& .rhap_repeat-button, & .rhap_forward-button, & .rhap_rewind-button": {
-          color: theme.palette.text.primary,
-        },
+        "& .rhap_repeat-button, & .rhap_forward-button, & .rhap_rewind-button":
+          {
+            color: theme.palette.text.primary,
+          },
       })}
     >
       {loading && (

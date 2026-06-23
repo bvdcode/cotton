@@ -44,7 +44,9 @@ export async function decryptChunk(
   aad: Uint8Array,
 ): Promise<Uint8Array> {
   if (tag.length !== GCM_TAG_BYTES) {
-    throw new CorruptedContainerError("Ciphertext chunk has an invalid GCM tag.");
+    throw new CorruptedContainerError(
+      "Ciphertext chunk has an invalid GCM tag.",
+    );
   }
 
   const iv = chunkNonce(noncePrefix, chunkIndex);
@@ -65,6 +67,8 @@ export async function decryptChunk(
     );
     return new Uint8Array(buffer);
   } catch {
-    throw new CorruptedContainerError(`Chunk ${chunkIndex} failed authentication.`);
+    throw new CorruptedContainerError(
+      `Chunk ${chunkIndex} failed authentication.`,
+    );
   }
 }

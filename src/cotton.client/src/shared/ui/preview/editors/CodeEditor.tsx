@@ -1,6 +1,6 @@
 /**
  * Code Editor Component
- * 
+ *
  * Single Responsibility: Provides syntax-highlighted code editing
  * Uses Monaco Editor with automatic language detection
  */
@@ -19,27 +19,28 @@ export const CodeEditor: React.FC<IEditorProps> = ({
   language: languageOverride,
 }) => {
   const theme = useTheme();
-  const language = languageOverride || detectMonacoLanguageFromFileName(fileName);
-  const monacoTheme = theme.palette.mode === 'dark' ? 'vs-dark' : 'vs-light';
+  const language =
+    languageOverride || detectMonacoLanguageFromFileName(fileName);
+  const monacoTheme = theme.palette.mode === "dark" ? "vs-dark" : "vs-light";
 
   return (
     <Box sx={{ height: "100%", width: "100%" }}>
       <Editor
         height="100%"
         language={language}
-        value={value || ''}
-        onChange={(val) => onChange(val || '')}
+        value={value || ""}
+        onChange={(val) => onChange(val || "")}
         theme={monacoTheme}
         options={{
           readOnly: !isEditing,
           minimap: { enabled: true },
           fontSize: 14,
-          lineNumbers: 'on',
+          lineNumbers: "on",
           scrollBeyondLastLine: false,
           automaticLayout: true,
-          wordWrap: 'on',
+          wordWrap: "on",
           folding: true,
-          renderWhitespace: 'selection',
+          renderWhitespace: "selection",
           tabSize: 2,
         }}
         loading={

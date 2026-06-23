@@ -17,17 +17,13 @@ const publicBaseUrlQueryOptions = () => ({
   staleTime: SERVER_SETTINGS_STALE_TIME_MS,
 });
 
-export const useServerSettingsQuery = (
-  options: { enabled?: boolean } = {},
-) =>
+export const useServerSettingsQuery = (options: { enabled?: boolean } = {}) =>
   useQuery<ServerSettings>({
     ...serverSettingsQueryOptions(),
     enabled: options.enabled ?? true,
   });
 
-export const usePublicBaseUrlQuery = (
-  options: { enabled?: boolean } = {},
-) =>
+export const usePublicBaseUrlQuery = (options: { enabled?: boolean } = {}) =>
   useQuery<string>({
     ...publicBaseUrlQueryOptions(),
     enabled: options.enabled ?? true,
@@ -35,7 +31,8 @@ export const usePublicBaseUrlQuery = (
 
 export const fetchServerSettings = (
   queryClient: QueryClient,
-): Promise<ServerSettings> => queryClient.fetchQuery(serverSettingsQueryOptions());
+): Promise<ServerSettings> =>
+  queryClient.fetchQuery(serverSettingsQueryOptions());
 
 export const invalidateServerSettings = async (
   queryClient: QueryClient,

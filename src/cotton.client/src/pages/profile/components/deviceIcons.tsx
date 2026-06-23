@@ -92,8 +92,7 @@ export const getDeviceIcon = (device: string) => {
   if (deviceMatchers.gameConsole(deviceLower))
     return <SportsEsportsIcon sx={ICON_STYLES} />;
   if (deviceMatchers.bot(deviceLower)) return <SmartToyIcon sx={ICON_STYLES} />;
-  if (deviceMatchers.script(deviceLower))
-    return <CodeIcon sx={ICON_STYLES} />;
+  if (deviceMatchers.script(deviceLower)) return <CodeIcon sx={ICON_STYLES} />;
   if (deviceMatchers.server(deviceLower)) return <DnsIcon sx={ICON_STYLES} />;
   if (deviceMatchers.mobile(deviceLower))
     return <PhoneIphoneIcon sx={ICON_STYLES} />;

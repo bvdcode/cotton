@@ -46,10 +46,8 @@ export const useFolderClientEncryptionActions = ({
   const [isDecryptingEncryptedFiles, setIsDecryptingEncryptedFiles] =
     useState(false);
 
-  const activeNode =
-    nodeId && currentNode?.id === nodeId ? currentNode : null;
-  const activeContent =
-    nodeId && content?.id === nodeId ? content : undefined;
+  const activeNode = nodeId && currentNode?.id === nodeId ? currentNode : null;
+  const activeContent = nodeId && content?.id === nodeId ? content : undefined;
   const folderPolicyEnabled =
     providedFolderPolicyEnabled ??
     isFolderEncryptionPolicyEnabled(activeNode?.metadata);
@@ -57,15 +55,17 @@ export const useFolderClientEncryptionActions = ({
   const plainFiles = useMemo(
     () =>
       folderPolicyEnabled
-        ? (activeContent?.files.filter((file) => !isFileEncrypted(file.metadata)) ??
-          [])
+        ? (activeContent?.files.filter(
+            (file) => !isFileEncrypted(file.metadata),
+          ) ?? [])
         : [],
     [activeContent?.files, folderPolicyEnabled],
   );
 
   const encryptedFiles = useMemo(
     () =>
-      activeContent?.files.filter((file) => isFileEncrypted(file.metadata)) ?? [],
+      activeContent?.files.filter((file) => isFileEncrypted(file.metadata)) ??
+      [],
     [activeContent?.files],
   );
 
@@ -97,7 +97,9 @@ export const useFolderClientEncryptionActions = ({
 
       let filesToEncrypt = plainFiles;
       try {
-        const scan = await collectPlainFilesInFoldersForClientEncryption([nodeId]);
+        const scan = await collectPlainFilesInFoldersForClientEncryption([
+          nodeId,
+        ]);
         if (scan.truncated) {
           scanIncomplete = true;
         }

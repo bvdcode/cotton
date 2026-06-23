@@ -33,7 +33,9 @@ export const useTextFileContent = (
         setLoading(true);
         setError(null);
 
-        const encrypted = sourceFile ? isFileEncrypted(sourceFile.metadata) : false;
+        const encrypted = sourceFile
+          ? isFileEncrypted(sourceFile.metadata)
+          : false;
         const maxPreviewSizeBytes = encrypted
           ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
           : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
@@ -52,9 +54,10 @@ export const useTextFileContent = (
           return;
         }
 
-        const downloadUrl = encrypted && sourceFile
-          ? (readableFile = await getReadableFileUrl(sourceFile)).url
-          : await filesApi.getDownloadLink(nodeFileId);
+        const downloadUrl =
+          encrypted && sourceFile
+            ? (readableFile = await getReadableFileUrl(sourceFile)).url
+            : await filesApi.getDownloadLink(nodeFileId);
         const response = await fetch(downloadUrl);
 
         if (!response.ok) {

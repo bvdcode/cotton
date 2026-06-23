@@ -1,8 +1,5 @@
 import { Box, Chip, Stack, Tooltip, Typography } from "@mui/material";
-import {
-  GridActionsCellItem,
-  type GridColDef,
-} from "@mui/x-data-grid";
+import { GridActionsCellItem, type GridColDef } from "@mui/x-data-grid";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { useMemo } from "react";

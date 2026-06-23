@@ -22,7 +22,10 @@ interface DropHandlersForGoUp {
 
 interface DropHandlersForBreadcrumbs {
   canAccept: (targetCrumbId: string) => boolean;
-  onDragOver: (targetCrumbId: string, event: React.DragEvent<HTMLElement>) => void;
+  onDragOver: (
+    targetCrumbId: string,
+    event: React.DragEvent<HTMLElement>,
+  ) => void;
   onDrop: (targetCrumbId: string, event: React.DragEvent<HTMLElement>) => void;
 }
 
@@ -259,22 +262,25 @@ export const useFileMoveController = ({
     };
   }, [canAcceptDropOn, goUpDropActive, goUpParentId, handleMoveItems]);
 
-  const breadcrumbsDropHandlers = useMemo<DropHandlersForBreadcrumbs>(() => ({
-    canAccept: (targetCrumbId) => targetCrumbId !== nodeId,
-    onDragOver: (targetCrumbId, event) => {
-      if (!canAcceptDropOn(event, targetCrumbId)) return;
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
-    },
-    onDrop: (targetCrumbId, event) => {
-      if (!isMoveDrag(event.dataTransfer)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const payload = readMoveDragPayload(event.dataTransfer);
-      if (!payload || payload.items.length === 0) return;
-      handleMoveItems(payload.items, targetCrumbId);
-    },
-  }), [canAcceptDropOn, handleMoveItems, nodeId]);
+  const breadcrumbsDropHandlers = useMemo<DropHandlersForBreadcrumbs>(
+    () => ({
+      canAccept: (targetCrumbId) => targetCrumbId !== nodeId,
+      onDragOver: (targetCrumbId, event) => {
+        if (!canAcceptDropOn(event, targetCrumbId)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+      },
+      onDrop: (targetCrumbId, event) => {
+        if (!isMoveDrag(event.dataTransfer)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const payload = readMoveDragPayload(event.dataTransfer);
+        if (!payload || payload.items.length === 0) return;
+        handleMoveItems(payload.items, targetCrumbId);
+      },
+    }),
+    [canAcceptDropOn, handleMoveItems, nodeId],
+  );
 
   const moveSupport = useMemo<MoveSupport | undefined>(() => {
     if (!nodeId) return undefined;
@@ -288,7 +294,9 @@ export const useFileMoveController = ({
   const handleCutFolder = useCallback(
     (folderId: string) => {
       if (!nodeId) return;
-      moveOps.cutItems([{ id: folderId, kind: "folder", sourceParentId: nodeId }]);
+      moveOps.cutItems([
+        { id: folderId, kind: "folder", sourceParentId: nodeId },
+      ]);
       onItemsCut?.();
       showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
     },

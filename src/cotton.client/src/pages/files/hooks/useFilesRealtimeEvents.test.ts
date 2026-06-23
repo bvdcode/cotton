@@ -119,7 +119,13 @@ describe("shouldInvalidateCurrentNode", () => {
     expect(
       shouldInvalidateCurrentNode(
         HUB_METHODS.NodeMoved,
-        [{ node: { id: deletedFileId }, oldParentId: currentNodeId, newParentId: otherNodeId }],
+        [
+          {
+            node: { id: deletedFileId },
+            oldParentId: currentNodeId,
+            newParentId: otherNodeId,
+          },
+        ],
         currentNodeId,
       ),
     ).toBe(true);
@@ -127,7 +133,13 @@ describe("shouldInvalidateCurrentNode", () => {
     expect(
       shouldInvalidateCurrentNode(
         HUB_METHODS.NodeMoved,
-        [{ node: { id: deletedFileId }, oldParentId: otherNodeId, newParentId: currentNodeId }],
+        [
+          {
+            node: { id: deletedFileId },
+            oldParentId: otherNodeId,
+            newParentId: currentNodeId,
+          },
+        ],
         currentNodeId,
       ),
     ).toBe(true);

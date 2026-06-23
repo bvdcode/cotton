@@ -4,7 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   renameDeleteOptions: undefined as
     | {
-        renameFile: (fileId: string, newName: string) => Promise<boolean | void>;
+        renameFile: (
+          fileId: string,
+          newName: string,
+        ) => Promise<boolean | void>;
       }
     | undefined,
   renameFile: vi.fn(),

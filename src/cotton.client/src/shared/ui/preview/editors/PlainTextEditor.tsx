@@ -1,6 +1,6 @@
 /**
  * Plain Text Editor Component
- * 
+ *
  * Single Responsibility: Handles plain text rendering and editing
  * with preserved whitespace and line breaks
  */
@@ -17,7 +17,7 @@ export const PlainTextEditor: React.FC<IEditorProps> = ({
     return (
       <Box
         component="textarea"
-        value={value || ''}
+        value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         sx={{
           width: "100%",

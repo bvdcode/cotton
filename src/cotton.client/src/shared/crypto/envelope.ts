@@ -10,7 +10,10 @@ import {
   wrapMasterKey,
 } from "./keys";
 import type { Argon2idParams } from "./keys";
-import { generateRecoveryPhrase, recoveryPhraseToKdfSecret } from "./recoveryKey";
+import {
+  generateRecoveryPhrase,
+  recoveryPhraseToKdfSecret,
+} from "./recoveryKey";
 import {
   CorruptedContainerError,
   InvalidCryptoInputError,
@@ -48,7 +51,9 @@ export function decodeEnvelopePreference(value: string): Uint8Array {
   try {
     return base64ToBytes(value);
   } catch {
-    throw new CorruptedContainerError("Envelope preference is not valid base64.");
+    throw new CorruptedContainerError(
+      "Envelope preference is not valid base64.",
+    );
   }
 }
 
@@ -175,19 +180,33 @@ function parseEnvelope(blob: Uint8Array): EnvelopeData {
   offset += 1;
 
   if (version !== ENVELOPE_VERSION) {
-    throw new UnsupportedVersionError(`Unsupported envelope version: ${version}.`);
+    throw new UnsupportedVersionError(
+      `Unsupported envelope version: ${version}.`,
+    );
   }
 
   if (kdfAlgorithm !== KDF_ARGON2ID) {
-    throw new UnsupportedVersionError(`Unsupported envelope KDF: ${kdfAlgorithm}.`);
+    throw new UnsupportedVersionError(
+      `Unsupported envelope KDF: ${kdfAlgorithm}.`,
+    );
   }
 
-  const password = readWrapSection(blob, view, () => offset, (next) => {
-    offset = next;
-  });
-  const recovery = readWrapSection(blob, view, () => offset, (next) => {
-    offset = next;
-  });
+  const password = readWrapSection(
+    blob,
+    view,
+    () => offset,
+    (next) => {
+      offset = next;
+    },
+  );
+  const recovery = readWrapSection(
+    blob,
+    view,
+    () => offset,
+    (next) => {
+      offset = next;
+    },
+  );
 
   if (offset !== blob.length) {
     throw new CorruptedContainerError("Envelope has trailing bytes.");
@@ -225,7 +244,9 @@ function readWrapSection(
   let offset = getOffset();
 
   if (offset + WRAP_SECTION_FIXED_BYTES > blob.length) {
-    throw new CorruptedContainerError("Envelope is truncated inside wrap section.");
+    throw new CorruptedContainerError(
+      "Envelope is truncated inside wrap section.",
+    );
   }
 
   const salt = blob.slice(offset, offset + KDF_SALT_BYTES);
@@ -239,14 +260,18 @@ function readWrapSection(
   const kdfParams = { memoryKiB, iterations, parallelism };
 
   if (!isValidArgon2idParams(kdfParams)) {
-    throw new CorruptedContainerError("Envelope contains invalid KDF parameters.");
+    throw new CorruptedContainerError(
+      "Envelope contains invalid KDF parameters.",
+    );
   }
 
   const wrappedLength = view.getUint16(offset, false);
   offset += 2;
 
   if (wrappedLength <= 0 || offset + wrappedLength > blob.length) {
-    throw new CorruptedContainerError("Envelope is truncated inside wrapped key.");
+    throw new CorruptedContainerError(
+      "Envelope is truncated inside wrapped key.",
+    );
   }
 
   const wrappedMasterKey = blob.slice(offset, offset + wrappedLength);
@@ -258,7 +283,9 @@ function readWrapSection(
 
 function assertWrapSection(section: EnvelopeWrapSection): void {
   if (section.salt.length !== KDF_SALT_BYTES) {
-    throw new InvalidCryptoInputError(`Envelope salt must be ${KDF_SALT_BYTES} bytes.`);
+    throw new InvalidCryptoInputError(
+      `Envelope salt must be ${KDF_SALT_BYTES} bytes.`,
+    );
   }
 
   if (!isValidArgon2idParams(section.kdfParams)) {

@@ -1,8 +1,6 @@
 const DATE_PREFIX_RE = /^(\d{4})-(\d{2})-(\d{2})/;
 
-export const toDateInputValue = (
-  value: string | null | undefined,
-): string => {
+export const toDateInputValue = (value: string | null | undefined): string => {
   if (!value) return "";
 
   const trimmed = value.trim();
@@ -23,7 +21,11 @@ export const tryParseDateOnly = (value: string): Date | null => {
   const monthIndex = Number(match[2]) - 1;
   const day = Number(match[3]);
 
-  if (!Number.isFinite(year) || !Number.isFinite(monthIndex) || !Number.isFinite(day)) {
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(monthIndex) ||
+    !Number.isFinite(day)
+  ) {
     return null;
   }
   if (monthIndex < 0 || monthIndex > 11 || day < 1 || day > 31) {
@@ -64,11 +66,17 @@ export const formatDateOnly = (value: string): string => {
   }).format(parsed);
 };
 
-export const getAgeYears = (birthDate: Date, now: Date = new Date()): number => {
+export const getAgeYears = (
+  birthDate: Date,
+  now: Date = new Date(),
+): number => {
   let age = now.getFullYear() - birthDate.getFullYear();
 
   const monthDelta = now.getMonth() - birthDate.getMonth();
-  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < birthDate.getDate())) {
+  if (
+    monthDelta < 0 ||
+    (monthDelta === 0 && now.getDate() < birthDate.getDate())
+  ) {
     age -= 1;
   }
 

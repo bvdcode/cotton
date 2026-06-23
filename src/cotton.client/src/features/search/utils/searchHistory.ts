@@ -14,9 +14,7 @@ export const normalizeSearchHistoryQuery = (query: string): string =>
 const getSearchHistoryKey = (query: string): string =>
   query.toLocaleLowerCase();
 
-const toSearchHistoryEntry = (
-  value: unknown,
-): SearchHistoryEntry | null => {
+const toSearchHistoryEntry = (value: unknown): SearchHistoryEntry | null => {
   if (typeof value === "string") {
     const query = normalizeSearchHistoryQuery(value);
     return query ? { query, lastUsedAt: "" } : null;
@@ -119,5 +117,7 @@ export const removeSearchHistoryEntry = (
 ): SearchHistoryEntry[] => {
   const normalizedQuery = normalizeSearchHistoryQuery(query);
   const removeKey = getSearchHistoryKey(normalizedQuery);
-  return entries.filter((entry) => getSearchHistoryKey(entry.query) !== removeKey);
+  return entries.filter(
+    (entry) => getSearchHistoryKey(entry.query) !== removeKey,
+  );
 };

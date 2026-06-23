@@ -7,14 +7,14 @@
  */
 export const EditorMode = {
   /** Plain text with preserved whitespace */
-  Text: 'text',
+  Text: "text",
   /** Markdown with preview and editing */
-  Markdown: 'markdown',
+  Markdown: "markdown",
   /** Code editor with syntax highlighting */
-  Code: 'code',
+  Code: "code",
 } as const;
 
-export type EditorMode = typeof EditorMode[keyof typeof EditorMode];
+export type EditorMode = (typeof EditorMode)[keyof typeof EditorMode];
 
 /**
  * Common interface for all editor components

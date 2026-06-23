@@ -22,12 +22,8 @@ vi.mock("../store/authStore", () => ({
   },
 }));
 
-const {
-  clearAccessToken,
-  getAccessToken,
-  httpClient,
-  setAccessToken,
-} = await import("./httpClient");
+const { clearAccessToken, getAccessToken, httpClient, setAccessToken } =
+  await import("./httpClient");
 const { authApi } = await import("./authApi");
 
 const baseUserResponse = {

@@ -1,9 +1,6 @@
 import { UserRole } from "../../../../features/auth/types";
 
-export type RoleTranslationKey =
-  | "roles.user"
-  | "roles.admin"
-  | "roles.unknown";
+export type RoleTranslationKey = "roles.user" | "roles.admin" | "roles.unknown";
 
 export const getRoleTranslationKey = (role: number): RoleTranslationKey => {
   switch (role) {

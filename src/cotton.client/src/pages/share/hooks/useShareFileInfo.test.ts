@@ -9,25 +9,27 @@ describe("useShareFileInfo", () => {
   });
 
   it("marks opaque octet-stream shares as encrypted when the stream starts with a Cotton encrypted container", async () => {
-    const fetchMock = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
-      if (init?.method === "HEAD") {
-        return new Response(null, {
-          status: 200,
-          headers: {
-            "content-disposition":
-              "attachment; filename=\"6f7474ab-1e2b-4bbf-ae87-b0243d9acb33\"",
-            "content-length": "128",
-            "content-type": "application/octet-stream",
-          },
-        });
-      }
+    const fetchMock = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === "HEAD") {
+          return new Response(null, {
+            status: 200,
+            headers: {
+              "content-disposition":
+                'attachment; filename="6f7474ab-1e2b-4bbf-ae87-b0243d9acb33"',
+              "content-length": "128",
+              "content-type": "application/octet-stream",
+            },
+          });
+        }
 
-      if (init?.method === "GET") {
-        return new Response(MAGIC, { status: 206 });
-      }
+        if (init?.method === "GET") {
+          return new Response(MAGIC, { status: 206 });
+        }
 
-      throw new Error("Unexpected request");
-    });
+        throw new Error("Unexpected request");
+      },
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const { result } = renderHook(() =>
@@ -53,20 +55,22 @@ describe("useShareFileInfo", () => {
   });
 
   it("does not range-probe ordinary octet-stream shares", async () => {
-    const fetchMock = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
-      if (init?.method === "HEAD") {
-        return new Response(null, {
-          status: 200,
-          headers: {
-            "content-disposition": "attachment; filename=\"archive.bin\"",
-            "content-length": "128",
-            "content-type": "application/octet-stream",
-          },
-        });
-      }
+    const fetchMock = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === "HEAD") {
+          return new Response(null, {
+            status: 200,
+            headers: {
+              "content-disposition": 'attachment; filename="archive.bin"',
+              "content-length": "128",
+              "content-type": "application/octet-stream",
+            },
+          });
+        }
 
-      throw new Error("Unexpected request");
-    });
+        throw new Error("Unexpected request");
+      },
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const { result } = renderHook(() =>

@@ -72,9 +72,9 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
           color={isFailed ? "error" : "text.secondary"}
         >
           {isFailed
-            ? (task.errorKey
-                ? t(`errors.${task.errorKey}`, task.errorParams)
-                : task.error ?? t("status.failed"))
+            ? task.errorKey
+              ? t(`errors.${task.errorKey}`, task.errorParams)
+              : (task.error ?? t("status.failed"))
             : `${progressPercent}%`}
         </Typography>
       </Box>

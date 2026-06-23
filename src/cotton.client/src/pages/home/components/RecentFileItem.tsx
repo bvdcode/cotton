@@ -31,13 +31,7 @@ export const RecentFileItem: React.FC<RecentFileItemProps> = ({ file, t }) => {
   const isPreviewUrl = typeof icon === "string";
 
   return (
-    <Box
-      display="flex"
-      alignItems="center"
-      gap={1.5}
-      px={1}
-      py={0.75}
-    >
+    <Box display="flex" alignItems="center" gap={1.5} px={1} py={0.75}>
       <Box
         width={PREVIEW_SIZE}
         height={PREVIEW_SIZE}

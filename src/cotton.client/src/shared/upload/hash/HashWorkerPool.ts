@@ -1,12 +1,12 @@
-import { HashWorkerClient } from './hashWorkerClient';
-import type { SupportedHashAlgorithm } from './hashing';
+import { HashWorkerClient } from "./hashWorkerClient";
+import type { SupportedHashAlgorithm } from "./hashing";
 
 /**
  * Pool of reusable HashWorkerClient instances to avoid WASM memory exhaustion.
- * 
+ *
  * Problem: Creating a new Worker + WASM instance for each file upload causes
  * "Out of memory: Cannot allocate Wasm memory" when uploading thousands of files.
- * 
+ *
  * Solution: Maintain a pool of workers that are reused across uploads.
  * Workers are initialized on-demand and kept alive for the session.
  */
@@ -66,7 +66,7 @@ class HashWorkerPool {
    */
   release(worker: HashWorkerClient): void {
     if (!this.inUse.has(worker)) {
-      console.warn('Attempting to release a worker that is not in use');
+      console.warn("Attempting to release a worker that is not in use");
       return;
     }
 

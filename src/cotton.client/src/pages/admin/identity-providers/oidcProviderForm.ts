@@ -1,5 +1,8 @@
 import { UserRole } from "@features/auth/types";
-import type { OidcProviderDto, OidcProviderRequestDto } from "@shared/api/oidcApi";
+import type {
+  OidcProviderDto,
+  OidcProviderRequestDto,
+} from "@shared/api/oidcApi";
 
 export interface OidcProviderFormState {
   name: string;
@@ -81,8 +84,9 @@ const splitList = (value: string): string[] =>
   value
     .split(/[\s,]+/u)
     .map((entry) => entry.trim())
-    .filter((entry, index, array) =>
-      entry.length > 0 && array.indexOf(entry) === index,
+    .filter(
+      (entry, index, array) =>
+        entry.length > 0 && array.indexOf(entry) === index,
     );
 
 export const buildOidcProviderRequest = (
@@ -107,7 +111,9 @@ export const buildOidcProviderRequest = (
   syncAvatar: state.syncAvatar,
 });
 
-export const isOidcProviderFormValid = (state: OidcProviderFormState): boolean =>
+export const isOidcProviderFormValid = (
+  state: OidcProviderFormState,
+): boolean =>
   state.name.trim().length > 0 &&
   state.issuer.trim().length > 0 &&
   state.clientId.trim().length > 0;

@@ -82,12 +82,16 @@ export const getCodeFileExtension = (fileName: string): string => {
 
 export const isDockerfileName = (fileName: string): boolean => {
   const name = fileName.toLowerCase();
-  return name === "dockerfile" ||
+  return (
+    name === "dockerfile" ||
     name.startsWith("dockerfile.") ||
-    name === ".dockerignore";
+    name === ".dockerignore"
+  );
 };
 
 export const isCodePreviewFileName = (fileName: string): boolean => {
-  return isDockerfileName(fileName) ||
-    codePreviewExtensionSet.has(getCodeFileExtension(fileName));
+  return (
+    isDockerfileName(fileName) ||
+    codePreviewExtensionSet.has(getCodeFileExtension(fileName))
+  );
 };

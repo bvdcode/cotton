@@ -81,11 +81,7 @@ export async function resolveUploadConflicts(
       continue;
     }
 
-    if (
-      action === ConflictAction.Overwrite &&
-      existingFile &&
-      canOverwrite
-    ) {
+    if (action === ConflictAction.Overwrite && existingFile && canOverwrite) {
       replacedFileIds.add(existingFile.id);
       resolved.push({ file, replaceNodeFileId: existingFile.id });
       continue;

@@ -1,10 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  clearAccessToken,
-  getAccessToken,
-  httpClient,
-} = await import("./httpClient");
+const { clearAccessToken, getAccessToken, httpClient } =
+  await import("./httpClient");
 const { passkeysApi } = await import("./passkeysApi");
 
 beforeEach(() => {
@@ -46,21 +43,17 @@ describe("passkeysApi", () => {
       data: { accessToken: "passkey-token" },
     });
 
-    const token = await passkeysApi.finishAssertion(
-      "request-id",
-      true,
-      {
-        id: "credential-id",
-        rawId: "credential-id",
-        type: "public-key",
-        response: {
-          authenticatorData: "authenticator-data",
-          clientDataJson: "client-data",
-          signature: "signature",
-          userHandle: null,
-        },
+    const token = await passkeysApi.finishAssertion("request-id", true, {
+      id: "credential-id",
+      rawId: "credential-id",
+      type: "public-key",
+      response: {
+        authenticatorData: "authenticator-data",
+        clientDataJson: "client-data",
+        signature: "signature",
+        userHandle: null,
       },
-    );
+    });
 
     expect(token).toBe("passkey-token");
     expect(getAccessToken()).toBe("passkey-token");

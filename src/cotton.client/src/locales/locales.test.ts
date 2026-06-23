@@ -20,21 +20,14 @@ const PLURAL_SUFFIX_RE = /_(zero|one|two|few|many|other)$/;
 
 const baseKey = (key: string): string => key.replace(PLURAL_SUFFIX_RE, "");
 
-const flatten = (
-  obj: LocaleObject,
-  prefix = "",
-): Record<string, unknown> => {
+const flatten = (obj: LocaleObject, prefix = ""): Record<string, unknown> => {
   const out: Record<string, unknown> = {};
 
   for (const key of Object.keys(obj)) {
     const value = obj[key];
     const fullKey = prefix ? `${prefix}.${key}` : key;
 
-    if (
-      value !== null &&
-      typeof value === "object" &&
-      !Array.isArray(value)
-    ) {
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
       Object.assign(out, flatten(value as LocaleObject, fullKey));
     } else {
       out[fullKey] = value;

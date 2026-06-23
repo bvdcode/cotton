@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { NodeContentDto } from "../../../shared/api/nodesApi";
-import {
-  ConflictAction,
-  resolveUploadConflicts,
-} from "./uploadConflicts";
+import { ConflictAction, resolveUploadConflicts } from "./uploadConflicts";
 
 const createContent = (
   fileNames: Array<{ id: string; name: string }>,
@@ -33,9 +30,7 @@ describe("resolveUploadConflicts", () => {
     );
 
     expect(result.cancelled).toBe(false);
-    expect(result.files).toEqual([
-      { file, replaceNodeFileId: "file-1" },
-    ]);
+    expect(result.files).toEqual([{ file, replaceNodeFileId: "file-1" }]);
     expect(confirmConflict).toHaveBeenCalledWith({
       newName: "report (1).txt",
       canOverwrite: true,

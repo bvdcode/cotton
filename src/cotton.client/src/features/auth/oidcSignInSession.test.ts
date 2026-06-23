@@ -6,7 +6,10 @@ import {
   markOidcSignInPending,
 } from "./oidcSignInSession";
 
-const createStorage = (): Pick<Storage, "getItem" | "removeItem" | "setItem"> => {
+const createStorage = (): Pick<
+  Storage,
+  "getItem" | "removeItem" | "setItem"
+> => {
   const values = new Map<string, string>();
 
   return {
@@ -31,8 +34,12 @@ describe("oidcSignInSession", () => {
 
     markOidcSignInPending(storage);
 
-    expect(consumeOidcSignInPending(createLocation("/settings"), storage)).toBe(true);
-    expect(consumeOidcSignInPending(createLocation("/settings"), storage)).toBe(false);
+    expect(consumeOidcSignInPending(createLocation("/settings"), storage)).toBe(
+      true,
+    );
+    expect(consumeOidcSignInPending(createLocation("/settings"), storage)).toBe(
+      false,
+    );
   });
 
   it("clears pending state on login returns", () => {
@@ -40,7 +47,9 @@ describe("oidcSignInSession", () => {
 
     markOidcSignInPending(storage);
 
-    expect(consumeOidcSignInPending(createLocation("/login"), storage)).toBe(false);
+    expect(consumeOidcSignInPending(createLocation("/login"), storage)).toBe(
+      false,
+    );
     expect(storage.getItem(OIDC_SIGN_IN_PENDING_STORAGE_KEY)).toBeNull();
   });
 
@@ -50,7 +59,10 @@ describe("oidcSignInSession", () => {
     markOidcSignInPending(storage);
 
     expect(
-      consumeOidcSignInPending(createLocation("/login", "?oidc=cancelled"), storage),
+      consumeOidcSignInPending(
+        createLocation("/login", "?oidc=cancelled"),
+        storage,
+      ),
     ).toBe(false);
     expect(storage.getItem(OIDC_SIGN_IN_PENDING_STORAGE_KEY)).toBeNull();
   });

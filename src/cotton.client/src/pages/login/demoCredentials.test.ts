@@ -40,10 +40,13 @@ describe("demoCredentials", () => {
 
   it("replaces short stored credentials without a display name", () => {
     const storage = new MemoryStorage();
-    storage.setItem(DEMO_CREDENTIALS_STORAGE_KEY, JSON.stringify({
-      username: "u_abc123",
-      password: "x".repeat(32),
-    }));
+    storage.setItem(
+      DEMO_CREDENTIALS_STORAGE_KEY,
+      JSON.stringify({
+        username: "u_abc123",
+        password: "x".repeat(32),
+      }),
+    );
 
     const credentials = getOrCreateDemoCredentials(storage);
 
@@ -54,10 +57,13 @@ describe("demoCredentials", () => {
 
   it("replaces malformed stored credentials", () => {
     const storage = new MemoryStorage();
-    storage.setItem(DEMO_CREDENTIALS_STORAGE_KEY, JSON.stringify({
-      username: "demo",
-      password: "demo",
-    }));
+    storage.setItem(
+      DEMO_CREDENTIALS_STORAGE_KEY,
+      JSON.stringify({
+        username: "demo",
+        password: "demo",
+      }),
+    );
 
     const credentials = getOrCreateDemoCredentials(storage);
 

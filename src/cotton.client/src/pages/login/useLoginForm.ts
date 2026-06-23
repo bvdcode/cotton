@@ -221,14 +221,7 @@ export const useLoginForm = (): UseLoginFormResult => {
     } finally {
       setPasskeyLoading(false);
     }
-  }, [
-    username,
-    trustDevice,
-    t,
-    showToast,
-    setAuthenticated,
-    navigate,
-  ]);
+  }, [username, trustDevice, t, showToast, setAuthenticated, navigate]);
 
   const handleForgotPassword = useCallback(async () => {
     const trimmed = username.trim();

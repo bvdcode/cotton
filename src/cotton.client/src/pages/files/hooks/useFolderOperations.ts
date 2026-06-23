@@ -30,11 +30,7 @@ export const useFolderOperations = (
       cancellationText: t("common:actions.cancel"),
     }),
     renameFolder: async (folderId, newName) => {
-      return await renameFolder(
-        folderId,
-        newName,
-        currentNodeId ?? undefined,
-      );
+      return await renameFolder(folderId, newName, currentNodeId ?? undefined);
     },
     deleteFolder: async (folderId) => {
       await deleteFolder(folderId, currentNodeId ?? undefined);

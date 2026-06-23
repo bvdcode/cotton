@@ -144,9 +144,10 @@ describe("UploadManager task facade", () => {
       "Library",
     );
 
-    await waitFor(() =>
-      taskManager.getSnapshot().tasks[0]?.speedBytesPerSec !== undefined &&
-      taskManager.getSnapshot().tasks[0]!.speedBytesPerSec! > 0,
+    await waitFor(
+      () =>
+        taskManager.getSnapshot().tasks[0]?.speedBytesPerSec !== undefined &&
+        taskManager.getSnapshot().tasks[0]!.speedBytesPerSec! > 0,
     );
 
     expect(taskManager.getSnapshot().tasks[0]).toMatchObject({
@@ -157,7 +158,9 @@ describe("UploadManager task facade", () => {
     });
 
     finishUpload();
-    await waitFor(() => taskManager.getSnapshot().tasks[0]?.status === "completed");
+    await waitFor(
+      () => taskManager.getSnapshot().tasks[0]?.status === "completed",
+    );
   });
 
   it("publishes generic tasks alongside upload tasks", () => {
@@ -298,7 +301,9 @@ describe("UploadManager task facade", () => {
       "Library",
     );
 
-    await waitFor(() => taskManager.getSnapshot().tasks[0]?.status === "completed");
+    await waitFor(
+      () => taskManager.getSnapshot().tasks[0]?.status === "completed",
+    );
 
     expect(queryClient.getQueryData(queryKeys.storageQuota.current())).toEqual({
       usedBytes: 15,
@@ -324,10 +329,7 @@ describe("UploadManager task facade", () => {
 
     try {
       taskManager.enqueue(
-        [
-          new File(["a"], "a.txt"),
-          new File(["b"], "b.txt"),
-        ],
+        [new File(["a"], "a.txt"), new File(["b"], "b.txt")],
         "node-1",
         "Library",
       );
@@ -363,7 +365,9 @@ describe("UploadManager task facade", () => {
       "Library",
     );
 
-    await waitFor(() => taskManager.getSnapshot().tasks[0]?.status === "completed");
+    await waitFor(
+      () => taskManager.getSnapshot().tasks[0]?.status === "completed",
+    );
     await new Promise((resolve) => setTimeout(resolve, 350));
 
     expect(useNodesStore.getState().contentByNodeId["node-1"]?.files).toEqual([
@@ -393,7 +397,9 @@ describe("UploadManager task facade", () => {
       { onFileUploaded },
     );
 
-    await waitFor(() => taskManager.getSnapshot().tasks[0]?.status === "completed");
+    await waitFor(
+      () => taskManager.getSnapshot().tasks[0]?.status === "completed",
+    );
 
     expect(onFileUploaded).toHaveBeenCalled();
     expect(consoleError).toHaveBeenCalledWith(

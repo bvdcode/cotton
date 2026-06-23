@@ -92,7 +92,9 @@ describe("useFolderClientEncryptionActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useVault.getState().lock();
-    vi.mocked(collectEncryptedFilesInFoldersForClientEncryption).mockResolvedValue({
+    vi.mocked(
+      collectEncryptedFilesInFoldersForClientEncryption,
+    ).mockResolvedValue({
       folders: [],
       files: [],
       scannedFolders: 0,
@@ -131,9 +133,7 @@ describe("useFolderClientEncryptionActions", () => {
     );
 
     expect(result.current.folderPolicyEnabled).toBe(true);
-    expect(result.current.plainFiles.map((file) => file.id)).toEqual([
-      "plain",
-    ]);
+    expect(result.current.plainFiles.map((file) => file.id)).toEqual(["plain"]);
     expect(result.current.encryptedFiles.map((file) => file.id)).toEqual([
       "encrypted",
     ]);
@@ -176,9 +176,7 @@ describe("useFolderClientEncryptionActions", () => {
     );
 
     expect(result.current.folderPolicyEnabled).toBe(true);
-    expect(result.current.plainFiles.map((file) => file.id)).toEqual([
-      "plain",
-    ]);
+    expect(result.current.plainFiles.map((file) => file.id)).toEqual(["plain"]);
   });
 
   it("does not use an inherited policy while current folder data is stale", () => {
@@ -295,7 +293,6 @@ describe("useFolderClientEncryptionActions", () => {
     );
   });
 
-
   it("decrypts recursive encrypted files when the current folder action runs", async () => {
     useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
     const onToast = vi.fn();
@@ -303,7 +300,9 @@ describe("useFolderClientEncryptionActions", () => {
       ...makeFile("nested-encrypted", { isClientEncrypted: "true" }),
       nodeId: "nested-node",
     };
-    vi.mocked(collectEncryptedFilesInFoldersForClientEncryption).mockResolvedValue({
+    vi.mocked(
+      collectEncryptedFilesInFoldersForClientEncryption,
+    ).mockResolvedValue({
       folders: [],
       files: [nestedFile],
       scannedFolders: 2,
@@ -325,9 +324,9 @@ describe("useFolderClientEncryptionActions", () => {
       await result.current.decryptEncryptedFiles();
     });
 
-    expect(collectEncryptedFilesInFoldersForClientEncryption).toHaveBeenCalledWith([
-      "node-1",
-    ]);
+    expect(
+      collectEncryptedFilesInFoldersForClientEncryption,
+    ).toHaveBeenCalledWith(["node-1"]);
     expect(decryptExistingFileWithTask).toHaveBeenCalledTimes(1);
     expect(decryptExistingFileWithTask).toHaveBeenCalledWith(
       expect.objectContaining({

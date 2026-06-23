@@ -39,7 +39,11 @@ type NodesState = {
     parentNodeId: string,
     file: NodeContentDto["files"][number],
   ) => boolean;
-  optimisticRenameFile: (parentNodeId: string, fileId: string, newName: string) => void;
+  optimisticRenameFile: (
+    parentNodeId: string,
+    fileId: string,
+    newName: string,
+  ) => void;
   optimisticSetFilePreviewHash: (
     parentNodeId: string,
     fileId: string,
@@ -168,18 +172,20 @@ export const useNodesStore = create<NodesState>()(
         set((prev) => {
           const currentNode =
             prev.currentNode?.id === updated.id ? updated : prev.currentNode;
-          const ancestors = prev.ancestors.some((node) => node.id === updated.id)
+          const ancestors = prev.ancestors.some(
+            (node) => node.id === updated.id,
+          )
             ? prev.ancestors.map((node) =>
                 node.id === updated.id ? updated : node,
               )
             : prev.ancestors;
 
           let contentChanged = false;
-          const contentByNodeId: Record<
-            string,
-            NodeContentDto | undefined
-          > = {};
-          for (const [nodeId, content] of Object.entries(prev.contentByNodeId)) {
+          const contentByNodeId: Record<string, NodeContentDto | undefined> =
+            {};
+          for (const [nodeId, content] of Object.entries(
+            prev.contentByNodeId,
+          )) {
             if (!content) {
               contentByNodeId[nodeId] = content;
               continue;
@@ -214,7 +220,9 @@ export const useNodesStore = create<NodesState>()(
           let contentChanged = false;
           const contentByNodeId = { ...prev.contentByNodeId };
 
-          for (const [nodeId, content] of Object.entries(prev.contentByNodeId)) {
+          for (const [nodeId, content] of Object.entries(
+            prev.contentByNodeId,
+          )) {
             if (!content) continue;
 
             if (nodeId === targetParentId) {
@@ -277,7 +285,9 @@ export const useNodesStore = create<NodesState>()(
           let contentChanged = false;
           const contentByNodeId = { ...prev.contentByNodeId };
 
-          for (const [nodeId, content] of Object.entries(prev.contentByNodeId)) {
+          for (const [nodeId, content] of Object.entries(
+            prev.contentByNodeId,
+          )) {
             if (!content) continue;
 
             if (nodeId === targetParentId) {
@@ -376,7 +386,7 @@ export const useNodesStore = create<NodesState>()(
           updated = true;
           const hasFile = existing.files.some((item) => item.id === file.id);
           const files = hasFile
-            ? existing.files.map((item) => item.id === file.id ? file : item)
+            ? existing.files.map((item) => (item.id === file.id ? file : item))
             : [...existing.files, file];
 
           return {

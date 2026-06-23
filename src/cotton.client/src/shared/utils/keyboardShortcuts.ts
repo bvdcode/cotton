@@ -24,8 +24,7 @@ const matchesShortcutKey = (
   const definition = SYSTEM_KEYBOARD_SHORTCUTS[shortcut];
 
   return (
-    event.code === definition.code ||
-    event.key.toLowerCase() === definition.key
+    event.code === definition.code || event.key.toLowerCase() === definition.key
   );
 };
 

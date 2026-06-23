@@ -12,7 +12,11 @@ import {
 } from "../api/httpClient";
 import { getRefreshEnabled, useAuthStore } from "../store/authStore";
 import type { JsonValue } from "../types/json";
-import { HUB_METHODS, SILENCED_HUB_METHODS, type HubMethodOrLower } from "./hubMethods";
+import {
+  HUB_METHODS,
+  SILENCED_HUB_METHODS,
+  type HubMethodOrLower,
+} from "./hubMethods";
 
 type HubEventCallback = (...args: JsonValue[]) => void;
 type HubConnectionCallback = () => void;

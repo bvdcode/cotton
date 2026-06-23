@@ -31,11 +31,8 @@ export const queryKeys = {
     },
     gcTimeline: {
       all: () => [...adminRoot, "gcTimeline"] as const,
-      detail: (params: {
-        bucket: string;
-        fromUtc?: string;
-        toUtc?: string;
-      }) => [...adminRoot, "gcTimeline", params] as const,
+      detail: (params: { bucket: string; fromUtc?: string; toUtc?: string }) =>
+        [...adminRoot, "gcTimeline", params] as const,
     },
     latestDbBackup: () => [...adminRoot, "latestDbBackup"] as const,
     securityDiagnostics: () => [...adminRoot, "securityDiagnostics"] as const,

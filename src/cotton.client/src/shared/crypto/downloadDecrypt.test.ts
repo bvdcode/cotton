@@ -41,7 +41,9 @@ function createFile(
 }
 
 function readBlobBytes(blob: Blob): Promise<number[]> {
-  return blob.arrayBuffer().then((buffer) => Array.from(new Uint8Array(buffer)));
+  return blob
+    .arrayBuffer()
+    .then((buffer) => Array.from(new Uint8Array(buffer)));
 }
 
 describe("downloadDecrypt", () => {
@@ -154,7 +156,8 @@ describe("downloadDecrypt", () => {
     expect(getDownloadLinkMock).toHaveBeenCalledWith("file-1", undefined);
     expect(fetchMock).toHaveBeenCalledWith("https://files.example/encrypted");
 
-    const decryptedBlob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
+    const decryptedBlob = vi.mocked(URL.createObjectURL).mock
+      .calls[0]?.[0] as Blob;
     expect(decryptedBlob.type).toBe("image/png");
     await expect(readBlobBytes(decryptedBlob)).resolves.toEqual([1, 2, 3, 4]);
     expect(onDecryptProgress).toHaveBeenCalledWith(0, 4);
@@ -198,7 +201,8 @@ describe("downloadDecrypt", () => {
 
     await getReadableFileUrl(file);
 
-    const decryptedBlob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
+    const decryptedBlob = vi.mocked(URL.createObjectURL).mock
+      .calls[0]?.[0] as Blob;
     expect(decryptedBlob.type).toBe("application/pdf");
   });
 

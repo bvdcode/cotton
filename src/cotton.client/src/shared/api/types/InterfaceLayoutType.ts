@@ -9,4 +9,5 @@ export const InterfaceLayoutType = {
   List: 1,
 } as const;
 
-export type InterfaceLayoutType = typeof InterfaceLayoutType[keyof typeof InterfaceLayoutType];
+export type InterfaceLayoutType =
+  (typeof InterfaceLayoutType)[keyof typeof InterfaceLayoutType];

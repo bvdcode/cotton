@@ -24,9 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { UserRole, useAuth } from "../../../features/auth";
 import { queryKeys } from "../../../shared/api/queries/queryKeys";
 import { storageQuotaApi } from "../../../shared/api/storageQuotaApi";
-import {
-  useLocalPreferencesStore,
-} from "../../../shared/store/localPreferencesStore";
+import { useLocalPreferencesStore } from "../../../shared/store/localPreferencesStore";
 import { useServerSettings } from "../../../shared/store/useServerSettings";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import {
@@ -322,7 +320,9 @@ export const UserMenu = () => {
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: serverSettings?.version ? "space-between" : "center",
+            justifyContent: serverSettings?.version
+              ? "space-between"
+              : "center",
             gap: 1.5,
           }}
         >

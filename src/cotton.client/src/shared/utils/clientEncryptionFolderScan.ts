@@ -38,13 +38,21 @@ export const collectPlainFilesInFoldersForClientEncryption = (
   rootNodeIds: ReadonlyArray<string>,
   options: ScanOptions = {},
 ): Promise<ClientEncryptionFolderScanResult> =>
-  collectFilesInFolders(rootNodeIds, (file) => !isFileEncrypted(file.metadata), options);
+  collectFilesInFolders(
+    rootNodeIds,
+    (file) => !isFileEncrypted(file.metadata),
+    options,
+  );
 
 export const collectEncryptedFilesInFoldersForClientEncryption = (
   rootNodeIds: ReadonlyArray<string>,
   options: ScanOptions = {},
 ): Promise<ClientEncryptionFolderScanResult> =>
-  collectFilesInFolders(rootNodeIds, (file) => isFileEncrypted(file.metadata), options);
+  collectFilesInFolders(
+    rootNodeIds,
+    (file) => isFileEncrypted(file.metadata),
+    options,
+  );
 
 export const collectFoldersInFoldersForClientEncryption = (
   rootNodeIds: ReadonlyArray<string>,
@@ -77,8 +85,14 @@ async function collectFilesInFolders(
 }
 
 const resolveScanLimits = (options: ScanOptions): ScanLimits => ({
-  maxFiles: Math.max(1, options.maxFiles ?? CLIENT_ENCRYPTION_FOLDER_SCAN_MAX_FILES),
-  maxFolders: Math.max(1, options.maxFolders ?? CLIENT_ENCRYPTION_FOLDER_SCAN_MAX_FOLDERS),
+  maxFiles: Math.max(
+    1,
+    options.maxFiles ?? CLIENT_ENCRYPTION_FOLDER_SCAN_MAX_FILES,
+  ),
+  maxFolders: Math.max(
+    1,
+    options.maxFolders ?? CLIENT_ENCRYPTION_FOLDER_SCAN_MAX_FOLDERS,
+  ),
 });
 
 const createScanState = (rootNodeIds: ReadonlyArray<string>): ScanState => {
@@ -109,7 +123,8 @@ const enqueueFolderIfNew = (state: ScanState, nodeId: string): boolean => {
 };
 
 const isScanLimitReached = (state: ScanState, limits: ScanLimits): boolean =>
-  state.scannedFolders >= limits.maxFolders || state.files.length >= limits.maxFiles;
+  state.scannedFolders >= limits.maxFolders ||
+  state.files.length >= limits.maxFiles;
 
 async function scanNextFolder(
   state: ScanState,
@@ -130,7 +145,8 @@ async function scanNextFolder(
       page,
       pageSize: CLIENT_ENCRYPTION_FOLDER_SCAN_PAGE_SIZE,
     });
-    const childCount = response.content.nodes.length + response.content.files.length;
+    const childCount =
+      response.content.nodes.length + response.content.files.length;
     seenChildren += childCount;
 
     enqueueChildFolders(state, limits, response.content.nodes);

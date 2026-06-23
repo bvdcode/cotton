@@ -4,10 +4,7 @@ export type HeaderMap = Record<string, HeaderPrimitive> & {
   get?: (name: string) => HeaderPrimitive;
 };
 
-const tryReadHeader = (
-  headers: HeaderMap,
-  name: string,
-): HeaderPrimitive => {
+const tryReadHeader = (headers: HeaderMap, name: string): HeaderPrimitive => {
   const direct = headers[name];
   if (direct !== undefined && direct !== null) {
     return direct;

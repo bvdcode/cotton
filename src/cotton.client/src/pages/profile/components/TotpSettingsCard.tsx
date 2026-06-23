@@ -325,7 +325,12 @@ const DisabledTotpContent = ({
   return (
     <Stack spacing={2} paddingY={2}>
       <Box>
-        <Button fullWidth variant="contained" onClick={onSetup} disabled={totpLoading}>
+        <Button
+          fullWidth
+          variant="contained"
+          onClick={onSetup}
+          disabled={totpLoading}
+        >
           {totpLoading ? (
             <>
               <CircularProgress size={16} sx={{ mr: 1 }} />
@@ -337,7 +342,9 @@ const DisabledTotpContent = ({
         </Button>
       </Box>
       {totpError && <Alert severity="error">{totpError}</Alert>}
-      {totpSuccess && <Alert severity="success">{t("totp.setup.success")}</Alert>}
+      {totpSuccess && (
+        <Alert severity="success">{t("totp.setup.success")}</Alert>
+      )}
       {totpSetup && (
         <TotpSetupForm
           totpSetup={totpSetup}
@@ -402,7 +409,11 @@ const DisableTotpDialog = ({
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton onClick={onPasswordVisibilityToggle} edge="end">
-                      {passwordVisible ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      {passwordVisible ? (
+                        <VisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
                     </IconButton>
                   </InputAdornment>
                 ),

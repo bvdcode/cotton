@@ -15,7 +15,10 @@ import { AppLayout, PublicLayout } from "./layouts";
 import { Folder, Home, Delete } from "@mui/icons-material";
 import { SetupGate } from "../features/settings/SetupGate";
 import { unlockApi, type UnlockStatusResponse } from "../shared/api/unlockApi";
-import { startupApi, type StartupStatusResponse } from "../shared/api/startupApi";
+import {
+  startupApi,
+  type StartupStatusResponse,
+} from "../shared/api/startupApi";
 
 const FilesPage = lazy(() =>
   import("../pages/files").then((module) => ({ default: module.FilesPage })),
@@ -196,7 +199,9 @@ export function AppRoutes() {
   const [startupCheckState, setStartupCheckState] = useState<
     "checking" | "ready" | "blocked"
   >("checking");
-  const [lockStatus, setLockStatus] = useState<UnlockStatusResponse | null>(null);
+  const [lockStatus, setLockStatus] = useState<UnlockStatusResponse | null>(
+    null,
+  );
   const [lockCheckState, setLockCheckState] = useState<
     "checking" | "locked" | "unlocked"
   >("checking");
@@ -256,12 +261,7 @@ export function AppRoutes() {
   }, [startupCheckState]);
 
   const isPublicRoute = publicRoutes.some((route) =>
-    Boolean(
-      matchPath(
-        { path: route.path, end: true },
-        location.pathname,
-      ),
-    ),
+    Boolean(matchPath({ path: route.path, end: true }, location.pathname)),
   );
 
   useEffect(() => {
@@ -309,7 +309,12 @@ export function AppRoutes() {
     return (
       <Routes>
         <Route element={<PublicLayout />}>
-          <Route path="/unlock" element={withRouteSuspense(<UnlockPage initialStatus={lockStatus ?? undefined} />)} />
+          <Route
+            path="/unlock"
+            element={withRouteSuspense(
+              <UnlockPage initialStatus={lockStatus ?? undefined} />,
+            )}
+          />
           <Route
             path="*"
             element={
@@ -326,11 +331,10 @@ export function AppRoutes() {
   }
 
   const isAuthBootstrapPending =
-    !isPublicRoute && (
-      !hydrated ||
+    !isPublicRoute &&
+    (!hydrated ||
       isInitializing ||
-      (!isAuthenticated && refreshEnabled && !hasChecked)
-    );
+      (!isAuthenticated && refreshEnabled && !hasChecked));
 
   if (isAuthBootstrapPending) {
     return (
@@ -402,18 +406,9 @@ export function AppRoutes() {
           }
         >
           <Route index element={<Navigate to="general-settings" replace />} />
-          <Route
-            path="users"
-            element={<AdminUsersPage />}
-          />
-          <Route
-            path="groups"
-            element={<AdminGroupsPage />}
-          />
-          <Route
-            path="database-backup"
-            element={<AdminDatabaseBackupPage />}
-          />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="groups" element={<AdminGroupsPage />} />
+          <Route path="database-backup" element={<AdminDatabaseBackupPage />} />
           <Route
             path="storage-statistics"
             element={<AdminStorageStatisticsPage />}
@@ -430,10 +425,7 @@ export function AppRoutes() {
             path="privacy-settings"
             element={<AdminPrivacySettingsPage />}
           />
-          <Route
-            path="security"
-            element={<AdminSecurityDiagnosticsPage />}
-          />
+          <Route path="security" element={<AdminSecurityDiagnosticsPage />} />
           <Route
             path="identity-providers"
             element={<AdminIdentityProvidersPage />}
@@ -467,9 +459,7 @@ export function AppRoutes() {
         path="/setup"
         element={
           <RequireAuth>
-            <SetupGate>
-              {withRouteSuspense(<SetupWizardPage />)}
-            </SetupGate>
+            <SetupGate>{withRouteSuspense(<SetupWizardPage />)}</SetupGate>
           </RequireAuth>
         }
       />
@@ -477,9 +467,7 @@ export function AppRoutes() {
       <Route
         path="/onboarding"
         element={
-          <RequireAuth>
-            {withRouteSuspense(<OnboardingPage />)}
-          </RequireAuth>
+          <RequireAuth>{withRouteSuspense(<OnboardingPage />)}</RequireAuth>
         }
       />
 

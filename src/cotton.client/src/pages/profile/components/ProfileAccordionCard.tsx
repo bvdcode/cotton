@@ -77,9 +77,24 @@ export const ProfileAccordionCard = ({
               : []),
         ]}
       >
-        <Box sx={{ width: "100%", display: "flex", alignItems: "center", gap: 2, minWidth: 0 }}>
+        <Box
+          sx={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            minWidth: 0,
+          }}
+        >
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                minWidth: 0,
+              }}
+            >
               {icon}
               <Typography
                 variant="h6"
@@ -102,7 +117,11 @@ export const ProfileAccordionCard = ({
           </Box>
 
           {typeof count === "number" && (
-            <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ whiteSpace: "nowrap" }}
+            >
               {count}
             </Typography>
           )}

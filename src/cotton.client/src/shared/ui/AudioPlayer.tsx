@@ -95,7 +95,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     [],
   );
 
-
   React.useEffect(() => {
     if (!shuffleEnabled) {
       shuffleOrderRef.current = null;
@@ -105,7 +104,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
     const currentIdx = findIndexById(effectivePlaylist, currentFileId);
     const existing = shuffleOrderRef.current;
-    const shouldRebuild = !existing || existing.length !== effectivePlaylist.length;
+    const shouldRebuild =
+      !existing || existing.length !== effectivePlaylist.length;
 
     if (shouldRebuild) {
       rebuildShuffleOrder(effectivePlaylist, currentIdx);
@@ -139,7 +139,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     const intervalMs = listenIntervalMs ?? 250;
 
     const timerId = window.setInterval(() => {
-      const audioEl = (playerRef.current as PlayerWithAudioRef | null)?.audio.current;
+      const audioEl = (playerRef.current as PlayerWithAudioRef | null)?.audio
+        .current;
       if (!audioEl) return;
       onListen(audioEl.currentTime);
     }, intervalMs);
@@ -248,7 +249,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       return;
     }
 
-    const nextIndex = safeIndex + 1 < effectivePlaylist.length ? safeIndex + 1 : safeIndex;
+    const nextIndex =
+      safeIndex + 1 < effectivePlaylist.length ? safeIndex + 1 : safeIndex;
     if (nextIndex === safeIndex) {
       return;
     }
@@ -310,10 +312,11 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           outline: "none",
           boxShadow: "none",
         },
-        "& .rhap_progress-indicator:focus, & .rhap_progress-indicator:focus-visible": {
-          outline: "none",
-          boxShadow: "none",
-        },
+        "& .rhap_progress-indicator:focus, & .rhap_progress-indicator:focus-visible":
+          {
+            outline: "none",
+            boxShadow: "none",
+          },
         "& .ctn-shuffle-button": {
           color: theme.palette.text.secondary,
         },

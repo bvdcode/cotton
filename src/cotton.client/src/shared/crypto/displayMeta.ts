@@ -71,9 +71,9 @@ export async function decryptDisplayMeta(value: string): Promise<DisplayMeta> {
   return parseDisplayMeta(decoder.decode(plaintext));
 }
 
-export async function applyDisplayMetaToFile<TFile extends FileDisplayMetaFields>(
-  file: TFile,
-): Promise<TFile> {
+export async function applyDisplayMetaToFile<
+  TFile extends FileDisplayMetaFields,
+>(file: TFile): Promise<TFile> {
   if (!isFileEncrypted(file.metadata)) {
     return file;
   }
@@ -85,7 +85,9 @@ export async function applyDisplayMetaToFile<TFile extends FileDisplayMetaFields
 
   try {
     const displayMeta = await decryptDisplayMeta(encryptedDisplayMeta);
-    const opaque = (file as FileWithOpaqueValues<TFile>)[OPAQUE_FILE_VALUES] ?? {
+    const opaque = (file as FileWithOpaqueValues<TFile>)[
+      OPAQUE_FILE_VALUES
+    ] ?? {
       name: file.name,
       contentType: file.contentType,
     };

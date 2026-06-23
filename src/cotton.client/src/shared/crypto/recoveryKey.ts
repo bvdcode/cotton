@@ -36,7 +36,9 @@ export function normalizeAndValidateRecoveryPhrase(input: string): string {
   }
 
   if (!validateMnemonic(normalized, wordlist)) {
-    throw new InvalidRecoveryPhraseError("Recovery phrase failed BIP39 validation.");
+    throw new InvalidRecoveryPhraseError(
+      "Recovery phrase failed BIP39 validation.",
+    );
   }
 
   return normalized;
@@ -47,7 +49,9 @@ export function recoveryPhraseToEntropy(phrase: string): Uint8Array {
   const entropy = mnemonicToEntropy(normalized, wordlist);
 
   if (entropy.length !== RECOVERY_ENTROPY_BYTES) {
-    throw new InvalidRecoveryPhraseError("Recovery phrase entropy length is unsupported.");
+    throw new InvalidRecoveryPhraseError(
+      "Recovery phrase entropy length is unsupported.",
+    );
   }
 
   return entropy;

@@ -1,17 +1,9 @@
-import {
-  Box,
-  Button,
-  TextField,
-  Alert,
-} from "@mui/material";
+import { Box, Button, TextField, Alert } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useState, useCallback, type FormEvent } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { authApi } from "../../shared/api/authApi";
-import {
-  getApiErrorMessage,
-  isAxiosError,
-} from "../../shared/api/httpClient";
+import { getApiErrorMessage, isAxiosError } from "../../shared/api/httpClient";
 import { AuthActionShell } from "../../shared/ui/AuthActionShell";
 
 export const ResetPasswordPage = () => {
@@ -68,10 +60,7 @@ export const ResetPasswordPage = () => {
   }, [navigate]);
 
   return (
-    <AuthActionShell
-      title={t("title")}
-      logoAlt={tCommon("app.logoAlt")}
-    >
+    <AuthActionShell title={t("title")} logoAlt={tCommon("app.logoAlt")}>
       {success ? (
         <Box>
           <Alert severity="success" sx={{ mt: 2 }}>

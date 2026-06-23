@@ -22,7 +22,11 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import type { UserPreferences } from "../../../shared/api/userPreferencesApi";
-import { persistEnvelope, setupEnvelope, useVault } from "../../../shared/crypto";
+import {
+  persistEnvelope,
+  setupEnvelope,
+  useVault,
+} from "../../../shared/crypto";
 import {
   selectClientEncryptionLockOnRefresh,
   useUserPreferencesStore,
@@ -171,7 +175,9 @@ export const ClientEncryptionSetupForm = ({
           error={error}
           onPasswordChange={setPassword}
           onConfirmPasswordChange={setConfirmPassword}
-          onPasswordVisibilityToggle={() => setPasswordVisible((value) => !value)}
+          onPasswordVisibilityToggle={() =>
+            setPasswordVisible((value) => !value)
+          }
           onBack={() => setStep("warning")}
           onCancel={onCancel}
           onGenerate={handleGenerate}
@@ -233,7 +239,11 @@ const WarningStep = ({
         <Button onClick={onCancel}>
           {t("clientEncryption.setupDialog.cancel")}
         </Button>
-        <Button variant="contained" disabled={!acknowledged} onClick={onContinue}>
+        <Button
+          variant="contained"
+          disabled={!acknowledged}
+          onClick={onContinue}
+        >
           {t("clientEncryption.setupDialog.continue")}
         </Button>
       </DialogActions>
@@ -275,7 +285,9 @@ const PasswordStep = ({
   onGenerate,
 }: PasswordStepProps) => {
   const { t } = useTranslation("profile");
-  const visibilityLabel = passwordVisible ? t("password.hide") : t("password.show");
+  const visibilityLabel = passwordVisible
+    ? t("password.hide")
+    : t("password.show");
 
   return (
     <>
@@ -311,7 +323,11 @@ const PasswordStep = ({
                         onClick={onPasswordVisibilityToggle}
                         disabled={pending}
                       >
-                        {passwordVisible ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        {passwordVisible ? (
+                          <VisibilityOffIcon />
+                        ) : (
+                          <VisibilityIcon />
+                        )}
                       </IconButton>
                     </Tooltip>
                   </InputAdornment>
@@ -350,7 +366,11 @@ const PasswordStep = ({
         <Button onClick={onCancel} disabled={pending}>
           {t("clientEncryption.setupDialog.cancel")}
         </Button>
-        <Button variant="contained" disabled={!canGenerate} onClick={onGenerate}>
+        <Button
+          variant="contained"
+          disabled={!canGenerate}
+          onClick={onGenerate}
+        >
           <PendingActionLabel
             pending={pending}
             pendingLabel={t("clientEncryption.setupDialog.generating")}
@@ -436,7 +456,11 @@ const PhraseStep = ({
         <Button onClick={onCancel} disabled={pending}>
           {t("clientEncryption.setupDialog.cancel")}
         </Button>
-        <Button variant="contained" disabled={!phraseStored || pending} onClick={onFinish}>
+        <Button
+          variant="contained"
+          disabled={!phraseStored || pending}
+          onClick={onFinish}
+        >
           <PendingActionLabel
             pending={pending}
             pendingLabel={t("clientEncryption.setupDialog.saving")}
@@ -501,7 +525,11 @@ type PendingActionLabelProps = {
   label: string;
 };
 
-const PendingActionLabel = ({ pending, pendingLabel, label }: PendingActionLabelProps) => {
+const PendingActionLabel = ({
+  pending,
+  pendingLabel,
+  label,
+}: PendingActionLabelProps) => {
   if (!pending) {
     return label;
   }

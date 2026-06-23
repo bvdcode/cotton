@@ -185,9 +185,7 @@ const MediaLightboxSlideContainer = ({
 }: MediaLightboxSlideContainerProps) => {
   const lightboxSlide = slide as Partial<SlideWithTitle>;
   const fileId =
-    typeof lightboxSlide.fileId === "string"
-      ? lightboxSlide.fileId
-      : null;
+    typeof lightboxSlide.fileId === "string" ? lightboxSlide.fileId : null;
   const previewUrl =
     slide.type === "image"
       ? (slide as { thumbnail?: string }).thumbnail
@@ -306,7 +304,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [indexState, setIndexState] = React.useState<LightboxIndexState>(
     () => ({ key: indexKey, index: initialIndex }),
   );
-  const rawIndex = indexState.key === indexKey ? indexState.index : initialIndex;
+  const rawIndex =
+    indexState.key === indexKey ? indexState.index : initialIndex;
   const index = items.length === 0 ? 0 : Math.min(rawIndex, items.length - 1);
   const setLightboxIndex = React.useCallback(
     (next: IndexOrUpdater) => {
@@ -329,7 +328,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const hlsErrorText = t("preview.video.transcodeError");
   const preferPreview = useUserPreferencesStore(selectGalleryPreferPreview);
   const currentItemId = React.useMemo(
-    () => (open ? items[index]?.id ?? null : null),
+    () => (open ? (items[index]?.id ?? null) : null),
     [index, items, open],
   );
   const currentItem = open ? items[index] : undefined;
@@ -337,7 +336,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [activeVideoState, setActiveVideoState] =
     React.useState<ActiveVideoState | null>(null);
   const activeVideoElement =
-    activeVideoState?.key === indexKey && activeVideoState.fileId === currentItemId
+    activeVideoState?.key === indexKey &&
+    activeVideoState.fileId === currentItemId
       ? activeVideoState.element
       : null;
 
@@ -395,9 +395,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const isActive = useActivityDetection(TOUCH_CONTROLS_AUTOHIDE_MS);
   const [touchControlsVisible, setTouchControlsVisible] =
     React.useState<boolean>(true);
-  const [closingState, setClosingState] = React.useState<ClosingState>(
-    () => ({ open, closing: false }),
-  );
+  const [closingState, setClosingState] = React.useState<ClosingState>(() => ({
+    open,
+    closing: false,
+  }));
   let isClosing = closingState.open === open ? closingState.closing : false;
   if (closingState.open !== open) {
     isClosing = false;
@@ -498,7 +499,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     } catch (error) {
       console.error("Failed to delete media item:", error);
     } finally {
-      deleteInProgressRef.current = { itemId: currentItemId, inProgress: false };
+      deleteInProgressRef.current = {
+        itemId: currentItemId,
+        inProgress: false,
+      };
       setDeleteProgress({ itemId: currentItemId, inProgress: false });
     }
   }, [currentItem, currentItemId, handleClose, items.length, onDelete]);

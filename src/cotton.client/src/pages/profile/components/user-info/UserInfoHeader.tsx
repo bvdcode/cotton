@@ -181,10 +181,16 @@ export const UserInfoHeader = ({
                 <Cake fontSize="small" />
               </Tooltip>
               <Typography variant="body2" color="text.secondary">
-                <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
+                <Box
+                  component="span"
+                  sx={{ display: { xs: "inline", sm: "none" } }}
+                >
                   {birthDateCompactValue}
                 </Box>
-                <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+                <Box
+                  component="span"
+                  sx={{ display: { xs: "none", sm: "inline" } }}
+                >
                   {birthDateValue}
                 </Box>
               </Typography>

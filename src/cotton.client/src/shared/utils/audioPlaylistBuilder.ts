@@ -7,11 +7,18 @@ export const buildAudioPlaylistFromFiles = (
   files: ReadonlyArray<NodeFileManifestDto>,
 ): AudioPlaylistItem[] => {
   return files
-    .filter((file) => getFileTypeInfo(file.name, file.contentType ?? null).type === "audio")
+    .filter(
+      (file) =>
+        getFileTypeInfo(file.name, file.contentType ?? null).type === "audio",
+    )
     .map((file) => {
       const previewToken = file.previewHashEncryptedHex ?? null;
 
-      const icon = getFileIcon(previewToken, file.name, file.contentType ?? null);
+      const icon = getFileIcon(
+        previewToken,
+        file.name,
+        file.contentType ?? null,
+      );
 
       return {
         id: file.id,

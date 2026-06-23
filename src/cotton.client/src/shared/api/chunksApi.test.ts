@@ -187,10 +187,7 @@ describe("chunksApi.uploadChunk", () => {
     progressCallback?.({ loaded: 500, total: 100 } as AxiosProgressEvent);
     progressCallback?.({ loaded: 4 } as AxiosProgressEvent);
 
-    expect(onProgress).toHaveBeenNthCalledWith(
-      1,
-      Math.floor(blob.size * 0.5),
-    );
+    expect(onProgress).toHaveBeenNthCalledWith(1, Math.floor(blob.size * 0.5));
     expect(onProgress).toHaveBeenNthCalledWith(2, blob.size);
     expect(onProgress).toHaveBeenNthCalledWith(3, 4);
   });

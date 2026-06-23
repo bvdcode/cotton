@@ -29,7 +29,11 @@ export const convertHeicToJpeg = async (url: string): Promise<string> => {
   const response = await fetch(url);
   const blob = await response.blob();
   const heic2any = await loadHeic2Any();
-  const converted = await heic2any({ blob, toType: "image/jpeg", quality: 0.92 });
+  const converted = await heic2any({
+    blob,
+    toType: "image/jpeg",
+    quality: 0.92,
+  });
   const resultBlob = Array.isArray(converted) ? converted[0] : converted;
   const objectUrl = URL.createObjectURL(resultBlob);
   heicUrlCache.set(url, objectUrl);

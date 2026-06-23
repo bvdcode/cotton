@@ -39,17 +39,13 @@ const loadGeoIpState = async (): Promise<LoadedState> => {
   return { mode, url: url.trim(), telemetry };
 };
 
-const formatGeoIpTestInput = (
-  result: CustomGeoIpLookupTestResult,
-): string => {
+const formatGeoIpTestInput = (result: CustomGeoIpLookupTestResult): string => {
   const inputLabel = result.inputLabel.trim();
   const inputValue = result.inputValue.trim();
   return inputValue.length > 0 ? `${inputLabel} (${inputValue})` : inputLabel;
 };
 
-const formatGeoIpTestLocation = (
-  result: CustomGeoIpLookupTestResult,
-): string =>
+const formatGeoIpTestLocation = (result: CustomGeoIpLookupTestResult): string =>
   [result.city, result.region, result.country]
     .map((part) => part?.trim())
     .filter((part): part is string => Boolean(part))
@@ -163,8 +159,7 @@ export const GeoIpLookupSetting = () => {
   };
 
   const urlValidation = useMemo(
-    () =>
-      validateCustomGeoIpLookupUrl(url, mode === "CustomHttp", messages),
+    () => validateCustomGeoIpLookupUrl(url, mode === "CustomHttp", messages),
     [url, mode, messages],
   );
 
@@ -277,7 +272,9 @@ export const GeoIpLookupSetting = () => {
           fullWidth
           SelectProps={{
             renderValue: (selected) =>
-              t(`settings.general.geoIpLookupMode.${selected as GeoIpLookupMode}`),
+              t(
+                `settings.general.geoIpLookupMode.${selected as GeoIpLookupMode}`,
+              ),
           }}
         >
           {geoIpOptions.map((option) => (

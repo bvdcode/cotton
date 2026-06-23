@@ -54,9 +54,7 @@ function isOctetStream(contentType: string | null): boolean {
 }
 
 function looksLikeOpaqueServerFileName(fileName: string | null): boolean {
-  return (
-    fileName !== null && isGuidString(fileName)
-  );
+  return fileName !== null && isGuidString(fileName);
 }
 
 function shouldSniffEncryptedContainer(
@@ -66,7 +64,9 @@ function shouldSniffEncryptedContainer(
   return isOctetStream(contentType) && looksLikeOpaqueServerFileName(fileName);
 }
 
-async function tryResolveNameFromDownloadUrl(downloadUrl: string): Promise<string | null> {
+async function tryResolveNameFromDownloadUrl(
+  downloadUrl: string,
+): Promise<string | null> {
   try {
     const resp = await fetch(downloadUrl, { method: "HEAD" });
     if (!resp.ok) return null;
@@ -137,7 +137,10 @@ async function loadShareFileInfo(args: {
       fileName = await tryResolveNameFromDownloadUrl(downloadUrl);
     }
 
-    const encryptedContainer = shouldSniffEncryptedContainer(fileName, contentType)
+    const encryptedContainer = shouldSniffEncryptedContainer(
+      fileName,
+      contentType,
+    )
       ? await sniffEncryptedContainer(inlineUrl, contentLength)
       : false;
 

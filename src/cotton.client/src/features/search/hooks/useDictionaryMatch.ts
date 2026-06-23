@@ -13,7 +13,9 @@ const MIN_SETTING_QUERY_LENGTH = 3;
 
 type DictionaryMatch = { row: SearchSettingRow; score: number };
 
-export const useDictionaryMatch = (debouncedQuery: string): SearchSettingRow[] => {
+export const useDictionaryMatch = (
+  debouncedQuery: string,
+): SearchSettingRow[] => {
   const { t } = useTranslation("search");
   const userRole = useAuthStore((s) => s.user?.role ?? null);
   const rawDictionary = t("dictionary", { returnObjects: true }) as unknown;

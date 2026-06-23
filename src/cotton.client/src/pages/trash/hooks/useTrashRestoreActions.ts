@@ -1,4 +1,10 @@
-import { useCallback, useMemo, useRef, useState, type MutableRefObject } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../shared/api/filesApi";
 import {
@@ -32,7 +38,11 @@ export type RestorableItem = {
 type PromptKind =
   | { kind: "confirm"; restorePath: string }
   | { kind: "parentMissing"; missingPath: string }
-  | { kind: "conflict"; conflictKind: RestoreConflictKind; conflictName: string };
+  | {
+      kind: "conflict";
+      conflictKind: RestoreConflictKind;
+      conflictName: string;
+    };
 
 type PromptState = {
   item: RestorableItem;
@@ -87,7 +97,9 @@ export const useTrashRestoreActions = ({
   const stickyParentMissing = useRef<PromptDecision["action"] | null>(null);
   const stickyConflict = useRef<PromptDecision["action"] | null>(null);
   const restoreInFlight = useRef(false);
-  const resolvePromptRef = useRef<((decision: PromptDecision) => void) | null>(null);
+  const resolvePromptRef = useRef<((decision: PromptDecision) => void) | null>(
+    null,
+  );
 
   const requestDecision = useCallback(
     (item: RestorableItem, prompt: PromptKind): Promise<PromptDecision> =>
@@ -133,7 +145,10 @@ export const useTrashRestoreActions = ({
   );
 
   const callRestore = useCallback(
-    (item: RestorableItem, options: { createMissingParents: boolean; overwrite: boolean }) =>
+    (
+      item: RestorableItem,
+      options: { createMissingParents: boolean; overwrite: boolean },
+    ) =>
       item.kind === "folder"
         ? nodesApi.restoreNode(item.id, options)
         : filesApi.restoreFile(item.id, options),
@@ -250,7 +265,10 @@ export const useTrashRestoreActions = ({
         return confirmed;
       }
 
-      let options: RestoreOptions = { createMissingParents: false, overwrite: false };
+      let options: RestoreOptions = {
+        createMissingParents: false,
+        overwrite: false,
+      };
       for (let attempt = 0; attempt < maxPromptHops; attempt += 1) {
         try {
           const outcome = await callRestore(item, options);
@@ -269,7 +287,13 @@ export const useTrashRestoreActions = ({
       reportRestoreFailure(item);
       return "failed";
     },
-    [callRestore, confirmRestore, getRestorePath, handleRestoreOutcome, reportRestoreFailure],
+    [
+      callRestore,
+      confirmRestore,
+      getRestorePath,
+      handleRestoreOutcome,
+      reportRestoreFailure,
+    ],
   );
 
   const restoreItems = useCallback(
@@ -288,13 +312,21 @@ export const useTrashRestoreActions = ({
       try {
         for (let i = 0; i < items.length; i += 1) {
           const item = items[i];
-          setProgress({ current: i + 1, total: items.length, itemName: item.name });
+          setProgress({
+            current: i + 1,
+            total: items.length,
+            itemName: item.name,
+          });
           await restoreSingle(item);
         }
       } finally {
         restoreInFlight.current = false;
         setRestoring(false);
-        setProgress({ current: items.length, total: items.length, itemName: "" });
+        setProgress({
+          current: items.length,
+          total: items.length,
+          itemName: "",
+        });
         fileSelection.deselectAll();
         await refreshContent();
       }
@@ -313,11 +345,12 @@ export const useTrashRestoreActions = ({
         const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
         return selected.has(id);
       })
-      .map((tile): RestorableItem => (
-        tile.kind === "folder"
-          ? { id: tile.node.id, kind: "folder", name: tile.node.name }
-          : { id: tile.file.id, kind: "file", name: tile.file.name }
-      ));
+      .map(
+        (tile): RestorableItem =>
+          tile.kind === "folder"
+            ? { id: tile.node.id, kind: "folder", name: tile.node.name }
+            : { id: tile.file.id, kind: "file", name: tile.file.name },
+      );
 
     await restoreItems(items);
   }, [fileSelection.selectedIds, restoreItems, tiles]);

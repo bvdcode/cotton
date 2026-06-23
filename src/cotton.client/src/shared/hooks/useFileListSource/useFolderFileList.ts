@@ -28,10 +28,11 @@ export const useFolderFileList = ({
   const loading = useNodesStore((s) => s.loading);
   const error = useNodesStore((s) => s.error);
 
-  const content =
-    cacheOwnerUserId === currentUserId ? rawContent : undefined;
+  const content = cacheOwnerUserId === currentUserId ? rawContent : undefined;
   const effectiveContent =
-    layoutType === InterfaceLayoutType.List ? (listContent ?? content) : content;
+    layoutType === InterfaceLayoutType.List
+      ? (listContent ?? content)
+      : content;
 
   const deferredContent = useDeferredValue(effectiveContent);
   const visibleContent = deferContent ? deferredContent : effectiveContent;

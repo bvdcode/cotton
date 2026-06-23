@@ -1,4 +1,9 @@
-import { createSHA1, createSHA256, createSHA384, createSHA512 } from "hash-wasm";
+import {
+  createSHA1,
+  createSHA256,
+  createSHA384,
+  createSHA512,
+} from "hash-wasm";
 import type { SupportedHashAlgorithm } from "./hashing";
 
 type HashWasmHasher = {
@@ -7,7 +12,11 @@ type HashWasmHasher = {
   digest(encoding: "hex"): string;
 };
 
-type InitMessage = { type: "init"; requestId: string; algorithm: SupportedHashAlgorithm };
+type InitMessage = {
+  type: "init";
+  requestId: string;
+  algorithm: SupportedHashAlgorithm;
+};
 
 type HashChunkMessage = {
   type: "hashChunk";
@@ -24,26 +33,45 @@ type UpdateFileHashMessage = {
 
 type DigestFileMessage = { type: "digestFile"; requestId: string };
 
-type InMessage = InitMessage | HashChunkMessage | UpdateFileHashMessage | DigestFileMessage;
+type InMessage =
+  | InitMessage
+  | HashChunkMessage
+  | UpdateFileHashMessage
+  | DigestFileMessage;
 
 type InitResult = { type: "initResult"; requestId: string };
 
-type HashChunkResult = { type: "hashChunkResult"; requestId: string; chunkHash: string };
+type HashChunkResult = {
+  type: "hashChunkResult";
+  requestId: string;
+  chunkHash: string;
+};
 
 type UpdateFileHashResult = { type: "updateFileHashResult"; requestId: string };
 
-type DigestFileResult = { type: "digestFileResult"; requestId: string; fileHash: string };
+type DigestFileResult = {
+  type: "digestFileResult";
+  requestId: string;
+  fileHash: string;
+};
 
 type ErrorResult = { type: "error"; requestId?: string; message: string };
 
-type OutMessage = InitResult | HashChunkResult | UpdateFileHashResult | DigestFileResult | ErrorResult;
+type OutMessage =
+  | InitResult
+  | HashChunkResult
+  | UpdateFileHashResult
+  | DigestFileResult
+  | ErrorResult;
 
 let initialized = false;
 let currentAlgorithm: SupportedHashAlgorithm | null = null;
 let fileHasher: HashWasmHasher | null = null;
 let chunkHasher: HashWasmHasher | null = null;
 
-async function createHasher(algorithm: SupportedHashAlgorithm): Promise<HashWasmHasher> {
+async function createHasher(
+  algorithm: SupportedHashAlgorithm,
+): Promise<HashWasmHasher> {
   const hasher = await (async () => {
     switch (algorithm) {
       case "SHA-1":
@@ -64,11 +92,18 @@ async function createHasher(algorithm: SupportedHashAlgorithm): Promise<HashWasm
   return h;
 }
 
-async function ensureInitialized(algorithm: SupportedHashAlgorithm): Promise<void> {
+async function ensureInitialized(
+  algorithm: SupportedHashAlgorithm,
+): Promise<void> {
   // IMPORTANT: hash-wasm requires calling init() before update(). After digest(),
   // the hasher is finalized and must be re-initialized for the next file.
   // Since we reuse workers across uploads, we must reset state on every init request.
-  if (initialized && currentAlgorithm === algorithm && fileHasher && chunkHasher) {
+  if (
+    initialized &&
+    currentAlgorithm === algorithm &&
+    fileHasher &&
+    chunkHasher
+  ) {
     fileHasher.init();
     chunkHasher.init();
     return;
@@ -93,20 +128,31 @@ self.onmessage = async (ev: MessageEvent<InMessage>) => {
 
     if (msg.type === "updateFileHash") {
       if (!initialized || !fileHasher || !currentAlgorithm) {
-        const out: OutMessage = { type: "error", requestId: msg.requestId, message: "Hasher is not initialized" };
+        const out: OutMessage = {
+          type: "error",
+          requestId: msg.requestId,
+          message: "Hasher is not initialized",
+        };
         self.postMessage(out);
         return;
       }
 
       fileHasher.update(new Uint8Array(msg.buffer));
-      const out: OutMessage = { type: "updateFileHashResult", requestId: msg.requestId };
+      const out: OutMessage = {
+        type: "updateFileHashResult",
+        requestId: msg.requestId,
+      };
       self.postMessage(out);
       return;
     }
 
     if (msg.type === "hashChunk") {
       if (!initialized || !fileHasher || !chunkHasher || !currentAlgorithm) {
-        const out: OutMessage = { type: "error", requestId: msg.requestId, message: "Hasher is not initialized" };
+        const out: OutMessage = {
+          type: "error",
+          requestId: msg.requestId,
+          message: "Hasher is not initialized",
+        };
         self.postMessage(out);
         return;
       }
@@ -122,14 +168,22 @@ self.onmessage = async (ev: MessageEvent<InMessage>) => {
       chunkHasher.update(bytes);
       const chunkHash = chunkHasher.digest("hex");
 
-      const out: OutMessage = { type: "hashChunkResult", requestId: msg.requestId, chunkHash };
+      const out: OutMessage = {
+        type: "hashChunkResult",
+        requestId: msg.requestId,
+        chunkHash,
+      };
       self.postMessage(out);
       return;
     }
 
     if (msg.type === "digestFile") {
       if (!initialized || !fileHasher) {
-        const out: OutMessage = { type: "error", requestId: msg.requestId, message: "Hasher is not initialized" };
+        const out: OutMessage = {
+          type: "error",
+          requestId: msg.requestId,
+          message: "Hasher is not initialized",
+        };
         self.postMessage(out);
         return;
       }
@@ -137,7 +191,11 @@ self.onmessage = async (ev: MessageEvent<InMessage>) => {
       const fileHash = fileHasher.digest("hex");
       // Reset so the worker can be reused even if the next consumer forgets to call init.
       fileHasher.init();
-      const out: OutMessage = { type: "digestFileResult", requestId: msg.requestId, fileHash };
+      const out: OutMessage = {
+        type: "digestFileResult",
+        requestId: msg.requestId,
+        fileHash,
+      };
       self.postMessage(out);
       return;
     }

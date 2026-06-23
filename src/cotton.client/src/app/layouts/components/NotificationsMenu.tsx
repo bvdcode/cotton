@@ -69,10 +69,8 @@ export const NotificationsMenu = () => {
     isFetchingNextPage,
     refetch: refetchNotifications,
   } = notificationsQuery;
-  const {
-    data: unreadCount = 0,
-    refetch: refetchUnreadCount,
-  } = useUnreadCountQuery();
+  const { data: unreadCount = 0, refetch: refetchUnreadCount } =
+    useUnreadCountQuery();
   const { mutate: markAsRead } = useMarkAsReadMutation();
   const { mutate: markAllAsRead } = useMarkAllAsReadMutation();
 

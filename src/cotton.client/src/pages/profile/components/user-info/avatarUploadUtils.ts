@@ -216,7 +216,10 @@ export const prepareAvatarForUpload = async (
       ? preferredTargetBytes
       : maxChunkSizeBytes;
 
-  const primaryBlob = await tryFitAvatarToLimit(decoded.image, primaryTargetBytes);
+  const primaryBlob = await tryFitAvatarToLimit(
+    decoded.image,
+    primaryTargetBytes,
+  );
   if (primaryBlob) {
     return {
       blob: primaryBlob,

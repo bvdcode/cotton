@@ -21,9 +21,7 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
-import {
-  useSecurityDiagnosticsQuery,
-} from "../../../shared/api/queries/admin";
+import { useSecurityDiagnosticsQuery } from "../../../shared/api/queries/admin";
 import type {
   LinuxProcessSecurityDto,
   SecurityDiagnosticWarningDto,
@@ -114,8 +112,7 @@ const paletteKeyFor = (
 
 const severityRank = (
   severity: SecurityDiagnosticWarningDto["severity"],
-): number =>
-  severity === "critical" ? 0 : severity === "warning" ? 1 : 2;
+): number => (severity === "critical" ? 0 : severity === "warning" ? 1 : 2);
 
 const getSeverityLabel = (
   severity: SecurityDiagnosticWarningDto["severity"],
@@ -156,10 +153,7 @@ const formatNullable = (
     ? t("securityDiagnostics.values.unknown")
     : String(value);
 
-const yesNo = (
-  value: boolean | null | undefined,
-  t: TFunction<"admin">,
-) => {
+const yesNo = (value: boolean | null | undefined, t: TFunction<"admin">) => {
   if (value === null || value === undefined) {
     return t("securityDiagnostics.values.unknown");
   }
@@ -217,10 +211,7 @@ interface DiagnosticsSectionProps {
   children: ReactNode;
 }
 
-const DiagnosticsSection = ({
-  title,
-  children,
-}: DiagnosticsSectionProps) => (
+const DiagnosticsSection = ({ title, children }: DiagnosticsSectionProps) => (
   <Stack spacing={1.5}>
     <Typography variant="subtitle1" fontWeight={700}>
       {title}
@@ -273,7 +264,8 @@ const SecurityScoreSummary = ({
         icon={level.color === "success" ? <CheckCircleIcon /> : undefined}
       >
         <Typography variant="subtitle2" fontWeight={700}>
-          {diagnostics.securityScore}/{diagnostics.maxSecurityScore} - {level.title}
+          {diagnostics.securityScore}/{diagnostics.maxSecurityScore} -{" "}
+          {level.title}
         </Typography>
         <Typography variant="body2">{level.summary}</Typography>
       </Alert>
@@ -552,7 +544,12 @@ const PositiveCard = ({ title, code, children }: PositiveCardProps) => (
         {title}
       </Typography>
       {code && (
-        <Chip size="small" variant="outlined" label={code} sx={{ ml: "auto" }} />
+        <Chip
+          size="small"
+          variant="outlined"
+          label={code}
+          sx={{ ml: "auto" }}
+        />
       )}
     </Box>
     {children && (
@@ -599,9 +596,7 @@ const SecurityPassedSection = ({
     ? [
         cpu.vendorId?.trim(),
         cpu.architecture?.trim(),
-        cpu.logicalProcessorCount
-          ? `${cpu.logicalProcessorCount}×`
-          : undefined,
+        cpu.logicalProcessorCount ? `${cpu.logicalProcessorCount}×` : undefined,
       ]
         .filter((part): part is string => Boolean(part))
         .join(" · ")
@@ -666,12 +661,16 @@ const InstanceDiagnosticsSection = ({
         "/" +
         String(diagnostics.adminTotp.adminCount)
       }
-      color={diagnostics.adminTotp.adminsWithoutTotp > 0 ? "warning" : "success"}
+      color={
+        diagnostics.adminTotp.adminsWithoutTotp > 0 ? "warning" : "success"
+      }
     />
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.adminsWithoutTotp")}
       value={String(diagnostics.adminTotp.adminsWithoutTotp)}
-      color={diagnostics.adminTotp.adminsWithoutTotp > 0 ? "warning" : "success"}
+      color={
+        diagnostics.adminTotp.adminsWithoutTotp > 0 ? "warning" : "success"
+      }
     />
   </DiagnosticsSection>
 );
@@ -741,7 +740,6 @@ const MemoryDiagnosticsSection = ({
   </DiagnosticsSection>
 );
 
-
 const getLimitSummary = (
   softLimit: string | null | undefined,
   hardLimit: string | null | undefined,
@@ -771,7 +769,9 @@ const ContainerDiagnosticsSection = ({
   diagnostics,
   t,
 }: DiagnosticsContentSectionProps) => (
-  <DiagnosticsSection title={t("securityDiagnostics.sections.containerBoundary")}>
+  <DiagnosticsSection
+    title={t("securityDiagnostics.sections.containerBoundary")}
+  >
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.rootFilesystemReadOnly")}
       value={yesNo(diagnostics.linuxContainer.rootFilesystemReadOnly, t)}
@@ -826,7 +826,9 @@ const ContainerDiagnosticsSection = ({
       color={
         diagnostics.linuxContainer.appArmorProfile
           ? booleanStatusColor(
-              isUnconfinedAppArmorProfile(diagnostics.linuxContainer.appArmorProfile),
+              isUnconfinedAppArmorProfile(
+                diagnostics.linuxContainer.appArmorProfile,
+              ),
               "warning",
               "success",
             )
@@ -881,12 +883,16 @@ const RuntimeDiagnosticsSection = ({
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.euid")}
       value={formatNullable(diagnostics.linuxProcess.effectiveUserId, t)}
-      color={diagnostics.linuxProcess.runningAsRoot === true ? "warning" : "default"}
+      color={
+        diagnostics.linuxProcess.runningAsRoot === true ? "warning" : "default"
+      }
     />
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.noNewPrivileges")}
       value={formatNullable(diagnostics.linuxProcess.noNewPrivileges, t)}
-      color={diagnostics.linuxProcess.noNewPrivileges === 1 ? "success" : "warning"}
+      color={
+        diagnostics.linuxProcess.noNewPrivileges === 1 ? "success" : "warning"
+      }
     />
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.seccomp")}
@@ -895,7 +901,10 @@ const RuntimeDiagnosticsSection = ({
     />
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.capabilities")}
-      value={formatNullable(diagnostics.linuxProcess.effectiveCapabilitiesHex, t)}
+      value={formatNullable(
+        diagnostics.linuxProcess.effectiveCapabilitiesHex,
+        t,
+      )}
     />
   </DiagnosticsSection>
 );
@@ -904,8 +913,8 @@ export const AdminSecurityDiagnosticsPage = () => {
   const { t } = useTranslation("admin");
   const diagnosticsQuery = useSecurityDiagnosticsQuery();
   const loadError = diagnosticsQuery.isError
-    ? getApiErrorMessage(diagnosticsQuery.error) ??
-      t("securityDiagnostics.errors.loadFailed")
+    ? (getApiErrorMessage(diagnosticsQuery.error) ??
+      t("securityDiagnostics.errors.loadFailed"))
     : null;
 
   return (

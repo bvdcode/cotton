@@ -60,11 +60,7 @@ describe("getAgeYears", () => {
   });
 
   it("subtracts a year when birthday has not happened yet", () => {
-    expect(getAgeYears(new Date(2000, 11, 31), new Date(2026, 5, 1))).toBe(
-      25,
-    );
-    expect(getAgeYears(new Date(2000, 5, 15), new Date(2026, 5, 14))).toBe(
-      25,
-    );
+    expect(getAgeYears(new Date(2000, 11, 31), new Date(2026, 5, 1))).toBe(25);
+    expect(getAgeYears(new Date(2000, 5, 15), new Date(2026, 5, 14))).toBe(25);
   });
 });

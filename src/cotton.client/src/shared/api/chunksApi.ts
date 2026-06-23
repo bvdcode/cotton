@@ -39,9 +39,7 @@ export const chunksApi = {
 
         const total = event.total ?? 0;
         const bytesUploaded =
-          total > 0
-            ? (event.loaded / total) * options.blob.size
-            : event.loaded;
+          total > 0 ? (event.loaded / total) * options.blob.size : event.loaded;
 
         options.onProgress(
           Math.floor(Math.max(0, Math.min(options.blob.size, bytesUploaded))),

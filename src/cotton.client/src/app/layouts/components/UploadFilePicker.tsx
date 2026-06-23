@@ -21,7 +21,8 @@ export const UploadFilePicker = () => {
 
   useEffect(() => {
     uploadManager.setFilePickerOpen(async ({ multiple, accept }) => {
-      const showOpenFilePicker = (window as FilePickerWindow).showOpenFilePicker;
+      const showOpenFilePicker = (window as FilePickerWindow)
+        .showOpenFilePicker;
 
       if (typeof showOpenFilePicker === "function") {
         try {

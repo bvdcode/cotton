@@ -31,7 +31,10 @@ import {
 } from "../../../shared/passkeys/webauthn";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 
-const passkeyCancellationErrorNames = new Set(["AbortError", "NotAllowedError"]);
+const passkeyCancellationErrorNames = new Set([
+  "AbortError",
+  "NotAllowedError",
+]);
 
 const isPasskeyCreationCancelled = (error: unknown): boolean => {
   return (
@@ -98,7 +101,9 @@ export const PasskeysCard = () => {
   }, [t]);
 
   const buildDefaultName = (transports: string[]): string => {
-    const normalized = new Set(transports.map((transport) => transport.toLowerCase()));
+    const normalized = new Set(
+      transports.map((transport) => transport.toLowerCase()),
+    );
     if (
       normalized.has("usb") ||
       normalized.has("nfc") ||
@@ -173,7 +178,10 @@ export const PasskeysCard = () => {
     setRenaming(true);
     setError(null);
     try {
-      const updated = await passkeysApi.rename(renameCredential.id, trimmedName);
+      const updated = await passkeysApi.rename(
+        renameCredential.id,
+        trimmedName,
+      );
       setCredentials((current) =>
         current.map((credential) =>
           credential.id === updated.id ? updated : credential,
@@ -217,7 +225,11 @@ export const PasskeysCard = () => {
             <Button
               variant="contained"
               startIcon={
-                adding ? <CircularProgress color="inherit" size={16} /> : <AddIcon />
+                adding ? (
+                  <CircularProgress color="inherit" size={16} />
+                ) : (
+                  <AddIcon />
+                )
               }
               onClick={handleAdd}
               disabled={adding || loading}

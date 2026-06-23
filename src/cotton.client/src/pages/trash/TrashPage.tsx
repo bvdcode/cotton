@@ -7,10 +7,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@mui/material";
-import {
-  FileListViewFactory,
-  PageHeader,
-} from "../files/components";
+import { FileListViewFactory, PageHeader } from "../files/components";
 import { Delete, Restore } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -25,7 +22,11 @@ import {
 } from "../../shared/api/queries/trash";
 import { useTrashFolderOperations } from "./hooks/useTrashFolderOperations";
 import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
-import { useTrashBulkActions, useTrashListData, useTrashRestoreActions } from "./hooks";
+import {
+  useTrashBulkActions,
+  useTrashListData,
+  useTrashRestoreActions,
+} from "./hooks";
 import { RestoreConflictDialog } from "./components/RestoreConflictDialog";
 import { calculateFolderStats } from "../files/utils/nodeUtils";
 import { useTrashFileList } from "../../shared/hooks/useFileListSource";
@@ -61,7 +62,9 @@ type EmptyTrashProgressDialogProps = {
 type TrashPageViewProps = {
   clearRestoreErrors: () => void;
   fileListViewProps: React.ComponentProps<typeof FileListViewFactory>;
-  handlePromptAnswer: ReturnType<typeof useTrashRestoreActions>["handlePromptAnswer"];
+  handlePromptAnswer: ReturnType<
+    typeof useTrashRestoreActions
+  >["handlePromptAnswer"];
   hasContent: boolean;
   layoutType: InterfaceLayoutType;
   loadError: string | null;
@@ -111,7 +114,7 @@ const resolveTrashCurrentNode = <TNode,>(
   node: TNode | null | undefined,
   root: TNode | null | undefined,
   isRoot: boolean,
-): TNode | null => node ?? (isRoot ? root ?? null : null);
+): TNode | null => node ?? (isRoot ? (root ?? null) : null);
 
 const resolveTrashAncestors = <TAncestor,>(
   isRoot: boolean,
@@ -151,7 +154,7 @@ const resolveEffectiveTrashContent = <TContent,>(
   listContent: TContent | null | undefined,
   content: TContent | null | undefined,
 ): TContent | null | undefined =>
-  layoutType === InterfaceLayoutType.List ? listContent ?? content : content;
+  layoutType === InterfaceLayoutType.List ? (listContent ?? content) : content;
 
 type TrashWrapperContent = {
   nodes?: Array<{ id: string; parentId?: string | null }>;
@@ -483,7 +486,10 @@ export const TrashPage: React.FC = () => {
     refreshContent,
     optionalWrapperResolver,
   );
-  const fileOps = useTrashFileOperations(refreshContent, optionalWrapperResolver);
+  const fileOps = useTrashFileOperations(
+    refreshContent,
+    optionalWrapperResolver,
+  );
 
   const folderOperations = React.useMemo<FolderOperations>(
     () => ({
@@ -533,21 +539,18 @@ export const TrashPage: React.FC = () => {
     navigateToBreadcrumb(breadcrumbs.length - 2);
   }, [breadcrumbs.length, navigate, navigateToBreadcrumb]);
 
-  const {
-    deletingTrash,
-    handleEmptyTrash,
-    handleDeleteSelected,
-  } = useTrashBulkActions({
-    t,
-    confirm,
-    content,
-    tiles,
-    nodeId,
-    isTrashRoot,
-    fileSelection,
-    resolveWrapperNodeId,
-    refreshContent,
-  });
+  const { deletingTrash, handleEmptyTrash, handleDeleteSelected } =
+    useTrashBulkActions({
+      t,
+      confirm,
+      content,
+      tiles,
+      nodeId,
+      isTrashRoot,
+      fileSelection,
+      resolveWrapperNodeId,
+      refreshContent,
+    });
 
   const customActionItems = useMemo(
     () =>
@@ -750,12 +753,14 @@ const TrashPageView: React.FC<TrashPageViewProps> = ({
   shouldRenderFileList,
   t,
 }) => {
-  if (shouldShowTrashInitialLoader({
-    error: loadError,
-    hasContent,
-    layoutType,
-    loading,
-  })) {
+  if (
+    shouldShowTrashInitialLoader({
+      error: loadError,
+      hasContent,
+      layoutType,
+      loading,
+    })
+  ) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 

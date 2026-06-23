@@ -42,41 +42,44 @@ export const useFilePreview = () => {
     });
   }, []);
 
-  const openPreview = useCallback((
-    fileId: string,
-    fileName: string,
-    fileSizeBytes?: number,
-    contentType?: string | null,
-    file?: NodeFileManifestDto | null,
-  ) => {
-    const typeInfo = getFileTypeInfo(fileName, contentType);
-    if (typeInfo.supportsInlineView) {
-      const textPreviewLimit =
-        file && isFileEncrypted(file.metadata)
-          ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
-          : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
-      if (
-        typeInfo.type === "text" &&
-        fileSizeBytes &&
-        fileSizeBytes > textPreviewLimit
-      ) {
-        return false;
-      }
+  const openPreview = useCallback(
+    (
+      fileId: string,
+      fileName: string,
+      fileSizeBytes?: number,
+      contentType?: string | null,
+      file?: NodeFileManifestDto | null,
+    ) => {
+      const typeInfo = getFileTypeInfo(fileName, contentType);
+      if (typeInfo.supportsInlineView) {
+        const textPreviewLimit =
+          file && isFileEncrypted(file.metadata)
+            ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
+            : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
+        if (
+          typeInfo.type === "text" &&
+          fileSizeBytes &&
+          fileSizeBytes > textPreviewLimit
+        ) {
+          return false;
+        }
 
-      setPreviewState({
-        isOpen: true,
-        fileId,
-        fileName,
-        fileType: typeInfo.type,
-        fileSizeBytes: fileSizeBytes ?? null,
-        file: file ?? null,
-      });
-      window.history.pushState({ overlay: PREVIEW_HISTORY_STATE }, "");
-      historyPushedRef.current = true;
-      return true;
-    }
-    return false;
-  }, []);
+        setPreviewState({
+          isOpen: true,
+          fileId,
+          fileName,
+          fileType: typeInfo.type,
+          fileSizeBytes: fileSizeBytes ?? null,
+          file: file ?? null,
+        });
+        window.history.pushState({ overlay: PREVIEW_HISTORY_STATE }, "");
+        historyPushedRef.current = true;
+        return true;
+      }
+      return false;
+    },
+    [],
+  );
 
   const closePreview = useCallback(() => {
     closePreviewInternal();
@@ -90,7 +93,10 @@ export const useFilePreview = () => {
     const handlePopState = (e: PopStateEvent) => {
       if (
         historyPushedRef.current &&
-        !(e.state && (e.state as { overlay?: string }).overlay === PREVIEW_HISTORY_STATE)
+        !(
+          e.state &&
+          (e.state as { overlay?: string }).overlay === PREVIEW_HISTORY_STATE
+        )
       ) {
         historyPushedRef.current = false;
         closePreviewInternal();

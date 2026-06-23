@@ -5,7 +5,10 @@ import { queryKeys } from "../api/queries/queryKeys";
 import { refreshNodeContent } from "../store/nodesActions";
 import { useNodesStore } from "../store/nodesStore";
 import { getCachedServerSettings } from "../api/queries/serverSettings";
-import { storageQuotaApi, type UserStorageQuotaDto } from "../api/storageQuotaApi";
+import {
+  storageQuotaApi,
+  type UserStorageQuotaDto,
+} from "../api/storageQuotaApi";
 import { ClientEncryptionSizeLimitError, NoKeyError } from "../crypto";
 import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
@@ -132,9 +135,14 @@ export class UploadManager {
   private overallBytesTotal = 0;
   private overallBytesUploaded = 0;
   private overallBytesTransferredForSpeed = 0;
-  private overallEstimator = new RollingBytesPerSecondEstimator({ windowMs: 2000, minDurationMs: 300 });
+  private overallEstimator = new RollingBytesPerSecondEstimator({
+    windowMs: 2000,
+    minDurationMs: 300,
+  });
 
-  private filePickerOpen: ((options: { multiple: boolean; accept?: string }) => void) | null = null;
+  private filePickerOpen:
+    | ((options: { multiple: boolean; accept?: string }) => void)
+    | null = null;
   private pendingFilePickerContext: UploadFilePickerContext | null = null;
   private pruneIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -210,7 +218,10 @@ export class UploadManager {
     };
   }
 
-  clearFinished(options?: { includeCompleted?: boolean; includeFailed?: boolean }) {
+  clearFinished(options?: {
+    includeCompleted?: boolean;
+    includeFailed?: boolean;
+  }) {
     const includeCompleted = options?.includeCompleted ?? true;
     const includeFailed = options?.includeFailed ?? true;
 
@@ -237,8 +248,14 @@ export class UploadManager {
     this.externalTasks.length = 0;
     this.externalTasks.push(...remainingExternalTasks);
 
-    this.overallBytesTotal = this.tasks.reduce((sum, t) => sum + t.bytesTotal, 0);
-    this.overallBytesUploaded = this.tasks.reduce((sum, t) => sum + t.bytesUploaded, 0);
+    this.overallBytesTotal = this.tasks.reduce(
+      (sum, t) => sum + t.bytesTotal,
+      0,
+    );
+    this.overallBytesUploaded = this.tasks.reduce(
+      (sum, t) => sum + t.bytesUploaded,
+      0,
+    );
     this.overallBytesTransferredForSpeed = this.tasks.reduce(
       (sum, t) => sum + (t._bytesTransferredForSpeed ?? t.bytesUploaded),
       0,
@@ -252,7 +269,9 @@ export class UploadManager {
     this.emit();
   }
 
-  setFilePickerOpen(fn: ((options: { multiple: boolean; accept?: string }) => void) | null) {
+  setFilePickerOpen(
+    fn: ((options: { multiple: boolean; accept?: string }) => void) | null,
+  ) {
     this.filePickerOpen = fn;
   }
 
@@ -319,13 +338,21 @@ export class UploadManager {
 
     for (let i = this.tasks.length - 1; i >= 0; i--) {
       const t = this.tasks[i];
-      if (FINISHED_TASK_STATUSES.has(this.toAppTaskStatus(t.status)) && t.completedAt && now - t.completedAt > FINISHED_TASK_TTL_MS) {
+      if (
+        FINISHED_TASK_STATUSES.has(this.toAppTaskStatus(t.status)) &&
+        t.completedAt &&
+        now - t.completedAt > FINISHED_TASK_TTL_MS
+      ) {
         this.tasks.splice(i, 1);
       }
     }
     for (let i = this.externalTasks.length - 1; i >= 0; i--) {
       const t = this.externalTasks[i];
-      if (FINISHED_TASK_STATUSES.has(t.status) && t.completedAt && now - t.completedAt > FINISHED_TASK_TTL_MS) {
+      if (
+        FINISHED_TASK_STATUSES.has(t.status) &&
+        t.completedAt &&
+        now - t.completedAt > FINISHED_TASK_TTL_MS
+      ) {
         this.externalTasks.splice(i, 1);
       }
     }
@@ -337,7 +364,9 @@ export class UploadManager {
       const toRemove = finished.length - MAX_FINISHED_TASKS;
       let removed = 0;
       for (let i = this.tasks.length - 1; i >= 0 && removed < toRemove; i--) {
-        if (FINISHED_TASK_STATUSES.has(this.toAppTaskStatus(this.tasks[i].status))) {
+        if (
+          FINISHED_TASK_STATUSES.has(this.toAppTaskStatus(this.tasks[i].status))
+        ) {
           this.tasks.splice(i, 1);
           removed++;
         }
@@ -350,7 +379,11 @@ export class UploadManager {
     if (externalFinished.length > MAX_FINISHED_TASKS) {
       const toRemove = externalFinished.length - MAX_FINISHED_TASKS;
       let removed = 0;
-      for (let i = this.externalTasks.length - 1; i >= 0 && removed < toRemove; i--) {
+      for (
+        let i = this.externalTasks.length - 1;
+        i >= 0 && removed < toRemove;
+        i--
+      ) {
         if (FINISHED_TASK_STATUSES.has(this.externalTasks[i].status)) {
           this.externalTasks.splice(i, 1);
           removed++;
@@ -358,8 +391,14 @@ export class UploadManager {
       }
     }
 
-    this.overallBytesTotal = this.tasks.reduce((sum, t) => sum + t.bytesTotal, 0);
-    this.overallBytesUploaded = this.tasks.reduce((sum, t) => sum + t.bytesUploaded, 0);
+    this.overallBytesTotal = this.tasks.reduce(
+      (sum, t) => sum + t.bytesTotal,
+      0,
+    );
+    this.overallBytesUploaded = this.tasks.reduce(
+      (sum, t) => sum + t.bytesUploaded,
+      0,
+    );
   }
 
   private emit() {
@@ -368,7 +407,10 @@ export class UploadManager {
       ...this.tasks.map((task) => this.toAppTask(task)),
     ];
     const bytesTotal = tasks.reduce((sum, task) => sum + task.bytesTotal, 0);
-    const bytesCompleted = tasks.reduce((sum, task) => sum + task.bytesCompleted, 0);
+    const bytesCompleted = tasks.reduce(
+      (sum, task) => sum + task.bytesCompleted,
+      0,
+    );
     const progress01 = bytesTotal > 0 ? bytesCompleted / bytesTotal : 0;
 
     this.overallBytesTotal = bytesTotal;
@@ -381,7 +423,8 @@ export class UploadManager {
         bytesTotal,
         bytesCompleted,
         progress01,
-        speedBytesPerSec: this.overallEstimator.getSnapshot().rollingBytesPerSec,
+        speedBytesPerSec:
+          this.overallEstimator.getSnapshot().rollingBytesPerSec,
       },
     };
     for (const l of this.listeners) l();
@@ -399,9 +442,8 @@ export class UploadManager {
     if (update.bytesTotal !== undefined) {
       task.bytesTotal = Math.max(0, update.bytesTotal);
       task.bytesCompleted = Math.min(task.bytesCompleted, task.bytesTotal);
-      task.progress01 = task.bytesTotal > 0
-        ? task.bytesCompleted / task.bytesTotal
-        : 1;
+      task.progress01 =
+        task.bytesTotal > 0 ? task.bytesCompleted / task.bytesTotal : 1;
     }
     if (update.status !== undefined) {
       task.status = update.status;
@@ -414,9 +456,8 @@ export class UploadManager {
         0,
         Math.min(task.bytesTotal, update.bytesCompleted),
       );
-      task.progress01 = task.bytesTotal > 0
-        ? task.bytesCompleted / task.bytesTotal
-        : 1;
+      task.progress01 =
+        task.bytesTotal > 0 ? task.bytesCompleted / task.bytesTotal : 1;
     }
     if (update.progress01 !== undefined) {
       task.progress01 = Math.max(0, Math.min(1, update.progress01));
@@ -487,7 +528,12 @@ export class UploadManager {
   }
 
   private hasActiveTasks(): boolean {
-    return this.tasks.some((t) => t.status === "queued" || t.status === "uploading" || t.status === "finalizing");
+    return this.tasks.some(
+      (t) =>
+        t.status === "queued" ||
+        t.status === "uploading" ||
+        t.status === "finalizing",
+    );
   }
 
   private shouldRefreshQuotaSnapshot(): boolean {
@@ -505,8 +551,10 @@ export class UploadManager {
   }
 
   private isQuotaSnapshotExpired(): boolean {
-    return this.quotaSnapshotLoadedAt === 0 ||
-      Date.now() - this.quotaSnapshotLoadedAt >= QUOTA_SNAPSHOT_TTL_MS;
+    return (
+      this.quotaSnapshotLoadedAt === 0 ||
+      Date.now() - this.quotaSnapshotLoadedAt >= QUOTA_SNAPSHOT_TTL_MS
+    );
   }
 
   private syncQuotaSnapshotFromQueryCache(): void {
@@ -562,7 +610,10 @@ export class UploadManager {
       return true;
     }
 
-    const availableBytes = Math.max(0, quota.availableBytes - this.pendingQuotaBytes);
+    const availableBytes = Math.max(
+      0,
+      quota.availableBytes - this.pendingQuotaBytes,
+    );
     if (task._file.size > availableBytes) {
       task.status = "failed";
       task.completedAt = Date.now();
@@ -576,21 +627,28 @@ export class UploadManager {
     return true;
   }
 
-  private releaseQuotaReservation(task: UploadTaskInternal, committed: boolean): void {
+  private releaseQuotaReservation(
+    task: UploadTaskInternal,
+    committed: boolean,
+  ): void {
     const reservationBytes = task._quotaReservationBytes ?? 0;
     if (reservationBytes <= 0) {
       return;
     }
 
     task._quotaReservationBytes = undefined;
-    this.pendingQuotaBytes = Math.max(0, this.pendingQuotaBytes - reservationBytes);
+    this.pendingQuotaBytes = Math.max(
+      0,
+      this.pendingQuotaBytes - reservationBytes,
+    );
     if (committed && this.quotaSnapshot) {
       this.setQuotaSnapshot({
         ...this.quotaSnapshot,
         usedBytes: this.quotaSnapshot.usedBytes + reservationBytes,
-        availableBytes: this.quotaSnapshot.availableBytes === null
-          ? null
-          : Math.max(0, this.quotaSnapshot.availableBytes - reservationBytes),
+        availableBytes:
+          this.quotaSnapshot.availableBytes === null
+            ? null
+            : Math.max(0, this.quotaSnapshot.availableBytes - reservationBytes),
       });
     }
   }
@@ -648,7 +706,10 @@ export class UploadManager {
     task._laneProbeConsumed = false;
     task._bytesTransferredForSpeed = 0;
 
-    const taskEstimator = new RollingBytesPerSecondEstimator({ windowMs: 1500, minDurationMs: 250 });
+    const taskEstimator = new RollingBytesPerSecondEstimator({
+      windowMs: 1500,
+      minDurationMs: 250,
+    });
     let lastEmitTime = 0;
     const encryptionTaskRef: { current: AppTaskHandle | null } = {
       current: null,
@@ -692,7 +753,8 @@ export class UploadManager {
               task.bytesTotal,
               Math.max(0, bytesUploaded),
             );
-            task.progress01 = task.bytesTotal > 0 ? task.bytesUploaded / task.bytesTotal : 1;
+            task.progress01 =
+              task.bytesTotal > 0 ? task.bytesUploaded / task.bytesTotal : 1;
 
             const now = Date.now();
             if (task.bytesUploaded > 0) {
@@ -711,10 +773,15 @@ export class UploadManager {
               task._bytesTransferredForSpeed = nextSpeedBytes;
               const taskRate = taskEstimator.update(nextSpeedBytes, now);
               task.uploadSpeedBytesPerSec =
-                taskRate.rollingBytesPerSec > 0 ? taskRate.rollingBytesPerSec : taskRate.averageBytesPerSec;
+                taskRate.rollingBytesPerSec > 0
+                  ? taskRate.rollingBytesPerSec
+                  : taskRate.averageBytesPerSec;
 
               this.overallBytesTransferredForSpeed += speedDelta;
-              this.overallEstimator.update(this.overallBytesTransferredForSpeed, now);
+              this.overallEstimator.update(
+                this.overallBytesTransferredForSpeed,
+                now,
+              );
             }
 
             const delta = task.bytesUploaded - prevBytesUploaded;
@@ -781,14 +848,16 @@ export class UploadManager {
         if (encryptionTaskRef.current && !encryptionTaskFinished) {
           encryptionTaskRef.current.fail({
             message: e instanceof Error ? e.message : undefined,
-            key: e instanceof NoKeyError
-              ? "encryptionVaultLocked"
-              : e instanceof ClientEncryptionSizeLimitError
-                ? "clientEncryptionFileTooLarge"
-                : "encryptionFailed",
-            params: e instanceof ClientEncryptionSizeLimitError
-              ? { maxSize: formatBytes(e.maxBytes) }
-              : undefined,
+            key:
+              e instanceof NoKeyError
+                ? "encryptionVaultLocked"
+                : e instanceof ClientEncryptionSizeLimitError
+                  ? "clientEncryptionFileTooLarge"
+                  : "encryptionFailed",
+            params:
+              e instanceof ClientEncryptionSizeLimitError
+                ? { maxSize: formatBytes(e.maxBytes) }
+                : undefined,
           });
         }
 

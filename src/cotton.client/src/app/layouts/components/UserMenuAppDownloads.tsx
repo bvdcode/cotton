@@ -70,12 +70,9 @@ export const UserMenuAppDownloads = ({
             color: "text.secondary",
             textDecoration: "none",
             transition: (theme) =>
-              theme.transitions.create(
-                ["outline-color", "color"],
-                {
-                  duration: theme.transitions.duration.shorter,
-                },
-              ),
+              theme.transitions.create(["outline-color", "color"], {
+                duration: theme.transitions.duration.shorter,
+              }),
             "&:hover": {
               color: "primary.main",
             },

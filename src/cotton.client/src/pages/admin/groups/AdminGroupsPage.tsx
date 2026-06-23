@@ -15,9 +15,7 @@ export const AdminGroupsPage = () => {
           <Typography variant="body2" color="text.secondary">
             {t("groups.description")}
           </Typography>
-          <Alert severity="info">
-            {t("groups.inDevelopment")}
-          </Alert>
+          <Alert severity="info">{t("groups.inDevelopment")}</Alert>
         </Stack>
       </AdminPageSurface>
     </Stack>

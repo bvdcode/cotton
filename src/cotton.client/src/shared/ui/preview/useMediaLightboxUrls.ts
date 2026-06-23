@@ -1,9 +1,6 @@
 import * as React from "react";
 import type { Slide } from "yet-another-react-lightbox";
-import {
-  convertHeicToJpeg,
-  isHeicFile,
-} from "../../utils/heicConverter";
+import { convertHeicToJpeg, isHeicFile } from "../../utils/heicConverter";
 import { buildSlidesFromItems } from "./mediaLightboxSlides";
 import { HLS_VIDEO_SLIDE_TYPE } from "@shared/types/mediaLightbox";
 import type { MediaItem, SlideWithTitle } from "@shared/types/mediaLightbox";
@@ -18,7 +15,10 @@ const getPreviewQueryValue = (preferPreview: boolean): string => {
 const applyPreviewModeToUrl = (url: string, preferPreview: boolean): string => {
   try {
     const parsed = new URL(url);
-    parsed.searchParams.set(PREVIEW_QUERY_PARAM, getPreviewQueryValue(preferPreview));
+    parsed.searchParams.set(
+      PREVIEW_QUERY_PARAM,
+      getPreviewQueryValue(preferPreview),
+    );
     return parsed.toString();
   } catch {
     const [base, queryString = ""] = url.split("?");
@@ -46,21 +46,27 @@ export const useMediaLightboxUrls = ({
   preferPreview,
   currentItemId,
 }: UseMediaLightboxUrlsArgs) => {
-  const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>({});
-  const [displayUrls, setDisplayUrls] = React.useState<Record<string, string>>({});
-  const [downloadUrls, setDownloadUrls] = React.useState<Record<string, string>>({});
+  const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>(
+    {},
+  );
+  const [displayUrls, setDisplayUrls] = React.useState<Record<string, string>>(
+    {},
+  );
+  const [downloadUrls, setDownloadUrls] = React.useState<
+    Record<string, string>
+  >({});
 
   const downloadUrlsRef = React.useRef<Record<string, string>>({});
   const displayUrlsRef = React.useRef<Record<string, string>>({});
-  const inFlightDownloadLoadsRef = React.useRef<Map<string, Promise<string | null>>>(
-    new Map(),
-  );
-  const inFlightOriginalLoadsRef = React.useRef<Map<string, Promise<string | null>>>(
-    new Map(),
-  );
-  const inFlightHeicFallbacksRef = React.useRef<Map<string, Promise<string | null>>>(
-    new Map(),
-  );
+  const inFlightDownloadLoadsRef = React.useRef<
+    Map<string, Promise<string | null>>
+  >(new Map());
+  const inFlightOriginalLoadsRef = React.useRef<
+    Map<string, Promise<string | null>>
+  >(new Map());
+  const inFlightHeicFallbacksRef = React.useRef<
+    Map<string, Promise<string | null>>
+  >(new Map());
   const loadingRef = React.useRef<Set<string>>(new Set());
   const loadedIdsRef = React.useRef<Set<string>>(new Set());
   const requestVersionRef = React.useRef<number>(0);
@@ -132,7 +138,10 @@ export const useMediaLightboxUrls = ({
             return baseSignedUrl;
           }
 
-          const displayUrl = applyPreviewModeToUrl(baseSignedUrl, preferPreview);
+          const displayUrl = applyPreviewModeToUrl(
+            baseSignedUrl,
+            preferPreview,
+          );
 
           setDisplayUrls((prev) =>
             prev[item.id] ? prev : { ...prev, [item.id]: displayUrl },
@@ -158,7 +167,10 @@ export const useMediaLightboxUrls = ({
       const item = items[targetIndex];
       if (!item) return;
 
-      if (loadedIdsRef.current.has(item.id) || loadingRef.current.has(item.id)) {
+      if (
+        loadedIdsRef.current.has(item.id) ||
+        loadingRef.current.has(item.id)
+      ) {
         return;
       }
 
@@ -197,7 +209,8 @@ export const useMediaLightboxUrls = ({
         const requestVersion = requestVersionRef.current;
 
         try {
-          const originalUrl = (await ensureOriginalUrl(item)) ?? currentDisplayUrl;
+          const originalUrl =
+            (await ensureOriginalUrl(item)) ?? currentDisplayUrl;
           if (!originalUrl) {
             return null;
           }
@@ -260,21 +273,24 @@ export const useMediaLightboxUrls = ({
     [getDownloadUrl],
   );
 
-  const getSlideSourceUrl = React.useCallback((slide: SlideWithTitle): string | null => {
-    if (slide.type === "video") {
-      const videoSlide = slide as SlideWithTitle & {
-        sources?: Array<{ src?: string }>;
-      };
-      return videoSlide.sources?.[0]?.src ?? null;
-    }
+  const getSlideSourceUrl = React.useCallback(
+    (slide: SlideWithTitle): string | null => {
+      if (slide.type === "video") {
+        const videoSlide = slide as SlideWithTitle & {
+          sources?: Array<{ src?: string }>;
+        };
+        return videoSlide.sources?.[0]?.src ?? null;
+      }
 
-    if (slide.type === HLS_VIDEO_SLIDE_TYPE) {
-      return (slide as SlideWithTitle & { src?: string }).src ?? null;
-    }
+      if (slide.type === HLS_VIDEO_SLIDE_TYPE) {
+        return (slide as SlideWithTitle & { src?: string }).src ?? null;
+      }
 
-    const imageSlide = slide as SlideWithTitle & { src?: string };
-    return imageSlide.src ?? null;
-  }, []);
+      const imageSlide = slide as SlideWithTitle & { src?: string };
+      return imageSlide.src ?? null;
+    },
+    [],
+  );
 
   const resolveSlideDownloadUrl = React.useCallback(
     async (slide: Slide): Promise<string | null> => {

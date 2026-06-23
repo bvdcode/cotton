@@ -38,7 +38,9 @@ interface FolderCardProps {
   readOnly?: boolean;
 }
 
-type FolderAction = NonNullable<React.ComponentProps<typeof RenamableItemCard>["actions"]>[number];
+type FolderAction = NonNullable<
+  React.ComponentProps<typeof RenamableItemCard>["actions"]
+>[number];
 
 type FolderActionOptions = Pick<
   FolderCardProps,
@@ -72,7 +74,10 @@ const buildFolderActions = (options: FolderActionOptions): FolderAction[] => {
   return actions;
 };
 
-const addDownloadAction = (actions: FolderAction[], options: FolderActionOptions) => {
+const addDownloadAction = (
+  actions: FolderAction[],
+  options: FolderActionOptions,
+) => {
   if (options.onDownload) {
     actions.push({
       icon: <Download />,
@@ -82,7 +87,10 @@ const addDownloadAction = (actions: FolderAction[], options: FolderActionOptions
   }
 };
 
-const addShareAction = (actions: FolderAction[], options: FolderActionOptions) => {
+const addShareAction = (
+  actions: FolderAction[],
+  options: FolderActionOptions,
+) => {
   if (options.onShare) {
     actions.push({
       icon: <Share />,
@@ -92,7 +100,10 @@ const addShareAction = (actions: FolderAction[], options: FolderActionOptions) =
   }
 };
 
-const addRenameAction = (actions: FolderAction[], options: FolderActionOptions) => {
+const addRenameAction = (
+  actions: FolderAction[],
+  options: FolderActionOptions,
+) => {
   if (options.onStartRename) {
     actions.push({
       icon: <Edit />,
@@ -102,7 +113,10 @@ const addRenameAction = (actions: FolderAction[], options: FolderActionOptions) 
   }
 };
 
-const addCutAction = (actions: FolderAction[], options: FolderActionOptions) => {
+const addCutAction = (
+  actions: FolderAction[],
+  options: FolderActionOptions,
+) => {
   if (options.onCut) {
     actions.push({
       icon: <ContentCut />,
@@ -133,7 +147,10 @@ const addEncryptionPolicyAction = (
   });
 };
 
-const addRestoreAction = (actions: FolderAction[], options: FolderActionOptions) => {
+const addRestoreAction = (
+  actions: FolderAction[],
+  options: FolderActionOptions,
+) => {
   if (options.onRestore) {
     actions.push({
       icon: <Restore />,
@@ -143,7 +160,10 @@ const addRestoreAction = (actions: FolderAction[], options: FolderActionOptions)
   }
 };
 
-const addDeleteAction = (actions: FolderAction[], options: FolderActionOptions) => {
+const addDeleteAction = (
+  actions: FolderAction[],
+  options: FolderActionOptions,
+) => {
   if (options.onDelete) {
     actions.push({
       icon: <Delete />,

@@ -14,8 +14,10 @@ const jsonHeaders = {
 };
 
 const acceptsJson = (response: Response): boolean =>
-  response.headers.get("content-type")?.toLowerCase().includes("application/json") ??
-  false;
+  response.headers
+    .get("content-type")
+    ?.toLowerCase()
+    .includes("application/json") ?? false;
 
 const delay = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -33,7 +35,9 @@ const isMainAppReady = async (): Promise<boolean> => {
   }
 };
 
-const isUnlockStatusResponse = (value: unknown): value is UnlockStatusResponse =>
+const isUnlockStatusResponse = (
+  value: unknown,
+): value is UnlockStatusResponse =>
   typeof value === "object" &&
   value !== null &&
   typeof (value as UnlockStatusResponse).requiresBootstrapToken === "boolean";
@@ -44,7 +48,9 @@ const isUnlockResponse = (value: unknown): value is UnlockResponse =>
   typeof (value as UnlockResponse).ok === "boolean" &&
   typeof (value as UnlockResponse).message === "string";
 
-const readUnlockResponse = async (response: Response): Promise<UnlockResponse> => {
+const readUnlockResponse = async (
+  response: Response,
+): Promise<UnlockResponse> => {
   if (!acceptsJson(response)) {
     return { ok: false, message: response.statusText || "Unlock failed." };
   }

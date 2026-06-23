@@ -166,7 +166,8 @@ describe("MediaSessionCoordinator", () => {
     expect(coordinator.getOwnerId()).toBeNull();
     expect(platform.metadata).toBeNull();
     expect(platform.playbackState).toBe("none");
-    expect([...platform.actions.values()].every((handler) => handler === null))
-      .toBe(true);
+    expect(
+      [...platform.actions.values()].every((handler) => handler === null),
+    ).toBe(true);
   });
 });

@@ -57,7 +57,9 @@ export function assertValidArgon2idParams(params: Argon2idParams): void {
 
 export function randomBytes(length: number): Uint8Array {
   if (!Number.isSafeInteger(length) || length < 0) {
-    throw new InvalidCryptoInputError("Random byte length must be a non-negative integer.");
+    throw new InvalidCryptoInputError(
+      "Random byte length must be a non-negative integer.",
+    );
   }
 
   const output = new Uint8Array(length);
@@ -71,7 +73,9 @@ export async function deriveKek(
   params: Argon2idParams,
 ): Promise<CryptoKey> {
   if (salt.length !== KDF_SALT_BYTES) {
-    throw new InvalidCryptoInputError(`KDF salt must be ${KDF_SALT_BYTES} bytes.`);
+    throw new InvalidCryptoInputError(
+      `KDF salt must be ${KDF_SALT_BYTES} bytes.`,
+    );
   }
 
   assertValidArgon2idParams(params);
@@ -106,7 +110,9 @@ export async function generateMasterKey(): Promise<CryptoKey> {
   ]);
 }
 
-export async function exportMasterKey(masterKey: CryptoKey): Promise<Uint8Array> {
+export async function exportMasterKey(
+  masterKey: CryptoKey,
+): Promise<Uint8Array> {
   const raw = new Uint8Array(await subtle().exportKey("raw", masterKey));
 
   if (raw.length !== MASTER_KEY_BYTES) {
@@ -142,7 +148,9 @@ export async function wrapMasterKey(
   kek: CryptoKey,
   masterKey: CryptoKey,
 ): Promise<Uint8Array> {
-  const buffer = await subtle().wrapKey("raw", masterKey, kek, { name: "AES-KW" });
+  const buffer = await subtle().wrapKey("raw", masterKey, kek, {
+    name: "AES-KW",
+  });
   return new Uint8Array(buffer);
 }
 
@@ -203,7 +211,9 @@ export async function unwrapFileKey(
   aad: Uint8Array,
 ): Promise<CryptoKey> {
   if (tag.length !== GCM_TAG_BYTES) {
-    throw new InvalidCryptoInputError("Wrapped file key tag has an invalid length.");
+    throw new InvalidCryptoInputError(
+      "Wrapped file key tag has an invalid length.",
+    );
   }
 
   const input = new Uint8Array(encryptedFileKey.length + tag.length);
@@ -236,8 +246,12 @@ export async function unwrapFileKey(
   }
 }
 
-export async function deriveMetadataKey(masterKey: CryptoKey): Promise<CryptoKey> {
-  const rawMasterKey = new Uint8Array(await subtle().exportKey("raw", masterKey));
+export async function deriveMetadataKey(
+  masterKey: CryptoKey,
+): Promise<CryptoKey> {
+  const rawMasterKey = new Uint8Array(
+    await subtle().exportKey("raw", masterKey),
+  );
 
   try {
     const hkdfKey = await subtle().importKey(
@@ -253,7 +267,9 @@ export async function deriveMetadataKey(masterKey: CryptoKey): Promise<CryptoKey
         name: "HKDF",
         hash: "SHA-256",
         salt: asBufferSource(new Uint8Array(0)),
-        info: asBufferSource(new TextEncoder().encode("cotton:display-meta:v1")),
+        info: asBufferSource(
+          new TextEncoder().encode("cotton:display-meta:v1"),
+        ),
       },
       hkdfKey,
       { name: "AES-GCM", length: 256 },

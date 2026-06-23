@@ -13,7 +13,9 @@ const mocks = vi.hoisted(() => ({
   openDownloadLink: vi.fn(),
   restoreVersion: vi.fn(),
   t: vi.fn((key: string, options?: { version?: number }) =>
-    key === "fileVersions.versionLabel" ? `Version ${options?.version ?? ""}` : key,
+    key === "fileVersions.versionLabel"
+      ? `Version ${options?.version ?? ""}`
+      : key,
   ),
 }));
 
@@ -126,7 +128,9 @@ describe("FileVersionsDialog", () => {
     renderDialog();
 
     await screen.findByText("Version 2");
-    fireEvent.click(screen.getAllByRole("button", { name: "common:actions.download" })[1]);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "common:actions.download" })[1],
+    );
 
     await waitFor(() =>
       expect(mocks.getVersionDownloadLink).toHaveBeenCalledWith(
@@ -145,7 +149,9 @@ describe("FileVersionsDialog", () => {
     renderDialog(onRestored);
 
     await screen.findByText("Version 2");
-    fireEvent.click(screen.getAllByRole("button", { name: "common:actions.restore" })[0]);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "common:actions.restore" })[0],
+    );
 
     await waitFor(() =>
       expect(mocks.restoreVersion).toHaveBeenCalledWith("file-1", "version-2"),
@@ -157,7 +163,9 @@ describe("FileVersionsDialog", () => {
     renderDialog();
 
     await screen.findByText("Version 2");
-    fireEvent.click(screen.getByRole("button", { name: "common:actions.delete" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.delete" }),
+    );
 
     await waitFor(() =>
       expect(mocks.deleteVersion).toHaveBeenCalledWith("file-1", "version-2"),

@@ -1,4 +1,11 @@
-export type ModelFormat = "stl" | "obj" | "3mf" | "gltf" | "glb" | "ply" | "fbx";
+export type ModelFormat =
+  | "stl"
+  | "obj"
+  | "3mf"
+  | "gltf"
+  | "glb"
+  | "ply"
+  | "fbx";
 
 const MODEL_FORMAT_BY_EXTENSION: Readonly<Record<string, ModelFormat>> = {
   stl: "stl",
@@ -51,7 +58,8 @@ export const resolveModelFormat = (
 ): ModelFormat | null => {
   const normalizedContentType = normalizeContentType(contentType);
   if (normalizedContentType) {
-    const formatFromContentType = MODEL_FORMAT_BY_MIME_TYPE[normalizedContentType];
+    const formatFromContentType =
+      MODEL_FORMAT_BY_MIME_TYPE[normalizedContentType];
     if (formatFromContentType) {
       return formatFromContentType;
     }

@@ -69,11 +69,12 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
   const [busy, setBusy] = React.useState<BusyState | null>(null);
 
   const loading = isLoading || isFetching;
-  const error = actionError?.fileId === fileId
-    ? actionError.message
-    : isError
-      ? t("fileVersions.loadFailed", { ns: "files" })
-      : null;
+  const error =
+    actionError?.fileId === fileId
+      ? actionError.message
+      : isError
+        ? t("fileVersions.loadFailed", { ns: "files" })
+        : null;
 
   const retryLoad = React.useCallback(() => {
     setActionError(null);
@@ -173,7 +174,9 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{t("fileVersions.title", { ns: "files", name: fileName })}</DialogTitle>
+      <DialogTitle>
+        {t("fileVersions.title", { ns: "files", name: fileName })}
+      </DialogTitle>
       <DialogContent dividers>
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
@@ -243,7 +246,7 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
   return (
     <ListItem
       divider
-      secondaryAction={(
+      secondaryAction={
         <Stack direction="row" spacing={0.5}>
           <Tooltip title={t("common:actions.download")}>
             <span>
@@ -253,7 +256,11 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
                 disabled={disabled}
                 aria-label={t("common:actions.download")}
               >
-                {busyAction === "download" ? <CircularProgress size={20} /> : <Download />}
+                {busyAction === "download" ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <Download />
+                )}
               </IconButton>
             </span>
           </Tooltip>
@@ -266,7 +273,11 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
                   disabled={disabled}
                   aria-label={t("common:actions.restore")}
                 >
-                  {busyAction === "restore" ? <CircularProgress size={20} /> : <Restore />}
+                  {busyAction === "restore" ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <Restore />
+                  )}
                 </IconButton>
               </span>
             </Tooltip>
@@ -281,29 +292,47 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
                   disabled={disabled}
                   aria-label={t("common:actions.delete")}
                 >
-                  {busyAction === "delete" ? <CircularProgress size={20} /> : <Delete />}
+                  {busyAction === "delete" ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <Delete />
+                  )}
                 </IconButton>
               </span>
             </Tooltip>
           ) : null}
         </Stack>
-      )}
+      }
     >
       <ListItemText
-        primary={(
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center", pr: 12 }}>
+        primary={
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: "center", pr: 12 }}
+          >
             <Typography component="span" fontWeight={600} noWrap>
               {t("fileVersions.versionLabel", {
                 ns: "files",
                 version: version.versionNumber,
               })}
             </Typography>
-            {version.isCurrent ? <Chip size="small" label={t("fileVersions.current", { ns: "files" })} /> : null}
-            {version.isOriginal ? <Chip size="small" label={t("fileVersions.original", { ns: "files" })} /> : null}
+            {version.isCurrent ? (
+              <Chip
+                size="small"
+                label={t("fileVersions.current", { ns: "files" })}
+              />
+            ) : null}
+            {version.isOriginal ? (
+              <Chip
+                size="small"
+                label={t("fileVersions.original", { ns: "files" })}
+              />
+            ) : null}
           </Stack>
-        )}
+        }
         primaryTypographyProps={{ component: "div" }}
-        secondary={(
+        secondary={
           <Stack spacing={0.25} sx={{ mt: 0.75, pr: 12 }}>
             <Typography color="text.secondary" component="span" variant="body2">
               {createdAt}
@@ -312,7 +341,7 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
               {formatBytes(version.sizeBytes)} / {version.contentType}
             </Typography>
           </Stack>
-        )}
+        }
         secondaryTypographyProps={{ component: "div" }}
       />
     </ListItem>

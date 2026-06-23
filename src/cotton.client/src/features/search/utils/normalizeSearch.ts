@@ -2,10 +2,7 @@ import type { LayoutSearchResultDto } from "../../../shared/api/layoutsApi";
 import type { SearchDictionaryEntry } from "../types";
 
 export const normalizeSearchText = (value: string): string =>
-  value
-    .toLocaleLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
+  value.toLocaleLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 export const normalizeCompactSearchText = (value: string): string =>
   normalizeSearchText(value).replace(/[\s._\-/:\\]+/g, "");

@@ -13,7 +13,11 @@ interface NotificationsPage {
 }
 
 export const notificationsApi = {
-  list: async (page = 1, pageSize = 20, unreadOnly = false): Promise<NotificationsPage> => {
+  list: async (
+    page = 1,
+    pageSize = 20,
+    unreadOnly = false,
+  ): Promise<NotificationsPage> => {
     // Gridify: when value is omitted for '=' it matches null/default values.
     // We want unread => readAt is null.
     const filter = unreadOnly ? "readAt=" : undefined;
@@ -27,9 +31,7 @@ export const notificationsApi = {
     const headerRaw = response.headers["x-total-count"];
     const parsedTotalCount =
       typeof headerRaw === "string" ? Number.parseInt(headerRaw, 10) : 0;
-    const totalCount = Number.isFinite(parsedTotalCount)
-      ? parsedTotalCount
-      : 0;
+    const totalCount = Number.isFinite(parsedTotalCount) ? parsedTotalCount : 0;
 
     return {
       data: parseValidated(

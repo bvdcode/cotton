@@ -27,15 +27,14 @@ describe("moveClipboardStore", () => {
     const { setItems } = useMoveClipboardStore.getState();
 
     setItems([makeItem("a"), makeItem("b", { kind: "folder" })]);
-    expect(useMoveClipboardStore.getState().items.map((item) => item.id)).toEqual([
-      "a",
-      "b",
-    ]);
+    expect(
+      useMoveClipboardStore.getState().items.map((item) => item.id),
+    ).toEqual(["a", "b"]);
 
     setItems([makeItem("c")]);
-    expect(useMoveClipboardStore.getState().items.map((item) => item.id)).toEqual([
-      "c",
-    ]);
+    expect(
+      useMoveClipboardStore.getState().items.map((item) => item.id),
+    ).toEqual(["c"]);
   });
 
   it("keeps the provided readonly item array reference", () => {

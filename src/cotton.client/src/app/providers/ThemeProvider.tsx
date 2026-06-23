@@ -2,7 +2,10 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { ThemeContext } from "./ThemeContext";
 import { darkTheme, lightTheme } from "../../shared/theme";
-import { selectThemeMode, useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
+import {
+  selectThemeMode,
+  useUserPreferencesStore,
+} from "../../shared/store/userPreferencesStore";
 import { ThemeProvider as MuiThemeProvider, CssBaseline } from "@mui/material";
 
 interface ThemeContextProviderProps {

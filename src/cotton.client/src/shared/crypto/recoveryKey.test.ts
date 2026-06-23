@@ -45,7 +45,8 @@ describe("normalizeAndValidateRecoveryPhrase", () => {
 
   it("rejects a phrase with a bad checksum", () => {
     const words = generateRecoveryPhrase().split(" ");
-    words[words.length - 1] = words[words.length - 1] === "abandon" ? "ability" : "abandon";
+    words[words.length - 1] =
+      words[words.length - 1] === "abandon" ? "ability" : "abandon";
 
     expect(() => normalizeAndValidateRecoveryPhrase(words.join(" "))).toThrow(
       InvalidRecoveryPhraseError,

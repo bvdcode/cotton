@@ -20,7 +20,10 @@ export const TaskQueueWidget = () => {
   const getSnapshot = useCallback(() => taskManager.getSnapshot(), []);
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
-  const tasks = useMemo(() => sortTasksByPriority(snapshot.tasks), [snapshot.tasks]);
+  const tasks = useMemo(
+    () => sortTasksByPriority(snapshot.tasks),
+    [snapshot.tasks],
+  );
   const stats = useMemo(() => calculateTaskStats(tasks), [tasks]);
   const totalSpeed = snapshot.overall.speedBytesPerSec;
   const visible = snapshot.open && stats.total > 0;
@@ -76,7 +79,10 @@ export const TaskQueueWidget = () => {
           onClose={() => {
             // Close clears the list to avoid keeping stale tasks.
             // Close is hidden while tasks are active.
-            taskManager.clearFinished({ includeCompleted: true, includeFailed: true });
+            taskManager.clearFinished({
+              includeCompleted: true,
+              includeFailed: true,
+            });
           }}
           aria={{
             expand: t("actions.expand"),
@@ -87,9 +93,7 @@ export const TaskQueueWidget = () => {
 
         <Box
           sx={{
-            maxHeight: isCollapsed
-              ? 0
-              : `${listHeight}px`,
+            maxHeight: isCollapsed ? 0 : `${listHeight}px`,
             overflow: "hidden",
             position: "relative",
             zIndex: 1,

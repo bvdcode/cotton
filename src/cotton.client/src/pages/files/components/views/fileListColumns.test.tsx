@@ -2,10 +2,7 @@ import { render, screen } from "@testing-library/react";
 import type { GridRenderCellParams } from "@mui/x-data-grid";
 import { describe, expect, it, vi } from "vitest";
 import { ENCRYPTED_FLAG_KEY } from "@shared/crypto";
-import {
-  createActionsColumn,
-  type FileListRow,
-} from "./fileListColumns";
+import { createActionsColumn, type FileListRow } from "./fileListColumns";
 
 const labels = {
   name: "Name",

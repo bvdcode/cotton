@@ -243,7 +243,10 @@ export const useTrashBulkActions = ({
 
     if (selectedTiles.length === 0) return;
 
-    const targets = buildSelectedTrashTargets(selectedTiles, resolveWrapperNodeId);
+    const targets = buildSelectedTrashTargets(
+      selectedTiles,
+      resolveWrapperNodeId,
+    );
     if (targets.length === 0) return;
 
     const result = await confirm({

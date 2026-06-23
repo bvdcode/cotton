@@ -33,7 +33,10 @@ export interface UploadProgressSnapshot {
 }
 
 export interface UploadFileToNodeCallbacks {
-  onProgress?: (bytesUploaded: number, snapshot?: UploadProgressSnapshot) => void;
+  onProgress?: (
+    bytesUploaded: number,
+    snapshot?: UploadProgressSnapshot,
+  ) => void;
   onFinalizing?: () => void;
   onEncryptProgress?: (bytesEncrypted: number, bytesTotal: number) => void;
   onEncryptComplete?: () => void;

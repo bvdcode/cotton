@@ -92,12 +92,26 @@ export const getWidgetTitle = (
   _totalProgress: number,
   totalSpeed: number,
 ):
-  | { key: "titleWithProgress"; options: { completed: number; total: number; speed: string } }
-  | { key: "titleWithProgressNoSpeed"; options: { completed: number; total: number } }
+  | {
+      key: "titleWithProgress";
+      options: { completed: number; total: number; speed: string };
+    }
+  | {
+      key: "titleWithProgressNoSpeed";
+      options: { completed: number; total: number };
+    }
   | { key: "titleWithErrors"; options: { total: number; failed: number } }
   | { key: "title" }
   | { key: "titleWithTotal"; options: { total: number } } => {
-  const { hasActive, allCompleted, hasErrors, completed, failed, inProgress, total } = stats;
+  const {
+    hasActive,
+    allCompleted,
+    hasErrors,
+    completed,
+    failed,
+    inProgress,
+    total,
+  } = stats;
 
   if (hasActive) {
     const completedCount = Math.min(completed + failed + inProgress, total);

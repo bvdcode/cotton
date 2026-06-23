@@ -196,9 +196,7 @@ export interface AdminGetUsersRequest {
 }
 
 export const adminApi = {
-  getUsers: async (
-    request?: AdminGetUsersRequest,
-  ): Promise<AdminUserDto[]> => {
+  getUsers: async (request?: AdminGetUsersRequest): Promise<AdminUserDto[]> => {
     const response = await httpClient.get<AdminUserDto[]>("users", {
       params: {
         calculateStorageUsage: request?.calculateStorageUsage || undefined,

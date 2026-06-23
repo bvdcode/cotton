@@ -67,7 +67,9 @@ const buildModelLoadKey = (
   sourceKey: string,
   qualityMode: PreviewQualityMode,
 ): string => {
-  return modelFormat ? [modelFormat, sourceKey, qualityMode].join("\u0000") : "";
+  return modelFormat
+    ? [modelFormat, sourceKey, qualityMode].join("\u0000")
+    : "";
 };
 
 export const useModelPreviewState = ({
@@ -172,7 +174,8 @@ export const useModelPreviewState = ({
           return;
         }
 
-        flipBaseQuaternionRef.current = nextPreparedModel.object.quaternion.clone();
+        flipBaseQuaternionRef.current =
+          nextPreparedModel.object.quaternion.clone();
         flipOrientationIndexRef.current = 0;
         setModelLoadState({
           key: modelLoadKey,
@@ -305,7 +308,8 @@ export const useModelPreviewState = ({
     }
 
     const nextOrientationIndex =
-      (flipOrientationIndexRef.current + 1) % MANUAL_FLIP_ORIENTATION_VARIANTS.length;
+      (flipOrientationIndexRef.current + 1) %
+      MANUAL_FLIP_ORIENTATION_VARIANTS.length;
     flipOrientationIndexRef.current = nextOrientationIndex;
 
     applyFlipOrientation(

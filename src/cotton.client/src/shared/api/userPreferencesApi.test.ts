@@ -18,9 +18,8 @@ vi.mock("../store/authStore", () => ({
 }));
 
 const { httpClient } = await import("./httpClient");
-const { isSelfPreferenceUpdateToken, userPreferencesApi } = await import(
-  "./userPreferencesApi"
-);
+const { isSelfPreferenceUpdateToken, userPreferencesApi } =
+  await import("./userPreferencesApi");
 
 beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => undefined);

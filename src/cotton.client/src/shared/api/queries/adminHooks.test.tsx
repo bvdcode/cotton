@@ -238,10 +238,9 @@ describe("admin mutations", () => {
       "day",
     );
 
-    const { result } = renderHook(
-      () => useTriggerGarbageCollectorMutation(),
-      { wrapper: createWrapper(queryClient) },
-    );
+    const { result } = renderHook(() => useTriggerGarbageCollectorMutation(), {
+      wrapper: createWrapper(queryClient),
+    });
 
     await result.current.mutateAsync();
 

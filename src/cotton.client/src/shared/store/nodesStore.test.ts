@@ -92,17 +92,23 @@ describe("addFolderToCache", () => {
   it("appends a new folder to the parent's nodes", () => {
     seedParent("parent-1", [makeNode("a", "Drafts")], []);
 
-    useNodesStore.getState().addFolderToCache("parent-1", makeNode("b", "Photos"));
+    useNodesStore
+      .getState()
+      .addFolderToCache("parent-1", makeNode("b", "Photos"));
 
     expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.nodes.map((n) => n.id),
+      useNodesStore
+        .getState()
+        .contentByNodeId["parent-1"]?.nodes.map((n) => n.id),
     ).toEqual(["a", "b"]);
   });
 
   it("is idempotent when the folder is already present", () => {
     seedParent("parent-1", [makeNode("a", "Drafts")], []);
 
-    useNodesStore.getState().addFolderToCache("parent-1", makeNode("a", "Drafts"));
+    useNodesStore
+      .getState()
+      .addFolderToCache("parent-1", makeNode("a", "Drafts"));
 
     expect(
       useNodesStore.getState().contentByNodeId["parent-1"]?.nodes.length,
@@ -110,7 +116,9 @@ describe("addFolderToCache", () => {
   });
 
   it("is a no-op when the parent has no cached content", () => {
-    useNodesStore.getState().addFolderToCache("nowhere", makeNode("a", "Drafts"));
+    useNodesStore
+      .getState()
+      .addFolderToCache("nowhere", makeNode("a", "Drafts"));
 
     expect(useNodesStore.getState().contentByNodeId["nowhere"]).toBeUndefined();
   });
@@ -182,9 +190,9 @@ describe("moveFolderInCache", () => {
 
     useNodesStore.getState().moveFolderInCache(updated, "parent-1", "parent-1");
 
-    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.nodes).toEqual([
-      updated,
-    ]);
+    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.nodes).toEqual(
+      [updated],
+    );
   });
 });
 
@@ -209,9 +217,9 @@ describe("moveFileInCache", () => {
 
     useNodesStore.getState().moveFileInCache(updated, "parent-1", "parent-1");
 
-    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.files).toEqual([
-      updated,
-    ]);
+    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.files).toEqual(
+      [updated],
+    );
   });
 });
 
@@ -227,15 +235,20 @@ describe("optimisticRenameFile", () => {
   });
 
   it("leaves other files alone", () => {
-    seedParent("parent-1", [], [
-      makeFile("f1", "a.txt"),
-      makeFile("f2", "b.txt"),
-    ]);
+    seedParent(
+      "parent-1",
+      [],
+      [makeFile("f1", "a.txt"), makeFile("f2", "b.txt")],
+    );
 
-    useNodesStore.getState().optimisticRenameFile("parent-1", "f2", "renamed.txt");
+    useNodesStore
+      .getState()
+      .optimisticRenameFile("parent-1", "f2", "renamed.txt");
 
     expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.files.map((f) => f.name),
+      useNodesStore
+        .getState()
+        .contentByNodeId["parent-1"]?.files.map((f) => f.name),
     ).toEqual(["a.txt", "renamed.txt"]);
   });
 });
@@ -276,11 +289,15 @@ describe("upsertFileInCache", () => {
     seedParent("parent-1", [], [makeFile("f1", "old.txt")]);
     const uploaded = makeFile("f2", "new.txt");
 
-    const updated = useNodesStore.getState().upsertFileInCache("parent-1", uploaded);
+    const updated = useNodesStore
+      .getState()
+      .upsertFileInCache("parent-1", uploaded);
 
     expect(updated).toBe(true);
     expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.files.map((f) => f.id),
+      useNodesStore
+        .getState()
+        .contentByNodeId["parent-1"]?.files.map((f) => f.id),
     ).toEqual(["f1", "f2"]);
     expect(useNodesStore.getState().lastUpdatedByNodeId["parent-1"]).toEqual(
       expect.any(Number),
@@ -293,12 +310,14 @@ describe("upsertFileInCache", () => {
       contentType: "image/jpeg",
     });
 
-    const updated = useNodesStore.getState().upsertFileInCache("parent-1", uploaded);
+    const updated = useNodesStore
+      .getState()
+      .upsertFileInCache("parent-1", uploaded);
 
     expect(updated).toBe(true);
-    expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.files,
-    ).toEqual([uploaded]);
+    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.files).toEqual(
+      [uploaded],
+    );
   });
 
   it("keeps cache unchanged when the parent content is not cached", () => {
@@ -315,9 +334,11 @@ describe("upsertFileInCache", () => {
 
 describe("optimisticSetFilePreviewHash", () => {
   it("updates only the matching file", () => {
-    seedParent("parent-1", [], [
-      makeFile("f1", "a.txt", { previewHashEncryptedHex: "old" }),
-    ]);
+    seedParent(
+      "parent-1",
+      [],
+      [makeFile("f1", "a.txt", { previewHashEncryptedHex: "old" })],
+    );
 
     useNodesStore
       .getState()
@@ -330,9 +351,11 @@ describe("optimisticSetFilePreviewHash", () => {
   });
 
   it("keeps the same content object when the hash is already current", () => {
-    seedParent("parent-1", [], [
-      makeFile("f1", "a.txt", { previewHashEncryptedHex: "stable" }),
-    ]);
+    seedParent(
+      "parent-1",
+      [],
+      [makeFile("f1", "a.txt", { previewHashEncryptedHex: "stable" })],
+    );
     const before = useNodesStore.getState().contentByNodeId["parent-1"];
 
     const updated = useNodesStore
@@ -344,9 +367,11 @@ describe("optimisticSetFilePreviewHash", () => {
   });
 
   it("reports whether a matching file was updated", () => {
-    seedParent("parent-1", [], [
-      makeFile("f1", "a.txt", { previewHashEncryptedHex: "old" }),
-    ]);
+    seedParent(
+      "parent-1",
+      [],
+      [makeFile("f1", "a.txt", { previewHashEncryptedHex: "old" })],
+    );
 
     const updated = useNodesStore
       .getState()
@@ -362,15 +387,18 @@ describe("optimisticSetFilePreviewHash", () => {
 
 describe("optimisticDeleteFile", () => {
   it("removes the file from the parent's files list", () => {
-    seedParent("parent-1", [], [
-      makeFile("f1", "a.txt"),
-      makeFile("f2", "b.txt"),
-    ]);
+    seedParent(
+      "parent-1",
+      [],
+      [makeFile("f1", "a.txt"), makeFile("f2", "b.txt")],
+    );
 
     useNodesStore.getState().optimisticDeleteFile("parent-1", "f1");
 
     expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.files.map((f) => f.id),
+      useNodesStore
+        .getState()
+        .contentByNodeId["parent-1"]?.files.map((f) => f.id),
     ).toEqual(["f2"]);
   });
 
@@ -394,15 +422,19 @@ describe("refreshCachedFileDisplayMetadata", () => {
       name: "private.pdf",
       contentType: "application/pdf",
     });
-    seedParent("parent-1", [], [
-      makeFile("f1", "11111111-2222-4333-8444-555555555555", {
-        contentType: "application/octet-stream",
-        metadata: {
-          [ENCRYPTED_FLAG_KEY]: "true",
-          [DISPLAY_META_KEY]: encryptedMeta,
-        },
-      }),
-    ]);
+    seedParent(
+      "parent-1",
+      [],
+      [
+        makeFile("f1", "11111111-2222-4333-8444-555555555555", {
+          contentType: "application/octet-stream",
+          metadata: {
+            [ENCRYPTED_FLAG_KEY]: "true",
+            [DISPLAY_META_KEY]: encryptedMeta,
+          },
+        }),
+      ],
+    );
 
     await useNodesStore.getState().refreshCachedFileDisplayMetadata();
 
@@ -425,15 +457,19 @@ describe("refreshCachedFileDisplayMetadata", () => {
       currentNode: parent,
       rootNodeId: parent.id,
     });
-    seedParent("parent-1", [], [
-      makeFile("f1", "11111111-2222-4333-8444-555555555555", {
-        contentType: "application/octet-stream",
-        metadata: {
-          [ENCRYPTED_FLAG_KEY]: "true",
-          [DISPLAY_META_KEY]: encryptedMeta,
-        },
-      }),
-    ]);
+    seedParent(
+      "parent-1",
+      [],
+      [
+        makeFile("f1", "11111111-2222-4333-8444-555555555555", {
+          contentType: "application/octet-stream",
+          metadata: {
+            [ENCRYPTED_FLAG_KEY]: "true",
+            [DISPLAY_META_KEY]: encryptedMeta,
+          },
+        }),
+      ],
+    );
 
     await useNodesStore.getState().refreshCachedFileDisplayMetadata();
 

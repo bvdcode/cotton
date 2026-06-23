@@ -210,7 +210,11 @@ const ConnectedAccountRow = ({
       color="error"
       variant="outlined"
       startIcon={
-        unlinking ? <CircularProgress color="inherit" size={16} /> : <LinkOffIcon />
+        unlinking ? (
+          <CircularProgress color="inherit" size={16} />
+        ) : (
+          <LinkOffIcon />
+        )
       }
       onClick={onUnlink}
       disabled={unlinking}

@@ -62,7 +62,9 @@ const OidcProviderFormDialogContent = ({
   const createMutation = useCreateOidcProviderMutation();
   const updateMutation = useUpdateOidcProviderMutation();
   const [form, setForm] = useState<OidcProviderFormState>(() =>
-    provider ? createOidcProviderFormFromDto(provider) : createEmptyOidcProviderForm(),
+    provider
+      ? createOidcProviderFormFromDto(provider)
+      : createEmptyOidcProviderForm(),
   );
   const [error, setError] = useState<string | null>(null);
 

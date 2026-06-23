@@ -1,9 +1,4 @@
-import {
-  Alert,
-  Divider,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Alert, Divider, Stack, Typography } from "@mui/material";
 import {
   useEffect,
   useRef,
@@ -174,12 +169,9 @@ export const AdminNotificationsSettingsPage = () => {
     setSmtpTesting(true);
     try {
       await settingsApi.testEmailConfig();
-      toast.success(
-        t("notificationsSettings.state.testSent"),
-        {
-          toastId: "admin-notifications-settings:smtp-test:sent",
-        },
-      );
+      toast.success(t("notificationsSettings.state.testSent"), {
+        toastId: "admin-notifications-settings:smtp-test:sent",
+      });
     } catch (error) {
       showApiErrorToast(
         error,

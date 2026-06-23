@@ -210,8 +210,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
       {
         key: "custom",
         label: () => t("setup:questions.geoIpLookup.options.custom"),
-        description: () =>
-          t("setup:questions.geoIpLookup.descriptions.custom"),
+        description: () => t("setup:questions.geoIpLookup.descriptions.custom"),
         value: "customHttp",
         icon: <Http />,
       },

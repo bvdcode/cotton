@@ -42,14 +42,17 @@ vi.mock("yet-another-react-lightbox", () => ({
       <div>
         <button onClick={props.close}>close</button>
         {props.toolbar?.buttons?.map((button, index) =>
-          typeof button === "string" ? null : (
-            <span key={index}>{button}</span>
-          ),
+          typeof button === "string" ? null : <span key={index}>{button}</span>,
         )}
       </div>
     );
   },
-  IconButton: ({ disabled, label, onClick, renderIcon }: MockIconButtonProps) => (
+  IconButton: ({
+    disabled,
+    label,
+    onClick,
+    renderIcon,
+  }: MockIconButtonProps) => (
     <button aria-label={label} disabled={disabled} onClick={onClick}>
       {renderIcon?.()}
     </button>
@@ -59,8 +62,12 @@ vi.mock("yet-another-react-lightbox", () => ({
 vi.mock("yet-another-react-lightbox/plugins/video", () => ({ default: {} }));
 vi.mock("yet-another-react-lightbox/plugins/download", () => ({ default: {} }));
 vi.mock("yet-another-react-lightbox/plugins/zoom", () => ({ default: {} }));
-vi.mock("yet-another-react-lightbox/plugins/slideshow", () => ({ default: {} }));
-vi.mock("yet-another-react-lightbox/plugins/thumbnails", () => ({ default: {} }));
+vi.mock("yet-another-react-lightbox/plugins/slideshow", () => ({
+  default: {},
+}));
+vi.mock("yet-another-react-lightbox/plugins/thumbnails", () => ({
+  default: {},
+}));
 vi.mock("yet-another-react-lightbox/plugins/share", () => ({ default: {} }));
 vi.mock("../../hooks/useActivityDetection", () => ({
   useActivityDetection: () => true,

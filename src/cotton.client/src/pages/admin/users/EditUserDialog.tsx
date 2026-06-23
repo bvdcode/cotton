@@ -42,9 +42,7 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
     return null;
   }
 
-  return (
-    <EditUserDialogContent key={user.id} user={user} onClose={onClose} />
-  );
+  return <EditUserDialogContent key={user.id} user={user} onClose={onClose} />;
 };
 
 interface EditUserDialogContentProps {
@@ -151,11 +149,7 @@ const EditUserDialogContent: React.FC<EditUserDialogContentProps> = ({
         <Button onClick={handleClose} disabled={saving}>
           {t("actions.cancel", { ns: "common" })}
         </Button>
-        <Button
-          variant="contained"
-          onClick={handleSave}
-          disabled={!canSave}
-        >
+        <Button variant="contained" onClick={handleSave} disabled={!canSave}>
           {saving ? (
             <Stack direction="row" spacing={1} alignItems="center">
               <CircularProgress size={16} color="inherit" />

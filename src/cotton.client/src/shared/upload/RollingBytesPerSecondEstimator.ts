@@ -28,7 +28,10 @@ export class RollingBytesPerSecondEstimator {
 
   private startMs: number | null = null;
   private samples: Array<{ t: number; bytes: number }> = [];
-  private last: BytesPerSecondSnapshot = { rollingBytesPerSec: 0, averageBytesPerSec: 0 };
+  private last: BytesPerSecondSnapshot = {
+    rollingBytesPerSec: 0,
+    averageBytesPerSec: 0,
+  };
 
   constructor(options: RollingBytesPerSecondEstimatorOptions = {}) {
     this.windowMs = options.windowMs ?? 1500;
@@ -41,7 +44,10 @@ export class RollingBytesPerSecondEstimator {
     this.last = { rollingBytesPerSec: 0, averageBytesPerSec: 0 };
   }
 
-  update(totalBytes: number, nowMs: number = Date.now()): BytesPerSecondSnapshot {
+  update(
+    totalBytes: number,
+    nowMs: number = Date.now(),
+  ): BytesPerSecondSnapshot {
     if (!Number.isFinite(totalBytes) || totalBytes < 0) {
       return this.last;
     }

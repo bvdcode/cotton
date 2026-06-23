@@ -232,9 +232,8 @@ describe("TilesView keyboard behavior", () => {
       },
     });
 
-    const menuButton = document.querySelector<HTMLButtonElement>(
-      ".card-menu-button",
-    );
+    const menuButton =
+      document.querySelector<HTMLButtonElement>(".card-menu-button");
     expect(menuButton).not.toBeNull();
 
     fireEvent.click(menuButton!);

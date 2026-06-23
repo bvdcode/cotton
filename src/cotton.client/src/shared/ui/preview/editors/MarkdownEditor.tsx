@@ -1,6 +1,6 @@
 /**
  * Markdown Editor Component
- * 
+ *
  * Single Responsibility: Wraps MDEditor with consistent interface
  * Provides markdown editing and preview capabilities
  */
@@ -16,7 +16,7 @@ export const MarkdownEditor: React.FC<IEditorProps> = ({
   return (
     <MDEditor
       value={value}
-      onChange={(val) => onChange(val || '')}
+      onChange={(val) => onChange(val || "")}
       preview={isEditing ? "edit" : "preview"}
       hideToolbar={!isEditing}
       height="100%"

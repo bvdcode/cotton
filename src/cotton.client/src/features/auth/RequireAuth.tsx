@@ -9,13 +9,8 @@ type Props = {
 };
 
 export function RequireAuth({ children }: Props) {
-  const {
-    isAuthenticated,
-    isInitializing,
-    hydrated,
-    hasChecked,
-    ensureAuth,
-  } = useAuth();
+  const { isAuthenticated, isInitializing, hydrated, hasChecked, ensureAuth } =
+    useAuth();
   const location = useLocation();
 
   useEffect(() => {
@@ -24,13 +19,7 @@ export function RequireAuth({ children }: Props) {
 
   // Wait for store rehydration before deciding to redirect.
   if (!hydrated) {
-    return (
-      <Loader
-        overlay={true}
-        title="Loading..."
-        caption="Please, wait"
-      />
-    );
+    return <Loader overlay={true} title="Loading..." caption="Please, wait" />;
   }
 
   if (isInitializing) {

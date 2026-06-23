@@ -1,8 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Box, Typography } from "@mui/material";
 import FolderOpenOutlinedIcon from "@mui/icons-material/FolderOpenOutlined";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
-import type { IFileListView, FileSystemTile } from "@shared/types/FileListViewTypes";
+import type {
+  IFileListView,
+  FileSystemTile,
+} from "@shared/types/FileListViewTypes";
 import Loader from "../../../../shared/ui/Loader";
 import { NewFolderCard } from "./NewFolderCard";
 import { TileItem } from "./TileItem";
@@ -47,8 +56,11 @@ const shouldIgnoreShortcutTarget = (target: EventTarget | null): boolean => {
   );
 };
 
-const hasModifierKeys = (event: { altKey: boolean; ctrlKey: boolean; metaKey: boolean }): boolean =>
-  event.altKey || event.ctrlKey || event.metaKey;
+const hasModifierKeys = (event: {
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+}): boolean => event.altKey || event.ctrlKey || event.metaKey;
 
 interface KeyboardEventLike {
   key: string;
@@ -139,8 +151,9 @@ export const TilesView: React.FC<IFileListView> = ({
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [previousTilesLength, setPreviousTilesLength] = useState(tiles.length);
-  const [previousSelectedIndex, setPreviousSelectedIndex] =
-    useState<number | null>(selectedIndex);
+  const [previousSelectedIndex, setPreviousSelectedIndex] = useState<
+    number | null
+  >(selectedIndex);
 
   if (
     tiles.length !== previousTilesLength ||
@@ -197,7 +210,8 @@ export const TilesView: React.FC<IFileListView> = ({
         if (!tileElement) {
           if (attempts < FOCUS_RETRY_LIMIT) {
             attempts += 1;
-            focusAnimationFrameRef.current = window.requestAnimationFrame(tryFocus);
+            focusAnimationFrameRef.current =
+              window.requestAnimationFrame(tryFocus);
           }
           return;
         }
@@ -283,10 +297,17 @@ export const TilesView: React.FC<IFileListView> = ({
         return;
       }
 
-      const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType ?? null, {
-        requiresVideoTranscoding: tile.file.requiresVideoTranscoding ?? false,
-      });
-      if ((typeInfo.type === "image" || typeInfo.type === "video") && fileOperations.onMediaClick) {
+      const typeInfo = getFileTypeInfo(
+        tile.file.name,
+        tile.file.contentType ?? null,
+        {
+          requiresVideoTranscoding: tile.file.requiresVideoTranscoding ?? false,
+        },
+      );
+      if (
+        (typeInfo.type === "image" || typeInfo.type === "video") &&
+        fileOperations.onMediaClick
+      ) {
         fileOperations.onMediaClick(tile.file.id);
         return;
       }
@@ -419,7 +440,8 @@ export const TilesView: React.FC<IFileListView> = ({
       if (!host) return;
 
       const activeElement = document.activeElement;
-      const isInsideHost = activeElement instanceof HTMLElement && host.contains(activeElement);
+      const isInsideHost =
+        activeElement instanceof HTMLElement && host.contains(activeElement);
       const isDocumentContext =
         activeElement === null ||
         activeElement === document.body ||
@@ -436,12 +458,15 @@ export const TilesView: React.FC<IFileListView> = ({
     };
   }, [containerRef, handleKeyboardEvent]);
 
-  const handleFocusCapture = useCallback((event: React.FocusEvent<HTMLDivElement>) => {
-    const tileIndex = getTileIndexFromTarget(event.target);
-    if (tileIndex === null) return;
+  const handleFocusCapture = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      const tileIndex = getTileIndexFromTarget(event.target);
+      if (tileIndex === null) return;
 
-    setActiveIndex((prev) => (prev === tileIndex ? prev : tileIndex));
-  }, []);
+      setActiveIndex((prev) => (prev === tileIndex ? prev : tileIndex));
+    },
+    [],
+  );
 
   const handlePointerDownCapture = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -504,9 +529,7 @@ export const TilesView: React.FC<IFileListView> = ({
             dimmed={dimmed}
             draggable={!!moveSupport && !readOnly}
             onMoveDragStart={
-              moveSupport
-                ? (e) => handleMoveDragStart(tileId, e)
-                : undefined
+              moveSupport ? (e) => handleMoveDragStart(tileId, e) : undefined
             }
             onMoveDragOver={
               moveSupport && isFolder

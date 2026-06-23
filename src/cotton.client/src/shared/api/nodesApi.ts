@@ -83,17 +83,18 @@ export const nodesApi = {
     nodeId: Guid,
     options?: { nodeType?: string },
   ): Promise<NodeDto[]> =>
-    getValidated(
-      `/layouts/nodes/${nodeId}/ancestors`,
-      nodeListSchema,
-      {
-        params: options?.nodeType ? { nodeType: options.nodeType } : undefined,
-      },
-    ),
+    getValidated(`/layouts/nodes/${nodeId}/ancestors`, nodeListSchema, {
+      params: options?.nodeType ? { nodeType: options.nodeType } : undefined,
+    }),
 
   getChildren: async (
     nodeId: Guid,
-    options?: { nodeType?: string; page?: number; pageSize?: number; depth?: number },
+    options?: {
+      nodeType?: string;
+      page?: number;
+      pageSize?: number;
+      depth?: number;
+    },
   ): Promise<NodeResponse> => {
     const requestedPage = options?.page ?? 1;
     const requestedPageSize = options?.pageSize ?? 1000000;
@@ -107,7 +108,10 @@ export const nodesApi = {
       },
     });
     const content = parseValidated(url, response.data, nodeContentSchema);
-    const totalCount = readRequiredIntHeader(response.headers as HeaderMap, "x-total-count");
+    const totalCount = readRequiredIntHeader(
+      response.headers as HeaderMap,
+      "x-total-count",
+    );
     const files = await applyDisplayMetaToFiles(content.files);
 
     return {

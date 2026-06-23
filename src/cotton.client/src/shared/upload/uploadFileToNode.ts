@@ -12,7 +12,11 @@ import {
   requireMasterKey,
 } from "../crypto";
 import { uploadConfig } from "./config";
-import type { UploadFileToNodeCallbacks, UploadFileToNodeOptions, UploadServerParams } from "./types";
+import type {
+  UploadFileToNodeCallbacks,
+  UploadFileToNodeOptions,
+  UploadServerParams,
+} from "./types";
 import { uploadBlobToChunks } from "./uploadBlobToChunks";
 
 export type { UploadServerParams } from "./types";
@@ -46,12 +50,9 @@ export async function uploadFileToNode(options: {
       contentType: originalContentType,
     });
 
-    uploadBlob = await encryptFileToBlob(
-      file,
-      masterKey,
-      undefined,
-      { onProgress: options.onEncryptProgress },
-    );
+    uploadBlob = await encryptFileToBlob(file, masterKey, undefined, {
+      onProgress: options.onEncryptProgress,
+    });
     options.onEncryptComplete?.();
     contentType = ENCRYPTED_CONTENT_TYPE;
     name = createOpaqueServerFileName();
@@ -67,8 +68,10 @@ export async function uploadFileToNode(options: {
     server,
     client: {
       sendChunkHashForValidation:
-        options.client?.sendChunkHashForValidation ?? uploadConfig.sendChunkHashForValidation,
-      concurrency: options.client?.concurrency ?? uploadConfig.maxChunkUploadConcurrency,
+        options.client?.sendChunkHashForValidation ??
+        uploadConfig.sendChunkHashForValidation,
+      concurrency:
+        options.client?.concurrency ?? uploadConfig.maxChunkUploadConcurrency,
     },
     onProgress: options.onProgress,
   });

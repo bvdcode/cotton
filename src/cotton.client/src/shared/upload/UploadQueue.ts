@@ -2,7 +2,11 @@ import type { Guid } from "../api/layoutsApi";
 import type { UploadServerParams } from "./types";
 import { uploadFileToNode } from "./uploadFileToNode";
 
-export type UploadQueueItemStatus = "queued" | "uploading" | "completed" | "failed";
+export type UploadQueueItemStatus =
+  | "queued"
+  | "uploading"
+  | "completed"
+  | "failed";
 
 export interface UploadQueueItem {
   id: string;
@@ -61,7 +65,11 @@ export class UploadQueue {
 
         next.status = "uploading";
         try {
-          await uploadFileToNode({ file: next.file, nodeId: next.nodeId, server });
+          await uploadFileToNode({
+            file: next.file,
+            nodeId: next.nodeId,
+            server,
+          });
           next.status = "completed";
         } catch (e) {
           next.status = "failed";

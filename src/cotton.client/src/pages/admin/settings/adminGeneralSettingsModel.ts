@@ -197,7 +197,7 @@ export const validateCustomGeoIpLookupUrl = (
   return { error: null, normalized: trimmed };
 };
 
-export const isSameArray = <T,>(
+export const isSameArray = <T>(
   left: readonly T[],
   right: readonly T[],
 ): boolean =>

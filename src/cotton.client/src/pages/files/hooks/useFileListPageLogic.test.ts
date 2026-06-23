@@ -13,9 +13,8 @@ vi.mock("@shared/hooks/useFileInteractionHandlers", () => ({
     useFileInteractionHandlersMock(args),
 }));
 
-const { useFileListPageLogic, useFileListSourceLogic } = await import(
-  "./useFileListPageLogic"
-);
+const { useFileListPageLogic, useFileListSourceLogic } =
+  await import("./useFileListPageLogic");
 
 const makeFolderTile = (id: string): FileSystemTile => ({
   kind: "folder",
@@ -50,7 +49,9 @@ const makeFileTile = (
   },
 });
 
-const makeSource = (overrides: Partial<FileListSource> = {}): FileListSource => ({
+const makeSource = (
+  overrides: Partial<FileListSource> = {},
+): FileListSource => ({
   loading: false,
   error: null,
   tiles: [],
@@ -134,10 +135,7 @@ describe("useFileListSourceLogic", () => {
 describe("useFileListPageLogic", () => {
   it("builds interaction handlers from sorted files", () => {
     const source = makeSource({
-      tiles: [
-        makeFileTile("file-b", "b.txt"),
-        makeFileTile("file-a", "a.txt"),
-      ],
+      tiles: [makeFileTile("file-b", "b.txt"), makeFileTile("file-a", "a.txt")],
     });
 
     const { result } = renderHook(() =>

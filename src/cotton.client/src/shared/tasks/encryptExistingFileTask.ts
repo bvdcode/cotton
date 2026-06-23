@@ -1,8 +1,5 @@
 import type { NodeFileManifestDto } from "../api/nodesApi";
-import {
-  ClientEncryptionSizeLimitError,
-  NoKeyError,
-} from "../crypto";
+import { ClientEncryptionSizeLimitError, NoKeyError } from "../crypto";
 import { encryptExistingFileInPlace } from "../upload/encryptExistingFileInPlace";
 import { decryptExistingFileInPlace } from "../upload/decryptExistingFileInPlace";
 import type { UploadServerParams } from "../upload/types";
@@ -28,12 +25,14 @@ export async function encryptExistingFileWithTask(options: {
   task?: AppTaskHandle;
 }): Promise<void> {
   const { file, targetNodeId, scopeLabel, server } = options;
-  const task = options.task ?? taskManager.createTask({
-    kind: "encrypt",
-    label: file.name,
-    scopeLabel,
-    bytesTotal: file.sizeBytes,
-  });
+  const task =
+    options.task ??
+    taskManager.createTask({
+      kind: "encrypt",
+      label: file.name,
+      scopeLabel,
+      bytesTotal: file.sizeBytes,
+    });
 
   try {
     task.update({ status: "running" });
@@ -87,12 +86,14 @@ export async function decryptExistingFileWithTask(options: {
   task?: AppTaskHandle;
 }): Promise<void> {
   const { file, targetNodeId, scopeLabel, server } = options;
-  const task = options.task ?? taskManager.createTask({
-    kind: "decrypt",
-    label: file.name,
-    scopeLabel,
-    bytesTotal: file.sizeBytes,
-  });
+  const task =
+    options.task ??
+    taskManager.createTask({
+      kind: "decrypt",
+      label: file.name,
+      scopeLabel,
+      bytesTotal: file.sizeBytes,
+    });
 
   try {
     task.update({ status: "running" });

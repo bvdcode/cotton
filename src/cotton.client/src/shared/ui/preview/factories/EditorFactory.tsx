@@ -39,7 +39,7 @@ interface EditorFactoryProps extends IEditorProps {
 
 /**
  * Factory component that renders the appropriate editor based on mode
- * 
+ *
  * Strategy Pattern: Selects and renders the correct editor strategy
  */
 export const EditorFactory: React.FC<EditorFactoryProps> = ({
@@ -49,21 +49,21 @@ export const EditorFactory: React.FC<EditorFactoryProps> = ({
   switch (mode) {
     case EditorMode.Text:
       return <PlainTextEditor {...editorProps} />;
-    
+
     case EditorMode.Markdown:
       return (
         <Suspense fallback={<EditorFallback />}>
           <MarkdownEditor {...editorProps} />
         </Suspense>
       );
-    
+
     case EditorMode.Code:
       return (
         <Suspense fallback={<EditorFallback />}>
           <CodeEditor {...editorProps} />
         </Suspense>
       );
-    
+
     default:
       // Fallback to text editor for unknown modes
       return <PlainTextEditor {...editorProps} />;

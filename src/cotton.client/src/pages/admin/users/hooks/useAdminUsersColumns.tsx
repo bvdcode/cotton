@@ -1,10 +1,13 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Box, Chip, CircularProgress, Tooltip, Typography } from "@mui/material";
 import {
-  GridActionsCellItem,
-  type GridColDef,
-} from "@mui/x-data-grid";
+  Box,
+  Chip,
+  CircularProgress,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { GridActionsCellItem, type GridColDef } from "@mui/x-data-grid";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -212,6 +215,13 @@ export const useAdminUsersColumns = ({
         ],
       },
     ],
-    [onEdit, placeholder, roleLabel, storageUsageCalculatingLabel, storageUsageLoading, t],
+    [
+      onEdit,
+      placeholder,
+      roleLabel,
+      storageUsageCalculatingLabel,
+      storageUsageLoading,
+      t,
+    ],
   );
 };

@@ -62,8 +62,7 @@ export const ListView: React.FC<IFileListView> = ({
           location: tile.path ?? null,
           sizeBytes: null,
           metadata: tile.node.metadata,
-          encryptionPolicy:
-            getFolderEncryptionPolicyState?.(tile.node),
+          encryptionPolicy: getFolderEncryptionPolicyState?.(tile.node),
           tile,
         };
       }
@@ -94,18 +93,10 @@ export const ListView: React.FC<IFileListView> = ({
       },
       ...baseRows,
     ];
-  }, [
-    tiles,
-    isCreatingFolder,
-    newFolderName,
-    getFolderEncryptionPolicyState,
-  ]);
+  }, [tiles, isCreatingFolder, newFolderName, getFolderEncryptionPolicyState]);
 
   const orderedIds = useMemo(
-    () =>
-      rows
-        .filter((r) => r.type !== "new-folder")
-        .map((r) => String(r.id)),
+    () => rows.filter((r) => r.type !== "new-folder").map((r) => String(r.id)),
     [rows],
   );
 
@@ -129,12 +120,15 @@ export const ListView: React.FC<IFileListView> = ({
     [],
   );
 
-  const isInlineRenameTarget = useCallback((target: EventTarget | null): boolean => {
-    if (!(target instanceof Element)) return false;
-    return Boolean(
-      target.closest("input, textarea, [contenteditable='true']"),
-    );
-  }, []);
+  const isInlineRenameTarget = useCallback(
+    (target: EventTarget | null): boolean => {
+      if (!(target instanceof Element)) return false;
+      return Boolean(
+        target.closest("input, textarea, [contenteditable='true']"),
+      );
+    },
+    [],
+  );
 
   const isRowRenaming = useCallback(
     (row: FileListRow): boolean => {
@@ -222,7 +216,13 @@ export const ListView: React.FC<IFileListView> = ({
       // sort headers, checkboxes) keep working normally.
       rowEl.setAttribute("draggable", "true");
     },
-    [findRowElement, isInlineRenameTarget, isRowRenaming, moveSupport, rowsById],
+    [
+      findRowElement,
+      isInlineRenameTarget,
+      isRowRenaming,
+      moveSupport,
+      rowsById,
+    ],
   );
 
   const handleContainerDragStart = useCallback(
@@ -246,7 +246,13 @@ export const ListView: React.FC<IFileListView> = ({
       writeMoveDragPayload(event.dataTransfer, { items });
       setClippedDragImage(event, rowEl);
     },
-    [buildDragPayloadForRow, findRowElement, isRowRenaming, moveSupport, rowsById],
+    [
+      buildDragPayloadForRow,
+      findRowElement,
+      isRowRenaming,
+      moveSupport,
+      rowsById,
+    ],
   );
 
   const handleContainerDragOver = useCallback(
@@ -501,8 +507,14 @@ export const ListView: React.FC<IFileListView> = ({
         rows={rows}
         columns={columns}
         checkboxSelection={selectionMode}
-        rowSelectionModel={selectionMode ? rowSelectionModel : { type: "include", ids: new Set() }}
-        onRowSelectionModelChange={selectionMode ? handleRowSelectionModelChange : undefined}
+        rowSelectionModel={
+          selectionMode
+            ? rowSelectionModel
+            : { type: "include", ids: new Set() }
+        }
+        onRowSelectionModelChange={
+          selectionMode ? handleRowSelectionModelChange : undefined
+        }
         disableRowSelectionOnClick
         onRowClick={handleRowClick}
         hideFooter={false}

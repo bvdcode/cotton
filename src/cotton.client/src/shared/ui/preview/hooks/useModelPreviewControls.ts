@@ -48,7 +48,7 @@ const resolveValue = <T>(current: T, next: ValueOrUpdater<T>): T => {
   return typeof next === "function" ? (next as (value: T) => T)(current) : next;
 };
 
-const nextInOrder = <T,>(order: ReadonlyArray<T>, value: T): T => {
+const nextInOrder = <T>(order: ReadonlyArray<T>, value: T): T => {
   const index = order.indexOf(value);
   return order[(index + 1) % order.length];
 };

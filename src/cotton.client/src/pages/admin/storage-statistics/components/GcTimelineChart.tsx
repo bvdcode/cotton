@@ -114,83 +114,89 @@ export const GcTimelineChart = ({ timeline, bucket }: GcTimelineChartProps) => {
 
         {timeline.buckets.length > 0 && (
           <Box sx={{ overflowX: "auto", pb: 1 }}>
-          <Box
-            sx={{
-              minWidth: `${points.length * 84}px`,
-              position: "relative",
-              pt: 1,
-            }}
-          >
             <Box
               sx={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                top: 50,
-                height: 2,
-                bgcolor: "divider",
-              }}
-            />
-
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))`,
-                gap: 1,
+                minWidth: `${points.length * 84}px`,
                 position: "relative",
-                zIndex: 1,
+                pt: 1,
               }}
             >
-              {points.map((point) => {
-                const relativeSize = point.sizeBytes / maxPointSize;
-                const dotSize =
-                  point.sizeBytes > 0
-                    ? 10 + Math.round(relativeSize * 16)
-                    : 8;
+              <Box
+                sx={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: 50,
+                  height: 2,
+                  bgcolor: "divider",
+                }}
+              />
 
-                return (
-                  <Stack
-                    key={point.bucketStartUtc}
-                    alignItems="center"
-                    spacing={0.5}
-                    minWidth={0}
-                  >
-                    <Typography variant="caption" noWrap>
-                      {formatBytes(point.sizeBytes)}
-                    </Typography>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))`,
+                  gap: 1,
+                  position: "relative",
+                  zIndex: 1,
+                }}
+              >
+                {points.map((point) => {
+                  const relativeSize = point.sizeBytes / maxPointSize;
+                  const dotSize =
+                    point.sizeBytes > 0
+                      ? 10 + Math.round(relativeSize * 16)
+                      : 8;
 
-                    <Box height={28} display="flex" alignItems="center">
-                      <Box
-                        sx={{
-                          width: dotSize,
-                          height: dotSize,
-                          borderRadius: "50%",
-                          bgcolor: "primary.main",
-                          opacity: point.sizeBytes > 0 ? 1 : 0.3,
-                          border: "2px solid",
-                          borderColor: "background.paper",
-                        }}
-                      />
-                    </Box>
+                  return (
+                    <Stack
+                      key={point.bucketStartUtc}
+                      alignItems="center"
+                      spacing={0.5}
+                      minWidth={0}
+                    >
+                      <Typography variant="caption" noWrap>
+                        {formatBytes(point.sizeBytes)}
+                      </Typography>
 
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                      {formatSlotLabel(point.bucketStartUtc, bucket)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                      {formatCount(point.chunkCount)}
-                    </Typography>
-                  </Stack>
-                );
-              })}
+                      <Box height={28} display="flex" alignItems="center">
+                        <Box
+                          sx={{
+                            width: dotSize,
+                            height: dotSize,
+                            borderRadius: "50%",
+                            bgcolor: "primary.main",
+                            opacity: point.sizeBytes > 0 ? 1 : 0.3,
+                            border: "2px solid",
+                            borderColor: "background.paper",
+                          }}
+                        />
+                      </Box>
+
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        noWrap
+                      >
+                        {formatSlotLabel(point.bucketStartUtc, bucket)}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        noWrap
+                      >
+                        {formatCount(point.chunkCount)}
+                      </Typography>
+                    </Stack>
+                  );
+                })}
+              </Box>
             </Box>
-          </Box>
           </Box>
         )}
 
         {timeline.buckets.length === 0 && (
-          <Alert severity="info">
-            {t("storageStatistics.state.empty")}
-          </Alert>
+          <Alert severity="info">{t("storageStatistics.state.empty")}</Alert>
         )}
       </Stack>
     </Box>

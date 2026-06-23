@@ -52,14 +52,14 @@ describe("buildSlidesFromItems", () => {
 
     expect(slides[0]).toMatchObject({
       type: "video",
-      sources: [{ src: "/api/v1/files/video/download?token=t", type: "video/mp4" }],
+      sources: [
+        { src: "/api/v1/files/video/download?token=t", type: "video/mp4" },
+      ],
     });
   });
 });
 
-const createVideoItem = (
-  overrides: Partial<MediaItem> = {},
-): MediaItem => ({
+const createVideoItem = (overrides: Partial<MediaItem> = {}): MediaItem => ({
   id: "video",
   kind: "video",
   name: "clip.avi",

@@ -17,10 +17,14 @@ export const shareFolder = async (
   t: TFunction,
 ): Promise<void> => {
   try {
-    const expireAfterMinutes =
-      selectShareLinkExpireAfterMinutes(useUserPreferencesStore.getState());
+    const expireAfterMinutes = selectShareLinkExpireAfterMinutes(
+      useUserPreferencesStore.getState(),
+    );
 
-    const shareLink = await layoutsApi.getNodeShareLink(nodeId, expireAfterMinutes);
+    const shareLink = await layoutsApi.getNodeShareLink(
+      nodeId,
+      expireAfterMinutes,
+    );
 
     const token = shareLinks.tryExtractTokenFromDownloadUrl(shareLink);
     if (!token) {
@@ -43,9 +47,12 @@ export const shareFolder = async (
       case "shared":
         return;
       case "copied":
-        toast.success(t("share.folderCopied", { ns: "files", name: folderName }), {
-          toastId: `share-folder-copied-${nodeId}`,
-        });
+        toast.success(
+          t("share.folderCopied", { ns: "files", name: folderName }),
+          {
+            toastId: `share-folder-copied-${nodeId}`,
+          },
+        );
         return;
       case "aborted":
         return;

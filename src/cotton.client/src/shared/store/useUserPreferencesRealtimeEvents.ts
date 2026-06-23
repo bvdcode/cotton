@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import { eventHub, HUB_METHODS } from "../signalr";
-import { isSelfUpdateToken, useUserPreferencesStore } from "./userPreferencesStore";
+import {
+  isSelfUpdateToken,
+  useUserPreferencesStore,
+} from "./userPreferencesStore";
 import { useAuth } from "../../features/auth";
 import { userPreferencesSchema } from "../api/schemas/userPreferences";
 import type { UserPreferences } from "../api/userPreferencesApi";
@@ -30,18 +33,21 @@ export function useUserPreferencesRealtimeEvents(): void {
       // connection will retry automatically
     });
 
-    const unsubscribe = eventHub.on(HUB_METHODS.PreferencesUpdated, (...args: JsonValue[]) => {
-      if (!isPreferencesUpdatedArgs(args)) {
-        return;
-      }
+    const unsubscribe = eventHub.on(
+      HUB_METHODS.PreferencesUpdated,
+      (...args: JsonValue[]) => {
+        if (!isPreferencesUpdatedArgs(args)) {
+          return;
+        }
 
-      const [token, preferences] = args;
-      if (isSelfUpdateToken(token)) {
-        return;
-      }
+        const [token, preferences] = args;
+        if (isSelfUpdateToken(token)) {
+          return;
+        }
 
-      useUserPreferencesStore.getState().hydrateFromRemote(preferences);
-    });
+        useUserPreferencesStore.getState().hydrateFromRemote(preferences);
+      },
+    );
 
     return () => {
       unsubscribe();

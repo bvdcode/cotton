@@ -1,19 +1,33 @@
 import type { SupportedHashAlgorithm } from "./hashing";
 
 type InitResult = { type: "initResult"; requestId: string };
-type HashChunkResult = { type: "hashChunkResult"; requestId: string; chunkHash: string };
+type HashChunkResult = {
+  type: "hashChunkResult";
+  requestId: string;
+  chunkHash: string;
+};
 type UpdateFileHashResult = { type: "updateFileHashResult"; requestId: string };
-type DigestFileResult = { type: "digestFileResult"; requestId: string; fileHash: string };
+type DigestFileResult = {
+  type: "digestFileResult";
+  requestId: string;
+  fileHash: string;
+};
 type ErrorResult = { type: "error"; requestId?: string; message: string };
 
-type OutMessage = InitResult | HashChunkResult | UpdateFileHashResult | DigestFileResult | ErrorResult;
+type OutMessage =
+  | InitResult
+  | HashChunkResult
+  | UpdateFileHashResult
+  | DigestFileResult
+  | ErrorResult;
 
 type PendingRequest<T> = {
   resolve: (value: T) => void;
   reject: (err: Error) => void;
 };
 
-const makeRequestId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const makeRequestId = () =>
+  `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export class HashWorkerClient {
   private readonly worker: Worker;
@@ -22,7 +36,9 @@ export class HashWorkerClient {
   private initBarrier: Promise<void> | null = null;
 
   constructor() {
-    this.worker = new Worker(new URL("./hash.worker.ts", import.meta.url), { type: "module" });
+    this.worker = new Worker(new URL("./hash.worker.ts", import.meta.url), {
+      type: "module",
+    });
     this.worker.onmessage = (ev: MessageEvent<OutMessage>) => {
       const msg = ev.data;
       if (msg.type === "error") {

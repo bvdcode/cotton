@@ -31,7 +31,9 @@ vi.mock("../../../crypto", () => ({
   isFileEncrypted: mocks.isFileEncrypted,
 }));
 
-function createFile(overrides: Partial<NodeFileManifestDto> = {}): NodeFileManifestDto {
+function createFile(
+  overrides: Partial<NodeFileManifestDto> = {},
+): NodeFileManifestDto {
   return {
     id: "file-1",
     createdAt: "2026-01-01T00:00:00.000Z",

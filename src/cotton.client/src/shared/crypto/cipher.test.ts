@@ -14,7 +14,13 @@ describe("encryptChunk / decryptChunk", () => {
     crypto.getRandomValues(plaintext);
     const aad = buildChunkAad(keyId, 0, plaintext.length);
 
-    const encrypted = await encryptChunk(fileKey, noncePrefix, 0, plaintext, aad);
+    const encrypted = await encryptChunk(
+      fileKey,
+      noncePrefix,
+      0,
+      plaintext,
+      aad,
+    );
     const restored = await decryptChunk(
       fileKey,
       noncePrefix,
@@ -57,7 +63,13 @@ describe("encryptChunk / decryptChunk", () => {
     const secondKey = await generateFileKey();
     const plaintext = new Uint8Array([1]);
     const aad = buildChunkAad(keyId, 0, plaintext.length);
-    const encrypted = await encryptChunk(firstKey, noncePrefix, 0, plaintext, aad);
+    const encrypted = await encryptChunk(
+      firstKey,
+      noncePrefix,
+      0,
+      plaintext,
+      aad,
+    );
 
     await expect(
       decryptChunk(
@@ -75,7 +87,13 @@ describe("encryptChunk / decryptChunk", () => {
     const fileKey = await generateFileKey();
     const plaintext = new Uint8Array([1, 2, 3]);
     const aad = buildChunkAad(keyId, 0, plaintext.length);
-    const encrypted = await encryptChunk(fileKey, noncePrefix, 0, plaintext, aad);
+    const encrypted = await encryptChunk(
+      fileKey,
+      noncePrefix,
+      0,
+      plaintext,
+      aad,
+    );
     const ciphertext = encrypted.ciphertext.slice();
     ciphertext[2] ^= 0x01;
 

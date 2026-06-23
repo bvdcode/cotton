@@ -38,7 +38,10 @@ export const EditProfileCard = ({
   const [birthDate, setBirthDate] = useState(user.birthDate ?? "");
   const [loading, setLoading] = useState(false);
 
-  const normalizedUsername = useMemo(() => normalizeUsername(username), [username]);
+  const normalizedUsername = useMemo(
+    () => normalizeUsername(username),
+    [username],
+  );
   const normalizedCurrentUsername = useMemo(
     () => normalizeUsername(user.username ?? ""),
     [user.username],

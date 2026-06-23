@@ -73,8 +73,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     clear: clearSearchHistory,
   } = useSearchHistory();
   const hasSearchHistoryEntries = searchHistoryEntries.length > 0;
-  const showSearchHistory =
-    open && !hasQuery && hasSearchHistoryEntries;
+  const showSearchHistory = open && !hasQuery && hasSearchHistoryEntries;
   const hasExpandedSearchSurface = hasQuery || hasSearchHistoryEntries;
 
   useEffect(() => {

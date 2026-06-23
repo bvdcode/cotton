@@ -23,7 +23,10 @@ import {
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { unlockApi, type UnlockStatusResponse } from "../../shared/api/unlockApi";
+import {
+  unlockApi,
+  type UnlockStatusResponse,
+} from "../../shared/api/unlockApi";
 import { toast } from "@shared/ui/notifications";
 import { JUST_UNLOCKED_STORAGE_KEY } from "../../features/auth/authStorageKeys";
 
@@ -76,7 +79,9 @@ const useUnlockStatus = (
   return { loaded, status };
 };
 
-const useFormattedExpiry = (status: UnlockStatusResponse | null): string | null => {
+const useFormattedExpiry = (
+  status: UnlockStatusResponse | null,
+): string | null => {
   const firstUnlockExpiresAtUtc = status?.firstUnlockExpiresAtUtc ?? null;
 
   return useMemo(() => {
@@ -249,7 +254,9 @@ const MasterKeyField = ({
         input: {
           endAdornment: (
             <InputAdornment position="end">
-              <Tooltip title={form.generating ? t("generating") : t("generate")}>
+              <Tooltip
+                title={form.generating ? t("generating") : t("generate")}
+              >
                 <span>
                   <IconButton
                     aria-label={t("generate")}
@@ -258,7 +265,11 @@ const MasterKeyField = ({
                     disabled={form.generating || form.submitting}
                   >
                     {form.generating ? (
-                      <CircularProgress color="inherit" size={18} thickness={5} />
+                      <CircularProgress
+                        color="inherit"
+                        size={18}
+                        thickness={5}
+                      />
                     ) : (
                       <Key />
                     )}
@@ -356,7 +367,12 @@ const UnlockForm = ({
   const { t } = useTranslation("unlock");
 
   return (
-    <Box component="form" onSubmit={form.handleSubmit} noValidate autoComplete="off">
+    <Box
+      component="form"
+      onSubmit={form.handleSubmit}
+      noValidate
+      autoComplete="off"
+    >
       <Stack spacing={2.5}>
         {form.requiresBootstrapToken && (
           <Alert severity="warning">

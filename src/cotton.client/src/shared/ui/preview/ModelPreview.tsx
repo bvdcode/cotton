@@ -2,16 +2,11 @@ import * as React from "react";
 import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
-import {
-  LIGHTING_PRESET_CONFIG,
-  resolveQualityMode,
-} from "./modelPreviewCore";
+import { LIGHTING_PRESET_CONFIG, resolveQualityMode } from "./modelPreviewCore";
 import { ModelPreviewScene } from "./components/ModelPreviewScene";
 import { ModelPreviewStatus } from "./components/ModelPreviewStatus";
 import { useModelPreviewState } from "./hooks/useModelPreviewState";
-import {
-  type ModelPreviewProps,
-} from "./modelPreviewTypes";
+import { type ModelPreviewProps } from "./modelPreviewTypes";
 import { resolveModelFormat } from "@shared/utils/modelFormats";
 import { resolveDefaultModelColor } from "./modelPalette";
 
@@ -67,18 +62,16 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       ? theme.palette.grey[800]
       : theme.palette.grey[200];
   }, [theme]);
-  const effectiveMaterialColor = React.useMemo<string | null | undefined>(() => {
-    return materialColor === undefined
-      ? defaultPreviewColor
-      : materialColor;
+  const effectiveMaterialColor = React.useMemo<
+    string | null | undefined
+  >(() => {
+    return materialColor === undefined ? defaultPreviewColor : materialColor;
   }, [defaultPreviewColor, materialColor]);
   const hasColorOverride =
-    effectiveMaterialColor !== null &&
-    effectiveMaterialColor !== undefined;
+    effectiveMaterialColor !== null && effectiveMaterialColor !== undefined;
 
-  const sourceKey = source.kind === "fileId"
-    ? `file:${source.fileId}`
-    : `url:${source.url}`;
+  const sourceKey =
+    source.kind === "fileId" ? `file:${source.fileId}` : `url:${source.url}`;
 
   const { hasLoadError, isLoading, preparedModel } = useModelPreviewState({
     autoAlignToken,
@@ -115,9 +108,11 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
           absolute
           loading={isLoading}
           color={isLoading ? "text.secondary" : "error"}
-          message={isLoading
-            ? t("preview.model.loading", { ns: "files" })
-            : t("preview.errors.modelLoadFailed", { ns: "files" })}
+          message={
+            isLoading
+              ? t("preview.model.loading", { ns: "files" })
+              : t("preview.errors.modelLoadFailed", { ns: "files" })
+          }
         />
       )}
 

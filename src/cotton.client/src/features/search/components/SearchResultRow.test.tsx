@@ -5,7 +5,9 @@ import type { SearchRow } from "../types";
 
 type FileSearchRow = Extract<SearchRow, { kind: "file" }>;
 
-const makeFileRow = (overrides: Partial<FileSearchRow["file"]> = {}): FileSearchRow => ({
+const makeFileRow = (
+  overrides: Partial<FileSearchRow["file"]> = {},
+): FileSearchRow => ({
   id: "file-file-1",
   kind: "file",
   path: "/Docs/report.pdf",
@@ -41,7 +43,9 @@ describe("SearchResultRow", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "actions.downloadFile" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "actions.downloadFile" }),
+    );
 
     expect(onDownloadFile).toHaveBeenCalledWith(row);
   });

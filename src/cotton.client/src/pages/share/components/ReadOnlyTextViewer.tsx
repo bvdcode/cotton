@@ -37,7 +37,8 @@ export const ReadOnlyTextViewer: React.FC<ReadOnlyTextViewerProps> = ({
 
   const resolvedFileName = fileName ?? title;
   const lowerName = resolvedFileName.toLowerCase();
-  const isMarkdown = lowerName.endsWith(".md") || lowerName.endsWith(".markdown");
+  const isMarkdown =
+    lowerName.endsWith(".md") || lowerName.endsWith(".markdown");
 
   if (isMarkdown) {
     return (

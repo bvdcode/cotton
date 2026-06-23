@@ -31,7 +31,9 @@ export function readEnvelopeFromPreferences(
   }
 }
 
-export async function persistEnvelope(envelope: Uint8Array): Promise<UserPreferences> {
+export async function persistEnvelope(
+  envelope: Uint8Array,
+): Promise<UserPreferences> {
   return userPreferencesApi.update({
     [ENVELOPE_PREFERENCE_KEY]: encodeEnvelopePreference(envelope),
   });

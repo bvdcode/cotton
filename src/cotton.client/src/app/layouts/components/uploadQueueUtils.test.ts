@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AppTask } from "../../../shared/tasks";
 import { calculateTaskStats, sortTasksByPriority } from "./uploadQueueUtils";
 
-const makeTask = (
-  id: string,
-  status: AppTask["status"],
-): AppTask => ({
+const makeTask = (id: string, status: AppTask["status"]): AppTask => ({
   id,
   kind: "system",
   label: id,

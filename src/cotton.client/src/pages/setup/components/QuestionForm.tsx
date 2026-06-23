@@ -45,10 +45,7 @@ export function QuestionForm({
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
-            md:
-              fields.length > 1
-                ? "repeat(2, minmax(0, 1fr))"
-                : "1fr",
+            md: fields.length > 1 ? "repeat(2, minmax(0, 1fr))" : "1fr",
           },
           gap: 2.5,
         }}

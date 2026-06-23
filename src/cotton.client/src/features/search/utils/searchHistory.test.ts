@@ -16,7 +16,10 @@ describe("searchHistory", () => {
     expect(
       parseSearchHistoryPreference(
         JSON.stringify([
-          { query: "  quarterly   report ", lastUsedAt: "2026-06-09T00:00:00.000Z" },
+          {
+            query: "  quarterly   report ",
+            lastUsedAt: "2026-06-09T00:00:00.000Z",
+          },
           { query: "" },
           { query: "quarterly report", lastUsedAt: "duplicate" },
           " photos ",
@@ -52,10 +55,13 @@ describe("searchHistory", () => {
   });
 
   it("keeps only the newest limited set of entries", () => {
-    const entries = Array.from({ length: SEARCH_HISTORY_LIMIT + 2 }, (_, index) => ({
-      query: `query ${index}`,
-      lastUsedAt: "2026-06-09T00:00:00.000Z",
-    }));
+    const entries = Array.from(
+      { length: SEARCH_HISTORY_LIMIT + 2 },
+      (_, index) => ({
+        query: `query ${index}`,
+        lastUsedAt: "2026-06-09T00:00:00.000Z",
+      }),
+    );
 
     const next = addSearchHistoryEntry(
       entries,
@@ -77,16 +83,17 @@ describe("searchHistory", () => {
         ],
         " photos ",
       ),
-    ).toEqual([
-      { query: "documents", lastUsedAt: "2026-06-09T00:00:00.000Z" },
-    ]);
+    ).toEqual([{ query: "documents", lastUsedAt: "2026-06-09T00:00:00.000Z" }]);
   });
 
   it("serializes the limited preference payload", () => {
-    const entries = Array.from({ length: SEARCH_HISTORY_LIMIT + 1 }, (_, index) => ({
-      query: `query ${index}`,
-      lastUsedAt: "2026-06-09T00:00:00.000Z",
-    }));
+    const entries = Array.from(
+      { length: SEARCH_HISTORY_LIMIT + 1 },
+      (_, index) => ({
+        query: `query ${index}`,
+        lastUsedAt: "2026-06-09T00:00:00.000Z",
+      }),
+    );
 
     expect(JSON.parse(serializeSearchHistoryPreference(entries))).toHaveLength(
       SEARCH_HISTORY_LIMIT,

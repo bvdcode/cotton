@@ -82,8 +82,8 @@ export const AdminDatabaseBackupPage = () => {
   const placeholder = t("placeholder", { ns: "common" });
   const isLoading = backupQuery.isPending || backupQuery.isFetching;
   const loadErrorMessage = backupQuery.isError
-    ? getApiErrorMessage(backupQuery.error) ??
-      t("databaseBackup.errors.loadFailed")
+    ? (getApiErrorMessage(backupQuery.error) ??
+      t("databaseBackup.errors.loadFailed"))
     : null;
   const isTriggering = triggerFeedback.kind === "loading";
   const isInitialLoading = backupQuery.isPending;
@@ -246,10 +246,7 @@ export const AdminDatabaseBackupPage = () => {
               }}
             >
               {cards.map((card) => (
-                <Box
-                  key={card.id}
-                  sx={{ p: 1.5, minWidth: 0 }}
-                >
+                <Box key={card.id} sx={{ p: 1.5, minWidth: 0 }}>
                   <Typography variant="caption" color="text.secondary" noWrap>
                     {card.label}
                   </Typography>

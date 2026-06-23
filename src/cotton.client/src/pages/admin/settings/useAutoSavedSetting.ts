@@ -24,7 +24,7 @@ export interface UseAutoSavedSettingResult<T> {
   loadFailed: boolean;
 }
 
-export const useAutoSavedSetting = <T,>({
+export const useAutoSavedSetting = <T>({
   initial,
   load,
   save,

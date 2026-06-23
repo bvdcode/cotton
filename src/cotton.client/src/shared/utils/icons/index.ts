@@ -1,3 +1,3 @@
-export { getFolderIcon } from './FolderIcon';
-export { getFileIcon } from './FileIcon';
-export type { IconResult } from './types';
+export { getFolderIcon } from "./FolderIcon";
+export { getFileIcon } from "./FileIcon";
+export type { IconResult } from "./types";

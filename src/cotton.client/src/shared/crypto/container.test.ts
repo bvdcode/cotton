@@ -76,7 +76,10 @@ describe("buildHeader / parseHeader", () => {
   });
 
   it("stores plaintext sizes above 4 GiB as little-endian int64", () => {
-    const bytes = buildHeader({ ...sampleHeader, plaintextSize: 5_000_000_000 });
+    const bytes = buildHeader({
+      ...sampleHeader,
+      plaintextSize: 5_000_000_000,
+    });
 
     expect(parseHeader(bytes).header.plaintextSize).toBe(5_000_000_000);
   });
@@ -134,7 +137,9 @@ describe("key AAD", () => {
     expect(Array.from(aad.slice(20, 24))).toEqual(
       Array.from(sampleHeader.noncePrefix),
     );
-    expect(Array.from(aad.slice(24))).toEqual(Array.from(sampleHeader.fileKeyNonce));
+    expect(Array.from(aad.slice(24))).toEqual(
+      Array.from(sampleHeader.fileKeyNonce),
+    );
   });
 });
 
@@ -195,8 +200,12 @@ describe("chunk nonce and sizing helpers", () => {
     expect(chunkCount(0, chunkSize)).toBe(0);
     expect(chunkCount(chunkSize * 4, chunkSize)).toBe(4);
     expect(chunkCount(chunkSize * 4 + 1, chunkSize)).toBe(5);
-    expect(chunkPlaintextLength(0, chunkSize, chunkSize * 2 + 5)).toBe(chunkSize);
-    expect(chunkPlaintextLength(1, chunkSize, chunkSize * 2 + 5)).toBe(chunkSize);
+    expect(chunkPlaintextLength(0, chunkSize, chunkSize * 2 + 5)).toBe(
+      chunkSize,
+    );
+    expect(chunkPlaintextLength(1, chunkSize, chunkSize * 2 + 5)).toBe(
+      chunkSize,
+    );
     expect(chunkPlaintextLength(2, chunkSize, chunkSize * 2 + 5)).toBe(5);
     expect(chunkPlaintextLength(3, chunkSize, chunkSize * 2 + 5)).toBe(0);
   });

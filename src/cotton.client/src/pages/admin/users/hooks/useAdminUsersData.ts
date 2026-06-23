@@ -67,5 +67,3 @@ export const useAdminUsersData = (): AdminUsersData => {
 
   return { users, loadState, storageUsageLoading, refresh };
 };
-
-

@@ -164,7 +164,9 @@ export const authApi = {
   },
 
   confirmEmailVerification: async (token: string): Promise<void> => {
-    await httpClient.post(`users/verify-email?token=${encodeURIComponent(token)}`);
+    await httpClient.post(
+      `users/verify-email?token=${encodeURIComponent(token)}`,
+    );
   },
 
   invalidateShareLinks: async (): Promise<void> => {

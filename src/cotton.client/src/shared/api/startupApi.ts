@@ -17,11 +17,14 @@ export interface StartupStatusResponse {
 
 export const startupApi = {
   getStatus: async (): Promise<StartupStatusResponse> => {
-    const response = await httpClient.get<StartupStatusResponse>("startup/status", {
-      headers: {
-        "Cache-Control": "no-store",
+    const response = await httpClient.get<StartupStatusResponse>(
+      "startup/status",
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
       },
-    });
+    );
     return response.data;
   },
 };

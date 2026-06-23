@@ -22,11 +22,7 @@ interface ObservedSearchState {
 
 const observedStates: ObservedSearchState[] = [];
 
-const SearchPaginationProbe = ({
-  trimmedQuery,
-}: {
-  trimmedQuery: string;
-}) => {
+const SearchPaginationProbe = ({ trimmedQuery }: { trimmedQuery: string }) => {
   const state = useSearchPagination({
     trimmedQuery,
     layoutId: "layout-1",

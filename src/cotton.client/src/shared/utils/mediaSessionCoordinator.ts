@@ -106,10 +106,7 @@ const browserMediaSessionPlatform: MediaSessionPlatform = {
     typeof navigator !== "undefined" && "mediaSession" in navigator,
 
   setMetadata: (track) => {
-    if (
-      typeof navigator === "undefined" ||
-      !("mediaSession" in navigator)
-    ) {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
       return;
     }
 
@@ -140,10 +137,7 @@ const browserMediaSessionPlatform: MediaSessionPlatform = {
   },
 
   setPlaybackState: (state) => {
-    if (
-      typeof navigator === "undefined" ||
-      !("mediaSession" in navigator)
-    ) {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
       return;
     }
 
@@ -171,10 +165,7 @@ const browserMediaSessionPlatform: MediaSessionPlatform = {
   },
 
   setActionHandler: (action, handler) => {
-    if (
-      typeof navigator === "undefined" ||
-      !("mediaSession" in navigator)
-    ) {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
       return;
     }
 
@@ -207,9 +198,7 @@ export class MediaSessionCoordinator {
     this.sources.set(input.id, {
       ...input,
       playbackState,
-      lastActivity: sameElement
-        ? previous.lastActivity
-        : this.nextActivity(),
+      lastActivity: sameElement ? previous.lastActivity : this.nextActivity(),
     });
     this.refresh();
   }
@@ -251,7 +240,7 @@ export class MediaSessionCoordinator {
   }
 
   private getOwner(): MediaSessionSource | null {
-    return this.ownerId ? this.sources.get(this.ownerId) ?? null : null;
+    return this.ownerId ? (this.sources.get(this.ownerId) ?? null) : null;
   }
 
   private chooseOwner(): MediaSessionSource | null {
@@ -330,10 +319,7 @@ export class MediaSessionCoordinator {
         return;
       }
 
-      const nextTime = clampTime(
-        details.seekTime,
-        owner.mediaElement.duration,
-      );
+      const nextTime = clampTime(details.seekTime, owner.mediaElement.duration);
       if (
         details.fastSeek &&
         typeof owner.mediaElement.fastSeek === "function"

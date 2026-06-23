@@ -1,9 +1,4 @@
-import {
-  useEffect,
-  useCallback,
-  createContext,
-  type ReactNode,
-} from "react";
+import { useEffect, useCallback, createContext, type ReactNode } from "react";
 import { authApi } from "../../shared/api/authApi";
 import type { AuthContextValue, User } from "./types";
 import { useAuthStore } from "../../shared/store";
@@ -163,27 +158,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setHasChecked(true);
       setInitializing(false);
     }
-  }, [isAuthenticated, isInitializing, hydrated, refreshEnabled, setInitializing, setAuthenticatedInStore, setUnauthenticated, setHasChecked]);
+  }, [
+    isAuthenticated,
+    isInitializing,
+    hydrated,
+    refreshEnabled,
+    setInitializing,
+    setAuthenticatedInStore,
+    setUnauthenticated,
+    setHasChecked,
+  ]);
 
-  const setAuthenticated = useCallback((value: boolean, u?: User | null) => {
-    if (value && u) {
-      const authState = useAuthStore.getState();
-      const currentUserId = authState.user?.id ?? null;
-      const shouldResetUserScopedStores = !authState.isAuthenticated || currentUserId !== u.id;
+  const setAuthenticated = useCallback(
+    (value: boolean, u?: User | null) => {
+      if (value && u) {
+        const authState = useAuthStore.getState();
+        const currentUserId = authState.user?.id ?? null;
+        const shouldResetUserScopedStores =
+          !authState.isAuthenticated || currentUserId !== u.id;
 
-      // Keep user-scoped caches when only profile fields are updated for the same identity.
-      if (shouldResetUserScopedStores) {
-        resetUserScopedStores(u.id);
+        // Keep user-scoped caches when only profile fields are updated for the same identity.
+        if (shouldResetUserScopedStores) {
+          resetUserScopedStores(u.id);
+        }
+
+        setAuthenticatedInStore(u);
+        return;
       }
-
-      setAuthenticatedInStore(u);
-      return;
-    }
-    if (!value) {
-      setUnauthenticated();
-      resetUserScopedStores(null);
-    }
-  }, [setAuthenticatedInStore, setUnauthenticated]);
+      if (!value) {
+        setUnauthenticated();
+        resetUserScopedStores(null);
+      }
+    },
+    [setAuthenticatedInStore, setUnauthenticated],
+  );
 
   const logout = useCallback(async () => {
     try {

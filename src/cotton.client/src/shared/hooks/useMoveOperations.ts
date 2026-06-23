@@ -66,7 +66,9 @@ export const writeMoveDragPayload = (
 
   // Tag the drag with source-parent IDs so drag-over can synchronously reject
   // drops onto the source folder without parsing the payload. UI hint only.
-  const sources = new Set(payload.items.map((i) => normalizeDragId(i.sourceParentId)));
+  const sources = new Set(
+    payload.items.map((i) => normalizeDragId(i.sourceParentId)),
+  );
   for (const source of sources) {
     dataTransfer.setData(`${MOVE_DRAG_DATA_TYPE}/${source}`, "1");
   }
@@ -74,7 +76,10 @@ export const writeMoveDragPayload = (
 
   // Same trick for per-item IDs so drag-over can reject dropping a folder onto itself.
   for (const item of payload.items) {
-    dataTransfer.setData(`${MOVE_DRAG_ITEM_TYPE}/${normalizeDragId(item.id)}`, "1");
+    dataTransfer.setData(
+      `${MOVE_DRAG_ITEM_TYPE}/${normalizeDragId(item.id)}`,
+      "1",
+    );
   }
 
   try {
@@ -96,7 +101,8 @@ export const writeMoveDragPayload = (
 export const moveDragHasSourceParent = (
   dataTransfer: DataTransfer | null,
   parentId: string,
-): boolean => getMoveDragSourceParents(dataTransfer).has(normalizeDragId(parentId));
+): boolean =>
+  getMoveDragSourceParents(dataTransfer).has(normalizeDragId(parentId));
 
 /**
  * True if the drag includes the given id as one of its items (case-insensitive).
@@ -217,10 +223,8 @@ const getCachedFolderEncryptionPolicyEnabled = (nodeId: string): boolean => {
   const node = findCachedNode(nodeId);
   if (!node) return false;
 
-  return getFolderEncryptionPolicyStateFromParentResolver(
-    node,
-    findCachedNode,
-  ).effectiveEnabled;
+  return getFolderEncryptionPolicyStateFromParentResolver(node, findCachedNode)
+    .effectiveEnabled;
 };
 
 const needsEncryptionAfterMove = (item: MoveClipboardItem): boolean =>
@@ -329,10 +333,7 @@ const moveCandidatesToTarget = async (options: {
     } catch (error) {
       failed.push(item);
       lastErrorMessage = extractErrorMessage(error) ?? lastErrorMessage;
-      console.error(
-        "Failed to move " + item.kind + " " + item.id,
-        error,
-      );
+      console.error("Failed to move " + item.kind + " " + item.id, error);
     }
   }
 
@@ -351,7 +352,9 @@ const moveSingleItem = async (
   targetParentId: string,
 ): Promise<MoveSingleItemResult> => {
   if (item.kind === "folder") {
-    const folder = await nodesApi.moveNode(item.id, { parentId: targetParentId });
+    const folder = await nodesApi.moveNode(item.id, {
+      parentId: targetParentId,
+    });
     return { kind: "folder", folder };
   }
 
@@ -379,12 +382,18 @@ const collectMovedEncryptionFollowups = (options: {
   movedFilesToOfferDecrypt: MoveClipboardItem[];
   targetEncryptsNewFiles: boolean;
 }): void => {
-  if (options.targetEncryptsNewFiles && needsEncryptionAfterMove(options.item)) {
+  if (
+    options.targetEncryptsNewFiles &&
+    needsEncryptionAfterMove(options.item)
+  ) {
     options.movedFilesToEncrypt.push(options.item);
     return;
   }
 
-  if (!options.targetEncryptsNewFiles && needsDecryptionAfterMove(options.item)) {
+  if (
+    !options.targetEncryptsNewFiles &&
+    needsDecryptionAfterMove(options.item)
+  ) {
     options.movedFilesToOfferDecrypt.push(options.item);
   }
 };
@@ -510,7 +519,9 @@ const offerDecryptForMovedFiles = (options: {
       ns: "files",
       count: options.files.length,
     }),
-    action: options.t("clientEncryption.movedEncrypted.action", { ns: "files" }),
+    action: options.t("clientEncryption.movedEncrypted.action", {
+      ns: "files",
+    }),
     onAction: () => {
       void decryptMovedEncryptedFiles({
         files: options.files,
@@ -616,7 +627,9 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
         getCachedFolderEncryptionPolicyEnabled(targetParentId);
       const hasMoveEncryptionFollowups =
         targetEncryptsNewFiles &&
-        candidates.some((item) => item.kind === "folder" || needsEncryptionAfterMove(item));
+        candidates.some(
+          (item) => item.kind === "folder" || needsEncryptionAfterMove(item),
+        );
       const encryptionServerSettings = await loadEncryptionServerSettings(
         hasMoveEncryptionFollowups,
       );

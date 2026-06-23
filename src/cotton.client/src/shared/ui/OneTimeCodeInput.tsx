@@ -67,7 +67,9 @@ export const OneTimeCodeInput = ({
             inputMode: "numeric",
             pattern: "[0-9]*",
             maxLength: 1,
-            "aria-label": inputAriaLabel ? `${inputAriaLabel} ${i + 1}` : undefined,
+            "aria-label": inputAriaLabel
+              ? `${inputAriaLabel} ${i + 1}`
+              : undefined,
           }}
           sx={{
             flex: 1,

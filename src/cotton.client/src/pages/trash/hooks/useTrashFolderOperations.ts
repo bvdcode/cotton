@@ -1,9 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { nodesApi } from "../../../shared/api/nodesApi";
-import {
-  deleteFolder,
-  renameFolder,
-} from "../../../shared/store/nodesActions";
+import { deleteFolder, renameFolder } from "../../../shared/store/nodesActions";
 import { useFolderRenameDeleteOperations } from "../../../shared/hooks/useFolderRenameDeleteOperations";
 
 /**
@@ -33,11 +30,7 @@ export const useTrashFolderOperations = (
       cancellationText: t("common:actions.cancel"),
     }),
     renameFolder: async (folderId, newName) => {
-      return await renameFolder(
-        folderId,
-        newName,
-        currentNodeId ?? undefined,
-      );
+      return await renameFolder(folderId, newName, currentNodeId ?? undefined);
     },
     deleteFolder: async (folderId) => {
       const wrapperId = resolveWrapperNodeId?.(folderId);

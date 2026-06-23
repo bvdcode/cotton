@@ -45,7 +45,9 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
   contentType,
   contentLength,
 }) => {
-  const [closedLightboxKey, setClosedLightboxKey] = React.useState<string | null>(null);
+  const [closedLightboxKey, setClosedLightboxKey] = React.useState<
+    string | null
+  >(null);
   const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
@@ -178,12 +180,7 @@ const ShareEncryptedFileNotice: React.FC<ShareEncryptedFileNoticeProps> = ({
       justifyContent="center"
       p={2}
     >
-      <Stack
-        alignItems="center"
-        spacing={1}
-        maxWidth={520}
-        textAlign="center"
-      >
+      <Stack alignItems="center" spacing={1} maxWidth={520} textAlign="center">
         <Box
           display="flex"
           alignItems="center"
@@ -236,8 +233,11 @@ const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
   previewUrl,
 }) => {
   const { t } = useTranslation(["share"]);
-  const [failedPreviewUrl, setFailedPreviewUrl] = React.useState<string | null>(null);
-  const hasSmallPreviewIcon = Boolean(previewUrl) && failedPreviewUrl !== previewUrl;
+  const [failedPreviewUrl, setFailedPreviewUrl] = React.useState<string | null>(
+    null,
+  );
+  const hasSmallPreviewIcon =
+    Boolean(previewUrl) && failedPreviewUrl !== previewUrl;
   const fallbackIcon = React.useMemo(
     () => getFileIcon(null, fileName ?? "", contentType),
     [contentType, fileName],

@@ -112,9 +112,9 @@ describe("loadNode", () => {
       pageSize: 100000,
     });
     expect(useNodesStore.getState().currentNode?.name).toBe("New name");
-    expect(
-      useNodesStore.getState().contentByNodeId["folder-1"]?.nodes,
-    ).toEqual([child]);
+    expect(useNodesStore.getState().contentByNodeId["folder-1"]?.nodes).toEqual(
+      [child],
+    );
   });
 });
 

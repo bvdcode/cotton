@@ -15,7 +15,12 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { Close, QueueMusic, Subtitles, TravelExplore } from "@mui/icons-material";
+import {
+  Close,
+  QueueMusic,
+  Subtitles,
+  TravelExplore,
+} from "@mui/icons-material";
 import type { SnackbarCloseReason } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import {
@@ -138,10 +143,12 @@ export const AudioPlayerBar: React.FC = () => {
     return playlist.find((x) => x.id === currentFileId) ?? null;
   }, [playlist, currentFileId]);
 
-  const [failedCoverPreviewUrl, setFailedCoverPreviewUrl] =
-    React.useState<string | null>(null);
+  const [failedCoverPreviewUrl, setFailedCoverPreviewUrl] = React.useState<
+    string | null
+  >(null);
   const coverFailed =
-    currentPreviewUrl !== undefined && failedCoverPreviewUrl === currentPreviewUrl;
+    currentPreviewUrl !== undefined &&
+    failedCoverPreviewUrl === currentPreviewUrl;
   const effectiveLyricsOpen = open && lyricsOpen;
 
   const lyricsAudioFileName = currentItem?.name ?? currentFileName;
@@ -191,7 +198,10 @@ export const AudioPlayerBar: React.FC = () => {
         const started = timeSeconds >= firstTime;
 
         if (started) {
-          const nextActiveIndex = findActiveLrcLineIndex(lyricsLines, timeSeconds);
+          const nextActiveIndex = findActiveLrcLineIndex(
+            lyricsLines,
+            timeSeconds,
+          );
           if (
             current.started &&
             current.countdown === null &&
@@ -427,7 +437,9 @@ export const AudioPlayerBar: React.FC = () => {
               <Box position="relative" height={lyricsViewHeightPx}>
                 <AudioLyricsView
                   lines={lyricsLines}
-                  activeIndex={lyricsPlayback.started ? lyricsPlayback.activeIndex : 0}
+                  activeIndex={
+                    lyricsPlayback.started ? lyricsPlayback.activeIndex : 0
+                  }
                   isActivePlaying={lyricsPlayback.started}
                 />
 

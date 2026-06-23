@@ -30,12 +30,18 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     const source = new Blob([plaintext], { type: "text/plain" });
 
     const encrypted = await encryptFileToBlob(source, masterKey, 8192);
-    const decrypted = await decryptBlobToBlob(encrypted, masterKey, "text/plain");
+    const decrypted = await decryptBlobToBlob(
+      encrypted,
+      masterKey,
+      "text/plain",
+    );
 
     expect(encrypted.type).toBe(ENCRYPTED_CONTENT_TYPE);
     expect(encrypted.size).toBeGreaterThan(plaintext.byteLength);
     expect(decrypted.type).toBe("text/plain");
-    expect(Array.from(await blobToBytes(decrypted))).toEqual(Array.from(plaintext));
+    expect(Array.from(await blobToBytes(decrypted))).toEqual(
+      Array.from(plaintext),
+    );
   });
 
   it("writes CTN2 file, chunk, and terminator headers", async () => {
@@ -43,24 +49,30 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     const plaintext = new Uint8Array(1024);
     crypto.getRandomValues(plaintext);
 
-    const encrypted = await encryptFileToBlob(new Blob([plaintext]), masterKey, 8192);
+    const encrypted = await encryptFileToBlob(
+      new Blob([plaintext]),
+      masterKey,
+      8192,
+    );
     const bytes = await blobToBytes(encrypted);
 
     expect(Array.from(bytes.slice(0, 4))).toEqual(Array.from(MAGIC));
-    expect(new DataView(bytes.buffer).getInt32(4, true)).toBe(FILE_HEADER_BYTES);
-    expect(Array.from(bytes.slice(FILE_HEADER_BYTES, FILE_HEADER_BYTES + 4))).toEqual(
-      Array.from(MAGIC),
+    expect(new DataView(bytes.buffer).getInt32(4, true)).toBe(
+      FILE_HEADER_BYTES,
     );
-    expect(new DataView(bytes.buffer).getInt32(FILE_HEADER_BYTES + 4, true)).toBe(
-      CHUNK_HEADER_BYTES,
-    );
+    expect(
+      Array.from(bytes.slice(FILE_HEADER_BYTES, FILE_HEADER_BYTES + 4)),
+    ).toEqual(Array.from(MAGIC));
+    expect(
+      new DataView(bytes.buffer).getInt32(FILE_HEADER_BYTES + 4, true),
+    ).toBe(CHUNK_HEADER_BYTES);
     const terminatorOffset = encrypted.size - CHUNK_HEADER_BYTES;
-    expect(Array.from(bytes.slice(terminatorOffset, terminatorOffset + 4))).toEqual(
-      Array.from(MAGIC),
-    );
-    expect(new DataView(bytes.buffer).getBigInt64(terminatorOffset + 8, true)).toBe(
-      0n,
-    );
+    expect(
+      Array.from(bytes.slice(terminatorOffset, terminatorOffset + 4)),
+    ).toEqual(Array.from(MAGIC));
+    expect(
+      new DataView(bytes.buffer).getBigInt64(terminatorOffset + 8, true),
+    ).toBe(0n);
   });
 
   it("round-trips multi-chunk content", async () => {
@@ -68,10 +80,16 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     const plaintext = new Uint8Array(70_000);
     fillRandom(plaintext);
 
-    const encrypted = await encryptFileToBlob(new Blob([plaintext]), masterKey, 32_768);
+    const encrypted = await encryptFileToBlob(
+      new Blob([plaintext]),
+      masterKey,
+      32_768,
+    );
     const decrypted = await decryptBlobToBlob(encrypted, masterKey);
 
-    expect(Array.from(await blobToBytes(decrypted))).toEqual(Array.from(plaintext));
+    expect(Array.from(await blobToBytes(decrypted))).toEqual(
+      Array.from(plaintext),
+    );
   });
 
   it("reports encrypt and decrypt chunk progress", async () => {
@@ -92,17 +110,12 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
         },
       },
     );
-    await decryptBlobToBlob(
-      encrypted,
-      masterKey,
-      ENCRYPTED_CONTENT_TYPE,
-      {
-        onProgress: (bytesProcessed, bytesTotal) => {
-          expect(bytesTotal).toBe(plaintext.byteLength);
-          decryptedProgress.push(bytesProcessed);
-        },
+    await decryptBlobToBlob(encrypted, masterKey, ENCRYPTED_CONTENT_TYPE, {
+      onProgress: (bytesProcessed, bytesTotal) => {
+        expect(bytesTotal).toBe(plaintext.byteLength);
+        decryptedProgress.push(bytesProcessed);
       },
-    );
+    });
 
     expect(encryptedProgress).toEqual([0, 8192, 16384, 20000]);
     expect(decryptedProgress).toEqual([0, 8192, 16384, 20000]);
@@ -130,7 +143,11 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     const masterKey = await generateMasterKey();
     const plaintext = new Uint8Array(32_000);
     fillRandom(plaintext);
-    const encrypted = await encryptFileToBlob(new Blob([plaintext]), masterKey, 8192);
+    const encrypted = await encryptFileToBlob(
+      new Blob([plaintext]),
+      masterKey,
+      8192,
+    );
     const bytes = await blobToBytes(encrypted);
     bytes[bytes.length - 20] ^= 0x01;
 

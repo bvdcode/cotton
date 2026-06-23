@@ -29,7 +29,10 @@ async function exportRawKey(key: CryptoKey): Promise<number[]> {
 
 describe("setupEnvelope / unlockWithPassword", () => {
   it("restores the same master key", async () => {
-    const { envelope, masterKey } = await setupEnvelope("correct horse", testKdf);
+    const { envelope, masterKey } = await setupEnvelope(
+      "correct horse",
+      testKdf,
+    );
     const restored = await unlockWithPassword(envelope, "correct horse");
 
     expect(await exportRawKey(restored)).toEqual(await exportRawKey(masterKey));
@@ -52,7 +55,10 @@ describe("setupEnvelope / unlockWithPassword", () => {
 
 describe("setupEnvelope / unlockWithRecovery", () => {
   it("restores the same master key from the recovery phrase", async () => {
-    const { envelope, masterKey, recoveryPhrase } = await setupEnvelope("pw", testKdf);
+    const { envelope, masterKey, recoveryPhrase } = await setupEnvelope(
+      "pw",
+      testKdf,
+    );
     const restored = await unlockWithRecovery(envelope, recoveryPhrase);
 
     expect(recoveryPhrase.split(" ")).toHaveLength(24);
@@ -60,7 +66,10 @@ describe("setupEnvelope / unlockWithRecovery", () => {
   });
 
   it("accepts a normalized recovery phrase", async () => {
-    const { envelope, masterKey, recoveryPhrase } = await setupEnvelope("pw", testKdf);
+    const { envelope, masterKey, recoveryPhrase } = await setupEnvelope(
+      "pw",
+      testKdf,
+    );
     const noisy = ` ${recoveryPhrase.replaceAll(" ", "   ").toUpperCase()} `;
     const restored = await unlockWithRecovery(envelope, noisy);
 
@@ -71,24 +80,36 @@ describe("setupEnvelope / unlockWithRecovery", () => {
     const { envelope } = await setupEnvelope("pw", testKdf);
     const otherPhrase = `${"abandon ".repeat(23)}art`.trim();
 
-    await expect(unlockWithRecovery(envelope, otherPhrase)).rejects.toBeInstanceOf(
-      WrongUnlockError,
-    );
+    await expect(
+      unlockWithRecovery(envelope, otherPhrase),
+    ).rejects.toBeInstanceOf(WrongUnlockError);
   });
 });
 
 describe("rewrapForNewPassword", () => {
   it("moves password unlock to the new password and keeps recovery intact", async () => {
-    const { envelope, masterKey, recoveryPhrase } = await setupEnvelope("old", testKdf);
-    const updated = await rewrapForNewPassword(envelope, masterKey, "new", testKdf);
+    const { envelope, masterKey, recoveryPhrase } = await setupEnvelope(
+      "old",
+      testKdf,
+    );
+    const updated = await rewrapForNewPassword(
+      envelope,
+      masterKey,
+      "new",
+      testKdf,
+    );
     const viaPassword = await unlockWithPassword(updated, "new");
     const viaRecovery = await unlockWithRecovery(updated, recoveryPhrase);
 
     await expect(unlockWithPassword(updated, "old")).rejects.toBeInstanceOf(
       WrongUnlockError,
     );
-    expect(await exportRawKey(viaPassword)).toEqual(await exportRawKey(masterKey));
-    expect(await exportRawKey(viaRecovery)).toEqual(await exportRawKey(masterKey));
+    expect(await exportRawKey(viaPassword)).toEqual(
+      await exportRawKey(masterKey),
+    );
+    expect(await exportRawKey(viaRecovery)).toEqual(
+      await exportRawKey(masterKey),
+    );
   });
 });
 
@@ -103,7 +124,9 @@ describe("envelope preference encoding", () => {
   });
 
   it("rejects invalid base64", () => {
-    expect(() => decodeEnvelopePreference("not base64!")).toThrow(CorruptedContainerError);
+    expect(() => decodeEnvelopePreference("not base64!")).toThrow(
+      CorruptedContainerError,
+    );
   });
 });
 
@@ -118,7 +141,9 @@ describe("envelope parser", () => {
     expect(() => __testing__.parseEnvelope(unknownVersion)).toThrow(
       UnsupportedVersionError,
     );
-    expect(() => __testing__.parseEnvelope(unknownKdf)).toThrow(UnsupportedVersionError);
+    expect(() => __testing__.parseEnvelope(unknownKdf)).toThrow(
+      UnsupportedVersionError,
+    );
   });
 
   it("rejects truncation and trailing bytes", async () => {
@@ -129,15 +154,23 @@ describe("envelope parser", () => {
     expect(() => __testing__.parseEnvelope(envelope.slice(0, 24))).toThrow(
       CorruptedContainerError,
     );
-    expect(() => __testing__.parseEnvelope(trailing)).toThrow(CorruptedContainerError);
+    expect(() => __testing__.parseEnvelope(trailing)).toThrow(
+      CorruptedContainerError,
+    );
   });
 
   it("rejects resource-heavy KDF parameters from stored data", async () => {
     const { envelope } = await setupEnvelope("pw", testKdf);
     const modified = envelope.slice();
     const passwordMemoryOffset = 2 + 16;
-    new DataView(modified.buffer).setUint32(passwordMemoryOffset, 999 * 1024, false);
+    new DataView(modified.buffer).setUint32(
+      passwordMemoryOffset,
+      999 * 1024,
+      false,
+    );
 
-    expect(() => __testing__.parseEnvelope(modified)).toThrow(CorruptedContainerError);
+    expect(() => __testing__.parseEnvelope(modified)).toThrow(
+      CorruptedContainerError,
+    );
   });
 });

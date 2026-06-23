@@ -12,10 +12,8 @@ import { shareLinkAction } from "./shareLinkAction";
  * Builds a formatted share text for a file.
  * Uses a localized invitation message.
  */
-const buildShareMessage = (
-  fileName: string,
-  t: TFunction,
-): string => t("share.message", { ns: "files", name: fileName });
+const buildShareMessage = (fileName: string, t: TFunction): string =>
+  t("share.message", { ns: "files", name: fileName });
 
 /**
  * Shared logic for sharing a file link.
@@ -29,8 +27,9 @@ export const shareFile = async (
   t: TFunction,
 ): Promise<void> => {
   try {
-    const expireAfterMinutes =
-      selectShareLinkExpireAfterMinutes(useUserPreferencesStore.getState());
+    const expireAfterMinutes = selectShareLinkExpireAfterMinutes(
+      useUserPreferencesStore.getState(),
+    );
 
     const downloadLink = await filesApi.getDownloadLink(
       nodeFileId,

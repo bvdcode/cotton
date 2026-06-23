@@ -2,10 +2,18 @@ import { chunksApi } from "../api/chunksApi";
 import { isAxiosError } from "../api/httpClient";
 import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
-import { createIncrementalHasher, hashBuffer, toWebCryptoAlgorithm } from "./hash/hashing";
+import {
+  createIncrementalHasher,
+  hashBuffer,
+  toWebCryptoAlgorithm,
+} from "./hash/hashing";
 import { canUseHashWorker, HashWorkerClient } from "./hash/hashWorkerClient";
 import { globalHashWorkerPool } from "./hash/HashWorkerPool";
-import type { UploadFileToNodeOptions, UploadProgressSnapshot, UploadServerParams } from "./types";
+import type {
+  UploadFileToNodeOptions,
+  UploadProgressSnapshot,
+  UploadServerParams,
+} from "./types";
 
 interface ChunkSegment {
   id: number;
@@ -75,12 +83,16 @@ export async function uploadBlobToChunks(options: {
   fileName: string;
   server: UploadServerParams;
   client?: UploadFileToNodeOptions;
-  onProgress?: (bytesUploaded: number, snapshot?: UploadProgressSnapshot) => void;
+  onProgress?: (
+    bytesUploaded: number,
+    snapshot?: UploadProgressSnapshot,
+  ) => void;
 }): Promise<{ chunkHashes: string[]; fileHash: string }> {
   const { blob, fileName, server } = options;
 
   const sendChunkHashForValidation =
-    options.client?.sendChunkHashForValidation ?? uploadConfig.sendChunkHashForValidation;
+    options.client?.sendChunkHashForValidation ??
+    uploadConfig.sendChunkHashForValidation;
 
   const chunkUploadConcurrency = new AdaptiveConcurrencyController({
     maxConcurrency: Math.max(
@@ -98,10 +110,7 @@ export async function uploadBlobToChunks(options: {
   const algorithm = toWebCryptoAlgorithm(server.supportedHashAlgorithm);
   const maxQueuedFileHashBytes = Math.max(
     initialChunkSize,
-    Math.min(
-      initialChunkSize * chunkUploadConcurrency.max,
-      64 * 1024 * 1024,
-    ),
+    Math.min(initialChunkSize * chunkUploadConcurrency.max, 64 * 1024 * 1024),
   );
 
   let activeChunkSize = initialChunkSize;
@@ -168,7 +177,9 @@ export async function uploadBlobToChunks(options: {
   });
 
   const takeReadyPendingSegment = (now: number): ChunkSegment | null => {
-    const index = pendingSegments.findIndex((segment) => segment.availableAt <= now);
+    const index = pendingSegments.findIndex(
+      (segment) => segment.availableAt <= now,
+    );
     if (index < 0) {
       return null;
     }
@@ -221,7 +232,10 @@ export async function uploadBlobToChunks(options: {
     }
   };
 
-  const queueVerificationSegment = (segment: ChunkSegment, knownHash: string) => {
+  const queueVerificationSegment = (
+    segment: ChunkSegment,
+    knownHash: string,
+  ) => {
     const failures = segment.networkFailures + 1;
     pendingSegments.push(
       makeSegment(
@@ -275,9 +289,9 @@ export async function uploadBlobToChunks(options: {
     }
 
     while (
-      !fatalError
-      && queuedFileHashBytes > 0
-      && queuedFileHashBytes + bytes > maxQueuedFileHashBytes
+      !fatalError &&
+      queuedFileHashBytes > 0 &&
+      queuedFileHashBytes + bytes > maxQueuedFileHashBytes
     ) {
       await new Promise<void>((resolve) => {
         fileHashQueueWaiters.push(resolve);
@@ -319,7 +333,8 @@ export async function uploadBlobToChunks(options: {
   };
 
   let worker: HashWorkerClient | null = null;
-  let blobHasher: Awaited<ReturnType<typeof createIncrementalHasher>> | null = null;
+  let blobHasher: Awaited<ReturnType<typeof createIncrementalHasher>> | null =
+    null;
   const abortController = new AbortController();
 
   const failUpload = (error: unknown) => {
@@ -367,7 +382,11 @@ export async function uploadBlobToChunks(options: {
     ) => {
       const chunkBytes = getSegmentLength(segment);
       inFlightBytesById.delete(segment.id);
-      uploadedSegments.push({ start: segment.start, end: segment.end, hash: chunkHash });
+      uploadedSegments.push({
+        start: segment.start,
+        end: segment.end,
+        hash: chunkHash,
+      });
       completedBytes += chunkBytes;
       report();
       chunkUploadConcurrency.observe({
@@ -381,7 +400,10 @@ export async function uploadBlobToChunks(options: {
       segment: ChunkSegment,
       startedAt: number,
     ) => {
-      const exists = await chunksApi.exists(segment.knownHash!, abortController.signal);
+      const exists = await chunksApi.exists(
+        segment.knownHash!,
+        abortController.signal,
+      );
       if (exists) {
         completeSegment(segment, segment.knownHash!, startedAt);
       } else {
@@ -389,7 +411,9 @@ export async function uploadBlobToChunks(options: {
       }
     };
 
-    const updateFileHashFromBuffer = async (buffer: ArrayBuffer): Promise<void> => {
+    const updateFileHashFromBuffer = async (
+      buffer: ArrayBuffer,
+    ): Promise<void> => {
       if (worker) {
         await worker.updateFileHash(buffer);
         return;
@@ -408,11 +432,14 @@ export async function uploadBlobToChunks(options: {
         return;
       }
 
-      trackFileHashUpdate((async () => {
-        await waitForFileHashTurn(segment);
-        await updateFileHashFromBuffer(buffer);
-        advanceFileHashOffset(segment);
-      })(), queuedBytes);
+      trackFileHashUpdate(
+        (async () => {
+          await waitForFileHashTurn(segment);
+          await updateFileHashFromBuffer(buffer);
+          advanceFileHashOffset(segment);
+        })(),
+        queuedBytes,
+      );
     };
 
     const uploadHashedChunk = async (
@@ -421,7 +448,10 @@ export async function uploadBlobToChunks(options: {
       chunkHash: string,
     ) => {
       if (sendChunkHashForValidation) {
-        const exists = await chunksApi.exists(chunkHash, abortController.signal);
+        const exists = await chunksApi.exists(
+          chunkHash,
+          abortController.signal,
+        );
         if (exists) {
           return;
         }
@@ -494,7 +524,13 @@ export async function uploadBlobToChunks(options: {
         completeSegment(segment, chunkHash, startedAt);
       } catch (error) {
         releaseFileHashQueueBytes(reservedFileHashBytes);
-        handleSegmentUploadFailure(segment, chunkBytes, startedAt, chunkHash, error);
+        handleSegmentUploadFailure(
+          segment,
+          chunkBytes,
+          startedAt,
+          chunkHash,
+          error,
+        );
       }
     };
 
@@ -510,7 +546,8 @@ export async function uploadBlobToChunks(options: {
       let startedAny = false;
       const now = Date.now();
       while (inFlight.size < chunkUploadConcurrency.current && !fatalError) {
-        const segment = takeReadyPendingSegment(now) ?? createNextInitialSegment();
+        const segment =
+          takeReadyPendingSegment(now) ?? createNextInitialSegment();
         if (!segment) {
           break;
         }
@@ -522,9 +559,13 @@ export async function uploadBlobToChunks(options: {
     };
 
     const allSegmentsSettled = () =>
-      nextOffset >= blob.size && pendingSegments.length === 0 && inFlight.size === 0;
+      nextOffset >= blob.size &&
+      pendingSegments.length === 0 &&
+      inFlight.size === 0;
 
-    const waitForNextUploadActivity = async (startedAny: boolean): Promise<boolean> => {
+    const waitForNextUploadActivity = async (
+      startedAny: boolean,
+    ): Promise<boolean> => {
       if (fatalError || allSegmentsSettled()) {
         return false;
       }
@@ -567,7 +608,9 @@ export async function uploadBlobToChunks(options: {
       throw new Error("File hash did not cover the complete file.");
     }
 
-    const fileHash = worker ? await worker.digestFile() : blobHasher!.digestHex();
+    const fileHash = worker
+      ? await worker.digestFile()
+      : blobHasher!.digestHex();
     const chunkHashes = buildOrderedChunkHashes();
 
     report();

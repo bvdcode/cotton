@@ -62,7 +62,12 @@ export async function encryptFileToBlob(
     plaintextSize: plaintext.size,
   };
   const keyAad = buildKeyAad(keyHeader);
-  const wrappedFileKey = await wrapFileKey(masterKey, fileKey, fileKeyNonce, keyAad);
+  const wrappedFileKey = await wrapFileKey(
+    masterKey,
+    fileKey,
+    fileKeyNonce,
+    keyAad,
+  );
   const header = buildHeader({
     ...keyHeader,
     fileKeyTag: wrappedFileKey.tag,
@@ -75,7 +80,11 @@ export async function encryptFileToBlob(
   callbacks?.onProgress?.(0, plaintext.size);
 
   for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
-    const chunkLength = chunkPlaintextLength(chunkIndex, chunkSize, plaintext.size);
+    const chunkLength = chunkPlaintextLength(
+      chunkIndex,
+      chunkSize,
+      plaintext.size,
+    );
     const chunkOffset = chunkIndex * chunkSize;
     const plaintextChunk = await readBlobSlice(
       plaintext,
@@ -87,7 +96,12 @@ export async function encryptFileToBlob(
       noncePrefix,
       chunkIndex,
       plaintextChunk,
-      buildChunkAad(DEFAULT_KEY_ID, chunkIndex, chunkLength, keyHeader.formatVersion),
+      buildChunkAad(
+        DEFAULT_KEY_ID,
+        chunkIndex,
+        chunkLength,
+        keyHeader.formatVersion,
+      ),
     );
     parts.push(
       asBlobPart(
@@ -167,18 +181,27 @@ export async function decryptBlobToBlob(
       throw new CorruptedContainerError("Encrypted file is truncated.");
     }
 
-    const chunkHeader = parseChunkHeader(chunkHeaderBytes, header.formatVersion);
+    const chunkHeader = parseChunkHeader(
+      chunkHeaderBytes,
+      header.formatVersion,
+    );
 
     if (chunkHeader.keyId !== header.keyId) {
-      throw new CorruptedContainerError("Chunk key id does not match file key id.");
+      throw new CorruptedContainerError(
+        "Chunk key id does not match file key id.",
+      );
     }
 
     if (chunkHeader.plaintextLength === 0) {
-      throw new CorruptedContainerError("Data chunk cannot be an encrypted terminator.");
+      throw new CorruptedContainerError(
+        "Data chunk cannot be an encrypted terminator.",
+      );
     }
 
     if (chunkHeader.plaintextLength > remainingPlaintext) {
-      throw new CorruptedContainerError("Chunk plaintext length exceeds file length.");
+      throw new CorruptedContainerError(
+        "Chunk plaintext length exceeds file length.",
+      );
     }
 
     cursor += CHUNK_HEADER_BYTES;
@@ -234,7 +257,10 @@ async function readAuthenticatedTerminatorIfPresent(
   header: ContainerHeader,
   chunkIndex: number,
 ): Promise<number> {
-  if (cursor === encrypted.size && !requiresAuthenticatedTerminator(header.formatVersion)) {
+  if (
+    cursor === encrypted.size &&
+    !requiresAuthenticatedTerminator(header.formatVersion)
+  ) {
     return cursor;
   }
 
@@ -253,7 +279,9 @@ async function readAuthenticatedTerminatorIfPresent(
     header.formatVersion,
   );
   if (terminatorHeader.keyId !== header.keyId) {
-    throw new CorruptedContainerError("Terminator key id does not match file key id.");
+    throw new CorruptedContainerError(
+      "Terminator key id does not match file key id.",
+    );
   }
 
   if (terminatorHeader.plaintextLength !== 0) {

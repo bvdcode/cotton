@@ -21,7 +21,11 @@ type DetailRow = {
   value: string | null | undefined;
 };
 
-const DetailRows = ({ rows }: { rows: DetailRow[] }): React.ReactElement | null => {
+const DetailRows = ({
+  rows,
+}: {
+  rows: DetailRow[];
+}): React.ReactElement | null => {
   const visibleRows = rows.filter((row) => row.value);
   if (visibleRows.length === 0) {
     return null;
@@ -109,7 +113,11 @@ export const StartupBlockedPage = ({
                 <Typography variant="h4" component="h1">
                   {title}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.75 }}
+                >
                   {t("caption")}
                 </Typography>
               </Box>

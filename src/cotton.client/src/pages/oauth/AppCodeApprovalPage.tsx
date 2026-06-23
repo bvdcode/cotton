@@ -21,10 +21,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
-import {
-  appCodeApi,
-  type AppCodeDetails,
-} from "../../shared/api/appCodeApi";
+import { appCodeApi, type AppCodeDetails } from "../../shared/api/appCodeApi";
 import { getApiErrorMessage } from "../../shared/api/httpClient";
 import { AuthActionShell } from "../../shared/ui/AuthActionShell";
 import { formatAppCodeOrigin } from "./appCodeOrigin";
@@ -64,9 +61,7 @@ export const AppCodeApprovalPage = () => {
         if (!cancelled) {
           setState({
             kind: "error",
-            message:
-              getApiErrorMessage(error) ??
-              t("errors.unavailable"),
+            message: getApiErrorMessage(error) ?? t("errors.unavailable"),
           });
         }
       }
@@ -153,9 +148,7 @@ const LoadingState = () => {
   return (
     <Box display="flex" alignItems="center" gap={2} mt={3}>
       <CircularProgress size={24} />
-      <Typography color="text.secondary">
-        {t("loading")}
-      </Typography>
+      <Typography color="text.secondary">{t("loading")}</Typography>
     </Box>
   );
 };
@@ -196,10 +189,7 @@ const ApprovalState = ({
   onDeny,
 }: ApprovalStateProps) => {
   const { t } = useTranslation("appCodeApproval");
-  const origin = formatAppCodeOrigin(
-    details.origin,
-    t("request.localOrigin"),
-  );
+  const origin = formatAppCodeOrigin(details.origin, t("request.localOrigin"));
 
   return (
     <Stack spacing={3} sx={{ mt: 3 }}>
@@ -228,9 +218,7 @@ const ApprovalState = ({
       <Box>
         <Box display="flex" alignItems="center" gap={1} mb={1}>
           <VerifiedUserOutlined color="primary" fontSize="small" />
-          <Typography variant="subtitle1">
-            {t("access.title")}
-          </Typography>
+          <Typography variant="subtitle1">{t("access.title")}</Typography>
         </Box>
         <List dense disablePadding>
           {ACCESS_BULLET_KEYS.map((key) => (
@@ -277,11 +265,7 @@ type FinalStateProps = {
 };
 
 const FinalState = ({ icon, message, severity, title }: FinalStateProps) => (
-  <Alert
-    severity={severity}
-    icon={icon}
-    sx={{ mt: 3, alignItems: "center" }}
-  >
+  <Alert severity={severity} icon={icon} sx={{ mt: 3, alignItems: "center" }}>
     <Typography fontWeight={600}>{title}</Typography>
     <Typography variant="body2">{message}</Typography>
   </Alert>

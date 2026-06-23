@@ -1,4 +1,10 @@
-import { Stack, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import {
+  Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
 import { QuestionHeader } from "./QuestionHeader";
 
 type QuestionDropdownProps = {

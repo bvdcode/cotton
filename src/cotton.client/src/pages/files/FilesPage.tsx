@@ -65,10 +65,7 @@ import {
   invalidateFileVersions,
 } from "../../shared/api/queries/fileVersions";
 import { fetchServerSettings } from "../../shared/api/queries/serverSettings";
-import {
-  nodesApi,
-  type NodeFileManifestDto,
-} from "../../shared/api/nodesApi";
+import { nodesApi, type NodeFileManifestDto } from "../../shared/api/nodesApi";
 import {
   applyDisplayMetaToFile,
   FOLDER_ENCRYPTION_POLICY_KEY,
@@ -297,7 +294,9 @@ const updateFolderEncryptionPolicyTree = async (
   const foldersToUpdate = [
     folderId,
     ...scan.folders
-      .filter((folder) => folder.metadata?.[FOLDER_ENCRYPTION_POLICY_KEY] !== value)
+      .filter(
+        (folder) => folder.metadata?.[FOLDER_ENCRYPTION_POLICY_KEY] !== value,
+      )
       .map((folder) => folder.id),
   ];
   const updatedNodes: NodeDto[] = [];
@@ -422,7 +421,8 @@ export const FilesPage: React.FC = () => {
   const location = useLocation();
   const params = useParams<{ nodeId?: string }>();
   const pendingSelectedFileIdRef = React.useRef<string | null>(
-    (location.state as { selectedFileId?: string } | null)?.selectedFileId ?? null,
+    (location.state as { selectedFileId?: string } | null)?.selectedFileId ??
+      null,
   );
 
   const {
@@ -513,8 +513,7 @@ export const FilesPage: React.FC = () => {
     [activeCurrentNode, ancestors],
   );
   const currentFolderEncryptionPolicy = useMemo(
-    () =>
-      getFolderEncryptionPolicyState(activeCurrentNode, activeAncestors),
+    () => getFolderEncryptionPolicyState(activeCurrentNode, activeAncestors),
     [activeAncestors, activeCurrentNode],
   );
   const childFolderEncryptionAncestors = useMemo(
@@ -665,12 +664,7 @@ export const FilesPage: React.FC = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    folderOps.isCreatingFolder,
-    handleNewFolderClick,
-    loading,
-    nodeId,
-  ]);
+  }, [folderOps.isCreatingFolder, handleNewFolderClick, loading, nodeId]);
   const handleRestoreLightboxFile = React.useCallback(
     async (fileId: string) => {
       try {
@@ -757,13 +751,14 @@ export const FilesPage: React.FC = () => {
     isVaultUnlocked,
     nodeId,
   });
-  const activeUnlockPrompt = useMemo<ClientEncryptionUnlockPrompt | null>(() => {
-    if (currentFolderRequiresUnlock && clientEncryptionEnvelope) {
-      return { kind: "current" };
-    }
+  const activeUnlockPrompt =
+    useMemo<ClientEncryptionUnlockPrompt | null>(() => {
+      if (currentFolderRequiresUnlock && clientEncryptionEnvelope) {
+        return { kind: "current" };
+      }
 
-    return unlockPrompt;
-  }, [clientEncryptionEnvelope, currentFolderRequiresUnlock, unlockPrompt]);
+      return unlockPrompt;
+    }, [clientEncryptionEnvelope, currentFolderRequiresUnlock, unlockPrompt]);
 
   const handleCreateMarkdownFile = React.useCallback(async () => {
     if (!nodeId || isCreatingMarkdownFile) {
@@ -831,7 +826,9 @@ export const FilesPage: React.FC = () => {
   const runFolderClientEncryptionAction = React.useCallback(
     (action: ClientEncryptionFolderAction) => {
       const runAction =
-        action === "encrypt-existing" ? encryptPlainFiles : decryptEncryptedFiles;
+        action === "encrypt-existing"
+          ? encryptPlainFiles
+          : decryptEncryptedFiles;
 
       if (isVaultUnlocked) {
         void runAction();
@@ -864,13 +861,19 @@ export const FilesPage: React.FC = () => {
         decryptEncryptedFiles: () =>
           runFolderClientEncryptionAction("decrypt-existing"),
         encryptedFilesCount: encryptedFiles.length,
-        encryptedFilesMessage: t("clientEncryption.encryptedFilesRemain.toast", {
-          ns: "files",
-          count: encryptedFiles.length,
-        }),
-        encryptedFilesAction: t("clientEncryption.encryptedFilesRemain.action", {
-          ns: "files",
-        }),
+        encryptedFilesMessage: t(
+          "clientEncryption.encryptedFilesRemain.toast",
+          {
+            ns: "files",
+            count: encryptedFiles.length,
+          },
+        ),
+        encryptedFilesAction: t(
+          "clientEncryption.encryptedFilesRemain.action",
+          {
+            ns: "files",
+          },
+        ),
         encryptPlainFiles: () =>
           runFolderClientEncryptionAction("encrypt-existing"),
         folderPolicyEnabled,
@@ -881,7 +884,9 @@ export const FilesPage: React.FC = () => {
           ns: "files",
           count: plainFiles.length,
         }),
-        plainFilesAction: t("clientEncryption.mixedPlain.action", { ns: "files" }),
+        plainFilesAction: t("clientEncryption.mixedPlain.action", {
+          ns: "files",
+        }),
       }),
     [
       encryptedFiles.length,
@@ -945,7 +950,10 @@ export const FilesPage: React.FC = () => {
       return;
     }
 
-    showToast(t("clientEncryption.toasts.setupRequired", { ns: "files" }), "error");
+    showToast(
+      t("clientEncryption.toasts.setupRequired", { ns: "files" }),
+      "error",
+    );
     goHome();
   }, [
     clientEncryptionEnvelope,
@@ -1072,9 +1080,12 @@ export const FilesPage: React.FC = () => {
     handleDownloadFolder,
   );
 
-  const handleOpenVersions = React.useCallback((fileId: string, fileName: string) => {
-    setVersionDialogFile({ id: fileId, name: fileName });
-  }, []);
+  const handleOpenVersions = React.useCallback(
+    (fileId: string, fileName: string) => {
+      setVersionDialogFile({ id: fileId, name: fileName });
+    },
+    [],
+  );
 
   const handleCloseVersions = React.useCallback(() => {
     setVersionDialogFile(null);
@@ -1579,10 +1590,15 @@ const SkippedUploadItemsDialog: React.FC<SkippedUploadItemsDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>{t("uploadDrop.skippedDialog.title", { ns: "files" })}</DialogTitle>
+      <DialogTitle>
+        {t("uploadDrop.skippedDialog.title", { ns: "files" })}
+      </DialogTitle>
       <DialogContent dividers>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {t("uploadDrop.skippedDialog.description", { ns: "files", count: total })}
+          {t("uploadDrop.skippedDialog.description", {
+            ns: "files",
+            count: total,
+          })}
         </Typography>
 
         {items.length > 0 && (
@@ -1603,7 +1619,10 @@ const SkippedUploadItemsDialog: React.FC<SkippedUploadItemsDialogProps> = ({
 
         {truncated && (
           <Alert severity="info" sx={{ mt: 2 }}>
-            {t("uploadDrop.skippedDialog.truncated", { ns: "files", count: items.length })}
+            {t("uploadDrop.skippedDialog.truncated", {
+              ns: "files",
+              count: items.length,
+            })}
           </Alert>
         )}
       </DialogContent>

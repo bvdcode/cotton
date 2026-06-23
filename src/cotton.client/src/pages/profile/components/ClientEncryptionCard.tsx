@@ -48,7 +48,9 @@ export const ClientEncryptionCard = ({
   const { t } = useTranslation("profile");
   const isUnlocked = useVault((state) => state.isUnlocked);
   const lockVault = useVault((state) => state.lock);
-  const storePreferences = useUserPreferencesStore((state) => state.preferences);
+  const storePreferences = useUserPreferencesStore(
+    (state) => state.preferences,
+  );
   const preferencesLoaded = useUserPreferencesStore((state) => state.loaded);
   const hydratePreferences = useUserPreferencesStore(
     (state) => state.hydrateFromRemote,
@@ -71,9 +73,7 @@ export const ClientEncryptionCard = ({
   );
   const [setupOpen, setSetupOpen] = useState(false);
   const [unlockOpen, setUnlockOpen] = useState(false);
-  const handleLockOnRefreshChange = (
-    event: ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleLockOnRefreshChange = (event: ChangeEvent<HTMLInputElement>) => {
     const enabled = event.target.checked;
     setLockOnRefresh(enabled);
 
@@ -94,11 +94,12 @@ export const ClientEncryptionCard = ({
       : "invalid";
 
   const statusChip = status === "notSetUp" ? null : getStatusChip(status, t);
-  const statusHint = status === "unlocked"
-    ? t("clientEncryption.unlockedHint")
-    : status === "locked"
-      ? t("clientEncryption.lockedHint")
-      : null;
+  const statusHint =
+    status === "unlocked"
+      ? t("clientEncryption.unlockedHint")
+      : status === "locked"
+        ? t("clientEncryption.lockedHint")
+        : null;
 
   return (
     <>

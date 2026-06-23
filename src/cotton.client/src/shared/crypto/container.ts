@@ -106,7 +106,11 @@ export function parseHeader(bytes: Uint8Array): {
   }
 
   let offset = MAGIC.length + 4;
-  const plaintextSize = getSafeInt64LittleEndian(view, offset, "Plaintext size");
+  const plaintextSize = getSafeInt64LittleEndian(
+    view,
+    offset,
+    "Plaintext size",
+  );
   offset += 8;
   const keyId = view.getInt32(offset, true);
   offset += 4;
@@ -135,10 +139,12 @@ export function parseHeader(bytes: Uint8Array): {
   };
 }
 
-export function buildKeyAad(header: Pick<
-  ContainerHeader,
-  "formatVersion" | "keyId" | "noncePrefix" | "fileKeyNonce" | "plaintextSize"
->): Uint8Array {
+export function buildKeyAad(
+  header: Pick<
+    ContainerHeader,
+    "formatVersion" | "keyId" | "noncePrefix" | "fileKeyNonce" | "plaintextSize"
+  >,
+): Uint8Array {
   assertFormatVersion(header.formatVersion);
   assertKeyId(header.keyId);
   assertByteLength(header.noncePrefix, GCM_NONCE_PREFIX_BYTES, "Nonce prefix");
@@ -260,7 +266,10 @@ export function buildChunkAad(
   return output;
 }
 
-export function chunkNonce(noncePrefix: Uint8Array, chunkIndex: number): Uint8Array {
+export function chunkNonce(
+  noncePrefix: Uint8Array,
+  chunkIndex: number,
+): Uint8Array {
   assertByteLength(noncePrefix, GCM_NONCE_PREFIX_BYTES, "Nonce prefix");
   assertChunkIndex(chunkIndex);
 
@@ -303,7 +312,9 @@ export function assertCompatibleChunkSize(chunkSize: number): void {
     chunkSize < MIN_CHUNK_SIZE ||
     chunkSize > MAX_CHUNK_SIZE
   ) {
-    throw new InvalidCryptoInputError("Chunk size is outside the supported range.");
+    throw new InvalidCryptoInputError(
+      "Chunk size is outside the supported range.",
+    );
   }
 }
 
@@ -351,7 +362,11 @@ function assertSupportedHeader(header: ContainerHeader): void {
   assertByteLength(header.noncePrefix, GCM_NONCE_PREFIX_BYTES, "Nonce prefix");
   assertByteLength(header.fileKeyNonce, GCM_NONCE_BYTES, "File key nonce");
   assertByteLength(header.fileKeyTag, GCM_TAG_BYTES, "File key tag");
-  assertByteLength(header.encryptedFileKey, FILE_KEY_BYTES, "Encrypted file key");
+  assertByteLength(
+    header.encryptedFileKey,
+    FILE_KEY_BYTES,
+    "Encrypted file key",
+  );
   assertPlaintextSize(header.plaintextSize);
 }
 
@@ -407,13 +422,17 @@ function assertPlaintextLength(
 
 function assertChunkIndex(chunkIndex: number): void {
   if (!Number.isSafeInteger(chunkIndex) || chunkIndex < 0) {
-    throw new InvalidCryptoInputError("Chunk index must be a safe non-negative integer.");
+    throw new InvalidCryptoInputError(
+      "Chunk index must be a safe non-negative integer.",
+    );
   }
 }
 
 function assertKeyId(keyId: number): void {
   if (!Number.isInteger(keyId) || keyId <= 0 || keyId > 0x7fffffff) {
-    throw new InvalidCryptoInputError("Key id must be a positive 32-bit integer.");
+    throw new InvalidCryptoInputError(
+      "Key id must be a positive 32-bit integer.",
+    );
   }
 }
 
@@ -428,7 +447,11 @@ function assertFormatVersion(
   }
 }
 
-function assertByteLength(bytes: Uint8Array, expected: number, name: string): void {
+function assertByteLength(
+  bytes: Uint8Array,
+  expected: number,
+  name: string,
+): void {
   if (bytes.length !== expected) {
     throw new InvalidCryptoInputError(`${name} must be ${expected} bytes.`);
   }
@@ -438,7 +461,11 @@ function viewFor(bytes: Uint8Array): DataView {
   return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 }
 
-function setInt64LittleEndian(view: DataView, byteOffset: number, value: number): void {
+function setInt64LittleEndian(
+  view: DataView,
+  byteOffset: number,
+  value: number,
+): void {
   view.setBigInt64(byteOffset, BigInt(value), true);
 }
 
@@ -450,7 +477,9 @@ function getSafeInt64LittleEndian(
   const raw = view.getBigInt64(byteOffset, true);
 
   if (raw < 0n || raw > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new CorruptedContainerError(`${fieldName} exceeds JavaScript safe range.`);
+    throw new CorruptedContainerError(
+      `${fieldName} exceeds JavaScript safe range.`,
+    );
   }
 
   return Number(raw);

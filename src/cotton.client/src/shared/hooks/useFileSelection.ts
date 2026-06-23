@@ -50,50 +50,53 @@ export const useFileSelection = (): FileSelectionState => {
     });
   }, []);
 
-  const toggleItem = useCallback((
-    id: string,
-    options?: { shiftKey?: boolean; orderedIds?: ReadonlyArray<string> },
-  ) => {
-    setSelectedIds((prev) => {
-      const shiftKey = !!options?.shiftKey;
-      const orderedIds = options?.orderedIds;
+  const toggleItem = useCallback(
+    (
+      id: string,
+      options?: { shiftKey?: boolean; orderedIds?: ReadonlyArray<string> },
+    ) => {
+      setSelectedIds((prev) => {
+        const shiftKey = !!options?.shiftKey;
+        const orderedIds = options?.orderedIds;
 
-      const anchorId = lastClickedIdRef.current;
+        const anchorId = lastClickedIdRef.current;
 
-      if (shiftKey && anchorId && orderedIds && orderedIds.length > 0) {
-        const anchorIndex = orderedIds.indexOf(anchorId);
-        const currentIndex = orderedIds.indexOf(id);
+        if (shiftKey && anchorId && orderedIds && orderedIds.length > 0) {
+          const anchorIndex = orderedIds.indexOf(anchorId);
+          const currentIndex = orderedIds.indexOf(id);
 
-        if (anchorIndex >= 0 && currentIndex >= 0) {
-          const start = Math.min(anchorIndex, currentIndex);
-          const end = Math.max(anchorIndex, currentIndex);
-          const next = new Set(prev);
+          if (anchorIndex >= 0 && currentIndex >= 0) {
+            const start = Math.min(anchorIndex, currentIndex);
+            const end = Math.max(anchorIndex, currentIndex);
+            const next = new Set(prev);
 
-          for (let i = start; i <= end; i += 1) {
-            const rangeId = orderedIds[i];
-            if (rangeId) next.add(rangeId);
+            for (let i = start; i <= end; i += 1) {
+              const rangeId = orderedIds[i];
+              if (rangeId) next.add(rangeId);
+            }
+
+            lastClickedIdRef.current = id;
+            return next;
           }
-
-          lastClickedIdRef.current = id;
-          return next;
         }
-      }
 
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
 
-      if (next.size === 0) {
-        setSelectionMode(false);
-      }
+        if (next.size === 0) {
+          setSelectionMode(false);
+        }
 
-      lastClickedIdRef.current = id;
-      return next;
-    });
-  }, []);
+        lastClickedIdRef.current = id;
+        return next;
+      });
+    },
+    [],
+  );
 
   const selectAll = useCallback((tiles: FileSystemTile[]) => {
     setSelectedIds(new Set(tiles.map(getTileId)));

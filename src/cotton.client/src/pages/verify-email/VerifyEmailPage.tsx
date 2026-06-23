@@ -10,10 +10,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { authApi } from "../../shared/api/authApi";
 import { useAuth } from "../../features/auth";
-import {
-  getApiErrorMessage,
-  isAxiosError,
-} from "../../shared/api/httpClient";
+import { getApiErrorMessage, isAxiosError } from "../../shared/api/httpClient";
 import { AuthActionShell } from "../../shared/ui/AuthActionShell";
 
 export const VerifyEmailPage = () => {
@@ -61,10 +58,7 @@ export const VerifyEmailPage = () => {
   }, [navigate, isAuthenticated]);
 
   return (
-    <AuthActionShell
-      title={t("title")}
-      logoAlt={tCommon("app.logoAlt")}
-    >
+    <AuthActionShell title={t("title")} logoAlt={tCommon("app.logoAlt")}>
       {loading && (
         <Box display="flex" alignItems="center" gap={2} mt={2}>
           <CircularProgress size={24} />

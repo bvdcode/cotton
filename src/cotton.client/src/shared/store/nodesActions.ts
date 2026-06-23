@@ -49,7 +49,10 @@ async function fetchAllNodeChildren(nodeId: string): Promise<NodeContentDto> {
       pageSize: CHILDREN_FETCH_PAGE_SIZE,
     });
 
-    if (response.content.nodes.length === 0 && response.content.files.length === 0) {
+    if (
+      response.content.nodes.length === 0 &&
+      response.content.files.length === 0
+    ) {
       break;
     }
 
@@ -97,7 +100,8 @@ async function resolveNodeAndAncestors(
   const tryResolveFromCurrentChildren = (): LocalResolution | null => {
     if (!state.currentNode) return null;
     const parentContent = state.contentByNodeId[state.currentNode.id];
-    const found = parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
+    const found =
+      parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
     if (!found) return null;
 
     const ancestors = getCachedAncestors();
@@ -106,7 +110,10 @@ async function resolveNodeAndAncestors(
     }
 
     if (found.parentId === state.currentNode.id) {
-      return { node: found, ancestors: [...state.ancestors, state.currentNode] };
+      return {
+        node: found,
+        ancestors: [...state.ancestors, state.currentNode],
+      };
     }
 
     return { node: found, ancestors: null };
@@ -273,9 +280,7 @@ const updateLoadState = (
     : useNodesStore.getState().contentByNodeId[nodeId];
 
   useNodesStore.setState(
-    cachedContent
-      ? { error: null }
-      : { loading: true, error: null },
+    cachedContent ? { error: null } : { loading: true, error: null },
   );
   return cachedContent;
 };
@@ -311,7 +316,9 @@ const tryRecoverRootNodeAsync = async (
   statusCode: number | undefined,
   options: LoadNodeOptions,
 ): Promise<boolean> => {
-  if (!shouldAttemptRootRecovery(nodeId, statusCode, options.allowRootRecovery)) {
+  if (
+    !shouldAttemptRootRecovery(nodeId, statusCode, options.allowRootRecovery)
+  ) {
     return false;
   }
 
@@ -406,8 +413,14 @@ const applyLoadedNodeState = (
   }));
 };
 
-const scheduleRootResolveIfNeeded = (nodeId: string, options: LoadNodeOptions) => {
-  if (options.allowRootRecovery && useNodesStore.getState().rootNodeId === nodeId) {
+const scheduleRootResolveIfNeeded = (
+  nodeId: string,
+  options: LoadNodeOptions,
+) => {
+  if (
+    options.allowRootRecovery &&
+    useNodesStore.getState().rootNodeId === nodeId
+  ) {
     scheduleRootResolve({ loadChildren: options.loadChildren });
   }
 };
@@ -447,15 +460,28 @@ export const loadNode = async (
 
   const cachedContent = updateLoadState(nodeId, resolvedOptions.force);
   try {
-    const resolved = await resolveNodeViewAsync(nodeId, state, resolvedOptions.force);
+    const resolved = await resolveNodeViewAsync(
+      nodeId,
+      state,
+      resolvedOptions.force,
+    );
     const content = await resolveNodeContentAsync(
       nodeId,
       cachedContent,
       resolvedOptions.loadChildren,
     );
 
-    applyLoadedNodeState(nodeId, resolved, content, resolvedOptions.loadChildren);
-    refreshChildrenInBackground(nodeId, cachedContent, resolvedOptions.loadChildren);
+    applyLoadedNodeState(
+      nodeId,
+      resolved,
+      content,
+      resolvedOptions.loadChildren,
+    );
+    refreshChildrenInBackground(
+      nodeId,
+      cachedContent,
+      resolvedOptions.loadChildren,
+    );
     scheduleRootResolveIfNeeded(nodeId, resolvedOptions);
   } catch (error) {
     await handleLoadNodeFailureAsync(nodeId, error, resolvedOptions);
@@ -521,9 +547,8 @@ export const createFolder = async (
     const stateAfterCreate = useNodesStore.getState();
     const parentNode = findCachedNodeById(stateAfterCreate, parentNodeId);
     const parentPolicyEnabled = parentNode
-      ? getFolderEncryptionPolicyStateFromParentResolver(
-          parentNode,
-          (id) => findCachedNodeById(stateAfterCreate, id),
+      ? getFolderEncryptionPolicyStateFromParentResolver(parentNode, (id) =>
+          findCachedNodeById(stateAfterCreate, id),
         ).effectiveEnabled
       : false;
     const folder = parentPolicyEnabled
@@ -647,9 +672,7 @@ export const renameFolder = async (
             ...prev.contentByNodeId,
             [parentNodeId]: {
               ...existing,
-              nodes: existing.nodes.map((n) =>
-                n.id === nodeId ? updated : n,
-              ),
+              nodes: existing.nodes.map((n) => (n.id === nodeId ? updated : n)),
             },
           },
           loading: false,

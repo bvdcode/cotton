@@ -159,18 +159,24 @@ describe("layoutsApi reads", () => {
   });
 
   it("gets share links and recent files with default params", async () => {
-    const get = vi.spyOn(httpClient, "get").mockResolvedValueOnce({
-      data: "https://share/node",
-    }).mockResolvedValueOnce({
-      data: [],
-    });
+    const get = vi
+      .spyOn(httpClient, "get")
+      .mockResolvedValueOnce({
+        data: "https://share/node",
+      })
+      .mockResolvedValueOnce({
+        data: [],
+      });
 
     await expect(layoutsApi.getNodeShareLink(nodeId)).resolves.toBe(
       "https://share/node",
     );
-    expect(get).toHaveBeenLastCalledWith(`/layouts/nodes/${nodeId}/share-link`, {
-      params: { expireAfterMinutes: 1440 },
-    });
+    expect(get).toHaveBeenLastCalledWith(
+      `/layouts/nodes/${nodeId}/share-link`,
+      {
+        params: { expireAfterMinutes: 1440 },
+      },
+    );
 
     await expect(layoutsApi.getRecentFiles(layoutId)).resolves.toEqual([]);
     expect(get).toHaveBeenLastCalledWith(`/layouts/${layoutId}/recent`, {
@@ -182,9 +188,12 @@ describe("layoutsApi reads", () => {
     const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: [] });
 
     await layoutsApi.getNodeShareLink(nodeId, 60);
-    expect(get).toHaveBeenLastCalledWith(`/layouts/nodes/${nodeId}/share-link`, {
-      params: { expireAfterMinutes: 60 },
-    });
+    expect(get).toHaveBeenLastCalledWith(
+      `/layouts/nodes/${nodeId}/share-link`,
+      {
+        params: { expireAfterMinutes: 60 },
+      },
+    );
 
     await layoutsApi.getRecentFiles(layoutId, 10);
     expect(get).toHaveBeenLastCalledWith(`/layouts/${layoutId}/recent`, {

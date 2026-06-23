@@ -22,7 +22,9 @@ import {
 } from "./avatarUploadUtils";
 import { getAvatarInitials } from "./userInfoCardFormatters";
 
-export type AvatarStatus = { kind: "idle" } | { kind: "error"; message: string };
+export type AvatarStatus =
+  | { kind: "idle" }
+  | { kind: "error"; message: string };
 
 interface UseUserInfoCardArgs {
   user: User;
@@ -38,7 +40,9 @@ interface UseUserInfoCardResult {
   avatarInitials: string;
   birthDateValue: string;
   birthDateCompactValue: string;
-  handleAvatarFileSelected: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
+  handleAvatarFileSelected: (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => Promise<void>;
   handleSendEmailVerification: () => Promise<void>;
 }
 

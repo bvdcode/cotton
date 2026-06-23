@@ -55,9 +55,8 @@ export const simplifyObjectGeometry = async (
     return;
   }
 
-  const { SimplifyModifier } = await import(
-    "three/examples/jsm/modifiers/SimplifyModifier.js"
-  );
+  const { SimplifyModifier } =
+    await import("three/examples/jsm/modifiers/SimplifyModifier.js");
   const modifier = new SimplifyModifier();
 
   object.traverse((node) => {
@@ -111,49 +110,43 @@ const loadModelObject = async (
 ): Promise<THREE.Object3D> => {
   switch (format) {
     case "stl": {
-      const { STLLoader } = await import(
-        "three/examples/jsm/loaders/STLLoader.js"
-      );
+      const { STLLoader } =
+        await import("three/examples/jsm/loaders/STLLoader.js");
       const geometry = await new STLLoader().loadAsync(url);
       geometry.computeVertexNormals();
       return new THREE.Mesh(geometry, createNeutralMaterial());
     }
 
     case "ply": {
-      const { PLYLoader } = await import(
-        "three/examples/jsm/loaders/PLYLoader.js"
-      );
+      const { PLYLoader } =
+        await import("three/examples/jsm/loaders/PLYLoader.js");
       const geometry = await new PLYLoader().loadAsync(url);
       geometry.computeVertexNormals();
       return new THREE.Mesh(geometry, createNeutralMaterial());
     }
 
     case "obj": {
-      const { OBJLoader } = await import(
-        "three/examples/jsm/loaders/OBJLoader.js"
-      );
+      const { OBJLoader } =
+        await import("three/examples/jsm/loaders/OBJLoader.js");
       return new OBJLoader().loadAsync(url);
     }
 
     case "fbx": {
-      const { FBXLoader } = await import(
-        "three/examples/jsm/loaders/FBXLoader.js"
-      );
+      const { FBXLoader } =
+        await import("three/examples/jsm/loaders/FBXLoader.js");
       return new FBXLoader().loadAsync(url);
     }
 
     case "3mf": {
-      const { ThreeMFLoader } = await import(
-        "three/examples/jsm/loaders/3MFLoader.js"
-      );
+      const { ThreeMFLoader } =
+        await import("three/examples/jsm/loaders/3MFLoader.js");
       return new ThreeMFLoader().loadAsync(url);
     }
 
     case "gltf":
     case "glb": {
-      const { GLTFLoader } = await import(
-        "three/examples/jsm/loaders/GLTFLoader.js"
-      );
+      const { GLTFLoader } =
+        await import("three/examples/jsm/loaders/GLTFLoader.js");
       const gltf = await new GLTFLoader().loadAsync(url);
       return gltf.scene;
     }

@@ -280,9 +280,7 @@ export const buildGridMetrics = (
       ? GRID_SIZE_MULTIPLIER * 1.2
       : GRID_SIZE_MULTIPLIER;
   const densityFactor =
-    qualityMode === "reduced"
-      ? GRID_DENSITY_FACTOR * 0.7
-      : GRID_DENSITY_FACTOR;
+    qualityMode === "reduced" ? GRID_DENSITY_FACTOR * 0.7 : GRID_DENSITY_FACTOR;
 
   const gridSize = clamp(
     footprint * gridSizeMultiplier,

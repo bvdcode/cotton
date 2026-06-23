@@ -115,7 +115,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       title={getPreviewTitle(fileName, fileType, isModel)}
       forceFullScreen={isModel}
       headerActions={
-        isModel ? <ModelHeaderActions modelControls={modelControls} /> : undefined
+        isModel ? (
+          <ModelHeaderActions modelControls={modelControls} />
+        ) : undefined
       }
     >
       <FilePreviewBody
@@ -143,7 +145,8 @@ const getModelControlsKey = (
   isModel: boolean,
   fileId: string | null,
   defaultModelColor: string,
-) => (isOpen && isModel && fileId ? [fileId, defaultModelColor].join("\u0000") : "");
+) =>
+  isOpen && isModel && fileId ? [fileId, defaultModelColor].join("\u0000") : "";
 
 const getPreviewLayout = (fileType: FileType | null, isModel: boolean) =>
   fileType === "pdf" || isModel ? "header" : "overlay";

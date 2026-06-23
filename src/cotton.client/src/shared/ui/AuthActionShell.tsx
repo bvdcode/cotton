@@ -38,11 +38,7 @@ export const AuthActionShell = ({
         alignItems="center"
         gap={1.5}
       >
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ flex: 1, minWidth: 0 }}
-        >
+        <Typography variant="h4" component="h1" sx={{ flex: 1, minWidth: 0 }}>
           {title}
         </Typography>
         <Avatar

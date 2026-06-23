@@ -63,7 +63,10 @@ export const sharedFoldersApi = {
         },
       },
     );
-    const totalCount = readRequiredIntHeader(response.headers as HeaderMap, "x-total-count");
+    const totalCount = readRequiredIntHeader(
+      response.headers as HeaderMap,
+      "x-total-count",
+    );
 
     return { content: response.data, totalCount };
   },
@@ -100,11 +103,12 @@ export const sharedFoldersApi = {
     return `/api/v1/layouts/shared/${encodedToken}/files/${encodedFileId}/content?download=${download}`;
   },
 
-  openFileInline: async (
-    token: string,
-    nodeFileId: Guid,
-  ): Promise<void> => {
-    const inlineUrl = sharedFoldersApi.buildFileContentUrl(token, nodeFileId, "inline");
+  openFileInline: async (token: string, nodeFileId: Guid): Promise<void> => {
+    const inlineUrl = sharedFoldersApi.buildFileContentUrl(
+      token,
+      nodeFileId,
+      "inline",
+    );
     const response = await fetch(inlineUrl);
     if (!response.ok) {
       throw new Error("Failed to open shared file");

@@ -21,7 +21,7 @@ export function WizardProgressBar({
           borderRadius: 999,
           bgcolor: alpha(
             theme.palette.text.primary,
-            theme.palette.mode === "dark" ? 0.08 : 0.08
+            theme.palette.mode === "dark" ? 0.08 : 0.08,
           ),
           overflow: "hidden",
         }}

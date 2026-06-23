@@ -65,8 +65,14 @@ export const ModelPreviewScene: React.FC<ModelPreviewSceneProps> = ({
       />
 
       {shadowsEnabled && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, 0]} receiveShadow>
-          <planeGeometry args={[preparedModel.gridSize, preparedModel.gridSize]} />
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, -0.012, 0]}
+          receiveShadow
+        >
+          <planeGeometry
+            args={[preparedModel.gridSize, preparedModel.gridSize]}
+          />
           <shadowMaterial transparent opacity={0.28} />
         </mesh>
       )}

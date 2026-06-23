@@ -51,11 +51,13 @@ describe("encryptExistingFileWithTask", () => {
   });
 
   it("wraps existing-file encryption in a visible task", async () => {
-    vi.mocked(encryptExistingFileInPlace).mockImplementation(async (options) => {
-      options.onEncryptProgress?.(40, 100);
-      options.onUploadProgress?.(20, 130);
-      options.onFinalizing?.();
-    });
+    vi.mocked(encryptExistingFileInPlace).mockImplementation(
+      async (options) => {
+        options.onEncryptProgress?.(40, 100);
+        options.onUploadProgress?.(20, 130);
+        options.onFinalizing?.();
+      },
+    );
 
     await encryptExistingFileWithTask({
       file,
@@ -133,11 +135,13 @@ describe("decryptExistingFileWithTask", () => {
       contentType: "application/octet-stream",
       metadata: { encrypted: "true" },
     };
-    vi.mocked(decryptExistingFileInPlace).mockImplementation(async (options) => {
-      options.onDecryptProgress?.(50, 100);
-      options.onUploadProgress?.(30, 90);
-      options.onFinalizing?.();
-    });
+    vi.mocked(decryptExistingFileInPlace).mockImplementation(
+      async (options) => {
+        options.onDecryptProgress?.(50, 100);
+        options.onUploadProgress?.(30, 90);
+        options.onFinalizing?.();
+      },
+    );
 
     await decryptExistingFileWithTask({
       file: encryptedFile,

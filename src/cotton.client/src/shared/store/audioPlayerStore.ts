@@ -48,7 +48,8 @@ const PLAYLIST_COLLATOR = new Intl.Collator(undefined, {
   sensitivity: "base",
 });
 
-const normalizeTrackName = (name: string): string => stripExtension(name).trim();
+const normalizeTrackName = (name: string): string =>
+  stripExtension(name).trim();
 
 const compareNullableStrings = (a: string | null, b: string | null): number => {
   if (a === b) return 0;
@@ -86,12 +87,16 @@ type NodeInfo = {
   name: string;
 };
 
-const tryBuildPreviewUrl = (token: string | null | undefined): string | undefined => {
+const tryBuildPreviewUrl = (
+  token: string | null | undefined,
+): string | undefined => {
   if (!token) return undefined;
   return `/api/v1/preview/${encodeURIComponent(token)}.webp`;
 };
 
-const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPlaylistItem[]> => {
+const buildRecursiveAudioPlaylist = async (
+  rootNodeId: string,
+): Promise<AudioPlaylistItem[]> => {
   const playlist: AudioPlaylistItem[] = [];
   let foldersSeen = 1;
 
@@ -196,9 +201,7 @@ const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPla
             name: file.name,
             nodeId: file.nodeId,
             folderPath: folderPath ?? undefined,
-            previewUrl: tryBuildPreviewUrl(
-              file.previewHashEncryptedHex,
-            ),
+            previewUrl: tryBuildPreviewUrl(file.previewHashEncryptedHex),
           });
         }
       }
@@ -312,8 +315,16 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
 }));
 
 export const selectAudioPlayerOpen = (s: AudioPlayerState): boolean => s.open;
-export const selectAudioPlayerIsScanning = (s: AudioPlayerState): boolean => s.isScanning;
-export const selectAudioPlayerShuffleEnabled = (s: AudioPlayerState): boolean => s.shuffleEnabled;
-export const selectAudioPlayerPlaylist = (s: AudioPlayerState): ReadonlyArray<AudioPlaylistItem> => s.playlist;
-export const selectAudioPlayerCurrentFileId = (s: AudioPlayerState): string | null => s.currentFileId;
-export const selectAudioPlayerCurrentFileName = (s: AudioPlayerState): string | null => s.currentFileName;
+export const selectAudioPlayerIsScanning = (s: AudioPlayerState): boolean =>
+  s.isScanning;
+export const selectAudioPlayerShuffleEnabled = (s: AudioPlayerState): boolean =>
+  s.shuffleEnabled;
+export const selectAudioPlayerPlaylist = (
+  s: AudioPlayerState,
+): ReadonlyArray<AudioPlaylistItem> => s.playlist;
+export const selectAudioPlayerCurrentFileId = (
+  s: AudioPlayerState,
+): string | null => s.currentFileId;
+export const selectAudioPlayerCurrentFileName = (
+  s: AudioPlayerState,
+): string | null => s.currentFileName;

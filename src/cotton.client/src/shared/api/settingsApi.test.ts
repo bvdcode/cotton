@@ -90,12 +90,8 @@ describe("settingsApi getters", () => {
       maxChunkSizeBytes: 8192,
       supportedMaxChunkSizeBytes: [4096, 8192, 16384],
     });
-    expect(get).toHaveBeenCalledWith(
-      "server/settings/chunk-size",
-      undefined,
-    );
+    expect(get).toHaveBeenCalledWith("server/settings/chunk-size", undefined);
   });
-
 
   it("reads and updates storage pipeline settings", async () => {
     const payload = {
@@ -111,12 +107,16 @@ describe("settingsApi getters", () => {
       maxEncryptionThreads: 4,
       supportedEncryptionThreads: [1, 2, 3, 4],
     };
-    const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: payload });
+    const get = vi
+      .spyOn(httpClient, "get")
+      .mockResolvedValue({ data: payload });
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
       data: { ...payload, compressionLevel: -5 },
     });
 
-    await expect(settingsApi.getStoragePipelineSettings()).resolves.toEqual(payload);
+    await expect(settingsApi.getStoragePipelineSettings()).resolves.toEqual(
+      payload,
+    );
     await expect(settingsApi.setCompressionLevel(-5)).resolves.toEqual({
       ...payload,
       compressionLevel: -5,
@@ -126,9 +126,7 @@ describe("settingsApi getters", () => {
       "server/settings/storage-pipeline",
       undefined,
     );
-    expect(patch).toHaveBeenCalledWith(
-      "server/settings/compression-level/-5",
-    );
+    expect(patch).toHaveBeenCalledWith("server/settings/compression-level/-5");
   });
 
   it("unwraps booleans and simple string settings", async () => {
@@ -141,9 +139,13 @@ describe("settingsApi getters", () => {
       .mockResolvedValueOnce({ data: { allowGlobalIndexing: true } })
       .mockResolvedValueOnce({ data: { timezone: null } })
       .mockResolvedValueOnce({ data: { publicBaseUrl: null } })
-      .mockResolvedValueOnce({ data: { defaultUserStorageQuotaBytes: 1073741824 } })
       .mockResolvedValueOnce({
-        data: { defaultUserTemplateNodeId: "019e2537-492b-77d3-83e4-efe942c6156c" },
+        data: { defaultUserStorageQuotaBytes: 1073741824 },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          defaultUserTemplateNodeId: "019e2537-492b-77d3-83e4-efe942c6156c",
+        },
       });
 
     await expect(settingsApi.getTelemetry()).resolves.toBe(true);
@@ -290,11 +292,10 @@ describe("settingsApi setters", () => {
       "server/settings/allow-global-indexing",
       true,
     );
-    expect(patch).toHaveBeenNthCalledWith(
-      4,
-      "server/settings/server-usage",
-      ["Photos", "Documents"],
-    );
+    expect(patch).toHaveBeenNthCalledWith(4, "server/settings/server-usage", [
+      "Photos",
+      "Documents",
+    ]);
     expect(patch).toHaveBeenNthCalledWith(
       5,
       "server/settings/timezone",
@@ -348,10 +349,7 @@ describe("settingsApi setters", () => {
       3,
       "server/settings/compution-mode/Remote",
     );
-    expect(patch).toHaveBeenNthCalledWith(
-      4,
-      "server/settings/storage-type/S3",
-    );
+    expect(patch).toHaveBeenNthCalledWith(4, "server/settings/storage-type/S3");
     expect(patch).toHaveBeenNthCalledWith(
       5,
       "server/settings/email-mode/Custom",
@@ -501,16 +499,15 @@ describe("settingsApi.saveSetupStep", () => {
     });
     await settingsApi.saveSetupStep("usage", { usage: [] });
 
-    expect(patch).toHaveBeenNthCalledWith(
-      1,
-      "server/settings/server-usage",
-      ["Photos", "Documents", "Media", "Other"],
-    );
-    expect(patch).toHaveBeenNthCalledWith(
-      2,
-      "server/settings/server-usage",
-      ["Other"],
-    );
+    expect(patch).toHaveBeenNthCalledWith(1, "server/settings/server-usage", [
+      "Photos",
+      "Documents",
+      "Media",
+      "Other",
+    ]);
+    expect(patch).toHaveBeenNthCalledWith(2, "server/settings/server-usage", [
+      "Other",
+    ]);
   });
 
   it("defers external storage and email modes until config steps", async () => {
@@ -617,10 +614,7 @@ describe("settingsApi.saveSetupStep", () => {
       accessKey: "key",
       secretKey: "secret",
     });
-    expect(patch).toHaveBeenNthCalledWith(
-      2,
-      "server/settings/storage-type/S3",
-    );
+    expect(patch).toHaveBeenNthCalledWith(2, "server/settings/storage-type/S3");
     expect(patch).toHaveBeenNthCalledWith(3, "server/settings/email-config", {
       smtpServer: "smtp.example",
       port: "587",

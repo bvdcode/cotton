@@ -35,7 +35,9 @@ describe("envelopeStorage", () => {
   it("returns null for missing or malformed values", () => {
     expect(hasEnvelopePreference(undefined)).toBe(false);
     expect(readEnvelopeFromPreferences(undefined)).toBeNull();
-    expect(readEnvelopeFromPreferences({ [ENVELOPE_PREFERENCE_KEY]: "not base64!" })).toBeNull();
+    expect(
+      readEnvelopeFromPreferences({ [ENVELOPE_PREFERENCE_KEY]: "not base64!" }),
+    ).toBeNull();
   });
 
   it("persists the envelope under the opaque preference key", async () => {

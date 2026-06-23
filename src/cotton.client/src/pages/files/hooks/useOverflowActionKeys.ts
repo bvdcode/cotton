@@ -4,7 +4,9 @@ import type { PageHeaderActionItem } from "../components/PageHeader";
 type UseOverflowActionKeysParams = {
   actions: PageHeaderActionItem[];
   actionsContainerRef: React.RefObject<HTMLDivElement | null>;
-  actionButtonRefs: React.MutableRefObject<Record<string, HTMLButtonElement | null>>;
+  actionButtonRefs: React.MutableRefObject<
+    Record<string, HTMLButtonElement | null>
+  >;
 };
 
 type VisibleActionsState = {
@@ -12,8 +14,14 @@ type VisibleActionsState = {
   keys: string[];
 };
 
-const sameKeys = (left: ReadonlyArray<string>, right: ReadonlyArray<string>): boolean => {
-  return left.length === right.length && left.every((key, index) => key === right[index]);
+const sameKeys = (
+  left: ReadonlyArray<string>,
+  right: ReadonlyArray<string>,
+): boolean => {
+  return (
+    left.length === right.length &&
+    left.every((key, index) => key === right[index])
+  );
 };
 
 /**
@@ -29,7 +37,10 @@ export const useOverflowActionKeys = ({
     () => actions.map((action) => action.key),
     [actions],
   );
-  const actionSignature = React.useMemo(() => actionKeys.join("\u0000"), [actionKeys]);
+  const actionSignature = React.useMemo(
+    () => actionKeys.join("\u0000"),
+    [actionKeys],
+  );
   const [visibleActionsState, setVisibleActionsState] =
     React.useState<VisibleActionsState>(() => ({
       signature: actionSignature,
@@ -99,7 +110,8 @@ export const useOverflowActionKeys = ({
 
       for (let index = 0; index < actions.length; index += 1) {
         const width = widths[index] ?? 36;
-        const projected = consumed + width + (nextVisible.length > 0 ? ACTION_GAP : 0);
+        const projected =
+          consumed + width + (nextVisible.length > 0 ? ACTION_GAP : 0);
 
         if (projected > maxWithoutOverflow) {
           break;
@@ -129,7 +141,13 @@ export const useOverflowActionKeys = ({
       window.cancelAnimationFrame(rafId);
       observer.disconnect();
     };
-  }, [actionButtonRefs, actionKeys, actions, actionsContainerRef, commitVisibleActionKeys]);
+  }, [
+    actionButtonRefs,
+    actionKeys,
+    actions,
+    actionsContainerRef,
+    commitVisibleActionKeys,
+  ]);
 
   return visibleActionKeys;
 };

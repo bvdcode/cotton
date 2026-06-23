@@ -23,8 +23,9 @@ export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const lineHeightPx = isMobile ? MOBILE_LINE_HEIGHT_PX : DESKTOP_LINE_HEIGHT_PX;
-
+  const lineHeightPx = isMobile
+    ? MOBILE_LINE_HEIGHT_PX
+    : DESKTOP_LINE_HEIGHT_PX;
 
   const maxOffset = Math.max(0, lines.length - VISIBLE_LINES);
   const offsetLines = clamp(activeIndex - 1, 0, maxOffset);

@@ -45,16 +45,12 @@ export function QuestionAutocomplete({
         }}
         isOptionEqualToValue={(option, value) => option.key === value.key}
         renderInput={(params) => (
-          <TextField
-            {...params}
-            label={title}
-            placeholder={subtitle}
-          />
+          <TextField {...params} label={title} placeholder={subtitle} />
         )}
         filterOptions={(options, state) => {
           const inputValue = state.inputValue.toLowerCase();
           return options.filter((option) =>
-            option.label.toLowerCase().includes(inputValue)
+            option.label.toLowerCase().includes(inputValue),
           );
         }}
       />

@@ -49,7 +49,8 @@ const demoLastNames = [
   "Wombat",
 ] as const;
 
-export const DEMO_CREDENTIALS_STORAGE_KEY = STORAGE_KEY_PREFIX + "demo-credentials";
+export const DEMO_CREDENTIALS_STORAGE_KEY =
+  STORAGE_KEY_PREFIX + "demo-credentials";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

@@ -165,7 +165,9 @@ describe("showApiErrorToast", () => {
 
     expect(toastErrorMock).toHaveBeenCalledWith(
       "from server",
-      expect.objectContaining({ toastId: expect.stringContaining("from server") }),
+      expect.objectContaining({
+        toastId: expect.stringContaining("from server"),
+      }),
     );
   });
 

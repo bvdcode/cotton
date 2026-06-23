@@ -1,4 +1,11 @@
-import { Box, ButtonBase, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import {
+  Box,
+  ButtonBase,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import {
   Download,
   Folder,
@@ -108,7 +115,9 @@ const SearchResultRowImpl = ({
       : null;
   const isDownloadOnly =
     row.kind === "file" && fileTypeInfo?.supportsInlineView === false;
-  const primaryAction = isDownloadOnly ? t("actions.downloadFile") : text.action;
+  const primaryAction = isDownloadOnly
+    ? t("actions.downloadFile")
+    : text.action;
 
   const handlePrimaryAction = (event: React.MouseEvent) => {
     event.stopPropagation();

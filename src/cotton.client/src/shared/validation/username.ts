@@ -14,7 +14,10 @@ export const getUsernameError = (value: string): string | null => {
   const normalized = normalizeUsername(value);
   if (normalized.length === 0) return null;
 
-  if (normalized.length < USERNAME_MIN_LENGTH || normalized.length > USERNAME_MAX_LENGTH) {
+  if (
+    normalized.length < USERNAME_MIN_LENGTH ||
+    normalized.length > USERNAME_MAX_LENGTH
+  ) {
     return `Username must be between ${USERNAME_MIN_LENGTH} and ${USERNAME_MAX_LENGTH} characters.`;
   }
 

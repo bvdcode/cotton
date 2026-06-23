@@ -73,7 +73,9 @@ describe("ClientEncryptionSetupForm", () => {
       { target: { value: "correct horse" } },
     );
     fireEvent.change(
-      screen.getByLabelText("clientEncryption.setupDialog.confirmPasswordLabel"),
+      screen.getByLabelText(
+        "clientEncryption.setupDialog.confirmPasswordLabel",
+      ),
       { target: { value: "correct horse" } },
     );
     fireEvent.click(

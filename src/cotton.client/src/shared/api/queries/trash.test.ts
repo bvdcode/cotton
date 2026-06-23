@@ -77,9 +77,11 @@ describe("clearTrashCaches", () => {
 
     clearTrashCaches(queryClient);
 
-    expect(queryClient.getQueryCache().findAll({
-      queryKey: queryKeys.trash.all(),
-      exact: false,
-    })).toEqual([]);
+    expect(
+      queryClient.getQueryCache().findAll({
+        queryKey: queryKeys.trash.all(),
+        exact: false,
+      }),
+    ).toEqual([]);
   });
 });

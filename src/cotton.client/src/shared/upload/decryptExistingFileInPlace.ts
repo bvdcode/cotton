@@ -42,9 +42,14 @@ export async function decryptExistingFileInPlace(options: {
   }
 
   const ciphertext = await response.blob();
-  const plaintext = await decryptBlobToBlob(ciphertext, masterKey, contentType, {
-    onProgress: options.onDecryptProgress,
-  });
+  const plaintext = await decryptBlobToBlob(
+    ciphertext,
+    masterKey,
+    contentType,
+    {
+      onProgress: options.onDecryptProgress,
+    },
+  );
 
   const { chunkHashes, fileHash } = await uploadBlobToChunks({
     blob: plaintext,

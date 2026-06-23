@@ -2,7 +2,10 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useVault } from "../crypto";
 import { FOLDER_ENCRYPTION_POLICY_KEY } from "../crypto/metadataFlags";
-import { useMoveClipboardStore, type MoveClipboardItem } from "../store/moveClipboardStore";
+import {
+  useMoveClipboardStore,
+  type MoveClipboardItem,
+} from "../store/moveClipboardStore";
 import { useNodesStore } from "../store/nodesStore";
 import { useMoveOperations } from "./useMoveOperations";
 
@@ -336,5 +339,4 @@ describe("useMoveOperations", () => {
     );
     expect(useMoveClipboardStore.getState().items).toEqual([]);
   });
-
 });

@@ -38,8 +38,12 @@ vi.mock("../../shared/api/settingsApi", () => ({
 }));
 
 vi.mock("../../shared/store/setupStatusStore", () => {
-  const useSetupStatusStore = ((selector: (state: { isInitialized: boolean | null }) => unknown) =>
-    selector({ isInitialized: testState.setupInitialized })) as typeof import("../../shared/store/setupStatusStore").useSetupStatusStore;
+  const useSetupStatusStore = ((
+    selector: (state: { isInitialized: boolean | null }) => unknown,
+  ) =>
+    selector({
+      isInitialized: testState.setupInitialized,
+    })) as typeof import("../../shared/store/setupStatusStore").useSetupStatusStore;
 
   useSetupStatusStore.getState = () => ({
     isInitialized: testState.setupInitialized,
@@ -97,6 +101,8 @@ describe("SetupWizardPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "actions.start" }));
 
-    await waitFor(() => expect(testState.getTelemetry).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(testState.getTelemetry).toHaveBeenCalledTimes(1),
+    );
   });
 });

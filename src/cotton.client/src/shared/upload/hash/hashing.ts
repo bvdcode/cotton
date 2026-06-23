@@ -1,11 +1,20 @@
-import { createSHA1, createSHA256, createSHA384, createSHA512 } from 'hash-wasm';
+import {
+  createSHA1,
+  createSHA256,
+  createSHA384,
+  createSHA512,
+} from "hash-wasm";
 
-export type SupportedHashAlgorithm = "SHA-1" | "SHA-256" | "SHA-384" | "SHA-512";
+export type SupportedHashAlgorithm =
+  | "SHA-1"
+  | "SHA-256"
+  | "SHA-384"
+  | "SHA-512";
 
 type HashWasmHasher = {
   init(): void;
   update(data: Uint8Array): void;
-  digest(encoding: 'hex'): string;
+  digest(encoding: "hex"): string;
 };
 
 export type IncrementalHasher = {
@@ -16,10 +25,14 @@ export type IncrementalHasher = {
 const normalize = (algorithm: string): string => algorithm.trim().toUpperCase();
 
 function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
 }
 
-export function toWebCryptoAlgorithm(serverAlgorithm: string): SupportedHashAlgorithm {
+export function toWebCryptoAlgorithm(
+  serverAlgorithm: string,
+): SupportedHashAlgorithm {
   const a = normalize(serverAlgorithm);
 
   // Accept common variants.
@@ -32,7 +45,9 @@ export function toWebCryptoAlgorithm(serverAlgorithm: string): SupportedHashAlgo
   return "SHA-256";
 }
 
-async function createHashWasmHasher(algorithm: SupportedHashAlgorithm): Promise<HashWasmHasher> {
+async function createHashWasmHasher(
+  algorithm: SupportedHashAlgorithm,
+): Promise<HashWasmHasher> {
   const hasher = await (async () => {
     switch (algorithm) {
       case "SHA-1":
@@ -52,17 +67,24 @@ async function createHashWasmHasher(algorithm: SupportedHashAlgorithm): Promise<
   return hasher as unknown as HashWasmHasher;
 }
 
-export async function createIncrementalHasher(algorithm: SupportedHashAlgorithm): Promise<IncrementalHasher> {
+export async function createIncrementalHasher(
+  algorithm: SupportedHashAlgorithm,
+): Promise<IncrementalHasher> {
   const hasher = await createHashWasmHasher(algorithm);
   return {
     update: (data) => hasher.update(data),
-    digestHex: () => hasher.digest('hex'),
+    digestHex: () => hasher.digest("hex"),
   };
 }
 
-export async function updateHasherFromBlob(blob: Blob, hasher: IncrementalHasher): Promise<void> {
-  const anyBlob = blob as unknown as { stream?: () => ReadableStream<Uint8Array> };
-  if (typeof anyBlob.stream === 'function') {
+export async function updateHasherFromBlob(
+  blob: Blob,
+  hasher: IncrementalHasher,
+): Promise<void> {
+  const anyBlob = blob as unknown as {
+    stream?: () => ReadableStream<Uint8Array>;
+  };
+  if (typeof anyBlob.stream === "function") {
     const reader = anyBlob.stream().getReader();
     try {
       while (true) {
@@ -81,13 +103,19 @@ export async function updateHasherFromBlob(blob: Blob, hasher: IncrementalHasher
   hasher.update(new Uint8Array(buffer));
 }
 
-export async function hashBytes(bytes: Uint8Array, algorithm: SupportedHashAlgorithm): Promise<string> {
+export async function hashBytes(
+  bytes: Uint8Array,
+  algorithm: SupportedHashAlgorithm,
+): Promise<string> {
   const hasher = await createHashWasmHasher(algorithm);
   hasher.update(bytes);
-  return hasher.digest('hex');
+  return hasher.digest("hex");
 }
 
-export async function hashBuffer(buffer: ArrayBuffer, algorithm: SupportedHashAlgorithm): Promise<string> {
+export async function hashBuffer(
+  buffer: ArrayBuffer,
+  algorithm: SupportedHashAlgorithm,
+): Promise<string> {
   if (globalThis.crypto?.subtle) {
     const digest = await globalThis.crypto.subtle.digest(algorithm, buffer);
     return bytesToHex(new Uint8Array(digest));
@@ -100,7 +128,10 @@ export async function hashBuffer(buffer: ArrayBuffer, algorithm: SupportedHashAl
  * Hash a blob using incremental hashing to avoid loading entire file into memory.
  * Uses hash-wasm for efficient streaming hash calculation.
  */
-export async function hashBlob(blob: Blob, algorithm: SupportedHashAlgorithm): Promise<string> {
+export async function hashBlob(
+  blob: Blob,
+  algorithm: SupportedHashAlgorithm,
+): Promise<string> {
   return hashBlobStreaming(blob, algorithm);
 }
 
@@ -108,7 +139,10 @@ export async function hashBlob(blob: Blob, algorithm: SupportedHashAlgorithm): P
  * Hash a file using incremental hashing to avoid loading entire file into memory.
  * Critical for large files (multi-GB) - prevents OOM and UI freezes.
  */
-export async function hashFile(file: File, algorithm: SupportedHashAlgorithm): Promise<string> {
+export async function hashFile(
+  file: File,
+  algorithm: SupportedHashAlgorithm,
+): Promise<string> {
   return hashBlobStreaming(file, algorithm);
 }
 
@@ -116,7 +150,10 @@ export async function hashFile(file: File, algorithm: SupportedHashAlgorithm): P
  * Incremental streaming hash using hash-wasm.
  * Reads file in chunks, updates hash incrementally without keeping entire file in memory.
  */
-async function hashBlobStreaming(blob: Blob, algorithm: SupportedHashAlgorithm): Promise<string> {
+async function hashBlobStreaming(
+  blob: Blob,
+  algorithm: SupportedHashAlgorithm,
+): Promise<string> {
   const hasher = await createIncrementalHasher(algorithm);
   await updateHasherFromBlob(blob, hasher);
   return hasher.digestHex();

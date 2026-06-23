@@ -17,7 +17,9 @@ import { ContentCopy } from "@mui/icons-material";
 
 const QR_CODE_FORWARD_REF_TYPE = Symbol.for("react.forward_ref");
 
-const isQrCodeComponent = (value: unknown): value is ElementType<QRCodeProps> => {
+const isQrCodeComponent = (
+  value: unknown,
+): value is ElementType<QRCodeProps> => {
   if (typeof value === "function") {
     return true;
   }

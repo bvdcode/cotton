@@ -1,12 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import {
-  Alert,
-  AlertTitle,
-  Box,
-  Button,
-  Collapse,
-  Stack,
-} from "@mui/material";
+import { Alert, AlertTitle, Box, Button, Collapse, Stack } from "@mui/material";
 import { withTranslation, type WithTranslation } from "react-i18next";
 
 interface OwnProps {

@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { layoutsApi, type Guid, type LayoutSearchResultDto } from "../../../shared/api/layoutsApi";
+import {
+  layoutsApi,
+  type Guid,
+  type LayoutSearchResultDto,
+} from "../../../shared/api/layoutsApi";
 
 export interface UseLayoutSearchOptions {
   layoutId?: Guid | null;
@@ -23,7 +27,9 @@ export interface UseLayoutSearchState {
   setPageSize: (pageSize: number) => void;
 }
 
-export function useLayoutSearch(options: UseLayoutSearchOptions): UseLayoutSearchState {
+export function useLayoutSearch(
+  options: UseLayoutSearchOptions,
+): UseLayoutSearchState {
   const {
     layoutId,
     initialQuery = "",

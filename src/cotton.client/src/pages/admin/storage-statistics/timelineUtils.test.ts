@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  fromBucketIndexToIso,
-  toBucketIndex,
-} from "./timelineUtils";
+import { fromBucketIndexToIso, toBucketIndex } from "./timelineUtils";
 
 describe("storage statistics timeline utils", () => {
   it("normalizes zoneless timestamps as UTC", () => {

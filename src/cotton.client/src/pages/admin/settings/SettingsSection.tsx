@@ -58,10 +58,7 @@ export const SettingsSection = ({
   }, [highlight, highlightKey]);
 
   return (
-    <Stack
-      ref={sectionRef}
-      spacing={1.25}
-    >
+    <Stack ref={sectionRef} spacing={1.25}>
       <Stack
         direction="row"
         spacing={1}
@@ -69,12 +66,7 @@ export const SettingsSection = ({
         justifyContent="space-between"
       >
         <Stack direction="column" spacing={0.25} minWidth={0} flex={1}>
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            minWidth={0}
-          >
+          <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
             <Typography
               variant="subtitle1"
               fontWeight={700}

@@ -73,9 +73,9 @@ describe("filesApi chunk manifests", () => {
       data: chunkResponse,
     });
 
-    await expect(filesApi.updateFileContent(fileId, chunkRequest)).resolves.toEqual(
-      chunkResponse,
-    );
+    await expect(
+      filesApi.updateFileContent(fileId, chunkRequest),
+    ).resolves.toEqual(chunkResponse);
 
     expect(patch).toHaveBeenCalledWith(
       `files/${fileId}/update-content`,
@@ -173,7 +173,9 @@ describe("filesApi versions", () => {
         canDelete: false,
       },
     ];
-    const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: versions });
+    const get = vi
+      .spyOn(httpClient, "get")
+      .mockResolvedValue({ data: versions });
 
     await expect(filesApi.listVersions(fileId)).resolves.toEqual(versions);
 
@@ -194,17 +196,23 @@ describe("filesApi versions", () => {
       requiresVideoTranscoding: false,
       previewHashEncryptedHex: null,
     };
-    const post = vi.spyOn(httpClient, "post").mockResolvedValue({ data: restored });
+    const post = vi
+      .spyOn(httpClient, "post")
+      .mockResolvedValue({ data: restored });
 
     await expect(filesApi.restoreVersion(fileId, "version-1")).resolves.toEqual(
       restored,
     );
 
-    expect(post).toHaveBeenCalledWith(`files/${fileId}/versions/version-1/restore`);
+    expect(post).toHaveBeenCalledWith(
+      `files/${fileId}/versions/version-1/restore`,
+    );
   });
 
   it("deletes a selected version", async () => {
-    const del = vi.spyOn(httpClient, "delete").mockResolvedValue({ data: undefined });
+    const del = vi
+      .spyOn(httpClient, "delete")
+      .mockResolvedValue({ data: undefined });
 
     await filesApi.deleteVersion(fileId, "version-1");
 
@@ -271,9 +279,9 @@ describe("filesApi file mutations", () => {
       .mockResolvedValueOnce({ data: movedFile });
 
     await filesApi.renameFile(fileId, { name: "renamed.txt" });
-    await expect(filesApi.moveFile(fileId, { parentId: nodeId })).resolves.toEqual(
-      movedFile,
-    );
+    await expect(
+      filesApi.moveFile(fileId, { parentId: nodeId }),
+    ).resolves.toEqual(movedFile);
 
     expect(patch).toHaveBeenNthCalledWith(1, `/files/${fileId}/rename`, {
       name: "renamed.txt",

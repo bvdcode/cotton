@@ -60,7 +60,10 @@ export const useMediaLightbox = (
     const handlePopState = (e: PopStateEvent) => {
       if (
         historyPushedRef.current &&
-        !(e.state && (e.state as { overlay?: string }).overlay === LIGHTBOX_HISTORY_STATE)
+        !(
+          e.state &&
+          (e.state as { overlay?: string }).overlay === LIGHTBOX_HISTORY_STATE
+        )
       ) {
         historyPushedRef.current = false;
         setLightboxOpenRaw(false);
@@ -79,10 +82,15 @@ export const useMediaLightbox = (
           requiresVideoTranscoding: file.requiresVideoTranscoding ?? false,
         }),
       }))
-      .filter(({ typeInfo }) => typeInfo.type === "image" || typeInfo.type === "video")
+      .filter(
+        ({ typeInfo }) =>
+          typeInfo.type === "image" || typeInfo.type === "video",
+      )
       .map(({ file, typeInfo }) => {
         const preview = getFileIcon(
-          file.largeFilePreviewPresignedToken ?? file.previewHashEncryptedHex ?? null,
+          file.largeFilePreviewPresignedToken ??
+            file.previewHashEncryptedHex ??
+            null,
           file.name,
           file.contentType,
         );
@@ -120,20 +128,26 @@ export const useMediaLightbox = (
 
   // Get signed media URL for gallery viewing.
   // Images use preview links, videos use original links for browser streaming compatibility.
-  const getSignedMediaUrl = useCallback(async (fileId: string): Promise<string> => {
-    const url = await filesApi.getDownloadLink(fileId, 60 * 24);
-    if (mediaKindsById.get(fileId) === "video") {
-      return transcodableIds.has(fileId) ? rewriteToHlsManifestUrl(url) : url;
-    }
+  const getSignedMediaUrl = useCallback(
+    async (fileId: string): Promise<string> => {
+      const url = await filesApi.getDownloadLink(fileId, 60 * 24);
+      if (mediaKindsById.get(fileId) === "video") {
+        return transcodableIds.has(fileId) ? rewriteToHlsManifestUrl(url) : url;
+      }
 
-    const separator = url.includes("?") ? "&" : "?";
-    return `${url}${separator}preview=true`;
-  }, [mediaKindsById, transcodableIds]);
+      const separator = url.includes("?") ? "&" : "?";
+      return `${url}${separator}preview=true`;
+    },
+    [mediaKindsById, transcodableIds],
+  );
 
   // Get download URL for the actual download button - full original file
-  const getDownloadUrl = useCallback(async (fileId: string): Promise<string> => {
-    return await filesApi.getDownloadLink(fileId, 60 * 24);
-  }, []);
+  const getDownloadUrl = useCallback(
+    async (fileId: string): Promise<string> => {
+      return await filesApi.getDownloadLink(fileId, 60 * 24);
+    },
+    [],
+  );
 
   const handleMediaClick = useCallback(
     (fileId: string) => {
