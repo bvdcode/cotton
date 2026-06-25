@@ -2,12 +2,11 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Reflection;
+using Cotton.Crypto;
 using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Attributes;
-using EasyExtensions.Abstractions;
 using EasyExtensions.EntityFrameworkCore.Database;
-using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;

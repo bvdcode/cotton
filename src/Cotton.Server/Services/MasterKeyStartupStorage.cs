@@ -159,7 +159,7 @@ namespace Cotton.Server.Services
                 {
                     byte[] encrypted = Convert.FromBase64String(secretAccessKeyEncrypted);
                     using AesGcmStreamCipher cipher = MasterKeySentinelStore.CreateCipher(encryptionSettings);
-                    byte[] decrypted = await DecryptBytesAsync(cipher, encrypted, cancellationToken);
+                    byte[] decrypted = await cipher.DecryptAsync(encrypted, cancellationToken);
                     return Encoding.UTF8.GetString(decrypted);
                 }
                 catch (Exception ex) when (ex is FormatException
@@ -170,17 +170,6 @@ namespace Cotton.Server.Services
                         "S3 secret access key could not be decrypted with the configured master key.",
                         ex);
                 }
-            }
-
-            private static async Task<byte[]> DecryptBytesAsync(
-                AesGcmStreamCipher cipher,
-                byte[] encrypted,
-                CancellationToken cancellationToken)
-            {
-                await using var input = new MemoryStream(encrypted, writable: false);
-                await using var output = new MemoryStream();
-                await cipher.DecryptAsync(input, output, ct: cancellationToken);
-                return output.ToArray();
             }
 
             private static string RequireConfigured(string? value, string settingName)

@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Crypto;
 using Cotton.Server.Abstractions;
 using Cotton.Database.Integrity;
 using Cotton.Server.Auth;
@@ -11,7 +12,6 @@ using Cotton.Server.Services.Search;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using Cotton.Server.Services.Startup;
 using Cotton.Server.Services.WebDav;
-using EasyExtensions.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Cotton.Server.Extensions

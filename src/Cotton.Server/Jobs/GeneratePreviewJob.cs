@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Crypto;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Previews;
@@ -12,8 +13,6 @@ using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
-using EasyExtensions.Abstractions;
-using EasyExtensions.Extensions;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;

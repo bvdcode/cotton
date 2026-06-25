@@ -16,7 +16,6 @@ using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.EntityFrameworkCore.Database;
-using EasyExtensions.Extensions;
 using EasyExtensions.Helpers;
 using EasyExtensions.Models.Enums;
 using System.IdentityModel.Tokens.Jwt;

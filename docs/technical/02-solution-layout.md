@@ -33,7 +33,7 @@ The split between projects is enforced by layering: low-level primitives (`Cotto
 | Project (file) | TFM | Kind | Project references under test |
 |---|---|---|---|
 | `src/Cotton.Server.IntegrationTests/Cotton.Server.IntegrationTests.csproj` | `net10.0` | NUnit + `Microsoft.AspNetCore.Mvc.Testing` | `Cotton.Crypto`, `Cotton.Server`, `Cotton.Storage` |
-| `src/Cotton.Crypto.Tests/Cotton.Crypto.Tests.csproj` | `net10.0` | NUnit | `Cotton.Crypto` (+ `EasyExtensions.Crypto` for legacy-format comparison) |
+| `src/Cotton.Crypto.Tests/Cotton.Crypto.Tests.csproj` | `net10.0` | NUnit | `Cotton.Crypto` |
 | `src/Cotton.Storage.Tests/Cotton.Storage.Tests.csproj` | `net10.0` | NUnit + Moq | `Cotton.Crypto`, `Cotton.Storage` |
 | `src/Cotton.Previews.Tests/Cotton.Previews.Tests.csproj` | `net10.0` | NUnit | `Cotton.Previews` |
 | `src/Cotton.Validators.Tests/Cotton.Validators.Tests.csproj` | `net10.0` | NUnit | `Cotton.Validators` |
@@ -93,7 +93,7 @@ Versions below are exactly as pinned in the `.csproj` files. Note the minor vers
 
 | Package | Version | Project(s) | Role |
 |---|---|---|---|
-| `EasyExtensions` | 3.0.65 (Crypto, Storage, Autoconfig) / 3.0.66 (Server) | Server, Crypto, Storage, Autoconfig | Core helper library (the author's own utility framework). |
+| `EasyExtensions` | 3.0.65 (Storage, Autoconfig) / 3.0.66 (Server) | Server, Storage, Autoconfig | Core helper library (the author's own utility framework). |
 | `EasyExtensions.Mediator` | 3.0.66 | Server | Mediator/CQRS dispatch. |
 | `EasyExtensions.Clients` | 3.0.67 | Server | HTTP client helpers. |
 | `EasyExtensions.Quartz` | 3.0.66 | Server | Quartz.NET scheduling integration (background jobs). |
@@ -101,7 +101,6 @@ Versions below are exactly as pinned in the `.csproj` files. Note the minor vers
 | `EasyExtensions.EntityFrameworkCore.Npgsql` | 3.0.65 (Database) / 3.0.66 (Server) | Server, Database | PostgreSQL provider helpers. |
 | `EasyExtensions.AspNetCore.Authorization` | 3.0.66 | Server | Auth helpers. |
 | `EasyExtensions.Fonts` | 3.0.65 | Previews | Embedded fonts for rendered previews/watermarks. |
-| `EasyExtensions.Crypto` | 3.0.65 | **Crypto.Tests only** | Reference implementation used to compare/validate the in-repo cipher and the legacy `CTN1` format. |
 | `Fido2` | 4.0.1 | Server | WebAuthn / passkey support. |
 | `Otp.NET` | 1.4.1 | Server | TOTP (two-factor) generation/validation. |
 | `Mapster` | 10.0.7 | Server | Object-to-DTO mapping. |
@@ -127,7 +126,7 @@ Versions below are exactly as pinned in the `.csproj` files. Note the minor vers
 | `Microsoft.Extensions.DependencyInjection` / `.Logging` / `.Logging.Console` | 10.0.8 | Benchmark | DI + console logging host for the benchmark console app. |
 | `Microsoft.SourceLink.GitHub` | 10.0.300 | Shared | Source Link for the published NuGet symbols. |
 
-> Crypto provenance note: The cipher is implemented **in-repo** in `Cotton.Crypto` (`src/Cotton.Crypto/AesGcmStreamCipher.cs`); `Cotton.Crypto.csproj` references only `EasyExtensions` (3.0.65), and the `EasyExtensions.Crypto` package appears **only** in `Cotton.Crypto.Tests.csproj`. The code itself records that `EasyExtensions.Crypto` is the *legacy* origin of the `CTN1` stream format — the current format is `CTN2` (see `LegacyMagicBytes => "CTN1"u8` / `CurrentMagicBytes => "CTN2"u8` and the comment in `src/Cotton.Crypto/Internals/FormatConstants.cs`). FFmpeg integration is via `Xabe.FFmpeg` (no `FFMpegCore` reference exists in any `.csproj`). See the *Cryptography Engine* section for details.
+> Crypto provenance note: The cipher, `IStreamCipher` contract, and byte/string helpers are implemented **in-repo** in `Cotton.Crypto` (`src/Cotton.Crypto/AesGcmStreamCipher.cs`). `Cotton.Crypto.csproj` has no NuGet package references, and legacy `CTN1` interop is validated with local golden vectors; the current format is `CTN2` (see `LegacyMagicBytes => "CTN1"u8` / `CurrentMagicBytes => "CTN2"u8`). FFmpeg integration is via `Xabe.FFmpeg` (no `FFMpegCore` reference exists in any `.csproj`). See the *Cryptography Engine* section for details.
 
 ## The plugin abstraction
 
@@ -351,7 +350,7 @@ The `Cotton.Shared` `.csproj` also carries the NuGet packaging metadata: `Packag
 
 ## Related sections
 
-- See the *Cryptography Engine* section for the in-repo `Cotton.Crypto` AES-GCM cipher, key derivation, and the `CTN2` (current) / `CTN1` (legacy) stream format that `EasyExtensions.Crypto` originally produced.
+- See the *Cryptography Engine* section for the in-repo `Cotton.Crypto` AES-GCM cipher, key derivation, and the `CTN2` (current) / `CTN1` (legacy) stream formats.
 - See the *Storage Pipeline* section for `Cotton.Storage` processors (compression → crypto), backends, and the storage pipeline probe surfaced in `TelemetryRequest`.
 - See the *Layout & Topology* section for `Cotton.Topology` services.
 - See the *Data Model & Persistence* section for `Cotton.Database` (EF Core + Npgsql).

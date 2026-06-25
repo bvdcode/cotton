@@ -346,7 +346,7 @@ namespace Cotton.Server.Services
             {
                 try
                 {
-                    _ = await DecryptBytesAsync(cipher, encrypted, cancellationToken);
+                    _ = await cipher.DecryptAsync(encrypted, cancellationToken);
                     return new CandidateValidationOutcome(Validated: true, FailedCandidate: failedCandidate);
                 }
                 catch (Exception ex) when (IsEncryptedProbeFailure(ex))
@@ -360,17 +360,6 @@ namespace Cotton.Server.Services
             }
 
             return new CandidateValidationOutcome(Validated: false, FailedCandidate: failedCandidate);
-        }
-
-        private static async Task<byte[]> DecryptBytesAsync(
-            AesGcmStreamCipher cipher,
-            byte[] encrypted,
-            CancellationToken cancellationToken)
-        {
-            await using var input = new MemoryStream(encrypted, writable: false);
-            await using var output = new MemoryStream();
-            await cipher.DecryptAsync(input, output, ct: cancellationToken);
-            return output.ToArray();
         }
 
         private static async Task<IReadOnlyList<byte[]>> ReadEncryptedBytesProbeCandidatesAsync(

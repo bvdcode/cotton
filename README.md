@@ -300,7 +300,7 @@ Writes flow through the storage pipeline **compression → crypto → backend** 
 - `src/cotton.client` — React/TypeScript/Vite frontend.
 - `docs/technical/` — full engineering documentation (28 sections).
 
-> Note: the runtime cipher is the in-repo `Cotton.Crypto` project. The `EasyExtensions.Crypto` NuGet package is referenced only by `Cotton.Crypto.Tests` for legacy stream-format (`CTN1`) interop; the current format is `CTN2`.
+> Note: the runtime cipher and stream-cipher helpers are implemented in the in-repo `Cotton.Crypto` project. Legacy stream-format (`CTN1`) interop is covered by local golden vectors; the current format is `CTN2`.
 
 ---
 

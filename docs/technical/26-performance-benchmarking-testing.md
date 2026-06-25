@@ -255,7 +255,7 @@ All backend test projects target `net10.0` and use **NUnit 4.6.1** + `NUnit3Test
 
 | Project | Extra packages | Covers | # source files |
 | --- | --- | --- | --- |
-| `Cotton.Crypto.Tests` | `EasyExtensions.Crypto` 3.0.65; golden-vector JSON `TestData/cotton-container-vectors.json` | `AesGcmStreamCipher` (streaming, pipe, edges, format invariants, golden vectors, key derivation, stability/reliability/negativity, diagnostics) + `[Explicit]` `PerformanceTests` | 18 |
+| `Cotton.Crypto.Tests` | golden-vector JSON `TestData/cotton-container-vectors.json` | `AesGcmStreamCipher` (streaming, pipe, edges, format invariants, golden vectors, key derivation, stability/reliability/negativity, diagnostics) + `[Explicit]` `PerformanceTests` | 18 |
 | `Cotton.Storage.Tests` | `Moq` 4.20.72; `s3-test-config.json[.example]` | `CompressionProcessor`, `CryptoProcessor`, `FileStoragePipeline`, `FileSystemStorageBackend`, `S3StorageBackend`, `S3CompatibilityFactory`, `ConcatenatedReadStream`, `StorageKeyHelper`, AES-GCM interop, cross-impl integration | 10 |
 | `Cotton.Previews.Tests` | `SixLabors.ImageSharp` 4.0.0 | Preview generators: image, pdf, svg, audio, text, STL thumbnail, provider selection | 7 |
 | `Cotton.Autoconfig.Tests` | `Microsoft.Extensions.Configuration` 10.0.8 | `ConfigurationBuilderExtensions` (key derivation/config) | 1 |
