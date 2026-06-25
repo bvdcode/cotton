@@ -52,6 +52,7 @@ namespace Cotton.Server.Handlers.Files
         ILogger<DeleteFileQueryHandler> _logger,
         UserStorageQuotaService _quota,
         ISyncChangeRecorder _syncChanges,
+        ILayoutMutationGate _layoutGate,
         FileVersionService _versions)
             : IRequestHandler<DeleteFileQuery>
     {
@@ -113,11 +114,10 @@ namespace Cotton.Server.Handlers.Files
 
         private async Task MoveToTrashAsync(DeleteFileQuery command, NodeFile nodeFile, CancellationToken ct)
         {
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(nodeFile.Node.LayoutId, ct);
             await using IDbContextTransaction? tx = _dbContext.Database.CurrentTransaction is null
                 ? await _dbContext.Database.BeginTransactionAsync(ct)
                 : null;
-
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, nodeFile.Node.LayoutId, ct);
 
             nodeFile = await _dbContext.NodeFiles
                     .Include(x => x.Node)

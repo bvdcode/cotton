@@ -87,7 +87,8 @@ namespace Cotton.Server.Handlers.Files
         SettingsProvider _settingsProvider,
         FileManifestService _fileManifestService,
         ISyncChangeRecorder _syncChanges,
-        UserStorageQuotaService _quota) : IRequestHandler<CreateFileRequest, NodeFileManifestDto>
+        UserStorageQuotaService _quota,
+        ILayoutMutationGate _layoutGate) : IRequestHandler<CreateFileRequest, NodeFileManifestDto>
     {
         /// <summary>
         /// Handles the request through the mediator pipeline.
@@ -97,8 +98,8 @@ namespace Cotton.Server.Handlers.Files
             Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, cancellationToken);
 
             // Resolve once before expensive manifest/hash work so invalid targets fail fast.
-            // The target is re-read inside the layout lock before the namespace write.
-            Node preLockNode = await GetTargetNodeAsync(request, layout.Id, tracking: false, cancellationToken);
+            // The target is re-read inside the transaction before the namespace write.
+            Node preTransactionNode = await GetTargetNodeAsync(request, layout.Id, tracking: false, cancellationToken);
             string nameKey = ValidateNameAndGetKey(request.Name);
 
             List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, request.UserId, cancellationToken);
@@ -106,15 +107,10 @@ namespace Cotton.Server.Handlers.Files
             FileManifest fileManifest = await GetOrCreateFileManifestAsync(chunks, request, proposedHash, cancellationToken);
 
             await ValidateContentHashIfRequestedAsync(request, fileManifest, proposedHash, cancellationToken);
-
-            // Cross-table namespace serialization: cf. LayoutLocks.
-            // Keep the lock scoped to the actual namespace mutation; chunk lookup,
-            // manifest dedup and optional hash validation can be slow but do not
-            // depend on per-parent NameKey state.
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(preTransactionNode.LayoutId, cancellationToken);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, preLockNode.LayoutId, cancellationToken);
 
-            Node node = await GetTargetNodeAsync(request, preLockNode.LayoutId, tracking: true, cancellationToken);
+            Node node = await GetTargetNodeAsync(request, preTransactionNode.LayoutId, tracking: true, cancellationToken);
             await EnsureNoDuplicatesAsync(node.Id, request.UserId, nameKey, cancellationToken);
             long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifest.Id, cancellationToken);
 

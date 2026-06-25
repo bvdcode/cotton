@@ -31,6 +31,7 @@ namespace Cotton.Server.Handlers.WebDav
         IWebDavPathResolver _pathResolver,
         IEventNotificationService _eventNotification,
         ISyncChangeRecorder _syncChanges,
+        ILayoutMutationGate _layoutGate,
         ILogger<WebDavMkColRequestHandler> _logger)
         : IRequestHandler<WebDavMkColRequest, WebDavMkColResult>
     {
@@ -45,11 +46,11 @@ namespace Cotton.Server.Handlers.WebDav
                 return parent.Failure;
             }
 
-            Guid lockedLayoutId = parent.Result!.ParentNode!.LayoutId;
+            Guid expectedLayoutId = parent.Result!.ParentNode!.LayoutId;
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(expectedLayoutId, ct);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
 
-            WebDavMkColResult result = await CreateCollectionInsideLockAsync(request, lockedLayoutId, ct);
+            WebDavMkColResult result = await CreateCollectionInTransactionAsync(request, expectedLayoutId, ct);
             if (!result.Success)
             {
                 return result;
@@ -89,21 +90,21 @@ namespace Cotton.Server.Handlers.WebDav
             return new WebDavMkColResult(false, WebDavMkColError.ParentNotFound);
         }
 
-        private async Task<WebDavMkColResult> CreateCollectionInsideLockAsync(
+        private async Task<WebDavMkColResult> CreateCollectionInTransactionAsync(
             WebDavMkColRequest request,
-            Guid lockedLayoutId,
+            Guid expectedLayoutId,
             CancellationToken ct)
         {
-            WebDavMkColParent parent = await ResolveValidatedParentAsync(request, "path after locking", ct);
+            WebDavMkColParent parent = await ResolveValidatedParentAsync(request, "path in transaction", ct);
             if (parent.Failure is not null)
             {
                 return parent.Failure;
             }
 
             WebDavParentResult parentResult = parent.Result!;
-            if (parentResult.ParentNode!.LayoutId != lockedLayoutId)
+            if (parentResult.ParentNode!.LayoutId != expectedLayoutId)
             {
-                _logger.LogDebug("WebDAV MKCOL: Parent layout changed while waiting for lock: {Path}", request.Path);
+                _logger.LogDebug("WebDAV MKCOL: Parent layout changed before creation: {Path}", request.Path);
                 return new WebDavMkColResult(false, WebDavMkColError.ParentNotFound);
             }
 

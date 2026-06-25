@@ -54,6 +54,7 @@ namespace Cotton.Server.Handlers.Files
         ILayoutService _layouts,
         TrashRestoreCoordinator _restore,
         ISyncChangeRecorder _syncChanges,
+        ILayoutMutationGate _layoutGate,
         ILogger<RestoreFileQueryHandler> _logger)
         : IRequestHandler<RestoreFileQuery, RestoreOutcomeDto>
     {
@@ -64,8 +65,8 @@ namespace Cotton.Server.Handlers.Files
         {
             Guid layoutId = await GetLayoutIdOrThrowAsync(request, ct);
 
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId, ct);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId, ct);
 
             NodeFile nodeFile = await LoadFileOrThrowAsync(request, ct);
             Node wrapper = nodeFile.Node;

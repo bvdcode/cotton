@@ -60,6 +60,7 @@ namespace Cotton.Server.Controllers
         IMemoryCache _cache,
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
+        ILayoutMutationGate _layoutGate,
         ILogger<FileController> _logger) : ControllerBase
     {
         private const int DefaultSharedFileTokenLength = 16;
@@ -241,11 +242,8 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("File not found.");
             }
-
-            // Per-layout namespace serialization for rename — same rationale as
-            // CreateFile / CreateNode / MoveFile / MoveNode.
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId.Value, HttpContext.RequestAborted);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId.Value, default);
 
             NodeFile? nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
@@ -589,8 +587,8 @@ namespace Cotton.Server.Controllers
             byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
             FileManifest newFile = await ResolveUpdateManifestAsync(request, proposedHash, userId);
 
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId.Value, HttpContext.RequestAborted);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId.Value, default);
 
             NodeFile? nodeFile = await LoadEditableNodeFileAsync(nodeFileId, userId);
             if (nodeFile is null)

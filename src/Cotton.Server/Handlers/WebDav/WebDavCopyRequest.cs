@@ -38,6 +38,7 @@ namespace Cotton.Server.Handlers.WebDav
         UserStorageQuotaService _quota,
         IEventNotificationService _eventNotification,
         ISyncChangeRecorder _syncChanges,
+        ILayoutMutationGate _layoutGate,
         ILogger<WebDavCopyRequestHandler> _logger)
         : IRequestHandler<WebDavCopyRequest, WebDavCopyResult>
     {
@@ -46,22 +47,22 @@ namespace Cotton.Server.Handlers.WebDav
         /// </summary>
         public async Task<WebDavCopyResult> Handle(WebDavCopyRequest request, CancellationToken ct)
         {
-            PreLockCopyOutcome preconditions = await ResolvePreLockPreconditionsAsync(request, ct);
-            if (preconditions.Failure is not null)
+            PreTransactionCopyOutcome preTransaction = await ResolvePreTransactionPreconditionsAsync(request, ct);
+            if (preTransaction.Failure is not null)
             {
-                return preconditions.Failure;
+                return preTransaction.Failure;
             }
 
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(preTransaction.LayoutId!.Value, ct);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, preconditions.LayoutId!.Value, ct);
 
-            LockedCopyOutcome lockedCopy = await PrepareLockedCopyAsync(request, preconditions.LayoutId.Value, ct);
-            if (lockedCopy.Failure is not null)
+            CopyPreparationOutcome preparedCopy = await PrepareCopyInTransactionAsync(request, preTransaction.LayoutId.Value, ct);
+            if (preparedCopy.Failure is not null)
             {
-                return lockedCopy.Failure;
+                return preparedCopy.Failure;
             }
 
-            CopyOperationOutcome copyResult = await TryPerformCopyAsync(request, lockedCopy.Source!, lockedCopy.DestinationParent!, ct);
+            CopyOperationOutcome copyResult = await TryPerformCopyAsync(request, preparedCopy.Source!, preparedCopy.DestinationParent!, ct);
             if (copyResult.Failure is not null)
             {
                 return copyResult.Failure;
@@ -72,54 +73,54 @@ namespace Cotton.Server.Handlers.WebDav
             _quota.RecordLogicalBytesAdded(request.UserId, copyResult.AddedBytes);
 
             await NotifyCopyCompletedAsync(request, copyResult.NodeId, copyResult.NodeFileId, ct);
-            return Ok(lockedCopy.Created, copyResult.NodeId, copyResult.NodeFileId);
+            return Ok(preparedCopy.Created, copyResult.NodeId, copyResult.NodeFileId);
         }
 
-        private async Task<PreLockCopyOutcome> ResolvePreLockPreconditionsAsync(WebDavCopyRequest request, CancellationToken ct)
+        private async Task<PreTransactionCopyOutcome> ResolvePreTransactionPreconditionsAsync(WebDavCopyRequest request, CancellationToken ct)
         {
             WebDavResolveResult source = await ResolveSourceAsync(request, ct);
             WebDavCopyResult? sourceFailure = ValidateSourceOrGetFailure(request, source);
             if (sourceFailure is not null)
             {
-                return PreLockCopyOutcome.Failed(sourceFailure);
+                return PreTransactionCopyOutcome.Failed(sourceFailure);
             }
 
             WebDavParentResult destinationParent = await GetAndValidateDestinationParentAsync(request, ct);
             WebDavCopyResult? destinationFailure = TryGetDestinationParentFailure(destinationParent);
             return destinationFailure is null
-                ? PreLockCopyOutcome.Success(destinationParent.ParentNode!.LayoutId)
-                : PreLockCopyOutcome.Failed(destinationFailure);
+                ? PreTransactionCopyOutcome.Success(destinationParent.ParentNode!.LayoutId)
+                : PreTransactionCopyOutcome.Failed(destinationFailure);
         }
 
-        private async Task<LockedCopyOutcome> PrepareLockedCopyAsync(
+        private async Task<CopyPreparationOutcome> PrepareCopyInTransactionAsync(
             WebDavCopyRequest request,
-            Guid lockedLayoutId,
+            Guid expectedLayoutId,
             CancellationToken ct)
         {
             WebDavResolveResult source = await ResolveSourceAsync(request, ct);
-            WebDavCopyResult? sourceFailure = await ValidateLockedSourceAsync(request, source, lockedLayoutId, ct);
+            WebDavCopyResult? sourceFailure = await ValidateSourceInTransactionAsync(request, source, expectedLayoutId, ct);
             if (sourceFailure is not null)
             {
-                return LockedCopyOutcome.Failed(sourceFailure);
+                return CopyPreparationOutcome.Failed(sourceFailure);
             }
 
             WebDavParentResult destinationParent = await GetAndValidateDestinationParentAsync(request, ct);
-            WebDavCopyResult? destinationFailure = ValidateLockedDestination(destinationParent, request, lockedLayoutId);
+            WebDavCopyResult? destinationFailure = ValidateDestinationInTransaction(destinationParent, request, expectedLayoutId);
             if (destinationFailure is not null)
             {
-                return LockedCopyOutcome.Failed(destinationFailure);
+                return CopyPreparationOutcome.Failed(destinationFailure);
             }
 
             (bool Created, bool Allowed) overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
             return overwriteResult.Allowed
-                ? LockedCopyOutcome.Success(source, destinationParent, overwriteResult.Created)
-                : LockedCopyOutcome.Failed(Fail(WebDavCopyError.DestinationExists));
+                ? CopyPreparationOutcome.Success(source, destinationParent, overwriteResult.Created)
+                : CopyPreparationOutcome.Failed(Fail(WebDavCopyError.DestinationExists));
         }
 
-        private async Task<WebDavCopyResult?> ValidateLockedSourceAsync(
+        private async Task<WebDavCopyResult?> ValidateSourceInTransactionAsync(
             WebDavCopyRequest request,
             WebDavResolveResult source,
-            Guid lockedLayoutId,
+            Guid expectedLayoutId,
             CancellationToken ct)
         {
             WebDavCopyResult? sourceFailure = ValidateSourceOrGetFailure(request, source);
@@ -128,19 +129,19 @@ namespace Cotton.Server.Handlers.WebDav
                 return sourceFailure;
             }
 
-            if (await GetSourceLayoutIdAsync(source, ct) == lockedLayoutId)
+            if (await GetSourceLayoutIdAsync(source, ct) == expectedLayoutId)
             {
                 return null;
             }
 
-            _logger.LogDebug("WebDAV COPY: Source layout changed while waiting for lock: {Path}", request.SourcePath);
+            _logger.LogDebug("WebDAV COPY: Source layout changed during copy preparation: {Path}", request.SourcePath);
             return Fail(WebDavCopyError.SourceNotFound);
         }
 
-        private WebDavCopyResult? ValidateLockedDestination(
+        private WebDavCopyResult? ValidateDestinationInTransaction(
             WebDavParentResult destinationParent,
             WebDavCopyRequest request,
-            Guid lockedLayoutId)
+            Guid expectedLayoutId)
         {
             WebDavCopyResult? destinationFailure = TryGetDestinationParentFailure(destinationParent);
             if (destinationFailure is not null)
@@ -148,12 +149,12 @@ namespace Cotton.Server.Handlers.WebDav
                 return destinationFailure;
             }
 
-            if (destinationParent.ParentNode!.LayoutId == lockedLayoutId)
+            if (destinationParent.ParentNode!.LayoutId == expectedLayoutId)
             {
                 return null;
             }
 
-            _logger.LogDebug("WebDAV COPY: Destination parent layout changed while waiting for lock: {Path}", request.DestinationPath);
+            _logger.LogDebug("WebDAV COPY: Destination parent layout changed during copy preparation: {Path}", request.DestinationPath);
             return Fail(WebDavCopyError.DestinationParentNotFound);
         }
 
@@ -179,20 +180,20 @@ namespace Cotton.Server.Handlers.WebDav
             }
         }
 
-        private record PreLockCopyOutcome(Guid? LayoutId, WebDavCopyResult? Failure)
+        private record PreTransactionCopyOutcome(Guid? LayoutId, WebDavCopyResult? Failure)
         {
             /// <summary>
             /// Creates a successful operation result.
             /// </summary>
-            public static PreLockCopyOutcome Success(Guid layoutId) => new(layoutId, null);
+            public static PreTransactionCopyOutcome Success(Guid layoutId) => new(layoutId, null);
 
             /// <summary>
             /// Creates a failed operation result.
             /// </summary>
-            public static PreLockCopyOutcome Failed(WebDavCopyResult failure) => new(null, failure);
+            public static PreTransactionCopyOutcome Failed(WebDavCopyResult failure) => new(null, failure);
         }
 
-        private record LockedCopyOutcome(
+        private record CopyPreparationOutcome(
             WebDavResolveResult? Source,
             WebDavParentResult? DestinationParent,
             bool Created,
@@ -201,7 +202,7 @@ namespace Cotton.Server.Handlers.WebDav
             /// <summary>
             /// Creates a successful operation result.
             /// </summary>
-            public static LockedCopyOutcome Success(
+            public static CopyPreparationOutcome Success(
                 WebDavResolveResult source,
                 WebDavParentResult destinationParent,
                 bool created) => new(source, destinationParent, created, null);
@@ -209,7 +210,7 @@ namespace Cotton.Server.Handlers.WebDav
             /// <summary>
             /// Creates a failed operation result.
             /// </summary>
-            public static LockedCopyOutcome Failed(WebDavCopyResult failure) => new(null, null, false, failure);
+            public static CopyPreparationOutcome Failed(WebDavCopyResult failure) => new(null, null, false, failure);
         }
 
         private record CopyOperationOutcome(

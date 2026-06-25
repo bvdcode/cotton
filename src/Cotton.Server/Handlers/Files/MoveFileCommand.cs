@@ -52,6 +52,7 @@ namespace Cotton.Server.Handlers.Files
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
         IEventNotificationService _eventNotification,
+        ILayoutMutationGate _layoutGate,
         ILogger<MoveFileCommandHandler> _logger)
         : IRequestHandler<MoveFileCommand, NodeFileManifestDto>
     {
@@ -61,16 +62,10 @@ namespace Cotton.Server.Handlers.Files
         public async Task<NodeFileManifestDto> Handle(MoveFileCommand request, CancellationToken cancellationToken)
         {
             ValidateRequest(request);
-
-            // The cross-table namespace (file vs folder with the same NameKey under
-            // the same parent) is NOT protected by a single unique index. Without a
-            // serialization point, a concurrent file move + folder move can both
-            // pass their pre-checks and commit a same-name cross-type duplicate.
-            // We take the same per-layout advisory lock that MoveNodeCommand uses.
             Guid sourceLayoutId = await GetSourceLayoutIdAsync(request, cancellationToken);
 
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(sourceLayoutId, cancellationToken);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, cancellationToken);
 
             NodeFile nodeFile = await GetMovableFileAsync(request, cancellationToken);
             ValidateMovableFile(request, nodeFile);
