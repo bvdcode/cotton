@@ -2,24 +2,30 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Amazon.S3;
+using Cotton.Database;
 using Cotton.Database.Models.Enums;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
 using Cotton.Storage.Helpers;
 using Cotton.Crypto;
-using EasyExtensions.Extensions;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Cotton.Server.Services
 {
     internal static class MasterKeyStartupStorage
     {
-        public static MasterKeySentinelStore CreateSentinelStore(
+        public static async Task<MasterKeySentinelStore> CreateSentinelStoreAsync(
             CottonEncryptionSettings encryptionSettings,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            CancellationToken cancellationToken = default)
         {
-            IStorageBackend storage = CreateConfiguredBackend(encryptionSettings, loggerFactory);
+            IStorageBackend storage = await CreateConfiguredBackendAsync(
+                encryptionSettings,
+                loggerFactory,
+                cancellationToken);
             var compatibilityProbe = new MasterKeyCompatibilityProbe(
                 loggerFactory.CreateLogger<MasterKeyCompatibilityProbe>(),
                 storage);
@@ -35,66 +41,50 @@ namespace Cotton.Server.Services
             return MasterKeyCompatibilityProbe.HasExistingCottonDataAsync(cancellationToken: cancellationToken);
         }
 
-        private static IStorageBackend CreateConfiguredBackend(
+        private static async Task<IStorageBackend> CreateConfiguredBackendAsync(
             CottonEncryptionSettings encryptionSettings,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            CancellationToken cancellationToken)
         {
             string connectionString = MasterKeyCompatibilityProbe.BuildConnectionStringFromEnvironment();
-            StartupStorageSettings settings = LoadLatestStorageSettings(connectionString);
+            StartupStorageSettings settings = await LoadLatestStorageSettingsAsync(connectionString, cancellationToken);
 
             return settings.StorageType switch
             {
                 StorageType.Local => new FileSystemStorageBackend(
                     loggerFactory.CreateLogger<FileSystemStorageBackend>()),
-                StorageType.S3 => new S3StorageBackend(new StaticS3Provider(settings, encryptionSettings)),
+                StorageType.S3 => new S3StorageBackend(await StaticS3Provider.CreateAsync(
+                    settings,
+                    encryptionSettings,
+                    cancellationToken)),
                 _ => throw new NotSupportedException($"Storage type {settings.StorageType} is not supported.")
             };
         }
 
-        private static StartupStorageSettings LoadLatestStorageSettings(string connectionString)
+        private static async Task<StartupStorageSettings> LoadLatestStorageSettingsAsync(
+            string connectionString,
+            CancellationToken cancellationToken)
         {
-            const string sql = """
-            select
-                storage_type,
-                s3_endpoint_url,
-                s3_region,
-                s3_access_key_id,
-                s3_secret_access_key_encrypted,
-                s3_bucket_name
-            from public.server_settings
-            order by created_at desc
-            limit 1;
-            """;
-
-            using var connection = new NpgsqlConnection(connectionString);
-            connection.Open();
-
-            using var command = new NpgsqlCommand(sql, connection);
             try
             {
-                using NpgsqlDataReader reader = command.ExecuteReader();
-                if (!reader.Read())
-                {
-                    return StartupStorageSettings.Local;
-                }
-
-                return new StartupStorageSettings(
-                    (StorageType)reader.GetInt32(0),
-                    GetNullableString(reader, 1),
-                    GetNullableString(reader, 2),
-                    GetNullableString(reader, 3),
-                    GetNullableString(reader, 4),
-                    GetNullableString(reader, 5));
+                await using CottonDbContext dbContext = MasterKeyCompatibilityProbe.CreateDbContext(connectionString);
+                StartupStorageSettings? settings = await dbContext.ServerSettings
+                    .AsNoTracking()
+                    .OrderByDescending(x => x.CreatedAt)
+                    .Select(x => new StartupStorageSettings(
+                        x.StorageType,
+                        x.S3EndpointUrl,
+                        x.S3Region,
+                        x.S3AccessKeyId,
+                        x.S3SecretAccessKeyEncrypted,
+                        x.S3BucketName))
+                    .FirstOrDefaultAsync(cancellationToken);
+                return settings ?? StartupStorageSettings.Local;
             }
             catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
             {
                 return StartupStorageSettings.Local;
             }
-        }
-
-        private static string? GetNullableString(NpgsqlDataReader reader, int ordinal)
-        {
-            return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
         }
 
         private record StartupStorageSettings(
@@ -119,21 +109,34 @@ namespace Cotton.Server.Services
             private readonly string _endpointUrl;
             private readonly string _region;
             private readonly string _accessKeyId;
-            private readonly string _secretAccessKeyEncrypted;
+            private readonly string _secretAccessKey;
             private readonly string _bucketName;
-            private readonly CottonEncryptionSettings _encryptionSettings;
             private IAmazonS3? _client;
 
-            public StaticS3Provider(StartupStorageSettings settings, CottonEncryptionSettings encryptionSettings)
+            private StaticS3Provider(
+                StartupStorageSettings settings,
+                string secretAccessKey)
             {
                 _endpointUrl = RequireConfigured(settings.S3EndpointUrl, nameof(settings.S3EndpointUrl));
                 _region = RequireConfigured(settings.S3Region, nameof(settings.S3Region));
                 _accessKeyId = RequireConfigured(settings.S3AccessKeyId, nameof(settings.S3AccessKeyId));
-                _secretAccessKeyEncrypted = RequireConfigured(
+                _secretAccessKey = secretAccessKey;
+                _bucketName = RequireConfigured(settings.S3BucketName, nameof(settings.S3BucketName));
+            }
+
+            public static async Task<StaticS3Provider> CreateAsync(
+                StartupStorageSettings settings,
+                CottonEncryptionSettings encryptionSettings,
+                CancellationToken cancellationToken)
+            {
+                string secretAccessKeyEncrypted = RequireConfigured(
                     settings.S3SecretAccessKeyEncrypted,
                     nameof(settings.S3SecretAccessKeyEncrypted));
-                _bucketName = RequireConfigured(settings.S3BucketName, nameof(settings.S3BucketName));
-                _encryptionSettings = encryptionSettings;
+                string secretAccessKey = await DecryptSecretAccessKeyAsync(
+                    secretAccessKeyEncrypted,
+                    encryptionSettings,
+                    cancellationToken);
+                return new StaticS3Provider(settings, secretAccessKey);
             }
 
             public string GetBucketName() => _bucketName;
@@ -144,16 +147,20 @@ namespace Cotton.Server.Services
                     _endpointUrl,
                     _region,
                     _accessKeyId,
-                    DecryptSecretAccessKey());
+                    _secretAccessKey);
             }
 
-            private string DecryptSecretAccessKey()
+            private static async Task<string> DecryptSecretAccessKeyAsync(
+                string secretAccessKeyEncrypted,
+                CottonEncryptionSettings encryptionSettings,
+                CancellationToken cancellationToken)
             {
                 try
                 {
-                    byte[] encrypted = Convert.FromBase64String(_secretAccessKeyEncrypted);
-                    using AesGcmStreamCipher cipher = MasterKeySentinelStore.CreateCipher(_encryptionSettings);
-                    return cipher.DecryptString(encrypted);
+                    byte[] encrypted = Convert.FromBase64String(secretAccessKeyEncrypted);
+                    using AesGcmStreamCipher cipher = MasterKeySentinelStore.CreateCipher(encryptionSettings);
+                    byte[] decrypted = await DecryptBytesAsync(cipher, encrypted, cancellationToken);
+                    return Encoding.UTF8.GetString(decrypted);
                 }
                 catch (Exception ex) when (ex is FormatException
                     or CryptographicException
@@ -163,6 +170,17 @@ namespace Cotton.Server.Services
                         "S3 secret access key could not be decrypted with the configured master key.",
                         ex);
                 }
+            }
+
+            private static async Task<byte[]> DecryptBytesAsync(
+                AesGcmStreamCipher cipher,
+                byte[] encrypted,
+                CancellationToken cancellationToken)
+            {
+                await using var input = new MemoryStream(encrypted, writable: false);
+                await using var output = new MemoryStream();
+                await cipher.DecryptAsync(input, output, ct: cancellationToken);
+                return output.ToArray();
             }
 
             private static string RequireConfigured(string? value, string settingName)

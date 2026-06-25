@@ -2,8 +2,10 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
+using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Crypto;
-using EasyExtensions.Extensions;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Security.Cryptography;
 
@@ -14,24 +16,54 @@ namespace Cotton.Server.Services
     /// </summary>
     public class MasterKeyCompatibilityProbe : IMasterKeyCompatibilityProbe
     {
-        private static readonly string[] CottonDataTables =
+        private static readonly EncryptedBytesProbe[] EncryptedBytesProbes =
         [
-            "users",
-            "nodes",
-            "file_manifests",
-            "chunks",
-            "server_settings"
+            new(
+                nameof(User.TotpSecretEncrypted),
+                dbContext => dbContext.Users
+                    .AsNoTracking()
+                    .Where(x => x.TotpSecretEncrypted != null)
+                    .Select(x => x.TotpSecretEncrypted!)),
+            new(
+                nameof(User.AvatarHashEncrypted),
+                dbContext => dbContext.Users
+                    .AsNoTracking()
+                    .Where(x => x.AvatarHashEncrypted != null)
+                    .Select(x => x.AvatarHashEncrypted!)),
+            new(
+                nameof(FileManifest.SmallFilePreviewHashEncrypted),
+                dbContext => dbContext.FileManifests
+                    .AsNoTracking()
+                    .Where(x => x.SmallFilePreviewHashEncrypted != null)
+                    .Select(x => x.SmallFilePreviewHashEncrypted!))
         ];
 
-        private static readonly EncryptedColumnProbe[] EncryptedColumnProbes =
+        private static readonly EncryptedTextProbe[] EncryptedTextProbes =
         [
-            new("users", "totp_secret_encrypted", EncryptedColumnKind.Bytea),
-            new("users", "avatar_hash_encrypted", EncryptedColumnKind.Bytea),
-            new("file_manifests", "small_file_preview_hash_encrypted", EncryptedColumnKind.Bytea),
-            new("server_settings", "cloud_services_token_encrypted", EncryptedColumnKind.Base64String),
-            new("server_settings", "oidc_client_secret_encrypted", EncryptedColumnKind.Base64String),
-            new("server_settings", "s3_secret_access_key_encrypted", EncryptedColumnKind.Base64String),
-            new("server_settings", "smtp_password_encrypted", EncryptedColumnKind.Base64String)
+            new(
+                nameof(CottonServerSettings.CloudServicesTokenEncrypted),
+                dbContext => dbContext.ServerSettings
+                    .AsNoTracking()
+                    .Where(x => x.CloudServicesTokenEncrypted != null && x.CloudServicesTokenEncrypted != string.Empty)
+                    .Select(x => x.CloudServicesTokenEncrypted!)),
+            new(
+                nameof(CottonServerSettings.OidcClientSecretEncrypted),
+                dbContext => dbContext.ServerSettings
+                    .AsNoTracking()
+                    .Where(x => x.OidcClientSecretEncrypted != null && x.OidcClientSecretEncrypted != string.Empty)
+                    .Select(x => x.OidcClientSecretEncrypted!)),
+            new(
+                nameof(CottonServerSettings.S3SecretAccessKeyEncrypted),
+                dbContext => dbContext.ServerSettings
+                    .AsNoTracking()
+                    .Where(x => x.S3SecretAccessKeyEncrypted != null && x.S3SecretAccessKeyEncrypted != string.Empty)
+                    .Select(x => x.S3SecretAccessKeyEncrypted!)),
+            new(
+                nameof(CottonServerSettings.SmtpPasswordEncrypted),
+                dbContext => dbContext.ServerSettings
+                    .AsNoTracking()
+                    .Where(x => x.SmtpPasswordEncrypted != null && x.SmtpPasswordEncrypted != string.Empty)
+                    .Select(x => x.SmtpPasswordEncrypted!))
         ];
 
         private readonly ILogger<MasterKeyCompatibilityProbe> _logger;
@@ -60,9 +92,8 @@ namespace Cotton.Server.Services
         {
             try
             {
-                await using var connection = new NpgsqlConnection(connectionString ?? BuildConnectionStringFromEnvironment());
-                await connection.OpenAsync(cancellationToken);
-                return await HasExistingCottonDataAsync(connection, cancellationToken);
+                await using CottonDbContext dbContext = CreateDbContext(connectionString);
+                return await HasExistingCottonDataAsync(dbContext, cancellationToken);
             }
             catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.InvalidCatalogName)
             {
@@ -80,9 +111,8 @@ namespace Cotton.Server.Services
         {
             try
             {
-                await using var connection = new NpgsqlConnection(_connectionString ?? BuildConnectionStringFromEnvironment());
-                await connection.OpenAsync(cancellationToken);
-                return await ValidateOpenDatabaseAsync(connection, encryptionSettings, mode, cancellationToken);
+                await using CottonDbContext dbContext = CreateDbContext(_connectionString);
+                return await ValidateOpenDatabaseAsync(dbContext, encryptionSettings, mode, cancellationToken);
             }
             catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.InvalidCatalogName)
             {
@@ -111,12 +141,12 @@ namespace Cotton.Server.Services
         }
 
         private async Task<MasterKeyCompatibilityResult> ValidateOpenDatabaseAsync(
-            NpgsqlConnection connection,
+            CottonDbContext dbContext,
             CottonEncryptionSettings encryptionSettings,
             MasterKeyCompatibilityMode mode,
             CancellationToken cancellationToken)
         {
-            bool existingDataFound = await HasExistingCottonDataAsync(connection, cancellationToken);
+            bool existingDataFound = await HasExistingCottonDataAsync(dbContext, cancellationToken);
             if (!existingDataFound)
             {
                 return MasterKeyCompatibilityResult.Compatible(existingDataFound: false, evidenceFound: false);
@@ -124,7 +154,7 @@ namespace Cotton.Server.Services
 
             using AesGcmStreamCipher cipher = MasterKeySentinelStore.CreateCipher(encryptionSettings);
             ProbeValidationState databaseProbe = await ValidateEncryptedDatabaseProbeAsync(
-                connection,
+                dbContext,
                 cipher,
                 cancellationToken);
             if (databaseProbe == ProbeValidationState.Validated)
@@ -137,7 +167,7 @@ namespace Cotton.Server.Services
                 return EvaluateFailedProbe(databaseProbe) ?? EvaluateMissingEvidence(mode);
             }
 
-            ProbeValidationState storageProbe = await ValidateStorageChunkProbeAsync(connection, cipher, cancellationToken);
+            ProbeValidationState storageProbe = await ValidateStorageChunkProbeAsync(dbContext, cipher, cancellationToken);
             if (storageProbe == ProbeValidationState.Validated)
             {
                 return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
@@ -203,56 +233,64 @@ namespace Cotton.Server.Services
             return builder.ConnectionString;
         }
 
+        internal static CottonDbContext CreateDbContext(string? connectionString = null)
+        {
+            var options = new DbContextOptionsBuilder<CottonDbContext>()
+                .UseNpgsql(connectionString ?? BuildConnectionStringFromEnvironment())
+                .Options;
+            return new CottonDbContext(options);
+        }
+
         private static async Task<bool> HasExistingCottonDataAsync(
-            NpgsqlConnection connection,
+            CottonDbContext dbContext,
             CancellationToken cancellationToken)
         {
-            foreach (string tableName in CottonDataTables)
-            {
-                if (await TableExistsAsync(connection, tableName, cancellationToken)
-                    && await RowExistsAsync(connection, tableName, cancellationToken))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return await EntityHasRowsAsync(dbContext.Users, cancellationToken)
+                || await EntityHasRowsAsync(dbContext.Nodes, cancellationToken)
+                || await EntityHasRowsAsync(dbContext.FileManifests, cancellationToken)
+                || await EntityHasRowsAsync(dbContext.Chunks, cancellationToken)
+                || await EntityHasRowsAsync(dbContext.ServerSettings, cancellationToken);
         }
 
         private async Task<ProbeValidationState> ValidateEncryptedDatabaseProbeAsync(
-            NpgsqlConnection connection,
+            CottonDbContext dbContext,
             AesGcmStreamCipher cipher,
             CancellationToken cancellationToken)
         {
             bool failedCandidate = false;
-            foreach (EncryptedColumnProbe probe in EncryptedColumnProbes)
+            foreach (EncryptedBytesProbe probe in EncryptedBytesProbes)
             {
-                if (!await TableExistsAsync(connection, probe.TableName, cancellationToken)
-                    || !await ColumnExistsAsync(connection, probe.TableName, probe.ColumnName, cancellationToken))
-                {
-                    continue;
-                }
-
-                IReadOnlyList<byte[]> candidates = await ReadEncryptedColumnProbeCandidatesAsync(
-                    connection,
+                IReadOnlyList<byte[]> candidates = await ReadEncryptedBytesProbeCandidatesAsync(
+                    dbContext,
                     probe,
                     cancellationToken);
-                foreach (byte[] encrypted in candidates)
+                CandidateValidationOutcome outcome = await ValidateEncryptedCandidatesAsync(
+                    cipher,
+                    probe.Description,
+                    candidates,
+                    cancellationToken);
+                failedCandidate |= outcome.FailedCandidate;
+                if (outcome.Validated)
                 {
-                    try
-                    {
-                        _ = cipher.Decrypt(encrypted);
-                        return ProbeValidationState.Validated;
-                    }
-                    catch (Exception ex) when (IsEncryptedProbeFailure(ex))
-                    {
-                        failedCandidate = true;
-                        _logger.LogDebug(
-                            ex,
-                            "Skipping encrypted database master-key probe candidate {Table}.{Column} after decrypt failure.",
-                            probe.TableName,
-                            probe.ColumnName);
-                    }
+                    return ProbeValidationState.Validated;
+                }
+            }
+
+            foreach (EncryptedTextProbe probe in EncryptedTextProbes)
+            {
+                IReadOnlyList<byte[]> candidates = await ReadEncryptedTextProbeCandidatesAsync(
+                    dbContext,
+                    probe,
+                    cancellationToken);
+                CandidateValidationOutcome outcome = await ValidateEncryptedCandidatesAsync(
+                    cipher,
+                    probe.Description,
+                    candidates,
+                    cancellationToken);
+                failedCandidate |= outcome.FailedCandidate;
+                if (outcome.Validated)
+                {
+                    return ProbeValidationState.Validated;
                 }
             }
 
@@ -262,18 +300,12 @@ namespace Cotton.Server.Services
         }
 
         private async Task<ProbeValidationState> ValidateStorageChunkProbeAsync(
-            NpgsqlConnection connection,
+            CottonDbContext dbContext,
             AesGcmStreamCipher cipher,
             CancellationToken cancellationToken)
         {
-            if (!await TableExistsAsync(connection, "chunks", cancellationToken)
-                || !await ColumnExistsAsync(connection, "chunks", "hash", cancellationToken))
-            {
-                return ProbeValidationState.NoCandidates;
-            }
-
             bool failedCandidate = false;
-            IReadOnlyList<string> storageKeys = await ReadCandidateChunkStorageKeysAsync(connection, cancellationToken);
+            IReadOnlyList<string> storageKeys = await ReadCandidateChunkStorageKeysAsync(dbContext, cancellationToken);
             foreach (string storageKey in storageKeys)
             {
                 if (!await _storage.ExistsAsync(storageKey))
@@ -303,106 +335,117 @@ namespace Cotton.Server.Services
                 : ProbeValidationState.NoCandidates;
         }
 
-        private static async Task<IReadOnlyList<byte[]>> ReadEncryptedColumnProbeCandidatesAsync(
-            NpgsqlConnection connection,
-            EncryptedColumnProbe probe,
+        private async Task<CandidateValidationOutcome> ValidateEncryptedCandidatesAsync(
+            AesGcmStreamCipher cipher,
+            string description,
+            IReadOnlyList<byte[]> candidates,
             CancellationToken cancellationToken)
         {
-            string nonEmptyTextFilter = probe.Kind == EncryptedColumnKind.Base64String
-                ? $" and {probe.ColumnName} <> ''"
-                : string.Empty;
-            string sql =
-                $"select {probe.ColumnName} from public.{probe.TableName} where {probe.ColumnName} is not null{nonEmptyTextFilter} limit 8";
-
-            var candidates = new List<byte[]>();
-            await using var command = new NpgsqlCommand(sql, connection);
-            await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
-            while (await reader.ReadAsync(cancellationToken))
+            bool failedCandidate = false;
+            foreach (byte[] encrypted in candidates)
             {
-                object value = reader.GetValue(0);
-                byte[]? encrypted = probe.Kind switch
+                try
                 {
-                    EncryptedColumnKind.Bytea => (byte[])value,
-                    EncryptedColumnKind.Base64String => TryDecodeBase64((string)value),
-                    _ => null
-                };
-
-                if (encrypted is not null)
+                    _ = await DecryptBytesAsync(cipher, encrypted, cancellationToken);
+                    return new CandidateValidationOutcome(Validated: true, FailedCandidate: failedCandidate);
+                }
+                catch (Exception ex) when (IsEncryptedProbeFailure(ex))
                 {
-                    candidates.Add(encrypted);
+                    failedCandidate = true;
+                    _logger.LogDebug(
+                        ex,
+                        "Skipping encrypted database master-key probe candidate {ProbeDescription} after decrypt failure.",
+                        description);
                 }
             }
 
-            return candidates;
+            return new CandidateValidationOutcome(Validated: false, FailedCandidate: failedCandidate);
+        }
+
+        private static async Task<byte[]> DecryptBytesAsync(
+            AesGcmStreamCipher cipher,
+            byte[] encrypted,
+            CancellationToken cancellationToken)
+        {
+            await using var input = new MemoryStream(encrypted, writable: false);
+            await using var output = new MemoryStream();
+            await cipher.DecryptAsync(input, output, ct: cancellationToken);
+            return output.ToArray();
+        }
+
+        private static async Task<IReadOnlyList<byte[]>> ReadEncryptedBytesProbeCandidatesAsync(
+            CottonDbContext dbContext,
+            EncryptedBytesProbe probe,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await probe.QueryFactory(dbContext)
+                    .Take(8)
+                    .ToListAsync(cancellationToken);
+            }
+            catch (PostgresException ex) when (IsMissingDatabaseShape(ex))
+            {
+                return [];
+            }
+        }
+
+        private static async Task<IReadOnlyList<byte[]>> ReadEncryptedTextProbeCandidatesAsync(
+            CottonDbContext dbContext,
+            EncryptedTextProbe probe,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                List<string> values = await probe.QueryFactory(dbContext)
+                    .Take(8)
+                    .ToListAsync(cancellationToken);
+                return [.. values.Select(TryDecodeBase64).OfType<byte[]>()];
+            }
+            catch (PostgresException ex) when (IsMissingDatabaseShape(ex))
+            {
+                return [];
+            }
         }
 
         private static async Task<IReadOnlyList<string>> ReadCandidateChunkStorageKeysAsync(
-            NpgsqlConnection connection,
+            CottonDbContext dbContext,
             CancellationToken cancellationToken)
         {
-            bool hasStoredSize = await ColumnExistsAsync(connection, "chunks", "stored_size_bytes", cancellationToken);
-            string orderBy = hasStoredSize
-                ? " order by stored_size_bytes asc nulls last"
-                : string.Empty;
-            string sql = $"select hash from public.chunks where hash is not null{orderBy} limit 16";
-
-            var storageKeys = new List<string>();
-            await using var command = new NpgsqlCommand(sql, connection);
-            await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
-            while (await reader.ReadAsync(cancellationToken))
+            try
             {
-                byte[] hash = reader.GetFieldValue<byte[]>(0);
-                storageKeys.Add(Hasher.ToHexStringHash(hash));
+                List<byte[]> hashes = await dbContext.Chunks
+                    .AsNoTracking()
+                    .Select(x => x.Hash)
+                    .Take(16)
+                    .ToListAsync(cancellationToken);
+                return [.. hashes.Select(Hasher.ToHexStringHash)];
             }
-
-            return storageKeys;
+            catch (PostgresException ex) when (IsMissingDatabaseShape(ex))
+            {
+                return [];
+            }
         }
 
-        private static async Task<bool> TableExistsAsync(
-            NpgsqlConnection connection,
-            string tableName,
+        private static async Task<bool> EntityHasRowsAsync<TEntity>(
+            IQueryable<TEntity> query,
             CancellationToken cancellationToken)
+            where TEntity : class
         {
-            await using var command = new NpgsqlCommand("select to_regclass(@table_name) is not null", connection);
-            command.Parameters.AddWithValue("table_name", $"public.{tableName}");
-            object? result = await command.ExecuteScalarAsync(cancellationToken);
-            return result is true;
+            try
+            {
+                return await query.AsNoTracking().AnyAsync(cancellationToken);
+            }
+            catch (PostgresException ex) when (IsMissingDatabaseShape(ex))
+            {
+                return false;
+            }
         }
 
-        private static async Task<bool> ColumnExistsAsync(
-            NpgsqlConnection connection,
-            string tableName,
-            string columnName,
-            CancellationToken cancellationToken)
-        {
-            const string sql = """
-                select exists (
-                    select 1
-                    from information_schema.columns
-                    where table_schema = 'public'
-                        and table_name = @table_name
-                        and column_name = @column_name
-                )
-                """;
-
-            await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("table_name", tableName);
-            command.Parameters.AddWithValue("column_name", columnName);
-            object? result = await command.ExecuteScalarAsync(cancellationToken);
-            return result is true;
-        }
-
-        private static async Task<bool> RowExistsAsync(
-            NpgsqlConnection connection,
-            string tableName,
-            CancellationToken cancellationToken)
-        {
-            await using var command = new NpgsqlCommand(
-                $"select exists (select 1 from public.{tableName} limit 1)",
-                connection);
-            object? result = await command.ExecuteScalarAsync(cancellationToken);
-            return result is true;
-        }
+        internal static bool IsMissingDatabaseShape(PostgresException ex) =>
+            ex.SqlState == PostgresErrorCodes.UndefinedTable
+            || ex.SqlState == PostgresErrorCodes.UndefinedColumn
+            || ex.SqlState == PostgresErrorCodes.UndefinedObject;
 
         private static byte[]? TryDecodeBase64(string value)
         {
@@ -429,15 +472,14 @@ namespace Cotton.Server.Services
             FailedCandidates
         }
 
-        private record EncryptedColumnProbe(
-            string TableName,
-            string ColumnName,
-            EncryptedColumnKind Kind);
+        private record EncryptedBytesProbe(
+            string Description,
+            Func<CottonDbContext, IQueryable<byte[]>> QueryFactory);
 
-        private enum EncryptedColumnKind
-        {
-            Bytea,
-            Base64String
-        }
+        private record EncryptedTextProbe(
+            string Description,
+            Func<CottonDbContext, IQueryable<string>> QueryFactory);
+
+        private record CandidateValidationOutcome(bool Validated, bool FailedCandidate);
     }
 }

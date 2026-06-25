@@ -90,9 +90,10 @@ namespace Cotton.Server.Services
                     return Results.BadRequest(new UnlockResponse(false, ex.Message));
                 }
 
-                MasterKeySentinelStore sentinel = MasterKeyStartupStorage.CreateSentinelStore(
+                MasterKeySentinelStore sentinel = await MasterKeyStartupStorage.CreateSentinelStoreAsync(
                     encryptionSettings,
-                    loggerFactory);
+                    loggerFactory,
+                    context.RequestAborted);
                 MasterKeySentinelResult validation = await sentinel.ValidateOrInitializeAsync(
                     encryptionSettings,
                     MasterKeySentinelInitializationMode.RequireCompatibilityEvidenceForExistingData,
