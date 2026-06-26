@@ -4,13 +4,24 @@
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Releases a layout mutation semaphore when disposed.
+    /// Leaves a layout mutation scope when disposed.
     /// </summary>
-    internal class LayoutMutationGateLease(SemaphoreSlim gate) : IAsyncDisposable
+    internal class LayoutMutationGateLease(
+        LayoutMutationGate gate,
+        Guid layoutId,
+        LayoutMutationGateScope scope) : IAsyncDisposable
     {
+        private bool _disposed;
+
         public ValueTask DisposeAsync()
         {
-            gate.Release();
+            if (_disposed)
+            {
+                return ValueTask.CompletedTask;
+            }
+
+            _disposed = true;
+            gate.Exit(layoutId, scope);
             return ValueTask.CompletedTask;
         }
     }
