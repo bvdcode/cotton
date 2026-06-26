@@ -21,6 +21,8 @@ namespace Cotton.Server.Extensions
     /// </summary>
     public static class ServiceCollectionExtensions
     {
+        private static readonly bool DatabaseIntegrityEnforcementEnabled = false;
+
         /// <summary>
         /// Registers stream cipher services.
         /// </summary>
@@ -62,11 +64,21 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
         {
+            services.AddSingleton(new DatabaseIntegrityRuntimeOptions(DatabaseIntegrityEnforcementEnabled));
             services.AddSingleton<IDatabaseIntegrityKeyProvider, DatabaseIntegrityKeyProvider>();
             services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
             services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
-            services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
-            services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
+            if (DatabaseIntegrityEnforcementEnabled)
+            {
+                services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
+                services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
+            }
+            else
+            {
+                services.AddScoped<IDatabaseIntegrityChangeSigner, DisabledDatabaseIntegrityChangeSigner>();
+                services.AddScoped<IDatabaseIntegrityVerifier, DisabledDatabaseIntegrityVerifier>();
+            }
+
             services.AddScoped<DatabaseIntegrityDiagnosticsService>();
             services.AddScoped<FileGraphIntegrityVerifier>();
             services.AddSingleton<DatabaseIntegrityFailureReporter>();
