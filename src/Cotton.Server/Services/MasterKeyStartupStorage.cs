@@ -2,7 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Amazon.S3;
-using Cotton.Database;
 using Cotton.Database.Models.Enums;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
@@ -67,7 +66,7 @@ namespace Cotton.Server.Services
         {
             try
             {
-                await using CottonDbContext dbContext = MasterKeyCompatibilityProbe.CreateDbContext(connectionString);
+                await using MasterKeyProbeDbContext dbContext = MasterKeyCompatibilityProbe.CreateDbContext(connectionString);
                 StartupStorageSettings? settings = await dbContext.ServerSettings
                     .AsNoTracking()
                     .OrderByDescending(x => x.CreatedAt)
@@ -81,7 +80,7 @@ namespace Cotton.Server.Services
                     .FirstOrDefaultAsync(cancellationToken);
                 return settings ?? StartupStorageSettings.Local;
             }
-            catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+            catch (PostgresException ex) when (MasterKeyCompatibilityProbe.IsMissingDatabaseShape(ex))
             {
                 return StartupStorageSettings.Local;
             }

@@ -2,8 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
-using Cotton.Database;
-using Cotton.Database.Models;
 using Cotton.Crypto;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -19,19 +17,19 @@ namespace Cotton.Server.Services
         private static readonly EncryptedBytesProbe[] EncryptedBytesProbes =
         [
             new(
-                nameof(User.TotpSecretEncrypted),
+                nameof(MasterKeyProbeUser.TotpSecretEncrypted),
                 dbContext => dbContext.Users
                     .AsNoTracking()
                     .Where(x => x.TotpSecretEncrypted != null)
                     .Select(x => x.TotpSecretEncrypted!)),
             new(
-                nameof(User.AvatarHashEncrypted),
+                nameof(MasterKeyProbeUser.AvatarHashEncrypted),
                 dbContext => dbContext.Users
                     .AsNoTracking()
                     .Where(x => x.AvatarHashEncrypted != null)
                     .Select(x => x.AvatarHashEncrypted!)),
             new(
-                nameof(FileManifest.SmallFilePreviewHashEncrypted),
+                nameof(MasterKeyProbeFileManifest.SmallFilePreviewHashEncrypted),
                 dbContext => dbContext.FileManifests
                     .AsNoTracking()
                     .Where(x => x.SmallFilePreviewHashEncrypted != null)
@@ -41,29 +39,53 @@ namespace Cotton.Server.Services
         private static readonly EncryptedTextProbe[] EncryptedTextProbes =
         [
             new(
-                nameof(CottonServerSettings.CloudServicesTokenEncrypted),
+                nameof(MasterKeyProbeServerSettings.CloudServicesTokenEncrypted),
                 dbContext => dbContext.ServerSettings
                     .AsNoTracking()
                     .Where(x => x.CloudServicesTokenEncrypted != null && x.CloudServicesTokenEncrypted != string.Empty)
                     .Select(x => x.CloudServicesTokenEncrypted!)),
             new(
-                nameof(CottonServerSettings.OidcClientSecretEncrypted),
+                nameof(MasterKeyProbeServerSettings.OidcClientSecretEncrypted),
                 dbContext => dbContext.ServerSettings
                     .AsNoTracking()
                     .Where(x => x.OidcClientSecretEncrypted != null && x.OidcClientSecretEncrypted != string.Empty)
                     .Select(x => x.OidcClientSecretEncrypted!)),
             new(
-                nameof(CottonServerSettings.S3SecretAccessKeyEncrypted),
+                nameof(MasterKeyProbeServerSettings.S3SecretAccessKeyEncrypted),
                 dbContext => dbContext.ServerSettings
                     .AsNoTracking()
                     .Where(x => x.S3SecretAccessKeyEncrypted != null && x.S3SecretAccessKeyEncrypted != string.Empty)
                     .Select(x => x.S3SecretAccessKeyEncrypted!)),
             new(
-                nameof(CottonServerSettings.SmtpPasswordEncrypted),
+                nameof(MasterKeyProbeServerSettings.SmtpPasswordEncrypted),
                 dbContext => dbContext.ServerSettings
                     .AsNoTracking()
                     .Where(x => x.SmtpPasswordEncrypted != null && x.SmtpPasswordEncrypted != string.Empty)
-                    .Select(x => x.SmtpPasswordEncrypted!))
+                    .Select(x => x.SmtpPasswordEncrypted!)),
+            new(
+                nameof(MasterKeyProbeServerSettings.FcmServiceAccountJsonEncrypted),
+                dbContext => dbContext.ServerSettings
+                    .AsNoTracking()
+                    .Where(x => x.FcmServiceAccountJsonEncrypted != null && x.FcmServiceAccountJsonEncrypted != string.Empty)
+                    .Select(x => x.FcmServiceAccountJsonEncrypted!)),
+            new(
+                nameof(MasterKeyProbeOidcProvider.ClientSecretEncrypted),
+                dbContext => dbContext.OidcProviders
+                    .AsNoTracking()
+                    .Where(x => x.ClientSecretEncrypted != null && x.ClientSecretEncrypted != string.Empty)
+                    .Select(x => x.ClientSecretEncrypted!)),
+            new(
+                nameof(MasterKeyProbeOidcLoginState.CodeVerifierEncrypted),
+                dbContext => dbContext.OidcLoginStates
+                    .AsNoTracking()
+                    .Where(x => x.CodeVerifierEncrypted != null && x.CodeVerifierEncrypted != string.Empty)
+                    .Select(x => x.CodeVerifierEncrypted!)),
+            new(
+                nameof(MasterKeyProbeOidcLoginState.NonceEncrypted),
+                dbContext => dbContext.OidcLoginStates
+                    .AsNoTracking()
+                    .Where(x => x.NonceEncrypted != null && x.NonceEncrypted != string.Empty)
+                    .Select(x => x.NonceEncrypted!))
         ];
 
         private readonly ILogger<MasterKeyCompatibilityProbe> _logger;
@@ -92,7 +114,7 @@ namespace Cotton.Server.Services
         {
             try
             {
-                await using CottonDbContext dbContext = CreateDbContext(connectionString);
+                await using MasterKeyProbeDbContext dbContext = CreateDbContext(connectionString);
                 return await HasExistingCottonDataAsync(dbContext, cancellationToken);
             }
             catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.InvalidCatalogName)
@@ -111,7 +133,7 @@ namespace Cotton.Server.Services
         {
             try
             {
-                await using CottonDbContext dbContext = CreateDbContext(_connectionString);
+                await using MasterKeyProbeDbContext dbContext = CreateDbContext(_connectionString);
                 return await ValidateOpenDatabaseAsync(dbContext, encryptionSettings, mode, cancellationToken);
             }
             catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.InvalidCatalogName)
@@ -141,7 +163,7 @@ namespace Cotton.Server.Services
         }
 
         private async Task<MasterKeyCompatibilityResult> ValidateOpenDatabaseAsync(
-            CottonDbContext dbContext,
+            MasterKeyProbeDbContext dbContext,
             CottonEncryptionSettings encryptionSettings,
             MasterKeyCompatibilityMode mode,
             CancellationToken cancellationToken)
@@ -233,16 +255,16 @@ namespace Cotton.Server.Services
             return builder.ConnectionString;
         }
 
-        internal static CottonDbContext CreateDbContext(string? connectionString = null)
+        internal static MasterKeyProbeDbContext CreateDbContext(string? connectionString = null)
         {
-            var options = new DbContextOptionsBuilder<CottonDbContext>()
+            var options = new DbContextOptionsBuilder<MasterKeyProbeDbContext>()
                 .UseNpgsql(connectionString ?? BuildConnectionStringFromEnvironment())
                 .Options;
-            return new CottonDbContext(options);
+            return new MasterKeyProbeDbContext(options);
         }
 
         private static async Task<bool> HasExistingCottonDataAsync(
-            CottonDbContext dbContext,
+            MasterKeyProbeDbContext dbContext,
             CancellationToken cancellationToken)
         {
             return await EntityHasRowsAsync(dbContext.Users, cancellationToken)
@@ -253,7 +275,7 @@ namespace Cotton.Server.Services
         }
 
         private async Task<ProbeValidationState> ValidateEncryptedDatabaseProbeAsync(
-            CottonDbContext dbContext,
+            MasterKeyProbeDbContext dbContext,
             AesGcmStreamCipher cipher,
             CancellationToken cancellationToken)
         {
@@ -300,7 +322,7 @@ namespace Cotton.Server.Services
         }
 
         private async Task<ProbeValidationState> ValidateStorageChunkProbeAsync(
-            CottonDbContext dbContext,
+            MasterKeyProbeDbContext dbContext,
             AesGcmStreamCipher cipher,
             CancellationToken cancellationToken)
         {
@@ -363,7 +385,7 @@ namespace Cotton.Server.Services
         }
 
         private static async Task<IReadOnlyList<byte[]>> ReadEncryptedBytesProbeCandidatesAsync(
-            CottonDbContext dbContext,
+            MasterKeyProbeDbContext dbContext,
             EncryptedBytesProbe probe,
             CancellationToken cancellationToken)
         {
@@ -380,7 +402,7 @@ namespace Cotton.Server.Services
         }
 
         private static async Task<IReadOnlyList<byte[]>> ReadEncryptedTextProbeCandidatesAsync(
-            CottonDbContext dbContext,
+            MasterKeyProbeDbContext dbContext,
             EncryptedTextProbe probe,
             CancellationToken cancellationToken)
         {
@@ -398,7 +420,7 @@ namespace Cotton.Server.Services
         }
 
         private static async Task<IReadOnlyList<string>> ReadCandidateChunkStorageKeysAsync(
-            CottonDbContext dbContext,
+            MasterKeyProbeDbContext dbContext,
             CancellationToken cancellationToken)
         {
             try
@@ -463,11 +485,11 @@ namespace Cotton.Server.Services
 
         private record EncryptedBytesProbe(
             string Description,
-            Func<CottonDbContext, IQueryable<byte[]>> QueryFactory);
+            Func<MasterKeyProbeDbContext, IQueryable<byte[]>> QueryFactory);
 
         private record EncryptedTextProbe(
             string Description,
-            Func<CottonDbContext, IQueryable<string>> QueryFactory);
+            Func<MasterKeyProbeDbContext, IQueryable<string>> QueryFactory);
 
         private record CandidateValidationOutcome(bool Validated, bool FailedCandidate);
     }

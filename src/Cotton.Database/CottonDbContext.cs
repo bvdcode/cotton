@@ -241,6 +241,11 @@ namespace Cotton.Database
         {
             if (value is null || streamCipher is null)
             {
+                if (value is not null)
+                {
+                    throw CreateMissingStreamCipherException();
+                }
+
                 return value;
             }
 
@@ -252,6 +257,11 @@ namespace Cotton.Database
         {
             if (value is null || streamCipher is null)
             {
+                if (value is not null)
+                {
+                    throw CreateMissingStreamCipherException();
+                }
+
                 return value;
             }
 
@@ -267,6 +277,12 @@ namespace Cotton.Database
                     "Failed to decrypt value in encrypted EF converter.");
                 throw;
             }
+        }
+
+        private static InvalidOperationException CreateMissingStreamCipherException()
+        {
+            return new InvalidOperationException(
+                "Encrypted EF string conversion requires IStreamCipher. Use a raw startup/probe DbContext for pre-unlock reads.");
         }
     }
 }

@@ -3,7 +3,9 @@
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Crypto;
+using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
@@ -161,6 +163,26 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task ValidateAsync_Accepts_Key_That_Decrypts_EncryptedServerSettingsText()
+        {
+            CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            await StoreEncryptedServerSettingsTextAsync(settings);
+            MasterKeyCompatibilityProbe probe = CreateProbe(new ThrowingEncryptedConfigurationStorageBackend());
+
+            MasterKeyCompatibilityResult result = await probe.ValidateAsync(
+                settings,
+                MasterKeyCompatibilityMode.RequireEvidenceForExistingData);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.Success, Is.True);
+                Assert.That(result.ExistingDataFound, Is.True);
+                Assert.That(result.EvidenceFound, Is.True);
+            }
+        }
+
+        [Test]
         public async Task ValidateAsync_Requires_Evidence_For_Initialized_Database_Without_Probe_Data()
         {
             DbContext.Users.Add(new User
@@ -255,6 +277,47 @@ namespace Cotton.Server.IntegrationTests
                 GCScheduledAfter = null
             });
             await DbContext.SaveChangesAsync();
+        }
+
+        private async Task StoreEncryptedServerSettingsTextAsync(CottonEncryptionSettings settings)
+        {
+            using AesGcmStreamCipher cipher = MasterKeySentinelStore.CreateCipher(settings);
+            await using CottonDbContext encryptedDbContext = CreateEncryptedDbContext(cipher);
+            encryptedDbContext.ServerSettings.Add(new CottonServerSettings
+            {
+                AllowCrossUserDeduplication = false,
+                AllowGlobalIndexing = false,
+                CipherChunkSizeBytes = AesGcmStreamCipher.DefaultChunkSize,
+                CompressionLevel = 3,
+                EncryptionThreads = 1,
+                MaxChunkSizeBytes = 1024 * 1024,
+                SessionTimeoutHours = 30 * 24,
+                TelemetryEnabled = false,
+                Timezone = "UTC",
+                TotpMaxFailedAttempts = 5,
+                EmailMode = EmailMode.None,
+                ComputionMode = ComputionMode.Local,
+                StorageType = StorageType.Local,
+                InstanceId = Guid.NewGuid(),
+                PublicBaseUrl = "http://localhost",
+                ServerUsage = [ServerUsage.Other],
+                StorageSpaceMode = StorageSpaceMode.Optimal,
+                GeoIpLookupMode = GeoIpLookupMode.Disabled,
+                FcmProjectId = "cotton-test",
+                FcmServiceAccountJsonEncrypted = "{\"project_id\":\"cotton-test\"}"
+            });
+            await encryptedDbContext.SaveChangesAsync();
+        }
+
+        private CottonDbContext CreateEncryptedDbContext(IStreamCipher cipher)
+        {
+            string connectionString = DbContext.Database.GetConnectionString()
+                ?? throw new InvalidOperationException("Test database connection string is not configured.");
+            var options = new DbContextOptionsBuilder<CottonDbContext>()
+                .UseNpgsql(connectionString)
+                .EnableServiceProviderCaching(false)
+                .Options;
+            return new CottonDbContext(options, cipher);
         }
     }
 }

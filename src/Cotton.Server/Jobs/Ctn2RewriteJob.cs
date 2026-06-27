@@ -10,6 +10,7 @@ using Cotton.Storage.Pipelines;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
+using System.Text;
 
 namespace Cotton.Server.Jobs
 {
@@ -27,14 +28,47 @@ namespace Cotton.Server.Jobs
     {
         private const int DatabaseBatchSize = 500;
         private const int ChunkStoredSizeRefreshBatchSize = 1000;
+        private const string CompletionMarkerDirectoryName = "cotton";
+        private const string CompletionMarkerFilePrefix = "ctn2-rewrite-";
+        private const string StorageCompletionMarkerLogicalKey = "cotton.ctn2-rewrite.completed.v1";
+        private const string CompletionMarkerContent =
+            "OBSOLETE TRANSITION: CTN2 rewrite completed. Delete this marker with Ctn2RewriteJob after the transition.";
         private static readonly TimeSpan ProgressLogInterval = TimeSpan.FromSeconds(30);
+        private static readonly byte[] StorageCompletionMarkerHash = Hasher.HashData(
+            Encoding.UTF8.GetBytes(StorageCompletionMarkerLogicalKey));
+        private static readonly string StorageCompletionMarkerKey = Hasher.ToHexStringHash(
+            StorageCompletionMarkerHash);
+
+        internal static string CompletionStorageMarkerKey => StorageCompletionMarkerKey;
+
+        internal static byte[] CompletionStorageMarkerHash => [.. StorageCompletionMarkerHash];
 
         /// <summary>
         /// Executes the scheduled CTN2 rewrite pass.
         /// </summary>
-        public async Task Execute(IJobExecutionContext context)
+        public Task Execute(IJobExecutionContext context)
         {
-            CancellationToken ct = context.CancellationToken;
+            return RunOnceAsync(context.CancellationToken);
+        }
+
+        internal async Task RunOnceAsync(CancellationToken ct = default)
+        {
+            string completionMarkerPath = GetCompletionMarkerPath();
+            bool storageMarkerExists = await _storage.ExistsAsync(StorageCompletionMarkerKey);
+            bool tempMarkerExists = File.Exists(completionMarkerPath);
+            if (storageMarkerExists || tempMarkerExists)
+            {
+                await EnsureCompletionMarkersAsync(completionMarkerPath, storageMarkerExists, tempMarkerExists, ct);
+                await ClearStorageMarkerGcScheduleAsync(ct);
+                _logger.LogWarning(
+                    "OBSOLETE TRANSITION: CTN2 rewrite job skipped because completion marker exists. StorageKey={StorageKey}; TempPath={TempPath}; StorageMarkerExists={StorageMarkerExists}; TempMarkerExists={TempMarkerExists}.",
+                    StorageCompletionMarkerKey,
+                    completionMarkerPath,
+                    storageMarkerExists,
+                    tempMarkerExists);
+                return;
+            }
+
             var stats = new RewriteStats();
 
             _logger.LogWarning(
@@ -43,6 +77,7 @@ namespace Cotton.Server.Jobs
             await RewriteMasterKeySentinelAsync(stats, ct);
             await RewriteStorageObjectsAsync(stats, ct);
             await RewriteEncryptedDatabaseValuesAsync(stats, ct);
+            await WriteCompletionMarkersAsync(completionMarkerPath, ct);
 
             _logger.LogWarning(
                 "OBSOLETE TRANSITION: CTN2 rewrite job finished. " +
@@ -54,6 +89,74 @@ namespace Cotton.Server.Jobs
                 stats.SentinelRewritten,
                 stats.DatabaseValuesRewritten,
                 stats.ChunkStoredSizesRefreshed);
+        }
+
+        private string GetCompletionMarkerPath()
+        {
+            string markerScope = _dbContext.Database.GetConnectionString()
+                ?? AppContext.BaseDirectory;
+            string markerHash = Hasher.ToHexStringHash(Hasher.HashData(Encoding.UTF8.GetBytes(markerScope)));
+            return Path.Combine(
+                Path.GetTempPath(),
+                CompletionMarkerDirectoryName,
+                CompletionMarkerFilePrefix + markerHash + ".complete");
+        }
+
+        internal string GetCompletionMarkerPathForTests() => GetCompletionMarkerPath();
+
+        private async Task EnsureCompletionMarkersAsync(
+            string completionMarkerPath,
+            bool storageMarkerExists,
+            bool tempMarkerExists,
+            CancellationToken ct)
+        {
+            if (!storageMarkerExists)
+            {
+                await WriteStorageCompletionMarkerAsync(ct);
+            }
+
+            if (!tempMarkerExists)
+            {
+                await WriteTempCompletionMarkerAsync(completionMarkerPath, ct);
+            }
+        }
+
+        private async Task WriteCompletionMarkersAsync(string completionMarkerPath, CancellationToken ct)
+        {
+            await WriteStorageCompletionMarkerAsync(ct);
+            await WriteTempCompletionMarkerAsync(completionMarkerPath, ct);
+            await ClearStorageMarkerGcScheduleAsync(ct);
+        }
+
+        private async Task WriteStorageCompletionMarkerAsync(CancellationToken ct)
+        {
+            byte[] marker = Encoding.UTF8.GetBytes(CompletionMarkerContent);
+            await using var stream = new MemoryStream(marker, writable: false);
+            await _storage.WriteAsync(
+                StorageCompletionMarkerKey,
+                stream,
+                new PipelineContext
+                {
+                    FileSizeBytes = stream.Length
+                });
+        }
+
+        private static async Task WriteTempCompletionMarkerAsync(string completionMarkerPath, CancellationToken ct)
+        {
+            string? markerDirectory = Path.GetDirectoryName(completionMarkerPath);
+            if (!string.IsNullOrWhiteSpace(markerDirectory))
+            {
+                Directory.CreateDirectory(markerDirectory);
+            }
+
+            await File.WriteAllTextAsync(completionMarkerPath, CompletionMarkerContent, ct);
+        }
+
+        private async Task ClearStorageMarkerGcScheduleAsync(CancellationToken ct)
+        {
+            await _dbContext.Chunks
+                .Where(c => c.Hash == StorageCompletionMarkerHash && c.GCScheduledAfter != null)
+                .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
         }
 
         private async Task RewriteMasterKeySentinelAsync(RewriteStats stats, CancellationToken ct)
