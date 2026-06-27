@@ -4,7 +4,9 @@
 namespace Cotton.Server.Services.DatabaseIntegrity
 {
     /// <summary>
-    /// Runtime switch for database integrity enforcement.
+    /// Runtime switches for database integrity validation.
     /// </summary>
-    public record DatabaseIntegrityRuntimeOptions(bool EnforcementEnabled);
+    public record DatabaseIntegrityRuntimeOptions(
+        bool ReadValidationEnabled,
+        bool SaveOriginalStateValidationEnabled);
 }

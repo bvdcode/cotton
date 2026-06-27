@@ -33,7 +33,11 @@ namespace Cotton.Storage.Abstractions
         /// <summary>
         /// Applies write processors and stores the resulting stream in the backend.
         /// </summary>
-        Task WriteAsync(string uid, Stream stream, PipelineContext? context = null);
+        Task WriteAsync(
+            string uid,
+            Stream stream,
+            PipelineContext? context = null,
+            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing);
 
         /// <summary>
         /// Lists every storage UID known to the active backend.

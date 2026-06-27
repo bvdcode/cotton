@@ -173,7 +173,10 @@ namespace Cotton.Storage.Backends
         }
 
         /// <inheritdoc />
-        public async Task WriteAsync(string uid, Stream stream)
+        public async Task WriteAsync(
+            string uid,
+            Stream stream,
+            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing)
         {
             const int WriteBufferSize = 2 * 1024 * 1024;
 
@@ -182,7 +185,7 @@ namespace Cotton.Storage.Backends
 
             string dirPath = GetFolderByUid(uid);
             string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
-            if (File.Exists(filePath))
+            if (writeMode == StorageWriteMode.CreateIfMissing && File.Exists(filePath))
             {
                 _logger.LogDebug("File {Uid} deduplicated, skipping write", uid);
                 return;
@@ -217,10 +220,15 @@ namespace Cotton.Storage.Backends
 
             try
             {
-                File.Move(tmpFilePath, filePath, overwrite: false);
+                if (writeMode == StorageWriteMode.OverwriteExisting && File.Exists(filePath))
+                {
+                    File.SetAttributes(filePath, FileAttributes.Normal);
+                }
+
+                File.Move(tmpFilePath, filePath, overwrite: writeMode == StorageWriteMode.OverwriteExisting);
                 File.SetAttributes(filePath, FileAttributes.ReadOnly | FileAttributes.NotContentIndexed);
             }
-            catch (IOException ex) when (File.Exists(filePath))
+            catch (IOException ex) when (writeMode == StorageWriteMode.CreateIfMissing && File.Exists(filePath))
             {
                 _logger.LogDebug(ex, "File {Uid} was written concurrently, deduplicated temp write", uid);
                 TryDelete(tmpFilePath);

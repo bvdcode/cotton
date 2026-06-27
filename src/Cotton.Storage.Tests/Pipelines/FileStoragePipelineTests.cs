@@ -45,7 +45,10 @@ namespace Cotton.Storage.Tests.Pipelines
                 return Task.FromResult<Stream>(new MemoryStream(data));
             }
 
-            public Task WriteAsync(string uid, Stream stream)
+            public Task WriteAsync(
+                string uid,
+                Stream stream,
+                StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing)
             {
                 var ms = new MemoryStream();
                 stream.CopyTo(ms);

@@ -37,7 +37,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         /// </summary>
         public async Task<DatabaseIntegrityDiagnosticsDto> GetSnapshotAsync(CancellationToken cancellationToken)
         {
-            if (!_runtimeOptions.EnforcementEnabled)
+            if (!_runtimeOptions.ReadValidationEnabled)
             {
                 return new DatabaseIntegrityDiagnosticsDto
                 {

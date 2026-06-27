@@ -43,7 +43,10 @@ namespace Cotton.Benchmark.Infrastructure
             return Task.FromResult<Stream>(new MemoryStream(data, writable: false));
         }
 
-        public Task WriteAsync(string uid, Stream stream)
+        public Task WriteAsync(
+            string uid,
+            Stream stream,
+            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing)
         {
             using var ms = new MemoryStream();
             stream.CopyTo(ms);

@@ -145,7 +145,8 @@ public class DatabaseIntegrityFoundationTests
         var signer = new DatabaseIntegrityChangeSigner(
             protector,
             new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance);
+            NullDatabaseIntegrityFailureReporter.Instance,
+            new DatabaseIntegrityRuntimeOptions(true, true));
         signer.SignPendingChanges(dbContext);
         DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
 
@@ -199,7 +200,8 @@ public class DatabaseIntegrityFoundationTests
         var signer = new DatabaseIntegrityChangeSigner(
             protector,
             new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance);
+            NullDatabaseIntegrityFailureReporter.Instance,
+            new DatabaseIntegrityRuntimeOptions(true, true));
 
         Assert.Throws<DatabaseIntegrityException>(() => signer.SignPendingChanges(dbContext));
     }
@@ -225,7 +227,8 @@ public class DatabaseIntegrityFoundationTests
         var signer = new DatabaseIntegrityChangeSigner(
             protector,
             new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance);
+            NullDatabaseIntegrityFailureReporter.Instance,
+            new DatabaseIntegrityRuntimeOptions(true, true));
 
         Assert.DoesNotThrow(() => signer.SignPendingChanges(dbContext));
 

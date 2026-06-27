@@ -21,7 +21,10 @@ namespace Cotton.Server.Extensions
     /// </summary>
     public static class ServiceCollectionExtensions
     {
-        private static readonly bool DatabaseIntegrityEnforcementEnabled = false;
+        private static readonly bool DatabaseIntegrityReadValidationEnabled = false;
+        private static readonly bool DatabaseIntegritySaveOriginalStateValidationEnabled = false;
+        [Obsolete("OBSOLETE TRANSITION: startup version transition validation is disabled because the 0.5.0 release bump is postponed. Remove this switch and re-enable StartupTransitionValidator when a strict transition gate is scheduled again.")]
+        private static readonly bool StartupTransitionValidationEnabled = false;
 
         /// <summary>
         /// Registers stream cipher services.
@@ -64,18 +67,19 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
         {
-            services.AddSingleton(new DatabaseIntegrityRuntimeOptions(DatabaseIntegrityEnforcementEnabled));
+            services.AddSingleton(new DatabaseIntegrityRuntimeOptions(
+                DatabaseIntegrityReadValidationEnabled,
+                DatabaseIntegritySaveOriginalStateValidationEnabled));
             services.AddSingleton<IDatabaseIntegrityKeyProvider, DatabaseIntegrityKeyProvider>();
             services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
             services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
-            if (DatabaseIntegrityEnforcementEnabled)
+            services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
+            if (DatabaseIntegrityReadValidationEnabled)
             {
-                services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
                 services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
             }
             else
             {
-                services.AddScoped<IDatabaseIntegrityChangeSigner, DisabledDatabaseIntegrityChangeSigner>();
                 services.AddScoped<IDatabaseIntegrityVerifier, DisabledDatabaseIntegrityVerifier>();
             }
 
@@ -113,7 +117,11 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<TempDirectoryProbe>();
             services.AddScoped<IStartupPreflightValidator, StartupPreflightValidator>();
             services.AddScoped<IStartupCheck, TempDirectoryStartupCheck>();
-            services.AddScoped<IStartupCheck, StartupTransitionValidator>();
+            if (StartupTransitionValidationEnabled)
+            {
+                services.AddScoped<IStartupCheck, StartupTransitionValidator>();
+            }
+
             return services;
         }
 
