@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
 
 namespace Cotton.Database
 {
@@ -259,11 +260,12 @@ namespace Cotton.Database
                 byte[] encryptedBytes = Convert.FromBase64String(value);
                 return streamCipher.DecryptString(encryptedBytes);
             }
-            catch
+            catch (Exception ex) when (ex is FormatException or CryptographicException or InvalidDataException)
             {
-                logger?.LogWarning(
-                    "Failed to decrypt value in encrypted EF converter. Falling back to raw database value.");
-                return value;
+                logger?.LogError(
+                    ex,
+                    "Failed to decrypt value in encrypted EF converter.");
+                throw;
             }
         }
     }

@@ -4,8 +4,16 @@ import {
   NotAContainerError,
 } from "./errors";
 
+/**
+ * @deprecated OBSOLETE TRANSITION: CTN1 read support exists only until legacy client-side containers are gone.
+ * Remove this legacy magic after the CTN2 transition cleanup.
+ */
 export const LEGACY_MAGIC = new Uint8Array([0x43, 0x54, 0x4e, 0x31]);
 export const MAGIC = new Uint8Array([0x43, 0x54, 0x4e, 0x32]);
+/**
+ * @deprecated OBSOLETE TRANSITION: CTN1 read support exists only until legacy client-side containers are gone.
+ * Remove this legacy version after the CTN2 transition cleanup.
+ */
 export const LEGACY_CONTAINER_VERSION = 1;
 export const CONTAINER_VERSION = 2;
 export const ALG_AES_256_GCM = 1;
