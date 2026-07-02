@@ -3,12 +3,15 @@
 
 using Cotton.Crypto;
 using Cotton.Database;
+using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
+using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Quartz;
 using System.Text;
 
@@ -29,10 +32,10 @@ namespace Cotton.Server.Jobs
         private const int DatabaseBatchSize = 500;
         private const int ChunkStoredSizeRefreshBatchSize = 1000;
         private const string CompletionMarkerDirectoryName = "cotton";
-        private const string CompletionMarkerFilePrefix = "ctn2-rewrite-";
-        private const string StorageCompletionMarkerLogicalKey = "cotton.ctn2-rewrite.completed.v1";
+        private const string CompletionMarkerFilePrefix = "ctn2-integrity-rewrite-";
+        private const string StorageCompletionMarkerLogicalKey = "cotton.ctn2-integrity-rewrite.completed.v1";
         private const string CompletionMarkerContent =
-            "OBSOLETE TRANSITION: CTN2 rewrite completed. Delete this marker with Ctn2RewriteJob after the transition.";
+            "OBSOLETE TRANSITION: CTN2 and database integrity rewrite completed. Delete this marker with Ctn2RewriteJob after the transition.";
         private static readonly TimeSpan ProgressLogInterval = TimeSpan.FromSeconds(30);
         private static readonly byte[] StorageCompletionMarkerHash = Hasher.HashData(
             Encoding.UTF8.GetBytes(StorageCompletionMarkerLogicalKey));
@@ -77,17 +80,19 @@ namespace Cotton.Server.Jobs
             await RewriteMasterKeySentinelAsync(stats, ct);
             await RewriteStorageObjectsAsync(stats, ct);
             await RewriteEncryptedDatabaseValuesAsync(stats, ct);
+            await RewriteDatabaseIntegritySignaturesAsync(stats, ct);
             await WriteCompletionMarkersAsync(completionMarkerPath, ct);
 
             _logger.LogWarning(
                 "OBSOLETE TRANSITION: CTN2 rewrite job finished. " +
                 "Storage scanned: {StorageScanned}; storage rewritten: {StorageRewritten}; " +
                 "sentinel rewritten: {SentinelRewritten}; database values rewritten: {DatabaseValuesRewritten}; " +
-                "chunk stored sizes refreshed: {ChunkStoredSizesRefreshed}.",
+                "database rows re-signed: {DatabaseRowsResigned}; chunk stored sizes refreshed: {ChunkStoredSizesRefreshed}.",
                 stats.StorageObjectsScanned,
                 stats.StorageObjectsRewritten,
                 stats.SentinelRewritten,
                 stats.DatabaseValuesRewritten,
+                stats.DatabaseRowsResigned,
                 stats.ChunkStoredSizesRefreshed);
         }
 
@@ -308,6 +313,125 @@ namespace Cotton.Server.Jobs
             await RewriteOidcLoginStatesAsync(stats, ct);
             await RewriteUsersAsync(stats, ct);
             await RewriteFileManifestsAsync(stats, ct);
+        }
+
+        private async Task RewriteDatabaseIntegritySignaturesAsync(RewriteStats stats, CancellationToken ct)
+        {
+            await RewriteIntegritySignaturesAsync(_dbContext.Users.OrderBy(x => x.Id), nameof(User), stats, ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.UserPasskeyCredentials.OrderBy(x => x.Id),
+                nameof(UserPasskeyCredential),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.OidcProviders.OrderBy(x => x.Id),
+                nameof(OidcProvider),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.UserExternalIdentities.OrderBy(x => x.Id),
+                nameof(UserExternalIdentity),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.OidcLoginStates.OrderBy(x => x.Id),
+                nameof(OidcLoginState),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.RefreshTokens.OrderBy(x => x.Id),
+                nameof(ExtendedRefreshToken),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.PushDeviceTokens.OrderBy(x => x.Id),
+                nameof(PushDeviceToken),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.DownloadTokens.OrderBy(x => x.Id),
+                nameof(DownloadToken),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.NodeShareTokens.OrderBy(x => x.Id),
+                nameof(NodeShareToken),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.ServerSettings.OrderBy(x => x.Id),
+                nameof(CottonServerSettings),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(_dbContext.Nodes.OrderBy(x => x.Id), nameof(Node), stats, ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.NodeFiles.OrderBy(x => x.Id),
+                nameof(NodeFile),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.FileManifests.OrderBy(x => x.Id),
+                nameof(FileManifest),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(
+                _dbContext.FileManifestChunks.OrderBy(x => x.Id),
+                nameof(FileManifestChunk),
+                stats,
+                ct);
+            await RewriteIntegritySignaturesAsync(_dbContext.Chunks.OrderBy(x => x.Hash), nameof(Chunk), stats, ct);
+        }
+
+        private async Task RewriteIntegritySignaturesAsync<TEntity>(
+            IOrderedQueryable<TEntity> orderedQuery,
+            string entityName,
+            RewriteStats stats,
+            CancellationToken ct)
+            where TEntity : class
+        {
+            int offset = 0;
+            DateTimeOffset nextProgressLogAt = DateTimeOffset.UtcNow.Add(ProgressLogInterval);
+            while (true)
+            {
+                List<TEntity> batch = await orderedQuery
+                    .Skip(offset)
+                    .Take(DatabaseBatchSize)
+                    .ToListAsync(ct);
+                if (batch.Count == 0)
+                {
+                    break;
+                }
+
+                foreach (TEntity entity in batch)
+                {
+                    QueueIntegritySignatureRewrite(entity);
+                }
+
+                await _dbContext.SaveChangesAsync(ct);
+                _dbContext.ChangeTracker.Clear();
+                offset += batch.Count;
+                stats.DatabaseRowsResigned += batch.Count;
+                LogIntegrityProgressIfNeeded(entityName, stats, nextProgressLogAt, out nextProgressLogAt);
+            }
+        }
+
+        private void QueueIntegritySignatureRewrite<TEntity>(TEntity entity)
+            where TEntity : class
+        {
+            EntityEntry<TEntity> entry = _dbContext.Entry(entity);
+            if (entry.Metadata.FindProperty(DatabaseIntegrityColumns.VersionProperty) is null
+                || entry.Metadata.FindProperty(DatabaseIntegrityColumns.MacProperty) is null)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot re-sign protected entity {typeof(TEntity).Name} because integrity shadow properties are missing.");
+            }
+
+            PropertyEntry version = entry.Property(DatabaseIntegrityColumns.VersionProperty);
+            PropertyEntry mac = entry.Property(DatabaseIntegrityColumns.MacProperty);
+            version.CurrentValue = null;
+            mac.CurrentValue = null;
+            version.IsModified = true;
+            mac.IsModified = true;
         }
 
         private async Task RewriteServerSettingsAsync(RewriteStats stats, CancellationToken ct)
@@ -631,6 +755,26 @@ namespace Cotton.Server.Jobs
             nextProgressLog = now.Add(ProgressLogInterval);
         }
 
+        private void LogIntegrityProgressIfNeeded(
+            string entityName,
+            RewriteStats stats,
+            DateTimeOffset nextProgressLogAt,
+            out DateTimeOffset nextProgressLog)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            if (now < nextProgressLogAt)
+            {
+                nextProgressLog = nextProgressLogAt;
+                return;
+            }
+
+            _logger.LogInformation(
+                "CTN2 database integrity rewrite progress: re-signed {DatabaseRowsResigned} rows; current entity {EntityName}.",
+                stats.DatabaseRowsResigned,
+                entityName);
+            nextProgressLog = now.Add(ProgressLogInterval);
+        }
+
         private enum EncryptedObjectFormat
         {
             Legacy,
@@ -643,6 +787,7 @@ namespace Cotton.Server.Jobs
             public long StorageObjectsRewritten { get; set; }
             public bool SentinelRewritten { get; set; }
             public long DatabaseValuesRewritten { get; set; }
+            public long DatabaseRowsResigned { get; set; }
             public long ChunkStoredSizesRefreshed { get; set; }
         }
     }
