@@ -23,9 +23,11 @@ namespace Cotton.Server.IntegrationTests
         [SetUp]
         public void SetUp()
         {
+            DbContext.ChangeTracker.Clear();
             IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
             creator.EnsureDeleted();
             DbContext.Database.Migrate();
+            DbContext.ChangeTracker.Clear();
         }
 
         [Test]
