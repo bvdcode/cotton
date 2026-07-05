@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Cotton.Benchmark.Regression
 {
@@ -9,6 +10,12 @@ namespace Cotton.Benchmark.Regression
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
         {
+            WriteIndented = true
+        };
+
+        private static readonly JsonSerializerOptions SummaryJsonOptions = new(JsonSerializerDefaults.Web)
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             WriteIndented = true
         };
 
@@ -35,6 +42,16 @@ namespace Cotton.Benchmark.Regression
             return path;
         }
 
+        public async Task<string> SaveBaselineSummaryAsync(
+            BenchmarkStoragePathSummaryDocument summaryDocument,
+            CancellationToken cancellationToken)
+        {
+            Directory.CreateDirectory(_baselineDirectory);
+            string path = GetBaselineSummaryPath(summaryDocument);
+            await SaveJsonAsync(path, summaryDocument, SummaryJsonOptions, cancellationToken);
+            return path;
+        }
+
         public async Task<string> SaveResultAsync(BenchmarkRunDocument runDocument, CancellationToken cancellationToken)
         {
             Directory.CreateDirectory(_resultsDirectory);
@@ -51,6 +68,18 @@ namespace Cotton.Benchmark.Regression
             return path;
         }
 
+        public async Task<string> SaveResultSummaryAsync(
+            string resultPath,
+            BenchmarkStoragePathSummaryDocument summaryDocument,
+            CancellationToken cancellationToken)
+        {
+            string resultDirectory = Path.GetDirectoryName(resultPath) ?? _resultsDirectory;
+            string resultFileName = Path.GetFileNameWithoutExtension(resultPath);
+            string path = Path.Combine(resultDirectory, $"{resultFileName}.storage-paths.json");
+            await SaveJsonAsync(path, summaryDocument, SummaryJsonOptions, cancellationToken);
+            return path;
+        }
+
         public string GetBaselinePath(BenchmarkRunDocument runDocument)
         {
             string fileName = string.Join(
@@ -63,10 +92,27 @@ namespace Cotton.Benchmark.Regression
             return Path.Combine(_baselineDirectory, fileName);
         }
 
-        private static async Task SaveJsonAsync(string path, BenchmarkRunDocument runDocument, CancellationToken cancellationToken)
+        public string GetBaselineSummaryPath(BenchmarkStoragePathSummaryDocument summaryDocument)
+        {
+            return Path.Combine(_baselineDirectory, $"{summaryDocument.HardwareId}.json");
+        }
+
+        private static Task SaveJsonAsync(
+            string path,
+            BenchmarkRunDocument runDocument,
+            CancellationToken cancellationToken)
+        {
+            return SaveJsonAsync(path, runDocument, JsonOptions, cancellationToken);
+        }
+
+        private static async Task SaveJsonAsync<TDocument>(
+            string path,
+            TDocument document,
+            JsonSerializerOptions jsonOptions,
+            CancellationToken cancellationToken)
         {
             await using FileStream stream = File.Create(path);
-            await JsonSerializer.SerializeAsync(stream, runDocument, JsonOptions, cancellationToken);
+            await JsonSerializer.SerializeAsync(stream, document, jsonOptions, cancellationToken);
             await stream.WriteAsync("\n"u8.ToArray(), cancellationToken);
         }
     }

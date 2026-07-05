@@ -5,7 +5,7 @@ namespace Cotton.Benchmark.Models
 {
     internal class BenchmarkOptions
     {
-        public BenchmarkMode Mode { get; init; } = BenchmarkMode.Machine;
+        public BenchmarkMode Mode { get; init; } = BenchmarkMode.StoragePaths;
 
         public BenchmarkProfile Profile { get; init; } = BenchmarkProfile.Standard;
 
@@ -17,9 +17,9 @@ namespace Cotton.Benchmark.Models
 
         public bool UpdateBaseline { get; init; }
 
-        public string BaselineDirectory { get; init; } = Path.Combine("performance", "baselines");
+        public string BaselineDirectory { get; init; } = Path.Combine("performance", "results");
 
-        public string ResultsDirectory { get; init; } = Path.Combine("performance", "results");
+        public string ResultsDirectory { get; init; } = Path.Combine(".temp", "benchmark-results");
 
         public int? CompressionLevel { get; init; }
 

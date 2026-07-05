@@ -5,7 +5,6 @@ namespace Cotton.Benchmark.Models
 {
     internal enum BenchmarkMode
     {
-        Machine,
-        Development
+        StoragePaths
     }
 }
