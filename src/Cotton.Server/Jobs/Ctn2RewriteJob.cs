@@ -35,7 +35,7 @@ namespace Cotton.Server.Jobs
         private const string CompletionMarkerFilePrefix = "ctn2-integrity-rewrite-";
         private const string StorageCompletionMarkerLogicalKey = "cotton.ctn2-integrity-rewrite.completed.v1";
         private const string CompletionMarkerContent =
-            "OBSOLETE TRANSITION: CTN2 and database integrity rewrite completed. Delete this marker with Ctn2RewriteJob after the transition.";
+            "CTN2 storage and database integrity rewrite completed.";
         private static readonly TimeSpan ProgressLogInterval = TimeSpan.FromSeconds(30);
         private static readonly byte[] StorageCompletionMarkerHash = Hasher.HashData(
             Encoding.UTF8.GetBytes(StorageCompletionMarkerLogicalKey));
@@ -63,8 +63,8 @@ namespace Cotton.Server.Jobs
             {
                 await EnsureCompletionMarkersAsync(completionMarkerPath, storageMarkerExists, tempMarkerExists, ct);
                 await ClearStorageMarkerGcScheduleAsync(ct);
-                _logger.LogWarning(
-                    "OBSOLETE TRANSITION: CTN2 rewrite job skipped because completion marker exists. StorageKey={StorageKey}; TempPath={TempPath}; StorageMarkerExists={StorageMarkerExists}; TempMarkerExists={TempMarkerExists}.",
+                _logger.LogInformation(
+                    "CTN2 rewrite job skipped because completion marker exists. StorageKey={StorageKey}; TempPath={TempPath}; StorageMarkerExists={StorageMarkerExists}; TempMarkerExists={TempMarkerExists}.",
                     StorageCompletionMarkerKey,
                     completionMarkerPath,
                     storageMarkerExists,
@@ -74,8 +74,7 @@ namespace Cotton.Server.Jobs
 
             var stats = new RewriteStats();
 
-            _logger.LogWarning(
-                "OBSOLETE TRANSITION: CTN2 rewrite job started. This job must be deleted after the transition.");
+            _logger.LogInformation("CTN2 rewrite job started.");
 
             await RewriteMasterKeySentinelAsync(stats, ct);
             await RewriteStorageObjectsAsync(stats, ct);
@@ -83,8 +82,8 @@ namespace Cotton.Server.Jobs
             await RewriteDatabaseIntegritySignaturesAsync(stats, ct);
             await WriteCompletionMarkersAsync(completionMarkerPath, ct);
 
-            _logger.LogWarning(
-                "OBSOLETE TRANSITION: CTN2 rewrite job finished. " +
+            _logger.LogInformation(
+                "CTN2 rewrite job finished. " +
                 "Storage scanned: {StorageScanned}; storage rewritten: {StorageRewritten}; " +
                 "sentinel rewritten: {SentinelRewritten}; database values rewritten: {DatabaseValuesRewritten}; " +
                 "database rows re-signed: {DatabaseRowsResigned}; chunk stored sizes refreshed: {ChunkStoredSizesRefreshed}.",
