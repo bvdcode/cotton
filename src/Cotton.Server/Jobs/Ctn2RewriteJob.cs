@@ -213,7 +213,23 @@ namespace Cotton.Server.Jobs
                     continue;
                 }
 
-                await RewritePipelineObjectAsync(storageKey, ct);
+                try
+                {
+                    await RewritePipelineObjectAsync(storageKey, ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogError(
+                        ex,
+                        "CTN2 storage rewrite failed for storage object {StorageKey}. " +
+                        "Scanned {StorageScanned}; rewritten {StorageRewritten}. " +
+                        "The completion marker will not be written.",
+                        storageKey,
+                        stats.StorageObjectsScanned,
+                        stats.StorageObjectsRewritten);
+                    throw;
+                }
+
                 stats.StorageObjectsRewritten++;
                 await QueueChunkStoredSizeRefreshAsync(storageKey, pendingChunkStoredSizes, stats, ct);
 
