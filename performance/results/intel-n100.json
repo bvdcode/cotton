@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "createdAtUtc": "2026-05-24T08:54:17.5108265+00:00",
+  "mode": "storage-paths",
+  "profile": "standard",
+  "sourceMode": "machine",
+  "sourceProfile": "standard",
+  "hardwareKey": "linux-x64-intel-r-n100-dotnet10",
+  "hardwareId": "intel-n100",
+  "gitCommit": "b5a76ecd1bfd",
+  "units": "MiB/s",
+  "environment": {
+    "architecture": "X64",
+    "cpu": "Intel(R) N100",
+    "dotnet": "10.0.7",
+    "logicalProcessors": "4",
+    "os": "Ubuntu 24.04.4 LTS",
+    "runtime": ".NET 10.0.7"
+  },
+  "write": {
+    "stages": [
+      {
+        "key": "sha256",
+        "label": "SHA-256 hashing",
+        "mibPerSecond": 1235.9940154849464,
+        "sourceBenchmark": "Hashing (SHA-256)",
+        "p50DurationMs": 80.622,
+        "p95DurationMs": 83.754145,
+        "dataSizeBytes": 104857600
+      },
+      {
+        "key": "zstdCompression",
+        "label": "Zstd compression",
+        "mibPerSecond": 149.98100217519405,
+        "sourceBenchmark": "Cotton.Storage Zstd Compression",
+        "p50DurationMs": 666.2257,
+        "p95DurationMs": 794.5052649999999,
+        "dataSizeBytes": 104857600
+      },
+      {
+        "key": "aesGcmEncryption",
+        "label": "AES-GCM encryption",
+        "mibPerSecond": 447.2207692674375,
+        "sourceBenchmark": "Cotton.Storage AES-GCM Encryption",
+        "p50DurationMs": 234.2073,
+        "p95DurationMs": 256.94637,
+        "dataSizeBytes": 104857600
+      },
+      {
+        "key": "filesystemIo",
+        "label": "Filesystem I/O",
+        "mibPerSecond": 1135.5652293676476,
+        "sourceBenchmark": "Filesystem Backend I/O",
+        "p50DurationMs": 168.7861,
+        "p95DurationMs": 288.22998999999993,
+        "dataSizeBytes": 104857600
+      }
+    ],
+    "pipeline": {
+      "key": "syntheticPipeline",
+      "label": "Synthetic compression + encryption pipeline",
+      "mibPerSecond": 816.5793820573471,
+      "sourceBenchmark": "Storage Pipeline (Compression + Encryption)",
+      "p50DurationMs": 248.68065,
+      "p95DurationMs": 373.00697499999995,
+      "dataSizeBytes": 104857600
+    },
+    "limitingStage": {
+      "key": "zstdCompression",
+      "label": "Zstd compression",
+      "mibPerSecond": 149.98100217519405,
+      "sourceBenchmark": "Cotton.Storage Zstd Compression",
+      "p50DurationMs": 666.2257,
+      "p95DurationMs": 794.5052649999999,
+      "dataSizeBytes": 104857600
+    }
+  },
+  "read": {
+    "stages": [
+      {
+        "key": "zstdDecompression",
+        "label": "Zstd decompression",
+        "mibPerSecond": 308.37914269499834,
+        "sourceBenchmark": "Cotton.Storage Zstd Decompression",
+        "p50DurationMs": 316.53684999999996,
+        "p95DurationMs": 499.4421349999998,
+        "dataSizeBytes": 104857600
+      },
+      {
+        "key": "aesGcmDecryption",
+        "label": "AES-GCM decryption",
+        "mibPerSecond": 471.0568719043439,
+        "sourceBenchmark": "Cotton.Storage AES-GCM Decryption",
+        "p50DurationMs": 217.38920000000002,
+        "p95DurationMs": 272.19841999999994,
+        "dataSizeBytes": 104857600
+      }
+    ],
+    "pipeline": null,
+    "limitingStage": {
+      "key": "zstdDecompression",
+      "label": "Zstd decompression",
+      "mibPerSecond": 308.37914269499834,
+      "sourceBenchmark": "Cotton.Storage Zstd Decompression",
+      "p50DurationMs": 316.53684999999996,
+      "p95DurationMs": 499.4421349999998,
+      "dataSizeBytes": 104857600
+    }
+  }
+}
