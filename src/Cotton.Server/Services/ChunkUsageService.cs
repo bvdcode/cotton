@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Jobs;
 using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Storage.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -114,7 +115,8 @@ namespace Cotton.Server.Services
             HashSet<string> protectedStorageKeys = new(StringComparer.OrdinalIgnoreCase)
             {
                 pointerStorageKey,
-                MasterKeySentinelStore.SentinelStorageKey
+                MasterKeySentinelStore.SentinelStorageKey,
+                Ctn2RewriteJob.CompletionStorageMarkerKey
             };
 
             if (!await _storage.ExistsAsync(pointerStorageKey))
