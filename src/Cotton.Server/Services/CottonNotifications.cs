@@ -341,6 +341,7 @@ namespace Cotton.Server.Services
                 PushNotificationPayloadPlanner.Create(notification, userPreferences);
             if (pushPayloadPlan.IsEligible)
             {
+                // TODO(push): Move remote push fanout to a background job so notification writes do not wait on FCM.
                 await SendRemotePushAsync(userId, notification.Id, pushPayloadPlan);
             }
         }
