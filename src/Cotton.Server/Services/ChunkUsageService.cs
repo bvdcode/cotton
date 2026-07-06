@@ -111,19 +111,26 @@ namespace Cotton.Server.Services
         /// </summary>
         public async Task<HashSet<string>> GetProtectedStorageKeysAsync(CancellationToken ct)
         {
-            string pointerStorageKey = _backupKeyProvider.GetScopedPointerStorageKey();
+            string databaseBackupPointerStorageKey = _backupKeyProvider.GetScopedPointerStorageKey();
             HashSet<string> protectedStorageKeys = new(StringComparer.OrdinalIgnoreCase)
             {
-                pointerStorageKey,
+                // Root pointer for the latest database backup manifest. If GC deletes it, Cotton loses the backup index.
+                databaseBackupPointerStorageKey,
+
+                // Master-key sentinel is stored outside normal user manifests, so database references will not protect it.
                 MasterKeySentinelStore.SentinelStorageKey,
+
+                // One-time CTN2 rewrite completion marker. Keep it until the transition job is deleted.
                 Ctn2RewriteJob.CompletionStorageMarkerKey
             };
 
-            if (!await _storage.ExistsAsync(pointerStorageKey))
+            if (!await _storage.ExistsAsync(databaseBackupPointerStorageKey))
             {
                 return protectedStorageKeys;
             }
 
+            // Database backups are stored as pointer -> manifest -> dump chunks. The manifest service is the
+            // canonical reader for that chain; GC protects every object reachable from the current pointer.
             ResolvedBackupManifest? latestBackup = await _backupManifestService.TryGetLatestManifestAsync(ct);
             if (latestBackup is null)
             {
@@ -131,11 +138,13 @@ namespace Cotton.Server.Services
                     "Database backup pointer exists, but the latest backup manifest could not be resolved. Aborting chunk garbage collection to avoid deleting backup data.");
             }
 
+            // Protect the manifest object itself; it is content-addressed and not referenced by database rows.
             protectedStorageKeys.Add(latestBackup.ManifestStorageKey);
             foreach (BackupChunkInfo chunk in latestBackup.Manifest.Chunks)
             {
                 if (!string.IsNullOrWhiteSpace(chunk.StorageKey))
                 {
+                    // Protect each storage chunk that contains the PostgreSQL dump payload.
                     protectedStorageKeys.Add(chunk.StorageKey);
                 }
             }
