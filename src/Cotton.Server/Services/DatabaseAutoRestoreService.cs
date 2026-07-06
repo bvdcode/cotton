@@ -62,6 +62,8 @@ namespace Cotton.Server.Services
             try
             {
                 await RebuildDumpFileAsync(backup.Manifest, dumpPath, cancellationToken);
+                await EnsurePostgresExtensionsForRestoreAsync(cancellationToken);
+                await ReloadPostgresTypesAsync(cancellationToken);
                 await postgresDump.RestoreFromFileAsync(dumpPath, cancellationToken);
                 await ReloadPostgresTypesAsync(cancellationToken);
                 await dbContext.Database.MigrateAsync(cancellationToken);
@@ -106,6 +108,14 @@ namespace Cotton.Server.Services
             }
 
             return false;
+        }
+
+        private async Task EnsurePostgresExtensionsForRestoreAsync(CancellationToken cancellationToken)
+        {
+            // pg_restore replays dump schema before EF migrations can run, so extension-backed types
+            // used by the dump must exist up front.
+            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS citext;", cancellationToken);
+            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS hstore;", cancellationToken);
         }
 
         private async Task EnsureConnectionOpenAsync(CancellationToken cancellationToken)
