@@ -192,6 +192,10 @@ namespace Cotton.Database
                 .Property(x => x.PreviewGeneratorVersion)
                 .HasDefaultValue(0);
 
+            modelBuilder.Entity<FileManifest>()
+                .Property(x => x.MetadataExtractorVersion)
+                .HasDefaultValue(0);
+
             ValueConverter<string?, string?> encryptedStringConverter = new(
                 value => EncryptString(value),
                 value => DecryptString(value));

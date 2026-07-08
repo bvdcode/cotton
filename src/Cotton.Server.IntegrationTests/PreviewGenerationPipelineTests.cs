@@ -244,6 +244,46 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task MetadataExtraction_ImageFile_StoresManifestMetadataAndReturnsMergedDto()
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        NodeDto root = await GetRootNodeAsync();
+        byte[] sourceImage = CreateGradientPngBytes(width: 320, height: 240);
+
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, "photo.png", "image/png", sourceImage);
+
+        HttpResponseMessage response = await _client!.PostAsync($"/api/v1/files/{createdFile.Id}/metadata/extract", null);
+        response.EnsureSuccessStatusCode();
+
+        NodeFileManifestDto? extractedFile = await response.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(extractedFile, Is.Not.Null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(extractedFile!.Metadata["image.width"], Is.EqualTo("320"));
+            Assert.That(extractedFile.Metadata["image.height"], Is.EqualTo("240"));
+        });
+
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        FileManifest manifest = await dbContext.NodeFiles
+            .AsNoTracking()
+            .Where(x => x.Id == createdFile.Id)
+            .Select(x => x.FileManifest)
+            .SingleAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(manifest.Metadata?["image.width"], Is.EqualTo("320"));
+            Assert.That(manifest.Metadata?["image.height"], Is.EqualTo("240"));
+            Assert.That(manifest.MetadataExtractorVersion, Is.EqualTo(1));
+            Assert.That(manifest.MetadataExtractionError, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task PreviewPipeline_PdfFile_GeneratesSmallPreviewOnly_AndReturnsWebpFromEndpoint()
     {
         string token = await LoginAsync();

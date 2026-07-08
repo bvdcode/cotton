@@ -6,6 +6,7 @@ using Cotton.Files;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Server.Services.FileMetadata;
 using Mapster;
 
 namespace Cotton.Server.Mappings
@@ -39,6 +40,7 @@ namespace Cotton.Server.Mappings
                 .Map(dest => dest.ContentType, src => src.FileManifest.ContentType)
                 .Map(dest => dest.ContentHash, src => Hasher.ToHexStringHash(src.FileManifest.ProposedContentHash))
                 .Map(dest => dest.ETag, src => FileETags.GetContentETag(src.FileManifest))
+                .Map(dest => dest.Metadata, src => FileManifestMetadataProjection.Merge(src.Metadata, src.FileManifest.Metadata))
                 .Map(dest => dest.RequiresVideoTranscoding, src =>
                     src.FileManifest.SmallFilePreviewHash != null
                     && src.FileManifest.ContentType.StartsWith("video/")

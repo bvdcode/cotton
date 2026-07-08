@@ -77,6 +77,24 @@ namespace Cotton.Database.Models
         public int PreviewGeneratorVersion { get; set; }
 
         /// <summary>
+        /// Content-derived metadata extracted from the immutable file payload.
+        /// </summary>
+        [Column("metadata")]
+        public Dictionary<string, string>? Metadata { get; set; } = [];
+
+        /// <summary>
+        /// Metadata extractor version used for the current manifest metadata.
+        /// </summary>
+        [Column("metadata_extractor_version")]
+        public int MetadataExtractorVersion { get; set; }
+
+        /// <summary>
+        /// Latest metadata extraction error message, if extraction failed.
+        /// </summary>
+        [Column("metadata_extraction_error")]
+        public string? MetadataExtractionError { get; set; }
+
+        /// <summary>
         /// Returns the row-scoped encrypted small-preview token as lowercase text.
         /// </summary>
         public string? GetPreviewHashEncryptedHex()

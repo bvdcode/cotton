@@ -429,6 +429,29 @@ public class DatabaseIntegrityFoundationTests
     }
 
     [Test]
+    public void FileManifestDescriptor_DetectsContentMetadataTampering()
+    {
+        DatabaseIntegrityProtector protector = CreateProtector();
+        var descriptor = new FileManifestIntegrityDescriptor();
+        var manifest = new FileManifest
+        {
+            ProposedContentHash = [1, 2, 3],
+            ComputedContentHash = [1, 2, 3],
+            ContentType = "audio/flac",
+            SizeBytes = 3,
+            Metadata = new Dictionary<string, string>
+            {
+                ["media.title"] = "Song",
+            },
+        };
+        byte[] mac = protector.Sign(manifest, descriptor);
+
+        manifest.Metadata["media.title"] = "Other";
+
+        Assert.That(protector.Verify(manifest, descriptor, mac), Is.False);
+    }
+
+    [Test]
     public void FileManifestDescriptor_IgnoresOperationalPreviewState()
     {
         DatabaseIntegrityProtector protector = CreateProtector();
@@ -440,12 +463,16 @@ public class DatabaseIntegrityFoundationTests
             ContentType = "text/plain",
             SizeBytes = 3,
             PreviewGenerationError = "ffmpeg failed before the runtime image was fixed",
-            PreviewGeneratorVersion = 1
+            PreviewGeneratorVersion = 1,
+            MetadataExtractionError = "metadata extraction failed before ffprobe was installed",
+            MetadataExtractorVersion = 1
         };
         byte[] mac = protector.Sign(manifest, descriptor);
 
         manifest.PreviewGenerationError = null;
         manifest.PreviewGeneratorVersion = 2;
+        manifest.MetadataExtractionError = null;
+        manifest.MetadataExtractorVersion = 2;
 
         Assert.That(protector.Verify(manifest, descriptor, mac), Is.True);
     }

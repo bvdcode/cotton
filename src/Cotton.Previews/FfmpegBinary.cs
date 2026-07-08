@@ -118,6 +118,23 @@ namespace Cotton.Previews
             return string.IsNullOrWhiteSpace(raw) ? null : ParseMediaProbe(raw);
         }
 
+        /// <summary>
+        /// Returns common media stream fields and format tags, or null when probing fails.
+        /// </summary>
+        public static async Task<MediaMetadataInfo?> TryGetMediaMetadataAsync(
+            Uri url,
+            TimeSpan? timeout = null,
+            CancellationToken cancellationToken = default)
+        {
+            string arguments =
+                "-v error -analyzeduration 100M -probesize 100M " +
+                "-of json -show_entries format=duration:format_tags:stream=codec_name,codec_type,width,height " +
+                $"\"{url}\"";
+
+            string? raw = await RunFfprobeAsync(arguments, timeout, cancellationToken).ConfigureAwait(false);
+            return string.IsNullOrWhiteSpace(raw) ? null : ParseMediaMetadata(raw);
+        }
+
         private static bool TryResolveInstalledBinaries(out string ffmpegPath, out string ffprobePath)
         {
             ffmpegPath = string.Empty;
@@ -328,6 +345,27 @@ namespace Cotton.Previews
             }
         }
 
+        private static MediaMetadataInfo? ParseMediaMetadata(string raw)
+        {
+            try
+            {
+                using JsonDocument document = JsonDocument.Parse(raw);
+                JsonElement root = document.RootElement;
+
+                return new MediaMetadataInfo(
+                    ParseProbeDuration(root),
+                    ParseFirstStreamCodec(root, "video"),
+                    ParseFirstStreamCodec(root, "audio"),
+                    ParseFirstVideoStreamInt(root, "width"),
+                    ParseFirstVideoStreamInt(root, "height"),
+                    ParseFormatTags(root));
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
         private static double? ParseProbeDuration(JsonElement root)
         {
             return root.TryGetProperty("format", out JsonElement format)
@@ -353,6 +391,66 @@ namespace Cotton.Previews
             }
 
             return null;
+        }
+
+        private static int? ParseFirstVideoStreamInt(JsonElement root, string propertyName)
+        {
+            if (!root.TryGetProperty("streams", out JsonElement streams))
+            {
+                return null;
+            }
+
+            foreach (JsonElement stream in streams.EnumerateArray())
+            {
+                if (!TryReadStreamCodec(stream, out string? codecType, out _)
+                    || codecType != "video"
+                    || !stream.TryGetProperty(propertyName, out JsonElement valueElement))
+                {
+                    continue;
+                }
+
+                if (valueElement.ValueKind == JsonValueKind.Number
+                    && valueElement.TryGetInt32(out int numericValue)
+                    && numericValue > 0)
+                {
+                    return numericValue;
+                }
+
+                if (valueElement.ValueKind == JsonValueKind.String
+                    && int.TryParse(valueElement.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int stringValue)
+                    && stringValue > 0)
+                {
+                    return stringValue;
+                }
+            }
+
+            return null;
+        }
+
+        private static IReadOnlyDictionary<string, string> ParseFormatTags(JsonElement root)
+        {
+            if (!root.TryGetProperty("format", out JsonElement format)
+                || !format.TryGetProperty("tags", out JsonElement tags)
+                || tags.ValueKind != JsonValueKind.Object)
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            Dictionary<string, string> result = new(StringComparer.OrdinalIgnoreCase);
+            foreach (JsonProperty tag in tags.EnumerateObject())
+            {
+                string? value = tag.Value.ValueKind == JsonValueKind.String
+                    ? tag.Value.GetString()
+                    : tag.Value.ToString();
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                result[tag.Name] = value.Trim();
+            }
+
+            return result;
         }
 
         private static bool TryReadStreamCodec(

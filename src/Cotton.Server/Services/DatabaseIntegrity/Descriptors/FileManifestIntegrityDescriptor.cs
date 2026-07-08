@@ -14,7 +14,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         public override string EntityName => "file_manifests";
 
         /// <inheritdoc />
-        public override int SchemaVersion => 1;
+        public override int SchemaVersion => 2;
 
         /// <inheritdoc />
         public override string GetEntityKey(FileManifest entity)
@@ -26,8 +26,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
         {
             WriteContentIdentityFields(writer, entity);
-            // PreviewGenerationError and PreviewGeneratorVersion are retry/scheduling state, not file-content identity.
-            // Keep them outside the MAC so operators can safely clear preview failures and generator bumps can reschedule work.
+            // Preview and metadata extraction state is derived cache state, not file-content identity.
         }
 
         private static void WriteContentIdentityFields(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
@@ -40,6 +39,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
             writer.WriteBytesField(nameof(entity.SmallFilePreviewHashEncrypted), entity.SmallFilePreviewHashEncrypted);
             writer.WriteBytesField(nameof(entity.SmallFilePreviewHash), entity.SmallFilePreviewHash);
             writer.WriteBytesField(nameof(entity.LargeFilePreviewHash), entity.LargeFilePreviewHash);
+            writer.WriteStringDictionaryField(nameof(entity.Metadata), entity.Metadata);
         }
     }
 }
