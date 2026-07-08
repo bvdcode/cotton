@@ -45,7 +45,11 @@ namespace Cotton.Storage.Tests.Streams
                 return Task.FromResult<Stream>(new MemoryStream(data));
             }
 
-            public Task WriteAsync(string uid, Stream stream, PipelineContext? context = null)
+            public Task WriteAsync(
+                string uid,
+                Stream stream,
+                PipelineContext? context = null,
+                StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing)
             {
                 throw new NotImplementedException();
             }

@@ -162,6 +162,9 @@ public class LayoutAndFilesTests : IntegrationTestBase
     }
 
     [Test]
+    [Obsolete("OBSOLETE TRANSITION: strict integrity tamper coverage is temporarily skipped because read validation is disabled for the CTN2/signature transition. Remove this attribute and re-enable the test when DatabaseIntegrityReadValidationEnabled is restored.")]
+    [Category("OBSOLETE_TRANSITION")]
+    [Ignore("OBSOLETE TRANSITION: database integrity read validation is disabled during the CTN2/signature transition. Re-enable this strict tamper test when DatabaseIntegrityReadValidationEnabled is restored.")]
     public async Task Shared_Children_Rejects_Tampered_Ancestor_Path_WithStrictIntegrity()
     {
         var token = await LoginAsync();

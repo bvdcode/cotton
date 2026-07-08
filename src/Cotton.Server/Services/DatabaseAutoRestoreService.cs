@@ -12,7 +12,6 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Buffers;
 using System.Data;
-using System.Data.Common;
 using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
@@ -63,8 +62,12 @@ namespace Cotton.Server.Services
             try
             {
                 await RebuildDumpFileAsync(backup.Manifest, dumpPath, cancellationToken);
+                await EnsurePostgresExtensionsForRestoreAsync(cancellationToken);
+                await ReloadPostgresTypesAsync(cancellationToken);
                 await postgresDump.RestoreFromFileAsync(dumpPath, cancellationToken);
-                await EnsurePostgresExtensionsAsync(cancellationToken);
+                await ReloadPostgresTypesAsync(cancellationToken);
+                await dbContext.Database.MigrateAsync(cancellationToken);
+                await ReloadPostgresTypesAsync(cancellationToken);
                 await NotifyAdminsAboutRestoreAsync(backup, cancellationToken);
                 logger.LogInformation(
                     "Automatic database restore finished successfully. BackupId={BackupId}",
@@ -83,15 +86,21 @@ namespace Cotton.Server.Services
 
         private async Task<bool> IsDatabaseEmptyAsync(CancellationToken cancellationToken)
         {
-            bool hasAppliedMigrations = await TableHasRowsAsync("__EFMigrationsHistory", cancellationToken);
+            IEnumerable<string> appliedMigrations = await dbContext.Database
+                .GetAppliedMigrationsAsync(cancellationToken);
+            bool hasAppliedMigrations = appliedMigrations.Any();
             if (!hasAppliedMigrations)
             {
                 logger.LogInformation("Database considered empty: no applied migrations in __EFMigrationsHistory.");
                 return true;
             }
 
-            bool hasUsers = await TableHasRowsAsync("users", cancellationToken);
-            bool hasServerSettings = await TableHasRowsAsync("server_settings", cancellationToken);
+            bool hasUsers = await dbContext.Users
+                .AsNoTracking()
+                .AnyAsync(cancellationToken);
+            bool hasServerSettings = await dbContext.ServerSettings
+                .AsNoTracking()
+                .AnyAsync(cancellationToken);
             if (!hasUsers && !hasServerSettings)
             {
                 logger.LogInformation("Database considered empty: no users and no server settings rows.");
@@ -101,50 +110,12 @@ namespace Cotton.Server.Services
             return false;
         }
 
-        private async Task<bool> TableHasRowsAsync(string tableName, CancellationToken cancellationToken)
+        private async Task EnsurePostgresExtensionsForRestoreAsync(CancellationToken cancellationToken)
         {
-            if (!await TableExistsAsync(tableName, cancellationToken))
-            {
-                return false;
-            }
-
-            string quotedTableName = QuoteIdentifier(tableName);
-            string sql = $"SELECT EXISTS (SELECT 1 FROM public.{quotedTableName} LIMIT 1);";
-            return await ExecuteScalarBooleanAsync(sql, cancellationToken);
-        }
-
-        private async Task<bool> TableExistsAsync(string tableName, CancellationToken cancellationToken)
-        {
-            const string sql = """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM information_schema.tables
-                    WHERE table_schema = 'public' AND table_name = @tableName
-                );
-                """;
-
-            await EnsureConnectionOpenAsync(cancellationToken);
-            using DbCommand command = dbContext.Database.GetDbConnection().CreateCommand();
-            command.CommandText = sql;
-            command.CommandType = CommandType.Text;
-
-            DbParameter parameter = command.CreateParameter();
-            parameter.ParameterName = "@tableName";
-            parameter.Value = tableName;
-            command.Parameters.Add(parameter);
-
-            object? result = await command.ExecuteScalarAsync(cancellationToken);
-            return result is bool exists && exists;
-        }
-
-        private async Task<bool> ExecuteScalarBooleanAsync(string sql, CancellationToken cancellationToken)
-        {
-            await EnsureConnectionOpenAsync(cancellationToken);
-            using DbCommand command = dbContext.Database.GetDbConnection().CreateCommand();
-            command.CommandText = sql;
-            command.CommandType = CommandType.Text;
-            object? result = await command.ExecuteScalarAsync(cancellationToken);
-            return result is bool value && value;
+            // pg_restore replays dump schema before EF migrations can run, so extension-backed types
+            // used by the dump must exist up front.
+            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS citext;", cancellationToken);
+            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS hstore;", cancellationToken);
         }
 
         private async Task EnsureConnectionOpenAsync(CancellationToken cancellationToken)
@@ -153,11 +124,6 @@ namespace Cotton.Server.Services
             {
                 await dbContext.Database.OpenConnectionAsync(cancellationToken);
             }
-        }
-
-        private static string QuoteIdentifier(string value)
-        {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
         }
 
         private async Task RebuildDumpFileAsync(BackupManifest manifest, string outputPath, CancellationToken cancellationToken)
@@ -226,19 +192,18 @@ namespace Cotton.Server.Services
             }
         }
 
-        private async Task EnsurePostgresExtensionsAsync(CancellationToken cancellationToken)
+        private async Task ReloadPostgresTypesAsync(CancellationToken cancellationToken)
         {
+            if (dbContext.Database.GetDbConnection() is not NpgsqlConnection npgsqlConnection)
+            {
+                return;
+            }
+
             bool shouldCloseConnection = dbContext.Database.GetDbConnection().State != ConnectionState.Open;
             await EnsureConnectionOpenAsync(cancellationToken);
             try
             {
-                await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS citext;", cancellationToken);
-                await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS hstore;", cancellationToken);
-
-                if (dbContext.Database.GetDbConnection() is NpgsqlConnection npgsqlConnection)
-                {
-                    await npgsqlConnection.ReloadTypesAsync(cancellationToken);
-                }
+                await npgsqlConnection.ReloadTypesAsync(cancellationToken);
             }
             finally
             {

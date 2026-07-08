@@ -1,10 +1,10 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Crypto;
 using Cotton.Database.Models.Attributes;
 using Cotton.Database.Models.Enums;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
-using EasyExtensions.Extensions;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Models

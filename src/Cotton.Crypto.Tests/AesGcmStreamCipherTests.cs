@@ -120,28 +120,6 @@ public class AesGcmStreamCipherTests
         Assert.That(plaintext, Is.EqualTo(decrypted.ToArray()));
     }
 
-    [Test]
-    public async Task Decrypt_LegacyCtn1StreamWithoutTerminator_RoundTrips()
-    {
-        byte[] mk = ValidMasterKey();
-        byte[] plaintext = CreateRandomBytes(MinChunkSize + 123);
-
-        using var legacyCipher = new EasyExtensions.Crypto.AesGcmStreamCipher(mk, keyId: 1, threads: 1);
-        using var legacyInput = new MemoryStream(plaintext);
-        using var legacyEncrypted = new MemoryStream();
-        await legacyCipher.EncryptAsync(legacyInput, legacyEncrypted, chunkSize: MinChunkSize);
-
-        byte[] legacyBytes = legacyEncrypted.ToArray();
-        Assert.That(Encoding.ASCII.GetString(legacyBytes, 0, 4), Is.EqualTo("CTN1"));
-
-        using AesGcmStreamCipher currentCipher = CreateCipher(mk, keyId: 1);
-        using var currentInput = new MemoryStream(legacyBytes, writable: false);
-        using var output = new MemoryStream();
-        await currentCipher.DecryptAsync(currentInput, output);
-
-        Assert.That(output.ToArray(), Is.EqualTo(plaintext));
-    }
-
     [TestCase(65_536)]
     [TestCase(131_072)]
     [TestCase(1_048_576)]

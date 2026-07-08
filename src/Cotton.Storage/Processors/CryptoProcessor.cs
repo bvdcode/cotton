@@ -4,7 +4,6 @@
 using Cotton.Crypto;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
-using EasyExtensions.Abstractions;
 
 namespace Cotton.Storage.Processors
 {

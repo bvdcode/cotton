@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using EasyExtensions.Abstractions;
 using Cotton.Crypto.Internals;
 using Cotton.Crypto.Internals.Pipelines;
 using System;

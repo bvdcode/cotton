@@ -191,6 +191,7 @@ namespace Cotton.Server
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
+                .AddSingleton<ILayoutMutationGate, LayoutMutationGate>()
                 .AddScoped<ILayoutService, StorageLayoutService>()
                 .AddScoped<ILayoutNavigator, LayoutNavigator>()
                 .AddPbkdf2PasswordHashService()

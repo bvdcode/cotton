@@ -1,6 +1,6 @@
 # 26. Performance, Benchmarking & Testing
 
-Cotton Cloud treats throughput as a first-class product requirement, and its quality-engineering surface reflects that: a dedicated benchmark harness (`Cotton.Benchmark`) with committed per-hardware baselines, an opt-in runtime storage-pipeline probe wired into telemetry, and a set of NUnit / Vitest test projects covering the cryptography, storage, preview, validation, and server layers. This section documents how performance is measured, how regressions are gated, where benchmark data lives, and what the test suite actually covers versus where the gaps are. Throughout, README throughput claims are reported explicitly as "developer-hardware" figures and contrasted with the real, committed artifacts.
+Cotton Cloud treats throughput as a first-class product requirement, and its quality-engineering surface reflects that: a dedicated benchmark harness (`Cotton.Benchmark`) with committed per-hardware results, an opt-in runtime storage-pipeline probe wired into telemetry, and a set of NUnit / Vitest test projects covering the cryptography, storage, preview, validation, and server layers. This section documents how performance is measured, how regressions are gated, where benchmark data lives, and what the test suite actually covers versus where the gaps are. Throughout, README throughput claims are reported explicitly as "developer-hardware" figures and contrasted with the real, committed artifacts.
 
 ## Purpose & overview
 
@@ -16,31 +16,31 @@ A fourth artifact, the `Benchmark` entity / `BenchmarkType` enum in `Cotton.Data
 
 ### Project shape
 
-`src/Cotton.Benchmark/Cotton.Benchmark.csproj` is an `Exe` targeting `net10.0`. Its only NuGet dependencies are `Microsoft.Extensions.DependencyInjection`, `Microsoft.Extensions.Logging`, `Microsoft.Extensions.Logging.Console` (all `10.0.8`) and `ZstdSharp.Port` `0.8.8`; it project-references `Cotton.Crypto`, `Cotton.Previews`, and `Cotton.Storage` so benchmarks exercise **production code paths**, not mocks. The repo's `src/Cotton.Benchmark/README.md` lists `ZstdSharp.Port 0.8.6`, but the csproj pins `0.8.8` — the csproj is authoritative. (The README also says new benchmarks are registered "in `Program.CreateBenchmarks()`"; the real registration entry point is `BenchmarkSuiteFactory.Create`, so treat that README line as stale.)
+`src/Cotton.Benchmark/Cotton.Benchmark.csproj` is an `Exe` targeting `net10.0`. Its only NuGet dependencies are `Microsoft.Extensions.DependencyInjection`, `Microsoft.Extensions.Logging`, `Microsoft.Extensions.Logging.Console` (all `10.0.8`) and `ZstdSharp.Port` `0.8.8`; it project-references `Cotton.Crypto` and `Cotton.Storage` so benchmarks exercise **production code paths**, not mocks.
 
 The entry point is `src/Cotton.Benchmark/Program.cs`. Control flow:
 
 ```mermaid
 flowchart TD
-    A[Main args] --> B{PreviewMemoryWorker.IsWorkerInvocation?}
-    B -->|yes, --preview-memory-worker| C[PreviewMemoryWorker.RunAsync -> exit]
-    B -->|no| D[BenchmarkOptionParser.Parse]
-    D --> E[BenchmarkConfigurationFactory.Create profile]
-    E --> F[ApplyConfigurationOverrides compression-level]
-    F --> G[HardwareFingerprintProvider.Create]
-    G --> H[BenchmarkSuiteFactory.Create config, options]
-    H --> I{--list?}
-    I -->|yes| J[print list -> exit 0]
-    I -->|no| K[BenchmarkRunner.RunBenchmarksAsync]
-    K --> L[ConsoleReporter.ReportAsync + memory stats]
-    L --> M[BenchmarkRunDocument.Create]
-    M --> N[BenchmarkArtifactStore.SaveResultAsync]
-    N --> O{--update-baseline?}
-    O -->|yes| P[SaveBaselineAsync]
-    O --> Q{--compare?}
-    Q -->|yes| R[load baseline -> BenchmarkRegressionComparer.Compare]
-    R --> S[exit code 0/1/2]
-    Q -->|no| S
+    A[Main args] --> B[BenchmarkOptionParser.Parse]
+    B --> C[BenchmarkConfigurationFactory.Create profile]
+    C --> D[ApplyConfigurationOverrides compression-level]
+    D --> E[HardwareFingerprintProvider.Create]
+    E --> F[BenchmarkSuiteFactory.Create config, options]
+    F --> G{--list?}
+    G -->|yes| H[print list -> exit 0]
+    G -->|no| I[BenchmarkRunner.RunBenchmarksAsync]
+    I --> J[ConsoleReporter.ReportAsync + memory stats]
+    J --> K[BenchmarkRunDocument.Create]
+    K --> L[BenchmarkStoragePathSummaryDocument.Create]
+    L --> M[BenchmarkArtifactStore.SaveResultAsync + SaveResultSummaryAsync]
+    M --> N{--update-baseline?}
+    N -->|yes| O[save compact reviewed result]
+    N --> P{--compare?}
+    O --> P
+    P -->|yes| Q[load committed result -> BenchmarkRegressionComparer.Compare]
+    Q --> R[exit code 0/1/2]
+    P -->|no| R
 ```
 
 ### Command-line interface
@@ -50,47 +50,40 @@ Options are parsed by `BenchmarkOptionParser.Parse` (`src/Cotton.Benchmark/Infra
 | Option | Effect | Default |
 | --- | --- | --- |
 | `-h`, `--help` | Print help and exit 0 | — |
-| `--mode <value>` | `machine` or `development` (`BenchmarkMode`) | `machine` |
+| `--mode <value>` | `storage-paths` (`BenchmarkMode`) | `storage-paths` |
 | `--profile <value>` | `quick`, `standard`, or `full` (`BenchmarkProfile`) | `standard` |
 | `--scenario <filter>` | Comma-separated name filters; case-insensitive substring or slug match | none (all) |
 | `--compression-level <n>` | Override Zstd level for configured pipeline benchmarks; validated by `CompressionProcessor.ThrowIfInvalidLevel` | profile default |
 | `--list` | List benchmarks for the selected mode and exit | false |
-| `--compare` / `--compare-baseline` | Compare run vs committed baseline for this hardware key | false |
-| `--update-baseline` | Save run as the reviewed baseline | see below |
-| `--no-update-baseline` | Save only an unreviewed result | — |
-| `--baseline-dir <path>` | Override baseline directory | `<repo>/performance/baselines` |
-| `--results-dir <path>` | Override unreviewed-results directory | `<repo>/performance/results` |
+| `--compare` / `--compare-baseline` | Compare run vs committed result for this hardware key | false |
+| `--update-baseline` | Save run as the reviewed result | see below |
+| `--no-update-baseline` | Save only a scratch result | — |
+| `--baseline-dir <path>` | Override reviewed result directory | `<repo>/performance/results` |
+| `--results-dir <path>` | Override scratch result directory | `<repo>/.temp/benchmark-results` |
 
 An unknown option throws `ArgumentException`, which `Program.Main` catches to print help and exit with code `2`.
 
-The default-baseline rule (`ShouldUpdateBaselineByDefault`) is non-obvious: `--update-baseline` defaults to **true** only when none of `--list`, `--compare`, or `--scenario` are present. So a bare `dotnet run --project src/Cotton.Benchmark -c Release` writes a reviewed baseline, but any scenario filter or `--compare` flips that off. The help text summarizes this as "default for full non-compare runs". An explicit `--update-baseline` / `--no-update-baseline` always overrides the default.
+The reviewed-result rule (`ShouldUpdateBaselineByDefault`) is non-obvious: `--update-baseline` defaults to **true** only when none of `--list`, `--compare`, or `--scenario` are present. So a bare `dotnet run --project src/Cotton.Benchmark -c Release` writes a reviewed result, but any scenario filter or `--compare` flips that off. The help text summarizes this as "default for full non-compare runs". An explicit `--update-baseline` / `--no-update-baseline` always overrides the default.
 
-### Modes and the suite factory
+### Storage-path suite
 
 `BenchmarkSuiteFactory.Create` (`src/Cotton.Benchmark/Infrastructure/BenchmarkSuiteFactory.cs`) selects the benchmark set by mode, then applies `--scenario` filters (substring or slug match against each benchmark's `Name`).
 
-**`machine` mode** (portable, no PostgreSQL) builds twelve benchmarks:
+`storage-paths` mode is the published benchmark set. It builds nine benchmarks:
 
 | Benchmark class | `Name` | What it measures |
 | --- | --- | --- |
-| `MemoryStreamBenchmark` | `Memory Stream Operations` | Baseline memory-alloc + stream-copy throughput |
 | `HashingBenchmark` | `Hashing (SHA-256)` | Content-addressing hash throughput |
-| `ChunkUploadProcessingBenchmark` (CompressibleText) | `Chunk Upload Processing - Compressible text (SHA-256 + Compression + Encryption)` | Combined server write-path (SHA-256 + buffer copy + compress + encrypt) on compressible text |
 | `ChunkUploadProcessingBenchmark` (MixedContent) | `Chunk Upload Processing - Mixed content (SHA-256 + Compression + Encryption)` | Same path on semi-compressible content |
-| `ChunkUploadProcessingBenchmark` (RandomBinary) | `Chunk Upload Processing - Random binary (SHA-256 + Compression + Encryption)` | Same path on incompressible content |
 | `CompressionBenchmark` | `Cotton.Storage Zstd Compression` | `CompressionProcessor` on log-like text |
 | `DecompressionBenchmark` | `Cotton.Storage Zstd Decompression` | Zstd decompression |
-| `MultiSizeCompressionBenchmark` | `ZstdSharp Level Sweep 1-5` | Direct `ZstdSharp` compression across levels 1..5 |
 | `EncryptionBenchmark` | `Cotton.Storage AES-GCM Encryption` | `CryptoProcessor` + `AesGcmStreamCipher` write path |
 | `DecryptionBenchmark` | `Cotton.Storage AES-GCM Decryption` | AES-GCM streaming decrypt |
-| `FileSystemBenchmark` | `Filesystem Backend I/O` | `FileSystemStorageBackend` write+read+delete |
-| `PipelineBenchmark` | `Storage Pipeline (Compression + Encryption)` | `FileStoragePipeline` full cycle |
-
-`CompressionLevelsBenchmark` (the expensive Zstd extreme-level sweep, named `ZstdSharp Extreme Level Sweep (-5..22)`) is **only** appended when a `--scenario` filter matches one of the aliases `compression-levels`, `extreme-level-sweep`, `zstd-extreme`, or the full name (`ShouldIncludeExtremeLevelSweep`). It is excluded from default runs because it is slow.
+| `FileSystemWriteBenchmark` | `Filesystem Backend Write` | Directional filesystem backend write |
+| `FileSystemReadBenchmark` | `Filesystem Backend Read` | Directional filesystem backend read |
+| `PipelineReadBenchmark` | `Storage Pipeline Read (Decryption + Decompression)` | Backend read + decrypt + decompress |
 
 The `ChunkUploadProcessingBenchmark` constructs a real `FileStoragePipeline` over an `InMemoryStorageBackend` with processors `[CryptoProcessor(AesGcmStreamCipher), CompressionProcessor]`, single-passes the chunk (SHA-256 via `IncrementalHash`, a buffered copy, then `WriteAsync`), and deletes the stored blob each iteration. It records extra metrics including `Path`, `StorageBackend` (`"In-memory benchmark backend"`), `ServerHashPasses = 1`, `ReadBack = false`, `DataType`, and `CompressionLevel`.
-
-**`development` mode** (local Cotton regression suite) builds a smaller set: `FileSystemBenchmark`, `ChunkUploadProcessingBenchmark(MixedContent)`, `PipelineBenchmark`, and `ImagePreviewMemoryBenchmark`. The roadmap in `performance/README.md` lists PostgreSQL-backed listing/upload/download/WebDAV/archive/integrity scenarios as **not yet implemented** here — only the image-preview memory capacity item is checked off.
 
 ### Execution model and metrics
 
@@ -119,7 +112,7 @@ Throughput in `PerformanceMetrics` (`src/Cotton.Benchmark/Models/PerformanceMetr
 
 `DataSizeBytes` is an `int`, so the `Full` profile's `1024*1024*1024` is exactly 1 GiB. `--compression-level` rebuilds the configuration with the validated level (`ApplyConfigurationOverrides` in `Program.cs`).
 
-### Hardware fingerprinting & result/baseline schema
+### Hardware fingerprinting & result schema
 
 `HardwareFingerprintProvider.Create` (`src/Cotton.Benchmark/Regression/HardwareFingerprint.cs`) builds a stable hardware **Key** by sanitizing `os-family + architecture + cpu-model + dotnet<major>` — e.g. `linux-x64-intel-r-n100-dotnet10`. The CPU model is read (in order) from the Windows registry (`HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0` → `ProcessorNameString`), `/proc/cpuinfo` (`model name` / `Hardware`), or the `PROCESSOR_IDENTIFIER` env var, falling back to `unknown-cpu`. It also records a `SortedDictionary` of `Properties` — `architecture`, `cpu`, `dotnet`, `logicalProcessors`, `os`, `runtime` — which become the run document's `environment`.
 
@@ -127,20 +120,20 @@ Throughput in `PerformanceMetrics` (`src/Cotton.Benchmark/Models/PerformanceMetr
 
 `BenchmarkArtifactStore` (`src/Cotton.Benchmark/Regression/BenchmarkArtifactStore.cs`) serializes with web-defaults camelCase + indented JSON (plus a trailing newline). File naming:
 
-- **Result** (unreviewed): `{yyyyMMdd-HHmmss}.{hardwareKey}.{mode}.{profile}.json` in `performance/results/` — e.g. `20260524-104028.linux-x64-intel-r-n100-dotnet10.machine.standard.json`.
-- **Baseline** (reviewed): `{hardwareKey}.{mode}.{profile}.json` in `performance/baselines/` (no timestamp — one baseline per hardware/mode/profile).
+- **Scratch result**: `{yyyyMMdd-HHmmss}.{hardwareKey}.{mode}.{profile}.json` plus a matching compact summary in `.temp/benchmark-results/`.
+- **Reviewed result**: `{hardwareId}.json` in `performance/results/`, containing only the stable write/read stage groups intended for published tables.
 
 ```mermaid
 flowchart LR
     Run[Benchmark run] --> Doc[BenchmarkRunDocument]
-    Doc -->|always| Res[(performance/results/<br/>timestamped, git-ignored)]
-    Doc -->|--update-baseline| Base[(performance/baselines/<br/>committed, reviewed)]
+    Doc -->|--no-update-baseline| Res[(.temp/benchmark-results/<br/>timestamped scratch)]
+    Doc -->|--update-baseline| Base[(performance/results/<br/>committed, reviewed)]
     Base -->|--compare| Cmp[BenchmarkRegressionComparer]
     Doc -->|--compare| Cmp
     Cmp --> Exit{Passed?}
 ```
 
-The path roots are resolved by `BenchmarkPathDefaults`, which walks up from the current directory / `AppContext.BaseDirectory` looking for a `performance/baselines` directory or `performance/README.md`, falling back to the current working directory.
+The path roots are resolved by `BenchmarkPathDefaults`, which walks up from the current directory / `AppContext.BaseDirectory` looking for a `performance/results` directory or `performance/README.md`, falling back to the current working directory.
 
 ### Regression gating
 
@@ -163,21 +156,15 @@ The comparer gates two metric groups:
 
 A failed or missing-baseline benchmark is reported but handled gracefully: a current benchmark with no matching baseline name emits a "no baseline yet" message and does not fail the run, whereas a benchmark whose `Succeeded` is false fails it. The process exit code is `0` (pass), `1` (regression, or a benchmark failed, or a fatal error in the runner), or `2` (bad options, or `--compare` with no baseline found).
 
-### The image-preview memory benchmark and out-of-process worker
-
-`ImagePreviewMemoryBenchmark` (`src/Cotton.Benchmark/Benchmarks/ImagePreviewMemoryBenchmark.cs`, `development` mode, `Name` = `Image Preview Memory Capacity`) is special: it does not extend `BenchmarkBase`. It writes a deterministic 24-bit BMP via `BmpTestImageWriter` (sizes per profile in `CreateImageSpec`: quick `4096×3072`, standard `10000×10000`, full `20000×10000`) and then runs `Cotton.Previews.ImagePreviewGenerator.GeneratePreviewWebPAsync` (at `PreviewGeneratorProvider.DefaultSmallPreviewSize` and `DefaultLargePreviewSize`) **in an isolated child process** via `PreviewMemoryWorker` (`src/Cotton.Benchmark/Infrastructure/PreviewMemoryWorker.cs`). The parent re-invokes the benchmark executable with the `--preview-memory-worker` switch (intercepted at the very top of `Program.Main`); the worker writes a JSON `PreviewMemoryWorkerResult` and exits `0` on success or `3` on failure.
-
-While the worker runs, the parent samples the child process working set every 10 ms in `ObserveWorkingSetAsync` (interval `WorkerMemorySampleInterval = 10 ms`) and records the peak as `WorkerObservedMaxWorkingSetBytes`. This isolates large-image decode memory from the parent so peak RSS is attributed correctly. (The `MemoryMonitor` helper is *not* used for this per-worker sampling — it only reports the parent process's overall current memory and GC stats at the end of a run.) The benchmark requires the SixLabors license; `src/Cotton.Benchmark/sixlabors-community.lic` is committed in the project.
-
 ### Performance artifacts: directory layout
 
 | Path | Tracked? | Contents |
 | --- | --- | --- |
 | `performance/README.md` | yes | Methodology, modes, commands, regression roadmap |
-| `performance/baselines/` | yes | Reviewed per-hardware-key baseline JSONs |
-| `performance/results/` | **git-ignored** (`.gitignore` line `performance/results/`) | Raw timestamped run output |
+| `performance/results/` | yes | Reviewed compact result JSONs, one file per measured machine |
+| `.temp/benchmark-results/` | no | Scratch timestamped run output |
 
-Committed baselines as of writing cover six hardware keys, all `machine.standard`:
+Published rows should use the compact JSON files in `performance/results/`:
 
 | Hardware key (file stem) | OS |
 | --- | --- |
@@ -188,13 +175,13 @@ Committed baselines as of writing cover six hardware keys, all `machine.standard
 | `windows-x64-14th-gen-intel-r-core-tm-i7-14700f-dotnet10` | Windows (i7-14700F) |
 | `windows-x64-13th-gen-intel-r-core-tm-i9-13900k-dotnet10` | Windows (i9-13900K) |
 
-Each committed baseline currently contains **9** result snapshots — `Memory Stream Operations`, `Hashing (SHA-256)`, `Cotton.Storage Zstd Compression`, `Cotton.Storage Zstd Decompression`, `ZstdSharp Level Sweep 1-5`, `Cotton.Storage AES-GCM Encryption`, `Cotton.Storage AES-GCM Decryption`, `Filesystem Backend I/O`, and `Storage Pipeline (Compression + Encryption)`. They predate the three `Chunk Upload Processing` benchmarks now built in `machine` mode, so a fresh `--compare` against these baselines emits "no baseline yet" notes for those three and matches the other nine. This is expected: baselines are point-in-time snapshots that are refreshed by review. The artifact policy is explicit (`performance/README.md`): **compare only runs with identical hardware key, mode, and profile** — the harness will not cross-compare, and the docs warn against treating CI-runner timings as stable.
+The reviewed result mirrors benchmark output into `write` and `read` groups with stable stage keys, source benchmark names, throughput in MiB/s, duration percentiles, and a limiting stage per direction. The artifact policy is explicit (`performance/README.md`): **compare only runs with identical hardware key, mode, and profile** — the harness will not cross-compare, and the docs warn against treating CI-runner timings as stable.
 
 ### Reported throughput figures vs. real artifacts
 
 The top-level `README.md` advertises crypto throughput of **decrypt ~9–10 GB/s** and **encrypt ~14–16+ GB/s** (around lines 175 and 489–490), explicitly attributing them to "Intel 13th Gen and DDR5 4200 MT/s … typical development hardware". **Treat these as developer-hardware marketing figures, not committed measurements.** They originate from the `[Explicit]` micro-benchmark `src/Cotton.Crypto.Tests/PerformanceTests.cs` (a 1 GiB buffer with thread/chunk-size sweeps) and the standalone chart scripts in `src/Cotton.Crypto.Tests.Charts/` (Python + PNGs, README in Russian) — none of which are part of the committed `performance/` artifacts and none of which run in CI.
 
-The **real, reviewable artifacts** are the baseline JSONs, which tell a different, hardware-bound story. On the committed Intel N100 `machine.standard` baseline (`performance/baselines/linux-x64-intel-r-n100-dotnet10.machine.standard.json`), `Cotton.Storage AES-GCM Encryption` averages **~447 MiB/s** and `Cotton.Storage AES-GCM Decryption` **~471 MiB/s** (`AvgThroughputMBps`, 10 iterations), with the full `Storage Pipeline (Compression + Encryption)` at **~817 MiB/s**. The gap from the README headline is by design: the baseline benchmark drives the full `CryptoProcessor` write path with the configured thread count on modest hardware, whereas the README's GB/s figures measure the bare `AesGcmStreamCipher` on a 1 GiB buffer on high-end DDR5 hardware. Engineers should anchor expectations to the baseline matching their CPU, not the README's GB/s headline.
+The **real, reviewable artifacts** are the result JSONs, which are hardware-bound and should be read by `hardwareId`, mode, and profile.
 
 ## Runtime performance instrumentation (server)
 
@@ -255,7 +242,7 @@ All backend test projects target `net10.0` and use **NUnit 4.6.1** + `NUnit3Test
 
 | Project | Extra packages | Covers | # source files |
 | --- | --- | --- | --- |
-| `Cotton.Crypto.Tests` | `EasyExtensions.Crypto` 3.0.65; golden-vector JSON `TestData/cotton-container-vectors.json` | `AesGcmStreamCipher` (streaming, pipe, edges, format invariants, golden vectors, key derivation, stability/reliability/negativity, diagnostics) + `[Explicit]` `PerformanceTests` | 18 |
+| `Cotton.Crypto.Tests` | golden-vector JSON `TestData/cotton-container-vectors.json` | `AesGcmStreamCipher` (streaming, pipe, edges, format invariants, golden vectors, key derivation, stability/reliability/negativity, diagnostics) + `[Explicit]` `PerformanceTests` | 18 |
 | `Cotton.Storage.Tests` | `Moq` 4.20.72; `s3-test-config.json[.example]` | `CompressionProcessor`, `CryptoProcessor`, `FileStoragePipeline`, `FileSystemStorageBackend`, `S3StorageBackend`, `S3CompatibilityFactory`, `ConcatenatedReadStream`, `StorageKeyHelper`, AES-GCM interop, cross-impl integration | 10 |
 | `Cotton.Previews.Tests` | `SixLabors.ImageSharp` 4.0.0 | Preview generators: image, pdf, svg, audio, text, STL thumbnail, provider selection | 7 |
 | `Cotton.Autoconfig.Tests` | `Microsoft.Extensions.Configuration` 10.0.8 | `ConfigurationBuilderExtensions` (key derivation/config) | 1 |
@@ -313,13 +300,13 @@ CI runs `dotnet test` with `--logger trx --results-directory TestResults`, produ
 - Cryptography is the most thoroughly tested area: streaming, pipe, format invariants, golden vectors, interop, key derivation, and adversarial/negativity/stability suites (`Cotton.Crypto.Tests`, plus `AesGcmStreamCipherInteropTests` in `Cotton.Storage.Tests`).
 - Storage processors, the pipeline, and both filesystem and S3 backends have direct unit tests plus interop/integration tests.
 - Integration tests run the *real* server against *real* Postgres via `WebApplicationFactory`, giving high-fidelity endpoint/job coverage (auth, chunks, layouts, trash, HLS, archive, WebDAV, integrity, master-key lifecycle, GC, storage-pipeline probe).
-- The benchmark harness produces structured, schema-versioned, per-hardware baselines with an automated regression gate.
+- The benchmark harness produces structured, schema-versioned, per-hardware results with an automated regression gate.
 
 **Gaps**
 
 - The README's marquee encrypt/decrypt GB/s numbers are not committed artifacts and not CI-verified; only `[Explicit]` micro-benchmarks and out-of-tree chart scripts produce them.
 - `development`-mode benchmarks cover only filesystem / pipeline / chunk-upload / preview-memory; the PostgreSQL-backed listing/upload/download/WebDAV/archive/integrity scenarios remain a roadmap (`performance/README.md`).
-- The committed baselines are an older 9-benchmark snapshot and do not yet include the three `Chunk Upload Processing` benchmarks now built in `machine` mode, so those compare as "no baseline yet" until refreshed.
+- The committed reviewed results are hardware-specific and should be refreshed by running the one-command storage-path script on each measured machine.
 - The `Benchmark` entity / `BenchmarkType` enum are schema-only dead code; no server diagnostic populates them, and no admin UI surfaces performance data.
 - `Cotton.Autoconfig.Tests` and `Cotton.Validators.Tests` are single-file and thin relative to the modules they cover.
 - Integration tests require an operator-provided Postgres and frequently drop/create databases; they are not hermetic (no Testcontainers), so a misconfigured local Postgres yields confusing failures.

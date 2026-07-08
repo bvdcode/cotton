@@ -48,6 +48,7 @@ namespace Cotton.Server.Handlers.Nodes
         ILogger<DeleteNodeQueryHandler> _logger,
         UserStorageQuotaService _quota,
         ISyncChangeRecorder _syncChanges,
+        ILayoutMutationGate _layoutGate,
         FileVersionService _versions)
             : IRequestHandler<DeleteNodeQuery>
     {
@@ -76,11 +77,10 @@ namespace Cotton.Server.Handlers.Nodes
 
         private async Task MoveToTrashAsync(DeleteNodeQuery command, Node node, CancellationToken ct)
         {
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(node.LayoutId, ct);
             await using IDbContextTransaction? tx = _dbContext.Database.CurrentTransaction is null
                 ? await _dbContext.Database.BeginTransactionAsync(ct)
                 : null;
-
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, node.LayoutId, ct);
 
             node = await _dbContext.Nodes
                     .Where(x => x.Id == command.NodeId && x.OwnerId == command.UserId)

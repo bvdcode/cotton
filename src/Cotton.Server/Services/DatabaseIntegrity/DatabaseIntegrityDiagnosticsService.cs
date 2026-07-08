@@ -19,7 +19,8 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </remarks>
     public class DatabaseIntegrityDiagnosticsService(
         CottonDbContext _dbContext,
-        IDatabaseIntegrityDescriptorRegistry _descriptors)
+        IDatabaseIntegrityDescriptorRegistry _descriptors,
+        DatabaseIntegrityRuntimeOptions _runtimeOptions)
     {
         // Descriptors are discovered at runtime, while EF's Set<TEntity>() API is generic. Reflection is contained in this
         // adapter so descriptors can remain simple policy objects without knowing about DbSet plumbing.
@@ -36,6 +37,16 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         /// </summary>
         public async Task<DatabaseIntegrityDiagnosticsDto> GetSnapshotAsync(CancellationToken cancellationToken)
         {
+            if (!_runtimeOptions.ReadValidationEnabled)
+            {
+                return new DatabaseIntegrityDiagnosticsDto
+                {
+                    Enabled = false,
+                    ProtectedEntityTypes = _descriptors.All.Count,
+                    UnsignedProtectedRows = 0,
+                };
+            }
+
             int unsignedRows = 0;
             foreach (IDatabaseIntegrityDescriptor descriptor in _descriptors.All)
             {
@@ -66,14 +77,11 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             CancellationToken cancellationToken)
             where TEntity : class
         {
-            int?[] acceptedVersions =
-                [.. DatabaseIntegrityDescriptorVersions.GetAcceptedSchemaVersions(descriptor).Select(x => (int?)x)];
-
             return _dbContext.Set<TEntity>()
                 .CountAsync(x => EF.Property<byte[]?>(x, DatabaseIntegrityColumns.MacProperty) == null
-                    || !acceptedVersions.Contains(EF.Property<int?>(
+                    || EF.Property<int?>(
                         x,
-                        DatabaseIntegrityColumns.VersionProperty)),
+                        DatabaseIntegrityColumns.VersionProperty) != descriptor.SchemaVersion,
                     cancellationToken);
         }
     }

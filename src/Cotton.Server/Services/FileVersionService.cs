@@ -34,6 +34,7 @@ namespace Cotton.Server.Services
         FileVersionStorageService _storage,
         UserStorageQuotaService _quota,
         ISyncChangeRecorder _syncChanges,
+        ILayoutMutationGate _layoutGate,
         ILogger<FileVersionService> _logger)
     {
         private const int VersionDownloadTokenLength = 16;
@@ -106,10 +107,10 @@ namespace Cotton.Server.Services
             Guid versionId,
             CancellationToken ct = default)
         {
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-
             NodeFile current = await LoadCurrentFileOrThrowAsync(userId, nodeFileId, tracking: true, ct);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, current.Node.LayoutId, ct);
+
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(current.Node.LayoutId, ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
 
             NodeFile version = await LoadHistoricalVersionOrThrowAsync(userId, GetLineageId(current), versionId, tracking: true, ct);
             long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(userId, current.Id, version.FileManifestId, ct);
@@ -149,10 +150,10 @@ namespace Cotton.Server.Services
             Guid versionId,
             CancellationToken ct = default)
         {
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-
             NodeFile current = await LoadCurrentFileOrThrowAsync(userId, nodeFileId, tracking: true, ct);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, current.Node.LayoutId, ct);
+
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(current.Node.LayoutId, ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
 
             Guid lineageId = GetLineageId(current);
             List<NodeFile> historicalVersions = await LoadHistoricalVersionsAsync(userId, lineageId, tracking: true, ct);
@@ -178,10 +179,10 @@ namespace Cotton.Server.Services
             Guid versionId,
             CancellationToken ct = default)
         {
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-
             NodeFile version = await LoadHistoricalVersionByIdOrThrowAsync(userId, versionId, tracking: true, ct);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, version.Node.LayoutId, ct);
+
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(version.Node.LayoutId, ct);
+            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
 
             List<NodeFile> historicalVersions = await LoadHistoricalVersionsAsync(
                 userId,

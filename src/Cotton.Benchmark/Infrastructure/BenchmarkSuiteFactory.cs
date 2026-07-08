@@ -11,50 +11,28 @@ namespace Cotton.Benchmark.Infrastructure
     {
         public static List<IBenchmark> Create(BenchmarkConfiguration configuration, BenchmarkOptions options)
         {
-            List<IBenchmark> benchmarks = options.Mode switch
+            if (options.Mode != BenchmarkMode.StoragePaths)
             {
-                BenchmarkMode.Machine => CreateMachineBenchmarks(configuration, options),
-                BenchmarkMode.Development => CreateDevelopmentBenchmarks(configuration, options.Profile),
-                _ => throw new ArgumentOutOfRangeException(nameof(options), options.Mode, "Unsupported benchmark mode.")
-            };
+                throw new ArgumentOutOfRangeException(nameof(options), options.Mode, "Unsupported benchmark mode.");
+            }
 
+            List<IBenchmark> benchmarks = CreateStoragePathBenchmarks(configuration);
             return ApplyScenarioFilters(benchmarks, options.ScenarioFilters);
         }
 
-        private static List<IBenchmark> CreateMachineBenchmarks(BenchmarkConfiguration configuration, BenchmarkOptions options)
-        {
-            List<IBenchmark> benchmarks =
-            [
-                new MemoryStreamBenchmark(configuration),
-                new HashingBenchmark(configuration),
-                new ChunkUploadProcessingBenchmark(configuration, ChunkUploadDataProfile.CompressibleText),
-                new ChunkUploadProcessingBenchmark(configuration, ChunkUploadDataProfile.MixedContent),
-                new ChunkUploadProcessingBenchmark(configuration, ChunkUploadDataProfile.RandomBinary),
-                new CompressionBenchmark(configuration),
-                new DecompressionBenchmark(configuration),
-                new MultiSizeCompressionBenchmark(configuration),
-                new EncryptionBenchmark(configuration),
-                new DecryptionBenchmark(configuration),
-                new FileSystemBenchmark(configuration),
-                new PipelineBenchmark(configuration)
-            ];
-
-            if (ShouldIncludeExtremeLevelSweep(options.ScenarioFilters))
-            {
-                benchmarks.Add(new CompressionLevelsBenchmark(configuration));
-            }
-
-            return benchmarks;
-        }
-
-        private static List<IBenchmark> CreateDevelopmentBenchmarks(BenchmarkConfiguration configuration, BenchmarkProfile profile)
+        private static List<IBenchmark> CreateStoragePathBenchmarks(BenchmarkConfiguration configuration)
         {
             return
             [
-                new FileSystemBenchmark(configuration),
+                new HashingBenchmark(configuration),
+                new CompressionBenchmark(configuration),
+                new DecompressionBenchmark(configuration),
+                new EncryptionBenchmark(configuration),
+                new DecryptionBenchmark(configuration),
+                new FileSystemWriteBenchmark(configuration),
+                new FileSystemReadBenchmark(configuration),
                 new ChunkUploadProcessingBenchmark(configuration, ChunkUploadDataProfile.MixedContent),
-                new PipelineBenchmark(configuration),
-                new ImagePreviewMemoryBenchmark(configuration, profile)
+                new PipelineReadBenchmark(configuration)
             ];
         }
 
@@ -74,24 +52,6 @@ namespace Cotton.Benchmark.Infrastructure
         private static bool MatchesFilter(IBenchmark benchmark, string filter)
         {
             return TextMatchesFilter(benchmark.Name, filter);
-        }
-
-        private static bool ShouldIncludeExtremeLevelSweep(IReadOnlyList<string> filters)
-        {
-            if (filters.Count == 0)
-            {
-                return false;
-            }
-
-            string[] aliases =
-            [
-                "ZstdSharp Extreme Level Sweep (-5..22)",
-                "compression-levels",
-                "extreme-level-sweep",
-                "zstd-extreme"
-            ];
-
-            return filters.Any(filter => aliases.Any(alias => TextMatchesFilter(alias, filter)));
         }
 
         private static bool TextMatchesFilter(string value, string filter)

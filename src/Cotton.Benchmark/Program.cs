@@ -20,11 +20,6 @@ namespace Cotton.Benchmark
     {
         private static async Task<int> Main(string[] args)
         {
-            if (PreviewMemoryWorker.IsWorkerInvocation(args))
-            {
-                return await PreviewMemoryWorker.RunAsync(args, CancellationToken.None).ConfigureAwait(false);
-            }
-
             BenchmarkOptions options;
             try
             {
@@ -153,13 +148,24 @@ namespace Cotton.Benchmark
         private static async Task<int> SaveAndCompareAsync(BenchmarkOptions options, BenchmarkRunDocument runDocument)
         {
             var artifactStore = new BenchmarkArtifactStore(options.BaselineDirectory, options.ResultsDirectory);
-            string resultPath = await artifactStore.SaveResultAsync(runDocument, CancellationToken.None);
-            Console.WriteLine($"Saved benchmark result: {resultPath}");
+            BenchmarkStoragePathSummaryDocument storagePathSummary = BenchmarkStoragePathSummaryDocument.Create(runDocument);
 
             if (options.UpdateBaseline)
             {
-                string baselinePath = await artifactStore.SaveBaselineAsync(runDocument, CancellationToken.None);
-                Console.WriteLine($"Updated benchmark baseline: {baselinePath}");
+                string baselineSummaryPath = await artifactStore.SaveBaselineSummaryAsync(
+                    storagePathSummary,
+                    CancellationToken.None);
+                Console.WriteLine($"Updated benchmark result: {baselineSummaryPath}");
+            }
+            else
+            {
+                string resultPath = await artifactStore.SaveResultAsync(runDocument, CancellationToken.None);
+                Console.WriteLine($"Saved scratch benchmark result: {resultPath}");
+                string resultSummaryPath = await artifactStore.SaveResultSummaryAsync(
+                    resultPath,
+                    storagePathSummary,
+                    CancellationToken.None);
+                Console.WriteLine($"Saved scratch storage path result: {resultSummaryPath}");
             }
 
             if (!options.CompareBaseline)
@@ -170,7 +176,7 @@ namespace Cotton.Benchmark
             BenchmarkRunDocument? baseline = await artifactStore.LoadBaselineAsync(runDocument, CancellationToken.None);
             if (baseline is null)
             {
-                Console.Error.WriteLine($"No baseline found: {artifactStore.GetBaselinePath(runDocument)}");
+                Console.Error.WriteLine($"No reviewed result found: {artifactStore.GetBaselinePath(runDocument)}");
                 Console.Error.WriteLine("Run again with --update-baseline after reviewing the result.");
                 return 2;
             }
@@ -183,7 +189,16 @@ namespace Cotton.Benchmark
         private static string FormatEnum<TEnum>(TEnum value)
             where TEnum : struct, Enum
         {
-            return value.ToString().ToLowerInvariant();
+            string text = value.ToString();
+            return string.Concat(text.Select((character, index) =>
+            {
+                if (index > 0 && char.IsUpper(character))
+                {
+                    return $"-{char.ToLowerInvariant(character)}";
+                }
+
+                return char.ToLowerInvariant(character).ToString();
+            }));
         }
 
         private static void PrintHeader()
@@ -194,7 +209,7 @@ namespace Cotton.Benchmark
             Console.WriteLine("                                                                  ");
             Console.WriteLine("           Cotton Cloud - Performance Benchmark Suite            ");
             Console.WriteLine("                                                                  ");
-            Console.WriteLine("  Local machine benchmarks and Cotton regression baselines        ");
+            Console.WriteLine("  Local storage-path benchmarks and reviewed results              ");
             Console.WriteLine("                                                                  ");
             Console.WriteLine("==================================================================");
             Console.ResetColor();
@@ -211,8 +226,8 @@ namespace Cotton.Benchmark
             Console.WriteLine($"  • Mode:                {FormatEnum(options.Mode)}");
             Console.WriteLine($"  • Profile:             {FormatEnum(options.Profile)}");
             Console.WriteLine($"  • Hardware Key:        {hardwareFingerprint.Key}");
-            Console.WriteLine($"  • Baseline Directory:  {options.BaselineDirectory}");
-            Console.WriteLine($"  • Results Directory:   {options.ResultsDirectory}");
+            Console.WriteLine($"  • Results Directory:   {options.BaselineDirectory}");
+            Console.WriteLine($"  • Scratch Directory:   {options.ResultsDirectory}");
             Console.WriteLine();
             Console.WriteLine("Configuration:");
             Console.WriteLine($"  • Data Size:           {FormatBytes(configuration.DataSizeBytes)}");
@@ -256,20 +271,19 @@ namespace Cotton.Benchmark
             Console.WriteLine();
             Console.WriteLine("Options:");
             Console.WriteLine("  -h, --help              Show this help message");
-            Console.WriteLine("  --mode <value>          machine | development");
+            Console.WriteLine("  --mode <value>          storage-paths");
             Console.WriteLine("  --profile <value>       quick | standard | full");
             Console.WriteLine("  --scenario <filter>     Run only matching benchmark names; can be comma-separated");
             Console.WriteLine("  --compression-level <n> Override Zstd level for configured pipeline benchmarks");
             Console.WriteLine("  --list                  List benchmarks for the selected mode");
-            Console.WriteLine("  --compare               Compare with the committed baseline for this hardware key");
-            Console.WriteLine("  --update-baseline       Save this run as the reviewed baseline; default for full non-compare runs");
-            Console.WriteLine("  --no-update-baseline    Save only an unreviewed result");
-            Console.WriteLine("  --baseline-dir <path>   Baseline directory; default <repo>/performance/baselines");
-            Console.WriteLine("  --results-dir <path>    Unreviewed result directory; default <repo>/performance/results");
+            Console.WriteLine("  --compare               Compare with the committed result for this hardware key");
+            Console.WriteLine("  --update-baseline       Save this run as the reviewed result; default for full non-compare runs");
+            Console.WriteLine("  --no-update-baseline    Save only a scratch result");
+            Console.WriteLine("  --baseline-dir <path>   Reviewed result directory; default <repo>/performance/results");
+            Console.WriteLine("  --results-dir <path>    Scratch result directory; default <repo>/.temp/benchmark-results");
             Console.WriteLine();
             Console.WriteLine("Modes:");
-            Console.WriteLine("  machine      Portable benchmarks without PostgreSQL; useful for comparing hardware.");
-            Console.WriteLine("  development  Local Cotton regression scenarios; PostgreSQL scenarios belong here.");
+            Console.WriteLine("  storage-paths Public write/read storage-path benchmarks used for published results.");
         }
 
         private static string FormatBytes(long bytes)

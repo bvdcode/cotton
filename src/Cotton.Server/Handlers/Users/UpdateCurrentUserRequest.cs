@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Auth;
+using Cotton.Crypto;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Previews;
@@ -10,9 +11,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Validators;
-using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
-using EasyExtensions.Extensions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;

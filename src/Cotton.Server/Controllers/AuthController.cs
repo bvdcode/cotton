@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Auth;
+using Cotton.Crypto;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
@@ -25,7 +26,6 @@ using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Database;
-using EasyExtensions.Extensions;
 using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
@@ -38,6 +38,7 @@ using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using CottonLoginRequestDto = Cotton.Auth.LoginRequestDto;
+using CottonStreamCipher = Cotton.Crypto.IStreamCipher;
 
 namespace Cotton.Server.Controllers
 {
@@ -48,7 +49,7 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Auth)]
     public class AuthController(
         IMediator _mediator,
-        IStreamCipher _crypto,
+        CottonStreamCipher _crypto,
         SettingsProvider _settings,
         CottonDbContext _dbContext,
         IPasswordHashService _hasher,

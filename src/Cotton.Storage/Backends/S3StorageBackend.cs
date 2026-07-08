@@ -110,7 +110,10 @@ namespace Cotton.Storage.Backends
         }
 
         /// <inheritdoc />
-        public async Task WriteAsync(string uid, Stream source)
+        public async Task WriteAsync(
+            string uid,
+            Stream source,
+            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
             ArgumentNullException.ThrowIfNull(source);
@@ -118,7 +121,7 @@ namespace Cotton.Storage.Backends
             IAmazonS3 s3 = _s3Provider.GetS3Client();
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
-            if (await ExistsAsync(uid).ConfigureAwait(false))
+            if (writeMode == StorageWriteMode.CreateIfMissing && await ExistsAsync(uid).ConfigureAwait(false))
             {
                 return;
             }

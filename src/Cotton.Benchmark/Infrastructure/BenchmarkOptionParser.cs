@@ -9,7 +9,7 @@ namespace Cotton.Benchmark.Infrastructure
     {
         public static BenchmarkOptions Parse(string[] args)
         {
-            BenchmarkMode mode = BenchmarkMode.Machine;
+            BenchmarkMode mode = BenchmarkMode.StoragePaths;
             BenchmarkProfile profile = BenchmarkProfile.Standard;
             bool list = false;
             bool compare = false;
@@ -105,8 +105,36 @@ namespace Cotton.Benchmark.Infrastructure
                 return parsed;
             }
 
-            string supportedValues = string.Join(", ", Enum.GetNames<TEnum>().Select(x => x.ToLowerInvariant()));
+            string normalizedValue = NormalizeEnumToken(value);
+            foreach (string name in Enum.GetNames<TEnum>())
+            {
+                if (NormalizeEnumToken(name).Equals(normalizedValue, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Enum.Parse<TEnum>(name);
+                }
+            }
+
+            string supportedValues = string.Join(", ", Enum.GetNames<TEnum>().Select(FormatEnumName));
             throw new ArgumentException($"Invalid {optionName} value '{value}'. Supported values: {supportedValues}.");
+        }
+
+        private static string NormalizeEnumToken(string value)
+        {
+            return value.Replace("-", string.Empty, StringComparison.Ordinal)
+                .Replace("_", string.Empty, StringComparison.Ordinal);
+        }
+
+        private static string FormatEnumName(string value)
+        {
+            return string.Concat(value.Select((character, index) =>
+            {
+                if (index > 0 && char.IsUpper(character))
+                {
+                    return $"-{char.ToLowerInvariant(character)}";
+                }
+
+                return char.ToLowerInvariant(character).ToString();
+            }));
         }
 
         private static string ReadValue(string[] args, ref int index, string optionName)

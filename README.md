@@ -116,7 +116,7 @@ A file should not become an opaque blob you are afraid to touch once it enters t
 - **Inline compression + dedup.** Compression runs before encryption, and content identity is established independently of encrypted bytes, so dedup keeps working with crypto fully enabled.
 - **Thin on the hot path.** The streaming pipeline reuses buffers (`ArrayPool`, bounded `System.IO.Pipelines`) to stay light in RAM during sustained large transfers.
 - **Partial reads are first-class.** Range requests, media seeking, and preview extraction are designed into the storage engine.
-- **Benchmarks use real production code.** The suite exercises the real compression/crypto processors, filesystem backend, and full pipeline. Reviewed baselines live under [performance/baselines](performance/baselines); see [src/Cotton.Benchmark/README.md](src/Cotton.Benchmark/README.md).
+- **Benchmarks use real production code.** The suite exercises the real compression/crypto processors, filesystem backend, and full pipeline. Reviewed results live under [performance/results](performance/results); see [src/Cotton.Benchmark/README.md](src/Cotton.Benchmark/README.md).
 
 ---
 
@@ -300,7 +300,7 @@ Writes flow through the storage pipeline **compression → crypto → backend** 
 - `src/cotton.client` — React/TypeScript/Vite frontend.
 - `docs/technical/` — full engineering documentation (28 sections).
 
-> Note: the runtime cipher is the in-repo `Cotton.Crypto` project. The `EasyExtensions.Crypto` NuGet package is referenced only by `Cotton.Crypto.Tests` for legacy stream-format (`CTN1`) interop; the current format is `CTN2`.
+> Note: the runtime cipher and stream-cipher helpers are implemented in the in-repo `Cotton.Crypto` project. Legacy stream-format (`CTN1`) interop is covered by local golden vectors; the current format is `CTN2`.
 
 ---
 

@@ -40,12 +40,10 @@ msbuild.wrn
 *.sqlite-wal
 [Tt]est[Rr]esults/
 *.trx
-performance/results/
-BenchmarkDotNet.Artifacts/
 *.key
 data
 notes/
+.temp/
 sixlabors.lic
 AGENTS.md
-# Local visual-QA scratch (capture scripts + screenshots)
 .qa/

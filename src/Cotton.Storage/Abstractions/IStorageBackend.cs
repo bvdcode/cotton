@@ -38,9 +38,12 @@ namespace Cotton.Storage.Abstractions
         Task<Stream> ReadAsync(string uid);
 
         /// <summary>
-        /// Writes the supplied blob stream if the UID is not already present.
+        /// Writes the supplied blob stream according to the requested write mode.
         /// </summary>
-        Task WriteAsync(string uid, Stream stream);
+        Task WriteAsync(
+            string uid,
+            Stream stream,
+            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing);
 
         /// <summary>
         /// Lists every storage UID known to the backend for consistency checks.

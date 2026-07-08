@@ -36,6 +36,7 @@ namespace Cotton.Server.Handlers.WebDav
         IWebDavPathResolver _pathResolver,
         IEventNotificationService _eventNotification,
         ISyncChangeRecorder _syncChanges,
+        ILayoutMutationGate _layoutGate,
         ILogger<WebDavMoveRequestHandler> _logger)
         : IRequestHandler<WebDavMoveRequest, WebDavMoveResult>
     {
@@ -44,26 +45,26 @@ namespace Cotton.Server.Handlers.WebDav
         /// </summary>
         public async Task<WebDavMoveResult> Handle(WebDavMoveRequest request, CancellationToken ct)
         {
-            PreLockSourceOutcome preLock = await ResolvePreLockSourceAsync(request, ct);
-            if (preLock.Failure is not null)
+            PreTransactionSourceOutcome preTransaction = await ResolvePreTransactionSourceAsync(request, ct);
+            if (preTransaction.Failure is not null)
             {
-                return preLock.Failure;
+                return preTransaction.Failure;
             }
 
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(preTransaction.LayoutId!.Value, ct);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, preLock.LayoutId!.Value, ct);
 
-            LockedMoveOutcome lockedMove = await PrepareLockedMoveAsync(request, preLock.LayoutId.Value, ct);
-            if (lockedMove.Failure is not null)
+            MovePreparationOutcome preparedMove = await PrepareMoveInTransactionAsync(request, preTransaction.LayoutId.Value, ct);
+            if (preparedMove.Failure is not null)
             {
-                return lockedMove.Failure;
+                return preparedMove.Failure;
             }
 
             WebDavMoveResult? moveFailure = await TryPerformMoveAsync(
                 request,
-                lockedMove.Source!,
-                lockedMove.DestinationParent!,
-                lockedMove.OldParentId,
+                preparedMove.Source!,
+                preparedMove.DestinationParent!,
+                preparedMove.OldParentId,
                 ct);
             if (moveFailure is not null)
             {
@@ -72,54 +73,54 @@ namespace Cotton.Server.Handlers.WebDav
 
             await _dbContext.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
-            await NotifyAfterCommitAsync(request, lockedMove.Source!, lockedMove.OldParentId, ct);
+            await NotifyAfterCommitAsync(request, preparedMove.Source!, preparedMove.OldParentId, ct);
 
-            (Guid? NodeId, Guid? NodeFileId) movedIds = GetMovedIds(lockedMove.Source!);
-            return Ok(lockedMove.Created, movedIds.NodeId, movedIds.NodeFileId);
+            (Guid? NodeId, Guid? NodeFileId) movedIds = GetMovedIds(preparedMove.Source!);
+            return Ok(preparedMove.Created, movedIds.NodeId, movedIds.NodeFileId);
         }
 
-        private async Task<PreLockSourceOutcome> ResolvePreLockSourceAsync(WebDavMoveRequest request, CancellationToken ct)
+        private async Task<PreTransactionSourceOutcome> ResolvePreTransactionSourceAsync(WebDavMoveRequest request, CancellationToken ct)
         {
             WebDavResolveResult source = await ResolveSourceAsync(request, ct);
             WebDavMoveResult? failure = TryGetSourceValidationFailure(request, source);
             if (failure is not null)
             {
-                return PreLockSourceOutcome.Failed(failure);
+                return PreTransactionSourceOutcome.Failed(failure);
             }
 
             Guid layoutId = await GetSourceLayoutIdAsync(source, ct);
-            return PreLockSourceOutcome.Success(layoutId);
+            return PreTransactionSourceOutcome.Success(layoutId);
         }
 
-        private async Task<LockedMoveOutcome> PrepareLockedMoveAsync(
+        private async Task<MovePreparationOutcome> PrepareMoveInTransactionAsync(
             WebDavMoveRequest request,
             Guid sourceLayoutId,
             CancellationToken ct)
         {
             WebDavResolveResult source = await ResolveSourceAsync(request, ct);
-            WebDavMoveResult? sourceFailure = await ValidateLockedSourceAsync(request, source, sourceLayoutId, ct);
+            WebDavMoveResult? sourceFailure = await ValidateSourceInTransactionAsync(request, source, sourceLayoutId, ct);
             if (sourceFailure is not null)
             {
-                return LockedMoveOutcome.Failed(sourceFailure);
+                return MovePreparationOutcome.Failed(sourceFailure);
             }
 
             WebDavParentResult destination = await GetAndValidateDestinationParentAsync(request, ct);
-            WebDavMoveResult? destinationFailure = ValidateLockedDestination(destination, request, sourceLayoutId);
+            WebDavMoveResult? destinationFailure = ValidateDestinationInTransaction(destination, request, sourceLayoutId);
             if (destinationFailure is not null)
             {
-                return LockedMoveOutcome.Failed(destinationFailure);
+                return MovePreparationOutcome.Failed(destinationFailure);
             }
 
             (bool Created, bool Allowed) overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
             if (!overwriteResult.Allowed)
             {
-                return LockedMoveOutcome.Failed(Fail(WebDavMoveError.DestinationExists));
+                return MovePreparationOutcome.Failed(Fail(WebDavMoveError.DestinationExists));
             }
 
-            return LockedMoveOutcome.Success(source, destination, overwriteResult.Created, GetOldParentId(source));
+            return MovePreparationOutcome.Success(source, destination, overwriteResult.Created, GetOldParentId(source));
         }
 
-        private async Task<WebDavMoveResult?> ValidateLockedSourceAsync(
+        private async Task<WebDavMoveResult?> ValidateSourceInTransactionAsync(
             WebDavMoveRequest request,
             WebDavResolveResult source,
             Guid sourceLayoutId,
@@ -136,11 +137,11 @@ namespace Cotton.Server.Handlers.WebDav
                 return null;
             }
 
-            _logger.LogDebug("WebDAV MOVE: Source layout changed while waiting for lock: {Path}", request.SourcePath);
+            _logger.LogDebug("WebDAV MOVE: Source layout changed during move preparation: {Path}", request.SourcePath);
             return Fail(WebDavMoveError.SourceNotFound);
         }
 
-        private WebDavMoveResult? ValidateLockedDestination(
+        private WebDavMoveResult? ValidateDestinationInTransaction(
             WebDavParentResult destination,
             WebDavMoveRequest request,
             Guid sourceLayoutId)
@@ -156,7 +157,7 @@ namespace Cotton.Server.Handlers.WebDav
                 return null;
             }
 
-            _logger.LogDebug("WebDAV MOVE: Destination parent layout differs from locked source layout: {Path}", request.DestinationPath);
+            _logger.LogDebug("WebDAV MOVE: Destination parent layout differs from source layout: {Path}", request.DestinationPath);
             return Fail(WebDavMoveError.DestinationParentNotFound);
         }
 
@@ -167,20 +168,20 @@ namespace Cotton.Server.Handlers.WebDav
                 : source.NodeFile?.NodeId;
         }
 
-        private record PreLockSourceOutcome(Guid? LayoutId, WebDavMoveResult? Failure)
+        private record PreTransactionSourceOutcome(Guid? LayoutId, WebDavMoveResult? Failure)
         {
             /// <summary>
             /// Creates a successful operation result.
             /// </summary>
-            public static PreLockSourceOutcome Success(Guid layoutId) => new(layoutId, null);
+            public static PreTransactionSourceOutcome Success(Guid layoutId) => new(layoutId, null);
 
             /// <summary>
             /// Creates a failed operation result.
             /// </summary>
-            public static PreLockSourceOutcome Failed(WebDavMoveResult failure) => new(null, failure);
+            public static PreTransactionSourceOutcome Failed(WebDavMoveResult failure) => new(null, failure);
         }
 
-        private record LockedMoveOutcome(
+        private record MovePreparationOutcome(
             WebDavResolveResult? Source,
             WebDavParentResult? DestinationParent,
             bool Created,
@@ -190,7 +191,7 @@ namespace Cotton.Server.Handlers.WebDav
             /// <summary>
             /// Creates a successful operation result.
             /// </summary>
-            public static LockedMoveOutcome Success(
+            public static MovePreparationOutcome Success(
                 WebDavResolveResult source,
                 WebDavParentResult destinationParent,
                 bool created,
@@ -199,7 +200,7 @@ namespace Cotton.Server.Handlers.WebDav
             /// <summary>
             /// Creates a failed operation result.
             /// </summary>
-            public static LockedMoveOutcome Failed(WebDavMoveResult failure) => new(null, null, false, null, failure);
+            public static MovePreparationOutcome Failed(WebDavMoveResult failure) => new(null, null, false, null, failure);
         }
 
         private async Task<Guid> GetSourceLayoutIdAsync(WebDavResolveResult source, CancellationToken ct)

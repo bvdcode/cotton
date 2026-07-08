@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Crypto;
 using Cotton.Database.Models;
 using DbUser = Cotton.Database.Models.User;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
-using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using Microsoft.Extensions.Primitives;

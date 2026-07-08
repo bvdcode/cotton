@@ -26,6 +26,19 @@ public class GoldenVectorsTests
     }
 
     [Test]
+    public async Task Shared_LegacyCtn1Vector_Decrypts()
+    {
+        SharedContainerVectors vectors = LoadSharedContainerVectors();
+        using var cipher = new AesGcmStreamCipher(vectors.MasterKey, keyId: 1, threads: 1);
+        using var input = new MemoryStream(vectors.LegacyCtn1SingleChunk, writable: false);
+        using var output = new MemoryStream();
+
+        await cipher.DecryptAsync(input, output);
+
+        Assert.That(output.ToArray(), Is.EqualTo(vectors.Plaintext));
+    }
+
+    [Test]
     public async Task Shared_Ctn2Vector_DeterministicWrite_MatchesFixture()
     {
         SharedContainerVectors vectors = LoadSharedContainerVectors();
@@ -106,6 +119,9 @@ public class GoldenVectorsTests
         JsonElement ctn2 = root
             .GetProperty("vectors")
             .GetProperty("cottonCtn2SingleChunk");
+        JsonElement legacyCtn1 = root
+            .GetProperty("vectors")
+            .GetProperty("legacyCtn1SingleChunk");
 
         return new SharedContainerVectors(
             ReadHex(root, "masterKeyHex"),
@@ -114,6 +130,7 @@ public class GoldenVectorsTests
             ReadHex(root, "noncePrefixHex"),
             ReadHex(root, "fileKeyNonceHex"),
             ctn2.GetProperty("chunkSize").GetInt32(),
+            ReadHex(legacyCtn1, "hex"),
             ReadHex(ctn2, "hex"));
     }
 
@@ -131,6 +148,7 @@ public class GoldenVectorsTests
         byte[] NoncePrefix,
         byte[] FileKeyNonce,
         int Ctn2ChunkSize,
+        byte[] LegacyCtn1SingleChunk,
         byte[] Ctn2SingleChunk);
 
     private class SequenceRandomNumberGenerator : RandomNumberGenerator

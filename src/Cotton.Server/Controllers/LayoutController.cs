@@ -55,6 +55,7 @@ namespace Cotton.Server.Controllers
         IStoragePipeline _storage,
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
+        ILayoutMutationGate _layoutGate,
         ArchiveDownloadService _archives) : ControllerBase
     {
         private const int DefaultSharedFolderTokenLength = 16;
@@ -176,12 +177,8 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("Node not found.");
             }
-
-            // Serialize per-layout: rename changes NameKey, which can collide with
-            // a concurrent move/create/rename of a same-key entry in the same parent
-            // (cross-table) under shared namespace rules.
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId.Value, HttpContext.RequestAborted);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId.Value, default);
 
             Node? node = await _dbContext.Nodes
                 .Where(x => x.Id == nodeId && x.OwnerId == userId)
@@ -385,25 +382,21 @@ namespace Cotton.Server.Controllers
 
             Guid userId = User.GetUserId();
             Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, HttpContext.RequestAborted);
-            Node? preLockParentNode = await _dbContext.Nodes
+            Node? preTransactionParentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == request.ParentId
                     && x.OwnerId == userId
                     && x.LayoutId == layout.Id
                     && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync();
-            if (preLockParentNode is null)
+            if (preTransactionParentNode is null)
             {
                 return CottonResult.NotFound("Parent node not found.");
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-
-            // Per-layout namespace serialization: a concurrent move/rename/create with
-            // the same NameKey under the same parent can otherwise commit a cross-table
-            // duplicate (folder + file with identical normalized name).
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layout.Id, HttpContext.RequestAborted);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layout.Id, default);
 
             Node? parentNode = await _dbContext.Nodes
                 .Where(x => x.Id == request.ParentId

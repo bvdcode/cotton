@@ -16,7 +16,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </remarks>
     public class DatabaseIntegrityCanonicalWriter
     {
-        private static readonly byte[] FormatMagic = Encoding.ASCII.GetBytes("Cotton.DbIntegrity.Row.v1");
         private readonly MemoryStream _stream = new();
 
         /// <summary>
@@ -26,8 +25,11 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         {
             ArgumentNullException.ThrowIfNull(write);
 
-            var writer = new DatabaseIntegrityCanonicalWriter();
-            writer.WriteBytes(FormatMagic);
+            DatabaseIntegrityCanonicalWriter writer = new();
+            writer.WriteBytes(Encoding.ASCII.GetBytes(DatabaseIntegritySignatureContract.PayloadMagic));
+            writer.WriteInt32Field("$payload-format", DatabaseIntegritySignatureContract.PayloadFormatVersion);
+            writer.WriteStringField("$mac", DatabaseIntegritySignatureContract.MacAlgorithm);
+            writer.WriteInt32Field("$canonical-writer", DatabaseIntegritySignatureContract.CanonicalWriterVersion);
             write(writer);
             return writer._stream.ToArray();
         }

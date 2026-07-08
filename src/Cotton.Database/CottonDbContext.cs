@@ -2,16 +2,16 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Reflection;
+using Cotton.Crypto;
 using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Attributes;
-using EasyExtensions.Abstractions;
 using EasyExtensions.EntityFrameworkCore.Database;
-using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
 
 namespace Cotton.Database
 {
@@ -241,6 +241,11 @@ namespace Cotton.Database
         {
             if (value is null || streamCipher is null)
             {
+                if (value is not null)
+                {
+                    throw CreateMissingStreamCipherException();
+                }
+
                 return value;
             }
 
@@ -252,6 +257,11 @@ namespace Cotton.Database
         {
             if (value is null || streamCipher is null)
             {
+                if (value is not null)
+                {
+                    throw CreateMissingStreamCipherException();
+                }
+
                 return value;
             }
 
@@ -260,12 +270,19 @@ namespace Cotton.Database
                 byte[] encryptedBytes = Convert.FromBase64String(value);
                 return streamCipher.DecryptString(encryptedBytes);
             }
-            catch
+            catch (Exception ex) when (ex is FormatException or CryptographicException or InvalidDataException)
             {
-                logger?.LogWarning(
-                    "Failed to decrypt value in encrypted EF converter. Falling back to raw database value.");
-                return value;
+                logger?.LogError(
+                    ex,
+                    "Failed to decrypt value in encrypted EF converter.");
+                throw;
             }
+        }
+
+        private static InvalidOperationException CreateMissingStreamCipherException()
+        {
+            return new InvalidOperationException(
+                "Encrypted EF string conversion requires IStreamCipher. Use a raw startup/probe DbContext for pre-unlock reads.");
         }
     }
 }

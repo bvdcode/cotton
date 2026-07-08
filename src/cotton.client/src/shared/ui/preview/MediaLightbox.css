@@ -128,7 +128,8 @@
   --yarl__thumbnails_thumbnail_background: transparent;
   --yarl__thumbnails_thumbnail_border_color: rgba(255, 255, 255, 0.36);
   --yarl__thumbnails_thumbnail_active_border_color: rgba(255, 255, 255, 0.86);
-  --yarl__thumbnails_thumbnail_focus_box_shadow: 0 0 0 2px rgba(255, 255, 255, 0.32);
+  --yarl__thumbnails_thumbnail_focus_box_shadow: 0 0 0 2px
+    rgba(255, 255, 255, 0.32);
 }
 
 /* Hide cursor when idle for immersive viewing */

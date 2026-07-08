@@ -56,6 +56,7 @@ namespace Cotton.Server.Handlers.Nodes
         TrashRestoreCoordinator _restore,
         NodeSubtreeService _subtree,
         ISyncChangeRecorder _syncChanges,
+        ILayoutMutationGate _layoutGate,
         ILogger<RestoreNodeQueryHandler> _logger)
         : IRequestHandler<RestoreNodeQuery, RestoreOutcomeDto>
     {
@@ -66,8 +67,8 @@ namespace Cotton.Server.Handlers.Nodes
         {
             Guid layoutId = await GetLayoutIdOrThrowAsync(request, ct);
 
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId, ct);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId, ct);
 
             Node node = await LoadNodeOrThrowAsync(request, ct);
             TopLevelTrashWrapperOutcome wrapperOutcome = await ResolveTopLevelTrashWrapperAsync(request, node, ct);

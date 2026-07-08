@@ -7,9 +7,9 @@ namespace Cotton.Benchmark.Infrastructure
     {
         private static readonly Lazy<string> Root = new(ResolveRoot);
 
-        public static string BaselineDirectory => Path.Combine(Root.Value, "performance", "baselines");
+        public static string BaselineDirectory => Path.Combine(Root.Value, "performance", "results");
 
-        public static string ResultsDirectory => Path.Combine(Root.Value, "performance", "results");
+        public static string ResultsDirectory => Path.Combine(Root.Value, ".temp", "benchmark-results");
 
         private static string ResolveRoot()
         {
@@ -36,7 +36,7 @@ namespace Cotton.Benchmark.Infrastructure
             var directory = new DirectoryInfo(startPath);
             while (directory is not null)
             {
-                if (Directory.Exists(Path.Combine(directory.FullName, "performance", "baselines"))
+                if (Directory.Exists(Path.Combine(directory.FullName, "performance", "results"))
                     || File.Exists(Path.Combine(directory.FullName, "performance", "README.md")))
                 {
                     return directory.FullName;

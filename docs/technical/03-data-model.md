@@ -60,7 +60,7 @@ public class CottonDbContext(
     IDatabaseIntegrityChangeSigner? integrityChangeSigner = null) : AuditedDbContext(options)
 ```
 
-`IStreamCipher` is `EasyExtensions.Abstractions.IStreamCipher`; `IDatabaseIntegrityChangeSigner` is the Cotton-defined abstraction in `src/Cotton.Database/Integrity/`. It is registered in DI via `AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)` in `src/Cotton.Server/Program.cs`. That EasyExtensions helper (`EasyExtensions.EntityFrameworkCore.Npgsql`) calls `services.AddDbContext<CottonDbContext>(...)` with the configured connection string and a scoped lifetime by default — it is a standard (non-pooled) `AddDbContext` registration. **Lazy-loading proxies are disabled**, so the `virtual` navigation properties are not auto-loaded — call sites must `Include(...)` or explicitly load related data.
+`IStreamCipher` is `Cotton.Crypto.IStreamCipher`; `IDatabaseIntegrityChangeSigner` is the Cotton-defined abstraction in `src/Cotton.Database/Integrity/`. It is registered in DI via `AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)` in `src/Cotton.Server/Program.cs`. That EasyExtensions helper (`EasyExtensions.EntityFrameworkCore.Npgsql`) calls `services.AddDbContext<CottonDbContext>(...)` with the configured connection string and a scoped lifetime by default — it is a standard (non-pooled) `AddDbContext` registration. **Lazy-loading proxies are disabled**, so the `virtual` navigation properties are not auto-loaded — call sites must `Include(...)` or explicitly load related data.
 
 The design-time factory `CottonDbContextDesignTimeFactory` (`src/Cotton.Database/CottonDbContextDesignTimeFactory.cs`) builds the context for EF tooling from `COTTON_PG_*` environment variables (defaults: `COTTON_PG_HOST=localhost`, `COTTON_PG_PORT=5432`, `COTTON_PG_DATABASE=cotton_dev`, `COTTON_PG_USERNAME=postgres`, `COTTON_PG_PASSWORD=postgres`), and uses `UseAdminDatabase("postgres")`. It passes only `options` to the constructor (no cipher, no signer).
 
@@ -125,7 +125,7 @@ flowchart TD
 
 The converter behavior:
 
-- `EncryptString`: if `value` is null **or** `streamCipher` is null, returns the value unchanged; otherwise encrypts via `streamCipher.EncryptString(value)` and stores the result as Base64 text. (`EncryptString`/`DecryptString` on `IStreamCipher` are extension methods from `EasyExtensions.Extensions.StreamCipherExtensions`.)
+- `EncryptString`: if `value` is null **or** `streamCipher` is null, returns the value unchanged; otherwise encrypts via `streamCipher.EncryptString(value)` and stores the result as Base64 text. (`EncryptString`/`DecryptString` on `IStreamCipher` are extension methods from `Cotton.Crypto.StreamCipherExtensions`.)
 - `DecryptString`: if `value` is null or `streamCipher` is null, returns the value unchanged; otherwise Base64-decodes and calls `streamCipher.DecryptString`. On **any** exception it logs a warning (`"Failed to decrypt value in encrypted EF converter. Falling back to raw database value."`) and returns the **raw stored value** rather than throwing.
 
 This is a graceful-degradation choice: a missing/rotated key yields warnings and ciphertext-as-plaintext reads instead of read failures. The `[Encrypted]`-decorated `string` properties in the model are exactly:

@@ -49,7 +49,11 @@ public class InMemoryStorage : IStoragePipeline
         return Task.FromResult(result: (Stream)ms);
     }
 
-    public async Task WriteAsync(string uid, Stream stream, PipelineContext? context = null)
+    public async Task WriteAsync(
+        string uid,
+        Stream stream,
+        PipelineContext? context = null,
+        StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(uid);
         ArgumentNullException.ThrowIfNull(stream);

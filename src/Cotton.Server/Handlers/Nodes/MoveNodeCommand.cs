@@ -47,6 +47,7 @@ namespace Cotton.Server.Handlers.Nodes
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
         IEventNotificationService _eventNotification,
+        ILayoutMutationGate _layoutGate,
         ILogger<MoveNodeCommandHandler> _logger)
         : IRequestHandler<MoveNodeCommand, NodeDto>
     {
@@ -58,8 +59,8 @@ namespace Cotton.Server.Handlers.Nodes
             ValidateRequest(request);
             Guid sourceLayoutId = await GetSourceLayoutIdOrThrowAsync(request, cancellationToken);
 
+            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(sourceLayoutId, cancellationToken);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, cancellationToken);
 
             Node node = await LoadSourceNodeOrThrowAsync(request, cancellationToken);
             ValidateSourceNode(node);

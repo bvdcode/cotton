@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Crypto;
 using Cotton.Server.Abstractions;
 using Cotton.Database.Integrity;
 using Cotton.Server.Auth;
@@ -11,7 +12,6 @@ using Cotton.Server.Services.Search;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using Cotton.Server.Services.Startup;
 using Cotton.Server.Services.WebDav;
-using EasyExtensions.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Cotton.Server.Extensions
@@ -21,6 +21,11 @@ namespace Cotton.Server.Extensions
     /// </summary>
     public static class ServiceCollectionExtensions
     {
+        private static readonly bool DatabaseIntegrityReadValidationEnabled = false;
+        private static readonly bool DatabaseIntegritySaveOriginalStateValidationEnabled = false;
+        [Obsolete("OBSOLETE TRANSITION: startup version transition validation is disabled because the 0.5.0 release bump is postponed. Remove this switch and re-enable StartupTransitionValidator when a strict transition gate is scheduled again.")]
+        private static readonly bool StartupTransitionValidationEnabled = false;
+
         /// <summary>
         /// Registers stream cipher services.
         /// </summary>
@@ -62,11 +67,22 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
         {
+            services.AddSingleton(new DatabaseIntegrityRuntimeOptions(
+                DatabaseIntegrityReadValidationEnabled,
+                DatabaseIntegritySaveOriginalStateValidationEnabled));
             services.AddSingleton<IDatabaseIntegrityKeyProvider, DatabaseIntegrityKeyProvider>();
             services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
             services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
             services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
-            services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
+            if (DatabaseIntegrityReadValidationEnabled)
+            {
+                services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
+            }
+            else
+            {
+                services.AddScoped<IDatabaseIntegrityVerifier, DisabledDatabaseIntegrityVerifier>();
+            }
+
             services.AddScoped<DatabaseIntegrityDiagnosticsService>();
             services.AddScoped<FileGraphIntegrityVerifier>();
             services.AddSingleton<DatabaseIntegrityFailureReporter>();
@@ -101,7 +117,11 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<TempDirectoryProbe>();
             services.AddScoped<IStartupPreflightValidator, StartupPreflightValidator>();
             services.AddScoped<IStartupCheck, TempDirectoryStartupCheck>();
-            services.AddScoped<IStartupCheck, StartupTransitionValidator>();
+            if (StartupTransitionValidationEnabled)
+            {
+                services.AddScoped<IStartupCheck, StartupTransitionValidator>();
+            }
+
             return services;
         }
 

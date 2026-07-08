@@ -22,8 +22,8 @@ import sharedVectors from "../../../../Cotton.Crypto.Tests/TestData/cotton-conta
 const GOLDEN_CONTAINER_HEX = sharedVectors.vectors.legacyCtn1TwoChunk.hex;
 const COTTON_CTN2_SINGLE_CHUNK_HEX =
   sharedVectors.vectors.cottonCtn2SingleChunk.hex;
-const EASY_EXTENSIONS_SINGLE_CHUNK_HEX =
-  sharedVectors.vectors.legacyEasyExtensionsSingleChunk.hex;
+const LEGACY_CTN1_SINGLE_CHUNK_HEX =
+  sharedVectors.vectors.legacyCtn1SingleChunk.hex;
 
 const GOLDEN_PLAINTEXT = hexToBytes(sharedVectors.plaintextHex);
 const GOLDEN_CHUNK_SIZE = sharedVectors.vectors.legacyCtn1TwoChunk.chunkSize;
@@ -33,7 +33,7 @@ const NONCE_PREFIX = hexToBytes(sharedVectors.noncePrefixHex);
 const FILE_KEY_NONCE = hexToBytes(sharedVectors.fileKeyNonceHex);
 
 describe("Cotton container golden vectors", () => {
-  it("decrypts the fixed EasyExtensions-compatible container", async () => {
+  it("decrypts the fixed legacy CTN1 container", async () => {
     const masterKey = await importMasterKey(MASTER_KEY_BYTES);
     const decrypted = await decryptBlobToBlob(
       new Blob([hexToBytes(GOLDEN_CONTAINER_HEX) as BlobPart]),
@@ -47,10 +47,10 @@ describe("Cotton container golden vectors", () => {
     expect(decrypted.type).toBe("text/plain");
   });
 
-  it("decrypts the single-chunk EasyExtensions fixture", async () => {
+  it("decrypts the single-chunk legacy CTN1 fixture", async () => {
     const masterKey = await importMasterKey(MASTER_KEY_BYTES);
     const decrypted = await decryptBlobToBlob(
-      new Blob([hexToBytes(EASY_EXTENSIONS_SINGLE_CHUNK_HEX) as BlobPart]),
+      new Blob([hexToBytes(LEGACY_CTN1_SINGLE_CHUNK_HEX) as BlobPart]),
       masterKey,
       "text/plain",
     );

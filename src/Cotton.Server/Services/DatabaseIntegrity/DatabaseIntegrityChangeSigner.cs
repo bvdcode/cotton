@@ -19,6 +19,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         private readonly IDatabaseIntegrityProtector _protector;
         private readonly IDatabaseIntegrityDescriptorRegistry _descriptors;
         private readonly IDatabaseIntegrityFailureReporter _failures;
+        private readonly DatabaseIntegrityRuntimeOptions _runtimeOptions;
 
         /// <summary>
         /// Initializes a new save-time integrity signer.
@@ -26,11 +27,13 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         public DatabaseIntegrityChangeSigner(
             IDatabaseIntegrityProtector protector,
             IDatabaseIntegrityDescriptorRegistry descriptors,
-            IDatabaseIntegrityFailureReporter? failures = null)
+            IDatabaseIntegrityFailureReporter failures,
+            DatabaseIntegrityRuntimeOptions runtimeOptions)
         {
             _protector = protector;
             _descriptors = descriptors;
-            _failures = failures ?? NullDatabaseIntegrityFailureReporter.Instance;
+            _failures = failures;
+            _runtimeOptions = runtimeOptions;
         }
 
         /// <inheritdoc />
@@ -63,7 +66,8 @@ namespace Cotton.Server.Services.DatabaseIntegrity
                 // The primary key participates in the signed payload, so signing a temporary EF key would create
                 // a MAC that cannot verify after SaveChanges assigns the real key.
                 EnsureStablePrimaryKey(entry, descriptor);
-                if (entry.State == EntityState.Modified)
+                if (entry.State == EntityState.Modified
+                    && _runtimeOptions.SaveOriginalStateValidationEnabled)
                 {
                     RequireOriginalStateValid(entry, descriptor);
                 }
@@ -102,14 +106,9 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             object? macValue = entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue;
             object originalEntity = entry.OriginalValues.ToObject();
             if (versionValue is int version
+                && version == descriptor.SchemaVersion
                 && macValue is byte[] mac
-                && DatabaseIntegrityDescriptorVersions.TryVerify(
-                    originalEntity,
-                    descriptor,
-                    version,
-                    mac,
-                    _protector,
-                    out _))
+                && _protector.Verify(originalEntity, descriptor, mac))
             {
                 return;
             }
