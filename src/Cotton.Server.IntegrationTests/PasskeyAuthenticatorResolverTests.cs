@@ -45,6 +45,14 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public void ResolveDefaultNameFallsBackToSecurityKeyTransportForZeroAaGuid()
+        {
+            string name = PasskeyAuthenticatorResolver.ResolveDefaultName(Guid.Empty, ["usb", "nfc"]);
+
+            Assert.That(name, Is.EqualTo("Security key"));
+        }
+
+        [Test]
         public void ResolveDefaultNameFallsBackToDeviceTransport()
         {
             string name = PasskeyAuthenticatorResolver.ResolveDefaultName(Guid.NewGuid(), ["internal"]);

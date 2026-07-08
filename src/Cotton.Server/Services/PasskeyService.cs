@@ -96,7 +96,7 @@ namespace Cotton.Server.Services
                     ResidentKey = ResidentKeyRequirement.Required,
                     UserVerification = UserVerificationRequirement.Required
                 },
-                AttestationPreference = AttestationConveyancePreference.None
+                AttestationPreference = AttestationConveyancePreference.Direct
             });
             string requestId = CreateRequestId();
             _cache.Set(

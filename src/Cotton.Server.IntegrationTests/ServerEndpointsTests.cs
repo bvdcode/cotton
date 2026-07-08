@@ -92,6 +92,22 @@ public class ServerEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Begin_Passkey_Registration_Requests_Direct_Attestation()
+    {
+        string token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using HttpResponseMessage response = await _client.PostAsJsonAsync(
+            "/api/v1/auth/passkeys/registration/options",
+            new { Name = "Security key" });
+        response.EnsureSuccessStatusCode();
+
+        JsonElement payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.That(payload.GetProperty("options").GetProperty("attestation").GetString(), Is.EqualTo("direct"));
+    }
+
+    [Test]
     public async Task Set_Chunk_Size_IsAdminOnly_AndPersists()
     {
         using HttpResponseMessage unauthenticatedResponse = await _client!.PatchAsync(
