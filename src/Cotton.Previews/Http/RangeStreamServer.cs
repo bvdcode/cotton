@@ -25,6 +25,10 @@ namespace Cotton.Previews.Http
         private readonly SemaphoreSlim _sem = new(1, 1);
         private readonly ILogger? _logger;
         private readonly string _serverId;
+        private readonly object _activeHandlersLock = new();
+        private readonly TaskCompletionSource _activeHandlersDrained = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _activeHandlers;
+        private bool _disposing;
 
         /// <summary>
         /// Gets the loopback URL that serves the supplied stream.
@@ -55,7 +59,7 @@ namespace Cotton.Previews.Http
             _listener.Prefixes.Add(prefix);
             _listener.Start();
 
-            _logger?.LogInformation("[RangeServer {ServerId}] Started on {Url}, stream length={Length}", _serverId, Url, _length);
+            _logger?.LogDebug("[RangeServer {ServerId}] Started on {Url}, stream length={Length}", _serverId, Url, _length);
 
             _loop = Task.Run(() => LoopAsync(_cts.Token));
         }
@@ -88,10 +92,88 @@ namespace Cotton.Previews.Http
                     continue;
                 }
 
-                _ = Task.Run(() => HandleAsync(ctx, ct), ct);
+                StartHandler(ctx, ct);
             }
 
-            _logger?.LogInformation("[RangeServer {ServerId}] Loop ended", _serverId);
+            _logger?.LogDebug("[RangeServer {ServerId}] Loop ended", _serverId);
+        }
+
+        private void StartHandler(HttpListenerContext ctx, CancellationToken ct)
+        {
+            if (!TryBeginHandler())
+            {
+                TryAbortResponse(ctx, "rejecting request during shutdown");
+                return;
+            }
+
+            try
+            {
+                _ = Task.Run(
+                    async () =>
+                    {
+                        try
+                        {
+                            await HandleAsync(ctx, ct).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            EndHandler();
+                        }
+                    },
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                EndHandler();
+                _logger?.LogError(ex, "[RangeServer {ServerId}] Failed to start request handler", _serverId);
+                TryAbortResponse(ctx, "starting request handler");
+            }
+        }
+
+        private bool TryBeginHandler()
+        {
+            lock (_activeHandlersLock)
+            {
+                if (_disposing)
+                {
+                    return false;
+                }
+
+                _activeHandlers++;
+                return true;
+            }
+        }
+
+        private void EndHandler()
+        {
+            lock (_activeHandlersLock)
+            {
+                _activeHandlers--;
+                if (_disposing && _activeHandlers == 0)
+                {
+                    _activeHandlersDrained.TrySetResult();
+                }
+            }
+        }
+
+        private void MarkDisposing()
+        {
+            lock (_activeHandlersLock)
+            {
+                _disposing = true;
+                if (_activeHandlers == 0)
+                {
+                    _activeHandlersDrained.TrySetResult();
+                }
+            }
+        }
+
+        private Task WaitForActiveHandlersAsync()
+        {
+            lock (_activeHandlersLock)
+            {
+                return _activeHandlers == 0 ? Task.CompletedTask : _activeHandlersDrained.Task;
+            }
         }
 
         private async Task HandleAsync(HttpListenerContext ctx, CancellationToken ct)
@@ -130,7 +212,7 @@ namespace Cotton.Previews.Http
             catch (OperationCanceledException)
             {
                 _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Range request cancelled by client", _serverId, reqId);
-                try { ctx.Response.Abort(); } catch { }
+                TryAbortResponse(ctx, "cancelling range request");
             }
             catch (HttpListenerException ex) when (ex.Message.Contains("reset by peer", StringComparison.OrdinalIgnoreCase)
                                                   || ex.Message.Contains("forcibly closed", StringComparison.OrdinalIgnoreCase)
@@ -139,12 +221,24 @@ namespace Cotton.Previews.Http
                 // Client (ffmpeg/ffprobe) closed connection early - this is normal behavior
                 // when they got what they needed (moov atom) and don't need the rest of the file
                 _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Client closed connection early (normal for ffmpeg)", _serverId, reqId);
-                try { ctx.Response.Abort(); } catch { }
+                TryAbortResponse(ctx, "handling early client disconnect");
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "[RangeServer {ServerId} Req {ReqId}] HandleAsync exception", _serverId, reqId);
-                try { ctx.Response.Abort(); } catch { }
+                TryAbortResponse(ctx, "handling request exception");
+            }
+        }
+
+        private void TryAbortResponse(HttpListenerContext ctx, string reason)
+        {
+            try
+            {
+                ctx.Response.Abort();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "[RangeServer {ServerId}] Response abort failed while {Reason}", _serverId, reason);
             }
         }
 
@@ -360,14 +454,24 @@ namespace Cotton.Previews.Http
         /// <inheritdoc />
         public async ValueTask DisposeAsync()
         {
-            _logger?.LogInformation("[RangeServer {ServerId}] Disposing...", _serverId);
+            _logger?.LogDebug("[RangeServer {ServerId}] Disposing...", _serverId);
+            MarkDisposing();
             _cts.Cancel();
             try { _listener.Stop(); } catch { }
             try { _listener.Close(); } catch { }
-            try { await _loop.ConfigureAwait(false); } catch { }
+            try
+            {
+                await _loop.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "[RangeServer {ServerId}] Loop shutdown failed", _serverId);
+            }
+
+            await WaitForActiveHandlersAsync().ConfigureAwait(false);
             _cts.Dispose();
             _sem.Dispose();
-            _logger?.LogInformation("[RangeServer {ServerId}] Disposed", _serverId);
+            _logger?.LogDebug("[RangeServer {ServerId}] Disposed", _serverId);
         }
     }
 }
