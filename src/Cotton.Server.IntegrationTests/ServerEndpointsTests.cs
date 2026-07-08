@@ -3,11 +3,14 @@
 
 using Cotton.Auth;
 using Cotton.Crypto;
+using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -105,6 +108,23 @@ public class ServerEndpointsTests : IntegrationTestBase
         JsonElement payload = await response.Content.ReadFromJsonAsync<JsonElement>();
 
         Assert.That(payload.GetProperty("options").GetProperty("attestation").GetString(), Is.EqualTo("direct"));
+    }
+
+    [Test]
+    public async Task Rename_Passkey_With_Blank_Label_Resets_To_Default_Name()
+    {
+        string token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        Guid credentialId = await CreatePasskeyCredentialAsync("Desk key", Guid.Empty, ["usb", "nfc"]);
+
+        using HttpResponseMessage response = await _client.PutAsJsonAsync(
+            $"/api/v1/auth/passkeys/{credentialId}",
+            new { Name = "   " });
+        response.EnsureSuccessStatusCode();
+
+        JsonElement payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.That(payload.GetProperty("name").GetString(), Is.EqualTo("Security key"));
     }
 
     [Test]
@@ -261,6 +281,33 @@ public class ServerEndpointsTests : IntegrationTestBase
         Assert.That(cipher, Is.TypeOf<AesGcmStreamCipher>());
 
         return ((AesGcmStreamCipher)cipher).ConcurrencyLevel;
+    }
+
+    private async Task<Guid> CreatePasskeyCredentialAsync(
+        string name,
+        Guid aaGuid,
+        string[] transports)
+    {
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        User user = await dbContext.Users.SingleAsync(x => x.Username == "testuser");
+        UserPasskeyCredential credential = new()
+        {
+            UserId = user.Id,
+            CredentialId = Guid.NewGuid().ToByteArray(),
+            PublicKey = [1, 2, 3],
+            UserHandle = user.Id.ToByteArray(),
+            SignatureCounter = 0,
+            Name = name,
+            Transports = transports,
+            AaGuid = aaGuid,
+            IsBackupEligible = false,
+            IsBackedUp = false
+        };
+
+        await dbContext.UserPasskeyCredentials.AddAsync(credential);
+        await dbContext.SaveChangesAsync();
+        return credential.Id;
     }
 
     private async Task<string> LoginAsync()

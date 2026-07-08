@@ -38,6 +38,20 @@ describe("passkeysApi", () => {
     });
   });
 
+  it("clears a passkey label", async () => {
+    const put = vi.spyOn(httpClient, "put").mockResolvedValue({
+      data: { id: "credential-1", name: "Security key" },
+    });
+
+    await expect(passkeysApi.rename("credential-1", "   ")).resolves.toEqual({
+      id: "credential-1",
+      name: "Security key",
+    });
+    expect(put).toHaveBeenCalledWith("auth/passkeys/credential-1", {
+      name: null,
+    });
+  });
+
   it("lets the server choose the passkey name during registration", async () => {
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: { id: "credential-1", name: "Google Password Manager" },

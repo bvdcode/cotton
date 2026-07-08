@@ -69,11 +69,11 @@ export const passkeysApi = {
 
   rename: async (
     credentialId: string,
-    name: string,
+    name: string | null,
   ): Promise<PasskeyCredential> => {
     const response = await httpClient.put<PasskeyCredential>(
       `auth/passkeys/${encodeURIComponent(credentialId)}`,
-      { name: name.trim() },
+      { name: name?.trim() || null },
     );
     return response.data;
   },

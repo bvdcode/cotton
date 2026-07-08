@@ -292,7 +292,7 @@ namespace Cotton.Server.Services
         public async Task<PasskeyCredentialDto> RenameCredentialAsync(
             Guid userId,
             Guid credentialId,
-            string name,
+            string? name,
             CancellationToken ct)
         {
             UserPasskeyCredential credential = await _dbContext.UserPasskeyCredentials
@@ -300,7 +300,7 @@ namespace Cotton.Server.Services
                 ?? throw new EntityNotFoundException<UserPasskeyCredential>();
             _integrity.RequireValid(_dbContext, credential, "passkey.rename");
 
-            credential.Name = NormalizeName(name);
+            credential.Name = ResolveCredentialName(name, credential.AaGuid, credential.Transports);
             await _dbContext.SaveChangesAsync(ct);
             return ToDto(credential);
         }

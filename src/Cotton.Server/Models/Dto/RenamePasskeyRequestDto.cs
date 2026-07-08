@@ -13,6 +13,6 @@ namespace Cotton.Server.Models.Dto
         /// <summary>
         /// Gets or sets the display name.
         /// </summary>
-        public string Name { get; set; } = null!;
+        public string? Name { get; set; }
     }
 }

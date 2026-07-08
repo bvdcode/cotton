@@ -107,31 +107,21 @@ const useUnlockFormState = (status: UnlockStatusResponse | null) => {
   const [showMasterKey, setShowMasterKey] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const requiresBootstrapToken = status?.requiresBootstrapToken === true;
   const canSubmit =
     masterKey.trim().length === masterKeyLength &&
     (!requiresBootstrapToken || bootstrapToken.trim().length > 0) &&
     !submitting;
 
-  const resetMessages = () => {
-    setError(null);
-    setSuccess(null);
-  };
-
   const handleGenerate = async () => {
     setGenerating(true);
-    resetMessages();
     try {
       const key = await unlockApi.generateKey();
       setMasterKey(key);
       setShowMasterKey(true);
-      setSuccess(t("generated"));
       toast.success(t("generatedToast"), { toastId: "unlock-generated" });
     } catch (err) {
       const message = err instanceof Error ? err.message : t("generateFailed");
-      setError(message);
       toast.error(message, { toastId: "unlock-generate-failed" });
     } finally {
       setGenerating(false);
@@ -154,7 +144,6 @@ const useUnlockFormState = (status: UnlockStatusResponse | null) => {
     if (!canSubmit) return;
 
     setSubmitting(true);
-    resetMessages();
     try {
       const response = await unlockApi.unlock({
         masterKey: masterKey.trim(),
@@ -162,7 +151,6 @@ const useUnlockFormState = (status: UnlockStatusResponse | null) => {
       });
       setMasterKey("");
       setBootstrapToken("");
-      setSuccess(response.message || t("unlocked"));
       toast.success(response.message || t("unlocked"), {
         toastId: "unlock-success",
       });
@@ -171,7 +159,6 @@ const useUnlockFormState = (status: UnlockStatusResponse | null) => {
       window.location.replace("/");
     } catch (err) {
       const message = err instanceof Error ? err.message : t("unlockFailed");
-      setError(message);
       toast.error(message, { toastId: "unlock-failed" });
       setSubmitting(false);
     }
@@ -180,7 +167,6 @@ const useUnlockFormState = (status: UnlockStatusResponse | null) => {
   return {
     bootstrapToken,
     canSubmit,
-    error,
     generating,
     handleCopy,
     handleGenerate,
@@ -192,7 +178,6 @@ const useUnlockFormState = (status: UnlockStatusResponse | null) => {
     setShowMasterKey,
     showMasterKey,
     submitting,
-    success,
   };
 };
 
@@ -381,8 +366,6 @@ const UnlockForm = ({
               : t("bootstrapRequired")}
           </Alert>
         )}
-        {form.error && <Alert severity="error">{form.error}</Alert>}
-        {form.success && <Alert severity="success">{form.success}</Alert>}
         <MasterKeyField form={form} />
         {form.requiresBootstrapToken && <BootstrapTokenField form={form} />}
         <Box

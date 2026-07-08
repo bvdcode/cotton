@@ -66,7 +66,11 @@ const getCredentialTitle = (credential: PasskeyCredential): string => {
 const getCredentialLabel = (credential: PasskeyCredential): string | null => {
   const authenticatorName = credential.authenticatorName?.trim();
   const credentialName = credential.name.trim();
-  if (!authenticatorName || !credentialName || credentialName === authenticatorName) {
+  if (
+    !authenticatorName ||
+    !credentialName ||
+    credentialName === authenticatorName
+  ) {
     return null;
   }
 
@@ -166,14 +170,12 @@ export const PasskeysCard = () => {
     if (!renameCredential) return;
 
     const trimmedName = renameName.trim();
-    if (!trimmedName) return;
-
     setRenaming(true);
     setError(null);
     try {
       const updated = await passkeysApi.rename(
         renameCredential.id,
-        trimmedName,
+        trimmedName || null,
       );
       setCredentials((current) =>
         current.map((credential) =>
@@ -353,7 +355,7 @@ export const PasskeysCard = () => {
           <Button
             variant="contained"
             onClick={() => void handleRename()}
-            disabled={renaming || !renameName.trim()}
+            disabled={renaming}
           >
             {renaming ? (
               <>
