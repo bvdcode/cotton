@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { nodesApi } from "../api/nodesApi";
 import type { AudioPlaylistItem } from "../types/audio";
+import { getAudioPlaylistMetadata } from "../utils/mediaMetadata";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 
 interface AudioPlayerState {
@@ -51,6 +52,27 @@ const PLAYLIST_COLLATOR = new Intl.Collator(undefined, {
 const normalizeTrackName = (name: string): string =>
   stripExtension(name).trim();
 
+const readTrackNumber = (value: string | undefined): number | null => {
+  if (!value) {
+    return null;
+  }
+
+  const first = value.split("/", 1)[0]?.trim();
+  if (!first) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(first, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const compareNullableNumbers = (a: number | null, b: number | null): number => {
+  if (a === b) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return a - b;
+};
+
 const compareNullableStrings = (a: string | null, b: string | null): number => {
   if (a === b) return 0;
   if (a === null) return -1;
@@ -73,9 +95,21 @@ const sortAudioPlaylist = (
     );
     if (folderCompare !== 0) return folderCompare;
 
+    const discCompare = compareNullableNumbers(
+      readTrackNumber(left.disc),
+      readTrackNumber(right.disc),
+    );
+    if (discCompare !== 0) return discCompare;
+
+    const trackCompare = compareNullableNumbers(
+      readTrackNumber(left.track),
+      readTrackNumber(right.track),
+    );
+    if (trackCompare !== 0) return trackCompare;
+
     return PLAYLIST_COLLATOR.compare(
-      normalizeTrackName(left.name),
-      normalizeTrackName(right.name),
+      normalizeTrackName(left.title ?? left.name),
+      normalizeTrackName(right.title ?? right.name),
     );
   });
   return next;
@@ -202,6 +236,7 @@ const buildRecursiveAudioPlaylist = async (
             nodeId: file.nodeId,
             folderPath: folderPath ?? undefined,
             previewUrl: tryBuildPreviewUrl(file.previewHashEncryptedHex),
+            ...getAudioPlaylistMetadata(file),
           });
         }
       }

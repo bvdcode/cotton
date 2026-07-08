@@ -1,5 +1,6 @@
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import type { AudioPlaylistItem } from "../types/audio";
+import { getAudioPlaylistMetadata } from "./mediaMetadata";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { getFileIcon } from "@shared/utils/icons";
 
@@ -25,6 +26,7 @@ export const buildAudioPlaylistFromFiles = (
         name: file.name,
         nodeId: file.nodeId,
         previewUrl: typeof icon === "string" ? icon : undefined,
+        ...getAudioPlaylistMetadata(file),
       };
     });
 };

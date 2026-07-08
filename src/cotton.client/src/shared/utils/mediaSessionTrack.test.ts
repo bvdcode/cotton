@@ -51,6 +51,23 @@ describe("media session track builders", () => {
     ).not.toHaveProperty("artist");
   });
 
+  it("uses extracted audio metadata before file and folder guesses", () => {
+    expect(
+      buildAudioMediaSessionTrack({
+        id: "track-1",
+        name: "11 Сны.flac",
+        folderPath: "Downloads / Raw",
+        title: "Сны",
+        artist: "Скриптонит",
+        album: "Дом с нормальными явлениями",
+      }),
+    ).toMatchObject({
+      title: "Сны",
+      artist: "Скриптонит",
+      album: "Дом с нормальными явлениями",
+    });
+  });
+
   it("uses video names and posters without audio-only metadata guesses", () => {
     expect(
       buildVideoMediaSessionTrack({
