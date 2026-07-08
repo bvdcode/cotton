@@ -118,10 +118,19 @@ export const useMediaSessionSource = ({
         isReloadingMedia(mediaElement)
       ) {
         mediaSessionCoordinator.updateSourcePlayback(sourceId, "playing");
+        mediaSessionCoordinator.reassertSource(sourceId);
         return;
       }
 
       mediaSessionCoordinator.updateSourcePlayback(sourceId, "paused");
+    };
+    const keepSessionDuringReload = (): void => {
+      if (pauseGraceUntilRef.current <= Date.now()) {
+        return;
+      }
+
+      mediaSessionCoordinator.updateSourcePlayback(sourceId, "playing");
+      mediaSessionCoordinator.reassertSource(sourceId);
     };
     const updatePosition = (): void => {
       mediaSessionCoordinator.updateSourcePosition(sourceId);
@@ -131,6 +140,11 @@ export const useMediaSessionSource = ({
     mediaElement.addEventListener("playing", markPlaying);
     mediaElement.addEventListener("pause", markPaused);
     mediaElement.addEventListener("ended", markPaused);
+    mediaElement.addEventListener("abort", keepSessionDuringReload);
+    mediaElement.addEventListener("emptied", keepSessionDuringReload);
+    mediaElement.addEventListener("loadstart", keepSessionDuringReload);
+    mediaElement.addEventListener("stalled", keepSessionDuringReload);
+    mediaElement.addEventListener("waiting", keepSessionDuringReload);
     mediaElement.addEventListener("loadedmetadata", updatePosition);
     mediaElement.addEventListener("durationchange", updatePosition);
     mediaElement.addEventListener("timeupdate", updatePosition);
@@ -148,6 +162,11 @@ export const useMediaSessionSource = ({
       mediaElement.removeEventListener("playing", markPlaying);
       mediaElement.removeEventListener("pause", markPaused);
       mediaElement.removeEventListener("ended", markPaused);
+      mediaElement.removeEventListener("abort", keepSessionDuringReload);
+      mediaElement.removeEventListener("emptied", keepSessionDuringReload);
+      mediaElement.removeEventListener("loadstart", keepSessionDuringReload);
+      mediaElement.removeEventListener("stalled", keepSessionDuringReload);
+      mediaElement.removeEventListener("waiting", keepSessionDuringReload);
       mediaElement.removeEventListener("loadedmetadata", updatePosition);
       mediaElement.removeEventListener("durationchange", updatePosition);
       mediaElement.removeEventListener("timeupdate", updatePosition);

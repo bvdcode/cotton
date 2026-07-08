@@ -150,11 +150,28 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     };
   }, [onListen, listenIntervalMs]);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     type PlayerWithAudioRef = { audio: React.RefObject<HTMLAudioElement> };
-    const element =
-      (playerRef.current as PlayerWithAudioRef | null)?.audio.current ?? null;
-    setAudioElement(element);
+    let animationFrameId: number | null = null;
+
+    const syncAudioElement = (): void => {
+      const element =
+        (playerRef.current as PlayerWithAudioRef | null)?.audio.current ?? null;
+      if (element) {
+        setAudioElement((previous) =>
+          previous === element ? previous : element,
+        );
+      }
+    };
+
+    syncAudioElement();
+    animationFrameId = window.requestAnimationFrame(syncAudioElement);
+
+    return () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [src]);
 
   React.useEffect(() => {
