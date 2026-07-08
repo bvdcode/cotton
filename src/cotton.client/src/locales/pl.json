@@ -2011,6 +2011,7 @@
       "adding": "Dodawanie...",
       "loading": "Ładowanie kluczy...",
       "empty": "Dla tego konta nie ma jeszcze zarejestrowanych kluczy dostępu.",
+      "label": "Etykieta: {{name}}",
       "created": "Utworzono {{date}}",
       "lastUsed": "Ostatnio użyto {{date}}",
       "delete": "Usuń klucz dostępu",

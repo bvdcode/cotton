@@ -2009,6 +2009,7 @@
       "adding": "Aggiunta...",
       "loading": "Caricamento passkey...",
       "empty": "Nessuna passkey è ancora registrata per questo account.",
+      "label": "Etichetta: {{name}}",
       "created": "Creata {{date}}",
       "lastUsed": "Ultimo uso {{date}}",
       "delete": "Elimina passkey",

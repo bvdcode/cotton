@@ -2003,6 +2003,7 @@
       "adding": "Wird hinzugefügt...",
       "loading": "Passkeys werden geladen...",
       "empty": "Für dieses Konto sind noch keine Passkeys registriert.",
+      "label": "Bezeichnung: {{name}}",
       "created": "Erstellt {{date}}",
       "lastUsed": "Zuletzt verwendet {{date}}",
       "delete": "Passkey löschen",

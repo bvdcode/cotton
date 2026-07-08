@@ -2006,6 +2006,7 @@
       "adding": "Añadiendo...",
       "loading": "Cargando passkeys...",
       "empty": "Aún no hay passkeys registradas para esta cuenta.",
+      "label": "Etiqueta: {{name}}",
       "created": "Creada {{date}}",
       "lastUsed": "Último uso {{date}}",
       "delete": "Eliminar passkey",

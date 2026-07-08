@@ -2006,6 +2006,7 @@
       "adding": "Toevoegen...",
       "loading": "Passkeys laden...",
       "empty": "Er zijn nog geen passkeys geregistreerd voor dit account.",
+      "label": "Label: {{name}}",
       "created": "Aangemaakt {{date}}",
       "lastUsed": "Laatst gebruikt {{date}}",
       "delete": "Passkey verwijderen",

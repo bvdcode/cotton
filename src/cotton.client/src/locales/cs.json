@@ -2008,6 +2008,7 @@
       "adding": "Přidávání...",
       "loading": "Načítání klíčů...",
       "empty": "Pro tento účet zatím nejsou zaregistrovány žádné přístupové klíče.",
+      "label": "Popisek: {{name}}",
       "created": "Vytvořeno {{date}}",
       "lastUsed": "Naposledy použito {{date}}",
       "delete": "Odstranit přístupový klíč",

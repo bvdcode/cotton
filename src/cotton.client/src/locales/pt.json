@@ -2008,6 +2008,7 @@
       "adding": "Adicionando...",
       "loading": "Carregando passkeys...",
       "empty": "Nenhuma passkey está registrada para esta conta ainda.",
+      "label": "Rótulo: {{name}}",
       "created": "Criada em {{date}}",
       "lastUsed": "Último uso {{date}}",
       "delete": "Excluir passkey",

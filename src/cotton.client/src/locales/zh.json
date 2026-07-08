@@ -2014,6 +2014,7 @@
       "adding": "正在添加...",
       "loading": "正在加载通行密钥...",
       "empty": "此账户尚未注册通行密钥。",
+      "label": "标签：{{name}}",
       "created": "创建于 {{date}}",
       "lastUsed": "上次使用 {{date}}",
       "delete": "删除通行密钥",
