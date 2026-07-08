@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services.DatabaseIntegrity;
+using Cotton.Server.Services.Passkeys;
 using EasyExtensions.AspNetCore.Exceptions;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
@@ -34,7 +35,7 @@ namespace Cotton.Server.Services
             Guid userId,
             CancellationToken ct)
         {
-            return await _dbContext.UserPasskeyCredentials
+            List<PasskeyCredentialDto> credentials = await _dbContext.UserPasskeyCredentials
                 .AsNoTracking()
                 .Where(x => x.UserId == userId)
                 .OrderByDescending(x => x.LastUsedAt ?? x.CreatedAt)
@@ -44,12 +45,20 @@ namespace Cotton.Server.Services
                     Name = x.Name,
                     CredentialId = WebEncoders.Base64UrlEncode(x.CredentialId),
                     Transports = x.Transports,
+                    AaGuid = x.AaGuid,
                     IsBackupEligible = x.IsBackupEligible,
                     IsBackedUp = x.IsBackedUp,
                     CreatedAt = x.CreatedAt,
                     LastUsedAt = x.LastUsedAt
                 })
                 .ToListAsync(ct);
+
+            foreach (PasskeyCredentialDto credential in credentials)
+            {
+                credential.AuthenticatorName = PasskeyAuthenticatorResolver.ResolveName(credential.AaGuid);
+            }
+
+            return credentials;
         }
 
         /// <summary>
@@ -92,7 +101,7 @@ namespace Cotton.Server.Services
             string requestId = CreateRequestId();
             _cache.Set(
                 RegistrationCacheKey(requestId),
-                new RegistrationState(userId, NormalizeName(requestedName), options),
+                new RegistrationState(userId, NormalizeOptionalName(requestedName), options),
                 OptionsLifetime);
 
             return new()
@@ -141,15 +150,16 @@ namespace Cotton.Server.Services
                 throw new BadRequestException<UserPasskeyCredential>("Passkey registration could not be verified");
             }
 
-            var credential = new UserPasskeyCredential
+            string[] transports = NormalizeTransports(result.Transports);
+            UserPasskeyCredential credential = new UserPasskeyCredential
             {
                 UserId = userId,
                 CredentialId = result.Id,
                 PublicKey = result.PublicKey,
                 UserHandle = result.User.Id,
                 SignatureCounter = result.SignCount,
-                Name = NormalizeName(request.Name ?? state.Name),
-                Transports = NormalizeTransports(result.Transports),
+                Name = ResolveCredentialName(request.Name ?? state.Name, result.AaGuid, transports),
+                Transports = transports,
                 AaGuid = result.AaGuid,
                 IsBackupEligible = result.IsBackupEligible,
                 IsBackedUp = result.IsBackedUp,
@@ -317,6 +327,8 @@ namespace Cotton.Server.Services
                 Name = credential.Name,
                 CredentialId = WebEncoders.Base64UrlEncode(credential.CredentialId),
                 Transports = credential.Transports,
+                AaGuid = credential.AaGuid,
+                AuthenticatorName = PasskeyAuthenticatorResolver.ResolveName(credential.AaGuid),
                 IsBackupEligible = credential.IsBackupEligible,
                 IsBackedUp = credential.IsBackedUp,
                 CreatedAt = credential.CreatedAt,
@@ -361,10 +373,32 @@ namespace Cotton.Server.Services
 
         private static string NormalizeName(string? name)
         {
-            string trimmed = string.IsNullOrWhiteSpace(name) ? "Passkey" : name.Trim();
+            string trimmed = NormalizeOptionalName(name) ?? "Passkey";
             return trimmed.Length <= MaxPasskeyNameLength
                 ? trimmed
                 : trimmed[..MaxPasskeyNameLength];
+        }
+
+        private static string? NormalizeOptionalName(string? name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return null;
+            }
+
+            string trimmed = name.Trim();
+            return trimmed.Length <= MaxPasskeyNameLength
+                ? trimmed
+                : trimmed[..MaxPasskeyNameLength];
+        }
+
+        private static string ResolveCredentialName(
+            string? requestedName,
+            Guid aaGuid,
+            IEnumerable<string> transports)
+        {
+            return NormalizeOptionalName(requestedName)
+                ?? NormalizeName(PasskeyAuthenticatorResolver.ResolveDefaultName(aaGuid, transports));
         }
 
         private static string BuildDisplayName(User user)
@@ -466,7 +500,7 @@ namespace Cotton.Server.Services
 
         private record RegistrationState(
             Guid UserId,
-            string Name,
+            string? Name,
             CredentialCreateOptions Options);
 
         private record AssertionState(

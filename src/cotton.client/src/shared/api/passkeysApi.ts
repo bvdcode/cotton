@@ -11,6 +11,8 @@ export interface PasskeyCredential {
   name: string;
   credentialId: string;
   transports: string[];
+  aaGuid: string;
+  authenticatorName: string | null;
   isBackupEligible: boolean;
   isBackedUp: boolean;
   createdAt: string;

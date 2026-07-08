@@ -31,6 +31,16 @@ namespace Cotton.Server.Models.Dto
         public string[] Transports { get; set; } = [];
 
         /// <summary>
+        /// Gets or sets the authenticator attestation GUID.
+        /// </summary>
+        public Guid AaGuid { get; set; }
+
+        /// <summary>
+        /// Gets or sets the detected authenticator or passkey provider name.
+        /// </summary>
+        public string? AuthenticatorName { get; set; }
+
+        /// <summary>
         /// Indicates whether the passkey can be backed up by the authenticator provider.
         /// </summary>
         public bool IsBackupEligible { get; set; }

@@ -38,6 +38,42 @@ describe("passkeysApi", () => {
     });
   });
 
+  it("lets the server choose the passkey name during registration", async () => {
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: { id: "credential-1", name: "Google Password Manager" },
+    });
+
+    await expect(
+      passkeysApi.finishRegistration("request-id", null, {
+        id: "credential-id",
+        rawId: "credential-id",
+        type: "public-key",
+        transports: ["internal"],
+        response: {
+          attestationObject: "attestation-object",
+          clientDataJson: "client-data",
+        },
+      }),
+    ).resolves.toEqual({
+      id: "credential-1",
+      name: "Google Password Manager",
+    });
+    expect(post).toHaveBeenCalledWith("auth/passkeys/registration/verify", {
+      requestId: "request-id",
+      name: null,
+      credential: {
+        id: "credential-id",
+        rawId: "credential-id",
+        type: "public-key",
+        transports: ["internal"],
+        response: {
+          attestationObject: "attestation-object",
+          clientDataJson: "client-data",
+        },
+      },
+    });
+  });
+
   it("stores the access token returned by passkey assertion verification", async () => {
     vi.spyOn(httpClient, "post").mockResolvedValue({
       data: { accessToken: "passkey-token" },

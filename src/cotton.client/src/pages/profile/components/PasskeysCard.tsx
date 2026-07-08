@@ -59,6 +59,20 @@ const formatDateTime = (iso: string): string => {
   }).format(date);
 };
 
+const getCredentialTitle = (credential: PasskeyCredential): string => {
+  return credential.authenticatorName?.trim() || credential.name;
+};
+
+const getCredentialLabel = (credential: PasskeyCredential): string | null => {
+  const authenticatorName = credential.authenticatorName?.trim();
+  const credentialName = credential.name.trim();
+  if (!authenticatorName || !credentialName || credentialName === authenticatorName) {
+    return null;
+  }
+
+  return credentialName;
+};
+
 export const PasskeysCard = () => {
   const { t } = useTranslation("profile");
   const [credentials, setCredentials] = useState<PasskeyCredential[]>([]);
@@ -100,26 +114,6 @@ export const PasskeysCard = () => {
     };
   }, [t]);
 
-  const buildDefaultName = (transports: string[]): string => {
-    const normalized = new Set(
-      transports.map((transport) => transport.toLowerCase()),
-    );
-    if (
-      normalized.has("usb") ||
-      normalized.has("nfc") ||
-      normalized.has("ble") ||
-      normalized.has("smart-card")
-    ) {
-      return t("passkeys.defaultNames.securityKey");
-    }
-
-    if (normalized.has("internal") || normalized.has("hybrid")) {
-      return t("passkeys.defaultNames.device");
-    }
-
-    return t("passkeys.defaultName", { count: credentials.length + 1 });
-  };
-
   const openRenameDialog = (credential: PasskeyCredential) => {
     setRenameCredential(credential);
     setRenameName(credential.name);
@@ -153,11 +147,10 @@ export const PasskeysCard = () => {
       const serializedCredential = serializeAttestationCredential(credential);
       const saved = await passkeysApi.finishRegistration(
         optionsResponse.requestId,
-        buildDefaultName(serializedCredential.transports),
+        null,
         serializedCredential,
       );
       setCredentials((current) => [saved, ...current]);
-      openRenameDialog(saved);
     } catch (caught) {
       setError(
         isPasskeyCreationCancelled(caught)
@@ -251,63 +244,77 @@ export const PasskeysCard = () => {
             <Alert severity="info">{t("passkeys.empty")}</Alert>
           ) : (
             <Stack spacing={1}>
-              {credentials.map((credential) => (
-                <Box
-                  key={credential.id}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                    py: 1,
-                    borderBottom: "1px solid",
-                    borderColor: "divider",
-                    "&:last-of-type": {
-                      borderBottom: 0,
-                    },
-                  }}
-                >
-                  <PhonelinkLockOutlinedIcon color="action" />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography fontWeight={600} noWrap>
-                      {credential.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" noWrap>
-                      {credential.lastUsedAt
-                        ? t("passkeys.lastUsed", {
-                            date: formatDateTime(credential.lastUsedAt),
-                          })
-                        : t("passkeys.created", {
-                            date: formatDateTime(credential.createdAt),
-                          })}
-                    </Typography>
+              {credentials.map((credential) => {
+                const title = getCredentialTitle(credential);
+                const label = getCredentialLabel(credential);
+
+                return (
+                  <Box
+                    key={credential.id}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      py: 1,
+                      borderBottom: "1px solid",
+                      borderColor: "divider",
+                      "&:last-of-type": {
+                        borderBottom: 0,
+                      },
+                    }}
+                  >
+                    <PhonelinkLockOutlinedIcon color="action" />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography fontWeight={600} noWrap>
+                        {title}
+                      </Typography>
+                      {label && (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          noWrap
+                        >
+                          {t("passkeys.label", { name: label })}
+                        </Typography>
+                      )}
+                      <Typography variant="body2" color="text.secondary" noWrap>
+                        {credential.lastUsedAt
+                          ? t("passkeys.lastUsed", {
+                              date: formatDateTime(credential.lastUsedAt),
+                            })
+                          : t("passkeys.created", {
+                              date: formatDateTime(credential.createdAt),
+                            })}
+                      </Typography>
+                    </Box>
+                    <Tooltip title={t("passkeys.rename.button")}>
+                      <span>
+                        <IconButton
+                          onClick={() => openRenameDialog(credential)}
+                          disabled={Boolean(deletingId)}
+                        >
+                          <EditOutlinedIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={t("passkeys.delete")}>
+                      <span>
+                        <IconButton
+                          color="error"
+                          onClick={() => void handleDelete(credential.id)}
+                          disabled={deletingId === credential.id}
+                        >
+                          {deletingId === credential.id ? (
+                            <CircularProgress color="inherit" size={18} />
+                          ) : (
+                            <DeleteOutlineIcon />
+                          )}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </Box>
-                  <Tooltip title={t("passkeys.rename.button")}>
-                    <span>
-                      <IconButton
-                        onClick={() => openRenameDialog(credential)}
-                        disabled={Boolean(deletingId)}
-                      >
-                        <EditOutlinedIcon />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  <Tooltip title={t("passkeys.delete")}>
-                    <span>
-                      <IconButton
-                        color="error"
-                        onClick={() => void handleDelete(credential.id)}
-                        disabled={deletingId === credential.id}
-                      >
-                        {deletingId === credential.id ? (
-                          <CircularProgress color="inherit" size={18} />
-                        ) : (
-                          <DeleteOutlineIcon />
-                        )}
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                </Box>
-              ))}
+                );
+              })}
             </Stack>
           )}
         </Stack>
