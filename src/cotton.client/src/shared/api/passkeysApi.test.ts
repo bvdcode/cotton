@@ -88,6 +88,34 @@ describe("passkeysApi", () => {
     });
   });
 
+  it("trims a custom user label during passkey registration", async () => {
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: { id: "credential-1", label: "Office key" },
+    });
+    const credential = {
+      id: "credential-id",
+      rawId: "credential-id",
+      type: "public-key" as const,
+      transports: ["internal"],
+      response: {
+        attestationObject: "attestation-object",
+        clientDataJson: "client-data",
+      },
+    };
+
+    await passkeysApi.finishRegistration(
+      "request-id",
+      "  Office key  ",
+      credential,
+    );
+
+    expect(post).toHaveBeenCalledWith("auth/passkeys/registration/verify", {
+      requestId: "request-id",
+      label: "Office key",
+      credential,
+    });
+  });
+
   it("stores the access token returned by passkey assertion verification", async () => {
     vi.spyOn(httpClient, "post").mockResolvedValue({
       data: { accessToken: "passkey-token" },
