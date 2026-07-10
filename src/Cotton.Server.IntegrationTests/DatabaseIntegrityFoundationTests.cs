@@ -446,7 +446,13 @@ public class DatabaseIntegrityFoundationTests
     }
 
     [Test]
-    public void FileManifestDescriptor_DetectsContentMetadataTampering()
+    public void FileManifestDescriptor_UsesReleaseSchemaVersion()
+    {
+        Assert.That(new FileManifestIntegrityDescriptor().SchemaVersion, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void FileManifestDescriptor_IgnoresExtractedMetadata()
     {
         DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new FileManifestIntegrityDescriptor();
@@ -465,7 +471,7 @@ public class DatabaseIntegrityFoundationTests
 
         manifest.Metadata["media.title"] = "Other";
 
-        Assert.That(protector.Verify(manifest, descriptor, mac), Is.False);
+        Assert.That(protector.Verify(manifest, descriptor, mac), Is.True);
     }
 
     [Test]

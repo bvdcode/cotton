@@ -14,7 +14,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         public override string EntityName => "file_manifests";
 
         /// <inheritdoc />
-        public override int SchemaVersion => 2;
+        public override int SchemaVersion => 1;
 
         /// <inheritdoc />
         public override string GetEntityKey(FileManifest entity)
@@ -26,7 +26,8 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
         {
             WriteContentIdentityFields(writer, entity);
-            // Preview and metadata extraction state is derived cache state, not file-content identity.
+            // Preview and metadata extraction state, including Metadata, is derived cache state,
+            // not file-content identity.
         }
 
         private static void WriteContentIdentityFields(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
@@ -39,7 +40,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
             writer.WriteBytesField(nameof(entity.SmallFilePreviewHashEncrypted), entity.SmallFilePreviewHashEncrypted);
             writer.WriteBytesField(nameof(entity.SmallFilePreviewHash), entity.SmallFilePreviewHash);
             writer.WriteBytesField(nameof(entity.LargeFilePreviewHash), entity.LargeFilePreviewHash);
-            writer.WriteStringDictionaryField(nameof(entity.Metadata), entity.Metadata);
         }
     }
 }
