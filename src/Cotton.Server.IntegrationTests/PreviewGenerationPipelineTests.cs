@@ -14,6 +14,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
+using Cotton.Server.Services.FileMetadata;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -54,6 +55,11 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         byte[]? LargeFilePreviewHash,
         string? PreviewGenerationError,
         string ContentType);
+
+    private record FileManifestMetadataState(
+        Dictionary<string, string>? Metadata,
+        int ExtractorVersion,
+        string? ExtractionError);
 
     [SetUp]
     public void SetUp()
@@ -281,7 +287,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         {
             Assert.That(manifest.Metadata?["image.width"], Is.EqualTo("320"));
             Assert.That(manifest.Metadata?["image.height"], Is.EqualTo("240"));
-            Assert.That(manifest.MetadataExtractorVersion, Is.EqualTo(1));
+            Assert.That(manifest.MetadataExtractorVersion, Is.EqualTo(FileContentMetadataExtractorProvider.CurrentVersion));
             Assert.That(manifest.MetadataExtractionError, Is.Null);
         });
     }
@@ -335,6 +341,82 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             Assert.That(
                 protector.Verify(persistedManifest, new FileManifestIntegrityDescriptor(), persistedMac!),
                 Is.True);
+        });
+    }
+
+    [Test]
+    public async Task MetadataExtraction_InvalidMedia_IsAttemptedOncePerExtractorVersion()
+    {
+        const string ExistingTitle = "Existing title";
+        const string AttemptedSentinel = "already attempted";
+
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        NodeDto root = await GetRootNodeAsync();
+        NodeFileManifestDto validImage = await UploadAndCreateFileAsync(
+            root.Id,
+            "valid.png",
+            "image/png",
+            CreateGradientPngBytes(width: 64, height: 48));
+        byte[] invalidAudio = Encoding.UTF8.GetBytes("This is not a valid audio file.");
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "invalid.mp3",
+            "audio/mpeg",
+            invalidAudio);
+
+        await UpdateFileManifestAsync(createdFile.Id, manifest =>
+        {
+            manifest.Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [FileContentMetadataKeys.MediaTitle] = ExistingTitle,
+            };
+        });
+
+        HttpResponseMessage firstAttempt = await _client!.PostAsync(
+            $"/api/v1/files/{createdFile.Id}/metadata/extract",
+            null);
+        firstAttempt.EnsureSuccessStatusCode();
+
+        FileManifestMetadataState failedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(failedState.Metadata?[FileContentMetadataKeys.MediaTitle], Is.EqualTo(ExistingTitle));
+            Assert.That(failedState.ExtractorVersion, Is.EqualTo(FileContentMetadataExtractorProvider.CurrentVersion));
+            Assert.That(failedState.ExtractionError, Is.EqualTo("File metadata extraction failed."));
+        });
+
+        await UpdateFileManifestAsync(createdFile.Id, manifest =>
+        {
+            manifest.MetadataExtractionError = AttemptedSentinel;
+        });
+
+        HttpResponseMessage sameVersionAttempt = await _client.PostAsync(
+            $"/api/v1/files/{createdFile.Id}/metadata/extract",
+            null);
+        sameVersionAttempt.EnsureSuccessStatusCode();
+
+        FileManifestMetadataState skippedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        Assert.That(skippedState.ExtractionError, Is.EqualTo(AttemptedSentinel));
+
+        await UpdateFileManifestAsync(createdFile.Id, manifest =>
+        {
+            manifest.MetadataExtractorVersion = FileContentMetadataExtractorProvider.CurrentVersion - 1;
+        });
+
+        await ExecuteExtractFileMetadataJobAsync();
+
+        FileManifestMetadataState versionBumpState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        FileManifestMetadataState validImageState = await GetFileManifestMetadataStateAsync(validImage.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(versionBumpState.Metadata?[FileContentMetadataKeys.MediaTitle], Is.EqualTo(ExistingTitle));
+            Assert.That(versionBumpState.ExtractorVersion, Is.EqualTo(FileContentMetadataExtractorProvider.CurrentVersion));
+            Assert.That(versionBumpState.ExtractionError, Is.EqualTo("File metadata extraction failed."));
+            Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageWidth], Is.EqualTo("64"));
+            Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageHeight], Is.EqualTo("48"));
+            Assert.That(validImageState.ExtractionError, Is.Null);
         });
     }
 
@@ -488,6 +570,40 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
         GeneratePreviewJob job = ActivatorUtilities.CreateInstance<GeneratePreviewJob>(scope.ServiceProvider);
         await job.Execute(null!);
+    }
+
+    private async Task ExecuteExtractFileMetadataJobAsync()
+    {
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        ExtractFileMetadataJob job = ActivatorUtilities.CreateInstance<ExtractFileMetadataJob>(scope.ServiceProvider);
+        await job.Execute(null!);
+    }
+
+    private async Task UpdateFileManifestAsync(Guid nodeFileId, Action<FileManifest> update)
+    {
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        FileManifest manifest = await dbContext.NodeFiles
+            .Where(x => x.Id == nodeFileId)
+            .Select(x => x.FileManifest)
+            .SingleAsync();
+
+        update(manifest);
+        await dbContext.SaveChangesAsync();
+    }
+
+    private async Task<FileManifestMetadataState> GetFileManifestMetadataStateAsync(Guid nodeFileId)
+    {
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        return await dbContext.NodeFiles
+            .AsNoTracking()
+            .Where(x => x.Id == nodeFileId)
+            .Select(x => new FileManifestMetadataState(
+                x.FileManifest.Metadata,
+                x.FileManifest.MetadataExtractorVersion,
+                x.FileManifest.MetadataExtractionError))
+            .SingleAsync();
     }
 
     private async Task<Chunk> GetChunkByHashAsync(byte[] hash)

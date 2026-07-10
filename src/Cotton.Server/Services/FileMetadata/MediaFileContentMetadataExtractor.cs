@@ -51,7 +51,7 @@ namespace Cotton.Server.Services.FileMetadata
 
             if (metadata is null)
             {
-                return new Dictionary<string, string>(StringComparer.Ordinal);
+                throw new InvalidDataException("ffprobe did not produce valid media metadata.");
             }
 
             Dictionary<string, string> result = new(StringComparer.Ordinal);

@@ -40,11 +40,6 @@ namespace Cotton.Server.Handlers.Files
         public Guid? UserId { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether already current metadata should be re-extracted.
-        /// </summary>
-        public bool Force { get; set; }
-
-        /// <summary>
         /// Gets or sets a value indicating whether updated file DTOs should be pushed to connected clients.
         /// </summary>
         public bool Notify { get; set; }
@@ -61,6 +56,8 @@ namespace Cotton.Server.Handlers.Files
         ILogger<ExtractFileManifestMetadataRequestHandler> _logger)
         : IRequestHandler<ExtractFileManifestMetadataRequest, NodeFileManifestDto?>
     {
+        private const string ExtractionFailedMessage = "File metadata extraction failed.";
+
         /// <inheritdoc />
         public async Task<NodeFileManifestDto?> Handle(
             ExtractFileManifestMetadataRequest request,
@@ -74,7 +71,7 @@ namespace Cotton.Server.Handlers.Files
                 return null;
             }
 
-            if (IsCurrent(request, manifest))
+            if (IsCurrent(manifest))
             {
                 return MapRequestedFile(request, manifest);
             }
@@ -124,10 +121,9 @@ namespace Cotton.Server.Handlers.Files
             return await query.SingleOrDefaultAsync(cancellationToken);
         }
 
-        private static bool IsCurrent(ExtractFileManifestMetadataRequest request, FileManifest manifest)
+        private static bool IsCurrent(FileManifest manifest)
         {
-            return !request.Force
-                && manifest.MetadataExtractorVersion == FileContentMetadataExtractorProvider.CurrentVersion;
+            return manifest.MetadataExtractorVersion == FileContentMetadataExtractorProvider.CurrentVersion;
         }
 
         private async Task<bool> ExtractAndStoreAsync(FileManifest manifest, CancellationToken cancellationToken)
@@ -175,7 +171,7 @@ namespace Cotton.Server.Handlers.Files
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to extract metadata for file manifest {FileManifestId}", manifest.Id);
-                MarkExtractionFailure(manifest, ex.Message);
+                MarkExtractionFailure(manifest, ExtractionFailedMessage);
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 return false;
             }
