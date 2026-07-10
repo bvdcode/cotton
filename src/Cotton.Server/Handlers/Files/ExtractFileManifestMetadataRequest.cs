@@ -10,10 +10,12 @@ using Cotton.Server.Services.FileMetadata;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 
 namespace Cotton.Server.Handlers.Files
 {
@@ -158,6 +160,17 @@ namespace Cotton.Server.Handlers.Files
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogInformation(
+                    ex,
+                    "Rejected stale metadata update for file manifest {FileManifestId}",
+                    manifest.Id);
+                throw new WebApiException(
+                    HttpStatusCode.Conflict,
+                    nameof(FileManifest),
+                    "The file manifest changed while metadata was being extracted. Retry the operation.");
             }
             catch (Exception ex)
             {

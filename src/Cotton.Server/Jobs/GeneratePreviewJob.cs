@@ -147,7 +147,7 @@ namespace Cotton.Server.Jobs
             {
                 throw;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not DbUpdateConcurrencyException)
             {
                 await RecordPreviewGenerationFailureAsync(item, generator, ex, cancellationToken);
             }
