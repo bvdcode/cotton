@@ -238,7 +238,8 @@ namespace Cotton.Database
 
             modelBuilder.Entity<TEntity>()
                 .Property<byte[]?>(DatabaseIntegrityColumns.MacProperty)
-                .HasColumnName(DatabaseIntegrityColumns.MacColumn);
+                .HasColumnName(DatabaseIntegrityColumns.MacColumn)
+                .IsConcurrencyToken();
         }
 
         private string? EncryptString(string? value)

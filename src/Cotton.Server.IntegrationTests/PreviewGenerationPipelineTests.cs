@@ -4,6 +4,7 @@
 using Cotton.Files;
 using Cotton.Nodes;
 using Cotton.Database;
+using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.IntegrationTests.Abstractions;
@@ -11,6 +12,8 @@ using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
+using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -284,6 +287,58 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task DatabaseIntegrity_ConcurrentSignedManifestWrites_RejectStaleSave()
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        NodeDto root = await GetRootNodeAsync();
+        byte[] content = Encoding.UTF8.GetBytes("concurrent integrity test");
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "concurrent.txt",
+            "text/plain",
+            content);
+
+        await using AsyncServiceScope previewScope = _factory!.Services.CreateAsyncScope();
+        await using AsyncServiceScope hashScope = _factory.Services.CreateAsyncScope();
+        CottonDbContext previewContext = previewScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        CottonDbContext hashContext = hashScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        FileManifest previewManifest = await LoadFileManifestAsync(previewContext, createdFile.Id);
+        FileManifest hashManifest = await LoadFileManifestAsync(hashContext, createdFile.Id);
+        byte[]? originalComputedHash = hashManifest.ComputedContentHash?.ToArray();
+
+        byte[] previewHash = Hasher.HashData(Encoding.UTF8.GetBytes("preview"));
+        byte[] computedHash = Hasher.HashData(Encoding.UTF8.GetBytes("computed"));
+        previewManifest.SmallFilePreviewHash = previewHash;
+        await previewContext.SaveChangesAsync();
+
+        hashManifest.ComputedContentHash = computedHash;
+        DbUpdateConcurrencyException? conflict = Assert.ThrowsAsync<DbUpdateConcurrencyException>(
+            async () => await hashContext.SaveChangesAsync());
+        Assert.That(conflict, Is.Not.Null);
+
+        await using AsyncServiceScope verificationScope = _factory.Services.CreateAsyncScope();
+        CottonDbContext verificationContext = verificationScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        FileManifest persistedManifest = await LoadFileManifestAsync(verificationContext, createdFile.Id);
+        IDatabaseIntegrityProtector protector = verificationScope.ServiceProvider.GetRequiredService<IDatabaseIntegrityProtector>();
+        byte[]? persistedMac = verificationContext.Entry(persistedManifest)
+            .Property<byte[]?>(DatabaseIntegrityColumns.MacProperty)
+            .CurrentValue;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(persistedManifest.SmallFilePreviewHash, Is.EqualTo(previewHash));
+            Assert.That(persistedManifest.ComputedContentHash, Is.EqualTo(originalComputedHash));
+            Assert.That(persistedMac, Is.Not.Null);
+            Assert.That(
+                protector.Verify(persistedManifest, new FileManifestIntegrityDescriptor(), persistedMac!),
+                Is.True);
+        });
+    }
+
+    [Test]
     public async Task PreviewPipeline_PdfFile_GeneratesSmallPreviewOnly_AndReturnsWebpFromEndpoint()
     {
         string token = await LoginAsync();
@@ -440,6 +495,16 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         Chunk? chunk = await DbContext.Chunks.FindAsync([hash]);
         Assert.That(chunk, Is.Not.Null, "Preview chunk row is missing in DB.");
         return chunk!;
+    }
+
+    private static async Task<FileManifest> LoadFileManifestAsync(
+        CottonDbContext dbContext,
+        Guid nodeFileId)
+    {
+        return await dbContext.NodeFiles
+            .Where(x => x.Id == nodeFileId)
+            .Select(x => x.FileManifest)
+            .SingleAsync();
     }
 
     private async Task SetManifestContentTypeAsync(Guid nodeFileId, string contentType)
