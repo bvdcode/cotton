@@ -1,17 +1,13 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using System.Reflection;
 using Cotton.Crypto;
+using Cotton.Database.Configuration;
 using Cotton.Database.Integrity;
 using Cotton.Database.Models;
-using Cotton.Database.Models.Attributes;
 using EasyExtensions.EntityFrameworkCore.Database;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Logging;
-using System.Security.Cryptography;
 
 namespace Cotton.Database
 {
@@ -22,7 +18,8 @@ namespace Cotton.Database
         DbContextOptions options,
         IStreamCipher? streamCipher = null,
         ILogger<CottonDbContext>? logger = null,
-        IDatabaseIntegrityChangeSigner? integrityChangeSigner = null) : AuditedDbContext(options)
+        IDatabaseIntegrityChangeSigner? integrityChangeSigner = null)
+        : IntegrityAuditedDbContext(options, integrityChangeSigner)
     {
         /// <summary>
         /// Folder nodes stored by the server.
@@ -129,165 +126,11 @@ namespace Cotton.Database
         /// </summary>
         public DbSet<SyncChange> SyncChanges => Set<SyncChange>();
 
-        /// <summary>
-        /// Signs pending protected rows before saving changes.
-        /// </summary>
-        public override int SaveChanges(bool acceptAllChangesOnSuccess)
-        {
-            integrityChangeSigner?.SignPendingChanges(this);
-            return base.SaveChanges(acceptAllChangesOnSuccess);
-        }
-
-        /// <summary>
-        /// Signs pending protected rows before saving changes.
-        /// </summary>
-        public override int SaveChanges()
-        {
-            integrityChangeSigner?.SignPendingChanges(this);
-            return base.SaveChanges();
-        }
-
-        /// <summary>
-        /// Signs pending protected rows before saving changes asynchronously.
-        /// </summary>
-        public override Task<int> SaveChangesAsync(
-            bool acceptAllChangesOnSuccess,
-            CancellationToken cancellationToken = default)
-        {
-            integrityChangeSigner?.SignPendingChanges(this);
-            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
-        }
-
-        /// <summary>
-        /// Signs pending protected rows before saving changes asynchronously.
-        /// </summary>
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        {
-            integrityChangeSigner?.SignPendingChanges(this);
-            return base.SaveChangesAsync(cancellationToken);
-        }
-
         /// <inheritdoc />
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
-            ConfigureIntegrityShadowProperties<User>(modelBuilder);
-            ConfigureIntegrityShadowProperties<UserPasskeyCredential>(modelBuilder);
-            ConfigureIntegrityShadowProperties<OidcProvider>(modelBuilder);
-            ConfigureIntegrityShadowProperties<UserExternalIdentity>(modelBuilder);
-            ConfigureIntegrityShadowProperties<OidcLoginState>(modelBuilder);
-            ConfigureIntegrityShadowProperties<ExtendedRefreshToken>(modelBuilder);
-            ConfigureIntegrityShadowProperties<PushDeviceToken>(modelBuilder);
-            ConfigureIntegrityShadowProperties<DownloadToken>(modelBuilder);
-            ConfigureIntegrityShadowProperties<NodeShareToken>(modelBuilder);
-            ConfigureIntegrityShadowProperties<CottonServerSettings>(modelBuilder);
-            ConfigureIntegrityShadowProperties<Node>(modelBuilder);
-            ConfigureIntegrityShadowProperties<NodeFile>(modelBuilder);
-            ConfigureIntegrityShadowProperties<FileManifest>(modelBuilder);
-            ConfigureIntegrityShadowProperties<FileManifestChunk>(modelBuilder);
-            ConfigureIntegrityShadowProperties<Chunk>(modelBuilder);
-
-            modelBuilder.Entity<FileManifest>()
-                .Property(x => x.PreviewGeneratorVersion)
-                .HasDefaultValue(0);
-
-            modelBuilder.Entity<FileManifest>()
-                .Property(x => x.MetadataExtractorVersion)
-                .HasDefaultValue(0);
-
-            ValueConverter<string?, string?> encryptedStringConverter = new(
-                value => EncryptString(value),
-                value => DecryptString(value));
-
-            foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes())
-            {
-                Type? clrType = entityType.ClrType;
-                if (clrType is null)
-                {
-                    continue;
-                }
-
-                foreach (IMutableProperty property in entityType.GetProperties())
-                {
-                    PropertyInfo? propertyInfo = property.PropertyInfo;
-                    if (propertyInfo is null)
-                    {
-                        continue;
-                    }
-
-                    bool hasEncryptedAttribute = Attribute.IsDefined(propertyInfo, typeof(EncryptedAttribute));
-                    if (!hasEncryptedAttribute || property.ClrType != typeof(string))
-                    {
-                        continue;
-                    }
-
-                    modelBuilder.Entity(clrType)
-                        .Property(propertyInfo.Name)
-                        .HasConversion(encryptedStringConverter);
-                }
-            }
-        }
-
-        private static void ConfigureIntegrityShadowProperties<TEntity>(ModelBuilder modelBuilder)
-            where TEntity : class
-        {
-            modelBuilder.Entity<TEntity>()
-                .Property<int?>(DatabaseIntegrityColumns.VersionProperty)
-                .HasColumnName(DatabaseIntegrityColumns.VersionColumn);
-
-            modelBuilder.Entity<TEntity>()
-                .Property<byte[]?>(DatabaseIntegrityColumns.MacProperty)
-                .HasColumnName(DatabaseIntegrityColumns.MacColumn)
-                .IsConcurrencyToken();
-        }
-
-        private string? EncryptString(string? value)
-        {
-            if (value is null || streamCipher is null)
-            {
-                if (value is not null)
-                {
-                    throw CreateMissingStreamCipherException();
-                }
-
-                return value;
-            }
-
-            byte[] encryptedBytes = streamCipher.EncryptString(value);
-            return Convert.ToBase64String(encryptedBytes);
-        }
-
-        private string? DecryptString(string? value)
-        {
-            if (value is null || streamCipher is null)
-            {
-                if (value is not null)
-                {
-                    throw CreateMissingStreamCipherException();
-                }
-
-                return value;
-            }
-
-            try
-            {
-                byte[] encryptedBytes = Convert.FromBase64String(value);
-                return streamCipher.DecryptString(encryptedBytes);
-            }
-            catch (Exception ex) when (ex is FormatException or CryptographicException or InvalidDataException)
-            {
-                logger?.LogError(
-                    ex,
-                    "Failed to decrypt value in encrypted EF converter.");
-                throw;
-            }
-        }
-
-        private static InvalidOperationException CreateMissingStreamCipherException()
-        {
-            return new InvalidOperationException(
-                "Encrypted EF string conversion requires IStreamCipher. Use a raw startup/probe DbContext for pre-unlock reads.");
+            EncryptedStringModelConfiguration.Configure(modelBuilder, streamCipher, logger);
         }
     }
 }
