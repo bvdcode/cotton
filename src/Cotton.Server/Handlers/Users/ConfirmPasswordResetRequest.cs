@@ -57,8 +57,9 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("New password is required");
             }
 
+            string tokenHash = AuthSessionIssuer.HashRefreshToken(request.Token);
             User user = await _dbContext.Users
-                .FirstOrDefaultAsync(x => x.PasswordResetToken == request.Token, cancellationToken)
+                .FirstOrDefaultAsync(x => x.PasswordResetToken == tokenHash, cancellationToken)
                 ?? throw new BadRequestException<User>("Invalid or expired token");
             _integrity.RequireValid(_dbContext, user, "user.password-reset");
 
