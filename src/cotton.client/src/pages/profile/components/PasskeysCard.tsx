@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   passkeysApi,
+  type PasskeyAuthenticatorKind,
   type PasskeyCredential,
 } from "../../../shared/api/passkeysApi";
 import {
@@ -29,6 +30,7 @@ import {
   serializeAttestationCredential,
   toCredentialCreationOptions,
 } from "../../../shared/passkeys/webauthn";
+import { resolvePasskeyDisplayName } from "../../../shared/passkeys/passkeyDisplay";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 
 const passkeyCancellationErrorNames = new Set([
@@ -59,22 +61,15 @@ const formatDateTime = (iso: string): string => {
   }).format(date);
 };
 
-const getCredentialTitle = (credential: PasskeyCredential): string => {
-  return credential.authenticatorName?.trim() || credential.name;
-};
-
-const getCredentialLabel = (credential: PasskeyCredential): string | null => {
-  const authenticatorName = credential.authenticatorName?.trim();
-  const credentialName = credential.name.trim();
-  if (
-    !authenticatorName ||
-    !credentialName ||
-    credentialName === authenticatorName
-  ) {
-    return null;
-  }
-
-  return credentialName;
+const defaultNameKeys: Record<
+  PasskeyAuthenticatorKind,
+  | "passkeys.defaultNames.passkey"
+  | "passkeys.defaultNames.securityKey"
+  | "passkeys.defaultNames.device"
+> = {
+  Unknown: "passkeys.defaultNames.passkey",
+  SecurityKey: "passkeys.defaultNames.securityKey",
+  Device: "passkeys.defaultNames.device",
 };
 
 export const PasskeysCard = () => {
@@ -88,6 +83,11 @@ export const PasskeysCard = () => {
   const [renameName, setRenameName] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const localizedDefaultNames: Record<PasskeyAuthenticatorKind, string> = {
+    Unknown: t(defaultNameKeys.Unknown),
+    SecurityKey: t(defaultNameKeys.SecurityKey),
+    Device: t(defaultNameKeys.Device),
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -120,7 +120,7 @@ export const PasskeysCard = () => {
 
   const openRenameDialog = (credential: PasskeyCredential) => {
     setRenameCredential(credential);
-    setRenameName(credential.name);
+    setRenameName(credential.label ?? "");
   };
 
   const closeRenameDialog = () => {
@@ -173,7 +173,7 @@ export const PasskeysCard = () => {
     setRenaming(true);
     setError(null);
     try {
-      const updated = await passkeysApi.rename(
+      const updated = await passkeysApi.setLabel(
         renameCredential.id,
         trimmedName || null,
       );
@@ -247,8 +247,10 @@ export const PasskeysCard = () => {
           ) : (
             <Stack spacing={1}>
               {credentials.map((credential) => {
-                const title = getCredentialTitle(credential);
-                const label = getCredentialLabel(credential);
+                const title = resolvePasskeyDisplayName(
+                  credential,
+                  localizedDefaultNames,
+                );
 
                 return (
                   <Box
@@ -270,15 +272,6 @@ export const PasskeysCard = () => {
                       <Typography fontWeight={600} noWrap>
                         {title}
                       </Typography>
-                      {label && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          noWrap
-                        >
-                          {t("passkeys.label", { name: label })}
-                        </Typography>
-                      )}
                       <Typography variant="body2" color="text.secondary" noWrap>
                         {credential.lastUsedAt
                           ? t("passkeys.lastUsed", {

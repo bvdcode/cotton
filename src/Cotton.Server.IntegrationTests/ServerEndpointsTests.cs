@@ -102,7 +102,7 @@ public class ServerEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage response = await _client.PostAsJsonAsync(
             "/api/v1/auth/passkeys/registration/options",
-            new { Name = "Security key" });
+            new { Label = "Office key" });
         response.EnsureSuccessStatusCode();
 
         JsonElement payload = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -111,7 +111,7 @@ public class ServerEndpointsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Rename_Passkey_With_Blank_Label_Resets_To_Default_Name()
+    public async Task Set_Passkey_Label_With_Blank_Value_Clears_Label_AndKeepsDetectedKind()
     {
         string token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -119,12 +119,17 @@ public class ServerEndpointsTests : IntegrationTestBase
 
         using HttpResponseMessage response = await _client.PutAsJsonAsync(
             $"/api/v1/auth/passkeys/{credentialId}",
-            new { Name = "   " });
+            new { Label = "   " });
         response.EnsureSuccessStatusCode();
 
         JsonElement payload = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.That(payload.GetProperty("name").GetString(), Is.EqualTo("Security key"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(payload.GetProperty("label").ValueKind, Is.EqualTo(JsonValueKind.Null));
+            Assert.That(payload.GetProperty("authenticatorName").ValueKind, Is.EqualTo(JsonValueKind.Null));
+            Assert.That(payload.GetProperty("authenticatorKind").GetString(), Is.EqualTo("SecurityKey"));
+        });
     }
 
     [Test]
@@ -284,7 +289,7 @@ public class ServerEndpointsTests : IntegrationTestBase
     }
 
     private async Task<Guid> CreatePasskeyCredentialAsync(
-        string name,
+        string? label,
         Guid aaGuid,
         string[] transports)
     {
@@ -298,7 +303,7 @@ public class ServerEndpointsTests : IntegrationTestBase
             PublicKey = [1, 2, 3],
             UserHandle = user.Id.ToByteArray(),
             SignatureCounter = 0,
-            Name = name,
+            Label = label,
             Transports = transports,
             AaGuid = aaGuid,
             IsBackupEligible = false,

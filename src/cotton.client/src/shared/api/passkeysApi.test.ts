@@ -16,45 +16,45 @@ afterEach(() => {
 describe("passkeysApi", () => {
   it("loads registered passkeys", async () => {
     vi.spyOn(httpClient, "get").mockResolvedValue({
-      data: [{ id: "credential-1", name: "YubiKey" }],
+      data: [{ id: "credential-1", label: "YubiKey" }],
     });
 
     await expect(passkeysApi.list()).resolves.toEqual([
-      { id: "credential-1", name: "YubiKey" },
+      { id: "credential-1", label: "YubiKey" },
     ]);
     expect(httpClient.get).toHaveBeenCalledWith("auth/passkeys");
   });
 
-  it("renames a passkey", async () => {
+  it("sets a passkey label", async () => {
     const put = vi.spyOn(httpClient, "put").mockResolvedValue({
-      data: { id: "credential-1", name: "YubiKey" },
+      data: { id: "credential-1", label: "YubiKey" },
     });
 
     await expect(
-      passkeysApi.rename("credential-1", "  YubiKey  "),
-    ).resolves.toEqual({ id: "credential-1", name: "YubiKey" });
+      passkeysApi.setLabel("credential-1", "  YubiKey  "),
+    ).resolves.toEqual({ id: "credential-1", label: "YubiKey" });
     expect(put).toHaveBeenCalledWith("auth/passkeys/credential-1", {
-      name: "YubiKey",
+      label: "YubiKey",
     });
   });
 
   it("clears a passkey label", async () => {
     const put = vi.spyOn(httpClient, "put").mockResolvedValue({
-      data: { id: "credential-1", name: "Security key" },
+      data: { id: "credential-1", label: null },
     });
 
-    await expect(passkeysApi.rename("credential-1", "   ")).resolves.toEqual({
+    await expect(passkeysApi.setLabel("credential-1", "   ")).resolves.toEqual({
       id: "credential-1",
-      name: "Security key",
+      label: null,
     });
     expect(put).toHaveBeenCalledWith("auth/passkeys/credential-1", {
-      name: null,
+      label: null,
     });
   });
 
-  it("lets the server choose the passkey name during registration", async () => {
+  it("registers a passkey without a user label", async () => {
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
-      data: { id: "credential-1", name: "Google Password Manager" },
+      data: { id: "credential-1", label: null },
     });
 
     await expect(
@@ -70,11 +70,11 @@ describe("passkeysApi", () => {
       }),
     ).resolves.toEqual({
       id: "credential-1",
-      name: "Google Password Manager",
+      label: null,
     });
     expect(post).toHaveBeenCalledWith("auth/passkeys/registration/verify", {
       requestId: "request-id",
-      name: null,
+      label: null,
       credential: {
         id: "credential-id",
         rawId: "credential-id",

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Fido2NetLib;
+using Cotton.Server.Models.Enums;
 
 namespace Cotton.Server.Models.Dto
 {
@@ -16,9 +17,9 @@ namespace Cotton.Server.Models.Dto
         public Guid Id { get; set; }
 
         /// <summary>
-        /// Gets or sets the display name.
+        /// Gets or sets the optional user-authored label.
         /// </summary>
-        public string Name { get; set; } = null!;
+        public string? Label { get; set; }
 
         /// <summary>
         /// Gets or sets the WebAuthn credential identifier encoded for transport.
@@ -39,6 +40,11 @@ namespace Cotton.Server.Models.Dto
         /// Gets or sets the detected authenticator or passkey provider name.
         /// </summary>
         public string? AuthenticatorName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the generic authenticator category used for localized fallback text.
+        /// </summary>
+        public PasskeyAuthenticatorKind AuthenticatorKind { get; set; }
 
         /// <summary>
         /// Indicates whether the passkey can be backed up by the authenticator provider.

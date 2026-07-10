@@ -300,7 +300,7 @@ namespace Cotton.Server.Controllers
         {
             PasskeyRegistrationOptionsResponseDto response = await _passkeys.BeginRegistrationAsync(
                 User.GetUserId(),
-                request.Name,
+                request.Label,
                 cancellationToken);
             return Ok(response);
         }
@@ -322,7 +322,7 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
-        /// Renames passkey.
+        /// Sets the optional passkey label.
         /// </summary>
         [Authorize]
         [HttpPut("passkeys/{credentialId:guid}")]
@@ -331,10 +331,10 @@ namespace Cotton.Server.Controllers
             [FromBody] RenamePasskeyRequestDto request,
             CancellationToken cancellationToken)
         {
-            PasskeyCredentialDto response = await _passkeys.RenameCredentialAsync(
+            PasskeyCredentialDto response = await _passkeys.SetCredentialLabelAsync(
                 User.GetUserId(),
                 credentialId,
-                request.Name,
+                request.Label,
                 cancellationToken);
             return Ok(response);
         }

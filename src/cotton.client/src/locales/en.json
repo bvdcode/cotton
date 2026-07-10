@@ -1815,12 +1815,13 @@
         "renameFailed": "Failed to rename passkey."
       },
       "defaultNames": {
+        "passkey": "Passkey",
         "securityKey": "Security key",
         "device": "Device passkey"
       },
       "rename": {
         "title": "Label this passkey",
-        "description": "The detected key type stays visible. Use this label as your own note.",
+        "description": "An optional label replaces the detected name. Leave it empty to use automatic detection.",
         "nameLabel": "Label",
         "button": "Edit label",
         "save": "Save",

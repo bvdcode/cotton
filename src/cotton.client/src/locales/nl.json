@@ -2019,12 +2019,13 @@
         "renameFailed": "Passkey hernoemen is mislukt."
       },
       "defaultNames": {
+        "passkey": "Passkey",
         "securityKey": "Beveiligingssleutel",
         "device": "Apparaatpasskey"
       },
       "rename": {
         "title": "Geef deze passkey een naam",
-        "description": "Kies een herkenbare naam. Cotton kan alleen het algemene authenticatortype detecteren, niet het exacte apparaatmodel.",
+        "description": "Een optioneel label vervangt de gedetecteerde naam. Laat het leeg om automatische detectie te gebruiken.",
         "nameLabel": "Passkeynaam",
         "button": "Passkey hernoemen",
         "save": "Opslaan",

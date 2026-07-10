@@ -8,16 +8,19 @@ import type {
 
 export interface PasskeyCredential {
   id: string;
-  name: string;
+  label: string | null;
   credentialId: string;
   transports: string[];
   aaGuid: string;
   authenticatorName: string | null;
+  authenticatorKind: PasskeyAuthenticatorKind;
   isBackupEligible: boolean;
   isBackedUp: boolean;
   createdAt: string;
   lastUsedAt: string | null;
 }
+
+export type PasskeyAuthenticatorKind = "Unknown" | "SecurityKey" | "Device";
 
 interface PasskeyRegistrationOptionsResponse {
   requestId: string;
@@ -40,23 +43,23 @@ export const passkeysApi = {
   },
 
   beginRegistration: async (
-    name?: string | null,
+    label?: string | null,
   ): Promise<PasskeyRegistrationOptionsResponse> => {
     const response = await httpClient.post<PasskeyRegistrationOptionsResponse>(
       "auth/passkeys/registration/options",
-      { name: name?.trim() || null },
+      { label: label?.trim() || null },
     );
     return response.data;
   },
 
   finishRegistration: async (
     requestId: string,
-    name: string | null,
+    label: string | null,
     credential: SerializedAttestationCredential,
   ): Promise<PasskeyCredential> => {
     const response = await httpClient.post<PasskeyCredential>(
       "auth/passkeys/registration/verify",
-      { requestId, name: name?.trim() || null, credential },
+      { requestId, label: label?.trim() || null, credential },
     );
     return response.data;
   },
@@ -67,13 +70,13 @@ export const passkeysApi = {
     );
   },
 
-  rename: async (
+  setLabel: async (
     credentialId: string,
-    name: string | null,
+    label: string | null,
   ): Promise<PasskeyCredential> => {
     const response = await httpClient.put<PasskeyCredential>(
       `auth/passkeys/${encodeURIComponent(credentialId)}`,
-      { name: name?.trim() || null },
+      { label: label?.trim() || null },
     );
     return response.data;
   },

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Models.Enums;
+
 namespace Cotton.Server.Services.Passkeys
 {
     /// <summary>
@@ -68,16 +70,10 @@ namespace Cotton.Server.Services.Passkeys
         }
 
         /// <summary>
-        /// Resolves the best default credential name when the user did not provide a label.
+        /// Resolves the generic authenticator category from reported transports.
         /// </summary>
-        public static string ResolveDefaultName(Guid aaGuid, IEnumerable<string> transports)
+        public static PasskeyAuthenticatorKind ResolveKind(IEnumerable<string> transports)
         {
-            string? authenticatorName = ResolveName(aaGuid);
-            if (!string.IsNullOrWhiteSpace(authenticatorName))
-            {
-                return authenticatorName;
-            }
-
             HashSet<string> normalizedTransports = transports
                 .Select(x => x.Trim().ToLowerInvariant())
                 .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -85,15 +81,34 @@ namespace Cotton.Server.Services.Passkeys
 
             if (normalizedTransports.Overlaps(SecurityKeyTransports))
             {
-                return "Security key";
+                return PasskeyAuthenticatorKind.SecurityKey;
             }
 
             if (normalizedTransports.Overlaps(DeviceTransports))
             {
-                return "Device passkey";
+                return PasskeyAuthenticatorKind.Device;
             }
 
-            return "Passkey";
+            return PasskeyAuthenticatorKind.Unknown;
+        }
+
+        /// <summary>
+        /// Resolves a stable server-side description for security audit messages.
+        /// </summary>
+        public static string ResolveDisplayName(Guid aaGuid, IEnumerable<string> transports)
+        {
+            string? authenticatorName = ResolveName(aaGuid);
+            if (!string.IsNullOrWhiteSpace(authenticatorName))
+            {
+                return authenticatorName;
+            }
+
+            return ResolveKind(transports) switch
+            {
+                PasskeyAuthenticatorKind.SecurityKey => "Security key",
+                PasskeyAuthenticatorKind.Device => "Device passkey",
+                _ => "Passkey"
+            };
         }
     }
 }

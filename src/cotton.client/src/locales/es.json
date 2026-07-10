@@ -2019,12 +2019,13 @@
         "renameFailed": "No se pudo renombrar la passkey."
       },
       "defaultNames": {
+        "passkey": "Clave de acceso",
         "securityKey": "Llave de seguridad",
         "device": "Passkey del dispositivo"
       },
       "rename": {
         "title": "Nombra esta passkey",
-        "description": "Elige un nombre fácil de reconocer. Cotton solo puede detectar el tipo general, no el modelo exacto del dispositivo.",
+        "description": "Una etiqueta opcional sustituye al nombre detectado. Déjala vacía para usar la detección automática.",
         "nameLabel": "Nombre de passkey",
         "button": "Renombrar passkey",
         "save": "Guardar",

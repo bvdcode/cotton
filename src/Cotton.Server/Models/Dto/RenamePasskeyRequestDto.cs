@@ -11,8 +11,8 @@ namespace Cotton.Server.Models.Dto
     public class RenamePasskeyRequestDto
     {
         /// <summary>
-        /// Gets or sets the display name.
+        /// Gets or sets the optional user-authored label. A blank value removes the label.
         /// </summary>
-        public string? Name { get; set; }
+        public string? Label { get; set; }
     }
 }

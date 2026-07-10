@@ -2016,12 +2016,13 @@
         "renameFailed": "Passkey konnte nicht umbenannt werden."
       },
       "defaultNames": {
+        "passkey": "Passkey",
         "securityKey": "Sicherheitsschlüssel",
         "device": "Geräte-Passkey"
       },
       "rename": {
         "title": "Passkey benennen",
-        "description": "Wähle einen Namen, den du später wiedererkennst. Cotton erkennt nur den groben Authenticator-Typ, nicht das genaue Gerätemodell.",
+        "description": "Eine optionale Bezeichnung ersetzt den erkannten Namen. Lass sie leer, um die automatische Erkennung zu verwenden.",
         "nameLabel": "Passkey-Name",
         "button": "Passkey umbenennen",
         "save": "Speichern",

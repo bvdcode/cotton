@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Enums;
 using Cotton.Server.Providers;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.Passkeys;
@@ -42,7 +43,7 @@ namespace Cotton.Server.Services
                 .Select(x => new PasskeyCredentialDto
                 {
                     Id = x.Id,
-                    Name = x.Name,
+                    Label = x.Label,
                     CredentialId = WebEncoders.Base64UrlEncode(x.CredentialId),
                     Transports = x.Transports,
                     AaGuid = x.AaGuid,
@@ -56,6 +57,7 @@ namespace Cotton.Server.Services
             foreach (PasskeyCredentialDto credential in credentials)
             {
                 credential.AuthenticatorName = PasskeyAuthenticatorResolver.ResolveName(credential.AaGuid);
+                credential.AuthenticatorKind = PasskeyAuthenticatorResolver.ResolveKind(credential.Transports);
             }
 
             return credentials;
@@ -66,7 +68,7 @@ namespace Cotton.Server.Services
         /// </summary>
         public async Task<PasskeyRegistrationOptionsResponseDto> BeginRegistrationAsync(
             Guid userId,
-            string? requestedName,
+            string? requestedLabel,
             CancellationToken ct)
         {
             User user = await _dbContext.Users.FindAsync([userId], ct)
@@ -101,7 +103,7 @@ namespace Cotton.Server.Services
             string requestId = CreateRequestId();
             _cache.Set(
                 RegistrationCacheKey(requestId),
-                new RegistrationState(userId, NormalizeOptionalName(requestedName), options),
+                new RegistrationState(userId, NormalizeOptionalLabel(requestedLabel), options),
                 OptionsLifetime);
 
             return new()
@@ -158,7 +160,7 @@ namespace Cotton.Server.Services
                 PublicKey = result.PublicKey,
                 UserHandle = result.User.Id,
                 SignatureCounter = result.SignCount,
-                Name = ResolveCredentialName(request.Name ?? state.Name, result.AaGuid, transports),
+                Label = NormalizeOptionalLabel(request.Label ?? state.Label),
                 Transports = transports,
                 AaGuid = result.AaGuid,
                 IsBackupEligible = result.IsBackupEligible,
@@ -287,12 +289,12 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
-        /// Renames credential async.
+        /// Sets the optional user-authored credential label.
         /// </summary>
-        public async Task<PasskeyCredentialDto> RenameCredentialAsync(
+        public async Task<PasskeyCredentialDto> SetCredentialLabelAsync(
             Guid userId,
             Guid credentialId,
-            string? name,
+            string? label,
             CancellationToken ct)
         {
             UserPasskeyCredential credential = await _dbContext.UserPasskeyCredentials
@@ -300,7 +302,7 @@ namespace Cotton.Server.Services
                 ?? throw new EntityNotFoundException<UserPasskeyCredential>();
             _integrity.RequireValid(_dbContext, credential, "passkey.rename");
 
-            credential.Name = ResolveCredentialName(name, credential.AaGuid, credential.Transports);
+            credential.Label = NormalizeOptionalLabel(label);
             await _dbContext.SaveChangesAsync(ct);
             return ToDto(credential);
         }
@@ -324,11 +326,12 @@ namespace Cotton.Server.Services
             return new()
             {
                 Id = credential.Id,
-                Name = credential.Name,
+                Label = credential.Label,
                 CredentialId = WebEncoders.Base64UrlEncode(credential.CredentialId),
                 Transports = credential.Transports,
                 AaGuid = credential.AaGuid,
                 AuthenticatorName = PasskeyAuthenticatorResolver.ResolveName(credential.AaGuid),
+                AuthenticatorKind = PasskeyAuthenticatorResolver.ResolveKind(credential.Transports),
                 IsBackupEligible = credential.IsBackupEligible,
                 IsBackedUp = credential.IsBackedUp,
                 CreatedAt = credential.CreatedAt,
@@ -371,34 +374,17 @@ namespace Cotton.Server.Services
             return $"passkey:assertion:{requestId}";
         }
 
-        private static string NormalizeName(string? name)
+        private static string? NormalizeOptionalLabel(string? label)
         {
-            string trimmed = NormalizeOptionalName(name) ?? "Passkey";
-            return trimmed.Length <= MaxPasskeyNameLength
-                ? trimmed
-                : trimmed[..MaxPasskeyNameLength];
-        }
-
-        private static string? NormalizeOptionalName(string? name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(label))
             {
                 return null;
             }
 
-            string trimmed = name.Trim();
+            string trimmed = label.Trim();
             return trimmed.Length <= MaxPasskeyNameLength
                 ? trimmed
                 : trimmed[..MaxPasskeyNameLength];
-        }
-
-        private static string ResolveCredentialName(
-            string? requestedName,
-            Guid aaGuid,
-            IEnumerable<string> transports)
-        {
-            return NormalizeOptionalName(requestedName)
-                ?? NormalizeName(PasskeyAuthenticatorResolver.ResolveDefaultName(aaGuid, transports));
         }
 
         private static string BuildDisplayName(User user)
@@ -500,7 +486,7 @@ namespace Cotton.Server.Services
 
         private record RegistrationState(
             Guid UserId,
-            string? Name,
+            string? Label,
             CredentialCreateOptions Options);
 
         private record AssertionState(

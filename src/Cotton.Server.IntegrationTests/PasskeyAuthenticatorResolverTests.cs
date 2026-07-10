@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Services.Passkeys;
+using Cotton.Server.Models.Enums;
 using NUnit.Framework;
 
 namespace Cotton.Server.IntegrationTests
@@ -27,45 +28,45 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void ResolveDefaultNamePrefersKnownProvider()
+        public void ResolveDisplayNamePrefersKnownProvider()
         {
             Guid aaGuid = Guid.Parse("b7d3f68e-88a6-471e-9ecf-2df26d041ede");
 
-            string name = PasskeyAuthenticatorResolver.ResolveDefaultName(aaGuid, ["usb"]);
+            string name = PasskeyAuthenticatorResolver.ResolveDisplayName(aaGuid, ["usb"]);
 
             Assert.That(name, Is.EqualTo("Security Key NFC by Yubico"));
         }
 
         [Test]
-        public void ResolveDefaultNameFallsBackToSecurityKeyTransport()
+        public void ResolveKindReturnsSecurityKeyForExternalTransport()
         {
-            string name = PasskeyAuthenticatorResolver.ResolveDefaultName(Guid.NewGuid(), ["nfc"]);
+            PasskeyAuthenticatorKind kind = PasskeyAuthenticatorResolver.ResolveKind(["nfc"]);
 
-            Assert.That(name, Is.EqualTo("Security key"));
+            Assert.That(kind, Is.EqualTo(PasskeyAuthenticatorKind.SecurityKey));
         }
 
         [Test]
-        public void ResolveDefaultNameFallsBackToSecurityKeyTransportForZeroAaGuid()
+        public void ResolveKindReturnsSecurityKeyForZeroAaGuidCredentialTransports()
         {
-            string name = PasskeyAuthenticatorResolver.ResolveDefaultName(Guid.Empty, ["usb", "nfc"]);
+            PasskeyAuthenticatorKind kind = PasskeyAuthenticatorResolver.ResolveKind(["usb", "nfc"]);
 
-            Assert.That(name, Is.EqualTo("Security key"));
+            Assert.That(kind, Is.EqualTo(PasskeyAuthenticatorKind.SecurityKey));
         }
 
         [Test]
-        public void ResolveDefaultNameFallsBackToDeviceTransport()
+        public void ResolveKindReturnsDeviceForInternalTransport()
         {
-            string name = PasskeyAuthenticatorResolver.ResolveDefaultName(Guid.NewGuid(), ["internal"]);
+            PasskeyAuthenticatorKind kind = PasskeyAuthenticatorResolver.ResolveKind(["internal"]);
 
-            Assert.That(name, Is.EqualTo("Device passkey"));
+            Assert.That(kind, Is.EqualTo(PasskeyAuthenticatorKind.Device));
         }
 
         [Test]
-        public void ResolveDefaultNameFallsBackToGenericPasskey()
+        public void ResolveKindReturnsUnknownWithoutRecognizedTransport()
         {
-            string name = PasskeyAuthenticatorResolver.ResolveDefaultName(Guid.NewGuid(), []);
+            PasskeyAuthenticatorKind kind = PasskeyAuthenticatorResolver.ResolveKind([]);
 
-            Assert.That(name, Is.EqualTo("Passkey"));
+            Assert.That(kind, Is.EqualTo(PasskeyAuthenticatorKind.Unknown));
         }
     }
 }
