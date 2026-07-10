@@ -27,7 +27,6 @@ namespace Cotton.Server.Services
         IDatabaseIntegrityVerifier _integrity)
     {
         private static readonly TimeSpan OptionsLifetime = TimeSpan.FromMinutes(5);
-        private const int MaxPasskeyNameLength = 120;
 
         /// <summary>
         /// Gets credentials async.
@@ -103,7 +102,7 @@ namespace Cotton.Server.Services
             string requestId = CreateRequestId();
             _cache.Set(
                 RegistrationCacheKey(requestId),
-                new RegistrationState(userId, NormalizeOptionalLabel(requestedLabel), options),
+                new RegistrationState(userId, PasskeyLabelNormalizer.Normalize(requestedLabel), options),
                 OptionsLifetime);
 
             return new()
@@ -160,7 +159,7 @@ namespace Cotton.Server.Services
                 PublicKey = result.PublicKey,
                 UserHandle = result.User.Id,
                 SignatureCounter = result.SignCount,
-                Label = NormalizeOptionalLabel(request.Label ?? state.Label),
+                Label = PasskeyLabelNormalizer.Normalize(request.Label ?? state.Label),
                 Transports = transports,
                 AaGuid = result.AaGuid,
                 IsBackupEligible = result.IsBackupEligible,
@@ -302,7 +301,7 @@ namespace Cotton.Server.Services
                 ?? throw new EntityNotFoundException<UserPasskeyCredential>();
             _integrity.RequireValid(_dbContext, credential, "passkey.rename");
 
-            credential.Label = NormalizeOptionalLabel(label);
+            credential.Label = PasskeyLabelNormalizer.Normalize(label);
             await _dbContext.SaveChangesAsync(ct);
             return ToDto(credential);
         }
@@ -372,19 +371,6 @@ namespace Cotton.Server.Services
         private static string AssertionCacheKey(string requestId)
         {
             return $"passkey:assertion:{requestId}";
-        }
-
-        private static string? NormalizeOptionalLabel(string? label)
-        {
-            if (string.IsNullOrWhiteSpace(label))
-            {
-                return null;
-            }
-
-            string trimmed = label.Trim();
-            return trimmed.Length <= MaxPasskeyNameLength
-                ? trimmed
-                : trimmed[..MaxPasskeyNameLength];
         }
 
         private static string BuildDisplayName(User user)

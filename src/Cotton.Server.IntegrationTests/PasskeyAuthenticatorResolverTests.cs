@@ -20,6 +20,16 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public void ResolveNameReturnsWindowsHelloForKnownAaGuid()
+        {
+            Guid aaGuid = Guid.Parse("08987058-cadc-4b81-b6e1-30de50dcbe96");
+
+            string? name = PasskeyAuthenticatorResolver.ResolveName(aaGuid);
+
+            Assert.That(name, Is.EqualTo("Windows Hello"));
+        }
+
+        [Test]
         public void ResolveNameReturnsNullForUnknownProvider()
         {
             string? name = PasskeyAuthenticatorResolver.ResolveName(Guid.Empty);
