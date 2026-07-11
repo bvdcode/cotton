@@ -12,6 +12,7 @@ using Cotton.Storage.Pipelines;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
+using System.Collections.Concurrent;
 
 namespace Cotton.Server.Jobs
 {
@@ -27,6 +28,8 @@ namespace Cotton.Server.Jobs
         CottonDbContext _dbContext) : IJob
     {
         private const int MaxItemsPerRun = 1000;
+        private const byte KnownMismatchMarker = 0;
+        private static readonly ConcurrentDictionary<Guid, byte> KnownMismatchedManifestIds = new();
 
         /// <summary>
         /// Executes the scheduled Quartz job.
@@ -44,8 +47,17 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            List<FileManifest> unprocessedManifests = await _dbContext.FileManifests
-                .Where(fm => fm.ComputedContentHash == null)
+            Guid[] knownMismatchedManifestIds = [.. KnownMismatchedManifestIds.Keys];
+            IQueryable<FileManifest> unprocessedManifestsQuery = _dbContext.FileManifests
+                .Where(fm => fm.ComputedContentHash == null);
+
+            if (knownMismatchedManifestIds.Length > 0)
+            {
+                unprocessedManifestsQuery = unprocessedManifestsQuery
+                    .Where(fm => !knownMismatchedManifestIds.Contains(fm.Id));
+            }
+
+            List<FileManifest> unprocessedManifests = await unprocessedManifestsQuery
                 .Include(fm => fm.FileManifestChunks)
                 .OrderBy(fm => fm.Id)
                 .Take(MaxItemsPerRun)
@@ -74,6 +86,7 @@ namespace Cotton.Server.Jobs
                 {
                     manifest.ComputedContentHash = computedContentHash;
                     await _dbContext.SaveChangesAsync(context.CancellationToken);
+                    KnownMismatchedManifestIds.TryRemove(manifest.Id, out _);
                     _logger.LogInformation("Hash match for manifest {ManifestId}: {Hash}",
                         manifest.Id, Hasher.ToHexStringHash(manifest.ComputedContentHash));
                 }
@@ -83,6 +96,15 @@ namespace Cotton.Server.Jobs
                         manifest.Id,
                         Hasher.ToHexStringHash(computedContentHash),
                         Hasher.ToHexStringHash(manifest.ProposedContentHash));
+
+                    if (!KnownMismatchedManifestIds.TryAdd(manifest.Id, KnownMismatchMarker))
+                    {
+                        _logger.LogInformation(
+                            "Hash mismatch for manifest {ManifestId} was already reported in this process.",
+                            manifest.Id);
+                        continue;
+                    }
+
                     var relatedFiles = await _dbContext.NodeFiles
                         .AsNoTracking()
                         .Where(nf => nf.FileManifestId == manifest.Id)
