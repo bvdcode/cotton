@@ -17,7 +17,6 @@ namespace Cotton.Server.Jobs
     /// Extracts deterministic content metadata for file manifests.
     /// </summary>
     [JobTrigger(minutes: 15)]
-    [DisallowConcurrentExecution]
     public class ExtractFileMetadataJob(
         PerfTracker _perf,
         CottonDbContext _dbContext,

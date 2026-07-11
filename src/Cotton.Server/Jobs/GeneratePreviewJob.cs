@@ -25,7 +25,6 @@ namespace Cotton.Server.Jobs
     /// Runs the scheduled generate preview maintenance task.
     /// </summary>
     [JobTrigger(minutes: 15)]
-    [DisallowConcurrentExecution]
     public class GeneratePreviewJob(
         PerfTracker _perf,
         IStreamCipher _crypto,
