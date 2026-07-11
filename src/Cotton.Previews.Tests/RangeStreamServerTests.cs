@@ -4,6 +4,7 @@
 using Cotton.Previews.Http;
 using Cotton.Previews.Tests.TestInfrastructure;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Http.Headers;
 
 namespace Cotton.Previews.Tests
@@ -42,6 +43,28 @@ namespace Cotton.Previews.Tests
                     Is.Empty,
                     string.Join(Environment.NewLine, errorEntries.Select(entry => $"{entry.Level}: {entry.Message}")));
             });
+        }
+
+        [TestCase(64)]
+        [TestCase(995)]
+        [TestCase(10053)]
+        [TestCase(10054)]
+        [TestCase(10058)]
+        public void IsExpectedClientDisconnect_KnownSocketErrors_ReturnsTrue(int errorCode)
+        {
+            HttpListenerException exception = new(errorCode, "Client disconnected");
+
+            Assert.That(RangeStreamServer.IsExpectedClientDisconnect(exception), Is.True);
+        }
+
+        [Test]
+        public void IsExpectedClientDisconnect_DisposedSocketMessage_ReturnsTrue()
+        {
+            HttpListenerException exception = new(
+                1,
+                "Unable to write data: Cannot access a disposed object. Object name: 'System.Net.Sockets.SafeSocketHandle'.");
+
+            Assert.That(RangeStreamServer.IsExpectedClientDisconnect(exception), Is.True);
         }
 
         private static async Task ObserveRequestCompletionAsync(Task<HttpResponseMessage> requestTask)

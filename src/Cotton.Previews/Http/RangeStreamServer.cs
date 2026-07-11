@@ -214,12 +214,8 @@ namespace Cotton.Previews.Http
                 _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Range request cancelled by client", _serverId, reqId);
                 TryAbortResponse(ctx, "cancelling range request");
             }
-            catch (HttpListenerException ex) when (ex.Message.Contains("reset by peer", StringComparison.OrdinalIgnoreCase)
-                                                  || ex.Message.Contains("forcibly closed", StringComparison.OrdinalIgnoreCase)
-                                                  || ex.Message.Contains("broken pipe", StringComparison.OrdinalIgnoreCase))
+            catch (HttpListenerException ex) when (IsDisposing() || IsExpectedClientDisconnect(ex))
             {
-                // Client (ffmpeg/ffprobe) closed connection early - this is normal behavior
-                // when they got what they needed (moov atom) and don't need the rest of the file
                 _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Client closed connection early (normal for ffmpeg)", _serverId, reqId);
                 TryAbortResponse(ctx, "handling early client disconnect");
             }
@@ -239,6 +235,26 @@ namespace Cotton.Previews.Http
             catch (Exception ex)
             {
                 _logger?.LogDebug(ex, "[RangeServer {ServerId}] Response abort failed while {Reason}", _serverId, reason);
+            }
+        }
+
+        internal static bool IsExpectedClientDisconnect(HttpListenerException exception)
+        {
+            ArgumentNullException.ThrowIfNull(exception);
+
+            return exception.NativeErrorCode is 64 or 995 or 10053 or 10054 or 10058
+                || exception.Message.Contains("reset by peer", StringComparison.OrdinalIgnoreCase)
+                || exception.Message.Contains("forcibly closed", StringComparison.OrdinalIgnoreCase)
+                || exception.Message.Contains("broken pipe", StringComparison.OrdinalIgnoreCase)
+                || exception.Message.Contains("cannot access a disposed object", StringComparison.OrdinalIgnoreCase)
+                || exception.Message.Contains("SafeSocketHandle", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool IsDisposing()
+        {
+            lock (_activeHandlersLock)
+            {
+                return _disposing;
             }
         }
 

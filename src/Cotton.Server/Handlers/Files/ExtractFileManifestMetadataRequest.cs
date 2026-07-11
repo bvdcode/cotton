@@ -168,6 +168,16 @@ namespace Cotton.Server.Handlers.Files
                     nameof(FileManifest),
                     "The file manifest changed while metadata was being extracted. Retry the operation.");
             }
+            catch (FileMetadataUnavailableException ex)
+            {
+                _logger.LogDebug(
+                    "Metadata is unavailable for file manifest {FileManifestId}: {Reason}",
+                    manifest.Id,
+                    ex.Message);
+                MarkExtractionFailure(manifest, ExtractionFailedMessage);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return false;
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to extract metadata for file manifest {FileManifestId}", manifest.Id);
