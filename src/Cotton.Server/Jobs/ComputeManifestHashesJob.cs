@@ -12,7 +12,6 @@ using Cotton.Storage.Pipelines;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
-using System.Collections.Concurrent;
 
 namespace Cotton.Server.Jobs
 {
@@ -28,8 +27,7 @@ namespace Cotton.Server.Jobs
         CottonDbContext _dbContext) : IJob
     {
         private const int MaxItemsPerRun = 1000;
-        private const byte KnownMismatchMarker = 0;
-        private static readonly ConcurrentDictionary<Guid, byte> KnownMismatchedManifestIds = new();
+        private static readonly HashSet<Guid> KnownMismatchedManifestIds = [];
 
         /// <summary>
         /// Executes the scheduled Quartz job.
@@ -47,7 +45,7 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            Guid[] knownMismatchedManifestIds = [.. KnownMismatchedManifestIds.Keys];
+            Guid[] knownMismatchedManifestIds = [.. KnownMismatchedManifestIds];
             IQueryable<FileManifest> unprocessedManifestsQuery = _dbContext.FileManifests
                 .Where(fm => fm.ComputedContentHash == null);
 
@@ -86,7 +84,7 @@ namespace Cotton.Server.Jobs
                 {
                     manifest.ComputedContentHash = computedContentHash;
                     await _dbContext.SaveChangesAsync(context.CancellationToken);
-                    KnownMismatchedManifestIds.TryRemove(manifest.Id, out _);
+                    KnownMismatchedManifestIds.Remove(manifest.Id);
                     _logger.LogInformation("Hash match for manifest {ManifestId}: {Hash}",
                         manifest.Id, Hasher.ToHexStringHash(manifest.ComputedContentHash));
                 }
@@ -97,7 +95,7 @@ namespace Cotton.Server.Jobs
                         Hasher.ToHexStringHash(computedContentHash),
                         Hasher.ToHexStringHash(manifest.ProposedContentHash));
 
-                    if (!KnownMismatchedManifestIds.TryAdd(manifest.Id, KnownMismatchMarker))
+                    if (!KnownMismatchedManifestIds.Add(manifest.Id))
                     {
                         _logger.LogInformation(
                             "Hash mismatch for manifest {ManifestId} was already reported in this process.",
