@@ -137,6 +137,7 @@ namespace Cotton.Server.Handlers.Files
                     "No metadata extractor matched file manifest {FileManifestId} content type {ContentType}.",
                     manifest.Id,
                     manifest.ContentType);
+                await MarkMetadataProcessedAsync(manifest, cancellationToken);
                 return false;
             }
 
@@ -172,6 +173,7 @@ namespace Cotton.Server.Handlers.Files
                     "Metadata is unavailable for file manifest {FileManifestId}: {Reason}",
                     manifest.Id,
                     ex.Message);
+                await MarkMetadataProcessedAsync(manifest, cancellationToken);
                 return false;
             }
             catch (Exception ex)
@@ -179,6 +181,17 @@ namespace Cotton.Server.Handlers.Files
                 _logger.LogWarning(ex, "Failed to extract metadata for file manifest {FileManifestId}", manifest.Id);
                 return false;
             }
+        }
+
+        private async Task MarkMetadataProcessedAsync(FileManifest manifest, CancellationToken cancellationToken)
+        {
+            if (manifest.Metadata is not null)
+            {
+                return;
+            }
+
+            manifest.Metadata = new Dictionary<string, string>(StringComparer.Ordinal);
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
         private async Task<IReadOnlyDictionary<string, string>> ExtractManifestMetadataAsync(

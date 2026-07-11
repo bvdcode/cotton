@@ -38,7 +38,16 @@ namespace Cotton.Server.Services.FileMetadata
                 stream.Position = 0;
             }
 
-            ImageInfo? info = await Image.IdentifyAsync(stream, cancellationToken);
+            ImageInfo? info;
+            try
+            {
+                info = await Image.IdentifyAsync(stream, cancellationToken);
+            }
+            catch (UnknownImageFormatException)
+            {
+                return new Dictionary<string, string>(StringComparer.Ordinal);
+            }
+
             if (info is null)
             {
                 return new Dictionary<string, string>(StringComparer.Ordinal);

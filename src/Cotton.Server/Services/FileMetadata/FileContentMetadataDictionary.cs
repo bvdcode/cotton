@@ -29,7 +29,7 @@ namespace Cotton.Server.Services.FileMetadata
                 }
             }
 
-            return result.Count > 0 ? result : null;
+            return result;
         }
 
         public static bool HasManagedValues(Dictionary<string, string>? metadata)

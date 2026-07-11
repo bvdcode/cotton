@@ -44,10 +44,22 @@ namespace Cotton.Server.Services.FileMetadata
             stream.Position = 0;
 
             await using RangeStreamServer server = new(stream, _logger);
-            MediaMetadataInfo? metadata = await FfmpegBinary.TryGetMediaMetadataAsync(
-                server.Url,
-                timeout: TimeSpan.FromSeconds(30),
-                cancellationToken: cancellationToken);
+            MediaMetadataInfo? metadata;
+            try
+            {
+                metadata = await FfmpegBinary.TryGetMediaMetadataAsync(
+                    server.Url,
+                    timeout: TimeSpan.FromSeconds(30),
+                    cancellationToken: cancellationToken);
+            }
+            catch (FfprobeOutputLimitExceededException ex)
+            {
+                throw new FileMetadataUnavailableException("ffprobe did not produce bounded media metadata.", ex);
+            }
+            catch (MediaMetadataLimitExceededException ex)
+            {
+                throw new FileMetadataUnavailableException("ffprobe produced media metadata above the configured limits.", ex);
+            }
 
             if (metadata is null)
             {

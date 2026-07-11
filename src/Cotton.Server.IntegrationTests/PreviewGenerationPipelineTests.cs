@@ -480,7 +480,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task MetadataExtraction_InvalidMedia_LeavesMetadataUnchanged()
+    public async Task MetadataExtraction_InvalidMedia_PreservesCustomMetadataAndMarksEmptyAttemptsProcessed()
     {
         const string ExistingTitle = "Existing title";
         const string ExistingKey = "custom.title";
@@ -495,11 +495,17 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             "image/png",
             CreateGradientPngBytes(width: 64, height: 48));
         byte[] invalidAudio = Encoding.UTF8.GetBytes("This is not a valid audio file.");
+        byte[] otherInvalidAudio = Encoding.UTF8.GetBytes("This is not a valid audio file either.");
         NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
             root.Id,
             "invalid.mp3",
             "audio/mpeg",
             invalidAudio);
+        NodeFileManifestDto emptyMetadataFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "invalid-empty.mp3",
+            "audio/mpeg",
+            otherInvalidAudio);
 
         await UpdateFileManifestAsync(createdFile.Id, manifest =>
         {
@@ -517,13 +523,28 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         FileManifestMetadataState failedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
         Assert.That(failedState.Metadata?[ExistingKey], Is.EqualTo(ExistingTitle));
 
+        HttpResponseMessage emptyAttempt = await _client!.PostAsync(
+            $"/api/v1/files/{emptyMetadataFile.Id}/metadata/extract",
+            null);
+        emptyAttempt.EnsureSuccessStatusCode();
+
+        FileManifestMetadataState emptyFailedState = await GetFileManifestMetadataStateAsync(emptyMetadataFile.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(emptyFailedState.Metadata, Is.Not.Null);
+            Assert.That(emptyFailedState.Metadata, Is.Empty);
+        });
+
         await ExecuteExtractFileMetadataJobAsync();
 
         FileManifestMetadataState invalidMediaState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        FileManifestMetadataState emptyInvalidMediaState = await GetFileManifestMetadataStateAsync(emptyMetadataFile.Id);
         FileManifestMetadataState validImageState = await GetFileManifestMetadataStateAsync(validImage.Id);
         Assert.Multiple(() =>
         {
             Assert.That(invalidMediaState.Metadata?[ExistingKey], Is.EqualTo(ExistingTitle));
+            Assert.That(emptyInvalidMediaState.Metadata, Is.Not.Null);
+            Assert.That(emptyInvalidMediaState.Metadata, Is.Empty);
             Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageWidth], Is.EqualTo("64"));
             Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageHeight], Is.EqualTo("48"));
         });
