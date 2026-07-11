@@ -115,6 +115,36 @@ const sortAudioPlaylist = (
   return next;
 };
 
+const mergeKnownPlaylistMetadata = (
+  next: AudioPlaylistItem,
+  existing: AudioPlaylistItem,
+): AudioPlaylistItem => ({
+  ...next,
+  previewUrl: next.previewUrl ?? existing.previewUrl,
+  title: next.title ?? existing.title,
+  artist: next.artist ?? existing.artist,
+  album: next.album ?? existing.album,
+  albumArtist: next.albumArtist ?? existing.albumArtist,
+  track: next.track ?? existing.track,
+  disc: next.disc ?? existing.disc,
+  durationSeconds: next.durationSeconds ?? existing.durationSeconds,
+});
+
+const preserveKnownPlaylistMetadata = (
+  next: ReadonlyArray<AudioPlaylistItem>,
+  existing: ReadonlyArray<AudioPlaylistItem>,
+): AudioPlaylistItem[] => {
+  if (existing.length === 0) {
+    return next.slice();
+  }
+
+  const existingById = new Map(existing.map((item) => [item.id, item]));
+  return next.map((item) => {
+    const known = existingById.get(item.id);
+    return known ? mergeKnownPlaylistMetadata(item, known) : item;
+  });
+};
+
 type NodeInfo = {
   id: string;
   parentId: string | null;
@@ -313,19 +343,24 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
     set({ isScanning: true });
 
     try {
-      const next = await buildRecursiveAudioPlaylist(rootNodeId);
+      const existingPlaylist = get().playlist;
+      const scanned = await buildRecursiveAudioPlaylist(rootNodeId);
+      const next = preserveKnownPlaylistMetadata(scanned, existingPlaylist);
 
       const currentId = get().currentFileId;
       const currentName = get().currentFileName;
 
       if (currentId && currentName) {
         if (!next.some((x) => x.id === currentId)) {
-          const existing = get().playlist.find((x) => x.id === currentId);
-          next.unshift({
-            id: currentId,
-            name: currentName,
-            previewUrl: existing?.previewUrl,
-          });
+          const existing = existingPlaylist.find((x) => x.id === currentId);
+          next.unshift(
+            existing
+              ? { ...existing, name: currentName }
+              : {
+                  id: currentId,
+                  name: currentName,
+                },
+          );
         }
       }
 
