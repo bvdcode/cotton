@@ -527,12 +527,15 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             $"/api/v1/files/{emptyMetadataFile.Id}/metadata/extract",
             null);
         emptyAttempt.EnsureSuccessStatusCode();
+        NodeFileManifestDto? emptyAttemptDto = await emptyAttempt.Content.ReadFromJsonAsync<NodeFileManifestDto>();
 
         FileManifestMetadataState emptyFailedState = await GetFileManifestMetadataStateAsync(emptyMetadataFile.Id);
         Assert.Multiple(() =>
         {
             Assert.That(emptyFailedState.Metadata, Is.Not.Null);
-            Assert.That(emptyFailedState.Metadata, Is.Empty);
+            Assert.That(emptyFailedState.Metadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
+            Assert.That(emptyAttemptDto?.Metadata, Is.Not.Null);
+            Assert.That(emptyAttemptDto!.Metadata, Does.Not.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
         });
 
         await ExecuteExtractFileMetadataJobAsync();
@@ -543,8 +546,9 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         Assert.Multiple(() =>
         {
             Assert.That(invalidMediaState.Metadata?[ExistingKey], Is.EqualTo(ExistingTitle));
+            Assert.That(invalidMediaState.Metadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
             Assert.That(emptyInvalidMediaState.Metadata, Is.Not.Null);
-            Assert.That(emptyInvalidMediaState.Metadata, Is.Empty);
+            Assert.That(emptyInvalidMediaState.Metadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
             Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageWidth], Is.EqualTo("64"));
             Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageHeight], Is.EqualTo("48"));
         });

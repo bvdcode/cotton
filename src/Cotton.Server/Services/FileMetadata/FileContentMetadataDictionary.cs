@@ -29,12 +29,34 @@ namespace Cotton.Server.Services.FileMetadata
                 }
             }
 
+            result[FileContentMetadataKeys.ExtractionProcessed] = "true";
             return result;
         }
 
-        public static bool HasManagedValues(Dictionary<string, string>? metadata)
+        public static Dictionary<string, string> MarkProcessed(Dictionary<string, string>? current)
         {
-            return metadata is not null && metadata.Keys.Any(IsManagedKey);
+            Dictionary<string, string> result = current is null
+                ? new Dictionary<string, string>(StringComparer.Ordinal)
+                : new Dictionary<string, string>(current, StringComparer.Ordinal);
+
+            result[FileContentMetadataKeys.ExtractionProcessed] = "true";
+            return result;
+        }
+
+        public static bool HasProcessedValues(Dictionary<string, string>? metadata)
+        {
+            return metadata is not null
+                && (metadata.Count == 0
+                    || metadata.ContainsKey(FileContentMetadataKeys.ExtractionProcessed)
+                    || metadata.Keys.Any(IsManagedKey));
+        }
+
+        public static bool IsProjectionKey(string key)
+        {
+            return !string.Equals(
+                key,
+                FileContentMetadataKeys.ExtractionProcessed,
+                StringComparison.Ordinal);
         }
 
         private static bool IsManagedKey(string key)

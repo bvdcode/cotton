@@ -23,7 +23,10 @@ namespace Cotton.Server.Services.FileMetadata
 
             foreach ((string key, string value) in manifestMetadata)
             {
-                result[key] = value;
+                if (FileContentMetadataDictionary.IsProjectionKey(key))
+                {
+                    result[key] = value;
+                }
             }
 
             return result;

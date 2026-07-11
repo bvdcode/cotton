@@ -121,7 +121,7 @@ namespace Cotton.Server.Handlers.Files
 
         private static bool HasExtractedMetadata(FileManifest manifest)
         {
-            return FileContentMetadataDictionary.HasManagedValues(manifest.Metadata);
+            return FileContentMetadataDictionary.HasProcessedValues(manifest.Metadata);
         }
 
         private async Task<bool> ExtractAndStoreAsync(FileManifest manifest, CancellationToken cancellationToken)
@@ -185,12 +185,7 @@ namespace Cotton.Server.Handlers.Files
 
         private async Task MarkMetadataProcessedAsync(FileManifest manifest, CancellationToken cancellationToken)
         {
-            if (manifest.Metadata is not null)
-            {
-                return;
-            }
-
-            manifest.Metadata = new Dictionary<string, string>(StringComparer.Ordinal);
+            manifest.Metadata = FileContentMetadataDictionary.MarkProcessed(manifest.Metadata);
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 

@@ -8,6 +8,8 @@ namespace Cotton.Server.Services.FileMetadata
     /// </summary>
     internal static class FileContentMetadataKeys
     {
+        public const string ExtractionProcessed = "contentMetadata.extractionProcessed";
+
         public const string ImageWidth = "image.width";
         public const string ImageHeight = "image.height";
         public const string ImageFormat = "image.format";
@@ -29,6 +31,7 @@ namespace Cotton.Server.Services.FileMetadata
 
         public static readonly string[] ManagedPrefixes =
         [
+            "contentMetadata.",
             "image.",
             "media.",
         ];
