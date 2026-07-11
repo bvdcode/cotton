@@ -65,7 +65,7 @@ flowchart LR
 
 ## How it works — the standard request flow
 
-A representative authenticated mutation (creating a file from already-uploaded chunks) shows the full path: controller → mediator → handler → service/DbContext/storage, with a SignalR side-effect and two Quartz job triggers.
+A representative authenticated mutation (creating a file from already-uploaded chunks) shows the full path: controller → mediator → handler → service/DbContext/storage, with a SignalR side-effect and two Quartz job triggers for preview and metadata work.
 
 ```mermaid
 sequenceDiagram
@@ -87,8 +87,8 @@ sequenceDiagram
     H->>DB: resolve layout, per-layout lock, name-key checks
     H->>DB: insert NodeFile, SaveChanges, Commit
     H-->>FC: NodeFileManifestDto
-    FC->>SCH: TriggerJobAsync<ComputeManifestHashesJob>
     FC->>SCH: TriggerJobAsync<GeneratePreviewJob>
+    FC->>SCH: TriggerJobAsync<ExtractFileMetadataJob>
     FC->>HUB: Clients.User(userId).SendAsync("FileCreated", dto)
     FC-->>C: 200 OK + NodeFileManifestDto
 ```
@@ -442,4 +442,4 @@ The middleware pipeline order in `Program.cs` is: `UseForwardedHeaders()` → `U
 
 ## Related sections
 
-For the subsystems this layer delegates into, see the *Cryptography Engine* section (`IStreamCipher`, AES-GCM chunking, `AesGcmStreamCipher.Min/MaxChunkSize`), the *Storage Pipeline* section (`IStoragePipeline`, chunk read/write, storage pressure), the *Layout & Node Graph* section (layouts, nodes, `LayoutLocks`, navigation), the *Chunk Ingest & File Manifests* section (`IChunkIngestService`, `FileManifestService`, dedup), the *Authentication & Sessions* section (JWT issuance, refresh rotation, passkeys, TOTP, OIDC, WebDAV basic auth), the *Database Integrity* section (`IDatabaseIntegrityVerifier`, `FileGraphIntegrityVerifier`, descriptors), the *Background Jobs* section (Quartz jobs triggered by controllers: `ComputeManifestHashesJob`, `GeneratePreviewJob`, `GarbageCollectorJob`), the *Previews & Transcoding* section (WebP previews, HLS), and the *Real-time Events* section (SignalR `EventHub`).
+For the subsystems this layer delegates into, see the *Cryptography Engine* section (`IStreamCipher`, AES-GCM chunking, `AesGcmStreamCipher.Min/MaxChunkSize`), the *Storage Pipeline* section (`IStoragePipeline`, chunk read/write, storage pressure), the *Layout & Node Graph* section (layouts, nodes, `LayoutLocks`, navigation), the *Chunk Ingest & File Manifests* section (`IChunkIngestService`, `FileManifestService`, dedup), the *Authentication & Sessions* section (JWT issuance, refresh rotation, passkeys, TOTP, OIDC, WebDAV basic auth), the *Database Integrity* section (`IDatabaseIntegrityVerifier`, `FileGraphIntegrityVerifier`, descriptors), the *Background Jobs* section (Quartz jobs triggered by controllers: `GeneratePreviewJob`, `ExtractFileMetadataJob`, `GarbageCollectorJob`), the *Previews & Transcoding* section (WebP previews, HLS), and the *Real-time Events* section (SignalR `EventHub`).

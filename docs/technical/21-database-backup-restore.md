@@ -37,7 +37,7 @@ The backup chunks themselves are written and re-read through the shared chunk-in
 
 ### Schedule and triggering
 
-`DumpDatabaseJob` is annotated `[JobTrigger(days: 7)]`. The `JobTriggerAttribute` (in `EasyExtensions.Quartz`, `Sources/EasyExtensions.Quartz/Attributes/JobTriggerAttribute.cs`) defaults to `startNow: true`, `repeatForever: true`, and `disallowConcurrentExecution: true`. `AddQuartzJobs()` (called in `src/Cotton.Server/Program.cs`) reflects over every `IJob` carrying the attribute and registers a Quartz **simple schedule**: `WithInterval(7 days)`, `WithMisfireHandlingInstructionFireNow()`, `RepeatForever()`, and `StartNow()`. Because `DisallowConcurrentExecution` is true, the job is registered with `.DisallowConcurrentExecution(true)`, so two backup runs cannot overlap.
+`DumpDatabaseJob` is annotated `[JobTrigger(days: 7)]`. `AddQuartzJobs()` (called in `src/Cotton.Server/Program.cs`) reflects over every `IJob` carrying the attribute and registers a Quartz **simple schedule**: `WithInterval(7 days)`, `WithMisfireHandlingInstructionFireNow()`, `RepeatForever()`, and `StartNow()`. The `[JobTrigger]` registration makes the job single-flight, so two backup runs cannot overlap.
 
 Two timing details matter for operators:
 
@@ -46,7 +46,7 @@ Two timing details matter for operators:
 
 Quartz is configured with the **in-memory** store: `AddQuartzJobs()` is called in `Program.cs` with no arguments, so its `postgresConnectionString` parameter is null and no `UsePersistentStore`/Postgres store is wired. Trigger schedules are therefore not persisted across restarts; each process start re-registers the 7-day repeating trigger fresh, starting now.
 
-An admin can force a run via `PATCH /api/v1/server/database-backup/trigger` (`ServerController.TriggerDatabaseBackup`, decorated `[Authorize(Roles = nameof(UserRole.Admin))]`, i.e. role `"Admin"`). The handler `TriggerDatabaseBackupRequestHandler` simply calls `ISchedulerFactory.TriggerJobAsync<DumpDatabaseJob>()`. The trigger only enqueues the existing job; the 3-minute internal delay still applies and `DisallowConcurrentExecution` still prevents overlap with a run already in progress.
+An admin can force a run via `PATCH /api/v1/server/database-backup/trigger` (`ServerController.TriggerDatabaseBackup`, decorated `[Authorize(Roles = nameof(UserRole.Admin))]`, i.e. role `"Admin"`). The handler `TriggerDatabaseBackupRequestHandler` simply calls `ISchedulerFactory.TriggerJobAsync<DumpDatabaseJob>()`. The trigger only enqueues the existing job; the 3-minute internal delay still applies and the existing job registration still prevents overlap with a run already in progress.
 
 ### Dump → chunk → manifest → pointer
 
@@ -247,7 +247,7 @@ Both processes run with `UseShellExecute = false`, `CreateNoWindow = true`, redi
 | `DatabaseSettings:Host` / `:Port` / `:Database` / `:Username` / `:Password` | config (populated from `COTTON_PG_HOST/PORT/DATABASE/USERNAME/PASSWORD`) | `localhost` / `5432` / `cotton_dev` / `postgres` / `postgres` | Connection for `pg_dump`/`pg_restore`; password also used by the EF connection. `COTTON_PG_PASSWORD` is wiped from the env after startup. |
 | `MaxChunkSizeBytes` (server settings) | DB-backed server settings (`SettingsProvider.GetServerSettings()`) | per server settings | Block size used when chunking the dump; must be positive. |
 | `COTTON_MASTER_KEY` (root) | env (consumed and wiped at startup) | — must be exactly 32 chars | Root key from which `MasterEncryptionKey` (label `"CottonMasterEncryptionKey"`) and `Pepper` (label `"CottonPepper"`) are derived; scopes the pointer key and encrypts all chunks. |
-| `[JobTrigger(days: 7)]` | `DumpDatabaseJob` | every 7 days, start now, repeat forever, no concurrent execution | Backup cadence. |
+| `[JobTrigger(days: 7)]` | `DumpDatabaseJob` | every 7 days, start now, repeat forever, single-flight | Backup cadence. |
 
 ### Temp paths
 
@@ -292,7 +292,7 @@ The DTO interface mirrored on the client (`LatestDatabaseBackupDto` in `adminApi
 - **Restore is fail-closed and blocks startup.** It runs synchronously before the host serves traffic; integrity-check failure (hash or size mismatch) or `pg_restore` failure throws and the process does not start.
 - **GC abort on unresolved pointer.** A present-but-unreadable pointer aborts the whole GC pass (and the GC timeline query) to avoid deleting backup chunks (see *Protection from garbage collection*).
 - **Single mutable pointer.** Each backup `DeleteAsync` + `WriteAsync` the same pointer key. Only the latest backup's manifest and chunks are protected; manifests and chunks unique to **older** backups lose protection once the pointer advances and become eligible for GC. There is no retention of multiple historical backups — "latest" is the only first-class backup.
-- **Concurrency.** `DisallowConcurrentExecution = true` prevents overlapping dump jobs. Chunk ingest itself is concurrency-safe (`ChunkIngestService` handles unique-violation races via `IsConcurrentChunkUpsertConflict` and waits out in-flight GC deletes via `WaitForGarbageCollectionAsync`).
+- **Concurrency.** `[JobTrigger]` registration prevents overlapping dump jobs. Chunk ingest itself is concurrency-safe (`ChunkIngestService` handles unique-violation races via `IsConcurrentChunkUpsertConflict` and waits out in-flight GC deletes via `WaitForGarbageCollectionAsync`).
 - **Master-key coupling.** Restore (and even discovering the pointer) requires the correct master key: the pointer key is derived from `MasterEncryptionKey`, and the chunk payloads are AES-GCM encrypted with it. A lost master key means the backup cannot be located or decrypted — consistent with the README's "Lost key warning" that encrypted Cotton data can become unrecoverable.
 - **Plaintext exposure window.** The dump exists in plaintext as a temp file only during dump/restore and is deleted in `finally`. `PGPASSWORD` is passed via the process environment, not the argv, so it does not appear in process listings; however, failure messages do include captured `pg_dump`/`pg_restore` stderr/stdout, which could surface schema/object names in logs.
 - **Integrity guarantees.** Restore verifies both the whole-dump SHA-256 content hash and the total byte count against the manifest before invoking `pg_restore`, catching truncated or tampered chunk reassembly.

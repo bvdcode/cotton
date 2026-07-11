@@ -9,7 +9,7 @@ The unit of storage is a `Chunk`, identified solely by the SHA-256 hash of its p
 The protocol has two phases:
 
 1. **Upload missing chunks.** The client hashes each chunk, optionally asks `GET /api/v1/chunks/{hash}/exists`, and `POST`s only the chunks the server does not already have for this user.
-2. **Assemble the file.** The client `POST`s the ordered list of chunk hashes plus the whole-file hash to `POST /api/v1/files/from-chunks`. The server resolves or creates a manifest, attaches a `NodeFile`, and schedules background hash verification and preview generation.
+2. **Assemble the file.** The client `POST`s the ordered list of chunk hashes plus the whole-file hash to `POST /api/v1/files/from-chunks`. The server resolves or creates a manifest, attaches a `NodeFile`, triggers preview/metadata work, and leaves whole-file hash verification to scheduled maintenance.
 
 ```mermaid
 sequenceDiagram
@@ -19,7 +19,7 @@ sequenceDiagram
     participant ST as IStoragePipeline
     participant FC as FileController
     participant H as CreateFileRequestHandler
-    participant J as ComputeManifestHashesJob
+    participant J as Preview and metadata jobs
 
     Note over B: slice blob, SHA-256 each chunk + whole file
     loop per chunk (concurrent, adaptive)
@@ -40,11 +40,11 @@ sequenceDiagram
     FC->>H: mediator.Send(CreateFileRequest)
     H->>H: resolve owned chunks, dedup manifest by hash
     H->>H: (layout advisory lock) create NodeFile at node
-    FC->>J: TriggerJobAsync<ComputeManifestHashesJob>() + GeneratePreviewJob
+    FC->>J: TriggerJobAsync<GeneratePreviewJob>() + ExtractFileMetadataJob
     FC-->>B: 200 NodeFileManifestDto + SignalR "FileCreated"
     Note over J: later / async
-    J->>ST: GetBlobStream(chunk hashes) -> SHA-256
-    J->>J: set ComputedContentHash if it matches ProposedContentHash
+    J->>ST: GetBlobStream(chunk hashes) -> preview / metadata
+    Note over FC: ComputedContentHash is verified by scheduled ComputeManifestHashesJob
 ```
 
 ## Key components & responsibilities
@@ -56,6 +56,7 @@ sequenceDiagram
 | `FileController` | `src/Cotton.Server/Controllers/FileController.cs` | File create-from-chunks, update-content, rename/move/delete/restore, metadata, download (token / link / Range), HLS, versions, public share. |
 | `CreateFileRequest` + handler | `src/Cotton.Server/Handlers/Files/CreateFileRequest.cs` | Mediator command that resolves/creates a manifest and attaches a `NodeFile`. |
 | `FileManifestService` | `src/Cotton.Server/Services/FileManifestService.cs` | Content-type resolution, owned-chunk lookup, new-manifest creation with ordered `FileManifestChunk` rows, GC-schedule clearing. |
+| `ExtractFileMetadataJob` | `src/Cotton.Server/Jobs/ExtractFileMetadataJob.cs` | Background job that extracts deterministic image/audio/video metadata. |
 | `ComputeManifestHashesJob` | `src/Cotton.Server/Jobs/ComputeManifestHashesJob.cs` | Background job that computes `ComputedContentHash` and detects upload corruption. |
 | `MoveFileCommand`, `DeleteFileQuery`, `RestoreFileQuery`, `ShareFileQuery` | `src/Cotton.Server/Handlers/Files/*` | File lifecycle mediator handlers. |
 | `GarbageCollectorJob` | `src/Cotton.Server/Jobs/GarbageCollectorJob.cs` | Owns the "currently deleting" set that ingest waits on; schedules and deletes orphaned chunks. |
@@ -120,7 +121,7 @@ Because the same chunk can be uploaded concurrently (multiple parallel requests,
 
 ## Manifest creation — `POST /api/v1/files/from-chunks`
 
-`FileController` is decorated with `[ApiController]`. `FileController.CreateFileFromChunks` sets `request.UserId = User.GetUserId()`, sends the `CreateFileRequest` through the mediator, then triggers `ComputeManifestHashesJob` and `GeneratePreviewJob` via `_scheduler.TriggerJobAsync<…>()`, pushes a `"FileCreated"` SignalR event to the owning user (`IHubContext<EventHub>`), and returns `Ok(manifest)` (HTTP `200`) with the `NodeFileManifestDto`.
+`FileController` is decorated with `[ApiController]`. `FileController.CreateFileFromChunks` sets `request.UserId = User.GetUserId()`, sends the `CreateFileRequest` through the mediator, then triggers `GeneratePreviewJob` and `ExtractFileMetadataJob` via `_scheduler.TriggerJobAsync<…>()`, pushes a `"FileCreated"` SignalR event to the owning user (`IHubContext<EventHub>`), and returns `Ok(manifest)` (HTTP `200`) with the `NodeFileManifestDto`.
 
 ### `CreateFileRequest`
 
@@ -164,7 +165,7 @@ This builds the immutable content record:
 
 ## Background hash computation — `ComputeManifestHashesJob`
 
-`ComputeManifestHashesJob` (`src/Cotton.Server/Jobs/ComputeManifestHashesJob.cs`) is a Quartz job triggered hourly (`[JobTrigger(hours: 1)]`) and also fired on demand after create-from-chunks and update-content. Its job is to populate `ComputedContentHash` — the server's own verification of what was actually stored.
+`ComputeManifestHashesJob` (`src/Cotton.Server/Jobs/ComputeManifestHashesJob.cs`) is a Quartz job triggered daily (`[JobTrigger(hours: 24)]`). Its job is to populate `ComputedContentHash` — the server's own verification of what was actually stored.
 
 - **Back-off.** It returns early when `PerfTracker.IsUploading()` (a chunk landed within the last 10 s) or `PerfTracker.IsNightTime()` (server-local hour `< 7` or `>= 22`, where local time is computed from `CottonServerSettings.Timezone` via `GetTimezoneInfo()`, falling back to UTC). Within a run it sleeps `60 000 ms` between manifests while a preview is generating or an upload is active (`IsPreviewGenerating() || IsUploading()`), otherwise `250 ms`.
 - **Selection.** The query is `FileManifests.Take(MaxItemsPerRun).Include(FileManifestChunks).Where(ComputedContentHash == null)` — note the `Take(1000)` is applied **before** the `Where`, so EF takes (an unordered) batch of up to `MaxItemsPerRun` (1000) manifests and filters those for a null computed hash. Fully verified manifests are skipped naturally and unverified ones are revisited on subsequent runs.
@@ -187,7 +188,7 @@ stateDiagram-v2
 - If the request's `ProposedContentHash` differs from the file's current manifest hash, it captures the current manifest as a historical version via `FileVersionService.CaptureAndUpdateManifestAsync` and repoints the `NodeFile` at the new manifest. Identical content (same proposed hash) is a no-op for content and skips version capture.
 - It updates the name and replaces metadata (when supplied).
 
-After commit it adjusts quota (added/removed logical bytes), triggers `ComputeManifestHashesJob` and `GeneratePreviewJob`, and emits a `"FileUpdated"` SignalR event. See the *File Versioning* section for `FileVersionService`, lineage (`OriginalNodeFileId`), and retention.
+After commit it adjusts quota (added/removed logical bytes), triggers `GeneratePreviewJob` and `ExtractFileMetadataJob`, and emits a `"FileUpdated"` SignalR event. See the *File Versioning* section for `FileVersionService`, lineage (`OriginalNodeFileId`), and retention.
 
 Related write/read endpoints on `FileController`:
 
@@ -234,7 +235,7 @@ The download stream (`DownloadFileByToken`) verifies the token and file-graph in
 
 ## GC-aware ingest coordination
 
-Deletion is owned by `GarbageCollectorJob` (`src/Cotton.Server/Jobs/GarbageCollectorJob.cs`, `[JobTrigger(hours: 6)]`, `[DisallowConcurrentExecution]`). On the very first run it waits 15 minutes (`Task.Delay(900_000)`) to let the server stabilize. Unless `StorageSpaceMode.Limited` (aggressive mode), it skips entirely during night time. Each pass (`RunOnceAsync`) runs four steps in order: delete orphaned manifests (manifests with no `NodeFiles`, plus their `FileManifestChunks` and any `DownloadTokens`), clear GC schedules for chunks that became referenced or protected, **schedule** orphaned chunks, and **delete** chunks whose schedule has elapsed.
+Deletion is owned by `GarbageCollectorJob` (`src/Cotton.Server/Jobs/GarbageCollectorJob.cs`, `[JobTrigger(hours: 6)]`). On the very first run it waits 15 minutes (`Task.Delay(900_000)`) to let the server stabilize. Unless `StorageSpaceMode.Limited` (aggressive mode), it skips entirely during night time. Each pass (`RunOnceAsync`) runs four steps in order: delete orphaned manifests (manifests with no `NodeFiles`, plus their `FileManifestChunks` and any `DownloadTokens`), clear GC schedules for chunks that became referenced or protected, **schedule** orphaned chunks, and **delete** chunks whose schedule has elapsed.
 
 The database is the source of truth for liveness: a chunk is deletable only when `ChunkUsageService.WhereUnreferencedByDatabase` holds (no `FileManifestChunk`, not a `SmallFilePreviewHash`/`LargeFilePreviewHash` on any manifest, not a `User.AvatarHash`) and it is not in the protected-storage-key set (`ChunkUsageService.GetProtectedStorageKeysAsync` — the database-backup pointer, the master-key sentinel, and the latest backup manifest plus its chunks). Unreferenced chunks are first *scheduled* (`GCScheduledAfter` set), then deleted once the schedule elapses and a re-check still finds them unreferenced. The scheduling delay and batch size vary by `StorageSpaceMode`:
 
