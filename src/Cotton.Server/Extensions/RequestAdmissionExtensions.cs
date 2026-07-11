@@ -6,6 +6,7 @@ using Cotton.Server.Models;
 using Cotton.Server.Models.Configuration;
 using Cotton.Server.Services.RequestAdmission;
 using Microsoft.AspNetCore.RateLimiting;
+using System.Globalization;
 using System.Net;
 using System.Threading.RateLimiting;
 
@@ -35,7 +36,7 @@ namespace Cotton.Server.Extensions
                 options.GlobalLimiter = HttpRequestAdmissionPolicy.Create(admissionOptions);
                 options.OnRejected = async (context, cancellationToken) =>
                 {
-                    context.HttpContext.Response.Headers.RetryAfter = "1";
+                    context.HttpContext.Response.Headers.RetryAfter = GetRetryAfterSeconds(context.Lease);
                     CottonResult result = new()
                     {
                         Success = false,
@@ -108,6 +109,18 @@ namespace Cotton.Server.Extensions
         private static string GetRemoteAddressPartition(HttpContext httpContext)
         {
             return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        }
+
+        private static string GetRetryAfterSeconds(RateLimitLease lease)
+        {
+            if (lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter)
+                && retryAfter > TimeSpan.Zero)
+            {
+                int seconds = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
+                return seconds.ToString(CultureInfo.InvariantCulture);
+            }
+
+            return "1";
         }
     }
 }
