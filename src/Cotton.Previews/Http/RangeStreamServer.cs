@@ -25,6 +25,7 @@ namespace Cotton.Previews.Http
         private readonly SemaphoreSlim _sem = new(1, 1);
         private readonly ILogger? _logger;
         private readonly string _serverId;
+        private readonly TimeSpan _requestDrainTimeout;
         private readonly object _activeHandlersLock = new();
         private readonly TaskCompletionSource _activeHandlersDrained = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int _activeHandlers;
@@ -38,7 +39,10 @@ namespace Cotton.Previews.Http
         /// <summary>
         /// Starts a loopback range server for the supplied seekable stream.
         /// </summary>
-        public RangeStreamServer(Stream seekableStream, ILogger? logger = null)
+        public RangeStreamServer(
+            Stream seekableStream,
+            ILogger? logger = null,
+            TimeSpan? requestDrainTimeout = null)
         {
             if (!seekableStream.CanSeek)
             {
@@ -47,6 +51,7 @@ namespace Cotton.Previews.Http
 
             _logger = logger;
             _serverId = Guid.NewGuid().ToString("N")[..8];
+            _requestDrainTimeout = requestDrainTimeout ?? TimeSpan.FromSeconds(5);
             _token = Guid.NewGuid().ToString("N");
             _stream = seekableStream;
             _length = seekableStream.Length;
@@ -174,6 +179,19 @@ namespace Cotton.Previews.Http
             {
                 return _activeHandlers == 0 ? Task.CompletedTask : _activeHandlersDrained.Task;
             }
+        }
+
+        private async Task<bool> TryWaitForActiveHandlersAsync()
+        {
+            Task drained = WaitForActiveHandlersAsync();
+            if (drained.IsCompletedSuccessfully)
+            {
+                return true;
+            }
+
+            Task timeout = Task.Delay(_requestDrainTimeout);
+            Task completed = await Task.WhenAny(drained, timeout).ConfigureAwait(false);
+            return ReferenceEquals(completed, drained);
         }
 
         private async Task HandleAsync(HttpListenerContext ctx, CancellationToken ct)
@@ -484,9 +502,20 @@ namespace Cotton.Previews.Http
                 _logger?.LogDebug(ex, "[RangeServer {ServerId}] Loop shutdown failed", _serverId);
             }
 
-            await WaitForActiveHandlersAsync().ConfigureAwait(false);
-            _cts.Dispose();
-            _sem.Dispose();
+            bool handlersDrained = await TryWaitForActiveHandlersAsync().ConfigureAwait(false);
+            if (handlersDrained)
+            {
+                _cts.Dispose();
+                _sem.Dispose();
+            }
+            else
+            {
+                _logger?.LogWarning(
+                    "[RangeServer {ServerId}] Timed out waiting {Timeout} for active range handlers to stop.",
+                    _serverId,
+                    _requestDrainTimeout);
+            }
+
             _logger?.LogDebug("[RangeServer {ServerId}] Disposed", _serverId);
         }
     }

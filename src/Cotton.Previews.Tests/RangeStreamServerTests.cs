@@ -45,6 +45,36 @@ namespace Cotton.Previews.Tests
             });
         }
 
+        [Test]
+        public async Task DisposeAsync_ReturnsWhenActiveReadIgnoresCancellation()
+        {
+            BlockingReadStream stream = new(length: 1024 * 1024, observeCancellation: false);
+            CapturingLogger logger = new();
+            RangeStreamServer server = new(
+                stream,
+                logger,
+                requestDrainTimeout: TimeSpan.FromMilliseconds(100));
+
+            using HttpClient client = new();
+            using HttpRequestMessage request = new(HttpMethod.Get, server.Url);
+            request.Headers.Range = new RangeHeaderValue(0, 1023);
+
+            Task<HttpResponseMessage> requestTask = client.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead);
+
+            await stream.ReadStarted.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+            await server.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+
+            Assert.That(
+                logger.Entries.Any(entry => entry.Level == LogLevel.Warning
+                    && entry.Message.Contains("Timed out waiting", StringComparison.Ordinal)),
+                Is.True);
+
+            _ = ObserveRequestCompletionAsync(requestTask);
+        }
+
         [TestCase(64)]
         [TestCase(995)]
         [TestCase(10053)]
