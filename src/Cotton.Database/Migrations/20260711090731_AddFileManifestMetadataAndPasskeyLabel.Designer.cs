@@ -14,8 +14,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20260710215004_SeparatePasskeyLabel")]
-    partial class SeparatePasskeyLabel
+    [Migration("20260711090731_AddFileManifestMetadataAndPasskeyLabel")]
+    partial class AddFileManifestMetadataAndPasskeyLabel
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -465,14 +465,6 @@ namespace Cotton.Database.Migrations
                     b.Property<Dictionary<string, string>>("Metadata")
                         .HasColumnType("hstore")
                         .HasColumnName("metadata");
-
-                    b.Property<string>("MetadataExtractionError")
-                        .HasColumnType("text")
-                        .HasColumnName("metadata_extraction_error");
-
-                    b.Property<int>("MetadataExtractorVersion")
-                        .HasColumnType("integer")
-                        .HasColumnName("metadata_extractor_version");
 
                     b.Property<string>("PreviewGenerationError")
                         .HasColumnType("text")

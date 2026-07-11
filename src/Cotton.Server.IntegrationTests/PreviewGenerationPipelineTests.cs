@@ -60,9 +60,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         string ContentType);
 
     private record FileManifestMetadataState(
-        Dictionary<string, string>? Metadata,
-        int ExtractorVersion,
-        string? ExtractionError);
+        Dictionary<string, string>? Metadata);
 
     [SetUp]
     public void SetUp()
@@ -290,8 +288,6 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         {
             Assert.That(manifest.Metadata?["image.width"], Is.EqualTo("320"));
             Assert.That(manifest.Metadata?["image.height"], Is.EqualTo("240"));
-            Assert.That(manifest.MetadataExtractorVersion, Is.EqualTo(FileContentMetadataExtractorProvider.CurrentVersion));
-            Assert.That(manifest.MetadataExtractionError, Is.Null);
         });
     }
 
@@ -376,8 +372,9 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             Assert.That(extractedFile!.Metadata[FileContentMetadataKeys.MediaTitle], Is.EqualTo(title));
             Assert.That(extractedFile.Metadata[FileContentMetadataKeys.MediaArtist], Is.EqualTo(artist));
             Assert.That(extractedFile.Metadata[FileContentMetadataKeys.MediaAlbum], Is.EqualTo(album));
-            Assert.That(persisted.ExtractionError, Is.Null);
-            Assert.That(persisted.ExtractorVersion, Is.EqualTo(FileContentMetadataExtractorProvider.CurrentVersion));
+            Assert.That(persisted.Metadata?[FileContentMetadataKeys.MediaTitle], Is.EqualTo(title));
+            Assert.That(persisted.Metadata?[FileContentMetadataKeys.MediaArtist], Is.EqualTo(artist));
+            Assert.That(persisted.Metadata?[FileContentMetadataKeys.MediaAlbum], Is.EqualTo(album));
         });
     }
 
@@ -407,8 +404,8 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             Assert.That(extractedFile!.Metadata, Does.ContainKey(FileContentMetadataKeys.MediaAudioCodec));
             Assert.That(extractedFile.Metadata, Does.ContainKey(FileContentMetadataKeys.MediaDurationSeconds));
             Assert.That(extractedFile.Metadata, Does.Not.ContainKey(FileContentMetadataKeys.MediaTitle));
-            Assert.That(persisted.ExtractionError, Is.Null);
-            Assert.That(persisted.ExtractorVersion, Is.EqualTo(FileContentMetadataExtractorProvider.CurrentVersion));
+            Assert.That(persisted.Metadata, Does.ContainKey(FileContentMetadataKeys.MediaAudioCodec));
+            Assert.That(persisted.Metadata, Does.ContainKey(FileContentMetadataKeys.MediaDurationSeconds));
         });
     }
 
@@ -442,7 +439,6 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             Assert.That(manifest.PreviewGenerationError, Is.Null);
             Assert.That(manifest.Metadata?[FileContentMetadataKeys.ImageWidth], Is.EqualTo("96"));
             Assert.That(manifest.Metadata?[FileContentMetadataKeys.ImageHeight], Is.EqualTo("64"));
-            Assert.That(manifest.MetadataExtractionError, Is.Null);
             Assert.That(integrityMac, Is.Not.Null);
             Assert.That(
                 protector.Verify(manifest, new FileManifestIntegrityDescriptor(), integrityMac!),
@@ -484,10 +480,10 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task MetadataExtraction_InvalidMedia_IsAttemptedOncePerExtractorVersion()
+    public async Task MetadataExtraction_InvalidMedia_LeavesMetadataUnchanged()
     {
         const string ExistingTitle = "Existing title";
-        const string AttemptedSentinel = "already attempted";
+        const string ExistingKey = "custom.title";
 
         string token = await LoginAsync();
         SetBearer(token);
@@ -509,7 +505,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         {
             manifest.Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                [FileContentMetadataKeys.MediaTitle] = ExistingTitle,
+                [ExistingKey] = ExistingTitle,
             };
         });
 
@@ -519,43 +515,17 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         firstAttempt.EnsureSuccessStatusCode();
 
         FileManifestMetadataState failedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
-        Assert.Multiple(() =>
-        {
-            Assert.That(failedState.Metadata?[FileContentMetadataKeys.MediaTitle], Is.EqualTo(ExistingTitle));
-            Assert.That(failedState.ExtractorVersion, Is.EqualTo(FileContentMetadataExtractorProvider.CurrentVersion));
-            Assert.That(failedState.ExtractionError, Is.EqualTo("File metadata extraction failed."));
-        });
-
-        await UpdateFileManifestAsync(createdFile.Id, manifest =>
-        {
-            manifest.MetadataExtractionError = AttemptedSentinel;
-        });
-
-        HttpResponseMessage sameVersionAttempt = await _client.PostAsync(
-            $"/api/v1/files/{createdFile.Id}/metadata/extract",
-            null);
-        sameVersionAttempt.EnsureSuccessStatusCode();
-
-        FileManifestMetadataState skippedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
-        Assert.That(skippedState.ExtractionError, Is.EqualTo(AttemptedSentinel));
-
-        await UpdateFileManifestAsync(createdFile.Id, manifest =>
-        {
-            manifest.MetadataExtractorVersion = FileContentMetadataExtractorProvider.CurrentVersion - 1;
-        });
+        Assert.That(failedState.Metadata?[ExistingKey], Is.EqualTo(ExistingTitle));
 
         await ExecuteExtractFileMetadataJobAsync();
 
-        FileManifestMetadataState versionBumpState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        FileManifestMetadataState invalidMediaState = await GetFileManifestMetadataStateAsync(createdFile.Id);
         FileManifestMetadataState validImageState = await GetFileManifestMetadataStateAsync(validImage.Id);
         Assert.Multiple(() =>
         {
-            Assert.That(versionBumpState.Metadata?[FileContentMetadataKeys.MediaTitle], Is.EqualTo(ExistingTitle));
-            Assert.That(versionBumpState.ExtractorVersion, Is.EqualTo(FileContentMetadataExtractorProvider.CurrentVersion));
-            Assert.That(versionBumpState.ExtractionError, Is.EqualTo("File metadata extraction failed."));
+            Assert.That(invalidMediaState.Metadata?[ExistingKey], Is.EqualTo(ExistingTitle));
             Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageWidth], Is.EqualTo("64"));
             Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageHeight], Is.EqualTo("48"));
-            Assert.That(validImageState.ExtractionError, Is.Null);
         });
     }
 
@@ -739,9 +709,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             .AsNoTracking()
             .Where(x => x.Id == nodeFileId)
             .Select(x => new FileManifestMetadataState(
-                x.FileManifest.Metadata,
-                x.FileManifest.MetadataExtractorVersion,
-                x.FileManifest.MetadataExtractionError))
+                x.FileManifest.Metadata))
             .SingleAsync();
     }
 

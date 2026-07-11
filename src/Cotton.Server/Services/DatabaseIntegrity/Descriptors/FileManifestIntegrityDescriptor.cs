@@ -26,8 +26,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
         {
             WriteContentIdentityFields(writer, entity);
-            // Preview and metadata extraction state, including Metadata, is derived cache state,
-            // not file-content identity.
+            // Preview fields and extracted Metadata are derived cache data, not file-content identity.
         }
 
         private static void WriteContentIdentityFields(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)

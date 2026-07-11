@@ -19,7 +19,8 @@ namespace Cotton.Server.Abstractions
             Guid userId,
             EmailTemplate template,
             Dictionary<string, string> parameters,
-            string serverBaseUrl);
+            string serverBaseUrl,
+            string? recipientEmail = null);
 
         /// <summary>
         /// Sends smtp test email.

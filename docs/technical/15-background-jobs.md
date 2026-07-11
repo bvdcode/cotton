@@ -104,7 +104,7 @@ Cadences below are the literal `[JobTrigger]` arguments. "Internal start delay" 
 | `StorageConsistencyJob` | `[JobTrigger(days: 30)]` | 5 min | Reconcile `Chunks` table against the blob store in both directions | `FileManifests` (clears preview hashes), `Users` (clears avatar hash), `Chunks` (registers orphans w/ `GCScheduledAfter`); sends notifications |
 | `ComputeManifestHashesJob` | `[JobTrigger(hours: 24)]` | none | Verify whole-file content hash of manifests as scheduled maintenance | `FileManifests.ComputedContentHash`; sends mismatch notifications |
 | `GeneratePreviewJob` | `[JobTrigger(minutes: 15)]` | none | Generate small/large WebP previews | blob store (preview blobs), `Chunks`, `FileManifests` (preview hashes, version, error); SignalR `PreviewGenerated` |
-| `ExtractFileMetadataJob` | `[JobTrigger(minutes: 15)]` | none | Extract deterministic image/audio/video metadata | `FileManifests.Metadata`, `MetadataExtractorVersion`, `MetadataExtractionError`; SignalR `FileUpdated` |
+| `ExtractFileMetadataJob` | `[JobTrigger(minutes: 15)]` | none | Extract deterministic image/audio/video metadata | `FileManifests.Metadata`; SignalR `FileUpdated` |
 | `DownloadTokenRetentionJob` | `[JobTrigger(days: 1)]` | 4 min | Delete download tokens expired > 30 days | `DownloadTokens` (delete) |
 | `RefreshTokenRetentionJob` | `[JobTrigger(days: 1)]` | 10 min | Revoke refresh tokens created > 30 days ago | `RefreshTokens.RevokedAt` |
 | `DumpDatabaseJob` | `[JobTrigger(days: 7)]` | 3 min | Logical `pg_dump` stored as content-addressed chunks + manifest pointer | blob store (dump chunks, manifest, pointer), `Chunks`/`ChunkOwnerships` via ingest |
@@ -190,7 +190,7 @@ Generates WebP previews. Deep detail lives in the *Previews* section; control fl
 
 `src/Cotton.Server/Jobs/ExtractFileMetadataJob.cs` — `[JobTrigger(minutes: 15)]`. Injects `PerfTracker`, `CottonDbContext`, `IMediator`, `ILogger`.
 
-Extracts deterministic content metadata for supported image, audio, and video manifests. If an upload is active it waits 5 seconds, then loads up to `MaxItemsPerRun` (500) manifests that have at least one `NodeFile`, a supported content type, and an old `MetadataExtractorVersion`. Each manifest is handled through `ExtractFileManifestMetadataRequest` with `Notify = true`; after the first `UnthrottledItemsCount` (100) items it waits `ThrottleDelayMs` (100 ms) between items and clears the EF change tracker after each manifest. The request handler updates only managed metadata keys, records the current extractor version on success or failure, stores a generic `MetadataExtractionError` on failure, and sends `FileUpdated` events only when visible metadata changed.
+Extracts deterministic content metadata for supported image, audio, and video manifests. If an upload is active it waits 5 seconds, then loads up to `MaxItemsPerRun` (500) manifests that have at least one `NodeFile`, supported content type, and null `Metadata`. Each manifest is handled through `ExtractFileManifestMetadataRequest` with `Notify = true`; after the first `UnthrottledItemsCount` (100) items it waits `ThrottleDelayMs` (100 ms) between items and clears the EF change tracker after each manifest. The request handler updates only managed metadata keys, logs extraction failures without writing attempt state to the database, and sends `FileUpdated` events only when visible metadata changed.
 
 ### DownloadTokenRetentionJob
 

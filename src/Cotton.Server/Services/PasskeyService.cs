@@ -3,6 +3,9 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Localization;
+using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Enums;
 using Cotton.Server.Providers;
@@ -24,7 +27,9 @@ namespace Cotton.Server.Services
         CottonDbContext _dbContext,
         IMemoryCache _cache,
         SettingsProvider _settings,
-        IDatabaseIntegrityVerifier _integrity)
+        IDatabaseIntegrityVerifier _integrity,
+        INotificationsProvider _notifications,
+        ILogger<PasskeyService> _logger)
     {
         private static readonly TimeSpan OptionsLifetime = TimeSpan.FromMinutes(5);
 
@@ -169,6 +174,13 @@ namespace Cotton.Server.Services
 
             await _dbContext.UserPasskeyCredentials.AddAsync(credential, ct);
             await _dbContext.SaveChangesAsync(ct);
+            await _notifications.SendSecurityEmailAsync(
+                _settings,
+                _logger,
+                userId,
+                NotificationTemplates.PasskeyAddedTitle,
+                NotificationTemplates.PasskeyAddedContent(ResolvePasskeyAuditName(credential)),
+                DateTime.UtcNow);
 
             return ToDto(credential);
         }
@@ -318,6 +330,13 @@ namespace Cotton.Server.Services
 
             _dbContext.UserPasskeyCredentials.Remove(credential);
             await _dbContext.SaveChangesAsync(ct);
+            await _notifications.SendSecurityEmailAsync(
+                _settings,
+                _logger,
+                userId,
+                NotificationTemplates.PasskeyRemovedTitle,
+                NotificationTemplates.PasskeyRemovedContent(ResolvePasskeyAuditName(credential)),
+                DateTime.UtcNow);
         }
 
         private static PasskeyCredentialDto ToDto(UserPasskeyCredential credential)
@@ -377,6 +396,12 @@ namespace Cotton.Server.Services
         {
             string displayName = $"{user.FirstName} {user.LastName}".Trim();
             return string.IsNullOrWhiteSpace(displayName) ? user.Username : displayName;
+        }
+
+        private static string ResolvePasskeyAuditName(UserPasskeyCredential credential)
+        {
+            return credential.Label
+                ?? PasskeyAuthenticatorResolver.ResolveDisplayName(credential.AaGuid, credential.Transports);
         }
 
         private static AuthenticatorAttestationRawResponse ToAttestationResponse(

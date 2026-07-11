@@ -3,10 +3,13 @@
 
 using Cotton.Database.Models.Enums;
 using Cotton.Localization;
+using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.Helpers;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using System.Globalization;
 using System.Net;
@@ -117,6 +120,64 @@ namespace Cotton.Server.Extensions
         private static string FormatInvariant(int value)
         {
             return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// Sends an account security email without affecting the completed account action.
+        /// </summary>
+        public static async Task SendSecurityEmailAsync(
+            this INotificationsProvider notifications,
+            SettingsProvider settings,
+            ILogger logger,
+            Guid userId,
+            string title,
+            string? content,
+            DateTime occurredAt,
+            string? recipientEmail = null)
+        {
+            ArgumentNullException.ThrowIfNull(notifications);
+            ArgumentNullException.ThrowIfNull(settings);
+            ArgumentNullException.ThrowIfNull(logger);
+
+            try
+            {
+                string serverBaseUrl = (await settings.GetPublicBaseUrlAsync(CancellationToken.None)).TrimEnd('/');
+                Dictionary<string, string> parameters = new()
+                {
+                    ["security_title"] = EncodeText(title),
+                    ["security_content"] = EncodeMultilineText(content),
+                    ["occurred_at"] = occurredAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                    ["server_url"] = WebUtility.HtmlEncode(serverBaseUrl),
+                };
+
+                bool sent = await notifications.SendEmailAsync(
+                    userId,
+                    EmailTemplate.SecurityAlert,
+                    parameters,
+                    serverBaseUrl,
+                    recipientEmail);
+
+                if (!sent)
+                {
+                    logger.LogDebug("Security email was not sent for user {UserId}.", userId);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Security email delivery failed for user {UserId}.", userId);
+            }
+        }
+
+        private static string EncodeText(string? value)
+        {
+            return WebUtility.HtmlEncode(value ?? string.Empty);
+        }
+
+        private static string EncodeMultilineText(string? value)
+        {
+            return EncodeText(value)
+                .Replace("\r\n", "<br />", StringComparison.Ordinal)
+                .Replace("\n", "<br />", StringComparison.Ordinal);
         }
 
         /// <summary>

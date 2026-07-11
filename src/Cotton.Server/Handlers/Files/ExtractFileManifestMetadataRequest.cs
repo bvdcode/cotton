@@ -56,8 +56,6 @@ namespace Cotton.Server.Handlers.Files
         ILogger<ExtractFileManifestMetadataRequestHandler> _logger)
         : IRequestHandler<ExtractFileManifestMetadataRequest, NodeFileManifestDto?>
     {
-        private const string ExtractionFailedMessage = "File metadata extraction failed.";
-
         /// <inheritdoc />
         public async Task<NodeFileManifestDto?> Handle(
             ExtractFileManifestMetadataRequest request,
@@ -71,7 +69,7 @@ namespace Cotton.Server.Handlers.Files
                 return null;
             }
 
-            if (IsCurrent(manifest))
+            if (HasExtractedMetadata(manifest))
             {
                 return MapRequestedFile(request, manifest);
             }
@@ -121,9 +119,9 @@ namespace Cotton.Server.Handlers.Files
             return await query.SingleOrDefaultAsync(cancellationToken);
         }
 
-        private static bool IsCurrent(FileManifest manifest)
+        private static bool HasExtractedMetadata(FileManifest manifest)
         {
-            return manifest.MetadataExtractorVersion == FileContentMetadataExtractorProvider.CurrentVersion;
+            return FileContentMetadataDictionary.HasManagedValues(manifest.Metadata);
         }
 
         private async Task<bool> ExtractAndStoreAsync(FileManifest manifest, CancellationToken cancellationToken)
@@ -135,8 +133,10 @@ namespace Cotton.Server.Handlers.Files
 
             if (extractor is null)
             {
-                MarkExtractionFailure(manifest, "No metadata extractor matched the manifest content type.");
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                _logger.LogDebug(
+                    "No metadata extractor matched file manifest {FileManifestId} content type {ContentType}.",
+                    manifest.Id,
+                    manifest.ContentType);
                 return false;
             }
 
@@ -148,8 +148,6 @@ namespace Cotton.Server.Handlers.Files
                     cancellationToken);
 
                 manifest.Metadata = FileContentMetadataDictionary.ReplaceManagedValues(manifest.Metadata, extracted);
-                manifest.MetadataExtractorVersion = FileContentMetadataExtractorProvider.CurrentVersion;
-                manifest.MetadataExtractionError = null;
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 return !AreEquivalent(oldMetadata, manifest.Metadata);
             }
@@ -174,15 +172,11 @@ namespace Cotton.Server.Handlers.Files
                     "Metadata is unavailable for file manifest {FileManifestId}: {Reason}",
                     manifest.Id,
                     ex.Message);
-                MarkExtractionFailure(manifest, ExtractionFailedMessage);
-                await _dbContext.SaveChangesAsync(cancellationToken);
                 return false;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to extract metadata for file manifest {FileManifestId}", manifest.Id);
-                MarkExtractionFailure(manifest, ExtractionFailedMessage);
-                await _dbContext.SaveChangesAsync(cancellationToken);
                 return false;
             }
         }
@@ -201,12 +195,6 @@ namespace Cotton.Server.Handlers.Files
 
             await using Stream stream = _storage.GetBlobStream(uids, pipelineContext);
             return await extractor.ExtractAsync(stream, manifest.ContentType, cancellationToken);
-        }
-
-        private static void MarkExtractionFailure(FileManifest manifest, string message)
-        {
-            manifest.MetadataExtractorVersion = FileContentMetadataExtractorProvider.CurrentVersion;
-            manifest.MetadataExtractionError = message;
         }
 
         private async Task NotifyManifestFilesUpdatedAsync(FileManifest manifest, CancellationToken cancellationToken)

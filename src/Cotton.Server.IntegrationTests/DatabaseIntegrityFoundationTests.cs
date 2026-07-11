@@ -486,16 +486,12 @@ public class DatabaseIntegrityFoundationTests
             ContentType = "text/plain",
             SizeBytes = 3,
             PreviewGenerationError = "ffmpeg failed before the runtime image was fixed",
-            PreviewGeneratorVersion = 1,
-            MetadataExtractionError = "metadata extraction failed before ffprobe was installed",
-            MetadataExtractorVersion = 1
+            PreviewGeneratorVersion = 1
         };
         byte[] mac = protector.Sign(manifest, descriptor);
 
         manifest.PreviewGenerationError = null;
         manifest.PreviewGeneratorVersion = 2;
-        manifest.MetadataExtractionError = null;
-        manifest.MetadataExtractorVersion = 2;
 
         Assert.That(protector.Verify(manifest, descriptor, mac), Is.True);
     }

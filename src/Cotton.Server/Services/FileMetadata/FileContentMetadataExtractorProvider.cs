@@ -8,11 +8,6 @@ namespace Cotton.Server.Services.FileMetadata
     /// </summary>
     public class FileContentMetadataExtractorProvider(IEnumerable<IFileContentMetadataExtractor> extractors)
     {
-        /// <summary>
-        /// Current extractor version for scheduling and idempotency.
-        /// </summary>
-        public const int CurrentVersion = 1;
-
         private readonly IReadOnlyList<IFileContentMetadataExtractor> _extractors = [.. extractors];
 
         /// <summary>

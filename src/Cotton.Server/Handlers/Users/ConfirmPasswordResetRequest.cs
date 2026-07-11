@@ -3,6 +3,10 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Localization;
+using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Abstractions;
@@ -38,7 +42,10 @@ namespace Cotton.Server.Handlers.Users
         IPasswordHashService _hasher,
         RefreshTokenRevocationService _refreshTokenRevocations,
         SessionRevocationNotifier _sessionRevocationNotifier,
-        IDatabaseIntegrityVerifier _integrity) : IRequestHandler<ConfirmPasswordResetRequest>
+        IDatabaseIntegrityVerifier _integrity,
+        INotificationsProvider _notifications,
+        SettingsProvider _settings,
+        ILogger<ConfirmPasswordResetRequestHandler> _logger) : IRequestHandler<ConfirmPasswordResetRequest>
     {
         private static readonly TimeSpan TokenExpiration = TimeSpan.FromHours(1);
 
@@ -96,6 +103,13 @@ namespace Cotton.Server.Handlers.Users
                 user.Id,
                 revocation.SessionIds,
                 CancellationToken.None);
+            await _notifications.SendSecurityEmailAsync(
+                _settings,
+                _logger,
+                user.Id,
+                NotificationTemplates.PasswordResetCompletedTitle,
+                NotificationTemplates.PasswordResetCompletedContent,
+                DateTime.UtcNow);
         }
     }
 }

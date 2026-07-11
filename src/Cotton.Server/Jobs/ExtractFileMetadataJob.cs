@@ -83,7 +83,7 @@ namespace Cotton.Server.Jobs
         {
             return _dbContext.FileManifests
                 .Where(x => x.NodeFiles.Any())
-                .Where(x => x.MetadataExtractorVersion != FileContentMetadataExtractorProvider.CurrentVersion)
+                .Where(x => x.Metadata == null)
                 .Where(x =>
                     x.ContentType.StartsWith("audio/")
                     || x.ContentType.StartsWith("video/")

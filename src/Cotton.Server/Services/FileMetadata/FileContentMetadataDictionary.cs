@@ -8,7 +8,7 @@ namespace Cotton.Server.Services.FileMetadata
     /// </summary>
     internal static class FileContentMetadataDictionary
     {
-        public static Dictionary<string, string> ReplaceManagedValues(
+        public static Dictionary<string, string>? ReplaceManagedValues(
             Dictionary<string, string>? current,
             IReadOnlyDictionary<string, string> extracted)
         {
@@ -29,7 +29,12 @@ namespace Cotton.Server.Services.FileMetadata
                 }
             }
 
-            return result;
+            return result.Count > 0 ? result : null;
+        }
+
+        public static bool HasManagedValues(Dictionary<string, string>? metadata)
+        {
+            return metadata is not null && metadata.Keys.Any(IsManagedKey);
         }
 
         private static bool IsManagedKey(string key)

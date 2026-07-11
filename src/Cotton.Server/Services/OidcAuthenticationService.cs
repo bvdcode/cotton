@@ -4,6 +4,9 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Localization;
+using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
@@ -34,7 +37,9 @@ namespace Cotton.Server.Services
         DefaultUserContentSeeder _defaultUserContentSeeder,
         AuthSessionIssuer _sessionIssuer,
         OidcAvatarImportService _avatarImporter,
-        IDatabaseIntegrityVerifier _integrity)
+        IDatabaseIntegrityVerifier _integrity,
+        INotificationsProvider _notifications,
+        ILogger<OidcAuthenticationService> _logger)
     {
         private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);
         private static readonly TimeSpan ClockSkew = TimeSpan.FromMinutes(2);
@@ -115,14 +120,33 @@ namespace Cotton.Server.Services
                 principal,
                 userInfo);
 
-            User user = loginState.LinkUserId.HasValue
-                ? await LinkIdentityAsync(loginState.LinkUserId.Value, loginState.Provider, claims, ct)
-                : await SignInOrCreateUserAsync(loginState.Provider, claims, ct);
+            bool isLinkFlow = loginState.LinkUserId.HasValue;
+            string? securityEmailRecipient = null;
+            User user;
+            if (loginState.LinkUserId is Guid linkUserId)
+            {
+                (user, securityEmailRecipient) = await LinkIdentityAsync(linkUserId, loginState.Provider, claims, ct);
+            }
+            else
+            {
+                user = await SignInOrCreateUserAsync(loginState.Provider, claims, ct);
+            }
 
             _dbContext.OidcLoginStates.Remove(loginState);
             await _dbContext.SaveChangesAsync(ct);
 
-            if (!loginState.LinkUserId.HasValue)
+            if (isLinkFlow)
+            {
+                await _notifications.SendSecurityEmailAsync(
+                    _settings,
+                    _logger,
+                    user.Id,
+                    NotificationTemplates.ExternalIdentityLinkedTitle,
+                    NotificationTemplates.ExternalIdentityLinkedContent(loginState.Provider.Name),
+                    DateTime.UtcNow,
+                    securityEmailRecipient);
+            }
+            else
             {
                 await _sessionIssuer.SignInAsync(user, loginState.TrustDevice, AuthType.Credentials, ct);
             }
@@ -156,12 +180,20 @@ namespace Cotton.Server.Services
         public async Task UnlinkAsync(Guid userId, Guid identityId, CancellationToken ct)
         {
             UserExternalIdentity identity = await _dbContext.UserExternalIdentities
+                .Include(x => x.Provider)
                 .FirstOrDefaultAsync(x => x.Id == identityId && x.UserId == userId, ct)
                 ?? throw new EntityNotFoundException<UserExternalIdentity>();
             _integrity.RequireValid(_dbContext, identity, "oidc.unlink");
             await EnsureCanUnlinkAsync(userId, identityId, ct);
             _dbContext.UserExternalIdentities.Remove(identity);
             await _dbContext.SaveChangesAsync(ct);
+            await _notifications.SendSecurityEmailAsync(
+                _settings,
+                _logger,
+                userId,
+                NotificationTemplates.ExternalIdentityUnlinkedTitle,
+                NotificationTemplates.ExternalIdentityUnlinkedContent(identity.Provider.Name),
+                DateTime.UtcNow);
         }
 
         private async Task<string> BeginAsync(
@@ -286,7 +318,7 @@ namespace Cotton.Server.Services
             return user;
         }
 
-        private async Task<User> LinkIdentityAsync(
+        private async Task<(User User, string? PreviousEmail)> LinkIdentityAsync(
             Guid userId,
             OidcProvider provider,
             OidcIdentityClaims claims,
@@ -295,6 +327,7 @@ namespace Cotton.Server.Services
             User user = await _dbContext.Users.FindAsync([userId], ct)
                 ?? throw new EntityNotFoundException<User>();
             _integrity.RequireValid(_dbContext, user, "oidc.link-user");
+            string? previousEmail = user.Email;
 
             UserExternalIdentity? existingSubject = await _dbContext.UserExternalIdentities
                 .FirstOrDefaultAsync(x => x.ProviderId == provider.Id && x.Subject == claims.Subject, ct);
@@ -317,13 +350,13 @@ namespace Cotton.Server.Services
 
                 ApplyIdentityClaims(existingProviderLink, claims);
                 await ApplyUserSyncAsync(user, provider, claims, ct);
-                return user;
+                return (user, previousEmail);
             }
 
             UserExternalIdentity identity = CreateIdentity(user.Id, provider.Id, provider.Issuer, claims);
             await _dbContext.UserExternalIdentities.AddAsync(identity, ct);
             await ApplyUserSyncAsync(user, provider, claims, ct);
-            return user;
+            return (user, previousEmail);
         }
 
         private static void ValidateAccountCreation(OidcProvider provider, OidcIdentityClaims claims)

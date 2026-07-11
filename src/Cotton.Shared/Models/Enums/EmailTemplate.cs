@@ -17,5 +17,10 @@ namespace Cotton.Models.Enums
         /// Password reset template.
         /// </summary>
         PasswordReset = 2,
+
+        /// <summary>
+        /// Account security activity template.
+        /// </summary>
+        SecurityAlert = 3,
     }
 }

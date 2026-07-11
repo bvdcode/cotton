@@ -240,6 +240,48 @@ namespace Cotton.Email
           </tr>
 ";
 
+        private const string ShellOpenSecurityAlertEn =
+            @"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"" />
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+  <title>Security alert</title>
+</head>
+<body style=""margin:0;padding:0;background-color:#f4f4f7;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"">
+  <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#f4f4f7;padding:40px 0;"">
+    <tr>
+      <td align=""center"">
+        <table role=""presentation"" width=""560"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);"">
+";
+
+        private const string BodySecurityAlertEn =
+            @"          <!-- Body -->
+          <tr>
+            <td style=""padding:40px 40px 32px;"">
+              <h2 style=""margin:0 0 16px;color:#1a1a2e;font-size:20px;font-weight:600;"">{{security_title}}</h2>
+              <p style=""margin:0 0 20px;color:#51545e;font-size:15px;line-height:1.6;"">
+                {{security_content}}
+              </p>
+              <p style=""margin:0 0 24px;color:#9ca3af;font-size:13px;line-height:1.5;"">
+                Recorded at {{occurred_at}} UTC
+              </p>
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" style=""margin:0 auto 24px;"">
+                <tr>
+                  <td align=""center"" style=""border-radius:8px;background:linear-gradient(135deg,#96be02,#1bcea7);"">
+                    <a href=""{{server_url}}"" target=""_blank"" style=""display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;"">
+                      Review Account
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style=""margin:0;color:#9ca3af;font-size:13px;line-height:1.5;"">
+                If this was not you, change your password and review your active sessions immediately.
+              </p>
+            </td>
+          </tr>
+";
+
         /// <summary>
         /// English email-confirmation HTML template. Placeholders: {{recipient_name}}, {{confirmation_url}}, {{year}}.
         /// </summary>
@@ -278,6 +320,16 @@ namespace Cotton.Email
             + CommonHeader
             + BodyPasswordResetRu
             + CommonFooterRu
+            + CommonShellClose;
+
+        /// <summary>
+        /// English security-alert HTML template.
+        /// </summary>
+        public const string SecurityAlertEn =
+            ShellOpenSecurityAlertEn
+            + CommonHeader
+            + BodySecurityAlertEn
+            + CommonFooterEn
             + CommonShellClose;
     }
 }
