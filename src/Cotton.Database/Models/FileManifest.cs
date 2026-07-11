@@ -77,6 +77,12 @@ namespace Cotton.Database.Models
         public int PreviewGeneratorVersion { get; set; }
 
         /// <summary>
+        /// Content-derived metadata extracted from the immutable file payload.
+        /// </summary>
+        [Column("metadata")]
+        public Dictionary<string, string>? Metadata { get; set; }
+
+        /// <summary>
         /// Returns the row-scoped encrypted small-preview token as lowercase text.
         /// </summary>
         public string? GetPreviewHashEncryptedHex()

@@ -42,7 +42,8 @@ namespace Cotton.Server.Services
             Guid userId,
             EmailTemplate template,
             Dictionary<string, string> parameters,
-            string serverBaseUrl)
+            string serverBaseUrl,
+            string? recipientEmail = null)
         {
             CottonServerSettings settings = _settingsProvider.GetServerSettings();
             switch (settings.EmailMode)
@@ -52,10 +53,10 @@ namespace Cotton.Server.Services
                     return false;
 
                 case EmailMode.Cloud:
-                    return await SendViaCottonBridgeAsync(userId, template, parameters, serverBaseUrl, settings);
+                    return await SendViaCottonBridgeAsync(userId, template, parameters, serverBaseUrl, settings, recipientEmail);
 
                 case EmailMode.Custom:
-                    return await SendViaSmtpAsync(userId, template, parameters, serverBaseUrl, settings);
+                    return await SendViaSmtpAsync(userId, template, parameters, serverBaseUrl, settings, recipientEmail);
 
                 default:
                     _logger.LogError("Invalid email mode configured: {EmailMode}.", settings.EmailMode);
@@ -120,7 +121,8 @@ namespace Cotton.Server.Services
             EmailTemplate template,
             Dictionary<string, string> parameters,
             string serverBaseUrl,
-            CottonServerSettings settings)
+            CottonServerSettings settings,
+            string? recipientEmail)
         {
             if (!settings.TelemetryEnabled)
             {
@@ -128,7 +130,13 @@ namespace Cotton.Server.Services
                 return false;
             }
             User? user = await _dbContext.Users.FindAsync(userId);
-            if (user is null || string.IsNullOrWhiteSpace(user.Email))
+            if (user is null)
+            {
+                return false;
+            }
+
+            string email = ResolveRecipientEmail(user, recipientEmail);
+            if (string.IsNullOrWhiteSpace(email))
             {
                 return false;
             }
@@ -138,7 +146,7 @@ namespace Cotton.Server.Services
             bool sent = await _publicEmailProvider.SendEmailAsync(
                 template,
                 serverBaseUrl,
-                user.Email,
+                email,
                 recipientName,
                 "en",
                 parameters);
@@ -159,10 +167,17 @@ namespace Cotton.Server.Services
             EmailTemplate template,
             Dictionary<string, string> parameters,
             string serverBaseUrl,
-            CottonServerSettings settings)
+            CottonServerSettings settings,
+            string? recipientEmail)
         {
             User? user = await _dbContext.Users.FindAsync(userId);
-            if (user is null || string.IsNullOrWhiteSpace(user.Email))
+            if (user is null)
+            {
+                return false;
+            }
+
+            string email = ResolveRecipientEmail(user, recipientEmail);
+            if (string.IsNullOrWhiteSpace(email))
             {
                 return false;
             }
@@ -171,7 +186,7 @@ namespace Cotton.Server.Services
             string recipientName = GetRecipientDisplayName(user);
             Dictionary<string, string> variables = EmailTemplateRenderer.BuildVariables(
                 recipientName,
-                user.Email,
+                email,
                 token,
                 serverBaseUrl);
 
@@ -189,14 +204,21 @@ namespace Cotton.Server.Services
 
             try
             {
-                SendSmtpEmail(user.Email, recipientName, subject, body, settings);
+                SendSmtpEmail(email, recipientName, subject, body, settings);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send {Template} email via SMTP to {Email}.", template, user.Email);
+                _logger.LogError(ex, "Failed to send {Template} email via SMTP to {Email}.", template, email);
                 return false;
             }
+        }
+
+        private static string ResolveRecipientEmail(User user, string? recipientEmail)
+        {
+            return string.IsNullOrWhiteSpace(recipientEmail)
+                ? user.Email ?? string.Empty
+                : recipientEmail.Trim();
         }
 
         private static string GetRecipientDisplayName(User user)

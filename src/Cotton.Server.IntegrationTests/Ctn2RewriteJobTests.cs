@@ -63,7 +63,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task RunOnce_WhenTempMarkerExists_SkipsAndCreatesStorageMarkerAndClearsGcSchedule()
+        public async Task RunOnce_WhenOnlyTempMarkerExists_DoesNotSkipOrPromoteStorageMarker()
         {
             var storage = new InMemoryStorage();
             await AddScheduledMarkerChunkAsync();
@@ -76,7 +76,7 @@ namespace Cotton.Server.IntegrationTests
 
             try
             {
-                await job.RunOnceAsync();
+                Assert.ThrowsAsync<InvalidOperationException>(async () => await job.RunOnceAsync());
                 DbContext.ChangeTracker.Clear();
 
                 Chunk markerChunk = (await DbContext.Chunks.FindAsync(Ctn2RewriteJob.CompletionStorageMarkerHash))!;
@@ -84,9 +84,9 @@ namespace Cotton.Server.IntegrationTests
 
                 Assert.Multiple(() =>
                 {
-                    Assert.That(storageMarkerExists, Is.True);
-                    Assert.That(File.Exists(tempMarkerPath), Is.True);
-                    Assert.That(markerChunk.GCScheduledAfter, Is.Null);
+                    Assert.That(storageMarkerExists, Is.False);
+                    Assert.That(File.Exists(tempMarkerPath), Is.False);
+                    Assert.That(markerChunk.GCScheduledAfter, Is.Not.Null);
                 });
             }
             finally
@@ -144,7 +144,7 @@ namespace Cotton.Server.IntegrationTests
         {
             public IStorageBackend GetBackend()
             {
-                throw new InvalidOperationException("CTN2 rewrite should not touch backend after a completion marker is found.");
+                throw new InvalidOperationException("Storage backend was touched.");
             }
         }
     }

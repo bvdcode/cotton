@@ -26,8 +26,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
         {
             WriteContentIdentityFields(writer, entity);
-            // PreviewGenerationError and PreviewGeneratorVersion are retry/scheduling state, not file-content identity.
-            // Keep them outside the MAC so operators can safely clear preview failures and generator bumps can reschedule work.
+            // Preview fields and extracted Metadata are derived cache data, not file-content identity.
         }
 
         private static void WriteContentIdentityFields(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)

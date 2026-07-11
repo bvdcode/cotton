@@ -8,6 +8,7 @@ import {
 
 class FakeMediaSessionPlatform implements MediaSessionPlatform {
   metadata: MediaSessionTrackInfo | null = null;
+  metadataSetCount = 0;
   playbackState: MediaSessionPlaybackState = "none";
   positionState: MediaPositionState | null = null;
   actions = new Map<MediaSessionAction, MediaSessionActionHandler | null>();
@@ -18,6 +19,7 @@ class FakeMediaSessionPlatform implements MediaSessionPlatform {
 
   setMetadata(track: MediaSessionTrackInfo | null): void {
     this.metadata = track;
+    this.metadataSetCount += 1;
   }
 
   setPlaybackState(state: MediaSessionPlaybackState): void {
@@ -149,6 +151,26 @@ describe("MediaSessionCoordinator", () => {
 
     expect(video.currentTime).toBe(35);
     expect(onNextTrack).toHaveBeenCalledOnce();
+  });
+
+  it("reasserts current owner metadata for platform reload glitches", () => {
+    const platform = new FakeMediaSessionPlatform();
+    const coordinator = new MediaSessionCoordinator(platform);
+
+    coordinator.upsertSource({
+      id: "audio",
+      priority: MEDIA_SESSION_SOURCE_PRIORITY.audio,
+      mediaElement: createMediaElement({ paused: false }),
+      track: { title: "Song" },
+    });
+
+    expect(platform.metadataSetCount).toBe(1);
+
+    coordinator.reassertSource("audio");
+
+    expect(platform.metadataSetCount).toBe(2);
+    expect(platform.metadata?.title).toBe("Song");
+    expect(platform.playbackState).toBe("playing");
   });
 
   it("clears platform state when the last source is removed", () => {

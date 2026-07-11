@@ -359,6 +359,27 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
+        /// Ensures content metadata has been extracted for the file.
+        /// </summary>
+        [Authorize]
+        [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/metadata/extract")]
+        [ProducesResponseType<NodeFileManifestDto>(StatusCodes.Status200OK)]
+        [ProducesResponseType<CottonResult>(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ExtractFileMetadata([FromRoute] Guid nodeFileId)
+        {
+            NodeFileManifestDto? mapped = await _mediator.Send(new ExtractFileManifestMetadataRequest
+            {
+                NodeFileId = nodeFileId,
+                UserId = User.GetUserId(),
+                Notify = true,
+            });
+
+            return mapped is null
+                ? CottonResult.NotFound("File not found.")
+                : Ok(mapped);
+        }
+
+        /// <summary>
         /// Gets file versions.
         /// </summary>
         [Authorize]
@@ -628,6 +649,7 @@ namespace Cotton.Server.Controllers
 
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
+            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
 
             NodeFileManifestDto mapped = nodeFile.Adapt<NodeFileManifestDto>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
@@ -1230,6 +1252,7 @@ namespace Cotton.Server.Controllers
             NodeFileManifestDto manifest = await _mediator.Send(ToCreateFileRequest(request, userId));
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
+            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileCreated", manifest);
             return Ok(manifest);
         }

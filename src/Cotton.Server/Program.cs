@@ -21,6 +21,7 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Quartz.Extensions;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
@@ -200,12 +201,14 @@ namespace Cotton.Server
                 .AddDatabaseIntegrity()
                 .AddStartupValidation()
                 .AddChunkServices()
+                .AddFileContentMetadataServices()
                 .AddLayoutPathServices()
                 .AddLayoutSearchServices()
                 .AddWebDavServices()
                 .AddWebDavAuth()
                 .AddJwt();
             builder.Services.AddAuthHardening();
+            builder.Services.AddRequestAdmission(builder.Configuration);
             builder.Services.AddHostedService<AppVersionTrackerService>();
 
             WebApplication app = builder.Build();
@@ -221,6 +224,7 @@ namespace Cotton.Server
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()
+                .UseRequestAdmission()
                 .UseAuthorization()
                 .UseExceptionHandler();
             app.MapStartupStatusEndpoint(null);
@@ -233,7 +237,7 @@ namespace Cotton.Server
                 autoRestore.TryRestoreIfEmptyAsync().GetAwaiter().GetResult();
                 scope.ServiceProvider.GetRequiredService<SettingsProvider>().GetServerSettings();
             }
-            app.MapHub<EventHub>(Routes.V1.EventHub);
+            app.MapHub<EventHub>(Routes.V1.EventHub).DisableRateLimiting();
             await app.RunAsync();
         }
 

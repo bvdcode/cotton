@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { nodesApi } from "../api/nodesApi";
 import type { AudioPlaylistItem } from "../types/audio";
+import { getAudioPlaylistMetadata } from "../utils/mediaMetadata";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 
 interface AudioPlayerState {
@@ -51,6 +52,27 @@ const PLAYLIST_COLLATOR = new Intl.Collator(undefined, {
 const normalizeTrackName = (name: string): string =>
   stripExtension(name).trim();
 
+const readTrackNumber = (value: string | undefined): number | null => {
+  if (!value) {
+    return null;
+  }
+
+  const first = value.split("/", 1)[0]?.trim();
+  if (!first) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(first, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const compareNullableNumbers = (a: number | null, b: number | null): number => {
+  if (a === b) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return a - b;
+};
+
 const compareNullableStrings = (a: string | null, b: string | null): number => {
   if (a === b) return 0;
   if (a === null) return -1;
@@ -73,12 +95,54 @@ const sortAudioPlaylist = (
     );
     if (folderCompare !== 0) return folderCompare;
 
+    const discCompare = compareNullableNumbers(
+      readTrackNumber(left.disc),
+      readTrackNumber(right.disc),
+    );
+    if (discCompare !== 0) return discCompare;
+
+    const trackCompare = compareNullableNumbers(
+      readTrackNumber(left.track),
+      readTrackNumber(right.track),
+    );
+    if (trackCompare !== 0) return trackCompare;
+
     return PLAYLIST_COLLATOR.compare(
-      normalizeTrackName(left.name),
-      normalizeTrackName(right.name),
+      normalizeTrackName(left.title ?? left.name),
+      normalizeTrackName(right.title ?? right.name),
     );
   });
   return next;
+};
+
+const mergeKnownPlaylistMetadata = (
+  next: AudioPlaylistItem,
+  existing: AudioPlaylistItem,
+): AudioPlaylistItem => ({
+  ...next,
+  previewUrl: next.previewUrl ?? existing.previewUrl,
+  title: next.title ?? existing.title,
+  artist: next.artist ?? existing.artist,
+  album: next.album ?? existing.album,
+  albumArtist: next.albumArtist ?? existing.albumArtist,
+  track: next.track ?? existing.track,
+  disc: next.disc ?? existing.disc,
+  durationSeconds: next.durationSeconds ?? existing.durationSeconds,
+});
+
+const preserveKnownPlaylistMetadata = (
+  next: ReadonlyArray<AudioPlaylistItem>,
+  existing: ReadonlyArray<AudioPlaylistItem>,
+): AudioPlaylistItem[] => {
+  if (existing.length === 0) {
+    return next.slice();
+  }
+
+  const existingById = new Map(existing.map((item) => [item.id, item]));
+  return next.map((item) => {
+    const known = existingById.get(item.id);
+    return known ? mergeKnownPlaylistMetadata(item, known) : item;
+  });
 };
 
 type NodeInfo = {
@@ -202,6 +266,7 @@ const buildRecursiveAudioPlaylist = async (
             nodeId: file.nodeId,
             folderPath: folderPath ?? undefined,
             previewUrl: tryBuildPreviewUrl(file.previewHashEncryptedHex),
+            ...getAudioPlaylistMetadata(file),
           });
         }
       }
@@ -278,19 +343,24 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
     set({ isScanning: true });
 
     try {
-      const next = await buildRecursiveAudioPlaylist(rootNodeId);
+      const existingPlaylist = get().playlist;
+      const scanned = await buildRecursiveAudioPlaylist(rootNodeId);
+      const next = preserveKnownPlaylistMetadata(scanned, existingPlaylist);
 
       const currentId = get().currentFileId;
       const currentName = get().currentFileName;
 
       if (currentId && currentName) {
         if (!next.some((x) => x.id === currentId)) {
-          const existing = get().playlist.find((x) => x.id === currentId);
-          next.unshift({
-            id: currentId,
-            name: currentName,
-            previewUrl: existing?.previewUrl,
-          });
+          const existing = existingPlaylist.find((x) => x.id === currentId);
+          next.unshift(
+            existing
+              ? { ...existing, name: currentName }
+              : {
+                  id: currentId,
+                  name: currentName,
+                },
+          );
         }
       }
 

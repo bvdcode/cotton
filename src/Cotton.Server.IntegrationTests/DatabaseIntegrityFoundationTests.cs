@@ -20,6 +20,23 @@ namespace Cotton.Server.IntegrationTests;
 public class DatabaseIntegrityFoundationTests
 {
     [Test]
+    public void IntegrityModel_UsesMacAsConcurrencyTokenForEveryProtectedEntity()
+    {
+        using CottonDbContext dbContext = CreateDbContext();
+        var protectedEntityTypes = dbContext.Model
+            .GetEntityTypes()
+            .Where(entityType => entityType.FindProperty(DatabaseIntegrityColumns.MacProperty) is not null)
+            .ToList();
+
+        Assert.That(protectedEntityTypes, Is.Not.Empty);
+        Assert.That(
+            protectedEntityTypes.All(entityType =>
+                entityType.FindProperty(DatabaseIntegrityColumns.MacProperty)!.IsConcurrencyToken),
+            Is.True,
+            "Every integrity-protected entity must reject stale writes through its persisted MAC.");
+    }
+
+    [Test]
     public void CanonicalWriter_SortsDictionaryKeys()
     {
         var first = new IntegrityTestEntity
@@ -426,6 +443,35 @@ public class DatabaseIntegrityFoundationTests
         manifest.ProposedContentHash = [9, 9, 9];
 
         Assert.That(protector.Verify(manifest, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void FileManifestDescriptor_UsesReleaseSchemaVersion()
+    {
+        Assert.That(new FileManifestIntegrityDescriptor().SchemaVersion, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void FileManifestDescriptor_IgnoresExtractedMetadata()
+    {
+        DatabaseIntegrityProtector protector = CreateProtector();
+        var descriptor = new FileManifestIntegrityDescriptor();
+        var manifest = new FileManifest
+        {
+            ProposedContentHash = [1, 2, 3],
+            ComputedContentHash = [1, 2, 3],
+            ContentType = "audio/flac",
+            SizeBytes = 3,
+            Metadata = new Dictionary<string, string>
+            {
+                ["media.title"] = "Song",
+            },
+        };
+        byte[] mac = protector.Sign(manifest, descriptor);
+
+        manifest.Metadata["media.title"] = "Other";
+
+        Assert.That(protector.Verify(manifest, descriptor, mac), Is.True);
     }
 
     [Test]

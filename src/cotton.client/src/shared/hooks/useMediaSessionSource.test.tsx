@@ -7,6 +7,7 @@ const coordinatorMock = vi.hoisted(() => ({
   removeSource: vi.fn(),
   updateSourcePlayback: vi.fn(),
   updateSourcePosition: vi.fn(),
+  reassertSource: vi.fn(),
 }));
 
 vi.mock("../utils/mediaSessionCoordinator", () => ({
@@ -86,6 +87,9 @@ describe("useMediaSessionSource", () => {
     expect(coordinatorMock.updateSourcePlayback).toHaveBeenLastCalledWith(
       expect.any(String),
       "playing",
+    );
+    expect(coordinatorMock.reassertSource).toHaveBeenCalledWith(
+      expect.any(String),
     );
 
     act(() => {

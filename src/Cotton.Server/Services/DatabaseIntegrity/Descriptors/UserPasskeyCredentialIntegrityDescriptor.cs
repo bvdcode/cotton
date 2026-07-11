@@ -10,7 +10,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// </summary>
     /// <remarks>
     /// The signed fields are the credential binding itself: owner, credential id, public key, user handle, signature counter,
-    /// authenticator identity, and backup state. The user-facing credential name is deliberately not part of the MAC.
+    /// authenticator identity, and backup state. The user-authored credential label is deliberately not part of the MAC.
     /// </remarks>
     public class UserPasskeyCredentialIntegrityDescriptor : DatabaseIntegrityDescriptor<UserPasskeyCredential>
     {

@@ -10,6 +10,7 @@ using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.Search;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
+using Cotton.Server.Services.FileMetadata;
 using Cotton.Server.Services.Startup;
 using Cotton.Server.Services.WebDav;
 using Microsoft.AspNetCore.Authentication;
@@ -142,6 +143,17 @@ namespace Cotton.Server.Extensions
             services.AddScoped<ILayoutSearchService, LayoutSearchService>();
             services.AddScoped<ILayoutSearchProvider, NameLayoutSearchProvider>();
             services.AddScoped<ILayoutSearchProvider, NoOpVectorLayoutSearchProvider>();
+            return services;
+        }
+
+        /// <summary>
+        /// Registers file content metadata extraction services.
+        /// </summary>
+        public static IServiceCollection AddFileContentMetadataServices(this IServiceCollection services)
+        {
+            services.AddScoped<FileContentMetadataExtractorProvider>();
+            services.AddScoped<IFileContentMetadataExtractor, ImageFileContentMetadataExtractor>();
+            services.AddScoped<IFileContentMetadataExtractor, MediaFileContentMetadataExtractor>();
             return services;
         }
 

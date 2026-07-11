@@ -140,7 +140,11 @@ public class AuthSmokeTests : IntegrationTestBase
             "limiteduser",
             "wrong-password",
             ipAddress);
-        Assert.That(limitedLogin.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+        Assert.Multiple(() =>
+        {
+            Assert.That(limitedLogin.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+            Assert.That(limitedLogin.Headers.RetryAfter?.Delta?.TotalSeconds, Is.GreaterThan(1));
+        });
     }
 
     [Test]

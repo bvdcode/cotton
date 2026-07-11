@@ -1802,6 +1802,7 @@
       "adding": "Adding...",
       "loading": "Loading passkeys...",
       "empty": "No passkeys are registered for this account yet.",
+      "label": "Label: {{name}}",
       "created": "Created {{date}}",
       "lastUsed": "Last used {{date}}",
       "delete": "Delete passkey",
@@ -1814,14 +1815,15 @@
         "renameFailed": "Failed to rename passkey."
       },
       "defaultNames": {
+        "passkey": "Passkey",
         "securityKey": "Security key",
         "device": "Device passkey"
       },
       "rename": {
-        "title": "Name this passkey",
-        "description": "Pick a name you will recognize later. Cotton can only detect the broad authenticator type, not the exact device model.",
-        "nameLabel": "Passkey name",
-        "button": "Rename passkey",
+        "title": "Label this passkey",
+        "description": "An optional label replaces the detected name. Leave it empty to use automatic detection.",
+        "nameLabel": "Label",
+        "button": "Edit label",
         "save": "Save",
         "saving": "Saving...",
         "cancel": "Not now"

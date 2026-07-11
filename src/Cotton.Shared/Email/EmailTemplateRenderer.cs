@@ -33,6 +33,7 @@ namespace Cotton.Email
             [BuildKey(EmailTemplate.EmailConfirmation, "ru")] = EmailTemplates.EmailConfirmationRu,
             [BuildKey(EmailTemplate.PasswordReset, "en")] = EmailTemplates.PasswordResetEn,
             [BuildKey(EmailTemplate.PasswordReset, "ru")] = EmailTemplates.PasswordResetRu,
+            [BuildKey(EmailTemplate.SecurityAlert, "en")] = EmailTemplates.SecurityAlertEn,
         };
 
         private static readonly Dictionary<string, string> Subjects = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -41,6 +42,7 @@ namespace Cotton.Email
             [BuildKey(EmailTemplate.EmailConfirmation, "ru")] = "\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u0432\u0430\u0448\u0443 \u043F\u043E\u0447\u0442\u0443 \u2014 Cotton Cloud",
             [BuildKey(EmailTemplate.PasswordReset, "en")] = "Reset your password \u2014 Cotton Cloud",
             [BuildKey(EmailTemplate.PasswordReset, "ru")] = "\u0421\u0431\u0440\u043E\u0441 \u043F\u0430\u0440\u043E\u043B\u044F \u2014 Cotton Cloud",
+            [BuildKey(EmailTemplate.SecurityAlert, "en")] = "Security alert \u2014 Cotton Cloud",
         };
 
         /// <summary>

@@ -213,7 +213,7 @@ Backups are storage-native: PostgreSQL dumps are chunked through Cotton's own st
 
 ### Scheduled backups
 
-`DumpDatabaseJob` (`src/Cotton.Server/Jobs/DumpDatabaseJob.cs`) carries `[JobTrigger(days: 7)]`. The `JobTriggerAttribute` defaults are `startNow: true`, `repeatForever: true`, `disallowConcurrentExecution: true`, so the job fires once shortly after startup and then every 7 days. The `Execute` method begins with `await Task.Delay(180_000)` (3 minutes) to let the server stabilize before dumping.
+`DumpDatabaseJob` (`src/Cotton.Server/Jobs/DumpDatabaseJob.cs`) carries `[JobTrigger(days: 7)]`. The trigger starts shortly after startup, repeats every 7 days, and is registered single-flight. The `Execute` method begins with `await Task.Delay(180_000)` (3 minutes) to let the server stabilize before dumping.
 
 Flow per run:
 
@@ -391,12 +391,13 @@ Setting `COTTON_PUBLIC_INSTANCE=true` flips `Constants.IsPublicInstance` (evalua
 
 ## Background job schedule reference
 
-All jobs use `[JobTrigger(...)]` with the attribute defaults `startNow: true, repeatForever: true, disallowConcurrentExecution: true` (so each runs once near startup, then on the interval).
+All jobs use `[JobTrigger(...)]` with startup firing, repeated intervals, and single-flight registration.
 
 | Job | Interval | Purpose |
 | --- | --- | --- |
-| `ComputeManifestHashesJob` | 1 hour | Compute manifest content hashes; flag mismatches. |
+| `ComputeManifestHashesJob` | 24 hours | Compute manifest content hashes; flag mismatches. |
 | `GeneratePreviewJob` | 15 min | Generate file previews. |
+| `ExtractFileMetadataJob` | 15 min | Extract file metadata. |
 | `GarbageCollectorJob` | 6 hours | Reclaim orphaned chunks (also triggerable via `PATCH /api/v1/server/gc/trigger`). |
 | `DownloadTokenRetentionJob` | 1 day | Sweep expired download/share tokens. |
 | `RefreshTokenRetentionJob` | 1 day | Sweep expired refresh tokens. |

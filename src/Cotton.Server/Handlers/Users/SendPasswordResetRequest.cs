@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Providers;
+using Cotton.Server.Services;
 using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -67,14 +68,15 @@ namespace Cotton.Server.Handlers.Users
                 return;
             }
 
-            user.PasswordResetToken = StringHelpers.CreateRandomString(TokenLength);
+            string token = StringHelpers.CreateRandomString(TokenLength);
+            user.PasswordResetToken = AuthSessionIssuer.HashRefreshToken(token);
             user.PasswordResetTokenSentAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             string baseUrl = _settingsProvider.GetServerSettings().PublicBaseUrl;
             var parameters = new Dictionary<string, string>
             {
-                ["token"] = user.PasswordResetToken,
+                ["token"] = token,
             };
 
             await _notifications.SendEmailAsync(

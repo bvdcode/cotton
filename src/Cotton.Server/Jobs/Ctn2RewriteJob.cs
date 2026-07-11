@@ -35,7 +35,7 @@ namespace Cotton.Server.Jobs
         private const string CompletionMarkerFilePrefix = "ctn2-integrity-rewrite-";
         private const string StorageCompletionMarkerLogicalKey = "cotton.ctn2-integrity-rewrite.completed.v1";
         private const string CompletionMarkerContent =
-            "OBSOLETE TRANSITION: CTN2 and database integrity rewrite completed. Delete this marker with Ctn2RewriteJob after the transition.";
+            "CTN2 storage and database integrity rewrite completed.";
         private static readonly TimeSpan ProgressLogInterval = TimeSpan.FromSeconds(30);
         private static readonly byte[] StorageCompletionMarkerHash = Hasher.HashData(
             Encoding.UTF8.GetBytes(StorageCompletionMarkerLogicalKey));
@@ -59,12 +59,12 @@ namespace Cotton.Server.Jobs
             string completionMarkerPath = GetCompletionMarkerPath();
             bool storageMarkerExists = await _storage.ExistsAsync(StorageCompletionMarkerKey);
             bool tempMarkerExists = File.Exists(completionMarkerPath);
-            if (storageMarkerExists || tempMarkerExists)
+            if (storageMarkerExists)
             {
-                await EnsureCompletionMarkersAsync(completionMarkerPath, storageMarkerExists, tempMarkerExists, ct);
+                await EnsureTempCompletionMarkerAsync(completionMarkerPath, tempMarkerExists, ct);
                 await ClearStorageMarkerGcScheduleAsync(ct);
-                _logger.LogWarning(
-                    "OBSOLETE TRANSITION: CTN2 rewrite job skipped because completion marker exists. StorageKey={StorageKey}; TempPath={TempPath}; StorageMarkerExists={StorageMarkerExists}; TempMarkerExists={TempMarkerExists}.",
+                _logger.LogInformation(
+                    "CTN2 rewrite job skipped because completion marker exists. StorageKey={StorageKey}; TempPath={TempPath}; StorageMarkerExists={StorageMarkerExists}; TempMarkerExists={TempMarkerExists}.",
                     StorageCompletionMarkerKey,
                     completionMarkerPath,
                     storageMarkerExists,
@@ -72,10 +72,18 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
+            if (tempMarkerExists)
+            {
+                DeleteTempCompletionMarker(completionMarkerPath);
+                _logger.LogWarning(
+                    "Ignoring stale CTN2 temp completion marker because the storage marker is missing. TempPath={TempPath}; StorageKey={StorageKey}.",
+                    completionMarkerPath,
+                    StorageCompletionMarkerKey);
+            }
+
             var stats = new RewriteStats();
 
-            _logger.LogWarning(
-                "OBSOLETE TRANSITION: CTN2 rewrite job started. This job must be deleted after the transition.");
+            _logger.LogInformation("CTN2 rewrite job started.");
 
             await RewriteMasterKeySentinelAsync(stats, ct);
             await RewriteStorageObjectsAsync(stats, ct);
@@ -83,8 +91,8 @@ namespace Cotton.Server.Jobs
             await RewriteDatabaseIntegritySignaturesAsync(stats, ct);
             await WriteCompletionMarkersAsync(completionMarkerPath, ct);
 
-            _logger.LogWarning(
-                "OBSOLETE TRANSITION: CTN2 rewrite job finished. " +
+            _logger.LogInformation(
+                "CTN2 rewrite job finished. " +
                 "Storage scanned: {StorageScanned}; storage rewritten: {StorageRewritten}; " +
                 "sentinel rewritten: {SentinelRewritten}; database values rewritten: {DatabaseValuesRewritten}; " +
                 "database rows re-signed: {DatabaseRowsResigned}; chunk stored sizes refreshed: {ChunkStoredSizesRefreshed}.",
@@ -109,17 +117,11 @@ namespace Cotton.Server.Jobs
 
         internal string GetCompletionMarkerPathForTests() => GetCompletionMarkerPath();
 
-        private async Task EnsureCompletionMarkersAsync(
+        private async Task EnsureTempCompletionMarkerAsync(
             string completionMarkerPath,
-            bool storageMarkerExists,
             bool tempMarkerExists,
             CancellationToken ct)
         {
-            if (!storageMarkerExists)
-            {
-                await WriteStorageCompletionMarkerAsync(ct);
-            }
-
             if (!tempMarkerExists)
             {
                 await WriteTempCompletionMarkerAsync(completionMarkerPath, ct);
@@ -155,6 +157,20 @@ namespace Cotton.Server.Jobs
             }
 
             await File.WriteAllTextAsync(completionMarkerPath, CompletionMarkerContent, ct);
+        }
+
+        private static void DeleteTempCompletionMarker(string completionMarkerPath)
+        {
+            try
+            {
+                File.Delete(completionMarkerPath);
+            }
+            catch (FileNotFoundException)
+            {
+            }
+            catch (DirectoryNotFoundException)
+            {
+            }
         }
 
         private async Task ClearStorageMarkerGcScheduleAsync(CancellationToken ct)
@@ -333,84 +349,85 @@ namespace Cotton.Server.Jobs
 
         private async Task RewriteDatabaseIntegritySignaturesAsync(RewriteStats stats, CancellationToken ct)
         {
-            await RewriteIntegritySignaturesAsync(_dbContext.Users.OrderBy(x => x.Id), nameof(User), stats, ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.UserPasskeyCredentials.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(_dbContext.Users, nameof(User), stats, ct);
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.UserPasskeyCredentials,
                 nameof(UserPasskeyCredential),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.OidcProviders.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.OidcProviders,
                 nameof(OidcProvider),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.UserExternalIdentities.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.UserExternalIdentities,
                 nameof(UserExternalIdentity),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.OidcLoginStates.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.OidcLoginStates,
                 nameof(OidcLoginState),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.RefreshTokens.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.RefreshTokens,
                 nameof(ExtendedRefreshToken),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.PushDeviceTokens.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.PushDeviceTokens,
                 nameof(PushDeviceToken),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.DownloadTokens.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.DownloadTokens,
                 nameof(DownloadToken),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.NodeShareTokens.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.NodeShareTokens,
                 nameof(NodeShareToken),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.ServerSettings.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.ServerSettings,
                 nameof(CottonServerSettings),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(_dbContext.Nodes.OrderBy(x => x.Id), nameof(Node), stats, ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.NodeFiles.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(_dbContext.Nodes, nameof(Node), stats, ct);
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.NodeFiles,
                 nameof(NodeFile),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.FileManifests.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.FileManifests,
                 nameof(FileManifest),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(
-                _dbContext.FileManifestChunks.OrderBy(x => x.Id),
+            await RewriteIntegritySignaturesByGuidAsync(
+                _dbContext.FileManifestChunks,
                 nameof(FileManifestChunk),
                 stats,
                 ct);
-            await RewriteIntegritySignaturesAsync(_dbContext.Chunks.OrderBy(x => x.Hash), nameof(Chunk), stats, ct);
+            await RewriteChunkIntegritySignaturesAsync(stats, ct);
         }
 
-        private async Task RewriteIntegritySignaturesAsync<TEntity>(
-            IOrderedQueryable<TEntity> orderedQuery,
+        private async Task RewriteIntegritySignaturesByGuidAsync<TEntity>(
+            IQueryable<TEntity> query,
             string entityName,
             RewriteStats stats,
             CancellationToken ct)
             where TEntity : class
         {
-            int offset = 0;
+            Guid lastId = Guid.Empty;
             DateTimeOffset nextProgressLogAt = DateTimeOffset.UtcNow.Add(ProgressLogInterval);
             while (true)
             {
-                List<TEntity> batch = await orderedQuery
-                    .Skip(offset)
+                List<TEntity> batch = await query
+                    .Where(x => EF.Property<Guid>(x, "Id").CompareTo(lastId) > 0)
+                    .OrderBy(x => EF.Property<Guid>(x, "Id"))
                     .Take(DatabaseBatchSize)
                     .ToListAsync(ct);
                 if (batch.Count == 0)
@@ -423,12 +440,49 @@ namespace Cotton.Server.Jobs
                     QueueIntegritySignatureRewrite(entity);
                 }
 
+                lastId = GetGuidEntityId(batch[^1]);
+                await _dbContext.SaveChangesAsync(ct);
+                _dbContext.ChangeTracker.Clear();
+                stats.DatabaseRowsResigned += batch.Count;
+                LogIntegrityProgressIfNeeded(entityName, stats, nextProgressLogAt, out nextProgressLogAt);
+            }
+        }
+
+        private async Task RewriteChunkIntegritySignaturesAsync(RewriteStats stats, CancellationToken ct)
+        {
+            int offset = 0;
+            DateTimeOffset nextProgressLogAt = DateTimeOffset.UtcNow.Add(ProgressLogInterval);
+            while (true)
+            {
+                List<Chunk> batch = await _dbContext.Chunks
+                    .OrderBy(x => x.Hash)
+                    .Skip(offset)
+                    .Take(DatabaseBatchSize)
+                    .ToListAsync(ct);
+                if (batch.Count == 0)
+                {
+                    break;
+                }
+
+                foreach (Chunk chunk in batch)
+                {
+                    QueueIntegritySignatureRewrite(chunk);
+                }
+
                 await _dbContext.SaveChangesAsync(ct);
                 _dbContext.ChangeTracker.Clear();
                 offset += batch.Count;
                 stats.DatabaseRowsResigned += batch.Count;
-                LogIntegrityProgressIfNeeded(entityName, stats, nextProgressLogAt, out nextProgressLogAt);
+                LogIntegrityProgressIfNeeded(nameof(Chunk), stats, nextProgressLogAt, out nextProgressLogAt);
             }
+        }
+
+        private Guid GetGuidEntityId<TEntity>(TEntity entity)
+            where TEntity : class
+        {
+            return (Guid)_dbContext.Entry(entity)
+                .Property("Id")
+                .CurrentValue!;
         }
 
         private void QueueIntegritySignatureRewrite<TEntity>(TEntity entity)
@@ -452,12 +506,12 @@ namespace Cotton.Server.Jobs
 
         private async Task RewriteServerSettingsAsync(RewriteStats stats, CancellationToken ct)
         {
-            int offset = 0;
+            Guid lastId = Guid.Empty;
             while (true)
             {
                 List<CottonServerSettings> batch = await _dbContext.ServerSettings
+                    .Where(x => x.Id.CompareTo(lastId) > 0)
                     .OrderBy(x => x.Id)
-                    .Skip(offset)
                     .Take(DatabaseBatchSize)
                     .ToListAsync(ct);
                 if (batch.Count == 0)
@@ -490,19 +544,19 @@ namespace Cotton.Server.Jobs
                         settings.FcmServiceAccountJsonEncrypted);
                 }
 
+                lastId = batch[^1].Id;
                 await SaveDatabaseRewriteBatchAsync(nameof(CottonServerSettings), rewritten, stats, ct);
-                offset += batch.Count;
             }
         }
 
         private async Task RewriteOidcProvidersAsync(RewriteStats stats, CancellationToken ct)
         {
-            int offset = 0;
+            Guid lastId = Guid.Empty;
             while (true)
             {
                 List<OidcProvider> batch = await _dbContext.OidcProviders
+                    .Where(x => x.Id.CompareTo(lastId) > 0)
                     .OrderBy(x => x.Id)
-                    .Skip(offset)
                     .Take(DatabaseBatchSize)
                     .ToListAsync(ct);
                 if (batch.Count == 0)
@@ -519,19 +573,19 @@ namespace Cotton.Server.Jobs
                         provider.ClientSecretEncrypted);
                 }
 
+                lastId = batch[^1].Id;
                 await SaveDatabaseRewriteBatchAsync(nameof(OidcProvider), rewritten, stats, ct);
-                offset += batch.Count;
             }
         }
 
         private async Task RewriteOidcLoginStatesAsync(RewriteStats stats, CancellationToken ct)
         {
-            int offset = 0;
+            Guid lastId = Guid.Empty;
             while (true)
             {
                 List<OidcLoginState> batch = await _dbContext.OidcLoginStates
+                    .Where(x => x.Id.CompareTo(lastId) > 0)
                     .OrderBy(x => x.Id)
-                    .Skip(offset)
                     .Take(DatabaseBatchSize)
                     .ToListAsync(ct);
                 if (batch.Count == 0)
@@ -552,20 +606,20 @@ namespace Cotton.Server.Jobs
                         loginState.NonceEncrypted);
                 }
 
+                lastId = batch[^1].Id;
                 await SaveDatabaseRewriteBatchAsync(nameof(OidcLoginState), rewritten, stats, ct);
-                offset += batch.Count;
             }
         }
 
         private async Task RewriteUsersAsync(RewriteStats stats, CancellationToken ct)
         {
-            int offset = 0;
+            Guid lastId = Guid.Empty;
             while (true)
             {
                 List<User> batch = await _dbContext.Users
-                    .Where(x => x.TotpSecretEncrypted != null || x.AvatarHashEncrypted != null)
+                    .Where(x => x.Id.CompareTo(lastId) > 0
+                        && (x.TotpSecretEncrypted != null || x.AvatarHashEncrypted != null))
                     .OrderBy(x => x.Id)
-                    .Skip(offset)
                     .Take(DatabaseBatchSize)
                     .ToListAsync(ct);
                 if (batch.Count == 0)
@@ -588,20 +642,20 @@ namespace Cotton.Server.Jobs
                         ct);
                 }
 
+                lastId = batch[^1].Id;
                 await SaveDatabaseRewriteBatchAsync(nameof(User), rewritten, stats, ct);
-                offset += batch.Count;
             }
         }
 
         private async Task RewriteFileManifestsAsync(RewriteStats stats, CancellationToken ct)
         {
-            int offset = 0;
+            Guid lastId = Guid.Empty;
             while (true)
             {
                 List<FileManifest> batch = await _dbContext.FileManifests
-                    .Where(x => x.SmallFilePreviewHashEncrypted != null)
+                    .Where(x => x.Id.CompareTo(lastId) > 0
+                        && x.SmallFilePreviewHashEncrypted != null)
                     .OrderBy(x => x.Id)
-                    .Skip(offset)
                     .Take(DatabaseBatchSize)
                     .ToListAsync(ct);
                 if (batch.Count == 0)
@@ -619,8 +673,8 @@ namespace Cotton.Server.Jobs
                         ct);
                 }
 
+                lastId = batch[^1].Id;
                 await SaveDatabaseRewriteBatchAsync(nameof(FileManifest), rewritten, stats, ct);
-                offset += batch.Count;
             }
         }
 

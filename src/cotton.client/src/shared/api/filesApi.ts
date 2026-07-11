@@ -139,6 +139,14 @@ export const filesApi = {
     return parseValidated(url, response.data, nodeFileManifestSchema);
   },
 
+  extractFileMetadata: async (
+    nodeFileId: Guid,
+  ): Promise<NodeFileManifestDto> => {
+    const url = `/files/${nodeFileId}/metadata/extract`;
+    const response = await httpClient.post(url);
+    return parseValidated(url, response.data, nodeFileManifestSchema);
+  },
+
   moveFile: async (
     nodeFileId: Guid,
     request: MoveFileRequest,

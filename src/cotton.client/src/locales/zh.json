@@ -2014,6 +2014,7 @@
       "adding": "正在添加...",
       "loading": "正在加载通行密钥...",
       "empty": "此账户尚未注册通行密钥。",
+      "label": "标签：{{name}}",
       "created": "创建于 {{date}}",
       "lastUsed": "上次使用 {{date}}",
       "delete": "删除通行密钥",
@@ -2026,12 +2027,13 @@
         "renameFailed": "无法重命名通行密钥。"
       },
       "defaultNames": {
+        "passkey": "通行密钥",
         "securityKey": "安全密钥",
         "device": "设备通行密钥"
       },
       "rename": {
         "title": "命名此通行密钥",
-        "description": "选择一个之后能认出的名称。Cotton 只能检测大致的验证器类型，无法识别具体设备型号。",
+        "description": "可选标签会替代检测到的名称。留空即可使用自动检测。",
         "nameLabel": "通行密钥名称",
         "button": "重命名通行密钥",
         "save": "保存",

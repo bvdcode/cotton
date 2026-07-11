@@ -40,12 +40,22 @@ export const buildAudioMediaSessionTrack = (
   item: AudioPlaylistItem,
 ): MediaSessionTrackInfo => {
   const folderMetadata = inferAudioFolderMetadata(item.folderPath);
-
-  return {
-    title: buildFileTitle(item.name),
-    ...folderMetadata,
+  const artist = item.artist?.trim() || folderMetadata.artist;
+  const album = item.album?.trim() || folderMetadata.album;
+  const result: MediaSessionTrackInfo = {
+    title: item.title?.trim() || buildFileTitle(item.name),
     artwork: item.previewUrl ? { src: item.previewUrl } : undefined,
   };
+
+  if (artist) {
+    result.artist = artist;
+  }
+
+  if (album) {
+    result.album = album;
+  }
+
+  return result;
 };
 
 export const buildVideoMediaSessionTrack = (

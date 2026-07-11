@@ -16,9 +16,9 @@ namespace Cotton.Server.Models.Dto
         public string RequestId { get; set; } = null!;
 
         /// <summary>
-        /// Gets or sets the display name.
+        /// Gets or sets the optional user-authored label.
         /// </summary>
-        public string? Name { get; set; }
+        public string? Label { get; set; }
 
         /// <summary>
         /// Gets or sets the WebAuthn credential payload returned by the browser.

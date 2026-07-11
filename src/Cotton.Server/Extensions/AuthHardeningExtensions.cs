@@ -4,10 +4,8 @@
 using Cotton.Server.Auth;
 using Cotton.Server.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.RateLimiting;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Threading.RateLimiting;
 
 namespace Cotton.Server.Extensions
 {
@@ -26,7 +24,7 @@ namespace Cotton.Server.Extensions
         {
             services.AddSingleton<SessionAccessTokenRevocationCache>();
             services.AddScoped<SessionAccessTokenRevocationStore>();
-            services.AddAuthRateLimiting();
+            services.AddScoped<ISessionRevocationPublisher, SignalRSessionRevocationPublisher>();
             services.AddSessionRevocationValidation();
             return services;
         }
@@ -36,9 +34,7 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IApplicationBuilder UseAuthHardening(this IApplicationBuilder app)
         {
-            return app
-                .UseSearchEngineExclusion()
-                .UseRateLimiter();
+            return app.UseSearchEngineExclusion();
         }
 
         private static IApplicationBuilder UseSearchEngineExclusion(this IApplicationBuilder app)
@@ -53,57 +49,6 @@ namespace Cotton.Server.Extensions
                 }, context.Response);
                 return next();
             });
-        }
-
-        private static IServiceCollection AddAuthRateLimiting(this IServiceCollection services)
-        {
-            services.AddRateLimiter(options =>
-            {
-                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-                options.AddPolicy(AuthRateLimitPolicies.Interactive, httpContext =>
-                {
-                    string partitionKey = GetRemoteAddressPartition(httpContext);
-                    return RateLimitPartition.GetFixedWindowLimiter(
-                        partitionKey,
-                        _ => new FixedWindowRateLimiterOptions
-                        {
-                            AutoReplenishment = true,
-                            PermitLimit = 10,
-                            QueueLimit = 0,
-                            Window = TimeSpan.FromMinutes(1),
-                        });
-                });
-                options.AddPolicy(AuthRateLimitPolicies.Refresh, httpContext =>
-                {
-                    string partitionKey = GetRemoteAddressPartition(httpContext);
-                    return RateLimitPartition.GetFixedWindowLimiter(
-                        partitionKey,
-                        _ => new FixedWindowRateLimiterOptions
-                        {
-                            AutoReplenishment = true,
-                            PermitLimit = 60,
-                            QueueLimit = 0,
-                            Window = TimeSpan.FromMinutes(1),
-                        });
-                });
-                options.AddPolicy(AuthRateLimitPolicies.PublicShareArchive, httpContext =>
-                {
-                    string token = httpContext.Request.RouteValues.TryGetValue("token", out object? routeToken)
-                        ? routeToken?.ToString() ?? "unknown"
-                        : "unknown";
-                    string partitionKey = $"{GetRemoteAddressPartition(httpContext)}:{token}";
-                    return RateLimitPartition.GetFixedWindowLimiter(
-                        partitionKey,
-                        _ => new FixedWindowRateLimiterOptions
-                        {
-                            AutoReplenishment = true,
-                            PermitLimit = 5,
-                            QueueLimit = 0,
-                            Window = TimeSpan.FromMinutes(1),
-                        });
-                });
-            });
-            return services;
         }
 
         private static IServiceCollection AddSessionRevocationValidation(this IServiceCollection services)
@@ -146,9 +91,5 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
-        private static string GetRemoteAddressPartition(HttpContext httpContext)
-        {
-            return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        }
     }
 }

@@ -3,7 +3,6 @@
 
 using System.Diagnostics;
 using System.Globalization;
-using System.Text.Json;
 using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
@@ -17,6 +16,11 @@ namespace Cotton.Previews
         private const string FfprobePathEnvironmentVariable = "COTTON_FFPROBE_PATH";
         private const string FfmpegDirectoryEnvironmentVariable = "COTTON_FFMPEG_DIR";
         private const string CacheDirectoryName = "cotton-ffmpeg";
+        private const string MediaMetadataShowEntries =
+            "format=duration:" +
+            "format_tags=title,artist,album,album_artist,albumartist,album artist,composer,performer," +
+            "track,tracknumber,track_number,disc,discnumber,disc_number,date,creation_time,year,genre:" +
+            "stream=codec_name,codec_type,width,height";
 
         private static readonly SemaphoreSlim DownloadGate = new(1, 1);
         private static string? _ffmpegPath;
@@ -92,12 +96,16 @@ namespace Cotton.Previews
             TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
         {
-            string arguments =
-                "-v error -analyzeduration 100M -probesize 100M " +
-                "-show_entries format=duration -of default=nw=1:nk=1 " +
-                $"\"{url}\"";
+            IReadOnlyCollection<string> arguments = CreateProbeArguments(
+                "default=nw=1:nk=1",
+                "format=duration",
+                url);
 
-            string? raw = await RunFfprobeAsync(arguments, timeout, cancellationToken).ConfigureAwait(false);
+            string? raw = await RunFfprobeAsync(
+                arguments,
+                FfprobeOutputLimits.Default,
+                timeout,
+                cancellationToken).ConfigureAwait(false);
             return raw is null ? null : ParsePositiveDuration(raw.Trim());
         }
 
@@ -109,13 +117,63 @@ namespace Cotton.Previews
             TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
         {
-            string arguments =
-                "-v error -analyzeduration 100M -probesize 100M " +
-                "-of json -show_entries format=duration:stream=codec_name,codec_type " +
-                $"\"{url}\"";
+            IReadOnlyCollection<string> arguments = CreateProbeArguments(
+                "json",
+                "format=duration:stream=codec_name,codec_type",
+                url);
 
-            string? raw = await RunFfprobeAsync(arguments, timeout, cancellationToken).ConfigureAwait(false);
-            return string.IsNullOrWhiteSpace(raw) ? null : ParseMediaProbe(raw);
+            string? raw = await RunFfprobeAsync(
+                arguments,
+                FfprobeOutputLimits.Default,
+                timeout,
+                cancellationToken).ConfigureAwait(false);
+            return string.IsNullOrWhiteSpace(raw) ? null : FfprobeJsonParser.ParseMediaProbe(raw);
+        }
+
+        /// <summary>
+        /// Returns common media stream fields and format tags, or null when probing fails.
+        /// </summary>
+        public static async Task<MediaMetadataInfo?> TryGetMediaMetadataAsync(
+            Uri url,
+            TimeSpan? timeout = null,
+            CancellationToken cancellationToken = default,
+            MediaMetadataProbeLimits? limits = null)
+        {
+            MediaMetadataProbeLimits effectiveLimits = limits ?? MediaMetadataProbeLimits.Default;
+            IReadOnlyCollection<string> arguments = CreateProbeArguments(
+                "json",
+                MediaMetadataShowEntries,
+                url);
+
+            string? raw = await RunFfprobeAsync(
+                arguments,
+                effectiveLimits.Output,
+                timeout,
+                cancellationToken).ConfigureAwait(false);
+            return string.IsNullOrWhiteSpace(raw)
+                ? null
+                : FfprobeJsonParser.ParseMediaMetadata(raw, effectiveLimits);
+        }
+
+        private static IReadOnlyCollection<string> CreateProbeArguments(
+            string outputFormat,
+            string showEntries,
+            Uri url)
+        {
+            return
+            [
+                "-v",
+                "error",
+                "-analyzeduration",
+                "100M",
+                "-probesize",
+                "100M",
+                "-of",
+                outputFormat,
+                "-show_entries",
+                showEntries,
+                url.ToString(),
+            ];
         }
 
         private static bool TryResolveInstalledBinaries(out string ffmpegPath, out string ffprobePath)
@@ -239,36 +297,98 @@ namespace Cotton.Previews
         }
 
         private static async Task<string?> RunFfprobeAsync(
-            string arguments,
+            IReadOnlyCollection<string> arguments,
+            FfprobeOutputLimits outputLimits,
             TimeSpan? timeout,
             CancellationToken cancellationToken)
         {
+            ArgumentNullException.ThrowIfNull(outputLimits);
             await EnsureAvailableAsync(cancellationToken).ConfigureAwait(false);
 
-            var startInfo = new ProcessStartInfo
+            ProcessStartInfo startInfo = new()
             {
                 FileName = GetFfprobePath(),
-                Arguments = arguments,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true,
             };
+            foreach (string argument in arguments)
+            {
+                startInfo.ArgumentList.Add(argument);
+            }
 
-            using var process = new Process { StartInfo = startInfo };
+            using Process process = new() { StartInfo = startInfo };
             if (!process.Start())
             {
                 return null;
             }
 
-            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-            bool completed = await WaitForProcessAsync(process, timeout, cancellationToken).ConfigureAwait(false);
+            BoundedProcessOutputReader stdoutReader = new(
+                "stdout",
+                outputLimits.MaxStandardOutputBytes);
+            BoundedProcessOutputReader stderrReader = new(
+                "stderr",
+                outputLimits.MaxStandardErrorBytes);
+            Task<string> stdoutTask = stdoutReader.ReadAsync(
+                process.StandardOutput.BaseStream,
+                CancellationToken.None);
+            Task<string> stderrTask = stderrReader.ReadAsync(
+                process.StandardError.BaseStream,
+                CancellationToken.None);
+            Task<bool> waitTask = WaitForProcessAsync(process, timeout, cancellationToken);
+
+            Task firstCompleted = await Task.WhenAny(
+                waitTask,
+                stdoutReader.LimitExceeded,
+                stderrReader.LimitExceeded).ConfigureAwait(false);
+
+            if (firstCompleted == stdoutReader.LimitExceeded
+                || firstCompleted == stderrReader.LimitExceeded)
+            {
+                FfprobeOutputLimitExceededException exception = firstCompleted == stdoutReader.LimitExceeded
+                    ? await stdoutReader.LimitExceeded.ConfigureAwait(false)
+                    : await stderrReader.LimitExceeded.ConfigureAwait(false);
+
+                await TerminateProcessAsync(process).ConfigureAwait(false);
+                await ((Task)waitTask).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                await ((Task)Task.WhenAll(stdoutTask, stderrTask))
+                    .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                cancellationToken.ThrowIfCancellationRequested();
+                throw exception;
+            }
+
+            bool completed;
+            try
+            {
+                completed = await waitTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await ((Task)Task.WhenAll(stdoutTask, stderrTask))
+                    .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                throw;
+            }
+
+            string stdout = await stdoutTask.ConfigureAwait(false);
+            await stderrTask.ConfigureAwait(false);
+
+            if (stdoutReader.LimitExceeded.IsCompletedSuccessfully)
+            {
+                throw await stdoutReader.LimitExceeded.ConfigureAwait(false);
+            }
+
+            if (stderrReader.LimitExceeded.IsCompletedSuccessfully)
+            {
+                throw await stderrReader.LimitExceeded.ConfigureAwait(false);
+            }
+
             if (!completed || process.ExitCode != 0)
             {
                 return null;
             }
 
-            return await stdoutTask.ConfigureAwait(false);
+            return stdout;
         }
 
         private static async Task<bool> WaitForProcessAsync(
@@ -276,30 +396,30 @@ namespace Cotton.Previews
             TimeSpan? timeout,
             CancellationToken cancellationToken)
         {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(60));
-
-            try
+            TimeSpan effectiveTimeout = timeout ?? TimeSpan.FromSeconds(60);
+            Task exitTask = process.WaitForExitAsync(CancellationToken.None);
+            Task timeoutTask = Task.Delay(effectiveTimeout, cancellationToken);
+            Task completedTask = await Task.WhenAny(exitTask, timeoutTask).ConfigureAwait(false);
+            if (completedTask == exitTask)
             {
-                await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                await exitTask.ConfigureAwait(false);
                 return true;
             }
-            catch (OperationCanceledException)
-            {
-                try
-                {
-                    if (!process.HasExited)
-                    {
-                        process.Kill(entireProcessTree: true);
-                    }
-                }
-                catch
-                {
-                    // Best effort cleanup after a timed-out ffprobe process.
-                }
 
-                return false;
+            await TerminateProcessAsync(process).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return false;
+        }
+
+        internal static async Task TerminateProcessAsync(Process process)
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
             }
+
+            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
         }
 
         private static double? ParsePositiveDuration(string raw)
@@ -310,68 +430,5 @@ namespace Cotton.Previews
                     : null;
         }
 
-        private static MediaProbeInfo? ParseMediaProbe(string raw)
-        {
-            try
-            {
-                using JsonDocument document = JsonDocument.Parse(raw);
-                JsonElement root = document.RootElement;
-
-                return new MediaProbeInfo(
-                    ParseProbeDuration(root),
-                    ParseFirstStreamCodec(root, "video"),
-                    ParseFirstStreamCodec(root, "audio"));
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
-        }
-
-        private static double? ParseProbeDuration(JsonElement root)
-        {
-            return root.TryGetProperty("format", out JsonElement format)
-                && format.TryGetProperty("duration", out JsonElement durationElement)
-                    ? ParsePositiveDuration(durationElement.GetString() ?? string.Empty)
-                    : null;
-        }
-
-        private static string? ParseFirstStreamCodec(JsonElement root, string targetCodecType)
-        {
-            if (!root.TryGetProperty("streams", out JsonElement streams))
-            {
-                return null;
-            }
-
-            foreach (JsonElement stream in streams.EnumerateArray())
-            {
-                if (TryReadStreamCodec(stream, out string? codecType, out string? codecName)
-                    && codecType == targetCodecType)
-                {
-                    return codecName;
-                }
-            }
-
-            return null;
-        }
-
-        private static bool TryReadStreamCodec(
-            JsonElement stream,
-            out string? codecType,
-            out string? codecName)
-        {
-            codecType = null;
-            codecName = null;
-
-            if (!stream.TryGetProperty("codec_type", out JsonElement typeElement)
-                || !stream.TryGetProperty("codec_name", out JsonElement codecElement))
-            {
-                return false;
-            }
-
-            codecType = typeElement.GetString();
-            codecName = codecElement.GetString();
-            return codecName is not null;
-        }
     }
 }
