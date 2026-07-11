@@ -647,6 +647,7 @@ namespace Cotton.Server.Controllers
                 _quota.RecordLogicalBytesRemoved(userId, capture.RemovedBytes);
             }
 
+            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
             await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
 
@@ -1249,6 +1250,7 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             NodeFileManifestDto manifest = await _mediator.Send(ToCreateFileRequest(request, userId));
+            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
             await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileCreated", manifest);
