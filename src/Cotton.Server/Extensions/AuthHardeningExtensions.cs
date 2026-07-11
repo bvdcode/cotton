@@ -24,6 +24,7 @@ namespace Cotton.Server.Extensions
         {
             services.AddSingleton<SessionAccessTokenRevocationCache>();
             services.AddScoped<SessionAccessTokenRevocationStore>();
+            services.AddScoped<ISessionRevocationPublisher, SignalRSessionRevocationPublisher>();
             services.AddSessionRevocationValidation();
             return services;
         }
