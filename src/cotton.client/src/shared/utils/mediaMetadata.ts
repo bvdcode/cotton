@@ -21,7 +21,13 @@ export const getAudioPlaylistMetadata = (
   file: Pick<NodeFileManifestDto, "metadata">,
 ): Pick<
   AudioPlaylistItem,
-  "title" | "artist" | "album" | "albumArtist" | "track" | "disc" | "durationSeconds"
+  | "title"
+  | "artist"
+  | "album"
+  | "albumArtist"
+  | "track"
+  | "disc"
+  | "durationSeconds"
 > => {
   const metadata = file.metadata;
 

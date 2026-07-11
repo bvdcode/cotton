@@ -6,10 +6,12 @@ using Cotton.Database.Models;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Services;
 using Cotton.Server.Services.FileMetadata;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Quartz.Attributes;
 using EasyExtensions.Mediator;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
+using System.Net;
 
 namespace Cotton.Server.Jobs
 {
@@ -60,6 +62,20 @@ namespace Cotton.Server.Jobs
                         Notify = true,
                     }, cancellationToken);
                     await ThrottleAsync(processed, cancellationToken);
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    _logger.LogInformation(
+                        ex,
+                        "Skipped stale metadata update for file manifest {FileManifestId}.",
+                        manifestId);
+                }
+                catch (WebApiException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+                {
+                    _logger.LogInformation(
+                        ex,
+                        "Skipped stale metadata update for file manifest {FileManifestId}.",
+                        manifestId);
                 }
                 finally
                 {

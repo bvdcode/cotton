@@ -146,7 +146,14 @@ namespace Cotton.Server.Jobs
             {
                 throw;
             }
-            catch (Exception ex) when (ex is not DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogInformation(
+                    ex,
+                    "Skipped stale preview update for file manifest {FileManifestId}.",
+                    item.Id);
+            }
+            catch (Exception ex)
             {
                 await RecordPreviewGenerationFailureAsync(item, generator, ex, cancellationToken);
             }
@@ -263,7 +270,17 @@ namespace Cotton.Server.Jobs
             _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
             item.PreviewGenerationError = ex.Message;
             item.PreviewGeneratorVersion = generator.Version;
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException conflict)
+            {
+                _logger.LogInformation(
+                    conflict,
+                    "Skipped stale preview failure update for file manifest {FileManifestId}.",
+                    item.Id);
+            }
         }
 
         private async Task RefreshQueueAfterUploadPauseAsync(
