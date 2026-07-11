@@ -18,7 +18,7 @@ namespace Cotton.Server.Jobs
     /// <summary>
     /// Runs the scheduled compute manifest hashes maintenance task.
     /// </summary>
-    [JobTrigger(hours: 24)]
+    [JobTrigger(hours: 12)]
     public class ComputeManifestHashesJob(
         PerfTracker _perf,
         IStoragePipeline _storage,
