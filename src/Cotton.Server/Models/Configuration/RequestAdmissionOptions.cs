@@ -19,7 +19,7 @@ namespace Cotton.Server.Models.Configuration
         public int GlobalConcurrentRequestLimit { get; set; } = 256;
 
         /// <summary>
-        /// Gets or sets the maximum number of concurrent requests per authenticated user.
+        /// Gets or sets the maximum number of concurrent requests per identified client.
         /// </summary>
         public int ClientConcurrentRequestLimit { get; set; } = 32;
 

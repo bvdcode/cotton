@@ -3,6 +3,7 @@
 
 using Cotton.Server.Models.Configuration;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 
@@ -14,6 +15,7 @@ namespace Cotton.Server.Services.RequestAdmission
     internal static class HttpRequestAdmissionPolicy
     {
         private const string GlobalPartitionKey = "server";
+        private const string UnknownAnonymousPartitionKey = "anonymous:unknown";
 
         public static PartitionedRateLimiter<HttpContext> Create(RequestAdmissionOptions options)
         {
@@ -46,7 +48,23 @@ namespace Cotton.Server.Services.RequestAdmission
                     _ => CreateLimiterOptions(permitLimit));
             }
 
-            return RateLimitPartition.GetNoLimiter("anonymous");
+            return RateLimitPartition.GetConcurrencyLimiter(
+                CreateAnonymousPartitionKey(context),
+                _ => CreateLimiterOptions(permitLimit));
+        }
+
+        private static string CreateAnonymousPartitionKey(HttpContext context)
+        {
+            IPAddress? remoteIpAddress = context.Connection.RemoteIpAddress;
+            if (remoteIpAddress is null)
+            {
+                return UnknownAnonymousPartitionKey;
+            }
+
+            IPAddress normalizedRemoteIpAddress = remoteIpAddress.IsIPv4MappedToIPv6
+                ? remoteIpAddress.MapToIPv4()
+                : remoteIpAddress;
+            return $"anonymous:{normalizedRemoteIpAddress}";
         }
 
         private static ConcurrencyLimiterOptions CreateLimiterOptions(int permitLimit)
