@@ -47,6 +47,10 @@ namespace Cotton.Server.Services.FileMetadata
             {
                 return new Dictionary<string, string>(StringComparer.Ordinal);
             }
+            catch (InvalidImageContentException)
+            {
+                return new Dictionary<string, string>(StringComparer.Ordinal);
+            }
 
             if (info is null)
             {

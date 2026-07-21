@@ -292,6 +292,44 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task MetadataExtraction_CorruptRecognizedImage_MarksAttemptProcessed()
+    {
+        byte[] corruptImage = CreateTruncatedPngBytes();
+        InvalidImageContentException? invalidContent = Assert.ThrowsAsync<InvalidImageContentException>(async () =>
+        {
+            await using MemoryStream stream = new(corruptImage, writable: false);
+            await Image.IdentifyAsync(stream);
+        });
+        Assert.That(invalidContent, Is.Not.Null, "The fixture must remain a recognized PNG with invalid content.");
+
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        NodeDto root = await GetRootNodeAsync();
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "corrupt.png",
+            "image/png",
+            corruptImage);
+
+        await ExecuteExtractFileMetadataJobAsync();
+
+        FileManifestMetadataState processedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        Assert.That(processedState.Metadata, Is.Not.Null);
+        Dictionary<string, string> processedMetadata = processedState.Metadata!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(processedMetadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
+            Assert.That(processedMetadata, Does.Not.ContainKey(FileContentMetadataKeys.ImageWidth));
+            Assert.That(processedMetadata, Does.Not.ContainKey(FileContentMetadataKeys.ImageHeight));
+        });
+
+        await ExecuteExtractFileMetadataJobAsync();
+        FileManifestMetadataState repeatedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        Assert.That(repeatedState.Metadata, Is.EquivalentTo(processedMetadata));
+    }
+
+    [Test]
     public async Task MetadataExtraction_PersistenceFailure_ReturnsServerErrorWithoutPhantomMetadata()
     {
         string token = await LoginAsync();
@@ -1067,6 +1105,14 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         image.SaveAsPng(ms);
         return ms.ToArray();
     }
+
+    private static byte[] CreateTruncatedPngBytes() =>
+    [
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        0x00, 0x00, 0x00, 0x0D,
+        0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01,
+    ];
 
     private static async Task<byte[]> CreateAudioBytesAsync(
         string? title = null,
