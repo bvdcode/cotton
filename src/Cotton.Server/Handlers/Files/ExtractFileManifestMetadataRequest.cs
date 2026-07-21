@@ -141,31 +141,17 @@ namespace Cotton.Server.Handlers.Files
                 return false;
             }
 
+            IReadOnlyDictionary<string, string> extracted;
             try
             {
-                IReadOnlyDictionary<string, string> extracted = await ExtractManifestMetadataAsync(
+                extracted = await ExtractManifestMetadataAsync(
                     manifest,
                     extractor,
                     cancellationToken);
-
-                manifest.Metadata = FileContentMetadataDictionary.ReplaceManagedValues(manifest.Metadata, extracted);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                return !AreEquivalent(oldMetadata, manifest.Metadata);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                _logger.LogInformation(
-                    ex,
-                    "Rejected stale metadata update for file manifest {FileManifestId}",
-                    manifest.Id);
-                throw new WebApiException(
-                    HttpStatusCode.Conflict,
-                    nameof(FileManifest),
-                    "The file manifest changed while metadata was being extracted. Retry the operation.");
             }
             catch (FileMetadataUnavailableException ex)
             {
@@ -181,6 +167,25 @@ namespace Cotton.Server.Handlers.Files
                 _logger.LogWarning(ex, "Failed to extract metadata for file manifest {FileManifestId}", manifest.Id);
                 return false;
             }
+
+            manifest.Metadata = FileContentMetadataDictionary.ReplaceManagedValues(manifest.Metadata, extracted);
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogInformation(
+                    ex,
+                    "Rejected stale metadata update for file manifest {FileManifestId}",
+                    manifest.Id);
+                throw new WebApiException(
+                    HttpStatusCode.Conflict,
+                    nameof(FileManifest),
+                    "The file manifest changed while metadata was being extracted. Retry the operation.");
+            }
+
+            return !AreEquivalent(oldMetadata, manifest.Metadata);
         }
 
         private async Task MarkMetadataProcessedAsync(FileManifest manifest, CancellationToken cancellationToken)

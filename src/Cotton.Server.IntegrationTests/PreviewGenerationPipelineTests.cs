@@ -292,6 +292,39 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task MetadataExtraction_PersistenceFailure_ReturnsServerErrorWithoutPhantomMetadata()
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        NodeDto root = await GetRootNodeAsync();
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "persistence-failure.png",
+            "image/png",
+            CreateGradientPngBytes(width: 32, height: 24));
+
+        await AddMetadataPersistenceFailureConstraintAsync();
+        try
+        {
+            HttpResponseMessage response = await _client!.PostAsync(
+                $"/api/v1/files/{createdFile.Id}/metadata/extract",
+                null);
+
+            FileManifestMetadataState persistedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+                Assert.That(persistedState.Metadata, Is.Null);
+            });
+        }
+        finally
+        {
+            await RemoveMetadataPersistenceFailureConstraintAsync();
+        }
+    }
+
+    [Test]
     public async Task DatabaseIntegrity_ConcurrentSignedManifestWrites_RejectStaleSave()
     {
         string token = await LoginAsync();
@@ -736,6 +769,22 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             .Select(x => new FileManifestMetadataState(
                 x.FileManifest.Metadata))
             .SingleAsync();
+    }
+
+    private async Task AddMetadataPersistenceFailureConstraintAsync()
+    {
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        await dbContext.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE file_manifests ADD CONSTRAINT ck_file_manifests_metadata_persistence_test CHECK (metadata IS NULL)");
+    }
+
+    private async Task RemoveMetadataPersistenceFailureConstraintAsync()
+    {
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        await dbContext.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE file_manifests DROP CONSTRAINT IF EXISTS ck_file_manifests_metadata_persistence_test");
     }
 
     private async Task<Chunk> GetChunkByHashAsync(byte[] hash)
