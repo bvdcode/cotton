@@ -6,6 +6,7 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton;
+using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;
@@ -140,10 +141,13 @@ public class AuthSmokeTests : IntegrationTestBase
             "limiteduser",
             "wrong-password",
             ipAddress);
+        CottonResult? result = await limitedLogin.Content.ReadFromJsonAsync<CottonResult>();
         Assert.Multiple(() =>
         {
             Assert.That(limitedLogin.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
             Assert.That(limitedLogin.Headers.RetryAfter?.Delta?.TotalSeconds, Is.GreaterThan(1));
+            Assert.That(result?.MessageCode, Is.EqualTo("rate_limit_exceeded"));
+            Assert.That(result?.Message, Is.EqualTo("Too many requests. Retry later."));
         });
     }
 

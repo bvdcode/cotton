@@ -34,18 +34,7 @@ namespace Cotton.Server.Extensions
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
                 options.GlobalLimiter = HttpRequestAdmissionPolicy.Create(admissionOptions);
-                options.OnRejected = async (context, cancellationToken) =>
-                {
-                    context.HttpContext.Response.Headers.RetryAfter = GetRetryAfterSeconds(context.Lease);
-                    CottonResult result = new()
-                    {
-                        Success = false,
-                        Message = "The server is processing too many concurrent requests. Retry shortly.",
-                        MessageCode = "request_capacity_exhausted",
-                        StatusCode = HttpStatusCode.TooManyRequests,
-                    };
-                    await context.HttpContext.Response.WriteAsJsonAsync(result, cancellationToken);
-                };
+                options.OnRejected = WriteCapacityRejectionAsync;
 
                 AddEndpointPolicies(options);
             });
@@ -62,48 +51,62 @@ namespace Cotton.Server.Extensions
 
         private static void AddEndpointPolicies(RateLimiterOptions options)
         {
-            options.AddPolicy(AuthRateLimitPolicies.Interactive, httpContext =>
+            options.AddPolicy(
+                AuthRateLimitPolicies.Interactive,
+                new FixedWindowEndpointPolicy(GetRemoteAddressPartition, 10));
+            options.AddPolicy(
+                AuthRateLimitPolicies.Refresh,
+                new FixedWindowEndpointPolicy(GetRemoteAddressPartition, 60));
+            options.AddPolicy(
+                AuthRateLimitPolicies.PublicShareArchive,
+                new FixedWindowEndpointPolicy(GetPublicShareArchivePartition, 5));
+        }
+
+        private static async ValueTask WriteCapacityRejectionAsync(
+            OnRejectedContext context,
+            CancellationToken cancellationToken)
+        {
+            await WriteRejectionAsync(
+                context,
+                "The server is processing too many concurrent requests. Retry shortly.",
+                "request_capacity_exhausted",
+                cancellationToken);
+        }
+
+        private static async ValueTask WriteEndpointRateLimitRejectionAsync(
+            OnRejectedContext context,
+            CancellationToken cancellationToken)
+        {
+            await WriteRejectionAsync(
+                context,
+                "Too many requests. Retry later.",
+                "rate_limit_exceeded",
+                cancellationToken);
+        }
+
+        private static async ValueTask WriteRejectionAsync(
+            OnRejectedContext context,
+            string message,
+            string messageCode,
+            CancellationToken cancellationToken)
+        {
+            context.HttpContext.Response.Headers.RetryAfter = GetRetryAfterSeconds(context.Lease);
+            CottonResult result = new()
             {
-                string partitionKey = GetRemoteAddressPartition(httpContext);
-                return RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey,
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        AutoReplenishment = true,
-                        PermitLimit = 10,
-                        QueueLimit = 0,
-                        Window = TimeSpan.FromMinutes(1),
-                    });
-            });
-            options.AddPolicy(AuthRateLimitPolicies.Refresh, httpContext =>
-            {
-                string partitionKey = GetRemoteAddressPartition(httpContext);
-                return RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey,
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        AutoReplenishment = true,
-                        PermitLimit = 60,
-                        QueueLimit = 0,
-                        Window = TimeSpan.FromMinutes(1),
-                    });
-            });
-            options.AddPolicy(AuthRateLimitPolicies.PublicShareArchive, httpContext =>
-            {
-                string token = httpContext.Request.RouteValues.TryGetValue("token", out object? routeToken)
-                    ? routeToken?.ToString() ?? "unknown"
-                    : "unknown";
-                string partitionKey = $"{GetRemoteAddressPartition(httpContext)}:{token}";
-                return RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey,
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        AutoReplenishment = true,
-                        PermitLimit = 5,
-                        QueueLimit = 0,
-                        Window = TimeSpan.FromMinutes(1),
-                    });
-            });
+                Success = false,
+                Message = message,
+                MessageCode = messageCode,
+                StatusCode = HttpStatusCode.TooManyRequests,
+            };
+            await context.HttpContext.Response.WriteAsJsonAsync(result, cancellationToken);
+        }
+
+        private static string GetPublicShareArchivePartition(HttpContext httpContext)
+        {
+            string token = httpContext.Request.RouteValues.TryGetValue("token", out object? routeToken)
+                ? routeToken?.ToString() ?? "unknown"
+                : "unknown";
+            return $"{GetRemoteAddressPartition(httpContext)}:{token}";
         }
 
         private static string GetRemoteAddressPartition(HttpContext httpContext)
@@ -121,6 +124,27 @@ namespace Cotton.Server.Extensions
             }
 
             return "1";
+        }
+
+        private sealed class FixedWindowEndpointPolicy(
+            Func<HttpContext, string> getPartitionKey,
+            int permitLimit) : IRateLimiterPolicy<string>
+        {
+            public Func<OnRejectedContext, CancellationToken, ValueTask>? OnRejected =>
+                WriteEndpointRateLimitRejectionAsync;
+
+            public RateLimitPartition<string> GetPartition(HttpContext httpContext)
+            {
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    getPartitionKey(httpContext),
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        AutoReplenishment = true,
+                        PermitLimit = permitLimit,
+                        QueueLimit = 0,
+                        Window = TimeSpan.FromMinutes(1),
+                    });
+            }
         }
     }
 }
