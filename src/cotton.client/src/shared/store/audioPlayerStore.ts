@@ -141,7 +141,15 @@ const preserveKnownPlaylistMetadata = (
   const existingById = new Map(existing.map((item) => [item.id, item]));
   return next.map((item) => {
     const known = existingById.get(item.id);
-    return known ? mergeKnownPlaylistMetadata(item, known) : item;
+    if (
+      !known ||
+      item.fileManifestId === undefined ||
+      item.fileManifestId !== known.fileManifestId
+    ) {
+      return item;
+    }
+
+    return mergeKnownPlaylistMetadata(item, known);
   });
 };
 
@@ -262,6 +270,7 @@ const buildRecursiveAudioPlaylist = async (
           const folderPath = file.nodeId ? buildFolderPath(file.nodeId) : null;
           playlist.push({
             id: file.id,
+            fileManifestId: file.fileManifestId,
             name: file.name,
             nodeId: file.nodeId,
             folderPath: folderPath ?? undefined,

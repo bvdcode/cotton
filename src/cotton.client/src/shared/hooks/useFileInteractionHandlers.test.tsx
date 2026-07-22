@@ -310,6 +310,35 @@ describe("useFileInteractionHandlers", () => {
     expect(mocks.openPreview).not.toHaveBeenCalled();
   });
 
+  it("includes file manifest identity in the audio playlist", () => {
+    const audio = createFile({
+      id: "audio-file",
+      fileManifestId: "manifest-1",
+      name: "song.mp3",
+      contentType: "audio/mpeg",
+    });
+    const { result } = renderHook(() =>
+      useFileInteractionHandlers({
+        sortedFiles: [audio],
+      }),
+    );
+
+    act(() => {
+      result.current.handleFileClick("audio-file", "song.mp3", 1024);
+    });
+
+    expect(mocks.openAudio).toHaveBeenCalledWith({
+      fileId: "audio-file",
+      fileName: "song.mp3",
+      playlist: [
+        expect.objectContaining({
+          id: "audio-file",
+          fileManifestId: "manifest-1",
+        }),
+      ],
+    });
+  });
+
   it("shows a targeted unlock message when an encrypted download has no key", async () => {
     const encryptedFile = createFile({
       id: "encrypted-file",

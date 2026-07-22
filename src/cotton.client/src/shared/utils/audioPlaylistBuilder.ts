@@ -23,6 +23,7 @@ export const buildAudioPlaylistFromFiles = (
 
       return {
         id: file.id,
+        fileManifestId: file.fileManifestId,
         name: file.name,
         nodeId: file.nodeId,
         previewUrl: typeof icon === "string" ? icon : undefined,

@@ -28,11 +28,13 @@ const makeNode = (id: string, parentId: string | null, name: string): NodeDto =>
 const makeAudioFile = (
   id: string,
   metadata: Record<string, string>,
+  fileManifestId = "manifest-1",
 ): NodeFileManifestDto => ({
   id,
   createdAt: "",
   updatedAt: "",
   nodeId: "root",
+  fileManifestId,
   ownerId: "user-1",
   name: "01-song.mp3",
   contentType: "audio/mpeg",
@@ -72,6 +74,7 @@ describe("audioPlayerStore", () => {
       playlist: [
         {
           id: "track-1",
+          fileManifestId: "manifest-1",
           name: "01-song.mp3",
           title: "Known title",
           artist: "Known artist",
@@ -91,6 +94,7 @@ describe("audioPlayerStore", () => {
     const [track] = useAudioPlayerStore.getState().playlist;
     expect(track).toMatchObject({
       id: "track-1",
+      fileManifestId: "manifest-1",
       title: "Known title",
       artist: "Known artist",
       album: "Known album",
@@ -100,5 +104,51 @@ describe("audioPlayerStore", () => {
       durationSeconds: "180",
       previewUrl: "/api/v1/preview/cover.webp",
     });
+  });
+
+  it("drops known metadata when recursive scan finds new file content", async () => {
+    const mockedNodesApi = vi.mocked(nodesApi);
+    mockedNodesApi.getNode.mockResolvedValue(makeNode("root", null, "Music"));
+    mockedNodesApi.getChildren.mockResolvedValue(
+      makeNodeResponse([makeAudioFile("track-1", {}, "manifest-2")]),
+    );
+
+    useAudioPlayerStore.getState().openFromSelection({
+      fileId: "track-1",
+      fileName: "01-song.mp3",
+      playlist: [
+        {
+          id: "track-1",
+          fileManifestId: "manifest-1",
+          name: "01-song.mp3",
+          title: "Old title",
+          artist: "Old artist",
+          album: "Old album",
+          albumArtist: "Old album artist",
+          track: "1",
+          disc: "1",
+          durationSeconds: "180",
+          previewUrl: "/api/v1/preview/old-cover.webp",
+        },
+      ],
+    });
+    useAudioPlayerStore.getState().setScanRootNodeId("root");
+
+    await useAudioPlayerStore.getState().scanRecursively();
+
+    const [track] = useAudioPlayerStore.getState().playlist;
+    expect(track).toMatchObject({
+      id: "track-1",
+      fileManifestId: "manifest-2",
+      name: "01-song.mp3",
+    });
+    expect(track?.title).toBeUndefined();
+    expect(track?.artist).toBeUndefined();
+    expect(track?.album).toBeUndefined();
+    expect(track?.albumArtist).toBeUndefined();
+    expect(track?.track).toBeUndefined();
+    expect(track?.disc).toBeUndefined();
+    expect(track?.durationSeconds).toBeUndefined();
+    expect(track?.previewUrl).toBeUndefined();
   });
 });

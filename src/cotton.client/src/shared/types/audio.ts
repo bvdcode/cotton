@@ -1,5 +1,6 @@
 export interface AudioPlaylistItem {
   id: string;
+  fileManifestId?: string;
   name: string;
   nodeId?: string;
   folderPath?: string;
