@@ -102,7 +102,7 @@ Cadences below are the literal `[JobTrigger]` arguments. "Internal start delay" 
 | --- | --- | --- | --- | --- |
 | `GarbageCollectorJob` | `[JobTrigger(hours: 6)]` | 15 min (first run only, process-static) | Reclaim orphaned manifests & unreferenced chunks (schedule-then-delete) | `FileManifests`, `FileManifestChunks`, `DownloadTokens`, `Chunks` (`GCScheduledAfter`), `ChunkOwnerships`, blob-store deletes |
 | `StorageConsistencyJob` | `[JobTrigger(days: 30)]` | 5 min | Reconcile `Chunks` table against the blob store in both directions | `FileManifests` (clears preview hashes), `Users` (clears avatar hash), `Chunks` (registers orphans w/ `GCScheduledAfter`); sends notifications |
-| `ComputeManifestHashesJob` | `[JobTrigger(hours: 24)]` | none | Verify whole-file content hash of manifests as scheduled maintenance | `FileManifests.ComputedContentHash`; sends mismatch notifications |
+| `ComputeManifestHashesJob` | `[JobTrigger(hours: 12)]` | none | Verify whole-file content hashes on schedule and after file creation/content update | `FileManifests.ComputedContentHash`; sends mismatch notifications |
 | `GeneratePreviewJob` | `[JobTrigger(minutes: 15)]` | none | Generate small/large WebP previews | blob store (preview blobs), `Chunks`, `FileManifests` (preview hashes, version, error); SignalR `PreviewGenerated` |
 | `ExtractFileMetadataJob` | `[JobTrigger(minutes: 15)]` | none | Extract deterministic image/audio/video metadata | `FileManifests.Metadata`; SignalR `FileUpdated` |
 | `DownloadTokenRetentionJob` | `[JobTrigger(days: 1)]` | 4 min | Delete download tokens expired > 30 days | `DownloadTokens` (delete) |
@@ -160,17 +160,17 @@ After `await Task.Delay(300_000, context.CancellationToken)` (5 minutes), `RunOn
 
 ### ComputeManifestHashesJob
 
-`src/Cotton.Server/Jobs/ComputeManifestHashesJob.cs` — `[JobTrigger(hours: 24)]`. Injects `PerfTracker`, `IStoragePipeline`, `INotificationsProvider`, `ILogger`, `CottonDbContext`.
+`src/Cotton.Server/Jobs/ComputeManifestHashesJob.cs` — `[JobTrigger(hours: 12)]`. Injects `PerfTracker`, `IStoragePipeline`, `INotificationsProvider`, `ILogger`, `CottonDbContext`.
 
 Verifies that uploaded file content actually hashes to the value the client proposed.
 
 - **Gates:** returns early (logging the reason) if `PerfTracker.IsUploading()` or `PerfTracker.IsNightTime()`.
-- Loads the work set with the LINQ chain `_dbContext.FileManifests.Take(MaxItemsPerRun).Include(fm => fm.FileManifestChunks).Where(fm => fm.ComputedContentHash == null).ToList()` — note the `Take(1000)` is composed *before* the `ComputedContentHash == null` predicate and the query is materialized synchronously, so a run processes at most `MaxItemsPerRun` (1000) candidate manifests.
-- For each manifest, it delays *before* processing the item — `await Task.Delay(60_000)` if `IsPreviewGenerating()` or `IsUploading()`, else `await Task.Delay(250)` (these initial per-item delays do **not** take a cancellation token). It then assembles the blob stream via `_storage.GetBlobStream(hashes, pipelineContext)` (`pipelineContext.FileSizeBytes = manifest.SizeBytes`) and computes the hash with `Hasher.HashData(stream)`.
+- Builds the work set from manifests where `ComputedContentHash == null`, excludes ids in the process-local `KnownMismatchedManifestIds` set, includes `FileManifestChunks`, orders by id, applies `Take(MaxItemsPerRun)`, and materializes with `ToListAsync(context.CancellationToken)`. A run therefore processes up to 1000 deterministic candidates.
+- For each manifest, it delays *before* processing the item — `await Task.Delay(60_000, context.CancellationToken)` if `IsPreviewGenerating()` or `IsUploading()`, else `await Task.Delay(250, context.CancellationToken)`. It then assembles the blob stream via `_storage.GetBlobStream(hashes, pipelineContext)` (`pipelineContext.FileSizeBytes = manifest.SizeBytes`) and computes the hash with `Hasher.HashData(stream)`.
   - **Match** (`computedContentHash.SequenceEqual(manifest.ProposedContentHash)`): sets `ComputedContentHash` and saves.
-  - **Mismatch:** logs a warning and, for every `NodeFile` referencing the manifest, sends `SendUploadHashMismatchNotificationAsync(ownerId, name, proposedHex, computedHex)`. It does **not** set `ComputedContentHash`, so the manifest is re-examined on the next run.
+  - **Mismatch:** logs a warning, records the manifest id in `KnownMismatchedManifestIds`, and, for every `NodeFile` referencing the manifest, sends `SendUploadHashMismatchNotificationAsync(ownerId, name, proposedHex, computedHex)`. It does **not** set `ComputedContentHash`; later runs in the same process skip the known mismatch, while a process restart can report it again.
 
-**Concurrency.** Single-flight via the `[JobTrigger]` registration. **Failure handling.** No outer try/catch; an exception fails the Quartz execution and the manifest stays unverified for retry. This is scheduled maintenance, not an upload-triggered job. See the *Garbage Collection* and storage-integrity material in the *Storage Pipeline* section.
+**Concurrency.** Single-flight via the `[JobTrigger]` registration. **Failure handling.** No outer try/catch; an exception fails the Quartz execution and the manifest stays unverified. In addition to scheduled maintenance, `FileController` triggers the same job after file creation and content update. See the *Garbage Collection* and storage-integrity material in the *Storage Pipeline* section.
 
 ### GeneratePreviewJob
 

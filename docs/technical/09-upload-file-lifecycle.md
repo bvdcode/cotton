@@ -165,19 +165,19 @@ This builds the immutable content record:
 
 ## Background hash computation — `ComputeManifestHashesJob`
 
-`ComputeManifestHashesJob` (`src/Cotton.Server/Jobs/ComputeManifestHashesJob.cs`) is a Quartz job triggered daily (`[JobTrigger(hours: 24)]`). Its job is to populate `ComputedContentHash` — the server's own verification of what was actually stored.
+`ComputeManifestHashesJob` (`src/Cotton.Server/Jobs/ComputeManifestHashesJob.cs`) is a Quartz job scheduled every 12 hours (`[JobTrigger(hours: 12)]`) and also triggered after file creation or content update. Its job is to populate `ComputedContentHash` — the server's own verification of what was actually stored.
 
-- **Back-off.** It returns early when `PerfTracker.IsUploading()` (a chunk landed within the last 10 s) or `PerfTracker.IsNightTime()` (server-local hour `< 7` or `>= 22`, where local time is computed from `CottonServerSettings.Timezone` via `GetTimezoneInfo()`, falling back to UTC). Within a run it sleeps `60 000 ms` between manifests while a preview is generating or an upload is active (`IsPreviewGenerating() || IsUploading()`), otherwise `250 ms`.
-- **Selection.** The query is `FileManifests.Take(MaxItemsPerRun).Include(FileManifestChunks).Where(ComputedContentHash == null)` — note the `Take(1000)` is applied **before** the `Where`, so EF takes (an unordered) batch of up to `MaxItemsPerRun` (1000) manifests and filters those for a null computed hash. Fully verified manifests are skipped naturally and unverified ones are revisited on subsequent runs.
+- **Back-off.** It returns early when `PerfTracker.IsUploading()` (a chunk landed within the last 10 s) or `PerfTracker.IsNightTime()` (server-local hour `< 7` or `>= 22`, where local time is computed from `CottonServerSettings.Timezone` via `GetTimezoneInfo()`, falling back to UTC). Within a run it sleeps `60 000 ms` between manifests while a preview is generating or an upload is active (`IsPreviewGenerating() || IsUploading()`), otherwise `250 ms`; both delays accept the Quartz cancellation token.
+- **Selection.** It filters for `ComputedContentHash == null`, excludes manifest ids already recorded as mismatches by this process, includes `FileManifestChunks`, orders by manifest id, then applies `Take(MaxItemsPerRun)` and materializes asynchronously with the Quartz cancellation token. A run therefore processes up to 1000 deterministic candidates without letting already-verified rows crowd them out.
 - **Compute.** For each, it streams the assembled blob via `IStoragePipeline.GetBlobStream(hashes, PipelineContext { FileSizeBytes })` (chunk hash order from `FileManifestExtensions.GetChunkHashes`) and computes SHA-256 (`Hasher.HashData(stream)`).
 - **Match → commit.** If the computed hash equals `ProposedContentHash`, it sets `ComputedContentHash` and saves. Setting `ComputedContentHash` is what makes the manifest eligible for the strongest dedup match and confirms integrity.
-- **Mismatch → notify.** On mismatch it logs a warning and, for every `NodeFile` referencing the manifest, calls `SendUploadHashMismatchNotificationAsync(ownerId, fileName, proposedHex, computedHex)` (an extension method on the notifications provider, defined in `src/Cotton.Server/Extensions/NotificationsProviderExtensions.cs`). It does **not** set `ComputedContentHash`, so the manifest is retried on subsequent runs and never silently dedups corrupt content.
+- **Mismatch → notify once per process.** On mismatch it logs a warning, records the manifest id in the process-local `KnownMismatchedManifestIds` set, and, for every `NodeFile` referencing the manifest, calls `SendUploadHashMismatchNotificationAsync(ownerId, fileName, proposedHex, computedHex)` (an extension method on the notifications provider, defined in `src/Cotton.Server/Extensions/NotificationsProviderExtensions.cs`). It does **not** set `ComputedContentHash`, so corrupt content is never silently treated as verified; subsequent runs in the same process skip it, while a process restart allows it to be detected and reported again.
 
 ```mermaid
 stateDiagram-v2
     [*] --> ProposedOnly: CreateNewFileManifestAsync (ComputedContentHash = null)
     ProposedOnly --> Verified: job computes hash == ProposedContentHash
-    ProposedOnly --> ProposedOnly: hash mismatch -> notify owners, retry next run
+    ProposedOnly --> ProposedOnly: hash mismatch -> notify owners, suppress repeats until restart
     Verified --> [*]: eligible for strongest dedup / fully verified
 ```
 
@@ -329,7 +329,7 @@ Key invariants:
 | `Timezone` | `CottonServerSettings` | Used by `PerfTracker.IsNightTime()`; falls back to UTC when empty/invalid. |
 | `GcWaitStepMs` / `GcWaitMaxMs` | `ChunkIngestService` (const) | 100 ms / 30 000 ms (ingest wait for in-progress GC). |
 | `ChunkTimeoutSeconds` | `PerfTracker` (const) | 10 s upload/preview-activity window (`IsUploading`, `IsPreviewGenerating`). |
-| `MaxItemsPerRun` | `ComputeManifestHashesJob` (const) | 1000 manifests per run (applied via `Take` before the null-hash filter). |
+| `MaxItemsPerRun` | `ComputeManifestHashesJob` (const) | 1000 unverified, not-already-reported manifests per run, ordered by id before `Take`. |
 | `ChunkGcDelayDays` | `GarbageCollectorJob` (const) | 7 days base scheduling delay (scaled by `StorageSpaceMode`). |
 | Storage-pressure reserve | `StoragePressureOptions` (`src/Cotton.Server/Models/Configuration/StoragePressureOptions.cs`) | `Enabled=true`, `MinFreePercent=5`, `MinFreeBytes=512 MiB`, `CheckIntervalSeconds=10`, `AdminNotificationCooldownMinutes=60`. Required free = `max(MinFreeBytes, MinFreePercent% of total)`; a breach throws `StoragePressureException` → `507`. |
 

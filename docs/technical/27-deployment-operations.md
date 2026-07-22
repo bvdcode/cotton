@@ -395,7 +395,7 @@ All jobs use `[JobTrigger(...)]` with startup firing, repeated intervals, and si
 
 | Job | Interval | Purpose |
 | --- | --- | --- |
-| `ComputeManifestHashesJob` | 24 hours | Compute manifest content hashes; flag mismatches. |
+| `ComputeManifestHashesJob` | 12 hours | Compute manifest content hashes; flag mismatches (also triggered after file creation/content update). |
 | `GeneratePreviewJob` | 15 min | Generate file previews. |
 | `ExtractFileMetadataJob` | 15 min | Extract file metadata. |
 | `GarbageCollectorJob` | 6 hours | Reclaim orphaned chunks (also triggerable via `PATCH /api/v1/server/gc/trigger`). |
