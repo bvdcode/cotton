@@ -56,6 +56,7 @@ namespace Cotton.Server.Controllers
         FileVersionService _versions,
         UserStorageQuotaService _quota,
         VideoTranscoder _videoTranscoder,
+        HlsTranscodeCoordinator _hlsTranscodes,
         HlsSegmentCache _segmentCache,
         IMemoryCache _cache,
         IDatabaseIntegrityVerifier _integrity,
@@ -1098,11 +1099,19 @@ namespace Cotton.Server.Controllers
 
             if (_segmentCache.TryGet(cacheKey, out byte[]? cachedBytes))
             {
-                Response.Headers.CacheControl = "private, max-age=300";
-                Response.Headers.ContentEncoding = "identity";
-                return File(cachedBytes, VideoTranscoder.SegmentContentType);
+                return ServeCachedHlsSegment(cachedBytes);
             }
 
+            await using IAsyncDisposable segmentLease = await _hlsTranscodes.EnterSegmentAsync(
+                cacheKey,
+                HttpContext.RequestAborted);
+            if (_segmentCache.TryGet(cacheKey, out cachedBytes))
+            {
+                return ServeCachedHlsSegment(cachedBytes);
+            }
+
+            await using IAsyncDisposable transcodeLease = await _hlsTranscodes.EnterTranscodeAsync(
+                HttpContext.RequestAborted);
             double startSeconds = HlsManifestBuilder.StartTimeOf(segmentIndex);
             double segmentDuration = manifestPlan.DurationOf(segmentIndex);
             HlsRenditionProfile.EncoderPlan encoderPlan = HlsRenditionProfile.Plan(
@@ -1152,6 +1161,13 @@ namespace Cotton.Server.Controllers
             }
 
             return new EmptyResult();
+        }
+
+        private IActionResult ServeCachedHlsSegment(byte[] cachedBytes)
+        {
+            Response.Headers.CacheControl = "private, max-age=300";
+            Response.Headers.ContentEncoding = "identity";
+            return File(cachedBytes, VideoTranscoder.SegmentContentType);
         }
 
         private record TranscodableLookup(

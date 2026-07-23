@@ -141,6 +141,13 @@ namespace Cotton.Server
                 .AddOptions<HlsSegmentCacheOptions>()
                 .Bind(builder.Configuration.GetSection("HlsSegmentCache"));
             builder.Services
+                .AddOptions<ResourceConcurrencyOptions>()
+                .Bind(builder.Configuration.GetSection(ResourceConcurrencyOptions.SectionName))
+                .Validate(
+                    options => options.HlsTranscodes > 0,
+                    "ResourceConcurrency:HlsTranscodes must be greater than zero.")
+                .ValidateOnStart();
+            builder.Services
                 .AddOptions<StoragePressureOptions>()
                 .Bind(builder.Configuration.GetSection("StoragePressure"));
             builder.Services
@@ -177,6 +184,7 @@ namespace Cotton.Server
                 .AddScoped<ChunkUsageService>()
                 .AddScoped<StorageUsageStatsService>()
                 .AddScoped<VideoTranscoder>()
+                .AddSingleton<HlsTranscodeCoordinator>()
                 .AddSingleton<HlsSegmentCache>()
                 .AddSingleton<DatabaseBackupKeyProvider>()
                 .AddScoped<IS3Provider, S3Provider>()
