@@ -169,6 +169,21 @@ namespace Cotton.Server.Handlers.Files
             }
 
             manifest.Metadata = FileContentMetadataDictionary.ReplaceManagedValues(manifest.Metadata, extracted);
+            await SaveManifestMetadataAsync(manifest, cancellationToken);
+
+            return !AreEquivalent(oldMetadata, manifest.Metadata);
+        }
+
+        private async Task MarkMetadataProcessedAsync(FileManifest manifest, CancellationToken cancellationToken)
+        {
+            manifest.Metadata = FileContentMetadataDictionary.MarkProcessed(manifest.Metadata);
+            await SaveManifestMetadataAsync(manifest, cancellationToken);
+        }
+
+        internal async Task SaveManifestMetadataAsync(
+            FileManifest manifest,
+            CancellationToken cancellationToken)
+        {
             try
             {
                 await _dbContext.SaveChangesAsync(cancellationToken);
@@ -184,14 +199,6 @@ namespace Cotton.Server.Handlers.Files
                     nameof(FileManifest),
                     "The file manifest changed while metadata was being extracted. Retry the operation.");
             }
-
-            return !AreEquivalent(oldMetadata, manifest.Metadata);
-        }
-
-        private async Task MarkMetadataProcessedAsync(FileManifest manifest, CancellationToken cancellationToken)
-        {
-            manifest.Metadata = FileContentMetadataDictionary.MarkProcessed(manifest.Metadata);
-            await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
         private async Task<IReadOnlyDictionary<string, string>> ExtractManifestMetadataAsync(

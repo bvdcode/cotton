@@ -90,40 +90,55 @@ namespace Cotton.Server.Jobs
                 }
                 else
                 {
+                    string computedHash = Hasher.ToHexStringHash(computedContentHash);
+                    string proposedHash = Hasher.ToHexStringHash(manifest.ProposedContentHash);
                     _logger.LogWarning("Hash mismatch for manifest {ManifestId}: computed {ComputedHash}, proposed {ProposedHash}",
                         manifest.Id,
-                        Hasher.ToHexStringHash(computedContentHash),
-                        Hasher.ToHexStringHash(manifest.ProposedContentHash));
+                        computedHash,
+                        proposedHash);
 
-                    if (!KnownMismatchedManifestIds.Add(manifest.Id))
-                    {
-                        _logger.LogInformation(
-                            "Hash mismatch for manifest {ManifestId} was already reported in this process.",
-                            manifest.Id);
-                        continue;
-                    }
-
-                    var relatedFiles = await _dbContext.NodeFiles
+                    List<ManifestHashMismatchNotificationTarget> notificationTargets =
+                        await _dbContext.NodeFiles
                         .AsNoTracking()
                         .Where(nf => nf.FileManifestId == manifest.Id)
-                        .Select(nf => new
-                        {
+                        .Select(nf => new ManifestHashMismatchNotificationTarget(
                             nf.OwnerId,
-                            nf.Name,
-                        })
+                            nf.Name))
                         .ToListAsync(context.CancellationToken);
 
-                    // send notification for each related file
-                    foreach (var file in relatedFiles)
-                    {
-                        await _notifications.SendUploadHashMismatchNotificationAsync(
-                            file.OwnerId,
-                            file.Name,
-                            Hasher.ToHexStringHash(manifest.ProposedContentHash),
-                            Hasher.ToHexStringHash(computedContentHash));
-                    }
+                    await ReportHashMismatchAsync(
+                        manifest.Id,
+                        notificationTargets,
+                        proposedHash,
+                        computedHash);
                 }
             }
+        }
+
+        internal async Task ReportHashMismatchAsync(
+            Guid manifestId,
+            IReadOnlyCollection<ManifestHashMismatchNotificationTarget> notificationTargets,
+            string proposedHash,
+            string computedHash)
+        {
+            if (KnownMismatchedManifestIds.Contains(manifestId))
+            {
+                _logger.LogInformation(
+                    "Hash mismatch for manifest {ManifestId} was already reported in this process.",
+                    manifestId);
+                return;
+            }
+
+            foreach (ManifestHashMismatchNotificationTarget target in notificationTargets)
+            {
+                await _notifications.SendUploadHashMismatchNotificationAsync(
+                    target.OwnerId,
+                    target.FileName,
+                    proposedHash,
+                    computedHash);
+            }
+
+            KnownMismatchedManifestIds.Add(manifestId);
         }
     }
 }
