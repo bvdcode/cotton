@@ -27,7 +27,10 @@ namespace Cotton.Server.Controllers
         IStoragePipeline _storage) : ControllerBase
     {
         private const int TokenOwnerIdLength = 32;
-        private static readonly SemaphoreSlim _previewGate = new(8);
+        internal const int PreviewConcurrencyLimit = 8;
+        private static readonly SemaphoreSlim _previewGate = new(
+            PreviewConcurrencyLimit,
+            PreviewConcurrencyLimit);
 
         /// <summary>
         /// Gets file preview.
@@ -37,8 +40,11 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetFilePreview([FromRoute] string previewHashEncryptedHex)
         {
             await _previewGate.WaitAsync(HttpContext.RequestAborted);
+            var gateLease = new PreviewGateLease(_previewGate);
             try
             {
+                Response.RegisterForDispose(gateLease);
+
                 // The token embeds the AES-GCM encrypted preview hash. GCM is authenticated,
                 // so a token that decrypts to a valid hash was necessarily issued by this server;
                 // that is sufficient to serve a public preview blob without a database round-trip.
@@ -93,9 +99,10 @@ namespace Cotton.Server.Controllers
                 Stream stream = await _storage.ReadAsync(decryptedPreviewHash, context);
                 return File(stream, "image/webp");
             }
-            finally
+            catch
             {
-                _previewGate.Release();
+                gateLease.Dispose();
+                throw;
             }
         }
 
@@ -136,5 +143,15 @@ namespace Cotton.Server.Controllers
         }
 
         private readonly record struct PreviewToken(char Kind, byte[] EncryptedHash);
+
+        private sealed class PreviewGateLease(SemaphoreSlim gate) : IDisposable
+        {
+            private SemaphoreSlim? _gate = gate;
+
+            public void Dispose()
+            {
+                Interlocked.Exchange(ref _gate, null)?.Release();
+            }
+        }
     }
 }
