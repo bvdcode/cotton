@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Controllers;
 using Cotton.Server.Models.Configuration;
 using Cotton.Server.Services.RequestAdmission;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using NUnit.Framework;
 using System.Net;
+using System.Reflection;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 
@@ -13,6 +16,15 @@ namespace Cotton.Server.IntegrationTests
 {
     public class HttpRequestAdmissionPolicyTests
     {
+        [Test]
+        public void PreviewController_DisablesRateLimitingInFavorOfItsSemaphoreQueue()
+        {
+            DisableRateLimitingAttribute? attribute =
+                typeof(PreviewController).GetCustomAttribute<DisableRateLimitingAttribute>();
+
+            Assert.That(attribute, Is.Not.Null);
+        }
+
         [Test]
         public async Task Create_RejectsRequestsAbovePerClientLimitWithoutAQueue()
         {

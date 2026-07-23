@@ -9,6 +9,7 @@ using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Net.Http.Headers;
 using Microsoft.Extensions.Primitives;
 
@@ -18,6 +19,7 @@ namespace Cotton.Server.Controllers
     /// Exposes HTTP endpoints for preview operations.
     /// </summary>
     [ApiController]
+    [DisableRateLimiting]
     [Route(Routes.V1.Previews)]
     public class PreviewController(
         IStreamCipher _crypto,
