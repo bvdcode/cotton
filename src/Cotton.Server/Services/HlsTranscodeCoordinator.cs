@@ -7,14 +7,15 @@ using Microsoft.Extensions.Options;
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Coordinates HLS segment ownership and process-wide ffmpeg concurrency.
+    /// Coordinates HLS work ownership and process-wide ffmpeg/ffprobe concurrency.
     /// </summary>
     public sealed class HlsTranscodeCoordinator
     {
         private readonly SemaphoreSlim _transcodeGate;
-        private readonly object _segmentGatesLock = new();
-        private readonly Dictionary<string, SegmentGateEntry> _segmentGates =
+        private readonly SemaphoreSlim _probeGate;
+        private readonly KeyedAsyncGate<string> _segmentGates =
             new(StringComparer.Ordinal);
+        private readonly KeyedAsyncGate<Guid> _probeManifestGates = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HlsTranscodeCoordinator"/> type.
@@ -25,39 +26,18 @@ namespace Cotton.Server.Services
             ResourceConcurrencyOptions value = options.Value;
             value.Validate();
             _transcodeGate = new SemaphoreSlim(value.HlsTranscodes, value.HlsTranscodes);
+            _probeGate = new SemaphoreSlim(value.HlsProbes, value.HlsProbes);
         }
 
         /// <summary>
         /// Serializes production of one exact HLS segment cache key.
         /// </summary>
-        public async ValueTask<IAsyncDisposable> EnterSegmentAsync(
+        public ValueTask<IAsyncDisposable> EnterSegmentAsync(
             string cacheKey,
             CancellationToken cancellationToken)
         {
             ArgumentException.ThrowIfNullOrEmpty(cacheKey);
-
-            SegmentGateEntry entry;
-            lock (_segmentGatesLock)
-            {
-                if (!_segmentGates.TryGetValue(cacheKey, out entry!))
-                {
-                    entry = new SegmentGateEntry();
-                    _segmentGates.Add(cacheKey, entry);
-                }
-
-                entry.ReferenceCount++;
-            }
-
-            try
-            {
-                await entry.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-                return new AsyncGateLease(() => ReleaseSegment(cacheKey, entry));
-            }
-            catch
-            {
-                ReleaseSegmentReference(cacheKey, entry);
-                throw;
-            }
+            return _segmentGates.EnterAsync(cacheKey, cancellationToken);
         }
 
         /// <summary>
@@ -70,43 +50,102 @@ namespace Cotton.Server.Services
             return new AsyncGateLease(() => _transcodeGate.Release());
         }
 
-        internal int SegmentGateCount
+        /// <summary>
+        /// Serializes media probing for one immutable file manifest.
+        /// </summary>
+        public ValueTask<IAsyncDisposable> EnterProbeManifestAsync(
+            Guid manifestId,
+            CancellationToken cancellationToken)
         {
-            get
+            return _probeManifestGates.EnterAsync(manifestId, cancellationToken);
+        }
+
+        /// <summary>
+        /// Waits for process-wide HLS media-probe capacity.
+        /// </summary>
+        public async ValueTask<IAsyncDisposable> EnterProbeAsync(
+            CancellationToken cancellationToken)
+        {
+            await _probeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return new AsyncGateLease(() => _probeGate.Release());
+        }
+
+        internal int SegmentGateCount => _segmentGates.Count;
+
+        internal int ProbeManifestGateCount => _probeManifestGates.Count;
+
+        private sealed class KeyedAsyncGate<TKey>(IEqualityComparer<TKey>? comparer = null)
+            where TKey : notnull
+        {
+            private readonly object _lock = new();
+            private readonly Dictionary<TKey, GateEntry> _gates = new(comparer);
+
+            public int Count
             {
-                lock (_segmentGatesLock)
+                get
                 {
-                    return _segmentGates.Count;
+                    lock (_lock)
+                    {
+                        return _gates.Count;
+                    }
                 }
             }
-        }
 
-        private void ReleaseSegment(string cacheKey, SegmentGateEntry entry)
-        {
-            entry.Gate.Release();
-            ReleaseSegmentReference(cacheKey, entry);
-        }
-
-        private void ReleaseSegmentReference(string cacheKey, SegmentGateEntry entry)
-        {
-            lock (_segmentGatesLock)
+            public async ValueTask<IAsyncDisposable> EnterAsync(
+                TKey key,
+                CancellationToken cancellationToken)
             {
-                entry.ReferenceCount--;
-                if (entry.ReferenceCount != 0)
+                GateEntry entry;
+                lock (_lock)
                 {
-                    return;
+                    if (!_gates.TryGetValue(key, out entry!))
+                    {
+                        entry = new GateEntry();
+                        _gates.Add(key, entry);
+                    }
+
+                    entry.ReferenceCount++;
                 }
 
-                _segmentGates.Remove(cacheKey);
-                entry.Gate.Dispose();
+                try
+                {
+                    await entry.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    return new AsyncGateLease(() => Release(key, entry));
+                }
+                catch
+                {
+                    ReleaseReference(key, entry);
+                    throw;
+                }
             }
-        }
 
-        private sealed class SegmentGateEntry
-        {
-            public SemaphoreSlim Gate { get; } = new(1, 1);
+            private void Release(TKey key, GateEntry entry)
+            {
+                entry.Gate.Release();
+                ReleaseReference(key, entry);
+            }
 
-            public int ReferenceCount { get; set; }
+            private void ReleaseReference(TKey key, GateEntry entry)
+            {
+                lock (_lock)
+                {
+                    entry.ReferenceCount--;
+                    if (entry.ReferenceCount != 0)
+                    {
+                        return;
+                    }
+
+                    _gates.Remove(key);
+                    entry.Gate.Dispose();
+                }
+            }
+
+            private sealed class GateEntry
+            {
+                public SemaphoreSlim Gate { get; } = new(1, 1);
+
+                public int ReferenceCount { get; set; }
+            }
         }
 
         private sealed class AsyncGateLease(Action release) : IAsyncDisposable

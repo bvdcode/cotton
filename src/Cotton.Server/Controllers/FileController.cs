@@ -66,6 +66,10 @@ namespace Cotton.Server.Controllers
     {
         private const int DefaultSharedFileTokenLength = 16;
 
+        // Manifest content is immutable, so positive and negative probe results are equally
+        // stable. A bounded lifetime still permits recovery from an ffprobe/runtime repair.
+        private static readonly TimeSpan HlsMediaProbeCacheLifetime = TimeSpan.FromHours(1);
+
         /// <summary>
         /// Creates or returns a public file share response.
         /// </summary>
@@ -1076,7 +1080,22 @@ namespace Cotton.Server.Controllers
                 return lookup.Failure;
             }
 
-            MediaProbeInfo? probe = await ProbeMediaAsync(lookup.NodeFile!);
+            NodeFile nodeFile = lookup.NodeFile!;
+            DownloadToken downloadToken = lookup.DownloadToken!;
+            HlsRendition rendition = HlsRenditionProfile.Parse(quality);
+            string qualityName = rendition.ToString().ToLowerInvariant();
+            string cacheKey = HlsSegmentCache.BuildKey(
+                nodeFile.FileManifest.Id,
+                qualityName,
+                segmentIndex);
+
+            if (_segmentCache.TryGet(cacheKey, out byte[]? cachedBytes))
+            {
+                RegisterDeleteAfterUse(downloadToken);
+                return ServeCachedHlsSegment(cachedBytes);
+            }
+
+            MediaProbeInfo? probe = await ProbeMediaAsync(nodeFile);
             if (probe?.DurationSeconds is null or <= 0)
             {
                 return CottonResult.BadRequest("Could not determine source duration for HLS segmentation.");
@@ -1088,19 +1107,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("Segment index out of range.");
             }
 
-            RegisterDeleteAfterUse(lookup.DownloadToken!);
-
-            HlsRendition rendition = HlsRenditionProfile.Parse(quality);
-            string qualityName = rendition.ToString().ToLowerInvariant();
-            string cacheKey = HlsSegmentCache.BuildKey(
-                lookup.NodeFile!.FileManifest.Id,
-                qualityName,
-                segmentIndex);
-
-            if (_segmentCache.TryGet(cacheKey, out byte[]? cachedBytes))
-            {
-                return ServeCachedHlsSegment(cachedBytes);
-            }
+            RegisterDeleteAfterUse(downloadToken);
 
             await using IAsyncDisposable segmentLease = await _hlsTranscodes.EnterSegmentAsync(
                 cacheKey,
@@ -1127,7 +1134,7 @@ namespace Cotton.Server.Controllers
             var tee = new TeeStream(Response.Body, captureStream);
             bool transcodeSucceeded = false;
 
-            await using Stream sourceStream = OpenSourceStream(lookup.NodeFile);
+            await using Stream sourceStream = OpenSourceStream(nodeFile);
             try
             {
                 await _videoTranscoder.TranscodeSegmentAsync(
@@ -1233,12 +1240,23 @@ namespace Cotton.Server.Controllers
 
         private async Task<MediaProbeInfo?> ProbeMediaAsync(NodeFile nodeFile)
         {
-            string cacheKey = $"hls-media-probe:{nodeFile.FileManifest.Id}";
-            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out MediaProbeInfo? cached))
+            Guid manifestId = nodeFile.FileManifest.Id;
+            string cacheKey = $"hls-media-probe:{manifestId}";
+            if (_cache.TryGetValue<MediaProbeCacheEntry>(cacheKey, out MediaProbeCacheEntry? cached))
             {
-                return cached;
+                return cached?.Probe;
             }
 
+            await using IAsyncDisposable manifestLease = await _hlsTranscodes.EnterProbeManifestAsync(
+                manifestId,
+                HttpContext.RequestAborted);
+            if (_cache.TryGetValue<MediaProbeCacheEntry>(cacheKey, out cached))
+            {
+                return cached?.Probe;
+            }
+
+            await using IAsyncDisposable probeLease = await _hlsTranscodes.EnterProbeAsync(
+                HttpContext.RequestAborted);
             MediaProbeInfo? probe;
             await using (Stream probeStream = OpenSourceStream(nodeFile))
             await using (var probeServer = new RangeStreamServer(probeStream, _logger))
@@ -1249,13 +1267,15 @@ namespace Cotton.Server.Controllers
                     .ConfigureAwait(false);
             }
 
-            if (probe is not null)
-            {
-                _cache.Set(cacheKey, probe, TimeSpan.FromHours(1));
-            }
+            _cache.Set(
+                cacheKey,
+                new MediaProbeCacheEntry(probe),
+                HlsMediaProbeCacheLifetime);
 
             return probe;
         }
+
+        private sealed record MediaProbeCacheEntry(MediaProbeInfo? Probe);
 
         /// <summary>
         /// Creates file from chunks.

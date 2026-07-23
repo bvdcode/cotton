@@ -19,6 +19,11 @@ namespace Cotton.Server.Models.Configuration
         public int HlsTranscodes { get; set; } = 2;
 
         /// <summary>
+        /// Gets or sets the maximum number of concurrent HLS media probes.
+        /// </summary>
+        public int HlsProbes { get; set; } = 2;
+
+        /// <summary>
         /// Gets or sets the maximum number of concurrently streamed archives.
         /// </summary>
         public int ArchiveStreams { get; set; } = 4;
@@ -29,6 +34,7 @@ namespace Cotton.Server.Models.Configuration
         public void Validate()
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(HlsTranscodes);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(HlsProbes);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(ArchiveStreams);
         }
     }

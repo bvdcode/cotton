@@ -147,6 +147,9 @@ namespace Cotton.Server
                     options => options.HlsTranscodes > 0,
                     "ResourceConcurrency:HlsTranscodes must be greater than zero.")
                 .Validate(
+                    options => options.HlsProbes > 0,
+                    "ResourceConcurrency:HlsProbes must be greater than zero.")
+                .Validate(
                     options => options.ArchiveStreams > 0,
                     "ResourceConcurrency:ArchiveStreams must be greater than zero.")
                 .ValidateOnStart();
