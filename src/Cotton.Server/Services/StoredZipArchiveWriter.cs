@@ -4,6 +4,8 @@
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Text;
+using Cotton.Server.Models.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Cotton.Server.Services
 {
@@ -19,6 +21,18 @@ namespace Cotton.Server.Services
         private const ushort VersionZip64 = 45;
         private const uint UInt32Max = uint.MaxValue;
         private const ushort UInt16Max = ushort.MaxValue;
+        private readonly SemaphoreSlim _streamGate;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StoredZipArchiveWriter"/> type.
+        /// </summary>
+        public StoredZipArchiveWriter(IOptions<ResourceConcurrencyOptions> options)
+        {
+            ArgumentNullException.ThrowIfNull(options);
+            ResourceConcurrencyOptions value = options.Value;
+            value.Validate();
+            _streamGate = new SemaphoreSlim(value.ArchiveStreams, value.ArchiveStreams);
+        }
 
         /// <summary>
         /// Calculates the exact number of bytes that <see cref="WriteAsync"/> will emit for the entries.
@@ -45,18 +59,26 @@ namespace Cotton.Server.Services
             ArgumentNullException.ThrowIfNull(destination);
             ArgumentNullException.ThrowIfNull(entries);
 
-            ZipPlan plan = BuildPlan(entries);
-            var writtenEntries = new List<WrittenZipEntry>(entries.Count);
-
-            for (int i = 0; i < entries.Count; i++)
+            await _streamGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
-                StoredZipSourceEntry entry = entries[i];
-                ZipEntryPlan entryPlan = plan.Entries[i];
-                uint crc = await WriteLocalEntryAsync(destination, entry, entryPlan, cancellationToken);
-                writtenEntries.Add(new WrittenZipEntry(entryPlan, crc));
-            }
+                ZipPlan plan = BuildPlan(entries);
+                List<WrittenZipEntry> writtenEntries = new(entries.Count);
 
-            await WriteCentralDirectoryAsync(destination, writtenEntries, plan, cancellationToken);
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    StoredZipSourceEntry entry = entries[i];
+                    ZipEntryPlan entryPlan = plan.Entries[i];
+                    uint crc = await WriteLocalEntryAsync(destination, entry, entryPlan, cancellationToken);
+                    writtenEntries.Add(new WrittenZipEntry(entryPlan, crc));
+                }
+
+                await WriteCentralDirectoryAsync(destination, writtenEntries, plan, cancellationToken);
+            }
+            finally
+            {
+                _streamGate.Release();
+            }
         }
 
         // Planning is separate from writing so the API can set Content-Length before sending bytes.

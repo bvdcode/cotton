@@ -146,6 +146,9 @@ namespace Cotton.Server
                 .Validate(
                     options => options.HlsTranscodes > 0,
                     "ResourceConcurrency:HlsTranscodes must be greater than zero.")
+                .Validate(
+                    options => options.ArchiveStreams > 0,
+                    "ResourceConcurrency:ArchiveStreams must be greater than zero.")
                 .ValidateOnStart();
             builder.Services
                 .AddOptions<StoragePressureOptions>()
