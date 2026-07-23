@@ -2,6 +2,8 @@
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Controllers;
+using Cotton.Server.Extensions;
+using Cotton.Server.Models;
 using Cotton.Server.Models.Configuration;
 using Cotton.Server.Services.RequestAdmission;
 using Microsoft.AspNetCore.Http;
@@ -26,42 +28,131 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task Create_RejectsRequestsAbovePerClientLimitWithoutAQueue()
+        public async Task Create_QueuesPerClientBurstUntilCapacityIsReleased()
         {
             RequestAdmissionOptions options = new()
             {
                 GlobalConcurrentRequestLimit = 4,
+                GlobalQueueLimit = 4,
                 ClientConcurrentRequestLimit = 1,
+                ClientQueueLimit = 1,
             };
             await using PartitionedRateLimiter<HttpContext> limiter = HttpRequestAdmissionPolicy.Create(options);
             DefaultHttpContext firstContext = CreateAuthenticatedContext("user-1");
             DefaultHttpContext secondContext = CreateAuthenticatedContext("user-1");
             DefaultHttpContext otherUserContext = CreateAuthenticatedContext("user-2");
 
-            using RateLimitLease first = await limiter.AcquireAsync(firstContext);
-            using RateLimitLease rejected = await limiter.AcquireAsync(secondContext);
-            using RateLimitLease otherUser = await limiter.AcquireAsync(otherUserContext);
+            Task<RateLimitLease> queuedRequest;
+            using (RateLimitLease first = await limiter.AcquireAsync(firstContext))
+            {
+                queuedRequest = limiter.AcquireAsync(secondContext).AsTask();
+                using RateLimitLease otherUser = await limiter.AcquireAsync(otherUserContext);
 
-            Assert.That(first.IsAcquired, Is.True);
-            Assert.That(rejected.IsAcquired, Is.False);
-            Assert.That(otherUser.IsAcquired, Is.True);
+                Assert.Multiple(() =>
+                {
+                    Assert.That(first.IsAcquired, Is.True);
+                    Assert.That(queuedRequest.IsCompleted, Is.False);
+                    Assert.That(otherUser.IsAcquired, Is.True);
+                });
+            }
+
+            using RateLimitLease admitted = await queuedRequest.WaitAsync(TimeSpan.FromSeconds(1));
+            Assert.That(admitted.IsAcquired, Is.True);
         }
 
         [Test]
-        public async Task Create_RejectsRequestsAboveGlobalLimitAcrossClients()
+        public async Task Create_QueuesGlobalBurstUntilCapacityIsReleased()
         {
             RequestAdmissionOptions options = new()
             {
                 GlobalConcurrentRequestLimit = 1,
+                GlobalQueueLimit = 1,
                 ClientConcurrentRequestLimit = 1,
+                ClientQueueLimit = 1,
             };
             await using PartitionedRateLimiter<HttpContext> limiter = HttpRequestAdmissionPolicy.Create(options);
 
-            using RateLimitLease first = await limiter.AcquireAsync(CreateAuthenticatedContext("user-1"));
-            using RateLimitLease rejected = await limiter.AcquireAsync(CreateAuthenticatedContext("user-2"));
+            Task<RateLimitLease> queuedRequest;
+            using (RateLimitLease first = await limiter.AcquireAsync(CreateAuthenticatedContext("user-1")))
+            {
+                queuedRequest = limiter.AcquireAsync(CreateAuthenticatedContext("user-2")).AsTask();
+                using RateLimitLease rejected =
+                    await limiter.AcquireAsync(CreateAuthenticatedContext("user-3"));
 
-            Assert.That(first.IsAcquired, Is.True);
-            Assert.That(rejected.IsAcquired, Is.False);
+                Assert.Multiple(() =>
+                {
+                    Assert.That(first.IsAcquired, Is.True);
+                    Assert.That(queuedRequest.IsCompleted, Is.False);
+                    Assert.That(rejected.IsAcquired, Is.False);
+                });
+            }
+
+            using RateLimitLease admitted = await queuedRequest.WaitAsync(TimeSpan.FromSeconds(1));
+            Assert.That(admitted.IsAcquired, Is.True);
+        }
+
+        [Test]
+        public async Task Create_RejectsRequestsOnlyAfterPerClientQueueIsFull()
+        {
+            RequestAdmissionOptions options = new()
+            {
+                GlobalConcurrentRequestLimit = 4,
+                GlobalQueueLimit = 4,
+                ClientConcurrentRequestLimit = 1,
+                ClientQueueLimit = 1,
+            };
+            await using PartitionedRateLimiter<HttpContext> limiter = HttpRequestAdmissionPolicy.Create(options);
+            DefaultHttpContext context = CreateAuthenticatedContext("user-1");
+
+            Task<RateLimitLease> queuedRequest;
+            using (RateLimitLease first = await limiter.AcquireAsync(context))
+            {
+                queuedRequest = limiter.AcquireAsync(CreateAuthenticatedContext("user-1")).AsTask();
+                using RateLimitLease rejected =
+                    await limiter.AcquireAsync(CreateAuthenticatedContext("user-1"));
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(first.IsAcquired, Is.True);
+                    Assert.That(queuedRequest.IsCompleted, Is.False);
+                    Assert.That(rejected.IsAcquired, Is.False);
+                });
+            }
+
+            using RateLimitLease admitted = await queuedRequest.WaitAsync(TimeSpan.FromSeconds(1));
+            Assert.That(admitted.IsAcquired, Is.True);
+        }
+
+        [Test]
+        public async Task Create_CancelledQueuedRequestDoesNotConsumeReleasedCapacity()
+        {
+            RequestAdmissionOptions options = new()
+            {
+                GlobalConcurrentRequestLimit = 2,
+                GlobalQueueLimit = 2,
+                ClientConcurrentRequestLimit = 1,
+                ClientQueueLimit = 1,
+            };
+            await using PartitionedRateLimiter<HttpContext> limiter = HttpRequestAdmissionPolicy.Create(options);
+            DefaultHttpContext context = CreateAuthenticatedContext("user-1");
+            using CancellationTokenSource cancellation = new();
+
+            using (RateLimitLease first = await limiter.AcquireAsync(context))
+            {
+                Task<RateLimitLease> cancelledRequest = limiter.AcquireAsync(
+                    CreateAuthenticatedContext("user-1"),
+                    cancellationToken: cancellation.Token).AsTask();
+                cancellation.Cancel();
+
+                Assert.CatchAsync<OperationCanceledException>(
+                    async () => await cancelledRequest.WaitAsync(TimeSpan.FromSeconds(1)));
+            }
+
+            using RateLimitLease admitted =
+                await limiter.AcquireAsync(CreateAuthenticatedContext("user-1"))
+                    .AsTask()
+                    .WaitAsync(TimeSpan.FromSeconds(1));
+            Assert.That(admitted.IsAcquired, Is.True);
         }
 
         [Test]
@@ -70,7 +161,9 @@ namespace Cotton.Server.IntegrationTests
             RequestAdmissionOptions options = new()
             {
                 GlobalConcurrentRequestLimit = 2,
+                GlobalQueueLimit = 0,
                 ClientConcurrentRequestLimit = 1,
+                ClientQueueLimit = 0,
             };
             await using PartitionedRateLimiter<HttpContext> limiter = HttpRequestAdmissionPolicy.Create(options);
             DefaultHttpContext firstContext = CreateAnonymousContext("192.0.2.10");
@@ -95,7 +188,9 @@ namespace Cotton.Server.IntegrationTests
             RequestAdmissionOptions options = new()
             {
                 GlobalConcurrentRequestLimit = 2,
+                GlobalQueueLimit = 0,
                 ClientConcurrentRequestLimit = 1,
+                ClientQueueLimit = 0,
             };
             await using PartitionedRateLimiter<HttpContext> limiter = HttpRequestAdmissionPolicy.Create(options);
 
@@ -117,7 +212,9 @@ namespace Cotton.Server.IntegrationTests
             RequestAdmissionOptions options = new()
             {
                 GlobalConcurrentRequestLimit = 2,
+                GlobalQueueLimit = 0,
                 ClientConcurrentRequestLimit = 1,
+                ClientQueueLimit = 0,
             };
             await using PartitionedRateLimiter<HttpContext> limiter = HttpRequestAdmissionPolicy.Create(options);
             DefaultHttpContext ipv4Context = CreateAnonymousContext("192.0.2.10");
@@ -139,7 +236,9 @@ namespace Cotton.Server.IntegrationTests
             RequestAdmissionOptions options = new()
             {
                 GlobalConcurrentRequestLimit = 2,
+                GlobalQueueLimit = 0,
                 ClientConcurrentRequestLimit = 1,
+                ClientQueueLimit = 0,
             };
             await using PartitionedRateLimiter<HttpContext> limiter = HttpRequestAdmissionPolicy.Create(options);
             DefaultHttpContext firstContext = CreateWebDavBasicContext("192.0.2.10");
@@ -152,6 +251,41 @@ namespace Cotton.Server.IntegrationTests
             {
                 Assert.That(first.IsAcquired, Is.True);
                 Assert.That(rejected.IsAcquired, Is.False);
+            });
+        }
+
+        [Test]
+        public async Task CapacityRejection_ReturnsServiceUnavailable()
+        {
+            using ConcurrencyLimiter limiter = new(new ConcurrencyLimiterOptions
+            {
+                PermitLimit = 1,
+                QueueLimit = 0,
+            });
+            using RateLimitLease held = await limiter.AcquireAsync(1);
+            using RateLimitLease rejected = await limiter.AcquireAsync(1);
+            DefaultHttpContext httpContext = new();
+            httpContext.Response.Body = new MemoryStream();
+            OnRejectedContext rejectedContext = new()
+            {
+                HttpContext = httpContext,
+                Lease = rejected,
+            };
+
+            await RequestAdmissionExtensions.WriteCapacityRejectionAsync(
+                rejectedContext,
+                CancellationToken.None);
+
+            httpContext.Response.Body.Position = 0;
+            CottonResult? result = await System.Text.Json.JsonSerializer.DeserializeAsync<CottonResult>(
+                httpContext.Response.Body,
+                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+            Assert.Multiple(() =>
+            {
+                Assert.That(httpContext.Response.StatusCode, Is.EqualTo(StatusCodes.Status503ServiceUnavailable));
+                Assert.That(httpContext.Response.Headers.RetryAfter.ToString(), Is.EqualTo("1"));
+                Assert.That(result?.MessageCode, Is.EqualTo("request_capacity_exhausted"));
+                Assert.That(result?.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
             });
         }
 

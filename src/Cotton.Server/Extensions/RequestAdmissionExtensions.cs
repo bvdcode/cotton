@@ -32,7 +32,7 @@ namespace Cotton.Server.Extensions
 
             services.AddRateLimiter(options =>
             {
-                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.RejectionStatusCode = StatusCodes.Status503ServiceUnavailable;
                 options.GlobalLimiter = HttpRequestAdmissionPolicy.Create(admissionOptions);
                 options.OnRejected = WriteCapacityRejectionAsync;
 
@@ -62,7 +62,7 @@ namespace Cotton.Server.Extensions
                 new FixedWindowEndpointPolicy(GetPublicShareArchivePartition, 5));
         }
 
-        private static async ValueTask WriteCapacityRejectionAsync(
+        internal static async ValueTask WriteCapacityRejectionAsync(
             OnRejectedContext context,
             CancellationToken cancellationToken)
         {
@@ -70,10 +70,11 @@ namespace Cotton.Server.Extensions
                 context,
                 "The server is processing too many concurrent requests. Retry shortly.",
                 "request_capacity_exhausted",
+                HttpStatusCode.ServiceUnavailable,
                 cancellationToken);
         }
 
-        private static async ValueTask WriteEndpointRateLimitRejectionAsync(
+        internal static async ValueTask WriteEndpointRateLimitRejectionAsync(
             OnRejectedContext context,
             CancellationToken cancellationToken)
         {
@@ -81,6 +82,7 @@ namespace Cotton.Server.Extensions
                 context,
                 "Too many requests. Retry later.",
                 "rate_limit_exceeded",
+                HttpStatusCode.TooManyRequests,
                 cancellationToken);
         }
 
@@ -88,15 +90,17 @@ namespace Cotton.Server.Extensions
             OnRejectedContext context,
             string message,
             string messageCode,
+            HttpStatusCode statusCode,
             CancellationToken cancellationToken)
         {
+            context.HttpContext.Response.StatusCode = (int)statusCode;
             context.HttpContext.Response.Headers.RetryAfter = GetRetryAfterSeconds(context.Lease);
             CottonResult result = new()
             {
                 Success = false,
                 Message = message,
                 MessageCode = messageCode,
-                StatusCode = HttpStatusCode.TooManyRequests,
+                StatusCode = statusCode,
             };
             await context.HttpContext.Response.WriteAsJsonAsync(result, cancellationToken);
         }

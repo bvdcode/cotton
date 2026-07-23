@@ -24,12 +24,30 @@ namespace Cotton.Server.Models.Configuration
         public int ClientConcurrentRequestLimit { get; set; } = 32;
 
         /// <summary>
+        /// Gets or sets the maximum number of requests waiting for process-wide capacity.
+        /// </summary>
+        public int GlobalQueueLimit { get; set; } = 256;
+
+        /// <summary>
+        /// Gets or sets the maximum number of requests waiting for capacity per identified client.
+        /// </summary>
+        public int ClientQueueLimit { get; set; } = 32;
+
+        /// <summary>
         /// Validates configured request limits.
         /// </summary>
         public void Validate()
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(GlobalConcurrentRequestLimit);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(ClientConcurrentRequestLimit);
+            ArgumentOutOfRangeException.ThrowIfNegative(GlobalQueueLimit);
+            ArgumentOutOfRangeException.ThrowIfNegative(ClientQueueLimit);
+            if (ClientQueueLimit > int.MaxValue - ClientConcurrentRequestLimit)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(ClientQueueLimit),
+                    "The per-client active and queued request limits are too large.");
+            }
             if (ClientConcurrentRequestLimit > GlobalConcurrentRequestLimit)
             {
                 throw new ArgumentOutOfRangeException(
