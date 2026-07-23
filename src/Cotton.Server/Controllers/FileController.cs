@@ -66,10 +66,6 @@ namespace Cotton.Server.Controllers
     {
         private const int DefaultSharedFileTokenLength = 16;
 
-        // Manifest content is immutable, so positive and negative probe results are equally
-        // stable. A bounded lifetime still permits recovery from an ffprobe/runtime repair.
-        private static readonly TimeSpan HlsMediaProbeCacheLifetime = TimeSpan.FromHours(1);
-
         /// <summary>
         /// Creates or returns a public file share response.
         /// </summary>
@@ -1270,7 +1266,7 @@ namespace Cotton.Server.Controllers
             _cache.Set(
                 cacheKey,
                 new MediaProbeCacheEntry(probe),
-                HlsMediaProbeCacheLifetime);
+                HlsMediaProbeCachePolicy.GetLifetime(probe));
 
             return probe;
         }
