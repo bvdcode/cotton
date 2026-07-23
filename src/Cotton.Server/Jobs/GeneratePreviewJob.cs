@@ -232,7 +232,10 @@ namespace Cotton.Server.Jobs
                 previewKind, hashStr, fileManifestId);
 
             using var resultStream = new MemoryStream(previewImage);
-            await _storage.WriteAsync(hashStr, resultStream);
+            await _storage.WriteAsync(
+                hashStr,
+                resultStream,
+                cancellationToken: cancellationToken);
             await EnsureChunkExistsAsync(hash, previewImage.Length, cancellationToken);
             return hash;
         }

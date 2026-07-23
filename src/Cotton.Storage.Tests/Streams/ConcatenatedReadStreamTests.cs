@@ -49,7 +49,8 @@ namespace Cotton.Storage.Tests.Streams
                 string uid,
                 Stream stream,
                 PipelineContext? context = null,
-                StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing)
+                StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing,
+                CancellationToken cancellationToken = default)
             {
                 throw new NotImplementedException();
             }

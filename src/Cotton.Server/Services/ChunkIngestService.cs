@@ -250,7 +250,11 @@ namespace Cotton.Server.Services
         {
             using StoragePressureReservation writeReservation = await _storagePressure.ReserveWriteAsync(length, ct);
             using var chunkStream = new MemoryStream(buffer, 0, length, writable: false);
-            await _storage.WriteAsync(storageKey, chunkStream, new PipelineContext());
+            await _storage.WriteAsync(
+                storageKey,
+                chunkStream,
+                new PipelineContext(),
+                cancellationToken: ct);
             writeReservation.Commit();
         }
 

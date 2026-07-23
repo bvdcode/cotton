@@ -75,7 +75,7 @@ namespace Cotton.Server.Jobs
 
                 byte[] manifestBytes = JsonSerializer.SerializeToUtf8Bytes(manifest, JsonOptions);
                 string manifestStorageKey = Hasher.ToHexStringHash(Hasher.HashData(manifestBytes));
-                await WriteObjectAsync(manifestStorageKey, manifestBytes);
+                await WriteObjectAsync(manifestStorageKey, manifestBytes, ct);
 
                 var pointer = new BackupManifestPointer(
                     SchemaVersion: 1,
@@ -87,7 +87,7 @@ namespace Cotton.Server.Jobs
                 byte[] pointerBytes = JsonSerializer.SerializeToUtf8Bytes(pointer, JsonOptions);
                 string pointerStorageKey = _backupKeyProvider.GetScopedPointerStorageKey();
                 await _storage.DeleteAsync(pointerStorageKey);
-                await WriteObjectAsync(pointerStorageKey, pointerBytes);
+                await WriteObjectAsync(pointerStorageKey, pointerBytes, ct);
 
                 _logger.LogInformation(
                     "Database dump job completed. BackupId={BackupId}, DumpSizeBytes={DumpSizeBytes}, elapsed: {elapsed}",
@@ -159,13 +159,16 @@ namespace Cotton.Server.Jobs
             return new DumpUploadResult(size, chunkSize, fileHashHex, chunks);
         }
 
-        private async Task WriteObjectAsync(string storageKey, byte[] content)
+        private async Task WriteObjectAsync(
+            string storageKey,
+            byte[] content,
+            CancellationToken cancellationToken)
         {
             using var stream = new MemoryStream(content, writable: false);
             await _storage.WriteAsync(storageKey, stream, new PipelineContext
             {
                 FileSizeBytes = content.Length
-            });
+            }, cancellationToken: cancellationToken);
         }
 
         private static async Task<int> ReadExactlyAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)

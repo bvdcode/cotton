@@ -32,12 +32,15 @@ namespace Cotton.Storage.Abstractions
 
         /// <summary>
         /// Applies write processors and stores the resulting stream in the backend.
+        /// Cancellation stops a write that is still waiting for pipeline capacity;
+        /// an admitted write remains completion-oriented.
         /// </summary>
         Task WriteAsync(
             string uid,
             Stream stream,
             PipelineContext? context = null,
-            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing);
+            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing,
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Lists every storage UID known to the active backend.
