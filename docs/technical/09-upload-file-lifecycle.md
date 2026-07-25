@@ -9,7 +9,7 @@ The unit of storage is a `Chunk`, identified solely by the SHA-256 hash of its p
 The protocol has two phases:
 
 1. **Upload missing chunks.** The client hashes each chunk, optionally asks `GET /api/v1/chunks/{hash}/exists`, and `POST`s only the chunks the server does not already have for this user.
-2. **Assemble the file.** The client `POST`s the ordered list of chunk hashes plus the whole-file hash to `POST /api/v1/files/from-chunks`. The server resolves or creates a manifest, attaches a `NodeFile`, triggers preview/metadata work, and leaves whole-file hash verification to scheduled maintenance.
+2. **Assemble the file.** The client `POST`s the ordered list of chunk hashes plus the whole-file hash to `POST /api/v1/files/from-chunks`. The server resolves or creates a manifest, attaches a `NodeFile`, and triggers hash verification, preview generation, and metadata extraction.
 
 ```mermaid
 sequenceDiagram
@@ -19,7 +19,7 @@ sequenceDiagram
     participant ST as IStoragePipeline
     participant FC as FileController
     participant H as CreateFileRequestHandler
-    participant J as Preview and metadata jobs
+    participant J as Deferred content jobs
 
     Note over B: slice blob, SHA-256 each chunk + whole file
     loop per chunk (concurrent, adaptive)
@@ -40,11 +40,10 @@ sequenceDiagram
     FC->>H: mediator.Send(CreateFileRequest)
     H->>H: resolve owned chunks, dedup manifest by hash
     H->>H: (layout advisory lock) create NodeFile at node
-    FC->>J: TriggerJobAsync<GeneratePreviewJob>() + ExtractFileMetadataJob
+    FC->>J: TriggerJobAsync<ComputeManifestHashesJob>() + GeneratePreviewJob + ExtractFileMetadataJob
     FC-->>B: 200 NodeFileManifestDto + SignalR "FileCreated"
     Note over J: later / async
-    J->>ST: GetBlobStream(chunk hashes) -> preview / metadata
-    Note over FC: ComputedContentHash is verified by scheduled ComputeManifestHashesJob
+    J->>ST: GetBlobStream(chunk hashes) -> hash verification / preview / metadata
 ```
 
 ## Key components & responsibilities
@@ -121,7 +120,7 @@ Because the same chunk can be uploaded concurrently (multiple parallel requests,
 
 ## Manifest creation — `POST /api/v1/files/from-chunks`
 
-`FileController` is decorated with `[ApiController]`. `FileController.CreateFileFromChunks` sets `request.UserId = User.GetUserId()`, sends the `CreateFileRequest` through the mediator, then triggers `GeneratePreviewJob` and `ExtractFileMetadataJob` via `_scheduler.TriggerJobAsync<…>()`, pushes a `"FileCreated"` SignalR event to the owning user (`IHubContext<EventHub>`), and returns `Ok(manifest)` (HTTP `200`) with the `NodeFileManifestDto`.
+`FileController` is decorated with `[ApiController]`. `FileController.CreateFileFromChunks` sets `request.UserId = User.GetUserId()`, sends the `CreateFileRequest` through the mediator, then triggers `ComputeManifestHashesJob`, `GeneratePreviewJob`, and `ExtractFileMetadataJob` via `_scheduler.TriggerJobAsync<…>()`, pushes a `"FileCreated"` SignalR event to the owning user (`IHubContext<EventHub>`), and returns `Ok(manifest)` (HTTP `200`) with the `NodeFileManifestDto`.
 
 ### `CreateFileRequest`
 
@@ -188,7 +187,7 @@ stateDiagram-v2
 - If the request's `ProposedContentHash` differs from the file's current manifest hash, it captures the current manifest as a historical version via `FileVersionService.CaptureAndUpdateManifestAsync` and repoints the `NodeFile` at the new manifest. Identical content (same proposed hash) is a no-op for content and skips version capture.
 - It updates the name and replaces metadata (when supplied).
 
-After commit it adjusts quota (added/removed logical bytes), triggers `GeneratePreviewJob` and `ExtractFileMetadataJob`, and emits a `"FileUpdated"` SignalR event. See the *File Versioning* section for `FileVersionService`, lineage (`OriginalNodeFileId`), and retention.
+After commit it adjusts quota (added/removed logical bytes), triggers `ComputeManifestHashesJob`, `GeneratePreviewJob`, and `ExtractFileMetadataJob`, and emits a `"FileUpdated"` SignalR event. See the *File Versioning* section for `FileVersionService`, lineage (`OriginalNodeFileId`), and retention.
 
 Related write/read endpoints on `FileController`:
 

@@ -193,7 +193,7 @@ sequenceDiagram
     U->>FC: POST /api/v1/files/from-chunks (ordered hashes, target node)
     FC->>M: mediator.Send(CreateFileRequest)
     M->>DB: get-or-create FileManifest + ordered FileManifestChunk rows, NodeFile
-    FC->>FC: TriggerJobAsync<GeneratePreviewJob> + <ExtractFileMetadataJob>
+    FC->>FC: TriggerJobAsync<ComputeManifestHashesJob> + <GeneratePreviewJob> + <ExtractFileMetadataJob>
     FC-->>U: NodeFileManifestDto + SignalR "FileCreated" to user
 ```
 

@@ -91,7 +91,7 @@ flowchart TD
 | --- | --- | --- |
 | `Controllers/ServerController.cs` `TriggerGarbageCollector` (`PATCH /api/v1/server/gc/trigger`, `[Authorize(Roles = nameof(UserRole.Admin))]`) | `GarbageCollectorJob` | Admin requests an immediate GC pass |
 | `Handlers/Server/TriggerDatabaseBackupRequest.cs` (`TriggerDatabaseBackupRequestHandler`), reached via `ServerController.TriggerDatabaseBackup` (`PATCH /api/v1/server/database-backup/trigger`, Admin only) | `DumpDatabaseJob` | Admin requests an immediate backup |
-| `Controllers/FileController.cs` (`CreateFileFromChunks`, `POST /api/v1/files/from-chunks`; update-content path) | `GeneratePreviewJob`, `ExtractFileMetadataJob` | After a file commit/update |
+| `Controllers/FileController.cs` (`CreateFileFromChunks`, `POST /api/v1/files/from-chunks`; update-content path) | `ComputeManifestHashesJob`, `GeneratePreviewJob`, `ExtractFileMetadataJob` | After a file commit/update |
 | `Handlers/WebDav/WebDavPutFileRequest.cs` `NotifyPutCompletedAsync` | `GeneratePreviewJob`, `ExtractFileMetadataJob` | After a WebDAV `PUT` completes |
 
 ## Job summary table
