@@ -19,7 +19,6 @@ namespace Cotton.Server.Jobs
     /// Runs the scheduled garbage collector maintenance task.
     /// </summary>
     [JobTrigger(hours: 6)]
-    [DisallowConcurrentExecution]
     public class GarbageCollectorJob(
         PerfTracker _perf,
         IStoragePipeline _storage,

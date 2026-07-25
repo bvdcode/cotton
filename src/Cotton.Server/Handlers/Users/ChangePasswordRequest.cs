@@ -3,6 +3,10 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Localization;
+using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -40,7 +44,10 @@ namespace Cotton.Server.Handlers.Users
         CottonDbContext _dbContext,
         IPasswordHashService _hasher,
         RefreshTokenRevocationService _refreshTokenRevocations,
-        SessionRevocationNotifier _sessionRevocationNotifier) : IRequestHandler<ChangePasswordRequest>
+        SessionRevocationNotifier _sessionRevocationNotifier,
+        INotificationsProvider _notifications,
+        SettingsProvider _settings,
+        ILogger<ChangePasswordRequestHandler> _logger) : IRequestHandler<ChangePasswordRequest>
     {
         /// <summary>
         /// Handles the request through the mediator pipeline.
@@ -81,6 +88,13 @@ namespace Cotton.Server.Handlers.Users
                 user.Id,
                 revocation.SessionIds,
                 CancellationToken.None);
+            await _notifications.SendSecurityEmailAsync(
+                _settings,
+                _logger,
+                user.Id,
+                NotificationTemplates.PasswordChangedTitle,
+                NotificationTemplates.PasswordChangedContent,
+                DateTime.UtcNow);
         }
     }
 }

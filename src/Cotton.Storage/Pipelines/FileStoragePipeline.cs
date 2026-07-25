@@ -14,7 +14,9 @@ namespace Cotton.Storage.Pipelines
         IStorageBackendProvider _backendProvider,
         IEnumerable<IStorageProcessor> _processors) : IStoragePipeline
     {
-        private static readonly SemaphoreSlim _maxParallel = new(initialCount: Environment.ProcessorCount);
+        private static readonly SemaphoreSlim _maxParallel = new(
+            initialCount: Environment.ProcessorCount,
+            maxCount: Environment.ProcessorCount);
 
         /// <inheritdoc />
         public Task<bool> ExistsAsync(string uid)
@@ -60,9 +62,10 @@ namespace Cotton.Storage.Pipelines
             string uid,
             Stream stream,
             PipelineContext? context = null,
-            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing)
+            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing,
+            CancellationToken cancellationToken = default)
         {
-            await _maxParallel.WaitAsync().ConfigureAwait(false);
+            await _maxParallel.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 IStorageBackend backend = _backendProvider.GetBackend();

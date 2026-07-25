@@ -4,13 +4,18 @@
 using Cotton.Files;
 using Cotton.Nodes;
 using Cotton.Database;
+using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
+using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
+using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
+using Cotton.Server.Services.FileMetadata;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -18,10 +23,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using NUnit.Framework;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -51,6 +58,9 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         byte[]? LargeFilePreviewHash,
         string? PreviewGenerationError,
         string ContentType);
+
+    private record FileManifestMetadataState(
+        Dictionary<string, string>? Metadata);
 
     [SetUp]
     public void SetUp()
@@ -244,6 +254,378 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task MetadataExtraction_ImageFile_StoresManifestMetadataAndReturnsMergedDto()
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        NodeDto root = await GetRootNodeAsync();
+        byte[] sourceImage = CreateGradientPngBytes(width: 320, height: 240);
+
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, "photo.png", "image/png", sourceImage);
+
+        HttpResponseMessage response = await _client!.PostAsync($"/api/v1/files/{createdFile.Id}/metadata/extract", null);
+        response.EnsureSuccessStatusCode();
+
+        NodeFileManifestDto? extractedFile = await response.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(extractedFile, Is.Not.Null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(extractedFile!.Metadata["image.width"], Is.EqualTo("320"));
+            Assert.That(extractedFile.Metadata["image.height"], Is.EqualTo("240"));
+        });
+
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        FileManifest manifest = await dbContext.NodeFiles
+            .AsNoTracking()
+            .Where(x => x.Id == createdFile.Id)
+            .Select(x => x.FileManifest)
+            .SingleAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(manifest.Metadata?["image.width"], Is.EqualTo("320"));
+            Assert.That(manifest.Metadata?["image.height"], Is.EqualTo("240"));
+        });
+    }
+
+    [Test]
+    public async Task MetadataExtraction_CorruptRecognizedImage_MarksAttemptProcessed()
+    {
+        byte[] corruptImage = CreateTruncatedPngBytes();
+        InvalidImageContentException? invalidContent = Assert.ThrowsAsync<InvalidImageContentException>(async () =>
+        {
+            await using MemoryStream stream = new(corruptImage, writable: false);
+            await Image.IdentifyAsync(stream);
+        });
+        Assert.That(invalidContent, Is.Not.Null, "The fixture must remain a recognized PNG with invalid content.");
+
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        NodeDto root = await GetRootNodeAsync();
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "corrupt.png",
+            "image/png",
+            corruptImage);
+
+        await ExecuteExtractFileMetadataJobAsync();
+
+        FileManifestMetadataState processedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        Assert.That(processedState.Metadata, Is.Not.Null);
+        Dictionary<string, string> processedMetadata = processedState.Metadata!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(processedMetadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
+            Assert.That(processedMetadata, Does.Not.ContainKey(FileContentMetadataKeys.ImageWidth));
+            Assert.That(processedMetadata, Does.Not.ContainKey(FileContentMetadataKeys.ImageHeight));
+        });
+
+        await ExecuteExtractFileMetadataJobAsync();
+        FileManifestMetadataState repeatedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        Assert.That(repeatedState.Metadata, Is.EquivalentTo(processedMetadata));
+    }
+
+    [Test]
+    public async Task MetadataExtraction_PersistenceFailure_ReturnsServerErrorWithoutPhantomMetadata()
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        NodeDto root = await GetRootNodeAsync();
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "persistence-failure.png",
+            "image/png",
+            CreateGradientPngBytes(width: 32, height: 24));
+
+        await AddMetadataPersistenceFailureConstraintAsync();
+        try
+        {
+            HttpResponseMessage response = await _client!.PostAsync(
+                $"/api/v1/files/{createdFile.Id}/metadata/extract",
+                null);
+
+            FileManifestMetadataState persistedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+                Assert.That(persistedState.Metadata, Is.Null);
+            });
+        }
+        finally
+        {
+            await RemoveMetadataPersistenceFailureConstraintAsync();
+        }
+    }
+
+    [Test]
+    public async Task DatabaseIntegrity_ConcurrentSignedManifestWrites_RejectStaleSave()
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        NodeDto root = await GetRootNodeAsync();
+        byte[] content = Encoding.UTF8.GetBytes("concurrent integrity test");
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "concurrent.txt",
+            "text/plain",
+            content);
+
+        await using AsyncServiceScope previewScope = _factory!.Services.CreateAsyncScope();
+        await using AsyncServiceScope hashScope = _factory.Services.CreateAsyncScope();
+        CottonDbContext previewContext = previewScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        CottonDbContext hashContext = hashScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+        FileManifest previewManifest = await LoadFileManifestAsync(previewContext, createdFile.Id);
+        FileManifest hashManifest = await LoadFileManifestAsync(hashContext, createdFile.Id);
+        byte[]? originalComputedHash = hashManifest.ComputedContentHash?.ToArray();
+
+        byte[] previewHash = Hasher.HashData(Encoding.UTF8.GetBytes("preview"));
+        byte[] computedHash = Hasher.HashData(Encoding.UTF8.GetBytes("computed"));
+        previewManifest.SmallFilePreviewHash = previewHash;
+        await previewContext.SaveChangesAsync();
+
+        hashManifest.ComputedContentHash = computedHash;
+        DbUpdateConcurrencyException? conflict = Assert.ThrowsAsync<DbUpdateConcurrencyException>(
+            async () => await hashContext.SaveChangesAsync());
+        Assert.That(conflict, Is.Not.Null);
+
+        await using AsyncServiceScope verificationScope = _factory.Services.CreateAsyncScope();
+        CottonDbContext verificationContext = verificationScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        FileManifest persistedManifest = await LoadFileManifestAsync(verificationContext, createdFile.Id);
+        IDatabaseIntegrityProtector protector = verificationScope.ServiceProvider.GetRequiredService<IDatabaseIntegrityProtector>();
+        byte[]? persistedMac = verificationContext.Entry(persistedManifest)
+            .Property<byte[]?>(DatabaseIntegrityColumns.MacProperty)
+            .CurrentValue;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(persistedManifest.SmallFilePreviewHash, Is.EqualTo(previewHash));
+            Assert.That(persistedManifest.ComputedContentHash, Is.EqualTo(originalComputedHash));
+            Assert.That(persistedMac, Is.Not.Null);
+            Assert.That(
+                protector.Verify(persistedManifest, new FileManifestIntegrityDescriptor(), persistedMac!),
+                Is.True);
+        });
+    }
+
+    [Test]
+    public async Task MetadataExtraction_TaggedAudio_StoresTitleArtistAndAlbum()
+    {
+        const string title = "Pipeline title";
+        const string artist = "Pipeline artist";
+        const string album = "Pipeline album";
+        string token = await LoginAsync();
+        SetBearer(token);
+        NodeDto root = await GetRootNodeAsync();
+        byte[] audio = await CreateAudioBytesAsync(title, artist, album);
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "tagged.mp3",
+            "audio/mpeg",
+            audio);
+
+        using HttpResponseMessage response = await _client!.PostAsync(
+            $"/api/v1/files/{createdFile.Id}/metadata/extract",
+            null);
+        response.EnsureSuccessStatusCode();
+
+        NodeFileManifestDto? extractedFile = await response.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(extractedFile, Is.Not.Null);
+        FileManifestMetadataState persisted = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(extractedFile!.Metadata[FileContentMetadataKeys.MediaTitle], Is.EqualTo(title));
+            Assert.That(extractedFile.Metadata[FileContentMetadataKeys.MediaArtist], Is.EqualTo(artist));
+            Assert.That(extractedFile.Metadata[FileContentMetadataKeys.MediaAlbum], Is.EqualTo(album));
+            Assert.That(persisted.Metadata?[FileContentMetadataKeys.MediaTitle], Is.EqualTo(title));
+            Assert.That(persisted.Metadata?[FileContentMetadataKeys.MediaArtist], Is.EqualTo(artist));
+            Assert.That(persisted.Metadata?[FileContentMetadataKeys.MediaAlbum], Is.EqualTo(album));
+        });
+    }
+
+    [Test]
+    public async Task MetadataExtraction_ValidAudioWithoutTags_IsNotMarkedFailed()
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+        NodeDto root = await GetRootNodeAsync();
+        byte[] audio = await CreateAudioBytesAsync();
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "untagged.mp3",
+            "audio/mpeg",
+            audio);
+
+        using HttpResponseMessage response = await _client!.PostAsync(
+            $"/api/v1/files/{createdFile.Id}/metadata/extract",
+            null);
+        response.EnsureSuccessStatusCode();
+
+        NodeFileManifestDto? extractedFile = await response.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(extractedFile, Is.Not.Null);
+        FileManifestMetadataState persisted = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(extractedFile!.Metadata, Does.ContainKey(FileContentMetadataKeys.MediaAudioCodec));
+            Assert.That(extractedFile.Metadata, Does.ContainKey(FileContentMetadataKeys.MediaDurationSeconds));
+            Assert.That(extractedFile.Metadata, Does.Not.ContainKey(FileContentMetadataKeys.MediaTitle));
+            Assert.That(persisted.Metadata, Does.ContainKey(FileContentMetadataKeys.MediaAudioCodec));
+            Assert.That(persisted.Metadata, Does.ContainKey(FileContentMetadataKeys.MediaDurationSeconds));
+        });
+    }
+
+    [Test]
+    public async Task PreviewAndMetadataJobs_SameManifest_PersistBothResultsWithValidIntegrityMac()
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+        NodeDto root = await GetRootNodeAsync();
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "combined.png",
+            "image/png",
+            CreateGradientPngBytes(width: 96, height: 64));
+
+        await ExecuteGeneratePreviewJobAsync();
+        await ExecuteExtractFileMetadataJobAsync();
+
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        FileManifest manifest = await LoadFileManifestAsync(dbContext, createdFile.Id);
+        byte[]? integrityMac = dbContext.Entry(manifest)
+            .Property<byte[]?>(DatabaseIntegrityColumns.MacProperty)
+            .CurrentValue;
+        IDatabaseIntegrityProtector protector =
+            scope.ServiceProvider.GetRequiredService<IDatabaseIntegrityProtector>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(manifest.SmallFilePreviewHash, Is.Not.Null);
+            Assert.That(manifest.SmallFilePreviewHashEncrypted, Is.Not.Null);
+            Assert.That(manifest.PreviewGenerationError, Is.Null);
+            Assert.That(manifest.Metadata?[FileContentMetadataKeys.ImageWidth], Is.EqualTo("96"));
+            Assert.That(manifest.Metadata?[FileContentMetadataKeys.ImageHeight], Is.EqualTo("64"));
+            Assert.That(integrityMac, Is.Not.Null);
+            Assert.That(
+                protector.Verify(manifest, new FileManifestIntegrityDescriptor(), integrityMac!),
+                Is.True);
+        });
+    }
+
+    [Test]
+    public async Task MetadataExtraction_DoesNotLogRawTagsPathsOrRecipientLikeValues()
+    {
+        const string pathLikeTitle = @"<local root>\music\track.mp3";
+        const string recipientLikeArtist = "<account>@example.invalid";
+        const string album = "<server profile> album";
+        byte[] audio = await CreateAudioBytesAsync(
+            pathLikeTitle,
+            recipientLikeArtist,
+            album);
+        NUnitLoggerProvider loggerProvider = new();
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+            builder.AddProvider(loggerProvider));
+        MediaFileContentMetadataExtractor extractor = new(
+            loggerFactory.CreateLogger<MediaFileContentMetadataExtractor>());
+        await using MemoryStream stream = new(audio, writable: false);
+
+        IReadOnlyDictionary<string, string> metadata = await extractor.ExtractAsync(
+            stream,
+            "audio/mpeg",
+            CancellationToken.None);
+
+        string logs = string.Join("\n", loggerProvider.Messages);
+        Assert.Multiple(() =>
+        {
+            Assert.That(metadata[FileContentMetadataKeys.MediaTitle], Is.EqualTo(pathLikeTitle));
+            Assert.That(metadata[FileContentMetadataKeys.MediaArtist], Is.EqualTo(recipientLikeArtist));
+            Assert.That(logs, Does.Not.Contain(pathLikeTitle));
+            Assert.That(logs, Does.Not.Contain(recipientLikeArtist));
+            Assert.That(logs, Does.Not.Contain(album));
+        });
+    }
+
+    [Test]
+    public async Task MetadataExtraction_InvalidMedia_PreservesCustomMetadataAndMarksEmptyAttemptsProcessed()
+    {
+        const string ExistingTitle = "Existing title";
+        const string ExistingKey = "custom.title";
+
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        NodeDto root = await GetRootNodeAsync();
+        NodeFileManifestDto validImage = await UploadAndCreateFileAsync(
+            root.Id,
+            "valid.png",
+            "image/png",
+            CreateGradientPngBytes(width: 64, height: 48));
+        byte[] invalidAudio = Encoding.UTF8.GetBytes("This is not a valid audio file.");
+        byte[] otherInvalidAudio = Encoding.UTF8.GetBytes("This is not a valid audio file either.");
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "invalid.mp3",
+            "audio/mpeg",
+            invalidAudio);
+        NodeFileManifestDto emptyMetadataFile = await UploadAndCreateFileAsync(
+            root.Id,
+            "invalid-empty.mp3",
+            "audio/mpeg",
+            otherInvalidAudio);
+
+        await UpdateFileManifestAsync(createdFile.Id, manifest =>
+        {
+            manifest.Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [ExistingKey] = ExistingTitle,
+            };
+        });
+
+        HttpResponseMessage firstAttempt = await _client!.PostAsync(
+            $"/api/v1/files/{createdFile.Id}/metadata/extract",
+            null);
+        firstAttempt.EnsureSuccessStatusCode();
+
+        FileManifestMetadataState failedState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        Assert.That(failedState.Metadata?[ExistingKey], Is.EqualTo(ExistingTitle));
+
+        HttpResponseMessage emptyAttempt = await _client!.PostAsync(
+            $"/api/v1/files/{emptyMetadataFile.Id}/metadata/extract",
+            null);
+        emptyAttempt.EnsureSuccessStatusCode();
+        NodeFileManifestDto? emptyAttemptDto = await emptyAttempt.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+
+        FileManifestMetadataState emptyFailedState = await GetFileManifestMetadataStateAsync(emptyMetadataFile.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(emptyFailedState.Metadata, Is.Not.Null);
+            Assert.That(emptyFailedState.Metadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
+            Assert.That(emptyAttemptDto?.Metadata, Is.Not.Null);
+            Assert.That(emptyAttemptDto!.Metadata, Does.Not.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
+        });
+
+        await ExecuteExtractFileMetadataJobAsync();
+
+        FileManifestMetadataState invalidMediaState = await GetFileManifestMetadataStateAsync(createdFile.Id);
+        FileManifestMetadataState emptyInvalidMediaState = await GetFileManifestMetadataStateAsync(emptyMetadataFile.Id);
+        FileManifestMetadataState validImageState = await GetFileManifestMetadataStateAsync(validImage.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(invalidMediaState.Metadata?[ExistingKey], Is.EqualTo(ExistingTitle));
+            Assert.That(invalidMediaState.Metadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
+            Assert.That(emptyInvalidMediaState.Metadata, Is.Not.Null);
+            Assert.That(emptyInvalidMediaState.Metadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
+            Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageWidth], Is.EqualTo("64"));
+            Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageHeight], Is.EqualTo("48"));
+        });
+    }
+
+    [Test]
     public async Task PreviewPipeline_PdfFile_GeneratesSmallPreviewOnly_AndReturnsWebpFromEndpoint()
     {
         string token = await LoginAsync();
@@ -395,11 +777,69 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         await job.Execute(null!);
     }
 
+    private async Task ExecuteExtractFileMetadataJobAsync()
+    {
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        ExtractFileMetadataJob job = ActivatorUtilities.CreateInstance<ExtractFileMetadataJob>(scope.ServiceProvider);
+        await job.Execute(null!);
+    }
+
+    private async Task UpdateFileManifestAsync(Guid nodeFileId, Action<FileManifest> update)
+    {
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        FileManifest manifest = await dbContext.NodeFiles
+            .Where(x => x.Id == nodeFileId)
+            .Select(x => x.FileManifest)
+            .SingleAsync();
+
+        update(manifest);
+        await dbContext.SaveChangesAsync();
+    }
+
+    private async Task<FileManifestMetadataState> GetFileManifestMetadataStateAsync(Guid nodeFileId)
+    {
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        return await dbContext.NodeFiles
+            .AsNoTracking()
+            .Where(x => x.Id == nodeFileId)
+            .Select(x => new FileManifestMetadataState(
+                x.FileManifest.Metadata))
+            .SingleAsync();
+    }
+
+    private async Task AddMetadataPersistenceFailureConstraintAsync()
+    {
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        await dbContext.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE file_manifests ADD CONSTRAINT ck_file_manifests_metadata_persistence_test CHECK (metadata IS NULL)");
+    }
+
+    private async Task RemoveMetadataPersistenceFailureConstraintAsync()
+    {
+        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        await dbContext.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE file_manifests DROP CONSTRAINT IF EXISTS ck_file_manifests_metadata_persistence_test");
+    }
+
     private async Task<Chunk> GetChunkByHashAsync(byte[] hash)
     {
         Chunk? chunk = await DbContext.Chunks.FindAsync([hash]);
         Assert.That(chunk, Is.Not.Null, "Preview chunk row is missing in DB.");
         return chunk!;
+    }
+
+    private static async Task<FileManifest> LoadFileManifestAsync(
+        CottonDbContext dbContext,
+        Guid nodeFileId)
+    {
+        return await dbContext.NodeFiles
+            .Where(x => x.Id == nodeFileId)
+            .Select(x => x.FileManifest)
+            .SingleAsync();
     }
 
     private async Task SetManifestContentTypeAsync(Guid nodeFileId, string contentType)
@@ -664,6 +1104,77 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         using var ms = new MemoryStream();
         image.SaveAsPng(ms);
         return ms.ToArray();
+    }
+
+    private static byte[] CreateTruncatedPngBytes() =>
+    [
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        0x00, 0x00, 0x00, 0x0D,
+        0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01,
+    ];
+
+    private static async Task<byte[]> CreateAudioBytesAsync(
+        string? title = null,
+        string? artist = null,
+        string? album = null)
+    {
+        await FfmpegBinary.EnsureAvailableAsync();
+        ProcessStartInfo startInfo = new()
+        {
+            FileName = FfmpegBinary.GetFfmpegPath(),
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        string[] commonArguments =
+        [
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=8000:cl=mono",
+            "-t",
+            "0.1"
+        ];
+        foreach (string argument in commonArguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        AddMetadataArgument(startInfo, "title", title);
+        AddMetadataArgument(startInfo, "artist", artist);
+        AddMetadataArgument(startInfo, "album", album);
+        startInfo.ArgumentList.Add("-f");
+        startInfo.ArgumentList.Add("mp3");
+        startInfo.ArgumentList.Add("pipe:1");
+
+        using Process process = new() { StartInfo = startInfo };
+        Assert.That(process.Start(), Is.True);
+        using MemoryStream output = new();
+        Task copyTask = process.StandardOutput.BaseStream.CopyToAsync(output);
+        Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+        await Task.WhenAll(copyTask, process.WaitForExitAsync());
+        string stderr = await stderrTask;
+        Assert.That(process.ExitCode, Is.EqualTo(0), stderr);
+        return output.ToArray();
+    }
+
+    private static void AddMetadataArgument(
+        ProcessStartInfo startInfo,
+        string key,
+        string? value)
+    {
+        if (value is null)
+        {
+            return;
+        }
+
+        startInfo.ArgumentList.Add("-metadata");
+        startInfo.ArgumentList.Add($"{key}={value}");
     }
 
     private static byte[] CreateSinglePagePdfBytes(string text)

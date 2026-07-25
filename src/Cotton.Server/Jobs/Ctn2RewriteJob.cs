@@ -145,7 +145,8 @@ namespace Cotton.Server.Jobs
                 new PipelineContext
                 {
                     FileSizeBytes = stream.Length
-                });
+                },
+                cancellationToken: ct);
         }
 
         private static async Task WriteTempCompletionMarkerAsync(string completionMarkerPath, CancellationToken ct)
@@ -262,7 +263,8 @@ namespace Cotton.Server.Jobs
                 storageKey,
                 plaintext,
                 new PipelineContext(),
-                StorageWriteMode.OverwriteExisting);
+                StorageWriteMode.OverwriteExisting,
+                cancellationToken: ct);
         }
 
         private async Task QueueChunkStoredSizeRefreshAsync(

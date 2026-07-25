@@ -56,6 +56,7 @@ namespace Cotton.Server.Controllers
         FileVersionService _versions,
         UserStorageQuotaService _quota,
         VideoTranscoder _videoTranscoder,
+        HlsTranscodeCoordinator _hlsTranscodes,
         HlsSegmentCache _segmentCache,
         IMemoryCache _cache,
         IDatabaseIntegrityVerifier _integrity,
@@ -64,6 +65,7 @@ namespace Cotton.Server.Controllers
         ILogger<FileController> _logger) : ControllerBase
     {
         private const int DefaultSharedFileTokenLength = 16;
+        private static readonly TimeSpan HlsMediaProbeCacheLifetime = TimeSpan.FromHours(1);
 
         /// <summary>
         /// Creates or returns a public file share response.
@@ -359,6 +361,27 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
+        /// Ensures content metadata has been extracted for the file.
+        /// </summary>
+        [Authorize]
+        [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/metadata/extract")]
+        [ProducesResponseType<NodeFileManifestDto>(StatusCodes.Status200OK)]
+        [ProducesResponseType<CottonResult>(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ExtractFileMetadata([FromRoute] Guid nodeFileId)
+        {
+            NodeFileManifestDto? mapped = await _mediator.Send(new ExtractFileManifestMetadataRequest
+            {
+                NodeFileId = nodeFileId,
+                UserId = User.GetUserId(),
+                Notify = true,
+            });
+
+            return mapped is null
+                ? CottonResult.NotFound("File not found.")
+                : Ok(mapped);
+        }
+
+        /// <summary>
         /// Gets file versions.
         /// </summary>
         [Authorize]
@@ -628,6 +651,7 @@ namespace Cotton.Server.Controllers
 
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
+            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
 
             NodeFileManifestDto mapped = nodeFile.Adapt<NodeFileManifestDto>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
@@ -1053,7 +1077,22 @@ namespace Cotton.Server.Controllers
                 return lookup.Failure;
             }
 
-            MediaProbeInfo? probe = await ProbeMediaAsync(lookup.NodeFile!);
+            NodeFile nodeFile = lookup.NodeFile!;
+            DownloadToken downloadToken = lookup.DownloadToken!;
+            HlsRendition rendition = HlsRenditionProfile.Parse(quality);
+            string qualityName = rendition.ToString().ToLowerInvariant();
+            string cacheKey = HlsSegmentCache.BuildKey(
+                nodeFile.FileManifest.Id,
+                qualityName,
+                segmentIndex);
+
+            if (_segmentCache.TryGet(cacheKey, out byte[]? cachedBytes))
+            {
+                RegisterDeleteAfterUse(downloadToken);
+                return ServeCachedHlsSegment(cachedBytes);
+            }
+
+            MediaProbeInfo? probe = await ProbeMediaAsync(nodeFile);
             if (probe?.DurationSeconds is null or <= 0)
             {
                 return CottonResult.BadRequest("Could not determine source duration for HLS segmentation.");
@@ -1065,22 +1104,18 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("Segment index out of range.");
             }
 
-            RegisterDeleteAfterUse(lookup.DownloadToken!);
+            RegisterDeleteAfterUse(downloadToken);
 
-            HlsRendition rendition = HlsRenditionProfile.Parse(quality);
-            string qualityName = rendition.ToString().ToLowerInvariant();
-            string cacheKey = HlsSegmentCache.BuildKey(
-                lookup.NodeFile!.FileManifest.Id,
-                qualityName,
-                segmentIndex);
-
-            if (_segmentCache.TryGet(cacheKey, out byte[]? cachedBytes))
+            await using IAsyncDisposable segmentLease = await _hlsTranscodes.EnterSegmentAsync(
+                cacheKey,
+                HttpContext.RequestAborted);
+            if (_segmentCache.TryGet(cacheKey, out cachedBytes))
             {
-                Response.Headers.CacheControl = "private, max-age=300";
-                Response.Headers.ContentEncoding = "identity";
-                return File(cachedBytes, VideoTranscoder.SegmentContentType);
+                return ServeCachedHlsSegment(cachedBytes);
             }
 
+            await using IAsyncDisposable transcodeLease = await _hlsTranscodes.EnterTranscodeAsync(
+                HttpContext.RequestAborted);
             double startSeconds = HlsManifestBuilder.StartTimeOf(segmentIndex);
             double segmentDuration = manifestPlan.DurationOf(segmentIndex);
             HlsRenditionProfile.EncoderPlan encoderPlan = HlsRenditionProfile.Plan(
@@ -1096,7 +1131,7 @@ namespace Cotton.Server.Controllers
             var tee = new TeeStream(Response.Body, captureStream);
             bool transcodeSucceeded = false;
 
-            await using Stream sourceStream = OpenSourceStream(lookup.NodeFile);
+            await using Stream sourceStream = OpenSourceStream(nodeFile);
             try
             {
                 await _videoTranscoder.TranscodeSegmentAsync(
@@ -1130,6 +1165,13 @@ namespace Cotton.Server.Controllers
             }
 
             return new EmptyResult();
+        }
+
+        private IActionResult ServeCachedHlsSegment(byte[] cachedBytes)
+        {
+            Response.Headers.CacheControl = "private, max-age=300";
+            Response.Headers.ContentEncoding = "identity";
+            return File(cachedBytes, VideoTranscoder.SegmentContentType);
         }
 
         private record TranscodableLookup(
@@ -1195,12 +1237,23 @@ namespace Cotton.Server.Controllers
 
         private async Task<MediaProbeInfo?> ProbeMediaAsync(NodeFile nodeFile)
         {
-            string cacheKey = $"hls-media-probe:{nodeFile.FileManifest.Id}";
+            Guid manifestId = nodeFile.FileManifest.Id;
+            string cacheKey = $"hls-media-probe:{manifestId}";
             if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out MediaProbeInfo? cached))
             {
                 return cached;
             }
 
+            await using IAsyncDisposable manifestLease = await _hlsTranscodes.EnterProbeManifestAsync(
+                manifestId,
+                HttpContext.RequestAborted);
+            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out cached))
+            {
+                return cached;
+            }
+
+            await using IAsyncDisposable probeLease = await _hlsTranscodes.EnterProbeAsync(
+                HttpContext.RequestAborted);
             MediaProbeInfo? probe;
             await using (Stream probeStream = OpenSourceStream(nodeFile))
             await using (var probeServer = new RangeStreamServer(probeStream, _logger))
@@ -1213,7 +1266,7 @@ namespace Cotton.Server.Controllers
 
             if (probe is not null)
             {
-                _cache.Set(cacheKey, probe, TimeSpan.FromHours(1));
+                _cache.Set(cacheKey, probe, HlsMediaProbeCacheLifetime);
             }
 
             return probe;
@@ -1230,6 +1283,7 @@ namespace Cotton.Server.Controllers
             NodeFileManifestDto manifest = await _mediator.Send(ToCreateFileRequest(request, userId));
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
+            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileCreated", manifest);
             return Ok(manifest);
         }

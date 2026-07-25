@@ -2009,6 +2009,7 @@
       "adding": "Aggiunta...",
       "loading": "Caricamento passkey...",
       "empty": "Nessuna passkey è ancora registrata per questo account.",
+      "label": "Etichetta: {{name}}",
       "created": "Creata {{date}}",
       "lastUsed": "Ultimo uso {{date}}",
       "delete": "Elimina passkey",
@@ -2021,12 +2022,13 @@
         "renameFailed": "Impossibile rinominare la passkey."
       },
       "defaultNames": {
+        "passkey": "Passkey",
         "securityKey": "Chiave di sicurezza",
         "device": "Passkey del dispositivo"
       },
       "rename": {
         "title": "Dai un nome a questa passkey",
-        "description": "Scegli un nome riconoscibile. Cotton può rilevare solo il tipo generale, non il modello esatto del dispositivo.",
+        "description": "Un'etichetta facoltativa sostituisce il nome rilevato. Lasciala vuota per usare il rilevamento automatico.",
         "nameLabel": "Nome passkey",
         "button": "Rinomina passkey",
         "save": "Salva",

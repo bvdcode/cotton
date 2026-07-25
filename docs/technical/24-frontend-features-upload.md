@@ -222,7 +222,7 @@ Two surfaces share search infrastructure. `features/search/SearchModal.tsx` is a
 `pages/profile/ProfilePage.tsx` (the component is exported as `SettingsPage`) stacks accordion cards (`ProfileAccordionCard.tsx`):
 
 - `UserInfoCard.tsx` + `components/user-info/*` — identity header (`UserInfoHeader.tsx`), avatar upload (`AvatarUploadControl.tsx`, `avatarUploadUtils.ts` with HEIC/HEIF handling via dynamic `heic2any` import), info rows (`InfoRow.tsx`).
-- `PasskeysCard.tsx` — WebAuthn passkey management via `passkeysApi` plus `isPasskeySupported`, `toCredentialCreationOptions`, `serializeAttestationCredential`; register/rename/delete credentials.
+- `PasskeysCard.tsx` — WebAuthn passkey management via `passkeysApi` plus `isPasskeySupported`, `toCredentialCreationOptions`, `serializeAttestationCredential`; register/delete credentials and set or clear optional labels while retaining detected authenticator fallback names.
 - `SessionsCard.tsx` + `SessionItem.tsx` + `sessionUtils.tsx`/`deviceIcons.tsx` — active session list via `sessionsApi.getSessions`, with revoke (`sessionsApi.revokeSession`) confirmed via `material-ui-confirm`.
 - `TotpSettingsCard.tsx` + `TotpSetupForm.tsx` — TOTP 2FA enable/disable.
 - `ChangePasswordCard.tsx`, `EditProfileCard.tsx`, `ConnectedAccountsCard.tsx` (linked OIDC), `WebDavTokenCard.tsx` (WebDAV access token), `ShareLinkSettingsCard.tsx`, `AppearanceSettingsCard.tsx` (theme/preferences).

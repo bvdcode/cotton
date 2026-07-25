@@ -5,9 +5,12 @@ using Cotton.Auth;
 using Cotton.Crypto;
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Localization;
 using Cotton.Previews;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Validators;
@@ -74,7 +77,10 @@ namespace Cotton.Server.Handlers.Users
         CottonDbContext _dbContext,
         IStreamCipher _crypto,
         IStoragePipeline _storage,
-        IChunkIngestService _chunkIngest) : IRequestHandler<UpdateCurrentUserRequest, UserDto>
+        IChunkIngestService _chunkIngest,
+        INotificationsProvider _notifications,
+        SettingsProvider _settings,
+        ILogger<UpdateCurrentUserRequestHandler> _logger) : IRequestHandler<UpdateCurrentUserRequest, UserDto>
     {
         private static readonly ImagePreviewGenerator _avatarGenerator = new();
 
@@ -85,6 +91,7 @@ namespace Cotton.Server.Handlers.Users
         {
             User user = await LoadUserAsync(request.UserId, cancellationToken);
 
+            string? previousEmail = user.Email;
             string? newEmail = NormalizeEmail(request.Email);
             bool emailChanged = IsEmailChanged(user, newEmail);
             await EnsureEmailAvailableAsync(user, newEmail, emailChanged, cancellationToken);
@@ -98,6 +105,18 @@ namespace Cotton.Server.Handlers.Users
             ApplyAvatarUpdate(user, avatarUpdate);
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+            if (emailChanged)
+            {
+                await _notifications.SendSecurityEmailAsync(
+                    _settings,
+                    _logger,
+                    user.Id,
+                    NotificationTemplates.EmailChangedTitle,
+                    NotificationTemplates.EmailChangedContent(previousEmail, newEmail),
+                    DateTime.UtcNow,
+                    previousEmail ?? newEmail);
+            }
+
             return user.Adapt<UserDto>();
         }
 

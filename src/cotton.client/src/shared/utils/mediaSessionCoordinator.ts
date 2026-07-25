@@ -230,6 +230,14 @@ export class MediaSessionCoordinator {
     this.platform.setPositionState(buildPositionState(owner.mediaElement));
   }
 
+  reassertSource(id: string): void {
+    if (this.ownerId !== id || !this.platform.isSupported()) {
+      return;
+    }
+
+    this.refresh({ forceMetadata: true });
+  }
+
   getOwnerId(): string | null {
     return this.ownerId;
   }
@@ -260,7 +268,7 @@ export class MediaSessionCoordinator {
     return pool[0] ?? null;
   }
 
-  private refresh(): void {
+  private refresh(options: { forceMetadata?: boolean } = {}): void {
     if (!this.platform.isSupported()) {
       return;
     }
@@ -282,7 +290,7 @@ export class MediaSessionCoordinator {
       return;
     }
 
-    if (ownerChanged || metadataChanged) {
+    if (ownerChanged || metadataChanged || options.forceMetadata === true) {
       this.platform.setMetadata(owner.track);
     }
 

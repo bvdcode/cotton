@@ -36,6 +36,10 @@ import { useTrackLyricsQuery } from "../../shared/api/queries/audio";
 import { AudioPlayer } from "../../shared/ui/AudioPlayer";
 import { AudioLyricsView } from "../../shared/ui/AudioLyricsView";
 import { findActiveLrcLineIndex, type LrcLine } from "../../shared/utils/lrc";
+import {
+  getAudioDisplaySubtitle,
+  getAudioDisplayTitle,
+} from "../../shared/utils/mediaMetadata";
 
 type LyricsStatus = "idle" | "loading" | "ready" | "notFound" | "error";
 
@@ -142,6 +146,12 @@ export const AudioPlayerBar: React.FC = () => {
   const currentItem = React.useMemo(() => {
     return playlist.find((x) => x.id === currentFileId) ?? null;
   }, [playlist, currentFileId]);
+  const currentDisplayTitle = currentItem
+    ? getAudioDisplayTitle(currentItem)
+    : currentFileName;
+  const currentDisplaySubtitle = currentItem
+    ? getAudioDisplaySubtitle(currentItem)
+    : undefined;
 
   const [failedCoverPreviewUrl, setFailedCoverPreviewUrl] = React.useState<
     string | null
@@ -333,9 +343,16 @@ export const AudioPlayerBar: React.FC = () => {
               />
             ) : null}
 
-            <Typography variant="subtitle2" noWrap flex={1} minWidth={0}>
-              {currentFileName}
-            </Typography>
+            <Box display="flex" flexDirection="column" flex={1} minWidth={0}>
+              <Typography variant="subtitle2" noWrap>
+                {currentDisplayTitle}
+              </Typography>
+              {currentDisplaySubtitle ? (
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  {currentDisplaySubtitle}
+                </Typography>
+              ) : null}
+            </Box>
 
             {positionLabel && (
               <Typography variant="caption" color="text.secondary" noWrap>
@@ -482,47 +499,68 @@ export const AudioPlayerBar: React.FC = () => {
           <Divider sx={{ mt: 1 }} />
           <Box maxHeight={{ xs: 220, sm: 300 }} overflow="auto">
             <List dense disablePadding>
-              {playlist.map((item) => (
-                <ListItemButton
-                  key={item.id}
-                  selected={item.id === currentFileId}
-                  onClick={() => {
-                    setCurrentTrack(item);
-                    setQueueOpen(false);
-                  }}
-                  sx={{
-                    "&.Mui-selected": {
-                      bgcolor: "action.hover",
-                    },
-                    "&.Mui-selected:hover": {
-                      bgcolor: "action.selected",
-                    },
-                  }}
-                >
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    gap={2}
-                    width="100%"
-                    minWidth={0}
-                  >
-                    <Typography variant="body2" noWrap flex={1} minWidth={0}>
-                      {item.name}
-                    </Typography>
+              {playlist.map((item) => {
+                const title = getAudioDisplayTitle(item);
+                const subtitle = getAudioDisplaySubtitle(item);
 
-                    {item.folderPath ? (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        noWrap
-                        sx={{ maxWidth: "55%" }}
+                return (
+                  <ListItemButton
+                    key={item.id}
+                    selected={item.id === currentFileId}
+                    onClick={() => {
+                      setCurrentTrack(item);
+                      setQueueOpen(false);
+                    }}
+                    sx={{
+                      "&.Mui-selected": {
+                        bgcolor: "action.hover",
+                      },
+                      "&.Mui-selected:hover": {
+                        bgcolor: "action.selected",
+                      },
+                    }}
+                  >
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      gap={2}
+                      width="100%"
+                      minWidth={0}
+                    >
+                      <Box
+                        display="flex"
+                        flexDirection="column"
+                        flex={1}
+                        minWidth={0}
                       >
-                        {item.folderPath}
-                      </Typography>
-                    ) : null}
-                  </Box>
-                </ListItemButton>
-              ))}
+                        <Typography variant="body2" noWrap>
+                          {title}
+                        </Typography>
+                        {subtitle ? (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            noWrap
+                          >
+                            {subtitle}
+                          </Typography>
+                        ) : null}
+                      </Box>
+
+                      {item.folderPath ? (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          noWrap
+                          sx={{ maxWidth: "45%" }}
+                        >
+                          {item.folderPath}
+                        </Typography>
+                      ) : null}
+                    </Box>
+                  </ListItemButton>
+                );
+              })}
             </List>
           </Box>
         </Collapse>

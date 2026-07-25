@@ -87,7 +87,7 @@ A storage object can also enter the lifecycle from the right: `StorageConsistenc
 
 ## `GarbageCollectorJob`
 
-`GarbageCollectorJob` is a Quartz job marked `[JobTrigger(hours: 6)]` and `[DisallowConcurrentExecution]`. The `JobTriggerAttribute` comes from the external `EasyExtensions.Quartz` package (`EasyExtensions.Quartz.Attributes.JobTriggerAttribute`), with constructor defaults `startNow: true`, `repeatForever: true`, `disallowConcurrentExecution: true`. Its registration helper `AddQuartzJobs`/`SetupQuartz` builds a simple schedule `WithInterval(6h).WithMisfireHandlingInstructionFireNow()`, calls `RepeatForever()` and `StartNow()`, and applies `DisallowConcurrentExecution(...)` to the job detail — so the trigger fires once at startup (after the Quartz server's `StartDelay` of 5 s) and then every 6 hours. The class-level `[DisallowConcurrentExecution]` plus a `static ConcurrentDictionary<string, byte>` of in-flight deletes guard against overlap.
+`GarbageCollectorJob` is a Quartz job marked `[JobTrigger(hours: 6)]`. The `JobTriggerAttribute` comes from the external `EasyExtensions.Quartz` package (`EasyExtensions.Quartz.Attributes.JobTriggerAttribute`). Its registration helper `AddQuartzJobs`/`SetupQuartz` builds a simple schedule `WithInterval(6h).WithMisfireHandlingInstructionFireNow()`, calls `RepeatForever()` and `StartNow()`, and registers the job as single-flight — so the trigger fires once at startup (after the Quartz server's `StartDelay` of 5 s) and then every 6 hours without overlapping another run of the same job. The static `CurrentlyDeletingChunks` dictionary guards individual chunk deletes inside a pass.
 
 ### Execute() gating, startup delay, and batch sizing
 
@@ -215,7 +215,7 @@ The ingest path (`ChunkIngestService.UpsertChunkAsync`, `src/Cotton.Server/Servi
 
 ## `StorageConsistencyJob`
 
-`StorageConsistencyJob` (`src/Cotton.Server/Jobs/StorageConsistencyJob.cs`) is marked `[JobTrigger(days: 30)]` — i.e. it runs at startup and then every 30 days. Unlike `GarbageCollectorJob` it is **not** annotated `[DisallowConcurrentExecution]` at the class level, but the attribute's default `disallowConcurrentExecution: true` still applies a Quartz `DisallowConcurrentExecution` directive to the job detail during registration. `Execute()` waits `Task.Delay(300_000)` (5 minutes) for startup to settle, then calls `RunOnceAsync`.
+`StorageConsistencyJob` (`src/Cotton.Server/Jobs/StorageConsistencyJob.cs`) is marked `[JobTrigger(days: 30)]` — i.e. it runs at startup and then every 30 days. The `[JobTrigger]` registration makes it single-flight. `Execute()` waits `Task.Delay(300_000)` (5 minutes) for startup to settle, then calls `RunOnceAsync`.
 
 `RunOnceAsync` performs a full bidirectional reconciliation:
 
@@ -368,7 +368,7 @@ The React client consumes this under `src/cotton.client/src/pages/admin/storage-
 
 ## Concurrency, failure modes & security considerations
 
-- **Single-flight deletion.** The static `CurrentlyDeletingChunks` (`ConcurrentDictionary<string, byte>`, `StringComparer.OrdinalIgnoreCase`) reserves uids for the duration of deletion. Combined with `[DisallowConcurrentExecution]` it prevents two passes from deleting the same chunk, and it is the visible signal the ingest path waits on (30 s cap, then a retry-able exception). The 5-second pre-delete delay deliberately widens the observation window.
+- **Single-flight deletion.** The `[JobTrigger]` registration prevents overlapping runs of the same job, and the static `CurrentlyDeletingChunks` (`ConcurrentDictionary<string, byte>`, `StringComparer.OrdinalIgnoreCase`) reserves uids for the duration of deletion. Together they prevent two passes from deleting the same chunk, and the reservation set is the visible signal the ingest path waits on (30 s cap, then a retry-able exception). The 5-second pre-delete delay deliberately widens the observation window.
 - **DB-before-storage ordering.** The `Chunk`/`ChunkOwnership` deletion commits in a transaction before any storage object is removed. A crash in between leaves a backend object with no DB row — recoverable by `StorageConsistencyJob`. The opposite (object deleted, row kept) would cause silent read failures and is avoided.
 - **Repeated liveness re-checks.** Liveness is verified at selection time, again per batch (`stillScheduledHashes`), and again for newly-referenced hashes (`nowReferencedHashes`) inside `DeleteEligibleBatchAsync`. Any revival between phases drops the chunk from deletion and clears its schedule. The idempotent `GCScheduledAfter == null` / `!= null` guards on every UPDATE make concurrent passes safe.
 - **Backup protection is fail-closed.** If the backup pointer exists but its manifest can't be resolved, GC (and the timeline query, and consistency registration — anything that calls `GetProtectedStorageKeysAsync`) aborts entirely. Protected keys are also re-checked at delete time (queued to `protectedHashesToClear` and excluded), so a chunk that is both scheduled and protected is un-scheduled rather than deleted.

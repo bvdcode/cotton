@@ -318,6 +318,31 @@ describe("filesApi file mutations", () => {
     });
   });
 
+  it("extracts file content metadata through the scoped metadata endpoint", async () => {
+    const response = {
+      id: fileId,
+      createdAt: "2026-05-17T00:00:00Z",
+      updatedAt: "2026-05-17T00:00:01Z",
+      nodeId,
+      ownerId: "owner-1",
+      name: "song.flac",
+      contentType: "audio/flac",
+      sizeBytes: 12,
+      metadata: { "media.title": "Song" },
+      requiresVideoTranscoding: false,
+      previewHashEncryptedHex: null,
+    };
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: response,
+    });
+
+    await expect(filesApi.extractFileMetadata(fileId)).resolves.toEqual(
+      response,
+    );
+
+    expect(post).toHaveBeenCalledWith(`/files/${fileId}/metadata/extract`);
+  });
+
   it("restores files with stable default conflict options", async () => {
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: { status: "Restored" },

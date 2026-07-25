@@ -363,7 +363,7 @@ Navigation: `User` (Restrict).
 | `PublicKey` | `public_key` | `bytea` | COSE public key |
 | `UserHandle` | `user_handle` | `bytea` | WebAuthn user handle |
 | `SignatureCounter` | `signature_counter` | bigint | cloned-credential detection |
-| `Name` | `name` | text | `[MaxLength(120)]` |
+| `Label` | `name` | text? | optional user-authored label; `[MaxLength(120)]` |
 | `Transports` | `transports` | `text[]` | reported transports |
 | `AaGuid` | `aaguid` | uuid | authenticator attestation GUID |
 | `IsBackupEligible` / `IsBackedUp` | `is_backup_eligible` / `is_backed_up` | bool | |

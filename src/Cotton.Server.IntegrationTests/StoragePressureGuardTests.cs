@@ -207,7 +207,8 @@ public class StoragePressureGuardTests : IntegrationTestBase
             Guid userId,
             EmailTemplate template,
             Dictionary<string, string> parameters,
-            string serverBaseUrl)
+            string serverBaseUrl,
+            string? recipientEmail = null)
         {
             return Task.FromResult(false);
         }

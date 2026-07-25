@@ -140,6 +140,19 @@ namespace Cotton.Server
                 .AddOptions<HlsSegmentCacheOptions>()
                 .Bind(builder.Configuration.GetSection("HlsSegmentCache"));
             builder.Services
+                .AddOptions<ResourceConcurrencyOptions>()
+                .Bind(builder.Configuration.GetSection(ResourceConcurrencyOptions.SectionName))
+                .Validate(
+                    options => options.HlsTranscodes > 0,
+                    "ResourceConcurrency:HlsTranscodes must be greater than zero.")
+                .Validate(
+                    options => options.HlsProbes > 0,
+                    "ResourceConcurrency:HlsProbes must be greater than zero.")
+                .Validate(
+                    options => options.ArchiveStreams > 0,
+                    "ResourceConcurrency:ArchiveStreams must be greater than zero.")
+                .ValidateOnStart();
+            builder.Services
                 .AddOptions<StoragePressureOptions>()
                 .Bind(builder.Configuration.GetSection("StoragePressure"));
             builder.Services
@@ -176,6 +189,7 @@ namespace Cotton.Server
                 .AddScoped<ChunkUsageService>()
                 .AddScoped<StorageUsageStatsService>()
                 .AddScoped<VideoTranscoder>()
+                .AddSingleton<HlsTranscodeCoordinator>()
                 .AddSingleton<HlsSegmentCache>()
                 .AddSingleton<DatabaseBackupKeyProvider>()
                 .AddScoped<IS3Provider, S3Provider>()
@@ -200,12 +214,14 @@ namespace Cotton.Server
                 .AddDatabaseIntegrity()
                 .AddStartupValidation()
                 .AddChunkServices()
+                .AddFileContentMetadataServices()
                 .AddLayoutPathServices()
                 .AddLayoutSearchServices()
                 .AddWebDavServices()
                 .AddWebDavAuth()
                 .AddJwt();
             builder.Services.AddAuthHardening();
+            builder.Services.AddEndpointRateLimiting();
             builder.Services.AddHostedService<AppVersionTrackerService>();
 
             WebApplication app = builder.Build();
@@ -221,6 +237,7 @@ namespace Cotton.Server
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()
+                .UseEndpointRateLimiting()
                 .UseAuthorization()
                 .UseExceptionHandler();
             app.MapStartupStatusEndpoint(null);

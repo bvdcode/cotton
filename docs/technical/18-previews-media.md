@@ -88,7 +88,7 @@ The `Version` property on each generator is the staleness key: when a generator'
 
 ### The scheduled GeneratePreviewJob
 
-`GeneratePreviewJob` is a Quartz job decorated `[JobTrigger(minutes: 15)]` and `[DisallowConcurrentExecution]`. It is also triggered eagerly after file creation: `FileController.CreateFileFromChunks` and `FileController.UpdateFileContent` both call `_scheduler.TriggerJobAsync<GeneratePreviewJob>()` (alongside `ComputeManifestHashesJob`), and the WebDAV PUT handler (`src/Cotton.Server/Handlers/WebDav/WebDavPutFileRequest.cs`) does the same.
+`GeneratePreviewJob` is a Quartz job decorated `[JobTrigger(minutes: 15)]`. It is also triggered eagerly after file creation: `FileController.CreateFileFromChunks` and `FileController.UpdateFileContent` both call `_scheduler.TriggerJobAsync<GeneratePreviewJob>()` (alongside `ExtractFileMetadataJob`), and the WebDAV PUT handler (`src/Cotton.Server/Handlers/WebDav/WebDavPutFileRequest.cs`) does the same.
 
 ```mermaid
 flowchart TD
@@ -353,7 +353,8 @@ sequenceDiagram
   Player->>FC: GET master.m3u8?token
   FC-->>Player: variants (source/high/medium/low)
   Player->>FC: GET playlist.m3u8?token&quality
-  FC->>FF: ffprobe duration+codecs (via RangeStreamServer, cached 1h)
+  FC->>FF: ffprobe duration+codecs via RangeStreamServer
+  Note over FC: successful probe results are cached for 1h; failures end the current request
   FC-->>Player: #EXTINF list of seg-i.ts
   Player->>FC: GET seg-3.ts?token&quality=medium
   FC->>Cache: TryGet(manifestId:medium:3)

@@ -47,11 +47,11 @@ namespace Cotton.Database.Models
         public long SignatureCounter { get; set; }
 
         /// <summary>
-        /// Human-readable name displayed to users.
+        /// Optional user-authored label displayed instead of the detected authenticator identity.
         /// </summary>
         [Column("name")]
         [MaxLength(120)]
-        public string Name { get; set; } = null!;
+        public string? Label { get; set; }
 
         /// <summary>
         /// Authenticator transports reported during passkey registration.

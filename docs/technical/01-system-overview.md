@@ -158,7 +158,7 @@ flowchart TD
 
 ### Architectural conventions (per AGENTS.md)
 
-The repository's `AGENTS.md` codifies conventions visible throughout the code and worth knowing as a contributor: application logic lives in `EasyExtensions.Mediator` handlers (not controllers/services); `Program.cs` is kept minimal (registration/middleware only); background work uses Quartz with `EasyExtensions.Quartz.Attributes.JobTrigger` (which already implies `[DisallowConcurrentExecution]`); realtime uses SignalR; all entities derive from `EasyExtensions.EntityFrameworkCore.Abstractions.BaseEntity<Guid>`; relationships use `DeleteBehavior.Restrict` (no cascade deletes) configured via data annotations (no Fluent API); BCL types are preferred (e.g. `AesGcm` over `ChaCha20Poly1305`, `System.Text.Json` over `Newtonsoft.Json`). The frontend forbids `localStorage` in favor of Zustand/TanStack Query, forbids `any`/`unknown`, requires i18n for all user-visible strings, and uses MUI components/`sx` rather than inline styles. Primary development happens on `develop`; pushing directly to `main` is prohibited.
+The repository's `AGENTS.md` codifies conventions visible throughout the code and worth knowing as a contributor: application logic lives in `EasyExtensions.Mediator` handlers (not controllers/services); `Program.cs` is kept minimal (registration/middleware only); background work uses Quartz with `EasyExtensions.Quartz.Attributes.JobTrigger` single-flight scheduling; realtime uses SignalR; all entities derive from `EasyExtensions.EntityFrameworkCore.Abstractions.BaseEntity<Guid>`; relationships use `DeleteBehavior.Restrict` (no cascade deletes) configured via data annotations (no Fluent API); BCL types are preferred (e.g. `AesGcm` over `ChaCha20Poly1305`, `System.Text.Json` over `Newtonsoft.Json`). The frontend forbids `localStorage` in favor of Zustand/TanStack Query, forbids `any`/`unknown`, requires i18n for all user-visible strings, and uses MUI components/`sx` rather than inline styles. Primary development happens on `develop`; pushing directly to `main` is prohibited.
 
 ## How a File Moves Through the System
 
@@ -193,7 +193,7 @@ sequenceDiagram
     U->>FC: POST /api/v1/files/from-chunks (ordered hashes, target node)
     FC->>M: mediator.Send(CreateFileRequest)
     M->>DB: get-or-create FileManifest + ordered FileManifestChunk rows, NodeFile
-    FC->>FC: TriggerJobAsync<ComputeManifestHashesJob> + <GeneratePreviewJob>
+    FC->>FC: TriggerJobAsync<ComputeManifestHashesJob> + <GeneratePreviewJob> + <ExtractFileMetadataJob>
     FC-->>U: NodeFileManifestDto + SignalR "FileCreated" to user
 ```
 
@@ -202,8 +202,8 @@ Verified specifics:
 1. **Chunk existence check** — `GET /api/v1/chunks/{hash}/exists` (`ChunkController.CheckChunkExists`) returns `true` only when both a `ChunkOwnership` row exists for the calling user *and* the blob exists in storage (`_storage.ExistsAsync`); it returns `false` immediately if the user does not own the chunk. This drives the "send only missing chunks" retry behavior.
 2. **Chunk upload** — `POST /api/v1/chunks` (`ChunkController.UploadChunk`, multipart `IFormFile`) and `POST /api/v1/chunks/raw` (streaming, no multipart). The hex hash is decoded by `Hasher.FromHexStringHash` and validated to be `Hasher.HashSizeInBytes` (32) bytes; the size is rejected if it exceeds `CottonServerSettings.MaxChunkSizeBytes`. Ingest is delegated to `ChunkIngestService.UpsertChunkAsync`. If storage free space is below the configured reserve, ingest throws `StoragePressureException` and the controller returns **HTTP 507**. The multipart endpoint carries `[RequestSizeLimit(AesGcmStreamCipher.MaxChunkSize + ushort.MaxValue)]`; the raw endpoint uses `[RequestSizeLimit(AesGcmStreamCipher.MaxChunkSize)]`.
 3. **Pipeline transform** — inside `FileStoragePipeline.WriteAsync` the stream is run through processors ordered by `Priority` *descending* on write: `CompressionProcessor` (`Priority => 10000`) then `CryptoProcessor` (`Priority => 1000`), then written to the backend. If the encrypted blob already exists in the backend, the write short-circuits (`backend.ExistsAsync` → dedup). A process-wide `SemaphoreSlim(initialCount: Environment.ProcessorCount)` bounds concurrent writes.
-4. **Manifest assembly** — `POST /api/v1/files/from-chunks` (`FileController.CreateFileFromChunks`) sends a `CreateFileRequest` through the mediator. The handler (`src/Cotton.Server/Handlers/Files/CreateFileRequest.cs`) gets-or-creates the `FileManifest` (reusing any existing manifest whose `ComputedContentHash` or `ProposedContentHash` matches the proposed hash, otherwise creating one with ordered `FileManifestChunk` rows), then creates the visible `NodeFile` under a per-layout lock. **The controller itself** (not the handler) then calls `_scheduler.TriggerJobAsync<ComputeManifestHashesJob>()` and `<GeneratePreviewJob>()` and pushes a `"FileCreated"` event over SignalR to the owning user (`_hubContext.Clients.User(...).SendAsync("FileCreated", manifest)`).
-5. **Background verification** — `ComputeManifestHashesJob` later computes `FileManifest.ComputedContentHash` from the stored chunks; a mismatch with `ProposedContentHash` raises a notification (see *Background Jobs* and *Reliability & Integrity*).
+4. **Manifest assembly** — `POST /api/v1/files/from-chunks` (`FileController.CreateFileFromChunks`) sends a `CreateFileRequest` through the mediator. The handler (`src/Cotton.Server/Handlers/Files/CreateFileRequest.cs`) gets-or-creates the `FileManifest` (reusing any existing manifest whose `ComputedContentHash` or `ProposedContentHash` matches the proposed hash, otherwise creating one with ordered `FileManifestChunk` rows), then creates the visible `NodeFile` under a per-layout lock. **The controller itself** (not the handler) then triggers `ComputeManifestHashesJob`, `GeneratePreviewJob`, and `ExtractFileMetadataJob` and pushes a `"FileCreated"` event over SignalR to the owning user (`_hubContext.Clients.User(...).SendAsync("FileCreated", manifest)`).
+5. **Background verification** — `ComputeManifestHashesJob` later computes `FileManifest.ComputedContentHash` from the stored chunks on its maintenance schedule; a mismatch with `ProposedContentHash` raises a notification (see *Background Jobs* and *Reliability & Integrity*).
 
 Read/download is the mirror image. `FileStoragePipeline.ReadAsync` reads the backend blob and applies processors ordered by `Priority` *ascending* (`OrderBy(p => p.Priority)`): `CryptoProcessor` (decrypt, 1000) then `CompressionProcessor` (decompress, 10000). Because chunk reads can be assembled into a single seekable logical stream (`ConcatenatedReadStream`, see *Storage Pipeline & Backends*), downloads support HTTP `Range`, `ETag`/`If-None-Match` (304), and preview/frame extraction without reassembling the whole file.
 
@@ -306,12 +306,13 @@ The storage backend is chosen at runtime by `StorageBackendProvider.GetBackend()
 
 ## Background Maintenance at a Glance
 
-Quartz jobs (`src/Cotton.Server/Jobs/`, each annotated with `[JobTrigger]` which implies `[DisallowConcurrentExecution]`) form the operational safety net. Schedules are read directly from the attributes:
+Quartz jobs (`src/Cotton.Server/Jobs/`, each annotated with `[JobTrigger]` and registered single-flight) form the operational safety net. Schedules are read directly from the attributes:
 
 | Job | Trigger (`[JobTrigger]`) | Purpose |
 | --- | --- | --- |
 | `GeneratePreviewJob` | `minutes: 15` | generate previews/thumbnails (also triggered on file create/update) |
-| `ComputeManifestHashesJob` | `hours: 1` | compute & verify `ComputedContentHash` vs `ProposedContentHash` |
+| `ExtractFileMetadataJob` | `minutes: 15` | extract deterministic image/audio/video metadata (also triggered on file create/update) |
+| `ComputeManifestHashesJob` | `hours: 12` | compute & verify `ComputedContentHash` vs `ProposedContentHash` (also triggered after file creation/content update) |
 | `GarbageCollectorJob` | `hours: 6` | reclaim chunks past `GCScheduledAfter`, coordinating with ingest |
 | `ClearTempFolderJob` | `hours: 36` | clear the storage temp directory |
 | `DownloadTokenRetentionJob` | `days: 1` | sweep expired/used download tokens |

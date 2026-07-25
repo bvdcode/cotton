@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "createdAtUtc": "2026-07-05T11:37:52.9025024+00:00",
+  "mode": "storage-paths",
+  "profile": "standard",
+  "hardwareKey": "windows-x64-intel-r-core-tm-i5-10300h-cpu-2-50ghz-dotnet10",
+  "hardwareId": "intel-r-core-tm-i5-10300h-cpu-2-50ghz",
+  "gitCommit": "1afc50a58894",
+  "units": "MiB/s",
+  "environment": {
+    "architecture": "X64",
+    "cpu": "Intel(R) Core(TM) i5-10300H CPU @ 2.50GHz",
+    "dotnet": "10.0.9",
+    "logicalProcessors": "8",
+    "os": "Microsoft Windows 10.0.26200",
+    "runtime": ".NET 10.0.9"
+  },
+  "write": {
+    "stages": [
+      {
+        "key": "sha256",
+        "label": "SHA-256 hashing",
+        "mibPerSecond": 443.0601141646786,
+        "sourceBenchmark": "Hashing (SHA-256)",
+        "p50DurationMs": 225.14355,
+        "p95DurationMs": 236.94351999999998,
+        "dataSizeBytes": 104857600
+      },
+      {
+        "key": "zstdCompression",
+        "label": "Zstd compression",
+        "mibPerSecond": 497.4551479390381,
+        "sourceBenchmark": "Cotton.Storage Zstd Compression",
+        "p50DurationMs": 194.43105,
+        "p95DurationMs": 244.30055499999992,
+        "dataSizeBytes": 104857600
+      },
+      {
+        "key": "aesGcmEncryption",
+        "label": "AES-GCM encryption",
+        "mibPerSecond": 1397.8202697560682,
+        "sourceBenchmark": "Cotton.Storage AES-GCM Encryption",
+        "p50DurationMs": 72.15705,
+        "p95DurationMs": 85.93877,
+        "dataSizeBytes": 104857600
+      },
+      {
+        "key": "filesystemWrite",
+        "label": "Filesystem write",
+        "mibPerSecond": 1110.3720496400397,
+        "sourceBenchmark": "Filesystem Backend Write",
+        "p50DurationMs": 89.15415,
+        "p95DurationMs": 96.40893499999999,
+        "dataSizeBytes": 104857600
+      }
+    ],
+    "pipeline": {
+      "key": "chunkUploadProcessing",
+      "label": "Chunk upload processing",
+      "mibPerSecond": 217.3760978607233,
+      "sourceBenchmark": "Chunk Upload Processing - Mixed content (SHA-256 \u002B Compression \u002B Encryption)",
+      "p50DurationMs": 458.62455,
+      "p95DurationMs": 476.876615,
+      "dataSizeBytes": 104857600
+    },
+    "limitingStage": {
+      "key": "sha256",
+      "label": "SHA-256 hashing",
+      "mibPerSecond": 443.0601141646786,
+      "sourceBenchmark": "Hashing (SHA-256)",
+      "p50DurationMs": 225.14355,
+      "p95DurationMs": 236.94351999999998,
+      "dataSizeBytes": 104857600
+    }
+  },
+  "read": {
+    "stages": [
+      {
+        "key": "filesystemRead",
+        "label": "Filesystem read",
+        "mibPerSecond": 1714.1705707317626,
+        "sourceBenchmark": "Filesystem Backend Read",
+        "p50DurationMs": 57.16145,
+        "p95DurationMs": 64.09687499999998,
+        "dataSizeBytes": 104857600
+      },
+      {
+        "key": "aesGcmDecryption",
+        "label": "AES-GCM decryption",
+        "mibPerSecond": 1464.8582490535364,
+        "sourceBenchmark": "Cotton.Storage AES-GCM Decryption",
+        "p50DurationMs": 67.24645000000001,
+        "p95DurationMs": 87.14092,
+        "dataSizeBytes": 104857600
+      },
+      {
+        "key": "zstdDecompression",
+        "label": "Zstd decompression",
+        "mibPerSecond": 787.5406289944078,
+        "sourceBenchmark": "Cotton.Storage Zstd Decompression",
+        "p50DurationMs": 129.43484999999998,
+        "p95DurationMs": 182.77876499999994,
+        "dataSizeBytes": 104857600
+      }
+    ],
+    "pipeline": {
+      "key": "storagePipelineRead",
+      "label": "Storage pipeline read",
+      "mibPerSecond": 2103.654650151467,
+      "sourceBenchmark": "Storage Pipeline Read (Decryption \u002B Decompression)",
+      "p50DurationMs": 47.5753,
+      "p95DurationMs": 59.12764,
+      "dataSizeBytes": 104857600
+    },
+    "limitingStage": {
+      "key": "zstdDecompression",
+      "label": "Zstd decompression",
+      "mibPerSecond": 787.5406289944078,
+      "sourceBenchmark": "Cotton.Storage Zstd Decompression",
+      "p50DurationMs": 129.43484999999998,
+      "p95DurationMs": 182.77876499999994,
+      "dataSizeBytes": 104857600
+    }
+  }
+}

@@ -12,6 +12,8 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -22,6 +24,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   passkeysApi,
+  type PasskeyAuthenticatorKind,
   type PasskeyCredential,
 } from "../../../shared/api/passkeysApi";
 import {
@@ -29,6 +32,7 @@ import {
   serializeAttestationCredential,
   toCredentialCreationOptions,
 } from "../../../shared/passkeys/webauthn";
+import { resolvePasskeyDisplayName } from "../../../shared/passkeys/passkeyDisplay";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 
 const passkeyCancellationErrorNames = new Set([
@@ -59,8 +63,21 @@ const formatDateTime = (iso: string): string => {
   }).format(date);
 };
 
+const defaultNameKeys: Record<
+  PasskeyAuthenticatorKind,
+  | "passkeys.defaultNames.passkey"
+  | "passkeys.defaultNames.securityKey"
+  | "passkeys.defaultNames.device"
+> = {
+  Unknown: "passkeys.defaultNames.passkey",
+  SecurityKey: "passkeys.defaultNames.securityKey",
+  Device: "passkeys.defaultNames.device",
+};
+
 export const PasskeysCard = () => {
   const { t } = useTranslation("profile");
+  const theme = useTheme();
+  const fullScreenRenameDialog = useMediaQuery(theme.breakpoints.down("sm"));
   const [credentials, setCredentials] = useState<PasskeyCredential[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -70,6 +87,11 @@ export const PasskeysCard = () => {
   const [renameName, setRenameName] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const localizedDefaultNames: Record<PasskeyAuthenticatorKind, string> = {
+    Unknown: t(defaultNameKeys.Unknown),
+    SecurityKey: t(defaultNameKeys.SecurityKey),
+    Device: t(defaultNameKeys.Device),
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -100,29 +122,9 @@ export const PasskeysCard = () => {
     };
   }, [t]);
 
-  const buildDefaultName = (transports: string[]): string => {
-    const normalized = new Set(
-      transports.map((transport) => transport.toLowerCase()),
-    );
-    if (
-      normalized.has("usb") ||
-      normalized.has("nfc") ||
-      normalized.has("ble") ||
-      normalized.has("smart-card")
-    ) {
-      return t("passkeys.defaultNames.securityKey");
-    }
-
-    if (normalized.has("internal") || normalized.has("hybrid")) {
-      return t("passkeys.defaultNames.device");
-    }
-
-    return t("passkeys.defaultName", { count: credentials.length + 1 });
-  };
-
   const openRenameDialog = (credential: PasskeyCredential) => {
     setRenameCredential(credential);
-    setRenameName(credential.name);
+    setRenameName(credential.label ?? "");
   };
 
   const closeRenameDialog = () => {
@@ -153,11 +155,10 @@ export const PasskeysCard = () => {
       const serializedCredential = serializeAttestationCredential(credential);
       const saved = await passkeysApi.finishRegistration(
         optionsResponse.requestId,
-        buildDefaultName(serializedCredential.transports),
+        null,
         serializedCredential,
       );
       setCredentials((current) => [saved, ...current]);
-      openRenameDialog(saved);
     } catch (caught) {
       setError(
         isPasskeyCreationCancelled(caught)
@@ -170,17 +171,15 @@ export const PasskeysCard = () => {
   };
 
   const handleRename = async () => {
-    if (!renameCredential) return;
+    if (!renameCredential || renaming) return;
 
     const trimmedName = renameName.trim();
-    if (!trimmedName) return;
-
     setRenaming(true);
     setError(null);
     try {
-      const updated = await passkeysApi.rename(
+      const updated = await passkeysApi.setLabel(
         renameCredential.id,
-        trimmedName,
+        trimmedName || null,
       );
       setCredentials((current) =>
         current.map((credential) =>
@@ -251,63 +250,72 @@ export const PasskeysCard = () => {
             <Alert severity="info">{t("passkeys.empty")}</Alert>
           ) : (
             <Stack spacing={1}>
-              {credentials.map((credential) => (
-                <Box
-                  key={credential.id}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                    py: 1,
-                    borderBottom: "1px solid",
-                    borderColor: "divider",
-                    "&:last-of-type": {
-                      borderBottom: 0,
-                    },
-                  }}
-                >
-                  <PhonelinkLockOutlinedIcon color="action" />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography fontWeight={600} noWrap>
-                      {credential.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" noWrap>
-                      {credential.lastUsedAt
-                        ? t("passkeys.lastUsed", {
-                            date: formatDateTime(credential.lastUsedAt),
-                          })
-                        : t("passkeys.created", {
-                            date: formatDateTime(credential.createdAt),
-                          })}
-                    </Typography>
+              {credentials.map((credential) => {
+                const title = resolvePasskeyDisplayName(
+                  credential,
+                  localizedDefaultNames,
+                );
+
+                return (
+                  <Box
+                    key={credential.id}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      py: 1,
+                      borderBottom: "1px solid",
+                      borderColor: "divider",
+                      "&:last-of-type": {
+                        borderBottom: 0,
+                      },
+                    }}
+                  >
+                    <PhonelinkLockOutlinedIcon color="action" />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography fontWeight={600} noWrap title={title}>
+                        {title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" noWrap>
+                        {credential.lastUsedAt
+                          ? t("passkeys.lastUsed", {
+                              date: formatDateTime(credential.lastUsedAt),
+                            })
+                          : t("passkeys.created", {
+                              date: formatDateTime(credential.createdAt),
+                            })}
+                      </Typography>
+                    </Box>
+                    <Tooltip title={t("passkeys.rename.button")}>
+                      <span>
+                        <IconButton
+                          aria-label={t("passkeys.rename.button")}
+                          onClick={() => openRenameDialog(credential)}
+                          disabled={Boolean(deletingId)}
+                        >
+                          <EditOutlinedIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={t("passkeys.delete")}>
+                      <span>
+                        <IconButton
+                          aria-label={t("passkeys.delete")}
+                          color="error"
+                          onClick={() => void handleDelete(credential.id)}
+                          disabled={deletingId === credential.id}
+                        >
+                          {deletingId === credential.id ? (
+                            <CircularProgress color="inherit" size={18} />
+                          ) : (
+                            <DeleteOutlineIcon />
+                          )}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </Box>
-                  <Tooltip title={t("passkeys.rename.button")}>
-                    <span>
-                      <IconButton
-                        onClick={() => openRenameDialog(credential)}
-                        disabled={Boolean(deletingId)}
-                      >
-                        <EditOutlinedIcon />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  <Tooltip title={t("passkeys.delete")}>
-                    <span>
-                      <IconButton
-                        color="error"
-                        onClick={() => void handleDelete(credential.id)}
-                        disabled={deletingId === credential.id}
-                      >
-                        {deletingId === credential.id ? (
-                          <CircularProgress color="inherit" size={18} />
-                        ) : (
-                          <DeleteOutlineIcon />
-                        )}
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                </Box>
-              ))}
+                );
+              })}
             </Stack>
           )}
         </Stack>
@@ -318,46 +326,58 @@ export const PasskeysCard = () => {
         onClose={closeRenameDialog}
         maxWidth="xs"
         fullWidth
+        fullScreen={fullScreenRenameDialog}
+        aria-labelledby="passkey-rename-dialog-title"
+        aria-describedby="passkey-rename-dialog-description"
       >
-        <DialogTitle>{t("passkeys.rename.title")}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} pt={1}>
-            <Typography variant="body2" color="text.secondary">
-              {t("passkeys.rename.description")}
-            </Typography>
-            <TextField
-              autoFocus
-              label={t("passkeys.rename.nameLabel")}
-              value={renameName}
-              onChange={(event) => setRenameName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  void handleRename();
-                }
-              }}
-              fullWidth
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeRenameDialog} disabled={renaming}>
-            {t("passkeys.rename.cancel")}
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => void handleRename()}
-            disabled={renaming || !renameName.trim()}
-          >
-            {renaming ? (
-              <>
-                <CircularProgress color="inherit" size={16} sx={{ mr: 1 }} />
-                {t("passkeys.rename.saving")}
-              </>
-            ) : (
-              t("passkeys.rename.save")
-            )}
-          </Button>
-        </DialogActions>
+        <DialogTitle id="passkey-rename-dialog-title">
+          {t("passkeys.rename.title")}
+        </DialogTitle>
+        <Box
+          component="form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleRename();
+          }}
+        >
+          <DialogContent>
+            <Stack spacing={2} pt={1}>
+              <Typography
+                id="passkey-rename-dialog-description"
+                variant="body2"
+                color="text.secondary"
+              >
+                {t("passkeys.rename.description")}
+              </Typography>
+              <TextField
+                autoFocus
+                label={t("passkeys.rename.nameLabel")}
+                value={renameName}
+                onChange={(event) => setRenameName(event.target.value)}
+                fullWidth
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ flexWrap: "wrap" }}>
+            <Button
+              type="button"
+              onClick={closeRenameDialog}
+              disabled={renaming}
+            >
+              {t("passkeys.rename.cancel")}
+            </Button>
+            <Button type="submit" variant="contained" disabled={renaming}>
+              {renaming ? (
+                <>
+                  <CircularProgress color="inherit" size={16} sx={{ mr: 1 }} />
+                  {t("passkeys.rename.saving")}
+                </>
+              ) : (
+                t("passkeys.rename.save")
+              )}
+            </Button>
+          </DialogActions>
+        </Box>
       </Dialog>
     </>
   );

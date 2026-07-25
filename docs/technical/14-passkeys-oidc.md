@@ -39,14 +39,14 @@ flowchart LR
 | `PasskeyService` | `src/Cotton.Server/Services/PasskeyService.cs` | All passkey logic: build options, verify attestation/assertion, CRUD on credentials |
 | `AuthController` (passkey actions) | `src/Cotton.Server/Controllers/AuthController.cs` | HTTP surface under `auth/passkeys/*` |
 | `UserPasskeyCredential` | `src/Cotton.Database/Models/UserPasskeyCredential.cs` | Stored credential entity |
-| Passkey DTOs | `src/Cotton.Server/Models/Dto/PasskeyDtos.cs` | Request/response payloads |
+| Passkey DTOs | `src/Cotton.Server/Models/Dto/Passkey*.cs` | Request/response payloads |
 | `UserPasskeyCredentialIntegrityDescriptor` | `src/Cotton.Server/Services/DatabaseIntegrity/Descriptors/UserPasskeyCredentialIntegrityDescriptor.cs` | HMAC-signed field set |
 | `webauthn.ts` | `src/cotton.client/src/shared/passkeys/webauthn.ts` | Base64url ↔ `ArrayBuffer` conversion and credential serialization |
 | `passkeysApi.ts` | `src/cotton.client/src/shared/api/passkeysApi.ts` | Client API wrapper |
 | `PasskeysCard.tsx` | `src/cotton.client/src/pages/profile/components/PasskeysCard.tsx` | Profile UI for managing passkeys |
 | `useLoginForm.ts` | `src/cotton.client/src/pages/login/useLoginForm.ts` | Login-page passkey assertion flow |
 
-`PasskeyService` is registered as scoped in `src/Cotton.Server/Program.cs` (`.AddScoped<PasskeyService>()`). It is a primary-constructor class depending on `CottonDbContext`, `IHttpContextAccessor`, `IMemoryCache`, and `IDatabaseIntegrityVerifier`.
+`PasskeyService` is registered as scoped in `src/Cotton.Server/Program.cs` (`.AddScoped<PasskeyService>()`). It is a primary-constructor class depending on `CottonDbContext`, `IMemoryCache`, `SettingsProvider`, `IDatabaseIntegrityVerifier`, `INotificationsProvider`, and `ILogger<PasskeyService>`.
 
 ### Endpoints
 
@@ -57,27 +57,25 @@ All passkey endpoints live on `AuthController` (route base `Routes.V1.Auth` = `/
 | `GET auth/passkeys` | `[Authorize]` | — | List the current user's credentials |
 | `POST auth/passkeys/registration/options` | `[Authorize]` | — | Begin registration; returns `requestId` + `CredentialCreateOptions` |
 | `POST auth/passkeys/registration/verify` | `[Authorize]` | — | Finish registration; verifies attestation, stores credential |
-| `PUT auth/passkeys/{credentialId:guid}` | `[Authorize]` | — | Rename a credential |
+| `PUT auth/passkeys/{credentialId:guid}` | `[Authorize]` | — | Set or clear a credential's optional label |
 | `DELETE auth/passkeys/{credentialId:guid}` | `[Authorize]` | — | Delete a credential (returns `Ok()`, not `NoContent`) |
 | `POST auth/passkeys/assertion/options` | anonymous | `auth.interactive` | Begin sign-in; returns `requestId` + `AssertionOptions` |
 | `POST auth/passkeys/assertion/verify` | anonymous | `auth.interactive` | Finish sign-in; verifies assertion, issues a session |
 
-The `auth.interactive` policy (`AuthRateLimitPolicies.Interactive`, defined in `src/Cotton.Server/Auth/AuthRateLimitPolicies.cs` and configured in `src/Cotton.Server/Extensions/AuthHardeningExtensions.cs`) is a per-remote-IP fixed-window limiter of **10 requests per minute** (`PermitLimit = 10`, `Window = 1 minute`, `QueueLimit = 0`); rejections return HTTP **429** (`RejectionStatusCode = StatusCodes.Status429TooManyRequests`). The partition key is `HttpContext.Connection.RemoteIpAddress` (falling back to the literal `"unknown"`). Only the two anonymous assertion endpoints are rate-limited; registration is gated behind `[Authorize]`.
+The `auth.interactive` policy (`AuthRateLimitPolicies.Interactive`, defined in `src/Cotton.Server/Auth/AuthRateLimitPolicies.cs` and configured in `src/Cotton.Server/Extensions/EndpointRateLimitingExtensions.cs`) is a per-remote-IP fixed-window limiter of **10 requests per minute** (`PermitLimit = 10`, `Window = 1 minute`, `QueueLimit = 0`); rejections return HTTP **429** (`RejectionStatusCode = StatusCodes.Status429TooManyRequests`). The partition key is `HttpContext.Connection.RemoteIpAddress` (falling back to the literal `"unknown"`). Only the two anonymous assertion endpoints are rate-limited; registration is gated behind `[Authorize]`.
 
 > Note on rate-limit partitioning: the limiter keys on the *connection* remote IP, not on a forwarded client IP, so behind a reverse proxy that does not preserve the connection source address the window may be shared across clients. (See also the operator gotcha below regarding forwarded headers.)
 
 ### The `Fido2` instance and relying-party configuration
 
-`PasskeyService.CreateFido2()` builds a fresh `Fido2` from the active HTTP request on every call:
+`PasskeyService.CreateFido2Async()` builds a fresh `Fido2` from the canonical persisted public base URL returned by `SettingsProvider.GetPublicBaseUrlAsync`:
 
-- `ServerDomain` = `request.Host.Host` (the bare host, no port).
+- `ServerDomain` = `new Uri(PublicBaseUrl).Host` (the bare host, no port).
 - `ServerName` = `Constants.ProductName` (`"Cotton Cloud"`, from `src/Cotton.Shared/Constants.cs`).
-- `Origins` = a single-entry `HashSet<string>` built from `request.Scheme` + `request.Host` via `UriHelper.BuildAbsolute`, with the trailing slash trimmed.
+- `Origins` = a single-entry `HashSet<string>` containing the URL's scheme and authority (`Uri.GetLeftPart(UriPartial.Authority)`); any path in `PublicBaseUrl` is not part of the WebAuthn origin.
 - `Timeout` = `60_000` ms; `ChallengeSize` = `32`; `metadataService: null` (no MDS attestation metadata lookups).
 
-If the request has no host, `CreateFido2()` throws `InvalidOperationException("Passkeys require a request host")`; if there is no active request at all it throws `InvalidOperationException("Passkeys require an active HTTP request")`.
-
-> **Operator gotcha:** the relying-party ID and allowed origin are derived from the inbound request host/scheme, not from a configured base URL. Behind a reverse proxy the forwarded scheme/host must be correct. Forwarded-header processing is enabled in `Program.cs` for `X-Forwarded-Proto` and `X-Forwarded-Host` (`ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost`, with `KnownIPNetworks`/`KnownProxies` cleared), otherwise the WebAuthn origin check will fail. If the host the browser uses changes (for example switching domains), previously registered credentials bound to the old RP ID will no longer assert.
+> **Operator gotcha:** `PublicBaseUrl` is the WebAuthn source of truth. Its hostname must be the relying-party domain used by the browser, and its scheme/authority must match the browser origin. Reverse-proxy request headers do not change this binding. Changing the configured domain prevents credentials registered for the old RP ID from asserting; a scheme or port mismatch fails the origin check.
 
 ### Registration ceremony
 
@@ -89,14 +87,14 @@ sequenceDiagram
   participant Cache as IMemoryCache
   participant DB as user_passkey_credentials
 
-  B->>API: POST passkeys/registration/options {name?}
-  API->>S: BeginRegistrationAsync(userId, name)
+  B->>API: POST passkeys/registration/options {label?}
+  API->>S: BeginRegistrationAsync(userId, label)
   S->>DB: load existing credentials (exclude list)
   S->>S: Fido2.RequestNewCredential(...)
-  S->>Cache: Set passkey:registration:{requestId} = (userId,name,options) TTL 5m
+  S->>Cache: Set passkey:registration:{requestId} = (userId,label,options) TTL 5m
   S-->>B: {requestId, options}
   B->>B: navigator.credentials.create({publicKey})
-  B->>API: POST passkeys/registration/verify {requestId,name?,credential}
+  B->>API: POST passkeys/registration/verify {requestId,label?,credential}
   API->>S: FinishRegistrationAsync(userId, request)
   S->>Cache: TryGetValue + Remove(requestId)
   S->>S: Fido2.MakeNewCredentialAsync (uniqueness callback)
@@ -109,15 +107,15 @@ sequenceDiagram
 - Loads the `User` (`EntityNotFoundException<User>` if missing), then runs `_integrity.RequireValid(_dbContext, user, "passkey.registration-options")` before doing anything.
 - Builds an `ExcludeCredentials` list from the user's existing credentials so an authenticator that already holds a Cotton passkey won't double-register.
 - Sets the `Fido2User` handle to `CreateUserHandle(user.Id)` = `userId.ToByteArray()` (a 16-byte GUID), `Name` = `user.Username`, `DisplayName` = `BuildDisplayName(user)` = `"{FirstName} {LastName}".Trim()`, falling back to the username when blank.
-- Forces `AuthenticatorSelection { ResidentKey = Required, UserVerification = Required }` (so it is a true **discoverable/resident** passkey requiring user verification) and `AttestationPreference = None`.
-- Caches a `RegistrationState(UserId, Name, Options)` record under key `passkey:registration:{requestId}` with a **5-minute** TTL (`OptionsLifetime`). The cached `Name` is already passed through `NormalizeName(requestedName)`. `requestId` is `CreateRequestId()` = base64url-encoded random GUID bytes.
+- Forces `AuthenticatorSelection { ResidentKey = Required, UserVerification = Required }` (so it is a true **discoverable/resident** passkey requiring user verification) and `AttestationPreference = Direct`, allowing the server to receive the authenticator's AAGUID and expose a detected provider/model name when known.
+- Caches a `RegistrationState(UserId, Label, Options)` record under key `passkey:registration:{requestId}` with a **5-minute** TTL (`OptionsLifetime`). The cached label is already passed through `PasskeyLabelNormalizer.Normalize(requestedLabel)`. `requestId` is `CreateRequestId()` = base64url-encoded random GUID bytes.
 
 `FinishRegistrationAsync`:
 
 - Re-reads the cache entry, requires it to exist and that `state.UserId == userId` (the caller), then removes it (single-use). A missing/expired/mismatched entry throws `BadRequestException<UserPasskeyCredential>("Passkey registration request has expired")`.
 - Converts the browser payload to a `Fido2NetLib` `AuthenticatorAttestationRawResponse` (base64url-decoded fields, with browser-reported transports parsed by `ParseTransports`) and calls `MakeNewCredentialAsync`, passing an `IsCredentialIdUniqueToUserCallback` that asserts the credential ID isn't already present in `user_passkey_credentials` (global uniqueness). Any non-`OperationCanceledException` is wrapped as `BadRequestException<UserPasskeyCredential>("Passkey registration could not be verified")`.
-- Persists a `UserPasskeyCredential` capturing `CredentialId` (`result.Id`), `PublicKey` (COSE), `UserHandle` (`result.User.Id`), `SignatureCounter` (`result.SignCount`), `Name`, normalized `Transports`, `AaGuid`, `IsBackupEligible`, `IsBackedUp`, and `AttestationFormat`.
-- The name is `NormalizeName(request.Name ?? state.Name)` — defaults to `"Passkey"` when blank and is truncated to `MaxPasskeyNameLength` = **120** characters.
+- Persists a `UserPasskeyCredential` capturing `CredentialId` (`result.Id`), `PublicKey` (COSE), `UserHandle` (`result.User.Id`), `SignatureCounter` (`result.SignCount`), optional `Label`, normalized `Transports`, `AaGuid`, `IsBackupEligible`, `IsBackedUp`, and `AttestationFormat`.
+- The label is `PasskeyLabelNormalizer.Normalize(request.Label ?? state.Label)`: blank input becomes `null`, non-blank input is trimmed, and values longer than **120** characters are truncated. There is no synthetic `"Passkey"` label; an unlabeled credential is displayed using its detected authenticator identity or a localized category fallback.
 
 ### Assertion (login) ceremony
 
@@ -176,7 +174,7 @@ Table `user_passkey_credentials` (`BaseEntity<Guid>`), unique index on `Credenti
 | `PublicKey` | `public_key` | `byte[]`, COSE public key |
 | `UserHandle` | `user_handle` | `byte[]`, WebAuthn user handle (the 16-byte user GUID) |
 | `SignatureCounter` | `signature_counter` | `long`; cloned-credential detection |
-| `Name` | `name` | `string`, max 120 |
+| `Label` | `name` | `string?`, optional user-authored label, max 120 |
 | `Transports` | `transports` | `string[]` (lowercased, distinct, ordered) |
 | `AaGuid` | `aaguid` | `Guid`, authenticator model GUID |
 | `IsBackupEligible` | `is_backup_eligible` | `bool` |
@@ -186,7 +184,7 @@ Table `user_passkey_credentials` (`BaseEntity<Guid>`), unique index on `Credenti
 
 Introduced by migration `20260520030000_AddUserPasskeyCredentials` (`src/Cotton.Database/Migrations/`).
 
-**Integrity (cross-ref *Database Integrity*):** `UserPasskeyCredentialIntegrityDescriptor` (`EntityName = "user_passkey_credentials"`, `SchemaVersion = 1`) signs `Id`, `UserId`, `CredentialId`, `PublicKey`, `UserHandle`, `SignatureCounter`, `Transports`, `AaGuid`, `IsBackupEligible`, `IsBackedUp`. Its remarks note that the user-facing `Name` is **deliberately excluded** from the MAC (so renaming doesn't require re-signing the credential binding). `LastUsedAt`, `CreatedAt`, and `AttestationFormat` are also not in the signed set. Every read path (`BeginRegistrationAsync`, `BeginAssertionAsync`, `FinishAssertionAsync`, `RenameCredentialAsync`, `DeleteCredentialAsync`) calls `_integrity.RequireValid` before trusting a row, so a tampered credential row is rejected rather than used.
+**Integrity (cross-ref *Database Integrity*):** `UserPasskeyCredentialIntegrityDescriptor` (`EntityName = "user_passkey_credentials"`, `SchemaVersion = 1`) signs `Id`, `UserId`, `CredentialId`, `PublicKey`, `UserHandle`, `SignatureCounter`, `Transports`, `AaGuid`, `IsBackupEligible`, `IsBackedUp`. The user-facing `Label` is **deliberately excluded** from the MAC because changing it cannot grant access; `LastUsedAt`, `CreatedAt`, and `AttestationFormat` are also outside the signed set. Assertion verification, label changes (`SetCredentialLabelAsync`), and deletion validate the credential before trusting or mutating it; registration/assertion option generation validates the user row. The list projection itself does not perform a per-credential integrity check.
 
 ### Client-side WebAuthn glue
 
@@ -197,7 +195,7 @@ Introduced by migration `20260520030000_AddUserPasskeyCredentials` (`src/Cotton.
 - `toCredentialCreationOptions` / `toCredentialRequestOptions` — convert the server JSON (challenge, `excludeCredentials[].id`, `allowCredentials[].id`, `user.id` as base64url strings) into the binary `PublicKeyCredential*Options` the browser API expects.
 - `serializeAttestationCredential` / `serializeAssertionCredential` — turn the authenticator response into the base64url JSON the server decodes. Attestation includes `transports` via `response.getTransports?.() ?? []`; assertion includes `userHandle` (or `null`).
 
-`PasskeysCard.tsx` (profile) drives registration: `passkeysApi.beginRegistration(null)` → `navigator.credentials.create` → `serializeAttestationCredential` → `passkeysApi.finishRegistration`, then immediately opens a rename dialog (`openRenameDialog`) seeded with a heuristically chosen default name from `buildDefaultName(transports)` (a security-key, device, or numbered default). Cancellation is detected when a thrown `DOMException` has name `AbortError` or `NotAllowedError` (the set `passkeyCancellationErrorNames`). `useLoginForm.ts` drives login: `passkeysApi.beginAssertion(username || null)` → `navigator.credentials.get` → `passkeysApi.finishAssertion(requestId, trustDevice, credential)` (which stores the returned access token via `setAccessToken`) → `authApi.me()` → `setAuthenticated(true, user)` and `navigate("/")`.
+`PasskeysCard.tsx` (profile) drives registration without asking for a label: `passkeysApi.beginRegistration(null)` → `navigator.credentials.create` → `serializeAttestationCredential` → `passkeysApi.finishRegistration(..., null, ...)`, then adds the returned credential to the list. It does **not** open a post-registration rename dialog. `resolvePasskeyDisplayName` displays an explicit label first, then the server-resolved authenticator name, then a localized fallback derived from `authenticatorKind`; the edit action opens a separate dialog, and saving an empty value clears the label. Cancellation is detected when a thrown `DOMException` has name `AbortError` or `NotAllowedError` (the set `passkeyCancellationErrorNames`). `useLoginForm.ts` drives login: `passkeysApi.beginAssertion(username || null)` → `navigator.credentials.get` → `passkeysApi.finishAssertion(requestId, trustDevice, credential)` (which stores the returned access token via `setAccessToken`) → `authApi.me()` → `setAuthenticated(true, user)` and `navigate("/")`.
 
 ## Part B — OIDC SSO
 

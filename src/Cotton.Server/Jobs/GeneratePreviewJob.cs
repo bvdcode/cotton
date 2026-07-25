@@ -25,7 +25,6 @@ namespace Cotton.Server.Jobs
     /// Runs the scheduled generate preview maintenance task.
     /// </summary>
     [JobTrigger(minutes: 15)]
-    [DisallowConcurrentExecution]
     public class GeneratePreviewJob(
         PerfTracker _perf,
         IStreamCipher _crypto,
@@ -147,6 +146,13 @@ namespace Cotton.Server.Jobs
             {
                 throw;
             }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogInformation(
+                    ex,
+                    "Skipped stale preview update for file manifest {FileManifestId}.",
+                    item.Id);
+            }
             catch (Exception ex)
             {
                 await RecordPreviewGenerationFailureAsync(item, generator, ex, cancellationToken);
@@ -226,7 +232,10 @@ namespace Cotton.Server.Jobs
                 previewKind, hashStr, fileManifestId);
 
             using var resultStream = new MemoryStream(previewImage);
-            await _storage.WriteAsync(hashStr, resultStream);
+            await _storage.WriteAsync(
+                hashStr,
+                resultStream,
+                cancellationToken: cancellationToken);
             await EnsureChunkExistsAsync(hash, previewImage.Length, cancellationToken);
             return hash;
         }
@@ -264,7 +273,17 @@ namespace Cotton.Server.Jobs
             _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
             item.PreviewGenerationError = ex.Message;
             item.PreviewGeneratorVersion = generator.Version;
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException conflict)
+            {
+                _logger.LogInformation(
+                    conflict,
+                    "Skipped stale preview failure update for file manifest {FileManifestId}.",
+                    item.Id);
+            }
         }
 
         private async Task RefreshQueueAfterUploadPauseAsync(

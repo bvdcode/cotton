@@ -221,6 +221,99 @@ namespace Cotton.Localization
         }
 
         /// <summary>
+        /// Title for password change security alerts.
+        /// </summary>
+        public static string PasswordChangedTitle => "Password changed";
+
+        /// <summary>
+        /// Content for password change security alerts.
+        /// </summary>
+        public static string PasswordChangedContent =>
+            "Your account password was changed and existing sessions were revoked.";
+
+        /// <summary>
+        /// Title for completed password reset security alerts.
+        /// </summary>
+        public static string PasswordResetCompletedTitle => "Password reset completed";
+
+        /// <summary>
+        /// Content for completed password reset security alerts.
+        /// </summary>
+        public static string PasswordResetCompletedContent =>
+            "Your account password was reset and existing sessions were revoked.";
+
+        /// <summary>
+        /// Title for email change security alerts.
+        /// </summary>
+        public static string EmailChangedTitle => "Account email changed";
+
+        /// <summary>
+        /// Builds email change security alert content.
+        /// </summary>
+        public static string EmailChangedContent(string? previousEmail, string? newEmail)
+        {
+            return $"Your account email was changed from {FormatOptionalEmail(previousEmail)} " +
+                   $"to {FormatOptionalEmail(newEmail)}.";
+        }
+
+        /// <summary>
+        /// Title for added passkey security alerts.
+        /// </summary>
+        public static string PasskeyAddedTitle => "Passkey added";
+
+        /// <summary>
+        /// Builds added passkey security alert content.
+        /// </summary>
+        public static string PasskeyAddedContent(string passkeyName)
+        {
+            return $"A passkey was added to your account: {passkeyName}.";
+        }
+
+        /// <summary>
+        /// Title for removed passkey security alerts.
+        /// </summary>
+        public static string PasskeyRemovedTitle => "Passkey removed";
+
+        /// <summary>
+        /// Builds removed passkey security alert content.
+        /// </summary>
+        public static string PasskeyRemovedContent(string passkeyName)
+        {
+            return $"A passkey was removed from your account: {passkeyName}.";
+        }
+
+        /// <summary>
+        /// Title for linked external identity security alerts.
+        /// </summary>
+        public static string ExternalIdentityLinkedTitle => "External account linked";
+
+        /// <summary>
+        /// Builds linked external identity security alert content.
+        /// </summary>
+        public static string ExternalIdentityLinkedContent(string providerName)
+        {
+            return $"An external sign-in account was linked through {providerName}.";
+        }
+
+        /// <summary>
+        /// Title for unlinked external identity security alerts.
+        /// </summary>
+        public static string ExternalIdentityUnlinkedTitle => "External account unlinked";
+
+        /// <summary>
+        /// Builds unlinked external identity security alert content.
+        /// </summary>
+        public static string ExternalIdentityUnlinkedContent(string providerName)
+        {
+            return $"An external sign-in account was unlinked from {providerName}.";
+        }
+
+        private static string FormatOptionalEmail(string? email)
+        {
+            return string.IsNullOrWhiteSpace(email) ? "no email address" : email.Trim();
+        }
+
+        /// <summary>
         /// Title for a shared file download notification.
         /// </summary>
         public static string SharedFileDownloadedTitle => "Shared file downloaded";

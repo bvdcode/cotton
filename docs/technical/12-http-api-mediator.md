@@ -65,7 +65,7 @@ flowchart LR
 
 ## How it works — the standard request flow
 
-A representative authenticated mutation (creating a file from already-uploaded chunks) shows the full path: controller → mediator → handler → service/DbContext/storage, with a SignalR side-effect and two Quartz job triggers.
+A representative authenticated mutation (creating a file from already-uploaded chunks) shows the full path: controller → mediator → handler → service/DbContext/storage, with a SignalR side-effect and two Quartz job triggers for preview and metadata work.
 
 ```mermaid
 sequenceDiagram
@@ -87,8 +87,8 @@ sequenceDiagram
     H->>DB: resolve layout, per-layout lock, name-key checks
     H->>DB: insert NodeFile, SaveChanges, Commit
     H-->>FC: NodeFileManifestDto
-    FC->>SCH: TriggerJobAsync<ComputeManifestHashesJob>
     FC->>SCH: TriggerJobAsync<GeneratePreviewJob>
+    FC->>SCH: TriggerJobAsync<ExtractFileMetadataJob>
     FC->>HUB: Clients.User(userId).SendAsync("FileCreated", dto)
     FC-->>C: 200 OK + NodeFileManifestDto
 ```
@@ -158,7 +158,7 @@ Auth column legend: **JWT** = `[Authorize]` (any authenticated user); **Admin** 
 | GET | `/api/v1/auth/passkeys` | `GetPasskeys` | JWT | List registered passkeys. |
 | POST | `/api/v1/auth/passkeys/registration/options` | `BeginPasskeyRegistration` | JWT | WebAuthn registration options. |
 | POST | `/api/v1/auth/passkeys/registration/verify` | `FinishPasskeyRegistration` | JWT | Complete passkey registration. |
-| PUT | `/api/v1/auth/passkeys/{credentialId:guid}` | `RenamePasskey` | JWT | Rename a passkey. |
+| PUT | `/api/v1/auth/passkeys/{credentialId:guid}` | `RenamePasskey` | JWT | Set or clear the passkey's optional label. |
 | DELETE | `/api/v1/auth/passkeys/{credentialId:guid}` | `DeletePasskey` | JWT | Delete a passkey. |
 | POST | `/api/v1/auth/passkeys/assertion/options` | `BeginPasskeyAssertion` | Anon, rate-limit `Interactive` | WebAuthn assertion (login) options. |
 | POST | `/api/v1/auth/passkeys/assertion/verify` | `FinishPasskeyAssertion` | Anon, rate-limit `Interactive` | Verify assertion, issue token pair. |
@@ -363,13 +363,13 @@ Routes.V1.Notifications = "/api/v1/notifications"
 
 ### DTOs — `src/Cotton.Server/Models/Dto/*`
 
-Response payloads serialized to clients. The directory currently contains: `NodeDto`, `NodeFileManifestDto`, `NodeContentDto`, `SharedNodeContentDto`, `SharedNodeFileDto`, `SharedNodeInfoDto`, `UserDto`, `AdminUserDto`, `UserStorageQuotaDto`, `UserExternalIdentityDto`, `SessionDto`, `NotificationDto`, `FileVersionDto`, `LayoutStatsDto`, `SearchLayoutsResultDto`, `SearchResultDto`, `RestoreOutcomeDto`, `SecurityDiagnosticsDto`, `LatestDatabaseBackupDto`, `GcChunkTimelineDto`, `GcChunkTimelineBucketDto`, `ArchiveDownloadLinkDto`, `StorageUsageStatsDto`, the OIDC DTOs (`OidcProviderDto`, `PublicOidcProviderDto`, `OidcAuthorizationUrlDto`), passkey DTOs (`PasskeyDtos.cs`), `S3Config`, `EmailConfig`, the SignalR event DTOs (`NodeDeletedEventDto`, `NodeFileDeletedEventDto`, `NodeMovedEventDto`, `NodeFileMovedEventDto`), and — anomalously — `LoginRequest.cs` (an inbound payload that sits in `Models/Dto` despite being a request body). Many DTOs derive from `EasyExtensions.Models.Dto.BaseDto<Guid>`, which supplies `Id`, `CreatedAt`, and `UpdatedAt`.
+Response payloads serialized to clients. The directory currently contains: `NodeDto`, `NodeFileManifestDto`, `NodeContentDto`, `SharedNodeContentDto`, `SharedNodeFileDto`, `SharedNodeInfoDto`, `UserDto`, `AdminUserDto`, `UserStorageQuotaDto`, `UserExternalIdentityDto`, `SessionDto`, `NotificationDto`, `FileVersionDto`, `LayoutStatsDto`, `SearchLayoutsResultDto`, `SearchResultDto`, `RestoreOutcomeDto`, `SecurityDiagnosticsDto`, `LatestDatabaseBackupDto`, `GcChunkTimelineDto`, `GcChunkTimelineBucketDto`, `ArchiveDownloadLinkDto`, `StorageUsageStatsDto`, the OIDC DTOs (`OidcProviderDto`, `PublicOidcProviderDto`, `OidcAuthorizationUrlDto`), the individual passkey `Passkey*.cs` DTO files, `S3Config`, `EmailConfig`, the SignalR event DTOs (`NodeDeletedEventDto`, `NodeFileDeletedEventDto`, `NodeMovedEventDto`, `NodeFileMovedEventDto`), and — anomalously — `LoginRequest.cs` (an inbound payload that sits in `Models/Dto` despite being a request body). Many DTOs derive from `EasyExtensions.Models.Dto.BaseDto<Guid>`, which supplies `Id`, `CreatedAt`, and `UpdatedAt`.
 
 `NodeFileManifestDto` (`src/Cotton.Server/Models/Dto/NodeFileManifestDto.cs`) extends `BaseDto<Guid>` and carries `NodeId`, `OwnerId`, `Name`, `ContentType`, `SizeBytes`, a never-null `Metadata` dictionary, `RequiresVideoTranscoding`, and `PreviewHashEncryptedHex` (the encrypted-hash token used to construct preview URLs).
 
 ### Request models — `src/Cotton.Server/Models/Requests/*`
 
-Inbound bodies bound by MVC. The directory contains exactly: `MoveFileRequest`, `MoveNodeRequest`, `RenameFileRequest`, `RenameNodeRequest`, `CreateNodeRequest`, `RestoreItemRequest`, `CreateArchiveDownloadLinkRequest`, `AdminUpdateUserRequestDto`, `ChangePasswordRequestDto`, `ConfirmTotpRequestDto`, `DisableTotpRequestDto`, `ForgotPasswordRequestDto`, `ResetPasswordRequestDto`, `UpdateCurrentUserRequestDto`, `OidcAuthorizationRequestDto`, and `OidcProviderRequestDto`. Several controller body types live elsewhere: passkey request DTOs (`PasskeyDtos.cs`) and `LoginRequest` live in `Models/Dto`; metadata-patch endpoints bind a raw `Dictionary<string, string?>`; preference updates bind a raw `Dictionary<string, string>`; and the file-creation body (`CreateFileRequest`) **is itself the mediator request** in `Handlers/Files/CreateFileRequest.cs` — the controller binds it directly from the body and sets `UserId` server-side before sending it. The `*Dto`-suffixed request types are typically translated by the controller into the corresponding mediator request (e.g. `UpdateCurrentUserRequestDto` → `UpdateCurrentUserRequest`).
+Inbound bodies bound by MVC. The directory contains exactly: `MoveFileRequest`, `MoveNodeRequest`, `RenameFileRequest`, `RenameNodeRequest`, `CreateNodeRequest`, `RestoreItemRequest`, `CreateArchiveDownloadLinkRequest`, `AdminUpdateUserRequestDto`, `ChangePasswordRequestDto`, `ConfirmTotpRequestDto`, `DisableTotpRequestDto`, `ForgotPasswordRequestDto`, `ResetPasswordRequestDto`, `UpdateCurrentUserRequestDto`, `OidcAuthorizationRequestDto`, and `OidcProviderRequestDto`. Several controller body types live elsewhere: the individual passkey request DTOs and `LoginRequest` live in `Models/Dto`; metadata-patch endpoints bind a raw `Dictionary<string, string?>`; preference updates bind a raw `Dictionary<string, string>`; and the file-creation body (`CreateFileRequest`) **is itself the mediator request** in `Handlers/Files/CreateFileRequest.cs` — the controller binds it directly from the body and sets `UserId` server-side before sending it. The `*Dto`-suffixed request types are typically translated by the controller into the corresponding mediator request (e.g. `UpdateCurrentUserRequestDto` → `UpdateCurrentUserRequest`).
 
 ### Mapster configuration — `src/Cotton.Server/Mappings/MapsterConfig.cs`
 
@@ -380,14 +380,14 @@ Inbound bodies bound by MVC. The directory contains exactly: `MoveFileRequest`, 
 
 Controllers use `.Adapt<NodeDto>()`, `.Adapt<UserDto>()`, `.Adapt<NodeFileManifestDto>()`, and `.ProjectToType<NodeDto>()` (for queryable projection in the shared-folder children path).
 
-### Auth rate-limit policies — `src/Cotton.Server/Auth/AuthRateLimitPolicies.cs` + `src/Cotton.Server/Extensions/AuthHardeningExtensions.cs`
+### Auth rate-limit policies — `src/Cotton.Server/Auth/AuthRateLimitPolicies.cs` + `src/Cotton.Server/Extensions/EndpointRateLimitingExtensions.cs`
 
 | Policy constant | Value | Limiter | Permit limit | Window | Applied to |
 | --- | --- | --- | --- | --- | --- |
 | `AuthRateLimitPolicies.Interactive` | `auth.interactive` | Fixed-window, partitioned by remote IP | 10 | 1 minute | login, password reset start/confirm, passkey assertion options/verify, OIDC start/link/callback |
 | `AuthRateLimitPolicies.Refresh` | `auth.refresh` | Fixed-window, partitioned by remote IP | 60 | 1 minute | token refresh |
 
-Both partitions use `QueueLimit = 0` (excess requests rejected immediately) and `AutoReplenishment = true`. Global `RejectionStatusCode = 429`. The partition key is `httpContext.Connection.RemoteIpAddress?.ToString()` (falls back to `"unknown"`). The limiter middleware is enabled by `UseAuthHardening()`, which calls `app.UseRateLimiter()`.
+These endpoint policies use `QueueLimit = 0` (excess requests are rejected immediately) and `AutoReplenishment = true`. Rejections return HTTP 429. The partition key is `httpContext.Connection.RemoteIpAddress?.ToString()` (falling back to `"unknown"`). `EndpointRateLimitingExtensions` registers the policies and enables `UseRateLimiter`; ordinary application requests are not globally rate-limited.
 
 ### DI registration — `Program.cs` + extension methods
 
@@ -442,4 +442,4 @@ The middleware pipeline order in `Program.cs` is: `UseForwardedHeaders()` → `U
 
 ## Related sections
 
-For the subsystems this layer delegates into, see the *Cryptography Engine* section (`IStreamCipher`, AES-GCM chunking, `AesGcmStreamCipher.Min/MaxChunkSize`), the *Storage Pipeline* section (`IStoragePipeline`, chunk read/write, storage pressure), the *Layout & Node Graph* section (layouts, nodes, `LayoutLocks`, navigation), the *Chunk Ingest & File Manifests* section (`IChunkIngestService`, `FileManifestService`, dedup), the *Authentication & Sessions* section (JWT issuance, refresh rotation, passkeys, TOTP, OIDC, WebDAV basic auth), the *Database Integrity* section (`IDatabaseIntegrityVerifier`, `FileGraphIntegrityVerifier`, descriptors), the *Background Jobs* section (Quartz jobs triggered by controllers: `ComputeManifestHashesJob`, `GeneratePreviewJob`, `GarbageCollectorJob`), the *Previews & Transcoding* section (WebP previews, HLS), and the *Real-time Events* section (SignalR `EventHub`).
+For the subsystems this layer delegates into, see the *Cryptography Engine* section (`IStreamCipher`, AES-GCM chunking, `AesGcmStreamCipher.Min/MaxChunkSize`), the *Storage Pipeline* section (`IStoragePipeline`, chunk read/write, storage pressure), the *Layout & Node Graph* section (layouts, nodes, `LayoutLocks`, navigation), the *Chunk Ingest & File Manifests* section (`IChunkIngestService`, `FileManifestService`, dedup), the *Authentication & Sessions* section (JWT issuance, refresh rotation, passkeys, TOTP, OIDC, WebDAV basic auth), the *Database Integrity* section (`IDatabaseIntegrityVerifier`, `FileGraphIntegrityVerifier`, descriptors), the *Background Jobs* section (Quartz jobs triggered by controllers: `GeneratePreviewJob`, `ExtractFileMetadataJob`, `GarbageCollectorJob`), the *Previews & Transcoding* section (WebP previews, HLS), and the *Real-time Events* section (SignalR `EventHub`).

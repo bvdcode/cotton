@@ -3,11 +3,14 @@
 
 using Cotton.Auth;
 using Cotton.Crypto;
+using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -89,6 +92,44 @@ public class ServerEndpointsTests : IntegrationTestBase
         Assert.That(settings, Is.Not.Null);
         Assert.That(settings!.ContainsKey("maxChunkSizeBytes"), Is.True);
         Assert.That(settings!.ContainsKey("supportedHashAlgorithm"), Is.True);
+    }
+
+    [Test]
+    public async Task Begin_Passkey_Registration_Requests_Direct_Attestation()
+    {
+        string token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using HttpResponseMessage response = await _client.PostAsJsonAsync(
+            "/api/v1/auth/passkeys/registration/options",
+            new { Label = "Office key" });
+        response.EnsureSuccessStatusCode();
+
+        JsonElement payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.That(payload.GetProperty("options").GetProperty("attestation").GetString(), Is.EqualTo("direct"));
+    }
+
+    [Test]
+    public async Task Set_Passkey_Label_With_Blank_Value_Clears_Label_AndKeepsDetectedKind()
+    {
+        string token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        Guid credentialId = await CreatePasskeyCredentialAsync("Desk key", Guid.Empty, ["usb", "nfc"]);
+
+        using HttpResponseMessage response = await _client.PutAsJsonAsync(
+            $"/api/v1/auth/passkeys/{credentialId}",
+            new { Label = "   " });
+        response.EnsureSuccessStatusCode();
+
+        JsonElement payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(payload.GetProperty("label").ValueKind, Is.EqualTo(JsonValueKind.Null));
+            Assert.That(payload.GetProperty("authenticatorName").ValueKind, Is.EqualTo(JsonValueKind.Null));
+            Assert.That(payload.GetProperty("authenticatorKind").GetString(), Is.EqualTo("SecurityKey"));
+        });
     }
 
     [Test]
@@ -245,6 +286,33 @@ public class ServerEndpointsTests : IntegrationTestBase
         Assert.That(cipher, Is.TypeOf<AesGcmStreamCipher>());
 
         return ((AesGcmStreamCipher)cipher).ConcurrencyLevel;
+    }
+
+    private async Task<Guid> CreatePasskeyCredentialAsync(
+        string? label,
+        Guid aaGuid,
+        string[] transports)
+    {
+        using IServiceScope scope = _factory!.Services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        User user = await dbContext.Users.SingleAsync(x => x.Username == "testuser");
+        UserPasskeyCredential credential = new()
+        {
+            UserId = user.Id,
+            CredentialId = Guid.NewGuid().ToByteArray(),
+            PublicKey = [1, 2, 3],
+            UserHandle = user.Id.ToByteArray(),
+            SignatureCounter = 0,
+            Label = label,
+            Transports = transports,
+            AaGuid = aaGuid,
+            IsBackupEligible = false,
+            IsBackedUp = false
+        };
+
+        await dbContext.UserPasskeyCredentials.AddAsync(credential);
+        await dbContext.SaveChangesAsync();
+        return credential.Id;
     }
 
     private async Task<string> LoginAsync()

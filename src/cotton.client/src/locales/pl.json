@@ -2011,6 +2011,7 @@
       "adding": "Dodawanie...",
       "loading": "Ładowanie kluczy...",
       "empty": "Dla tego konta nie ma jeszcze zarejestrowanych kluczy dostępu.",
+      "label": "Etykieta: {{name}}",
       "created": "Utworzono {{date}}",
       "lastUsed": "Ostatnio użyto {{date}}",
       "delete": "Usuń klucz dostępu",
@@ -2023,12 +2024,13 @@
         "renameFailed": "Nie udało się zmienić nazwy klucza dostępu."
       },
       "defaultNames": {
+        "passkey": "Klucz dostępu",
         "securityKey": "Klucz bezpieczeństwa",
         "device": "Klucz urządzenia"
       },
       "rename": {
         "title": "Nazwij ten klucz",
-        "description": "Wybierz nazwę, którą później rozpoznasz. Cotton wykrywa tylko ogólny typ klucza, nie dokładny model urządzenia.",
+        "description": "Opcjonalna etykieta zastępuje wykrytą nazwę. Pozostaw ją pustą, aby użyć automatycznego wykrywania.",
         "nameLabel": "Nazwa klucza",
         "button": "Zmień nazwę klucza",
         "save": "Zapisz",

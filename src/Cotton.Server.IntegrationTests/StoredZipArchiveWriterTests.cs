@@ -1,7 +1,9 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Models.Configuration;
 using Cotton.Server.Services;
+using Microsoft.Extensions.Options;
 using System.Buffers.Binary;
 using System.Reflection;
 using System.Text;
@@ -11,6 +13,118 @@ namespace Cotton.Server.IntegrationTests;
 
 public class StoredZipArchiveWriterTests
 {
+    [Test]
+    public async Task WriteAsync_QueuesStreamsUntilActiveBodyCompletes()
+    {
+        StoredZipArchiveWriter writer = CreateWriter(maxConcurrentStreams: 1);
+        TaskCompletionSource firstOpened = CreateCompletionSource();
+        TaskCompletionSource releaseFirst = CreateCompletionSource();
+        TaskCompletionSource secondOpened = CreateCompletionSource();
+        StoredZipSourceEntry firstEntry = CreateBlockingEntry(
+            "first.bin",
+            firstOpened,
+            releaseFirst);
+        StoredZipSourceEntry secondEntry = CreateObservedEntry("second.bin", secondOpened);
+        using MemoryStream firstDestination = new();
+        using MemoryStream secondDestination = new();
+
+        Task firstWrite = writer.WriteAsync(
+            firstDestination,
+            [firstEntry],
+            CancellationToken.None);
+        await firstOpened.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        Task secondWrite = writer.WriteAsync(
+            secondDestination,
+            [secondEntry],
+            CancellationToken.None);
+        Assert.That(secondOpened.Task.IsCompleted, Is.False);
+
+        releaseFirst.SetResult();
+        await firstWrite.WaitAsync(TimeSpan.FromSeconds(1));
+        await secondOpened.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        await secondWrite.WaitAsync(TimeSpan.FromSeconds(1));
+    }
+
+    [Test]
+    public async Task WriteAsync_CancelledWaiterDoesNotConsumeStreamPermit()
+    {
+        StoredZipArchiveWriter writer = CreateWriter(maxConcurrentStreams: 1);
+        TaskCompletionSource firstOpened = CreateCompletionSource();
+        TaskCompletionSource releaseFirst = CreateCompletionSource();
+        TaskCompletionSource cancelledOpened = CreateCompletionSource();
+        TaskCompletionSource followerOpened = CreateCompletionSource();
+        StoredZipSourceEntry firstEntry = CreateBlockingEntry(
+            "first.bin",
+            firstOpened,
+            releaseFirst);
+        StoredZipSourceEntry cancelledEntry = CreateObservedEntry(
+            "cancelled.bin",
+            cancelledOpened);
+        StoredZipSourceEntry followerEntry = CreateObservedEntry(
+            "follower.bin",
+            followerOpened);
+        using MemoryStream firstDestination = new();
+        using MemoryStream cancelledDestination = new();
+        using MemoryStream followerDestination = new();
+        using CancellationTokenSource cancellation = new();
+
+        Task firstWrite = writer.WriteAsync(
+            firstDestination,
+            [firstEntry],
+            CancellationToken.None);
+        await firstOpened.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        Task cancelledWrite = writer.WriteAsync(
+            cancelledDestination,
+            [cancelledEntry],
+            cancellation.Token);
+        cancellation.Cancel();
+        Assert.CatchAsync<OperationCanceledException>(
+            async () => await cancelledWrite.WaitAsync(TimeSpan.FromSeconds(1)));
+        Assert.That(cancelledOpened.Task.IsCompleted, Is.False);
+
+        Task followerWrite = writer.WriteAsync(
+            followerDestination,
+            [followerEntry],
+            CancellationToken.None);
+        Assert.That(followerOpened.Task.IsCompleted, Is.False);
+
+        releaseFirst.SetResult();
+        await firstWrite.WaitAsync(TimeSpan.FromSeconds(1));
+        await followerOpened.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        await followerWrite.WaitAsync(TimeSpan.FromSeconds(1));
+    }
+
+    [Test]
+    public async Task WriteAsync_ReleasesStreamPermitAfterFailure()
+    {
+        StoredZipArchiveWriter writer = CreateWriter(maxConcurrentStreams: 1);
+        StoredZipSourceEntry failingEntry = new(
+            "failing.bin",
+            1,
+            false,
+            _ => throw new IOException("Synthetic archive source failure."));
+        TaskCompletionSource followerOpened = CreateCompletionSource();
+        StoredZipSourceEntry followerEntry = CreateObservedEntry(
+            "follower.bin",
+            followerOpened);
+        using MemoryStream failingDestination = new();
+        using MemoryStream followerDestination = new();
+
+        Assert.ThrowsAsync<IOException>(
+            async () => await writer.WriteAsync(
+                failingDestination,
+                [failingEntry],
+                CancellationToken.None));
+
+        await writer.WriteAsync(
+            followerDestination,
+            [followerEntry],
+            CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.That(followerOpened.Task.IsCompletedSuccessfully, Is.True);
+    }
+
     [Test]
     public async Task CentralDirectory_WritesZip64ExtraAfterFileName_WhenOnlyOffsetUsesZip64Sentinel()
     {
@@ -110,5 +224,98 @@ public class StoredZipArchiveWriterTests
             1024);
 
         Assert.That(requiresZip64, Is.True);
+    }
+
+    private static StoredZipArchiveWriter CreateWriter(int maxConcurrentStreams)
+    {
+        ResourceConcurrencyOptions options = new()
+        {
+            HlsTranscodes = 1,
+            ArchiveStreams = maxConcurrentStreams,
+        };
+        return new StoredZipArchiveWriter(Options.Create(options));
+    }
+
+    private static StoredZipSourceEntry CreateBlockingEntry(
+        string path,
+        TaskCompletionSource opened,
+        TaskCompletionSource release)
+    {
+        return new StoredZipSourceEntry(
+            path,
+            1,
+            false,
+            _ => ValueTask.FromResult<Stream>(new BlockingReadStream(opened, release)));
+    }
+
+    private static StoredZipSourceEntry CreateObservedEntry(
+        string path,
+        TaskCompletionSource opened)
+    {
+        return new StoredZipSourceEntry(
+            path,
+            1,
+            false,
+            _ =>
+            {
+                opened.TrySetResult();
+                return ValueTask.FromResult<Stream>(new MemoryStream([1]));
+            });
+    }
+
+    private static TaskCompletionSource CreateCompletionSource() =>
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    private sealed class BlockingReadStream(
+        TaskCompletionSource readStarted,
+        TaskCompletionSource releaseRead) : Stream
+    {
+        private bool _completed;
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
+
+        public override async ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            if (_completed)
+            {
+                return 0;
+            }
+
+            readStarted.TrySetResult();
+            await releaseRead.Task.WaitAsync(cancellationToken);
+            buffer.Span[0] = 1;
+            _completed = true;
+            return 1;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) =>
+            throw new NotSupportedException();
+
+        public override void SetLength(long value) =>
+            throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
     }
 }

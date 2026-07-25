@@ -72,7 +72,11 @@ namespace Cotton.Server.Services
             {
                 await using (var input = new MemoryStream(payload, writable: false))
                 {
-                    await _storage.WriteAsync(uid, input, context).ConfigureAwait(false);
+                    await _storage.WriteAsync(
+                        uid,
+                        input,
+                        context,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
 
                 writeStopwatch.Stop();
