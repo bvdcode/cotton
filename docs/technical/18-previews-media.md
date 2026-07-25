@@ -353,7 +353,8 @@ sequenceDiagram
   Player->>FC: GET master.m3u8?token
   FC-->>Player: variants (source/high/medium/low)
   Player->>FC: GET playlist.m3u8?token&quality
-  FC->>FF: ffprobe duration+codecs (via RangeStreamServer, cached 1h)
+  FC->>FF: ffprobe duration+codecs via RangeStreamServer
+  Note over FC: successful probe results are cached for 1h; failures end the current request
   FC-->>Player: #EXTINF list of seg-i.ts
   Player->>FC: GET seg-3.ts?token&quality=medium
   FC->>Cache: TryGet(manifestId:medium:3)

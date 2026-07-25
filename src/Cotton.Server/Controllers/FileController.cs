@@ -65,6 +65,7 @@ namespace Cotton.Server.Controllers
         ILogger<FileController> _logger) : ControllerBase
     {
         private const int DefaultSharedFileTokenLength = 16;
+        private static readonly TimeSpan HlsMediaProbeCacheLifetime = TimeSpan.FromHours(1);
 
         /// <summary>
         /// Creates or returns a public file share response.
@@ -1238,17 +1239,17 @@ namespace Cotton.Server.Controllers
         {
             Guid manifestId = nodeFile.FileManifest.Id;
             string cacheKey = $"hls-media-probe:{manifestId}";
-            if (_cache.TryGetValue<MediaProbeCacheEntry>(cacheKey, out MediaProbeCacheEntry? cached))
+            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out MediaProbeInfo? cached))
             {
-                return cached?.Probe;
+                return cached;
             }
 
             await using IAsyncDisposable manifestLease = await _hlsTranscodes.EnterProbeManifestAsync(
                 manifestId,
                 HttpContext.RequestAborted);
-            if (_cache.TryGetValue<MediaProbeCacheEntry>(cacheKey, out cached))
+            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out cached))
             {
-                return cached?.Probe;
+                return cached;
             }
 
             await using IAsyncDisposable probeLease = await _hlsTranscodes.EnterProbeAsync(
@@ -1263,15 +1264,13 @@ namespace Cotton.Server.Controllers
                     .ConfigureAwait(false);
             }
 
-            _cache.Set(
-                cacheKey,
-                new MediaProbeCacheEntry(probe),
-                HlsMediaProbeCachePolicy.GetLifetime(probe));
+            if (probe is not null)
+            {
+                _cache.Set(cacheKey, probe, HlsMediaProbeCacheLifetime);
+            }
 
             return probe;
         }
-
-        private sealed record MediaProbeCacheEntry(MediaProbeInfo? Probe);
 
         /// <summary>
         /// Creates file from chunks.
