@@ -361,16 +361,16 @@ flowchart TD
 
 There is **no separate `/register` endpoint**: registration is folded into `POST /login` for the two cases above. (The README's "public instances can also create an account from any credentials you enter" maps exactly to this login-driven path.)
 
-## Rate limiting (`AuthHardeningExtensions` + `AuthRateLimitPolicies`)
+## Rate limiting (`EndpointRateLimitingExtensions` + `AuthRateLimitPolicies`)
 
-Two ASP.NET Core fixed-window policies, partitioned by **remote IP** (`HttpContext.Connection.RemoteIpAddress?.ToString()`, or `"unknown"`), with `AutoReplenishment = true`, `QueueLimit = 0` (excess requests are rejected, not queued) and a global `429` rejection status (`RejectionStatusCode = StatusCodes.Status429TooManyRequests`):
+Two ASP.NET Core fixed-window policies, partitioned by **remote IP** (`HttpContext.Connection.RemoteIpAddress?.ToString()`, or `"unknown"`), with `AutoReplenishment = true`, `QueueLimit = 0` (excess requests are rejected, not queued) and HTTP 429 responses (`RejectionStatusCode = StatusCodes.Status429TooManyRequests`):
 
 | Policy constant | Name | Permit limit | Window | Applied to (verified via `[EnableRateLimiting(...)]`) |
 | --- | --- | --- | --- | --- |
 | `AuthRateLimitPolicies.Interactive` | `auth.interactive` | 10 | 1 minute | `login`, `forgot-password`, `reset-password`, `passkeys/assertion/options`, `passkeys/assertion/verify` |
 | `AuthRateLimitPolicies.Refresh` | `auth.refresh` | 60 | 1 minute | `refresh` |
 
-The limiter is registered by `AddAuthHardening` → `AddAuthRateLimiting` and activated by `UseAuthHardening` → `UseRateLimiter` in `Program.cs`. `AddAuthHardening` also registers the singleton `SessionAccessTokenRevocationCache`, the scoped `SessionAccessTokenRevocationStore`, and the JWT revocation `OnTokenValidated` hook (`AddSessionRevocationValidation`).
+The endpoint policies are registered by `AddEndpointRateLimiting` and activated by `UseEndpointRateLimiting` in `Program.cs`. Ordinary application requests have no global rate limiter. `AddAuthHardening` separately registers the singleton `SessionAccessTokenRevocationCache`, the scoped `SessionAccessTokenRevocationStore`, and the JWT revocation `OnTokenValidated` hook (`AddSessionRevocationValidation`).
 
 > Note the partition key uses `Connection.RemoteIpAddress` directly. Behind a reverse proxy this is meaningful only because `Program.cs` calls `app.UseForwardedHeaders()` before `app.UseAuthHardening()`; operators must configure forwarded-headers/known-proxies correctly or all clients will share the proxy's IP partition.
 

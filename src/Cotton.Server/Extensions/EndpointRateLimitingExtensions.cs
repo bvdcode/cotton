@@ -3,8 +3,6 @@
 
 using Cotton.Server.Auth;
 using Cotton.Server.Models;
-using Cotton.Server.Models.Configuration;
-using Cotton.Server.Services.RequestAdmission;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Globalization;
 using System.Net;
@@ -13,38 +11,27 @@ using System.Threading.RateLimiting;
 namespace Cotton.Server.Extensions
 {
     /// <summary>
-    /// Configures bounded HTTP request admission and endpoint-specific rate limits.
+    /// Configures rate limits for endpoints exposed to credential abuse.
     /// </summary>
-    public static class RequestAdmissionExtensions
+    public static class EndpointRateLimitingExtensions
     {
         /// <summary>
-        /// Registers HTTP request admission policies.
+        /// Registers endpoint-specific abuse rate limits.
         /// </summary>
-        public static IServiceCollection AddRequestAdmission(
-            this IServiceCollection services,
-            IConfiguration configuration)
+        public static IServiceCollection AddEndpointRateLimiting(this IServiceCollection services)
         {
-            RequestAdmissionOptions admissionOptions = configuration
-                .GetSection(RequestAdmissionOptions.SectionName)
-                .Get<RequestAdmissionOptions>() ?? new RequestAdmissionOptions();
-            admissionOptions.Validate();
-            services.AddSingleton(admissionOptions);
-
             services.AddRateLimiter(options =>
             {
-                options.RejectionStatusCode = StatusCodes.Status503ServiceUnavailable;
-                options.GlobalLimiter = HttpRequestAdmissionPolicy.Create(admissionOptions);
-                options.OnRejected = WriteCapacityRejectionAsync;
-
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
                 AddEndpointPolicies(options);
             });
             return services;
         }
 
         /// <summary>
-        /// Adds request admission middleware after authentication has identified the client.
+        /// Adds endpoint rate-limit middleware.
         /// </summary>
-        public static IApplicationBuilder UseRequestAdmission(this IApplicationBuilder app)
+        public static IApplicationBuilder UseEndpointRateLimiting(this IApplicationBuilder app)
         {
             return app.UseRateLimiter();
         }
@@ -62,45 +49,18 @@ namespace Cotton.Server.Extensions
                 new FixedWindowEndpointPolicy(GetPublicShareArchivePartition, 5));
         }
 
-        internal static async ValueTask WriteCapacityRejectionAsync(
-            OnRejectedContext context,
-            CancellationToken cancellationToken)
-        {
-            await WriteRejectionAsync(
-                context,
-                "The server is processing too many concurrent requests. Retry shortly.",
-                "request_capacity_exhausted",
-                HttpStatusCode.ServiceUnavailable,
-                cancellationToken);
-        }
-
         internal static async ValueTask WriteEndpointRateLimitRejectionAsync(
             OnRejectedContext context,
             CancellationToken cancellationToken)
         {
-            await WriteRejectionAsync(
-                context,
-                "Too many requests. Retry later.",
-                "rate_limit_exceeded",
-                HttpStatusCode.TooManyRequests,
-                cancellationToken);
-        }
-
-        private static async ValueTask WriteRejectionAsync(
-            OnRejectedContext context,
-            string message,
-            string messageCode,
-            HttpStatusCode statusCode,
-            CancellationToken cancellationToken)
-        {
-            context.HttpContext.Response.StatusCode = (int)statusCode;
+            context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
             context.HttpContext.Response.Headers.RetryAfter = GetRetryAfterSeconds(context.Lease);
             CottonResult result = new()
             {
                 Success = false,
-                Message = message,
-                MessageCode = messageCode,
-                StatusCode = statusCode,
+                Message = "Too many requests. Retry later.",
+                MessageCode = "rate_limit_exceeded",
+                StatusCode = HttpStatusCode.TooManyRequests,
             };
             await context.HttpContext.Response.WriteAsJsonAsync(result, cancellationToken);
         }

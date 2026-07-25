@@ -380,14 +380,14 @@ Inbound bodies bound by MVC. The directory contains exactly: `MoveFileRequest`, 
 
 Controllers use `.Adapt<NodeDto>()`, `.Adapt<UserDto>()`, `.Adapt<NodeFileManifestDto>()`, and `.ProjectToType<NodeDto>()` (for queryable projection in the shared-folder children path).
 
-### Auth rate-limit policies — `src/Cotton.Server/Auth/AuthRateLimitPolicies.cs` + `src/Cotton.Server/Extensions/AuthHardeningExtensions.cs`
+### Auth rate-limit policies — `src/Cotton.Server/Auth/AuthRateLimitPolicies.cs` + `src/Cotton.Server/Extensions/EndpointRateLimitingExtensions.cs`
 
 | Policy constant | Value | Limiter | Permit limit | Window | Applied to |
 | --- | --- | --- | --- | --- | --- |
 | `AuthRateLimitPolicies.Interactive` | `auth.interactive` | Fixed-window, partitioned by remote IP | 10 | 1 minute | login, password reset start/confirm, passkey assertion options/verify, OIDC start/link/callback |
 | `AuthRateLimitPolicies.Refresh` | `auth.refresh` | Fixed-window, partitioned by remote IP | 60 | 1 minute | token refresh |
 
-Both partitions use `QueueLimit = 0` (excess requests rejected immediately) and `AutoReplenishment = true`. Global `RejectionStatusCode = 429`. The partition key is `httpContext.Connection.RemoteIpAddress?.ToString()` (falls back to `"unknown"`). The limiter middleware is enabled by `UseAuthHardening()`, which calls `app.UseRateLimiter()`.
+These endpoint policies use `QueueLimit = 0` (excess requests are rejected immediately) and `AutoReplenishment = true`. Rejections return HTTP 429. The partition key is `httpContext.Connection.RemoteIpAddress?.ToString()` (falling back to `"unknown"`). `EndpointRateLimitingExtensions` registers the policies and enables `UseRateLimiter`; ordinary application requests are not globally rate-limited.
 
 ### DI registration — `Program.cs` + extension methods
 
