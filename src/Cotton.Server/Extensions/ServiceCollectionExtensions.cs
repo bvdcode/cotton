@@ -22,11 +22,6 @@ namespace Cotton.Server.Extensions
     /// </summary>
     public static class ServiceCollectionExtensions
     {
-        private static readonly bool DatabaseIntegrityReadValidationEnabled = false;
-        private static readonly bool DatabaseIntegritySaveOriginalStateValidationEnabled = false;
-        [Obsolete("OBSOLETE TRANSITION: startup version transition validation is disabled because the 0.5.0 release bump is postponed. Remove this switch and re-enable StartupTransitionValidator when a strict transition gate is scheduled again.")]
-        private static readonly bool StartupTransitionValidationEnabled = false;
-
         /// <summary>
         /// Registers stream cipher services.
         /// </summary>
@@ -68,22 +63,11 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
         {
-            services.AddSingleton(new DatabaseIntegrityRuntimeOptions(
-                DatabaseIntegrityReadValidationEnabled,
-                DatabaseIntegritySaveOriginalStateValidationEnabled));
             services.AddSingleton<IDatabaseIntegrityKeyProvider, DatabaseIntegrityKeyProvider>();
             services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
             services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
             services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
-            if (DatabaseIntegrityReadValidationEnabled)
-            {
-                services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
-            }
-            else
-            {
-                services.AddScoped<IDatabaseIntegrityVerifier, DisabledDatabaseIntegrityVerifier>();
-            }
-
+            services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
             services.AddScoped<DatabaseIntegrityDiagnosticsService>();
             services.AddScoped<FileGraphIntegrityVerifier>();
             services.AddSingleton<DatabaseIntegrityFailureReporter>();
@@ -118,10 +102,9 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<TempDirectoryProbe>();
             services.AddScoped<IStartupPreflightValidator, StartupPreflightValidator>();
             services.AddScoped<IStartupCheck, TempDirectoryStartupCheck>();
-            if (StartupTransitionValidationEnabled)
-            {
-                services.AddScoped<IStartupCheck, StartupTransitionValidator>();
-            }
+#pragma warning disable CS0618 // OBSOLETE TRANSITION: remove this registration with the 0.5 cutover guard.
+            services.AddScoped<Ctn2IntegrityTransitionStartupCheck>();
+#pragma warning restore CS0618
 
             return services;
         }

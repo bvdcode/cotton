@@ -10,15 +10,6 @@ namespace Cotton.Storage.Tests.Processors;
 [TestFixture]
 public class AesGcmStreamCipherInteropTests
 {
-    private const string BrowserTwoChunkContainerHex =
-        "43544e315400000020000000000000000100000001020304101112131415161718191a1b" +
-        "105a66b023aeb952c3b16a92055c1160dd5f3ab5ed6c9c1462dca2b6a3d4c7fc" +
-        "67e1fcbdaf77e1065f4058dce2e9ea64" +
-        "43544e3124000000100000000000000001000000063de420397031cdab567aa89be7f18d" +
-        "86d0074dab5ecff2aa2da23f6adee0ef" +
-        "43544e3124000000100000000000000001000000c5ef24a09009a9ed0ccc6edd0daa845f" +
-        "92687f5a3ed888916cd851a46a61f41e";
-
     private const string CottonSingleChunkContainerHex =
         "43544e325400000020000000000000000100000001020304101112131415161718191a1b" +
         "4f84036fe0e090e1b0b1e8b167429b33dd5f3ab5ed6c9c1462dca2b6a3d4c7fc" +
@@ -29,18 +20,6 @@ public class AesGcmStreamCipherInteropTests
 
     private static readonly byte[] Plaintext = Encoding.UTF8.GetBytes(
         "0123456789abcdefABCDEFGHIJKLMNOP");
-
-    [Test]
-    public async Task DecryptAsync_ReadsBrowserTwoChunkGoldenVector()
-    {
-        using var cipher = new AesGcmStreamCipher(MasterKeyBytes(), keyId: 1, threads: 1);
-        await using var input = new MemoryStream(Convert.FromHexString(BrowserTwoChunkContainerHex));
-        await using var output = new MemoryStream();
-
-        await cipher.DecryptAsync(input, output);
-
-        Assert.That(output.ToArray(), Is.EqualTo(Plaintext));
-    }
 
     [Test]
     public async Task EncryptAsync_WritesCottonSingleChunkGoldenVector()

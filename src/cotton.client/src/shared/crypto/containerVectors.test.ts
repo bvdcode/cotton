@@ -19,6 +19,7 @@ import { decryptBlobToBlob } from "./fileCipher";
 import { importMasterKey, wrapFileKey } from "./keys";
 import sharedVectors from "../../../../Cotton.Crypto.Tests/TestData/cotton-container-vectors.json";
 
+// OBSOLETE TRANSITION: these fixtures pin temporary browser-only CTN1 read compatibility.
 const GOLDEN_CONTAINER_HEX = sharedVectors.vectors.legacyCtn1TwoChunk.hex;
 const COTTON_CTN2_SINGLE_CHUNK_HEX =
   sharedVectors.vectors.cottonCtn2SingleChunk.hex;

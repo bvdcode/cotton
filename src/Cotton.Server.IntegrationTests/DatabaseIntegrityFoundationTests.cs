@@ -162,8 +162,7 @@ public class DatabaseIntegrityFoundationTests
         var signer = new DatabaseIntegrityChangeSigner(
             protector,
             new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance,
-            new DatabaseIntegrityRuntimeOptions(true, true));
+            NullDatabaseIntegrityFailureReporter.Instance);
         signer.SignPendingChanges(dbContext);
         DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
 
@@ -217,8 +216,28 @@ public class DatabaseIntegrityFoundationTests
         var signer = new DatabaseIntegrityChangeSigner(
             protector,
             new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance,
-            new DatabaseIntegrityRuntimeOptions(true, true));
+            NullDatabaseIntegrityFailureReporter.Instance);
+
+        Assert.Throws<DatabaseIntegrityException>(() => signer.SignPendingChanges(dbContext));
+    }
+
+    [Test]
+    public void ChangeSigner_RejectsModifiedEntityWhenOriginalIntegrityMetadataIsMissing()
+    {
+        DatabaseIntegrityProtector protector = CreateProtector();
+        var descriptor = new UserIntegrityDescriptor();
+        User user = CreateUser();
+
+        using CottonDbContext dbContext = CreateDbContext();
+        EntityEntry<User> entry = dbContext.Attach(user);
+        entry.State = EntityState.Unchanged;
+        user.Email = "alice.changed@example.test";
+        dbContext.ChangeTracker.DetectChanges();
+
+        var signer = new DatabaseIntegrityChangeSigner(
+            protector,
+            new DatabaseIntegrityDescriptorRegistry([descriptor]),
+            NullDatabaseIntegrityFailureReporter.Instance);
 
         Assert.Throws<DatabaseIntegrityException>(() => signer.SignPendingChanges(dbContext));
     }
@@ -244,8 +263,7 @@ public class DatabaseIntegrityFoundationTests
         var signer = new DatabaseIntegrityChangeSigner(
             protector,
             new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance,
-            new DatabaseIntegrityRuntimeOptions(true, true));
+            NullDatabaseIntegrityFailureReporter.Instance);
 
         Assert.DoesNotThrow(() => signer.SignPendingChanges(dbContext));
 

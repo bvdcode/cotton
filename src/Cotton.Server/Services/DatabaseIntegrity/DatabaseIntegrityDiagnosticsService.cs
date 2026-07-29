@@ -19,8 +19,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </remarks>
     public class DatabaseIntegrityDiagnosticsService(
         CottonDbContext _dbContext,
-        IDatabaseIntegrityDescriptorRegistry _descriptors,
-        DatabaseIntegrityRuntimeOptions _runtimeOptions)
+        IDatabaseIntegrityDescriptorRegistry _descriptors)
     {
         // Descriptors are discovered at runtime, while EF's Set<TEntity>() API is generic. Reflection is contained in this
         // adapter so descriptors can remain simple policy objects without knowing about DbSet plumbing.
@@ -37,16 +36,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         /// </summary>
         public async Task<DatabaseIntegrityDiagnosticsDto> GetSnapshotAsync(CancellationToken cancellationToken)
         {
-            if (!_runtimeOptions.ReadValidationEnabled)
-            {
-                return new DatabaseIntegrityDiagnosticsDto
-                {
-                    Enabled = false,
-                    ProtectedEntityTypes = _descriptors.All.Count,
-                    UnsignedProtectedRows = 0,
-                };
-            }
-
             int unsignedRows = 0;
             foreach (IDatabaseIntegrityDescriptor descriptor in _descriptors.All)
             {

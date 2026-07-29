@@ -53,7 +53,6 @@ public class InMemoryStorage : IStoragePipeline
         string uid,
         Stream stream,
         PipelineContext? context = null,
-        StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(uid);
