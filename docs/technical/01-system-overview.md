@@ -105,7 +105,7 @@ Frontend (`src/cotton.client/package.json`), built with **Vite** (`vite ^8.0.13`
 | PWA | vite-plugin-pwa | `^1.2.0` |
 | Previews | pdfjs-dist, hls.js, three / @react-three, heic2any, monaco-editor | various |
 
-> Crypto provenance. The runtime cipher is the **in-repo `Cotton.Crypto` project** (`src/Cotton.Crypto/AesGcmStreamCipher.cs`, `src/Cotton.Crypto/KeyDerivation.cs`), registered through `AddStreamCipher()` (`src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`) and constructed by `StreamCipherFactory` (`src/Cotton.Server/Services/StreamCipherFactory.cs`). `Cotton.Crypto` also owns the `IStreamCipher` contract and byte/string helpers. Legacy-format (`CTN1`) interop is validated by local golden vectors; the current format is `CTN2`. See the *Cryptography Engine* section for the authoritative description.
+> Crypto provenance. The runtime cipher is the **in-repo `Cotton.Crypto` project** (`src/Cotton.Crypto/AesGcmStreamCipher.cs`, `src/Cotton.Crypto/KeyDerivation.cs`), registered through `AddStreamCipher()` (`src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`) and constructed by `StreamCipherFactory` (`src/Cotton.Server/Services/StreamCipherFactory.cs`). `Cotton.Crypto` also owns the `IStreamCipher` contract and byte/string helpers. The server reads and writes only the authenticated `CTN2` format; temporary browser-only `CTN1` reads are deprecated. See the *Cryptography Engine* section for the authoritative description.
 
 ## Major Subsystems
 

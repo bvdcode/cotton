@@ -24,7 +24,7 @@ Per the README, the encryption core was conceived and built first, on the premis
 | `AesGcmStreamCipher` | `src/Cotton.Crypto/AesGcmStreamCipher.cs` | Public cipher. Implements `IStreamCipher` and `IDisposable`. Generates the per-file key + nonce prefix, wraps the file key, writes the file header, and drives the encrypt/decrypt pipelines. Holds the master key. |
 | `AesGcmStreamFormat` | `src/Cotton.Crypto/Internals/AesGcmStreamFormat.cs` | `internal static` helpers for nonce composition, AAD construction, header build/parse, and exact-length stream reads. |
 | `FileHeader`, `ChunkHeader` | `src/Cotton.Crypto/Internals/Headers.cs` | `internal readonly struct` layouts for the per-file header and per-chunk header, with `TryWrite`/`TryRead` and `ComputeLength`. |
-| `FormatConstants` | `src/Cotton.Crypto/Internals/FormatConstants.cs` | Magic bytes and format versions (`CTN1` legacy, `CTN2` current), version detection, and the terminator-required rule. |
+| `FormatConstants` | `src/Cotton.Crypto/Internals/FormatConstants.cs` | Current `CTN2` magic bytes and format version. |
 | `Tag128` | `src/Cotton.Crypto/Internals/Tag128.cs` | Allocation-free 128-bit GCM tag value type (two `ulong`s) with little-endian span conversion. |
 | `EncryptionPipeline` | `src/Cotton.Crypto/Internals/Pipelines/EncryptionPipeline.cs` | Producer → worker pool → ordered consumer for encryption; writes framed chunks and the end marker. |
 | `DecryptionPipeline` | `src/Cotton.Crypto/Internals/Pipelines/DecryptionPipeline.cs` | Producer (parse + read ciphertext) → worker pool → reorder writer for decryption; verifies the terminator and total length. |
@@ -60,7 +60,7 @@ Produced by `FileHeader.TryWrite` (`Headers.cs`). `FileHeader.ComputeLength(nonc
 
 | Offset | Size | Field | Notes |
 |---|---|---|---|
-| 0 | 4 | magic | `CTN2` (current) or `CTN1` (legacy) |
+| 0 | 4 | magic | `CTN2` |
 | 4 | 4 | header length | equals 84 for the current sizes; validated on read |
 | 8 | 8 | `TotalPlaintextLength` | total plaintext bytes if the input was seekable, else `0` |
 | 16 | 4 | `KeyId` | must match the configured key id on decrypt |
@@ -77,7 +77,7 @@ Produced by `ChunkHeader.TryWrite`. `ChunkHeader.ComputeLength(tagSize) = 4 + 4 
 
 | Offset | Size | Field | Notes |
 |---|---|---|---|
-| 0 | 4 | magic | `CTN2`/`CTN1` |
+| 0 | 4 | magic | `CTN2` |
 | 4 | 4 | header length | equals 36 |
 | 8 | 8 | `PlaintextLength` | length of this chunk's plaintext; `0` marks the authenticated terminator |
 | 16 | 4 | `KeyId` | must match the file's key id |
@@ -87,14 +87,7 @@ The ciphertext immediately follows its header and is exactly `PlaintextLength` b
 
 ### Format versions
 
-`FormatConstants` defines:
-
-| Constant | Value | Magic |
-|---|---|---|
-| `LegacyVersion` | 1 | `CTN1` (`"CTN1"u8`) |
-| `CurrentVersion` | 2 | `CTN2` (`"CTN2"u8`) |
-
-`CTN1` predates the authenticated terminator. `FormatConstants.RequiresAuthenticatedTerminator(formatVersion)` returns `true` for `formatVersion >= CurrentVersion` (i.e. `CTN2` and newer): a `CTN2` reader must see the zero-length MACed terminator and throws `EndOfStreamException` ("Encrypted stream ended before its authenticated terminator.") if the stream ends without it. `CTN1` blobs are treated as complete at transport EOF. New writes always emit `CTN2` (header and chunk headers default to `FormatConstants.CurrentVersion`). The format version is read from the file-header magic and threaded through to the decryption pipeline and per-chunk parsing: `ChunkHeader.TryRead` accepts an `expectedFormatVersion` and rejects a chunk whose magic does not match, so a reader fast-fails on mixed-version chunks.
+`FormatConstants.CurrentVersion` is `2` and `FormatConstants.MagicBytes` is `"CTN2"u8`. The server accepts no other stream version. Every encrypted stream must end with the zero-length authenticated terminator; EOF before it throws `EndOfStreamException` ("Encrypted stream ended before its authenticated terminator."). File and chunk headers both require the `CTN2` magic, so mixed or obsolete stream formats fail immediately.
 
 ### 12-byte nonce layout
 
@@ -110,8 +103,8 @@ The cipher binds metadata into GCM associated data so it is authenticated even t
 
 | Offset | Size | Field (source) |
 |---|---|---|
-| 0 | 4 | magic for the format version (`GetMagicBytes`) |
-| 4 | 4 | format version (`Int32`) |
+| 0 | 4 | `CTN2` magic |
+| 4 | 4 | format version `2` (`Int32`) |
 | 8 | 4 | `keyId` (`Int32`) |
 | 12 | 8 | chunk index (`Int64`) |
 | 20 | 8 | plaintext length of the chunk (`Int64`) |
@@ -197,8 +190,8 @@ sequenceDiagram
 
 `DecryptionPipeline.RunAsync`:
 
-- **`ProduceCoreAsync` / `TryReadAndPublishJobAsync`** read each chunk header. A zero-`PlaintextLength` header is treated as the terminator: `VerifyEndMarker` re-derives the AAD/nonce for that index and GCM-decrypts the empty record; on tag failure it throws `AuthenticationTagMismatchException` ("Stream terminator authentication failed."). It then calls `EnsureNoTrailingBytesAfterEndMarkerAsync` (seekable: `input.Position` must equal `input.Length`; non-seekable: a 1-byte probe read must return 0) to reject appended bytes with `InvalidDataException` ("Unexpected data after encrypted stream terminator."). For a data chunk, `ValidateDataChunkHeader` checks `KeyId` and `0 < PlaintextLength ≤ maxChunkSize` (and, for seekable input, that enough bytes remain), then `ReadCiphertextAsync` reads exactly `PlaintextLength` bytes (`ReadExactlyAsync`) and a `DecryptionJob` is published. If the stream ends without a terminator and the format requires one (`CTN2`), `TryReadAndPublishJobAsync` throws `EndOfStreamException`; for `CTN1` it simply stops at transport EOF.
-- **`StartWorkersAsync`** mirrors encryption: per-worker `AesGcm`, nonce buffer, and AAD (initialized with the stream's `formatVersion`). Each worker GCM-decrypts into a rented plaintext buffer; a `CryptographicException` is wrapped as `AuthenticationTagMismatchException` ("Chunk authentication failed."). The ciphertext (job) buffer is always recycled.
+- **`ProduceCoreAsync` / `TryReadAndPublishJobAsync`** read each chunk header. A zero-`PlaintextLength` header is treated as the terminator: `VerifyEndMarker` re-derives the AAD/nonce for that index and GCM-decrypts the empty record; on tag failure it throws `AuthenticationTagMismatchException` ("Stream terminator authentication failed."). It then calls `EnsureNoTrailingBytesAfterEndMarkerAsync` (seekable: `input.Position` must equal `input.Length`; non-seekable: a 1-byte probe read must return 0) to reject appended bytes with `InvalidDataException` ("Unexpected data after encrypted stream terminator."). For a data chunk, `ValidateDataChunkHeader` checks `KeyId` and `0 < PlaintextLength ≤ maxChunkSize` (and, for seekable input, that enough bytes remain), then `ReadCiphertextAsync` reads exactly `PlaintextLength` bytes (`ReadExactlyAsync`) and a `DecryptionJob` is published. EOF before the authenticated terminator throws `EndOfStreamException`.
+- **`StartWorkersAsync`** mirrors encryption: per-worker `AesGcm`, nonce buffer, and CTN2 AAD. Each worker GCM-decrypts into a rented plaintext buffer; a `CryptographicException` is wrapped as `AuthenticationTagMismatchException` ("Chunk authentication failed."). The ciphertext (job) buffer is always recycled.
 - **`ConsumeAsync`** drives a private nested `ReorderWriter` (a growable ring buffer) that writes plaintext to the output strictly in index order, accumulating `TotalWritten`. Duplicate indices (`result.Index < _nextToWrite`) throw `InvalidDataException` ("Duplicate chunk index detected…") and ring-slot collisions throw `InvalidDataException` ("Reorder buffer slot collision…").
 - After all stages complete (and a cancellation re-check), if `strictLength` is enabled and the header recorded a positive `TotalPlaintextLength`, the pipeline throws `InvalidDataException` ("Decrypted length mismatch. Expected: … Actual: …") unless `written == expectedTotal`.
 

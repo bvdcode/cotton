@@ -114,7 +114,7 @@ Important guards:
 
 #### Database-integrity strict mode
 
-`DatabaseIntegrityDiagnosticsService.GetSnapshotAsync` returns a DTO with `Enabled = true` and **`BridgeBackfillEnabled = false` hardcoded**. `UnsignedProtectedRows` is a live count, summed across every registered descriptor, of protected rows whose MAC property (`IntegrityMac` column, `DatabaseIntegrityColumns.MacProperty`) is null or whose version property (`IntegrityVersion`, `DatabaseIntegrityColumns.VersionProperty`) differs from the descriptor `SchemaVersion`. Those rows are hard failures at read boundaries and during save-time original-state verification. `ProtectedEntityTypes` is the count of descriptors in `IDatabaseIntegrityDescriptorRegistry.All` (currently 14). See the *Database Integrity* section for the signing model and the startup transition guard that blocks unsafe upgrades before normal traffic is served.
+`DatabaseIntegrityDiagnosticsService.GetSnapshotAsync` returns a DTO with `Enabled = true`. `UnsignedProtectedRows` is a live count, summed across every registered descriptor, of protected rows whose MAC property (`IntegrityMac` column, `DatabaseIntegrityColumns.MacProperty`) is null or whose version property (`IntegrityVersion`, `DatabaseIntegrityColumns.VersionProperty`) differs from the descriptor `SchemaVersion`. Those rows are hard failures at read boundaries and during save-time original-state verification. `ProtectedEntityTypes` is the count of descriptors in `IDatabaseIntegrityDescriptorRegistry.All` (currently 14). See the *Database Integrity* section for the signing model and the temporary state-based startup guard that blocks unsafe upgrades before normal traffic is served.
 
 ### SecurityDiagnosticsDto shape
 
@@ -134,7 +134,7 @@ Important guards:
 | `LinuxProcess` | `LinuxProcessSecurityDto` | hardening status + procfs facts |
 | `LinuxContainer` | `LinuxContainerSecurityDto` | container boundary facts |
 | `AdminTotp` | `AdminTotpDiagnosticsDto` | `AdminCount`, `AdminsWithTotp`, `AdminsWithoutTotp` |
-| `DatabaseIntegrity` | `DatabaseIntegrityDiagnosticsDto` | `Enabled`, `BridgeBackfillEnabled`, `ProtectedEntityTypes`, `UnsignedProtectedRows` |
+| `DatabaseIntegrity` | `DatabaseIntegrityDiagnosticsDto` | `Enabled`, `ProtectedEntityTypes`, `UnsignedProtectedRows` |
 | `Warnings` | `IReadOnlyList<SecurityDiagnosticWarningDto>` | the catalog above |
 
 `LinuxProcessSecurityDto` carries `HardeningRequested`, `HardeningApplied`, `HardeningError`, `Dumpable` (`int?`), `EffectiveUserId` (`uint?`), `RunningAsRoot` (`bool?`), `NoNewPrivileges` (`int?`), `SeccompMode` (`int?`), `SeccompFilters` (`int?`), `EffectiveCapabilitiesHex` (`string?`), `HasSysPtraceCapability` (`bool?`). `LinuxContainerSecurityDto` carries `RootFilesystemReadOnly` (`bool?`), `DockerSocketMounted` (`bool`), `HostPidNamespaceLikely` (`bool?`), `ProcOneCommandLine` (`string?`), `CoreDumpSoftLimit`/`CoreDumpHardLimit` (strings, e.g. `"unlimited"`), `CoreDumpSoftLimitDisabled` (`bool?`), `CorePattern` (`string?`), `AppArmorProfile` (`string?`), `SelinuxContext` (`string?`), `SelinuxEnforcing` (`bool?`). `SecurityDiagnosticWarningDto` is a class with `Code`, `Severity`, and `Message` strings.

@@ -65,7 +65,7 @@ flowchart LR
 | `DatabaseIntegrityFailure` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityFailure.cs` | record | Immutable failure event |
 | `DatabaseIntegrityException` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityException.cs` | exception | Thrown when a row fails verification |
 | `DatabaseIntegrityDiagnosticsService` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityDiagnosticsService.cs` | scoped | Coverage/rollout counts for security check-up |
-| `StartupTransitionValidator` | `src/Cotton.Server/Services/Startup/StartupTransitionValidator.cs` | scoped | Blocks unsafe version jumps before the app starts serving |
+| `Ctn2IntegrityTransitionStartupCheck` | `src/Cotton.Server/Services/Startup/Ctn2IntegrityTransitionStartupCheck.cs` | scoped | Temporary state-based guard for the 0.5 cutover |
 | `StartupBlockedServer` | `src/Cotton.Server/Services/Startup/StartupBlockedServer.cs` | static | Serves the SPA and startup status endpoint when startup is blocked |
 
 DI registration lives in `AddDatabaseIntegrity()` in `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`, called from `src/Cotton.Server/Program.cs`. Note the lifetimes: the key provider, protector, registry, and all descriptors are **singletons** (stateless or holding the immutable key); the signer, verifier, diagnostics, and `FileGraphIntegrityVerifier` are **scoped** (they touch the per-request `CottonDbContext`). The failure reporter is registered once as a concrete singleton (`DatabaseIntegrityFailureReporter`), re-exposed as `IDatabaseIntegrityFailureReporter` resolving to the same instance, and registered a third time via `AddHostedService` so its background drain loop runs.
@@ -302,20 +302,23 @@ As the class remarks note, folder *listing* does not walk every child signature 
 
 ## Startup transition guard
 
-Strict integrity releases do not sign unsigned legacy rows at startup. They expect the transition release to have already run long enough to create trustworthy signatures. `StartupTransitionValidator` runs before the normal app starts serving and evaluates code-defined rules against the recorded application version history in `app_versions`.
+Strict integrity releases never manufacture trust by signing unsigned legacy rows during startup. The temporary, `[Obsolete]` `Ctn2IntegrityTransitionStartupCheck` runs after migrations and any automatic database restore, then validates the state that will actually be served. It does not inspect `APP_VERSION` or `app_versions`, so stable and development versioning cannot bypass it.
 
-The current rule blocks stable `0.5.0` and newer unless the database has evidence of a prior `0.4.33` run below `0.5.0`. This keeps clean installs available, avoids applying the stable rule to prerelease builds such as `0.5.0-alpha.*`, and gives operators a direct message instead of letting the first protected read fail later.
+An empty database is allowed. A non-empty database is allowed only when every protected row has the current integrity metadata and durable storage contains the completion marker written by the 0.4.35 CTN2/integrity rewrite. A missing schema, unsigned or obsolete row, or missing marker blocks startup with instructions to run 0.4.35 against the same database, storage, and master key. The guard and marker contract are transition-only code and must be removed together after the supported upgrade window closes.
 
 When a rule blocks startup, Cotton disposes the normal host and starts `StartupBlockedServer`. That server serves the SPA, exposes `GET /api/v1/startup/status`, returns HTTP 503 for other API calls, and lets the frontend show the rule-provided title, message, current version, required version range, and last recorded database version.
 
 ```mermaid
 flowchart TD
-    Start[Startup] --> Validate[Validate startup transition rules]
-    Validate --> Clean{clean database?}
+    Start[Startup] --> Migrate[apply migrations and automatic restore]
+    Migrate --> Validate[validate actual transition state]
+    Validate --> Clean{database empty?}
     Clean -- yes --> Run[run normal app]
-    Clean -- no --> Required{required prior version found?}
-    Required -- yes --> Run
-    Required -- no --> Block[start blocked server]
+    Clean -- no --> Signed{all protected rows current?}
+    Signed -- no --> Block[start blocked server]
+    Signed -- yes --> Marker{durable completion marker exists?}
+    Marker -- yes --> Run
+    Marker -- no --> Block
     Block --> Status[GET /api/v1/startup/status]
     Status --> Spa[frontend blocked screen]
 ```
@@ -339,12 +342,11 @@ When a read boundary (or the save-time original-state check, or the file-graph v
 
 ## Diagnostics
 
-`DatabaseIntegrityDiagnosticsService.GetSnapshotAsync` produces a `DatabaseIntegrityDiagnosticsDto` (declared in `src/Cotton.Server/Models/Dto/SecurityDiagnosticsDto.cs`) for the admin security check-up. It deliberately **counts metadata state rather than recomputing MACs** — folders and admin screens can hold tens of thousands of rows, and full verification stays on the trust boundaries. For each descriptor it counts rows where MAC is `NULL` *or* version ≠ `SchemaVersion` (via the reflected `CountUnsignedRowsCoreAsync<TEntity>`), and returns:
+`DatabaseIntegrityDiagnosticsService.GetSnapshotAsync` produces a `DatabaseIntegrityDiagnosticsDto` (declared in `src/Cotton.Server/Models/Dto/DatabaseIntegrityDiagnosticsDto.cs`) for the admin security check-up. It deliberately **counts metadata state rather than recomputing MACs** — folders and admin screens can hold tens of thousands of rows, and full verification stays on the trust boundaries. For each descriptor it counts rows where MAC is `NULL` *or* version ≠ `SchemaVersion` (via the reflected `CountUnsignedRowsCoreAsync<TEntity>`), and returns:
 
 | Field | Value in current code |
 |---|---|
 | `Enabled` | `true` (hardcoded) |
-| `BridgeBackfillEnabled` | `false` (hardcoded) |
 | `ProtectedEntityTypes` | `_descriptors.All.Count` (14) |
 | `UnsignedProtectedRows` | summed unsigned/mis-versioned row count |
 

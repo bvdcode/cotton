@@ -300,7 +300,7 @@ Writes flow through the storage pipeline **compression → crypto → backend** 
 - `src/cotton.client` — React/TypeScript/Vite frontend.
 - `docs/technical/` — full engineering documentation (28 sections).
 
-> Note: the runtime cipher and stream-cipher helpers are implemented in the in-repo `Cotton.Crypto` project. Legacy stream-format (`CTN1`) interop is covered by local golden vectors; the current format is `CTN2`.
+> Note: the runtime cipher and stream-cipher helpers are implemented in the in-repo `Cotton.Crypto` project. The server reads and writes only the authenticated `CTN2` stream format; temporary browser-only `CTN1` read compatibility remains deprecated.
 
 ---
 

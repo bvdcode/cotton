@@ -126,7 +126,7 @@ Versions below are exactly as pinned in the `.csproj` files. Note the minor vers
 | `Microsoft.Extensions.DependencyInjection` / `.Logging` / `.Logging.Console` | 10.0.8 | Benchmark | DI + console logging host for the benchmark console app. |
 | `Microsoft.SourceLink.GitHub` | 10.0.300 | Shared | Source Link for the published NuGet symbols. |
 
-> Crypto provenance note: The cipher, `IStreamCipher` contract, and byte/string helpers are implemented **in-repo** in `Cotton.Crypto` (`src/Cotton.Crypto/AesGcmStreamCipher.cs`). `Cotton.Crypto.csproj` has no NuGet package references, and legacy `CTN1` interop is validated with local golden vectors; the current format is `CTN2` (see `LegacyMagicBytes => "CTN1"u8` / `CurrentMagicBytes => "CTN2"u8`). FFmpeg integration is via `Xabe.FFmpeg` (no `FFMpegCore` reference exists in any `.csproj`). See the *Cryptography Engine* section for details.
+> Crypto provenance note: The cipher, `IStreamCipher` contract, and byte/string helpers are implemented **in-repo** in `Cotton.Crypto` (`src/Cotton.Crypto/AesGcmStreamCipher.cs`). `Cotton.Crypto.csproj` has no NuGet package references, and the server accepts only the authenticated `CTN2` stream format. FFmpeg integration is via `Xabe.FFmpeg` (no `FFMpegCore` reference exists in any `.csproj`). See the *Cryptography Engine* section for details.
 
 ## The plugin abstraction
 
@@ -350,7 +350,7 @@ The `Cotton.Shared` `.csproj` also carries the NuGet packaging metadata: `Packag
 
 ## Related sections
 
-- See the *Cryptography Engine* section for the in-repo `Cotton.Crypto` AES-GCM cipher, key derivation, and the `CTN2` (current) / `CTN1` (legacy) stream formats.
+- See the *Cryptography Engine* section for the in-repo `Cotton.Crypto` AES-GCM cipher, key derivation, and authenticated `CTN2` stream format.
 - See the *Storage Pipeline* section for `Cotton.Storage` processors (compression → crypto), backends, and the storage pipeline probe surfaced in `TelemetryRequest`.
 - See the *Layout & Topology* section for `Cotton.Topology` services.
 - See the *Data Model & Persistence* section for `Cotton.Database` (EF Core + Npgsql).
