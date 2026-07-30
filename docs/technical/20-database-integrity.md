@@ -64,9 +64,8 @@ flowchart LR
 | `NullDatabaseIntegrityFailureReporter` | `src/Cotton.Server/Services/DatabaseIntegrity/NullDatabaseIntegrityFailureReporter.cs` | singleton | No-op fallback reporter |
 | `DatabaseIntegrityFailure` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityFailure.cs` | record | Immutable failure event |
 | `DatabaseIntegrityException` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityException.cs` | exception | Thrown when a row fails verification |
+| `DatabaseIntegritySignatureMissingException` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegritySignatureMissingException.cs` | exception | Temporary 0.5 cutover error for unsigned legacy rows |
 | `DatabaseIntegrityDiagnosticsService` | `src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityDiagnosticsService.cs` | scoped | Coverage/rollout counts for security check-up |
-| `Ctn2IntegrityTransitionStartupCheck` | `src/Cotton.Server/Services/Startup/Ctn2IntegrityTransitionStartupCheck.cs` | scoped | Temporary state-based guard for the 0.5 cutover |
-| `StartupBlockedServer` | `src/Cotton.Server/Services/Startup/StartupBlockedServer.cs` | static | Serves the SPA and startup status endpoint when startup is blocked |
 
 DI registration lives in `AddDatabaseIntegrity()` in `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`, called from `src/Cotton.Server/Program.cs`. Note the lifetimes: the key provider, protector, registry, and all descriptors are **singletons** (stateless or holding the immutable key); the signer, verifier, diagnostics, and `FileGraphIntegrityVerifier` are **scoped** (they touch the per-request `CottonDbContext`). The failure reporter is registered once as a concrete singleton (`DatabaseIntegrityFailureReporter`), re-exposed as `IDatabaseIntegrityFailureReporter` resolving to the same instance, and registered a third time via `AddHostedService` so its background drain loop runs.
 
@@ -185,7 +184,7 @@ It is keyed only via `IDatabaseIntegrityKeyProvider`; it has no knowledge of EF,
 
 `CottonDbContext` overrides all four `SaveChanges`/`SaveChangesAsync` overloads to call `integrityChangeSigner?.SignPendingChanges(this)` *before* `base.SaveChanges*` (`src/Cotton.Database/CottonDbContext.cs`, lines 63–90). The signer is an optional constructor dependency (`IDatabaseIntegrityChangeSigner? integrityChangeSigner = null`), so the database project compiles and tests run without the server's implementation; when it is null, signing is silently skipped. In the server composition it is wired as a scoped service.
 
-`OnModelCreating` registers the two shadow properties for all 14 protected entity types via `ConfigureIntegrityShadowProperties<TEntity>` (`int?` → `integrity_version`, `byte[]?` → `integrity_mac`).
+`OnModelCreating` registers the two shadow properties for all 15 protected entity types via `ConfigureIntegrityShadowProperties<TEntity>` (`int?` → `integrity_version`, `byte[]?` → `integrity_mac`).
 
 `DatabaseIntegrityChangeSigner.SignPendingChanges` walks the change tracker and, for each `Added` or `Modified` entry that (a) has a registered descriptor and (b) actually has the integrity shadow properties on its EF metadata:
 
@@ -300,36 +299,22 @@ Callers of the file-graph verifier:
 
 As the class remarks note, folder *listing* does not walk every child signature — verification happens only when Cotton actually opens a specific file, archive entry, preview, or stream.
 
-## Startup transition guard
+## Strict 0.5 cutover
 
-Strict integrity releases never manufacture trust by signing unsigned legacy rows during startup. The temporary, `[Obsolete]` `Ctn2IntegrityTransitionStartupCheck` runs after migrations and any automatic database restore, then validates the state that will actually be served. It does not inspect `APP_VERSION` or `app_versions`, so stable and development versioning cannot bypass it.
+Strict releases never manufacture trust by signing unsigned legacy rows during startup. Version 0.5 has no rewrite job, completion marker, or migration-specific startup server. It enforces the new state at the boundaries where legacy data is actually encountered.
 
-An empty database is allowed. A non-empty database is allowed only when every protected row has the current integrity metadata and durable storage contains the completion marker written by the 0.4.35 CTN2/integrity rewrite. A missing schema, unsigned or obsolete row, or missing marker blocks startup with instructions to run 0.4.35 against the same database, storage, and master key. The guard and marker contract are transition-only code and must be removed together after the supported upgrade window closes.
+- The stream decryptor recognizes only the `CTN1` file magic and throws the temporary `Ctn1NotSupportedException` with instructions to start Cotton 0.4.35 against the same database, storage, and master key.
+- `DatabaseIntegrityVerifier` and `DatabaseIntegrityChangeSigner` distinguish absent integrity metadata from a present but invalid signature. Missing MAC/version metadata throws the temporary `DatabaseIntegritySignatureMissingException` with the same 0.4.35 instruction. A present signature that does not verify remains a `DatabaseIntegrityException`, because it represents corruption or tampering rather than an incomplete transition.
 
-When a rule blocks startup, Cotton disposes the normal host and starts `StartupBlockedServer`. That server serves the SPA, exposes `GET /api/v1/startup/status`, returns HTTP 503 for other API calls, and lets the frontend show the rule-provided title, message, current version, required version range, and last recorded database version.
-
-```mermaid
-flowchart TD
-    Start[Startup] --> Migrate[apply migrations and automatic restore]
-    Migrate --> Validate[validate actual transition state]
-    Validate --> Clean{database empty?}
-    Clean -- yes --> Run[run normal app]
-    Clean -- no --> Signed{all protected rows current?}
-    Signed -- no --> Block[start blocked server]
-    Signed -- yes --> Marker{durable completion marker exists?}
-    Marker -- yes --> Run
-    Marker -- no --> Block
-    Block --> Status[GET /api/v1/startup/status]
-    Status --> Spa[frontend blocked screen]
-```
+Both transition exceptions and their narrow detection branches are marked `[Obsolete]` for removal after the 0.5 cutover window. No CTN1 decryption or unsigned-row backfill remains in 0.5.
 
 ## Failure handling and admin notification
 
-When a read boundary (or the save-time original-state check, or the file-graph verifier) detects tampering, two things happen: a `DatabaseIntegrityException` is thrown (failing the request — it propagates through `app.UseExceptionHandler()`, registered in `Program.cs`), and a `DatabaseIntegrityFailure` is reported asynchronously to admins.
+When a read boundary (or the save-time original-state check, or the file-graph verifier) detects tampering, two things happen: an integrity exception is thrown (failing the request — it propagates through `app.UseExceptionHandler()`, registered in `Program.cs`), and a `DatabaseIntegrityFailure` is reported asynchronously to admins.
 
 `DatabaseIntegrityFailure` is an immutable record of `(string EntityName, string EntityKey, string Boundary, DateTime DetectedAtUtc)`.
 
-`DatabaseIntegrityException(entityName, entityKey)` carries those identifiers and a message of the form `Database integrity verification failed for {entityName} '{entityKey}'.`. There is no integrity-specific exception handler — it flows through the generic exception handler like any unhandled exception, so the failing request fails. The exception message intentionally identifies the entity/row but not the failed field.
+`DatabaseIntegrityException(entityName, entityKey)` carries those identifiers and a message of the form `Database integrity verification failed for {entityName} '{entityKey}'.`. When the MAC or version is absent rather than invalid, the verifier or change signer throws `DatabaseIntegritySignatureMissingException` with the Cotton 0.4.35 transition instruction. There is no integrity-specific exception handler; both flow through the generic exception handler like any unhandled exception.
 
 `DatabaseIntegrityFailureReporter` (a `BackgroundService` that is also the `IDatabaseIntegrityFailureReporter` singleton) must never become a second failure mode for authentication, so reporting is decoupled from the request:
 
@@ -347,14 +332,14 @@ When a read boundary (or the save-time original-state check, or the file-graph v
 | Field | Value in current code |
 |---|---|
 | `Enabled` | `true` (hardcoded) |
-| `ProtectedEntityTypes` | `_descriptors.All.Count` (14) |
+| `ProtectedEntityTypes` | `_descriptors.All.Count` (15) |
 | `UnsignedProtectedRows` | summed unsigned/mis-versioned row count |
 
 `SecurityDiagnosticsService` (`src/Cotton.Server/Services/SecurityDiagnosticsService.cs`) consumes this via `AddDatabaseIntegrityWarnings` and emits a **critical** `db-integrity-unsigned-rows` warning when `UnsignedProtectedRows > 0`. Operators should restore the affected rows from a trusted backup or run the required transition version before upgrading.
 
 ## Schema and migrations
 
-The `integrity_mac` (`bytea`, nullable) and `integrity_version` (`integer`, nullable) columns are added to all 14 protected tables across the following migrations (no separate index or constraint is created):
+The `integrity_mac` (`bytea`, nullable) and `integrity_version` (`integer`, nullable) columns are added to all 15 protected tables across the following migrations (no separate index or constraint is created):
 
 | Migration | Tables |
 |---|---|

@@ -87,7 +87,7 @@ The ciphertext immediately follows its header and is exactly `PlaintextLength` b
 
 ### Format versions
 
-`FormatConstants.CurrentVersion` is `2` and `FormatConstants.MagicBytes` is `"CTN2"u8`. The server accepts no other stream version. Every encrypted stream must end with the zero-length authenticated terminator; EOF before it throws `EndOfStreamException` ("Encrypted stream ended before its authenticated terminator."). File and chunk headers both require the `CTN2` magic, so mixed or obsolete stream formats fail immediately.
+`FormatConstants.CurrentVersion` is `2` and `FormatConstants.MagicBytes` is `"CTN2"u8`. The server accepts no other stream version. Every encrypted stream must end with the zero-length authenticated terminator; EOF before it throws `EndOfStreamException` ("Encrypted stream ended before its authenticated terminator."). A file beginning with the obsolete `CTN1` magic throws the temporary `Ctn1NotSupportedException`, which instructs the operator to complete the transition on Cotton 0.4.35. Other invalid file magic and mixed-format chunk headers remain ordinary corruption errors.
 
 ### 12-byte nonce layout
 
