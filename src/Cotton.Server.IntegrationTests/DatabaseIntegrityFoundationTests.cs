@@ -170,7 +170,7 @@ public class DatabaseIntegrityFoundationTests
     }
 
     [Test]
-    public void Verifier_RejectsUnsignedProtectedEntity()
+    public void Verifier_ReportsRequiredTransitionVersionForUnsignedProtectedEntity()
     {
         DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new UserIntegrityDescriptor();
@@ -180,8 +180,33 @@ public class DatabaseIntegrityFoundationTests
         dbContext.Attach(user);
         DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
 
-        Assert.Throws<DatabaseIntegrityException>(() =>
+#pragma warning disable CS0618 // OBSOLETE TRANSITION: pin the operator-facing unsigned-row cutover error.
+        DatabaseIntegritySignatureMissingException? exception = Assert.Throws<DatabaseIntegritySignatureMissingException>(() =>
             verifier.RequireValid(dbContext, user, "test.unsigned"));
+#pragma warning restore CS0618
+
+        Assert.That(exception!.Message, Does.Contain("Cotton 0.4.35"));
+    }
+
+    [Test]
+    public void Verifier_RejectsInvalidSignatureAsIntegrityFailure()
+    {
+        DatabaseIntegrityProtector protector = CreateProtector();
+        var descriptor = new UserIntegrityDescriptor();
+        User user = CreateUser();
+
+        using CottonDbContext dbContext = CreateDbContext();
+        dbContext.Users.Add(user);
+        var signer = new DatabaseIntegrityChangeSigner(
+            protector,
+            new DatabaseIntegrityDescriptorRegistry([descriptor]),
+            NullDatabaseIntegrityFailureReporter.Instance);
+        signer.SignPendingChanges(dbContext);
+        user.Role = UserRole.Admin;
+        DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
+
+        Assert.Throws<DatabaseIntegrityException>(() =>
+            verifier.RequireValid(dbContext, user, "test.invalid-signature"));
     }
 
     [Test]
@@ -222,7 +247,7 @@ public class DatabaseIntegrityFoundationTests
     }
 
     [Test]
-    public void ChangeSigner_RejectsModifiedEntityWhenOriginalIntegrityMetadataIsMissing()
+    public void ChangeSigner_ReportsRequiredTransitionVersionWhenOriginalIntegrityMetadataIsMissing()
     {
         DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new UserIntegrityDescriptor();
@@ -239,7 +264,12 @@ public class DatabaseIntegrityFoundationTests
             new DatabaseIntegrityDescriptorRegistry([descriptor]),
             NullDatabaseIntegrityFailureReporter.Instance);
 
-        Assert.Throws<DatabaseIntegrityException>(() => signer.SignPendingChanges(dbContext));
+#pragma warning disable CS0618 // OBSOLETE TRANSITION: pin the operator-facing unsigned-row cutover error.
+        DatabaseIntegritySignatureMissingException? exception =
+            Assert.Throws<DatabaseIntegritySignatureMissingException>(() => signer.SignPendingChanges(dbContext));
+#pragma warning restore CS0618
+
+        Assert.That(exception!.Message, Does.Contain("Cotton 0.4.35"));
     }
 
     [Test]

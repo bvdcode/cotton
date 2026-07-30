@@ -107,6 +107,13 @@ namespace Cotton.Crypto.Internals
                 await ReadExactlyAsync(input, headerPrefix, 8, ct).ConfigureAwait(false);
                 if (!headerPrefix.AsSpan(0, 4).SequenceEqual(FormatConstants.MagicBytes))
                 {
+                    if (headerPrefix.AsSpan(0, 4).SequenceEqual("CTN1"u8))
+                    {
+#pragma warning disable CS0618 // OBSOLETE TRANSITION: preserve a precise CTN1 upgrade error during the 0.5 cutover.
+                        throw new Ctn1NotSupportedException();
+#pragma warning restore CS0618
+                    }
+
                     throw new InvalidDataException("Invalid file format: magic header not found.");
                 }
                 int headerLength = BinaryPrimitives.ReadInt32LittleEndian(headerPrefix.AsSpan(4));

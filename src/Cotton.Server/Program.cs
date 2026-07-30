@@ -226,8 +226,10 @@ namespace Cotton.Server
 
             WebApplication app = builder.Build();
             StartupBlocker? startupBlocker = await ValidateStartupAsync(app);
-            if (await TryRunStartupBlockedServerAsync(app, args, startupBlocker))
+            if (startupBlocker is not null)
             {
+                await app.DisposeAsync();
+                await StartupBlockedServer.RunAsync(args, startupBlocker);
                 return;
             }
 
@@ -242,24 +244,11 @@ namespace Cotton.Server
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
             app.ApplyMigrations<CottonDbContext>();
-            StartupBlocker? transitionBlocker;
             using (IServiceScope scope = app.Services.CreateScope())
             {
                 IDatabaseAutoRestoreService autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
                 autoRestore.TryRestoreIfEmptyAsync().GetAwaiter().GetResult();
-#pragma warning disable CS0618 // OBSOLETE TRANSITION: remove this check after the 0.5 upgrade window.
-                Ctn2IntegrityTransitionStartupCheck transitionCheck = scope.ServiceProvider
-                    .GetRequiredService<Ctn2IntegrityTransitionStartupCheck>();
-#pragma warning restore CS0618
-                transitionBlocker = await transitionCheck.ValidateAsync(CancellationToken.None);
-                if (transitionBlocker is null)
-                {
-                    scope.ServiceProvider.GetRequiredService<SettingsProvider>().GetServerSettings();
-                }
-            }
-            if (await TryRunStartupBlockedServerAsync(app, args, transitionBlocker))
-            {
-                return;
+                scope.ServiceProvider.GetRequiredService<SettingsProvider>().GetServerSettings();
             }
             app.MapHub<EventHub>(Routes.V1.EventHub);
             await app.RunAsync();
@@ -270,21 +259,6 @@ namespace Cotton.Server
             using IServiceScope scope = app.Services.CreateScope();
             IStartupPreflightValidator validator = scope.ServiceProvider.GetRequiredService<IStartupPreflightValidator>();
             return await validator.ValidateAsync(CancellationToken.None);
-        }
-
-        private static async Task<bool> TryRunStartupBlockedServerAsync(
-            WebApplication app,
-            string[] args,
-            StartupBlocker? blocker)
-        {
-            if (blocker is null)
-            {
-                return false;
-            }
-
-            await app.DisposeAsync();
-            await StartupBlockedServer.RunAsync(args, blocker);
-            return true;
         }
     }
 }

@@ -26,15 +26,19 @@ public class GoldenVectorsTests
     }
 
     [Test]
-    public void Shared_Ctn1Vector_IsRejected()
+    public void Shared_Ctn1Vector_ReportsRequiredTransitionVersion()
     {
         SharedContainerVectors vectors = LoadSharedContainerVectors();
         using var cipher = new AesGcmStreamCipher(vectors.MasterKey, keyId: 1, threads: 1);
         using var input = new MemoryStream(vectors.Ctn1TwoChunk, writable: false);
         using var output = new MemoryStream();
 
-        Assert.ThrowsAsync<InvalidDataException>(
+#pragma warning disable CS0618 // OBSOLETE TRANSITION: pin the operator-facing CTN1 cutover error.
+        Ctn1NotSupportedException? exception = Assert.ThrowsAsync<Ctn1NotSupportedException>(
             async () => await cipher.DecryptAsync(input, output));
+#pragma warning restore CS0618
+
+        Assert.That(exception!.Message, Does.Contain("Cotton 0.4.35"));
     }
 
     [Test]

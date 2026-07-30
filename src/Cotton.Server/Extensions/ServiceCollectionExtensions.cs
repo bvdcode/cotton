@@ -102,9 +102,6 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<TempDirectoryProbe>();
             services.AddScoped<IStartupPreflightValidator, StartupPreflightValidator>();
             services.AddScoped<IStartupCheck, TempDirectoryStartupCheck>();
-#pragma warning disable CS0618 // OBSOLETE TRANSITION: remove this registration with the 0.5 cutover guard.
-            services.AddScoped<Ctn2IntegrityTransitionStartupCheck>();
-#pragma warning restore CS0618
 
             return services;
         }

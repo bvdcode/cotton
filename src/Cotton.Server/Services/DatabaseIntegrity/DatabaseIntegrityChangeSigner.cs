@@ -115,6 +115,14 @@ namespace Cotton.Server.Services.DatabaseIntegrity
                 entityKey,
                 "save.original-state",
                 DateTime.UtcNow));
+
+            if (versionValue is not int || macValue is not byte[])
+            {
+#pragma warning disable CS0618 // OBSOLETE TRANSITION: preserve a precise unsigned-row upgrade error during the 0.5 cutover.
+                throw new DatabaseIntegritySignatureMissingException(descriptor.EntityName, entityKey);
+#pragma warning restore CS0618
+            }
+
             throw new DatabaseIntegrityException(descriptor.EntityName, entityKey);
         }
     }

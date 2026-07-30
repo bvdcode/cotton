@@ -48,10 +48,24 @@ namespace Cotton.Server.Services.DatabaseIntegrity
 
             object? versionValue = entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue;
             object? macValue = entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue;
-            if (versionValue is not int version
-                || version != descriptor.SchemaVersion
-                || macValue is not byte[] mac
-                || !_protector.Verify(entity, descriptor, mac))
+            if (versionValue is not int || macValue is not byte[])
+            {
+                ReportFailure(descriptor, entity, boundary);
+                _logger.LogError(
+                    "Database integrity signature is missing for {EntityName} {EntityKey} at {Boundary}.",
+                    descriptor.EntityName,
+                    descriptor.GetEntityKey(entity),
+                    boundary);
+#pragma warning disable CS0618 // OBSOLETE TRANSITION: preserve a precise unsigned-row upgrade error during the 0.5 cutover.
+                throw new DatabaseIntegritySignatureMissingException(
+                    descriptor.EntityName,
+                    descriptor.GetEntityKey(entity));
+#pragma warning restore CS0618
+            }
+
+            int version = (int)versionValue;
+            byte[] mac = (byte[])macValue;
+            if (version != descriptor.SchemaVersion || !_protector.Verify(entity, descriptor, mac))
             {
                 ReportFailure(descriptor, entity, boundary);
                 _logger.LogError(
