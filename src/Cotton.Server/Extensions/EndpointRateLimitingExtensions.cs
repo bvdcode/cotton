@@ -45,8 +45,11 @@ namespace Cotton.Server.Extensions
                 AuthRateLimitPolicies.Refresh,
                 new FixedWindowEndpointPolicy(GetRemoteAddressPartition, 60));
             options.AddPolicy(
+                AuthRateLimitPolicies.PublicShareLookup,
+                new FixedWindowEndpointPolicy(GetRemoteAddressPartition, 60));
+            options.AddPolicy(
                 AuthRateLimitPolicies.PublicShareArchive,
-                new FixedWindowEndpointPolicy(GetPublicShareArchivePartition, 5));
+                new FixedWindowEndpointPolicy(GetRemoteAddressPartition, 5));
         }
 
         internal static async ValueTask WriteEndpointRateLimitRejectionAsync(
@@ -63,14 +66,6 @@ namespace Cotton.Server.Extensions
                 StatusCode = HttpStatusCode.TooManyRequests,
             };
             await context.HttpContext.Response.WriteAsJsonAsync(result, cancellationToken);
-        }
-
-        private static string GetPublicShareArchivePartition(HttpContext httpContext)
-        {
-            string token = httpContext.Request.RouteValues.TryGetValue("token", out object? routeToken)
-                ? routeToken?.ToString() ?? "unknown"
-                : "unknown";
-            return $"{GetRemoteAddressPartition(httpContext)}:{token}";
         }
 
         private static string GetRemoteAddressPartition(HttpContext httpContext)

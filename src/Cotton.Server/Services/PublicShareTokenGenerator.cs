@@ -13,7 +13,7 @@ namespace Cotton.Server.Services
         /// <summary>
         /// Length of an automatically generated public share token.
         /// </summary>
-        public const int TokenLength = 8;
+        public const int TokenLength = 16;
 
         private const string Alphabet = "abcdefghijklmnopqrstuvwxyz";
 

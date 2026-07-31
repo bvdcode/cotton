@@ -1350,7 +1350,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Generated_File_And_Folder_Share_Tokens_Are_Eight_Lowercase_Letters()
+    public async Task Generated_File_And_Folder_Share_Tokens_Are_Sixteen_Lowercase_Letters()
     {
         string authToken = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -1372,8 +1372,25 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         Assert.Multiple(() =>
         {
-            Assert.That(folderToken, Does.Match("^[a-z]{8}$"));
-            Assert.That(fileToken, Does.Match("^[a-z]{8}$"));
+            Assert.That(folderToken, Does.Match("^[a-z]{16}$"));
+            Assert.That(fileToken, Does.Match("^[a-z]{16}$"));
+        });
+    }
+
+    [Test]
+    public async Task Public_Share_Lookup_RateLimit_Cannot_Be_Bypassed_By_Changing_Token()
+    {
+        for (int i = 0; i < 60; i++)
+        {
+            using HttpResponseMessage response = await _client!.GetAsync($"/s/missing-token-{i}");
+            Assert.That(response.StatusCode, Is.Not.EqualTo(HttpStatusCode.TooManyRequests));
+        }
+
+        using HttpResponseMessage limitedResponse = await _client!.GetAsync("/s/another-missing-token");
+        Assert.Multiple(() =>
+        {
+            Assert.That(limitedResponse.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+            Assert.That(limitedResponse.Headers.RetryAfter, Is.Not.Null);
         });
     }
 

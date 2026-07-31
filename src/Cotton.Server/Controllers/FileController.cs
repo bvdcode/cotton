@@ -9,6 +9,7 @@ using Cotton.Models.Enums;
 using Cotton.Previews;
 using Cotton.Previews.Http;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Hubs;
@@ -29,6 +30,7 @@ using EasyExtensions.Quartz.Extensions;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -68,6 +70,7 @@ namespace Cotton.Server.Controllers
         /// <summary>
         /// Creates or returns a public file share response.
         /// </summary>
+        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareLookup)]
         [HttpGet("/s/{token}")]
         [HttpHead("/s/{token}")]
         public async Task<IActionResult> Share(

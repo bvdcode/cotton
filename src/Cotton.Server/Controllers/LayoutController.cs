@@ -576,6 +576,7 @@ namespace Cotton.Server.Controllers
         /// Gets shared node info.
         /// </summary>
         [AllowAnonymous]
+        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareLookup)]
         [HttpGet("shared/{token}")]
         public async Task<IActionResult> GetSharedNodeInfo([FromRoute] string token)
         {
@@ -598,6 +599,7 @@ namespace Cotton.Server.Controllers
         /// Gets shared node children.
         /// </summary>
         [AllowAnonymous]
+        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareLookup)]
         [HttpGet("shared/{token}/children")]
         public async Task<IActionResult> GetSharedNodeChildren(
             [FromRoute] string token,
@@ -681,6 +683,7 @@ namespace Cotton.Server.Controllers
         /// Gets shared node ancestors.
         /// </summary>
         [AllowAnonymous]
+        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareLookup)]
         [HttpGet("shared/{token}/ancestors/{nodeId:guid}")]
         public async Task<IActionResult> GetSharedNodeAncestors(
             [FromRoute] string token,
@@ -805,6 +808,7 @@ namespace Cotton.Server.Controllers
         /// Downloads shared node file.
         /// </summary>
         [AllowAnonymous]
+        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareLookup)]
         [HttpGet("shared/{token}/files/{nodeFileId:guid}/content")]
         public async Task<IActionResult> DownloadSharedNodeFile(
             [FromRoute] string token,
