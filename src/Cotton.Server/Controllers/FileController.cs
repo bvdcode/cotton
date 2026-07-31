@@ -24,7 +24,6 @@ using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
 using EasyExtensions.Quartz.Extensions;
 using Mapster;
@@ -64,7 +63,6 @@ namespace Cotton.Server.Controllers
         ILayoutMutationGate _layoutGate,
         ILogger<FileController> _logger) : ControllerBase
     {
-        private const int DefaultSharedFileTokenLength = 16;
         private static readonly TimeSpan HlsMediaProbeCacheLifetime = TimeSpan.FromHours(1);
 
         /// <summary>
@@ -492,7 +490,7 @@ namespace Cotton.Server.Controllers
                 ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
                 Token = !string.IsNullOrWhiteSpace(customToken)
                     ? customToken
-                    : await CreateUniqueFileShareTokenAsync(DefaultSharedFileTokenLength),
+                    : await CreateUniqueFileShareTokenAsync(),
             };
             await _dbContext.DownloadTokens.AddAsync(newToken);
             await _dbContext.SaveChangesAsync();
@@ -500,13 +498,13 @@ namespace Cotton.Server.Controllers
             return Ok(link);
         }
 
-        private async Task<string> CreateUniqueFileShareTokenAsync(int length)
+        private async Task<string> CreateUniqueFileShareTokenAsync()
         {
             const int maxAttempts = 8;
 
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
-                string candidate = StringHelpers.CreateRandomString(length);
+                string candidate = PublicShareTokenGenerator.Create();
                 if (!await ShareTokenExistsAsync(candidate))
                 {
                     return candidate;

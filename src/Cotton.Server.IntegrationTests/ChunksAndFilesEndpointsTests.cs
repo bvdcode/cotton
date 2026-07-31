@@ -1350,6 +1350,34 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Generated_File_And_Folder_Share_Tokens_Are_Eight_Lowercase_Letters()
+    {
+        string authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        NodeDto folder = await CreateFolderAsync(root!.Id, "shared-folder-token-format");
+        NodeFileManifestDto file = await UploadTextFileAsync(root, "shared-file-token-format.txt", "file body");
+
+        HttpResponseMessage folderResponse = await _client.GetAsync($"/api/v1/layouts/nodes/{folder.Id}/share-link");
+        folderResponse.EnsureSuccessStatusCode();
+        string folderLink = (await folderResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string folderToken = folderLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+
+        HttpResponseMessage fileResponse = await _client.GetAsync($"/api/v1/files/{file.Id}/download-link");
+        fileResponse.EnsureSuccessStatusCode();
+        string fileLink = (await fileResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string fileToken = ExtractToken(fileLink);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(folderToken, Does.Match("^[a-z]{8}$"));
+            Assert.That(fileToken, Does.Match("^[a-z]{8}$"));
+        });
+    }
+
+    [Test]
     public async Task File_Versions_List_Download_And_Restore_Previous_Content()
     {
         var token = await LoginAsync();

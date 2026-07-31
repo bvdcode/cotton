@@ -25,7 +25,6 @@ using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
@@ -58,8 +57,6 @@ namespace Cotton.Server.Controllers
         ILayoutMutationGate _layoutGate,
         ArchiveDownloadService _archives) : ControllerBase
     {
-        private const int DefaultSharedFolderTokenLength = 16;
-
         /// <summary>
         /// Gets recent nodes.
         /// </summary>
@@ -558,7 +555,7 @@ namespace Cotton.Server.Controllers
             }
             else
             {
-                token = await CreateUniqueShareTokenAsync(DefaultSharedFolderTokenLength);
+                token = await CreateUniqueShareTokenAsync();
             }
 
             NodeShareToken newToken = new()
@@ -1033,13 +1030,13 @@ namespace Cotton.Server.Controllers
             return node;
         }
 
-        private async Task<string> CreateUniqueShareTokenAsync(int length)
+        private async Task<string> CreateUniqueShareTokenAsync()
         {
             const int maxAttempts = 8;
 
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
-                string candidate = StringHelpers.CreateRandomString(length);
+                string candidate = PublicShareTokenGenerator.Create();
                 bool existsInFileTokens = await _dbContext.DownloadTokens.AnyAsync(x => x.Token == candidate);
                 if (existsInFileTokens)
                 {
