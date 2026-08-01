@@ -161,13 +161,13 @@ namespace Cotton.Server.Handlers.Files
         {
             if (!isHtml)
             {
-                return ShareFileResult.AsNotFound("File not found");
+                return ShareFileResult.AsTokenNotFound("File not found");
             }
 
             NodeShareToken? nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
             if (nodeShareToken is null || nodeShareToken.Node.Type != NodeType.Default)
             {
-                return ShareFileResult.AsRedirect($"{baseAppUrl}/404");
+                return ShareFileResult.AsTokenNotFoundRedirect($"{baseAppUrl}/404");
             }
 
             _integrity.RequireValid(_dbContext, nodeShareToken, "share.node-token");

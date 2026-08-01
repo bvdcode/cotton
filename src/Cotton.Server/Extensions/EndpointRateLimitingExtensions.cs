@@ -3,6 +3,8 @@
 
 using Cotton.Server.Auth;
 using Cotton.Server.Models;
+using EasyExtensions.AspNetCore.Extensions;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Globalization;
 using System.Net;
@@ -20,6 +22,7 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IServiceCollection AddEndpointRateLimiting(this IServiceCollection services)
         {
+            services.AddSingleton<PublicShareLookupFailureLimiter>();
             services.AddRateLimiter(options =>
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -45,9 +48,6 @@ namespace Cotton.Server.Extensions
                 AuthRateLimitPolicies.Refresh,
                 new FixedWindowEndpointPolicy(GetRemoteAddressPartition, 60));
             options.AddPolicy(
-                AuthRateLimitPolicies.PublicShareLookup,
-                new FixedWindowEndpointPolicy(GetRemoteAddressPartition, 60));
-            options.AddPolicy(
                 AuthRateLimitPolicies.PublicShareArchive,
                 new FixedWindowEndpointPolicy(GetRemoteAddressPartition, 5));
         }
@@ -57,20 +57,53 @@ namespace Cotton.Server.Extensions
             CancellationToken cancellationToken)
         {
             context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-            context.HttpContext.Response.Headers.RetryAfter = GetRetryAfterSeconds(context.Lease);
-            CottonResult result = new()
+            CottonResult result = CreateRateLimitRejection(context.HttpContext.Response, context.Lease);
+            await context.HttpContext.Response.WriteAsJsonAsync(result, cancellationToken);
+        }
+
+        /// <summary>
+        /// Returns a 429 result when a failed public-share lookup exceeds its per-client limit.
+        /// </summary>
+        public static IActionResult? GetPublicShareLookupFailureRejection(
+            this ControllerBase controller,
+            PublicShareLookupFailureLimiter limiter)
+        {
+            ArgumentNullException.ThrowIfNull(controller);
+            ArgumentNullException.ThrowIfNull(limiter);
+
+            using RateLimitLease lease = limiter.AttemptAcquire(controller.Request);
+            return lease.IsAcquired
+                ? null
+                : CreateRateLimitRejection(controller.Response, lease);
+        }
+
+        /// <summary>
+        /// Returns a public-share not-found response unless the failed lookup limit was exceeded.
+        /// </summary>
+        public static IActionResult ApiPublicShareNotFound(
+            this ControllerBase controller,
+            PublicShareLookupFailureLimiter limiter,
+            string message)
+        {
+            return controller.GetPublicShareLookupFailureRejection(limiter)
+                ?? controller.ApiNotFound(message);
+        }
+
+        internal static string GetRemoteAddressPartition(HttpContext httpContext)
+        {
+            return httpContext.Request.GetRemoteIPAddress().ToString();
+        }
+
+        private static CottonResult CreateRateLimitRejection(HttpResponse response, RateLimitLease lease)
+        {
+            response.Headers.RetryAfter = GetRetryAfterSeconds(lease);
+            return new CottonResult
             {
                 Success = false,
                 Message = "Too many requests. Retry later.",
                 MessageCode = "rate_limit_exceeded",
                 StatusCode = HttpStatusCode.TooManyRequests,
             };
-            await context.HttpContext.Response.WriteAsJsonAsync(result, cancellationToken);
-        }
-
-        private static string GetRemoteAddressPartition(HttpContext httpContext)
-        {
-            return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         }
 
         private static string GetRetryAfterSeconds(RateLimitLease lease)

@@ -30,7 +30,6 @@ using EasyExtensions.Quartz.Extensions;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -64,6 +63,7 @@ namespace Cotton.Server.Controllers
         FileGraphIntegrityVerifier _fileGraphIntegrity,
         ILayoutMutationGate _layoutGate,
         PublicShareTokenGenerator _publicShareTokens,
+        PublicShareLookupFailureLimiter _publicShareLookupFailures,
         ILogger<FileController> _logger) : ControllerBase
     {
         private static readonly TimeSpan HlsMediaProbeCacheLifetime = TimeSpan.FromHours(1);
@@ -71,7 +71,6 @@ namespace Cotton.Server.Controllers
         /// <summary>
         /// Creates or returns a public file share response.
         /// </summary>
-        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareLookup)]
         [HttpGet("/s/{token}")]
         [HttpHead("/s/{token}")]
         public async Task<IActionResult> Share(
@@ -80,6 +79,15 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool preview = false)
         {
             ShareFileResult result = await _mediator.Send(new ShareFileQuery(token, view, preview, Request));
+
+            if (result.IsTokenLookupFailure)
+            {
+                IActionResult? rejection = this.GetPublicShareLookupFailureRejection(_publicShareLookupFailures);
+                if (rejection is not null)
+                {
+                    return rejection;
+                }
+            }
 
             switch (result.Kind)
             {

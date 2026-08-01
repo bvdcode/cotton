@@ -56,6 +56,7 @@ namespace Cotton.Server.Controllers
         FileGraphIntegrityVerifier _fileGraphIntegrity,
         ILayoutMutationGate _layoutGate,
         PublicShareTokenGenerator _publicShareTokens,
+        PublicShareLookupFailureLimiter _publicShareLookupFailures,
         ArchiveDownloadService _archives) : ControllerBase
     {
         /// <summary>
@@ -577,14 +578,13 @@ namespace Cotton.Server.Controllers
         /// Gets shared node info.
         /// </summary>
         [AllowAnonymous]
-        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareLookup)]
         [HttpGet("shared/{token}")]
         public async Task<IActionResult> GetSharedNodeInfo([FromRoute] string token)
         {
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiNotFound("Shared folder not found.");
+                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "Shared folder not found.");
             }
 
             return Ok(new SharedNodeInfoDto
@@ -600,7 +600,6 @@ namespace Cotton.Server.Controllers
         /// Gets shared node children.
         /// </summary>
         [AllowAnonymous]
-        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareLookup)]
         [HttpGet("shared/{token}/children")]
         public async Task<IActionResult> GetSharedNodeChildren(
             [FromRoute] string token,
@@ -614,7 +613,7 @@ namespace Cotton.Server.Controllers
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiNotFound("Shared folder not found.");
+                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "Shared folder not found.");
             }
 
             Guid targetNodeId = nodeId ?? nodeShareToken.NodeId;
@@ -684,7 +683,6 @@ namespace Cotton.Server.Controllers
         /// Gets shared node ancestors.
         /// </summary>
         [AllowAnonymous]
-        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareLookup)]
         [HttpGet("shared/{token}/ancestors/{nodeId:guid}")]
         public async Task<IActionResult> GetSharedNodeAncestors(
             [FromRoute] string token,
@@ -693,7 +691,7 @@ namespace Cotton.Server.Controllers
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiNotFound("Shared folder not found.");
+                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "Shared folder not found.");
             }
 
             bool canAccessNode = await IsNodeInSharedSubtreeAsync(
@@ -809,7 +807,6 @@ namespace Cotton.Server.Controllers
         /// Downloads shared node file.
         /// </summary>
         [AllowAnonymous]
-        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareLookup)]
         [HttpGet("shared/{token}/files/{nodeFileId:guid}/content")]
         public async Task<IActionResult> DownloadSharedNodeFile(
             [FromRoute] string token,
@@ -820,7 +817,7 @@ namespace Cotton.Server.Controllers
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiNotFound("File not found.");
+                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "File not found.");
             }
 
             NodeFile? nodeFile = await _dbContext.NodeFiles

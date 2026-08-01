@@ -104,6 +104,11 @@ namespace Cotton.Server.Handlers.Files
         public string? ErrorMessage { get; init; }
 
         /// <summary>
+        /// Gets a value indicating whether token resolution failed.
+        /// </summary>
+        public bool IsTokenLookupFailure { get; init; }
+
+        /// <summary>
         /// Converts the result to bad request.
         /// </summary>
         public static ShareFileResult AsBadRequest(string message) => new() { Kind = "badRequest", ErrorMessage = message };
@@ -114,9 +119,21 @@ namespace Cotton.Server.Handlers.Files
         public static ShareFileResult AsNotFound(string message) => new() { Kind = "notFound", ErrorMessage = message };
 
         /// <summary>
+        /// Converts a failed token lookup to not found.
+        /// </summary>
+        public static ShareFileResult AsTokenNotFound(string message) =>
+            new() { Kind = "notFound", ErrorMessage = message, IsTokenLookupFailure = true };
+
+        /// <summary>
         /// Converts the result to redirect.
         /// </summary>
         public static ShareFileResult AsRedirect(string url) => new() { Kind = "redirect", RedirectUrl = url };
+
+        /// <summary>
+        /// Converts a failed token lookup to a redirect.
+        /// </summary>
+        public static ShareFileResult AsTokenNotFoundRedirect(string url) =>
+            new() { Kind = "redirect", RedirectUrl = url, IsTokenLookupFailure = true };
 
         /// <summary>
         /// Converts the result to html.

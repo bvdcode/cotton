@@ -1378,17 +1378,34 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Public_Share_Lookup_RateLimit_Cannot_Be_Bypassed_By_Changing_Token()
+    public async Task Public_Share_Failed_Lookup_RateLimit_Does_Not_Block_Valid_Content()
     {
+        string authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        NodeFileManifestDto file = await UploadTextFileAsync(root!, "rate-limit-content.txt", "valid shared content");
+
+        HttpResponseMessage linkResponse = await _client.GetAsync($"/api/v1/files/{file.Id}/download-link");
+        linkResponse.EnsureSuccessStatusCode();
+        string downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string shareToken = ExtractToken(downloadLink);
+        _client.DefaultRequestHeaders.Authorization = null;
+
         for (int i = 0; i < 60; i++)
         {
-            using HttpResponseMessage response = await _client!.GetAsync($"/s/missing-token-{i}");
+            using HttpResponseMessage response = await _client.GetAsync($"/s/missing-token-{i}");
             Assert.That(response.StatusCode, Is.Not.EqualTo(HttpStatusCode.TooManyRequests));
         }
 
-        using HttpResponseMessage limitedResponse = await _client!.GetAsync("/s/another-missing-token");
+        using HttpRequestMessage contentRequest = new(HttpMethod.Get, $"/s/{shareToken}?view=inline");
+        contentRequest.Headers.Range = new RangeHeaderValue(0, 3);
+        using HttpResponseMessage contentResponse = await _client.SendAsync(contentRequest);
+        using HttpResponseMessage limitedResponse = await _client.GetAsync("/s/another-missing-token");
         Assert.Multiple(() =>
         {
+            Assert.That(contentResponse.StatusCode, Is.EqualTo(HttpStatusCode.PartialContent));
             Assert.That(limitedResponse.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
             Assert.That(limitedResponse.Headers.RetryAfter, Is.Not.Null);
         });

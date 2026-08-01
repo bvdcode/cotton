@@ -19,11 +19,6 @@ namespace Cotton.Server.Auth
         public const string Refresh = "auth.refresh";
 
         /// <summary>
-        /// Defines anonymous public share lookups.
-        /// </summary>
-        public const string PublicShareLookup = "public-share.lookup";
-
-        /// <summary>
         /// Defines the anonymous public share archive policy.
         /// </summary>
         public const string PublicShareArchive = "public-share.archive";
