@@ -63,6 +63,7 @@ namespace Cotton.Server.Controllers
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
         ILayoutMutationGate _layoutGate,
+        PublicShareTokenGenerator _publicShareTokens,
         ILogger<FileController> _logger) : ControllerBase
     {
         private static readonly TimeSpan HlsMediaProbeCacheLifetime = TimeSpan.FromHours(1);
@@ -493,28 +494,12 @@ namespace Cotton.Server.Controllers
                 ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
                 Token = !string.IsNullOrWhiteSpace(customToken)
                     ? customToken
-                    : await CreateUniqueFileShareTokenAsync(),
+                    : await _publicShareTokens.CreateUniqueAsync(HttpContext.RequestAborted),
             };
             await _dbContext.DownloadTokens.AddAsync(newToken);
             await _dbContext.SaveChangesAsync();
             string link = Routes.V1.Files + $"/{nodeFileId}/download?token={newToken.Token}";
             return Ok(link);
-        }
-
-        private async Task<string> CreateUniqueFileShareTokenAsync()
-        {
-            const int maxAttempts = 8;
-
-            for (int attempt = 0; attempt < maxAttempts; attempt++)
-            {
-                string candidate = PublicShareTokenGenerator.Create();
-                if (!await ShareTokenExistsAsync(candidate))
-                {
-                    return candidate;
-                }
-            }
-
-            throw new InvalidOperationException("Unable to generate a unique share token.");
         }
 
         private async Task<bool> ShareTokenExistsAsync(string token)

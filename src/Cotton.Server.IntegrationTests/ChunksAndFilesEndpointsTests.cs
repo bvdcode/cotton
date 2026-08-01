@@ -1350,7 +1350,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task Generated_File_And_Folder_Share_Tokens_Are_Sixteen_Lowercase_Letters()
+    public async Task Generated_File_And_Folder_Share_Tokens_Are_Eight_Lowercase_Alphanumeric_Characters()
     {
         string authToken = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
@@ -1372,8 +1372,8 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         Assert.Multiple(() =>
         {
-            Assert.That(folderToken, Does.Match("^[a-z]{16}$"));
-            Assert.That(fileToken, Does.Match("^[a-z]{16}$"));
+            Assert.That(folderToken, Does.Match("^[a-z0-9]{8}$"));
+            Assert.That(fileToken, Does.Match("^[a-z0-9]{8}$"));
         });
     }
 

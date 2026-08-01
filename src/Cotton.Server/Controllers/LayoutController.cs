@@ -55,6 +55,7 @@ namespace Cotton.Server.Controllers
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
         ILayoutMutationGate _layoutGate,
+        PublicShareTokenGenerator _publicShareTokens,
         ArchiveDownloadService _archives) : ControllerBase
     {
         /// <summary>
@@ -555,7 +556,7 @@ namespace Cotton.Server.Controllers
             }
             else
             {
-                token = await CreateUniqueShareTokenAsync();
+                token = await _publicShareTokens.CreateUniqueAsync(HttpContext.RequestAborted);
             }
 
             NodeShareToken newToken = new()
@@ -1032,29 +1033,6 @@ namespace Cotton.Server.Controllers
                 return null;
             }
             return node;
-        }
-
-        private async Task<string> CreateUniqueShareTokenAsync()
-        {
-            const int maxAttempts = 8;
-
-            for (int attempt = 0; attempt < maxAttempts; attempt++)
-            {
-                string candidate = PublicShareTokenGenerator.Create();
-                bool existsInFileTokens = await _dbContext.DownloadTokens.AnyAsync(x => x.Token == candidate);
-                if (existsInFileTokens)
-                {
-                    continue;
-                }
-
-                bool existsInNodeTokens = await _dbContext.NodeShareTokens.AnyAsync(x => x.Token == candidate);
-                if (!existsInNodeTokens)
-                {
-                    return candidate;
-                }
-            }
-
-            throw new InvalidOperationException("Unable to generate a unique share token.");
         }
 
         private static async Task<List<SharedNodeFileDto>> LoadSharedFilesAsync(
