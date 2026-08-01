@@ -9,7 +9,7 @@ Cotton ships as a single ASP.NET Core process (`Cotton.Server`) that serves both
 Startup is a two-phase process driven entirely from `src/Cotton.Server/Program.cs`:
 
 1. **Master-key resolution.** Before the main application is built, Cotton resolves the runtime encryption settings either from the `COTTON_MASTER_KEY` environment variable or, if that is absent, from an interactive `/unlock` mini-web-server. The process clock is pinned to UTC and Linux process hardening (`PR_SET_DUMPABLE=0`) is requested *before* key resolution.
-2. **Application run.** The full web app is built (`RunApplicationAsync`), startup transition rules are validated, EF migrations are applied, optional auto-restore runs, server settings are warmed, the SignalR hub is mapped, and finally `app.RunAsync()` is awaited.
+2. **Application run.** The full web app is built (`RunApplicationAsync`), startup preflight checks run, EF migrations are applied, optional auto-restore runs, server settings are warmed, the SignalR hub is mapped, and finally `app.RunAsync()` is awaited.
 
 ```mermaid
 flowchart TD
@@ -21,7 +21,7 @@ flowchart TD
     E --> G[RunApplicationAsync]
     F --> G
     G --> H[Build WebApplication + AddCottonOptions]
-    H --> I[Validate startup transition rules]
+    H --> I[Run startup preflight checks]
     I --> J{blocked?}
     J -- yes --> K[StartupBlockedServer]
     J -- no --> L[ApplyMigrations CottonDbContext]
@@ -203,7 +203,7 @@ OIDC is configured per-provider in the admin UI; see `docs/oidc-setup.md` and th
 
 - The callback path is fixed at `<public-base-url>/api/v1/auth/oidc/callback` — `OidcController` is routed at `Routes.V1.Auth + "/oidc"` with `[HttpGet("callback")]`, and `OidcAuthenticationService.BuildRedirectUri` constructs the URI as `{baseUrl}{Routes.V1.Auth}/oidc/callback`. The provider slug is **not** part of it.
 - The base URL comes from `OidcAuthenticationService.ResolvePublicBaseUrl`, which reads `server_settings.public_base_url` (entity `PublicBaseUrl`), trimming a trailing slash. It must be the externally reachable HTTPS origin.
-- Behind a reverse proxy, forward `X-Forwarded-Proto` and `X-Forwarded-Host`. `Program.cs` configures `ForwardedHeadersOptions` for exactly these two headers (`ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost`) and clears the known-proxy/known-network allow-lists (`KnownIPNetworks.Clear()`, `KnownProxies.Clear()`), so the proxy's forwarded values are honored unconditionally. Put Cotton behind a trusted proxy you control.
+- Behind a reverse proxy, configure `PublicBaseUrl` to the externally reachable HTTPS origin. Client-IP-sensitive abuse controls resolve `X-Forwarded-For` through `HttpRequest.GetRemoteIPAddress()`, and request-derived URL generation reads `X-Forwarded-Proto` through `RequestBaseUrlHelpers`.
 - The Issuer URL must omit `/.well-known/openid-configuration`. `openid` scope is required; `openid profile email` is the recommended set. The client secret is `[Encrypted]` in `server_settings` (column `oidc_client_secret_encrypted`, entity `OidcClientSecretEncrypted`).
 - Provider options (see the `OidcProvider` entity and *Authentication & Identity*) include enabling sign-in, allowing auto account creation, requiring `email_verified=true`, an allowed-email-domain allow-list, a default role (Admin disallowed as a default), profile-name sync, and avatar import.
 
@@ -238,7 +238,7 @@ PATCH /api/v1/server/database-backup/trigger
 
 ### Auto-restore for empty instances
 
-`DatabaseAutoRestoreService.TryRestoreIfEmptyAsync` runs during startup (`Program.RunApplicationAsync`, after startup transition validation and migrations). It is a no-op unless `COTTON_RESTORE_DATABASE_IF_EMPTY` parses (via `bool.TryParse`) to `true`.
+`DatabaseAutoRestoreService.TryRestoreIfEmptyAsync` runs during startup (`Program.RunApplicationAsync`, after startup preflight checks and migrations). It is a no-op unless `COTTON_RESTORE_DATABASE_IF_EMPTY` parses (via `bool.TryParse`) to `true`.
 
 "Empty" means either no rows in `__EFMigrationsHistory`, **or** no rows in both `users` and `server_settings`. When empty, it:
 

@@ -327,12 +327,12 @@ Heavier jobs are load-aware: for example `ComputeManifestHashesJob` skips when a
 
 ## Concurrency, Failure Modes, and Security Considerations (overview)
 
-- **Startup ordering.** `RunApplicationAsync` builds the `WebApplication`, runs generic preflight checks, configures forwarded headers and auth hardening, maps controllers and the SPA fallback, applies EF migrations (`ApplyMigrations<CottonDbContext>`), attempts auto-restore (`IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync`, active when `COTTON_RESTORE_DATABASE_IF_EMPTY=true` and the DB is empty), warms `SettingsProvider`, maps the SignalR `EventHub`, and finally starts Kestrel (`app.RunAsync()`).
+- **Startup ordering.** `RunApplicationAsync` builds the `WebApplication`, runs generic preflight checks, configures auth hardening and endpoint rate limiting, maps controllers and the SPA fallback, applies EF migrations (`ApplyMigrations<CottonDbContext>`), attempts auto-restore (`IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync`, active when `COTTON_RESTORE_DATABASE_IF_EMPTY=true` and the DB is empty), warms `SettingsProvider`, maps the SignalR `EventHub`, and finally starts Kestrel (`app.RunAsync()`).
 - **GC vs ingest.** Ingest waits out an in-flight GC of the same chunk and clears `GCScheduledAfter` when a chunk becomes live again; this is the central concurrency invariant of the storage lifetime contract.
 - **Storage pressure.** Filesystem-backed writes are guarded by `StoragePressureGuard`; crossing the reserve raises `StoragePressureException` and returns **HTTP 507** on chunk upload (`ChunkController`), WebDAV (`WebDavController`), and avatar (`UserController`) paths, and notifies admins (throttled).
 - **Integrity.** Upload hash mismatch → notification; storage consistency loss → notification; protected DB rows carry integrity signatures derived from the master key (see *Database Integrity*).
 - **Master key exposure.** Even with `DOTNET_EnableDiagnostics=0`, `PR_SET_DUMPABLE=0` (via `LinuxProcessHardening`), and `COTTON_PROCESS_HARDENING=true`, the README is explicit that an attacker executing code inside the process can still reach the in-memory key; these flags protect against accidental dumps and over-privileged neighbors, not in-process compromise.
-- **Forwarded headers.** `ForwardedHeadersOptions` is configured for `XForwardedProto | XForwardedHost` with cleared `KnownIPNetworks`/`KnownProxies` lists, relevant when running behind a reverse proxy.
+- **Proxy client addresses.** Abuse controls resolve the client through `HttpRequest.GetRemoteIPAddress()`, which honors the forwarded client address supplied by the reverse proxy. URL generation that depends on the external scheme uses `RequestBaseUrlHelpers` and `X-Forwarded-Proto`.
 
 ## Non-Obvious Design Decisions & Gotchas
 

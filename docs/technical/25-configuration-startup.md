@@ -270,12 +270,12 @@ flowchart TD
     I --> J[Singletons: encryption settings, MasterKeyRuntimeState, ProcessHardeningStatus, ApplicationStartupClock]
     J --> K[Bind HlsSegmentCache / StoragePressure options]
     K --> L[DI graph: Mediator, Quartz, MemoryCache, SignalR, services, EF DbContext, controllers, AddStreamCipher/AddDatabaseIntegrity/AddChunkServices/AddLayout*/AddWebDav*/AddJwt]
-    L --> M[AddAuthHardening + AddHostedService AppVersionTrackerService]
+    L --> M[AddAuthHardening + AddEndpointRateLimiting + AddHostedService AppVersionTrackerService]
     M --> N[builder.Build]
-    N --> O[Validate startup transition rules]
+    N --> O[Run startup preflight checks]
     O --> P{blocked?}
     P -- yes --> Q[StartupBlockedServer: SPA + startup/status]
-    P -- no --> R[Pipeline: UseForwardedHeaders, UseAuthHardening, UseDefaultFiles, MapStaticAssets, UseAuthentication/Authorization/ExceptionHandler, MapStartupStatusEndpoint, MapControllers, MapFallbackToFile]
+    P -- no --> R[Pipeline: UseAuthHardening, UseDefaultFiles, MapStaticAssets, UseAuthentication, UseEndpointRateLimiting, UseAuthorization/ExceptionHandler, MapStartupStatusEndpoint, MapControllers, MapFallbackToFile]
     R --> S[ApplyMigrations CottonDbContext]
     S --> T[scope: DatabaseAutoRestore.TryRestoreIfEmptyAsync GetAwaiter GetResult]
     T --> U[same scope: SettingsProvider.GetServerSettings prime cache]
@@ -292,13 +292,13 @@ flowchart TD
    - `builder.Configuration.AddCottonOptions(encryptionSettings)` re-reads `COTTON_PG_*` (and erases `COTTON_PG_PASSWORD`), generates a fresh `JwtSettings:Key`, and injects `DatabaseSettings:*` plus the derived `CottonEncryptionSettings` keys into in-memory config.
    - Logging: on Windows non-production it resets providers to console/debug; it always lowers `Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager` logging to `Error`.
    - HTTP clients: a named GitHub client (`AppVersionTrackerService.GitHubHttpClientName` = `"Cotton.GitHub"`, base address `https://api.github.com/`), a named `OidcDiscoveryService.HttpClientName` client, and a typed `OidcAvatarImportService` client.
-   - `ForwardedHeadersOptions` is configured to honor `X-Forwarded-Proto` and `X-Forwarded-Host`, and **clears** `KnownIPNetworks`/`KnownProxies` (the server trusts the headers from any proxy — it is expected to run behind a controlled reverse proxy).
+   - Client-IP-sensitive controls use `HttpRequest.GetRemoteIPAddress()`, including `X-Forwarded-For` supplied by the reverse proxy. `RequestBaseUrlHelpers` reads `X-Forwarded-Proto` when deriving an external base URL from a request.
    - Singletons: the bound `CottonEncryptionSettings`, `MasterKeyRuntimeState`, `ProcessHardeningStatus`, and `new ApplicationStartupClock(DateTimeOffset.UtcNow)`.
    - Options binding: `HlsSegmentCacheOptions` ← `HlsSegmentCache` section; `StoragePressureOptions` ← `StoragePressure` section.
    - The large fluent block registers Mediator (`AddMediator`), Quartz jobs (`AddQuartzJobs`), `AddMemoryCache`, SignalR, the HTTP context accessor, and the full service graph (settings, security diagnostics, storage probe, passkey/OIDC/auth, backup/restore, archive/zip, storage-pressure guard, default-user seeder, the storage pipeline processors `CryptoProcessor` + `CompressionProcessor` and `FileStoragePipeline`, the EF `CottonDbContext` via `AddPostgresDbContext` with `UseLazyLoadingProxies = false`, layout services, the PBKDF2 password hash service via `AddPbkdf2PasswordHashService`, controllers). It then chains the project extension methods `AddStreamCipher`, `AddDatabaseIntegrity`, `AddChunkServices`, `AddLayoutPathServices`, `AddLayoutSearchServices`, `AddWebDavServices`, and `AddWebDavAuth` (all defined in `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`), and finally `AddJwt` (from the external EasyExtensions packages; `AddPbkdf2PasswordHashService` is likewise external).
-   - `builder.Services.AddAuthHardening()` registers the rate limiter and the session-revocation JWT validation hook; `AddHostedService<AppVersionTrackerService>()` registers the background version tracker.
-5. **Startup preflight validation** — `IStartupPreflightValidator` runs ordered `IStartupCheck` implementations before normal traffic, migrations, restore, and jobs. The temp-directory check first verifies that `Path.GetTempPath()` can create/write/delete a probe file; if it cannot, Cotton blocks startup and instructs the operator to mount writable scratch storage at `/tmp` (`tmpfs` or a fast-disk bind mount). The version-transition check then validates code-defined rules against `app_versions`. If any check returns a blocker, the normal host is disposed and `StartupBlockedServer` serves the SPA plus `GET /api/v1/startup/status`; other API calls return HTTP 503.
-6. **Middleware pipeline** (order is significant): `UseForwardedHeaders` → `UseAuthHardening` → `UseDefaultFiles` → `MapStaticAssets` → `UseAuthentication` → `UseAuthorization` → `UseExceptionHandler` → `MapStartupStatusEndpoint` → `MapControllers` → `MapFallbackToFile("/index.html")` (SPA fallback).
+   - `builder.Services.AddAuthHardening()` registers the session-revocation JWT validation hook; `AddEndpointRateLimiting()` registers endpoint abuse policies and failed public-share lookup tracking; `AddHostedService<AppVersionTrackerService>()` registers the background version tracker.
+5. **Startup preflight validation** — `IStartupPreflightValidator` runs registered `IStartupCheck` implementations before normal traffic, migrations, restore, and jobs. The temp-directory check verifies that `Path.GetTempPath()` can create/write/delete a probe file; if it cannot, Cotton blocks startup and instructs the operator to mount writable scratch storage at `/tmp` (`tmpfs` or a fast-disk bind mount). There is no version-transition or data-migration startup guard in 0.5.
+6. **Middleware pipeline** (order is significant): `UseAuthHardening` → `UseDefaultFiles` → `MapStaticAssets` → `UseAuthentication` → `UseEndpointRateLimiting` → `UseAuthorization` → `UseExceptionHandler` → `MapStartupStatusEndpoint` → `MapControllers` → `MapFallbackToFile("/index.html")` (SPA fallback).
 7. **`ApplyMigrations<CottonDbContext>()`** — migrate-on-startup; EF migrations are applied automatically every boot.
 8. **Restore-if-empty** — in a fresh `IServiceScope`, `IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync()` is awaited synchronously (`GetAwaiter().GetResult()`).
 9. **Prime the settings cache** — still in that scope, `SettingsProvider.GetServerSettings()` is called once to warm the static cache (and, when settings exist, to verify their integrity).
