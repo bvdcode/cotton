@@ -11,6 +11,7 @@ using Cotton.Server.Auth;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Models;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions;
@@ -40,6 +41,7 @@ public class AppCodeOAuthController(
     INotificationsProvider _notifications,
     IDatabaseIntegrityVerifier _integrity,
     IGeoLookupService _geoLookup,
+    SettingsProvider _settings,
     ILogger<AppCodeOAuthController> _logger) : ControllerBase
 {
     private const int MaxActiveRequests = 1024;
@@ -166,7 +168,7 @@ public class AppCodeOAuthController(
             state.Status = AppCodeRequestStatus.Approved;
             state.ApprovedAt = DateTime.UtcNow;
 
-            await SendApprovedNotificationAsync(userId, state);
+            await SendApprovedSecurityEventAsync(userId, state);
             state.Completion.TrySetResult();
         }
         finally
@@ -282,11 +284,16 @@ public class AppCodeOAuthController(
         dbToken.City = NormalizeGeoField(lookup?.City);
     }
 
-    private async Task SendApprovedNotificationAsync(Guid userId, AppCodeRequestState state)
+    private async Task SendApprovedSecurityEventAsync(Guid userId, AppCodeRequestState state)
     {
+        string content = NotificationTemplates.AppCodeApprovalContent(
+            state.ApplicationName,
+            state.ApplicationVersion,
+            state.Origin);
+
         try
         {
-            var metadata = new Dictionary<string, string>
+            Dictionary<string, string> metadata = new()
             {
                 ["applicationName"] = state.ApplicationName,
                 ["applicationVersion"] = state.ApplicationVersion,
@@ -301,10 +308,7 @@ public class AppCodeOAuthController(
             await _notifications.SendNotificationAsync(
                 userId,
                 NotificationTemplates.AppCodeApprovalTitle,
-                NotificationTemplates.AppCodeApprovalContent(
-                    state.ApplicationName,
-                    state.ApplicationVersion,
-                    state.Origin),
+                content,
                 NotificationPriority.Medium,
                 templateMetadata);
         }
@@ -315,6 +319,14 @@ public class AppCodeOAuthController(
                 "Failed to send app-code approval notification for request {RequestId}",
                 state.ApprovalId);
         }
+
+        await _notifications.SendSecurityEmailAsync(
+            _settings,
+            _logger,
+            userId,
+            NotificationTemplates.AppCodeApprovalTitle,
+            content,
+            state.ApprovedAt ?? DateTime.UtcNow);
     }
 
     private static AppCodeRequestState GetExistingState(Guid id)

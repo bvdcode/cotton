@@ -168,6 +168,32 @@ namespace Cotton.Server.Extensions
             }
         }
 
+        private static async Task SendSecurityEventAsync(
+            INotificationsProvider notifications,
+            SettingsProvider settings,
+            ILogger logger,
+            Guid userId,
+            string title,
+            string content,
+            NotificationPriority priority,
+            Dictionary<string, string> metadata)
+        {
+            DateTime occurredAt = DateTime.UtcNow;
+            await notifications.SendNotificationAsync(
+                userId,
+                title,
+                content,
+                priority,
+                metadata);
+            await notifications.SendSecurityEmailAsync(
+                settings,
+                logger,
+                userId,
+                title,
+                content,
+                occurredAt);
+        }
+
         private static string EncodeText(string? value)
         {
             return WebUtility.HtmlEncode(value ?? string.Empty);
@@ -223,6 +249,8 @@ namespace Cotton.Server.Extensions
         public static async Task SendOtpDisabledAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
+            SettingsProvider settings,
+            ILogger logger,
             Guid userId,
             IPAddress ipAddress,
             StringValues userAgent)
@@ -234,20 +262,24 @@ namespace Cotton.Server.Extensions
             string contentKey = context.HasDevice
                 ? NotificationTemplateKeys.OtpDisabledWithDeviceContent
                 : NotificationTemplateKeys.OtpDisabledWithoutDeviceContent;
+            string content = context.HasDevice
+                ? NotificationTemplates.OtpDisabledContent(
+                    context.Ip,
+                    context.DeviceName,
+                    context.Location)
+                : NotificationTemplates.OtpDisabledContentNoDevice(
+                    context.Ip,
+                    context.Location);
 
-            await notifications.SendNotificationAsync(
+            await SendSecurityEventAsync(
+                notifications,
+                settings,
+                logger,
                 userId,
-                title: NotificationTemplates.OtpDisabledTitle,
-                content: context.HasDevice
-                    ? NotificationTemplates.OtpDisabledContent(
-                        context.Ip,
-                        context.DeviceName,
-                        context.Location)
-                    : NotificationTemplates.OtpDisabledContentNoDevice(
-                        context.Ip,
-                        context.Location),
-                priority: NotificationPriority.High,
-                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpDisabledTitle, contentKey));
+                NotificationTemplates.OtpDisabledTitle,
+                content,
+                NotificationPriority.High,
+                CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpDisabledTitle, contentKey));
         }
 
         /// <summary>
@@ -256,6 +288,8 @@ namespace Cotton.Server.Extensions
         public static async Task SendOtpEnabledAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
+            SettingsProvider settings,
+            ILogger logger,
             Guid userId,
             IPAddress ipAddress,
             StringValues userAgent)
@@ -267,20 +301,24 @@ namespace Cotton.Server.Extensions
             string contentKey = context.HasDevice
                 ? NotificationTemplateKeys.OtpEnabledWithDeviceContent
                 : NotificationTemplateKeys.OtpEnabledWithoutDeviceContent;
+            string content = context.HasDevice
+                ? NotificationTemplates.OtpEnabledContent(
+                    context.Ip,
+                    context.DeviceName,
+                    context.Location)
+                : NotificationTemplates.OtpEnabledContentNoDevice(
+                    context.Ip,
+                    context.Location);
 
-            await notifications.SendNotificationAsync(
+            await SendSecurityEventAsync(
+                notifications,
+                settings,
+                logger,
                 userId,
-                title: NotificationTemplates.OtpEnabledTitle,
-                content: context.HasDevice
-                    ? NotificationTemplates.OtpEnabledContent(
-                        context.Ip,
-                        context.DeviceName,
-                        context.Location)
-                    : NotificationTemplates.OtpEnabledContentNoDevice(
-                        context.Ip,
-                        context.Location),
-                priority: NotificationPriority.Medium,
-                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpEnabledTitle, contentKey));
+                NotificationTemplates.OtpEnabledTitle,
+                content,
+                NotificationPriority.Medium,
+                CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpEnabledTitle, contentKey));
         }
 
         /// <summary>
@@ -289,6 +327,8 @@ namespace Cotton.Server.Extensions
         public static async Task SendSuccessfulLoginAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
+            SettingsProvider settings,
+            ILogger logger,
             Guid userId,
             IPAddress ipAddress,
             StringValues userAgent)
@@ -300,20 +340,24 @@ namespace Cotton.Server.Extensions
             string contentKey = context.HasDevice
                 ? NotificationTemplateKeys.SuccessfulLoginWithDeviceContent
                 : NotificationTemplateKeys.SuccessfulLoginWithoutDeviceContent;
+            string content = context.HasDevice
+                ? NotificationTemplates.SuccessfulLoginContent(
+                    context.Ip,
+                    context.DeviceName,
+                    context.Location)
+                : NotificationTemplates.SuccessfulLoginContentNoDevice(
+                    context.Ip,
+                    context.Location);
 
-            await notifications.SendNotificationAsync(
+            await SendSecurityEventAsync(
+                notifications,
+                settings,
+                logger,
                 userId,
-                title: NotificationTemplates.SuccessfulLoginTitle,
-                content: context.HasDevice
-                    ? NotificationTemplates.SuccessfulLoginContent(
-                        context.Ip,
-                        context.DeviceName,
-                        context.Location)
-                    : NotificationTemplates.SuccessfulLoginContentNoDevice(
-                        context.Ip,
-                        context.Location),
-                priority: NotificationPriority.None,
-                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.SuccessfulLoginTitle, contentKey));
+                NotificationTemplates.SuccessfulLoginTitle,
+                content,
+                NotificationPriority.None,
+                CreateTemplateMetadata(metadata, NotificationTemplateKeys.SuccessfulLoginTitle, contentKey));
         }
 
         /// <summary>
@@ -396,6 +440,8 @@ namespace Cotton.Server.Extensions
         public static async Task SendWebDavTokenResetAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
+            SettingsProvider settings,
+            ILogger logger,
             Guid userId,
             IPAddress ipAddress,
             StringValues userAgent)
@@ -407,20 +453,24 @@ namespace Cotton.Server.Extensions
             string contentKey = context.HasDevice
                 ? NotificationTemplateKeys.WebDavTokenResetWithDeviceContent
                 : NotificationTemplateKeys.WebDavTokenResetWithoutDeviceContent;
+            string content = context.HasDevice
+                ? NotificationTemplates.WebDavTokenResetContent(
+                    context.Ip,
+                    context.DeviceName,
+                    context.Location)
+                : NotificationTemplates.WebDavTokenResetContentNoDevice(
+                    context.Ip,
+                    context.Location);
 
-            await notifications.SendNotificationAsync(
+            await SendSecurityEventAsync(
+                notifications,
+                settings,
+                logger,
                 userId,
-                title: NotificationTemplates.WebDavTokenResetTitle,
-                content: context.HasDevice
-                    ? NotificationTemplates.WebDavTokenResetContent(
-                        context.Ip,
-                        context.DeviceName,
-                        context.Location)
-                    : NotificationTemplates.WebDavTokenResetContentNoDevice(
-                        context.Ip,
-                        context.Location),
-                priority: NotificationPriority.Medium,
-                metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.WebDavTokenResetTitle, contentKey));
+                NotificationTemplates.WebDavTokenResetTitle,
+                content,
+                NotificationPriority.Medium,
+                CreateTemplateMetadata(metadata, NotificationTemplateKeys.WebDavTokenResetTitle, contentKey));
         }
 
         /// <summary>

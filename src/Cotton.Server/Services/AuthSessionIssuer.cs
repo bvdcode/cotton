@@ -34,7 +34,8 @@ namespace Cotton.Server.Services
         SettingsProvider _settings,
         IHttpContextAccessor _httpContextAccessor,
         INotificationsProvider _notifications,
-        IGeoLookupService _geoLookup)
+        IGeoLookupService _geoLookup,
+        ILogger<AuthSessionIssuer> _logger)
     {
         private const string UnknownGeoLabel = "Unknown";
         private const string DemoGeoLabel = "Demo";
@@ -57,6 +58,8 @@ namespace Cotton.Server.Services
             HttpRequest request = GetRequest();
             await _notifications.SendSuccessfulLoginAsync(
                 _geoLookup,
+                _settings,
+                _logger,
                 user.Id,
                 GetRequestIpAddress(request),
                 request.Headers.UserAgent);

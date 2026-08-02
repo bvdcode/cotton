@@ -104,6 +104,8 @@ namespace Cotton.Server.Controllers
             _webDavAuthCache.BumpUsernameCacheVersion(user.Username);
             await _notifications.SendWebDavTokenResetAsync(
                 _geoLookup,
+                _settings,
+                _logger,
                 userId,
                 GetRequestIpAddress(),
                 Request.Headers.UserAgent);
@@ -183,6 +185,8 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             await _notifications.SendOtpDisabledAsync(
                 _geoLookup,
+                _settings,
+                _logger,
                 userId,
                 GetRequestIpAddress(),
                 Request.Headers.UserAgent);
@@ -226,6 +230,8 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             await _notifications.SendOtpEnabledAsync(
                 _geoLookup,
+                _settings,
+                _logger,
                 userId,
                 GetRequestIpAddress(),
                 Request.Headers.UserAgent);

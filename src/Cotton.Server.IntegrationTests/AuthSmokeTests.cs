@@ -6,6 +6,8 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton;
+using Cotton.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
@@ -34,6 +36,7 @@ public class AuthSmokeTests : IntegrationTestBase
     private TestAppFactory? _factory;
     private WebApplicationFactory<Program>? _customFactory;
     private HttpClient? _client;
+    private RecordingNotificationsProvider? _notifications;
 
     [SetUp]
     public void SetUp()
@@ -72,6 +75,8 @@ public class AuthSmokeTests : IntegrationTestBase
         };
 
         _factory = new TestAppFactory(overrides);
+        RecordingNotificationsProvider notifications = new();
+        _notifications = notifications;
         _customFactory = _factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureServices(services =>
@@ -79,6 +84,14 @@ public class AuthSmokeTests : IntegrationTestBase
                 ServiceDescriptor? existing = services.FirstOrDefault(d => d.ServiceType == typeof(IStoragePipeline));
                 if (existing != null) services.Remove(existing);
                 services.AddSingleton<IStoragePipeline, InMemoryStorage>();
+
+                ServiceDescriptor? existingNotifications = services
+                    .FirstOrDefault(d => d.ServiceType == typeof(INotificationsProvider));
+                if (existingNotifications is not null)
+                {
+                    services.Remove(existingNotifications);
+                }
+                services.AddSingleton<INotificationsProvider>(notifications);
             });
             builder.ConfigureLogging((ctx, logging) =>
             {
@@ -106,14 +119,39 @@ public class AuthSmokeTests : IntegrationTestBase
     public async Task Login_Returns_Token()
     {
         Assert.That(_client, Is.Not.Null);
+        Assert.That(_notifications, Is.Not.Null);
 
         TokenPairResponseDto payload = await LoginAsync("testuser", "testpassword");
-        Assert.That(string.IsNullOrWhiteSpace(payload.AccessToken), Is.False, "Token must be present");
+        Assert.Multiple(() =>
+        {
+            Assert.That(string.IsNullOrWhiteSpace(payload.AccessToken), Is.False, "Token must be present");
+            Assert.That(_notifications!.Emails, Has.Count.EqualTo(1));
+        });
+
+        var (_, template, parameters, _, _) = _notifications!.Emails.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(template, Is.EqualTo(EmailTemplate.SecurityAlert));
+            Assert.That(parameters["security_title"], Is.EqualTo("New login to your account"));
+            Assert.That(parameters["security_content"], Does.Contain("8.8.8.8"));
+        });
 
         var parts = payload.AccessToken.Split('.');
         Assert.That(parts.Length, Is.EqualTo(3), "JWT must have3 parts");
 
         TestContext.Progress.WriteLine($"Login OK. Token: {payload.AccessToken[..Math.Min(16, payload.AccessToken.Length)]}...");
+    }
+
+    [Test]
+    public async Task Login_Succeeds_WhenSecurityEmailFails()
+    {
+        RecordingNotificationsProvider notifications = _notifications
+            ?? throw new InvalidOperationException("Notifications provider is not configured.");
+        notifications.ThrowOnEmail = true;
+
+        TokenPairResponseDto payload = await LoginAsync("emailfailure", "testpassword");
+
+        Assert.That(string.IsNullOrWhiteSpace(payload.AccessToken), Is.False, "Token must be present");
     }
 
     [Test]
