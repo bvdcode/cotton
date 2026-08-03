@@ -3,6 +3,7 @@
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database.Models;
+using Cotton.Server.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -91,6 +92,7 @@ public class TestAppFactory : WebApplicationFactory<Program>
             }
             services.AddSingleton<ISchedulerFactory, NoOpSchedulerFactory>();
             services.AddSingleton<IStartupFilter, TestRemoteIpStartupFilter>();
+            services.AddSingleton<IProxyTopologyProbeService, NoOpProxyTopologyProbeService>();
 
             services.AddSingleton(new CottonServerSettings
             {
@@ -119,6 +121,16 @@ public class TestAppFactory : WebApplicationFactory<Program>
                 });
                 next(app);
             };
+        }
+    }
+
+    private sealed class NoOpProxyTopologyProbeService : IProxyTopologyProbeService
+    {
+        public Task<IReadOnlyList<string>> DetectAsync(
+            string publicBaseUrl,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<string>>([]);
         }
     }
 

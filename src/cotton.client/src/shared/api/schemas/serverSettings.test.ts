@@ -14,7 +14,7 @@ import {
   telemetrySettingSchema,
   timezoneSchema,
   trustedProxyIpAddressSchema,
-  observedProxyIpAddressSchema,
+  observedProxyInfoSchema,
   trustedProxyVerificationResultSchema,
   defaultUserTemplateNodeIdSchema,
 } from "./serverSettings";
@@ -119,20 +119,26 @@ describe("server settings schemas", () => {
       trustedProxyIpAddressSchema.parse({ trustedProxyIpAddress: null }),
     ).toBe("");
     expect(
-      observedProxyIpAddressSchema.parse({
+      observedProxyInfoSchema.parse({
         observedProxyIpAddress: "172.18.0.2",
+        detectedProxyServices: ["cloudflare", "reverse-proxy"],
       }),
-    ).toBe("172.18.0.2");
+    ).toEqual({
+      observedProxyIpAddress: "172.18.0.2",
+      detectedProxyServices: ["cloudflare", "reverse-proxy"],
+    });
     expect(
       trustedProxyVerificationResultSchema.parse({
         trustedProxyIpAddress: "172.18.0.3",
         observedProxyIpAddress: "172.18.0.2",
+        detectedProxyServices: ["cloudflare", "traefik"],
         matches: false,
         saved: false,
       }),
     ).toEqual({
       trustedProxyIpAddress: "172.18.0.3",
       observedProxyIpAddress: "172.18.0.2",
+      detectedProxyServices: ["cloudflare", "traefik"],
       matches: false,
       saved: false,
     });

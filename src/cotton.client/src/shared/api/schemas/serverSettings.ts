@@ -213,13 +213,39 @@ export const trustedProxyIpAddressSchema = z
   .object({ trustedProxyIpAddress: nullableStringSchema })
   .transform((value) => value.trustedProxyIpAddress ?? "");
 
-export const observedProxyIpAddressSchema = z
-  .object({ observedProxyIpAddress: nullableStringSchema })
-  .transform((value) => value.observedProxyIpAddress ?? "");
+export const detectedProxyServiceSchema = z.enum([
+  "cloudflare",
+  "cloudfront",
+  "azure-front-door",
+  "fastly",
+  "fly-io",
+  "vercel",
+  "aws-alb",
+  "traefik",
+  "envoy",
+  "nginx",
+  "caddy",
+  "haproxy",
+  "apache",
+  "reverse-proxy",
+]);
+export type DetectedProxyService = z.infer<typeof detectedProxyServiceSchema>;
+
+export const observedProxyInfoSchema = z
+  .object({
+    observedProxyIpAddress: nullableStringSchema,
+    detectedProxyServices: z.array(detectedProxyServiceSchema),
+  })
+  .transform((value) => ({
+    observedProxyIpAddress: value.observedProxyIpAddress ?? "",
+    detectedProxyServices: value.detectedProxyServices,
+  }));
+export type ObservedProxyInfo = z.infer<typeof observedProxyInfoSchema>;
 
 export const trustedProxyVerificationResultSchema = z.object({
   trustedProxyIpAddress: nullableStringSchema,
   observedProxyIpAddress: z.string(),
+  detectedProxyServices: z.array(detectedProxyServiceSchema),
   matches: z.boolean(),
   saved: z.boolean(),
 });

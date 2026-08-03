@@ -2866,6 +2866,9 @@
           "verifyAndSave": "验证并保存",
           "unavailable": "此请求无法获取连接代理的地址。",
           "detected": "检测到连接代理地址：{{address}}。",
+          "detectedPath": "检测到的网络路径",
+          "genericProxy": "反向代理",
+          "internet": "互联网",
           "saved": "受信任代理地址已验证并保存。",
           "disabled": "受信任代理限制已禁用。",
           "mismatch": "输入的是 {{entered}}，但此请求来自 {{observed}}。设置未保存。"

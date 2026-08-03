@@ -100,11 +100,25 @@ public class ServerEndpointsTests : IntegrationTestBase
         string token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         _client.DefaultRequestHeaders.Add(TestAppFactory.RemoteIpAddressHeader, "198.51.100.10");
+        _client.DefaultRequestHeaders.Add("CF-Ray", "230b030023ae2822-SJC");
+        _client.DefaultRequestHeaders.Add("CF-Connecting-IP", "203.0.113.40");
+        _client.DefaultRequestHeaders.Add("X-Forwarded-For", "203.0.113.40");
+        _client.DefaultRequestHeaders.Add("X-Real-IP", "203.0.113.40");
+        _client.DefaultRequestHeaders.Add("X-Forwarded-Host", "cotton.example");
+        _client.DefaultRequestHeaders.Add("X-Forwarded-Port", "443");
+        _client.DefaultRequestHeaders.Add("X-Forwarded-Proto", "https");
+        _client.DefaultRequestHeaders.Add("X-Forwarded-Server", "traefik-1");
 
         JsonElement observedPayload = await _client.GetFromJsonAsync<JsonElement>(
             "/api/v1/server/settings/trusted-proxy-ip-address/observed");
         string? observedAddress = observedPayload.GetProperty("observedProxyIpAddress").GetString();
-        Assert.That(observedAddress, Is.Not.Null.And.Not.Empty);
+        Assert.Multiple(() =>
+        {
+            Assert.That(observedAddress, Is.Not.Null.And.Not.Empty);
+            Assert.That(
+                observedPayload.GetProperty("detectedProxyServices").EnumerateArray().Select(x => x.GetString()),
+                Is.EqualTo(new[] { "cloudflare", "reverse-proxy" }));
+        });
 
         using HttpResponseMessage mismatchResponse = await _client.PostAsJsonAsync(
             "/api/v1/server/settings/trusted-proxy-ip-address/verify-and-save",
@@ -116,6 +130,9 @@ public class ServerEndpointsTests : IntegrationTestBase
             Assert.That(mismatchPayload.GetProperty("matches").GetBoolean(), Is.False);
             Assert.That(mismatchPayload.GetProperty("saved").GetBoolean(), Is.False);
             Assert.That(mismatchPayload.GetProperty("observedProxyIpAddress").GetString(), Is.EqualTo(observedAddress));
+            Assert.That(
+                mismatchPayload.GetProperty("detectedProxyServices").EnumerateArray().Select(x => x.GetString()),
+                Is.EqualTo(new[] { "cloudflare", "reverse-proxy" }));
         });
 
         JsonElement unsetPayload = await _client.GetFromJsonAsync<JsonElement>(

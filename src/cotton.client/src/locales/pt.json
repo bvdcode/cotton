@@ -2860,6 +2860,9 @@
           "verifyAndSave": "Verificar e guardar",
           "unavailable": "O endereço do proxy ligado não está disponível para este pedido.",
           "detected": "Endereço do proxy ligado detetado: {{address}}.",
+          "detectedPath": "Caminho de rede detetado",
+          "genericProxy": "Proxy reverso",
+          "internet": "Internet",
           "saved": "O endereço do proxy confiável foi verificado e guardado.",
           "disabled": "A restrição ao proxy confiável foi desativada.",
           "mismatch": "Introduziu {{entered}}, mas o pedido chegou de {{observed}}. A definição não foi guardada."

@@ -10,7 +10,7 @@ import { TrustedProxyIpAddressSetting } from "./TrustedProxyIpAddressSetting";
 
 const settingsApi = vi.hoisted(() => ({
   getTrustedProxyIpAddress: vi.fn(),
-  getObservedProxyIpAddress: vi.fn(),
+  getObservedProxyInfo: vi.fn(),
   verifyAndSaveTrustedProxyIpAddress: vi.fn(),
 }));
 
@@ -41,9 +41,31 @@ describe("TrustedProxyIpAddressSetting", () => {
     settingsApi.verifyAndSaveTrustedProxyIpAddress.mockResolvedValue({
       trustedProxyIpAddress: "0.0.0.0",
       observedProxyIpAddress: "198.51.100.25",
+      detectedProxyServices: [],
       matches: true,
       saved: true,
     });
+  });
+
+  it("shows every detected proxy service in front of Cotton", async () => {
+    settingsApi.getObservedProxyInfo.mockResolvedValue({
+      observedProxyIpAddress: "172.21.0.1",
+      detectedProxyServices: ["cloudflare", "traefik"],
+    });
+    render(<TrustedProxyIpAddressSetting />);
+
+    await waitFor(() => expect(screen.getByRole("textbox")).toBeEnabled());
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings.general.trustedProxy.detect",
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Cotton → Traefik → Cloudflare → settings.general.trustedProxy.internet",
+      ),
+    ).toBeInTheDocument();
   });
 
   afterEach(() => {

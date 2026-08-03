@@ -8,6 +8,7 @@ using Cotton.Server.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NUnit.Framework;
 using System.Net;
@@ -119,6 +120,110 @@ public class EndpointRateLimitingTests
     }
 
     [Test]
+    public void ProxyServiceDetection_DoesNotGuessLocalProxyProduct()
+    {
+        DefaultHttpContext context = new();
+        context.Request.Headers["CF-Ray"] = "230b030023ae2822-SJC";
+        context.Request.Headers["CF-Connecting-IP"] = "203.0.113.40";
+        context.Request.Headers["X-Forwarded-For"] = "203.0.113.40";
+        context.Request.Headers["X-Real-IP"] = "203.0.113.40";
+        context.Request.Headers["X-Forwarded-Host"] = "cotton.example";
+        context.Request.Headers["X-Forwarded-Port"] = "443";
+        context.Request.Headers["X-Forwarded-Proto"] = "https";
+        context.Request.Headers["X-Forwarded-Server"] = "traefik-1";
+
+        IReadOnlyList<string> services = context.Request.DetectProxyServices();
+
+        Assert.That(services, Is.EqualTo(new[] { "cloudflare", "reverse-proxy" }));
+    }
+
+    [Test]
+    public void ProxyServiceDetection_ReportsGenericProxyForUnknownForwarder()
+    {
+        DefaultHttpContext context = new();
+        context.Request.Headers["Forwarded"] = "for=203.0.113.40;proto=https";
+
+        IReadOnlyList<string> services = context.Request.DetectProxyServices();
+
+        Assert.That(services, Is.EqualTo(new[] { "reverse-proxy" }));
+    }
+
+    [TestCase("X-Amz-Cf-Id", "cloudfront")]
+    [TestCase("X-Azure-FDID", "azure-front-door")]
+    [TestCase("Fastly-Client-IP", "fastly")]
+    [TestCase("Fly-Client-IP", "fly-io")]
+    [TestCase("X-Vercel-Id", "vercel")]
+    [TestCase("X-Amzn-Trace-Id", "aws-alb")]
+    [TestCase("X-Envoy-External-Address", "envoy")]
+    public void ProxyServiceDetection_RecognizesDistinctiveServiceHeaders(
+        string headerName,
+        string expectedService)
+    {
+        DefaultHttpContext context = new();
+        context.Request.Headers[headerName] = "present";
+
+        IReadOnlyList<string> services = context.Request.DetectProxyServices();
+
+        Assert.That(services, Is.EqualTo(new[] { expectedService }));
+    }
+
+    [Test]
+    public void ProxyServiceDetection_UsesAllowlistedDeclaredLocalProxyNames()
+    {
+        DefaultHttpContext context = new();
+        context.Request.Headers["CF-Ray"] = "230b030023ae2822-SJC";
+        context.Request.Headers[ProxyServiceDetectionExtensions.DeclaredProxyHeaderName] =
+            "traefik, nginx, caddy, untrusted-display-value";
+
+        IReadOnlyList<string> services = context.Request.DetectProxyServices();
+
+        Assert.That(services, Is.EqualTo(new[] { "cloudflare", "traefik", "nginx", "caddy" }));
+    }
+
+    [Test]
+    public void ProxyServiceDetection_ReadsServerResponseAndPositionsLocalProbe()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.OK);
+        response.Headers.Server.ParseAdd("nginx/1.27.4");
+
+        IReadOnlyList<string> probed = ProxyServiceDetectionExtensions.DetectProxyServices(response);
+        IReadOnlyList<string> merged = ProxyServiceDetectionExtensions.MergeProxyServices(
+            ["cloudflare", "reverse-proxy"],
+            probed);
+        IReadOnlyList<string> edgeMerged = ProxyServiceDetectionExtensions.MergeProxyServices(
+            ["reverse-proxy"],
+            ["cloudflare"]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(probed, Is.EqualTo(new[] { "nginx" }));
+            Assert.That(merged, Is.EqualTo(new[] { "cloudflare", "nginx" }));
+            Assert.That(edgeMerged, Is.EqualTo(new[] { "cloudflare", "reverse-proxy" }));
+        });
+    }
+
+    [Test]
+    public async Task ProxyTopologyProbe_UsesHeadRequestAndReadsResponseServer()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.OK);
+        response.Headers.Server.ParseAdd("Caddy");
+        using var handler = new StaticResponseHandler(response);
+        using var client = new HttpClient(handler);
+        var probe = new ProxyTopologyProbeService(
+            client,
+            NullLogger<ProxyTopologyProbeService>.Instance);
+
+        IReadOnlyList<string> services = await probe.DetectAsync("https://cotton.example/");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.RequestMethod, Is.EqualTo(HttpMethod.Head));
+            Assert.That(handler.RequestUri, Is.EqualTo(new Uri("https://cotton.example/")));
+            Assert.That(services, Is.EqualTo(new[] { "caddy" }));
+        });
+    }
+
+    [Test]
     public void PublicShareLookupFailureLimiter_IsPartitionedByForwardedClientAddress()
     {
         using PublicShareLookupFailureLimiter limiter = new(request => request
@@ -158,5 +263,21 @@ public class EndpointRateLimitingTests
         context.Connection.RemoteIpAddress = IPAddress.Loopback;
         context.Request.Headers["X-Forwarded-For"] = forwardedAddress;
         return context.Request;
+    }
+
+    private sealed class StaticResponseHandler(HttpResponseMessage response) : HttpMessageHandler
+    {
+        public HttpMethod? RequestMethod { get; private set; }
+
+        public Uri? RequestUri { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestMethod = request.Method;
+            RequestUri = request.RequestUri;
+            return Task.FromResult(response);
+        }
     }
 }

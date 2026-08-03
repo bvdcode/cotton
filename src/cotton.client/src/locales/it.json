@@ -2859,6 +2859,9 @@
           "verifyAndSave": "Verifica e salva",
           "unavailable": "L’indirizzo del proxy connesso non è disponibile per questa richiesta.",
           "detected": "Indirizzo del proxy connesso rilevato: {{address}}.",
+          "detectedPath": "Percorso di rete rilevato",
+          "genericProxy": "Proxy inverso",
+          "internet": "Internet",
           "saved": "L’indirizzo del proxy attendibile è stato verificato e salvato.",
           "disabled": "La restrizione al proxy attendibile è stata disattivata.",
           "mismatch": "Hai inserito {{entered}}, ma la richiesta proviene da {{observed}}. L’impostazione non è stata salvata."

@@ -14,12 +14,32 @@ import { toast } from "@shared/ui/notifications";
 import {
   DIRECT_CONNECTION_IP_ADDRESS,
   settingsApi,
+  type DetectedProxyService,
   type TrustedProxyVerificationResult,
 } from "../../../shared/api/settingsApi";
 import { showApiErrorToast } from "../../../shared/api/httpClient";
 import { SAVED_STATUS_VISIBLE_MS } from "./adminSettingSaveStatus";
 import { SettingsSection } from "./SettingsSection";
 import type { SaveStatus } from "./useAutoSavedSetting";
+
+const proxyServiceNames: Record<
+  Exclude<DetectedProxyService, "reverse-proxy">,
+  string
+> = {
+  cloudflare: "Cloudflare",
+  cloudfront: "Amazon CloudFront",
+  "azure-front-door": "Azure Front Door",
+  fastly: "Fastly",
+  "fly-io": "Fly.io",
+  vercel: "Vercel",
+  "aws-alb": "AWS Application Load Balancer",
+  traefik: "Traefik",
+  envoy: "Envoy",
+  nginx: "nginx",
+  caddy: "Caddy",
+  haproxy: "HAProxy",
+  apache: "Apache HTTP Server",
+};
 
 export const TrustedProxyIpAddressSetting = () => {
   const { t } = useTranslation("admin");
@@ -28,6 +48,9 @@ export const TrustedProxyIpAddressSetting = () => {
   const [detecting, setDetecting] = useState(false);
   const [lastResult, setLastResult] =
     useState<TrustedProxyVerificationResult | null>(null);
+  const [detectedProxyServices, setDetectedProxyServices] = useState<
+    DetectedProxyService[]
+  >([]);
   const flashTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -71,17 +94,21 @@ export const TrustedProxyIpAddressSetting = () => {
   const handleAutoDetect = useCallback(async () => {
     setDetecting(true);
     setLastResult(null);
+    setDetectedProxyServices([]);
     try {
-      const observed = await settingsApi.getObservedProxyIpAddress();
-      if (!observed) {
+      const observed = await settingsApi.getObservedProxyInfo();
+      if (!observed.observedProxyIpAddress) {
         toast.error(t("settings.general.trustedProxy.unavailable"), {
           toastId: "admin-general:trusted-proxy:auto-unavailable",
         });
         return;
       }
-      setValue(observed);
+      setValue(observed.observedProxyIpAddress);
+      setDetectedProxyServices(observed.detectedProxyServices);
       toast.success(
-        t("settings.general.trustedProxy.detected", { address: observed }),
+        t("settings.general.trustedProxy.detected", {
+          address: observed.observedProxyIpAddress,
+        }),
         { toastId: "admin-general:trusted-proxy:auto-success" },
       );
     } catch (error) {
@@ -98,11 +125,13 @@ export const TrustedProxyIpAddressSetting = () => {
   const handleVerifyAndSave = useCallback(async () => {
     setStatus("saving");
     setLastResult(null);
+    setDetectedProxyServices([]);
     try {
       const result = await settingsApi.verifyAndSaveTrustedProxyIpAddress(
         value.trim() || null,
       );
       setLastResult(result);
+      setDetectedProxyServices(result.detectedProxyServices);
       if (!result.saved) {
         setStatus("error");
         return;
@@ -129,11 +158,13 @@ export const TrustedProxyIpAddressSetting = () => {
   const handleDirectConnection = useCallback(async () => {
     setStatus("saving");
     setLastResult(null);
+    setDetectedProxyServices([]);
     try {
       const result = await settingsApi.verifyAndSaveTrustedProxyIpAddress(
         DIRECT_CONNECTION_IP_ADDRESS,
       );
       setLastResult(result);
+      setDetectedProxyServices(result.detectedProxyServices);
       if (!result.saved) {
         setStatus("error");
         return;
@@ -157,6 +188,18 @@ export const TrustedProxyIpAddressSetting = () => {
   const busy = status === "loading" || status === "saving" || detecting;
   const mismatch = lastResult?.matches === false ? lastResult : null;
   const directConnection = value === DIRECT_CONNECTION_IP_ADDRESS;
+  const detectedPath = [
+    "Cotton",
+    ...detectedProxyServices
+      .slice()
+      .reverse()
+      .map((service) =>
+        service === "reverse-proxy"
+          ? t("settings.general.trustedProxy.genericProxy")
+          : proxyServiceNames[service],
+      ),
+    t("settings.general.trustedProxy.internet"),
+  ].join(" → ");
 
   return (
     <SettingsSection
@@ -170,6 +213,7 @@ export const TrustedProxyIpAddressSetting = () => {
           onChange={(event) => {
             setValue(event.target.value);
             setLastResult(null);
+            setDetectedProxyServices([]);
             if (status === "error") setStatus("idle");
           }}
           placeholder={t("settings.general.trustedProxy.placeholder")}
@@ -181,6 +225,13 @@ export const TrustedProxyIpAddressSetting = () => {
           disabled={busy}
           fullWidth
         />
+
+        {detectedProxyServices.length > 0 && (
+          <Alert severity="info">
+            {t("settings.general.trustedProxy.detectedPath")}:{" "}
+            <strong>{detectedPath}</strong>
+          </Alert>
+        )}
 
         {mismatch && (
           <Alert severity="warning">

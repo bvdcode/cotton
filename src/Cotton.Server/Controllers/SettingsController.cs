@@ -32,7 +32,8 @@ namespace Cotton.Server.Controllers
     public class SettingsController(
         SettingsProvider _settings,
         INotificationsProvider _notifications,
-        IGeoLookupService _geoLookup) : ControllerBase
+        IGeoLookupService _geoLookup,
+        IProxyTopologyProbeService _proxyTopologyProbe) : ControllerBase
     {
         private const int KiB = 1024;
         private const int MiB = 1024 * KiB;
@@ -542,10 +543,15 @@ namespace Cotton.Server.Controllers
         /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("trusted-proxy-ip-address/observed")]
-        public IActionResult GetObservedProxyIpAddress()
+        public async Task<IActionResult> GetObservedProxyIpAddress(CancellationToken cancellationToken)
         {
             string? observedProxyIpAddress = Request.GetConnectingIPAddress()?.ToString();
-            return Ok(new { observedProxyIpAddress });
+            IReadOnlyList<string> detectedProxyServices = await DetectProxyTopologyAsync(cancellationToken);
+            return Ok(new
+            {
+                observedProxyIpAddress,
+                detectedProxyServices,
+            });
         }
 
         /// <summary>
@@ -558,6 +564,7 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
+            IReadOnlyList<string> detectedProxyServices = await DetectProxyTopologyAsync(cancellationToken);
 
             IPAddress? observedProxyIpAddress = Request.GetConnectingIPAddress();
             if (observedProxyIpAddress is null)
@@ -575,6 +582,7 @@ namespace Cotton.Server.Controllers
                 return Ok(CreateTrustedProxyVerificationResponse(
                     configuredProxyIpAddress: null,
                     observedProxyIpAddress,
+                    detectedProxyServices,
                     matches: true,
                     saved: true));
             }
@@ -594,6 +602,7 @@ namespace Cotton.Server.Controllers
                 return Ok(CreateTrustedProxyVerificationResponse(
                     candidateProxyIpAddress,
                     observedProxyIpAddress,
+                    detectedProxyServices,
                     matches: false,
                     saved: false));
             }
@@ -606,6 +615,7 @@ namespace Cotton.Server.Controllers
             return Ok(CreateTrustedProxyVerificationResponse(
                 candidateProxyIpAddress,
                 observedProxyIpAddress,
+                detectedProxyServices,
                 matches: true,
                 saved: true));
         }
@@ -889,6 +899,7 @@ namespace Cotton.Server.Controllers
         private static object CreateTrustedProxyVerificationResponse(
             IPAddress? configuredProxyIpAddress,
             IPAddress observedProxyIpAddress,
+            IReadOnlyList<string> detectedProxyServices,
             bool matches,
             bool saved)
         {
@@ -896,9 +907,21 @@ namespace Cotton.Server.Controllers
             {
                 trustedProxyIpAddress = configuredProxyIpAddress?.ToString(),
                 observedProxyIpAddress = observedProxyIpAddress.ToString(),
+                detectedProxyServices,
                 matches,
                 saved,
             };
+        }
+
+        private async Task<IReadOnlyList<string>> DetectProxyTopologyAsync(
+            CancellationToken cancellationToken)
+        {
+            IReadOnlyList<string> requestServices = Request.DetectProxyServices();
+            string publicBaseUrl = _settings.GetServerSettings().PublicBaseUrl;
+            IReadOnlyList<string> probedServices = await _proxyTopologyProbe.DetectAsync(
+                publicBaseUrl,
+                cancellationToken);
+            return ProxyServiceDetectionExtensions.MergeProxyServices(requestServices, probedServices);
         }
 
         private static ServerUsage[] ParseServerUsage(JsonElement value)

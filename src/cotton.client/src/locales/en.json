@@ -2652,6 +2652,9 @@
           "verifyAndSave": "Verify and save",
           "unavailable": "The connecting proxy address is unavailable for this request.",
           "detected": "Detected connecting proxy address: {{address}}.",
+          "detectedPath": "Detected network path",
+          "genericProxy": "Reverse proxy",
+          "internet": "Internet",
           "saved": "The trusted proxy address was verified and saved.",
           "disabled": "Trusted proxy restriction was disabled.",
           "mismatch": "You entered {{entered}}, but this request arrived from {{observed}}. The setting was not saved."

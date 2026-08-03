@@ -272,28 +272,36 @@ describe("settingsApi setters", () => {
         data: { trustedProxyIpAddress: "172.18.0.2" },
       })
       .mockResolvedValueOnce({
-        data: { observedProxyIpAddress: "172.18.0.3" },
+        data: {
+          observedProxyIpAddress: "172.18.0.3",
+          detectedProxyServices: ["cloudflare", "reverse-proxy"],
+        },
+        headers: { server: "nginx/1.27.4" },
       });
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: {
         trustedProxyIpAddress: "172.18.0.3",
         observedProxyIpAddress: "172.18.0.3",
+        detectedProxyServices: ["cloudflare", "reverse-proxy"],
         matches: true,
         saved: true,
       },
+      headers: { server: "cloudflare" },
     });
 
     await expect(settingsApi.getTrustedProxyIpAddress()).resolves.toBe(
       "172.18.0.2",
     );
-    await expect(settingsApi.getObservedProxyIpAddress()).resolves.toBe(
-      "172.18.0.3",
-    );
+    await expect(settingsApi.getObservedProxyInfo()).resolves.toEqual({
+      observedProxyIpAddress: "172.18.0.3",
+      detectedProxyServices: ["cloudflare", "nginx"],
+    });
     await expect(
       settingsApi.verifyAndSaveTrustedProxyIpAddress("172.18.0.3"),
     ).resolves.toEqual({
       trustedProxyIpAddress: "172.18.0.3",
       observedProxyIpAddress: "172.18.0.3",
+      detectedProxyServices: ["cloudflare", "reverse-proxy"],
       matches: true,
       saved: true,
     });
@@ -306,7 +314,6 @@ describe("settingsApi setters", () => {
     expect(get).toHaveBeenNthCalledWith(
       2,
       "server/settings/trusted-proxy-ip-address/observed",
-      undefined,
     );
     expect(post).toHaveBeenCalledWith(
       "server/settings/trusted-proxy-ip-address/verify-and-save",

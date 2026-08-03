@@ -2898,6 +2898,9 @@
           "verifyAndSave": "Ověřit a uložit",
           "unavailable": "Adresu připojeného proxy serveru nelze pro tento požadavek zjistit.",
           "detected": "Zjištěná adresa připojeného proxy serveru: {{address}}.",
+          "detectedPath": "Zjištěná síťová cesta",
+          "genericProxy": "Reverzní proxy",
+          "internet": "Internet",
           "saved": "Adresa důvěryhodného proxy serveru byla ověřena a uložena.",
           "disabled": "Omezení na důvěryhodný proxy server bylo vypnuto.",
           "mismatch": "Zadali jste {{entered}}, ale požadavek přišel z {{observed}}. Nastavení nebylo uloženo."

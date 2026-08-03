@@ -2853,6 +2853,9 @@
           "verifyAndSave": "Prüfen und speichern",
           "unavailable": "Die Adresse des verbundenen Proxys ist für diese Anfrage nicht verfügbar.",
           "detected": "Erkannte Adresse des verbundenen Proxys: {{address}}.",
+          "detectedPath": "Erkannter Netzwerkpfad",
+          "genericProxy": "Reverse-Proxy",
+          "internet": "Internet",
           "saved": "Die Adresse des vertrauenswürdigen Proxys wurde geprüft und gespeichert.",
           "disabled": "Die Einschränkung auf einen vertrauenswürdigen Proxy wurde deaktiviert.",
           "mismatch": "Eingegeben wurde {{entered}}, die Anfrage kam jedoch von {{observed}}. Die Einstellung wurde nicht gespeichert."

@@ -3141,6 +3141,9 @@
           "verifyAndSave": "Verificar y guardar",
           "unavailable": "La dirección del proxy conectado no está disponible para esta solicitud.",
           "detected": "Dirección del proxy conectado detectada: {{address}}.",
+          "detectedPath": "Ruta de red detectada",
+          "genericProxy": "Proxy inverso",
+          "internet": "Internet",
           "saved": "La dirección del proxy de confianza se verificó y guardó.",
           "disabled": "Se desactivó la restricción de proxy de confianza.",
           "mismatch": "Introdujiste {{entered}}, pero la solicitud llegó desde {{observed}}. La configuración no se guardó."

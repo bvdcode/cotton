@@ -2857,6 +2857,9 @@
           "verifyAndSave": "Vérifier et enregistrer",
           "unavailable": "L’adresse du proxy connecté n’est pas disponible pour cette requête.",
           "detected": "Adresse du proxy connecté détectée : {{address}}.",
+          "detectedPath": "Chemin réseau détecté",
+          "genericProxy": "Proxy inverse",
+          "internet": "Internet",
           "saved": "L’adresse du proxy de confiance a été vérifiée et enregistrée.",
           "disabled": "La restriction au proxy de confiance a été désactivée.",
           "mismatch": "Vous avez saisi {{entered}}, mais la requête provient de {{observed}}. Le paramètre n’a pas été enregistré."

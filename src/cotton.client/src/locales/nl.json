@@ -2858,6 +2858,9 @@
           "verifyAndSave": "Controleren en opslaan",
           "unavailable": "Het adres van de verbonden proxy is voor deze aanvraag niet beschikbaar.",
           "detected": "Gedetecteerd adres van de verbonden proxy: {{address}}.",
+          "detectedPath": "Gedetecteerd netwerkpad",
+          "genericProxy": "Reverseproxy",
+          "internet": "Internet",
           "saved": "Het adres van de vertrouwde proxy is gecontroleerd en opgeslagen.",
           "disabled": "De beperking tot een vertrouwde proxy is uitgeschakeld.",
           "mismatch": "Je hebt {{entered}} ingevoerd, maar de aanvraag kwam van {{observed}}. De instelling is niet opgeslagen."

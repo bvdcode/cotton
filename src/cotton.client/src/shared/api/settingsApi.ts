@@ -14,7 +14,7 @@ import {
   emailModeResponseSchema,
   geoIpLookupModeResponseSchema,
   publicBaseUrlSchema,
-  observedProxyIpAddressSchema,
+  observedProxyInfoSchema,
   publicServerInfoSchema,
   serverSettingsResponseSchema,
   serverUsageListSchema,
@@ -33,6 +33,8 @@ import {
   type EmailConfig,
   type EmailMode,
   type GeoIpLookupMode,
+  type DetectedProxyService,
+  type ObservedProxyInfo,
   type PublicServerInfo,
   type S3Config,
   type ServerSettings,
@@ -52,6 +54,8 @@ export type {
   EmailConfig,
   EmailMode,
   GeoIpLookupMode,
+  DetectedProxyService,
+  ObservedProxyInfo,
   PublicServerInfo,
   S3Config,
   ServerSettings,
@@ -77,6 +81,71 @@ const mapUsageAnswer = (value: string): ServerUsage => {
 
 const toStorageType = (value: unknown): StorageType =>
   typeof value === "string" && value.toLowerCase() === "s3" ? "S3" : "Local";
+
+const responseServerSignatures: ReadonlyArray<
+  readonly [DetectedProxyService, RegExp]
+> = [
+  ["cloudflare", /\bcloudflare\b/i],
+  ["cloudfront", /\bcloudfront\b/i],
+  ["fastly", /\bfastly\b/i],
+  ["fly-io", /\bfly(?:\.io)?\b/i],
+  ["vercel", /\bvercel\b/i],
+  ["aws-alb", /\bawselb\b/i],
+  ["traefik", /\btraefik\b/i],
+  ["envoy", /\benvoy\b/i],
+  ["nginx", /\bnginx\b/i],
+  ["caddy", /\bcaddy\b/i],
+  ["haproxy", /\bhaproxy\b/i],
+  ["apache", /\bapache\b/i],
+];
+
+const localProxyServices = new Set<DetectedProxyService>([
+  "traefik",
+  "envoy",
+  "nginx",
+  "caddy",
+  "haproxy",
+  "apache",
+]);
+
+const edgeProxyServices = new Set<DetectedProxyService>([
+  "cloudflare",
+  "cloudfront",
+  "azure-front-door",
+  "fastly",
+  "fly-io",
+  "vercel",
+  "aws-alb",
+]);
+
+const detectResponseServerService = (
+  serverHeader: unknown,
+): DetectedProxyService[] => {
+  if (typeof serverHeader !== "string") return [];
+  const match = responseServerSignatures.find(([, pattern]) =>
+    pattern.test(serverHeader),
+  );
+  return match ? [match[0]] : [];
+};
+
+const mergeDetectedProxyServices = (
+  detected: DetectedProxyService[],
+  serverHeader: unknown,
+): DetectedProxyService[] => {
+  const responseServices = detectResponseServerService(serverHeader);
+  const identifiesUnknownLocalProxy = responseServices.some(
+    (service) => localProxyServices.has(service) && !detected.includes(service),
+  );
+  const merged = identifiesUnknownLocalProxy
+    ? detected.filter((service) => service !== "reverse-proxy")
+    : [...detected];
+  for (const service of responseServices) {
+    if (merged.includes(service)) continue;
+    if (edgeProxyServices.has(service)) merged.unshift(service);
+    else merged.push(service);
+  }
+  return merged;
+};
 
 const toEmailMode = (value: unknown): EmailMode => {
   if (typeof value !== "string") return "None";
@@ -319,11 +388,18 @@ export const settingsApi = {
       trustedProxyIpAddressSchema,
     ),
 
-  getObservedProxyIpAddress: (): Promise<string> =>
-    getValidated(
-      "server/settings/trusted-proxy-ip-address/observed",
-      observedProxyIpAddressSchema,
-    ),
+  getObservedProxyInfo: async (): Promise<ObservedProxyInfo> => {
+    const path = "server/settings/trusted-proxy-ip-address/observed";
+    const response = await httpClient.get<unknown>(path);
+    const result = parseValidated(path, response.data, observedProxyInfoSchema);
+    return {
+      ...result,
+      detectedProxyServices: mergeDetectedProxyServices(
+        result.detectedProxyServices,
+        response.headers.server,
+      ),
+    };
+  },
 
   verifyAndSaveTrustedProxyIpAddress: async (
     ipAddress: string | null,
@@ -332,11 +408,18 @@ export const settingsApi = {
       "server/settings/trusted-proxy-ip-address/verify-and-save",
       ipAddress,
     );
-    return parseValidated(
+    const result = parseValidated(
       "server/settings/trusted-proxy-ip-address/verify-and-save",
       response.data,
       trustedProxyVerificationResultSchema,
     );
+    return {
+      ...result,
+      detectedProxyServices: mergeDetectedProxyServices(
+        result.detectedProxyServices,
+        response.headers.server,
+      ),
+    };
   },
 
   getStorageSpaceMode: (): Promise<StorageSpaceMode> =>

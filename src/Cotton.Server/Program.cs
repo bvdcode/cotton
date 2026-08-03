@@ -129,6 +129,17 @@ namespace Cotton.Server
                 client.Timeout = TimeSpan.FromSeconds(15);
             });
             builder.Services
+                .AddHttpClient<IProxyTopologyProbeService, ProxyTopologyProbeService>(client =>
+                {
+                    client.Timeout = TimeSpan.FromSeconds(3);
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton-Proxy-Topology-Probe/1.0");
+                })
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    AllowAutoRedirect = false,
+                    UseCookies = false,
+                });
+            builder.Services
                 .AddExceptionHandler<UntrustedProxyConnectionExceptionHandler>()
                 .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()

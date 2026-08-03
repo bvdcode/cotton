@@ -2901,6 +2901,9 @@
           "verifyAndSave": "Sprawdź i zapisz",
           "unavailable": "Adres połączonego proxy jest niedostępny dla tego żądania.",
           "detected": "Wykryty adres połączonego proxy: {{address}}.",
+          "detectedPath": "Wykryta ścieżka sieciowa",
+          "genericProxy": "Odwrotny serwer proxy",
+          "internet": "Internet",
           "saved": "Adres zaufanego proxy został sprawdzony i zapisany.",
           "disabled": "Ograniczenie do zaufanego proxy zostało wyłączone.",
           "mismatch": "Wprowadzono {{entered}}, ale żądanie nadeszło z {{observed}}. Ustawienie nie zostało zapisane."
