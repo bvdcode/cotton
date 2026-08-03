@@ -549,7 +549,7 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
-        /// Verifies an immediate reverse-proxy address against the current connection and saves it on success.
+        /// Selects direct-connection mode, or verifies an immediate reverse-proxy address and saves it on success.
         /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPost("trusted-proxy-ip-address/verify-and-save")]
@@ -585,9 +585,10 @@ namespace Cotton.Server.Controllers
             }
 
             candidateProxyIpAddress = TrustedProxyRequestExtensions.Normalize(candidateProxyIpAddress);
-            bool matches = TrustedProxyRequestExtensions.AddressesEqual(
-                candidateProxyIpAddress,
-                observedProxyIpAddress);
+            bool matches = TrustedProxyRequestExtensions.IsDirectConnectionMode(candidateProxyIpAddress)
+                || TrustedProxyRequestExtensions.AddressesEqual(
+                    candidateProxyIpAddress,
+                    observedProxyIpAddress);
             if (!matches)
             {
                 return Ok(CreateTrustedProxyVerificationResponse(

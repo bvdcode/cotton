@@ -372,7 +372,7 @@ Two ASP.NET Core fixed-window policies, partitioned by the client address resolv
 
 The endpoint policies are registered by `AddEndpointRateLimiting` and activated by `UseEndpointRateLimiting` in `Program.cs`. The same registration adds `PublicShareLookupFailureLimiter`, which counts only unresolved or expired public-share tokens and allows 60 failed lookups per resolved client address per minute. Valid public-share navigation, previews, downloads, and range requests never consume that failure budget. Ordinary application requests have no global rate limiter. `AddAuthHardening` separately registers the singleton `SessionAccessTokenRevocationCache`, the scoped `SessionAccessTokenRevocationStore`, and the JWT revocation `OnTokenValidated` hook (`AddSessionRevocationValidation`).
 
-> Both endpoint policies and failed public-share lookup tracking use `HttpRequest.GetTrustedClientIPAddress()`. Configure the exact immediate proxy address in General settings and make the proxy overwrite client-supplied forwarding headers. The resolver prefers `CF-Connecting-IP`, then `X-Real-IP`, then `X-Forwarded-For`; leaving the setting empty keeps the legacy trust-all mode and lowers the security score by two.
+> Both endpoint policies and failed public-share lookup tracking use `HttpRequest.GetTrustedClientIPAddress()`. With a proxy, configure its exact immediate address in General settings and make it overwrite client-supplied forwarding headers; the resolver then prefers `CF-Connecting-IP`, `X-Real-IP`, and `X-Forwarded-For` in that order. Without a proxy, select **No proxy** to use the connection peer and ignore those headers. Leaving the setting empty keeps the legacy trust-all mode and lowers the security score by two.
 
 ## Geo lookup (`GeoLookupService`)
 

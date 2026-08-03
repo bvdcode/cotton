@@ -2642,9 +2642,12 @@
       "general": {
         "trustedProxy": {
           "title": "Trusted proxy IP address",
-          "description": "Exact IP address of the immediate reverse proxy allowed to supply the client address. The proxy must overwrite or strip client-supplied CF-Connecting-IP, X-Real-IP, and X-Forwarded-For headers.",
+          "description": "Exact IP address of the immediate reverse proxy allowed to supply the client address. The proxy must overwrite or strip client-supplied CF-Connecting-IP, X-Real-IP, and X-Forwarded-For headers. For a direct deployment, choose No proxy.",
           "emptyHint": "Leave empty to keep the legacy behavior that trusts forwarded client-address headers from every connection.",
           "placeholder": "For example, 172.18.0.2",
+          "direct": "No proxy",
+          "directMode": "Direct connection (no proxy); forwarding headers are ignored",
+          "directSaved": "Direct-connection mode was saved. Forwarding headers will be ignored.",
           "detect": "Auto",
           "verifyAndSave": "Verify and save",
           "unavailable": "The connecting proxy address is unavailable for this request.",
@@ -2934,8 +2937,8 @@
       "trustedProxy": {
         "field": "Trusted proxy IP address",
         "threatVector": "A caller that can reach Cotton directly, or pass unsanitized headers through a proxy, can rotate its apparent client address and bypass IP-based abuse limits.",
-        "fix": "In General settings, use Auto or enter the immediate proxy connection address, then verify and save it. Ensure the proxy overwrites client-supplied forwarding headers.",
-        "passed": "Forwarded client addresses accepted only from the configured proxy"
+        "fix": "In General settings, choose No proxy for a direct deployment, or use Auto or enter the immediate proxy address and then verify and save it. Ensure a proxy overwrites client-supplied forwarding headers.",
+        "passed": "Client-address trust mode is explicitly configured"
       },
       "title": "Security checkup",
       "description": "Server-side checks for account hygiene, master-key handling, and process-memory exposure.",

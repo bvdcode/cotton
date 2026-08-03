@@ -22,6 +22,8 @@ const configStringSchema = nullableStringSchema.transform(
   (value) => value ?? "",
 );
 
+export const DIRECT_CONNECTION_IP_ADDRESS = "0.0.0.0";
+
 export const storageTypeValues = ["Local", "S3"] as const;
 export const emailModeValues = ["None", "Cloud", "Custom"] as const;
 export const computionModeValues = ["Local", "Cloud", "Remote"] as const;

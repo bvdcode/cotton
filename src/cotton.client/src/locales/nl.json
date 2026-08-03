@@ -2848,9 +2848,12 @@
       "general": {
         "trustedProxy": {
           "title": "IP-adres van vertrouwde proxy",
-          "description": "Het exacte IP-adres van de direct verbonden reverse proxy die het clientadres mag aanleveren. De proxy moet door de client ingestelde headers CF-Connecting-IP, X-Real-IP en X-Forwarded-For overschrijven of verwijderen.",
+          "description": "Het exacte IP-adres van de direct verbonden reverse proxy die het clientadres mag aanleveren. De proxy moet door de client ingestelde headers CF-Connecting-IP, X-Real-IP en X-Forwarded-For overschrijven of verwijderen. Kies Zonder proxy voor een directe installatie.",
           "emptyHint": "Laat leeg om het oude gedrag te behouden dat doorgestuurde clientadressen van elke verbinding vertrouwt.",
           "placeholder": "Bijvoorbeeld 172.18.0.2",
+          "direct": "Zonder proxy",
+          "directMode": "Directe verbinding (zonder proxy); forwarding-headers worden genegeerd",
+          "directSaved": "De modus voor directe verbinding is opgeslagen. Forwarding-headers worden genegeerd.",
           "detect": "Automatisch",
           "verifyAndSave": "Controleren en opslaan",
           "unavailable": "Het adres van de verbonden proxy is voor deze aanvraag niet beschikbaar.",
@@ -3140,8 +3143,8 @@
       "trustedProxy": {
         "field": "IP-adres van vertrouwde proxy",
         "threatVector": "Een aanvaller die Cotton rechtstreeks kan bereiken, of via een proxy die headers niet opschoont, kan het zichtbare clientadres wijzigen en IP-limieten omzeilen.",
-        "fix": "Gebruik bij Algemene instellingen Automatisch of voer het adres van de direct verbonden proxy in en controleer en bewaar dit. De proxy moet doorgestuurde clientheaders overschrijven.",
-        "passed": "Doorgestuurde clientadressen worden alleen van de ingestelde proxy geaccepteerd"
+        "fix": "Kies bij Algemene instellingen Zonder proxy voor een directe installatie, of gebruik Automatisch of voer het adres van de direct verbonden proxy in en controleer en bewaar dit. Een proxy moet doorgestuurde clientheaders overschrijven.",
+        "passed": "De vertrouwensmodus voor clientadressen is expliciet ingesteld"
       },
       "title": "Beveiligingscontrole",
       "description": "Controles aan de serverzijde voor accounthygiëne, behandeling van de hoofdsleutel en blootstelling van procesgeheugen.",

@@ -43,6 +43,8 @@ import {
   type TrustedProxyVerificationResult,
 } from "./schemas/serverSettings";
 
+export { DIRECT_CONNECTION_IP_ADDRESS } from "./schemas/serverSettings";
+
 export type {
   ChunkSizeSettings,
   ComputionMode,

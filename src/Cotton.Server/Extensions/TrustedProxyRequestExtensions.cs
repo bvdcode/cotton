@@ -15,8 +15,13 @@ namespace Cotton.Server.Extensions
     public static class TrustedProxyRequestExtensions
     {
         /// <summary>
-        /// Gets the client address supplied by a configured trusted proxy, or preserves legacy header trust while no
-        /// trusted proxy has been configured.
+        /// Reserved settings value that selects direct-connection mode and disables forwarded client-address headers.
+        /// </summary>
+        internal static IPAddress DirectConnectionIpAddress { get; } = IPAddress.Any;
+
+        /// <summary>
+        /// Gets the client address according to the configured trust mode: direct connection, validated proxy, or
+        /// legacy header trust while no trusted proxy has been configured.
         /// </summary>
         public static IPAddress GetTrustedClientIPAddress(this HttpRequest request)
         {
@@ -34,6 +39,13 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(request);
 
+            if (IsDirectConnectionMode(trustedProxyIpAddress))
+            {
+                return request.GetConnectingIPAddress()
+                    ?? throw new InvalidOperationException(
+                        "The direct client connection IP address is unavailable for this request.");
+            }
+
             if (trustedProxyIpAddress is not null)
             {
                 IPAddress? connectingIpAddress = request.GetConnectingIPAddress();
@@ -48,6 +60,11 @@ namespace Cotton.Server.Extensions
             // EasyExtensions currently resolves CF-Connecting-IP, then X-Real-IP, then X-Forwarded-For, and finally
             // Connection.RemoteIpAddress. The configured peer check above is the trust boundary around those headers.
             return EasyHttpRequestExtensions.GetRemoteIPAddress(request);
+        }
+
+        internal static bool IsDirectConnectionMode(IPAddress? address)
+        {
+            return address is not null && Normalize(address).Equals(DirectConnectionIpAddress);
         }
 
         internal static IPAddress? GetConnectingIPAddress(this HttpRequest request)

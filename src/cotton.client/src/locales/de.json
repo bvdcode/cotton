@@ -2843,9 +2843,12 @@
       "general": {
         "trustedProxy": {
           "title": "IP-Adresse des vertrauenswürdigen Proxys",
-          "description": "Exakte IP-Adresse des unmittelbar vorgeschalteten Reverse-Proxys, der die Clientadresse liefern darf. Der Proxy muss vom Client gesetzte Header CF-Connecting-IP, X-Real-IP und X-Forwarded-For überschreiben oder entfernen.",
+          "description": "Exakte IP-Adresse des unmittelbar vorgeschalteten Reverse-Proxys, der die Clientadresse liefern darf. Der Proxy muss vom Client gesetzte Header CF-Connecting-IP, X-Real-IP und X-Forwarded-For überschreiben oder entfernen. Für eine direkte Bereitstellung Ohne Proxy wählen.",
           "emptyHint": "Leer lassen, um das bisherige Verhalten beizubehalten, das weitergeleiteten Clientadressen aus jeder Verbindung vertraut.",
           "placeholder": "Zum Beispiel 172.18.0.2",
+          "direct": "Ohne Proxy",
+          "directMode": "Direkte Verbindung (ohne Proxy); Forwarding-Header werden ignoriert",
+          "directSaved": "Der Modus für direkte Verbindungen wurde gespeichert. Forwarding-Header werden ignoriert.",
           "detect": "Automatisch",
           "verifyAndSave": "Prüfen und speichern",
           "unavailable": "Die Adresse des verbundenen Proxys ist für diese Anfrage nicht verfügbar.",
@@ -3135,8 +3138,8 @@
       "trustedProxy": {
         "field": "IP-Adresse des vertrauenswürdigen Proxys",
         "threatVector": "Ein Angreifer mit direktem Zugriff auf Cotton oder über einen Proxy ohne Header-Bereinigung kann seine scheinbare Clientadresse wechseln und IP-basierte Limits umgehen.",
-        "fix": "Unter Allgemeine Einstellungen Automatisch verwenden oder die Adresse des unmittelbar verbundenen Proxys eingeben, anschließend prüfen und speichern. Der Proxy muss Client-Forwarding-Header überschreiben.",
-        "passed": "Weitergeleitete Clientadressen werden nur vom konfigurierten Proxy akzeptiert"
+        "fix": "Unter Allgemeine Einstellungen für eine direkte Bereitstellung Ohne Proxy wählen oder Automatisch verwenden bzw. die Adresse des unmittelbar verbundenen Proxys eingeben und anschließend prüfen und speichern. Ein Proxy muss Client-Forwarding-Header überschreiben.",
+        "passed": "Der Vertrauensmodus für Clientadressen ist ausdrücklich konfiguriert"
       },
       "title": "Sicherheitsprüfung",
       "description": "Serverseitige Prüfungen für Kontohygiene, Master-Key-Handhabung und Speicherexposition des Prozesses.",

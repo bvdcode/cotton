@@ -2891,9 +2891,12 @@
       "general": {
         "trustedProxy": {
           "title": "Adres IP zaufanego proxy",
-          "description": "Dokładny adres IP bezpośrednio połączonego reverse proxy, który może przekazywać adres klienta. Proxy musi nadpisywać lub usuwać nagłówki CF-Connecting-IP, X-Real-IP i X-Forwarded-For ustawione przez klienta.",
+          "description": "Dokładny adres IP bezpośrednio połączonego reverse proxy, który może przekazywać adres klienta. Proxy musi nadpisywać lub usuwać nagłówki CF-Connecting-IP, X-Real-IP i X-Forwarded-For ustawione przez klienta. Dla wdrożenia bezpośredniego wybierz Bez proxy.",
           "emptyHint": "Pozostaw puste, aby zachować poprzednie zachowanie ufające przekazanym adresom ze wszystkich połączeń.",
           "placeholder": "Na przykład 172.18.0.2",
+          "direct": "Bez proxy",
+          "directMode": "Połączenie bezpośrednie (bez proxy); nagłówki przekazywania są ignorowane",
+          "directSaved": "Tryb połączenia bezpośredniego został zapisany. Nagłówki przekazywania będą ignorowane.",
           "detect": "Automatycznie",
           "verifyAndSave": "Sprawdź i zapisz",
           "unavailable": "Adres połączonego proxy jest niedostępny dla tego żądania.",
@@ -3183,8 +3186,8 @@
       "trustedProxy": {
         "field": "Adres IP zaufanego proxy",
         "threatVector": "Atakujący, który może dotrzeć bezpośrednio do Cotton lub przez proxy bez czyszczenia nagłówków, może zmieniać widoczny adres klienta i omijać limity IP.",
-        "fix": "W ustawieniach ogólnych użyj opcji Automatycznie lub wpisz adres bezpośredniego proxy, następnie sprawdź i zapisz. Proxy musi nadpisywać nagłówki przekazywane przez klienta.",
-        "passed": "Przekazane adresy klientów są akceptowane tylko od skonfigurowanego proxy"
+        "fix": "W ustawieniach ogólnych wybierz Bez proxy dla wdrożenia bezpośredniego albo użyj opcji Automatycznie lub wpisz adres bezpośredniego proxy, następnie sprawdź i zapisz. Proxy musi nadpisywać nagłówki przekazywane przez klienta.",
+        "passed": "Tryb zaufania adresu klienta jest jawnie skonfigurowany"
       },
       "title": "Przegląd bezpieczeństwa",
       "description": "Kontrole po stronie serwera dotyczące higieny konta, obsługi klucza głównego i ekspozycji pamięci procesu.",

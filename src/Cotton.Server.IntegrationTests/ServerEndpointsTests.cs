@@ -139,6 +139,28 @@ public class ServerEndpointsTests : IntegrationTestBase
         Assert.That(
             configuredPayload.GetProperty("trustedProxyIpAddress").GetString(),
             Is.EqualTo(observedAddress));
+
+        using HttpResponseMessage directResponse = await _client.PostAsJsonAsync(
+            "/api/v1/server/settings/trusted-proxy-ip-address/verify-and-save",
+            IPAddress.Any.ToString());
+        directResponse.EnsureSuccessStatusCode();
+        JsonElement directPayload = await directResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(directPayload.GetProperty("matches").GetBoolean(), Is.True);
+            Assert.That(directPayload.GetProperty("saved").GetBoolean(), Is.True);
+            Assert.That(
+                directPayload.GetProperty("trustedProxyIpAddress").GetString(),
+                Is.EqualTo(IPAddress.Any.ToString()));
+        });
+
+        using HttpResponseMessage securityResponse = await _client.GetAsync("/api/v1/server/security/status");
+        securityResponse.EnsureSuccessStatusCode();
+        JsonElement securityPayload = await securityResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.That(
+            securityPayload.GetProperty("warnings").EnumerateArray().Any(warning =>
+                warning.GetProperty("code").GetString() == "trusted-proxy-not-configured"),
+            Is.False);
     }
 
     [Test]

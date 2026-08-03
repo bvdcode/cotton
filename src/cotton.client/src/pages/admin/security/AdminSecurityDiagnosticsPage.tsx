@@ -27,6 +27,7 @@ import type {
   SecurityDiagnosticWarningDto,
   SecurityDiagnosticsDto,
 } from "../../../shared/api/adminApi";
+import { DIRECT_CONNECTION_IP_ADDRESS } from "../../../shared/api/settingsApi";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 
 const knownThreatVectorCodes = new Set([
@@ -669,7 +670,11 @@ const InstanceDiagnosticsSection = ({
     />
     <DiagnosticsRow
       label={t("securityDiagnostics.trustedProxy.field")}
-      value={formatNullable(diagnostics.trustedProxyIpAddress, t)}
+      value={
+        diagnostics.trustedProxyIpAddress === DIRECT_CONNECTION_IP_ADDRESS
+          ? t("settings.general.trustedProxy.directMode")
+          : formatNullable(diagnostics.trustedProxyIpAddress, t)
+      }
       color={diagnostics.trustedProxyIpAddress ? "success" : "warning"}
     />
     <DiagnosticsRow

@@ -126,7 +126,7 @@ sequenceDiagram
 
 ### Public-instance IP handling
 
-`GetRequestIpAddress()` returns `IPAddress.Loopback` when `Constants.IsPublicInstance` is true (controlled by the env var `COTTON_PUBLIC_INSTANCE`, parsed as a boolean by `Constants.IsPublicInstance`), otherwise `Request.GetTrustedClientIPAddress()`. The latter validates the configured immediate proxy before accepting a forwarded address. This is used only in the failed-login notification path, masking the caller's IP on public/demo deployments.
+`GetRequestIpAddress()` returns `IPAddress.Loopback` when `Constants.IsPublicInstance` is true (controlled by the env var `COTTON_PUBLIC_INSTANCE`, parsed as a boolean by `Constants.IsPublicInstance`), otherwise `Request.GetTrustedClientIPAddress()`. The latter applies the configured legacy, direct, or exact-proxy client-address trust mode. This is used only in the failed-login notification path, masking the caller's IP on public/demo deployments.
 
 ## Path resolution
 

@@ -74,6 +74,21 @@ public class EndpointRateLimitingTests
     }
 
     [Test]
+    public void TrustedClientAddress_DirectModeIgnoresForwardedHeaders()
+    {
+        DefaultHttpContext context = new();
+        context.Connection.RemoteIpAddress = IPAddress.Parse("198.51.100.25");
+        context.Request.Headers["CF-Connecting-IP"] = "203.0.113.40";
+        context.Request.Headers["X-Real-IP"] = "203.0.113.41";
+        context.Request.Headers["X-Forwarded-For"] = "203.0.113.42";
+
+        IPAddress address = context.Request.GetTrustedClientIPAddress(
+            TrustedProxyRequestExtensions.DirectConnectionIpAddress);
+
+        Assert.That(address, Is.EqualTo(IPAddress.Parse("198.51.100.25")));
+    }
+
+    [Test]
     public void TrustedClientAddress_RejectsHeadersFromUntrustedConnection()
     {
         DefaultHttpContext context = new();

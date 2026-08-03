@@ -1,4 +1,5 @@
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
+import PublicIcon from "@mui/icons-material/Public";
 import SaveIcon from "@mui/icons-material/Save";
 import {
   Alert,
@@ -11,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
 import {
+  DIRECT_CONNECTION_IP_ADDRESS,
   settingsApi,
   type TrustedProxyVerificationResult,
 } from "../../../shared/api/settingsApi";
@@ -124,8 +126,37 @@ export const TrustedProxyIpAddressSetting = () => {
     }
   }, [flashSaved, t, value]);
 
+  const handleDirectConnection = useCallback(async () => {
+    setStatus("saving");
+    setLastResult(null);
+    try {
+      const result = await settingsApi.verifyAndSaveTrustedProxyIpAddress(
+        DIRECT_CONNECTION_IP_ADDRESS,
+      );
+      setLastResult(result);
+      if (!result.saved) {
+        setStatus("error");
+        return;
+      }
+
+      setValue(DIRECT_CONNECTION_IP_ADDRESS);
+      flashSaved();
+      toast.success(t("settings.general.trustedProxy.directSaved"), {
+        toastId: "admin-general:trusted-proxy:direct-success",
+      });
+    } catch (error) {
+      setStatus("error");
+      showApiErrorToast(
+        error,
+        t("settings.errors.saveFailed"),
+        "admin-general:trusted-proxy:direct-error",
+      );
+    }
+  }, [flashSaved, t]);
+
   const busy = status === "loading" || status === "saving" || detecting;
   const mismatch = lastResult?.matches === false ? lastResult : null;
+  const directConnection = value === DIRECT_CONNECTION_IP_ADDRESS;
 
   return (
     <SettingsSection
@@ -135,14 +166,24 @@ export const TrustedProxyIpAddressSetting = () => {
     >
       <Stack spacing={1.5}>
         <TextField
-          value={value}
+          value={directConnection ? "" : value}
+          onFocus={() => {
+            if (directConnection) {
+              setValue("");
+              setLastResult(null);
+            }
+          }}
           onChange={(event) => {
             setValue(event.target.value);
             setLastResult(null);
             if (status === "error") setStatus("idle");
           }}
           placeholder={t("settings.general.trustedProxy.placeholder")}
-          helperText={t("settings.general.trustedProxy.emptyHint")}
+          helperText={
+            directConnection
+              ? t("settings.general.trustedProxy.directMode")
+              : t("settings.general.trustedProxy.emptyHint")
+          }
           disabled={busy}
           fullWidth
         />
@@ -156,7 +197,21 @@ export const TrustedProxyIpAddressSetting = () => {
           </Alert>
         )}
 
-        <Stack direction="row" spacing={1} justifyContent="flex-end">
+        <Stack
+          direction="row"
+          spacing={1}
+          justifyContent="flex-end"
+          useFlexGap
+          flexWrap="wrap"
+        >
+          <Button
+            variant={directConnection ? "contained" : "outlined"}
+            onClick={() => void handleDirectConnection()}
+            disabled={busy}
+            startIcon={<PublicIcon />}
+          >
+            {t("settings.general.trustedProxy.direct")}
+          </Button>
           <Button
             variant="outlined"
             onClick={() => void handleAutoDetect()}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DIRECT_CONNECTION_IP_ADDRESS,
   chunkSizeResponseSchema,
   chunkSizeSettingsResponseSchema,
   emailConfigSchema,
@@ -113,6 +114,7 @@ describe("server settings schemas", () => {
   });
 
   it("parses trusted proxy settings and verification results", () => {
+    expect(DIRECT_CONNECTION_IP_ADDRESS).toBe("0.0.0.0");
     expect(
       trustedProxyIpAddressSchema.parse({ trustedProxyIpAddress: null }),
     ).toBe("");

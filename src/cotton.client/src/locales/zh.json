@@ -2856,9 +2856,12 @@
       "general": {
         "trustedProxy": {
           "title": "受信任代理 IP 地址",
-          "description": "允许提供客户端地址的直接反向代理的准确 IP 地址。代理必须覆盖或删除客户端提供的 CF-Connecting-IP、X-Real-IP 和 X-Forwarded-For 标头。",
+          "description": "允许提供客户端地址的直接反向代理的准确 IP 地址。代理必须覆盖或删除客户端提供的 CF-Connecting-IP、X-Real-IP 和 X-Forwarded-For 标头。直接部署请选择“无代理”。",
           "emptyHint": "留空可保留旧行为，即信任来自所有连接的转发客户端地址。",
           "placeholder": "例如 172.18.0.2",
+          "direct": "无代理",
+          "directMode": "直接连接（无代理）；忽略转发标头",
+          "directSaved": "已保存直接连接模式。转发标头将被忽略。",
           "detect": "自动",
           "verifyAndSave": "验证并保存",
           "unavailable": "此请求无法获取连接代理的地址。",
@@ -3148,8 +3151,8 @@
       "trustedProxy": {
         "field": "受信任代理 IP 地址",
         "threatVector": "能够直接访问 Cotton，或通过未清理标头的代理访问的攻击者，可以更改其显示的客户端地址并绕过基于 IP 的限制。",
-        "fix": "在常规设置中使用“自动”，或输入直接连接代理的地址，然后验证并保存。请确保代理覆盖客户端提供的转发标头。",
-        "passed": "仅接受来自已配置代理的转发客户端地址"
+        "fix": "在常规设置中，直接部署请选择“无代理”；否则使用“自动”或输入直接连接代理的地址，然后验证并保存。代理必须覆盖客户端提供的转发标头。",
+        "passed": "客户端地址信任模式已明确配置"
       },
       "title": "安全检查",
       "description": "对账户卫生、主密钥处理以及进程内存暴露进行的服务端检查。",
