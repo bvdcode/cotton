@@ -207,6 +207,24 @@ export const publicBaseUrlSchema = z
   .object({ publicBaseUrl: nullableStringSchema })
   .transform((value) => value.publicBaseUrl ?? "");
 
+export const trustedProxyIpAddressSchema = z
+  .object({ trustedProxyIpAddress: nullableStringSchema })
+  .transform((value) => value.trustedProxyIpAddress ?? "");
+
+export const observedProxyIpAddressSchema = z
+  .object({ observedProxyIpAddress: nullableStringSchema })
+  .transform((value) => value.observedProxyIpAddress ?? "");
+
+export const trustedProxyVerificationResultSchema = z.object({
+  trustedProxyIpAddress: nullableStringSchema,
+  observedProxyIpAddress: z.string(),
+  matches: z.boolean(),
+  saved: z.boolean(),
+});
+export type TrustedProxyVerificationResult = z.infer<
+  typeof trustedProxyVerificationResultSchema
+>;
+
 export const storageSpaceModeResponseSchema = z
   .object({ storageSpaceMode: z.unknown().optional() })
   .transform((value) => storageSpaceModeSchema.parse(value.storageSpaceMode));

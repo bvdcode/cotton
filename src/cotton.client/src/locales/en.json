@@ -2640,6 +2640,19 @@
         "saveFailed": "Failed to save settings."
       },
       "general": {
+        "trustedProxy": {
+          "title": "Trusted proxy IP address",
+          "description": "Exact IP address of the immediate reverse proxy allowed to supply the client address. The proxy must overwrite or strip client-supplied CF-Connecting-IP, X-Real-IP, and X-Forwarded-For headers.",
+          "emptyHint": "Leave empty to keep the legacy behavior that trusts forwarded client-address headers from every connection.",
+          "placeholder": "For example, 172.18.0.2",
+          "detect": "Auto",
+          "verifyAndSave": "Verify and save",
+          "unavailable": "The connecting proxy address is unavailable for this request.",
+          "detected": "Detected connecting proxy address: {{address}}.",
+          "saved": "The trusted proxy address was verified and saved.",
+          "disabled": "Trusted proxy restriction was disabled.",
+          "mismatch": "You entered {{entered}}, but this request arrived from {{observed}}. The setting was not saved."
+        },
         "title": "General settings",
         "description": "Core server behavior and notification location lookup.",
         "fields": {
@@ -2918,6 +2931,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "Trusted proxy IP address",
+        "threatVector": "A caller that can reach Cotton directly, or pass unsanitized headers through a proxy, can rotate its apparent client address and bypass IP-based abuse limits.",
+        "fix": "In General settings, use Auto or enter the immediate proxy connection address, then verify and save it. Ensure the proxy overwrites client-supplied forwarding headers.",
+        "passed": "Forwarded client addresses accepted only from the configured proxy"
+      },
       "title": "Security checkup",
       "description": "Server-side checks for account hygiene, master-key handling, and process-memory exposure.",
       "errors": {

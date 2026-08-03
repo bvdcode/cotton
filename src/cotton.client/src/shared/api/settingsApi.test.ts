@@ -265,6 +265,55 @@ describe("settingsApi getters", () => {
 });
 
 describe("settingsApi setters", () => {
+  it("detects and verifies the trusted proxy address", async () => {
+    const get = vi
+      .spyOn(httpClient, "get")
+      .mockResolvedValueOnce({
+        data: { trustedProxyIpAddress: "172.18.0.2" },
+      })
+      .mockResolvedValueOnce({
+        data: { observedProxyIpAddress: "172.18.0.3" },
+      });
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: {
+        trustedProxyIpAddress: "172.18.0.3",
+        observedProxyIpAddress: "172.18.0.3",
+        matches: true,
+        saved: true,
+      },
+    });
+
+    await expect(settingsApi.getTrustedProxyIpAddress()).resolves.toBe(
+      "172.18.0.2",
+    );
+    await expect(settingsApi.getObservedProxyIpAddress()).resolves.toBe(
+      "172.18.0.3",
+    );
+    await expect(
+      settingsApi.verifyAndSaveTrustedProxyIpAddress("172.18.0.3"),
+    ).resolves.toEqual({
+      trustedProxyIpAddress: "172.18.0.3",
+      observedProxyIpAddress: "172.18.0.3",
+      matches: true,
+      saved: true,
+    });
+
+    expect(get).toHaveBeenNthCalledWith(
+      1,
+      "server/settings/trusted-proxy-ip-address",
+      undefined,
+    );
+    expect(get).toHaveBeenNthCalledWith(
+      2,
+      "server/settings/trusted-proxy-ip-address/observed",
+      undefined,
+    );
+    expect(post).toHaveBeenCalledWith(
+      "server/settings/trusted-proxy-ip-address/verify-and-save",
+      "172.18.0.3",
+    );
+  });
+
   it("patches primitive settings with the expected payloads", async () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
       data: undefined,

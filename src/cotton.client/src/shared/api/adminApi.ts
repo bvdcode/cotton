@@ -166,6 +166,7 @@ export interface SecurityDiagnosticsDto {
   isLinux: boolean;
   isContainer: boolean;
   isPublicInstance: boolean;
+  trustedProxyIpAddress: string | null;
   securityScore: number;
   maxSecurityScore: number;
   masterKeySource: string;

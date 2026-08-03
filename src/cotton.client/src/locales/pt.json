@@ -2848,6 +2848,19 @@
         "saveFailed": "Falha ao salvar as configurações."
       },
       "general": {
+        "trustedProxy": {
+          "title": "Endereço IP do proxy confiável",
+          "description": "Endereço IP exato do proxy reverso ligado diretamente e autorizado a fornecer o endereço do cliente. O proxy deve substituir ou remover os cabeçalhos CF-Connecting-IP, X-Real-IP e X-Forwarded-For enviados pelo cliente.",
+          "emptyHint": "Deixe vazio para manter o comportamento anterior, que confia em endereços encaminhados por qualquer ligação.",
+          "placeholder": "Por exemplo, 172.18.0.2",
+          "detect": "Automático",
+          "verifyAndSave": "Verificar e guardar",
+          "unavailable": "O endereço do proxy ligado não está disponível para este pedido.",
+          "detected": "Endereço do proxy ligado detetado: {{address}}.",
+          "saved": "O endereço do proxy confiável foi verificado e guardado.",
+          "disabled": "A restrição ao proxy confiável foi desativada.",
+          "mismatch": "Introduziu {{entered}}, mas o pedido chegou de {{observed}}. A definição não foi guardada."
+        },
         "title": "Configurações gerais",
         "description": "Comportamento principal do servidor e consulta de localização para notificações.",
         "fields": {
@@ -3126,6 +3139,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "Endereço IP do proxy confiável",
+        "threatVector": "Um atacante que consiga aceder diretamente ao Cotton, ou através de um proxy que não limpe cabeçalhos, pode alterar o endereço aparente e contornar limites por IP.",
+        "fix": "Nas definições gerais, use Automático ou introduza o endereço do proxy ligado diretamente; depois verifique e guarde. O proxy deve substituir os cabeçalhos encaminhados pelo cliente.",
+        "passed": "Os endereços de cliente encaminhados só são aceites do proxy configurado"
+      },
       "title": "Verificação de segurança",
       "description": "Verificações no servidor sobre a higiene das contas, manuseio da chave-mestra e exposição da memória do processo.",
       "errors": {

@@ -2889,6 +2889,19 @@
         "saveFailed": "Nie udało się zapisać ustawień."
       },
       "general": {
+        "trustedProxy": {
+          "title": "Adres IP zaufanego proxy",
+          "description": "Dokładny adres IP bezpośrednio połączonego reverse proxy, który może przekazywać adres klienta. Proxy musi nadpisywać lub usuwać nagłówki CF-Connecting-IP, X-Real-IP i X-Forwarded-For ustawione przez klienta.",
+          "emptyHint": "Pozostaw puste, aby zachować poprzednie zachowanie ufające przekazanym adresom ze wszystkich połączeń.",
+          "placeholder": "Na przykład 172.18.0.2",
+          "detect": "Automatycznie",
+          "verifyAndSave": "Sprawdź i zapisz",
+          "unavailable": "Adres połączonego proxy jest niedostępny dla tego żądania.",
+          "detected": "Wykryty adres połączonego proxy: {{address}}.",
+          "saved": "Adres zaufanego proxy został sprawdzony i zapisany.",
+          "disabled": "Ograniczenie do zaufanego proxy zostało wyłączone.",
+          "mismatch": "Wprowadzono {{entered}}, ale żądanie nadeszło z {{observed}}. Ustawienie nie zostało zapisane."
+        },
         "title": "Ustawienia ogólne",
         "description": "Podstawowe zachowanie serwera i wyszukiwanie lokalizacji dla powiadomień.",
         "fields": {
@@ -3167,6 +3180,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "Adres IP zaufanego proxy",
+        "threatVector": "Atakujący, który może dotrzeć bezpośrednio do Cotton lub przez proxy bez czyszczenia nagłówków, może zmieniać widoczny adres klienta i omijać limity IP.",
+        "fix": "W ustawieniach ogólnych użyj opcji Automatycznie lub wpisz adres bezpośredniego proxy, następnie sprawdź i zapisz. Proxy musi nadpisywać nagłówki przekazywane przez klienta.",
+        "passed": "Przekazane adresy klientów są akceptowane tylko od skonfigurowanego proxy"
+      },
       "title": "Przegląd bezpieczeństwa",
       "description": "Kontrole po stronie serwera dotyczące higieny konta, obsługi klucza głównego i ekspozycji pamięci procesu.",
       "errors": {

@@ -31,6 +31,7 @@ import { AdminPageSurface } from "../components/AdminPageSurface";
 
 const knownThreatVectorCodes = new Set([
   "public-instance",
+  "trusted-proxy-not-configured",
   "master-key-from-environment",
   "admins-without-2fa",
   "dotnet-diagnostics-enabled",
@@ -134,7 +135,9 @@ const getThreatVector = (
   t: TFunction<"admin">,
 ): string | null =>
   knownThreatVectorCodes.has(warning.code)
-    ? t(`securityDiagnostics.threatVectors.${warning.code}`)
+    ? warning.code === "trusted-proxy-not-configured"
+      ? t("securityDiagnostics.trustedProxy.threatVector")
+      : t(`securityDiagnostics.threatVectors.${warning.code}`)
     : null;
 
 const getFixText = (
@@ -142,7 +145,9 @@ const getFixText = (
   t: TFunction<"admin">,
 ): string | null =>
   knownThreatVectorCodes.has(warning.code)
-    ? t(`securityDiagnostics.fixes.${warning.code}`)
+    ? warning.code === "trusted-proxy-not-configured"
+      ? t("securityDiagnostics.trustedProxy.fix")
+      : t(`securityDiagnostics.fixes.${warning.code}`)
     : null;
 
 const formatNullable = (
@@ -481,6 +486,7 @@ const getPassedCheckCodes = (d: SecurityDiagnosticsDto): string[] => {
   const lc = d.linuxContainer;
   const checks: ReadonlyArray<readonly [string, boolean]> = [
     ["public-instance", d.isPublicInstance === false],
+    ["trusted-proxy-not-configured", Boolean(d.trustedProxyIpAddress)],
     [
       "master-key-from-environment",
       d.masterKeyEnvironmentVariableWasConfigured === false,
@@ -571,7 +577,14 @@ const SecurityPassedCard = ({ code, t }: SecurityPassedCardProps) => {
     : null;
 
   return (
-    <PositiveCard title={t(`securityDiagnostics.passed.${code}`)} code={code}>
+    <PositiveCard
+      title={
+        code === "trusted-proxy-not-configured"
+          ? t("securityDiagnostics.trustedProxy.passed")
+          : t(`securityDiagnostics.passed.${code}`)
+      }
+      code={code}
+    >
       {guardsAgainst && (
         <RiskLabeledBlock
           label={t("securityDiagnostics.labels.guardsAgainst")}
@@ -653,6 +666,11 @@ const InstanceDiagnosticsSection = ({
       label={t("securityDiagnostics.fields.publicInstance")}
       value={yesNo(diagnostics.isPublicInstance, t)}
       color={diagnostics.isPublicInstance ? "warning" : "success"}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.trustedProxy.field")}
+      value={formatNullable(diagnostics.trustedProxyIpAddress, t)}
+      color={diagnostics.trustedProxyIpAddress ? "success" : "warning"}
     />
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.admins")}

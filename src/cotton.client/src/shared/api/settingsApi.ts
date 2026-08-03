@@ -14,6 +14,7 @@ import {
   emailModeResponseSchema,
   geoIpLookupModeResponseSchema,
   publicBaseUrlSchema,
+  observedProxyIpAddressSchema,
   publicServerInfoSchema,
   serverSettingsResponseSchema,
   serverUsageListSchema,
@@ -24,6 +25,8 @@ import {
   storageTypeResponseSchema,
   telemetrySettingSchema,
   timezoneSchema,
+  trustedProxyIpAddressSchema,
+  trustedProxyVerificationResultSchema,
   type ChunkSizeSettings,
   type ComputionMode,
   type CustomGeoIpLookupTestResult,
@@ -37,6 +40,7 @@ import {
   type StoragePipelineSettings,
   type StorageSpaceMode,
   type StorageType,
+  type TrustedProxyVerificationResult,
 } from "./schemas/serverSettings";
 
 export type {
@@ -53,6 +57,7 @@ export type {
   StoragePipelineSettings,
   StorageSpaceMode,
   StorageType,
+  TrustedProxyVerificationResult,
 } from "./schemas/serverSettings";
 
 const mapUsageAnswer = (value: string): ServerUsage => {
@@ -304,6 +309,32 @@ export const settingsApi = {
 
   setPublicBaseUrl: async (url: string): Promise<void> => {
     await httpClient.patch("server/settings/public-base-url", url);
+  },
+
+  getTrustedProxyIpAddress: (): Promise<string> =>
+    getValidated(
+      "server/settings/trusted-proxy-ip-address",
+      trustedProxyIpAddressSchema,
+    ),
+
+  getObservedProxyIpAddress: (): Promise<string> =>
+    getValidated(
+      "server/settings/trusted-proxy-ip-address/observed",
+      observedProxyIpAddressSchema,
+    ),
+
+  verifyAndSaveTrustedProxyIpAddress: async (
+    ipAddress: string | null,
+  ): Promise<TrustedProxyVerificationResult> => {
+    const response = await httpClient.post<unknown>(
+      "server/settings/trusted-proxy-ip-address/verify-and-save",
+      ipAddress,
+    );
+    return parseValidated(
+      "server/settings/trusted-proxy-ip-address/verify-and-save",
+      response.data,
+      trustedProxyVerificationResultSchema,
+    );
   },
 
   getStorageSpaceMode: (): Promise<StorageSpaceMode> =>

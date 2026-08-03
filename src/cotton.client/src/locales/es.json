@@ -2916,6 +2916,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "Dirección IP del proxy de confianza",
+        "threatVector": "Un atacante con acceso directo a Cotton o a través de un proxy que no limpie encabezados puede cambiar su dirección aparente y eludir límites basados en IP.",
+        "fix": "En Configuración general, usa Automático o introduce la dirección del proxy inmediato; después verifica y guarda. Asegúrate de que el proxy sobrescriba los encabezados reenviados por el cliente.",
+        "passed": "Las direcciones reenviadas solo se aceptan del proxy configurado"
+      },
       "title": "Revisión de seguridad",
       "description": "Comprobaciones del servidor para cuentas, manejo de la clave maestra y exposición de memoria del proceso.",
       "errors": {
@@ -3123,6 +3129,19 @@
     },
     "settings": {
       "general": {
+        "trustedProxy": {
+          "title": "Dirección IP del proxy de confianza",
+          "description": "Dirección IP exacta del proxy inverso inmediato autorizado a proporcionar la dirección del cliente. El proxy debe sobrescribir o eliminar los encabezados CF-Connecting-IP, X-Real-IP y X-Forwarded-For enviados por el cliente.",
+          "emptyHint": "Déjalo vacío para conservar el comportamiento anterior, que confía en direcciones reenviadas desde cualquier conexión.",
+          "placeholder": "Por ejemplo, 172.18.0.2",
+          "detect": "Automático",
+          "verifyAndSave": "Verificar y guardar",
+          "unavailable": "La dirección del proxy conectado no está disponible para esta solicitud.",
+          "detected": "Dirección del proxy conectado detectada: {{address}}.",
+          "saved": "La dirección del proxy de confianza se verificó y guardó.",
+          "disabled": "Se desactivó la restricción de proxy de confianza.",
+          "mismatch": "Introdujiste {{entered}}, pero la solicitud llegó desde {{observed}}. La configuración no se guardó."
+        },
         "actions": {
           "testGeoIpProvider": "Probar proveedor"
         },

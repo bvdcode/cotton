@@ -2847,6 +2847,19 @@
         "saveFailed": "Impossibile salvare le impostazioni."
       },
       "general": {
+        "trustedProxy": {
+          "title": "Indirizzo IP del proxy attendibile",
+          "description": "Indirizzo IP esatto del reverse proxy collegato direttamente e autorizzato a fornire l’indirizzo del client. Il proxy deve sovrascrivere o rimuovere gli header CF-Connecting-IP, X-Real-IP e X-Forwarded-For inviati dal client.",
+          "emptyHint": "Lascia vuoto per mantenere il comportamento precedente, che considera attendibili gli indirizzi inoltrati da ogni connessione.",
+          "placeholder": "Ad esempio, 172.18.0.2",
+          "detect": "Auto",
+          "verifyAndSave": "Verifica e salva",
+          "unavailable": "L’indirizzo del proxy connesso non è disponibile per questa richiesta.",
+          "detected": "Indirizzo del proxy connesso rilevato: {{address}}.",
+          "saved": "L’indirizzo del proxy attendibile è stato verificato e salvato.",
+          "disabled": "La restrizione al proxy attendibile è stata disattivata.",
+          "mismatch": "Hai inserito {{entered}}, ma la richiesta proviene da {{observed}}. L’impostazione non è stata salvata."
+        },
         "title": "Impostazioni generali",
         "description": "Comportamento di base del server e risoluzione della posizione per le notifiche.",
         "fields": {
@@ -3125,6 +3138,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "Indirizzo IP del proxy attendibile",
+        "threatVector": "Un attaccante che può raggiungere Cotton direttamente, o tramite un proxy che non pulisce gli header, può cambiare l’indirizzo apparente e aggirare i limiti basati su IP.",
+        "fix": "Nelle impostazioni generali usa Auto o inserisci l’indirizzo del proxy collegato direttamente, quindi verifica e salva. Il proxy deve sovrascrivere gli header di inoltro inviati dal client.",
+        "passed": "Gli indirizzi client inoltrati sono accettati solo dal proxy configurato"
+      },
       "title": "Controllo della sicurezza",
       "description": "Controlli lato server per l'igiene degli account, la gestione della chiave master e l'esposizione della memoria del processo.",
       "errors": {

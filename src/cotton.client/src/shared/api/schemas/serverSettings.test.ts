@@ -12,6 +12,9 @@ import {
   storageTypeResponseSchema,
   telemetrySettingSchema,
   timezoneSchema,
+  trustedProxyIpAddressSchema,
+  observedProxyIpAddressSchema,
+  trustedProxyVerificationResultSchema,
   defaultUserTemplateNodeIdSchema,
 } from "./serverSettings";
 
@@ -107,6 +110,30 @@ describe("server settings schemas", () => {
     expect(timezoneSchema.parse({ timezone: null })).toBe("UTC");
     expect(publicBaseUrlSchema.parse({ publicBaseUrl: null })).toBe("");
     expect(serverUsageListSchema.parse({ serverUsage: [] })).toEqual(["Other"]);
+  });
+
+  it("parses trusted proxy settings and verification results", () => {
+    expect(
+      trustedProxyIpAddressSchema.parse({ trustedProxyIpAddress: null }),
+    ).toBe("");
+    expect(
+      observedProxyIpAddressSchema.parse({
+        observedProxyIpAddress: "172.18.0.2",
+      }),
+    ).toBe("172.18.0.2");
+    expect(
+      trustedProxyVerificationResultSchema.parse({
+        trustedProxyIpAddress: "172.18.0.3",
+        observedProxyIpAddress: "172.18.0.2",
+        matches: false,
+        saved: false,
+      }),
+    ).toEqual({
+      trustedProxyIpAddress: "172.18.0.3",
+      observedProxyIpAddress: "172.18.0.2",
+      matches: false,
+      saved: false,
+    });
   });
 
   it("normalizes storage and email config payloads", () => {

@@ -13,6 +13,7 @@ import { ComputationModeSetting } from "./ComputationModeSetting";
 import { PublicBaseUrlSetting } from "./PublicBaseUrlSetting";
 import { ServerUsageSetting } from "./ServerUsageSetting";
 import { TimezoneSetting } from "./TimezoneSetting";
+import { TrustedProxyIpAddressSetting } from "./TrustedProxyIpAddressSetting";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 
 export const AdminGeneralSettingsPage = () => {
@@ -44,6 +45,7 @@ export const AdminGeneralSettingsPage = () => {
           </Box>
 
           <PublicBaseUrlSetting />
+          <TrustedProxyIpAddressSetting />
           <TimezoneSetting />
           <ComputationModeSetting />
           <ServerUsageSetting />

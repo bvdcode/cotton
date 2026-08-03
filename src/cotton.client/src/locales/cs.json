@@ -2886,6 +2886,19 @@
         "saveFailed": "Uložení nastavení se nezdařilo."
       },
       "general": {
+        "trustedProxy": {
+          "title": "IP adresa důvěryhodného proxy serveru",
+          "description": "Přesná IP adresa přímého reverzního proxy serveru, který smí předávat adresu klienta. Proxy musí přepsat nebo odstranit klientské hlavičky CF-Connecting-IP, X-Real-IP a X-Forwarded-For.",
+          "emptyHint": "Ponechte prázdné pro původní chování, které důvěřuje přeposlaným adresám ze všech připojení.",
+          "placeholder": "Například 172.18.0.2",
+          "detect": "Automaticky",
+          "verifyAndSave": "Ověřit a uložit",
+          "unavailable": "Adresu připojeného proxy serveru nelze pro tento požadavek zjistit.",
+          "detected": "Zjištěná adresa připojeného proxy serveru: {{address}}.",
+          "saved": "Adresa důvěryhodného proxy serveru byla ověřena a uložena.",
+          "disabled": "Omezení na důvěryhodný proxy server bylo vypnuto.",
+          "mismatch": "Zadali jste {{entered}}, ale požadavek přišel z {{observed}}. Nastavení nebylo uloženo."
+        },
         "title": "Obecná nastavení",
         "description": "Základní chování serveru a vyhledávání polohy pro oznámení.",
         "fields": {
@@ -3164,6 +3177,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "IP adresa důvěryhodného proxy serveru",
+        "threatVector": "Útočník s přímým přístupem ke Cottonu nebo přes proxy bez čištění hlaviček může měnit zdánlivou adresu klienta a obcházet IP limity.",
+        "fix": "V Obecných nastaveních použijte Automaticky nebo zadejte adresu přímého proxy serveru, poté ji ověřte a uložte. Proxy musí přepisovat klientské přeposílací hlavičky.",
+        "passed": "Přeposlané adresy klientů přijímá pouze nakonfigurovaný proxy server"
+      },
       "title": "Kontrola zabezpečení",
       "description": "Serverové kontroly hygieny účtu, zacházení s hlavním klíčem a expozice paměti procesu.",
       "errors": {
