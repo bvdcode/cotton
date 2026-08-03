@@ -129,6 +129,7 @@ namespace Cotton.Server
                 client.Timeout = TimeSpan.FromSeconds(15);
             });
             builder.Services
+                .AddExceptionHandler<UntrustedProxyConnectionExceptionHandler>()
                 .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()
                 .Bind(builder.Configuration);

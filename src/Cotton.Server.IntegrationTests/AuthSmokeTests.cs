@@ -6,10 +6,12 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton;
+using Cotton.Database.Models;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;
 using Cotton.Storage.Abstractions;
@@ -187,6 +189,49 @@ public class AuthSmokeTests : IntegrationTestBase
             Assert.That(result?.MessageCode, Is.EqualTo("rate_limit_exceeded"));
             Assert.That(result?.Message, Is.EqualTo("Too many requests. Retry later."));
         });
+    }
+
+    [Test]
+    public async Task Login_FromUntrustedProxy_ReturnsForbidden()
+    {
+        Assert.That(_client, Is.Not.Null);
+        Assert.That(_customFactory, Is.Not.Null);
+
+        using IServiceScope scope = _customFactory!.Services.CreateScope();
+        CottonServerSettings settings = scope.ServiceProvider
+            .GetRequiredService<SettingsProvider>()
+            .GetServerSettings();
+        IPAddress? previousTrustedProxyIpAddress = settings.TrustedProxyIpAddress;
+        settings.TrustedProxyIpAddress = IPAddress.Parse("192.0.2.10");
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            {
+                Content = JsonContent.Create(new CottonLoginRequestDto
+                {
+                    Username = "untrusted-proxy",
+                    Password = "testpassword"
+                })
+            };
+            request.Headers.Add(TestAppFactory.RemoteIpAddressHeader, "192.0.2.11");
+            request.Headers.Add("CF-Connecting-IP", "203.0.113.40");
+
+            using HttpResponseMessage response = await _client!.SendAsync(request);
+            CottonResult? result = await response.Content.ReadFromJsonAsync<CottonResult>();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+                Assert.That(result?.MessageCode, Is.EqualTo("untrusted_proxy_connection"));
+                Assert.That(result?.Message, Does.Not.Contain("192.0.2.10"));
+                Assert.That(result?.Message, Does.Not.Contain("192.0.2.11"));
+            });
+        }
+        finally
+        {
+            settings.TrustedProxyIpAddress = previousTrustedProxyIpAddress;
+        }
     }
 
     [Test]

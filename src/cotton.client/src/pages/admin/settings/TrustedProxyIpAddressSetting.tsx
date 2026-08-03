@@ -167,12 +167,6 @@ export const TrustedProxyIpAddressSetting = () => {
       <Stack spacing={1.5}>
         <TextField
           value={directConnection ? "" : value}
-          onFocus={() => {
-            if (directConnection) {
-              setValue("");
-              setLastResult(null);
-            }
-          }}
           onChange={(event) => {
             setValue(event.target.value);
             setLastResult(null);
