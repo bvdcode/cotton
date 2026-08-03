@@ -125,6 +125,10 @@ namespace Cotton.Server.Extensions
         /// <summary>
         /// Sends an account security email without affecting the completed account action.
         /// </summary>
+        /// <remarks>
+        /// Delivery is intentionally best-effort and request-scoped: it is not persisted or retried. Transport
+        /// failures are logged and do not change the result of the originating account operation.
+        /// </remarks>
         public static async Task SendSecurityEmailAsync(
             this INotificationsProvider notifications,
             SettingsProvider settings,
