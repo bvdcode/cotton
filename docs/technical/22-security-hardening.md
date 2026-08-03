@@ -75,11 +75,12 @@ The result is clamped to a floor of 0: `Math.Max(0, 10 - penalty)`. `MaxSecurity
 
 ### Warning vectors
 
-`BuildWarnings` invokes a fixed sequence of detectors in this order: public-instance, master-key, admin-TOTP, .NET diagnostics, temp-directory, Linux-process group (`AddLinuxProcessWarnings`), Linux-container group (`AddLinuxContainerWarnings`), hardening-failure, and database-integrity. Each detector emits at most one `SecurityDiagnosticWarningDto { Code, Severity, Message }`. The complete catalog:
+`BuildWarnings` invokes a fixed sequence of detectors in this order: public-instance, trusted-proxy, master-key, admin-TOTP, .NET diagnostics, temp-directory, Linux-process group (`AddLinuxProcessWarnings`), Linux-container group (`AddLinuxContainerWarnings`), hardening-failure, and database-integrity. Each detector emits at most one `SecurityDiagnosticWarningDto { Code, Severity, Message }`. The complete catalog:
 
 | Code | Severity | Trigger condition | Notes |
 |---|---|---|---|
 | `public-instance` | warning | `Constants.IsPublicInstance` (env `COTTON_PUBLIC_INSTANCE` parses to `true`) | Public/demo account creation is on. |
+| `trusted-proxy-not-configured` | warning | `CottonServerSettings.TrustedProxyIpAddress == null` | Forwarded client-address headers remain trusted from every connection for compatibility; costs 2 score points. |
 | `master-key-from-environment` | warning | `MasterKeyRuntimeState.EnvironmentVariableWasConfigured` | Key came from `COTTON_MASTER_KEY`; container metadata may still expose it. |
 | `admins-without-2fa` | warning | `AdminTotpDiagnosticsDto.AdminsWithoutTotp > 0` | Message reads "N of M admin accounts do not have 2FA enabled." |
 | `dotnet-diagnostics-enabled` | warning | `.NET` diagnostics **not** disabled | See OR semantics below. |
@@ -126,6 +127,7 @@ Important guards:
 | `IsLinux` | bool | `OperatingSystem.IsLinux()` |
 | `IsContainer` | bool | `IsContainer()` probe |
 | `IsPublicInstance` | bool | `Constants.IsPublicInstance` |
+| `TrustedProxyIpAddress` | string? | configured exact immediate proxy peer; null means legacy trust-all mode |
 | `SecurityScore` / `MaxSecurityScore` | int / int (=10) | computed / constant |
 | `MasterKeySource` | string | `"Unlock"` or `"Environment"` |
 | `MasterKeyEnvironmentVariableWasConfigured` | bool | key supplied via env |
@@ -143,7 +145,7 @@ Important guards:
 
 `AdminSecurityDiagnosticsPage` (route `/admin/security`, registered in `src/cotton.client/src/app/routes.tsx` and linked from `src/cotton.client/src/pages/admin/AdminLayoutPage.tsx`) consumes the snapshot via `useSecurityDiagnosticsQuery` and renders, in order: a score summary (`Alert` + `LinearProgress` with the level band from `getSecurityLevel`, including summary chips for public-vs-private, env-key-vs-memory-unlock, and admin-TOTP coverage), the risk list (`SecurityRiskSection`), and per-field diagnostic sections — `InstanceDiagnosticsSection`, `MasterKeyDiagnosticsSection`, `MemoryDiagnosticsSection`, `ContainerDiagnosticsSection`, `RuntimeDiagnosticsSection`.
 
-The page maintains its **own** allow-list `knownThreatVectorCodes` (a `Set` of all 17 codes) and looks up localized "threat vector" explanation copy via `securityDiagnostics.threatVectors.${warning.code}` only when `knownThreatVectorCodes.has(warning.code)` (`getThreatVector`). If the backend ever introduces a new warning code that is not added to this client-side set, the warning's `message` still renders but the extra threat-vector paragraph is silently omitted — keep the set in sync with `BuildWarnings`. Severity-to-color mapping mirrors the backend: `critical` → error, `warning` → warning, else info (`getSeverityColor`).
+The page maintains its **own** allow-list `knownThreatVectorCodes` (including `trusted-proxy-not-configured`) and looks up localized threat-vector/fix copy for known warnings. The trusted-proxy copy lives under `securityDiagnostics.trustedProxy.*`; older warnings retain the `securityDiagnostics.threatVectors.${code}` and `securityDiagnostics.fixes.${code}` layout. If the backend introduces an unknown warning code, its server message still renders but the localized impact/fix blocks are omitted. Severity-to-color mapping mirrors the backend: `critical` → error, `warning` → warning, else info (`getSeverityColor`).
 
 ## Runtime hardening
 
@@ -288,7 +290,7 @@ flowchart LR
     Diag --> Admin["Admin-only /admin/security"]
 ```
 
-- **Internet → HTTP edge.** Untrusted input crosses into the app through controllers. The validators canonicalize/reject names and usernames; `EndpointRateLimitingExtensions` protects credential-abuse endpoints with per-remote-IP fixed-window policies — `AuthRateLimitPolicies.Interactive` at 10 requests/minute and `AuthRateLimitPolicies.Refresh` at 60 requests/minute, both rejecting with HTTP 429 — while auth hardening provides JWT validation and session-token revocation (`OnTokenValidated`). The `public-instance` flag widens this boundary (anyone can create an account) and is surfaced as a warning.
+- **Internet → HTTP edge.** Untrusted input crosses into the app through controllers. `GetTrustedClientIPAddress` validates the immediate connection peer against `TrustedProxyIpAddress` before trusting forwarded client-address headers; a null setting keeps compatibility mode and is surfaced as a two-point warning. The validators canonicalize/reject names and usernames; `EndpointRateLimitingExtensions` protects credential-abuse endpoints with per-client-IP fixed-window policies — `AuthRateLimitPolicies.Interactive` at 10 requests/minute and `AuthRateLimitPolicies.Refresh` at 60 requests/minute, both rejecting with HTTP 429 — while auth hardening provides JWT validation and session-token revocation (`OnTokenValidated`). The `public-instance` flag widens this boundary (anyone can create an account) and is surfaced as a warning.
 - **App process ↔ in-memory secret.** The most sensitive asset is the master key in process memory. The app defends it directly only via `PR_SET_DUMPABLE=0`; everything else that could read process memory (ptrace, `/proc/<pid>/mem`, core dumps, .NET diagnostics endpoints, debugger attach) is detected and reported, with critical severity for the worst escalation paths (`CAP_SYS_PTRACE`, Docker socket, host PID namespace).
 - **App ↔ container/host runtime (operator-controlled).** The runtime is *trusted to be configured correctly* but the app cannot enforce it, so the diagnostics layer treats it as a thing to be **measured and reported**: writable OS temp, seccomp, MAC confinement, no-new-privileges, read-only rootfs, non-root UID, core-dump limits, and namespace/socket isolation. With `read_only: true`, `/tmp` must still be mounted as writable scratch storage; either a `tmpfs` mount or a bind mount from a fast writable disk is valid. The README is explicit that aggressive runtime hardening (custom seccomp/AppArmor, `kernel.yama.ptrace_scope`, TPM/HSM/KMS, encrypted swap) is an expert second pass that can break volume permissions, debugging, previews, or restores, so the app ships the cheap defaults and leaves the rest opt-in.
 - **App ↔ database.** Protected rows carry integrity signatures verified at security-sensitive reads; the diagnostics layer reports unsigned or stale protected rows (`db-integrity-unsigned-rows`, critical). Version 0.5 raises strict cutover exceptions when it encounters unsigned rows rather than blocking startup. See the *Database Integrity* section.

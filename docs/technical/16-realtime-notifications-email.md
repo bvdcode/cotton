@@ -253,7 +253,7 @@ Their i18n keys (`AppUpdateAvailable*`, `StoragePressure*`, `DatabaseRestoreComp
 
 `src/Cotton.Server/Services/SharedFileDownloadNotifier.cs` (`ISharedFileDownloadNotifier`, a `sealed class`, registered scoped) wraps `SendSharedFileDownloadedNotificationAsync` with an `IMemoryCache`-based debounce so a single viewer re-fetching a shared file doesn't spam the owner. `NotifyOnceAsync(Guid ownerId, Guid tokenId, string fileName, HttpContext httpContext, CancellationToken ct)`:
 
-* Resolves the IP: if `Constants.IsPublicInstance` is true the IP is forced to `IPAddress.Loopback` (privacy on the public demo); otherwise `httpContext.Request.GetRemoteIPAddress()`.
+* Resolves the IP: if `Constants.IsPublicInstance` is true the IP is forced to `IPAddress.Loopback` (privacy on the public demo); otherwise `httpContext.Request.GetTrustedClientIPAddress()`, including the configured immediate-proxy trust check.
 * Builds a cache key `shared-download:{ownerId:N}:{tokenId:N}:{ip}:{userAgent}`.
 * If the key already exists, returns immediately (no notification).
 * Otherwise sets the key with `AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)` and sends the notification (addressed to `ownerId`).

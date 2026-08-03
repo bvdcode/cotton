@@ -23,6 +23,7 @@ The single source of truth for operational configuration is the entity `CottonSe
 | `Timezone` | `timezone` | `string` | IANA/Windows timezone id for admin-facing timestamps. `GetTimezoneInfo()` falls back to UTC if unresolvable. |
 | `InstanceId` | `instance_id` | `Guid` | Stable per-installation identifier. Never exposed raw — `GetInstanceIdHash()` returns its SHA-256. |
 | `PublicBaseUrl` | `public_base_url` | `string` | Externally reachable base URL for generated links/callbacks. |
+| `TrustedProxyIpAddress` | `trusted_proxy_ip_address` | `IPAddress?` / PostgreSQL `inet` | Exact immediate reverse-proxy peer allowed to supply forwarded client-address headers. `null` preserves legacy trust-all behavior. |
 | `SmtpServerAddress` | `smtp_server_address` | `string?` | Custom SMTP host. |
 | `SmtpServerPort` | `smtp_server_port` | `int?` | Custom SMTP port. |
 | `SmtpUsername` | `smtp_username` | `string?` | Custom SMTP username. |
@@ -71,6 +72,7 @@ When no row exists yet, two code paths in `SettingsProvider` supply defaults. `G
 | `GeoIpLookupMode` | `Disabled` |
 | `AllowCrossUserDeduplication` / `AllowGlobalIndexing` / `TelemetryEnabled` | `false` |
 | `DefaultUserStorageQuotaBytes` / `DefaultUserTemplateNodeId` | `null` |
+| `TrustedProxyIpAddress` | `null` (legacy forwarded-header trust; security score penalty: 2) |
 
 ### Configuration enums
 
@@ -144,6 +146,9 @@ The settings endpoints (relative to either base route):
 | `GET` / `PATCH default-user-template-node` | Admin | Read / set onboarding template node |
 | `GET` / `PATCH timezone` | Admin | Read / set timezone |
 | `GET` / `PATCH public-base-url` | Admin | Read / set public base URL |
+| `GET trusted-proxy-ip-address` | Admin | Read the configured immediate proxy address |
+| `GET trusted-proxy-ip-address/observed` | Admin | Return the current connection peer for the admin UI's **Auto** action |
+| `POST trusted-proxy-ip-address/verify-and-save` | Admin | Save an IP only when it equals the current connection peer; a mismatch returns both entered and observed addresses with `saved: false` |
 | `GET` / `PATCH compution-mode` (`/{mode}` on PATCH) | Admin | Read / set compute mode |
 | `GET` / `PATCH email-mode` (`/{mode}` on PATCH) | Admin | Read / set email mode |
 | `GET` / `PATCH allow-cross-user-deduplication` | Admin | Read / set cross-user dedup flag |
@@ -163,6 +168,18 @@ The settings endpoints (relative to either base route):
 | `PATCH gc/trigger` | Admin | Triggers `GarbageCollectorJob` via the Quartz scheduler |
 | `GET database-backup/latest` | Admin | `GetLatestDatabaseBackupInfoQuery` (404 when none) |
 | `GET gc/chunks/timeline` | Admin | `GetGcChunksTimelineQuery` (honors the `X-Timezone` header and `bucket` query, default `hour`) |
+
+### Trusted proxy and client-address resolution
+
+All application code that needs a client IP calls `HttpRequest.GetTrustedClientIPAddress()` rather than the package helper directly. The wrapper first reads `CottonServerSettings.TrustedProxyIpAddress`:
+
+- When the setting is `null`, Cotton preserves backward compatibility and accepts forwarded client-address headers from every connection. Security diagnostics emits `trusted-proxy-not-configured` with severity `warning`, which subtracts **2** from the 10-point score.
+- When the setting is present, Cotton normalizes IPv4-mapped IPv6 addresses and compares it with `HttpContext.Connection.RemoteIpAddress`, the peer that opened the current TCP connection. Only after that peer matches does it resolve the client address. A different or unavailable peer causes `UntrustedProxyConnectionException`; its forwarded headers are never used.
+- After the trust check, the retained package resolver uses this priority: `CF-Connecting-IP`, then `X-Real-IP`, then `X-Forwarded-For`, then `Connection.RemoteIpAddress`.
+
+The admin UI's **Auto** action calls the `observed` endpoint and fills the immediate peer address. **Verify and save** sends the candidate back over the same proxy path. The server saves it only when it equals the observed peer; otherwise the response includes both values so the operator can correct the deployment without guessing. Clearing the field explicitly restores legacy trust-all behavior.
+
+This is a single exact IP, not a CIDR or proxy pool. Deployments whose last-hop proxy address changes must provide a stable address before enabling it. In every mode, the edge proxy must overwrite or remove client-supplied `CF-Connecting-IP`, `X-Real-IP`, and `X-Forwarded-For` values. The setting is deliberately excluded from the database-integrity canonical signature, so changing it does not require or trigger an integrity-format transition.
 
 ### DTOs
 
@@ -275,7 +292,7 @@ flowchart TD
     N --> O[Run startup preflight checks]
     O --> P{blocked?}
     P -- yes --> Q[StartupBlockedServer: SPA + startup/status]
-    P -- no --> R[Pipeline: UseAuthHardening, UseDefaultFiles, MapStaticAssets, UseAuthentication, UseEndpointRateLimiting, UseAuthorization/ExceptionHandler, MapStartupStatusEndpoint, MapControllers, MapFallbackToFile]
+    P -- no --> R[Pipeline: UseAuthHardening, UseExceptionHandler, UseDefaultFiles, MapStaticAssets, UseAuthentication, UseEndpointRateLimiting, UseAuthorization, MapStartupStatusEndpoint, MapControllers, MapFallbackToFile]
     R --> S[ApplyMigrations CottonDbContext]
     S --> T[scope: DatabaseAutoRestore.TryRestoreIfEmptyAsync GetAwaiter GetResult]
     T --> U[same scope: SettingsProvider.GetServerSettings prime cache]
@@ -292,13 +309,13 @@ flowchart TD
    - `builder.Configuration.AddCottonOptions(encryptionSettings)` re-reads `COTTON_PG_*` (and erases `COTTON_PG_PASSWORD`), generates a fresh `JwtSettings:Key`, and injects `DatabaseSettings:*` plus the derived `CottonEncryptionSettings` keys into in-memory config.
    - Logging: on Windows non-production it resets providers to console/debug; it always lowers `Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager` logging to `Error`.
    - HTTP clients: a named GitHub client (`AppVersionTrackerService.GitHubHttpClientName` = `"Cotton.GitHub"`, base address `https://api.github.com/`), a named `OidcDiscoveryService.HttpClientName` client, and a typed `OidcAvatarImportService` client.
-   - Client-IP-sensitive controls use `HttpRequest.GetRemoteIPAddress()`, including `X-Forwarded-For` supplied by the reverse proxy. `RequestBaseUrlHelpers` reads `X-Forwarded-Proto` when deriving an external base URL from a request.
+   - Client-IP-sensitive controls use `HttpRequest.GetTrustedClientIPAddress()`. A configured trusted proxy is checked against the connection peer before `CF-Connecting-IP`, `X-Real-IP`, or `X-Forwarded-For` is accepted. `RequestBaseUrlHelpers` separately reads `X-Forwarded-Proto` when deriving an external base URL from a request.
    - Singletons: the bound `CottonEncryptionSettings`, `MasterKeyRuntimeState`, `ProcessHardeningStatus`, and `new ApplicationStartupClock(DateTimeOffset.UtcNow)`.
    - Options binding: `HlsSegmentCacheOptions` ← `HlsSegmentCache` section; `StoragePressureOptions` ← `StoragePressure` section.
    - The large fluent block registers Mediator (`AddMediator`), Quartz jobs (`AddQuartzJobs`), `AddMemoryCache`, SignalR, the HTTP context accessor, and the full service graph (settings, security diagnostics, storage probe, passkey/OIDC/auth, backup/restore, archive/zip, storage-pressure guard, default-user seeder, the storage pipeline processors `CryptoProcessor` + `CompressionProcessor` and `FileStoragePipeline`, the EF `CottonDbContext` via `AddPostgresDbContext` with `UseLazyLoadingProxies = false`, layout services, the PBKDF2 password hash service via `AddPbkdf2PasswordHashService`, controllers). It then chains the project extension methods `AddStreamCipher`, `AddDatabaseIntegrity`, `AddChunkServices`, `AddLayoutPathServices`, `AddLayoutSearchServices`, `AddWebDavServices`, and `AddWebDavAuth` (all defined in `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`), and finally `AddJwt` (from the external EasyExtensions packages; `AddPbkdf2PasswordHashService` is likewise external).
    - `builder.Services.AddAuthHardening()` registers the session-revocation JWT validation hook; `AddEndpointRateLimiting()` registers endpoint abuse policies and failed public-share lookup tracking; `AddHostedService<AppVersionTrackerService>()` registers the background version tracker.
 5. **Startup preflight validation** — `IStartupPreflightValidator` runs registered `IStartupCheck` implementations before normal traffic, migrations, restore, and jobs. The temp-directory check verifies that `Path.GetTempPath()` can create/write/delete a probe file; if it cannot, Cotton blocks startup and instructs the operator to mount writable scratch storage at `/tmp` (`tmpfs` or a fast-disk bind mount). There is no version-transition or data-migration startup guard in 0.5.
-6. **Middleware pipeline** (order is significant): `UseAuthHardening` → `UseDefaultFiles` → `MapStaticAssets` → `UseAuthentication` → `UseEndpointRateLimiting` → `UseAuthorization` → `UseExceptionHandler` → `MapStartupStatusEndpoint` → `MapControllers` → `MapFallbackToFile("/index.html")` (SPA fallback).
+6. **Middleware pipeline** (order is significant): `UseAuthHardening` → `UseExceptionHandler` → `UseDefaultFiles` → `MapStaticAssets` → `UseAuthentication` → `UseEndpointRateLimiting` → `UseAuthorization` → `MapStartupStatusEndpoint` → `MapControllers` → `MapFallbackToFile("/index.html")` (SPA fallback). The exception handler wraps authentication and rate limiting so a rejected proxy peer is handled consistently.
 7. **`ApplyMigrations<CottonDbContext>()`** — migrate-on-startup; EF migrations are applied automatically every boot.
 8. **Restore-if-empty** — in a fresh `IServiceScope`, `IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync()` is awaited synchronously (`GetAwaiter().GetResult()`).
 9. **Prime the settings cache** — still in that scope, `SettingsProvider.GetServerSettings()` is called once to warm the static cache (and, when settings exist, to verify their integrity).
@@ -327,7 +344,7 @@ flowchart TD
 - **Static settings cache.** `SettingsProvider._cache` and `_cachedEncryptionThreads` are `static`, deliberately shared process-wide across DI scopes. All access is guarded by a `Lock`/`Volatile`. Any write path must call `InvalidateSettingsCache` or stale reads will persist until process restart; the boolean caches additionally tolerate up to 1 minute of staleness.
 - **Master key never persists in config or env.** It is cleared from Process/User env after derivation; `COTTON_PG_PASSWORD` is likewise erased after the connection string is built. Encrypted settings columns are `[Encrypted]` at rest, and the compatibility probe proves key/data match before the full app starts.
 - **JWT key per restart.** A fresh `JwtSettings:Key` per boot means every restart logs everyone out — intentional, but operators should expect it.
-- **Forwarded headers trust.** `KnownProxies`/`KnownIPNetworks` are cleared, so the server unconditionally trusts `X-Forwarded-Proto`/`X-Forwarded-Host`. Cotton must be deployed behind a trusted reverse proxy that strips client-supplied forwarded headers.
+- **Forwarded-header trust is split by purpose.** Client-address headers are guarded by `TrustedProxyIpAddress` as described above; leaving it null is an explicit compatibility mode and costs two security-checkup points. `RequestBaseUrlHelpers` still reads `X-Forwarded-Proto` directly for request-derived external URLs, so the edge proxy must also overwrite that header. Cotton does not install ASP.NET Core `ForwardedHeadersMiddleware` or configure `KnownProxies`/`KnownIPNetworks`.
 - **Migrate-on-startup.** `ApplyMigrations` runs on every boot; concurrent instances against one database can race on migrations and should not start simultaneously against an unmigrated schema.
 - **Writable OS temp is mandatory.** Startup is blocked when the OS temp directory cannot accept a probe file. With a read-only container root filesystem, mount writable scratch storage at `/tmp`; a `tmpfs` mount and a fast-disk bind mount are both valid.
 - **Synchronous restore.** `TryRestoreIfEmptyAsync().GetAwaiter().GetResult()` blocks startup; a hang or failure here blocks the whole server from accepting traffic. Restore is also strictly opt-in via `COTTON_RESTORE_DATABASE_IF_EMPTY`.
