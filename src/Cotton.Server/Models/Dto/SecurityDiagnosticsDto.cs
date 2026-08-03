@@ -29,6 +29,11 @@ namespace Cotton.Server.Models.Dto
         public bool IsPublicInstance { get; init; }
 
         /// <summary>
+        /// Configured immediate reverse-proxy address allowed to supply client-address headers.
+        /// </summary>
+        public string? TrustedProxyIpAddress { get; init; }
+
+        /// <summary>
         /// Computed security score, out of <see cref="MaxSecurityScore"/>.
         /// </summary>
         public int SecurityScore { get; init; }

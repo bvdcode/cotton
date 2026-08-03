@@ -95,6 +95,53 @@ public class ServerEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task TrustedProxyAddress_IsSavedOnlyWhenItMatchesCurrentConnection()
+    {
+        string token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        _client.DefaultRequestHeaders.Add(TestAppFactory.RemoteIpAddressHeader, "198.51.100.10");
+
+        JsonElement observedPayload = await _client.GetFromJsonAsync<JsonElement>(
+            "/api/v1/server/settings/trusted-proxy-ip-address/observed");
+        string? observedAddress = observedPayload.GetProperty("observedProxyIpAddress").GetString();
+        Assert.That(observedAddress, Is.Not.Null.And.Not.Empty);
+
+        using HttpResponseMessage mismatchResponse = await _client.PostAsJsonAsync(
+            "/api/v1/server/settings/trusted-proxy-ip-address/verify-and-save",
+            "192.0.2.250");
+        mismatchResponse.EnsureSuccessStatusCode();
+        JsonElement mismatchPayload = await mismatchResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(mismatchPayload.GetProperty("matches").GetBoolean(), Is.False);
+            Assert.That(mismatchPayload.GetProperty("saved").GetBoolean(), Is.False);
+            Assert.That(mismatchPayload.GetProperty("observedProxyIpAddress").GetString(), Is.EqualTo(observedAddress));
+        });
+
+        JsonElement unsetPayload = await _client.GetFromJsonAsync<JsonElement>(
+            "/api/v1/server/settings/trusted-proxy-ip-address");
+        Assert.That(unsetPayload.GetProperty("trustedProxyIpAddress").ValueKind, Is.EqualTo(JsonValueKind.Null));
+
+        using HttpResponseMessage savedResponse = await _client.PostAsJsonAsync(
+            "/api/v1/server/settings/trusted-proxy-ip-address/verify-and-save",
+            observedAddress);
+        savedResponse.EnsureSuccessStatusCode();
+        JsonElement savedPayload = await savedResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(savedPayload.GetProperty("matches").GetBoolean(), Is.True);
+            Assert.That(savedPayload.GetProperty("saved").GetBoolean(), Is.True);
+            Assert.That(savedPayload.GetProperty("trustedProxyIpAddress").GetString(), Is.EqualTo(observedAddress));
+        });
+
+        JsonElement configuredPayload = await _client.GetFromJsonAsync<JsonElement>(
+            "/api/v1/server/settings/trusted-proxy-ip-address");
+        Assert.That(
+            configuredPayload.GetProperty("trustedProxyIpAddress").GetString(),
+            Is.EqualTo(observedAddress));
+    }
+
+    [Test]
     public async Task Begin_Passkey_Registration_Requests_Direct_Attestation()
     {
         string token = await LoginAsync();
@@ -235,10 +282,12 @@ public class ServerEndpointsTests : IntegrationTestBase
             Assert.That(payload.TryGetProperty("securityScore", out JsonElement score), Is.True);
             Assert.That(payload.TryGetProperty("maxSecurityScore", out JsonElement maxScore), Is.True);
             Assert.That(payload.TryGetProperty("isPublicInstance", out _), Is.True);
+            Assert.That(payload.TryGetProperty("trustedProxyIpAddress", out JsonElement trustedProxy), Is.True);
             Assert.That(payload.TryGetProperty("adminTotp", out JsonElement adminTotp), Is.True);
             Assert.That(warnings.ValueKind, Is.EqualTo(JsonValueKind.Array));
             Assert.That(score.GetInt32(), Is.InRange(0, 10));
             Assert.That(maxScore.GetInt32(), Is.EqualTo(10));
+            Assert.That(trustedProxy.ValueKind, Is.EqualTo(JsonValueKind.Null));
             Assert.That(payload.GetProperty("masterKeySource").GetString(), Is.Not.Empty);
             Assert.That(adminTotp.GetProperty("adminCount").GetInt32(), Is.EqualTo(1));
             Assert.That(adminTotp.GetProperty("adminsWithTotp").GetInt32(), Is.EqualTo(0));
@@ -253,6 +302,11 @@ public class ServerEndpointsTests : IntegrationTestBase
             Assert.That(
                 warnings.EnumerateArray().Any(warning =>
                     warning.GetProperty("code").GetString() == "admins-without-2fa"),
+                Is.True);
+            Assert.That(
+                warnings.EnumerateArray().Any(warning =>
+                    warning.GetProperty("code").GetString() == "trusted-proxy-not-configured"
+                    && warning.GetProperty("severity").GetString() == "warning"),
                 Is.True);
         });
     }

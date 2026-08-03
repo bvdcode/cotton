@@ -639,7 +639,7 @@ namespace Cotton.Server.Controllers
         {
             return Constants.IsPublicInstance
                 ? IPAddress.Loopback
-                : Request.GetRemoteIPAddress();
+                : Request.GetTrustedClientIPAddress();
         }
 
         private async Task<User?> TryGetNewUserAsync(CottonLoginRequestDto request)

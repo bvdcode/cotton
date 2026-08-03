@@ -475,7 +475,7 @@ public class AppCodeOAuthController(
     {
         return Constants.IsPublicInstance
             ? IPAddress.Loopback
-            : request.GetRemoteIPAddress();
+            : request.GetTrustedClientIPAddress();
     }
 
     private static string NormalizeGeoField(string? value)

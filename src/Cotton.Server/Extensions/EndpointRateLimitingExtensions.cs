@@ -91,7 +91,7 @@ namespace Cotton.Server.Extensions
 
         internal static string GetRemoteAddressPartition(HttpContext httpContext)
         {
-            return httpContext.Request.GetRemoteIPAddress().ToString();
+            return httpContext.Request.GetTrustedClientIPAddress().ToString();
         }
 
         private static CottonResult CreateRateLimitRejection(HttpResponse response, RateLimitLease lease)

@@ -54,7 +54,7 @@ namespace Cotton.Server.Auth
         {
             return Constants.IsPublicInstance
                 ? IPAddress.Loopback
-                : Request.GetRemoteIPAddress();
+                : Request.GetTrustedClientIPAddress();
         }
 
         /// <inheritdoc />
@@ -297,7 +297,7 @@ namespace Cotton.Server.Auth
             Logger.LogWarning(
                 "WebDAV auth: rate limited username '{Username}' from remote IP {RemoteIp}.",
                 username,
-                Request.GetRemoteIPAddress());
+                Request.GetTrustedClientIPAddress());
             return AuthenticateResult.Fail("Too many WebDAV authentication attempts.");
         }
 
@@ -335,7 +335,7 @@ namespace Cotton.Server.Auth
         private string GetFailureCacheKey(string username)
         {
             string normalizedUsername = username.Trim().ToLowerInvariant();
-            return $"webdav-basic-fail:{Request.GetRemoteIPAddress()}:{normalizedUsername}";
+            return $"webdav-basic-fail:{Request.GetTrustedClientIPAddress()}:{normalizedUsername}";
         }
 
         private AuthenticateResult AuthenticateSuccess(Guid userId, string username)

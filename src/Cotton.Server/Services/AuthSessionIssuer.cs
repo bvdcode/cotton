@@ -159,7 +159,7 @@ namespace Cotton.Server.Services
         {
             return Constants.IsPublicInstance
                 ? IPAddress.Loopback
-                : request.GetRemoteIPAddress();
+                : request.GetTrustedClientIPAddress();
         }
 
         private static (string City, string Region, string Country) ResolveRefreshTokenGeoFields(

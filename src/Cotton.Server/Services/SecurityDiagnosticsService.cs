@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Providers;
 using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,8 @@ namespace Cotton.Server.Services
         ProcessHardeningStatus hardeningStatus,
         MasterKeyRuntimeState masterKeyRuntimeState,
         DatabaseIntegrityDiagnosticsService databaseIntegrityDiagnostics,
-        TempDirectoryProbe tempDirectoryProbe)
+        TempDirectoryProbe tempDirectoryProbe,
+        SettingsProvider settingsProvider)
     {
         /// <summary>
         /// Gets snapshot async.
@@ -32,6 +34,7 @@ namespace Cotton.Server.Services
             bool dotnetDiagnosticsDisabled = IsZero(dotnetEnableDiagnostics) || IsZero(comPlusEnableDiagnostics);
             bool isContainer = IsContainer();
             bool isPublicInstance = Constants.IsPublicInstance;
+            string? trustedProxyIpAddress = settingsProvider.GetServerSettings().TrustedProxyIpAddress?.ToString();
             TempDirectoryProbeResult tempDirectory = tempDirectoryProbe.Probe();
             LinuxContainerSecuritySnapshot containerSecurity = LinuxContainerSecurity.Snapshot(isContainer);
             AdminTotpDiagnosticsDto adminTotp = await GetAdminTotpDiagnosticsAsync(cancellationToken);
@@ -85,7 +88,8 @@ namespace Cotton.Server.Services
                 linuxContainer,
                 adminTotp,
                 databaseIntegrity,
-                tempDirectory);
+                tempDirectory,
+                trustedProxyIpAddress);
 
             return new SecurityDiagnosticsDto
             {
@@ -94,6 +98,7 @@ namespace Cotton.Server.Services
                 IsContainer = isContainer,
                 MasterKeySource = masterKeyRuntimeState.Source,
                 IsPublicInstance = isPublicInstance,
+                TrustedProxyIpAddress = trustedProxyIpAddress,
                 MasterKeyEnvironmentVariableWasConfigured = masterKeyRuntimeState.EnvironmentVariableWasConfigured,
                 MasterKeyEnvironmentVariablePresentInProcess = masterKeyRuntimeState.EnvironmentVariablePresentAfterResolution,
                 TempDirectoryPath = tempDirectory.TempPath,
@@ -134,10 +139,12 @@ namespace Cotton.Server.Services
             LinuxContainerSecurityDto linuxContainer,
             AdminTotpDiagnosticsDto adminTotp,
             DatabaseIntegrityDiagnosticsDto databaseIntegrity,
-            TempDirectoryProbeResult tempDirectory)
+            TempDirectoryProbeResult tempDirectory,
+            string? trustedProxyIpAddress)
         {
             var warnings = new List<SecurityDiagnosticWarningDto>();
             AddPublicInstanceWarning(warnings, isPublicInstance);
+            AddTrustedProxyWarning(warnings, trustedProxyIpAddress);
             AddMasterKeyWarning(warnings, masterKey);
             AddAdminTotpWarning(warnings, adminTotp);
             AddDotNetDiagnosticsWarning(warnings, dotnetDiagnostics);
@@ -147,6 +154,23 @@ namespace Cotton.Server.Services
             AddHardeningWarning(warnings, linuxProcess);
             AddDatabaseIntegrityWarnings(warnings, databaseIntegrity);
             return warnings;
+        }
+
+        private static void AddTrustedProxyWarning(
+            ICollection<SecurityDiagnosticWarningDto> warnings,
+            string? trustedProxyIpAddress)
+        {
+            if (!string.IsNullOrWhiteSpace(trustedProxyIpAddress))
+            {
+                return;
+            }
+
+            warnings.Add(new SecurityDiagnosticWarningDto
+            {
+                Code = "trusted-proxy-not-configured",
+                Severity = "warning",
+                Message = "No trusted reverse-proxy IP address is configured. Client-address headers are accepted from every connection for backward compatibility.",
+            });
         }
 
         private static void AddTempDirectoryWarning(

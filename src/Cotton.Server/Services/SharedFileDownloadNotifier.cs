@@ -21,7 +21,7 @@ namespace Cotton.Server.Services
         {
             return Constants.IsPublicInstance
                 ? IPAddress.Loopback
-                : httpContext.Request.GetRemoteIPAddress();
+                : httpContext.Request.GetTrustedClientIPAddress();
         }
 
         private static string BuildKey(Guid ownerId, Guid tokenId, string ip, string userAgent) =>

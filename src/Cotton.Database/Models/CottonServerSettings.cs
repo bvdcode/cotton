@@ -6,6 +6,7 @@ using Cotton.Database.Models.Attributes;
 using Cotton.Database.Models.Enums;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Net;
 
 namespace Cotton.Database.Models
 {
@@ -80,6 +81,12 @@ namespace Cotton.Database.Models
         /// </summary>
         [Column("public_base_url")]
         public string PublicBaseUrl { get; set; } = null!;
+
+        /// <summary>
+        /// Immediate reverse-proxy address that is allowed to supply client-address headers.
+        /// </summary>
+        [Column("trusted_proxy_ip_address")]
+        public IPAddress? TrustedProxyIpAddress { get; set; }
 
         /// <summary>
         /// SMTP host used for custom email delivery.

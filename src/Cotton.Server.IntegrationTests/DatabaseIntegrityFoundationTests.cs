@@ -11,6 +11,7 @@ using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Models.Enums;
 using NUnit.Framework;
+using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -369,6 +370,24 @@ public class DatabaseIntegrityFoundationTests
         settings.S3SecretAccessKeyEncrypted = "other-secret";
 
         Assert.That(protector.Verify(settings, descriptor, mac), Is.False);
+    }
+
+    [Test]
+    public void ServerSettingsDescriptor_DoesNotSignTrustedProxyAddress()
+    {
+        DatabaseIntegrityProtector protector = CreateProtector();
+        var descriptor = new CottonServerSettingsIntegrityDescriptor();
+        var settings = new CottonServerSettings
+        {
+            InstanceId = Guid.Parse("30000000-0000-0000-0000-000000000002"),
+            PublicBaseUrl = "https://cloud.example.test",
+            TrustedProxyIpAddress = IPAddress.Parse("192.0.2.10")
+        };
+        byte[] mac = protector.Sign(settings, descriptor);
+
+        settings.TrustedProxyIpAddress = IPAddress.Parse("192.0.2.11");
+
+        Assert.That(protector.Verify(settings, descriptor, mac), Is.True);
     }
 
     [Test]

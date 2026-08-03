@@ -235,12 +235,12 @@ namespace Cotton.Server
             }
 
             app.UseAuthHardening();
+            app.UseExceptionHandler();
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()
                 .UseEndpointRateLimiting()
-                .UseAuthorization()
-                .UseExceptionHandler();
+                .UseAuthorization();
             app.MapStartupStatusEndpoint(null);
             app.MapControllers();
             app.MapFallbackToFile("/index.html");

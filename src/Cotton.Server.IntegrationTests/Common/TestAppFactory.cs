@@ -3,17 +3,22 @@
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database.Models;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Quartz;
+using System.Net;
 
 namespace Cotton.Server.IntegrationTests.Common;
 
 public class TestAppFactory : WebApplicationFactory<Program>
 {
+    public const string RemoteIpAddressHeader = "X-Cotton-Test-Remote-IP";
+
     private const string TestRootMasterKey = "testtesttesttesttesttesttesttest";
     private readonly Dictionary<string, string?> _overrides;
     private readonly Dictionary<string, string?> _previousEnvironmentVariables = [];
@@ -85,6 +90,7 @@ public class TestAppFactory : WebApplicationFactory<Program>
                 services.Remove(d);
             }
             services.AddSingleton<ISchedulerFactory, NoOpSchedulerFactory>();
+            services.AddSingleton<IStartupFilter, TestRemoteIpStartupFilter>();
 
             services.AddSingleton(new CottonServerSettings
             {
@@ -93,6 +99,27 @@ public class TestAppFactory : WebApplicationFactory<Program>
                 EncryptionThreads = 1,
             });
         });
+    }
+
+    private sealed class TestRemoteIpStartupFilter : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
+        {
+            return app =>
+            {
+                app.Use(async (context, nextMiddleware) =>
+                {
+                    if (context.Request.Headers.TryGetValue(RemoteIpAddressHeader, out var values)
+                        && IPAddress.TryParse(values.ToString(), out IPAddress? remoteIpAddress))
+                    {
+                        context.Connection.RemoteIpAddress = remoteIpAddress;
+                    }
+
+                    await nextMiddleware();
+                });
+                next(app);
+            };
+        }
     }
 
     protected override IHost CreateHost(IHostBuilder builder)

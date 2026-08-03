@@ -5,6 +5,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Crypto;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
@@ -16,6 +17,7 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 using System.Text.Json;
 using Cotton.Server.Models;
 
@@ -525,6 +527,89 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
+        /// Gets the configured immediate reverse-proxy address.
+        /// </summary>
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("trusted-proxy-ip-address")]
+        public IActionResult GetTrustedProxyIpAddress()
+        {
+            string? trustedProxyIpAddress = _settings.GetServerSettings().TrustedProxyIpAddress?.ToString();
+            return Ok(new { trustedProxyIpAddress });
+        }
+
+        /// <summary>
+        /// Gets the address of the peer that opened the current connection for trusted-proxy auto-detection.
+        /// </summary>
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("trusted-proxy-ip-address/observed")]
+        public IActionResult GetObservedProxyIpAddress()
+        {
+            string? observedProxyIpAddress = Request.GetConnectingIPAddress()?.ToString();
+            return Ok(new { observedProxyIpAddress });
+        }
+
+        /// <summary>
+        /// Verifies an immediate reverse-proxy address against the current connection and saves it on success.
+        /// </summary>
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPost("trusted-proxy-ip-address/verify-and-save")]
+        public async Task<IActionResult> VerifyAndSaveTrustedProxyIpAddress(
+            [FromBody] string? ipAddress,
+            CancellationToken cancellationToken)
+        {
+            await EnsureSettingsAsync(cancellationToken);
+
+            IPAddress? observedProxyIpAddress = Request.GetConnectingIPAddress();
+            if (observedProxyIpAddress is null)
+            {
+                return this.ApiBadRequest("The connecting proxy IP address is unavailable for this request.");
+            }
+
+            if (string.IsNullOrWhiteSpace(ipAddress))
+            {
+                await _settings.SetPropertyAsync(
+                    x => x.TrustedProxyIpAddress,
+                    null,
+                    GetFallbackPublicBaseUrl(),
+                    cancellationToken);
+                return Ok(CreateTrustedProxyVerificationResponse(
+                    configuredProxyIpAddress: null,
+                    observedProxyIpAddress,
+                    matches: true,
+                    saved: true));
+            }
+
+            if (!IPAddress.TryParse(ipAddress.Trim(), out IPAddress? candidateProxyIpAddress))
+            {
+                return this.ApiBadRequest("Trusted proxy must be a valid IPv4 or IPv6 address.");
+            }
+
+            candidateProxyIpAddress = TrustedProxyRequestExtensions.Normalize(candidateProxyIpAddress);
+            bool matches = TrustedProxyRequestExtensions.AddressesEqual(
+                candidateProxyIpAddress,
+                observedProxyIpAddress);
+            if (!matches)
+            {
+                return Ok(CreateTrustedProxyVerificationResponse(
+                    candidateProxyIpAddress,
+                    observedProxyIpAddress,
+                    matches: false,
+                    saved: false));
+            }
+
+            await _settings.SetPropertyAsync(
+                x => x.TrustedProxyIpAddress,
+                candidateProxyIpAddress,
+                GetFallbackPublicBaseUrl(),
+                cancellationToken);
+            return Ok(CreateTrustedProxyVerificationResponse(
+                candidateProxyIpAddress,
+                observedProxyIpAddress,
+                matches: true,
+                saved: true));
+        }
+
+        /// <summary>
         /// Sets compution mode.
         /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -798,6 +883,21 @@ namespace Cotton.Server.Controllers
             {
                 throw new BadRequestException<CottonServerSettings>(error);
             }
+        }
+
+        private static object CreateTrustedProxyVerificationResponse(
+            IPAddress? configuredProxyIpAddress,
+            IPAddress observedProxyIpAddress,
+            bool matches,
+            bool saved)
+        {
+            return new
+            {
+                trustedProxyIpAddress = configuredProxyIpAddress?.ToString(),
+                observedProxyIpAddress = observedProxyIpAddress.ToString(),
+                matches,
+                saved,
+            };
         }
 
         private static ServerUsage[] ParseServerUsage(JsonElement value)

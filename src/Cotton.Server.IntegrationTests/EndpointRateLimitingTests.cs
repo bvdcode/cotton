@@ -4,6 +4,7 @@
 using Cotton.Server.Extensions;
 using Cotton.Server.Auth;
 using Cotton.Server.Controllers;
+using Cotton.Server.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,15 +39,76 @@ public class EndpointRateLimitingTests
         context.Connection.RemoteIpAddress = IPAddress.Loopback;
         context.Request.Headers["X-Forwarded-For"] = "203.0.113.42";
 
-        string partition = EndpointRateLimitingExtensions.GetRemoteAddressPartition(context);
+        string partition = context.Request
+            .GetTrustedClientIPAddress(trustedProxyIpAddress: null)
+            .ToString();
 
         Assert.That(partition, Is.EqualTo("203.0.113.42"));
     }
 
     [Test]
+    public void TrustedClientAddress_PrefersCloudflareHeader()
+    {
+        DefaultHttpContext context = new();
+        context.Connection.RemoteIpAddress = IPAddress.Loopback;
+        context.Request.Headers["CF-Connecting-IP"] = "203.0.113.40";
+        context.Request.Headers["X-Real-IP"] = "203.0.113.41";
+        context.Request.Headers["X-Forwarded-For"] = "203.0.113.42";
+
+        IPAddress address = context.Request.GetTrustedClientIPAddress(trustedProxyIpAddress: null);
+
+        Assert.That(address, Is.EqualTo(IPAddress.Parse("203.0.113.40")));
+    }
+
+    [Test]
+    public void TrustedClientAddress_AcceptsHeadersFromConfiguredProxy()
+    {
+        DefaultHttpContext context = new();
+        context.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.10");
+        context.Request.Headers["CF-Connecting-IP"] = "203.0.113.40";
+
+        IPAddress address = context.Request.GetTrustedClientIPAddress(
+            IPAddress.Parse("192.0.2.10"));
+
+        Assert.That(address, Is.EqualTo(IPAddress.Parse("203.0.113.40")));
+    }
+
+    [Test]
+    public void TrustedClientAddress_RejectsHeadersFromUntrustedConnection()
+    {
+        DefaultHttpContext context = new();
+        context.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.11");
+        context.Request.Headers["CF-Connecting-IP"] = "203.0.113.40";
+
+        UntrustedProxyConnectionException exception = Assert.Throws<UntrustedProxyConnectionException>(() =>
+            context.Request.GetTrustedClientIPAddress(IPAddress.Parse("192.0.2.10")))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception.TrustedProxyIpAddress, Is.EqualTo(IPAddress.Parse("192.0.2.10")));
+            Assert.That(exception.ConnectingIpAddress, Is.EqualTo(IPAddress.Parse("192.0.2.11")));
+        });
+    }
+
+    [Test]
+    public void TrustedClientAddress_NormalizesIpv4MappedProxyAddress()
+    {
+        DefaultHttpContext context = new();
+        context.Connection.RemoteIpAddress = IPAddress.Parse("::ffff:192.0.2.10");
+        context.Request.Headers["X-Real-IP"] = "203.0.113.41";
+
+        IPAddress address = context.Request.GetTrustedClientIPAddress(
+            IPAddress.Parse("192.0.2.10"));
+
+        Assert.That(address, Is.EqualTo(IPAddress.Parse("203.0.113.41")));
+    }
+
+    [Test]
     public void PublicShareLookupFailureLimiter_IsPartitionedByForwardedClientAddress()
     {
-        using PublicShareLookupFailureLimiter limiter = new();
+        using PublicShareLookupFailureLimiter limiter = new(request => request
+            .GetTrustedClientIPAddress(trustedProxyIpAddress: null)
+            .ToString());
         HttpRequest firstClient = CreateRequest("203.0.113.42");
         HttpRequest secondClient = CreateRequest("203.0.113.43");
 
