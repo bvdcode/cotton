@@ -231,14 +231,26 @@ export const detectedProxyServiceSchema = z.enum([
 ]);
 export type DetectedProxyService = z.infer<typeof detectedProxyServiceSchema>;
 
+export const cloudflareProxyMetadataSchema = z
+  .object({
+    visitorCountryCode: nullableStringSchema,
+    datacenterCode: nullableStringSchema,
+  })
+  .nullable();
+export type CloudflareProxyMetadata = z.infer<
+  typeof cloudflareProxyMetadataSchema
+>;
+
 export const observedProxyInfoSchema = z
   .object({
     observedProxyIpAddress: nullableStringSchema,
     detectedProxyServices: z.array(detectedProxyServiceSchema),
+    cloudflare: cloudflareProxyMetadataSchema,
   })
   .transform((value) => ({
     observedProxyIpAddress: value.observedProxyIpAddress ?? "",
     detectedProxyServices: value.detectedProxyServices,
+    cloudflare: value.cloudflare,
   }));
 export type ObservedProxyInfo = z.infer<typeof observedProxyInfoSchema>;
 
@@ -246,6 +258,7 @@ export const trustedProxyVerificationResultSchema = z.object({
   trustedProxyIpAddress: nullableStringSchema,
   observedProxyIpAddress: z.string(),
   detectedProxyServices: z.array(detectedProxyServiceSchema),
+  cloudflare: cloudflareProxyMetadataSchema,
   matches: z.boolean(),
   saved: z.boolean(),
 });

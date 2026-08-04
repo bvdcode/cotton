@@ -28,6 +28,7 @@ import {
   trustedProxyIpAddressSchema,
   trustedProxyVerificationResultSchema,
   type ChunkSizeSettings,
+  type CloudflareProxyMetadata,
   type ComputionMode,
   type CustomGeoIpLookupTestResult,
   type EmailConfig,
@@ -49,6 +50,7 @@ export { DIRECT_CONNECTION_IP_ADDRESS } from "./schemas/serverSettings";
 
 export type {
   ChunkSizeSettings,
+  CloudflareProxyMetadata,
   ComputionMode,
   CustomGeoIpLookupTestResult,
   EmailConfig,
@@ -117,6 +119,27 @@ const edgeProxyServices = new Set<DetectedProxyService>([
   "vercel",
   "aws-alb",
 ]);
+
+const parseCloudflareDatacenterCode = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const firstValue = value.split(",", 1)[0].trim();
+  const separatorIndex = firstValue.lastIndexOf("-");
+  if (separatorIndex < 0) return null;
+  const code = firstValue.slice(separatorIndex + 1).toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : null;
+};
+
+const mergeCloudflareMetadata = (
+  metadata: CloudflareProxyMetadata,
+  rayHeader: unknown,
+): CloudflareProxyMetadata => {
+  const browserDatacenterCode = parseCloudflareDatacenterCode(rayHeader);
+  if (!browserDatacenterCode) return metadata;
+  return {
+    visitorCountryCode: metadata?.visitorCountryCode ?? null,
+    datacenterCode: browserDatacenterCode,
+  };
+};
 
 const detectResponseServerService = (
   serverHeader: unknown,
@@ -398,6 +421,10 @@ export const settingsApi = {
         result.detectedProxyServices,
         response.headers.server,
       ),
+      cloudflare: mergeCloudflareMetadata(
+        result.cloudflare,
+        response.headers["cf-ray"],
+      ),
     };
   },
 
@@ -418,6 +445,10 @@ export const settingsApi = {
       detectedProxyServices: mergeDetectedProxyServices(
         result.detectedProxyServices,
         response.headers.server,
+      ),
+      cloudflare: mergeCloudflareMetadata(
+        result.cloudflare,
+        response.headers["cf-ray"],
       ),
     };
   },

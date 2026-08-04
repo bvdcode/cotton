@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Models.Dto;
+
 namespace Cotton.Server.Abstractions
 {
     /// <summary>
@@ -9,9 +11,9 @@ namespace Cotton.Server.Abstractions
     public interface IProxyTopologyProbeService
     {
         /// <summary>
-        /// Returns service identifiers inferred from response headers, or an empty list when the probe fails.
+        /// Returns normalized topology hints inferred from response headers, or an empty result when the probe fails.
         /// </summary>
-        Task<IReadOnlyList<string>> DetectAsync(
+        Task<ProxyTopologyProbeResult> DetectAsync(
             string publicBaseUrl,
             CancellationToken cancellationToken = default);
     }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Models.Dto;
+
 namespace Cotton.Server.Extensions
 {
     /// <summary>
@@ -18,25 +20,6 @@ namespace Cotton.Server.Extensions
         internal const string TraefikService = "traefik";
         internal const string EnvoyService = "envoy";
         internal const string GenericReverseProxyService = "reverse-proxy";
-        internal const string DeclaredProxyHeaderName = "X-Cotton-Proxy";
-
-        private static readonly HashSet<string> DeclaredServiceNames = new(StringComparer.OrdinalIgnoreCase)
-        {
-            CloudflareService,
-            CloudFrontService,
-            AzureFrontDoorService,
-            FastlyService,
-            FlyIoService,
-            VercelService,
-            AwsAlbService,
-            TraefikService,
-            EnvoyService,
-            "nginx",
-            "caddy",
-            "haproxy",
-            "apache",
-        };
-
         private static readonly HashSet<string> LocalProxyServiceNames = new(StringComparer.Ordinal)
         {
             TraefikService,
@@ -87,8 +70,7 @@ namespace Cotton.Server.Extensions
 
         /// <summary>
         /// Returns stable service identifiers inferred from the current request. These hints are informational only
-        /// and must not be used to establish proxy trust. A local proxy without a distinctive native header may
-        /// overwrite X-Cotton-Proxy with one or more allowlisted service identifiers in public-to-Cotton order.
+        /// and must not be used to establish proxy trust.
         /// </summary>
         public static IReadOnlyList<string> DetectProxyServices(this HttpRequest request)
         {
@@ -135,8 +117,6 @@ namespace Cotton.Server.Extensions
                 AddOnce(services, EnvoyService);
             }
 
-            AddDeclaredServices(request, services);
-
             bool hasNamedLocalProxy = services.Any(LocalProxyServiceNames.Contains);
             bool hasForwardingHeaders = ForwardingHeaderNames.Any(name => HasHeader(request, name));
             bool hasUnidentifiedImmediateProxy = HasHeader(request, "X-Forwarded-Server");
@@ -176,6 +156,58 @@ namespace Cotton.Server.Extensions
         }
 
         /// <summary>
+        /// Returns normalized Cloudflare country and data-center hints from an incoming request.
+        /// </summary>
+        public static CloudflareProxyMetadataDto? DetectCloudflareMetadata(this HttpRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            if (!HasHeader(request, "CF-Ray")) return null;
+
+            return CreateCloudflareMetadata(
+                GetFirstHeaderValue(request, "CF-IPCountry"),
+                GetFirstHeaderValue(request, "CF-Ray"));
+        }
+
+        /// <summary>
+        /// Returns normalized Cloudflare data-center hints from a probe response.
+        /// </summary>
+        public static CloudflareProxyMetadataDto? DetectCloudflareMetadata(HttpResponseMessage response)
+        {
+            ArgumentNullException.ThrowIfNull(response);
+            if (!HasHeader(response, "CF-Ray")) return null;
+
+            return CreateCloudflareMetadata(
+                countryCode: null,
+                rayId: GetFirstHeaderValue(response, "CF-Ray"));
+        }
+
+        /// <summary>
+        /// Merges Cloudflare metadata, preferring the current request and filling only missing values from a probe.
+        /// </summary>
+        public static CloudflareProxyMetadataDto? MergeCloudflareMetadata(
+            CloudflareProxyMetadataDto? requestMetadata,
+            CloudflareProxyMetadataDto? probedMetadata)
+        {
+            if (requestMetadata is null)
+            {
+                return probedMetadata is null
+                    ? null
+                    : new()
+                    {
+                        VisitorCountryCode = null,
+                        DatacenterCode = probedMetadata.DatacenterCode,
+                    };
+            }
+            if (probedMetadata is null) return requestMetadata;
+
+            return new()
+            {
+                VisitorCountryCode = requestMetadata.VisitorCountryCode ?? probedMetadata.VisitorCountryCode,
+                DatacenterCode = requestMetadata.DatacenterCode ?? probedMetadata.DatacenterCode,
+            };
+        }
+
+        /// <summary>
         /// Merges current-request services with a self-probe. Edge services are placed farthest from Cotton, while
         /// a concrete local service replaces an unidentified reverse-proxy hop.
         /// </summary>
@@ -200,25 +232,6 @@ namespace Cotton.Server.Extensions
             }
 
             return merged;
-        }
-
-        private static void AddDeclaredServices(HttpRequest request, List<string> services)
-        {
-            if (!request.Headers.TryGetValue(DeclaredProxyHeaderName, out var values))
-            {
-                return;
-            }
-
-            foreach (string? value in values)
-            {
-                foreach (string candidate in (value ?? string.Empty).Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-                {
-                    if (DeclaredServiceNames.TryGetValue(candidate, out string? canonicalName))
-                    {
-                        AddOnce(services, canonicalName);
-                    }
-                }
-            }
         }
 
         private static void AddOnce(List<string> services, string service)
@@ -254,6 +267,54 @@ namespace Cotton.Server.Extensions
             return response.Headers.TryGetValues(name, out IEnumerable<string>? values)
                 ? string.Join(' ', values)
                 : string.Empty;
+        }
+
+        private static CloudflareProxyMetadataDto? CreateCloudflareMetadata(
+            string? countryCode,
+            string? rayId)
+        {
+            string? normalizedCountryCode = NormalizeCountryCode(countryCode);
+            string? datacenterCode = ParseCloudflareDatacenterCode(rayId);
+            return normalizedCountryCode is null && datacenterCode is null
+                ? null
+                : new()
+                {
+                    VisitorCountryCode = normalizedCountryCode,
+                    DatacenterCode = datacenterCode,
+                };
+        }
+
+        private static string? NormalizeCountryCode(string? value)
+        {
+            string normalized = (value ?? string.Empty).Trim().ToUpperInvariant();
+            if (normalized == "T1") return normalized;
+            return normalized.Length == 2 && normalized.All(char.IsAsciiLetter)
+                ? normalized
+                : null;
+        }
+
+        private static string? ParseCloudflareDatacenterCode(string? rayId)
+        {
+            string value = (rayId ?? string.Empty).Split(',', 2)[0].Trim();
+            int separatorIndex = value.LastIndexOf('-');
+            if (separatorIndex < 0 || separatorIndex == value.Length - 1) return null;
+
+            string code = value[(separatorIndex + 1)..].ToUpperInvariant();
+            return code.Length == 3 && code.All(char.IsAsciiLetter) ? code : null;
+        }
+
+        private static string? GetFirstHeaderValue(HttpRequest request, string name)
+        {
+            return request.Headers.TryGetValue(name, out var values)
+                ? values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+                : null;
+        }
+
+        private static string? GetFirstHeaderValue(HttpResponseMessage response, string name)
+        {
+            return response.Headers.TryGetValues(name, out IEnumerable<string>? values)
+                ? values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+                : null;
         }
 
         private static bool HasHeader(HttpRequest request, string name)

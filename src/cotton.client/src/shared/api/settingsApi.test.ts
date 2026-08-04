@@ -275,14 +275,19 @@ describe("settingsApi setters", () => {
         data: {
           observedProxyIpAddress: "172.18.0.3",
           detectedProxyServices: ["cloudflare", "reverse-proxy"],
+          cloudflare: {
+            visitorCountryCode: "US",
+            datacenterCode: "SJC",
+          },
         },
-        headers: { server: "nginx/1.27.4" },
+        headers: { server: "nginx/1.27.4", "cf-ray": "a2591eb86ff8cbaa-LAX" },
       });
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: {
         trustedProxyIpAddress: "172.18.0.3",
         observedProxyIpAddress: "172.18.0.3",
         detectedProxyServices: ["cloudflare", "reverse-proxy"],
+        cloudflare: null,
         matches: true,
         saved: true,
       },
@@ -295,6 +300,10 @@ describe("settingsApi setters", () => {
     await expect(settingsApi.getObservedProxyInfo()).resolves.toEqual({
       observedProxyIpAddress: "172.18.0.3",
       detectedProxyServices: ["cloudflare", "nginx"],
+      cloudflare: {
+        visitorCountryCode: "US",
+        datacenterCode: "LAX",
+      },
     });
     await expect(
       settingsApi.verifyAndSaveTrustedProxyIpAddress("172.18.0.3"),
@@ -302,6 +311,7 @@ describe("settingsApi setters", () => {
       trustedProxyIpAddress: "172.18.0.3",
       observedProxyIpAddress: "172.18.0.3",
       detectedProxyServices: ["cloudflare", "reverse-proxy"],
+      cloudflare: null,
       matches: true,
       saved: true,
     });

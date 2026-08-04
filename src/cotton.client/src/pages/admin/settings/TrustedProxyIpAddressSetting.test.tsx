@@ -31,7 +31,10 @@ vi.mock("@shared/ui/notifications", () => ({
 }));
 
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { resolvedLanguage: "en" },
+  }),
 }));
 
 describe("TrustedProxyIpAddressSetting", () => {
@@ -42,6 +45,7 @@ describe("TrustedProxyIpAddressSetting", () => {
       trustedProxyIpAddress: "0.0.0.0",
       observedProxyIpAddress: "198.51.100.25",
       detectedProxyServices: [],
+      cloudflare: null,
       matches: true,
       saved: true,
     });
@@ -51,6 +55,10 @@ describe("TrustedProxyIpAddressSetting", () => {
     settingsApi.getObservedProxyInfo.mockResolvedValue({
       observedProxyIpAddress: "172.21.0.1",
       detectedProxyServices: ["cloudflare", "traefik"],
+      cloudflare: {
+        visitorCountryCode: "US",
+        datacenterCode: "LAX",
+      },
     });
     render(<TrustedProxyIpAddressSetting />);
 
@@ -65,6 +73,9 @@ describe("TrustedProxyIpAddressSetting", () => {
       await screen.findByText(
         "Cotton → Traefik → Cloudflare → settings.general.trustedProxy.internet",
       ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("🇺🇸 United States · Los Angeles (LAX)"),
     ).toBeInTheDocument();
   });
 

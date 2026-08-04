@@ -546,11 +546,12 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetObservedProxyIpAddress(CancellationToken cancellationToken)
         {
             string? observedProxyIpAddress = Request.GetConnectingIPAddress()?.ToString();
-            IReadOnlyList<string> detectedProxyServices = await DetectProxyTopologyAsync(cancellationToken);
+            ProxyTopologyProbeResult topology = await DetectProxyTopologyAsync(cancellationToken);
             return Ok(new
             {
                 observedProxyIpAddress,
-                detectedProxyServices,
+                detectedProxyServices = topology.Services,
+                cloudflare = topology.Cloudflare,
             });
         }
 
@@ -564,7 +565,7 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            IReadOnlyList<string> detectedProxyServices = await DetectProxyTopologyAsync(cancellationToken);
+            ProxyTopologyProbeResult topology = await DetectProxyTopologyAsync(cancellationToken);
 
             IPAddress? observedProxyIpAddress = Request.GetConnectingIPAddress();
             if (observedProxyIpAddress is null)
@@ -582,7 +583,7 @@ namespace Cotton.Server.Controllers
                 return Ok(CreateTrustedProxyVerificationResponse(
                     configuredProxyIpAddress: null,
                     observedProxyIpAddress,
-                    detectedProxyServices,
+                    topology,
                     matches: true,
                     saved: true));
             }
@@ -602,7 +603,7 @@ namespace Cotton.Server.Controllers
                 return Ok(CreateTrustedProxyVerificationResponse(
                     candidateProxyIpAddress,
                     observedProxyIpAddress,
-                    detectedProxyServices,
+                    topology,
                     matches: false,
                     saved: false));
             }
@@ -615,7 +616,7 @@ namespace Cotton.Server.Controllers
             return Ok(CreateTrustedProxyVerificationResponse(
                 candidateProxyIpAddress,
                 observedProxyIpAddress,
-                detectedProxyServices,
+                topology,
                 matches: true,
                 saved: true));
         }
@@ -899,7 +900,7 @@ namespace Cotton.Server.Controllers
         private static object CreateTrustedProxyVerificationResponse(
             IPAddress? configuredProxyIpAddress,
             IPAddress observedProxyIpAddress,
-            IReadOnlyList<string> detectedProxyServices,
+            ProxyTopologyProbeResult topology,
             bool matches,
             bool saved)
         {
@@ -907,21 +908,26 @@ namespace Cotton.Server.Controllers
             {
                 trustedProxyIpAddress = configuredProxyIpAddress?.ToString(),
                 observedProxyIpAddress = observedProxyIpAddress.ToString(),
-                detectedProxyServices,
+                detectedProxyServices = topology.Services,
+                cloudflare = topology.Cloudflare,
                 matches,
                 saved,
             };
         }
 
-        private async Task<IReadOnlyList<string>> DetectProxyTopologyAsync(
+        private async Task<ProxyTopologyProbeResult> DetectProxyTopologyAsync(
             CancellationToken cancellationToken)
         {
             IReadOnlyList<string> requestServices = Request.DetectProxyServices();
             string publicBaseUrl = _settings.GetServerSettings().PublicBaseUrl;
-            IReadOnlyList<string> probedServices = await _proxyTopologyProbe.DetectAsync(
+            ProxyTopologyProbeResult probe = await _proxyTopologyProbe.DetectAsync(
                 publicBaseUrl,
                 cancellationToken);
-            return ProxyServiceDetectionExtensions.MergeProxyServices(requestServices, probedServices);
+            return new(
+                ProxyServiceDetectionExtensions.MergeProxyServices(requestServices, probe.Services),
+                ProxyServiceDetectionExtensions.MergeCloudflareMetadata(
+                    Request.DetectCloudflareMetadata(),
+                    probe.Cloudflare));
         }
 
         private static ServerUsage[] ParseServerUsage(JsonElement value)

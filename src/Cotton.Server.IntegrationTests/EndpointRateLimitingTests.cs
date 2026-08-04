@@ -4,6 +4,7 @@
 using Cotton.Server.Extensions;
 using Cotton.Server.Auth;
 using Cotton.Server.Controllers;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
@@ -124,6 +125,7 @@ public class EndpointRateLimitingTests
     {
         DefaultHttpContext context = new();
         context.Request.Headers["CF-Ray"] = "230b030023ae2822-SJC";
+        context.Request.Headers["CF-IPCountry"] = "US";
         context.Request.Headers["CF-Connecting-IP"] = "203.0.113.40";
         context.Request.Headers["X-Forwarded-For"] = "203.0.113.40";
         context.Request.Headers["X-Real-IP"] = "203.0.113.40";
@@ -133,8 +135,14 @@ public class EndpointRateLimitingTests
         context.Request.Headers["X-Forwarded-Server"] = "traefik-1";
 
         IReadOnlyList<string> services = context.Request.DetectProxyServices();
+        CloudflareProxyMetadataDto? cloudflare = context.Request.DetectCloudflareMetadata();
 
-        Assert.That(services, Is.EqualTo(new[] { "cloudflare", "reverse-proxy" }));
+        Assert.Multiple(() =>
+        {
+            Assert.That(services, Is.EqualTo(new[] { "cloudflare", "reverse-proxy" }));
+            Assert.That(cloudflare?.VisitorCountryCode, Is.EqualTo("US"));
+            Assert.That(cloudflare?.DatacenterCode, Is.EqualTo("SJC"));
+        });
     }
 
     [Test]
@@ -168,19 +176,6 @@ public class EndpointRateLimitingTests
     }
 
     [Test]
-    public void ProxyServiceDetection_UsesAllowlistedDeclaredLocalProxyNames()
-    {
-        DefaultHttpContext context = new();
-        context.Request.Headers["CF-Ray"] = "230b030023ae2822-SJC";
-        context.Request.Headers[ProxyServiceDetectionExtensions.DeclaredProxyHeaderName] =
-            "traefik, nginx, caddy, untrusted-display-value";
-
-        IReadOnlyList<string> services = context.Request.DetectProxyServices();
-
-        Assert.That(services, Is.EqualTo(new[] { "cloudflare", "traefik", "nginx", "caddy" }));
-    }
-
-    [Test]
     public void ProxyServiceDetection_ReadsServerResponseAndPositionsLocalProbe()
     {
         using var response = new HttpResponseMessage(HttpStatusCode.OK);
@@ -207,19 +202,22 @@ public class EndpointRateLimitingTests
     {
         using var response = new HttpResponseMessage(HttpStatusCode.OK);
         response.Headers.Server.ParseAdd("Caddy");
+        response.Headers.TryAddWithoutValidation("CF-Ray", "a2591eb86ff8cbaa-LAX");
         using var handler = new StaticResponseHandler(response);
         using var client = new HttpClient(handler);
         var probe = new ProxyTopologyProbeService(
             client,
             NullLogger<ProxyTopologyProbeService>.Instance);
 
-        IReadOnlyList<string> services = await probe.DetectAsync("https://cotton.example/");
+        ProxyTopologyProbeResult result = await probe.DetectAsync("https://cotton.example/");
 
         Assert.Multiple(() =>
         {
             Assert.That(handler.RequestMethod, Is.EqualTo(HttpMethod.Head));
             Assert.That(handler.RequestUri, Is.EqualTo(new Uri("https://cotton.example/")));
-            Assert.That(services, Is.EqualTo(new[] { "caddy" }));
+            Assert.That(result.Services, Is.EqualTo(new[] { "cloudflare", "caddy" }));
+            Assert.That(result.Cloudflare?.VisitorCountryCode, Is.Null);
+            Assert.That(result.Cloudflare?.DatacenterCode, Is.EqualTo("LAX"));
         });
     }
 

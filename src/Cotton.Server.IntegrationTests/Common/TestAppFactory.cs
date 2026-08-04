@@ -4,6 +4,7 @@
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Models.Dto;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -126,11 +127,11 @@ public class TestAppFactory : WebApplicationFactory<Program>
 
     private sealed class NoOpProxyTopologyProbeService : IProxyTopologyProbeService
     {
-        public Task<IReadOnlyList<string>> DetectAsync(
+        public Task<ProxyTopologyProbeResult> DetectAsync(
             string publicBaseUrl,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyList<string>>([]);
+            return Task.FromResult(new ProxyTopologyProbeResult([], null));
         }
     }
 

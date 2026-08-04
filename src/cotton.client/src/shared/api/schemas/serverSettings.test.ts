@@ -122,16 +122,25 @@ describe("server settings schemas", () => {
       observedProxyInfoSchema.parse({
         observedProxyIpAddress: "172.18.0.2",
         detectedProxyServices: ["cloudflare", "reverse-proxy"],
+        cloudflare: {
+          visitorCountryCode: "US",
+          datacenterCode: "LAX",
+        },
       }),
     ).toEqual({
       observedProxyIpAddress: "172.18.0.2",
       detectedProxyServices: ["cloudflare", "reverse-proxy"],
+      cloudflare: {
+        visitorCountryCode: "US",
+        datacenterCode: "LAX",
+      },
     });
     expect(
       trustedProxyVerificationResultSchema.parse({
         trustedProxyIpAddress: "172.18.0.3",
         observedProxyIpAddress: "172.18.0.2",
         detectedProxyServices: ["cloudflare", "traefik"],
+        cloudflare: null,
         matches: false,
         saved: false,
       }),
@@ -139,6 +148,7 @@ describe("server settings schemas", () => {
       trustedProxyIpAddress: "172.18.0.3",
       observedProxyIpAddress: "172.18.0.2",
       detectedProxyServices: ["cloudflare", "traefik"],
+      cloudflare: null,
       matches: false,
       saved: false,
     });

@@ -3,6 +3,7 @@
 
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
+using Cotton.Server.Models.Dto;
 
 namespace Cotton.Server.Services
 {
@@ -15,14 +16,14 @@ namespace Cotton.Server.Services
         ILogger<ProxyTopologyProbeService> _logger) : IProxyTopologyProbeService
     {
         /// <inheritdoc />
-        public async Task<IReadOnlyList<string>> DetectAsync(
+        public async Task<ProxyTopologyProbeResult> DetectAsync(
             string publicBaseUrl,
             CancellationToken cancellationToken = default)
         {
             if (!Uri.TryCreate(publicBaseUrl, UriKind.Absolute, out Uri? uri)
                 || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
-                return [];
+                return new([], null);
             }
 
             try
@@ -32,17 +33,19 @@ namespace Cotton.Server.Services
                     request,
                     HttpCompletionOption.ResponseHeadersRead,
                     cancellationToken);
-                return ProxyServiceDetectionExtensions.DetectProxyServices(response);
+                return new(
+                    ProxyServiceDetectionExtensions.DetectProxyServices(response),
+                    ProxyServiceDetectionExtensions.DetectCloudflareMetadata(response));
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 _logger.LogDebug("Proxy topology probe timed out for {Host}.", uri.Host);
-                return [];
+                return new([], null);
             }
             catch (HttpRequestException ex)
             {
                 _logger.LogDebug(ex, "Proxy topology probe failed for {Host}.", uri.Host);
-                return [];
+                return new([], null);
             }
         }
     }

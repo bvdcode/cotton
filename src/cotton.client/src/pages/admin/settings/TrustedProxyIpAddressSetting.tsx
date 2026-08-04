@@ -14,6 +14,7 @@ import { toast } from "@shared/ui/notifications";
 import {
   DIRECT_CONNECTION_IP_ADDRESS,
   settingsApi,
+  type CloudflareProxyMetadata,
   type DetectedProxyService,
   type TrustedProxyVerificationResult,
 } from "../../../shared/api/settingsApi";
@@ -21,6 +22,10 @@ import { showApiErrorToast } from "../../../shared/api/httpClient";
 import { SAVED_STATUS_VISIBLE_MS } from "./adminSettingSaveStatus";
 import { SettingsSection } from "./SettingsSection";
 import type { SaveStatus } from "./useAutoSavedSetting";
+import {
+  formatCloudflareCountry,
+  formatCloudflareDatacenter,
+} from "./cloudflareLocation";
 
 const proxyServiceNames: Record<
   Exclude<DetectedProxyService, "reverse-proxy">,
@@ -42,7 +47,7 @@ const proxyServiceNames: Record<
 };
 
 export const TrustedProxyIpAddressSetting = () => {
-  const { t } = useTranslation("admin");
+  const { t, i18n } = useTranslation("admin");
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<SaveStatus>("loading");
   const [detecting, setDetecting] = useState(false);
@@ -51,6 +56,7 @@ export const TrustedProxyIpAddressSetting = () => {
   const [detectedProxyServices, setDetectedProxyServices] = useState<
     DetectedProxyService[]
   >([]);
+  const [cloudflare, setCloudflare] = useState<CloudflareProxyMetadata>(null);
   const flashTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -95,6 +101,7 @@ export const TrustedProxyIpAddressSetting = () => {
     setDetecting(true);
     setLastResult(null);
     setDetectedProxyServices([]);
+    setCloudflare(null);
     try {
       const observed = await settingsApi.getObservedProxyInfo();
       if (!observed.observedProxyIpAddress) {
@@ -105,6 +112,7 @@ export const TrustedProxyIpAddressSetting = () => {
       }
       setValue(observed.observedProxyIpAddress);
       setDetectedProxyServices(observed.detectedProxyServices);
+      setCloudflare(observed.cloudflare);
       toast.success(
         t("settings.general.trustedProxy.detected", {
           address: observed.observedProxyIpAddress,
@@ -126,12 +134,14 @@ export const TrustedProxyIpAddressSetting = () => {
     setStatus("saving");
     setLastResult(null);
     setDetectedProxyServices([]);
+    setCloudflare(null);
     try {
       const result = await settingsApi.verifyAndSaveTrustedProxyIpAddress(
         value.trim() || null,
       );
       setLastResult(result);
       setDetectedProxyServices(result.detectedProxyServices);
+      setCloudflare(result.cloudflare);
       if (!result.saved) {
         setStatus("error");
         return;
@@ -159,12 +169,14 @@ export const TrustedProxyIpAddressSetting = () => {
     setStatus("saving");
     setLastResult(null);
     setDetectedProxyServices([]);
+    setCloudflare(null);
     try {
       const result = await settingsApi.verifyAndSaveTrustedProxyIpAddress(
         DIRECT_CONNECTION_IP_ADDRESS,
       );
       setLastResult(result);
       setDetectedProxyServices(result.detectedProxyServices);
+      setCloudflare(result.cloudflare);
       if (!result.saved) {
         setStatus("error");
         return;
@@ -200,6 +212,13 @@ export const TrustedProxyIpAddressSetting = () => {
       ),
     t("settings.general.trustedProxy.internet"),
   ].join(" → ");
+  const cloudflareDetails = [
+    formatCloudflareCountry(
+      cloudflare?.visitorCountryCode ?? null,
+      i18n.resolvedLanguage ?? "en",
+    ),
+    formatCloudflareDatacenter(cloudflare?.datacenterCode ?? null),
+  ].filter((detail): detail is string => detail !== null);
 
   return (
     <SettingsSection
@@ -214,6 +233,7 @@ export const TrustedProxyIpAddressSetting = () => {
             setValue(event.target.value);
             setLastResult(null);
             setDetectedProxyServices([]);
+            setCloudflare(null);
             if (status === "error") setStatus("idle");
           }}
           placeholder={t("settings.general.trustedProxy.placeholder")}
@@ -228,8 +248,17 @@ export const TrustedProxyIpAddressSetting = () => {
 
         {detectedProxyServices.length > 0 && (
           <Alert severity="info">
-            {t("settings.general.trustedProxy.detectedPath")}:{" "}
-            <strong>{detectedPath}</strong>
+            <Stack spacing={0.5}>
+              <span>
+                {t("settings.general.trustedProxy.detectedPath")}:{" "}
+                <strong>{detectedPath}</strong>
+              </span>
+              {cloudflareDetails.length > 0 && (
+                <span>
+                  Cloudflare: <strong>{cloudflareDetails.join(" · ")}</strong>
+                </span>
+              )}
+            </Stack>
           </Alert>
         )}
 

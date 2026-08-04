@@ -101,6 +101,7 @@ public class ServerEndpointsTests : IntegrationTestBase
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         _client.DefaultRequestHeaders.Add(TestAppFactory.RemoteIpAddressHeader, "198.51.100.10");
         _client.DefaultRequestHeaders.Add("CF-Ray", "230b030023ae2822-SJC");
+        _client.DefaultRequestHeaders.Add("CF-IPCountry", "US");
         _client.DefaultRequestHeaders.Add("CF-Connecting-IP", "203.0.113.40");
         _client.DefaultRequestHeaders.Add("X-Forwarded-For", "203.0.113.40");
         _client.DefaultRequestHeaders.Add("X-Real-IP", "203.0.113.40");
@@ -118,6 +119,12 @@ public class ServerEndpointsTests : IntegrationTestBase
             Assert.That(
                 observedPayload.GetProperty("detectedProxyServices").EnumerateArray().Select(x => x.GetString()),
                 Is.EqualTo(new[] { "cloudflare", "reverse-proxy" }));
+            Assert.That(
+                observedPayload.GetProperty("cloudflare").GetProperty("visitorCountryCode").GetString(),
+                Is.EqualTo("US"));
+            Assert.That(
+                observedPayload.GetProperty("cloudflare").GetProperty("datacenterCode").GetString(),
+                Is.EqualTo("SJC"));
         });
 
         using HttpResponseMessage mismatchResponse = await _client.PostAsJsonAsync(
