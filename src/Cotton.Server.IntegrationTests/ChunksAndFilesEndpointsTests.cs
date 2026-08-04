@@ -562,6 +562,65 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Create_Files_With_Same_Content_In_Parallel_Reuses_Manifest()
+    {
+        string token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        byte[] content = new byte[128 * 1024];
+        RandomNumberGenerator.Fill(content);
+        string contentHash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using HttpResponseMessage uploadResponse = await UploadRawChunkAsync(content, contentHash);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        const int requestCount = 16;
+        Task<HttpResponseMessage>[] requests = Enumerable.Range(0, requestCount)
+            .Select(index => _client.PostAsJsonAsync(
+                "/api/v1/files/from-chunks",
+                new CreateFileFromChunksRequestDto
+                {
+                    ChunkHashes = [contentHash],
+                    Name = $"parallel-manifest-{index}.bin",
+                    ContentType = "application/octet-stream",
+                    Hash = contentHash,
+                    NodeId = root!.Id,
+                }))
+            .ToArray();
+
+        HttpResponseMessage[] responses = await Task.WhenAll(requests);
+        try
+        {
+            Assert.That(responses.Select(x => x.StatusCode), Is.All.EqualTo(HttpStatusCode.OK));
+        }
+        finally
+        {
+            foreach (HttpResponseMessage response in responses)
+            {
+                response.Dispose();
+            }
+        }
+
+        byte[] proposedHash = Hasher.FromHexStringHash(contentHash);
+        DbContext.ChangeTracker.Clear();
+        int manifestCount = await DbContext.FileManifests
+            .CountAsync(x => x.ProposedContentHash == proposedHash);
+        List<Guid> manifestIds = await DbContext.NodeFiles
+            .Where(x => x.NodeId == root!.Id && x.Name.StartsWith("parallel-manifest-"))
+            .Select(x => x.FileManifestId)
+            .ToListAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(manifestCount, Is.EqualTo(1));
+            Assert.That(manifestIds, Has.Count.EqualTo(requestCount));
+            Assert.That(manifestIds.Distinct(), Has.Exactly(1).Items);
+        });
+    }
+
+    [Test]
     public async Task Chunk_Exists_Honors_CrossUser_Deduplication_Setting()
     {
         string adminToken = await LoginAsync();

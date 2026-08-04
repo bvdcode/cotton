@@ -202,7 +202,14 @@ namespace Cotton.Server.Handlers.Files
                 return fileManifest;
             }
 
-            return await _fileManifestService.CreateNewFileManifestAsync(chunks, request.Name, request.ContentType, proposedHash, ct);
+            return await _fileManifestService.CreateNewFileManifestAsync(
+                chunks,
+                request.Name,
+                request.ContentType,
+                proposedHash,
+                request.UserId,
+                request.Validate,
+                ct);
         }
 
         private async Task ValidateContentHashIfRequestedAsync(

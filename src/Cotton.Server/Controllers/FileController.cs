@@ -672,7 +672,8 @@ namespace Cotton.Server.Controllers
                     chunks,
                     request.Name,
                     request.ContentType,
-                    proposedHash);
+                    proposedHash,
+                    userId);
         }
 
         private async Task<NodeFile?> LoadEditableNodeFileAsync(Guid nodeFileId, Guid userId)

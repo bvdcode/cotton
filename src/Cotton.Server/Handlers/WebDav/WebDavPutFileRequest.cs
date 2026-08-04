@@ -320,7 +320,8 @@ namespace Cotton.Server.Handlers.WebDav
                     resourceName,
                     contentType,
                     fileHash,
-                    ct);
+                    userId,
+                    cancellationToken: ct);
             }
 
             return fileManifest;
