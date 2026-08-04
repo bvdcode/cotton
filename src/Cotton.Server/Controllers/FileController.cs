@@ -754,23 +754,25 @@ namespace Cotton.Server.Controllers
         {
             if (string.IsNullOrWhiteSpace(token))
             {
-                return CottonResult.NotFound("File not found");
+                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "File not found");
             }
+
+            DownloadToken? downloadToken = await LoadValidDownloadTokenAsync(token, nodeFileId);
+            if (downloadToken is null)
+            {
+                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "File not found");
+            }
+
+            _integrity.RequireValid(_dbContext, downloadToken, "file.download-token");
 
             NodeFile? nodeFile = await LoadDownloadNodeFileAsync(nodeFileId);
-            if (nodeFile is null)
-            {
-                return CottonResult.NotFound("File not found");
-            }
-
-            DownloadToken? downloadToken = await LoadValidDownloadTokenAsync(token, nodeFile.Id);
-            if (downloadToken is null || !CanServeTokenDownload(nodeFile))
+            if (nodeFile is null || !CanServeTokenDownload(nodeFile))
             {
                 return CottonResult.NotFound("File not found");
             }
 
             bool servesPreview = CanServeLargePreview(nodeFile, preview);
-            RequireDownloadIntegrity(nodeFile, downloadToken, servesPreview);
+            RequireDownloadGraphIntegrity(nodeFile, servesPreview);
 
             return servesPreview
                 ? ServeLargePreview(nodeFile)
@@ -806,13 +808,10 @@ namespace Cotton.Server.Controllers
         private static bool CanServeLargePreview(NodeFile nodeFile, bool preview) =>
             preview && nodeFile.FileManifest.LargeFilePreviewHash is not null;
 
-        private void RequireDownloadIntegrity(
+        private void RequireDownloadGraphIntegrity(
             NodeFile nodeFile,
-            DownloadToken downloadToken,
             bool servesPreview)
         {
-            _integrity.RequireValid(_dbContext, downloadToken, "file.download-token");
-
             if (servesPreview)
             {
                 _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "file.preview");
@@ -1178,8 +1177,22 @@ namespace Cotton.Server.Controllers
         {
             if (string.IsNullOrWhiteSpace(token))
             {
-                return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
+                return new TranscodableLookup(
+                    null,
+                    null,
+                    this.ApiPublicShareNotFound(_publicShareLookupFailures, "File not found"));
             }
+
+            DownloadToken? downloadToken = await LoadValidDownloadTokenAsync(token, nodeFileId);
+            if (downloadToken is null)
+            {
+                return new TranscodableLookup(
+                    null,
+                    null,
+                    this.ApiPublicShareNotFound(_publicShareLookupFailures, "File not found"));
+            }
+
+            _integrity.RequireValid(_dbContext, downloadToken, "file.hls-token");
 
             NodeFile? nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
@@ -1192,13 +1205,6 @@ namespace Cotton.Server.Controllers
                 return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
             }
 
-            DownloadToken? downloadToken = await _dbContext.DownloadTokens
-                .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFile.Id);
-            if (downloadToken is null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
-            {
-                return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
-            }
-            _integrity.RequireValid(_dbContext, downloadToken, "file.hls-token");
             _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.hls-source");
             if (nodeFile.Node.Type != NodeType.Default)
             {

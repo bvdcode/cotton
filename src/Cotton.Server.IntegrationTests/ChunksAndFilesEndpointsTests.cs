@@ -1471,6 +1471,46 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Direct_And_Hls_Failed_Lookups_Do_Not_Block_Valid_Download()
+    {
+        string authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        NodeFileManifestDto file = await UploadTextFileAsync(
+            root!,
+            "direct-rate-limit-content.txt",
+            "valid direct content");
+
+        using HttpResponseMessage linkResponse = await _client.GetAsync(
+            $"/api/v1/files/{file.Id}/download-link");
+        linkResponse.EnsureSuccessStatusCode();
+        string downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        for (int i = 0; i < 60; i++)
+        {
+            using HttpResponseMessage response = await _client.GetAsync(
+                $"/api/v1/files/{file.Id}/download?token=missing-direct-token-{i}");
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
+
+        using HttpResponseMessage validResponse = await _client.GetAsync(downloadLink);
+        string validContent = await validResponse.Content.ReadAsStringAsync();
+        using HttpResponseMessage limitedHlsResponse = await _client.GetAsync(
+            $"/api/v1/files/{file.Id}/hls/master.m3u8?token=another-missing-token");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(validResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(validContent, Is.EqualTo("valid direct content"));
+            Assert.That(limitedHlsResponse.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+            Assert.That(limitedHlsResponse.Headers.RetryAfter, Is.Not.Null);
+        });
+    }
+
+    [Test]
     public async Task File_Versions_List_Download_And_Restore_Previous_Content()
     {
         var token = await LoginAsync();
