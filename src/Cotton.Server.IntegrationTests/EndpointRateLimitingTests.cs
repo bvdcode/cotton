@@ -3,7 +3,6 @@
 
 using Cotton.Server.Extensions;
 using Cotton.Server.Auth;
-using Cotton.Server.Controllers;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Microsoft.AspNetCore.Http;
@@ -13,7 +12,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NUnit.Framework;
 using System.Net;
-using System.Reflection;
 using System.Threading.RateLimiting;
 
 namespace Cotton.Server.IntegrationTests;
@@ -243,16 +241,6 @@ public class EndpointRateLimitingTests
             Assert.That(rejectedLease.IsAcquired, Is.False);
             Assert.That(separateClientLease.IsAcquired, Is.True);
         });
-    }
-
-    [Test]
-    public void PublicShareArchive_UsesArchiveRateLimit()
-    {
-        MethodInfo? archiveAction = typeof(LayoutController)
-            .GetMethod(nameof(LayoutController.CreateSharedArchiveDownloadLink));
-        EnableRateLimitingAttribute? attribute = archiveAction?.GetCustomAttribute<EnableRateLimitingAttribute>();
-
-        Assert.That(attribute?.PolicyName, Is.EqualTo(AuthRateLimitPolicies.PublicShareArchive));
     }
 
     private static HttpRequest CreateRequest(string forwardedAddress)

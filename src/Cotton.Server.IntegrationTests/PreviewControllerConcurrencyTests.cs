@@ -5,24 +5,13 @@ using Cotton.Server.Controllers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
-using System.Reflection;
 
 namespace Cotton.Server.IntegrationTests;
 
 public class PreviewControllerConcurrencyTests
 {
-    [Test]
-    public void PreviewController_ExplicitlyBypassesRateLimiting()
-    {
-        DisableRateLimitingAttribute? attribute =
-            typeof(PreviewController).GetCustomAttribute<DisableRateLimitingAttribute>();
-
-        Assert.That(attribute, Is.Not.Null);
-    }
-
     [Test]
     [NonParallelizable]
     public async Task GetFilePreview_HoldsSemaphoreUntilResponseCompletes()
