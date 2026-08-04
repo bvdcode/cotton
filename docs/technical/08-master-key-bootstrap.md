@@ -380,4 +380,4 @@ So the only thing the Cotton process itself *toggles* for "paranoia" is `PR_SET_
 - *Database Backup & Auto-Restore* — `DumpDatabaseJob`, the latest-backup pointer, and `DatabaseBackupKeyProvider`.
 - *Authentication* — how the derived `Pepper` and the ephemeral JWT key are used.
 - *Security Diagnostics & Process Hardening* — `SecurityDiagnosticsService`, `LinuxProcessHardening`, and the admin security score.
-- *Server Bootstrap & Startup* — the rest of `Program.RunApplicationAsync` (migrations, integrity backfill, auto-restore, first-admin window).
+- *Server Bootstrap & Startup* — the rest of `Program.RunApplicationAsync` (preflight validation, migrations, auto-restore, settings-cache priming, first-admin window).

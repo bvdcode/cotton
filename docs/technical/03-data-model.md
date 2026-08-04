@@ -508,12 +508,12 @@ Row-level tamper-evidence is implemented with two **shadow** properties (not pre
 | `VersionColumn` | `"integrity_version"` | DB column (`integer`, nullable) |
 | `MacColumn` | `"integrity_mac"` | DB column (`bytea`, nullable) |
 
-`ConfigureIntegrityShadowProperties<TEntity>` maps the `int?` shadow property `IntegrityVersion` to column `integrity_version` and the `byte[]?` shadow property `IntegrityMac` to column `integrity_mac`. These are nullable so existing rows can be backfilled rather than migrated atomically.
+`ConfigureIntegrityShadowProperties<TEntity>` maps the `int?` shadow property `IntegrityVersion` to column `integrity_version` and the `byte[]?` shadow property `IntegrityMac` to column `integrity_mac`. The columns remain nullable so the schema can represent rows that predate the integrity transition; version 0.5 treats that state as an upgrade error and does not backfill it.
 
 The save-time contract is defined by `IDatabaseIntegrityChangeSigner` (`src/Cotton.Database/Integrity/IDatabaseIntegrityChangeSigner.cs`), a one-method interface: `void SignPendingChanges(DbContext dbContext)`. `CottonDbContext` invokes it before every save. The server-side implementation (`DatabaseIntegrityChangeSigner` in `src/Cotton.Server/Services/DatabaseIntegrity/`) walks the change tracker for `Added`/`Modified` entries that (a) have a registered descriptor (`IDatabaseIntegrityDescriptorRegistry.TryGet`) and (b) carry the two shadow properties, then:
 
 1. Refuses to sign a row whose `Id` property is still `Guid.Empty` or marked temporary by EF (the PK participates in the signed payload, so a temporary key would produce a MAC that cannot verify after insert), throwing `InvalidOperationException`. Entities without an `Id` property (i.e. `Chunk`) skip this check.
-2. For `Modified` rows, requires and re-verifies the **original** stored MAC/version against the original values before re-signing. Missing metadata, a version mismatch, or a failed `protector.Verify(originalEntity, descriptor, originalMac)` reports a failure and throws `DatabaseIntegrityException`, blocking the save.
+2. For `Modified` rows, requires and re-verifies the **original** stored MAC/version against the original values before re-signing. Missing metadata reports a failure and throws `DatabaseIntegritySignatureMissingException`; a version mismatch or failed `protector.Verify(originalEntity, descriptor, originalMac)` reports a failure and throws `DatabaseIntegrityException`. Both paths block the save.
 3. Sets `IntegrityVersion = descriptor.SchemaVersion` and `IntegrityMac = protector.Sign(entity, descriptor)`.
 
 This catches in-place tampering on the normal write path; direct SQL edits that bypass the application are caught later at read-time verification. The signing algorithm and descriptor registry live in the server's database-integrity subsystem — see the *Database Integrity* section.

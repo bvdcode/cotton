@@ -96,7 +96,7 @@ The result is clamped to a floor of 0: `Math.Max(0, 10 - penalty)`. `MaxSecurity
 | `mandatory-access-control-unconfined` | warning | container AND no enforcing AppArmor/SELinux detected | See MAC logic below. |
 | `core-dumps-enabled` | warning | `CoreDumpSoftLimitDisabled == false` AND `Dumpable != 0` (Linux only) | Set `ulimit core=0`. Runs on any Linux host, not only containers. |
 | `process-hardening-failed` | warning | `HardeningRequested && !HardeningApplied` | Message is `HardeningError` when present, else a generic fallback. |
-| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` | Restore affected rows from backup or run the required transition version before upgrading. |
+| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` | Restore affected rows from backup or complete the transition on Cotton 0.4.35 before upgrading; version 0.5 does not repair them. |
 
 Important guards:
 
