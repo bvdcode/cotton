@@ -38,6 +38,7 @@ import { isGuidString } from "../../../shared/utils/guid";
 import { storageSpaceOptions } from "./adminGeneralSettingsModel";
 import type { SaveStatus } from "./useAutoSavedSetting";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { AdminPageHeader } from "../components/AdminPageHeader";
 import { SAVED_STATUS_VISIBLE_MS } from "./adminSettingSaveStatus";
 
 type FlashTimers = {
@@ -692,15 +693,15 @@ export const AdminStorageSettingsPage = () => {
     <Stack>
       <AdminPageSurface>
         <Stack p={3} spacing={3} divider={<Divider flexItem />}>
-          <Typography variant="h5" fontWeight={700}>
-            {t("storageSettings.title")}
-          </Typography>
+          <AdminPageHeader
+            title={t("storageSettings.title")}
+            description={t("storageSettings.description")}
+          />
 
           {loadError && <Alert severity="error">{loadError}</Alert>}
 
           <SettingsSection
             title={t("storageSettings.fields.storageType")}
-            description={t("storageSettings.description")}
             status={storageTypeStatus}
           >
             <TextField

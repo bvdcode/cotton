@@ -7,7 +7,6 @@ import {
   Stack,
   ToggleButton,
   ToggleButtonGroup,
-  Typography,
 } from "@mui/material";
 import { type MouseEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +19,7 @@ import {
 } from "@shared/api/queries/admin";
 import { getApiErrorMessage } from "@shared/api/httpClient";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { AdminPageHeader } from "../components/AdminPageHeader";
 import { GcTimelineChart } from "./components/GcTimelineChart";
 import { StorageSummaryCards } from "./components/StorageSummaryCards";
 
@@ -88,22 +88,10 @@ export const AdminStorageStatisticsPage = () => {
     <Stack spacing={2}>
       <AdminPageSurface>
         <Stack p={3} spacing={3}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={1}
-            justifyContent="space-between"
-            alignItems={{ xs: "stretch", md: "center" }}
-          >
-            <Stack spacing={0.5}>
-              <Typography variant="h5" fontWeight={700}>
-                {t("storageStatistics.title")}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t("storageStatistics.description")}
-              </Typography>
-            </Stack>
-
-            <Stack spacing={1} alignItems={{ xs: "stretch", md: "flex-end" }}>
+          <AdminPageHeader
+            title={t("storageStatistics.title")}
+            description={t("storageStatistics.description")}
+            action={
               <Stack
                 direction="row"
                 spacing={1}
@@ -150,8 +138,8 @@ export const AdminStorageStatisticsPage = () => {
                   {t("storageStatistics.actions.refresh")}
                 </Button>
               </Stack>
-            </Stack>
-          </Stack>
+            }
+          />
 
           {loadErrorMessage && (
             <Alert severity="error">{loadErrorMessage}</Alert>

@@ -1,4 +1,4 @@
-import { Alert, Box, Stack, Typography, useMediaQuery } from "@mui/material";
+import { Alert, Box, Stack, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,6 +7,7 @@ import type { AdminUserDto } from "../../../shared/api/adminApi";
 import { CreateUserDialog } from "./CreateUserDialog";
 import { EditUserDialog } from "./EditUserDialog";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { AdminPageHeader } from "../components/AdminPageHeader";
 import { UsersGridToolbar } from "./components/UsersGridToolbar";
 import { useAdminUsersColumns } from "./hooks/useAdminUsersColumns";
 import { useAdminUsersData } from "./hooks/useAdminUsersData";
@@ -84,9 +85,7 @@ export const AdminUsersPage = () => {
     <Stack spacing={2}>
       <AdminPageSurface>
         <Stack p={3} pb={2} spacing={0.5}>
-          <Typography variant="h5" fontWeight={700}>
-            {t("users.title")}
-          </Typography>
+          <AdminPageHeader title={t("users.title")} />
         </Stack>
 
         {loadState.kind === "error" && (

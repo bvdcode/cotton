@@ -29,6 +29,7 @@ import type {
 } from "../../../shared/api/adminApi";
 import { DIRECT_CONNECTION_IP_ADDRESS } from "../../../shared/api/settingsApi";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { AdminPageHeader } from "../components/AdminPageHeader";
 
 const knownThreatVectorCodes = new Set([
   "public-instance",
@@ -944,17 +945,11 @@ export const AdminSecurityDiagnosticsPage = () => {
     <Stack>
       <AdminPageSurface>
         <Stack p={3} spacing={3} divider={<Divider flexItem />}>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <SecurityIcon color="primary" />
-            <Stack spacing={0.5}>
-              <Typography variant="h5" fontWeight={700}>
-                {t("securityDiagnostics.title")}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t("securityDiagnostics.description")}
-              </Typography>
-            </Stack>
-          </Stack>
+          <AdminPageHeader
+            title={t("securityDiagnostics.title")}
+            description={t("securityDiagnostics.description")}
+            icon={<SecurityIcon color="primary" />}
+          />
 
           {diagnosticsQuery.isPending && (
             <Stack spacing={1.5}>
