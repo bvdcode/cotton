@@ -5,6 +5,7 @@ import { useConfirm } from "material-ui-confirm";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OidcProviderDto } from "@shared/api/oidcApi";
+import { destructiveConfirmOptions } from "@shared/ui/confirmOptions";
 import {
   useAdminOidcProvidersQuery,
   useDeleteOidcProviderMutation,
@@ -47,6 +48,7 @@ export const AdminIdentityProvidersPage = () => {
       description: t("identityProviders.delete.description"),
       confirmationText: t("identityProviders.delete.confirm"),
       cancellationText: t("actions.cancel", { ns: "common" }),
+      ...destructiveConfirmOptions,
     });
 
     if (!result.confirmed) return;
