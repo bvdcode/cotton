@@ -60,6 +60,7 @@ export const GeoIpLookupSetting = () => {
   const [savedUrl, setSavedUrl] = useState("");
   const [telemetry, setTelemetry] = useState(false);
   const [status, setStatus] = useState<SaveStatus>("loading");
+  const [loadFailed, setLoadFailed] = useState(false);
   const [urlTouched, setUrlTouched] = useState(false);
   const [testing, setTesting] = useState(false);
 
@@ -89,11 +90,13 @@ export const GeoIpLookupSetting = () => {
         setUrl(next.url);
         setSavedUrl(next.url);
         setTelemetry(next.telemetry);
+        setLoadFailed(false);
         setStatus("idle");
       })
       .catch(() => {
         if (!active) return;
-        setStatus("idle");
+        setLoadFailed(true);
+        setStatus("error");
         toast.error(t("settings.errors.loadFailed"), {
           toastId: "admin-general:geoip:load-error",
         });
@@ -136,6 +139,7 @@ export const GeoIpLookupSetting = () => {
   );
 
   const handleModeChange = (next: GeoIpLookupMode) => {
+    if (loadFailed) return;
     if (next === mode) return;
     setMode(next);
     setUrlTouched(false);
@@ -166,6 +170,8 @@ export const GeoIpLookupSetting = () => {
   const urlError = urlTouched ? urlValidation.error : null;
 
   const commitUrl = useCallback(async (): Promise<boolean> => {
+    if (loadFailed) return false;
+
     setUrlTouched(true);
     const next = urlValidation.normalized;
     if (urlValidation.error || next === null) return false;
@@ -192,6 +198,7 @@ export const GeoIpLookupSetting = () => {
     }
   }, [
     flashSaved,
+    loadFailed,
     reportError,
     savedMode,
     savedUrl,
@@ -238,7 +245,8 @@ export const GeoIpLookupSetting = () => {
     }
   };
 
-  const disabled = status === "loading" || status === "saving" || testing;
+  const disabled =
+    loadFailed || status === "loading" || status === "saving" || testing;
 
   return (
     <SettingsSection

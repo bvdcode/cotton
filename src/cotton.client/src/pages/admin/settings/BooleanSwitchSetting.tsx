@@ -27,15 +27,17 @@ export const BooleanSwitchSetting = ({
 }: BooleanSwitchSettingProps) => {
   const { t } = useTranslation("admin");
 
-  const { value, commitValue, status } = useAutoSavedSetting<boolean>({
-    initial: false,
-    load,
-    save,
-    toastIdPrefix,
-    errorMessage: t("settings.errors.saveFailed"),
-  });
+  const { value, commitValue, status, loadFailed } =
+    useAutoSavedSetting<boolean>({
+      initial: false,
+      load,
+      save,
+      toastIdPrefix,
+      loadErrorMessage: t("settings.errors.loadFailed"),
+      saveErrorMessage: t("settings.errors.saveFailed"),
+    });
 
-  const disabled = status === "loading" || status === "saving";
+  const disabled = loadFailed || status === "loading" || status === "saving";
 
   return (
     <SettingsSection

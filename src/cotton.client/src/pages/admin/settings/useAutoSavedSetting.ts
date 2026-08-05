@@ -10,7 +10,8 @@ interface UseAutoSavedSettingArgs<T> {
   load: () => Promise<T>;
   save: (value: T) => Promise<void>;
   toastIdPrefix: string;
-  errorMessage: string;
+  loadErrorMessage: string;
+  saveErrorMessage: string;
   isEqual?: (a: T, b: T) => boolean;
 }
 
@@ -29,7 +30,8 @@ export const useAutoSavedSetting = <T>({
   load,
   save,
   toastIdPrefix,
-  errorMessage,
+  loadErrorMessage,
+  saveErrorMessage,
   isEqual = Object.is,
 }: UseAutoSavedSettingArgs<T>): UseAutoSavedSettingResult<T> => {
   const [value, setValueState] = useState<T>(initial);
@@ -40,16 +42,19 @@ export const useAutoSavedSetting = <T>({
   const loadRef = useRef(load);
   const saveRef = useRef(save);
   const isEqualRef = useRef(isEqual);
-  const errorMessageRef = useRef(errorMessage);
+  const loadErrorMessageRef = useRef(loadErrorMessage);
+  const saveErrorMessageRef = useRef(saveErrorMessage);
   const toastIdPrefixRef = useRef(toastIdPrefix);
   const savedValueRef = useRef(savedValue);
+  const loadFailedRef = useRef(false);
   const flashTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadRef.current = load;
     saveRef.current = save;
     isEqualRef.current = isEqual;
-    errorMessageRef.current = errorMessage;
+    loadErrorMessageRef.current = loadErrorMessage;
+    saveErrorMessageRef.current = saveErrorMessage;
     toastIdPrefixRef.current = toastIdPrefix;
     savedValueRef.current = savedValue;
   });
@@ -63,13 +68,16 @@ export const useAutoSavedSetting = <T>({
         if (!active) return;
         setValueState(loaded);
         setSavedValue(loaded);
+        loadFailedRef.current = false;
+        setLoadFailed(false);
         setStatus("idle");
       })
       .catch(() => {
         if (!active) return;
-        setStatus("idle");
+        loadFailedRef.current = true;
+        setStatus("error");
         setLoadFailed(true);
-        toast.error(errorMessageRef.current, {
+        toast.error(loadErrorMessageRef.current, {
           toastId: `${toastIdPrefixRef.current}:load-error`,
         });
       });
@@ -89,6 +97,10 @@ export const useAutoSavedSetting = <T>({
   );
 
   const persist = useCallback(async (next: T) => {
+    if (loadFailedRef.current) {
+      return;
+    }
+
     if (flashTimerRef.current !== null) {
       window.clearTimeout(flashTimerRef.current);
       flashTimerRef.current = null;
@@ -108,23 +120,29 @@ export const useAutoSavedSetting = <T>({
       setStatus("error");
       showApiErrorToast(
         error,
-        errorMessageRef.current,
+        saveErrorMessageRef.current,
         `${toastIdPrefixRef.current}:save-error`,
       );
     }
   }, []);
 
   const setValue = useCallback((next: T) => {
+    if (loadFailedRef.current) {
+      return;
+    }
+
     setValueState(next);
   }, []);
 
   const commit = useCallback(() => {
+    if (loadFailedRef.current) return;
     if (isEqualRef.current(value, savedValueRef.current)) return;
     void persist(value);
   }, [persist, value]);
 
   const commitValue = useCallback(
     (next: T) => {
+      if (loadFailedRef.current) return;
       setValueState(next);
       if (isEqualRef.current(next, savedValueRef.current)) return;
       void persist(next);

@@ -11,20 +11,22 @@ export const TimezoneSetting = () => {
 
   const timeZoneOptions = useMemo(() => getSupportedTimeZones(), []);
 
-  const { value, commitValue, status } = useAutoSavedSetting<string>({
-    initial: "UTC",
-    load: async () => (await settingsApi.getTimezone()).trim() || "UTC",
-    save: settingsApi.setTimezone,
-    toastIdPrefix: "admin-general:timezone",
-    errorMessage: t("settings.errors.saveFailed"),
-  });
+  const { value, commitValue, status, loadFailed } =
+    useAutoSavedSetting<string>({
+      initial: "UTC",
+      load: async () => (await settingsApi.getTimezone()).trim() || "UTC",
+      save: settingsApi.setTimezone,
+      toastIdPrefix: "admin-general:timezone",
+      loadErrorMessage: t("settings.errors.loadFailed"),
+      saveErrorMessage: t("settings.errors.saveFailed"),
+    });
 
   const options = useMemo(() => {
     if (timeZoneOptions.includes(value) || !value) return timeZoneOptions;
     return [value, ...timeZoneOptions];
   }, [timeZoneOptions, value]);
 
-  const disabled = status === "loading" || status === "saving";
+  const disabled = loadFailed || status === "loading" || status === "saving";
 
   return (
     <SettingsSection

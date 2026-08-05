@@ -27,21 +27,23 @@ export const PublicBaseUrlSetting = () => {
     [t],
   );
 
-  const { value, setValue, commitValue, status } = useAutoSavedSetting<string>({
-    initial: "",
-    load: async () =>
-      normalizeStoredPublicBaseUrl(await settingsApi.getPublicBaseUrl()),
-    save: settingsApi.setPublicBaseUrl,
-    toastIdPrefix: "admin-general:public-base-url",
-    errorMessage: t("settings.errors.saveFailed"),
-  });
+  const { value, setValue, commitValue, status, loadFailed } =
+    useAutoSavedSetting<string>({
+      initial: "",
+      load: async () =>
+        normalizeStoredPublicBaseUrl(await settingsApi.getPublicBaseUrl()),
+      save: settingsApi.setPublicBaseUrl,
+      toastIdPrefix: "admin-general:public-base-url",
+      loadErrorMessage: t("settings.errors.loadFailed"),
+      saveErrorMessage: t("settings.errors.saveFailed"),
+    });
 
   const validation = useMemo(
     () => validatePublicBaseUrl(value, messages),
     [value, messages],
   );
 
-  const disabled = status === "loading" || status === "saving";
+  const disabled = loadFailed || status === "loading" || status === "saving";
 
   const handleBlur = () => {
     if (validation.error || validation.normalized === null) return;

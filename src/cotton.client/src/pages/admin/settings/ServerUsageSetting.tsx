@@ -13,16 +13,19 @@ const loadServerUsage = async (): Promise<ServerUsage[]> => {
 export const ServerUsageSetting = () => {
   const { t } = useTranslation("admin");
 
-  const { value, commitValue, status } = useAutoSavedSetting<ServerUsage[]>({
+  const { value, commitValue, status, loadFailed } = useAutoSavedSetting<
+    ServerUsage[]
+  >({
     initial: ["Other"],
     load: loadServerUsage,
     save: settingsApi.setServerUsage,
     toastIdPrefix: "admin-general:server-usage",
-    errorMessage: t("settings.errors.saveFailed"),
+    loadErrorMessage: t("settings.errors.loadFailed"),
+    saveErrorMessage: t("settings.errors.saveFailed"),
     isEqual: isSameArray,
   });
 
-  const disabled = status === "loading" || status === "saving";
+  const disabled = loadFailed || status === "loading" || status === "saving";
 
   const toggle = (option: ServerUsage) => {
     const toggled = value.includes(option)
