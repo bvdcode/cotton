@@ -2805,17 +2805,22 @@
     "title": "Správa",
     "menu": {
       "navigate": "Sekce",
+      "expand": "Rozbalit navigaci",
+      "collapse": "Sbalit navigaci",
+      "sections": {
+        "people": "Lidé",
+        "storage": "Úložiště",
+        "security": "Zabezpečení",
+        "system": "Systém"
+      },
       "users": "Uživatelé",
-      "usersAndGroups": "Uživatelé a skupiny",
       "generalSettings": "Obecná nastavení",
-      "privacySettings": "Soukromí a bezpečnost",
+      "privacySettings": "Soukromí",
       "storageSettings": "Úložiště",
-      "storageAndStatistics": "Úložiště a statistiky",
       "notificationsSettings": "Oznámení",
       "databaseBackup": "Záloha databáze",
       "storageStatistics": "Statistiky úložiště",
       "securityDiagnostics": "Kontrola zabezpečení",
-      "groups": "Skupiny",
       "identityProviders": "Identity providers"
     },
     "roles": {

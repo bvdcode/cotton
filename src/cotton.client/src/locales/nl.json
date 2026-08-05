@@ -2765,17 +2765,22 @@
     "title": "Beheer",
     "menu": {
       "navigate": "Sectie",
+      "expand": "Navigatie uitklappen",
+      "collapse": "Navigatie inklappen",
+      "sections": {
+        "people": "Mensen",
+        "storage": "Opslag",
+        "security": "Beveiliging",
+        "system": "Systeem"
+      },
       "users": "Gebruikers",
-      "usersAndGroups": "Gebruikers en groepen",
       "generalSettings": "Algemene instellingen",
-      "privacySettings": "Privacy en beveiliging",
+      "privacySettings": "Privacy",
       "storageSettings": "Opslag",
-      "storageAndStatistics": "Opslag en statistieken",
       "notificationsSettings": "Meldingen",
       "databaseBackup": "Databaseback-up",
       "storageStatistics": "Opslagstatistieken",
       "securityDiagnostics": "Beveiligingscontrole",
-      "groups": "Groepen",
       "identityProviders": "Identity providers"
     },
     "roles": {

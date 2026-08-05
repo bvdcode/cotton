@@ -17,6 +17,7 @@ interface LocalPreferencesState {
   developerSettingsUnlocked: boolean;
   developerSettingsUnlockClickCount: number;
   developerSettingsUnlockClickExpiresAt: number | null;
+  adminNavigationExpanded: boolean | null;
 
   editorModes: Record<string, string>;
   languageOverrides: Record<string, string>;
@@ -27,6 +28,7 @@ interface LocalPreferencesState {
   setTrashTilesSize: (size: TilesSize) => void;
   setDeveloperSettingsUnlocked: (unlocked: boolean) => void;
   recordDeveloperSettingsUnlockClick: (now?: number) => boolean;
+  setAdminNavigationExpanded: (expanded: boolean) => void;
 
   setEditorMode: (fileId: string, mode: string) => void;
   setLanguageOverride: (fileId: string, language: string) => void;
@@ -43,6 +45,7 @@ const INITIAL_STATE = {
   developerSettingsUnlocked: false,
   developerSettingsUnlockClickCount: 0,
   developerSettingsUnlockClickExpiresAt: null as number | null,
+  adminNavigationExpanded: null as boolean | null,
   editorModes: {} as Record<string, string>,
   languageOverrides: {} as Record<string, string>,
 };
@@ -89,6 +92,8 @@ export const useLocalPreferencesStore = create<LocalPreferencesState>()(
         });
         return unlocked;
       },
+      setAdminNavigationExpanded: (expanded) =>
+        set({ adminNavigationExpanded: expanded }),
 
       setEditorMode: (fileId, mode) =>
         set((s) => ({
@@ -132,3 +137,6 @@ export const selectTrashTilesSize = (s: LocalPreferencesState): TilesSize =>
 export const selectDeveloperSettingsUnlocked = (
   s: LocalPreferencesState,
 ): boolean => s.developerSettingsUnlocked;
+export const selectAdminNavigationExpanded = (
+  s: LocalPreferencesState,
+): boolean | null => s.adminNavigationExpanded;

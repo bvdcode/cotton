@@ -2893,17 +2893,22 @@
     "title": "Администрирование",
     "menu": {
       "navigate": "Раздел",
+      "expand": "Развернуть навигацию",
+      "collapse": "Свернуть навигацию",
+      "sections": {
+        "people": "Пользователи",
+        "storage": "Хранилище",
+        "security": "Безопасность",
+        "system": "Система"
+      },
       "users": "Пользователи",
       "databaseBackup": "Бэкап базы данных",
       "storageStatistics": "Статистика хранилища",
       "securityDiagnostics": "Проверка безопасности",
-      "groups": "Группы",
       "generalSettings": "Основные настройки",
-      "privacySettings": "Приватность и безопасность",
+      "privacySettings": "Приватность",
       "storageSettings": "Хранилище",
-      "storageAndStatistics": "Хранилище и статистика",
       "notificationsSettings": "Уведомления",
-      "usersAndGroups": "Пользователи и группы",
       "identityProviders": "Провайдеры входа"
     },
     "roles": {

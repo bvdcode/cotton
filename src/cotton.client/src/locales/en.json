@@ -2559,17 +2559,22 @@
     "title": "Admin",
     "menu": {
       "navigate": "Section",
+      "expand": "Expand navigation",
+      "collapse": "Collapse navigation",
+      "sections": {
+        "people": "People",
+        "storage": "Storage",
+        "security": "Security",
+        "system": "System"
+      },
       "users": "Users",
-      "usersAndGroups": "Users and groups",
       "generalSettings": "General settings",
-      "privacySettings": "Privacy and security",
+      "privacySettings": "Privacy",
       "storageSettings": "Storage",
-      "storageAndStatistics": "Storage and statistics",
       "notificationsSettings": "Notifications",
       "databaseBackup": "Database backup",
       "storageStatistics": "Storage statistics",
       "securityDiagnostics": "Security checkup",
-      "groups": "Groups",
       "identityProviders": "Identity providers"
     },
     "roles": {

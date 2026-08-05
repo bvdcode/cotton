@@ -2779,17 +2779,22 @@
     "title": "Адміністрування",
     "menu": {
       "navigate": "Розділ",
+      "expand": "Розгорнути навігацію",
+      "collapse": "Згорнути навігацію",
+      "sections": {
+        "people": "Користувачі",
+        "storage": "Сховище",
+        "security": "Безпека",
+        "system": "Система"
+      },
       "users": "Користувачі",
-      "usersAndGroups": "Користувачі та групи",
       "generalSettings": "Загальні налаштування",
-      "privacySettings": "Приватність і безпека",
+      "privacySettings": "Приватність",
       "storageSettings": "Сховище",
-      "storageAndStatistics": "Сховище та статистика",
       "notificationsSettings": "Сповіщення",
       "databaseBackup": "Резервне копіювання бази даних",
       "storageStatistics": "Статистика сховища",
       "securityDiagnostics": "Перевірка безпеки",
-      "groups": "Групи",
       "identityProviders": "Identity providers"
     },
     "roles": {

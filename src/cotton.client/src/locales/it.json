@@ -2766,17 +2766,22 @@
     "title": "Amministrazione",
     "menu": {
       "navigate": "Sezione",
+      "expand": "Espandi navigazione",
+      "collapse": "Riduci navigazione",
+      "sections": {
+        "people": "Persone",
+        "storage": "Archiviazione",
+        "security": "Sicurezza",
+        "system": "Sistema"
+      },
       "users": "Utenti",
-      "usersAndGroups": "Utenti e gruppi",
       "generalSettings": "Impostazioni generali",
-      "privacySettings": "Privacy e sicurezza",
+      "privacySettings": "Privacy",
       "storageSettings": "Archiviazione",
-      "storageAndStatistics": "Archiviazione e statistiche",
       "notificationsSettings": "Notifiche",
       "databaseBackup": "Backup del database",
       "storageStatistics": "Statistiche di archiviazione",
       "securityDiagnostics": "Controllo della sicurezza",
-      "groups": "Gruppi",
       "identityProviders": "Identity providers"
     },
     "roles": {

@@ -2808,17 +2808,22 @@
     "title": "Administrator",
     "menu": {
       "navigate": "Sekcja",
+      "expand": "Rozwiń nawigację",
+      "collapse": "Zwiń nawigację",
+      "sections": {
+        "people": "Osoby",
+        "storage": "Magazyn",
+        "security": "Bezpieczeństwo",
+        "system": "System"
+      },
       "users": "Użytkownicy",
-      "usersAndGroups": "Użytkownicy i grupy",
       "generalSettings": "Ustawienia ogólne",
-      "privacySettings": "Prywatność i bezpieczeństwo",
+      "privacySettings": "Prywatność",
       "storageSettings": "Magazyn",
-      "storageAndStatistics": "Magazyn i statystyki",
       "notificationsSettings": "Powiadomienia",
       "databaseBackup": "Kopia zapasowa bazy danych",
       "storageStatistics": "Statystyki magazynu",
       "securityDiagnostics": "Przegląd bezpieczeństwa",
-      "groups": "Grupy",
       "identityProviders": "Identity providers"
     },
     "roles": {

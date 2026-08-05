@@ -2760,17 +2760,22 @@
     "title": "Admin",
     "menu": {
       "navigate": "Abschnitt",
+      "expand": "Navigation erweitern",
+      "collapse": "Navigation einklappen",
+      "sections": {
+        "people": "Personen",
+        "storage": "Speicher",
+        "security": "Sicherheit",
+        "system": "System"
+      },
       "users": "Benutzer",
-      "usersAndGroups": "Benutzer und Gruppen",
       "generalSettings": "Allgemeine Einstellungen",
-      "privacySettings": "Datenschutz und Sicherheit",
+      "privacySettings": "Datenschutz",
       "storageSettings": "Speicher",
-      "storageAndStatistics": "Speicher und Statistiken",
       "notificationsSettings": "Benachrichtigungen",
       "databaseBackup": "Datenbanksicherung",
       "storageStatistics": "Speicherstatistiken",
       "securityDiagnostics": "Sicherheitsprüfung",
-      "groups": "Gruppen",
       "identityProviders": "Identity providers"
     },
     "roles": {

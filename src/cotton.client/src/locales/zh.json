@@ -2773,17 +2773,22 @@
     "title": "管理",
     "menu": {
       "navigate": "板块",
+      "expand": "展开导航",
+      "collapse": "收起导航",
+      "sections": {
+        "people": "用户",
+        "storage": "存储",
+        "security": "安全",
+        "system": "系统"
+      },
       "users": "用户",
-      "usersAndGroups": "用户与用户组",
       "generalSettings": "常规设置",
-      "privacySettings": "隐私与安全",
+      "privacySettings": "隐私",
       "storageSettings": "存储",
-      "storageAndStatistics": "存储与统计",
       "notificationsSettings": "通知",
       "databaseBackup": "数据库备份",
       "storageStatistics": "存储统计",
       "securityDiagnostics": "安全检查",
-      "groups": "用户组",
       "identityProviders": "Identity providers"
     },
     "roles": {

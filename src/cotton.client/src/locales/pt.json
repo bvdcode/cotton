@@ -2767,17 +2767,22 @@
     "title": "Administração",
     "menu": {
       "navigate": "Seção",
+      "expand": "Expandir navegação",
+      "collapse": "Recolher navegação",
+      "sections": {
+        "people": "Pessoas",
+        "storage": "Armazenamento",
+        "security": "Segurança",
+        "system": "Sistema"
+      },
       "users": "Usuários",
-      "usersAndGroups": "Usuários e grupos",
       "generalSettings": "Configurações gerais",
-      "privacySettings": "Privacidade e segurança",
+      "privacySettings": "Privacidade",
       "storageSettings": "Armazenamento",
-      "storageAndStatistics": "Armazenamento e estatísticas",
       "notificationsSettings": "Notificações",
       "databaseBackup": "Backup do banco de dados",
       "storageStatistics": "Estatísticas de armazenamento",
       "securityDiagnostics": "Verificação de segurança",
-      "groups": "Grupos",
       "identityProviders": "Identity providers"
     },
     "roles": {

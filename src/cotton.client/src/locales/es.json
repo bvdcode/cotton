@@ -2763,17 +2763,22 @@
     "title": "Administración",
     "menu": {
       "navigate": "Sección",
+      "expand": "Expandir navegación",
+      "collapse": "Contraer navegación",
+      "sections": {
+        "people": "Personas",
+        "storage": "Almacenamiento",
+        "security": "Seguridad",
+        "system": "Sistema"
+      },
       "users": "Usuarios",
       "databaseBackup": "Respaldo de base de datos",
       "storageStatistics": "Estadísticas de almacenamiento",
       "securityDiagnostics": "Revisión de seguridad",
-      "groups": "Grupos",
       "generalSettings": "Ajustes generales",
-      "privacySettings": "Privacidad y seguridad",
+      "privacySettings": "Privacidad",
       "storageSettings": "Almacenamiento",
-      "storageAndStatistics": "Almacenamiento y estadísticas",
       "notificationsSettings": "Notificaciones",
-      "usersAndGroups": "Usuarios y grupos",
       "identityProviders": "Identity providers"
     },
     "roles": {
