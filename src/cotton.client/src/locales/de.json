@@ -182,29 +182,6 @@
         "adminOnly": true
       },
       {
-        "id": "privacy-global-indexing",
-        "title": "Globale Indexierung",
-        "description": "Datenschutz und Sicherheit",
-        "path": "/admin/privacy-settings",
-        "keywords": [
-          "global indexing",
-          "global index",
-          "indexing",
-          "search indexing",
-          "search index",
-          "deep search",
-          "full text search",
-          "content search",
-          "decrypt files",
-          "file content search",
-          "Globale Indexierung",
-          "Datenschutz und Sicherheit",
-          "Privacy and security"
-        ],
-        "highlightSettingId": "allowGlobalIndexing",
-        "adminOnly": true
-      },
-      {
         "id": "privacy-telemetry",
         "title": "Telemetrie",
         "description": "Datenschutz und Sicherheit",
@@ -233,6 +210,7 @@
         "title": "IP-Suchmodus",
         "description": "Datenschutz und Sicherheit",
         "path": "/admin/privacy-settings",
+        "highlightSettingId": "geoIpLookupMode",
         "keywords": [
           "geoip",
           "geo ip",

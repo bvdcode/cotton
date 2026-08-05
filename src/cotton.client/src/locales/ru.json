@@ -204,32 +204,6 @@
         "adminOnly": true
       },
       {
-        "id": "privacy-global-indexing",
-        "title": "Глобальная индексация",
-        "description": "Приватность и безопасность",
-        "path": "/admin/privacy-settings",
-        "keywords": [
-          "global indexing",
-          "global index",
-          "indexing",
-          "search indexing",
-          "search index",
-          "deep search",
-          "full text search",
-          "content search",
-          "decrypt files",
-          "file content search",
-          "Глобальная индексация",
-          "Приватность и безопасность",
-          "Privacy and security",
-          "индексация",
-          "глубокий поиск",
-          "поиск по содержимому"
-        ],
-        "highlightSettingId": "allowGlobalIndexing",
-        "adminOnly": true
-      },
-      {
         "id": "privacy-telemetry",
         "title": "Телеметрия",
         "description": "Приватность и безопасность",
@@ -261,6 +235,7 @@
         "title": "Режим определения IP",
         "description": "Приватность и безопасность",
         "path": "/admin/privacy-settings",
+        "highlightSettingId": "geoIpLookupMode",
         "keywords": [
           "geoip",
           "geo ip",

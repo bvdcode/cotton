@@ -27,16 +27,14 @@ import { SAVED_STATUS_VISIBLE_MS } from "./adminSettingSaveStatus";
 type LoadedState = {
   mode: GeoIpLookupMode;
   url: string;
-  telemetry: boolean;
 };
 
 const loadGeoIpState = async (): Promise<LoadedState> => {
-  const [mode, url, telemetry] = await Promise.all([
+  const [mode, url] = await Promise.all([
     settingsApi.getGeoIpLookupMode(),
     settingsApi.getCustomGeoIpLookupUrl(),
-    settingsApi.getTelemetry(),
   ]);
-  return { mode, url: url.trim(), telemetry };
+  return { mode, url: url.trim() };
 };
 
 const formatGeoIpTestInput = (result: CustomGeoIpLookupTestResult): string => {
@@ -51,14 +49,23 @@ const formatGeoIpTestLocation = (result: CustomGeoIpLookupTestResult): string =>
     .filter((part): part is string => Boolean(part))
     .join(", ");
 
-export const GeoIpLookupSetting = () => {
+type GeoIpLookupSettingProps = {
+  telemetryEnabled: boolean;
+  highlight?: boolean;
+  highlightKey?: string;
+};
+
+export const GeoIpLookupSetting = ({
+  telemetryEnabled,
+  highlight = false,
+  highlightKey,
+}: GeoIpLookupSettingProps) => {
   const { t } = useTranslation("admin");
 
   const [mode, setMode] = useState<GeoIpLookupMode>("Disabled");
   const [savedMode, setSavedMode] = useState<GeoIpLookupMode>("Disabled");
   const [url, setUrl] = useState("");
   const [savedUrl, setSavedUrl] = useState("");
-  const [telemetry, setTelemetry] = useState(false);
   const [status, setStatus] = useState<SaveStatus>("loading");
   const [loadFailed, setLoadFailed] = useState(false);
   const [urlTouched, setUrlTouched] = useState(false);
@@ -89,7 +96,6 @@ export const GeoIpLookupSetting = () => {
         setSavedMode(next.mode);
         setUrl(next.url);
         setSavedUrl(next.url);
-        setTelemetry(next.telemetry);
         setLoadFailed(false);
         setStatus("idle");
       })
@@ -142,10 +148,16 @@ export const GeoIpLookupSetting = () => {
     if (loadFailed) return;
     if (next === mode) return;
     setMode(next);
-    setUrlTouched(false);
 
     if (next === "CustomHttp") {
-      // Mode is committed only after a valid URL is saved.
+      setUrlTouched(true);
+      const validation = validateCustomGeoIpLookupUrl(url, true, messages);
+      if (validation.error || validation.normalized === null) return;
+    } else {
+      setUrlTouched(false);
+    }
+
+    if (next === savedMode) {
       return;
     }
 
@@ -253,6 +265,8 @@ export const GeoIpLookupSetting = () => {
       title={t("settings.general.fields.geoIpLookupMode")}
       description={t(`settings.general.geoIpLookupModeDescription.${mode}`)}
       status={status}
+      highlight={highlight}
+      highlightKey={highlightKey}
       action={
         mode === "CustomHttp" ? (
           <Button
@@ -279,6 +293,9 @@ export const GeoIpLookupSetting = () => {
           disabled={disabled}
           fullWidth
           SelectProps={{
+            inputProps: {
+              "aria-label": t("settings.general.fields.geoIpLookupMode"),
+            },
             renderValue: (selected) =>
               t(
                 `settings.general.geoIpLookupMode.${selected as GeoIpLookupMode}`,
@@ -289,7 +306,7 @@ export const GeoIpLookupSetting = () => {
             <MenuItem
               key={option}
               value={option}
-              disabled={!telemetry && option === "CottonCloud"}
+              disabled={!telemetryEnabled && option === "CottonCloud"}
               sx={{ alignItems: "flex-start", py: 1 }}
             >
               <Stack spacing={0.25}>

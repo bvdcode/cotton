@@ -2,14 +2,20 @@ import { Stack } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { settingsApi } from "../../../shared/api/settingsApi";
 import { TelemetryHelpButton } from "../../../shared/ui/TelemetryHelpButton";
-import { BooleanSwitchSetting } from "./BooleanSwitchSetting";
+import {
+  BooleanSwitchSetting,
+  BooleanSwitchSettingControl,
+} from "./BooleanSwitchSetting";
+import type { UseAutoSavedSettingResult } from "./useAutoSavedSetting";
 
 type PrivacyTogglesSettingProps = {
+  telemetrySetting: UseAutoSavedSettingResult<boolean>;
   highlightSettingId?: string | null;
   highlightKey?: string;
 };
 
 export const PrivacyTogglesSetting = ({
+  telemetrySetting,
   highlightSettingId = null,
   highlightKey,
 }: PrivacyTogglesSettingProps) => {
@@ -17,13 +23,14 @@ export const PrivacyTogglesSetting = ({
 
   return (
     <Stack spacing={2.5}>
-      <BooleanSwitchSetting
+      <BooleanSwitchSettingControl
         title={t("settings.general.fields.telemetry")}
         titleAction={<TelemetryHelpButton />}
         description={t("settings.general.help.telemetry")}
-        toastIdPrefix="admin-general:telemetry"
-        load={settingsApi.getTelemetry}
-        save={settingsApi.setTelemetry}
+        value={telemetrySetting.value}
+        commitValue={telemetrySetting.commitValue}
+        status={telemetrySetting.status}
+        loadFailed={telemetrySetting.loadFailed}
         highlight={highlightSettingId === "telemetry"}
         highlightKey={highlightKey}
       />
@@ -34,15 +41,6 @@ export const PrivacyTogglesSetting = ({
         load={settingsApi.getAllowCrossUserDeduplication}
         save={settingsApi.setAllowCrossUserDeduplication}
         highlight={highlightSettingId === "allowCrossUserDeduplication"}
-        highlightKey={highlightKey}
-      />
-      <BooleanSwitchSetting
-        title={t("settings.general.fields.allowGlobalIndexing")}
-        description={t("settings.general.help.allowGlobalIndexing")}
-        toastIdPrefix="admin-general:allow-global-indexing"
-        load={settingsApi.getAllowGlobalIndexing}
-        save={settingsApi.setAllowGlobalIndexing}
-        highlight={highlightSettingId === "allowGlobalIndexing"}
         highlightKey={highlightKey}
       />
     </Stack>
