@@ -11,6 +11,7 @@ import { AdminPageHeader } from "../components/AdminPageHeader";
 import { UsersGridToolbar } from "./components/UsersGridToolbar";
 import { useAdminUsersColumns } from "./hooks/useAdminUsersColumns";
 import { useAdminUsersData } from "./hooks/useAdminUsersData";
+import { useAdminDataGridLocaleText } from "../components/useAdminDataGridLocaleText";
 
 type ColumnVisibilityTarget = "desktop" | "mobile";
 
@@ -42,6 +43,7 @@ export const AdminUsersPage = () => {
   const isLoading = loadState.kind === "loading";
   const createLabel = t("users.create.button");
   const refreshLabel = t("users.refresh");
+  const localeText = useAdminDataGridLocaleText(t("users.empty"));
 
   const columns = useAdminUsersColumns({
     storageUsageLoading,
@@ -110,6 +112,7 @@ export const AdminUsersPage = () => {
             onColumnVisibilityModelChange={handleColumnVisibilityModelChange}
             getRowId={(row) => row.id}
             loading={isLoading}
+            localeText={localeText}
             disableRowSelectionOnClick
             showToolbar
             label={t("users.title")}

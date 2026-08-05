@@ -3341,6 +3341,7 @@
     "identityProviders": {
       "title": "Identity providers",
       "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "empty": "Nejsou nastaveni žádní poskytovatelé identity.",
       "actions": {
         "create": "Add provider",
         "edit": "Edit provider",

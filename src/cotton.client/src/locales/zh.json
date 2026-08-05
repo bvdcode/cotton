@@ -3309,6 +3309,7 @@
     "identityProviders": {
       "title": "Identity providers",
       "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "empty": "尚未配置身份提供商。",
       "actions": {
         "create": "Add provider",
         "edit": "Edit provider",

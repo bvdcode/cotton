@@ -3303,6 +3303,7 @@
     "identityProviders": {
       "title": "Identity providers",
       "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "empty": "Nenhum provedor de identidade configurado.",
       "actions": {
         "create": "Add provider",
         "edit": "Edit provider",

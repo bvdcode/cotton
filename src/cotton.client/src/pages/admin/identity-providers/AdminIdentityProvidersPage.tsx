@@ -15,6 +15,7 @@ import { AdminPageHeader } from "../components/AdminPageHeader";
 import { OidcProviderFormDialog } from "./OidcProviderFormDialog";
 import { OidcProvidersGridToolbar } from "./OidcProvidersGridToolbar";
 import { useOidcProviderColumns } from "./useOidcProviderColumns";
+import { useAdminDataGridLocaleText } from "../components/useAdminDataGridLocaleText";
 
 type ColumnVisibilityTarget = "desktop" | "mobile";
 
@@ -42,6 +43,7 @@ export const AdminIdentityProvidersPage = () => {
   const [pageError, setPageError] = useState<string | null>(null);
 
   const providers = providersQuery.data ?? [];
+  const localeText = useAdminDataGridLocaleText(t("identityProviders.empty"));
 
   const handleDelete = async (provider: OidcProviderDto) => {
     const result = await confirm({
@@ -134,6 +136,7 @@ export const AdminIdentityProvidersPage = () => {
             onColumnVisibilityModelChange={handleColumnVisibilityModelChange}
             getRowId={(row) => row.id}
             loading={providersQuery.isLoading}
+            localeText={localeText}
             disableRowSelectionOnClick
             showToolbar
             label={t("identityProviders.title")}
