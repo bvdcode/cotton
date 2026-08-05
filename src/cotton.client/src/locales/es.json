@@ -3305,6 +3305,8 @@
         "loadFailed": "No se pudieron cargar los ajustes de almacenamiento.",
         "s3SaveFailed": "No se pudo guardar la configuración de S3.",
         "storageSaveFailed": "No se pudo cambiar el modo de almacenamiento.",
+        "quotaInvalid": "Introduce cero o un número positivo.",
+        "templateNodeIdInvalid": "Introduce un ID de nodo de carpeta válido.",
         "quotaSaveFailed": "No se pudo guardar la cuota por defecto.",
         "templateSaveFailed": "No se pudo guardar la plantilla de archivos por defecto.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",

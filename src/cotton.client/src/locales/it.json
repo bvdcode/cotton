@@ -3011,6 +3011,8 @@
         "loadFailed": "Impossibile caricare le impostazioni di archiviazione.",
         "s3SaveFailed": "Impossibile salvare la configurazione S3.",
         "storageSaveFailed": "Impossibile cambiare la modalità di archiviazione.",
+        "quotaInvalid": "Inserisci zero o un numero positivo.",
+        "templateNodeIdInvalid": "Inserisci un ID nodo cartella valido.",
         "quotaSaveFailed": "Impossibile salvare la quota utente predefinita.",
         "templateSaveFailed": "Impossibile salvare il modello di file predefiniti.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",

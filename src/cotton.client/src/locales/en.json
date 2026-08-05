@@ -2804,6 +2804,8 @@
         "loadFailed": "Failed to load storage settings.",
         "s3SaveFailed": "Failed to save S3 configuration.",
         "storageSaveFailed": "Failed to switch storage mode.",
+        "quotaInvalid": "Enter zero or a positive number.",
+        "templateNodeIdInvalid": "Enter a valid folder node ID.",
         "quotaSaveFailed": "Failed to save default user quota.",
         "templateSaveFailed": "Failed to save default files template.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",

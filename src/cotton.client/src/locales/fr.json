@@ -3009,6 +3009,8 @@
         "loadFailed": "Échec du chargement des paramètres de stockage.",
         "s3SaveFailed": "Échec de l'enregistrement de la configuration S3.",
         "storageSaveFailed": "Échec du changement de mode de stockage.",
+        "quotaInvalid": "Saisissez zéro ou un nombre positif.",
+        "templateNodeIdInvalid": "Saisissez un ID de nœud de dossier valide.",
         "quotaSaveFailed": "Échec de l'enregistrement du quota utilisateur par défaut.",
         "templateSaveFailed": "Échec de l'enregistrement du modèle de fichiers par défaut.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",

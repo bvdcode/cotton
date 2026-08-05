@@ -3010,6 +3010,8 @@
         "loadFailed": "Laden van opslaginstellingen mislukt.",
         "s3SaveFailed": "Opslaan van S3-configuratie mislukt.",
         "storageSaveFailed": "Wisselen van opslagmodus mislukt.",
+        "quotaInvalid": "Voer nul of een positief getal in.",
+        "templateNodeIdInvalid": "Voer een geldige mapknooppunt-ID in.",
         "quotaSaveFailed": "Opslaan van het standaardquotum per gebruiker mislukt.",
         "templateSaveFailed": "Opslaan van het standaardbestandensjabloon mislukt.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",

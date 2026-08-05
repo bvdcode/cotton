@@ -3050,6 +3050,8 @@
         "loadFailed": "Načtení nastavení úložiště se nezdařilo.",
         "s3SaveFailed": "Uložení konfigurace S3 se nezdařilo.",
         "storageSaveFailed": "Přepnutí režimu úložiště se nezdařilo.",
+        "quotaInvalid": "Zadejte nulu nebo kladné číslo.",
+        "templateNodeIdInvalid": "Zadejte platné ID uzlu složky.",
         "quotaSaveFailed": "Uložení výchozí kvóty uživatele se nezdařilo.",
         "templateSaveFailed": "Uložení šablony výchozích souborů se nezdařilo.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",

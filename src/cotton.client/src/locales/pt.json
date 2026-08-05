@@ -3012,6 +3012,8 @@
         "loadFailed": "Falha ao carregar as configurações de armazenamento.",
         "s3SaveFailed": "Falha ao salvar a configuração S3.",
         "storageSaveFailed": "Falha ao alternar o modo de armazenamento.",
+        "quotaInvalid": "Insira zero ou um número positivo.",
+        "templateNodeIdInvalid": "Insira um ID de nó de pasta válido.",
         "quotaSaveFailed": "Falha ao salvar a cota padrão por usuário.",
         "templateSaveFailed": "Falha ao salvar o modelo de arquivos padrão.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",

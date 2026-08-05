@@ -3024,6 +3024,8 @@
         "loadFailed": "Не вдалося завантажити налаштування сховища.",
         "s3SaveFailed": "Не вдалося зберегти конфігурацію S3.",
         "storageSaveFailed": "Не вдалося перемкнути режим сховища.",
+        "quotaInvalid": "Введіть нуль або додатне число.",
+        "templateNodeIdInvalid": "Введіть коректний ID вузла папки.",
         "quotaSaveFailed": "Не вдалося зберегти квоту користувача за замовчуванням.",
         "templateSaveFailed": "Не вдалося зберегти шаблон файлів за замовчуванням.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",

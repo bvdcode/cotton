@@ -194,6 +194,7 @@ export const AdminStorageSettingsPage = () => {
   );
 
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const [storageType, setStorageType] = useState<StorageType>("Local");
   const [savedStorageType, setSavedStorageType] =
@@ -213,12 +214,15 @@ export const AdminStorageSettingsPage = () => {
 
   const [defaultUserQuotaGiB, setDefaultUserQuotaGiB] = useState("");
   const [savedDefaultUserQuotaGiB, setSavedDefaultUserQuotaGiB] = useState("");
+  const [defaultUserQuotaInvalid, setDefaultUserQuotaInvalid] = useState(false);
   const [defaultUserQuotaStatus, setDefaultUserQuotaStatus] =
     useState<SaveStatus>("loading");
 
   const [defaultTemplateNodeId, setDefaultTemplateNodeId] = useState("");
   const [savedDefaultTemplateNodeId, setSavedDefaultTemplateNodeId] =
     useState("");
+  const [defaultTemplateNodeIdInvalid, setDefaultTemplateNodeIdInvalid] =
+    useState(false);
   const [defaultTemplateStatus, setDefaultTemplateStatus] =
     useState<SaveStatus>("loading");
 
@@ -310,6 +314,7 @@ export const AdminStorageSettingsPage = () => {
         setCompressionLevelInput(
           nextStoragePipelineSettings.compressionLevel.toString(),
         );
+        setLoadFailed(false);
         setStorageTypeStatus("idle");
         setS3Status("idle");
         setStorageSpaceModeStatus("idle");
@@ -320,13 +325,14 @@ export const AdminStorageSettingsPage = () => {
       } catch {
         if (!active) return;
         setLoadError(t("storageSettings.errors.loadFailed"));
-        setStorageTypeStatus("idle");
-        setS3Status("idle");
-        setStorageSpaceModeStatus("idle");
-        setDefaultUserQuotaStatus("idle");
-        setDefaultTemplateStatus("idle");
-        setChunkSizeStatus("idle");
-        setStoragePipelineStatus("idle");
+        setLoadFailed(true);
+        setStorageTypeStatus("error");
+        setS3Status("error");
+        setStorageSpaceModeStatus("error");
+        setDefaultUserQuotaStatus("error");
+        setDefaultTemplateStatus("error");
+        setChunkSizeStatus("error");
+        setStoragePipelineStatus("error");
       }
     };
 
@@ -419,10 +425,12 @@ export const AdminStorageSettingsPage = () => {
       return;
     }
 
+    setDefaultUserQuotaInvalid(false);
     let quotaBytes: number | null;
     try {
       quotaBytes = parseQuotaInput(defaultUserQuotaGiB);
     } catch {
+      setDefaultUserQuotaInvalid(true);
       setDefaultUserQuotaStatus("error");
       return;
     }
@@ -455,10 +463,12 @@ export const AdminStorageSettingsPage = () => {
       return;
     }
 
+    setDefaultTemplateNodeIdInvalid(false);
     let nodeId: string | null;
     try {
       nodeId = parseTemplateNodeIdInput(defaultTemplateNodeId);
     } catch {
+      setDefaultTemplateNodeIdInvalid(true);
       setDefaultTemplateStatus("error");
       return;
     }
@@ -654,28 +664,28 @@ export const AdminStorageSettingsPage = () => {
     }
   };
 
-  const storageTypeDisabled = isStorageTypeDisabled(
-    storageTypeStatus,
-    s3Status,
-  );
-  const s3Disabled = isStatusBusy(s3Status);
+  const storageTypeDisabled =
+    loadFailed || isStorageTypeDisabled(storageTypeStatus, s3Status);
+  const s3Disabled = loadFailed || isStatusBusy(s3Status);
   const s3Saving = isAnyStatusSaving(s3Status, storageTypeStatus);
-  const storageSpaceDisabled = isStatusBusy(storageSpaceModeStatus);
+  const storageSpaceDisabled =
+    loadFailed || isStatusBusy(storageSpaceModeStatus);
   const storagePipelineGroupStatus = combineStatuses(
     chunkSizeStatus,
     storagePipelineStatus,
   );
-  const storagePipelineGroupDisabled = isStatusBusy(storagePipelineGroupStatus);
+  const storagePipelineGroupDisabled =
+    loadFailed || isStatusBusy(storagePipelineGroupStatus);
   const chunkSizeDisabled = storagePipelineGroupDisabled;
   const storagePipelineDisabled = storagePipelineGroupDisabled;
   const compressionLevelChanged =
     compressionLevelInput.trim() !==
     savedStoragePipelineSettings.compressionLevel.toString();
   const quotaSaving = defaultUserQuotaStatus === "saving";
-  const quotaDisabled = isStatusBusy(defaultUserQuotaStatus);
+  const quotaDisabled = loadFailed || isStatusBusy(defaultUserQuotaStatus);
   const quotaChanged = defaultUserQuotaGiB !== savedDefaultUserQuotaGiB;
   const templateSaving = defaultTemplateStatus === "saving";
-  const templateDisabled = isStatusBusy(defaultTemplateStatus);
+  const templateDisabled = loadFailed || isStatusBusy(defaultTemplateStatus);
   const templateChanged = defaultTemplateNodeId !== savedDefaultTemplateNodeId;
 
   return (
@@ -1004,13 +1014,20 @@ export const AdminStorageSettingsPage = () => {
                 value={defaultUserQuotaGiB}
                 onChange={(event) => {
                   setDefaultUserQuotaGiB(event.target.value);
+                  setDefaultUserQuotaInvalid(false);
                   if (defaultUserQuotaStatus === "error") {
                     setDefaultUserQuotaStatus("idle");
                   }
                 }}
                 disabled={quotaDisabled}
-                error={defaultUserQuotaStatus === "error"}
-                helperText={t("storageSettings.quota.help")}
+                error={
+                  defaultUserQuotaInvalid || defaultUserQuotaStatus === "error"
+                }
+                helperText={
+                  defaultUserQuotaInvalid
+                    ? t("storageSettings.errors.quotaInvalid")
+                    : t("storageSettings.quota.help")
+                }
                 type="number"
                 inputProps={{ min: 0, step: 0.25 }}
                 fullWidth
@@ -1048,13 +1065,21 @@ export const AdminStorageSettingsPage = () => {
                 value={defaultTemplateNodeId}
                 onChange={(event) => {
                   setDefaultTemplateNodeId(event.target.value);
+                  setDefaultTemplateNodeIdInvalid(false);
                   if (defaultTemplateStatus === "error") {
                     setDefaultTemplateStatus("idle");
                   }
                 }}
                 disabled={templateDisabled}
-                error={defaultTemplateStatus === "error"}
-                helperText={t("storageSettings.template.help")}
+                error={
+                  defaultTemplateNodeIdInvalid ||
+                  defaultTemplateStatus === "error"
+                }
+                helperText={
+                  defaultTemplateNodeIdInvalid
+                    ? t("storageSettings.errors.templateNodeIdInvalid")
+                    : t("storageSettings.template.help")
+                }
                 fullWidth
               />
               <Button

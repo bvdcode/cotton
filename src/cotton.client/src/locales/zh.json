@@ -3018,6 +3018,8 @@
         "loadFailed": "加载存储设置失败。",
         "s3SaveFailed": "保存 S3 配置失败。",
         "storageSaveFailed": "切换存储模式失败。",
+        "quotaInvalid": "请输入零或正数。",
+        "templateNodeIdInvalid": "请输入有效的文件夹节点 ID。",
         "quotaSaveFailed": "保存默认用户配额失败。",
         "templateSaveFailed": "保存默认文件模板失败。",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",

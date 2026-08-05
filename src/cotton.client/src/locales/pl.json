@@ -3053,6 +3053,8 @@
         "loadFailed": "Nie udało się załadować ustawień magazynu.",
         "s3SaveFailed": "Nie udało się zapisać konfiguracji S3.",
         "storageSaveFailed": "Nie udało się przełączyć trybu magazynu.",
+        "quotaInvalid": "Wprowadź zero lub liczbę dodatnią.",
+        "templateNodeIdInvalid": "Wprowadź prawidłowy identyfikator węzła folderu.",
         "quotaSaveFailed": "Nie udało się zapisać domyślnego limitu użytkownika.",
         "templateSaveFailed": "Nie udało się zapisać szablonu plików domyślnych.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",

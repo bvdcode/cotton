@@ -3005,6 +3005,8 @@
         "loadFailed": "Speichereinstellungen konnten nicht geladen werden.",
         "s3SaveFailed": "S3-Konfiguration konnte nicht gespeichert werden.",
         "storageSaveFailed": "Speichermodus konnte nicht gewechselt werden.",
+        "quotaInvalid": "Geben Sie null oder eine positive Zahl ein.",
+        "templateNodeIdInvalid": "Geben Sie eine gültige Ordnerknoten-ID ein.",
         "quotaSaveFailed": "Standardkontingent konnte nicht gespeichert werden.",
         "templateSaveFailed": "Vorlage für Standarddateien konnte nicht gespeichert werden.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",
