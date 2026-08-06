@@ -15,7 +15,7 @@ import type { AdminUserDto } from "../../../../shared/api/adminApi";
 import { UserRole } from "../../../../features/auth/types";
 import { formatDateOnly } from "../../../../shared/utils/dateOnly";
 import { formatTimeAgo } from "../../../../shared/utils/formatTimeAgo";
-import { formatStorageBytes } from "../utils/formatStorageBytes";
+import { formatStorageBytes } from "@shared/utils/formatBytes";
 
 const renderOptionalText = (value: string, placeholder: string) =>
   value ? (
