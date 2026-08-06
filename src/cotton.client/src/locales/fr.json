@@ -2829,17 +2829,17 @@
       },
       "general": {
         "trustedProxy": {
-          "title": "Adresse IP du proxy de confiance",
-          "description": "Adresse IP exacte du proxy inverse directement connecté qui peut fournir l’adresse du client. Le proxy doit remplacer ou supprimer les en-têtes CF-Connecting-IP, X-Real-IP et X-Forwarded-For envoyés par le client. Pour un déploiement direct, choisissez Sans proxy.",
+          "title": "Proxy de confiance",
+          "description": "Adresse IP ou réseau CIDR du proxy inverse directement connecté qui peut fournir l’adresse du client. Le proxy doit remplacer ou supprimer les en-têtes CF-Connecting-IP, X-Real-IP et X-Forwarded-For envoyés par le client. Pour un déploiement direct, choisissez Sans proxy.",
           "emptyHint": "Laissez vide pour conserver l’ancien comportement qui accepte les adresses transférées depuis toute connexion.",
-          "placeholder": "Par exemple, 172.18.0.2",
+          "placeholder": "Par exemple, 172.16.0.0/12",
           "direct": "Sans proxy",
           "directMode": "Connexion directe (sans proxy) ; les en-têtes transférés sont ignorés",
           "directSaved": "Le mode de connexion directe a été enregistré. Les en-têtes transférés seront ignorés.",
           "detect": "Auto",
           "verifyAndSave": "Vérifier et enregistrer",
           "unavailable": "L’adresse du proxy connecté n’est pas disponible pour cette requête.",
-          "detected": "Adresse du proxy connecté détectée : {{address}}.",
+          "detected": "Proxy de confiance suggéré : {{address}}.",
           "detectedPath": "Chemin réseau détecté",
           "genericProxy": "Proxy inverse",
           "internet": "Internet",
@@ -3128,7 +3128,7 @@
     },
     "securityDiagnostics": {
       "trustedProxy": {
-        "field": "Adresse IP du proxy de confiance",
+        "field": "Proxy de confiance",
         "threatVector": "Un attaquant pouvant joindre Cotton directement, ou via un proxy qui ne nettoie pas les en-têtes, peut changer son adresse apparente et contourner les limites par IP.",
         "fix": "Dans les paramètres généraux, choisissez Sans proxy pour un déploiement direct, ou utilisez Auto ou saisissez l’adresse du proxy directement connecté, puis vérifiez et enregistrez. Le proxy doit remplacer les en-têtes transmis par le client.",
         "passed": "Le mode de confiance de l’adresse client est explicitement configuré"

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,11 @@ namespace Cotton.Server.Extensions
     /// </summary>
     public static class TrustedProxyRequestExtensions
     {
+        private const byte Ipv4PrefixLength = 32;
+        private const byte Ipv6PrefixLength = 128;
+
+        private static IPNetwork Private172Network { get; } = IPNetwork.Parse("172.16.0.0/12");
+
         /// <summary>
         /// Reserved settings value that selects direct-connection mode and disables forwarded client-address headers.
         /// </summary>
@@ -29,17 +35,20 @@ namespace Cotton.Server.Extensions
 
             SettingsProvider settingsProvider = request.HttpContext.RequestServices
                 .GetRequiredService<SettingsProvider>();
-            IPAddress? trustedProxyIpAddress = settingsProvider.GetServerSettings().TrustedProxyIpAddress;
-            return request.GetTrustedClientIPAddress(trustedProxyIpAddress);
+            CottonServerSettings settings = settingsProvider.GetServerSettings();
+            return request.GetTrustedClientIPAddress(
+                settings.TrustedProxyIpAddress,
+                settings.TrustedProxyPrefixLength);
         }
 
         internal static IPAddress GetTrustedClientIPAddress(
             this HttpRequest request,
-            IPAddress? trustedProxyIpAddress)
+            IPAddress? trustedProxyIpAddress,
+            byte? trustedProxyPrefixLength = null)
         {
             ArgumentNullException.ThrowIfNull(request);
 
-            if (IsDirectConnectionMode(trustedProxyIpAddress))
+            if (IsDirectConnectionMode(trustedProxyIpAddress, trustedProxyPrefixLength))
             {
                 return request.GetConnectingIPAddress()
                     ?? throw new InvalidOperationException(
@@ -49,10 +58,14 @@ namespace Cotton.Server.Extensions
             if (trustedProxyIpAddress is not null)
             {
                 IPAddress? connectingIpAddress = request.GetConnectingIPAddress();
-                if (!AddressesEqual(trustedProxyIpAddress, connectingIpAddress))
+                if (!MatchesTrustedProxy(
+                        trustedProxyIpAddress,
+                        trustedProxyPrefixLength,
+                        connectingIpAddress))
                 {
                     throw new UntrustedProxyConnectionException(
                         Normalize(trustedProxyIpAddress),
+                        trustedProxyPrefixLength,
                         connectingIpAddress);
                 }
             }
@@ -62,9 +75,13 @@ namespace Cotton.Server.Extensions
             return EasyHttpRequestExtensions.GetRemoteIPAddress(request);
         }
 
-        internal static bool IsDirectConnectionMode(IPAddress? address)
+        internal static bool IsDirectConnectionMode(
+            IPAddress? address,
+            byte? prefixLength = null)
         {
-            return address is not null && Normalize(address).Equals(DirectConnectionIpAddress);
+            return prefixLength is null
+                && address is not null
+                && Normalize(address).Equals(DirectConnectionIpAddress);
         }
 
         internal static IPAddress? GetConnectingIPAddress(this HttpRequest request)
@@ -74,16 +91,110 @@ namespace Cotton.Server.Extensions
             return address is null ? null : Normalize(address);
         }
 
-        internal static bool AddressesEqual(IPAddress expected, IPAddress? actual)
+        internal static bool TryParseTrustedProxy(
+            string value,
+            out IPAddress address,
+            out byte? prefixLength)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
+            if (IPAddress.TryParse(value, out IPAddress? exactAddress))
+            {
+                address = Normalize(exactAddress);
+                prefixLength = null;
+                return true;
+            }
+
+            if (IPNetwork.TryParse(value, out IPNetwork network)
+                && !network.BaseAddress.IsIPv4MappedToIPv6)
+            {
+                address = network.BaseAddress;
+                prefixLength = checked((byte)network.PrefixLength);
+                return true;
+            }
+
+            address = IPAddress.None;
+            prefixLength = null;
+            return false;
+        }
+
+        internal static string GetSuggestedProxyConfiguration(IPAddress address)
+        {
+            IPAddress normalizedAddress = Normalize(address);
+            if (Private172Network.Contains(normalizedAddress))
+            {
+                return Private172Network.ToString();
+            }
+
+            return $"{normalizedAddress}/{GetMaximumPrefixLength(normalizedAddress)}";
+        }
+
+        internal static string FormatConfiguredProxy(
+            IPAddress address,
+            byte? prefixLength = null)
+        {
+            IPAddress normalizedAddress = Normalize(address);
+            if (prefixLength is null)
+            {
+                return normalizedAddress.ToString();
+            }
+
+            if (!TryCreateNetwork(normalizedAddress, prefixLength.Value, out IPNetwork network))
+            {
+                throw new InvalidOperationException("Trusted proxy prefix length is invalid for its address family.");
+            }
+
+            return network.ToString();
+        }
+
+        internal static bool MatchesTrustedProxy(
+            IPAddress expected,
+            byte? prefixLength,
+            IPAddress? actual)
         {
             ArgumentNullException.ThrowIfNull(expected);
-            return actual is not null && Normalize(expected).Equals(Normalize(actual));
+            if (actual is null)
+            {
+                return false;
+            }
+
+            IPAddress normalizedExpected = Normalize(expected);
+            IPAddress normalizedActual = Normalize(actual);
+            if (prefixLength is null)
+            {
+                return normalizedExpected.Equals(normalizedActual);
+            }
+
+            if (!TryCreateNetwork(normalizedExpected, prefixLength.Value, out IPNetwork trustedNetwork))
+            {
+                return false;
+            }
+
+            return trustedNetwork.Contains(normalizedActual);
         }
 
         internal static IPAddress Normalize(IPAddress address)
         {
             ArgumentNullException.ThrowIfNull(address);
             return address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;
+        }
+
+        private static byte GetMaximumPrefixLength(IPAddress address)
+        {
+            return address.AddressFamily switch
+            {
+                System.Net.Sockets.AddressFamily.InterNetwork => Ipv4PrefixLength,
+                System.Net.Sockets.AddressFamily.InterNetworkV6 => Ipv6PrefixLength,
+                _ => throw new InvalidOperationException("Unsupported trusted proxy address family."),
+            };
+        }
+
+        private static bool TryCreateNetwork(
+            IPAddress address,
+            byte prefixLength,
+            out IPNetwork network)
+        {
+            return IPNetwork.TryParse($"{address}/{prefixLength}", out network);
         }
     }
 }

@@ -2,11 +2,14 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
+using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 
 namespace Cotton.Server.Services
 {
@@ -34,7 +37,13 @@ namespace Cotton.Server.Services
             bool dotnetDiagnosticsDisabled = IsZero(dotnetEnableDiagnostics) || IsZero(comPlusEnableDiagnostics);
             bool isContainer = IsContainer();
             bool isPublicInstance = Constants.IsPublicInstance;
-            string? trustedProxyIpAddress = settingsProvider.GetServerSettings().TrustedProxyIpAddress?.ToString();
+            CottonServerSettings settings = settingsProvider.GetServerSettings();
+            IPAddress? configuredProxy = settings.TrustedProxyIpAddress;
+            string? trustedProxyIpAddress = configuredProxy is null
+                ? null
+                : TrustedProxyRequestExtensions.FormatConfiguredProxy(
+                    configuredProxy,
+                    settings.TrustedProxyPrefixLength);
             TempDirectoryProbeResult tempDirectory = tempDirectoryProbe.Probe();
             LinuxContainerSecuritySnapshot containerSecurity = LinuxContainerSecurity.Snapshot(isContainer);
             AdminTotpDiagnosticsDto adminTotp = await GetAdminTotpDiagnosticsAsync(cancellationToken);

@@ -50,11 +50,6 @@ const datacenterCities: Readonly<Record<string, string>> = {
   ZRH: "Zurich",
 };
 
-const countryFlag = (countryCode: string): string =>
-  String.fromCodePoint(
-    ...[...countryCode].map((character) => character.charCodeAt(0) + 127397),
-  );
-
 export const formatCloudflareCountry = (
   countryCode: string | null,
   language: string,
@@ -72,7 +67,7 @@ export const formatCloudflareCountry = (
     displayName = undefined;
   }
 
-  return `${countryFlag(countryCode)} ${displayName ?? countryCode}`;
+  return displayName ?? countryCode;
 };
 
 export const formatCloudflareDatacenter = (

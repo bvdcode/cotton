@@ -202,7 +202,9 @@ public class AuthSmokeTests : IntegrationTestBase
             .GetRequiredService<SettingsProvider>()
             .GetServerSettings();
         IPAddress? previousTrustedProxyIpAddress = settings.TrustedProxyIpAddress;
+        byte? previousTrustedProxyPrefixLength = settings.TrustedProxyPrefixLength;
         settings.TrustedProxyIpAddress = IPAddress.Parse("192.0.2.10");
+        settings.TrustedProxyPrefixLength = null;
 
         try
         {
@@ -231,6 +233,7 @@ public class AuthSmokeTests : IntegrationTestBase
         finally
         {
             settings.TrustedProxyIpAddress = previousTrustedProxyIpAddress;
+            settings.TrustedProxyPrefixLength = previousTrustedProxyPrefixLength;
         }
     }
 

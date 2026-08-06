@@ -2832,17 +2832,17 @@
       },
       "general": {
         "trustedProxy": {
-          "title": "Endereço IP do proxy confiável",
-          "description": "Endereço IP exato do proxy reverso ligado diretamente e autorizado a fornecer o endereço do cliente. O proxy deve substituir ou remover os cabeçalhos CF-Connecting-IP, X-Real-IP e X-Forwarded-For enviados pelo cliente. Para uma instalação direta, escolha Sem proxy.",
+          "title": "Proxy confiável",
+          "description": "Endereço IP ou rede CIDR do proxy reverso ligado diretamente e autorizado a fornecer o endereço do cliente. O proxy deve substituir ou remover os cabeçalhos CF-Connecting-IP, X-Real-IP e X-Forwarded-For enviados pelo cliente. Para uma instalação direta, escolha Sem proxy.",
           "emptyHint": "Deixe vazio para manter o comportamento anterior, que confia em endereços encaminhados por qualquer ligação.",
-          "placeholder": "Por exemplo, 172.18.0.2",
+          "placeholder": "Por exemplo, 172.16.0.0/12",
           "direct": "Sem proxy",
           "directMode": "Ligação direta (sem proxy); os cabeçalhos de encaminhamento são ignorados",
           "directSaved": "O modo de ligação direta foi guardado. Os cabeçalhos de encaminhamento serão ignorados.",
           "detect": "Automático",
           "verifyAndSave": "Verificar e guardar",
           "unavailable": "O endereço do proxy ligado não está disponível para este pedido.",
-          "detected": "Endereço do proxy ligado detetado: {{address}}.",
+          "detected": "Proxy confiável sugerido: {{address}}.",
           "detectedPath": "Caminho de rede detetado",
           "genericProxy": "Proxy reverso",
           "internet": "Internet",
@@ -3131,7 +3131,7 @@
     },
     "securityDiagnostics": {
       "trustedProxy": {
-        "field": "Endereço IP do proxy confiável",
+        "field": "Proxy confiável",
         "threatVector": "Um atacante que consiga aceder diretamente ao Cotton, ou através de um proxy que não limpe cabeçalhos, pode alterar o endereço aparente e contornar limites por IP.",
         "fix": "Nas definições gerais, escolha Sem proxy para uma instalação direta, ou use Automático ou introduza o endereço do proxy ligado diretamente; depois verifique e guarde. O proxy deve substituir os cabeçalhos encaminhados pelo cliente.",
         "passed": "O modo de confiança do endereço do cliente está configurado explicitamente"

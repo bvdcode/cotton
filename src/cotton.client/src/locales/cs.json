@@ -2870,17 +2870,17 @@
       },
       "general": {
         "trustedProxy": {
-          "title": "IP adresa důvěryhodného proxy serveru",
-          "description": "Přesná IP adresa přímého reverzního proxy serveru, který smí předávat adresu klienta. Proxy musí přepsat nebo odstranit klientské hlavičky CF-Connecting-IP, X-Real-IP a X-Forwarded-For. Pro přímé nasazení zvolte Bez proxy.",
+          "title": "Důvěryhodný proxy server",
+          "description": "IP adresa nebo síť CIDR přímého reverzního proxy serveru, který smí předávat adresu klienta. Proxy musí přepsat nebo odstranit klientské hlavičky CF-Connecting-IP, X-Real-IP a X-Forwarded-For. Pro přímé nasazení zvolte Bez proxy.",
           "emptyHint": "Ponechte prázdné pro původní chování, které důvěřuje přeposlaným adresám ze všech připojení.",
-          "placeholder": "Například 172.18.0.2",
+          "placeholder": "Například 172.16.0.0/12",
           "direct": "Bez proxy",
           "directMode": "Přímé připojení (bez proxy); předávané hlavičky se ignorují",
           "directSaved": "Režim přímého připojení byl uložen. Předávané hlavičky budou ignorovány.",
           "detect": "Automaticky",
           "verifyAndSave": "Ověřit a uložit",
           "unavailable": "Adresu připojeného proxy serveru nelze pro tento požadavek zjistit.",
-          "detected": "Zjištěná adresa připojeného proxy serveru: {{address}}.",
+          "detected": "Navržený důvěryhodný proxy server: {{address}}.",
           "detectedPath": "Zjištěná síťová cesta",
           "genericProxy": "Reverzní proxy",
           "internet": "Internet",
@@ -3169,7 +3169,7 @@
     },
     "securityDiagnostics": {
       "trustedProxy": {
-        "field": "IP adresa důvěryhodného proxy serveru",
+        "field": "Důvěryhodný proxy server",
         "threatVector": "Útočník s přímým přístupem ke Cottonu nebo přes proxy bez čištění hlaviček může měnit zdánlivou adresu klienta a obcházet IP limity.",
         "fix": "V Obecných nastaveních zvolte Bez proxy pro přímé nasazení, nebo použijte Automaticky či zadejte adresu přímého proxy serveru a poté ji ověřte a uložte. Proxy musí přepisovat klientské přeposílací hlavičky.",
         "passed": "Režim důvěry adresy klienta je výslovně nastaven"

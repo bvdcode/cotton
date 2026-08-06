@@ -113,9 +113,11 @@ public class ServerEndpointsTests : IntegrationTestBase
         JsonElement observedPayload = await _client.GetFromJsonAsync<JsonElement>(
             "/api/v1/server/settings/trusted-proxy-ip-address/observed");
         string? observedAddress = observedPayload.GetProperty("observedProxyIpAddress").GetString();
+        string? suggestedAddress = observedPayload.GetProperty("suggestedTrustedProxy").GetString();
         Assert.Multiple(() =>
         {
             Assert.That(observedAddress, Is.Not.Null.And.Not.Empty);
+            Assert.That(suggestedAddress, Is.EqualTo($"{observedAddress}/32"));
             Assert.That(
                 observedPayload.GetProperty("detectedProxyServices").EnumerateArray().Select(x => x.GetString()),
                 Is.EqualTo(new[] { "cloudflare", "reverse-proxy" }));

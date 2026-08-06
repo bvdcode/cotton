@@ -110,12 +110,12 @@ export const TrustedProxyIpAddressSetting = () => {
         });
         return;
       }
-      setValue(observed.observedProxyIpAddress);
+      setValue(observed.suggestedTrustedProxy);
       setDetectedProxyServices(observed.detectedProxyServices);
       setCloudflare(observed.cloudflare);
       toast.success(
         t("settings.general.trustedProxy.detected", {
-          address: observed.observedProxyIpAddress,
+          address: observed.suggestedTrustedProxy,
         }),
         { toastId: "admin-general:trusted-proxy:auto-success" },
       );

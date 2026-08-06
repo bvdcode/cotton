@@ -14,6 +14,8 @@ const settingsApi = vi.hoisted(() => ({
   verifyAndSaveTrustedProxyIpAddress: vi.fn(),
 }));
 
+const translate = vi.hoisted(() => (key: string) => key);
+
 vi.mock("../../../shared/api/settingsApi", () => ({
   DIRECT_CONNECTION_IP_ADDRESS: "0.0.0.0",
   settingsApi,
@@ -32,7 +34,7 @@ vi.mock("@shared/ui/notifications", () => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: translate,
     i18n: { resolvedLanguage: "en" },
   }),
 }));
@@ -54,6 +56,7 @@ describe("TrustedProxyIpAddressSetting", () => {
   it("shows every detected proxy service in front of Cotton", async () => {
     settingsApi.getObservedProxyInfo.mockResolvedValue({
       observedProxyIpAddress: "172.21.0.1",
+      suggestedTrustedProxy: "172.16.0.0/12",
       detectedProxyServices: ["cloudflare", "traefik"],
       cloudflare: {
         visitorCountryCode: "US",
@@ -75,8 +78,11 @@ describe("TrustedProxyIpAddressSetting", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("🇺🇸 United States · Los Angeles (LAX)"),
+      screen.getByText("United States · Los Angeles (LAX)"),
     ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("textbox")).toHaveValue("172.16.0.0/12"),
+    );
   });
 
   afterEach(() => {

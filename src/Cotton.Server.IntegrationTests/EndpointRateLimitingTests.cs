@@ -74,6 +74,113 @@ public class EndpointRateLimitingTests
     }
 
     [Test]
+    public void TrustedClientAddress_AcceptsPrivate172ProxyAfterDockerNetworkChanges()
+    {
+        DefaultHttpContext context = new();
+        context.Connection.RemoteIpAddress = IPAddress.Parse("172.16.0.1");
+        context.Request.Headers["CF-Connecting-IP"] = "203.0.113.40";
+
+        IPAddress address = context.Request.GetTrustedClientIPAddress(
+            IPAddress.Parse("172.16.0.0"),
+            trustedProxyPrefixLength: 12);
+
+        Assert.That(address, Is.EqualTo(IPAddress.Parse("203.0.113.40")));
+    }
+
+    [TestCase("172.21.0.1", "172.16.0.0/12")]
+    [TestCase("127.0.0.1", "127.0.0.1/32")]
+    [TestCase("::1", "::1/128")]
+    public void TrustedProxyConfiguration_SuggestsExpectedNetwork(
+        string observedAddress,
+        string expectedConfiguration)
+    {
+        string suggested = TrustedProxyRequestExtensions.GetSuggestedProxyConfiguration(
+            IPAddress.Parse(observedAddress));
+
+        Assert.That(suggested, Is.EqualTo(expectedConfiguration));
+    }
+
+    [Test]
+    public void TrustedProxyConfiguration_KeepsPrivate172AddressExactWithoutPrefix()
+    {
+        bool parsed = TrustedProxyRequestExtensions.TryParseTrustedProxy(
+            "172.21.0.1",
+            out IPAddress address,
+            out byte? prefixLength);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(parsed, Is.True);
+            Assert.That(address, Is.EqualTo(IPAddress.Parse("172.21.0.1")));
+            Assert.That(prefixLength, Is.Null);
+            Assert.That(
+                TrustedProxyRequestExtensions.MatchesTrustedProxy(
+                    address,
+                    prefixLength,
+                    IPAddress.Parse("172.16.0.1")),
+                Is.False);
+        });
+    }
+
+    [TestCase("172.16.0.0/12", "172.16.0.0", 12)]
+    [TestCase("172.21.0.1/12", "172.16.0.0", 12)]
+    [TestCase("172.21.0.0/16", "172.21.0.0", 16)]
+    [TestCase("192.0.2.0/24", "192.0.2.0", 24)]
+    [TestCase("2001:db8::/64", "2001:db8::", 64)]
+    public void TrustedProxyConfiguration_ParsesCidrNetwork(
+        string value,
+        string expectedAddress,
+        byte expectedPrefixLength)
+    {
+        bool parsed = TrustedProxyRequestExtensions.TryParseTrustedProxy(
+            value,
+            out IPAddress address,
+            out byte? prefixLength);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(parsed, Is.True);
+            Assert.That(address, Is.EqualTo(IPAddress.Parse(expectedAddress)));
+            Assert.That(prefixLength, Is.EqualTo(expectedPrefixLength));
+            Assert.That(
+                TrustedProxyRequestExtensions.FormatConfiguredProxy(address, prefixLength),
+                Is.EqualTo($"{expectedAddress}/{expectedPrefixLength}"));
+        });
+    }
+
+    [TestCase("192.0.2.1/33")]
+    [TestCase("2001:db8::1/129")]
+    [TestCase("not-an-address/12")]
+    public void TrustedProxyConfiguration_RejectsInvalidNetwork(string value)
+    {
+        bool parsed = TrustedProxyRequestExtensions.TryParseTrustedProxy(
+            value,
+            out IPAddress _,
+            out byte? _);
+
+        Assert.That(parsed, Is.False);
+    }
+
+    [Test]
+    public void TrustedProxyConfiguration_KeepsPublic172AddressExact()
+    {
+        bool parsed = TrustedProxyRequestExtensions.TryParseTrustedProxy(
+            "172.64.0.1",
+            out IPAddress address,
+            out byte? prefixLength);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(parsed, Is.True);
+            Assert.That(address, Is.EqualTo(IPAddress.Parse("172.64.0.1")));
+            Assert.That(prefixLength, Is.Null);
+            Assert.That(
+                TrustedProxyRequestExtensions.FormatConfiguredProxy(address),
+                Is.EqualTo("172.64.0.1"));
+        });
+    }
+
+    [Test]
     public void TrustedClientAddress_DirectModeIgnoresForwardedHeaders()
     {
         DefaultHttpContext context = new();
@@ -101,6 +208,7 @@ public class EndpointRateLimitingTests
         Assert.Multiple(() =>
         {
             Assert.That(exception.TrustedProxyIpAddress, Is.EqualTo(IPAddress.Parse("192.0.2.10")));
+            Assert.That(exception.TrustedProxyPrefixLength, Is.Null);
             Assert.That(exception.ConnectingIpAddress, Is.EqualTo(IPAddress.Parse("192.0.2.11")));
         });
     }

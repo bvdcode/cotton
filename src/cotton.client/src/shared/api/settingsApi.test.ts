@@ -274,6 +274,7 @@ describe("settingsApi setters", () => {
       .mockResolvedValueOnce({
         data: {
           observedProxyIpAddress: "172.18.0.3",
+          suggestedTrustedProxy: "172.16.0.0/12",
           detectedProxyServices: ["cloudflare", "reverse-proxy"],
           cloudflare: {
             visitorCountryCode: "US",
@@ -299,6 +300,7 @@ describe("settingsApi setters", () => {
     );
     await expect(settingsApi.getObservedProxyInfo()).resolves.toEqual({
       observedProxyIpAddress: "172.18.0.3",
+      suggestedTrustedProxy: "172.16.0.0/12",
       detectedProxyServices: ["cloudflare", "nginx"],
       cloudflare: {
         visitorCountryCode: "US",

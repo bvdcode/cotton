@@ -2900,7 +2900,7 @@
     },
     "securityDiagnostics": {
       "trustedProxy": {
-        "field": "Dirección IP del proxy de confianza",
+        "field": "Proxy de confianza",
         "threatVector": "Un atacante con acceso directo a Cotton o a través de un proxy que no limpie encabezados puede cambiar su dirección aparente y eludir límites basados en IP.",
         "fix": "En Configuración general, elige Sin proxy para una instalación directa, o usa Automático o introduce la dirección del proxy inmediato y después verifica y guarda. El proxy debe sobrescribir los encabezados reenviados por el cliente.",
         "passed": "El modo de confianza de la dirección del cliente está configurado explícitamente"
@@ -3113,17 +3113,17 @@
     "settings": {
       "general": {
         "trustedProxy": {
-          "title": "Dirección IP del proxy de confianza",
-          "description": "Dirección IP exacta del proxy inverso inmediato autorizado a proporcionar la dirección del cliente. El proxy debe sobrescribir o eliminar los encabezados CF-Connecting-IP, X-Real-IP y X-Forwarded-For enviados por el cliente. Para una instalación directa, elige Sin proxy.",
+          "title": "Proxy de confianza",
+          "description": "Dirección IP o red CIDR del proxy inverso inmediato autorizado a proporcionar la dirección del cliente. El proxy debe sobrescribir o eliminar los encabezados CF-Connecting-IP, X-Real-IP y X-Forwarded-For enviados por el cliente. Para una instalación directa, elige Sin proxy.",
           "emptyHint": "Déjalo vacío para conservar el comportamiento anterior, que confía en direcciones reenviadas desde cualquier conexión.",
-          "placeholder": "Por ejemplo, 172.18.0.2",
+          "placeholder": "Por ejemplo, 172.16.0.0/12",
           "direct": "Sin proxy",
           "directMode": "Conexión directa (sin proxy); se ignoran los encabezados de reenvío",
           "directSaved": "Se guardó el modo de conexión directa. Se ignorarán los encabezados de reenvío.",
           "detect": "Automático",
           "verifyAndSave": "Verificar y guardar",
           "unavailable": "La dirección del proxy conectado no está disponible para esta solicitud.",
-          "detected": "Dirección del proxy conectado detectada: {{address}}.",
+          "detected": "Proxy de confianza sugerido: {{address}}.",
           "detectedPath": "Ruta de red detectada",
           "genericProxy": "Proxy inverso",
           "internet": "Internet",

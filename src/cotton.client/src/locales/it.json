@@ -2831,17 +2831,17 @@
       },
       "general": {
         "trustedProxy": {
-          "title": "Indirizzo IP del proxy attendibile",
-          "description": "Indirizzo IP esatto del reverse proxy collegato direttamente e autorizzato a fornire l’indirizzo del client. Il proxy deve sovrascrivere o rimuovere gli header CF-Connecting-IP, X-Real-IP e X-Forwarded-For inviati dal client. Per una distribuzione diretta, scegli Senza proxy.",
+          "title": "Proxy attendibile",
+          "description": "Indirizzo IP o rete CIDR del reverse proxy collegato direttamente e autorizzato a fornire l’indirizzo del client. Il proxy deve sovrascrivere o rimuovere gli header CF-Connecting-IP, X-Real-IP e X-Forwarded-For inviati dal client. Per una distribuzione diretta, scegli Senza proxy.",
           "emptyHint": "Lascia vuoto per mantenere il comportamento precedente, che considera attendibili gli indirizzi inoltrati da ogni connessione.",
-          "placeholder": "Ad esempio, 172.18.0.2",
+          "placeholder": "Ad esempio, 172.16.0.0/12",
           "direct": "Senza proxy",
           "directMode": "Connessione diretta (senza proxy); gli header di inoltro vengono ignorati",
           "directSaved": "La modalità di connessione diretta è stata salvata. Gli header di inoltro verranno ignorati.",
           "detect": "Auto",
           "verifyAndSave": "Verifica e salva",
           "unavailable": "L’indirizzo del proxy connesso non è disponibile per questa richiesta.",
-          "detected": "Indirizzo del proxy connesso rilevato: {{address}}.",
+          "detected": "Proxy attendibile suggerito: {{address}}.",
           "detectedPath": "Percorso di rete rilevato",
           "genericProxy": "Proxy inverso",
           "internet": "Internet",
@@ -3130,7 +3130,7 @@
     },
     "securityDiagnostics": {
       "trustedProxy": {
-        "field": "Indirizzo IP del proxy attendibile",
+        "field": "Proxy attendibile",
         "threatVector": "Un attaccante che può raggiungere Cotton direttamente, o tramite un proxy che non pulisce gli header, può cambiare l’indirizzo apparente e aggirare i limiti basati su IP.",
         "fix": "Nelle impostazioni generali scegli Senza proxy per una distribuzione diretta, oppure usa Auto o inserisci l’indirizzo del proxy collegato direttamente, quindi verifica e salva. Il proxy deve sovrascrivere gli header di inoltro inviati dal client.",
         "passed": "La modalità di attendibilità dell’indirizzo client è configurata esplicitamente"

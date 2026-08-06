@@ -381,11 +381,13 @@ public class DatabaseIntegrityFoundationTests
         {
             InstanceId = Guid.Parse("30000000-0000-0000-0000-000000000002"),
             PublicBaseUrl = "https://cloud.example.test",
-            TrustedProxyIpAddress = IPAddress.Parse("192.0.2.10")
+            TrustedProxyIpAddress = IPAddress.Parse("192.0.2.10"),
+            TrustedProxyPrefixLength = null
         };
         byte[] mac = protector.Sign(settings, descriptor);
 
         settings.TrustedProxyIpAddress = IPAddress.Parse("192.0.2.11");
+        settings.TrustedProxyPrefixLength = 24;
 
         Assert.That(protector.Verify(settings, descriptor, mac), Is.True);
     }

@@ -2873,17 +2873,17 @@
       },
       "general": {
         "trustedProxy": {
-          "title": "Adres IP zaufanego proxy",
-          "description": "Dokładny adres IP bezpośrednio połączonego reverse proxy, który może przekazywać adres klienta. Proxy musi nadpisywać lub usuwać nagłówki CF-Connecting-IP, X-Real-IP i X-Forwarded-For ustawione przez klienta. Dla wdrożenia bezpośredniego wybierz Bez proxy.",
+          "title": "Zaufany serwer proxy",
+          "description": "Adres IP lub sieć CIDR bezpośrednio połączonego reverse proxy, który może przekazywać adres klienta. Proxy musi nadpisywać lub usuwać nagłówki CF-Connecting-IP, X-Real-IP i X-Forwarded-For ustawione przez klienta. Dla wdrożenia bezpośredniego wybierz Bez proxy.",
           "emptyHint": "Pozostaw puste, aby zachować poprzednie zachowanie ufające przekazanym adresom ze wszystkich połączeń.",
-          "placeholder": "Na przykład 172.18.0.2",
+          "placeholder": "Na przykład 172.16.0.0/12",
           "direct": "Bez proxy",
           "directMode": "Połączenie bezpośrednie (bez proxy); nagłówki przekazywania są ignorowane",
           "directSaved": "Tryb połączenia bezpośredniego został zapisany. Nagłówki przekazywania będą ignorowane.",
           "detect": "Automatycznie",
           "verifyAndSave": "Sprawdź i zapisz",
           "unavailable": "Adres połączonego proxy jest niedostępny dla tego żądania.",
-          "detected": "Wykryty adres połączonego proxy: {{address}}.",
+          "detected": "Sugerowany zaufany serwer proxy: {{address}}.",
           "detectedPath": "Wykryta ścieżka sieciowa",
           "genericProxy": "Odwrotny serwer proxy",
           "internet": "Internet",
@@ -3172,7 +3172,7 @@
     },
     "securityDiagnostics": {
       "trustedProxy": {
-        "field": "Adres IP zaufanego proxy",
+        "field": "Zaufany serwer proxy",
         "threatVector": "Atakujący, który może dotrzeć bezpośrednio do Cotton lub przez proxy bez czyszczenia nagłówków, może zmieniać widoczny adres klienta i omijać limity IP.",
         "fix": "W ustawieniach ogólnych wybierz Bez proxy dla wdrożenia bezpośredniego albo użyj opcji Automatycznie lub wpisz adres bezpośredniego proxy, następnie sprawdź i zapisz. Proxy musi nadpisywać nagłówki przekazywane przez klienta.",
         "passed": "Tryb zaufania adresu klienta jest jawnie skonfigurowany"

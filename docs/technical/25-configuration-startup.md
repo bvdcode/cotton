@@ -23,7 +23,8 @@ The single source of truth for operational configuration is the entity `CottonSe
 | `Timezone` | `timezone` | `string` | IANA/Windows timezone id for admin-facing timestamps. `GetTimezoneInfo()` falls back to UTC if unresolvable. |
 | `InstanceId` | `instance_id` | `Guid` | Stable per-installation identifier. Never exposed raw — `GetInstanceIdHash()` returns its SHA-256. |
 | `PublicBaseUrl` | `public_base_url` | `string` | Externally reachable base URL for generated links/callbacks. |
-| `TrustedProxyIpAddress` | `trusted_proxy_ip_address` | `IPAddress?` / PostgreSQL `inet` | Client-address trust mode: `null` preserves legacy trust-all behavior, reserved `0.0.0.0` selects direct mode, and any other value is the exact immediate reverse-proxy peer. |
+| `TrustedProxyIpAddress` | `trusted_proxy_ip_address` | `IPAddress?` / PostgreSQL `inet` | Client-address trust mode: `null` preserves legacy trust-all behavior, reserved `0.0.0.0` without a prefix selects direct mode, and any other value is an immediate reverse-proxy address or network base. |
+| `TrustedProxyPrefixLength` | `trusted_proxy_prefix_length` | `byte?` / PostgreSQL `smallint` | Optional CIDR prefix for `TrustedProxyIpAddress`; null keeps exact-address matching. |
 | `SmtpServerAddress` | `smtp_server_address` | `string?` | Custom SMTP host. |
 | `SmtpServerPort` | `smtp_server_port` | `int?` | Custom SMTP port. |
 | `SmtpUsername` | `smtp_username` | `string?` | Custom SMTP username. |
@@ -73,6 +74,7 @@ When no row exists yet, two code paths in `SettingsProvider` supply defaults. `G
 | `AllowCrossUserDeduplication` / `AllowGlobalIndexing` / `TelemetryEnabled` | `false` |
 | `DefaultUserStorageQuotaBytes` / `DefaultUserTemplateNodeId` | `null` |
 | `TrustedProxyIpAddress` | `null` (legacy forwarded-header trust; security score penalty: 2) |
+| `TrustedProxyPrefixLength` | `null` (exact-address matching) |
 
 ### Configuration enums
 
@@ -171,20 +173,20 @@ The settings endpoints (relative to either base route):
 
 ### Trusted proxy and client-address resolution
 
-All application code that needs a client IP calls `HttpRequest.GetTrustedClientIPAddress()` rather than the package helper directly. The wrapper first reads `CottonServerSettings.TrustedProxyIpAddress`:
+All application code that needs a client IP calls `HttpRequest.GetTrustedClientIPAddress()` rather than the package helper directly. The wrapper first reads `CottonServerSettings.TrustedProxyIpAddress` and `TrustedProxyPrefixLength`:
 
 - When the setting is `null`, Cotton preserves backward compatibility and accepts forwarded client-address headers from every connection. Security diagnostics emits `trusted-proxy-not-configured` with severity `warning`, which subtracts **2** from the 10-point score.
 - When the setting is the reserved value `0.0.0.0`, Cotton is in direct-connection mode. It uses `HttpContext.Connection.RemoteIpAddress` as the client address and ignores `CF-Connecting-IP`, `X-Real-IP`, and `X-Forwarded-For`. The marker is stored as an address, not interpreted as a CIDR.
-- For any other configured address, Cotton normalizes IPv4-mapped IPv6 addresses and compares it with `HttpContext.Connection.RemoteIpAddress`, the peer that opened the current TCP connection. Only after that peer matches does it resolve the client address. A different or unavailable peer causes `UntrustedProxyConnectionException`; its forwarded headers are never used.
+- For any other configured address, Cotton normalizes IPv4-mapped IPv6 addresses and compares it with `HttpContext.Connection.RemoteIpAddress`, the peer that opened the current TCP connection. When a prefix is present, the peer must belong to that CIDR network. Only after the peer matches does Cotton resolve the client address. A different or unavailable peer causes `UntrustedProxyConnectionException`; its forwarded headers are never used.
 - After a real proxy passes the trust check, the retained package resolver uses this priority: `CF-Connecting-IP`, then `X-Real-IP`, then `X-Forwarded-For`, then `Connection.RemoteIpAddress`.
 
-The admin UI's **Auto** action calls the `observed` endpoint and fills the immediate peer address. **Verify and save** sends the candidate back over the same proxy path. The server saves a real proxy address only when it equals the observed peer; otherwise the response includes both values so the operator can correct the deployment without guessing. **No proxy** stores the reserved direct-mode marker without exposing it as a second setting. Clearing the field explicitly restores legacy trust-all behavior.
+The admin UI's **Auto** action calls the `observed` endpoint and fills an explicit CIDR candidate: `/32` for an ordinary IPv4 peer, `/128` for IPv6, or `172.16.0.0/12` for a peer in that private range so Docker can recreate its bridge with a different private `172.*` subnet. **Verify and save** sends the candidate back over the same proxy path. The server saves an address or network only when it contains the observed peer; otherwise the response includes both values so the operator can correct the deployment without guessing. **No proxy** stores the reserved direct-mode marker without exposing it as a second setting. Clearing the field explicitly restores legacy trust-all behavior.
 
 Both detection responses also return informational `detectedProxyServices[]`. Cotton combines product-specific request headers with a three-second, unauthenticated `HEAD` probe of `PublicBaseUrl` through the server's own DNS path; the browser additionally normalizes known response headers. The UI renders the merged topology from Cotton outward, for example `Cotton → nginx → Cloudflare → Internet`. Standard forwarding headers cannot uniquely distinguish nginx, Caddy, HAProxy, Apache, Traefik, or a CDN without a distinctive header; such a hop remains an intentionally generic reverse proxy.
 
 When Cloudflare is detected, the same responses may include normalized `cloudflare.visitorCountryCode` from `CF-IPCountry` and `cloudflare.datacenterCode` from the suffix of `CF-Ray`. Cotton never returns the ray identifier itself. The data-center code describes the Cloudflare location on the origin-facing request path and, with tiered routing, is not guaranteed to be the visitor's nearest edge. All topology and location hints are display-only: they never establish trust and do not affect client-address validation.
 
-Except for the reserved direct marker, this is a single exact IP, not a CIDR or proxy pool. Deployments whose last-hop proxy address changes must provide a stable address before enabling strict proxy validation. When a proxy is used, it must overwrite or remove client-supplied `CF-Connecting-IP`, `X-Real-IP`, and `X-Forwarded-For` values. The setting is deliberately excluded from the database-integrity canonical signature, so changing it does not require or trigger an integrity-format transition.
+Except for the reserved direct marker, this can be an exact IP or a CIDR network. Keep the network as narrow as the deployment allows. When a proxy is used, it must overwrite or remove client-supplied `CF-Connecting-IP`, `X-Real-IP`, and `X-Forwarded-For` values. The address and prefix are deliberately excluded from the database-integrity canonical signature, so changing them does not require or trigger an integrity-format transition.
 
 ### DTOs
 

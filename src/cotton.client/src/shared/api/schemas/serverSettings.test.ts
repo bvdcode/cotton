@@ -121,6 +121,7 @@ describe("server settings schemas", () => {
     expect(
       observedProxyInfoSchema.parse({
         observedProxyIpAddress: "172.18.0.2",
+        suggestedTrustedProxy: "172.16.0.0/12",
         detectedProxyServices: ["cloudflare", "reverse-proxy"],
         cloudflare: {
           visitorCountryCode: "US",
@@ -129,6 +130,7 @@ describe("server settings schemas", () => {
       }),
     ).toEqual({
       observedProxyIpAddress: "172.18.0.2",
+      suggestedTrustedProxy: "172.16.0.0/12",
       detectedProxyServices: ["cloudflare", "reverse-proxy"],
       cloudflare: {
         visitorCountryCode: "US",

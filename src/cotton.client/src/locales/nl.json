@@ -2830,17 +2830,17 @@
       },
       "general": {
         "trustedProxy": {
-          "title": "IP-adres van vertrouwde proxy",
-          "description": "Het exacte IP-adres van de direct verbonden reverse proxy die het clientadres mag aanleveren. De proxy moet door de client ingestelde headers CF-Connecting-IP, X-Real-IP en X-Forwarded-For overschrijven of verwijderen. Kies Zonder proxy voor een directe installatie.",
+          "title": "Vertrouwde proxy",
+          "description": "Het IP-adres of CIDR-netwerk van de direct verbonden reverse proxy die het clientadres mag aanleveren. De proxy moet door de client ingestelde headers CF-Connecting-IP, X-Real-IP en X-Forwarded-For overschrijven of verwijderen. Kies Zonder proxy voor een directe installatie.",
           "emptyHint": "Laat leeg om het oude gedrag te behouden dat doorgestuurde clientadressen van elke verbinding vertrouwt.",
-          "placeholder": "Bijvoorbeeld 172.18.0.2",
+          "placeholder": "Bijvoorbeeld 172.16.0.0/12",
           "direct": "Zonder proxy",
           "directMode": "Directe verbinding (zonder proxy); forwarding-headers worden genegeerd",
           "directSaved": "De modus voor directe verbinding is opgeslagen. Forwarding-headers worden genegeerd.",
           "detect": "Automatisch",
           "verifyAndSave": "Controleren en opslaan",
           "unavailable": "Het adres van de verbonden proxy is voor deze aanvraag niet beschikbaar.",
-          "detected": "Gedetecteerd adres van de verbonden proxy: {{address}}.",
+          "detected": "Voorgestelde vertrouwde proxy: {{address}}.",
           "detectedPath": "Gedetecteerd netwerkpad",
           "genericProxy": "Reverseproxy",
           "internet": "Internet",
@@ -3129,7 +3129,7 @@
     },
     "securityDiagnostics": {
       "trustedProxy": {
-        "field": "IP-adres van vertrouwde proxy",
+        "field": "Vertrouwde proxy",
         "threatVector": "Een aanvaller die Cotton rechtstreeks kan bereiken, of via een proxy die headers niet opschoont, kan het zichtbare clientadres wijzigen en IP-limieten omzeilen.",
         "fix": "Kies bij Algemene instellingen Zonder proxy voor een directe installatie, of gebruik Automatisch of voer het adres van de direct verbonden proxy in en controleer en bewaar dit. Een proxy moet doorgestuurde clientheaders overschrijven.",
         "passed": "De vertrouwensmodus voor clientadressen is expliciet ingesteld"

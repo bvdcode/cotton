@@ -244,11 +244,13 @@ export type CloudflareProxyMetadata = z.infer<
 export const observedProxyInfoSchema = z
   .object({
     observedProxyIpAddress: nullableStringSchema,
+    suggestedTrustedProxy: nullableStringSchema,
     detectedProxyServices: z.array(detectedProxyServiceSchema),
     cloudflare: cloudflareProxyMetadataSchema,
   })
   .transform((value) => ({
     observedProxyIpAddress: value.observedProxyIpAddress ?? "",
+    suggestedTrustedProxy: value.suggestedTrustedProxy ?? "",
     detectedProxyServices: value.detectedProxyServices,
     cloudflare: value.cloudflare,
   }));

@@ -89,6 +89,12 @@ namespace Cotton.Database.Models
         public IPAddress? TrustedProxyIpAddress { get; set; }
 
         /// <summary>
+        /// Optional CIDR prefix length for the trusted reverse-proxy network.
+        /// </summary>
+        [Column("trusted_proxy_prefix_length")]
+        public byte? TrustedProxyPrefixLength { get; set; }
+
+        /// <summary>
         /// SMTP host used for custom email delivery.
         /// </summary>
         [Column("smtp_server_address")]

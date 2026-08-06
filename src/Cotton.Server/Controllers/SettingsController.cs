@@ -534,7 +534,13 @@ namespace Cotton.Server.Controllers
         [HttpGet("trusted-proxy-ip-address")]
         public IActionResult GetTrustedProxyIpAddress()
         {
-            string? trustedProxyIpAddress = _settings.GetServerSettings().TrustedProxyIpAddress?.ToString();
+            CottonServerSettings settings = _settings.GetServerSettings();
+            IPAddress? configuredProxy = settings.TrustedProxyIpAddress;
+            string? trustedProxyIpAddress = configuredProxy is null
+                ? null
+                : TrustedProxyRequestExtensions.FormatConfiguredProxy(
+                    configuredProxy,
+                    settings.TrustedProxyPrefixLength);
             return Ok(new { trustedProxyIpAddress });
         }
 
@@ -545,11 +551,16 @@ namespace Cotton.Server.Controllers
         [HttpGet("trusted-proxy-ip-address/observed")]
         public async Task<IActionResult> GetObservedProxyIpAddress(CancellationToken cancellationToken)
         {
-            string? observedProxyIpAddress = Request.GetConnectingIPAddress()?.ToString();
+            IPAddress? observedProxy = Request.GetConnectingIPAddress();
+            string? observedProxyIpAddress = observedProxy?.ToString();
+            string? suggestedTrustedProxy = observedProxy is null
+                ? null
+                : TrustedProxyRequestExtensions.GetSuggestedProxyConfiguration(observedProxy);
             ProxyTopologyProbeResult topology = await DetectProxyTopologyAsync(cancellationToken);
             return Ok(new
             {
                 observedProxyIpAddress,
+                suggestedTrustedProxy,
                 detectedProxyServices = topology.Services,
                 cloudflare = topology.Cloudflare,
             });
@@ -575,46 +586,61 @@ namespace Cotton.Server.Controllers
 
             if (string.IsNullOrWhiteSpace(ipAddress))
             {
-                await _settings.SetPropertyAsync(
-                    x => x.TrustedProxyIpAddress,
-                    null,
+                await _settings.UpdateSettingsAsync(
+                    settings =>
+                    {
+                        settings.TrustedProxyIpAddress = null;
+                        settings.TrustedProxyPrefixLength = null;
+                    },
                     GetFallbackPublicBaseUrl(),
                     cancellationToken);
                 return Ok(CreateTrustedProxyVerificationResponse(
                     configuredProxyIpAddress: null,
+                    configuredProxyPrefixLength: null,
                     observedProxyIpAddress,
                     topology,
                     matches: true,
                     saved: true));
             }
 
-            if (!IPAddress.TryParse(ipAddress.Trim(), out IPAddress? candidateProxyIpAddress))
+            if (!TrustedProxyRequestExtensions.TryParseTrustedProxy(
+                    ipAddress.Trim(),
+                    out IPAddress candidateProxyIpAddress,
+                    out byte? candidateProxyPrefixLength))
             {
-                return this.ApiBadRequest("Trusted proxy must be a valid IPv4 or IPv6 address.");
+                return this.ApiBadRequest(
+                    "Trusted proxy must be a valid IPv4, IPv6, or CIDR network.");
             }
 
-            candidateProxyIpAddress = TrustedProxyRequestExtensions.Normalize(candidateProxyIpAddress);
-            bool matches = TrustedProxyRequestExtensions.IsDirectConnectionMode(candidateProxyIpAddress)
-                || TrustedProxyRequestExtensions.AddressesEqual(
+            bool matches = TrustedProxyRequestExtensions.IsDirectConnectionMode(
                     candidateProxyIpAddress,
+                    candidateProxyPrefixLength)
+                || TrustedProxyRequestExtensions.MatchesTrustedProxy(
+                    candidateProxyIpAddress,
+                    candidateProxyPrefixLength,
                     observedProxyIpAddress);
             if (!matches)
             {
                 return Ok(CreateTrustedProxyVerificationResponse(
                     candidateProxyIpAddress,
+                    candidateProxyPrefixLength,
                     observedProxyIpAddress,
                     topology,
                     matches: false,
                     saved: false));
             }
 
-            await _settings.SetPropertyAsync(
-                x => x.TrustedProxyIpAddress,
-                candidateProxyIpAddress,
+            await _settings.UpdateSettingsAsync(
+                settings =>
+                {
+                    settings.TrustedProxyIpAddress = candidateProxyIpAddress;
+                    settings.TrustedProxyPrefixLength = candidateProxyPrefixLength;
+                },
                 GetFallbackPublicBaseUrl(),
                 cancellationToken);
             return Ok(CreateTrustedProxyVerificationResponse(
                 candidateProxyIpAddress,
+                candidateProxyPrefixLength,
                 observedProxyIpAddress,
                 topology,
                 matches: true,
@@ -899,6 +925,7 @@ namespace Cotton.Server.Controllers
 
         private static object CreateTrustedProxyVerificationResponse(
             IPAddress? configuredProxyIpAddress,
+            byte? configuredProxyPrefixLength,
             IPAddress observedProxyIpAddress,
             ProxyTopologyProbeResult topology,
             bool matches,
@@ -906,7 +933,11 @@ namespace Cotton.Server.Controllers
         {
             return new
             {
-                trustedProxyIpAddress = configuredProxyIpAddress?.ToString(),
+                trustedProxyIpAddress = configuredProxyIpAddress is null
+                    ? null
+                    : TrustedProxyRequestExtensions.FormatConfiguredProxy(
+                        configuredProxyIpAddress,
+                        configuredProxyPrefixLength),
                 observedProxyIpAddress = observedProxyIpAddress.ToString(),
                 detectedProxyServices = topology.Services,
                 cloudflare = topology.Cloudflare,
