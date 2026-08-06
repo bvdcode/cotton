@@ -18,7 +18,7 @@ namespace Cotton.Server.Services
         public const int CompactTokenActiveShareLimit = 1_000;
 
         private const int CompactTokenLength = 8;
-        private const int ExpandedTokenLength = 12;
+        internal const int ExpandedTokenLength = 12;
         private const int MaxGenerationAttempts = 8;
         private const string CompactAlphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
         private const string ExpandedAlphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

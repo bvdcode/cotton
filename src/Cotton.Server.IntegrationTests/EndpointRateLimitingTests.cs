@@ -335,19 +335,28 @@ public class EndpointRateLimitingTests
             .ToString());
         HttpRequest firstClient = CreateRequest("203.0.113.42");
         HttpRequest secondClient = CreateRequest("203.0.113.43");
+        const string compactToken = "short123";
+
+        for (int i = 0; i < 100; i++)
+        {
+            using RateLimitLease? lease = limiter.CheckAvailability(firstClient, compactToken);
+            Assert.That(lease?.IsAcquired, Is.True);
+        }
 
         for (int i = 0; i < 60; i++)
         {
-            using RateLimitLease lease = limiter.AttemptAcquire(firstClient);
-            Assert.That(lease.IsAcquired, Is.True);
+            using RateLimitLease? lease = limiter.RecordFailure(firstClient, compactToken);
+            Assert.That(lease?.IsAcquired, Is.True);
         }
 
-        using RateLimitLease rejectedLease = limiter.AttemptAcquire(firstClient);
-        using RateLimitLease separateClientLease = limiter.AttemptAcquire(secondClient);
+        using RateLimitLease? rejectedLease = limiter.CheckAvailability(firstClient, compactToken);
+        using RateLimitLease? separateClientLease = limiter.CheckAvailability(secondClient, compactToken);
+        using RateLimitLease? expandedTokenLease = limiter.CheckAvailability(firstClient, "abcdefghijkl");
         Assert.Multiple(() =>
         {
-            Assert.That(rejectedLease.IsAcquired, Is.False);
-            Assert.That(separateClientLease.IsAcquired, Is.True);
+            Assert.That(rejectedLease?.IsAcquired, Is.False);
+            Assert.That(separateClientLease?.IsAcquired, Is.True);
+            Assert.That(expandedTokenLease, Is.Null);
         });
     }
 

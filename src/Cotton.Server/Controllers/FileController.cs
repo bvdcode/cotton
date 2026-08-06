@@ -77,11 +77,21 @@ namespace Cotton.Server.Controllers
             [FromQuery] string? view = null,
             [FromQuery] bool preview = false)
         {
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
             ShareFileResult result = await _mediator.Send(new ShareFileQuery(token, view, preview, Request));
 
             if (result.IsTokenLookupFailure)
             {
-                IActionResult? rejection = this.GetPublicShareLookupFailureRejection(_publicShareLookupFailures);
+                IActionResult? rejection = this.GetPublicShareLookupFailureRejection(
+                    _publicShareLookupFailures,
+                    token);
                 if (rejection is not null)
                 {
                     return rejection;
@@ -753,13 +763,21 @@ namespace Cotton.Server.Controllers
         {
             if (string.IsNullOrWhiteSpace(token))
             {
-                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "File not found");
+                return this.ApiNotFound("File not found");
+            }
+
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
             }
 
             DownloadToken? downloadToken = await LoadValidDownloadTokenAsync(token, nodeFileId);
             if (downloadToken is null)
             {
-                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "File not found");
+                return this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found");
             }
 
             _integrity.RequireValid(_dbContext, downloadToken, "file.download-token");
@@ -1168,7 +1186,15 @@ namespace Cotton.Server.Controllers
                 return new TranscodableLookup(
                     null,
                     null,
-                    this.ApiPublicShareNotFound(_publicShareLookupFailures, "File not found"));
+                    this.ApiNotFound("File not found"));
+            }
+
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return new TranscodableLookup(null, null, blocked);
             }
 
             DownloadToken? downloadToken = await LoadValidDownloadTokenAsync(token, nodeFileId);
@@ -1177,7 +1203,7 @@ namespace Cotton.Server.Controllers
                 return new TranscodableLookup(
                     null,
                     null,
-                    this.ApiPublicShareNotFound(_publicShareLookupFailures, "File not found"));
+                    this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found"));
             }
 
             _integrity.RequireValid(_dbContext, downloadToken, "file.hls-token");

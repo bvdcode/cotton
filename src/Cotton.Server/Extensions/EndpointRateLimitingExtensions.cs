@@ -62,19 +62,37 @@ namespace Cotton.Server.Extensions
         }
 
         /// <summary>
-        /// Returns a 429 result when a failed public-share lookup exceeds its per-client limit.
+        /// Returns a 429 result when the client is already blocked from short-token lookups.
         /// </summary>
-        public static IActionResult? GetPublicShareLookupFailureRejection(
+        public static IActionResult? GetPublicShareLookupBlockRejection(
             this ControllerBase controller,
-            PublicShareLookupFailureLimiter limiter)
+            PublicShareLookupFailureLimiter limiter,
+            string token)
         {
             ArgumentNullException.ThrowIfNull(controller);
             ArgumentNullException.ThrowIfNull(limiter);
+            ArgumentNullException.ThrowIfNull(token);
 
-            using RateLimitLease lease = limiter.AttemptAcquire(controller.Request);
-            return lease.IsAcquired
-                ? null
-                : CreateRateLimitRejection(controller.Response, lease);
+            return GetPublicShareLookupRejection(
+                controller,
+                limiter.CheckAvailability(controller.Request, token));
+        }
+
+        /// <summary>
+        /// Records a failed short-token lookup and returns a 429 result when its limit is exceeded.
+        /// </summary>
+        public static IActionResult? GetPublicShareLookupFailureRejection(
+            this ControllerBase controller,
+            PublicShareLookupFailureLimiter limiter,
+            string token)
+        {
+            ArgumentNullException.ThrowIfNull(controller);
+            ArgumentNullException.ThrowIfNull(limiter);
+            ArgumentNullException.ThrowIfNull(token);
+
+            return GetPublicShareLookupRejection(
+                controller,
+                limiter.RecordFailure(controller.Request, token));
         }
 
         /// <summary>
@@ -83,15 +101,28 @@ namespace Cotton.Server.Extensions
         public static IActionResult ApiPublicShareNotFound(
             this ControllerBase controller,
             PublicShareLookupFailureLimiter limiter,
+            string token,
             string message)
         {
-            return controller.GetPublicShareLookupFailureRejection(limiter)
+            return controller.GetPublicShareLookupFailureRejection(limiter, token)
                 ?? controller.ApiNotFound(message);
         }
 
         internal static string GetRemoteAddressPartition(HttpContext httpContext)
         {
             return httpContext.Request.GetTrustedClientIPAddress().ToString();
+        }
+
+        private static IActionResult? GetPublicShareLookupRejection(
+            ControllerBase controller,
+            RateLimitLease? lease)
+        {
+            using (lease)
+            {
+                return lease is null || lease.IsAcquired
+                    ? null
+                    : CreateRateLimitRejection(controller.Response, lease);
+            }
         }
 
         private static CottonResult CreateRateLimitRejection(HttpResponse response, RateLimitLease lease)

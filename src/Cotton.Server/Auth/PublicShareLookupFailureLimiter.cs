@@ -2,12 +2,13 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Extensions;
+using Cotton.Server.Services;
 using System.Threading.RateLimiting;
 
 namespace Cotton.Server.Auth
 {
     /// <summary>
-    /// Limits failed public-share token lookups without throttling valid share traffic.
+    /// Limits short public-share token lookups after repeated failures.
     /// </summary>
     public class PublicShareLookupFailureLimiter : IDisposable
     {
@@ -40,12 +41,27 @@ namespace Cotton.Server.Auth
         }
 
         /// <summary>
-        /// Records one failed lookup and returns its rate-limit lease.
+        /// Checks whether short-token lookups are currently allowed without consuming a permit.
         /// </summary>
-        public RateLimitLease AttemptAcquire(HttpRequest request)
+        public RateLimitLease? CheckAvailability(HttpRequest request, string token)
         {
             ArgumentNullException.ThrowIfNull(request);
-            return _limiter.AttemptAcquire(request);
+            ArgumentNullException.ThrowIfNull(token);
+            return RequiresProtection(token)
+                ? _limiter.AttemptAcquire(request, permitCount: 0)
+                : null;
+        }
+
+        /// <summary>
+        /// Records one failed short-token lookup and returns its rate-limit lease.
+        /// </summary>
+        public RateLimitLease? RecordFailure(HttpRequest request, string token)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            ArgumentNullException.ThrowIfNull(token);
+            return RequiresProtection(token)
+                ? _limiter.AttemptAcquire(request)
+                : null;
         }
 
         /// <inheritdoc />
@@ -53,6 +69,11 @@ namespace Cotton.Server.Auth
         {
             _limiter.Dispose();
             GC.SuppressFinalize(this);
+        }
+
+        private static bool RequiresProtection(string token)
+        {
+            return token.Length < PublicShareTokenGenerator.ExpandedTokenLength;
         }
     }
 }

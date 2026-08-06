@@ -581,10 +581,21 @@ namespace Cotton.Server.Controllers
         [HttpGet("shared/{token}")]
         public async Task<IActionResult> GetSharedNodeInfo([FromRoute] string token)
         {
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "Shared folder not found.");
+                return this.ApiPublicShareNotFound(
+                    _publicShareLookupFailures,
+                    token,
+                    "Shared folder not found.");
             }
 
             return Ok(new SharedNodeInfoDto
@@ -610,10 +621,21 @@ namespace Cotton.Server.Controllers
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
 
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "Shared folder not found.");
+                return this.ApiPublicShareNotFound(
+                    _publicShareLookupFailures,
+                    token,
+                    "Shared folder not found.");
             }
 
             Guid targetNodeId = nodeId ?? nodeShareToken.NodeId;
@@ -688,10 +710,21 @@ namespace Cotton.Server.Controllers
             [FromRoute] string token,
             [FromRoute] Guid nodeId)
         {
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "Shared folder not found.");
+                return this.ApiPublicShareNotFound(
+                    _publicShareLookupFailures,
+                    token,
+                    "Shared folder not found.");
             }
 
             bool canAccessNode = await IsNodeInSharedSubtreeAsync(
@@ -769,10 +802,21 @@ namespace Cotton.Server.Controllers
             [FromQuery] Guid? nodeId,
             CancellationToken cancellationToken)
         {
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiNotFound("Shared folder not found.");
+                return this.ApiPublicShareNotFound(
+                    _publicShareLookupFailures,
+                    token,
+                    "Shared folder not found.");
             }
 
             Guid targetNodeId = nodeId ?? nodeShareToken.NodeId;
@@ -814,10 +858,18 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool download = true,
             [FromQuery] bool preview = false)
         {
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiPublicShareNotFound(_publicShareLookupFailures, "File not found.");
+                return this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found.");
             }
 
             NodeFile? nodeFile = await _dbContext.NodeFiles
