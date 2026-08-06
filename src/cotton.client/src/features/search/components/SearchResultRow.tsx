@@ -18,6 +18,7 @@ import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
+import { buildPreviewUrl } from "@shared/api/previewUrl";
 import { getSmallFileIcon } from "../utils/fileIcon";
 import type { SearchRow } from "../types";
 
@@ -48,7 +49,7 @@ const renderPreview = (
   const previewHash = row.file.previewHashEncryptedHex;
   const previewUrl =
     previewHash && !previewFailed
-      ? `/api/v1/preview/${encodeURIComponent(previewHash)}.webp`
+      ? buildPreviewUrl(previewHash)
       : null;
 
   if (previewUrl) {
