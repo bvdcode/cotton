@@ -39,7 +39,6 @@ Per the README, the encryption core was conceived and built first, on the premis
 | `AesGcmKeyHeader` | `src/Cotton.Crypto/Models/AesGcmKeyHeader.cs` | Public `readonly record struct` for serializing/parsing a header outside the pipeline. |
 | `ByteChunk` | `src/Cotton.Crypto/Models/ByteChunk.cs` | Public `(byte[] Buffer, int Length)` `readonly struct` documenting pool-ownership transfer. |
 | `StreamCipherFactory` | `src/Cotton.Server/Services/StreamCipherFactory.cs` | `internal static` server-side construction of `AesGcmStreamCipher` from `CottonEncryptionSettings`. |
-| `CryptoExtensions` | `src/Cotton.Server/Extensions/CryptoExtensions.cs` | Presigned-token encrypt/decrypt helpers built on the `IStreamCipher` string helpers. |
 | `CryptoProcessor` | `src/Cotton.Storage/Processors/CryptoProcessor.cs` | Storage-pipeline processor (`IStorageProcessor`) that calls `EncryptAsync`/`DecryptAsync` on blob streams. |
 
 The project also ships `src/Cotton.Crypto/InternalsVisibleTo.Tests.cs`, which grants `Cotton.Crypto.Tests` access to internal types so the format, pipelines, and `BufferScope` can be unit-tested directly.
@@ -282,9 +281,9 @@ Both endpoints below live on `SettingsController`, which is routed at both `Rout
 
 `EncryptionThreads` defaults to **2** (`defaultEncryptionThreads`). Note the asymmetry: the settings endpoint caps `EncryptionThreads` at `ProcessorCount`, while the factory/cipher hard cap is `ProcessorCount * 2` (via `threadsLimitMultiplier = 2`). Changing either setting writes through `SettingsProvider.SetPropertyAsync`, which refreshes the cached pipeline values.
 
-### String/token helpers
+### String helpers
 
-`CryptoExtensions` (`src/Cotton.Server/Extensions/CryptoExtensions.cs`) builds presigned download tokens. `GetPresignedToken` formats `"{hexHash}|{expireAt:R}"` (expiry default `TimeSpan.FromDays(1)`), encrypts it with `IStreamCipher.EncryptString` (from `Cotton.Crypto.StreamCipherExtensions`), and hex-encodes the bytes via `Convert.ToHexString(...).ToLower()`. `DecryptPresignedToken` reverses this: it converts from a hex hash string (`Hasher.FromHexStringHash`), `DecryptString`s it, splits on `|`, parses the expiry, throws if expired, and returns the decoded hash bytes. The same `EncryptString`/`DecryptString` helpers back TOTP-secret encryption in `AuthController` (`user.TotpSecretEncrypted`), transparent column encryption in `CottonDbContext`, and master-key sentinel handling in `MasterKeyStartupStorage`.
+`Cotton.Crypto.StreamCipherExtensions` provides `EncryptString` and `DecryptString` for short encrypted values. These helpers back TOTP-secret encryption in `AuthController` (`user.TotpSecretEncrypted`), transparent column encryption in `CottonDbContext`, and master-key sentinel handling in `MasterKeyStartupStorage`.
 
 ## Buffer management
 
