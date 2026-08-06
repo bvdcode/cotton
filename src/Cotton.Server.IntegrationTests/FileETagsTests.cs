@@ -13,9 +13,9 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("\"sha256-current\"", true)]
         [TestCase("\"sha256-other\", \"sha256-current\"", true)]
         [TestCase("\"sha256-other\"", false)]
-        [TestCase("W/\"sha256-current\"", false)]
-        [TestCase("*", false)]
-        public void MatchesIfNoneMatchHeader_UsesStrongComparison(string headerValue, bool expected)
+        [TestCase("W/\"sha256-current\"", true)]
+        [TestCase("*", true)]
+        public void MatchesIfNoneMatchHeader_UsesConditionalRequestComparison(string headerValue, bool expected)
         {
             DefaultHttpContext context = new();
             context.Request.Headers[HeaderNames.IfNoneMatch] = headerValue;

@@ -148,7 +148,8 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         NodeFileManifestDto listedFile = await GetNodeFileAsync(root.Id, "notes.txt");
         Assert.That(listedFile.PreviewHashEncryptedHex, Is.EqualTo(GetPreviewHashEncryptedHex(manifest.Id, manifest.SmallFilePreviewHashEncrypted)));
 
-        HttpResponseMessage previewResponse = await _client!.GetAsync($"{PreviewRouteBase}/{listedFile.PreviewHashEncryptedHex}");
+        string previewUrl = $"{PreviewRouteBase}/{listedFile.PreviewHashEncryptedHex}";
+        HttpResponseMessage previewResponse = await _client!.GetAsync(previewUrl);
         previewResponse.EnsureSuccessStatusCode();
 
         Assert.That(previewResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("image/webp"));
@@ -161,11 +162,23 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         HttpResponseMessage rawTokenResponse = await _client!.GetAsync($"{PreviewRouteBase}/{Convert.ToHexStringLower(manifest.SmallFilePreviewHashEncrypted!)}");
         Assert.That(rawTokenResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
-        using var conditional = new HttpRequestMessage(HttpMethod.Get, $"{PreviewRouteBase}/{listedFile.PreviewHashEncryptedHex}");
+        using HttpRequestMessage conditional = new(HttpMethod.Get, previewUrl);
         conditional.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag!));
 
-        HttpResponseMessage notModified = await _client.SendAsync(conditional);
-        Assert.That(notModified.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
+        using HttpResponseMessage strongNotModified = await _client.SendAsync(conditional);
+        Assert.That(strongNotModified.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
+
+        using HttpRequestMessage weakConditional = new(HttpMethod.Get, previewUrl);
+        weakConditional.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag!, isWeak: true));
+
+        using HttpResponseMessage weakNotModified = await _client.SendAsync(weakConditional);
+        Assert.That(weakNotModified.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
+
+        using HttpRequestMessage anyConditional = new(HttpMethod.Get, previewUrl);
+        anyConditional.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Any);
+
+        using HttpResponseMessage anyNotModified = await _client.SendAsync(anyConditional);
+        Assert.That(anyNotModified.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
     }
 
     [Test]

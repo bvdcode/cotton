@@ -103,7 +103,7 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
-        /// Determines whether the request's If-None-Match header strongly matches the current entity tag.
+        /// Determines whether the request's If-None-Match condition matches the current entity tag.
         /// </summary>
         public static bool MatchesIfNoneMatchHeader(HttpRequest request, EntityTagHeaderValue entityTag)
         {
@@ -116,7 +116,9 @@ namespace Cotton.Server.Services
             }
 
             IList<EntityTagHeaderValue> clientEntityTags = EntityTagHeaderValue.ParseList([.. values!]);
-            return clientEntityTags.Any(x => x.Compare(entityTag, useStrongComparison: true));
+            return clientEntityTags.Any(clientEntityTag =>
+                EntityTagHeaderValue.Any.Equals(clientEntityTag)
+                || clientEntityTag.Compare(entityTag, useStrongComparison: false));
         }
 
         private static string QuoteETag(string value)
