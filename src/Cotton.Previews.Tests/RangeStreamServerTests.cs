@@ -11,6 +11,51 @@ namespace Cotton.Previews.Tests
 {
     public class RangeStreamServerTests
     {
+        [TestCase("bytes=-3")]
+        [TestCase("bytes=7-")]
+        [TestCase("bytes=7-20")]
+        public async Task Get_WithSatisfiableRange_ReturnsResolvedBytes(string range)
+        {
+            (HttpStatusCode StatusCode, string? ContentRange, byte[] Content) response =
+                await SendRangeAsync(range).ConfigureAwait(false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.PartialContent));
+                Assert.That(response.ContentRange, Is.EqualTo("bytes 7-9/10"));
+                Assert.That(response.Content, Is.EqualTo(new byte[] { 7, 8, 9 }));
+            });
+        }
+
+        [TestCase("items=0-1")]
+        [TestCase("bytes=0-1,4-5")]
+        public async Task Get_WithUnsupportedRange_ReturnsRequestedRangeNotSatisfiable(string range)
+        {
+            (HttpStatusCode StatusCode, string? ContentRange, byte[] Content) response =
+                await SendRangeAsync(range).ConfigureAwait(false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.RequestedRangeNotSatisfiable));
+                Assert.That(response.ContentRange, Is.Null);
+                Assert.That(response.Content, Is.Empty);
+            });
+        }
+
+        [Test]
+        public async Task Get_WithRangeStartingPastEnd_ReturnsStreamLength()
+        {
+            (HttpStatusCode StatusCode, string? ContentRange, byte[] Content) response =
+                await SendRangeAsync("bytes=10-").ConfigureAwait(false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.RequestedRangeNotSatisfiable));
+                Assert.That(response.ContentRange, Is.EqualTo("bytes */10"));
+                Assert.That(response.Content, Is.Empty);
+            });
+        }
+
         [Test]
         public async Task DisposeAsync_WaitsForActiveRangeRequestBeforeDisposingSemaphore()
         {
@@ -108,6 +153,22 @@ namespace Cotton.Previews.Tests
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
             {
             }
+        }
+
+        private static async Task<(HttpStatusCode StatusCode, string? ContentRange, byte[] Content)> SendRangeAsync(
+            string range)
+        {
+            byte[] source = Enumerable.Range(0, 10).Select(value => (byte)value).ToArray();
+            using MemoryStream stream = new(source, writable: false);
+            await using RangeStreamServer server = new(stream);
+            using HttpClient client = new();
+            using HttpRequestMessage request = new(HttpMethod.Get, server.Url);
+            request.Headers.TryAddWithoutValidation("Range", range);
+
+            using HttpResponseMessage response = await client.SendAsync(request).ConfigureAwait(false);
+            byte[] content = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+
+            return (response.StatusCode, response.Content.Headers.ContentRange?.ToString(), content);
         }
 
         private static bool IsSemaphoreDisposedEntry((LogLevel Level, Exception? Exception, string Message) entry)
