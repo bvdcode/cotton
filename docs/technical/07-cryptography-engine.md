@@ -34,7 +34,6 @@ Per the README, the encryption core was conceived and built first, on the premis
 | `BufferScope` | `src/Cotton.Crypto/Internals/BufferScope.cs` | Pooled buffer manager with count/byte caps, reference-identity tracking, and zero-on-dispose. |
 | `ReferenceEqualityComparer<T>` | `src/Cotton.Crypto/Internals/ReferenceEqualityComparer.cs` | Reference-identity comparer used by `BufferScope` so equal-content arrays aren't conflated. |
 | `KeyDerivation` | `src/Cotton.Crypto/KeyDerivation.cs` | HKDF (RFC 5869) over HMAC-SHA256 subkey derivation. |
-| `HashHelpers` | `src/Cotton.Crypto/Helpers/HashHelpers.cs` | 256-bit lowercase-hex hash validation; legacy `HashToHex` (marked `[Obsolete]`). |
 | `AesGcmKeyHeader` | `src/Cotton.Crypto/Models/AesGcmKeyHeader.cs` | Public `readonly record struct` for serializing/parsing a header outside the pipeline. |
 | `ByteChunk` | `src/Cotton.Crypto/Models/ByteChunk.cs` | Public `(byte[] Buffer, int Length)` `readonly struct` documenting pool-ownership transfer. |
 | `StreamCipherFactory` | `src/Cotton.Server/Services/StreamCipherFactory.cs` | `internal static` server-side construction of `AesGcmStreamCipher` from `CottonEncryptionSettings`. |
@@ -298,7 +297,6 @@ Both endpoints below live on `SettingsController`, which is routed at both `Rout
 ## KeyDerivation, hashing, randomness
 
 - **`KeyDerivation`** (`src/Cotton.Crypto/KeyDerivation.cs`) implements HKDF (RFC 5869) over HMAC-SHA256 manually: `HkdfExtract` (HMAC over the IKM with the salt as key, defaulting to `HmacOutputLength = 32` zero bytes per RFC 5869 §2.2) then `HkdfExpand` (`T(1) = HMAC(PRK, info || 0x01)`, `T(i) = HMAC(PRK, T(i-1) || info || i)`). Intermediate buffers (`prk`, `tPrev`, `data`, `infoBytes`, plus the string overload's UTF-8 inputs) are zeroed via `CryptographicOperations.ZeroMemory`. Expansion is capped at 255 blocks (`n > 255` throws `ArgumentOutOfRangeException`). `DeriveSubkey(ReadOnlySpan<byte> masterKey, ReadOnlySpan<byte> info, int lengthBytes, ReadOnlySpan<byte> salt = default)` is the byte-span core; the string overloads UTF-8-encode their inputs, and `DeriveSubkeyBase64` returns base64. This is what `Autoconfig` uses to split the root master key into the data master key and the pepper.
-- **`HashHelpers`** (`src/Cotton.Crypto/Helpers/HashHelpers.cs`) validates lowercase 64-hex-char (256-bit) strings via a `[GeneratedRegex]` compiled `^[0-9a-f]{64}$` (`IsValidHash`). `HashToHex(Stream)` computes a SHA-256 lowercase-hex digest and is marked `[Obsolete]`. **Note:** its obsolete message points callers to `Cotton.Crypto.Hashing.HashingExtensions.ComputeHashToHex`, but no such type, namespace, or method exists anywhere in the repository — the suggested replacement is a dangling reference. `HashToHex` itself remains the only functioning hash-to-hex helper in `Cotton.Crypto`.
 
 ## Concurrency, failure modes, and edge cases
 

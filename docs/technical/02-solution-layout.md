@@ -17,7 +17,7 @@ The split between projects is enforced by layering: low-level primitives (`Cotto
 | Project (file) | Display name | TFM | Output | Responsibility |
 |---|---|---|---|---|
 | `src/Cotton.Server/Cotton.Server.csproj` | Cotton.Server | `net10.0` | Web (`Microsoft.NET.Sdk.Web`) | The ASP.NET Core host: controllers, SignalR hubs, Quartz jobs, WebDAV, auth, DI composition root. The only runnable app. |
-| `src/Cotton.Crypto/Cotton.Crypto.csproj` | Cotton.Crypto | `net10.0` | Library (`Microsoft.NET.Sdk`) | In-repo streaming AES-GCM cipher (`AesGcmStreamCipher`), key derivation (`KeyDerivation`), and hashing (`HashHelpers`). No internal project references. |
+| `src/Cotton.Crypto/Cotton.Crypto.csproj` | Cotton.Crypto | `net10.0` | Library (`Microsoft.NET.Sdk`) | In-repo streaming AES-GCM cipher (`AesGcmStreamCipher`) and key derivation (`KeyDerivation`). No internal project references. |
 | `src/Cotton.Storage/Cotton.Storage.csproj` | Cotton.Storage | `net10.0` | Library | Content-addressed storage pipeline: filesystem & S3 backends, compression and crypto processors. |
 | `src/Cotton.Topology/Cotton.Topology.csproj` | Cotton.Topology | `net10.0` | Library | Layout/topology graph services (`ILayoutService`, `ILayoutNavigator`, `LayoutNavigator`, `StorageLayoutService`). |
 | `src/Cotton.Database/Cotton.Database.csproj` | Cotton.Database | `net10.0` | Library | EF Core + Npgsql data model, `DbContext`, entities, migrations. |
