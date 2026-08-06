@@ -11,6 +11,7 @@ import {
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OidcProviderDto } from "@shared/api/oidcApi";
+import { getApiErrorMessage } from "@shared/api/httpClient";
 import {
   useCreateOidcProviderMutation,
   useUpdateOidcProviderMutation,
@@ -98,8 +99,11 @@ const OidcProviderFormDialogContent = ({
       }
 
       onClose();
-    } catch {
-      setError(t("identityProviders.errors.saveFailed"));
+    } catch (error) {
+      setError(
+        getApiErrorMessage(error) ??
+          t("identityProviders.errors.saveFailed"),
+      );
     }
   };
 
