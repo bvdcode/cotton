@@ -11,7 +11,6 @@ using EasyExtensions.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Net.Http.Headers;
-using Microsoft.Extensions.Primitives;
 
 namespace Cotton.Server.Controllers
 {
@@ -79,16 +78,12 @@ namespace Cotton.Server.Controllers
                     return this.ApiNotFound("Preview image not found.");
                 }
                 string etag = $"\"sha256-{decryptedPreviewHash}\"";
-                var etagHeader = new EntityTagHeaderValue(etag);
-                if (Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out StringValues inmValues))
+                EntityTagHeaderValue etagHeader = new(etag);
+                if (FileETags.MatchesIfNoneMatchHeader(Request, etagHeader))
                 {
-                    IList<EntityTagHeaderValue> clientEtags = EntityTagHeaderValue.ParseList([.. inmValues!]);
-                    if (clientEtags.Any(x => x.Compare(etagHeader, useStrongComparison: true)))
-                    {
-                        Response.Headers.ETag = etagHeader.ToString();
-                        Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-                        return StatusCode(StatusCodes.Status304NotModified);
-                    }
+                    Response.Headers.ETag = etagHeader.ToString();
+                    Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+                    return StatusCode(StatusCodes.Status304NotModified);
                 }
                 PipelineContext context = new()
                 {

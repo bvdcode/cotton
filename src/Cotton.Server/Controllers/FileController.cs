@@ -37,7 +37,6 @@ using Microsoft.Net.Http.Headers;
 using Quartz;
 using FileVersionDto = Cotton.Files.FileVersionDto;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Primitives;
 
 namespace Cotton.Server.Controllers
 {
@@ -824,10 +823,10 @@ namespace Cotton.Server.Controllers
         private IActionResult ServeLargePreview(NodeFile nodeFile)
         {
             string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash!);
-            var etagHeader = new EntityTagHeaderValue($"\"sha256-{previewHashHex}\"");
+            EntityTagHeaderValue etagHeader = new($"\"sha256-{previewHashHex}\"");
             SetLargePreviewCacheHeaders(etagHeader);
 
-            if (ClientHasCurrentPreview(etagHeader))
+            if (FileETags.MatchesIfNoneMatchHeader(Request, etagHeader))
             {
                 return StatusCode(StatusCodes.Status304NotModified);
             }
@@ -840,17 +839,6 @@ namespace Cotton.Server.Controllers
         {
             Response.Headers.ETag = etagHeader.ToString();
             Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-        }
-
-        private bool ClientHasCurrentPreview(EntityTagHeaderValue etagHeader)
-        {
-            if (!Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out StringValues inmValues))
-            {
-                return false;
-            }
-
-            IList<EntityTagHeaderValue> clientEtags = EntityTagHeaderValue.ParseList([.. inmValues!]);
-            return clientEtags.Any(x => x.Compare(etagHeader, useStrongComparison: true));
         }
 
         private IActionResult ServeTokenFileDownload(
