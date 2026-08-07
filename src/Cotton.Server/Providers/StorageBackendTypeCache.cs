@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models.Enums;
@@ -10,50 +10,40 @@ namespace Cotton.Server.Providers
     /// </summary>
     public class StorageBackendTypeCache : IStorageBackendTypeCache
     {
-        private int _hasValue;
-        private StorageType _value;
+        private readonly Lock _lock = new();
 
-        /// <summary>
-        /// Gets value.
-        /// </summary>
-        public StorageType Get()
-        {
-            return TryGet(out StorageType type)
-                ? type
-                : throw new InvalidOperationException("Storage backend type cache is not initialized.");
-        }
+        // Boxed StorageType when resolved, null otherwise. A single reference keeps reads atomic,
+        // and resolving under the same lock as Reset makes a stale value impossible to publish.
+        private volatile object? _state;
 
-        /// <summary>
-        /// Attempts to get value.
-        /// </summary>
-        public bool TryGet(out StorageType type)
+        /// <inheritdoc />
+        public StorageType GetOrAdd(Func<StorageType> resolve)
         {
-            if (Volatile.Read(ref _hasValue) == 1)
+            if (_state is StorageType cached)
             {
-                type = _value;
-                return true;
+                return cached;
             }
 
-            type = default;
-            return false;
+            lock (_lock)
+            {
+                if (_state is StorageType raced)
+                {
+                    return raced;
+                }
+
+                StorageType resolved = resolve();
+                _state = resolved;
+                return resolved;
+            }
         }
 
-        /// <summary>
-        /// Sets value.
-        /// </summary>
-        public void Set(StorageType type)
-        {
-            _value = type;
-            Volatile.Write(ref _hasValue, 1);
-        }
-
-        /// <summary>
-        /// Clears the cached value so it will be resolved again.
-        /// </summary>
+        /// <inheritdoc />
         public void Reset()
         {
-            Volatile.Write(ref _hasValue, 0);
-            _value = default;
+            lock (_lock)
+            {
+                _state = null;
+            }
         }
     }
 }

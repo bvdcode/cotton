@@ -818,8 +818,6 @@ namespace Cotton.Server.Providers
 
         private void InvalidateSettingsCache(bool serverIsInitialized)
         {
-            _storageTypeCache?.Reset();
-
             lock (_cacheLock)
             {
                 _cache = null;
@@ -828,6 +826,10 @@ namespace Cotton.Server.Providers
                     _isServerInitializedCache = (true, DateTimeOffset.UtcNow);
                 }
             }
+
+            // Reset after the settings cache is cleared: a backend-type fill racing with this
+            // invalidation then either resolves fresh settings or gets wiped by the reset below.
+            _storageTypeCache?.Reset();
         }
 
         private static void CacheRuntimePipelineSettings(CottonServerSettings settings)

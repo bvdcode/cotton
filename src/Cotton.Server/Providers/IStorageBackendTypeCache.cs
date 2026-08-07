@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models.Enums;
@@ -11,22 +11,12 @@ namespace Cotton.Server.Providers
     public interface IStorageBackendTypeCache
     {
         /// <summary>
-        /// Gets value.
+        /// Returns the cached storage type, resolving and caching it when absent.
         /// </summary>
-        StorageType Get();
+        StorageType GetOrAdd(Func<StorageType> resolve);
 
         /// <summary>
-        /// Sets value.
-        /// </summary>
-        void Set(StorageType type);
-
-        /// <summary>
-        /// Attempts to get value.
-        /// </summary>
-        bool TryGet(out StorageType type);
-
-        /// <summary>
-        /// Clears the cached value.
+        /// Clears the cached value so it will be resolved again.
         /// </summary>
         void Reset();
     }
