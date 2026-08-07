@@ -2787,12 +2787,15 @@
         "actions": "Ações"
       },
       "actions": {
-        "edit": "Editar"
+        "edit": "Editar",
+        "delete": "Excluir conta",
+        "deleteCurrent": "Você não pode excluir sua própria conta"
       },
       "errors": {
         "loadFailed": "Falha ao carregar os usuários.",
         "createFailed": "Falha ao criar o usuário.",
-        "updateFailed": "Falha ao atualizar o usuário."
+        "updateFailed": "Falha ao atualizar o usuário.",
+        "deleteFailed": "Falha ao excluir o usuário."
       },
       "create": {
         "title": "Criar usuário",
@@ -2812,6 +2815,14 @@
         "save": "Salvar",
         "saving": "Salvando...",
         "success": "Usuário atualizado."
+      },
+      "delete": {
+        "title": "Excluir conta",
+        "warning": "A conta, todos os arquivos e todos os dados relacionados serão excluídos permanentemente. Esta ação não pode ser desfeita.",
+        "confirmation": "Digite {{username}} para confirmar.",
+        "confirmationLabel": "Nome de usuário",
+        "button": "Excluir conta",
+        "deleting": "Excluindo..."
       },
       "storageUsage": {
         "calculating": "Calculando uso de armazenamento"

@@ -4,7 +4,9 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DataGrid, type GridColumnVisibilityModel } from "@mui/x-data-grid";
 import type { AdminUserDto } from "../../../shared/api/adminApi";
+import { useAuth } from "../../../features/auth/useAuth";
 import { CreateUserDialog } from "./CreateUserDialog";
+import { DeleteUserDialog } from "./DeleteUserDialog";
 import { EditUserDialog } from "./EditUserDialog";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 import { AdminPageHeader } from "../components/AdminPageHeader";
@@ -34,10 +36,12 @@ const createInitialColumnVisibilityModels = (): Record<
 
 export const AdminUsersPage = () => {
   const { t } = useTranslation(["admin", "common"]);
+  const { user: currentUser } = useAuth();
 
   const { users, loadState, storageUsageLoading, refresh } =
     useAdminUsersData();
   const [editingUser, setEditingUser] = useState<AdminUserDto | null>(null);
+  const [deletingUser, setDeletingUser] = useState<AdminUserDto | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   const isLoading = loadState.kind === "loading";
@@ -47,7 +51,9 @@ export const AdminUsersPage = () => {
 
   const columns = useAdminUsersColumns({
     storageUsageLoading,
+    currentUserId: currentUser?.id ?? null,
     onEdit: setEditingUser,
+    onDelete: setDeletingUser,
   });
 
   const theme = useTheme();
@@ -149,6 +155,11 @@ export const AdminUsersPage = () => {
         open={editingUser !== null}
         user={editingUser}
         onClose={() => setEditingUser(null)}
+      />
+      <DeleteUserDialog
+        open={deletingUser !== null}
+        user={deletingUser}
+        onClose={() => setDeletingUser(null)}
       />
     </Stack>
   );

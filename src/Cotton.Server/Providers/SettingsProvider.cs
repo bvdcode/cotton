@@ -630,6 +630,37 @@ namespace Cotton.Server.Providers
         }
 
         /// <summary>
+        /// Clears the default user template when it belongs to the specified owner.
+        /// </summary>
+        public async Task ClearDefaultUserTemplateForOwnerAsync(
+            Guid ownerId,
+            CancellationToken cancellationToken = default)
+        {
+            CottonServerSettings? settings = await LoadLatestSettingsAsync(
+                asNoTracking: false,
+                cancellationToken);
+            if (settings?.DefaultUserTemplateNodeId is not Guid templateNodeId)
+            {
+                return;
+            }
+
+            bool isOwnedByUser = await _dbContext.Nodes
+                .AsNoTracking()
+                .AnyAsync(
+                    x => x.Id == templateNodeId && x.OwnerId == ownerId,
+                    cancellationToken);
+            if (!isOwnedByUser)
+            {
+                return;
+            }
+
+            settings.DefaultUserTemplateNodeId = null;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            CacheRuntimePipelineSettings(settings);
+            InvalidateSettingsCache(serverIsInitialized: true);
+        }
+
+        /// <summary>
         /// Validates public base url.
         /// </summary>
         public string? ValidatePublicBaseUrl(string? url)

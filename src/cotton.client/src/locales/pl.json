@@ -2828,12 +2828,15 @@
         "actions": "Akcje"
       },
       "actions": {
-        "edit": "Edytuj"
+        "edit": "Edytuj",
+        "delete": "Usuń konto",
+        "deleteCurrent": "Nie możesz usunąć własnego konta"
       },
       "errors": {
         "loadFailed": "Nie udało się załadować użytkowników.",
         "createFailed": "Nie udało się utworzyć użytkownika.",
-        "updateFailed": "Nie udało się zaktualizować użytkownika."
+        "updateFailed": "Nie udało się zaktualizować użytkownika.",
+        "deleteFailed": "Nie udało się usunąć użytkownika."
       },
       "create": {
         "title": "Utwórz użytkownika",
@@ -2853,6 +2856,14 @@
         "save": "Zapisz",
         "saving": "Zapisywanie...",
         "success": "Użytkownik zaktualizowany."
+      },
+      "delete": {
+        "title": "Usuń konto",
+        "warning": "Konto, wszystkie pliki i wszystkie powiązane dane zostaną trwale usunięte. Tej operacji nie można cofnąć.",
+        "confirmation": "Wpisz {{username}}, aby potwierdzić.",
+        "confirmationLabel": "Nazwa użytkownika",
+        "button": "Usuń konto",
+        "deleting": "Usuwanie..."
       },
       "storageUsage": {
         "calculating": "Obliczanie wykorzystania magazynu"

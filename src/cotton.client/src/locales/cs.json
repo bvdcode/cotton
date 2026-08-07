@@ -2825,12 +2825,15 @@
         "actions": "Akce"
       },
       "actions": {
-        "edit": "Upravit"
+        "edit": "Upravit",
+        "delete": "Smazat účet",
+        "deleteCurrent": "Vlastní účet nelze smazat"
       },
       "errors": {
         "loadFailed": "Načtení uživatelů se nezdařilo.",
         "createFailed": "Vytvoření uživatele se nezdařilo.",
-        "updateFailed": "Aktualizace uživatele se nezdařila."
+        "updateFailed": "Aktualizace uživatele se nezdařila.",
+        "deleteFailed": "Smazání uživatele se nezdařilo."
       },
       "create": {
         "title": "Vytvořit uživatele",
@@ -2850,6 +2853,14 @@
         "save": "Uložit",
         "saving": "Ukládání...",
         "success": "Uživatel byl aktualizován."
+      },
+      "delete": {
+        "title": "Smazat účet",
+        "warning": "Účet, všechny soubory a související data budou trvale smazány. Tuto akci nelze vrátit zpět.",
+        "confirmation": "Pro potvrzení zadejte {{username}}.",
+        "confirmationLabel": "Uživatelské jméno",
+        "button": "Smazat účet",
+        "deleting": "Mazání..."
       },
       "storageUsage": {
         "calculating": "Výpočet využití úložiště"

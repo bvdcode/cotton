@@ -2785,12 +2785,15 @@
         "actions": "Acties"
       },
       "actions": {
-        "edit": "Bewerken"
+        "edit": "Bewerken",
+        "delete": "Account verwijderen",
+        "deleteCurrent": "Je kunt je eigen account niet verwijderen"
       },
       "errors": {
         "loadFailed": "Laden van gebruikers mislukt.",
         "createFailed": "Aanmaken van gebruiker mislukt.",
-        "updateFailed": "Bijwerken van gebruiker mislukt."
+        "updateFailed": "Bijwerken van gebruiker mislukt.",
+        "deleteFailed": "Verwijderen van gebruiker mislukt."
       },
       "create": {
         "title": "Gebruiker aanmaken",
@@ -2810,6 +2813,14 @@
         "save": "Opslaan",
         "saving": "Bezig met opslaan...",
         "success": "Gebruiker bijgewerkt."
+      },
+      "delete": {
+        "title": "Account verwijderen",
+        "warning": "Het account, alle bestanden en alle gerelateerde gegevens worden permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
+        "confirmation": "Typ {{username}} om te bevestigen.",
+        "confirmationLabel": "Gebruikersnaam",
+        "button": "Account verwijderen",
+        "deleting": "Bezig met verwijderen..."
       },
       "storageUsage": {
         "calculating": "Opslaggebruik berekenen"

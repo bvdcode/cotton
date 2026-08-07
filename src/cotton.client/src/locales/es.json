@@ -2783,12 +2783,15 @@
         "actions": "Acciones"
       },
       "actions": {
-        "edit": "Editar"
+        "edit": "Editar",
+        "delete": "Eliminar cuenta",
+        "deleteCurrent": "No puedes eliminar tu propia cuenta"
       },
       "errors": {
         "loadFailed": "No se pudieron cargar los usuarios.",
         "createFailed": "No se pudo crear el usuario.",
-        "updateFailed": "No se pudo actualizar el usuario."
+        "updateFailed": "No se pudo actualizar el usuario.",
+        "deleteFailed": "No se pudo eliminar el usuario."
       },
       "create": {
         "title": "Crear usuario",
@@ -2808,6 +2811,14 @@
         "save": "Guardar",
         "saving": "Guardando...",
         "success": "Usuario actualizado."
+      },
+      "delete": {
+        "title": "Eliminar cuenta",
+        "warning": "La cuenta, todos los archivos y todos los datos relacionados se eliminarán permanentemente. Esta acción no se puede deshacer.",
+        "confirmation": "Escribe {{username}} para confirmar.",
+        "confirmationLabel": "Nombre de usuario",
+        "button": "Eliminar cuenta",
+        "deleting": "Eliminando..."
       },
       "storageUsage": {
         "calculating": "Calculando uso de almacenamiento"

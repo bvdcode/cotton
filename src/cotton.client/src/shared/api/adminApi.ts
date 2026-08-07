@@ -222,6 +222,10 @@ export const adminApi = {
     return response.data;
   },
 
+  deleteUser: async (userId: string): Promise<void> => {
+    await httpClient.delete(`users/${userId}`);
+  },
+
   getLatestDatabaseBackup: async (
     signal?: AbortSignal,
   ): Promise<LatestDatabaseBackupDto | null> => {

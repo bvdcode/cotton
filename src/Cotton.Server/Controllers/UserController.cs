@@ -243,6 +243,20 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
+        /// Permanently deletes a user and all user-owned data.
+        /// </summary>
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpDelete("{userId:guid}")]
+        public async Task<IActionResult> DeleteUser(
+            [FromRoute] Guid userId,
+            CancellationToken cancellationToken)
+        {
+            AdminDeleteUserRequest command = new(User.GetUserId(), userId);
+            await _mediator.Send(command, cancellationToken);
+            return NoContent();
+        }
+
+        /// <summary>
         /// Changes the current user password after verifying the old password.
         /// </summary>
         [Authorize]

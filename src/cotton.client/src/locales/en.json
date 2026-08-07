@@ -2581,12 +2581,15 @@
         "actions": "Actions"
       },
       "actions": {
-        "edit": "Edit"
+        "edit": "Edit",
+        "delete": "Delete account",
+        "deleteCurrent": "You cannot delete your own account"
       },
       "errors": {
         "loadFailed": "Failed to load users.",
         "createFailed": "Failed to create user.",
-        "updateFailed": "Failed to update user."
+        "updateFailed": "Failed to update user.",
+        "deleteFailed": "Failed to delete user."
       },
       "create": {
         "title": "Create user",
@@ -2606,6 +2609,14 @@
         "save": "Save",
         "saving": "Saving...",
         "success": "User updated."
+      },
+      "delete": {
+        "title": "Delete account",
+        "warning": "This permanently deletes the account, all files, and all related data. This action cannot be undone.",
+        "confirmation": "Type {{username}} to confirm.",
+        "confirmationLabel": "Username",
+        "button": "Delete account",
+        "deleting": "Deleting..."
       },
       "storageUsage": {
         "calculating": "Calculating storage usage"

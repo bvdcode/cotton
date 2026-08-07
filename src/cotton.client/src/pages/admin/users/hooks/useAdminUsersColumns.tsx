@@ -9,6 +9,7 @@ import {
 } from "@mui/material";
 import { GridActionsCellItem, type GridColDef } from "@mui/x-data-grid";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import type { AdminUserDto } from "../../../../shared/api/adminApi";
@@ -28,12 +29,16 @@ const renderOptionalText = (value: string, placeholder: string) =>
 
 interface UseAdminUsersColumnsOptions {
   storageUsageLoading: boolean;
+  currentUserId: string | null;
   onEdit: (user: AdminUserDto) => void;
+  onDelete: (user: AdminUserDto) => void;
 }
 
 export const useAdminUsersColumns = ({
   storageUsageLoading,
+  currentUserId,
   onEdit,
+  onDelete,
 }: UseAdminUsersColumnsOptions): GridColDef<AdminUserDto>[] => {
   const { t } = useTranslation(["admin", "common"]);
 
@@ -204,7 +209,7 @@ export const useAdminUsersColumns = ({
         field: "actions",
         headerName: t("users.columns.actions"),
         type: "actions",
-        width: 80,
+        width: 100,
         getActions: (params) => [
           <GridActionsCellItem
             key="edit"
@@ -212,11 +217,24 @@ export const useAdminUsersColumns = ({
             label={t("users.actions.edit")}
             onClick={() => onEdit(params.row)}
           />,
+          <GridActionsCellItem
+            key="delete"
+            icon={<DeleteOutlineIcon />}
+            label={
+              params.row.id === currentUserId
+                ? t("users.actions.deleteCurrent")
+                : t("users.actions.delete")
+            }
+            onClick={() => onDelete(params.row)}
+            disabled={params.row.id === currentUserId}
+          />,
         ],
       },
     ],
     [
+      currentUserId,
       onEdit,
+      onDelete,
       placeholder,
       roleLabel,
       storageUsageCalculatingLabel,

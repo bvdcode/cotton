@@ -2784,12 +2784,15 @@
         "actions": "Actions"
       },
       "actions": {
-        "edit": "Modifier"
+        "edit": "Modifier",
+        "delete": "Supprimer le compte",
+        "deleteCurrent": "Vous ne pouvez pas supprimer votre propre compte"
       },
       "errors": {
         "loadFailed": "Échec du chargement des utilisateurs.",
         "createFailed": "Échec de la création de l'utilisateur.",
-        "updateFailed": "Échec de la mise à jour de l'utilisateur."
+        "updateFailed": "Échec de la mise à jour de l'utilisateur.",
+        "deleteFailed": "Échec de la suppression de l'utilisateur."
       },
       "create": {
         "title": "Créer un utilisateur",
@@ -2809,6 +2812,14 @@
         "save": "Enregistrer",
         "saving": "Enregistrement...",
         "success": "Utilisateur mis à jour."
+      },
+      "delete": {
+        "title": "Supprimer le compte",
+        "warning": "Le compte, tous les fichiers et toutes les données associées seront définitivement supprimés. Cette action est irréversible.",
+        "confirmation": "Saisissez {{username}} pour confirmer.",
+        "confirmationLabel": "Nom d'utilisateur",
+        "button": "Supprimer le compte",
+        "deleting": "Suppression..."
       },
       "storageUsage": {
         "calculating": "Calcul de l'utilisation du stockage"

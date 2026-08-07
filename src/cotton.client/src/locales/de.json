@@ -2780,12 +2780,15 @@
         "actions": "Aktionen"
       },
       "actions": {
-        "edit": "Bearbeiten"
+        "edit": "Bearbeiten",
+        "delete": "Konto löschen",
+        "deleteCurrent": "Das eigene Konto kann nicht gelöscht werden"
       },
       "errors": {
         "loadFailed": "Benutzer konnten nicht geladen werden.",
         "createFailed": "Benutzer konnte nicht erstellt werden.",
-        "updateFailed": "Benutzer konnte nicht aktualisiert werden."
+        "updateFailed": "Benutzer konnte nicht aktualisiert werden.",
+        "deleteFailed": "Benutzer konnte nicht gelöscht werden."
       },
       "create": {
         "title": "Benutzer erstellen",
@@ -2805,6 +2808,14 @@
         "save": "Speichern",
         "saving": "Wird gespeichert...",
         "success": "Benutzer aktualisiert."
+      },
+      "delete": {
+        "title": "Konto löschen",
+        "warning": "Das Konto, alle Dateien und alle zugehörigen Daten werden dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+        "confirmation": "Geben Sie zur Bestätigung {{username}} ein.",
+        "confirmationLabel": "Benutzername",
+        "button": "Konto löschen",
+        "deleting": "Wird gelöscht..."
       },
       "storageUsage": {
         "calculating": "Belegter Speicher wird berechnet"

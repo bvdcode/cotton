@@ -2793,12 +2793,15 @@
         "actions": "操作"
       },
       "actions": {
-        "edit": "编辑"
+        "edit": "编辑",
+        "delete": "删除账户",
+        "deleteCurrent": "无法删除自己的账户"
       },
       "errors": {
         "loadFailed": "加载用户失败。",
         "createFailed": "创建用户失败。",
-        "updateFailed": "更新用户失败。"
+        "updateFailed": "更新用户失败。",
+        "deleteFailed": "删除用户失败。"
       },
       "create": {
         "title": "创建用户",
@@ -2818,6 +2821,14 @@
         "save": "保存",
         "saving": "正在保存……",
         "success": "用户已更新。"
+      },
+      "delete": {
+        "title": "删除账户",
+        "warning": "该账户、所有文件及所有相关数据将被永久删除。此操作无法撤销。",
+        "confirmation": "请输入 {{username}} 以确认。",
+        "confirmationLabel": "用户名",
+        "button": "删除账户",
+        "deleting": "正在删除……"
       },
       "storageUsage": {
         "calculating": "正在计算存储使用量"
