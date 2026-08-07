@@ -302,8 +302,7 @@ namespace Cotton.Server.IntegrationTests
                 ServerUsage = [ServerUsage.Other],
                 StorageSpaceMode = StorageSpaceMode.Optimal,
                 GeoIpLookupMode = GeoIpLookupMode.Disabled,
-                FcmProjectId = "cotton-test",
-                FcmServiceAccountJsonEncrypted = "{\"project_id\":\"cotton-test\"}"
+                SmtpPasswordEncrypted = "cotton-test-secret"
             });
             await encryptedDbContext.SaveChangesAsync();
         }

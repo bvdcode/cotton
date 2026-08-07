@@ -154,9 +154,6 @@ namespace Cotton.Server.Handlers.Users
             await _dbContext.Notifications
                 .Where(x => x.UserId == userId)
                 .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.PushDeviceTokens
-                .Where(x => x.UserId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
             await _dbContext.UserPasskeyCredentials
                 .Where(x => x.UserId == userId)
                 .ExecuteDeleteAsync(cancellationToken);

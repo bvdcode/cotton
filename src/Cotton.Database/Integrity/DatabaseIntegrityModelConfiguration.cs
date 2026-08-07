@@ -18,7 +18,6 @@ namespace Cotton.Database.Integrity
             typeof(UserExternalIdentity),
             typeof(OidcLoginState),
             typeof(ExtendedRefreshToken),
-            typeof(PushDeviceToken),
             typeof(DownloadToken),
             typeof(NodeShareToken),
             typeof(CottonServerSettings),

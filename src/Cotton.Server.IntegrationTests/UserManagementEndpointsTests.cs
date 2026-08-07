@@ -561,16 +561,6 @@ public class UserManagementEndpointsTests : IntegrationTestBase
             Title = "Delete me",
             Priority = NotificationPriority.None,
         });
-        dbContext.PushDeviceTokens.Add(new PushDeviceToken
-        {
-            UserId = userId,
-            Provider = PushDeviceTokenProvider.FirebaseCloudMessaging,
-            Platform = PushDeviceTokenPlatform.Android,
-            Token = "device-token",
-            TokenHash = new string('a', PushDeviceToken.TokenHashLength),
-            SessionId = "deletion-session",
-            LastRegisteredAt = DateTime.UtcNow,
-        });
         dbContext.UserPasskeyCredentials.Add(new UserPasskeyCredential
         {
             UserId = userId,
@@ -650,7 +640,6 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         int shareTokens = await dbContext.NodeShareTokens.CountAsync(x => x.CreatedByUserId == userId);
         int chunkOwnerships = await dbContext.ChunkOwnerships.CountAsync(x => x.OwnerId == userId);
         int notifications = await dbContext.Notifications.CountAsync(x => x.UserId == userId);
-        int pushTokens = await dbContext.PushDeviceTokens.CountAsync(x => x.UserId == userId);
         int passkeys = await dbContext.UserPasskeyCredentials.CountAsync(x => x.UserId == userId);
         int externalIdentities = await dbContext.UserExternalIdentities.CountAsync(x => x.UserId == userId);
         int oidcStates = await dbContext.OidcLoginStates.CountAsync(x => x.LinkUserId == userId);
@@ -675,7 +664,6 @@ public class UserManagementEndpointsTests : IntegrationTestBase
             Assert.That(shareTokens, Is.Zero);
             Assert.That(chunkOwnerships, Is.Zero);
             Assert.That(notifications, Is.Zero);
-            Assert.That(pushTokens, Is.Zero);
             Assert.That(passkeys, Is.Zero);
             Assert.That(externalIdentities, Is.Zero);
             Assert.That(oidcStates, Is.Zero);

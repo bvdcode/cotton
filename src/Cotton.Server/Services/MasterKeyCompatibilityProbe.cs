@@ -63,12 +63,6 @@ namespace Cotton.Server.Services
                     .Where(x => x.SmtpPasswordEncrypted != null && x.SmtpPasswordEncrypted != string.Empty)
                     .Select(x => x.SmtpPasswordEncrypted!)),
             new(
-                nameof(MasterKeyProbeServerSettings.FcmServiceAccountJsonEncrypted),
-                dbContext => dbContext.ServerSettings
-                    .AsNoTracking()
-                    .Where(x => x.FcmServiceAccountJsonEncrypted != null && x.FcmServiceAccountJsonEncrypted != string.Empty)
-                    .Select(x => x.FcmServiceAccountJsonEncrypted!)),
-            new(
                 nameof(MasterKeyProbeOidcProvider.ClientSecretEncrypted),
                 dbContext => dbContext.OidcProviders
                     .AsNoTracking()

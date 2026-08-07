@@ -128,7 +128,7 @@ namespace Cotton.Server.Controllers
                 sessionId,
                 revokedAt,
                 cancellationToken);
-            if (revocation.RevokedTokens > 0 || revocation.RevokedPushDeviceTokens > 0)
+            if (revocation.RevokedTokens > 0)
             {
                 await _sessionRevocationNotifier.NotifyRevokedAsync(
                     userId,

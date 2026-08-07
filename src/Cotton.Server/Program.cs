@@ -124,10 +124,6 @@ namespace Cotton.Server
                 client.Timeout = TimeSpan.FromSeconds(10);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
             });
-            builder.Services.AddHttpClient<IPushNotificationDeliveryService, FirebaseCloudMessagingPushNotificationDeliveryService>(client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(15);
-            });
             builder.Services
                 .AddHttpClient<IProxyTopologyProbeService, ProxyTopologyProbeService>(client =>
                 {
@@ -184,7 +180,6 @@ namespace Cotton.Server
                 .AddScoped<OidcProviderService>()
                 .AddScoped<OidcAuthenticationService>()
                 .AddScoped(sp => new OidcDiscoveryService(sp.GetRequiredService<IHttpClientFactory>().CreateClient(OidcDiscoveryService.HttpClientName)))
-                .AddScoped<PushDeviceTokenRevocationService>()
                 .AddScoped<RefreshTokenRevocationService>()
                 .AddScoped<SessionRevocationNotifier>()
                 .AddScoped<DownloadTokenExpirationService>()
