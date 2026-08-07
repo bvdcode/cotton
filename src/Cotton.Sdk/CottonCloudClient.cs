@@ -20,17 +20,46 @@ namespace Cotton.Sdk;
 /// </summary>
 public class CottonCloudClient : ICottonCloudClient
 {
+    private readonly HttpClient? _ownedHttpClient;
+    private int _disposeState;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CottonCloudClient" /> class.
     /// </summary>
+    /// <remarks>
+    /// The caller retains ownership of <paramref name="httpClient" />. Use the constructor without an
+    /// <see cref="HttpClient" /> when the SDK client should manage its own HTTP client.
+    /// </remarks>
     public CottonCloudClient(
         HttpClient httpClient,
         ICottonTokenStore tokenStore,
         CottonSdkOptions? options = null,
         ILoggerFactory? loggerFactory = null)
+        : this(httpClient, tokenStore, options, loggerFactory, ownsHttpClient: false)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a client that creates, owns, and disposes its own <see cref="HttpClient" />.
+    /// </summary>
+    public CottonCloudClient(
+        ICottonTokenStore tokenStore,
+        CottonSdkOptions? options = null,
+        ILoggerFactory? loggerFactory = null)
+        : this(CreateOwnedHttpClient(tokenStore), tokenStore, options, loggerFactory, ownsHttpClient: true)
+    {
+    }
+
+    private CottonCloudClient(
+        HttpClient httpClient,
+        ICottonTokenStore tokenStore,
+        CottonSdkOptions? options,
+        ILoggerFactory? loggerFactory,
+        bool ownsHttpClient)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(tokenStore);
+        _ownedHttpClient = ownsHttpClient ? httpClient : null;
         CottonSdkOptions resolvedOptions = options ?? new CottonSdkOptions();
         ILoggerFactory resolvedLoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         var transport = new CottonHttpTransport(
@@ -46,6 +75,12 @@ public class CottonCloudClient : ICottonCloudClient
         Notifications = new CottonNotificationClient(transport);
         Sync = new CottonSyncClient(transport);
         Realtime = new CottonRealtimeClient(tokenStore, resolvedOptions);
+    }
+
+    private static HttpClient CreateOwnedHttpClient(ICottonTokenStore tokenStore)
+    {
+        ArgumentNullException.ThrowIfNull(tokenStore);
+        return new HttpClient();
     }
 
     /// <summary>
@@ -89,8 +124,20 @@ public class CottonCloudClient : ICottonCloudClient
     public ICottonRealtimeClient Realtime { get; }
 
     /// <inheritdoc />
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return Realtime.DisposeAsync();
+        if (Interlocked.Exchange(ref _disposeState, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await Realtime.DisposeAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            _ownedHttpClient?.Dispose();
+        }
     }
 }

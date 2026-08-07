@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Net;
+using System.Reflection;
 using System.Text;
 using Cotton.Auth;
 using Cotton.Sdk.Auth;
@@ -284,5 +285,62 @@ public class CottonHttpTransportTests
             Assert.That(exception.Message, Does.Contain("Validation failed for remote folder."));
             Assert.That(exception.ResponseBody, Is.EqualTo("Validation failed for remote folder."));
         });
+    }
+
+    [Test]
+    public async Task DisposeAsync_DoesNotDisposeCallerOwnedHttpClient()
+    {
+        var handler = new DisposalTrackingHttpMessageHandler();
+        using var httpClient = new HttpClient(handler);
+        var client = new CottonCloudClient(httpClient, new InMemoryCottonTokenStore(), new CottonSdkOptions
+        {
+            BaseAddress = new Uri("https://cotton.test"),
+        });
+
+        await client.DisposeAsync();
+
+        Assert.That(handler.IsDisposed, Is.False);
+    }
+
+    [Test]
+    public async Task ConstructorWithoutHttpClient_OwnsAndDisposesItsHttpClient()
+    {
+        var client = new CottonCloudClient(
+            new InMemoryCottonTokenStore(),
+            new CottonSdkOptions { BaseAddress = new Uri("https://cotton.test") });
+        HttpClient? ownedHttpClient = typeof(CottonCloudClient)
+            .GetField("_ownedHttpClient", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.GetValue(client) as HttpClient;
+
+        await client.DisposeAsync();
+        await client.DisposeAsync();
+
+        Assert.That(ownedHttpClient, Is.Not.Null);
+        Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await ownedHttpClient!.GetAsync("api/v1/settings"));
+    }
+
+    private sealed class DisposalTrackingHttpMessageHandler : HttpMessageHandler
+    {
+        public int DisposeCount { get; private set; }
+
+        public bool IsDisposed => DisposeCount > 0;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                DisposeCount++;
+            }
+
+            base.Dispose(disposing);
+        }
     }
 }
