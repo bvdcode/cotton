@@ -51,6 +51,27 @@ afterEach(() => {
 });
 
 describe("PageHeader", () => {
+  it("keeps overflow actions stable when hidden buttons cannot be measured", () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(124);
+    vi.spyOn(
+      HTMLElement.prototype,
+      "getBoundingClientRect",
+    ).mockImplementation(function (this: HTMLElement) {
+      const parentDisplay = this.parentElement
+        ? window.getComputedStyle(this.parentElement).display
+        : "";
+      const width = parentDisplay === "none" ? 0 : 40;
+
+      return DOMRect.fromRect({ width, height: 40 });
+    });
+
+    renderHeader();
+
+    expect(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    ).toBeVisible();
+  });
+
   it("renders and invokes the new markdown file action", () => {
     const onNewFileClick = vi.fn();
 
