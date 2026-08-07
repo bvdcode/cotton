@@ -23,6 +23,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using Cotton.Database.Models;
+using Cotton.Server.Abstractions;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -589,6 +590,71 @@ public class MoveEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task ConcurrentWebDavPuts_DoNotExceedUserStorageQuota()
+    {
+        _client?.Dispose();
+        _factory?.Dispose();
+
+        QuotaPreflightBarrier barrier = new();
+        using TestAppFactory factory = new(_overrides);
+        using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IChunkIngestService>();
+                services.AddSingleton(barrier);
+                services.AddScoped<ChunkIngestService>();
+                services.AddScoped<IChunkIngestService>(serviceProvider =>
+                    new QuotaBarrierChunkIngestService(
+                        serviceProvider.GetRequiredService<ChunkIngestService>(),
+                        serviceProvider.GetRequiredService<QuotaPreflightBarrier>()));
+            });
+        });
+        using HttpClient client = customFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        string token = await LoginViaClientAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using HttpResponseMessage quotaResponse = await client.PatchAsJsonAsync(
+            "/api/v1/server/settings/default-user-storage-quota-bytes",
+            10L);
+        quotaResponse.EnsureSuccessStatusCode();
+        try
+        {
+            await UseWebDavBasicAuthAsync(client);
+
+            Task<HttpResponseMessage> firstPut = SendWebDavPutAsync(client, "/api/v1/webdav/quota-a.txt", "123456");
+            Task<HttpResponseMessage> secondPut = SendWebDavPutAsync(client, "/api/v1/webdav/quota-b.txt", "abcdef");
+            HttpResponseMessage[] responses = await Task.WhenAll(firstPut, secondPut);
+            using HttpResponseMessage firstResponse = responses[0];
+            using HttpResponseMessage secondResponse = responses[1];
+
+            int successes = responses.Count(response => response.StatusCode == HttpStatusCode.Created);
+            int quotaRejections = responses.Count(response => response.StatusCode == (HttpStatusCode)507);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(successes, Is.EqualTo(1));
+                Assert.That(quotaRejections, Is.EqualTo(1));
+            }
+
+            using IServiceScope scope = customFactory.Services.CreateScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            long usedBytes = await dbContext.NodeFiles
+                .AsNoTracking()
+                .SumAsync(nodeFile => nodeFile.FileManifest.SizeBytes);
+            Assert.That(usedBytes, Is.EqualTo(6));
+        }
+        finally
+        {
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using HttpResponseMessage resetQuotaResponse = await client.PatchAsJsonAsync<long?>(
+                "/api/v1/server/settings/default-user-storage-quota-bytes",
+                null);
+            resetQuotaResponse.EnsureSuccessStatusCode();
+        }
+    }
+
+    [Test]
     public async Task WebDavMove_NotificationFailureDoesNotFailRequest()
     {
         // Reset the standard factory so we can wire a throwing notifier.
@@ -881,6 +947,69 @@ internal class ThrowingEventNotificationService : IEventNotificationService
     public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+}
+
+internal sealed class QuotaBarrierChunkIngestService(
+    ChunkIngestService _inner,
+    QuotaPreflightBarrier _barrier) : IChunkIngestService
+{
+    public async Task<Chunk> UpsertChunkAsync(
+        Guid userId,
+        byte[] buffer,
+        int length,
+        CancellationToken ct = default)
+    {
+        await _barrier.SignalAndWaitAsync(ct);
+        return await _inner.UpsertChunkAsync(userId, buffer, length, ct);
+    }
+
+    public Task<Chunk> UpsertChunkAsync(
+        Guid userId,
+        Stream stream,
+        long length,
+        byte[] expectedHash,
+        CancellationToken ct = default)
+    {
+        return _inner.UpsertChunkAsync(userId, stream, length, expectedHash, ct);
+    }
+
+    public Task<Chunk> UpsertChunkAsync(
+        Guid userId,
+        Stream stream,
+        long length,
+        CancellationToken ct = default)
+    {
+        return _inner.UpsertChunkAsync(userId, stream, length, ct);
+    }
+
+    public Task<Chunk> ReuseExistingChunkAsync(
+        Guid userId,
+        byte[] chunkHash,
+        CancellationToken ct = default)
+    {
+        return _inner.ReuseExistingChunkAsync(userId, chunkHash, ct);
+    }
+}
+
+internal sealed class QuotaPreflightBarrier
+{
+    private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _arrived;
+
+    public async Task SignalAndWaitAsync(CancellationToken cancellationToken)
+    {
+        int arrived = Interlocked.Increment(ref _arrived);
+        if (arrived == 2)
+        {
+            _release.TrySetResult();
+        }
+        else if (arrived > 2)
+        {
+            throw new InvalidOperationException("The two-participant barrier was entered more than twice.");
+        }
+
+        await _release.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+    }
 }
 
 internal class WebDavDeleteEventRecorder
