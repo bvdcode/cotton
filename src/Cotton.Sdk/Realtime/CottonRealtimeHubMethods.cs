@@ -14,6 +14,11 @@ public static class CottonRealtimeHubMethods
     public const string SessionRevoked = "SessionRevoked";
 
     /// <summary>
+    /// Server method sent when a notification is created for the current user.
+    /// </summary>
+    public const string NotificationReceived = "OnNotificationReceived";
+
+    /// <summary>
     /// Server methods that indicate file-tree mutations.
     /// </summary>
     public static readonly IReadOnlyList<string> RemoteFileTreeChanged =

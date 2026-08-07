@@ -46,6 +46,16 @@ public class CottonRealtimeClientTests
     }
 
     [Test]
+    public void NotificationReceived_UsesServerHubMethod()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(CottonRealtimeHubMethods.NotificationReceived, Is.EqualTo("OnNotificationReceived"));
+            Assert.That((int)CottonRealtimeEventKind.NotificationReceived, Is.EqualTo(3));
+        });
+    }
+
+    [Test]
     public void CottonRealtimeEvent_RejectsUnknownKind()
     {
         Assert.That(

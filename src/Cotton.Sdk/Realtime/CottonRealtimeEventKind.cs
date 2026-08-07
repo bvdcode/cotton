@@ -22,4 +22,9 @@ public enum CottonRealtimeEventKind
     /// The current auth session was revoked by the server.
     /// </summary>
     SessionRevoked = 2,
+
+    /// <summary>
+    /// A notification was created for the current user.
+    /// </summary>
+    NotificationReceived = 3,
 }

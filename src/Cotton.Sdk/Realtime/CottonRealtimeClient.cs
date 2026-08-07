@@ -46,6 +46,9 @@ public class CottonRealtimeClient : ICottonRealtimeClient
     public event EventHandler<CottonRealtimeEvent>? SessionRevoked;
 
     /// <inheritdoc />
+    public event EventHandler<CottonRealtimeEvent>? NotificationReceived;
+
+    /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
         return _connection.StartAsync(cancellationToken);
@@ -73,6 +76,10 @@ public class CottonRealtimeClient : ICottonRealtimeClient
         _connection.On(
             CottonRealtimeHubMethods.SessionRevoked,
             () => PublishSessionRevoked(CottonRealtimeHubMethods.SessionRevoked));
+
+        _connection.On<object?>(
+            CottonRealtimeHubMethods.NotificationReceived,
+            _ => PublishNotificationReceived(CottonRealtimeHubMethods.NotificationReceived));
     }
 
     private void PublishRemoteFileTreeChanged(string methodName)
@@ -91,6 +98,16 @@ public class CottonRealtimeClient : ICottonRealtimeClient
             this,
             new CottonRealtimeEvent(
                 CottonRealtimeEventKind.SessionRevoked,
+                methodName,
+                DateTime.UtcNow));
+    }
+
+    private void PublishNotificationReceived(string methodName)
+    {
+        NotificationReceived?.Invoke(
+            this,
+            new CottonRealtimeEvent(
+                CottonRealtimeEventKind.NotificationReceived,
                 methodName,
                 DateTime.UtcNow));
     }

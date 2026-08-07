@@ -19,6 +19,11 @@ public interface ICottonRealtimeClient : IAsyncDisposable
     event EventHandler<CottonRealtimeEvent>? SessionRevoked;
 
     /// <summary>
+    /// Occurs when the server reports a newly created notification.
+    /// </summary>
+    event EventHandler<CottonRealtimeEvent>? NotificationReceived;
+
+    /// <summary>
     /// Starts the realtime connection.
     /// </summary>
     Task StartAsync(CancellationToken cancellationToken = default);
