@@ -6,9 +6,13 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cotton.Database.Integrity
 {
-    internal class DatabaseIntegritySaveChangesInterceptor(
+    /// <summary>
+    /// Signs pending protected rows right before the context saves changes.
+    /// </summary>
+    public class DatabaseIntegritySaveChangesInterceptor(
         IDatabaseIntegrityChangeSigner integrityChangeSigner) : SaveChangesInterceptor
     {
+        /// <inheritdoc />
         public override InterceptionResult<int> SavingChanges(
             DbContextEventData eventData,
             InterceptionResult<int> result)
@@ -17,6 +21,7 @@ namespace Cotton.Database.Integrity
             return result;
         }
 
+        /// <inheritdoc />
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
             DbContextEventData eventData,
             InterceptionResult<int> result,

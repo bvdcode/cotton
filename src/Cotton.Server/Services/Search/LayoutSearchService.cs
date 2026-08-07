@@ -5,6 +5,7 @@ using Cotton.Files;
 using Cotton.Nodes;
 using Cotton.Database;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
@@ -21,20 +22,20 @@ namespace Cotton.Server.Services.Search
         private const int MaxPageSize = 100;
 
         /// <inheritdoc />
-        public async Task<SearchLayoutsResultDto> SearchAsync(LayoutSearchRequest request, CancellationToken cancellationToken)
+        public async Task<PagedResult<SearchResultDto>> SearchAsync(LayoutSearchRequest request, CancellationToken cancellationToken)
         {
             ValidatePaging(request.Page, request.PageSize);
 
             LayoutSearchCriteria criteria = LayoutSearchCriteriaBuilder.Build(request.Query);
             if (!criteria.HasText && !criteria.HasIds)
             {
-                return new SearchLayoutsResultDto();
+                return CreateEmptySearchResult(0);
             }
 
             IQueryable<LayoutSearchHit>? hitsQuery = BuildHitsQuery(request, criteria);
             if (hitsQuery is null)
             {
-                return new SearchLayoutsResultDto();
+                return CreateEmptySearchResult(0);
             }
 
             hitsQuery = LayoutSearchHitMerger.MergeDuplicateHits(hitsQuery);
@@ -59,14 +60,13 @@ namespace Cotton.Server.Services.Search
                 hits,
                 cancellationToken);
 
-            return new SearchLayoutsResultDto
+            return new(new SearchResultDto
             {
                 Nodes = nodes,
                 Files = files,
                 NodePaths = nodePaths,
                 FilePaths = filePaths,
-                TotalCount = totalCount,
-            };
+            }, totalCount);
         }
 
         private IQueryable<LayoutSearchHit>? BuildHitsQuery(LayoutSearchRequest request, LayoutSearchCriteria criteria)
@@ -103,12 +103,9 @@ namespace Cotton.Server.Services.Search
             }
         }
 
-        private static SearchLayoutsResultDto CreateEmptySearchResult(int totalCount)
+        private static PagedResult<SearchResultDto> CreateEmptySearchResult(int totalCount)
         {
-            return new SearchLayoutsResultDto
-            {
-                TotalCount = totalCount,
-            };
+            return new(new SearchResultDto(), totalCount);
         }
 
         private static async Task<List<LayoutSearchHit>> LoadPagedHitsAsync(

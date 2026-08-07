@@ -69,6 +69,7 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
             services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
             services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
+            services.AddScoped<DatabaseIntegritySaveChangesInterceptor>();
             services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
             services.AddScoped<DatabaseIntegrityDiagnosticsService>();
             services.AddScoped<FileGraphIntegrityVerifier>();

@@ -19,7 +19,6 @@ export interface SharedNodeContentDto {
   id: Guid;
   createdAt: string;
   updatedAt: string;
-  totalCount: number;
   nodes: NodeDto[];
   files: SharedNodeFileDto[];
 }

@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services.Search;
 using EasyExtensions.Mediator;
@@ -16,7 +17,7 @@ namespace Cotton.Server.Handlers.Layouts
         Guid layoutId,
         string query,
         int page,
-        int pageSize) : IRequest<SearchLayoutsResultDto>
+        int pageSize) : IRequest<PagedResult<SearchResultDto>>
     {
         /// <summary>
         /// Gets the owning user identifier.
@@ -48,12 +49,12 @@ namespace Cotton.Server.Handlers.Layouts
     /// Handles search layouts queries in the mediator pipeline.
     /// </summary>
     public class SearchLayoutsQueryHandler(ILayoutSearchService _searchService)
-        : IRequestHandler<SearchLayoutsQuery, SearchLayoutsResultDto>
+        : IRequestHandler<SearchLayoutsQuery, PagedResult<SearchResultDto>>
     {
         /// <summary>
         /// Handles the request through the mediator pipeline.
         /// </summary>
-        public Task<SearchLayoutsResultDto> Handle(SearchLayoutsQuery request, CancellationToken cancellationToken)
+        public Task<PagedResult<SearchResultDto>> Handle(SearchLayoutsQuery request, CancellationToken cancellationToken)
         {
             LayoutSearchRequest searchRequest = new(
                 request.UserId,

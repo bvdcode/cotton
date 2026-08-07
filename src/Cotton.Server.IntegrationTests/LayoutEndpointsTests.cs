@@ -177,18 +177,18 @@ public class LayoutEndpointsTests : IntegrationTestBase
             new CreateNodeRequestDto { ParentId = root.Id, Name = "why-log" });
         textMatchResponse.EnsureSuccessStatusCode();
 
-        SearchLayoutsResultDto exact = await SearchAsync(root.LayoutId, target!.Id.ToString());
+        (SearchResultDto exact, int exactTotal) = await SearchAsync(root.LayoutId, target!.Id.ToString());
         Assert.Multiple(() =>
         {
-            Assert.That(exact.TotalCount, Is.EqualTo(1));
+            Assert.That(exactTotal, Is.EqualTo(1));
             Assert.That(exact.Nodes.Single().Id, Is.EqualTo(target.Id));
             Assert.That(exact.Files, Is.Empty);
         });
 
-        SearchLayoutsResultDto copiedLogLine = await SearchAsync(root.LayoutId, $"{target.Id} why");
+        (SearchResultDto copiedLogLine, int copiedTotal) = await SearchAsync(root.LayoutId, $"{target.Id} why");
         Assert.Multiple(() =>
         {
-            Assert.That(copiedLogLine.TotalCount, Is.EqualTo(1));
+            Assert.That(copiedTotal, Is.EqualTo(1));
             Assert.That(copiedLogLine.Nodes.Single().Id, Is.EqualTo(target.Id));
             Assert.That(copiedLogLine.Files, Is.Empty);
         });
@@ -209,20 +209,20 @@ public class LayoutEndpointsTests : IntegrationTestBase
         NodeDto prefixFolder = await CreateNodeAsync(root.Id, "demo archive");
         NodeDto substringFolder = await CreateNodeAsync(root.Id, "old demo backup");
 
-        SearchLayoutsResultDto firstPage = await SearchAsync(root.LayoutId, "demo", page: 1, pageSize: 2);
+        (SearchResultDto firstPage, int firstPageTotal) = await SearchAsync(root.LayoutId, "demo", page: 1, pageSize: 2);
         Assert.Multiple(() =>
         {
-            Assert.That(firstPage.TotalCount, Is.EqualTo(4));
+            Assert.That(firstPageTotal, Is.EqualTo(4));
             Assert.That(firstPage.Nodes.Single().Id, Is.EqualTo(exactFolder.Id));
             Assert.That(firstPage.Files.Single().Id, Is.EqualTo(exactFile.Id));
             Assert.That(firstPage.NodePaths[exactFolder.Id], Is.EqualTo($"/{root.Name}/demo"));
             Assert.That(firstPage.FilePaths[exactFile.Id], Is.EqualTo($"/{root.Name}/file-parent/demo"));
         });
 
-        SearchLayoutsResultDto secondPage = await SearchAsync(root.LayoutId, "demo", page: 2, pageSize: 2);
+        (SearchResultDto secondPage, int secondPageTotal) = await SearchAsync(root.LayoutId, "demo", page: 2, pageSize: 2);
         Assert.Multiple(() =>
         {
-            Assert.That(secondPage.TotalCount, Is.EqualTo(4));
+            Assert.That(secondPageTotal, Is.EqualTo(4));
             Assert.That(secondPage.Files, Is.Empty);
             Assert.That(secondPage.Nodes.Select(x => x.Id), Is.EqualTo(new[]
             {
@@ -249,25 +249,27 @@ public class LayoutEndpointsTests : IntegrationTestBase
         (await _client.DeleteAsync($"/api/v1/layouts/nodes/{trashedFolder.Id}")).EnsureSuccessStatusCode();
         (await _client.DeleteAsync($"/api/v1/files/{trashedFile.Id}")).EnsureSuccessStatusCode();
 
-        SearchLayoutsResultDto visibleResult = await SearchAsync(root.LayoutId, "archive-visible");
-        SearchLayoutsResultDto trashResult = await SearchAsync(root.LayoutId, "archive-trash");
+        (SearchResultDto visibleResult, int visibleTotal) = await SearchAsync(root.LayoutId, "archive-visible");
+        (SearchResultDto trashResult, int trashTotal) = await SearchAsync(root.LayoutId, "archive-trash");
 
         Assert.Multiple(() =>
         {
-            Assert.That(visibleResult.TotalCount, Is.EqualTo(1));
+            Assert.That(visibleTotal, Is.EqualTo(1));
             Assert.That(visibleResult.Nodes.Single().Id, Is.EqualTo(visible.Id));
-            Assert.That(trashResult.TotalCount, Is.EqualTo(0));
+            Assert.That(trashTotal, Is.EqualTo(0));
             Assert.That(trashResult.Nodes, Is.Empty);
             Assert.That(trashResult.Files, Is.Empty);
         });
     }
 
-    private async Task<SearchLayoutsResultDto> SearchAsync(Guid layoutId, string query, int page = 1, int pageSize = 20)
+    private async Task<(SearchResultDto Result, int TotalCount)> SearchAsync(Guid layoutId, string query, int page = 1, int pageSize = 20)
     {
         HttpResponseMessage response = await _client!.GetAsync(
             $"/api/v1/layouts/{layoutId}/search?query={Uri.EscapeDataString(query)}&page={page}&pageSize={pageSize}");
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<SearchLayoutsResultDto>())!;
+        SearchResultDto result = (await response.Content.ReadFromJsonAsync<SearchResultDto>())!;
+        int totalCount = int.Parse(response.Headers.GetValues("X-Total-Count").Single());
+        return (result, totalCount);
     }
 
     private async Task<NodeDto> CreateNodeAsync(Guid parentId, string name)

@@ -3,6 +3,7 @@
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
+using Cotton.Database.Integrity;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
@@ -21,6 +22,7 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Quartz.Extensions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
@@ -213,7 +215,10 @@ namespace Cotton.Server
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
-                .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
+                .AddPostgresDbContext<CottonDbContext>(
+                    x => x.UseLazyLoadingProxies = false,
+                    (sp, options) => options.AddInterceptors(
+                        sp.GetRequiredService<DatabaseIntegritySaveChangesInterceptor>()))
                 .AddSingleton<ILayoutMutationGate, LayoutMutationGate>()
                 .AddScoped<ILayoutService, StorageLayoutService>()
                 .AddScoped<ILayoutNavigator, LayoutNavigator>()

@@ -12,7 +12,7 @@ namespace Cotton.Database
     /// <summary>
     /// Entity Framework context for Cotton domain data and encrypted database fields.
     /// </summary>
-    public class CottonDbContext : IntegrityAuditedDbContext
+    public class CottonDbContext : AuditedDbContext
     {
         private readonly IDatabaseFieldProtector? _databaseFieldProtector;
 
@@ -20,7 +20,7 @@ namespace Cotton.Database
         /// Initializes a context for design-time and raw database operations that do not access encrypted fields.
         /// </summary>
         public CottonDbContext(DbContextOptions options)
-            : base(options, integrityChangeSigner: null)
+            : base(options)
         {
         }
 
@@ -29,9 +29,8 @@ namespace Cotton.Database
         /// </summary>
         public CottonDbContext(
             DbContextOptions options,
-            IDatabaseFieldProtector databaseFieldProtector,
-            IDatabaseIntegrityChangeSigner? integrityChangeSigner = null)
-            : base(options, integrityChangeSigner)
+            IDatabaseFieldProtector databaseFieldProtector)
+            : base(options)
         {
             ArgumentNullException.ThrowIfNull(databaseFieldProtector);
             _databaseFieldProtector = databaseFieldProtector;
@@ -141,6 +140,7 @@ namespace Cotton.Database
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            DatabaseIntegrityModelConfiguration.Configure(modelBuilder);
             EncryptedStringModelConfiguration.Configure(modelBuilder, _databaseFieldProtector);
         }
     }

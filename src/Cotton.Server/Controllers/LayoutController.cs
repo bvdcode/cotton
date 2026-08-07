@@ -86,9 +86,9 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             SearchLayoutsQuery request = new(userId, layoutId, query, page, pageSize);
-            SearchLayoutsResultDto result = await _mediator.Send(request);
+            PagedResult<SearchResultDto> result = await _mediator.Send(request);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
-            return Ok(result);
+            return Ok(result.Payload);
         }
 
         /// <summary>
@@ -515,9 +515,9 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize, depth);
-            NodeContentDto result = await _mediator.Send(query);
+            PagedResult<NodeContentDto> result = await _mediator.Send(query);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
-            return Ok(result);
+            return Ok(result.Payload);
         }
 
         /// <summary>
@@ -694,10 +694,9 @@ namespace Cotton.Server.Controllers
                 Id = targetNode.Id,
                 CreatedAt = targetNode.CreatedAt,
                 UpdatedAt = targetNode.UpdatedAt,
-                TotalCount = nodesCount + filesCount,
             };
 
-            Response.Headers.Append("X-Total-Count", response.TotalCount.ToString());
+            Response.Headers.Append("X-Total-Count", (nodesCount + filesCount).ToString());
             return Ok(response);
         }
 
