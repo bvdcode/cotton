@@ -280,8 +280,10 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task StoreEncryptedServerSettingsTextAsync(CottonEncryptionSettings settings)
         {
-            using AesGcmStreamCipher cipher = MasterKeySentinelStore.CreateCipher(settings);
-            await using CottonDbContext encryptedDbContext = CreateEncryptedDbContext(cipher);
+            using DatabaseFieldProtector protector = new(
+                settings,
+                NullLogger<DatabaseFieldProtector>.Instance);
+            await using CottonDbContext encryptedDbContext = CreateEncryptedDbContext(protector);
             encryptedDbContext.ServerSettings.Add(new CottonServerSettings
             {
                 AllowCrossUserDeduplication = false,
@@ -307,7 +309,7 @@ namespace Cotton.Server.IntegrationTests
             await encryptedDbContext.SaveChangesAsync();
         }
 
-        private CottonDbContext CreateEncryptedDbContext(IStreamCipher cipher)
+        private CottonDbContext CreateEncryptedDbContext(IDatabaseFieldProtector databaseFieldProtector)
         {
             string connectionString = DbContext.Database.GetConnectionString()
                 ?? throw new InvalidOperationException("Test database connection string is not configured.");
@@ -315,7 +317,7 @@ namespace Cotton.Server.IntegrationTests
                 .UseNpgsql(connectionString)
                 .EnableServiceProviderCaching(false)
                 .Options;
-            return new CottonDbContext(options, cipher);
+            return new CottonDbContext(options, databaseFieldProtector);
         }
     }
 }

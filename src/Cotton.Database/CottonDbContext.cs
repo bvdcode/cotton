@@ -1,26 +1,42 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Crypto;
 using Cotton.Database.Configuration;
 using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using EasyExtensions.EntityFrameworkCore.Database;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Cotton.Database
 {
     /// <summary>
     /// Entity Framework context for Cotton domain data and encrypted database fields.
     /// </summary>
-    public class CottonDbContext(
-        DbContextOptions options,
-        IStreamCipher? streamCipher = null,
-        ILogger<CottonDbContext>? logger = null,
-        IDatabaseIntegrityChangeSigner? integrityChangeSigner = null)
-        : IntegrityAuditedDbContext(options, integrityChangeSigner)
+    public class CottonDbContext : IntegrityAuditedDbContext
     {
+        private readonly IDatabaseFieldProtector? _databaseFieldProtector;
+
+        /// <summary>
+        /// Initializes a context for design-time and raw database operations that do not access encrypted fields.
+        /// </summary>
+        public CottonDbContext(DbContextOptions options)
+            : base(options, integrityChangeSigner: null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a runtime context with database field protection.
+        /// </summary>
+        public CottonDbContext(
+            DbContextOptions options,
+            IDatabaseFieldProtector databaseFieldProtector,
+            IDatabaseIntegrityChangeSigner? integrityChangeSigner = null)
+            : base(options, integrityChangeSigner)
+        {
+            ArgumentNullException.ThrowIfNull(databaseFieldProtector);
+            _databaseFieldProtector = databaseFieldProtector;
+        }
+
         /// <summary>
         /// Folder nodes stored by the server.
         /// </summary>
@@ -125,7 +141,7 @@ namespace Cotton.Database
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            EncryptedStringModelConfiguration.Configure(modelBuilder, streamCipher, logger);
+            EncryptedStringModelConfiguration.Configure(modelBuilder, _databaseFieldProtector);
         }
     }
 }

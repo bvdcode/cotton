@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Crypto;
 using Cotton.Database.Models.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Microsoft.Extensions.Logging;
 using System.Reflection;
-using System.Security.Cryptography;
 
 namespace Cotton.Database.Configuration
 {
@@ -16,12 +13,11 @@ namespace Cotton.Database.Configuration
     {
         public static void Configure(
             ModelBuilder modelBuilder,
-            IStreamCipher? streamCipher,
-            ILogger? logger)
+            IDatabaseFieldProtector? databaseFieldProtector)
         {
             ValueConverter<string?, string?> converter = new(
-                value => Encrypt(value, streamCipher),
-                value => Decrypt(value, streamCipher, logger));
+                value => Protect(value, databaseFieldProtector),
+                value => Unprotect(value, databaseFieldProtector));
 
             foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes())
             {
@@ -51,53 +47,44 @@ namespace Cotton.Database.Configuration
             }
         }
 
-        private static string? Encrypt(string? value, IStreamCipher? streamCipher)
-        {
-            if (value is null)
-            {
-                return null;
-            }
-
-            if (streamCipher is null)
-            {
-                throw CreateMissingStreamCipherException();
-            }
-
-            byte[] encryptedBytes = streamCipher.EncryptString(value);
-            return Convert.ToBase64String(encryptedBytes);
-        }
-
-        private static string? Decrypt(
+        private static string? Protect(
             string? value,
-            IStreamCipher? streamCipher,
-            ILogger? logger)
+            IDatabaseFieldProtector? databaseFieldProtector)
         {
             if (value is null)
             {
                 return null;
             }
 
-            if (streamCipher is null)
+            if (databaseFieldProtector is null)
             {
-                throw CreateMissingStreamCipherException();
+                throw CreateMissingDatabaseFieldProtectorException();
             }
 
-            try
-            {
-                byte[] encryptedBytes = Convert.FromBase64String(value);
-                return streamCipher.DecryptString(encryptedBytes);
-            }
-            catch (Exception ex) when (ex is FormatException or CryptographicException or InvalidDataException)
-            {
-                logger?.LogError(ex, "Failed to decrypt value in encrypted EF converter.");
-                throw;
-            }
+            return databaseFieldProtector.Protect(value);
         }
 
-        private static InvalidOperationException CreateMissingStreamCipherException()
+        private static string? Unprotect(
+            string? value,
+            IDatabaseFieldProtector? databaseFieldProtector)
+        {
+            if (value is null)
+            {
+                return null;
+            }
+
+            if (databaseFieldProtector is null)
+            {
+                throw CreateMissingDatabaseFieldProtectorException();
+            }
+
+            return databaseFieldProtector.Unprotect(value);
+        }
+
+        private static InvalidOperationException CreateMissingDatabaseFieldProtectorException()
         {
             return new InvalidOperationException(
-                "Encrypted EF string conversion requires IStreamCipher. Use a raw startup/probe DbContext for pre-unlock reads.");
+                "Encrypted EF string conversion requires IDatabaseFieldProtector. Use a raw startup/probe DbContext for pre-unlock reads.");
         }
     }
 }

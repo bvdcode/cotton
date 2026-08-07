@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Crypto;
+using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Database.Integrity;
 using Cotton.Server.Auth;
@@ -23,10 +24,11 @@ namespace Cotton.Server.Extensions
     public static class ServiceCollectionExtensions
     {
         /// <summary>
-        /// Registers stream cipher services.
+        /// Registers stream cipher and database field protection services.
         /// </summary>
         public static IServiceCollection AddStreamCipher(this IServiceCollection services)
         {
+            services.AddSingleton<IDatabaseFieldProtector, DatabaseFieldProtector>();
             return services.AddScoped<IStreamCipher>(sp =>
             {
                 CottonEncryptionSettings settings = sp.GetRequiredService<CottonEncryptionSettings>();
