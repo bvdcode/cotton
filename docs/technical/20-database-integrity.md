@@ -341,7 +341,7 @@ The `integrity_mac` (`bytea`, nullable) and `integrity_version` (`integer`, null
 | `20260522021312_AddDatabaseIntegrityColumns` | `users`, `user_passkey_credentials`, `server_settings`, `refresh_tokens`, `node_share_tokens`, `download_tokens` |
 | `20260522200207_AddFileGraphIntegrityColumns` | `nodes`, `node_files`, `file_manifests`, `file_manifest_chunks`, `chunks` |
 | `20260526073016_AddOidcProviders` | `oidc_providers`, `oidc_login_states`, `user_external_identities` (integrity columns created inline with the new tables) |
-| `20260808072737_RemoveFirebaseCloudMessagingAndServerSettingsIntegrity` | removes the two integrity columns from `server_settings` |
+| `20260808080155_RemoveServerSettingsIntegrity` | removes the two integrity columns from `server_settings` |
 
 The add migrations' `Down` methods drop both columns from the same tables; the removal migration's `Down` restores the two `server_settings` columns.
 

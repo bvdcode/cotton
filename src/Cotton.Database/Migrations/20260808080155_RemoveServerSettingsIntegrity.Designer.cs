@@ -14,8 +14,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20260808072737_RemoveFirebaseCloudMessagingAndServerSettingsIntegrity")]
-    partial class RemoveFirebaseCloudMessagingAndServerSettingsIntegrity
+    [Migration("20260808080155_RemoveServerSettingsIntegrity")]
+    partial class RemoveServerSettingsIntegrity
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
