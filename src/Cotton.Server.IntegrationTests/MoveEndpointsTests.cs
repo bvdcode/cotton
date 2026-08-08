@@ -160,29 +160,11 @@ public class MoveEndpointsTests : IntegrationTestBase
         NodeDto src = await CreateFolderAsync(root.Id, "src");
         NodeFileManifestDto file = await CreateFileAsync(src.Id, "doc.txt", "across-layouts");
 
-        Guid otherLayoutRootId;
-        using (IServiceScope scope = _factory!.Services.CreateScope())
-        {
-            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            Guid ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
-            var newLayout = new Cotton.Database.Models.Layout { OwnerId = ownerId, IsActive = false };
-            db.UserLayouts.Add(newLayout);
-            await db.SaveChangesAsync();
+        (Guid OwnerId, Guid RootId) additionalLayout = await CreateAdditionalLayoutRootAsync(
+            _factory!.Services,
+            "other-root");
 
-            var newRoot = new Cotton.Database.Models.Node
-            {
-                LayoutId = newLayout.Id,
-                OwnerId = ownerId,
-                Type = Cotton.Database.Models.Enums.NodeType.Default,
-                ParentId = null,
-            };
-            newRoot.SetName("other-root");
-            db.Nodes.Add(newRoot);
-            await db.SaveChangesAsync();
-            otherLayoutRootId = newRoot.Id;
-        }
-
-        HttpResponseMessage res = await MoveFileAsync(file.Id, otherLayoutRootId);
+        HttpResponseMessage res = await MoveFileAsync(file.Id, additionalLayout.RootId);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
@@ -529,31 +511,11 @@ public class MoveEndpointsTests : IntegrationTestBase
         NodeDto root = await GetRootAsync();
         NodeDto moving = await CreateFolderAsync(root.Id, "moving");
 
-        // Same user, second layout: API only auto-creates one layout per user, so
-        // we manufacture the second one directly via the factory's DI scope.
-        Guid otherLayoutRootId;
-        using (IServiceScope scope = _factory!.Services.CreateScope())
-        {
-            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            Guid ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
-            var newLayout = new Cotton.Database.Models.Layout { OwnerId = ownerId, IsActive = false };
-            db.UserLayouts.Add(newLayout);
-            await db.SaveChangesAsync();
+        (Guid OwnerId, Guid RootId) additionalLayout = await CreateAdditionalLayoutRootAsync(
+            _factory!.Services,
+            "other-root");
 
-            var newRoot = new Cotton.Database.Models.Node
-            {
-                LayoutId = newLayout.Id,
-                OwnerId = ownerId,
-                Type = Cotton.Database.Models.Enums.NodeType.Default,
-                ParentId = null,
-            };
-            newRoot.SetName("other-root");
-            db.Nodes.Add(newRoot);
-            await db.SaveChangesAsync();
-            otherLayoutRootId = newRoot.Id;
-        }
-
-        HttpResponseMessage res = await MoveNodeAsync(moving.Id, otherLayoutRootId);
+        HttpResponseMessage res = await MoveNodeAsync(moving.Id, additionalLayout.RootId);
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
@@ -590,24 +552,22 @@ public class MoveEndpointsTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task ConcurrentWebDavPuts_DoNotExceedUserStorageQuota()
+    public async Task ConcurrentFileUpdates_AcrossLayouts_DoNotExceedUserStorageQuota()
     {
         _client?.Dispose();
         _factory?.Dispose();
 
-        QuotaPreflightBarrier barrier = new();
+        QuotaMutationBarrier barrier = new();
         using TestAppFactory factory = new(_overrides);
         using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureTestServices(services =>
             {
-                services.RemoveAll<IChunkIngestService>();
+                services.RemoveAll<ILayoutMutationGate>();
                 services.AddSingleton(barrier);
-                services.AddScoped<ChunkIngestService>();
-                services.AddScoped<IChunkIngestService>(serviceProvider =>
-                    new QuotaBarrierChunkIngestService(
-                        serviceProvider.GetRequiredService<ChunkIngestService>(),
-                        serviceProvider.GetRequiredService<QuotaPreflightBarrier>()));
+                services.AddSingleton<ILayoutMutationGate>(serviceProvider =>
+                    new QuotaBarrierLayoutMutationGate(
+                        serviceProvider.GetRequiredService<QuotaMutationBarrier>()));
             });
         });
         using HttpClient client = customFactory.CreateClient(
@@ -621,15 +581,42 @@ public class MoveEndpointsTests : IntegrationTestBase
         quotaResponse.EnsureSuccessStatusCode();
         try
         {
-            await UseWebDavBasicAuthAsync(client);
+            NodeDto? primaryRoot = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(primaryRoot, Is.Not.Null);
+            (Guid OwnerId, Guid RootId) additionalLayout = await CreateAdditionalLayoutRootAsync(
+                customFactory.Services,
+                "quota-other-root");
+            Guid primaryFileId = await CreateEmptyFileAsync(
+                customFactory.Services,
+                additionalLayout.OwnerId,
+                primaryRoot!.Id,
+                "quota-a.txt");
+            Guid secondaryFileId = await CreateEmptyFileAsync(
+                customFactory.Services,
+                additionalLayout.OwnerId,
+                additionalLayout.RootId,
+                "quota-b.txt");
+            string firstHash = await UploadChunkViaClientAsync(client, "123456");
+            string secondHash = await UploadChunkViaClientAsync(client, "abcdef");
+            barrier.Enable();
 
-            Task<HttpResponseMessage> firstPut = SendWebDavPutAsync(client, "/api/v1/webdav/quota-a.txt", "123456");
-            Task<HttpResponseMessage> secondPut = SendWebDavPutAsync(client, "/api/v1/webdav/quota-b.txt", "abcdef");
-            HttpResponseMessage[] responses = await Task.WhenAll(firstPut, secondPut);
+            Task<HttpResponseMessage> firstUpdate = SendUpdateFileViaClientAsync(
+                client,
+                primaryFileId,
+                primaryRoot.Id,
+                "quota-a.txt",
+                firstHash);
+            Task<HttpResponseMessage> secondUpdate = SendUpdateFileViaClientAsync(
+                client,
+                secondaryFileId,
+                additionalLayout.RootId,
+                "quota-b.txt",
+                secondHash);
+            HttpResponseMessage[] responses = await Task.WhenAll(firstUpdate, secondUpdate);
             using HttpResponseMessage firstResponse = responses[0];
             using HttpResponseMessage secondResponse = responses[1];
 
-            int successes = responses.Count(response => response.StatusCode == HttpStatusCode.Created);
+            int successes = responses.Count(response => response.IsSuccessStatusCode);
             int quotaRejections = responses.Count(response => response.StatusCode == (HttpStatusCode)507);
             using (Assert.EnterMultipleScope())
             {
@@ -641,6 +628,7 @@ public class MoveEndpointsTests : IntegrationTestBase
             CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
             long usedBytes = await dbContext.NodeFiles
                 .AsNoTracking()
+                .Where(nodeFile => nodeFile.OwnerId == additionalLayout.OwnerId)
                 .SumAsync(nodeFile => nodeFile.FileManifest.SizeBytes);
             Assert.That(usedBytes, Is.EqualTo(6));
         }
@@ -866,17 +854,16 @@ public class MoveEndpointsTests : IntegrationTestBase
 
     private static async Task<NodeFileManifestDto> CreateFileViaClientAsync(HttpClient client, Guid nodeId, string name, string body)
     {
-        var hash = await UploadChunkViaClientAsync(client, body);
-
-        var fileReq = new CreateFileFromChunksRequestDto
+        string hash = await UploadChunkViaClientAsync(client, body);
+        CreateFileFromChunksRequestDto request = new()
         {
             ChunkHashes = [hash],
             Name = name,
             ContentType = "application/octet-stream",
             Hash = hash,
-            NodeId = nodeId
+            NodeId = nodeId,
         };
-        HttpResponseMessage createRes = await client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        using HttpResponseMessage createRes = await client.PostAsJsonAsync("/api/v1/files/from-chunks", request);
         createRes.EnsureSuccessStatusCode();
 
         // Read back from the folder so callers get the same projection as the files UI.
@@ -884,6 +871,79 @@ public class MoveEndpointsTests : IntegrationTestBase
         NodeFileManifestDto dto = children!.Files.SingleOrDefault(f => f.Name == name)
             ?? throw new InvalidOperationException($"Created file '{name}' not found in node {nodeId}.");
         return dto;
+    }
+
+    private static Task<HttpResponseMessage> SendUpdateFileViaClientAsync(
+        HttpClient client,
+        Guid nodeFileId,
+        Guid nodeId,
+        string name,
+        string hash)
+    {
+        CreateFileFromChunksRequestDto request = new()
+        {
+            ChunkHashes = [hash],
+            Name = name,
+            ContentType = "application/octet-stream",
+            Hash = hash,
+            NodeId = nodeId,
+        };
+        return client.PatchAsJsonAsync($"/api/v1/files/{nodeFileId}/update-content", request);
+    }
+
+    private static async Task<(Guid OwnerId, Guid RootId)> CreateAdditionalLayoutRootAsync(
+        IServiceProvider services,
+        string rootName)
+    {
+        using IServiceScope scope = services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        Guid ownerId = await dbContext.Users.AsNoTracking().Select(user => user.Id).FirstAsync();
+        Cotton.Database.Models.Layout layout = new()
+        {
+            OwnerId = ownerId,
+            IsActive = false,
+        };
+        dbContext.UserLayouts.Add(layout);
+        await dbContext.SaveChangesAsync();
+
+        Cotton.Database.Models.Node root = new()
+        {
+            LayoutId = layout.Id,
+            OwnerId = ownerId,
+            Type = Cotton.Database.Models.Enums.NodeType.Default,
+            ParentId = null,
+        };
+        root.SetName(rootName);
+        dbContext.Nodes.Add(root);
+        await dbContext.SaveChangesAsync();
+        return (ownerId, root.Id);
+    }
+
+    private static async Task<Guid> CreateEmptyFileAsync(
+        IServiceProvider services,
+        Guid ownerId,
+        Guid nodeId,
+        string name)
+    {
+        using IServiceScope scope = services.CreateScope();
+        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        FileManifest manifest = new()
+        {
+            ProposedContentHash = Hasher.HashData(Guid.NewGuid().ToByteArray()),
+            ContentType = "application/octet-stream",
+            SizeBytes = 0,
+        };
+        NodeFile nodeFile = new()
+        {
+            OwnerId = ownerId,
+            NodeId = nodeId,
+            FileManifest = manifest,
+        };
+        nodeFile.OriginalNodeFileId = nodeFile.Id;
+        nodeFile.SetName(name);
+        dbContext.NodeFiles.Add(nodeFile);
+        await dbContext.SaveChangesAsync();
+        return nodeFile.Id;
     }
 
     private static async Task<string> UploadChunkViaClientAsync(HttpClient client, string body)
@@ -947,69 +1007,6 @@ internal class ThrowingEventNotificationService : IEventNotificationService
     public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-}
-
-internal sealed class QuotaBarrierChunkIngestService(
-    ChunkIngestService _inner,
-    QuotaPreflightBarrier _barrier) : IChunkIngestService
-{
-    public async Task<Chunk> UpsertChunkAsync(
-        Guid userId,
-        byte[] buffer,
-        int length,
-        CancellationToken ct = default)
-    {
-        await _barrier.SignalAndWaitAsync(ct);
-        return await _inner.UpsertChunkAsync(userId, buffer, length, ct);
-    }
-
-    public Task<Chunk> UpsertChunkAsync(
-        Guid userId,
-        Stream stream,
-        long length,
-        byte[] expectedHash,
-        CancellationToken ct = default)
-    {
-        return _inner.UpsertChunkAsync(userId, stream, length, expectedHash, ct);
-    }
-
-    public Task<Chunk> UpsertChunkAsync(
-        Guid userId,
-        Stream stream,
-        long length,
-        CancellationToken ct = default)
-    {
-        return _inner.UpsertChunkAsync(userId, stream, length, ct);
-    }
-
-    public Task<Chunk> ReuseExistingChunkAsync(
-        Guid userId,
-        byte[] chunkHash,
-        CancellationToken ct = default)
-    {
-        return _inner.ReuseExistingChunkAsync(userId, chunkHash, ct);
-    }
-}
-
-internal sealed class QuotaPreflightBarrier
-{
-    private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private int _arrived;
-
-    public async Task SignalAndWaitAsync(CancellationToken cancellationToken)
-    {
-        int arrived = Interlocked.Increment(ref _arrived);
-        if (arrived == 2)
-        {
-            _release.TrySetResult();
-        }
-        else if (arrived > 2)
-        {
-            throw new InvalidOperationException("The two-participant barrier was entered more than twice.");
-        }
-
-        await _release.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
-    }
 }
 
 internal class WebDavDeleteEventRecorder

@@ -24,9 +24,20 @@ namespace Cotton.Server.Services
     public class UserStorageQuotaService(
         CottonDbContext _dbContext,
         SettingsProvider _settings,
-        UserStorageQuotaCache _usageCache)
+        UserStorageQuotaCache _usageCache,
+        UserStorageQuotaMutationGate _mutationGate)
     {
         private readonly Dictionary<Guid, long> _scopedUsedBytesByUser = [];
+
+        /// <summary>
+        /// Serializes the final quota check and storage-reference commit for one user.
+        /// </summary>
+        public ValueTask<IAsyncDisposable> EnterMutationAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default)
+        {
+            return _mutationGate.EnterAsync(userId, cancellationToken);
+        }
 
         /// <summary>
         /// Gets the logical bytes currently referenced by the user's visible and retained file versions.
@@ -190,12 +201,6 @@ namespace Cotton.Server.Services
                 return;
             }
 
-            if (_scopedUsedBytesByUser.TryGetValue(userId, out long scopedUsedBytes))
-            {
-                _usageCache.Set(userId, scopedUsedBytes);
-                return;
-            }
-
             _usageCache.AddIfCached(userId, safeBytes);
         }
 
@@ -214,8 +219,6 @@ namespace Cotton.Server.Services
             {
                 long adjustedScopedUsedBytes = Math.Max(0, scopedUsedBytes - safeBytes);
                 _scopedUsedBytesByUser[userId] = adjustedScopedUsedBytes;
-                _usageCache.Set(userId, adjustedScopedUsedBytes);
-                return;
             }
 
             _usageCache.RemoveIfCached(userId, safeBytes);

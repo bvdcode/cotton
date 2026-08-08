@@ -108,6 +108,7 @@ namespace Cotton.Server.Handlers.Files
 
             await ValidateContentHashIfRequestedAsync(request, fileManifest, proposedHash, cancellationToken);
             await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(preTransactionNode.LayoutId, cancellationToken);
+            await using IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(request.UserId, cancellationToken);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             Node node = await GetTargetNodeAsync(request, preTransactionNode.LayoutId, tracking: true, cancellationToken);

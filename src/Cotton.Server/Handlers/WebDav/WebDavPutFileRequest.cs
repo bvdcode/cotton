@@ -99,38 +99,43 @@ namespace Cotton.Server.Handlers.WebDav
             // Re-resolve the target inside the transaction: the original path result can be stale after a long upload stream.
             Guid expectedLayoutId = target.Parent.ParentNode!.LayoutId;
             await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(expectedLayoutId, ct);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-
-            var (refreshedTarget, refreshedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
-            if (refreshedTargetError is not null)
+            PutTarget finalTarget;
+            NodeFile resultNodeFile;
+            await using (IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(request.UserId, ct))
+            await using (IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct))
             {
-                return refreshedTargetError;
-            }
+                (PutTarget? refreshedTarget, WebDavPutFileResult? refreshedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
+                if (refreshedTargetError is not null)
+                {
+                    return refreshedTargetError;
+                }
 
-            PutTarget finalTarget = refreshedTarget!;
-            if (finalTarget.Parent.ParentNode!.LayoutId != expectedLayoutId)
-            {
-                _logger.LogDebug("WebDAV PUT: Parent layout changed before commit: {Path}", request.Path);
-                return Fail(WebDavPutFileError.ParentNotFound);
-            }
+                finalTarget = refreshedTarget!;
+                if (finalTarget.Parent.ParentNode!.LayoutId != expectedLayoutId)
+                {
+                    _logger.LogDebug("WebDAV PUT: Parent layout changed before commit: {Path}", request.Path);
+                    return Fail(WebDavPutFileError.ParentNotFound);
+                }
 
-            var (quotaError, addedBytes) = await TryEnsureQuotaAsync(request, finalTarget, fileManifest.Id, ct);
-            if (quotaError is not null)
-            {
-                return quotaError;
-            }
+                (WebDavPutFileResult? quotaError, long addedBytes) = await TryEnsureQuotaAsync(request, finalTarget, fileManifest.Id, ct);
+                if (quotaError is not null)
+                {
+                    return quotaError;
+                }
 
-            var (resultNodeFile, capture) = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
-            _syncChanges.StageFileChange(
-                finalTarget.Created ? SyncChangeKind.FileCreated : SyncChangeKind.FileContentUpdated,
-                resultNodeFile,
-                finalTarget.Parent.ParentNode.LayoutId);
-            await _dbContext.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-            _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
-            if (capture.RemovedBytes > 0)
-            {
-                _quota.RecordLogicalBytesRemoved(request.UserId, capture.RemovedBytes);
+                (NodeFile upsertedNodeFile, FileVersionCaptureResult capture) = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
+                resultNodeFile = upsertedNodeFile;
+                _syncChanges.StageFileChange(
+                    finalTarget.Created ? SyncChangeKind.FileCreated : SyncChangeKind.FileContentUpdated,
+                    resultNodeFile,
+                    finalTarget.Parent.ParentNode.LayoutId);
+                await _dbContext.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+                _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
+                if (capture.RemovedBytes > 0)
+                {
+                    _quota.RecordLogicalBytesRemoved(request.UserId, capture.RemovedBytes);
+                }
             }
 
             await NotifyPutCompletedAsync(request, created: finalTarget.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);

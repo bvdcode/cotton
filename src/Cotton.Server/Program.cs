@@ -190,6 +190,7 @@ namespace Cotton.Server
                 .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()
                 .AddScoped<FileManifestService>()
                 .AddSingleton<UserStorageQuotaCache>()
+                .AddSingleton<UserStorageQuotaMutationGate>()
                 .AddScoped<UserStorageQuotaService>()
                 .AddScoped<PublicShareTokenGenerator>()
                 .AddSingleton<ArchiveDownloadTicketStore>()

@@ -614,42 +614,46 @@ namespace Cotton.Server.Controllers
             FileManifest newFile = await ResolveUpdateManifestAsync(request, proposedHash, userId);
 
             await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId.Value, HttpContext.RequestAborted);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
-
-            NodeFile? nodeFile = await LoadEditableNodeFileAsync(nodeFileId, userId);
-            if (nodeFile is null)
+            NodeFile nodeFile;
+            await using (IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(userId, HttpContext.RequestAborted))
+            await using (IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync())
             {
-                return this.ApiNotFound("Node file not found.");
-            }
+                NodeFile? editableNodeFile = await LoadEditableNodeFileAsync(nodeFileId, userId);
+                if (editableNodeFile is null)
+                {
+                    return this.ApiNotFound("Node file not found.");
+                }
 
-            if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
-            {
-                throw new FilePreconditionFailedException<NodeFile>("File content changed before update.");
-            }
+                nodeFile = editableNodeFile;
+                if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
+                {
+                    throw new FilePreconditionFailedException<NodeFile>("File content changed before update.");
+                }
 
-            string nameKey = NameValidator.NormalizeAndGetNameKey(normalizedName);
-            string? conflictMessage = await FindUpdateNameConflictAsync(nodeFile, userId, nodeFileId, nameKey);
-            if (conflictMessage is not null)
-            {
-                return this.ApiConflict(conflictMessage);
-            }
+                string nameKey = NameValidator.NormalizeAndGetNameKey(normalizedName);
+                string? conflictMessage = await FindUpdateNameConflictAsync(nodeFile, userId, nodeFileId, nameKey);
+                if (conflictMessage is not null)
+                {
+                    return this.ApiConflict(conflictMessage);
+                }
 
-            long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(userId, nodeFile.Id, newFile.Id);
-            FileVersionCaptureResult capture = await ApplyUpdatedFileContentAsync(
-                nodeFile,
-                newFile,
-                proposedHash,
-                normalizedName,
-                request.Metadata,
-                userId);
+                long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(userId, nodeFile.Id, newFile.Id);
+                FileVersionCaptureResult capture = await ApplyUpdatedFileContentAsync(
+                    nodeFile,
+                    newFile,
+                    proposedHash,
+                    normalizedName,
+                    request.Metadata,
+                    userId);
 
-            _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, layoutId.Value);
-            await _dbContext.SaveChangesAsync();
-            await tx.CommitAsync();
-            _quota.RecordLogicalBytesAdded(userId, addedBytes);
-            if (capture.RemovedBytes > 0)
-            {
-                _quota.RecordLogicalBytesRemoved(userId, capture.RemovedBytes);
+                _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, layoutId.Value);
+                await _dbContext.SaveChangesAsync();
+                await tx.CommitAsync();
+                _quota.RecordLogicalBytesAdded(userId, addedBytes);
+                if (capture.RemovedBytes > 0)
+                {
+                    _quota.RecordLogicalBytesRemoved(userId, capture.RemovedBytes);
+                }
             }
 
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();

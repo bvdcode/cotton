@@ -110,26 +110,28 @@ namespace Cotton.Server.Services
             NodeFile current = await LoadCurrentFileOrThrowAsync(userId, nodeFileId, tracking: true, ct);
 
             await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(current.Node.LayoutId, ct);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-
-            NodeFile version = await LoadHistoricalVersionOrThrowAsync(userId, GetLineageId(current), versionId, tracking: true, ct);
-            long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(userId, current.Id, version.FileManifestId, ct);
-
-            FileVersionCaptureResult capture = await CaptureAndUpdateManifestAsync(
-                current,
-                version.FileManifestId,
-                userId,
-                protectedVersionIds: new HashSet<Guid> { version.Id },
-                ct: ct);
-            current.FileManifest = version.FileManifest;
-            _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, current, current.Node.LayoutId);
-
-            await _dbContext.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-            _quota.RecordLogicalBytesAdded(userId, addedBytes);
-            if (capture.RemovedBytes > 0)
+            await using (IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(userId, ct))
+            await using (IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct))
             {
-                _quota.RecordLogicalBytesRemoved(userId, capture.RemovedBytes);
+                NodeFile version = await LoadHistoricalVersionOrThrowAsync(userId, GetLineageId(current), versionId, tracking: true, ct);
+                long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(userId, current.Id, version.FileManifestId, ct);
+
+                FileVersionCaptureResult capture = await CaptureAndUpdateManifestAsync(
+                    current,
+                    version.FileManifestId,
+                    userId,
+                    protectedVersionIds: new HashSet<Guid> { version.Id },
+                    ct: ct);
+                current.FileManifest = version.FileManifest;
+                _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, current, current.Node.LayoutId);
+
+                await _dbContext.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+                _quota.RecordLogicalBytesAdded(userId, addedBytes);
+                if (capture.RemovedBytes > 0)
+                {
+                    _quota.RecordLogicalBytesRemoved(userId, capture.RemovedBytes);
+                }
             }
 
             _logger.LogInformation(
