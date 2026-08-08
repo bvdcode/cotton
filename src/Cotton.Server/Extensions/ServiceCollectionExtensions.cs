@@ -86,7 +86,6 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<IDatabaseIntegrityDescriptor, ExtendedRefreshTokenIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, DownloadTokenIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, NodeShareTokenIntegrityDescriptor>();
-            services.AddSingleton<IDatabaseIntegrityDescriptor, CottonServerSettingsIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, NodeIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, NodeFileIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, FileManifestIntegrityDescriptor>();

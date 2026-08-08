@@ -246,15 +246,6 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("instance_id");
 
-                    b.Property<byte[]>("IntegrityMac")
-                        .IsConcurrencyToken()
-                        .HasColumnType("bytea")
-                        .HasColumnName("integrity_mac");
-
-                    b.Property<int?>("IntegrityVersion")
-                        .HasColumnType("integer")
-                        .HasColumnName("integrity_version");
-
                     b.Property<int>("MaxChunkSizeBytes")
                         .HasColumnType("integer")
                         .HasColumnName("max_chunk_size_bytes");

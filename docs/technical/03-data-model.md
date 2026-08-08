@@ -108,7 +108,7 @@ Because `AuditedDbContext` also overrides these methods (to stamp timestamps), t
 
 ```mermaid
 flowchart TD
-    A[base.OnModelCreating] --> B[ConfigureIntegrityShadowProperties&lt;T&gt; for 15 protected entities]
+    A[base.OnModelCreating] --> B[Configure integrity shadow properties for 13 protected entities]
     B --> C[FileManifest.PreviewGeneratorVersion default = 0]
     C --> D[Build encryptedStringConverter using streamCipher]
     D --> E[Scan every entity type's properties]
@@ -119,7 +119,7 @@ flowchart TD
 
 `OnModelCreating` does exactly three things beyond the base call:
 
-1. **Integrity shadow properties.** A private generic helper `ConfigureIntegrityShadowProperties<TEntity>` is called for 14 entity types: `User`, `UserPasskeyCredential`, `OidcProvider`, `UserExternalIdentity`, `OidcLoginState`, `ExtendedRefreshToken`, `DownloadToken`, `NodeShareToken`, `CottonServerSettings`, `Node`, `NodeFile`, `FileManifest`, `FileManifestChunk`, `Chunk`. Each gets two shadow properties (see *Integrity shadow columns*).
+1. **Integrity shadow properties.** `DatabaseIntegrityModelConfiguration` registers two shadow properties for 13 entity types: `User`, `UserPasskeyCredential`, `OidcProvider`, `UserExternalIdentity`, `OidcLoginState`, `ExtendedRefreshToken`, `DownloadToken`, `NodeShareToken`, `Node`, `NodeFile`, `FileManifest`, `FileManifestChunk`, `Chunk` (see *Integrity shadow columns*).
 2. **One default value.** `FileManifest.PreviewGeneratorVersion` gets a database default of `0` via `.HasDefaultValue(0)`.
 3. **Transparent encryption.** A `ValueConverter<string?, string?>` is built from the private `EncryptString`/`DecryptString` methods. The model is then scanned with `modelBuilder.Model.GetEntityTypes()`; for every property of every entity that (a) is decorated `[Encrypted]` and (b) has CLR type `string`, the converter is attached via `.HasConversion(encryptedStringConverter)`.
 

@@ -1,6 +1,6 @@
 # 20. Database Integrity & Tamper Evidence
 
-Cotton stores most of its security-critical state in PostgreSQL: user accounts, password hashes, TOTP secrets, refresh-token sessions, passkey credentials, OIDC links, share/download tokens, server settings, and the file metadata graph that maps logical files to encrypted content chunks. Because Cotton is self-hosted, an attacker (or a careless operator with `psql` access) could in principle edit a row directly in the database to escalate privileges, restore a revoked session, retarget a public share link, or swap the bytes served for a file — completely bypassing the application's authorization logic. The **Database Integrity & Tamper-Evidence** subsystem defends against exactly that: it attaches a keyed MAC (HMAC-SHA256) to every protected row, computed over a deterministic canonical serialization of the row's security-sensitive fields. The MAC key is derived from the master encryption key and never persisted, so a database-only attacker cannot forge it. Cotton signs rows automatically on `SaveChanges` and verifies them at security-sensitive read boundaries; a mismatch raises `DatabaseIntegrityException` and notifies admins.
+Cotton stores most of its security-critical state in PostgreSQL: user accounts, password hashes, TOTP secrets, refresh-token sessions, passkey credentials, OIDC links, share/download tokens, and the file metadata graph that maps logical files to encrypted content chunks. Because Cotton is self-hosted, an attacker (or a careless operator with `psql` access) could in principle edit a row directly in the database to escalate privileges, restore a revoked session, retarget a public share link, or swap the bytes served for a file — completely bypassing the application's authorization logic. The **Database Integrity & Tamper-Evidence** subsystem defends against exactly that: it attaches a keyed MAC (HMAC-SHA256) to every protected row, computed over a deterministic canonical serialization of the row's security-sensitive fields. The MAC key is derived from the master encryption key and never persisted, so a database-only attacker cannot forge it. Cotton signs rows automatically on `SaveChanges` and verifies them at security-sensitive read boundaries; a mismatch raises `DatabaseIntegrityException` and notifies admins.
 
 This is *tamper evidence*, not tamper prevention. It does not stop someone with database access from corrupting a row; it guarantees that Cotton will *refuse to trust* a row whose protected fields were changed outside the application, and that it will tell operators about it.
 
@@ -99,7 +99,7 @@ public byte[] BuildCanonicalPayload(object entity)
 
 ### Protected entities → descriptor
 
-There are **14** descriptors (one per protected entity type), all registered as `IDatabaseIntegrityDescriptor` in `AddDatabaseIntegrity()`. All are `SchemaVersion = 1` except `server_settings`, which is `SchemaVersion = 2`. Descriptor source files live under `src/Cotton.Server/Services/DatabaseIntegrity/Descriptors/`. The entities themselves are in `Cotton.Database.Models` **except** `ExtendedRefreshToken`, which is the `EasyExtensions.EntityFrameworkCore.Database` base type used as Cotton's refresh-token row.
+There are **13** descriptors (one per protected entity type), all registered as `IDatabaseIntegrityDescriptor` in `AddDatabaseIntegrity()` and currently using `SchemaVersion = 1`. Descriptor source files live under `src/Cotton.Server/Services/DatabaseIntegrity/Descriptors/`. The entities themselves are in `Cotton.Database.Models` **except** `ExtendedRefreshToken`, which is the `EasyExtensions.EntityFrameworkCore.Database` base type used as Cotton's refresh-token row.
 
 | Entity | Descriptor | `EntityName` | `SchemaVersion` | Entity key | Signed fields (canonical order) |
 |---|---|---|---|---|---|
@@ -111,7 +111,6 @@ There are **14** descriptors (one per protected entity type), all registered as 
 | `ExtendedRefreshToken` | `ExtendedRefreshTokenIntegrityDescriptor` | `refresh_tokens` | 1 | `Id` ("D") | Id, UserId, Token, SessionId, RevokedAt, IsTrusted, AuthType |
 | `DownloadToken` | `DownloadTokenIntegrityDescriptor` | `download_tokens` | 1 | `Id` ("D") | Id, Token, NodeFileId, CreatedByUserId, ExpiresAt, DeleteAfterUse |
 | `NodeShareToken` | `NodeShareTokenIntegrityDescriptor` | `node_share_tokens` | 1 | `Id` ("D") | Id, Token, NodeId, CreatedByUserId, ExpiresAt |
-| `CottonServerSettings` | `CottonServerSettingsIntegrityDescriptor` | `server_settings` | 2 | `Id` ("D") | Id, InstanceId, PublicBaseUrl, and ~35 more security/posture settings (see below) |
 | `Node` | `NodeIntegrityDescriptor` | `nodes` | 1 | `Id` ("D") | Id, OwnerId, LayoutId, ParentId, Type, Name, NameKey, Metadata |
 | `NodeFile` | `NodeFileIntegrityDescriptor` | `node_files` | 1 | `Id` ("D") | Id, OwnerId, FileManifestId, NodeId, OriginalNodeFileId, Name, NameKey, Metadata |
 | `FileManifest` | `FileManifestIntegrityDescriptor` | `file_manifests` | 1 | `Id` ("D") | Id, ComputedContentHash, ProposedContentHash, ContentType, SizeBytes, SmallFilePreviewHashEncrypted, SmallFilePreviewHash, LargeFilePreviewHash |
@@ -127,9 +126,7 @@ Several descriptors document *deliberate exclusions*, which are as load-bearing 
 - `ChunkIntegrityDescriptor` excludes the GC schedule (mutable housekeeping). Chunk reference correctness is instead enforced structurally by `FileGraphIntegrityVerifier`.
 - `UserPasskeyCredentialIntegrityDescriptor`, `DownloadTokenIntegrityDescriptor`, and `NodeShareTokenIntegrityDescriptor` exclude user-facing display/filename labels, because changing a label cannot grant access.
 
-For `CottonServerSettings` the full signed set (from `CottonServerSettingsIntegrityDescriptor.cs`, in this exact order) is: `Id`, `InstanceId`, `PublicBaseUrl`, `EncryptionThreads`, `CipherChunkSizeBytes`, `CompressionLevel`, `MaxChunkSizeBytes`, `SessionTimeoutHours`, `TelemetryEnabled`, `Timezone`, `AllowCrossUserDeduplication`, `AllowGlobalIndexing`, `EmailMode`, `SmtpServerAddress`, `SmtpServerPort` (null → `-1`), `SmtpUsername`, `SmtpSenderEmail`, `SmtpUseSsl`, `SmtpPasswordEncrypted`, `ComputionMode`, `StorageType`, `StorageSpaceMode`, `ServerUsage`, `S3AccessKeyId`, `S3BucketName`, `S3Region`, `S3EndpointUrl`, `S3SecretAccessKeyEncrypted`, `CloudServicesTokenEncrypted`, `OidcClientId`, `OidcIssuer`, `OidcClientSecretEncrypted`, `TotpMaxFailedAttempts`, `GeoIpLookupMode`, `CustomGeoIpLookupUrl`, `DefaultUserStorageQuotaBytes` (null → `-1`), `DefaultUserTemplateNodeId`. Enum-valued settings (`EmailMode`, `ComputionMode`, `StorageType`, `StorageSpaceMode`, `GeoIpLookupMode`) are signed as their `int` value; `ServerUsage` (a collection of enum values) is written as a single string-array field where each value is rendered as an invariant-culture integer string and the array is ordinal-sorted before writing. Its bump to `SchemaVersion = 2` indicates the protected field set changed at least once since the original version 1.
-
-`CottonServerSettings.TrustedProxyIpAddress` and `TrustedProxyPrefixLength` are intentionally **not** part of the signed set above. They are an operator-managed network mode: real proxy addresses or networks are verified against the live connection peer when saved, while reserved `0.0.0.0` without a prefix selects direct mode. Changing them must not create a database-integrity schema transition or require legacy rows to be resigned.
+`CottonServerSettings` is intentionally outside row-level integrity protection. It is a frequently evolving operational configuration aggregate, so adding a setting must not create an integrity schema transition for the whole row. Its SMTP, S3, OIDC, and Cotton Bridge secrets remain authenticated and encrypted at rest by AES-GCM.
 
 ## Canonical serialization
 
@@ -143,7 +140,7 @@ For `CottonServerSettings` the full signed set (from `CottonServerSettingsIntegr
 - Booleans: a single `0`/`1` byte.
 - `DateTime`: normalized to UTC, truncated to **microsecond** precision (to match PostgreSQL's storage precision), then stored as big-endian Int64 ticks. The microsecond truncation is critical — without it, a value would sign with sub-microsecond ticks but verify against the truncated value read back from PostgreSQL and fail.
 - Nullable values carry an explicit presence byte (`0` = null, `1` = present) before the value, so `null` is distinguishable from an empty value. This applies to nullable strings, nullable GUIDs, nullable byte arrays, nullable `DateTime`, nullable string arrays, and nullable string dictionaries.
-- String dictionaries are sorted by **ordinal key** before writing; string arrays are written in the order the descriptor supplies them (descriptors are expected to pre-sort if order is not meaningful — as `CottonServerSettings.ServerUsage` does explicitly).
+- String dictionaries are sorted by **ordinal key** before writing; string arrays are written in the order the descriptor supplies them, so descriptors must pre-sort arrays when order is not meaningful.
 
 The field-type tag is `DatabaseIntegrityFieldType` (an `internal byte` enum):
 
@@ -186,7 +183,7 @@ It is keyed only via `IDatabaseIntegrityKeyProvider`; it has no knowledge of EF,
 
 `CottonDbContext` overrides all four `SaveChanges`/`SaveChangesAsync` overloads to call `integrityChangeSigner?.SignPendingChanges(this)` *before* `base.SaveChanges*` (`src/Cotton.Database/CottonDbContext.cs`, lines 63–90). The signer is an optional constructor dependency (`IDatabaseIntegrityChangeSigner? integrityChangeSigner = null`), so the database project compiles and tests run without the server's implementation; when it is null, signing is silently skipped. In the server composition it is wired as a scoped service.
 
-`OnModelCreating` registers the two shadow properties for all 15 protected entity types via `ConfigureIntegrityShadowProperties<TEntity>` (`int?` → `integrity_version`, `byte[]?` → `integrity_mac`).
+`OnModelCreating` registers the two shadow properties for all 13 protected entity types (`int?` → `integrity_version`, `byte[]?` → `integrity_mac`).
 
 `DatabaseIntegrityChangeSigner.SignPendingChanges` walks the change tracker and, for each `Added` or `Modified` entry that (a) has a registered descriptor and (b) actually has the integrity shadow properties on its EF metadata:
 
@@ -225,7 +222,7 @@ sequenceDiagram
 
 ## Read path — verifying at trust boundaries
 
-Signing only guarantees Cotton never *writes* an unsigned change. Read-time verification is what makes the signatures meaningful: it is applied exactly where the application is about to *trust* a row — authenticate a user, consume a token, serve file bytes, apply server settings, etc. `DatabaseIntegrityVerifier.RequireValid<TEntity>(dbContext, entity, boundary)`:
+Signing only guarantees Cotton never *writes* an unsigned change. Read-time verification is what makes the signatures meaningful: it is applied exactly where the application is about to *trust* a row — authenticate a user, consume a token, serve file bytes, etc. `DatabaseIntegrityVerifier.RequireValid<TEntity>(dbContext, entity, boundary)`:
 
 1. Resolves the descriptor; if none, returns (the entity is unprotected — a no-op).
 2. Requires the entity to be **tracked** (not `Detached`) — the MAC/version live in EF shadow properties on the tracked entry, so a detached DTO-like instance has no metadata to check. A detached entity throws `InvalidOperationException`.
@@ -273,10 +270,6 @@ The verifier is consumed at many boundaries; the `boundary` string is a stable l
 | `share.download-token`, `share.node-token` | `DownloadToken`, `NodeShareToken` | `src/Cotton.Server/Handlers/Files/ShareFileQuery.cs` |
 | `shared-folder.node-token`, `shared-folder.root-node`, and a parameterized boundary for a shared default `Node` | `NodeShareToken`, `Node` | `src/Cotton.Server/Controllers/LayoutController.cs` |
 | `preview.file-manifest`, `preview.avatar-user` | `FileManifest`, `User` | `src/Cotton.Server/Controllers/PreviewController.cs` |
-| `settings.cache-load`, `settings.load` | `CottonServerSettings` | `src/Cotton.Server/Providers/SettingsProvider.cs` |
-
-In `SettingsProvider` the verifier is an *optional* (`?`) dependency and is null-conditionally invoked (`_integrity?.RequireValid(...)`), so settings loading degrades gracefully if integrity is not wired (e.g. in tooling contexts).
-
 ### File-graph verification
 
 Serving file bytes touches several joined rows (`NodeFile` → `Node`, `NodeFile` → `FileManifest` → ordered `FileManifestChunk` → `Chunk`). Verifying each one individually at every call site would be error-prone, so `FileGraphIntegrityVerifier` (`src/Cotton.Server/Services/DatabaseIntegrity/FileGraphIntegrityVerifier.cs`) does it as a unit. It depends on `IDatabaseIntegrityVerifier` (for per-row MACs) and `IDatabaseIntegrityFailureReporter` (for structural failures), and has two entry points:
@@ -334,22 +327,23 @@ When a read boundary (or the save-time original-state check, or the file-graph v
 | Field | Value in current code |
 |---|---|
 | `Enabled` | `true` (hardcoded) |
-| `ProtectedEntityTypes` | `_descriptors.All.Count` (15) |
+| `ProtectedEntityTypes` | `_descriptors.All.Count` (13) |
 | `UnsignedProtectedRows` | summed unsigned/mis-versioned row count |
 
 `SecurityDiagnosticsService` (`src/Cotton.Server/Services/SecurityDiagnosticsService.cs`) consumes this via `AddDatabaseIntegrityWarnings` and emits a **critical** `db-integrity-unsigned-rows` warning when `UnsignedProtectedRows > 0`. Operators should restore the affected rows from a trusted backup or start Cotton 0.4.35 with the same database, storage, and master key and complete its transition before upgrading. Version 0.5 does not repair these rows.
 
 ## Schema and migrations
 
-The `integrity_mac` (`bytea`, nullable) and `integrity_version` (`integer`, nullable) columns are added to all 15 protected tables across the following migrations (no separate index or constraint is created):
+The `integrity_mac` (`bytea`, nullable) and `integrity_version` (`integer`, nullable) columns are used by 13 protected tables. The original integrity migration also added them to `server_settings`; the current schema removes those two columns:
 
 | Migration | Tables |
 |---|---|
 | `20260522021312_AddDatabaseIntegrityColumns` | `users`, `user_passkey_credentials`, `server_settings`, `refresh_tokens`, `node_share_tokens`, `download_tokens` |
 | `20260522200207_AddFileGraphIntegrityColumns` | `nodes`, `node_files`, `file_manifests`, `file_manifest_chunks`, `chunks` |
 | `20260526073016_AddOidcProviders` | `oidc_providers`, `oidc_login_states`, `user_external_identities` (integrity columns created inline with the new tables) |
+| `20260808072737_RemoveFirebaseCloudMessagingAndServerSettingsIntegrity` | removes the two integrity columns from `server_settings` |
 
-Each migration's `Down` drops both columns from the same tables.
+The add migrations' `Down` methods drop both columns from the same tables; the removal migration's `Down` restores the two `server_settings` columns.
 
 ## Concurrency, failure modes, edge cases, security considerations
 
@@ -366,7 +360,7 @@ Each migration's `Down` drops both columns from the same tables.
 ## Non-obvious design decisions and gotchas
 
 - **`EntityName` is a stable descriptor identifier, not the EF table name.** It happens to match the EF table names today, but it is signed payload data and changing it would invalidate every MAC for that entity.
-- **Schema version vs. format magic are different versions.** `Cotton.DbIntegrity.Row.v1` is the canonical-writer format marker; each descriptor's `SchemaVersion` is the per-entity protected-field-set version (e.g. `server_settings` is at 2). Bumping a descriptor's `SchemaVersion` is the correct way to evolve its field set, and old rows at the previous version become *stale* — the verifier rejects them.
+- **Schema version vs. format magic are different versions.** `Cotton.DbIntegrity.Row.v1` is the canonical-writer format marker; each descriptor's `SchemaVersion` is the per-entity protected-field-set version. Bumping a descriptor's `SchemaVersion` is the correct way to evolve its field set, and old rows at the previous version become *stale* — the verifier rejects them.
 - **No global enable/disable or bridge toggle exists in code.** `AddDatabaseIntegrity()` is unconditional in `Program.cs`; version 0.5 has no startup migration guard or compatibility mode.
 - **The signer is an optional DB-layer dependency.** `CottonDbContext` works without it (null-conditional call). Any non-server consumer of the context (migrations tooling, certain tests) will *not* sign — which is fine for those paths but means signing is a property of the server composition, not the context itself.
 - **`Chunk` keys on its content hash,** not a GUID, because chunks are content-addressed; this is the only descriptor whose entity key is non-GUID (`Hasher.ToHexStringHash(Chunk.Hash)`).
@@ -377,6 +371,6 @@ Each migration's `Down` drops both columns from the same tables.
 - *Cryptography Engine* — the master encryption key, `KeyDerivation` (HKDF), and `CottonEncryptionSettings` that this subsystem derives its HMAC key from.
 - *Authentication & Sessions* — the refresh-token, passkey, TOTP, and OIDC flows whose entities are protected and verified at boundaries like `auth.login` and `passkey.assertion-credential`.
 - *File Storage & Content Addressing* — the `NodeFile`/`FileManifest`/`FileManifestChunk`/`Chunk` graph that `FileGraphIntegrityVerifier` validates before serving bytes.
-- *Server Settings* — the `CottonServerSettings` row protected by the most extensive descriptor and verified on settings load.
+- *Server Settings* — the operational configuration stored in `CottonServerSettings`, including its AES-GCM-encrypted secret fields.
 - *Security Check-up / Diagnostics* — the admin-facing surface that consumes `DatabaseIntegrityDiagnosticsService`.
 - *Notifications* — the `INotificationsProvider` and template machinery used to alert admins on a detected failure.

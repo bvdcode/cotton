@@ -11,7 +11,6 @@ using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Models.Enums;
 using NUnit.Framework;
-using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -348,48 +347,6 @@ public class DatabaseIntegrityFoundationTests
         credential.PublicKey = [9, 9, 9];
 
         Assert.That(protector.Verify(credential, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void ServerSettingsDescriptor_DetectsStorageCredentialTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new CottonServerSettingsIntegrityDescriptor();
-        var settings = new CottonServerSettings
-        {
-            InstanceId = Guid.Parse("30000000-0000-0000-0000-000000000002"),
-            PublicBaseUrl = "https://cloud.example.test",
-            S3AccessKeyId = "access-key",
-            S3BucketName = "bucket",
-            S3Region = "auto",
-            S3EndpointUrl = "https://s3.example.test",
-            S3SecretAccessKeyEncrypted = "encrypted-secret"
-        };
-        byte[] mac = protector.Sign(settings, descriptor);
-
-        settings.S3SecretAccessKeyEncrypted = "other-secret";
-
-        Assert.That(protector.Verify(settings, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void ServerSettingsDescriptor_DoesNotSignTrustedProxyAddress()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new CottonServerSettingsIntegrityDescriptor();
-        var settings = new CottonServerSettings
-        {
-            InstanceId = Guid.Parse("30000000-0000-0000-0000-000000000002"),
-            PublicBaseUrl = "https://cloud.example.test",
-            TrustedProxyIpAddress = IPAddress.Parse("192.0.2.10"),
-            TrustedProxyPrefixLength = null
-        };
-        byte[] mac = protector.Sign(settings, descriptor);
-
-        settings.TrustedProxyIpAddress = IPAddress.Parse("192.0.2.11");
-        settings.TrustedProxyPrefixLength = 24;
-
-        Assert.That(protector.Verify(settings, descriptor, mac), Is.True);
     }
 
     [Test]

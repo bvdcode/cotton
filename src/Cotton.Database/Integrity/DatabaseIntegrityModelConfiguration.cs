@@ -20,7 +20,6 @@ namespace Cotton.Database.Integrity
             typeof(ExtendedRefreshToken),
             typeof(DownloadToken),
             typeof(NodeShareToken),
-            typeof(CottonServerSettings),
             typeof(Node),
             typeof(NodeFile),
             typeof(FileManifest),
