@@ -61,6 +61,7 @@ namespace Cotton.Crypto
         private readonly long? _memoryLimitBytes;
         private readonly long _pipePauseWriterThresholdBytes;
         private readonly long _pipeResumeWriterThresholdBytes;
+        private int _disposed;
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
         private readonly int _concurrencyLevel = Math.Min(4, Environment.ProcessorCount);
 
@@ -162,6 +163,7 @@ namespace Cotton.Crypto
         /// <inheritdoc/>
         public async Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, bool leaveInputOpen = true, bool leaveOutputOpen = true, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
             ArgumentNullException.ThrowIfNull(input);
             ArgumentNullException.ThrowIfNull(output);
             if (!input.CanRead)
@@ -235,6 +237,7 @@ namespace Cotton.Crypto
         /// <inheritdoc/>
         public async Task DecryptAsync(Stream input, Stream output, bool leaveInputOpen = true, bool leaveOutputOpen = true, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
             ArgumentNullException.ThrowIfNull(input);
             ArgumentNullException.ThrowIfNull(output);
             if (!input.CanRead)
@@ -293,6 +296,7 @@ namespace Cotton.Crypto
         /// <inheritdoc/>
         public Task<Stream> EncryptAsync(Stream input, int chunkSize = DefaultChunkSize, bool leaveOpen = false, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
             ArgumentNullException.ThrowIfNull(input);
             if (!input.CanRead)
             {
@@ -347,6 +351,7 @@ namespace Cotton.Crypto
         /// <inheritdoc/>
         public Task<Stream> DecryptAsync(Stream input, bool leaveOpen = false, CancellationToken ct = default)
         {
+            ThrowIfDisposed();
             ArgumentNullException.ThrowIfNull(input);
             if (!input.CanRead)
             {
@@ -402,9 +407,19 @@ namespace Cotton.Crypto
         /// be used.</remarks>
         public void Dispose()
         {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
             CryptographicOperations.ZeroMemory(_masterKeyBytes);
             _rng.Dispose();
             GC.SuppressFinalize(this);
+        }
+
+        private void ThrowIfDisposed()
+        {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         }
     }
 }
