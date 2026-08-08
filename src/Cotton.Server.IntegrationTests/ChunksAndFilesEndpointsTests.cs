@@ -459,6 +459,21 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task WebDav_BasicAuth_RejectsMultilinePayload()
+    {
+        string accessToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        string webDavToken = await GetWebDavTokenAsync();
+        string payload = Convert.ToBase64String(
+            Encoding.UTF8.GetBytes($"ignored\ntestuser:{webDavToken}"));
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", payload);
+
+        using HttpResponseMessage response = await _client.GetAsync("/api/v1/webdav");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
     public async Task Download_Owned_File_Content_Rejects_Another_User()
     {
         var ownerToken = await LoginAsync();

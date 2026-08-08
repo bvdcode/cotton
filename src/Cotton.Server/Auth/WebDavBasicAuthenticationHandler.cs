@@ -14,6 +14,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -31,6 +32,7 @@ namespace Cotton.Server.Auth
         IPasswordHashService hasher,
         IMemoryCache cache,
         Cotton.Server.Services.WebDav.WebDavAuthCache authCache,
+        WebDavAuthenticationFailureLimiter authenticationFailureLimiter,
         INotificationsProvider notifications,
         IGeoLookupService geoLookup,
         IDatabaseIntegrityVerifier integrity)
@@ -46,8 +48,9 @@ namespace Cotton.Server.Auth
         /// </summary>
         public const string SchemeName = "WebDavBasic";
         private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan FailedAttemptWindow = TimeSpan.FromMinutes(1);
-        private const int FailedAttemptLimit = 10;
+        private static readonly Encoding StrictUtf8 = new UTF8Encoding(
+            encoderShouldEmitUTF8Identifier: false,
+            throwOnInvalidBytes: true);
         private const string RateLimitedContextItemKey = "__cotton_webdav_basic_rate_limited";
 
         private IPAddress GetRequestIpAddress()
@@ -60,18 +63,22 @@ namespace Cotton.Server.Auth
         /// <inheritdoc />
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            var authHeader = Request.Headers.Authorization.ToString();
-            if (TryGetBasicAuthHeaderFailure(authHeader, out AuthenticateResult? headerFailure))
+            string authHeader = Request.Headers.Authorization.ToString();
+            if (!TryGetBasicAuthParameter(authHeader, out string encodedCredentials, out AuthenticateResult headerFailure))
             {
                 return headerFailure;
             }
 
-            if (!TryParseAndValidateCredentials(authHeader, out var username, out var token, out AuthenticateResult? credentialsFailure))
+            if (!TryParseAndValidateCredentials(
+                encodedCredentials,
+                out string username,
+                out string token,
+                out AuthenticateResult credentialsFailure))
             {
                 return credentialsFailure;
             }
 
-            var cacheKey = authCache.GetCacheKey(username, token);
+            string cacheKey = authCache.GetCacheKey(username, token);
             if (TryAuthenticateFromCache(cacheKey, username, out AuthenticateResult? cachedResult))
             {
                 return cachedResult;
@@ -125,57 +132,70 @@ namespace Cotton.Server.Auth
 
         private static ClaimsPrincipal CreatePrincipal(Guid userId, string username)
         {
-            var claims = new List<Claim>
+            List<Claim> claims = new()
             {
                 new(ClaimTypes.NameIdentifier, userId.ToString()),
                 new(JwtRegisteredClaimNames.Sub, userId.ToString()),
                 new(ClaimTypes.Name, username),
             };
 
-            var identity = new ClaimsIdentity(claims, SchemeName);
+            ClaimsIdentity identity = new(claims, SchemeName);
             return new ClaimsPrincipal(identity);
         }
 
-        private static (string username, string token)? ParseBasicCredentials(string authorizationHeader)
+        private static (string username, string token)? ParseBasicCredentials(string encodedCredentials)
         {
-            const string basicPrefix = "Basic ";
-            var encoded = authorizationHeader[basicPrefix.Length..].Trim();
-            if (string.IsNullOrWhiteSpace(encoded))
+            if (string.IsNullOrWhiteSpace(encodedCredentials))
             {
                 return null;
             }
-            var bytes = Convert.FromBase64String(encoded);
-            string? decoded = Encoding.UTF8.GetString(bytes).Split('\n').FirstOrDefault(x => x.Contains(':'));
-            if (decoded is null)
+
+            byte[] bytes = Convert.FromBase64String(encodedCredentials);
+            string decoded = StrictUtf8.GetString(bytes);
+            if (decoded.Any(char.IsControl))
             {
                 return null;
             }
-            var idx = decoded.IndexOf(':');
+
+            int idx = decoded.IndexOf(':');
             if (idx <= 0)
             {
                 return null;
             }
 
-            var username = decoded[..idx];
-            var token = decoded[(idx + 1)..];
+            string username = decoded[..idx];
+            string token = decoded[(idx + 1)..];
             return (username, token);
         }
 
-        private bool TryGetBasicAuthHeaderFailure(string authHeader, out AuthenticateResult failure)
+        private bool TryGetBasicAuthParameter(
+            string authHeader,
+            out string encodedCredentials,
+            out AuthenticateResult failure)
         {
-            if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+            encodedCredentials = string.Empty;
+            if (!AuthenticationHeaderValue.TryParse(authHeader, out AuthenticationHeaderValue? parsedHeader)
+                || !parsedHeader.Scheme.Equals("Basic", StringComparison.OrdinalIgnoreCase))
             {
                 Logger.LogInformation("WebDAV auth: missing or non-Basic Authorization header.");
                 failure = AuthenticateResult.NoResult();
-                return true;
+                return false;
             }
 
+            if (string.IsNullOrWhiteSpace(parsedHeader.Parameter))
+            {
+                Logger.LogInformation("WebDAV auth: Basic Authorization header has no credentials.");
+                failure = AuthenticateResult.Fail("Invalid Authorization header.");
+                return false;
+            }
+
+            encodedCredentials = parsedHeader.Parameter;
             failure = default!;
-            return false;
+            return true;
         }
 
         private bool TryParseAndValidateCredentials(
-            string authHeader,
+            string encodedCredentials,
             out string username,
             out string token,
             out AuthenticateResult failure)
@@ -186,11 +206,11 @@ namespace Cotton.Server.Auth
             (string username, string token)? creds;
             try
             {
-                creds = ParseBasicCredentials(authHeader);
+                creds = ParseBasicCredentials(encodedCredentials);
             }
-            catch
+            catch (Exception ex) when (ex is FormatException or DecoderFallbackException)
             {
-                Logger.LogInformation("WebDAV auth: invalid Basic Authorization header (base64 decode failed).");
+                Logger.LogInformation("WebDAV auth: invalid Basic Authorization header payload.");
                 failure = AuthenticateResult.Fail("Invalid Authorization header.");
                 return false;
             }
@@ -287,8 +307,7 @@ namespace Cotton.Server.Auth
 
         private AuthenticateResult? TryRejectRateLimitedCredentials(string username)
         {
-            FailureCounter? counter = GetFailureCounter(username);
-            if (counter is null || counter.Count < FailedAttemptLimit)
+            if (!authenticationFailureLimiter.IsLimited(Request.GetTrustedClientIPAddress(), username))
             {
                 return null;
             }
@@ -301,53 +320,23 @@ namespace Cotton.Server.Auth
             return AuthenticateResult.Fail("Too many WebDAV authentication attempts.");
         }
 
-        private FailureCounter? GetFailureCounter(string username)
-        {
-            string key = GetFailureCacheKey(username);
-            if (!cache.TryGetValue(key, out FailureCounter? counter))
-            {
-                return null;
-            }
-
-            if (counter!.ResetAt > DateTimeOffset.UtcNow)
-            {
-                return counter;
-            }
-
-            cache.Remove(key);
-            return null;
-        }
-
         private void RecordAuthenticationFailure(string username)
         {
-            string key = GetFailureCacheKey(username);
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            FailureCounter counter = GetFailureCounter(username) ?? new FailureCounter(0, now.Add(FailedAttemptWindow));
-            counter.Count++;
-            cache.Set(key, counter, counter.ResetAt);
+            if (authenticationFailureLimiter.RecordFailure(Request.GetTrustedClientIPAddress(), username))
+            {
+                Context.Items[RateLimitedContextItemKey] = true;
+            }
         }
 
         private void ClearAuthenticationFailures(string username)
         {
-            cache.Remove(GetFailureCacheKey(username));
-        }
-
-        private string GetFailureCacheKey(string username)
-        {
-            string normalizedUsername = username.Trim().ToLowerInvariant();
-            return $"webdav-basic-fail:{Request.GetTrustedClientIPAddress()}:{normalizedUsername}";
+            authenticationFailureLimiter.Clear(Request.GetTrustedClientIPAddress(), username);
         }
 
         private AuthenticateResult AuthenticateSuccess(Guid userId, string username)
         {
             ClaimsPrincipal principal = CreatePrincipal(userId, username);
             return AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name));
-        }
-
-        private class FailureCounter(int count, DateTimeOffset resetAt)
-        {
-            public int Count { get; set; } = count;
-            public DateTimeOffset ResetAt { get; } = resetAt;
         }
     }
 }
