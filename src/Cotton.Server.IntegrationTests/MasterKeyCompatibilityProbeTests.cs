@@ -7,6 +7,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.IntegrationTests.Abstractions;
+using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
@@ -35,10 +36,7 @@ namespace Cotton.Server.IntegrationTests
         [TearDown]
         public void TearDown()
         {
-            if (Directory.Exists(_storageBasePath))
-            {
-                Directory.Delete(_storageBasePath, recursive: true);
-            }
+            TestDirectory.Delete(_storageBasePath);
         }
 
         [Test]
