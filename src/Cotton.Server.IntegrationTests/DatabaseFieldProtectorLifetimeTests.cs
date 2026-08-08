@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using NUnit.Framework;
+using System.Security.Cryptography;
 
 namespace Cotton.Server.IntegrationTests
 {
@@ -70,6 +71,88 @@ namespace Cotton.Server.IntegrationTests
             }
         }
 
+        [Test]
+        public async Task EncryptedFields_UseProtectorFromCurrentServiceProvider()
+        {
+            CottonEncryptionSettings settings = CreateEncryptionSettings();
+            Guid instanceId = Guid.NewGuid();
+
+            await using (ServiceProvider firstServices = CreateServiceProvider(settings))
+            await using (AsyncServiceScope scope = firstServices.CreateAsyncScope())
+            {
+                CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                dbContext.ServerSettings.Add(CreateServerSettings(instanceId, "first-provider-secret"));
+                await dbContext.SaveChangesAsync();
+            }
+
+            await using ServiceProvider secondServices = CreateServiceProvider(settings);
+            await using AsyncServiceScope secondScope = secondServices.CreateAsyncScope();
+            CottonDbContext secondDbContext = secondScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            string? storedSecret = await secondDbContext.ServerSettings
+                .Where(settingsRow => settingsRow.InstanceId == instanceId)
+                .Select(settingsRow => settingsRow.SmtpPasswordEncrypted)
+                .SingleAsync();
+
+            Assert.That(storedSecret, Is.EqualTo("first-provider-secret"));
+        }
+
+        [Test]
+        public async Task EncryptedFields_DoNotReuseProtectorFromDifferentServiceProvider()
+        {
+            CottonEncryptionSettings firstSettings = CreateEncryptionSettings();
+            CottonEncryptionSettings secondSettings = CreateEncryptionSettings(
+                "database-field-protector-key-002");
+            Guid instanceId = Guid.NewGuid();
+
+            await using ServiceProvider firstServices = CreateServiceProvider(firstSettings);
+            await using (AsyncServiceScope scope = firstServices.CreateAsyncScope())
+            {
+                CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                dbContext.ServerSettings.Add(CreateServerSettings(instanceId, "isolated-secret"));
+                await dbContext.SaveChangesAsync();
+            }
+
+            await using ServiceProvider secondServices = CreateServiceProvider(secondSettings);
+            await using AsyncServiceScope secondScope = secondServices.CreateAsyncScope();
+            CottonDbContext secondDbContext = secondScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+
+            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () =>
+                await secondDbContext.ServerSettings
+                    .Where(settingsRow => settingsRow.InstanceId == instanceId)
+                    .Select(settingsRow => settingsRow.SmtpPasswordEncrypted)
+                    .SingleAsync());
+        }
+
+        [Test]
+        public async Task EncryptedFields_DoNotReuseRawContextModel()
+        {
+            string connectionString = DbContext.Database.GetConnectionString()
+                ?? throw new InvalidOperationException("Test database connection string is not configured.");
+            DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
+                .UseNpgsql(connectionString)
+                .Options;
+
+            await using (CottonDbContext rawDbContext = new(options))
+            {
+                await rawDbContext.ServerSettings.CountAsync();
+            }
+
+            CottonEncryptionSettings settings = CreateEncryptionSettings();
+            await using ServiceProvider services = CreateServiceProvider(settings);
+            IDatabaseFieldProtector protector = services.GetRequiredService<IDatabaseFieldProtector>();
+            await using CottonDbContext protectedDbContext = new(options, protector);
+            Guid instanceId = Guid.NewGuid();
+            protectedDbContext.ServerSettings.Add(CreateServerSettings(instanceId, "protected-secret"));
+
+            await protectedDbContext.SaveChangesAsync();
+
+            string? storedSecret = await protectedDbContext.ServerSettings
+                .Where(settingsRow => settingsRow.InstanceId == instanceId)
+                .Select(settingsRow => settingsRow.SmtpPasswordEncrypted)
+                .SingleAsync();
+            Assert.That(storedSecret, Is.EqualTo("protected-secret"));
+        }
+
         private ServiceProvider CreateServiceProvider(CottonEncryptionSettings settings)
         {
             string connectionString = DbContext.Database.GetConnectionString()
@@ -101,10 +184,10 @@ namespace Cotton.Server.IntegrationTests
                 ?? throw new InvalidOperationException("Encrypted test field was not persisted.");
         }
 
-        private static CottonEncryptionSettings CreateEncryptionSettings()
+        private static CottonEncryptionSettings CreateEncryptionSettings(
+            string masterKey = "database-field-protector-key-001")
         {
-            return ConfigurationBuilderExtensions.DeriveEncryptionSettings(
-                "database-field-protector-key-001");
+            return ConfigurationBuilderExtensions.DeriveEncryptionSettings(masterKey);
         }
 
         private static CottonServerSettings CreateServerSettings(Guid instanceId, string smtpPassword)

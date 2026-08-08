@@ -6,6 +6,7 @@ using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using EasyExtensions.EntityFrameworkCore.Database;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cotton.Database
 {
@@ -15,6 +16,8 @@ namespace Cotton.Database
     public class CottonDbContext : AuditedDbContext
     {
         private readonly IDatabaseFieldProtector? _databaseFieldProtector;
+
+        internal IDatabaseFieldProtector? DatabaseFieldProtector => _databaseFieldProtector;
 
         /// <summary>
         /// Initializes a context for design-time and raw database operations that do not access encrypted fields.
@@ -135,6 +138,13 @@ namespace Cotton.Database
         /// Durable ordered sync-change feed rows.
         /// </summary>
         public DbSet<SyncChange> SyncChanges => Set<SyncChange>();
+
+        /// <inheritdoc />
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            base.OnConfiguring(optionsBuilder);
+            optionsBuilder.ReplaceService<IModelCacheKeyFactory, CottonModelCacheKeyFactory>();
+        }
 
         /// <inheritdoc />
         protected override void OnModelCreating(ModelBuilder modelBuilder)
