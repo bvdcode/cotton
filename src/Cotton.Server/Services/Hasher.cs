@@ -41,18 +41,6 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
-        /// Computes the SHA-256 hash value for the data in the specified stream.
-        /// </summary>
-        /// <remarks>The method reads from the current position of the stream to the end. The position of
-        /// the stream is not reset after the operation completes.</remarks>
-        /// <param name="input">The input stream containing the data to hash. The stream must be readable and seekable.</param>
-        /// <returns>A byte array containing the SHA-256 hash of the input data.</returns>
-        public static byte[] HashData(Stream input)
-        {
-            return SHA256.HashData(input);
-        }
-
-        /// <summary>
         /// Computes the SHA-256 hash value for the specified span of bytes.
         /// </summary>
         /// <param name="span">The span of bytes to compute the hash for.</param>
@@ -65,9 +53,14 @@ namespace Cotton.Server.Services
         /// <summary>
         /// Computes the SHA-256 hash of the stream asynchronously.
         /// </summary>
-        public static async Task<byte[]> HashDataAsync(Stream stream)
+        /// <param name="stream">The readable stream to hash from its current position to the end.</param>
+        /// <param name="cancellationToken">The token used to cancel asynchronous reads.</param>
+        /// <returns>The SHA-256 hash of the remaining stream content.</returns>
+        public static async Task<byte[]> HashDataAsync(
+            Stream stream,
+            CancellationToken cancellationToken = default)
         {
-            return await SHA256.HashDataAsync(stream);
+            return await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

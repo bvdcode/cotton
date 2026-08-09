@@ -230,8 +230,8 @@ namespace Cotton.Server.Handlers.Files
                 FileSizeBytes = fileManifest.SizeBytes
             };
 
-            using Stream stream = _storage.GetBlobStream(hashes, pipelineContext);
-            var computedContentHash = Hasher.HashData(stream);
+            await using Stream stream = _storage.GetBlobStream(hashes, pipelineContext);
+            byte[] computedContentHash = await Hasher.HashDataAsync(stream, ct);
             if (!computedContentHash.SequenceEqual(proposedHash))
             {
                 _logger.LogWarning(
