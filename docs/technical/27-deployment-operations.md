@@ -182,7 +182,7 @@ Writes are atomic and corruption-safe:
 `S3StorageBackend` stores chunks as bucket objects keyed `p1/p2/fileName.ctn`. It implements `IStorageBackendUsesEncryptedConfiguration` (the S3 secret is stored encrypted). Behavior:
 
 - `WriteAsync` calls `ExistsAsync` first and skips redundant uploads (dedup), then buffers to an OS temp file (`Path.GetTempFileName()`) and `PutObject`s it as `application/octet-stream` with chunked encoding disabled (`WithFileBodyCompatibility`).
-- `ReadAsync` uses `GetObject` with `ChecksumMode("DISABLED")`.
+- `ReadAsync` uses a full-content Range GET (`bytes=0-`) to avoid provider-specific ETag parsing in the AWS SDK; `416 InvalidRange` represents an existing empty object, while other S3 errors propagate.
 - `ExistsAsync`/`GetSizeAsync` use `GetObjectMetadata` and treat `NotFound` as absent.
 - `ListAllKeysAsync` paginates `ListObjectsV2` (1000 keys/page) and reconstructs UIDs from `.ctn` keys.
 - `CleanupTempFiles` is a no-op for S3.

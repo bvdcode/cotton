@@ -17,6 +17,7 @@ namespace Cotton.Storage.Backends
     /// </summary>
     public class S3StorageBackend(IS3Provider _s3Provider, ILogger<S3StorageBackend>? _logger = null) : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
     {
+        private const string InvalidRangeErrorCode = "InvalidRange";
         private const int WriteBufferSize = 2 * 1024 * 1024;
 
         private static string GetS3Key(string uid)
@@ -49,13 +50,23 @@ namespace Cotton.Storage.Backends
             IAmazonS3 _s3 = _s3Provider.GetS3Client();
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
-            GetObjectResponse result = await _s3.GetObjectAsync(new GetObjectRequest
+            GetObjectRequest request = new GetObjectRequest
             {
                 Key = key,
                 BucketName = bucket,
-                ChecksumMode = new ChecksumMode("DISABLED")
-            });
-            return new S3ResponseStream(result);
+            }.WithFullContentReadCompatibility();
+
+            try
+            {
+                GetObjectResponse result = await _s3.GetObjectAsync(request);
+                return new S3ResponseStream(result);
+            }
+            catch (AmazonS3Exception exception) when (
+                exception.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable
+                && exception.ErrorCode == InvalidRangeErrorCode)
+            {
+                return new MemoryStream([], writable: false);
+            }
         }
 
         /// <inheritdoc />
