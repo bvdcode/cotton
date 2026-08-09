@@ -17,7 +17,6 @@ using EasyExtensions.Quartz.Attributes;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
-using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Jobs
 {
@@ -46,8 +45,6 @@ namespace Cotton.Server.Jobs
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
             IReadOnlyDictionary<string, int> generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
-
-            await NormalizeLegacyPreviewableContentTypesAsync(allSupportedMimeTypes, cancellationToken);
 
             HashSet<Guid> queuedOrProcessedItemIds = [];
             List<FileManifest> itemsToProcess = await LoadNextPreviewItemsAsync(
@@ -458,52 +455,6 @@ namespace Cotton.Server.Jobs
             const int waitTimeSeconds = 5;
             _logger.LogInformation("Upload in progress, waiting {seconds}s before processing next item...", waitTimeSeconds);
             await Task.Delay(waitTimeSeconds * 1000, cancellationToken);
-        }
-
-        private async Task NormalizeLegacyPreviewableContentTypesAsync(
-            IReadOnlyCollection<string> supportedContentTypes,
-            CancellationToken cancellationToken)
-        {
-            List<FileManifest> manifests = await _dbContext.FileManifests
-                .Include(m => m.NodeFiles)
-                .Where(m =>
-                    (m.ContentType == FileManifestService.DefaultContentType
-                        || m.ContentType == string.Empty) &&
-                    m.NodeFiles.Any(nf => Regex.IsMatch(
-                        nf.Name,
-                        FileManifestService.PreviewableFileNameRegexPattern,
-                        RegexOptions.IgnoreCase)))
-                .OrderBy(m => m.CreatedAt)
-                .Take(MaxItemsPerRun)
-                .ToListAsync(cancellationToken);
-
-            int updated = 0;
-            foreach (FileManifest? manifest in manifests)
-            {
-                string? fileName = manifest.NodeFiles.FirstOrDefault(nodeFile => Regex.IsMatch(
-                    nodeFile.Name,
-                    FileManifestService.PreviewableFileNameRegexPattern,
-                    RegexOptions.IgnoreCase))?.Name;
-                if (string.IsNullOrWhiteSpace(fileName))
-                {
-                    continue;
-                }
-
-                string contentType = FileManifestService.ResolveContentType(fileName, manifest.ContentType);
-                if (!supportedContentTypes.Contains(contentType))
-                {
-                    continue;
-                }
-
-                manifest.ContentType = contentType;
-                updated++;
-            }
-
-            if (updated > 0)
-            {
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Normalized {Count} legacy file manifest content types before preview generation.", updated);
-            }
         }
 
         private async Task EnsureChunkExistsAsync(byte[] hash, long sizeBytes, CancellationToken cancellationToken)

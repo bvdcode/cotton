@@ -317,8 +317,6 @@ Quartz jobs (`src/Cotton.Server/Jobs/`, each annotated with `[JobTrigger]` and r
 | `ClearTempFolderJob` | `hours: 36` | clear the storage temp directory |
 | `DownloadTokenRetentionJob` | `days: 1` | sweep expired/used download tokens |
 | `RefreshTokenRetentionJob` | `days: 1` | clean expired refresh tokens |
-| `FixMimeTypesJob` | `days: 1` | correct stored MIME types |
-| `BackfillChunkStoredSizeJob` | `days: 1` | backfill `Chunk.StoredSizeBytes` |
 | `CollectPerformanceJob` | `days: 1` | collect performance/telemetry samples |
 | `DumpDatabaseJob` | `days: 7` | create chunked, storage-native PostgreSQL backups |
 | `StorageConsistencyJob` | `days: 30` | re-check stored data against the real backend, notify on loss |

@@ -56,8 +56,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         byte[]? SmallFilePreviewHash,
         byte[]? SmallFilePreviewHashEncrypted,
         byte[]? LargeFilePreviewHash,
-        string? PreviewGenerationError,
-        string ContentType);
+        string? PreviewGenerationError);
 
     private record FileManifestMetadataState(
         Dictionary<string, string>? Metadata);
@@ -179,35 +178,6 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
         using HttpResponseMessage anyNotModified = await _client.SendAsync(anyConditional);
         Assert.That(anyNotModified.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
-    }
-
-    [Test]
-    public async Task PreviewPipeline_SourceTextFile_WithLegacyOctetStreamContentType_GeneratesTextPreview()
-    {
-        string token = await LoginAsync();
-        SetBearer(token);
-
-        NodeDto root = await GetRootNodeAsync();
-        byte[] source = Encoding.UTF8.GetBytes("def hello():\n    print(\"Hello\")\n");
-
-        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, "app.py", FileManifestService.DefaultContentType, source);
-        await SetManifestContentTypeAsync(createdFile.Id, FileManifestService.DefaultContentType);
-
-        await ExecuteGeneratePreviewJobAsync();
-
-        FileManifestPreviewState manifest = await GetFileManifestByNodeFileIdAsync(createdFile.Id);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(manifest.ContentType, Is.EqualTo("text/plain"));
-            Assert.That(manifest.SmallFilePreviewHash, Is.Not.Null);
-            Assert.That(manifest.SmallFilePreviewHashEncrypted, Is.Not.Null);
-            Assert.That(manifest.LargeFilePreviewHash, Is.Null);
-            Assert.That(manifest.PreviewGenerationError, Is.Null);
-        });
-
-        byte[] smallPreview = await ReadPreviewBlobAsync(manifest.SmallFilePreviewHash!);
-        AssertWebpSignature(smallPreview);
     }
 
     [Test]
@@ -855,24 +825,6 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             .SingleAsync();
     }
 
-    private async Task SetManifestContentTypeAsync(Guid nodeFileId, string contentType)
-    {
-        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
-        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-
-        Guid manifestId = await dbContext.NodeFiles
-            .AsNoTracking()
-            .Where(x => x.Id == nodeFileId)
-            .Select(x => x.FileManifestId)
-            .SingleAsync();
-
-        FileManifest? manifest = await dbContext.FileManifests.FindAsync(manifestId);
-        Assert.That(manifest, Is.Not.Null);
-
-        manifest!.ContentType = contentType;
-        await dbContext.SaveChangesAsync();
-    }
-
     private async Task<FileManifestPreviewState> GetFileManifestByNodeFileIdAsync(Guid nodeFileId)
     {
         await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
@@ -886,8 +838,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
                 x.FileManifest.SmallFilePreviewHash,
                 x.FileManifest.SmallFilePreviewHashEncrypted,
                 x.FileManifest.LargeFilePreviewHash,
-                x.FileManifest.PreviewGenerationError,
-                x.FileManifest.ContentType))
+                x.FileManifest.PreviewGenerationError))
             .SingleOrDefaultAsync();
 
         Assert.That(manifest, Is.Not.Null);

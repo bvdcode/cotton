@@ -402,9 +402,7 @@ All jobs use `[JobTrigger(...)]` with startup firing, repeated intervals, and si
 | `GarbageCollectorJob` | 6 hours | Reclaim orphaned chunks (also triggerable via `PATCH /api/v1/server/gc/trigger`). |
 | `DownloadTokenRetentionJob` | 1 day | Sweep expired download/share tokens. |
 | `RefreshTokenRetentionJob` | 1 day | Sweep expired refresh tokens. |
-| `FixMimeTypesJob` | 1 day | Repair MIME types. |
 | `CollectPerformanceJob` | 1 day | Collect performance metrics. |
-| `BackfillChunkStoredSizeJob` | 1 day | Backfill stored chunk sizes. |
 | `ClearTempFolderJob` | 36 hours | Clean storage temp files. |
 | `DumpDatabaseJob` | 7 days | Database backup (3-min internal startup delay; triggerable via `PATCH /api/v1/server/database-backup/trigger`). |
 | `StorageConsistencyJob` | 30 days | Re-verify stored data against the backend. |

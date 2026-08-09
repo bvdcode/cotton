@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Npgsql;
-using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Services
 {
@@ -155,16 +154,6 @@ namespace Cotton.Server.Services
         };
 
         /// <summary>
-        /// Regex pattern matching filenames that Cotton treats as source-code text previews.
-        /// </summary>
-        public static string SourceTextFileNameRegexPattern { get; } = BuildSourceTextFileNameRegexPattern();
-
-        /// <summary>
-        /// Regex pattern matching legacy octet-stream filenames that Cotton can normalize for previews.
-        /// </summary>
-        public static string PreviewableFileNameRegexPattern { get; } = BuildPreviewableFileNameRegexPattern();
-
-        /// <summary>
         /// Resolves content type.
         /// </summary>
         public static string ResolveContentType(string? fileName, string? contentType)
@@ -275,28 +264,6 @@ namespace Cotton.Server.Services
 
             return normalizedContentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
                 || normalizedContentType.StartsWith("application/x-", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string BuildSourceTextFileNameRegexPattern()
-        {
-            IOrderedEnumerable<string> extensions = sourceTextExtensions
-                .Select(extension => Regex.Escape(extension.TrimStart('.')))
-                .OrderByDescending(extension => extension.Length)
-                .ThenBy(extension => extension, StringComparer.Ordinal);
-
-            return $"^(?:dockerfile(?:\\..*)?|\\.dockerignore|.+\\.(?:{string.Join("|", extensions)}))$";
-        }
-
-        private static string BuildPreviewableFileNameRegexPattern()
-        {
-            IOrderedEnumerable<string> extensions = sourceTextExtensions
-                .Concat(extensionContentTypeOverrides.Keys)
-                .Select(extension => Regex.Escape(extension.TrimStart('.')))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderByDescending(extension => extension.Length)
-                .ThenBy(extension => extension, StringComparer.Ordinal);
-
-            return $"^(?:dockerfile(?:\\..*)?|\\.dockerignore|.+\\.(?:{string.Join("|", extensions)}))$";
         }
 
         private static string NormalizeContentType(string? contentType)

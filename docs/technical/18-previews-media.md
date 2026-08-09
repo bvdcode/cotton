@@ -92,8 +92,7 @@ The `Version` property on each generator is the staleness key: when a generator'
 
 ```mermaid
 flowchart TD
-  A[Execute] --> B[NormalizeLegacySourceTextContentTypesAsync]
-  B --> C[LoadNextPreviewItemsAsync: newest-first, up to 10000 ids]
+  A[Execute] --> C[LoadNextPreviewItemsAsync: newest-first, up to 10000 ids]
   C --> D{For each manifest}
   D --> E[GetGeneratorByContentType]
   E -->|null| F[DetachPreviewItem + skip]
@@ -131,8 +130,6 @@ Concurrency/throttling constants:
 | `RefreshItemsPerUploadPause` | `250` | Max newer items pulled in during an upload pause. |
 
 When `_perf.IsUploading()` (the injected `PerfTracker`) reports an active upload, the job waits 5 s (`WaitForUploadPauseAsync`) and then `RefreshPreviewQueueAsync` inserts up to 250 *newer* manifests at the current position ahead of the remaining queue (so freshly-uploaded files get previews quickly), re-trimming the queue to `MaxItemsPerRun` (`TrimPreviewQueueToRunLimit`). Processed/queued IDs are tracked in a `HashSet<Guid>` to avoid duplicates. `DetachPreviewItem` detaches each manifest, its chunks (and their `Chunk` entities), and node-files from the EF change tracker after processing to bound memory across a 10k-item run.
-
-`NormalizeLegacySourceTextContentTypesAsync` runs first each pass: it repairs manifests stored as the default/empty content type (`FileManifestService.DefaultContentType` or `string.Empty`) whose node-file name matches a source-text pattern (`FileManifestService.SourceTextFileNameRegexPattern`, matched case-insensitively), reassigning a proper content type via `FileManifestService.ResolveContentType` so `TextPreviewGenerator` can pick them up (only when the resolved type is in the supported set). It processes up to `MaxItemsPerRun` rows ordered by `CreatedAt` ascending.
 
 ### Individual generators
 

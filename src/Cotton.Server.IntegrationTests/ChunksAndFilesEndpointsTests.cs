@@ -566,12 +566,16 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         byte[] chunkHash = Hasher.FromHexStringHash(chunkHashLower);
         DbContext.ChangeTracker.Clear();
-        int chunkCount = await DbContext.Chunks.CountAsync(x => x.Hash == chunkHash);
+        Chunk? storedChunk = await DbContext.Chunks
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Hash == chunkHash);
         int ownershipCount = await DbContext.ChunkOwnerships.CountAsync(x => x.ChunkHash == chunkHash);
 
         Assert.Multiple(() =>
         {
-            Assert.That(chunkCount, Is.EqualTo(1));
+            Assert.That(storedChunk, Is.Not.Null);
+            Assert.That(storedChunk?.PlainSizeBytes, Is.EqualTo(content.Length));
+            Assert.That(storedChunk?.StoredSizeBytes, Is.GreaterThan(0));
             Assert.That(ownershipCount, Is.EqualTo(1));
         });
     }
