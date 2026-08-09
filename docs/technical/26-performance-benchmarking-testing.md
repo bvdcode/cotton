@@ -209,7 +209,7 @@ The probe uid is the lowercase SHA-256 hex of 32 random bytes, never a user file
 
 ### CollectPerformanceJob (telemetry)
 
-`CollectPerformanceJob` (`src/Cotton.Server/Jobs/CollectPerformanceJob.cs`) is a Quartz job triggered daily (`[JobTrigger(days: 1)]`). It `await Task.Delay(360_000)` (6 minutes for startup stabilization), then **returns early unless `settings.TelemetryEnabled`** and again unless `!_perf.IsUploading()`. When it proceeds it runs the storage-pipeline probe best-effort (`TryRunStoragePipelineProbeAsync` swallows probe failures and degrades to telemetry without storage metrics) and POSTs a `TelemetryRequest` to `Cotton.Constants.CottonBridgeTelemetryUrl` via `HttpClient.PostAsJsonAsync`.
+`CollectPerformanceJob` (`src/Cotton.Server/Jobs/CollectPerformanceJob.cs`) is a Quartz job triggered daily (`[JobTrigger(days: 1)]`). Its first execution per process awaits the cancellation-aware 6-minute `JobStartupDelays.WaitForCollectPerformanceAsync` delay; later executions proceed immediately. It then **returns early unless `settings.TelemetryEnabled`** and again unless `!_perf.IsUploading()`. When it proceeds it runs the storage-pipeline probe best-effort (ordinary probe failures degrade to telemetry without storage metrics, while shutdown cancellation propagates) and POSTs a `TelemetryRequest` to `Cotton.Constants.CottonBridgeTelemetryUrl` via `HttpClient.PostAsJsonAsync`.
 
 The `TelemetryRequest` (`src/Cotton.Shared/Models/TelemetryRequest.cs`, namespace `Cotton.Models`) carries:
 

@@ -92,21 +92,20 @@ A storage object can also enter the lifecycle from the right: `StorageConsistenc
 
 ```mermaid
 flowchart TD
-    A[Execute] --> B{StorageSpaceMode == Limited?}
+    A[Execute] --> F{First run since process start?}
+    F -- yes --> G[Delay 15 minutes]
+    F -- no --> B
+    G --> B{StorageSpaceMode == Limited?}
     B -- no --> C{IsNightTime?}
     C -- yes --> D[Skip run, log, return]
     C -- no --> E[continue]
     B -- yes --> E
-    E --> F{First run since process start?}
-    F -- yes --> G[Delay 15 minutes]
-    F -- no --> H[continue]
-    G --> H
-    H --> I[Pick batchSize by StorageSpaceMode]
+    E --> I[Pick batchSize by StorageSpaceMode]
     I --> J[RunOnceAsync now, batchSize]
 ```
 
 - **Night-time gating:** `PerfTracker.IsNightTime()` (`src/Cotton.Server/Services/PerfTracker.cs`) returns true when the server-timezone local hour is `< 7` or `>= 22` (the timezone comes from `CottonServerSettings.GetTimezoneInfo()`). If the server is **not** in `StorageSpaceMode.Limited` (the "aggressive" mode) and it is currently night time, the run is skipped entirely. In `Limited` mode this gate is bypassed and GC runs around the clock.
-- **First-run delay:** A `static bool _isFirstRun` causes a one-time `await Task.Delay(900_000)` (15 minutes) before the very first pass, to let the server stabilize after startup. Because the flag is static and process-scoped, this delay happens once per process lifetime, not once per trigger.
+- **First-run delay:** `JobStartupDelays.WaitForGarbageCollectorAsync` uses a private process-static atomic flag to apply a cancellation-aware 15-minute delay to the first execution only. The flag is consumed before the night-time gate, so even a first run that later skips still absorbs its startup slot; later scheduled or manual executions never inherit a stale startup delay.
 - **Batch size** is chosen in `Execute()` by `StorageSpaceMode` (`src/Cotton.Database/Models/Enums/StorageSpaceMode.cs`), while the **retention window** is chosen by a separate switch in `ScheduleOrphanedChunksAsync`. Both switches key off the same mode value, so the per-mode pairing is:
 
 | `StorageSpaceMode` | `batchSize` | Retention window (`deleteAfter`) |
@@ -214,7 +213,7 @@ The ingest path (`ChunkIngestService.UpsertChunkAsync`, `src/Cotton.Server/Servi
 
 ## `StorageConsistencyJob`
 
-`StorageConsistencyJob` (`src/Cotton.Server/Jobs/StorageConsistencyJob.cs`) is marked `[JobTrigger(days: 30)]` — i.e. it runs at startup and then every 30 days. The `[JobTrigger]` registration makes it single-flight. `Execute()` waits `Task.Delay(300_000)` (5 minutes) for startup to settle, then calls `RunOnceAsync`.
+`StorageConsistencyJob` (`src/Cotton.Server/Jobs/StorageConsistencyJob.cs`) is marked `[JobTrigger(days: 30)]` — i.e. it runs at startup and then every 30 days. The `[JobTrigger]` registration makes it single-flight. Its first process execution waits for the cancellation-aware 5-minute `JobStartupDelays.WaitForStorageConsistencyAsync` delay, then calls `RunOnceAsync`; later executions call it immediately.
 
 `RunOnceAsync` performs a full bidirectional reconciliation:
 

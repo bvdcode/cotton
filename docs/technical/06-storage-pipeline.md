@@ -404,7 +404,7 @@ So the probe reports backend type plus observed read/write throughput of the ful
 
 ## Maintenance: temp cleanup job
 
-`ClearTempFolderJob` (`src/Cotton.Server/Jobs/ClearTempFolderJob.cs`, `[JobTrigger(hours: 36)]`) resolves the active backend and calls `CleanupTempFiles(TimeSpan.FromHours(1))` — i.e. it deletes filesystem temp files older than 1 hour roughly every 36 hours. It first awaits a 7-minute startup delay (`Task.Delay(420_000)`) and returns early if `_perf.IsNightTime()`. For S3 this is a no-op, since S3 uploads clean their OS temp files inline.
+`ClearTempFolderJob` (`src/Cotton.Server/Jobs/ClearTempFolderJob.cs`, `[JobTrigger(hours: 36)]`) resolves the active backend and calls `CleanupTempFiles(TimeSpan.FromHours(1))` — i.e. it deletes filesystem temp files older than 1 hour roughly every 36 hours. Its first execution in each process awaits the cancellation-aware 7-minute `JobStartupDelays.WaitForClearTempFolderAsync` delay; later executions proceed immediately. It then returns early if `_perf.IsNightTime()`. For S3 cleanup is a no-op, since S3 uploads remove their OS temp files inline.
 
 ## Concurrency, failure modes, edge cases, security
 

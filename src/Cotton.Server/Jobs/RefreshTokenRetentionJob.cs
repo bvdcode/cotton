@@ -24,7 +24,7 @@ namespace Cotton.Server.Jobs
         /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
-            await Task.Delay(600_000); // Wait for 10 minutes for the server to start up and stabilize
+            await JobStartupDelays.WaitForRefreshTokenRetentionAsync(context.CancellationToken);
 
             DateTime cutoffDate = DateTime.UtcNow - RetentionPeriod;
             List<ExtendedRefreshToken> tokensToRefresh = await _dbContext.RefreshTokens

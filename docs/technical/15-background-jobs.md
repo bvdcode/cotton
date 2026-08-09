@@ -95,21 +95,21 @@ flowchart TD
 
 ## Job summary table
 
-Cadences below are the literal `[JobTrigger]` arguments. "Internal start delay" is the `await Task.Delay(...)` at the top of `Execute` that defers the first useful work after process start.
+Cadences below are the literal `[JobTrigger]` arguments. "Internal start delay" is the one-shot, process-static wait coordinated by `JobStartupDelays` before a job's first execution.
 
 | Job | Trigger / cadence | Internal start delay | Purpose | Primary writes |
 | --- | --- | --- | --- | --- |
-| `GarbageCollectorJob` | `[JobTrigger(hours: 6)]` | 15 min (first run only, process-static) | Reclaim orphaned manifests & unreferenced chunks (schedule-then-delete) | `FileManifests`, `FileManifestChunks`, `DownloadTokens`, `Chunks` (`GCScheduledAfter`), `ChunkOwnerships`, blob-store deletes |
-| `StorageConsistencyJob` | `[JobTrigger(days: 30)]` | 5 min | Reconcile `Chunks` table against the blob store in both directions | `FileManifests` (clears preview hashes), `Users` (clears avatar hash), `Chunks` (registers orphans w/ `GCScheduledAfter`); sends notifications |
+| `GarbageCollectorJob` | `[JobTrigger(hours: 6)]` | 15 min (first execution only) | Reclaim orphaned manifests & unreferenced chunks (schedule-then-delete) | `FileManifests`, `FileManifestChunks`, `DownloadTokens`, `Chunks` (`GCScheduledAfter`), `ChunkOwnerships`, blob-store deletes |
+| `StorageConsistencyJob` | `[JobTrigger(days: 30)]` | 5 min (first execution only) | Reconcile `Chunks` table against the blob store in both directions | `FileManifests` (clears preview hashes), `Users` (clears avatar hash), `Chunks` (registers orphans w/ `GCScheduledAfter`); sends notifications |
 | `ComputeManifestHashesJob` | `[JobTrigger(hours: 12)]` | none | Verify whole-file content hashes on schedule and after file creation/content update | `FileManifests.ComputedContentHash`; sends mismatch notifications |
 | `GeneratePreviewJob` | `[JobTrigger(minutes: 15)]` | none | Generate small/large WebP previews | blob store (preview blobs), `Chunks`, `FileManifests` (preview hashes, version, error); SignalR `PreviewGenerated` |
 | `ExtractFileMetadataJob` | `[JobTrigger(minutes: 15)]` | none | Extract deterministic image/audio/video metadata | `FileManifests.Metadata`; SignalR `FileUpdated` |
-| `DownloadTokenRetentionJob` | `[JobTrigger(days: 1)]` | 4 min | Delete download tokens expired > 30 days | `DownloadTokens` (delete) |
-| `RefreshTokenRetentionJob` | `[JobTrigger(days: 1)]` | 10 min | Revoke refresh tokens created > 30 days ago | `RefreshTokens.RevokedAt` |
-| `DumpDatabaseJob` | `[JobTrigger(days: 7)]` | 3 min | Logical `pg_dump` stored as content-addressed chunks + manifest pointer | blob store (dump chunks, manifest, pointer), `Chunks`/`ChunkOwnerships` via ingest |
-| `ClearTempFolderJob` | `[JobTrigger(hours: 36)]` | 7 min | Delete storage-backend temp files older than 1 hour | storage backend temp dir |
+| `DownloadTokenRetentionJob` | `[JobTrigger(days: 1)]` | 4 min (first execution only) | Delete download tokens expired > 30 days | `DownloadTokens` (delete) |
+| `RefreshTokenRetentionJob` | `[JobTrigger(days: 1)]` | 10 min (first execution only) | Revoke refresh tokens created > 30 days ago | `RefreshTokens.RevokedAt` |
+| `DumpDatabaseJob` | `[JobTrigger(days: 7)]` | 3 min (first execution only) | Logical `pg_dump` stored as content-addressed chunks + manifest pointer | blob store (dump chunks, manifest, pointer), `Chunks`/`ChunkOwnerships` via ingest |
+| `ClearTempFolderJob` | `[JobTrigger(hours: 36)]` | 7 min (first execution only) | Delete storage-backend temp files older than 1 hour | storage backend temp dir |
 | `SyncChangeRetentionJob` | `[JobTrigger(days: 1)]` | none | Prune `SyncChanges` older than 365 days (keeps the newest per owner) | `SyncChanges` (delete) |
-| `CollectPerformanceJob` | `[JobTrigger(days: 1)]` | 6 min | Send telemetry + optional storage-pipeline probe to Cotton Bridge | none (outbound HTTP POST only) |
+| `CollectPerformanceJob` | `[JobTrigger(days: 1)]` | 6 min (first execution only) | Send telemetry + optional storage-pipeline probe to Cotton Bridge | none (outbound HTTP POST only) |
 
 ## Per-job reference
 
@@ -120,7 +120,7 @@ Cadences below are the literal `[JobTrigger]` arguments. "Internal start delay" 
 This is the most involved job; the deep mechanics are documented in the *Garbage Collection* section. Summary of control flow:
 
 1. **Night-time gate.** Reads `SettingsProvider.GetServerSettings().StorageSpaceMode`. `isAggressiveMode = spaceMode == StorageSpaceMode.Limited`. If the mode is *not* `Limited` and `PerfTracker.IsNightTime()` is true, the run logs and returns early. Night time is local hours `< 7` or `>= 22` evaluated against the server's configured timezone (`PerfTracker.IsNightTime` via `CottonServerSettings.GetTimezoneInfo()`).
-2. **First-run cool-down.** A `static bool _isFirstRun` flag delays the very first run with `await Task.Delay(900_000, context.CancellationToken)` (15 minutes) to let the server stabilize. This is process-static, so it applies once per process and is cancellation-aware.
+2. **First-run cool-down.** `JobStartupDelays.WaitForGarbageCollectorAsync` uses a private atomic process-static flag to delay the first execution by 15 minutes. It runs before the night-time gate, so the startup slot is consumed even when that first execution later skips.
 3. **Batch sizing by mode.** `StorageSpaceMode` selects the chunk batch size: `Limited` → `MaxChunkBatchSize` (100000), `Unlimited` → `MinChunkBatchSize` (1000), `Optimal` → midpoint `(MinChunkBatchSize + MaxChunkBatchSize) / 2` (50500); the fall-through default is `MinChunkBatchSize * 2` (2000).
 4. **`RunOnceAsync(now, batchSize, ct)`** loads `protectedStorageKeys` via `ChunkUsageService.GetProtectedStorageKeysAsync` and performs four phases:
    - `DeleteOrphanedManifestsAsync` — deletes up to `ManifestBatchSize` (1000) `FileManifests` with no `NodeFiles`, inside a transaction that first `ExecuteDeleteAsync`-deletes dependent `DownloadTokens` (joined through `NodeFile.FileManifestId`) and `FileManifestChunks`. The manifest delete re-asserts `!fm.NodeFiles.Any()`; if a candidate became referenced mid-transaction (`deletedManifests != manifestIds.Count`) or a `DbUpdateException` is thrown, the whole transaction rolls back and the pass logs a warning rather than risking data loss.
@@ -140,7 +140,7 @@ See the *Garbage Collection* section for the full schedule-then-delete model.
 
 `src/Cotton.Server/Jobs/StorageConsistencyJob.cs` — `[JobTrigger(days: 30)]`. Injects `IStoragePipeline`, `CottonDbContext`, `INotificationsProvider`, `ChunkUsageService`, `ILogger`.
 
-After `await Task.Delay(300_000, context.CancellationToken)` (5 minutes), `RunOnceAsync` does a two-directional reconciliation:
+On the first execution per process, `JobStartupDelays.WaitForStorageConsistencyAsync` applies a cancellation-aware 5-minute delay; later executions proceed immediately. `RunOnceAsync` then does a two-directional reconciliation:
 
 1. **Collect all storage keys** into a case-insensitive `HashSet<string>` via `IStoragePipeline.ListAllKeysAsync`.
 2. **DB → storage** (`CheckDbChunksAgainstStorageAsync`): streams `Chunks` ordered by `Hash` with `AsNoTracking` so a running pass is not destabilized by concurrent chunk inserts. For each chunk hash (hex via `Hasher.ToHexStringHash`), if its key is present in the storage set it is `Remove`d (marking it accounted-for); otherwise it double-checks with `IStoragePipeline.ExistsAsync` (guard against listing races). Chunks that exist on direct lookup are counted and logged once with a sample; truly missing hashes are collected and handled after the DB stream closes.
@@ -191,19 +191,19 @@ Extracts deterministic content metadata for supported image, audio, and video ma
 
 `src/Cotton.Server/Jobs/DownloadTokenRetentionJob.cs` — `[JobTrigger(days: 1)]`. Injects `CottonDbContext`, `ILogger`.
 
-After `await Task.Delay(240_000)` (4 minutes; no cancellation token), deletes `DownloadTokens` whose `ExpiresAt` is non-null and `<= now - 30 days` (i.e. expired for more than 30 days, not merely expired). It loads them, `RemoveRange`, `SaveChangesAsync`, and logs the count. Tokens with a null `ExpiresAt` are never removed here. See the *Sharing & Download Tokens* section.
+The first execution per process awaits the cancellation-aware 4-minute `JobStartupDelays.WaitForDownloadTokenRetentionAsync` delay; later executions proceed immediately. It deletes `DownloadTokens` whose `ExpiresAt` is non-null and `<= now - 30 days` (i.e. expired for more than 30 days, not merely expired). The database query and save observe the same cancellation token. It loads the rows, calls `RemoveRange`, saves, and logs the count. Tokens with a null `ExpiresAt` are never removed here. See the *Sharing & Download Tokens* section.
 
 ### RefreshTokenRetentionJob
 
 `src/Cotton.Server/Jobs/RefreshTokenRetentionJob.cs` — `[JobTrigger(days: 1)]`. Injects `CottonDbContext`, `ILogger`.
 
-After `await Task.Delay(600_000)` (10 minutes; no cancellation token), it revokes (does not delete) auth refresh tokens. `RetentionPeriod` is `TimeSpan.FromDays(30)`. It loads `RefreshTokens` where `RevokedAt == null` and `CreatedAt < now - 30 days`, sets `RevokedAt = DateTime.UtcNow` on each, saves, and logs the count. Note this revokes by **creation age**, capping the absolute lifetime of any refresh token at 30 days regardless of recent use. See the *Authentication & Sessions* section.
+The first execution per process awaits the cancellation-aware 10-minute `JobStartupDelays.WaitForRefreshTokenRetentionAsync` delay; later executions proceed immediately. It revokes (does not delete) auth refresh tokens. `RetentionPeriod` is `TimeSpan.FromDays(30)`. It loads `RefreshTokens` where `RevokedAt == null` and `CreatedAt < now - 30 days`, sets `RevokedAt = DateTime.UtcNow` on each, saves, and logs the count. Note this revokes by **creation age**, capping the absolute lifetime of any refresh token at 30 days regardless of recent use. See the *Authentication & Sessions* section.
 
 ### DumpDatabaseJob
 
 `src/Cotton.Server/Jobs/DumpDatabaseJob.cs` — `[JobTrigger(days: 7)]`. Injects `IPostgresDumpService`, `IChunkIngestService`, `IStoragePipeline`, `SettingsProvider`, `CottonDbContext`, `DatabaseBackupKeyProvider`, `IConfiguration`, `ILogger`.
 
-Performs a logical PostgreSQL backup and stores it as content-addressed chunks. After `await Task.Delay(180_000)` (3 minutes; no cancellation token):
+Performs a logical PostgreSQL backup and stores it as content-addressed chunks. Its first process execution awaits the cancellation-aware 3-minute `JobStartupDelays.WaitForDumpDatabaseAsync` delay; later executions proceed immediately. It then:
 
 1. Resolves a backup owner (`ResolveBackupOwnerIdAsync` — the first user by `Id`); throws `InvalidOperationException` if no users exist.
 2. `IPostgresDumpService.DumpToFileAsync` writes a dump file to `{Path.GetTempPath()}/cotton/db-dumps/db-{yyyyMMdd-HHmmss}-{backupId}.dump` (path built by `BuildDumpFilePath`, `backupId` is a `Guid.NewGuid().ToString("N")`).
@@ -218,7 +218,7 @@ Performs a logical PostgreSQL backup and stores it as content-addressed chunks. 
 
 `src/Cotton.Server/Jobs/ClearTempFolderJob.cs` — `[JobTrigger(hours: 36)]`. Injects `PerfTracker`, `IStorageBackendProvider`.
 
-After `await Task.Delay(420_000)` (7 minutes; no cancellation token), returns early if `PerfTracker.IsNightTime()`. Otherwise it resolves the active backend via `IStorageBackendProvider.GetBackend()` and calls `backend.CleanupTempFiles(_ttl)` with `_ttl = TimeSpan.FromHours(1)`, removing temp files older than one hour. Whether a backend actually has temp files depends on the configured backend; see the *Storage Backends* section.
+The first execution per process awaits the cancellation-aware 7-minute `JobStartupDelays.WaitForClearTempFolderAsync` delay; later executions proceed immediately. It then returns early if `PerfTracker.IsNightTime()`. Otherwise it resolves the active backend via `IStorageBackendProvider.GetBackend()` and calls `backend.CleanupTempFiles(_ttl)` with `_ttl = TimeSpan.FromHours(1)`, removing temp files older than one hour. Whether a backend actually has temp files depends on the configured backend; see the *Storage Backends* section.
 
 ### SyncChangeRetentionJob
 
@@ -230,7 +230,7 @@ Prunes the sync-change log used by the delta-sync API. `RetentionPeriod` is `Tim
 
 `src/Cotton.Server/Jobs/CollectPerformanceJob.cs` — `[JobTrigger(days: 1)]`. Injects `PerfTracker`, `CottonDbContext`, `SettingsProvider`, `StoragePipelineProbeService`, `ILogger`.
 
-Sends opt-in telemetry to Cotton Bridge. After `await Task.Delay(360_000)` (6 minutes; no cancellation token):
+Sends opt-in telemetry to Cotton Bridge. Its first process execution awaits the cancellation-aware 6-minute `JobStartupDelays.WaitForCollectPerformanceAsync` delay; later executions proceed immediately. It then:
 
 - **Gates:** returns early if `SettingsProvider.GetServerSettings().TelemetryEnabled` is false, or if `PerfTracker.IsUploading()`.
 - Optionally runs a bounded storage-pipeline throughput probe via `StoragePipelineProbeService.RunAsync(storageBackend, ct)`, where `storageBackend = settings.StorageType.ToString().ToLowerInvariant()`. Probe failures are caught (`TryRunStoragePipelineProbeAsync`) and the telemetry is sent with a null probe.
@@ -254,7 +254,7 @@ This job writes nothing to the database or storage — it only emits an outbound
 ## Concurrency, failure modes, and edge cases
 
 - **Non-concurrent by default.** `[JobTrigger]` registration makes each job single-flight, so no single job overlaps itself — including manual `TriggerJobAsync` fires, which target the same `JobDetail`.
-- **Startup storm + start delays.** With `StartNow = true` and an in-memory store, every trigger tries to fire right after `AwaitApplicationStarted` plus the 5-second `StartDelay`. The staggered per-job `Task.Delay` values spread the first runs out and let the server stabilize. Several of these initial delays are **not** cancellation-aware — `DownloadTokenRetentionJob`, `RefreshTokenRetentionJob`, `DumpDatabaseJob`, `ClearTempFolderJob`, and `CollectPerformanceJob` pass no token to the opening `Task.Delay` — so a shutdown during that window will not interrupt the delay promptly; with `WaitForJobsToComplete = false` the host does not block on them either. (`GarbageCollectorJob` and `StorageConsistencyJob` *do* pass `context.CancellationToken` to their start delays.)
+- **Startup storm + start delays.** With `StartNow = true` and an in-memory store, every trigger tries to fire right after `AwaitApplicationStarted` plus the scheduler `StartDelay`. `JobStartupDelays` keeps a private atomic process-static flag per delayed job, spreading only each job's first execution. Repeated scheduled and manual runs proceed immediately. Every wait observes `IJobExecutionContext.CancellationToken`, so shutdown cancels jobs still waiting instead of allowing them to proceed into application work.
 - **No persistence / no clustering.** Multi-instance deployments run each job on every node. Cross-node safety relies on the database-level re-checks inside the jobs (GC's `CurrentlyDeletingChunks` reservation set is process-local only), not on Quartz. Operators running more than one server replica should expect GC, consistency, dump, and telemetry to each run per-node.
 - **Misfire handling.** All triggers use `WithMisfireHandlingInstructionFireNow()` — a single catch-up fire after downtime, not a replay of missed occurrences.
 - **PerfTracker gating.** `IsUploading()` and `IsPreviewGenerating()` are time-window heuristics (both use the same 10-second `ChunkTimeoutSeconds`) backed by in-memory timestamps (`OnChunkCreated` is called from `ChunkController`; `OnPreviewGenerating` from `GeneratePreviewJob`). `IsNightTime()` is evaluated against the configured server timezone. Several jobs voluntarily yield to live traffic using these signals (GC night gate, `ComputeManifestHashesJob`, `GeneratePreviewJob`, `ClearTempFolderJob`, `CollectPerformanceJob`).
@@ -264,7 +264,7 @@ This job writes nothing to the database or storage — it only emits an outbound
 
 - `[JobTrigger]` already carries the job-level single-flight behavior Cotton needs. Job classes should not add a redundant Quartz class-level concurrency marker.
 - `RefreshTokenRetentionJob` caps tokens by **creation age**, not idle age — long-lived sessions are forcibly rotated at 30 days. `DownloadTokenRetentionJob` keeps expired tokens for an extra 30 days before deleting them (grace window) and never deletes tokens with a null `ExpiresAt`.
-- `GarbageCollectorJob._isFirstRun` and `CurrentlyDeletingChunks` are `static`, so their state is per-process and shared across all (non-concurrent) runs in that process.
+- Startup-delay flags in `JobStartupDelays` and `GarbageCollectorJob.CurrentlyDeletingChunks` are process-static and shared across all runs in that process.
 - The README describes background maintenance at a feature level; this section records the exact implemented jobs, schedules, and deferred GC delays.
 
 ## Related sections

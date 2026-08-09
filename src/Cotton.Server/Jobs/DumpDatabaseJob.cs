@@ -40,9 +40,9 @@ namespace Cotton.Server.Jobs
         /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
-            await Task.Delay(180_000); // Wait for 3 minutes for the server to start up and stabilize
-
             CancellationToken ct = context.CancellationToken;
+            await JobStartupDelays.WaitForDumpDatabaseAsync(ct);
+
             Stopwatch sw = Stopwatch.StartNew();
             DateTime startedAtUtc = DateTime.UtcNow;
             string backupId = Guid.NewGuid().ToString("N");

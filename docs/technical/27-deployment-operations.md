@@ -214,7 +214,7 @@ Backups are storage-native: PostgreSQL dumps are chunked through Cotton's own st
 
 ### Scheduled backups
 
-`DumpDatabaseJob` (`src/Cotton.Server/Jobs/DumpDatabaseJob.cs`) carries `[JobTrigger(days: 7)]`. The trigger starts shortly after startup, repeats every 7 days, and is registered single-flight. The `Execute` method begins with `await Task.Delay(180_000)` (3 minutes) to let the server stabilize before dumping.
+`DumpDatabaseJob` (`src/Cotton.Server/Jobs/DumpDatabaseJob.cs`) carries `[JobTrigger(days: 7)]`. The trigger starts shortly after startup, repeats every 7 days, and is registered single-flight. The first execution in each process observes the cancellation-aware 3-minute `JobStartupDelays.WaitForDumpDatabaseAsync` delay; later scheduled and manual executions start immediately.
 
 Flow per run:
 

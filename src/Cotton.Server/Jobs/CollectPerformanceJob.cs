@@ -29,7 +29,8 @@ namespace Cotton.Server.Jobs
         /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
-            await Task.Delay(360_000); // Wait for 6 minutes for the server to start up and stabilize
+            CancellationToken cancellationToken = context.CancellationToken;
+            await JobStartupDelays.WaitForCollectPerformanceAsync(cancellationToken);
 
             CottonServerSettings settings = _settingsProvider.GetServerSettings();
             if (!settings.TelemetryEnabled)
@@ -44,21 +45,26 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            StoragePipelineProbeResult? storagePipelineProbe = await TryRunStoragePipelineProbeAsync(settings.StorageType.ToString().ToLowerInvariant(), context.CancellationToken).ConfigureAwait(false);
+            StoragePipelineProbeResult? storagePipelineProbe = await TryRunStoragePipelineProbeAsync(
+                settings.StorageType.ToString().ToLowerInvariant(),
+                cancellationToken).ConfigureAwait(false);
 
             TelemetryRequest request = new()
             {
                 InstanceId = settings.InstanceId,
                 ServerUrl = settings.PublicBaseUrl,
-                Nodes = await _dbContext.Nodes.CountAsync(),
-                Users = await _dbContext.Users.CountAsync(),
-                Files = await _dbContext.FileManifests.CountAsync(),
+                Nodes = await _dbContext.Nodes.CountAsync(cancellationToken),
+                Users = await _dbContext.Users.CountAsync(cancellationToken),
+                Files = await _dbContext.FileManifests.CountAsync(cancellationToken),
                 Version = AppVersionHelpers.GetAppVersion() ?? "Unknown",
                 MaxChunkSizeBytes = settings.MaxChunkSizeBytes,
                 StoragePipelineProbe = storagePipelineProbe,
             };
             using var httpClient = new HttpClient();
-            await httpClient.PostAsJsonAsync(global::Cotton.Constants.CottonBridgeTelemetryUrl, request);
+            await httpClient.PostAsJsonAsync(
+                global::Cotton.Constants.CottonBridgeTelemetryUrl,
+                request,
+                cancellationToken);
             _logger.LogInformation("CollectPerformanceJob completed - telemetry data was sent to Cotton Bridge");
         }
 
@@ -67,6 +73,10 @@ namespace Cotton.Server.Jobs
             try
             {
                 return await _storagePipelineProbe.RunAsync(storageBackend, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
