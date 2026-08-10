@@ -88,35 +88,39 @@ namespace Cotton.Previews
                     return scannedIcon;
                 }
 
-                if (foundDeclaredIcon)
+                if (foundDeclaredIcon || depth >= MaxNestedDepth)
                 {
                     return null;
                 }
 
-                if (depth >= MaxNestedDepth)
-                {
-                    return null;
-                }
-
-                foreach (ZipArchiveEntry nestedPackageEntry in SelectNestedPackageEntries(archive))
-                {
-                    byte[]? nestedBytes = await TryReadEntryBytesAsync(nestedPackageEntry, MaxNestedPackageBytes).ConfigureAwait(false);
-                    if (nestedBytes is null)
-                    {
-                        continue;
-                    }
-
-                    using var nestedStream = new MemoryStream(nestedBytes, writable: false);
-                    byte[]? nestedIcon = await TryExtractIconBytesAsync(nestedStream, depth + 1, previewSize)
-                        .ConfigureAwait(false);
-                    if (nestedIcon is not null)
-                    {
-                        return nestedIcon;
-                    }
-                }
-
-                return null;
+                return await TryExtractNestedIconBytesAsync(archive, depth, previewSize).ConfigureAwait(false);
             }
+        }
+
+        private static async Task<byte[]?> TryExtractNestedIconBytesAsync(
+            ZipArchive archive,
+            int depth,
+            int previewSize)
+        {
+            foreach (ZipArchiveEntry nestedPackageEntry in SelectNestedPackageEntries(archive))
+            {
+                byte[]? nestedBytes = await TryReadEntryBytesAsync(nestedPackageEntry, MaxNestedPackageBytes)
+                    .ConfigureAwait(false);
+                if (nestedBytes is null)
+                {
+                    continue;
+                }
+
+                using MemoryStream nestedStream = new(nestedBytes, writable: false);
+                byte[]? nestedIcon = await TryExtractIconBytesAsync(nestedStream, depth + 1, previewSize)
+                    .ConfigureAwait(false);
+                if (nestedIcon is not null)
+                {
+                    return nestedIcon;
+                }
+            }
+
+            return null;
         }
 
         private static async Task<(bool FoundDeclaredIcon, byte[]? Bytes)> TryExtractDeclaredIconBytesAsync(
@@ -375,15 +379,7 @@ namespace Cotton.Previews
 
             string path = NormalizeEntryPath(entry.FullName);
             string extension = Path.GetExtension(path);
-            if (path.EndsWith(".9.png", StringComparison.Ordinal))
-            {
-                return 0;
-            }
-
-            bool isKnownRasterExtension = extension is ".png" or ".webp" or ".jpg" or ".jpeg";
-            bool isExtensionless = string.IsNullOrEmpty(extension);
-            bool inResourceTree = path.StartsWith("res/", StringComparison.Ordinal) || path.Contains("/res/", StringComparison.Ordinal);
-            if (!isKnownRasterExtension && !(isExtensionless && inResourceTree))
+            if (!IsSupportedIconPath(path, extension))
             {
                 return 0;
             }
@@ -395,43 +391,96 @@ namespace Cotton.Previews
                 return 0;
             }
 
-            bool inNamedAndroidResourceDirectory = path.StartsWith("res/mipmap", StringComparison.Ordinal)
-                || path.StartsWith("res/drawable", StringComparison.Ordinal)
-                || path.Contains("/res/mipmap", StringComparison.Ordinal)
-                || path.Contains("/res/drawable", StringComparison.Ordinal);
-            bool rootManifestIcon = !path.Contains('/', StringComparison.Ordinal)
-                && hasExplicitIconName;
-            if (!inNamedAndroidResourceDirectory && !inResourceTree && !rootManifestIcon)
+            int? locationScore = ScoreIconLocation(path, hasExplicitIconName);
+            if (!locationScore.HasValue)
             {
                 return 0;
             }
 
-            int score = rootManifestIcon ? 500 : 0;
-            if (inNamedAndroidResourceDirectory)
-            {
-                score += 1_000;
-            }
-            else if (inResourceTree)
-            {
-                // Some optimized APKs obfuscate resources to extensionless paths like res/yG.
-                // They can still be real PNG/WebP app icons, so try them after named resources.
-                score += 2_000;
-            }
-
-            if (path.Contains("/mipmap", StringComparison.Ordinal) || path.StartsWith("res/mipmap", StringComparison.Ordinal))
-            {
-                score += 8_000;
-            }
-            else if (path.Contains("/drawable", StringComparison.Ordinal) || path.StartsWith("res/drawable", StringComparison.Ordinal))
-            {
-                score += 5_000;
-            }
-
+            int score = locationScore.Value;
             score += ScoreIconName(fileName);
             score += ScoreDensity(path);
-            score += extension is ".png" or ".webp" ? 200 : isExtensionless ? 100 : 50;
+            score += ScoreIconExtension(extension);
             score += (int)Math.Min(entry.Length / 1024, 512);
             return score;
+        }
+
+        private static bool IsSupportedIconPath(string path, string extension)
+        {
+            if (path.EndsWith(".9.png", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            bool isKnownRasterExtension = extension is ".png" or ".webp" or ".jpg" or ".jpeg";
+            bool isInResourceTree = IsInResourceTree(path);
+            return isKnownRasterExtension || (string.IsNullOrEmpty(extension) && isInResourceTree);
+        }
+
+        private static int? ScoreIconLocation(string path, bool hasExplicitIconName)
+        {
+            bool isInResourceTree = IsInResourceTree(path);
+            bool isInNamedResourceDirectory = IsInNamedResourceDirectory(path);
+            bool isRootManifestIcon = IsRootManifestIcon(path, hasExplicitIconName);
+            if (!isInNamedResourceDirectory && !isInResourceTree && !isRootManifestIcon)
+            {
+                return null;
+            }
+
+            int score = isRootManifestIcon ? 500 : 0;
+            score += ScoreResourceDirectory(isInNamedResourceDirectory, isInResourceTree);
+            score += ScoreResourceKind(path);
+            return score;
+        }
+
+        private static bool IsInResourceTree(string path) =>
+            path.StartsWith("res/", StringComparison.Ordinal)
+            || path.Contains("/res/", StringComparison.Ordinal);
+
+        private static bool IsInNamedResourceDirectory(string path) =>
+            path.StartsWith("res/mipmap", StringComparison.Ordinal)
+            || path.StartsWith("res/drawable", StringComparison.Ordinal)
+            || path.Contains("/res/mipmap", StringComparison.Ordinal)
+            || path.Contains("/res/drawable", StringComparison.Ordinal);
+
+        private static bool IsRootManifestIcon(string path, bool hasExplicitIconName) =>
+            !path.Contains('/', StringComparison.Ordinal) && hasExplicitIconName;
+
+        private static int ScoreResourceDirectory(bool isInNamedResourceDirectory, bool isInResourceTree)
+        {
+            if (isInNamedResourceDirectory)
+            {
+                return 1_000;
+            }
+
+            return isInResourceTree ? 2_000 : 0;
+        }
+
+        private static int ScoreResourceKind(string path)
+        {
+            if (path.Contains("/mipmap", StringComparison.Ordinal)
+                || path.StartsWith("res/mipmap", StringComparison.Ordinal))
+            {
+                return 8_000;
+            }
+
+            if (path.Contains("/drawable", StringComparison.Ordinal)
+                || path.StartsWith("res/drawable", StringComparison.Ordinal))
+            {
+                return 5_000;
+            }
+
+            return 0;
+        }
+
+        private static int ScoreIconExtension(string extension)
+        {
+            return extension switch
+            {
+                ".png" or ".webp" => 200,
+                "" => 100,
+                _ => 50,
+            };
         }
 
         private static int ScoreIconName(string fileName)
