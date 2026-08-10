@@ -28,7 +28,12 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IServiceCollection AddStreamCipher(this IServiceCollection services)
         {
-            services.AddSingleton<IDatabaseFieldProtector, DatabaseFieldProtector>();
+            services.AddSingleton<DatabaseFieldProtector>();
+#pragma warning disable CS0618 // TEMPORARY 0.5 RECOVERY: remove after the upgrade window.
+            services.AddSingleton<LegacyZeroKeySettingsRecovery>();
+            services.AddSingleton<IDatabaseFieldProtector>(sp =>
+                sp.GetRequiredService<LegacyZeroKeySettingsRecovery>());
+#pragma warning restore CS0618
             return services.AddScoped<IStreamCipher>(sp =>
             {
                 CottonEncryptionSettings settings = sp.GetRequiredService<CottonEncryptionSettings>();

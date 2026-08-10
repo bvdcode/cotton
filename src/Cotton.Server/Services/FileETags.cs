@@ -13,7 +13,6 @@ namespace Cotton.Server.Services
     public static class FileETags
     {
         private const string ETagPrefix = "sha256-";
-        private const string WeakETagPrefix = "W/";
 
         /// <summary>
         /// Gets the current strong file content ETag without quotes.
@@ -70,27 +69,33 @@ namespace Cotton.Server.Services
         /// </summary>
         public static bool MatchesIfMatchHeader(string? ifMatchHeader, NodeFile nodeFile)
         {
-            if (string.IsNullOrWhiteSpace(ifMatchHeader))
+            if (ifMatchHeader is null)
             {
                 return true;
             }
 
-            string current = NormalizeStrongETag(GetContentETag(nodeFile));
-            foreach (string value in ifMatchHeader.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            if (ifMatchHeader == "*")
             {
-                if (value == "*")
-                {
-                    return true;
-                }
-
-                string? normalized = NormalizeStrongETagOrNull(value);
-                if (normalized is not null && string.Equals(normalized, current, StringComparison.Ordinal))
-                {
-                    return true;
-                }
+                return true;
             }
 
-            return false;
+            string currentETag = GetQuotedContentETag(nodeFile);
+            if (string.Equals(ifMatchHeader, currentETag, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (!EntityTagHeaderValue.TryParseStrictList(
+                [ifMatchHeader],
+                out IList<EntityTagHeaderValue>? clientEntityTags))
+            {
+                return false;
+            }
+
+            EntityTagHeaderValue currentEntityTag = EntityTagHeaderValue.Parse(currentETag);
+            return clientEntityTags.Any(clientEntityTag =>
+                EntityTagHeaderValue.Any.Equals(clientEntityTag)
+                || clientEntityTag.Compare(currentEntityTag, useStrongComparison: true));
         }
 
         /// <summary>
@@ -124,22 +129,6 @@ namespace Cotton.Server.Services
         private static string QuoteETag(string value)
         {
             return $"\"{value}\"";
-        }
-
-        private static string NormalizeStrongETag(string value)
-        {
-            return value.Trim().Trim('"');
-        }
-
-        private static string? NormalizeStrongETagOrNull(string value)
-        {
-            string normalized = value.Trim();
-            if (normalized.StartsWith(WeakETagPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                return null;
-            }
-
-            return NormalizeStrongETag(normalized);
         }
     }
 }
