@@ -3,16 +3,23 @@
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Crypto;
+using Cotton.Database.Integrity;
+using Cotton.Database.Models;
+using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
+using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
+using EasyExtensions.Models.Enums;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 
 namespace Cotton.Server.IntegrationTests
 {
-    public class MasterKeyStartupValidatorTests
+    public class MasterKeyStartupValidatorTests : IntegrationTestBase
     {
         private const string CorrectRootKey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
         private const string WrongRootKey = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -25,6 +32,8 @@ namespace Cotton.Server.IntegrationTests
                 Path.GetTempPath(),
                 "cotton-master-key-startup-tests",
                 Guid.NewGuid().ToString("N"));
+            DbContext.Database.EnsureDeleted();
+            DbContext.Database.Migrate();
         }
 
         [TearDown]
@@ -134,6 +143,37 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task ValidateAsync_CreatesSentinelAfterDatabaseIntegrityEvidenceMatches()
+        {
+            FileSystemStorageBackend backend = CreateBackend();
+            CottonEncryptionSettings settings = CreateSettings(CorrectRootKey);
+            await StoreSignedUserAsync(settings);
+            using AesGcmStreamCipher cipher = StreamCipherFactory.Create(settings);
+            MasterKeyStartupValidator validator = CreateValidator(backend, cipher, settings);
+
+            await validator.ValidateAsync();
+
+            Assert.That(
+                await backend.ExistsAsync(MasterKeySentinelStore.SentinelStorageKey),
+                Is.True);
+        }
+
+        [Test]
+        public async Task ValidateAsync_DoesNotCreateSentinelWhenDatabaseIntegrityEvidenceRejectsKey()
+        {
+            FileSystemStorageBackend backend = CreateBackend();
+            await StoreSignedUserAsync(CreateSettings(CorrectRootKey));
+            CottonEncryptionSettings wrongSettings = CreateSettings(WrongRootKey);
+            using AesGcmStreamCipher wrongCipher = StreamCipherFactory.Create(wrongSettings);
+            MasterKeyStartupValidator validator = CreateValidator(backend, wrongCipher, wrongSettings);
+
+            Assert.ThrowsAsync<DatabaseIntegrityException>(async () => await validator.ValidateAsync());
+            Assert.That(
+                await backend.ExistsAsync(MasterKeySentinelStore.SentinelStorageKey),
+                Is.False);
+        }
+
+        [Test]
         public async Task ValidateAsync_ValidatesEncryptedConfigurationBackendThroughStorage()
         {
             FileSystemStorageBackend innerBackend = CreateBackend();
@@ -173,17 +213,48 @@ namespace Cotton.Server.IntegrationTests
                 backend);
         }
 
-        private static MasterKeyStartupValidator CreateValidator(
+        private MasterKeyStartupValidator CreateValidator(
             IStorageBackend backend,
             IStreamCipher cipher,
             CottonEncryptionSettings settings)
         {
+            UserIntegrityDescriptor descriptor = new();
+            DatabaseIntegrityProtector protector = new(new DatabaseIntegrityKeyProvider(settings));
+            DatabaseIntegrityVerifier verifier = new(
+                protector,
+                new DatabaseIntegrityDescriptorRegistry([descriptor]),
+                NullDatabaseIntegrityFailureReporter.Instance,
+                NullLogger<DatabaseIntegrityVerifier>.Instance);
             return new MasterKeyStartupValidator(
                 new StaticStorageBackendProvider(backend),
                 cipher,
                 settings,
+                DbContext,
+                verifier,
                 NullLogger<MasterKeySentinelStore>.Instance,
                 NullLogger<MasterKeyStartupValidator>.Instance);
+        }
+
+        private async Task StoreSignedUserAsync(CottonEncryptionSettings settings)
+        {
+            UserIntegrityDescriptor descriptor = new();
+            DatabaseIntegrityProtector protector = new(new DatabaseIntegrityKeyProvider(settings));
+            User user = new()
+            {
+                Username = "startup",
+                PasswordPhc = "password",
+                WebDavTokenPhc = "webdav",
+                Role = UserRole.Admin,
+                Email = "startup@example.test"
+            };
+            DbContext.Users.Add(user);
+            DatabaseIntegrityChangeSigner signer = new(
+                protector,
+                new DatabaseIntegrityDescriptorRegistry([descriptor]),
+                NullDatabaseIntegrityFailureReporter.Instance);
+            signer.SignPendingChanges(DbContext);
+            await DbContext.SaveChangesAsync();
+            DbContext.ChangeTracker.Clear();
         }
 
         private static async Task StoreEncryptedObjectAsync(

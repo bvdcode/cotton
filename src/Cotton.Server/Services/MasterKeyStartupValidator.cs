@@ -2,7 +2,11 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Crypto;
+using Cotton.Database;
+using Cotton.Database.Models;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
@@ -11,6 +15,8 @@ namespace Cotton.Server.Services
         IStorageBackendProvider _backendProvider,
         IStreamCipher _cipher,
         CottonEncryptionSettings _encryptionSettings,
+        CottonDbContext _dbContext,
+        IDatabaseIntegrityVerifier _integrityVerifier,
         ILogger<MasterKeySentinelStore> _sentinelLogger,
         ILogger<MasterKeyStartupValidator> _logger)
     {
@@ -50,6 +56,11 @@ namespace Cotton.Server.Services
                 }
             }
 
+            if (!evidenceValidated)
+            {
+                evidenceValidated = await ValidateDatabaseEvidenceAsync(cancellationToken);
+            }
+
             if (candidateCount > 0 && !evidenceValidated)
             {
                 throw new InvalidOperationException(
@@ -85,6 +96,28 @@ namespace Cotton.Server.Services
                     storageKey);
                 return false;
             }
+        }
+
+        private async Task<bool> ValidateDatabaseEvidenceAsync(CancellationToken cancellationToken)
+        {
+            User? user = await _dbContext.Users.FirstOrDefaultAsync(cancellationToken);
+            if (user is not null)
+            {
+                _integrityVerifier.RequireValid(_dbContext, user, "startup.master-key");
+                return true;
+            }
+
+            bool existingDataFound = await _dbContext.Nodes.AnyAsync(cancellationToken)
+                || await _dbContext.FileManifests.AnyAsync(cancellationToken)
+                || await _dbContext.Chunks.AnyAsync(cancellationToken)
+                || await _dbContext.ServerSettings.AnyAsync(cancellationToken);
+            if (existingDataFound)
+            {
+                throw new InvalidOperationException(
+                    "Existing Cotton database data was found, but no integrity evidence was available to validate the configured master key.");
+            }
+
+            return false;
         }
 
         private static void EnsureValid(MasterKeySentinelResult result)
