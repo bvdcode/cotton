@@ -108,15 +108,6 @@ namespace Cotton.Server.Extensions
         }
 
         /// <summary>
-        /// Registers layout path services.
-        /// </summary>
-        public static IServiceCollection AddLayoutPathServices(this IServiceCollection services)
-        {
-            services.AddScoped<ILayoutPathResolver, LayoutPathResolver>();
-            return services;
-        }
-
-        /// <summary>
         /// Registers layout search services.
         /// </summary>
         public static IServiceCollection AddLayoutSearchServices(this IServiceCollection services)

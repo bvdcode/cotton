@@ -231,7 +231,6 @@ namespace Cotton.Server
                 .AddStartupValidation()
                 .AddChunkServices()
                 .AddFileContentMetadataServices()
-                .AddLayoutPathServices()
                 .AddLayoutSearchServices()
                 .AddWebDavServices()
                 .AddWebDavAuth()

@@ -35,7 +35,7 @@ flowchart LR
 | Route constants | `src/Cotton.Shared/Routes.cs` | `Routes.V1.*` string constants; base prefix `/api/v1`. |
 | Mediator registration | `src/Cotton.Server/Program.cs` (`AddMediator()`) | Scans the calling assembly (`Cotton.Server`), registers all handlers + `IMediator` as transient. |
 | Mapster config | `src/Cotton.Server/Mappings/MapsterConfig.cs` | Entity→DTO adapter rules; registered once via `MapsterConfig.Register()` in `Program.cs`. |
-| Service registration extensions | `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs` | `AddStreamCipher`, `AddWebDavServices`, `AddChunkServices`, `AddDatabaseIntegrity`, `AddLayoutPathServices`, `AddLayoutSearchServices`, `AddWebDavAuth`. |
+| Service registration extensions | `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs` | `AddStreamCipher`, `AddWebDavServices`, `AddChunkServices`, `AddDatabaseIntegrity`, `AddLayoutSearchServices`, `AddWebDavAuth`. |
 | Auth hardening | `src/Cotton.Server/Extensions/AuthHardeningExtensions.cs` | `AddAuthHardening`/`UseAuthHardening`; configures the two rate-limit policies and JWT session-revocation validation. |
 | Rate-limit policy names | `src/Cotton.Server/Auth/AuthRateLimitPolicies.cs` | `Interactive = "auth.interactive"`, `Refresh = "auth.refresh"`. |
 | WebDAV auth handler | `src/Cotton.Server/Auth/WebDavBasicAuthenticationHandler.cs` | `SchemeName = "WebDavBasic"`, `PolicyName = "WebDav"`. |
@@ -402,7 +402,6 @@ Public-share enumeration uses a separate singleton `PublicShareLookupFailureLimi
 .AddStreamCipher()        // IStreamCipher (scoped) from CottonEncryptionSettings
 .AddDatabaseIntegrity()   // signers/verifiers + descriptor registry + failure-reporter hosted service
 .AddChunkServices()       // IChunkIngestService, file-version services, IEventNotificationService
-.AddLayoutPathServices()  // ILayoutPathResolver
 .AddLayoutSearchServices()// ILayoutSearchService + name/no-op-vector providers
 .AddWebDavServices()      // IWebDavPathResolver
 .AddWebDavAuth()          // WebDavBasic auth scheme + "WebDav" authorization policy
