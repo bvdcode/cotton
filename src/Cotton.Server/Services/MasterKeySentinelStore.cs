@@ -69,40 +69,10 @@ namespace Cotton.Server.Services
         {
             try
             {
-                using AesGcmStreamCipher cipher = CreateCipher(encryptionSettings);
-                bool storageDependsOnEncryptedConfiguration = _compatibilityProbe is not null
-                    && _backend is IStorageBackendUsesEncryptedConfiguration;
-
-                MasterKeySentinelResult? existing = await TryValidateExistingStorageSentinelAsync(
+                return await ValidateOrInitializeCoreAsync(
                     encryptionSettings,
-                    cipher,
-                    storageDependsOnEncryptedConfiguration,
+                    initializationMode,
                     cancellationToken);
-                if (existing is not null)
-                {
-                    return existing;
-                }
-
-                MasterKeyCompatibilityResult compatibility = await ValidateCompatibilityAsync(
-                    encryptionSettings,
-                    MasterKeyCompatibilityMode.AllowMissingEvidence,
-                    cancellationToken);
-
-                MasterKeySentinelResult? compatibilityFailure = ValidateCompatibilityResult(compatibility, initializationMode);
-                if (compatibilityFailure is not null)
-                {
-                    return compatibilityFailure;
-                }
-
-                MasterKeySentinelResult? encryptedBackendResult = AcceptEncryptedConfigurationBackend(compatibility);
-                if (encryptedBackendResult is not null)
-                {
-                    return encryptedBackendResult;
-                }
-
-                await WriteNewAsync(cipher, cancellationToken);
-                _logger.LogInformation("Master key sentinel created. StorageKey={StorageKey}", SentinelStorageKey);
-                return MasterKeySentinelResult.Ok(created: true);
             }
             catch (Exception ex) when (ex is FormatException
                 or InvalidOperationException
@@ -114,6 +84,46 @@ namespace Cotton.Server.Services
                 _logger.LogWarning(ex, "Master key sentinel validation failed.");
                 return MasterKeySentinelResult.Fail(ex.Message);
             }
+        }
+
+        private async Task<MasterKeySentinelResult> ValidateOrInitializeCoreAsync(
+            CottonEncryptionSettings encryptionSettings,
+            MasterKeySentinelInitializationMode initializationMode,
+            CancellationToken cancellationToken)
+        {
+            using AesGcmStreamCipher cipher = CreateCipher(encryptionSettings);
+            bool storageDependsOnEncryptedConfiguration = _compatibilityProbe is not null
+                && _backend is IStorageBackendUsesEncryptedConfiguration;
+
+            MasterKeySentinelResult? existing = await TryValidateExistingStorageSentinelAsync(
+                encryptionSettings,
+                cipher,
+                storageDependsOnEncryptedConfiguration,
+                cancellationToken);
+            if (existing is not null)
+            {
+                return existing;
+            }
+
+            MasterKeyCompatibilityResult compatibility = await ValidateCompatibilityAsync(
+                encryptionSettings,
+                MasterKeyCompatibilityMode.AllowMissingEvidence,
+                cancellationToken);
+            MasterKeySentinelResult? compatibilityFailure = ValidateCompatibilityResult(compatibility, initializationMode);
+            if (compatibilityFailure is not null)
+            {
+                return compatibilityFailure;
+            }
+
+            MasterKeySentinelResult? encryptedBackendResult = AcceptEncryptedConfigurationBackend(compatibility);
+            if (encryptedBackendResult is not null)
+            {
+                return encryptedBackendResult;
+            }
+
+            await WriteNewAsync(cipher, cancellationToken);
+            _logger.LogInformation("Master key sentinel created. StorageKey={StorageKey}", SentinelStorageKey);
+            return MasterKeySentinelResult.Ok(created: true);
         }
 
         private async Task<MasterKeySentinelResult?> TryValidateExistingStorageSentinelAsync(

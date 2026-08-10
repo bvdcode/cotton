@@ -99,32 +99,55 @@ namespace Cotton.Server.Handlers.WebDav
             // Re-resolve the target inside the transaction: the original path result can be stale after a long upload stream.
             Guid expectedLayoutId = target.Parent.ParentNode!.LayoutId;
             await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(expectedLayoutId, ct);
-            PutTarget finalTarget;
-            NodeFile resultNodeFile;
+            (PutTarget? finalTarget, NodeFile? resultNodeFile, WebDavPutFileResult? commitError) =
+                await CommitPutAsync(request, fileManifest.Id, expectedLayoutId, ct);
+            if (commitError is not null)
+            {
+                return commitError;
+            }
+
+            await NotifyPutCompletedAsync(
+                request,
+                created: finalTarget!.Created,
+                chunkCount: content.Chunks.Count,
+                nodeFileId: resultNodeFile!.Id,
+                ct);
+            return new WebDavPutFileResult(true, finalTarget.Created, null, resultNodeFile.Id);
+        }
+
+        private async Task<(PutTarget? Target, NodeFile? NodeFile, WebDavPutFileResult? Error)> CommitPutAsync(
+            WebDavPutFileRequest request,
+            Guid fileManifestId,
+            Guid expectedLayoutId,
+            CancellationToken ct)
+        {
             await using (IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(request.UserId, ct))
             await using (IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct))
             {
                 (PutTarget? refreshedTarget, WebDavPutFileResult? refreshedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
                 if (refreshedTargetError is not null)
                 {
-                    return refreshedTargetError;
+                    return (null, null, refreshedTargetError);
                 }
 
-                finalTarget = refreshedTarget!;
+                PutTarget finalTarget = refreshedTarget!;
                 if (finalTarget.Parent.ParentNode!.LayoutId != expectedLayoutId)
                 {
                     _logger.LogDebug("WebDAV PUT: Parent layout changed before commit: {Path}", request.Path);
-                    return Fail(WebDavPutFileError.ParentNotFound);
+                    return (null, null, Fail(WebDavPutFileError.ParentNotFound));
                 }
 
-                (WebDavPutFileResult? quotaError, long addedBytes) = await TryEnsureQuotaAsync(request, finalTarget, fileManifest.Id, ct);
+                (WebDavPutFileResult? quotaError, long addedBytes) = await TryEnsureQuotaAsync(request, finalTarget, fileManifestId, ct);
                 if (quotaError is not null)
                 {
-                    return quotaError;
+                    return (null, null, quotaError);
                 }
 
-                (NodeFile upsertedNodeFile, FileVersionCaptureResult capture) = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
-                resultNodeFile = upsertedNodeFile;
+                (NodeFile resultNodeFile, FileVersionCaptureResult capture) = await UpsertNodeFileAsync(
+                    request,
+                    finalTarget,
+                    fileManifestId,
+                    ct);
                 _syncChanges.StageFileChange(
                     finalTarget.Created ? SyncChangeKind.FileCreated : SyncChangeKind.FileContentUpdated,
                     resultNodeFile,
@@ -136,10 +159,9 @@ namespace Cotton.Server.Handlers.WebDav
                 {
                     _quota.RecordLogicalBytesRemoved(request.UserId, capture.RemovedBytes);
                 }
-            }
 
-            await NotifyPutCompletedAsync(request, created: finalTarget.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
-            return new WebDavPutFileResult(true, finalTarget.Created, null, resultNodeFile.Id);
+                return (finalTarget, resultNodeFile, null);
+            }
         }
 
         private async Task<(PutTarget? Target, WebDavPutFileResult? Error)> TryResolveAndValidateTargetAsync(WebDavPutFileRequest request, CancellationToken ct)
