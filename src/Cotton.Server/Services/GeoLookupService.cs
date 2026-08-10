@@ -16,7 +16,9 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates geo lookup.
     /// </summary>
-    public class GeoLookupService(SettingsProvider _settings) : IGeoLookupService
+    public class GeoLookupService(
+        SettingsProvider _settings,
+        HttpClient _httpClient) : IGeoLookupService
     {
         private const string GoogleDnsIpAddress = "8.8.8.8";
         private static readonly GeoIpClient CottonBridgeGeoIpClient = new(global::Cotton.Constants.CottonBridgeGeoIpLookupUrl);
@@ -111,7 +113,7 @@ namespace Cotton.Server.Services
                 Result: null);
         }
 
-        private static async Task<CustomLookupAttemptResult> TryLookupWithCustomHttpAsync(
+        private async Task<CustomLookupAttemptResult> TryLookupWithCustomHttpAsync(
             string? lookupUrl,
             string ipValue,
             CancellationToken cancellationToken)
@@ -125,9 +127,8 @@ namespace Cotton.Server.Services
 
             try
             {
-                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
                 string url = BuildCustomLookupUrl(lookupUrl, ipValue);
-                JsonElement json = await client.GetFromJsonAsync<JsonElement>(url, cancellationToken);
+                JsonElement json = await _httpClient.GetFromJsonAsync<JsonElement>(url, cancellationToken);
                 if (json.ValueKind == JsonValueKind.Undefined || json.ValueKind == JsonValueKind.Null)
                 {
                     return new CustomLookupAttemptResult(

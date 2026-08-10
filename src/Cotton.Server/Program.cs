@@ -131,6 +131,10 @@ namespace Cotton.Server
                 client.BaseAddress = new Uri(CottonPublicEmailProvider.CottonBridgeBaseUrl);
                 client.Timeout = TimeSpan.FromSeconds(15);
             });
+            builder.Services.AddHttpClient<IGeoLookupService, GeoLookupService>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(10);
+            });
             builder.Services
                 .AddHttpClient<IProxyTopologyProbeService, ProxyTopologyProbeService>(client =>
                 {
@@ -210,7 +214,6 @@ namespace Cotton.Server
                 .AddSingleton<DatabaseBackupKeyProvider>()
                 .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<INotificationsProvider, CottonNotifications>()
-                .AddScoped<IGeoLookupService, GeoLookupService>()
                 .AddScoped<ISharedFileDownloadNotifier, SharedFileDownloadNotifier>()
                 .AddScoped<NodeSubtreeService>()
                 .AddScoped<TrashRestoreCoordinator>()
