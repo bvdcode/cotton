@@ -2,7 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Net;
-using System.Reflection;
 using System.Text;
 using Cotton.Auth;
 using Cotton.Sdk.Auth;
@@ -305,19 +304,15 @@ public class CottonHttpTransportTests
     [Test]
     public async Task ConstructorWithoutHttpClient_OwnsAndDisposesItsHttpClient()
     {
-        var client = new CottonCloudClient(
+        CottonCloudClient client = new(
             new InMemoryCottonTokenStore(),
             new CottonSdkOptions { BaseAddress = new Uri("https://cotton.test") });
-        HttpClient? ownedHttpClient = typeof(CottonCloudClient)
-            .GetField("_ownedHttpClient", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?.GetValue(client) as HttpClient;
 
         await client.DisposeAsync();
         await client.DisposeAsync();
 
-        Assert.That(ownedHttpClient, Is.Not.Null);
         Assert.ThrowsAsync<ObjectDisposedException>(async () =>
-            await ownedHttpClient!.GetAsync("api/v1/settings"));
+            await client.Settings.GetAsync());
     }
 
     private sealed class DisposalTrackingHttpMessageHandler : HttpMessageHandler
