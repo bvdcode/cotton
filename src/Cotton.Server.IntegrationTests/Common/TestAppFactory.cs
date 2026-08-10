@@ -5,6 +5,8 @@ using Cotton.Autoconfig.Extensions;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
+using Cotton.Storage.Abstractions;
+using Cotton.Storage.Backends;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -14,6 +16,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Quartz;
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Cotton.Server.IntegrationTests.Common;
 
@@ -22,6 +26,10 @@ public class TestAppFactory : WebApplicationFactory<Program>
     public const string RemoteIpAddressHeader = "X-Cotton-Test-Remote-IP";
 
     private const string TestRootMasterKey = "testtesttesttesttesttesttesttest";
+    private static readonly string StorageRoot = Path.Combine(
+        Path.GetTempPath(),
+        "cotton-server-integration-storage",
+        Guid.NewGuid().ToString("N"));
     private readonly Dictionary<string, string?> _overrides;
     private readonly Dictionary<string, string?> _previousEnvironmentVariables = [];
 
@@ -63,6 +71,7 @@ public class TestAppFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         Quartz.Logging.LogProvider.IsDisabled = true;
+        string storagePath = GetStoragePath();
 
         builder.ConfigureAppConfiguration((context, config) =>
         {
@@ -95,6 +104,19 @@ public class TestAppFactory : WebApplicationFactory<Program>
             services.AddSingleton<IStartupFilter, TestRemoteIpStartupFilter>();
             services.AddSingleton<IProxyTopologyProbeService, NoOpProxyTopologyProbeService>();
 
+            ServiceDescriptor[] storageBackendProviders = services
+                .Where(descriptor => descriptor.ServiceType == typeof(IStorageBackendProvider))
+                .ToArray();
+            foreach (ServiceDescriptor descriptor in storageBackendProviders)
+            {
+                services.Remove(descriptor);
+            }
+            services.AddSingleton<IStorageBackendProvider>(serviceProvider =>
+                new StaticStorageBackendProvider(
+                    ActivatorUtilities.CreateInstance<FileSystemStorageBackend>(
+                        serviceProvider,
+                        storagePath)));
+
             services.AddSingleton(new CottonServerSettings
             {
                 MaxChunkSizeBytes = 128 * 1024 * 1024,
@@ -102,6 +124,20 @@ public class TestAppFactory : WebApplicationFactory<Program>
                 EncryptionThreads = 1,
             });
         });
+    }
+
+    internal static void DeleteStorage()
+    {
+        TestDirectory.Delete(StorageRoot);
+    }
+
+    private string GetStoragePath()
+    {
+        string database = _overrides.GetValueOrDefault("DatabaseSettings:Database") ?? "default";
+        string masterKey = _overrides.GetValueOrDefault("MasterEncryptionKey") ?? TestRootMasterKey;
+        byte[] identity = Encoding.UTF8.GetBytes($"{database}\n{masterKey}");
+        string storageId = Convert.ToHexStringLower(SHA256.HashData(identity));
+        return Path.Combine(StorageRoot, storageId);
     }
 
     private sealed class TestRemoteIpStartupFilter : IStartupFilter

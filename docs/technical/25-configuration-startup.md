@@ -300,10 +300,11 @@ flowchart TD
     P -- yes --> Q[StartupBlockedServer: SPA + startup/status]
     P -- no --> R[Pipeline: UseAuthHardening, UseExceptionHandler, UseDefaultFiles, MapStaticAssets, UseAuthentication, UseEndpointRateLimiting, UseAuthorization, MapStartupStatusEndpoint, MapControllers, MapFallbackToFile]
     R --> S[ApplyMigrations CottonDbContext]
-    S --> T[scope: DatabaseAutoRestore.TryRestoreIfEmptyAsync GetAwaiter GetResult]
-    T --> U[same scope: SettingsProvider.GetServerSettings prime cache]
-    U --> V[MapHub EventHub]
-    V --> W[app.RunAsync]
+    S --> T[scope: DatabaseAutoRestore.TryRestoreIfEmptyAsync]
+    T --> U[same scope: MasterKeyStartupValidator.ValidateAsync]
+    U --> V[same scope: SettingsProvider.GetServerSettings prime cache]
+    V --> X[MapHub EventHub]
+    X --> W[app.RunAsync]
 ```
 
 ### Step-by-step
@@ -323,9 +324,10 @@ flowchart TD
 5. **Startup preflight validation** — `IStartupPreflightValidator` runs registered `IStartupCheck` implementations before normal traffic, migrations, restore, and jobs. The temp-directory check verifies that `Path.GetTempPath()` can create/write/delete a probe file; if it cannot, Cotton blocks startup and instructs the operator to mount writable scratch storage at `/tmp` (`tmpfs` or a fast-disk bind mount). There is no version-transition or data-migration startup guard in 0.5.
 6. **Middleware pipeline** (order is significant): `UseAuthHardening` → `UseExceptionHandler` → `UseDefaultFiles` → `MapStaticAssets` → `UseAuthentication` → `UseEndpointRateLimiting` → `UseAuthorization` → `MapStartupStatusEndpoint` → `MapControllers` → `MapFallbackToFile("/index.html")` (SPA fallback). The exception handler wraps authentication and rate limiting so a rejected proxy peer is handled consistently.
 7. **`ApplyMigrations<CottonDbContext>()`** — migrate-on-startup; EF migrations are applied automatically every boot.
-8. **Restore-if-empty** — in a fresh `IServiceScope`, `IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync()` is awaited synchronously (`GetAwaiter().GetResult()`).
-9. **Prime the settings cache** — still in that scope, `SettingsProvider.GetServerSettings()` is called once to warm the static cache (and, when settings exist, to verify their integrity).
-10. **`MapHub<EventHub>(Routes.V1.EventHub)`** (`/api/v1/hub/events`) then **`app.RunAsync()`**.
+8. **Restore-if-empty** — in a fresh `IServiceScope`, `IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync()` is awaited before any settings are cached.
+9. **Validate the master key** — still in that scope, `MasterKeyStartupValidator.ValidateAsync()` uses the normal configured backend. It strictly validates an existing sentinel; when the sentinel is absent, it validates up to three existing encrypted storage objects before creating one. Existing evidence that cannot be decrypted stops startup. Empty storage initializes a sentinel directly.
+10. **Prime the settings cache** — `SettingsProvider.GetServerSettings()` is called once after restore and key validation to warm the static cache.
+11. **`MapHub<EventHub>(Routes.V1.EventHub)`** (`/api/v1/hub/events`) then **`app.RunAsync()`**.
 
 > Ordering note: `MapHub` is registered *after* `MapControllers`/`MapFallbackToFile` and after the DB bootstrap, not in the earlier middleware block. Functionally this is fine — hub mapping just adds an endpoint — but it is later in `Program.cs` than one might expect.
 
@@ -344,16 +346,17 @@ flowchart TD
 | `DefaultUserContentSeeder` | `Services/DefaultUserContentSeeder.cs` | Scoped service; entry point `SeedAsync(userId, ct)`. When `DefaultUserTemplateNodeId` is set and the template node exists (`NodeType.Default`), recursively copies the template's folders and files (referencing the same `FileManifestId`, i.e. zero re-upload) into a new user's default layout inside a single transaction (via an EF execution strategy). Called from guest signup (`AuthController`), admin user creation (`AdminCreateUserRequest` handler), and OIDC login (`OidcAuthenticationService`). |
 | `MasterKeyCompatibilityProbe` / `IMasterKeyCompatibilityProbe` | `Services/MasterKeyCompatibilityProbe.cs` | Validates a candidate master key against existing encrypted DB/storage evidence during unlock; also exposes `HasExistingCottonDataAsync` and `BuildConnectionStringFromEnvironment`. |
 | `MasterKeyStartupStorage` | `Services/MasterKeyStartupStorage.cs` | Builds the pre-DI storage backend + `MasterKeySentinelStore` from a raw SQL read of `server_settings`. |
+| `MasterKeyStartupValidator` | `Services/MasterKeyStartupValidator.cs` | Uses the normal application DI graph and configured storage backend to validate every resolved master key before traffic and jobs start. |
 
 ## Concurrency, failure modes & security considerations
 
 - **Static settings cache.** `SettingsProvider._cache` and `_cachedEncryptionThreads` are `static`, deliberately shared process-wide across DI scopes. All access is guarded by a `Lock`/`Volatile`. Any write path must call `InvalidateSettingsCache` or stale reads will persist until process restart; the boolean caches additionally tolerate up to 1 minute of staleness.
-- **Master key never persists in config or env.** It is cleared from Process/User env after derivation; `COTTON_PG_PASSWORD` is likewise erased after the connection string is built. Encrypted settings columns are `[Encrypted]` at rest, and the compatibility probe proves key/data match before the full app starts.
+- **Master key never persists in config or env.** It is cleared from Process/User env after derivation; `COTTON_PG_PASSWORD` is likewise erased after the connection string is built. Encrypted settings columns are `[Encrypted]` at rest. Interactive unlock performs its compatibility check, and the normal startup validator verifies either the sentinel or existing encrypted storage before traffic and jobs start.
 - **JWT key per restart.** A fresh `JwtSettings:Key` per boot means every restart logs everyone out — intentional, but operators should expect it.
 - **Forwarded headers share one trust boundary.** Client-address headers and `X-Forwarded-Proto` are accepted only in legacy mode or when the immediate peer matches `TrustedProxyIpAddress` and its optional CIDR prefix; direct mode ignores them. The client-address resolver rejects a mismatched configured proxy because it cannot establish a reliable client identity, while request-derived URL generation safely falls back to `Request.Scheme`. Cotton does not install ASP.NET Core `ForwardedHeadersMiddleware` or configure `KnownProxies`/`KnownIPNetworks`.
 - **Migrate-on-startup.** `ApplyMigrations` runs on every boot; concurrent instances against one database can race on migrations and should not start simultaneously against an unmigrated schema.
 - **Writable OS temp is mandatory.** Startup is blocked when the OS temp directory cannot accept a probe file. With a read-only container root filesystem, mount writable scratch storage at `/tmp`; a `tmpfs` mount and a fast-disk bind mount are both valid.
-- **Synchronous restore.** `TryRestoreIfEmptyAsync().GetAwaiter().GetResult()` blocks startup; a hang or failure here blocks the whole server from accepting traffic. Restore is also strictly opt-in via `COTTON_RESTORE_DATABASE_IF_EMPTY`.
+- **Restore blocks readiness.** `TryRestoreIfEmptyAsync()` is awaited during startup; a hang or failure prevents the server from accepting traffic. Restore is strictly opt-in via `COTTON_RESTORE_DATABASE_IF_EMPTY`.
 - **First-table-missing tolerance.** Many provider/probe queries swallow `UndefinedTable`/`InvalidCatalogName` so the pre-migration boot does not crash; this is correct but means errors during early boot can look like "uninitialized" rather than "broken".
 - **Process hardening is best-effort.** A failed `prctl` is reported via `ProcessHardeningStatus.Error` and surfaced in `GET /api/v1/server/security/status`, but does not stop startup.
 

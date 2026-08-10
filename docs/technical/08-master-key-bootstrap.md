@@ -21,6 +21,7 @@ The key-length contract is fixed and load-bearing: the root key must be **exactl
 | `Program` | `src/Cotton.Server/Program.cs` | Chooses env vs. unlock path; builds the real app only after settings resolve. |
 | `MasterKeyUnlockServer` | `src/Cotton.Server/Services/MasterKeyUnlockServer.cs` | Minimal web app serving `/unlock`; generates the bootstrap token; validates/initializes the sentinel. |
 | `MasterKeyStartupStorage` | `src/Cotton.Server/Services/MasterKeyStartupStorage.cs` | Builds the storage backend + sentinel store before DI exists; checks for existing data. |
+| `MasterKeyStartupValidator` | `src/Cotton.Server/Services/MasterKeyStartupValidator.cs` | Validates every resolved key through the normal configured storage backend before traffic and jobs start. |
 | `MasterKeySentinelStore` | `src/Cotton.Server/Services/MasterKeySentinelStore.cs` | Reads/validates/creates/repairs the encrypted sentinel object in storage. |
 | `MasterKeyCompatibilityProbe` | `src/Cotton.Server/Services/MasterKeyCompatibilityProbe.cs` | Proves a submitted key decrypts pre-existing encrypted DB columns or storage chunks. |
 | `MasterKeyRuntimeState` | `src/Cotton.Server/Services/MasterKeyRuntimeState.cs` | Records the key source and env-var disposition for diagnostics. |
@@ -76,7 +77,9 @@ Because `Program` reads `COTTON_MASTER_KEY` itself in `ResolveEncryptionSettings
 
 ## Boot WITH COTTON_MASTER_KEY
 
-When the env var is present and non-empty, `Program.ResolveEncryptionSettingsAsync` calls `DeriveEncryptionSettings(rootMasterKey)` synchronously and clears the variable in a `finally` block. No sentinel validation and no compatibility probe run on this path — supplying the env var is treated as authoritative. (The sentinel and probes only run inside the unlock server.) The runtime state recorded is `MasterKeyRuntimeState.FromEnvironment(environmentVariablePresentAfterResolution: false)`, which sets `Source = "Environment"` and `EnvironmentVariableWasConfigured = true`; that latter flag is what drives the `master-key-from-environment` admin warning.
+When the env var is present and non-empty, `Program.ResolveEncryptionSettingsAsync` calls `DeriveEncryptionSettings(rootMasterKey)` synchronously and clears the variable in a `finally` block. The runtime state recorded is `MasterKeyRuntimeState.FromEnvironment(environmentVariablePresentAfterResolution: false)`, which sets `Source = "Environment"` and `EnvironmentVariableWasConfigured = true`; that latter flag is what drives the `master-key-from-environment` admin warning.
+
+After migrations and an optional empty-database restore, but before Kestrel starts accepting traffic, `MasterKeyStartupValidator` resolves the ordinary configured storage backend through DI and validates the derived key. An existing sentinel must decrypt successfully. If an older storage volume has no sentinel, the validator attempts to decrypt at most three existing encrypted storage objects; one successful decrypt is enough to seed the sentinel, while existing candidates that all fail reject startup. An empty storage volume simply receives its first sentinel. This startup gate applies to both environment and browser-unlock key sources and does not create a secondary database context.
 
 ```mermaid
 sequenceDiagram
@@ -97,7 +100,9 @@ sequenceDiagram
     Resolve-->>Main: (settings, MasterKeyRuntimeState.FromEnvironment)
     Main->>App: RunApplicationAsync(args, settings, runtimeState, hardeningStatus)
     App->>App: builder.Configuration.AddCottonOptions(settings) -> in-memory config
-    App->>App: ApplyMigrations, auto-restore, RunAsync
+    App->>App: ApplyMigrations, auto-restore
+    App->>App: Validate master key against storage
+    App->>App: RunAsync
 ```
 
 ### Environment scrubbing
@@ -238,9 +243,9 @@ private sealed record MasterKeySentinelPayload(
 
 `ValidateOrInitializeAsync(settings, mode, ct)` orchestrates the decision tree. The two-arg overload defaults `mode` to `TrustProvidedKeyWhenNoProbe`; the unlock server passes `RequireCompatibilityEvidenceForExistingData`. The whole body is wrapped in a `catch` for `FormatException`, `InvalidOperationException`, `ArgumentException`, `IOException`, `UnauthorizedAccessException`, and `TimeoutException`, all turned into `MasterKeySentinelResult.Fail(ex.Message)` — these surface to the unlock page as a 400 rather than crashing the process.
 
-1. **`TryValidateExistingStorageSentinelAsync`** — returns early (skips this branch) when the backend implements `IStorageBackendUsesEncryptedConfiguration` *or* the sentinel object does not exist. Otherwise → `ValidateExistingOrRepairAsync`:
+1. **`TryValidateExistingStorageSentinelAsync`** — returns early when the sentinel object does not exist. The interactive unlock compatibility path also skips direct sentinel access when the backend implements `IStorageBackendUsesEncryptedConfiguration`, because that pre-DI backend depends on configuration encrypted with the submitted key. The normal application startup validator does not supply a compatibility probe, so it validates the sentinel through the fully configured S3 backend. Otherwise → `ValidateExistingOrRepairAsync`:
    - `ValidateExistingAsync`: decrypt + deserialize. If `payload.SchemaVersion == 1` and `payload.Purpose == SentinelLogicalKey` → success, `created: false`. A null/wrong-schema/wrong-purpose payload returns `Fail("Master key sentinel is corrupted.")`.
-   - If decrypt/parse throws a *read failure* (`CryptographicException`, `InvalidDataException`, or `JsonException` per `IsSentinelReadFailure`) → `TryRepairExistingSentinelAsync`: run a `RequireEvidenceForExistingData` compatibility probe. If the submitted key decrypts real existing data, the corrupt sentinel is **overwritten** with a fresh one (`created: true, repaired: true`, logs a warning). Otherwise it returns `"Master key sentinel is corrupted."` (for a `JsonException`) or `"Master key does not match this Cotton instance."` (for a crypto/data failure).
+   - If decrypt/parse throws a *read failure* (`CryptographicException`, `InvalidDataException`, `EndOfStreamException`, or `JsonException` per `IsSentinelReadFailure`) → `TryRepairExistingSentinelAsync`: run a `RequireEvidenceForExistingData` compatibility probe when one is configured. If the submitted key decrypts real existing data, the corrupt sentinel is **overwritten** with a fresh one (`created: true, repaired: true`, logs a warning). Without corroborating evidence, malformed/truncated data is reported as a corrupt sentinel and an authentication failure as a key mismatch.
 2. **No usable existing sentinel** → run a compatibility probe in `AllowMissingEvidence` mode (`ValidateCompatibilityAsync`), then:
    - `ValidateCompatibilityResult`: if `compatibility.Success == false` → fail with the probe's error. If `mode == RequireCompatibilityEvidenceForExistingData` AND `ExistingDataFound` AND NOT `EvidenceFound` → fail with the "seed with `COTTON_MASTER_KEY`" message (see *gotchas*).
    - `AcceptEncryptedConfigurationBackend`: for an encrypted-config backend (S3), accept the key with **no storage sentinel written** when there is evidence or there is no existing data; otherwise fail.
@@ -368,7 +373,7 @@ So the only thing the Cotton process itself *toggles* for "paranoia" is `PR_SET_
 - **The Postgres password is scrubbed too.** `AddCottonOptions(CottonEncryptionSettings)` nulls `COTTON_PG_PASSWORD` (Process + User) after reading it, alongside the master key. Other `COTTON_PG_*` vars are left in place.
 - **`Program` uses neither env-reading `AddCottonOptions` overload directly.** It reads the env var itself in `ResolveEncryptionSettingsAsync`, derives via `DeriveEncryptionSettings`, then injects the already-derived settings through `AddCottonOptions(CottonEncryptionSettings)`. The parameterless `AddCottonOptions()` (which both reads and scrubs) is exercised mainly by `Cotton.Autoconfig.Tests`.
 - **`JwtSettings:Key` is ephemeral.** It is regenerated randomly (`StringHelpers.CreateRandomString(32)`) on every process start, so JWTs do not survive restarts — a deliberate consequence of not persisting that key. (Relevant to the *Authentication* section.)
-- **The "seed with COTTON_MASTER_KEY" message** appears when existing data is present but no encrypted artifact could be tested with the submitted key (encrypted-config/S3 backend with no testable columns, or no testable columns/chunks generally). The remedy is to boot once *with* `COTTON_MASTER_KEY` set to the original key so the sentinel is written via the trusting env path, after which browser unlocks validate against the sentinel.
+- **The "seed with COTTON_MASTER_KEY" message** appears when the pre-DI browser-unlock probe finds existing data but no encrypted artifact it can test. Booting once with the original `COTTON_MASTER_KEY` lets the normal application startup validator use the fully configured backend, validate existing storage evidence when present, and seed the sentinel. Subsequent browser unlocks validate against that sentinel.
 - **Sentinel storage key is key-independent**, but the backup-pointer storage key is key-*dependent*. This asymmetry is intentional: the sentinel must be findable before the key is known; the backup pointer must be partitioned by key.
 - **`MasterEncryptionKeyId` is a tag, not rotation.** No automated rotation exists; the id is the AAD/header marker that would let a future scheme coexist with data written under id `1`.
 - **`MasterKeyRuntimeState` carries three flags.** `Source` (`"Environment"` or `"Unlock"`), `EnvironmentVariableWasConfigured`, and `EnvironmentVariablePresentAfterResolution`. The admin warning is gated on `EnvironmentVariableWasConfigured`, which `FromEnvironment` sets to `true` and `FromUnlock` always sets to `false`.

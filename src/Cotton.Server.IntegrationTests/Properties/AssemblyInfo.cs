@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using NUnit.Framework;
+using Cotton.Server.IntegrationTests.Common;
 
 // The integration suite uses process-wide environment variables and shared
 // PostgreSQL databases in several fixtures. Keep this assembly on one worker so
@@ -24,5 +25,6 @@ public class IntegrationTestAssemblySetup
     public void OneTimeTearDown()
     {
         Environment.SetEnvironmentVariable("DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE", _previousReloadConfigOnChange);
+        TestAppFactory.DeleteStorage();
     }
 }

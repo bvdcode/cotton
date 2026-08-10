@@ -70,7 +70,8 @@ namespace Cotton.Server.Services
             try
             {
                 using AesGcmStreamCipher cipher = CreateCipher(encryptionSettings);
-                bool storageDependsOnEncryptedConfiguration = _backend is IStorageBackendUsesEncryptedConfiguration;
+                bool storageDependsOnEncryptedConfiguration = _compatibilityProbe is not null
+                    && _backend is IStorageBackendUsesEncryptedConfiguration;
 
                 MasterKeySentinelResult? existing = await TryValidateExistingStorageSentinelAsync(
                     encryptionSettings,
@@ -156,7 +157,8 @@ namespace Cotton.Server.Services
 
         private MasterKeySentinelResult? AcceptEncryptedConfigurationBackend(MasterKeyCompatibilityResult compatibility)
         {
-            if (_backend is not IStorageBackendUsesEncryptedConfiguration)
+            if (_compatibilityProbe is null
+                || _backend is not IStorageBackendUsesEncryptedConfiguration)
             {
                 return null;
             }
@@ -201,7 +203,7 @@ namespace Cotton.Server.Services
                 cancellationToken);
             if (!compatibility.Success || !compatibility.EvidenceFound)
             {
-                return sentinelFailure is JsonException
+                return IsSentinelCorruption(sentinelFailure)
                     ? MasterKeySentinelResult.Fail("Master key sentinel is corrupted.")
                     : MasterKeySentinelResult.Fail("Master key does not match this Cotton instance.");
             }
@@ -278,6 +280,12 @@ namespace Cotton.Server.Services
         private static bool IsSentinelReadFailure(Exception ex) =>
             ex is CryptographicException
                 or InvalidDataException
+                or EndOfStreamException
+                or JsonException;
+
+        private static bool IsSentinelCorruption(Exception ex) =>
+            ex is InvalidDataException
+                or EndOfStreamException
                 or JsonException;
 
         private record MasterKeySentinelPayload(

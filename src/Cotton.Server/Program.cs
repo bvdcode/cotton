@@ -216,6 +216,7 @@ namespace Cotton.Server
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
+                .AddScoped<MasterKeyStartupValidator>()
                 .AddPostgresDbContext<CottonDbContext>(
                     x => x.UseLazyLoadingProxies = false,
                     (sp, options) => options.AddInterceptors(
@@ -263,6 +264,9 @@ namespace Cotton.Server
             {
                 IDatabaseAutoRestoreService autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
                 await autoRestore.TryRestoreIfEmptyAsync();
+                MasterKeyStartupValidator masterKeyValidator = scope.ServiceProvider
+                    .GetRequiredService<MasterKeyStartupValidator>();
+                await masterKeyValidator.ValidateAsync();
                 scope.ServiceProvider.GetRequiredService<SettingsProvider>().GetServerSettings();
             }
             app.MapHub<EventHub>(Routes.V1.EventHub);
