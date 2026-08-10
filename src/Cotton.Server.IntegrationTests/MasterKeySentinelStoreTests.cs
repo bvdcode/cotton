@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
+using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
@@ -23,10 +24,7 @@ namespace Cotton.Server.IntegrationTests
         [TearDown]
         public void TearDown()
         {
-            if (Directory.Exists(_storageBasePath))
-            {
-                Directory.Delete(_storageBasePath, recursive: true);
-            }
+            TestDirectory.Delete(_storageBasePath);
         }
 
         [Test]
@@ -198,8 +196,7 @@ namespace Cotton.Server.IntegrationTests
             public Task<Stream> ReadAsync(string uid) => throw StorageTouched();
             public Task WriteAsync(
                 string uid,
-                Stream stream,
-                StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing) => throw StorageTouched();
+                Stream stream) => throw StorageTouched();
             public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => throw StorageTouched();
 
             private static InvalidOperationException StorageTouched() =>

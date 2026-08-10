@@ -12,6 +12,8 @@ namespace Cotton.Storage.Helpers
     /// </summary>
     public static class S3CompatibilityFactory
     {
+        private const string FullContentByteRange = "bytes=0-";
+
         /// <summary>
         /// Builds an Amazon S3 config suitable for path-style S3-compatible providers.
         /// </summary>
@@ -66,6 +68,15 @@ namespace Cotton.Storage.Helpers
         {
             request.UseChunkEncoding = false;
             request.DisablePayloadSigning = true;
+            return request;
+        }
+
+        /// <summary>
+        /// Requests the complete object as a byte range to bypass full-response ETag-as-MD5 validation.
+        /// </summary>
+        public static GetObjectRequest WithFullContentReadCompatibility(this GetObjectRequest request)
+        {
+            request.ByteRange = new ByteRange(FullContentByteRange);
             return request;
         }
     }

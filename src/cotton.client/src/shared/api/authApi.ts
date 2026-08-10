@@ -6,6 +6,7 @@ import {
 } from "./httpClient";
 import { UserRole, type User } from "../../features/auth/types";
 import type { BaseDto } from "./types";
+import { buildPreviewUrl } from "./previewUrl";
 
 interface LoginRequest {
   username: string;
@@ -64,7 +65,7 @@ interface UserInfoResponse extends BaseDto<string> {
 const buildAvatarUrl = (response: UserInfoResponse): string | undefined => {
   const avatarHashEncryptedHex = response.avatarHashEncryptedHex?.trim();
   return avatarHashEncryptedHex
-    ? `/api/v1/preview/${encodeURIComponent(avatarHashEncryptedHex)}.webp`
+    ? buildPreviewUrl(avatarHashEncryptedHex)
     : undefined;
 };
 

@@ -26,16 +26,19 @@ public class GoldenVectorsTests
     }
 
     [Test]
-    public async Task Shared_LegacyCtn1Vector_Decrypts()
+    public void Shared_Ctn1Vector_ReportsRequiredTransitionVersion()
     {
         SharedContainerVectors vectors = LoadSharedContainerVectors();
         using var cipher = new AesGcmStreamCipher(vectors.MasterKey, keyId: 1, threads: 1);
-        using var input = new MemoryStream(vectors.LegacyCtn1SingleChunk, writable: false);
+        using var input = new MemoryStream(vectors.Ctn1TwoChunk, writable: false);
         using var output = new MemoryStream();
 
-        await cipher.DecryptAsync(input, output);
+#pragma warning disable CS0618 // OBSOLETE TRANSITION: pin the operator-facing CTN1 cutover error.
+        Ctn1NotSupportedException? exception = Assert.ThrowsAsync<Ctn1NotSupportedException>(
+            async () => await cipher.DecryptAsync(input, output));
+#pragma warning restore CS0618
 
-        Assert.That(output.ToArray(), Is.EqualTo(vectors.Plaintext));
+        Assert.That(exception!.Message, Does.Contain("Cotton 0.4.35"));
     }
 
     [Test]
@@ -119,10 +122,9 @@ public class GoldenVectorsTests
         JsonElement ctn2 = root
             .GetProperty("vectors")
             .GetProperty("cottonCtn2SingleChunk");
-        JsonElement legacyCtn1 = root
+        JsonElement ctn1 = root
             .GetProperty("vectors")
-            .GetProperty("legacyCtn1SingleChunk");
-
+            .GetProperty("legacyCtn1TwoChunk");
         return new SharedContainerVectors(
             ReadHex(root, "masterKeyHex"),
             ReadHex(root, "plaintextHex"),
@@ -130,8 +132,8 @@ public class GoldenVectorsTests
             ReadHex(root, "noncePrefixHex"),
             ReadHex(root, "fileKeyNonceHex"),
             ctn2.GetProperty("chunkSize").GetInt32(),
-            ReadHex(legacyCtn1, "hex"),
-            ReadHex(ctn2, "hex"));
+            ReadHex(ctn2, "hex"),
+            ReadHex(ctn1, "hex"));
     }
 
     private static byte[] ReadHex(JsonElement element, string propertyName)
@@ -148,8 +150,8 @@ public class GoldenVectorsTests
         byte[] NoncePrefix,
         byte[] FileKeyNonce,
         int Ctn2ChunkSize,
-        byte[] LegacyCtn1SingleChunk,
-        byte[] Ctn2SingleChunk);
+        byte[] Ctn2SingleChunk,
+        byte[] Ctn1TwoChunk);
 
     private class SequenceRandomNumberGenerator : RandomNumberGenerator
     {

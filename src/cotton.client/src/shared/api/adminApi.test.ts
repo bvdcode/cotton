@@ -136,6 +136,16 @@ describe("adminApi users", () => {
     );
     expect(put).toHaveBeenCalledWith("users/user-1", request);
   });
+
+  it("deletes users through the users endpoint", async () => {
+    const remove = vi.spyOn(httpClient, "delete").mockResolvedValue({
+      data: undefined,
+    });
+
+    await adminApi.deleteUser("user-1");
+
+    expect(remove).toHaveBeenCalledWith("users/user-1");
+  });
 });
 
 describe("adminApi database backups", () => {

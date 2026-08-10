@@ -5,14 +5,17 @@ import { useConfirm } from "material-ui-confirm";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OidcProviderDto } from "@shared/api/oidcApi";
+import { destructiveConfirmOptions } from "@shared/ui/confirmOptions";
 import {
   useAdminOidcProvidersQuery,
   useDeleteOidcProviderMutation,
 } from "@shared/api/queries/oidc";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { AdminPageHeader } from "../components/AdminPageHeader";
 import { OidcProviderFormDialog } from "./OidcProviderFormDialog";
 import { OidcProvidersGridToolbar } from "./OidcProvidersGridToolbar";
 import { useOidcProviderColumns } from "./useOidcProviderColumns";
+import { useAdminDataGridLocaleText } from "../components/useAdminDataGridLocaleText";
 
 type ColumnVisibilityTarget = "desktop" | "mobile";
 
@@ -40,6 +43,7 @@ export const AdminIdentityProvidersPage = () => {
   const [pageError, setPageError] = useState<string | null>(null);
 
   const providers = providersQuery.data ?? [];
+  const localeText = useAdminDataGridLocaleText(t("identityProviders.empty"));
 
   const handleDelete = async (provider: OidcProviderDto) => {
     const result = await confirm({
@@ -47,6 +51,7 @@ export const AdminIdentityProvidersPage = () => {
       description: t("identityProviders.delete.description"),
       confirmationText: t("identityProviders.delete.confirm"),
       cancellationText: t("actions.cancel", { ns: "common" }),
+      ...destructiveConfirmOptions,
     });
 
     if (!result.confirmed) return;
@@ -108,6 +113,13 @@ export const AdminIdentityProvidersPage = () => {
       }}
     >
       <AdminPageSurface fullHeight>
+        <Box p={3} pb={2}>
+          <AdminPageHeader
+            title={t("identityProviders.title")}
+            description={t("identityProviders.description")}
+          />
+        </Box>
+
         {(providersQuery.isError || pageError) && (
           <Box p={2} pb={0}>
             <Alert severity="error">
@@ -124,6 +136,7 @@ export const AdminIdentityProvidersPage = () => {
             onColumnVisibilityModelChange={handleColumnVisibilityModelChange}
             getRowId={(row) => row.id}
             loading={providersQuery.isLoading}
+            localeText={localeText}
             disableRowSelectionOnClick
             showToolbar
             label={t("identityProviders.title")}

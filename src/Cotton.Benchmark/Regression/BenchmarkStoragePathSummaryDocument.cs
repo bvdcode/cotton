@@ -129,6 +129,5 @@ namespace Cotton.Benchmark.Regression
 
             return null;
         }
-
     }
 }

@@ -6,6 +6,7 @@ using Cotton.Nodes;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Topology.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -21,7 +22,7 @@ namespace Cotton.Server.Handlers.Nodes
     /// </summary>
     public class GetChildrenQuery(
         Guid userId, Guid nodeId, NodeType nodeType,
-        int page, int pageSize, int depth = 0) : IRequest<NodeContentDto>
+        int page, int pageSize, int depth = 0) : IRequest<PagedResult<NodeContentDto>>
     {
         /// <summary>
         /// Gets the owning user identifier.
@@ -60,12 +61,12 @@ namespace Cotton.Server.Handlers.Nodes
     public class GetChildrenQueryHandler(
         ILayoutService _layouts,
         CottonDbContext _dbContext)
-            : IRequestHandler<GetChildrenQuery, NodeContentDto>
+            : IRequestHandler<GetChildrenQuery, PagedResult<NodeContentDto>>
     {
         /// <summary>
         /// Handles the request through the mediator pipeline.
         /// </summary>
-        public async Task<NodeContentDto> Handle(GetChildrenQuery request, CancellationToken ct)
+        public async Task<PagedResult<NodeContentDto>> Handle(GetChildrenQuery request, CancellationToken ct)
         {
             Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, ct);
             Node parentNode = await _dbContext.Nodes
@@ -101,15 +102,14 @@ namespace Cotton.Server.Handlers.Nodes
 
                 if (currentParentIds.Count == 0)
                 {
-                    return new()
+                    return new(new NodeContentDto
                     {
                         Nodes = [],
                         Files = [],
                         Id = request.NodeId,
                         CreatedAt = parentNode.CreatedAt,
                         UpdatedAt = parentNode.UpdatedAt,
-                        TotalCount = 0,
-                    };
+                    }, 0);
                 }
             }
 
@@ -165,18 +165,17 @@ namespace Cotton.Server.Handlers.Nodes
                     .ProjectToType<NodeFileManifestDto>()
                     .ToListAsync(cancellationToken: ct);
 
-            return new()
+            return new(new NodeContentDto
             {
                 Nodes = nodes,
                 Files = files,
                 Id = request.NodeId,
                 CreatedAt = parentNode.CreatedAt,
                 UpdatedAt = parentNode.UpdatedAt,
-                TotalCount = nodesCount + filesCount,
-            };
+            }, nodesCount + filesCount);
         }
 
-        private async Task<NodeContentDto> LoadTrashChildrenAsync(
+        private async Task<PagedResult<NodeContentDto>> LoadTrashChildrenAsync(
             GetChildrenQuery request,
             Node parentNode,
             IQueryable<Node> nodesBaseQuery,
@@ -235,15 +234,14 @@ namespace Cotton.Server.Handlers.Nodes
             nodes.Sort((a, b) => entryOrder[a.Id].CompareTo(entryOrder[b.Id]));
             files.Sort((a, b) => entryOrder[a.Id].CompareTo(entryOrder[b.Id]));
 
-            return new()
+            return new(new NodeContentDto
             {
                 Nodes = nodes,
                 Files = files,
                 Id = request.NodeId,
                 CreatedAt = parentNode.CreatedAt,
                 UpdatedAt = parentNode.UpdatedAt,
-                TotalCount = nodesCount + filesCount,
-            };
+            }, nodesCount + filesCount);
         }
 
         private class TrashChildPageEntry

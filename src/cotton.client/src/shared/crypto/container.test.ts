@@ -40,7 +40,7 @@ describe("looksLikeContainer", () => {
     expect(looksLikeContainer(MAGIC)).toBe(true);
   });
 
-  it("accepts the legacy CTN1 magic prefix", () => {
+  it("accepts the obsolete legacy CTN1 magic prefix", () => {
     expect(looksLikeContainer(LEGACY_MAGIC)).toBe(true);
   });
 

@@ -40,16 +40,39 @@ const parseDateToUtc = (value: string): Date => {
   return new Date(value);
 };
 
+const toCalendarDayIndex = (value: Date, timeZone: string): number | null => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(value);
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const day = Number(parts.find((part) => part.type === "day")?.value);
+
+  if (![year, month, day].every(Number.isInteger)) {
+    return null;
+  }
+
+  return Math.floor(Date.UTC(year, month - 1, day) / bucketStepMs("day"));
+};
+
 const bucketStepMs = (bucket: GcTimelineBucketKind): number =>
   bucket === "day" ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000;
 
 export const toBucketIndex = (
   value: string,
   bucket: GcTimelineBucketKind,
+  timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): number | null => {
   const parsed = parseDateToUtc(value);
   if (Number.isNaN(parsed.getTime())) {
     return null;
+  }
+
+  if (bucket === "day") {
+    return toCalendarDayIndex(parsed, timeZone);
   }
 
   return Math.floor(parsed.getTime() / bucketStepMs(bucket));

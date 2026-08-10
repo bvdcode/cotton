@@ -1,26 +1,44 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Crypto;
 using Cotton.Database.Configuration;
 using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using EasyExtensions.EntityFrameworkCore.Database;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cotton.Database
 {
     /// <summary>
     /// Entity Framework context for Cotton domain data and encrypted database fields.
     /// </summary>
-    public class CottonDbContext(
-        DbContextOptions options,
-        IStreamCipher? streamCipher = null,
-        ILogger<CottonDbContext>? logger = null,
-        IDatabaseIntegrityChangeSigner? integrityChangeSigner = null)
-        : IntegrityAuditedDbContext(options, integrityChangeSigner)
+    public class CottonDbContext : AuditedDbContext
     {
+        private readonly IDatabaseFieldProtector? _databaseFieldProtector;
+
+        internal IDatabaseFieldProtector? DatabaseFieldProtector => _databaseFieldProtector;
+
+        /// <summary>
+        /// Initializes a context for design-time and raw database operations that do not access encrypted fields.
+        /// </summary>
+        public CottonDbContext(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a runtime context with database field protection.
+        /// </summary>
+        public CottonDbContext(
+            DbContextOptions options,
+            IDatabaseFieldProtector databaseFieldProtector)
+            : base(options)
+        {
+            ArgumentNullException.ThrowIfNull(databaseFieldProtector);
+            _databaseFieldProtector = databaseFieldProtector;
+        }
+
         /// <summary>
         /// Folder nodes stored by the server.
         /// </summary>
@@ -60,11 +78,6 @@ namespace Cotton.Database
         /// User notification rows.
         /// </summary>
         public DbSet<Notification> Notifications => Set<Notification>();
-
-        /// <summary>
-        /// Registered mobile push device tokens.
-        /// </summary>
-        public DbSet<PushDeviceToken> PushDeviceTokens => Set<PushDeviceToken>();
 
         /// <summary>
         /// Immutable file-content manifests.
@@ -127,10 +140,18 @@ namespace Cotton.Database
         public DbSet<SyncChange> SyncChanges => Set<SyncChange>();
 
         /// <inheritdoc />
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            base.OnConfiguring(optionsBuilder);
+            optionsBuilder.ReplaceService<IModelCacheKeyFactory, CottonModelCacheKeyFactory>();
+        }
+
+        /// <inheritdoc />
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            EncryptedStringModelConfiguration.Configure(modelBuilder, streamCipher, logger);
+            DatabaseIntegrityModelConfiguration.Configure(modelBuilder);
+            EncryptedStringModelConfiguration.Configure(modelBuilder, _databaseFieldProtector);
         }
     }
 }

@@ -265,6 +265,74 @@ describe("settingsApi getters", () => {
 });
 
 describe("settingsApi setters", () => {
+  it("detects and verifies the trusted proxy address", async () => {
+    const get = vi
+      .spyOn(httpClient, "get")
+      .mockResolvedValueOnce({
+        data: { trustedProxyIpAddress: "172.18.0.2" },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          observedProxyIpAddress: "172.18.0.3",
+          suggestedTrustedProxy: "172.16.0.0/12",
+          detectedProxyServices: ["cloudflare", "reverse-proxy"],
+          cloudflare: {
+            visitorCountryCode: "US",
+            datacenterCode: "SJC",
+          },
+        },
+        headers: { server: "nginx/1.27.4", "cf-ray": "a2591eb86ff8cbaa-LAX" },
+      });
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: {
+        trustedProxyIpAddress: "172.18.0.3",
+        observedProxyIpAddress: "172.18.0.3",
+        detectedProxyServices: ["cloudflare", "reverse-proxy"],
+        cloudflare: null,
+        matches: true,
+        saved: true,
+      },
+      headers: { server: "cloudflare" },
+    });
+
+    await expect(settingsApi.getTrustedProxyIpAddress()).resolves.toBe(
+      "172.18.0.2",
+    );
+    await expect(settingsApi.getObservedProxyInfo()).resolves.toEqual({
+      observedProxyIpAddress: "172.18.0.3",
+      suggestedTrustedProxy: "172.16.0.0/12",
+      detectedProxyServices: ["cloudflare", "nginx"],
+      cloudflare: {
+        visitorCountryCode: "US",
+        datacenterCode: "LAX",
+      },
+    });
+    await expect(
+      settingsApi.verifyAndSaveTrustedProxyIpAddress("172.18.0.3"),
+    ).resolves.toEqual({
+      trustedProxyIpAddress: "172.18.0.3",
+      observedProxyIpAddress: "172.18.0.3",
+      detectedProxyServices: ["cloudflare", "reverse-proxy"],
+      cloudflare: null,
+      matches: true,
+      saved: true,
+    });
+
+    expect(get).toHaveBeenNthCalledWith(
+      1,
+      "server/settings/trusted-proxy-ip-address",
+      undefined,
+    );
+    expect(get).toHaveBeenNthCalledWith(
+      2,
+      "server/settings/trusted-proxy-ip-address/observed",
+    );
+    expect(post).toHaveBeenCalledWith(
+      "server/settings/trusted-proxy-ip-address/verify-and-save",
+      "172.18.0.3",
+    );
+  });
+
   it("patches primitive settings with the expected payloads", async () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
       data: undefined,

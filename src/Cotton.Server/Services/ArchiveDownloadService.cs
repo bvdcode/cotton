@@ -38,74 +38,37 @@ namespace Cotton.Server.Services
                 return CreateArchiveDownloadLinkResult.BadRequest("Select at least one file or folder to download.");
             }
 
-            var uniquifier = new ArchivePathUniquifier();
-            var entries = new List<ArchiveDownloadEntry>();
-            var addedFileIds = new HashSet<Guid>();
+            ArchivePathUniquifier uniquifier = new();
+            List<ArchiveDownloadEntry> entries = [];
+            HashSet<Guid> addedFileIds = [];
             ArchiveLimitTracker? limits = request.EnforcePublicShareLimits
                 ? ArchiveLimitTracker.ForPublicShare()
                 : null;
 
-            if (fileIds.Length > 0)
+            CreateArchiveDownloadLinkResult? selectionError = await AddRequestedFilesAsync(
+                entries,
+                addedFileIds,
+                uniquifier,
+                limits,
+                fileIds,
+                userId,
+                cancellationToken);
+            if (selectionError is not null)
             {
-                List<NodeFile> files = await LoadFilesAsync(fileIds, userId, cancellationToken);
-                if (files.Count != fileIds.Length)
-                {
-                    return CreateArchiveDownloadLinkResult.NotFound("One or more selected files were not found.");
-                }
-
-                foreach (NodeFile file in OrderByRequestedIds(files, fileIds, x => x.Id))
-                {
-                    _fileGraphIntegrity.RequireValidContent(_dbContext, file, "archive.selected-file");
-                    CreateArchiveDownloadLinkResult? limitError = AddFileEntry(
-                        entries,
-                        addedFileIds,
-                        uniquifier,
-                        limits,
-                        file,
-                        file.Name);
-                    if (limitError is not null)
-                    {
-                        return limitError;
-                    }
-                }
+                return selectionError;
             }
 
-            if (nodeIds.Length > 0)
+            selectionError = await AddRequestedFoldersAsync(
+                entries,
+                addedFileIds,
+                uniquifier,
+                limits,
+                nodeIds,
+                userId,
+                cancellationToken);
+            if (selectionError is not null)
             {
-                List<Node> folders = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => nodeIds.Contains(x.Id) && x.OwnerId == userId && x.Type == NodeType.Default)
-                    .OrderBy(x => x.Name)
-                    .ToListAsync(cancellationToken);
-                if (folders.Count != nodeIds.Length)
-                {
-                    return CreateArchiveDownloadLinkResult.NotFound("One or more selected folders were not found.");
-                }
-
-                foreach (Node folder in OrderByRequestedIds(folders, nodeIds, x => x.Id))
-                {
-                    string folderPath = uniquifier.AddDirectory(folder.Name).TrimEnd('/');
-                    CreateArchiveDownloadLinkResult? limitError = limits?.TryAddEntry();
-                    if (limitError is not null)
-                    {
-                        return limitError;
-                    }
-
-                    entries.Add(new ArchiveDownloadDirectoryEntry(folderPath + "/"));
-                    limitError = await AddFolderEntriesAsync(
-                        entries,
-                        addedFileIds,
-                        uniquifier,
-                        limits,
-                        folder.Id,
-                        folderPath,
-                        userId,
-                        cancellationToken);
-                    if (limitError is not null)
-                    {
-                        return limitError;
-                    }
-                }
+                return selectionError;
             }
 
             if (entries.Count == 0)
@@ -115,7 +78,7 @@ namespace Cotton.Server.Services
 
             string fileName = BuildArchiveFileName(request.ArchiveName, fileIds.Length, nodeIds.Length, entries);
             long archiveSizeBytes = StoredZipArchiveWriter.CalculateLength(entries);
-            var ticket = new ArchiveDownloadTicket(fileName, archiveSizeBytes, entries.Count, entries);
+            ArchiveDownloadTicket ticket = new(fileName, archiveSizeBytes, entries.Count, entries);
             string token = _tickets.Store(ticket);
 
             return CreateArchiveDownloadLinkResult.Success(new ArchiveDownloadLinkDto
@@ -125,6 +88,105 @@ namespace Cotton.Server.Services
                 SizeBytes = archiveSizeBytes,
                 EntryCount = entries.Count,
             });
+        }
+
+        private async Task<CreateArchiveDownloadLinkResult?> AddRequestedFilesAsync(
+            List<ArchiveDownloadEntry> entries,
+            HashSet<Guid> addedFileIds,
+            ArchivePathUniquifier uniquifier,
+            ArchiveLimitTracker? limits,
+            Guid[] fileIds,
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            if (fileIds.Length == 0)
+            {
+                return null;
+            }
+
+            List<NodeFile> files = await LoadFilesAsync(fileIds, userId, cancellationToken);
+            if (files.Count != fileIds.Length)
+            {
+                return CreateArchiveDownloadLinkResult.NotFound("One or more selected files were not found.");
+            }
+
+            foreach (NodeFile file in OrderByRequestedIds(files, fileIds, x => x.Id))
+            {
+                _fileGraphIntegrity.RequireValidContent(_dbContext, file, "archive.selected-file");
+                CreateArchiveDownloadLinkResult? limitError = AddFileEntry(
+                    entries,
+                    addedFileIds,
+                    uniquifier,
+                    limits,
+                    file,
+                    file.Name);
+                if (limitError is not null)
+                {
+                    return limitError;
+                }
+            }
+
+            return null;
+        }
+
+        private async Task<CreateArchiveDownloadLinkResult?> AddRequestedFoldersAsync(
+            List<ArchiveDownloadEntry> entries,
+            HashSet<Guid> addedFileIds,
+            ArchivePathUniquifier uniquifier,
+            ArchiveLimitTracker? limits,
+            Guid[] nodeIds,
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            if (nodeIds.Length == 0)
+            {
+                return null;
+            }
+
+            List<Node> folders = await LoadFoldersAsync(nodeIds, userId, cancellationToken);
+            if (folders.Count != nodeIds.Length)
+            {
+                return CreateArchiveDownloadLinkResult.NotFound("One or more selected folders were not found.");
+            }
+
+            foreach (Node folder in OrderByRequestedIds(folders, nodeIds, x => x.Id))
+            {
+                string folderPath = uniquifier.AddDirectory(folder.Name).TrimEnd('/');
+                CreateArchiveDownloadLinkResult? limitError = limits?.TryAddEntry();
+                if (limitError is not null)
+                {
+                    return limitError;
+                }
+
+                entries.Add(new ArchiveDownloadDirectoryEntry(folderPath + "/"));
+                limitError = await AddFolderEntriesAsync(
+                    entries,
+                    addedFileIds,
+                    uniquifier,
+                    limits,
+                    folder.Id,
+                    folderPath,
+                    userId,
+                    cancellationToken);
+                if (limitError is not null)
+                {
+                    return limitError;
+                }
+            }
+
+            return null;
+        }
+
+        private Task<List<Node>> LoadFoldersAsync(
+            Guid[] nodeIds,
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            return _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => nodeIds.Contains(x.Id) && x.OwnerId == userId && x.Type == NodeType.Default)
+                .OrderBy(x => x.Name)
+                .ToListAsync(cancellationToken);
         }
 
         private async Task<CreateArchiveDownloadLinkResult?> AddFolderEntriesAsync(

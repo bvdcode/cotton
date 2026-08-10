@@ -77,17 +77,15 @@ namespace Cotton.Server.Handlers.Files
             string baseAppUrl = await _settings.GetPublicBaseUrlAsync(ct);
             bool requestsPreview = RequestsInlinePreview(request, viewMode.Value);
 
-            if (viewMode.Value.IsHtml)
+            ShareFileResult? nodeShareResult = await TryBuildNodeShareRedirectResultAsync(
+                request.Token,
+                now,
+                baseAppUrl,
+                viewMode.Value.IsHtml,
+                ct);
+            if (nodeShareResult is not null)
             {
-                ShareFileResult? nodeShareResult = await TryBuildNodeShareRedirectResultAsync(
-                    request.Token,
-                    now,
-                    baseAppUrl,
-                    ct);
-                if (nodeShareResult is not null)
-                {
-                    return nodeShareResult;
-                }
+                return nodeShareResult;
             }
 
             bool includeChunks = !viewMode.Value.IsHtml && !isHead && !requestsPreview;
@@ -98,14 +96,7 @@ namespace Cotton.Server.Handlers.Files
             }
 
             _integrity.RequireValid(_dbContext, downloadToken, "share.download-token");
-            if (viewMode.Value.IsHtml || isHead || requestsPreview)
-            {
-                _fileGraphIntegrity.RequireValidMetadata(_dbContext, downloadToken.NodeFile, "share.file-metadata");
-            }
-            else
-            {
-                _fileGraphIntegrity.RequireValidContent(_dbContext, downloadToken.NodeFile, "share.file-download");
-            }
+            RequireFileIntegrity(downloadToken, viewMode.Value.IsHtml || isHead || requestsPreview);
 
             if (downloadToken.NodeFile.Node.Type != NodeType.Default)
             {
@@ -135,8 +126,14 @@ namespace Cotton.Server.Handlers.Files
             string token,
             DateTime now,
             string baseAppUrl,
+            bool shouldRedirect,
             CancellationToken ct)
         {
+            if (!shouldRedirect)
+            {
+                return null;
+            }
+
             NodeShareToken? nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
             if (nodeShareToken is null)
             {
@@ -152,6 +149,17 @@ namespace Cotton.Server.Handlers.Files
             return BuildNodeShareRedirect(nodeShareToken, token, baseAppUrl);
         }
 
+        private void RequireFileIntegrity(DownloadToken downloadToken, bool metadataOnly)
+        {
+            if (metadataOnly)
+            {
+                _fileGraphIntegrity.RequireValidMetadata(_dbContext, downloadToken.NodeFile, "share.file-metadata");
+                return;
+            }
+
+            _fileGraphIntegrity.RequireValidContent(_dbContext, downloadToken.NodeFile, "share.file-download");
+        }
+
         private async Task<ShareFileResult> BuildMissingTokenResultAsync(
             string token,
             DateTime now,
@@ -161,13 +169,13 @@ namespace Cotton.Server.Handlers.Files
         {
             if (!isHtml)
             {
-                return ShareFileResult.AsNotFound("File not found");
+                return ShareFileResult.AsTokenNotFound("File not found");
             }
 
             NodeShareToken? nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
             if (nodeShareToken is null || nodeShareToken.Node.Type != NodeType.Default)
             {
-                return ShareFileResult.AsRedirect($"{baseAppUrl}/404");
+                return ShareFileResult.AsTokenNotFoundRedirect($"{baseAppUrl}/404");
             }
 
             _integrity.RequireValid(_dbContext, nodeShareToken, "share.node-token");
@@ -324,7 +332,7 @@ namespace Cotton.Server.Handlers.Files
             }
 
             string previewHashHex = Hasher.ToHexStringHash(file.SmallFilePreviewHash);
-            var entityTag = new EntityTagHeaderValue($"\"sha256-{previewHashHex}\"");
+            EntityTagHeaderValue entityTag = new($"\"sha256-{previewHashHex}\"");
             Stream previewStream = _storage.GetBlobStream([previewHashHex]);
 
             return ShareFileResult.AsStream(

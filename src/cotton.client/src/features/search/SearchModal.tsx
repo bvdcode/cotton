@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Alert,
   Box,
@@ -38,6 +45,127 @@ interface SearchModalProps {
   open: boolean;
   onClose: () => void;
 }
+
+interface SearchEndAdornmentProps {
+  isMobile: boolean;
+  onClose: () => void;
+  resultCount: number;
+  resultsCountText: string;
+  waitingForResults: boolean;
+  closeText: string;
+}
+
+const SearchEndAdornment = ({
+  isMobile,
+  onClose,
+  resultCount,
+  resultsCountText,
+  waitingForResults,
+  closeText,
+}: SearchEndAdornmentProps) => {
+  if (isMobile) {
+    return (
+      <IconButton
+        edge="end"
+        aria-label={closeText}
+        title={closeText}
+        onClick={onClose}
+      >
+        <Close />
+      </IconButton>
+    );
+  }
+
+  if (waitingForResults) {
+    return <CircularProgress size={24} />;
+  }
+
+  if (resultCount === 0) {
+    return null;
+  }
+
+  return (
+    <Typography
+      variant="caption"
+      color="text.secondary"
+      noWrap
+      sx={{ px: 0.5 }}
+    >
+      {resultsCountText}
+    </Typography>
+  );
+};
+
+interface SearchResultsContentProps {
+  emptyText: string;
+  loadNextPage: () => void;
+  loadingMore: boolean;
+  renderSearchRow: (index: number, row: SearchRow) => ReactNode;
+  rows: SearchRow[];
+  waitingForResults: boolean;
+}
+
+const SearchResultsContent = ({
+  emptyText,
+  loadNextPage,
+  loadingMore,
+  renderSearchRow,
+  rows,
+  waitingForResults,
+}: SearchResultsContentProps) => {
+  if (waitingForResults) {
+    return (
+      <Box
+        sx={{
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress size={24} />
+      </Box>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <Box
+        sx={{
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          px: 3,
+          textAlign: "center",
+        }}
+      >
+        <Typography color="text.secondary">{emptyText}</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Virtuoso
+      style={{ height: "100%" }}
+      data={rows}
+      overscan={600}
+      defaultItemHeight={68}
+      components={{
+        Scroller: SearchResultsScroller,
+        Footer: () =>
+          loadingMore ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 1.5 }}>
+              <CircularProgress size={18} />
+            </Box>
+          ) : null,
+      }}
+      computeItemKey={(_, row) => row.id}
+      endReached={loadNextPage}
+      itemContent={renderSearchRow}
+    />
+  );
+};
 
 export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   const { t } = useTranslation("search");
@@ -343,27 +471,16 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    {isMobile ? (
-                      <IconButton
-                        edge="end"
-                        aria-label={tCommon("actions.close")}
-                        title={tCommon("actions.close")}
-                        onClick={onClose}
-                      >
-                        <Close />
-                      </IconButton>
-                    ) : waitingForResults ? (
-                      <CircularProgress size={24} />
-                    ) : hasSearchQuery && resultCount > 0 ? (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        noWrap
-                        sx={{ px: 0.5 }}
-                      >
-                        {t("modal.resultsCount", { count: resultCount })}
-                      </Typography>
-                    ) : null}
+                    <SearchEndAdornment
+                      isMobile={isMobile}
+                      onClose={onClose}
+                      resultCount={hasSearchQuery ? resultCount : 0}
+                      resultsCountText={t("modal.resultsCount", {
+                        count: resultCount,
+                      })}
+                      waitingForResults={waitingForResults}
+                      closeText={tCommon("actions.close")}
+                    />
                   </InputAdornment>
                 ),
               },
@@ -402,58 +519,14 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                 bgcolor: "background.default",
               }}
             >
-              {waitingForResults ? (
-                <Box
-                  sx={{
-                    height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <CircularProgress size={24} />
-                </Box>
-              ) : rows.length === 0 ? (
-                <Box
-                  sx={{
-                    height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    px: 3,
-                    textAlign: "center",
-                  }}
-                >
-                  <Typography color="text.secondary">
-                    {t("noResults")}
-                  </Typography>
-                </Box>
-              ) : (
-                <Virtuoso
-                  style={{ height: "100%" }}
-                  data={rows}
-                  overscan={600}
-                  defaultItemHeight={68}
-                  components={{
-                    Scroller: SearchResultsScroller,
-                    Footer: () =>
-                      loadingMore ? (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "center",
-                            py: 1.5,
-                          }}
-                        >
-                          <CircularProgress size={18} />
-                        </Box>
-                      ) : null,
-                  }}
-                  computeItemKey={(_, row) => row.id}
-                  endReached={loadNextPage}
-                  itemContent={renderSearchRow}
-                />
-              )}
+              <SearchResultsContent
+                emptyText={t("noResults")}
+                loadNextPage={loadNextPage}
+                loadingMore={loadingMore}
+                renderSearchRow={renderSearchRow}
+                rows={rows}
+                waitingForResults={waitingForResults}
+              />
             </Box>
           )}
         </DialogContent>

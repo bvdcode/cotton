@@ -56,5 +56,13 @@ namespace Cotton.Storage.Tests.Helpers
                 Assert.That(request.DisablePayloadSigning, Is.True);
             });
         }
+
+        [Test]
+        public void WithFullContentReadCompatibility_RequestsEntireObjectAsRange()
+        {
+            GetObjectRequest request = new GetObjectRequest().WithFullContentReadCompatibility();
+
+            Assert.That(request.ByteRange.FormattedByteRange, Is.EqualTo("bytes=0-"));
+        }
     }
 }

@@ -19,7 +19,8 @@ namespace Cotton.Server.Services
     /// </summary>
     public partial class OidcProviderService(
         CottonDbContext _dbContext,
-        IDatabaseIntegrityVerifier _integrity)
+        IDatabaseIntegrityVerifier _integrity,
+        OidcDiscoveryService _discovery)
     {
         private static readonly string[] DefaultScopes = ["openid", "profile", "email"];
         private const int MaxSlugLength = 64;
@@ -85,6 +86,7 @@ namespace Cotton.Server.Services
                 SyncAvatar = input.SyncAvatar
             };
 
+            await ValidateEnabledProviderAsync(provider, ct);
             await _dbContext.OidcProviders.AddAsync(provider, ct);
             await _dbContext.SaveChangesAsync(ct);
             return ToDto(provider);
@@ -121,6 +123,7 @@ namespace Cotton.Server.Services
             provider.SyncProfile = input.SyncProfile;
             provider.SyncAvatar = input.SyncAvatar;
 
+            await ValidateEnabledProviderAsync(provider, ct);
             await _dbContext.SaveChangesAsync(ct);
             return ToDto(provider);
         }
@@ -179,6 +182,13 @@ namespace Cotton.Server.Services
             }
 
             return slug;
+        }
+
+        private Task ValidateEnabledProviderAsync(OidcProvider provider, CancellationToken ct)
+        {
+            return provider.IsEnabled
+                ? _discovery.ValidateConfigurationAsync(provider, ct)
+                : Task.CompletedTask;
         }
 
         private static NormalizedProviderInput Normalize(OidcProviderRequestDto request, bool requireSecret)

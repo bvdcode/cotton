@@ -14,6 +14,7 @@ import {
   emailModeResponseSchema,
   geoIpLookupModeResponseSchema,
   publicBaseUrlSchema,
+  observedProxyInfoSchema,
   publicServerInfoSchema,
   serverSettingsResponseSchema,
   serverUsageListSchema,
@@ -24,12 +25,17 @@ import {
   storageTypeResponseSchema,
   telemetrySettingSchema,
   timezoneSchema,
+  trustedProxyIpAddressSchema,
+  trustedProxyVerificationResultSchema,
   type ChunkSizeSettings,
+  type CloudflareProxyMetadata,
   type ComputionMode,
   type CustomGeoIpLookupTestResult,
   type EmailConfig,
   type EmailMode,
   type GeoIpLookupMode,
+  type DetectedProxyService,
+  type ObservedProxyInfo,
   type PublicServerInfo,
   type S3Config,
   type ServerSettings,
@@ -37,15 +43,21 @@ import {
   type StoragePipelineSettings,
   type StorageSpaceMode,
   type StorageType,
+  type TrustedProxyVerificationResult,
 } from "./schemas/serverSettings";
+
+export { DIRECT_CONNECTION_IP_ADDRESS } from "./schemas/serverSettings";
 
 export type {
   ChunkSizeSettings,
+  CloudflareProxyMetadata,
   ComputionMode,
   CustomGeoIpLookupTestResult,
   EmailConfig,
   EmailMode,
   GeoIpLookupMode,
+  DetectedProxyService,
+  ObservedProxyInfo,
   PublicServerInfo,
   S3Config,
   ServerSettings,
@@ -53,6 +65,7 @@ export type {
   StoragePipelineSettings,
   StorageSpaceMode,
   StorageType,
+  TrustedProxyVerificationResult,
 } from "./schemas/serverSettings";
 
 const mapUsageAnswer = (value: string): ServerUsage => {
@@ -70,6 +83,92 @@ const mapUsageAnswer = (value: string): ServerUsage => {
 
 const toStorageType = (value: unknown): StorageType =>
   typeof value === "string" && value.toLowerCase() === "s3" ? "S3" : "Local";
+
+const responseServerSignatures: ReadonlyArray<
+  readonly [DetectedProxyService, RegExp]
+> = [
+  ["cloudflare", /\bcloudflare\b/i],
+  ["cloudfront", /\bcloudfront\b/i],
+  ["fastly", /\bfastly\b/i],
+  ["fly-io", /\bfly(?:\.io)?\b/i],
+  ["vercel", /\bvercel\b/i],
+  ["aws-alb", /\bawselb\b/i],
+  ["traefik", /\btraefik\b/i],
+  ["envoy", /\benvoy\b/i],
+  ["nginx", /\bnginx\b/i],
+  ["caddy", /\bcaddy\b/i],
+  ["haproxy", /\bhaproxy\b/i],
+  ["apache", /\bapache\b/i],
+];
+
+const localProxyServices = new Set<DetectedProxyService>([
+  "traefik",
+  "envoy",
+  "nginx",
+  "caddy",
+  "haproxy",
+  "apache",
+]);
+
+const edgeProxyServices = new Set<DetectedProxyService>([
+  "cloudflare",
+  "cloudfront",
+  "azure-front-door",
+  "fastly",
+  "fly-io",
+  "vercel",
+  "aws-alb",
+]);
+
+const parseCloudflareDatacenterCode = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const firstValue = value.split(",", 1)[0].trim();
+  const separatorIndex = firstValue.lastIndexOf("-");
+  if (separatorIndex < 0) return null;
+  const code = firstValue.slice(separatorIndex + 1).toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : null;
+};
+
+const mergeCloudflareMetadata = (
+  metadata: CloudflareProxyMetadata,
+  rayHeader: unknown,
+): CloudflareProxyMetadata => {
+  const browserDatacenterCode = parseCloudflareDatacenterCode(rayHeader);
+  if (!browserDatacenterCode) return metadata;
+  return {
+    visitorCountryCode: metadata?.visitorCountryCode ?? null,
+    datacenterCode: browserDatacenterCode,
+  };
+};
+
+const detectResponseServerService = (
+  serverHeader: unknown,
+): DetectedProxyService[] => {
+  if (typeof serverHeader !== "string") return [];
+  const match = responseServerSignatures.find(([, pattern]) =>
+    pattern.test(serverHeader),
+  );
+  return match ? [match[0]] : [];
+};
+
+const mergeDetectedProxyServices = (
+  detected: DetectedProxyService[],
+  serverHeader: unknown,
+): DetectedProxyService[] => {
+  const responseServices = detectResponseServerService(serverHeader);
+  const identifiesUnknownLocalProxy = responseServices.some(
+    (service) => localProxyServices.has(service) && !detected.includes(service),
+  );
+  const merged = identifiesUnknownLocalProxy
+    ? detected.filter((service) => service !== "reverse-proxy")
+    : [...detected];
+  for (const service of responseServices) {
+    if (merged.includes(service)) continue;
+    if (edgeProxyServices.has(service)) merged.unshift(service);
+    else merged.push(service);
+  }
+  return merged;
+};
 
 const toEmailMode = (value: unknown): EmailMode => {
   if (typeof value !== "string") return "None";
@@ -304,6 +403,54 @@ export const settingsApi = {
 
   setPublicBaseUrl: async (url: string): Promise<void> => {
     await httpClient.patch("server/settings/public-base-url", url);
+  },
+
+  getTrustedProxyIpAddress: (): Promise<string> =>
+    getValidated(
+      "server/settings/trusted-proxy-ip-address",
+      trustedProxyIpAddressSchema,
+    ),
+
+  getObservedProxyInfo: async (): Promise<ObservedProxyInfo> => {
+    const path = "server/settings/trusted-proxy-ip-address/observed";
+    const response = await httpClient.get<unknown>(path);
+    const result = parseValidated(path, response.data, observedProxyInfoSchema);
+    return {
+      ...result,
+      detectedProxyServices: mergeDetectedProxyServices(
+        result.detectedProxyServices,
+        response.headers.server,
+      ),
+      cloudflare: mergeCloudflareMetadata(
+        result.cloudflare,
+        response.headers["cf-ray"],
+      ),
+    };
+  },
+
+  verifyAndSaveTrustedProxyIpAddress: async (
+    ipAddress: string | null,
+  ): Promise<TrustedProxyVerificationResult> => {
+    const response = await httpClient.post<unknown>(
+      "server/settings/trusted-proxy-ip-address/verify-and-save",
+      ipAddress,
+    );
+    const result = parseValidated(
+      "server/settings/trusted-proxy-ip-address/verify-and-save",
+      response.data,
+      trustedProxyVerificationResultSchema,
+    );
+    return {
+      ...result,
+      detectedProxyServices: mergeDetectedProxyServices(
+        result.detectedProxyServices,
+        response.headers.server,
+      ),
+      cloudflare: mergeCloudflareMetadata(
+        result.cloudflare,
+        response.headers["cf-ray"],
+      ),
+    };
   },
 
   getStorageSpaceMode: (): Promise<StorageSpaceMode> =>

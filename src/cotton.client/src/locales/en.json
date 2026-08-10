@@ -168,27 +168,6 @@
         "adminOnly": true
       },
       {
-        "id": "privacy-global-indexing",
-        "title": "Global indexing",
-        "description": "Privacy and security",
-        "path": "/admin/privacy-settings",
-        "keywords": [
-          "global indexing",
-          "global index",
-          "indexing",
-          "search indexing",
-          "search index",
-          "deep search",
-          "full text search",
-          "content search",
-          "decrypt files",
-          "file content search",
-          "Privacy and security"
-        ],
-        "highlightSettingId": "allowGlobalIndexing",
-        "adminOnly": true
-      },
-      {
         "id": "privacy-telemetry",
         "title": "Telemetry",
         "description": "Privacy and security",
@@ -215,6 +194,7 @@
         "title": "IP lookup mode",
         "description": "Privacy and security",
         "path": "/admin/privacy-settings",
+        "highlightSettingId": "geoIpLookupMode",
         "keywords": [
           "geoip",
           "geo ip",
@@ -2559,17 +2539,22 @@
     "title": "Admin",
     "menu": {
       "navigate": "Section",
+      "expand": "Expand navigation",
+      "collapse": "Collapse navigation",
+      "sections": {
+        "people": "People",
+        "storage": "Storage",
+        "security": "Security",
+        "system": "System"
+      },
       "users": "Users",
-      "usersAndGroups": "Users and groups",
       "generalSettings": "General settings",
-      "privacySettings": "Privacy and security",
+      "privacySettings": "Privacy",
       "storageSettings": "Storage",
-      "storageAndStatistics": "Storage and statistics",
       "notificationsSettings": "Notifications",
       "databaseBackup": "Database backup",
       "storageStatistics": "Storage statistics",
       "securityDiagnostics": "Security checkup",
-      "groups": "Groups",
       "identityProviders": "Identity providers"
     },
     "roles": {
@@ -2596,12 +2581,15 @@
         "actions": "Actions"
       },
       "actions": {
-        "edit": "Edit"
+        "edit": "Edit",
+        "delete": "Delete account",
+        "deleteCurrent": "You cannot delete your own account"
       },
       "errors": {
         "loadFailed": "Failed to load users.",
         "createFailed": "Failed to create user.",
-        "updateFailed": "Failed to update user."
+        "updateFailed": "Failed to update user.",
+        "deleteFailed": "Failed to delete user."
       },
       "create": {
         "title": "Create user",
@@ -2622,6 +2610,14 @@
         "saving": "Saving...",
         "success": "User updated."
       },
+      "delete": {
+        "title": "Delete account",
+        "warning": "This permanently deletes the account, all files, and all related data. This action cannot be undone.",
+        "confirmation": "Type {{username}} to confirm.",
+        "confirmationLabel": "Username",
+        "button": "Delete account",
+        "deleting": "Deleting..."
+      },
       "storageUsage": {
         "calculating": "Calculating storage usage"
       }
@@ -2640,6 +2636,25 @@
         "saveFailed": "Failed to save settings."
       },
       "general": {
+        "trustedProxy": {
+          "title": "Trusted proxy",
+          "description": "IP address or CIDR network of the immediate reverse proxy allowed to supply the client address. The proxy must overwrite or strip client-supplied CF-Connecting-IP, X-Real-IP, and X-Forwarded-For headers. For a direct deployment, choose No proxy.",
+          "emptyHint": "Leave empty to keep the legacy behavior that trusts forwarded client-address headers from every connection.",
+          "placeholder": "For example, 172.16.0.0/12",
+          "direct": "No proxy",
+          "directMode": "Direct connection (no proxy); forwarding headers are ignored",
+          "directSaved": "Direct-connection mode was saved. Forwarding headers will be ignored.",
+          "detect": "Auto",
+          "verifyAndSave": "Verify and save",
+          "unavailable": "The connecting proxy address is unavailable for this request.",
+          "detected": "Suggested trusted proxy: {{address}}.",
+          "detectedPath": "Detected network path",
+          "genericProxy": "Reverse proxy",
+          "internet": "Internet",
+          "saved": "The trusted proxy address was verified and saved.",
+          "disabled": "Trusted proxy restriction was disabled.",
+          "mismatch": "You entered {{entered}}, but this request arrived from {{observed}}. The setting was not saved."
+        },
         "title": "General settings",
         "description": "Core server behavior and notification location lookup.",
         "fields": {
@@ -2785,6 +2800,8 @@
         "loadFailed": "Failed to load storage settings.",
         "s3SaveFailed": "Failed to save S3 configuration.",
         "storageSaveFailed": "Failed to switch storage mode.",
+        "quotaInvalid": "Enter zero or a positive number.",
+        "templateNodeIdInvalid": "Enter a valid folder node ID.",
         "quotaSaveFailed": "Failed to save default user quota.",
         "templateSaveFailed": "Failed to save default files template.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",
@@ -2918,6 +2935,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "Trusted proxy",
+        "threatVector": "A caller that can reach Cotton directly, or pass unsanitized headers through a proxy, can rotate its apparent client address and bypass IP-based abuse limits.",
+        "fix": "In General settings, choose No proxy for a direct deployment, or use Auto or enter the immediate proxy address and then verify and save it. Ensure a proxy overwrites client-supplied forwarding headers.",
+        "passed": "Client-address trust mode is explicitly configured"
+      },
       "title": "Security checkup",
       "description": "Server-side checks for account hygiene, master-key handling, and process-memory exposure.",
       "errors": {
@@ -3085,6 +3108,7 @@
     "identityProviders": {
       "title": "Identity providers",
       "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "empty": "No identity providers configured.",
       "actions": {
         "create": "Add provider",
         "edit": "Edit provider",

@@ -182,29 +182,6 @@
         "adminOnly": true
       },
       {
-        "id": "privacy-global-indexing",
-        "title": "Indexación global",
-        "description": "Privacidad y seguridad",
-        "path": "/admin/privacy-settings",
-        "keywords": [
-          "global indexing",
-          "global index",
-          "indexing",
-          "search indexing",
-          "search index",
-          "deep search",
-          "full text search",
-          "content search",
-          "decrypt files",
-          "file content search",
-          "Indexación global",
-          "Privacidad y seguridad",
-          "Privacy and security"
-        ],
-        "highlightSettingId": "allowGlobalIndexing",
-        "adminOnly": true
-      },
-      {
         "id": "privacy-telemetry",
         "title": "Telemetría",
         "description": "Privacidad y seguridad",
@@ -233,6 +210,7 @@
         "title": "Modo de búsqueda de IP",
         "description": "Privacidad y seguridad",
         "path": "/admin/privacy-settings",
+        "highlightSettingId": "geoIpLookupMode",
         "keywords": [
           "geoip",
           "geo ip",
@@ -2763,17 +2741,22 @@
     "title": "Administración",
     "menu": {
       "navigate": "Sección",
+      "expand": "Expandir navegación",
+      "collapse": "Contraer navegación",
+      "sections": {
+        "people": "Personas",
+        "storage": "Almacenamiento",
+        "security": "Seguridad",
+        "system": "Sistema"
+      },
       "users": "Usuarios",
       "databaseBackup": "Respaldo de base de datos",
       "storageStatistics": "Estadísticas de almacenamiento",
       "securityDiagnostics": "Revisión de seguridad",
-      "groups": "Grupos",
       "generalSettings": "Ajustes generales",
-      "privacySettings": "Privacidad y seguridad",
+      "privacySettings": "Privacidad",
       "storageSettings": "Almacenamiento",
-      "storageAndStatistics": "Almacenamiento y estadísticas",
       "notificationsSettings": "Notificaciones",
-      "usersAndGroups": "Usuarios y grupos",
       "identityProviders": "Identity providers"
     },
     "roles": {
@@ -2800,12 +2783,15 @@
         "actions": "Acciones"
       },
       "actions": {
-        "edit": "Editar"
+        "edit": "Editar",
+        "delete": "Eliminar cuenta",
+        "deleteCurrent": "No puedes eliminar tu propia cuenta"
       },
       "errors": {
         "loadFailed": "No se pudieron cargar los usuarios.",
         "createFailed": "No se pudo crear el usuario.",
-        "updateFailed": "No se pudo actualizar el usuario."
+        "updateFailed": "No se pudo actualizar el usuario.",
+        "deleteFailed": "No se pudo eliminar el usuario."
       },
       "create": {
         "title": "Crear usuario",
@@ -2825,6 +2811,14 @@
         "save": "Guardar",
         "saving": "Guardando...",
         "success": "Usuario actualizado."
+      },
+      "delete": {
+        "title": "Eliminar cuenta",
+        "warning": "La cuenta, todos los archivos y todos los datos relacionados se eliminarán permanentemente. Esta acción no se puede deshacer.",
+        "confirmation": "Escribe {{username}} para confirmar.",
+        "confirmationLabel": "Nombre de usuario",
+        "button": "Eliminar cuenta",
+        "deleting": "Eliminando..."
       },
       "storageUsage": {
         "calculating": "Calculando uso de almacenamiento"
@@ -2916,6 +2910,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "Proxy de confianza",
+        "threatVector": "Un atacante con acceso directo a Cotton o a través de un proxy que no limpie encabezados puede cambiar su dirección aparente y eludir límites basados en IP.",
+        "fix": "En Configuración general, elige Sin proxy para una instalación directa, o usa Automático o introduce la dirección del proxy inmediato y después verifica y guarda. El proxy debe sobrescribir los encabezados reenviados por el cliente.",
+        "passed": "El modo de confianza de la dirección del cliente está configurado explícitamente"
+      },
       "title": "Revisión de seguridad",
       "description": "Comprobaciones del servidor para cuentas, manejo de la clave maestra y exposición de memoria del proceso.",
       "errors": {
@@ -3123,6 +3123,25 @@
     },
     "settings": {
       "general": {
+        "trustedProxy": {
+          "title": "Proxy de confianza",
+          "description": "Dirección IP o red CIDR del proxy inverso inmediato autorizado a proporcionar la dirección del cliente. El proxy debe sobrescribir o eliminar los encabezados CF-Connecting-IP, X-Real-IP y X-Forwarded-For enviados por el cliente. Para una instalación directa, elige Sin proxy.",
+          "emptyHint": "Déjalo vacío para conservar el comportamiento anterior, que confía en direcciones reenviadas desde cualquier conexión.",
+          "placeholder": "Por ejemplo, 172.16.0.0/12",
+          "direct": "Sin proxy",
+          "directMode": "Conexión directa (sin proxy); se ignoran los encabezados de reenvío",
+          "directSaved": "Se guardó el modo de conexión directa. Se ignorarán los encabezados de reenvío.",
+          "detect": "Automático",
+          "verifyAndSave": "Verificar y guardar",
+          "unavailable": "La dirección del proxy conectado no está disponible para esta solicitud.",
+          "detected": "Proxy de confianza sugerido: {{address}}.",
+          "detectedPath": "Ruta de red detectada",
+          "genericProxy": "Proxy inverso",
+          "internet": "Internet",
+          "saved": "La dirección del proxy de confianza se verificó y guardó.",
+          "disabled": "Se desactivó la restricción de proxy de confianza.",
+          "mismatch": "Introdujiste {{entered}}, pero la solicitud llegó desde {{observed}}. La configuración no se guardó."
+        },
         "actions": {
           "testGeoIpProvider": "Probar proveedor"
         },
@@ -3280,6 +3299,8 @@
         "loadFailed": "No se pudieron cargar los ajustes de almacenamiento.",
         "s3SaveFailed": "No se pudo guardar la configuración de S3.",
         "storageSaveFailed": "No se pudo cambiar el modo de almacenamiento.",
+        "quotaInvalid": "Introduce cero o un número positivo.",
+        "templateNodeIdInvalid": "Introduce un ID de nodo de carpeta válido.",
         "quotaSaveFailed": "No se pudo guardar la cuota por defecto.",
         "templateSaveFailed": "No se pudo guardar la plantilla de archivos por defecto.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",
@@ -3289,6 +3310,7 @@
     "identityProviders": {
       "title": "Identity providers",
       "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "empty": "No hay proveedores de identidad configurados.",
       "actions": {
         "create": "Add provider",
         "edit": "Edit provider",

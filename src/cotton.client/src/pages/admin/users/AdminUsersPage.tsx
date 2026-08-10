@@ -1,15 +1,19 @@
-import { Alert, Box, Stack, Typography, useMediaQuery } from "@mui/material";
+import { Alert, Box, Stack, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DataGrid, type GridColumnVisibilityModel } from "@mui/x-data-grid";
 import type { AdminUserDto } from "../../../shared/api/adminApi";
+import { useAuth } from "../../../features/auth/useAuth";
 import { CreateUserDialog } from "./CreateUserDialog";
+import { DeleteUserDialog } from "./DeleteUserDialog";
 import { EditUserDialog } from "./EditUserDialog";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { AdminPageHeader } from "../components/AdminPageHeader";
 import { UsersGridToolbar } from "./components/UsersGridToolbar";
 import { useAdminUsersColumns } from "./hooks/useAdminUsersColumns";
 import { useAdminUsersData } from "./hooks/useAdminUsersData";
+import { useAdminDataGridLocaleText } from "../components/useAdminDataGridLocaleText";
 
 type ColumnVisibilityTarget = "desktop" | "mobile";
 
@@ -32,19 +36,24 @@ const createInitialColumnVisibilityModels = (): Record<
 
 export const AdminUsersPage = () => {
   const { t } = useTranslation(["admin", "common"]);
+  const { user: currentUser } = useAuth();
 
   const { users, loadState, storageUsageLoading, refresh } =
     useAdminUsersData();
   const [editingUser, setEditingUser] = useState<AdminUserDto | null>(null);
+  const [deletingUser, setDeletingUser] = useState<AdminUserDto | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   const isLoading = loadState.kind === "loading";
   const createLabel = t("users.create.button");
   const refreshLabel = t("users.refresh");
+  const localeText = useAdminDataGridLocaleText(t("users.empty"));
 
   const columns = useAdminUsersColumns({
     storageUsageLoading,
+    currentUserId: currentUser?.id ?? null,
     onEdit: setEditingUser,
+    onDelete: setDeletingUser,
   });
 
   const theme = useTheme();
@@ -84,9 +93,7 @@ export const AdminUsersPage = () => {
     <Stack spacing={2}>
       <AdminPageSurface>
         <Stack p={3} pb={2} spacing={0.5}>
-          <Typography variant="h5" fontWeight={700}>
-            {t("users.title")}
-          </Typography>
+          <AdminPageHeader title={t("users.title")} />
         </Stack>
 
         {loadState.kind === "error" && (
@@ -111,6 +118,7 @@ export const AdminUsersPage = () => {
             onColumnVisibilityModelChange={handleColumnVisibilityModelChange}
             getRowId={(row) => row.id}
             loading={isLoading}
+            localeText={localeText}
             disableRowSelectionOnClick
             showToolbar
             label={t("users.title")}
@@ -147,6 +155,11 @@ export const AdminUsersPage = () => {
         open={editingUser !== null}
         user={editingUser}
         onClose={() => setEditingUser(null)}
+      />
+      <DeleteUserDialog
+        open={deletingUser !== null}
+        user={deletingUser}
+        onClose={() => setDeletingUser(null)}
       />
     </Stack>
   );

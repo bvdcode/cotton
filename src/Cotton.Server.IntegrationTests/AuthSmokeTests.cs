@@ -6,8 +6,12 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton;
+using Cotton.Database.Models;
+using Cotton.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;
 using Cotton.Storage.Abstractions;
@@ -34,6 +38,7 @@ public class AuthSmokeTests : IntegrationTestBase
     private TestAppFactory? _factory;
     private WebApplicationFactory<Program>? _customFactory;
     private HttpClient? _client;
+    private RecordingNotificationsProvider? _notifications;
 
     [SetUp]
     public void SetUp()
@@ -72,6 +77,8 @@ public class AuthSmokeTests : IntegrationTestBase
         };
 
         _factory = new TestAppFactory(overrides);
+        RecordingNotificationsProvider notifications = new();
+        _notifications = notifications;
         _customFactory = _factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureServices(services =>
@@ -79,6 +86,14 @@ public class AuthSmokeTests : IntegrationTestBase
                 ServiceDescriptor? existing = services.FirstOrDefault(d => d.ServiceType == typeof(IStoragePipeline));
                 if (existing != null) services.Remove(existing);
                 services.AddSingleton<IStoragePipeline, InMemoryStorage>();
+
+                ServiceDescriptor? existingNotifications = services
+                    .FirstOrDefault(d => d.ServiceType == typeof(INotificationsProvider));
+                if (existingNotifications is not null)
+                {
+                    services.Remove(existingNotifications);
+                }
+                services.AddSingleton<INotificationsProvider>(notifications);
             });
             builder.ConfigureLogging((ctx, logging) =>
             {
@@ -106,14 +121,39 @@ public class AuthSmokeTests : IntegrationTestBase
     public async Task Login_Returns_Token()
     {
         Assert.That(_client, Is.Not.Null);
+        Assert.That(_notifications, Is.Not.Null);
 
         TokenPairResponseDto payload = await LoginAsync("testuser", "testpassword");
-        Assert.That(string.IsNullOrWhiteSpace(payload.AccessToken), Is.False, "Token must be present");
+        Assert.Multiple(() =>
+        {
+            Assert.That(string.IsNullOrWhiteSpace(payload.AccessToken), Is.False, "Token must be present");
+            Assert.That(_notifications!.Emails, Has.Count.EqualTo(1));
+        });
+
+        var (_, template, parameters, _, _) = _notifications!.Emails.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(template, Is.EqualTo(EmailTemplate.SecurityAlert));
+            Assert.That(parameters["security_title"], Is.EqualTo("New login to your account"));
+            Assert.That(parameters["security_content"], Does.Contain("8.8.8.8"));
+        });
 
         var parts = payload.AccessToken.Split('.');
         Assert.That(parts.Length, Is.EqualTo(3), "JWT must have3 parts");
 
         TestContext.Progress.WriteLine($"Login OK. Token: {payload.AccessToken[..Math.Min(16, payload.AccessToken.Length)]}...");
+    }
+
+    [Test]
+    public async Task Login_Succeeds_WhenSecurityEmailFails()
+    {
+        RecordingNotificationsProvider notifications = _notifications
+            ?? throw new InvalidOperationException("Notifications provider is not configured.");
+        notifications.ThrowOnEmail = true;
+
+        TokenPairResponseDto payload = await LoginAsync("emailfailure", "testpassword");
+
+        Assert.That(string.IsNullOrWhiteSpace(payload.AccessToken), Is.False, "Token must be present");
     }
 
     [Test]
@@ -149,6 +189,52 @@ public class AuthSmokeTests : IntegrationTestBase
             Assert.That(result?.MessageCode, Is.EqualTo("rate_limit_exceeded"));
             Assert.That(result?.Message, Is.EqualTo("Too many requests. Retry later."));
         });
+    }
+
+    [Test]
+    public async Task Login_FromUntrustedProxy_ReturnsForbidden()
+    {
+        Assert.That(_client, Is.Not.Null);
+        Assert.That(_customFactory, Is.Not.Null);
+
+        using IServiceScope scope = _customFactory!.Services.CreateScope();
+        CottonServerSettings settings = scope.ServiceProvider
+            .GetRequiredService<SettingsProvider>()
+            .GetServerSettings();
+        IPAddress? previousTrustedProxyIpAddress = settings.TrustedProxyIpAddress;
+        byte? previousTrustedProxyPrefixLength = settings.TrustedProxyPrefixLength;
+        settings.TrustedProxyIpAddress = IPAddress.Parse("192.0.2.10");
+        settings.TrustedProxyPrefixLength = null;
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            {
+                Content = JsonContent.Create(new CottonLoginRequestDto
+                {
+                    Username = "untrusted-proxy",
+                    Password = "testpassword"
+                })
+            };
+            request.Headers.Add(TestAppFactory.RemoteIpAddressHeader, "192.0.2.11");
+            request.Headers.Add("CF-Connecting-IP", "203.0.113.40");
+
+            using HttpResponseMessage response = await _client!.SendAsync(request);
+            CottonResult? result = await response.Content.ReadFromJsonAsync<CottonResult>();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+                Assert.That(result?.MessageCode, Is.EqualTo("untrusted_proxy_connection"));
+                Assert.That(result?.Message, Does.Not.Contain("192.0.2.10"));
+                Assert.That(result?.Message, Does.Not.Contain("192.0.2.11"));
+            });
+        }
+        finally
+        {
+            settings.TrustedProxyIpAddress = previousTrustedProxyIpAddress;
+            settings.TrustedProxyPrefixLength = previousTrustedProxyPrefixLength;
+        }
     }
 
     [Test]

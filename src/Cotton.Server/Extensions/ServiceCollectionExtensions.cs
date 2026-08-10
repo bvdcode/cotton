@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Crypto;
+using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Database.Integrity;
 using Cotton.Server.Auth;
@@ -22,16 +23,12 @@ namespace Cotton.Server.Extensions
     /// </summary>
     public static class ServiceCollectionExtensions
     {
-        private static readonly bool DatabaseIntegrityReadValidationEnabled = false;
-        private static readonly bool DatabaseIntegritySaveOriginalStateValidationEnabled = false;
-        [Obsolete("OBSOLETE TRANSITION: startup version transition validation is disabled because the 0.5.0 release bump is postponed. Remove this switch and re-enable StartupTransitionValidator when a strict transition gate is scheduled again.")]
-        private static readonly bool StartupTransitionValidationEnabled = false;
-
         /// <summary>
-        /// Registers stream cipher services.
+        /// Registers stream cipher and database field protection services.
         /// </summary>
         public static IServiceCollection AddStreamCipher(this IServiceCollection services)
         {
+            services.AddSingleton<IDatabaseFieldProtector, DatabaseFieldProtector>();
             return services.AddScoped<IStreamCipher>(sp =>
             {
                 CottonEncryptionSettings settings = sp.GetRequiredService<CottonEncryptionSettings>();
@@ -68,22 +65,12 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
         {
-            services.AddSingleton(new DatabaseIntegrityRuntimeOptions(
-                DatabaseIntegrityReadValidationEnabled,
-                DatabaseIntegritySaveOriginalStateValidationEnabled));
             services.AddSingleton<IDatabaseIntegrityKeyProvider, DatabaseIntegrityKeyProvider>();
             services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
             services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
             services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
-            if (DatabaseIntegrityReadValidationEnabled)
-            {
-                services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
-            }
-            else
-            {
-                services.AddScoped<IDatabaseIntegrityVerifier, DisabledDatabaseIntegrityVerifier>();
-            }
-
+            services.AddScoped<DatabaseIntegritySaveChangesInterceptor>();
+            services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
             services.AddScoped<DatabaseIntegrityDiagnosticsService>();
             services.AddScoped<FileGraphIntegrityVerifier>();
             services.AddSingleton<DatabaseIntegrityFailureReporter>();
@@ -97,10 +84,8 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserExternalIdentityIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, OidcLoginStateIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, ExtendedRefreshTokenIntegrityDescriptor>();
-            services.AddSingleton<IDatabaseIntegrityDescriptor, PushDeviceTokenIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, DownloadTokenIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, NodeShareTokenIntegrityDescriptor>();
-            services.AddSingleton<IDatabaseIntegrityDescriptor, CottonServerSettingsIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, NodeIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, NodeFileIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, FileManifestIntegrityDescriptor>();
@@ -118,20 +103,7 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<TempDirectoryProbe>();
             services.AddScoped<IStartupPreflightValidator, StartupPreflightValidator>();
             services.AddScoped<IStartupCheck, TempDirectoryStartupCheck>();
-            if (StartupTransitionValidationEnabled)
-            {
-                services.AddScoped<IStartupCheck, StartupTransitionValidator>();
-            }
 
-            return services;
-        }
-
-        /// <summary>
-        /// Registers layout path services.
-        /// </summary>
-        public static IServiceCollection AddLayoutPathServices(this IServiceCollection services)
-        {
-            services.AddScoped<ILayoutPathResolver, LayoutPathResolver>();
             return services;
         }
 
@@ -163,6 +135,7 @@ namespace Cotton.Server.Extensions
         public static IServiceCollection AddWebDavAuth(this IServiceCollection services)
         {
             services.AddSingleton<Cotton.Server.Services.WebDav.WebDavAuthCache>();
+            services.AddSingleton<WebDavAuthenticationFailureLimiter>();
 
             services
                 .AddAuthentication()

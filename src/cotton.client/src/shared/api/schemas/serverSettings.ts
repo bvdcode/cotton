@@ -22,6 +22,8 @@ const configStringSchema = nullableStringSchema.transform(
   (value) => value ?? "",
 );
 
+export const DIRECT_CONNECTION_IP_ADDRESS = "0.0.0.0";
+
 export const storageTypeValues = ["Local", "S3"] as const;
 export const emailModeValues = ["None", "Cloud", "Custom"] as const;
 export const computionModeValues = ["Local", "Cloud", "Remote"] as const;
@@ -206,6 +208,65 @@ export const timezoneSchema = z
 export const publicBaseUrlSchema = z
   .object({ publicBaseUrl: nullableStringSchema })
   .transform((value) => value.publicBaseUrl ?? "");
+
+export const trustedProxyIpAddressSchema = z
+  .object({ trustedProxyIpAddress: nullableStringSchema })
+  .transform((value) => value.trustedProxyIpAddress ?? "");
+
+export const detectedProxyServiceSchema = z.enum([
+  "cloudflare",
+  "cloudfront",
+  "azure-front-door",
+  "fastly",
+  "fly-io",
+  "vercel",
+  "aws-alb",
+  "traefik",
+  "envoy",
+  "nginx",
+  "caddy",
+  "haproxy",
+  "apache",
+  "reverse-proxy",
+]);
+export type DetectedProxyService = z.infer<typeof detectedProxyServiceSchema>;
+
+export const cloudflareProxyMetadataSchema = z
+  .object({
+    visitorCountryCode: nullableStringSchema,
+    datacenterCode: nullableStringSchema,
+  })
+  .nullable();
+export type CloudflareProxyMetadata = z.infer<
+  typeof cloudflareProxyMetadataSchema
+>;
+
+export const observedProxyInfoSchema = z
+  .object({
+    observedProxyIpAddress: nullableStringSchema,
+    suggestedTrustedProxy: nullableStringSchema,
+    detectedProxyServices: z.array(detectedProxyServiceSchema),
+    cloudflare: cloudflareProxyMetadataSchema,
+  })
+  .transform((value) => ({
+    observedProxyIpAddress: value.observedProxyIpAddress ?? "",
+    suggestedTrustedProxy: value.suggestedTrustedProxy ?? "",
+    detectedProxyServices: value.detectedProxyServices,
+    cloudflare: value.cloudflare,
+  }));
+export type ObservedProxyInfo = z.infer<typeof observedProxyInfoSchema>;
+
+export const trustedProxyVerificationResultSchema = z.object({
+  trustedProxyIpAddress: nullableStringSchema,
+  observedProxyIpAddress: z.string(),
+  detectedProxyServices: z.array(detectedProxyServiceSchema),
+  cloudflare: cloudflareProxyMetadataSchema,
+  matches: z.boolean(),
+  saved: z.boolean(),
+});
+export type TrustedProxyVerificationResult = z.infer<
+  typeof trustedProxyVerificationResultSchema
+>;
 
 export const storageSpaceModeResponseSchema = z
   .object({ storageSpaceMode: z.unknown().optional() })

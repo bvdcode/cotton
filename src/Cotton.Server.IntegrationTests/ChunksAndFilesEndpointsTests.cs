@@ -459,6 +459,21 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task WebDav_BasicAuth_RejectsMultilinePayload()
+    {
+        string accessToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        string webDavToken = await GetWebDavTokenAsync();
+        string payload = Convert.ToBase64String(
+            Encoding.UTF8.GetBytes($"ignored\ntestuser:{webDavToken}"));
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", payload);
+
+        using HttpResponseMessage response = await _client.GetAsync("/api/v1/webdav");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
     public async Task Download_Owned_File_Content_Rejects_Another_User()
     {
         var ownerToken = await LoginAsync();
@@ -551,13 +566,76 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         byte[] chunkHash = Hasher.FromHexStringHash(chunkHashLower);
         DbContext.ChangeTracker.Clear();
-        int chunkCount = await DbContext.Chunks.CountAsync(x => x.Hash == chunkHash);
+        Chunk? storedChunk = await DbContext.Chunks
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Hash == chunkHash);
         int ownershipCount = await DbContext.ChunkOwnerships.CountAsync(x => x.ChunkHash == chunkHash);
 
         Assert.Multiple(() =>
         {
-            Assert.That(chunkCount, Is.EqualTo(1));
+            Assert.That(storedChunk, Is.Not.Null);
+            Assert.That(storedChunk?.PlainSizeBytes, Is.EqualTo(content.Length));
+            Assert.That(storedChunk?.StoredSizeBytes, Is.GreaterThan(0));
             Assert.That(ownershipCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task Create_Files_With_Same_Content_In_Parallel_Reuses_Manifest()
+    {
+        string token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        byte[] content = new byte[128 * 1024];
+        RandomNumberGenerator.Fill(content);
+        string contentHash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using HttpResponseMessage uploadResponse = await UploadRawChunkAsync(content, contentHash);
+        uploadResponse.EnsureSuccessStatusCode();
+
+        const int requestCount = 16;
+        Task<HttpResponseMessage>[] requests = Enumerable.Range(0, requestCount)
+            .Select(index => _client.PostAsJsonAsync(
+                "/api/v1/files/from-chunks",
+                new CreateFileFromChunksRequestDto
+                {
+                    ChunkHashes = [contentHash],
+                    Name = $"parallel-manifest-{index}.bin",
+                    ContentType = "application/octet-stream",
+                    Hash = contentHash,
+                    NodeId = root!.Id,
+                }))
+            .ToArray();
+
+        HttpResponseMessage[] responses = await Task.WhenAll(requests);
+        try
+        {
+            Assert.That(responses.Select(x => x.StatusCode), Is.All.EqualTo(HttpStatusCode.OK));
+        }
+        finally
+        {
+            foreach (HttpResponseMessage response in responses)
+            {
+                response.Dispose();
+            }
+        }
+
+        byte[] proposedHash = Hasher.FromHexStringHash(contentHash);
+        DbContext.ChangeTracker.Clear();
+        int manifestCount = await DbContext.FileManifests
+            .CountAsync(x => x.ProposedContentHash == proposedHash);
+        List<Guid> manifestIds = await DbContext.NodeFiles
+            .Where(x => x.NodeId == root!.Id && x.Name.StartsWith("parallel-manifest-"))
+            .Select(x => x.FileManifestId)
+            .ToListAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(manifestCount, Is.EqualTo(1));
+            Assert.That(manifestIds, Has.Count.EqualTo(requestCount));
+            Assert.That(manifestIds.Distinct(), Has.Exactly(1).Items);
         });
     }
 
@@ -1347,6 +1425,134 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         HttpResponseMessage fileShare = await _client.GetAsync($"/api/v1/files/{file.Id}/download-link?customToken={token}");
         Assert.That(fileShare.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+    }
+
+    [Test]
+    public async Task Generated_File_And_Folder_Share_Tokens_Are_Eight_Lowercase_Alphanumeric_Characters()
+    {
+        string authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        NodeDto folder = await CreateFolderAsync(root!.Id, "shared-folder-token-format");
+        NodeFileManifestDto file = await UploadTextFileAsync(root, "shared-file-token-format.txt", "file body");
+
+        HttpResponseMessage folderResponse = await _client.GetAsync($"/api/v1/layouts/nodes/{folder.Id}/share-link");
+        folderResponse.EnsureSuccessStatusCode();
+        string folderLink = (await folderResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string folderToken = folderLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+
+        HttpResponseMessage fileResponse = await _client.GetAsync($"/api/v1/files/{file.Id}/download-link");
+        fileResponse.EnsureSuccessStatusCode();
+        string fileLink = (await fileResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string fileToken = ExtractToken(fileLink);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(folderToken, Does.Match("^[a-z0-9]{8}$"));
+            Assert.That(fileToken, Does.Match("^[a-z0-9]{8}$"));
+        });
+    }
+
+    [Test]
+    public async Task Public_Share_Failed_Compact_Lookups_Block_Compact_Tokens_Before_Resolution()
+    {
+        string authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        NodeFileManifestDto file = await UploadTextFileAsync(root!, "rate-limit-content.txt", "valid shared content");
+        NodeDto folder = await CreateFolderAsync(root!.Id, "rate-limit-folder");
+        NodeDto expandedTokenFolder = await CreateFolderAsync(root!.Id, "expanded-rate-limit-folder");
+
+        HttpResponseMessage linkResponse = await _client.GetAsync($"/api/v1/files/{file.Id}/download-link");
+        linkResponse.EnsureSuccessStatusCode();
+        string downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string shareToken = ExtractToken(downloadLink);
+        HttpResponseMessage folderLinkResponse = await _client.GetAsync(
+            $"/api/v1/layouts/nodes/{folder.Id}/share-link");
+        folderLinkResponse.EnsureSuccessStatusCode();
+        string folderLink = (await folderLinkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string folderToken = folderLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+        const string expandedFolderToken = "LongTokenAb1";
+        HttpResponseMessage expandedFolderLinkResponse = await _client.GetAsync(
+            $"/api/v1/layouts/nodes/{expandedTokenFolder.Id}/share-link?customToken={expandedFolderToken}");
+        expandedFolderLinkResponse.EnsureSuccessStatusCode();
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        for (int i = 0; i < 60; i++)
+        {
+            string missingToken = $"s{i:D7}";
+            using HttpResponseMessage response = await _client.GetAsync($"/s/{missingToken}");
+            Assert.That(response.StatusCode, Is.Not.EqualTo(HttpStatusCode.TooManyRequests));
+        }
+
+        using HttpRequestMessage contentRequest = new(HttpMethod.Get, $"/s/{shareToken}?view=inline");
+        contentRequest.Headers.Range = new RangeHeaderValue(0, 3);
+        using HttpResponseMessage blockedContentResponse = await _client.SendAsync(contentRequest);
+        using HttpResponseMessage blockedFolderResponse = await _client.GetAsync(
+            $"/api/v1/layouts/shared/{folderToken}");
+        using HttpResponseMessage expandedTokenResponse = await _client.GetAsync(
+            $"/api/v1/layouts/shared/{expandedFolderToken}");
+        Assert.Multiple(() =>
+        {
+            Assert.That(blockedContentResponse.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+            Assert.That(blockedContentResponse.Headers.RetryAfter, Is.Not.Null);
+            Assert.That(blockedFolderResponse.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+            Assert.That(expandedTokenResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        });
+    }
+
+    [Test]
+    public async Task Direct_And_Hls_Failed_Compact_Lookups_Block_Before_Resolution()
+    {
+        string authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        NodeFileManifestDto file = await UploadTextFileAsync(
+            root!,
+            "direct-rate-limit-content.txt",
+            "valid direct content");
+
+        using HttpResponseMessage linkResponse = await _client.GetAsync(
+            $"/api/v1/files/{file.Id}/download-link");
+        linkResponse.EnsureSuccessStatusCode();
+        string downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string shareToken = ExtractToken(downloadLink);
+        const string expandedToken = "LongTokenAb1";
+        using HttpResponseMessage expandedLinkResponse = await _client.GetAsync(
+            $"/api/v1/files/{file.Id}/download-link?customToken={expandedToken}");
+        expandedLinkResponse.EnsureSuccessStatusCode();
+        string expandedDownloadLink = (await expandedLinkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        for (int i = 0; i < 60; i++)
+        {
+            string missingToken = $"d{i:D7}";
+            using HttpResponseMessage response = await _client.GetAsync(
+                $"/api/v1/files/{file.Id}/download?token={missingToken}");
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
+
+        using HttpResponseMessage blockedDownloadResponse = await _client.GetAsync(downloadLink);
+        using HttpResponseMessage blockedHlsResponse = await _client.GetAsync(
+            $"/api/v1/files/{file.Id}/hls/master.m3u8?token={shareToken}");
+        using HttpResponseMessage expandedDownloadResponse = await _client.GetAsync(expandedDownloadLink);
+        using HttpResponseMessage expandedHlsResponse = await _client.GetAsync(
+            $"/api/v1/files/{file.Id}/hls/master.m3u8?token={expandedToken}");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(blockedDownloadResponse.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+            Assert.That(blockedDownloadResponse.Headers.RetryAfter, Is.Not.Null);
+            Assert.That(blockedHlsResponse.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+            Assert.That(expandedDownloadResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(expandedHlsResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        });
     }
 
     [Test]

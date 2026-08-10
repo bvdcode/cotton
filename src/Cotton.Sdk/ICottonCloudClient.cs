@@ -5,6 +5,7 @@ using Cotton.Sdk.Auth;
 using Cotton.Sdk.Chunks;
 using Cotton.Sdk.Files;
 using Cotton.Sdk.Nodes;
+using Cotton.Sdk.Notifications;
 using Cotton.Sdk.Realtime;
 using Cotton.Sdk.Settings;
 using Cotton.Sdk.Sync;
@@ -40,6 +41,11 @@ public interface ICottonCloudClient : IAsyncDisposable
     /// Gets node operations.
     /// </summary>
     ICottonNodeClient Nodes { get; }
+
+    /// <summary>
+    /// Gets notification operations.
+    /// </summary>
+    ICottonNotificationClient Notifications { get; }
 
     /// <summary>
     /// Gets synchronization feed operations.

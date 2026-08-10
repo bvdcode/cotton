@@ -1,4 +1,4 @@
-import { Alert, Divider, Stack, Typography } from "@mui/material";
+import { Alert, Divider, Stack } from "@mui/material";
 import {
   useEffect,
   useRef,
@@ -18,6 +18,7 @@ import { EmailModeSelector } from "./EmailModeSelector";
 import { SmtpConfigForm } from "./SmtpConfigForm";
 import type { SaveStatus } from "./useAutoSavedSetting";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { AdminPageHeader } from "../components/AdminPageHeader";
 import { SAVED_STATUS_VISIBLE_MS } from "./adminSettingSaveStatus";
 
 type FlashTimers = {
@@ -187,9 +188,10 @@ export const AdminNotificationsSettingsPage = () => {
     <Stack>
       <AdminPageSurface>
         <Stack p={3} spacing={3} divider={<Divider flexItem />}>
-          <Typography variant="h5" fontWeight={700}>
-            {t("notificationsSettings.title")}
-          </Typography>
+          <AdminPageHeader
+            title={t("notificationsSettings.title")}
+            description={t("notificationsSettings.description")}
+          />
 
           {loadError && <Alert severity="error">{loadError}</Alert>}
 

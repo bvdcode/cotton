@@ -194,8 +194,7 @@ public class StoragePressureGuardTests : IntegrationTestBase
         public Task<Stream> ReadAsync(string uid) => throw new NotImplementedException();
         public Task WriteAsync(
             string uid,
-            Stream stream,
-            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing) => throw new NotImplementedException();
+            Stream stream) => throw new NotImplementedException();
         public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => throw new NotImplementedException();
     }
 

@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 
 namespace Cotton.Server.Services.Search
@@ -11,8 +12,8 @@ namespace Cotton.Server.Services.Search
     public interface ILayoutSearchService
     {
         /// <summary>
-        /// Searches a layout and returns the API result payload.
+        /// Searches a layout and returns the API result payload with its total hit count.
         /// </summary>
-        Task<SearchLayoutsResultDto> SearchAsync(LayoutSearchRequest request, CancellationToken cancellationToken);
+        Task<PagedResult<SearchResultDto>> SearchAsync(LayoutSearchRequest request, CancellationToken cancellationToken);
     }
 }

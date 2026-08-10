@@ -55,6 +55,20 @@ namespace Cotton.Storage.Streams
             => _inner.Read(buffer, offset, count);
 
         /// <inheritdoc />
+        public override Task<int> ReadAsync(
+            byte[] buffer,
+            int offset,
+            int count,
+            CancellationToken cancellationToken) =>
+            _inner.ReadAsync(buffer, offset, count, cancellationToken);
+
+        /// <inheritdoc />
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default) =>
+            _inner.ReadAsync(buffer, cancellationToken);
+
+        /// <inheritdoc />
         public override long Seek(long offset, SeekOrigin origin)
             => _inner.Seek(offset, origin);
 

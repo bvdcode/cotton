@@ -391,7 +391,7 @@ namespace Cotton.Previews
             return stdout;
         }
 
-        private static async Task<bool> WaitForProcessAsync(
+        internal static async Task<bool> WaitForProcessAsync(
             Process process,
             TimeSpan? timeout,
             CancellationToken cancellationToken)
@@ -429,6 +429,5 @@ namespace Cotton.Previews
                     ? value
                     : null;
         }
-
     }
 }

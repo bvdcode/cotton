@@ -22,19 +22,20 @@ namespace Cotton.Server.Jobs
         /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
-            await Task.Delay(240_000); // Wait for 4 minutes for the server to start up and stabilize
+            CancellationToken cancellationToken = context.CancellationToken;
+            await JobStartupDelays.WaitForDownloadTokenRetentionAsync(cancellationToken);
 
             DateTime now = DateTime.UtcNow;
             DateTime removalThreshold = now.AddDays(-30);
             List<DownloadToken> expiredTokens = await _dbContext.DownloadTokens
                 .Where(dt => dt.ExpiresAt != null && dt.ExpiresAt <= removalThreshold)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
             if (expiredTokens.Count == 0)
             {
                 return;
             }
             _dbContext.DownloadTokens.RemoveRange(expiredTokens);
-            int deletedCount = await _dbContext.SaveChangesAsync();
+            int deletedCount = await _dbContext.SaveChangesAsync(cancellationToken);
             _logger.LogInformation("Deleted {DeletedCount} expired download tokens", deletedCount);
         }
     }

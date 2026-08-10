@@ -108,6 +108,7 @@ namespace Cotton.Server.Handlers.Files
 
             await ValidateContentHashIfRequestedAsync(request, fileManifest, proposedHash, cancellationToken);
             await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(preTransactionNode.LayoutId, cancellationToken);
+            await using IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(request.UserId, cancellationToken);
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             Node node = await GetTargetNodeAsync(request, preTransactionNode.LayoutId, tracking: true, cancellationToken);
@@ -202,7 +203,14 @@ namespace Cotton.Server.Handlers.Files
                 return fileManifest;
             }
 
-            return await _fileManifestService.CreateNewFileManifestAsync(chunks, request.Name, request.ContentType, proposedHash, ct);
+            return await _fileManifestService.CreateNewFileManifestAsync(
+                chunks,
+                request.Name,
+                request.ContentType,
+                proposedHash,
+                request.UserId,
+                request.Validate,
+                ct);
         }
 
         private async Task ValidateContentHashIfRequestedAsync(
@@ -222,8 +230,8 @@ namespace Cotton.Server.Handlers.Files
                 FileSizeBytes = fileManifest.SizeBytes
             };
 
-            using Stream stream = _storage.GetBlobStream(hashes, pipelineContext);
-            var computedContentHash = Hasher.HashData(stream);
+            await using Stream stream = _storage.GetBlobStream(hashes, pipelineContext);
+            byte[] computedContentHash = await Hasher.HashDataAsync(stream, ct);
             if (!computedContentHash.SequenceEqual(proposedHash))
             {
                 _logger.LogWarning(

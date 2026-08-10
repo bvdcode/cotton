@@ -6,9 +6,14 @@ using System.Buffers.Binary;
 
 namespace Cotton.Crypto.Internals
 {
-    internal readonly struct FileHeader(int keyId, uint noncePrefix, byte[] nonce, Tag128 tag, byte[] encryptedKey, long totalLength, int formatVersion = FormatConstants.CurrentVersion)
+    internal readonly struct FileHeader(
+        int keyId,
+        uint noncePrefix,
+        byte[] nonce,
+        Tag128 tag,
+        byte[] encryptedKey,
+        long totalLength)
     {
-        public int FormatVersion { get; } = formatVersion;
         public int KeyId { get; } = keyId;
         public uint NoncePrefix { get; } = noncePrefix;
         public byte[] Nonce { get; } = nonce;
@@ -25,7 +30,7 @@ namespace Cotton.Crypto.Internals
             int required = ComputeLength(nonceSize, tagSize, keySize);
             if (destination.Length < required) return false;
             int offset = 0;
-            FormatConstants.GetMagicBytes(header.FormatVersion).CopyTo(destination[offset..]); offset += 4;
+            FormatConstants.MagicBytes.CopyTo(destination[offset..]); offset += 4;
             BinaryPrimitives.WriteInt32LittleEndian(destination[offset..], required); offset += 4;
             BinaryPrimitives.WriteInt64LittleEndian(destination[offset..], header.TotalPlaintextLength); offset += 8;
             BinaryPrimitives.WriteInt32LittleEndian(destination[offset..], header.KeyId); offset += 4;
@@ -41,7 +46,7 @@ namespace Cotton.Crypto.Internals
             header = default;
             if (tagSize != 16) return false; // only 16-byte tags supported for file header
             if (source.Length < 8) return false;
-            if (!FormatConstants.TryGetVersion(source[..4], out int formatVersion)) return false;
+            if (!source[..4].SequenceEqual(FormatConstants.MagicBytes)) return false;
             int expected = ComputeLength(nonceSize, tagSize, keySize);
             int len = BinaryPrimitives.ReadInt32LittleEndian(source.Slice(4, 4));
             if (len != expected || source.Length < expected) return false;
@@ -52,7 +57,7 @@ namespace Cotton.Crypto.Internals
             byte[] nonce = source.Slice(offset, nonceSize).ToArray(); offset += nonceSize;
             Tag128 tag = Tag128.FromSpan(source.Slice(offset, tagSize)); offset += tagSize;
             byte[] encKey = source.Slice(offset, keySize).ToArray();
-            header = new FileHeader(keyId, prefix, nonce, tag, encKey, total, formatVersion);
+            header = new FileHeader(keyId, prefix, nonce, tag, encKey, total);
             return true;
         }
     }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatBytes } from "./formatBytes";
+import { formatBytes, formatStorageBytes } from "./formatBytes";
 
 describe("formatBytes", () => {
   it("returns 0 B for non-positive or non-finite inputs", () => {
@@ -30,5 +30,26 @@ describe("formatBytes", () => {
 
   it("caps at TB for larger values", () => {
     expect(formatBytes(1024 ** 5)).toBe("1024.0 TB");
+  });
+});
+
+describe("formatStorageBytes", () => {
+  const formatNumber = (value: number, fractionDigits: number): string =>
+    new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(value);
+
+  it("preserves localized fixed-precision storage formatting", () => {
+    expect(formatStorageBytes(0)).toBe("0 B");
+    expect(formatStorageBytes(512)).toBe(`${formatNumber(512, 0)} B`);
+    expect(formatStorageBytes(1536)).toBe(`${formatNumber(1.5, 2)} KB`);
+  });
+
+  it("scales through PB and caps there", () => {
+    expect(formatStorageBytes(1024 ** 5)).toBe(`${formatNumber(1, 2)} PB`);
+    expect(formatStorageBytes(1024 ** 6)).toBe(
+      `${formatNumber(1024, 2)} PB`,
+    );
   });
 });

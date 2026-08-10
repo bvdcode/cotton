@@ -8,14 +8,12 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
-using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Helpers;
 using Cotton.Storage.Processors;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Linq.Expressions;
 using System.Net.Mail;
-using System.Text.Json;
 
 namespace Cotton.Server.Providers
 {
@@ -24,8 +22,7 @@ namespace Cotton.Server.Providers
     /// </summary>
     public class SettingsProvider(
         CottonDbContext _dbContext,
-        IStorageBackendTypeCache? _storageTypeCache = null,
-        IDatabaseIntegrityVerifier? _integrity = null)
+        IStorageBackendTypeCache? _storageTypeCache = null)
     {
         private static readonly Lock _cacheLock = new();
         private static readonly SemaphoreSlim _settingsCreationLock = new(1, 1);
@@ -73,7 +70,6 @@ namespace Cotton.Server.Providers
                 }
                 if (settings is not null)
                 {
-                    _integrity?.RequireValid(_dbContext, settings, "settings.cache-load");
                     CacheRuntimePipelineSettings(settings);
                     _cache = settings;
                     return _cache;
@@ -566,29 +562,6 @@ namespace Cotton.Server.Providers
         }
 
         /// <summary>
-        /// Validates Firebase Cloud Messaging config.
-        /// </summary>
-        public string? ValidateFirebaseCloudMessagingConfig(FirebaseCloudMessagingConfig? config)
-        {
-            if (config is null)
-            {
-                return "Firebase Cloud Messaging settings must be provided.";
-            }
-
-            if (string.IsNullOrWhiteSpace(config.ProjectId))
-            {
-                return "Firebase Cloud Messaging project ID must be provided.";
-            }
-
-            if (string.IsNullOrWhiteSpace(config.ServiceAccountJson))
-            {
-                return "Firebase Cloud Messaging service account JSON must be provided.";
-            }
-
-            return ValidateFirebaseCloudMessagingServiceAccountJson(config.ServiceAccountJson);
-        }
-
-        /// <summary>
         /// Validates default user storage quota bytes.
         /// </summary>
         public string? ValidateDefaultUserStorageQuotaBytes(long? quotaBytes)
@@ -627,6 +600,37 @@ namespace Cotton.Server.Providers
             return exists
                 ? null
                 : "Default user template folder was not found.";
+        }
+
+        /// <summary>
+        /// Clears the default user template when it belongs to the specified owner.
+        /// </summary>
+        public async Task ClearDefaultUserTemplateForOwnerAsync(
+            Guid ownerId,
+            CancellationToken cancellationToken = default)
+        {
+            CottonServerSettings? settings = await LoadLatestSettingsAsync(
+                asNoTracking: false,
+                cancellationToken);
+            if (settings?.DefaultUserTemplateNodeId is not Guid templateNodeId)
+            {
+                return;
+            }
+
+            bool isOwnedByUser = await _dbContext.Nodes
+                .AsNoTracking()
+                .AnyAsync(
+                    x => x.Id == templateNodeId && x.OwnerId == ownerId,
+                    cancellationToken);
+            if (!isOwnedByUser)
+            {
+                return;
+            }
+
+            settings.DefaultUserTemplateNodeId = null;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            CacheRuntimePipelineSettings(settings);
+            InvalidateSettingsCache(serverIsInitialized: true);
         }
 
         /// <summary>
@@ -745,49 +749,6 @@ namespace Cotton.Server.Providers
             return true;
         }
 
-        private static string? ValidateFirebaseCloudMessagingServiceAccountJson(string serviceAccountJson)
-        {
-            try
-            {
-                using JsonDocument document = JsonDocument.Parse(serviceAccountJson);
-                JsonElement root = document.RootElement;
-                if (root.ValueKind != JsonValueKind.Object)
-                {
-                    return "Firebase Cloud Messaging service account JSON must be a JSON object.";
-                }
-
-                if (!HasRequiredJsonString(root, "client_email"))
-                {
-                    return "Firebase Cloud Messaging service account JSON must include client_email.";
-                }
-
-                if (!HasRequiredJsonString(root, "private_key"))
-                {
-                    return "Firebase Cloud Messaging service account JSON must include private_key.";
-                }
-
-                if (root.TryGetProperty("type", out JsonElement type)
-                    && type.ValueKind == JsonValueKind.String
-                    && !string.Equals(type.GetString(), "service_account", StringComparison.Ordinal))
-                {
-                    return "Firebase Cloud Messaging service account JSON must describe a service_account.";
-                }
-
-                return null;
-            }
-            catch (JsonException)
-            {
-                return "Firebase Cloud Messaging service account JSON must be valid JSON.";
-            }
-        }
-
-        private static bool HasRequiredJsonString(JsonElement root, string propertyName)
-        {
-            return root.TryGetProperty(propertyName, out JsonElement value)
-                && value.ValueKind == JsonValueKind.String
-                && !string.IsNullOrWhiteSpace(value.GetString());
-        }
-
         private async Task<CottonServerSettings?> LoadLatestSettingsAsync(
             bool asNoTracking,
             CancellationToken cancellationToken)
@@ -803,11 +764,6 @@ namespace Cotton.Server.Providers
             try
             {
                 CottonServerSettings? settings = await query.FirstOrDefaultAsync(cancellationToken);
-                if (settings is not null && !asNoTracking)
-                {
-                    _integrity?.RequireValid(_dbContext, settings, "settings.load");
-                }
-
                 return settings;
             }
             catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
@@ -854,8 +810,6 @@ namespace Cotton.Server.Providers
 
         private void InvalidateSettingsCache(bool serverIsInitialized)
         {
-            _storageTypeCache?.Reset();
-
             lock (_cacheLock)
             {
                 _cache = null;
@@ -864,6 +818,10 @@ namespace Cotton.Server.Providers
                     _isServerInitializedCache = (true, DateTimeOffset.UtcNow);
                 }
             }
+
+            // Reset after the settings cache is cleared: a backend-type fill racing with this
+            // invalidation then either resolves fresh settings or gets wiped by the reset below.
+            _storageTypeCache?.Reset();
         }
 
         private static void CacheRuntimePipelineSettings(CottonServerSettings settings)

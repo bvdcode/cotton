@@ -75,11 +75,12 @@ The result is clamped to a floor of 0: `Math.Max(0, 10 - penalty)`. `MaxSecurity
 
 ### Warning vectors
 
-`BuildWarnings` invokes a fixed sequence of detectors in this order: public-instance, master-key, admin-TOTP, .NET diagnostics, temp-directory, Linux-process group (`AddLinuxProcessWarnings`), Linux-container group (`AddLinuxContainerWarnings`), hardening-failure, and database-integrity. Each detector emits at most one `SecurityDiagnosticWarningDto { Code, Severity, Message }`. The complete catalog:
+`BuildWarnings` invokes a fixed sequence of detectors in this order: public-instance, trusted-proxy, master-key, admin-TOTP, .NET diagnostics, temp-directory, Linux-process group (`AddLinuxProcessWarnings`), Linux-container group (`AddLinuxContainerWarnings`), hardening-failure, and database-integrity. Each detector emits at most one `SecurityDiagnosticWarningDto { Code, Severity, Message }`. The complete catalog:
 
 | Code | Severity | Trigger condition | Notes |
 |---|---|---|---|
 | `public-instance` | warning | `Constants.IsPublicInstance` (env `COTTON_PUBLIC_INSTANCE` parses to `true`) | Public/demo account creation is on. |
+| `trusted-proxy-not-configured` | warning | `CottonServerSettings.TrustedProxyIpAddress == null` | Forwarded client-address headers remain trusted from every connection for compatibility; costs 2 score points. |
 | `master-key-from-environment` | warning | `MasterKeyRuntimeState.EnvironmentVariableWasConfigured` | Key came from `COTTON_MASTER_KEY`; container metadata may still expose it. |
 | `admins-without-2fa` | warning | `AdminTotpDiagnosticsDto.AdminsWithoutTotp > 0` | Message reads "N of M admin accounts do not have 2FA enabled." |
 | `dotnet-diagnostics-enabled` | warning | `.NET` diagnostics **not** disabled | See OR semantics below. |
@@ -95,7 +96,7 @@ The result is clamped to a floor of 0: `Math.Max(0, 10 - penalty)`. `MaxSecurity
 | `mandatory-access-control-unconfined` | warning | container AND no enforcing AppArmor/SELinux detected | See MAC logic below. |
 | `core-dumps-enabled` | warning | `CoreDumpSoftLimitDisabled == false` AND `Dumpable != 0` (Linux only) | Set `ulimit core=0`. Runs on any Linux host, not only containers. |
 | `process-hardening-failed` | warning | `HardeningRequested && !HardeningApplied` | Message is `HardeningError` when present, else a generic fallback. |
-| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` | Restore affected rows from backup or run the required transition version before upgrading. |
+| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` | Restore affected rows from backup or complete the transition on Cotton 0.4.35 before upgrading; version 0.5 does not repair them. |
 
 Important guards:
 
@@ -114,7 +115,7 @@ Important guards:
 
 #### Database-integrity strict mode
 
-`DatabaseIntegrityDiagnosticsService.GetSnapshotAsync` returns a DTO with `Enabled = true` and **`BridgeBackfillEnabled = false` hardcoded**. `UnsignedProtectedRows` is a live count, summed across every registered descriptor, of protected rows whose MAC property (`IntegrityMac` column, `DatabaseIntegrityColumns.MacProperty`) is null or whose version property (`IntegrityVersion`, `DatabaseIntegrityColumns.VersionProperty`) differs from the descriptor `SchemaVersion`. Those rows are hard failures at read boundaries and during save-time original-state verification. `ProtectedEntityTypes` is the count of descriptors in `IDatabaseIntegrityDescriptorRegistry.All` (currently 14). See the *Database Integrity* section for the signing model and the startup transition guard that blocks unsafe upgrades before normal traffic is served.
+`DatabaseIntegrityDiagnosticsService.GetSnapshotAsync` returns a DTO with `Enabled = true`. `UnsignedProtectedRows` is a live count, summed across every registered descriptor, of protected rows whose MAC property (`IntegrityMac` column, `DatabaseIntegrityColumns.MacProperty`) is null or whose version property (`IntegrityVersion`, `DatabaseIntegrityColumns.VersionProperty`) differs from the descriptor `SchemaVersion`. Those rows are hard failures at read boundaries and during save-time original-state verification. `ProtectedEntityTypes` is the count of descriptors in `IDatabaseIntegrityDescriptorRegistry.All` (currently 13). See the *Database Integrity* section for the signing model and strict cutover exceptions raised when unsigned rows are encountered.
 
 ### SecurityDiagnosticsDto shape
 
@@ -126,6 +127,7 @@ Important guards:
 | `IsLinux` | bool | `OperatingSystem.IsLinux()` |
 | `IsContainer` | bool | `IsContainer()` probe |
 | `IsPublicInstance` | bool | `Constants.IsPublicInstance` |
+| `TrustedProxyIpAddress` | string? | null means legacy trust-all mode; `0.0.0.0` means direct mode; any other value is the immediate proxy peer or CIDR network |
 | `SecurityScore` / `MaxSecurityScore` | int / int (=10) | computed / constant |
 | `MasterKeySource` | string | `"Unlock"` or `"Environment"` |
 | `MasterKeyEnvironmentVariableWasConfigured` | bool | key supplied via env |
@@ -134,7 +136,7 @@ Important guards:
 | `LinuxProcess` | `LinuxProcessSecurityDto` | hardening status + procfs facts |
 | `LinuxContainer` | `LinuxContainerSecurityDto` | container boundary facts |
 | `AdminTotp` | `AdminTotpDiagnosticsDto` | `AdminCount`, `AdminsWithTotp`, `AdminsWithoutTotp` |
-| `DatabaseIntegrity` | `DatabaseIntegrityDiagnosticsDto` | `Enabled`, `BridgeBackfillEnabled`, `ProtectedEntityTypes`, `UnsignedProtectedRows` |
+| `DatabaseIntegrity` | `DatabaseIntegrityDiagnosticsDto` | `Enabled`, `ProtectedEntityTypes`, `UnsignedProtectedRows` |
 | `Warnings` | `IReadOnlyList<SecurityDiagnosticWarningDto>` | the catalog above |
 
 `LinuxProcessSecurityDto` carries `HardeningRequested`, `HardeningApplied`, `HardeningError`, `Dumpable` (`int?`), `EffectiveUserId` (`uint?`), `RunningAsRoot` (`bool?`), `NoNewPrivileges` (`int?`), `SeccompMode` (`int?`), `SeccompFilters` (`int?`), `EffectiveCapabilitiesHex` (`string?`), `HasSysPtraceCapability` (`bool?`). `LinuxContainerSecurityDto` carries `RootFilesystemReadOnly` (`bool?`), `DockerSocketMounted` (`bool`), `HostPidNamespaceLikely` (`bool?`), `ProcOneCommandLine` (`string?`), `CoreDumpSoftLimit`/`CoreDumpHardLimit` (strings, e.g. `"unlimited"`), `CoreDumpSoftLimitDisabled` (`bool?`), `CorePattern` (`string?`), `AppArmorProfile` (`string?`), `SelinuxContext` (`string?`), `SelinuxEnforcing` (`bool?`). `SecurityDiagnosticWarningDto` is a class with `Code`, `Severity`, and `Message` strings.
@@ -143,7 +145,7 @@ Important guards:
 
 `AdminSecurityDiagnosticsPage` (route `/admin/security`, registered in `src/cotton.client/src/app/routes.tsx` and linked from `src/cotton.client/src/pages/admin/AdminLayoutPage.tsx`) consumes the snapshot via `useSecurityDiagnosticsQuery` and renders, in order: a score summary (`Alert` + `LinearProgress` with the level band from `getSecurityLevel`, including summary chips for public-vs-private, env-key-vs-memory-unlock, and admin-TOTP coverage), the risk list (`SecurityRiskSection`), and per-field diagnostic sections — `InstanceDiagnosticsSection`, `MasterKeyDiagnosticsSection`, `MemoryDiagnosticsSection`, `ContainerDiagnosticsSection`, `RuntimeDiagnosticsSection`.
 
-The page maintains its **own** allow-list `knownThreatVectorCodes` (a `Set` of all 17 codes) and looks up localized "threat vector" explanation copy via `securityDiagnostics.threatVectors.${warning.code}` only when `knownThreatVectorCodes.has(warning.code)` (`getThreatVector`). If the backend ever introduces a new warning code that is not added to this client-side set, the warning's `message` still renders but the extra threat-vector paragraph is silently omitted — keep the set in sync with `BuildWarnings`. Severity-to-color mapping mirrors the backend: `critical` → error, `warning` → warning, else info (`getSeverityColor`).
+The page maintains its **own** allow-list `knownThreatVectorCodes` (including `trusted-proxy-not-configured`) and looks up localized threat-vector/fix copy for known warnings. The trusted-proxy copy lives under `securityDiagnostics.trustedProxy.*`; older warnings retain the `securityDiagnostics.threatVectors.${code}` and `securityDiagnostics.fixes.${code}` layout. If the backend introduces an unknown warning code, its server message still renders but the localized impact/fix blocks are omitted. Severity-to-color mapping mirrors the backend: `critical` → error, `warning` → warning, else info (`getSeverityColor`).
 
 ## Runtime hardening
 
@@ -288,15 +290,15 @@ flowchart LR
     Diag --> Admin["Admin-only /admin/security"]
 ```
 
-- **Internet → HTTP edge.** Untrusted input crosses into the app through controllers. The validators canonicalize/reject names and usernames; `EndpointRateLimitingExtensions` protects credential-abuse endpoints with per-remote-IP fixed-window policies — `AuthRateLimitPolicies.Interactive` at 10 requests/minute and `AuthRateLimitPolicies.Refresh` at 60 requests/minute, both rejecting with HTTP 429 — while auth hardening provides JWT validation and session-token revocation (`OnTokenValidated`). The `public-instance` flag widens this boundary (anyone can create an account) and is surfaced as a warning.
+- **Internet → HTTP edge.** Untrusted input crosses into the app through controllers. `GetTrustedClientIPAddress` keeps compatibility mode for a null `TrustedProxyIpAddress` (surfaced as a two-point warning), uses only the connection peer in reserved direct mode (`0.0.0.0` without a prefix), or validates that peer against a trusted-proxy address or CIDR network before accepting forwarded client-address headers. The validators canonicalize/reject names and usernames; `EndpointRateLimitingExtensions` protects credential-abuse endpoints with per-client-IP fixed-window policies — `AuthRateLimitPolicies.Interactive` at 10 requests/minute and `AuthRateLimitPolicies.Refresh` at 60 requests/minute, both rejecting with HTTP 429 — while auth hardening provides JWT validation and session-token revocation (`OnTokenValidated`). The `public-instance` flag widens this boundary (anyone can create an account) and is surfaced as a warning.
 - **App process ↔ in-memory secret.** The most sensitive asset is the master key in process memory. The app defends it directly only via `PR_SET_DUMPABLE=0`; everything else that could read process memory (ptrace, `/proc/<pid>/mem`, core dumps, .NET diagnostics endpoints, debugger attach) is detected and reported, with critical severity for the worst escalation paths (`CAP_SYS_PTRACE`, Docker socket, host PID namespace).
 - **App ↔ container/host runtime (operator-controlled).** The runtime is *trusted to be configured correctly* but the app cannot enforce it, so the diagnostics layer treats it as a thing to be **measured and reported**: writable OS temp, seccomp, MAC confinement, no-new-privileges, read-only rootfs, non-root UID, core-dump limits, and namespace/socket isolation. With `read_only: true`, `/tmp` must still be mounted as writable scratch storage; either a `tmpfs` mount or a bind mount from a fast writable disk is valid. The README is explicit that aggressive runtime hardening (custom seccomp/AppArmor, `kernel.yama.ptrace_scope`, TPM/HSM/KMS, encrypted swap) is an expert second pass that can break volume permissions, debugging, previews, or restores, so the app ships the cheap defaults and leaves the rest opt-in.
-- **App ↔ database.** Protected rows carry integrity signatures verified at security-sensitive reads; the diagnostics layer reports unsigned or stale protected rows (`db-integrity-unsigned-rows`, critical), and startup transition validation blocks unsafe version jumps before normal traffic is served. See the *Database Integrity* section.
+- **App ↔ database.** Protected rows carry integrity signatures verified at security-sensitive reads; the diagnostics layer reports unsigned or stale protected rows (`db-integrity-unsigned-rows`, critical). Version 0.5 raises strict cutover exceptions when it encounters unsigned rows rather than blocking startup. See the *Database Integrity* section.
 
 ## Related sections
 
 - *Master Key & Unlock* — full master-key lifecycle, env scrubbing (`ClearMasterKeyEnvironmentVariable`), `MasterKeyRuntimeState`, and the unlock server.
-- *Database Integrity* — row MAC signing, descriptors, the verifier, strict unsigned-row handling, and startup transition validation.
+- *Database Integrity* — row MAC signing, descriptors, the verifier, and strict unsigned-row handling.
 - *Authentication & Sessions* — JWT, TOTP/2FA, passkeys, rate limiting, and session revocation (`AuthHardeningExtensions`).
 - *Cryptography Engine* — key derivation (`ConfigurationBuilderExtensions`) that consumes the master key the hardening layer protects.
 - *Storage Topology & Layouts* — how `NameKey` is used for collision-safe navigation and sibling uniqueness.

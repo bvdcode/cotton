@@ -18,11 +18,7 @@ namespace Cotton.Server.Providers
         /// </summary>
         public global::Cotton.Storage.Abstractions.IStorageBackend GetBackend()
         {
-            if (!_storageTypeCache.TryGet(out StorageType type))
-            {
-                type = _settings.GetServerSettings().StorageType;
-                _storageTypeCache.Set(type);
-            }
+            StorageType type = _storageTypeCache.GetOrAdd(() => _settings.GetServerSettings().StorageType);
             if (type == StorageType.S3)
             {
                 return ActivatorUtilities.CreateInstance<global::Cotton.Storage.Backends.S3StorageBackend>(_serviceProvider);

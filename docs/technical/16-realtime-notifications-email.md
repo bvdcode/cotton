@@ -1,6 +1,6 @@
 # 16. Real-time Events, Notifications & Email
 
-Cotton delivers asynchronous activity to users through three distinct, loosely coupled channels: **realtime SignalR push** (for keeping active web clients in sync without polling), **in-app notifications** (durable rows in PostgreSQL surfaced through the notification bell and a REST API), and **email** (transactional confirmation/reset messages, sent either via the hosted Cotton Bridge relay or an operator-configured SMTP server). These channels overlap only partially: a single server-side action may push a SignalR frame, persist a notification row (which itself triggers a SignalR push), and/or send an email — but most events use only one or two of them. This section documents each channel, the exact wire methods and DTOs, and how a server action fans out across them, grounded in the actual source code.
+Cotton delivers asynchronous activity to users through three distinct, loosely coupled channels: **realtime SignalR push** (for keeping active web clients in sync without polling), **in-app notifications** (durable rows in PostgreSQL surfaced through the notification bell and a REST API), and **email** (transactional confirmation/reset messages and account-security alerts, sent either via the hosted Cotton Bridge relay or an operator-configured SMTP server). These channels overlap only partially: a single server-side action may push a SignalR frame, persist a notification row (which itself triggers a SignalR push), and/or send an email — but most events use only one or two of them. This section documents each channel, the exact wire methods and DTOs, and how a server action fans out across them, grounded in the actual source code.
 
 ## Purpose & overview
 
@@ -10,7 +10,7 @@ The three channels answer three different needs:
 | --- | --- | --- | --- | --- |
 | Realtime push | SignalR (`EventHub`) | No (fire-and-forget to connected clients) | All connections of one user, or one specific session group | File & folder mutations, restore, preview readiness, metadata/preference changes, session revocation |
 | In-app notification | DB row + SignalR push | Yes (`notifications` table) | One user | Security events (logins, TOTP, 2FA, WebDAV token), shared-file downloads, upload/storage integrity, server updates, storage pressure, DB restore/integrity |
-| Email | Cotton Bridge HTTP relay or SMTP | External | One user's email address | Email verification, password reset, SMTP test |
+| Email | Cotton Bridge HTTP relay or SMTP | External | One user's email address | Email verification, password reset, account-security alerts, SMTP test |
 
 The boundary is deliberate: realtime push is *ephemeral UI synchronization*, in-app notifications are the *durable activity log*, and email is the only channel that reaches users who are not logged in.
 
@@ -253,7 +253,7 @@ Their i18n keys (`AppUpdateAvailable*`, `StoragePressure*`, `DatabaseRestoreComp
 
 `src/Cotton.Server/Services/SharedFileDownloadNotifier.cs` (`ISharedFileDownloadNotifier`, a `sealed class`, registered scoped) wraps `SendSharedFileDownloadedNotificationAsync` with an `IMemoryCache`-based debounce so a single viewer re-fetching a shared file doesn't spam the owner. `NotifyOnceAsync(Guid ownerId, Guid tokenId, string fileName, HttpContext httpContext, CancellationToken ct)`:
 
-* Resolves the IP: if `Constants.IsPublicInstance` is true the IP is forced to `IPAddress.Loopback` (privacy on the public demo); otherwise `httpContext.Request.GetRemoteIPAddress()`.
+* Resolves the IP: if `Constants.IsPublicInstance` is true the IP is forced to `IPAddress.Loopback` (privacy on the public demo); otherwise `httpContext.Request.GetTrustedClientIPAddress()`, including the configured immediate-proxy trust check.
 * Builds a cache key `shared-download:{ownerId:N}:{tokenId:N}:{ip}:{userAgent}`.
 * If the key already exists, returns immediately (no notification).
 * Otherwise sets the key with `AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)` and sends the notification (addressed to `ownerId`).
@@ -279,12 +279,16 @@ flowchart TD
     E --> I[Render template locally en + System.Net.Mail SmtpClient.Send]
 ```
 
-`SendEmailAsync` returns `bool` (true only if actually dispatched). `EmailTemplate` (`src/Cotton.Shared/Models/Enums/EmailTemplate.cs`, namespace `Cotton.Models.Enums`) has exactly two members: `EmailConfirmation = 1`, `PasswordReset = 2`. Email is invoked from two handlers:
+`SendEmailAsync` returns `bool` (true only if actually dispatched). `EmailTemplate` (`src/Cotton.Shared/Models/Enums/EmailTemplate.cs`, namespace `Cotton.Models.Enums`) has three members: `EmailConfirmation = 1`, `PasswordReset = 2`, and `SecurityAlert = 3`. `SecurityAlert` is the single reusable account-security layout: callers provide the event title, content, occurrence time, and account URL instead of adding one HTML template per event.
+
+Transactional email is invoked directly from the verification and password-reset handlers:
 
 | Handler | Template | Notes |
 | --- | --- | --- |
 | `SendEmailVerificationRequest` (`src/Cotton.Server/Handlers/Users/SendEmailVerificationRequest.cs`) | `EmailTemplate.EmailConfirmation` | Passes `["token"] = user.EmailVerificationToken`; throws `BadRequestException<User>` if `sent` is false |
 | `SendPasswordResetRequest` (`src/Cotton.Server/Handlers/Users/SendPasswordResetRequest.cs`) | `EmailTemplate.PasswordReset` | Passes `["token"] = user.PasswordResetToken`; intentionally ignores the return value so it does not leak whether the user exists |
+
+Account-security email goes through `NotificationsProviderExtensions.SendSecurityEmailAsync`. The helper uses `EmailTemplate.SecurityAlert`, HTML-encodes caller-provided text, and treats delivery as best-effort so a mail failure does not roll back an already completed account action. It covers successful new-session sign-ins, app-code approval, TOTP activation/deactivation, WebDAV token replacement, password changes and completed resets, account-email changes, passkey changes, and external-identity link changes. Refresh-token rotation and failed authentication attempts do not send email.
 
 ### Cloud mode — Cotton Bridge relay
 
@@ -334,7 +338,7 @@ HTML detection inside `SendSmtpEmail`: if the body contains `"<html"` (case-inse
 
 ### Email template renderer
 
-`src/Cotton.Shared/Email/EmailTemplateRenderer.cs` (namespace `Cotton.Email`) is a static renderer over compile-time HTML constants in `src/Cotton.Shared/Email/EmailTemplates.cs` (public constants `EmailConfirmationEn`, `EmailConfirmationRu`, `PasswordResetEn`, `PasswordResetRu`). Key behavior:
+`src/Cotton.Shared/Email/EmailTemplateRenderer.cs` (namespace `Cotton.Email`) is a static renderer over compile-time HTML constants in `src/Cotton.Shared/Email/EmailTemplates.cs` (public constants `EmailConfirmationEn`, `EmailConfirmationRu`, `PasswordResetEn`, `PasswordResetRu`, and `SecurityAlertEn`). Key behavior:
 
 * Templates and subjects are keyed by `"<Template>.<lang>"` (`BuildKey`, e.g. `EmailConfirmation.en`), in case-insensitive dictionaries. `Render` and `GetSubject` **fall back to English** when the requested language is missing; `Render` throws `InvalidOperationException` if even the English template is absent, while `GetSubject` ultimately falls back to `template.ToString()`.
 * Placeholders use `{{name}}` syntax; substitution is a literal `string.Replace` per variable, then a final `PlaceholderRegex` (`\{\{[a-z_]+\}\}`, compiled) strips any **unfilled** placeholders to empty string.
@@ -346,7 +350,7 @@ HTML detection inside `SendSmtpEmail`: if the body contains `"<html"` (case-inse
 
 ## Fan-out: a single server action across all three channels
 
-The richest fan-out is a successful interactive login, which (a) issues a session (and may revoke others), (b) records a durable security notification, and (c) pushes that notification in realtime. Email is *not* part of login — it is reserved for verification/reset. The diagram shows the general shape; substitute the relevant producer for other actions.
+The richest fan-out is a successful interactive login, which (a) issues a session, (b) records a durable security notification, (c) pushes that notification in realtime, and (d) sends a best-effort security email. Refresh-token rotation does not repeat the notification or email. The diagram shows the general shape; substitute the relevant producer for other actions.
 
 ```mermaid
 sequenceDiagram
@@ -367,7 +371,7 @@ sequenceDiagram
     Hub-->>Client: NodeMoved (NodeMovedEventDto) — UI updates tree in place
 
     note over Action,Bridge: Email is a separate, explicit call
-    Action->>Notif: SendEmailAsync(userId, PasswordReset, parameters, baseUrl)
+    Action->>Notif: SendEmailAsync(userId, SecurityAlert, parameters, baseUrl)
     alt EmailMode.Cloud (+ telemetry)
         Notif->>Bridge: POST email/send (Cotton Bridge renders + delivers)
     else EmailMode.Custom
@@ -382,7 +386,8 @@ When which channel fires:
 
 * **Realtime only** — file/folder CRUD, rename, move, restore, preview readiness (`PreviewGenerated`), node-metadata and user-preference changes. These have no durable row and no email; they go through `EventNotificationService` or direct `IHubContext`.
 * **Notification + realtime** — every `SendNotificationAsync` call (security events, shared-file downloads, integrity/storage/update alerts). The row is persisted and the same row is pushed as `OnNotificationReceived`.
-* **Email only** — email verification and password reset. These do *not* create in-app notification rows.
+* **Notification + realtime + email** — successful new-session sign-ins and critical account changes covered by the reusable `SecurityAlert` template.
+* **Email only** — email verification and the password-reset request. These do *not* create in-app notification rows.
 * **Session-targeted realtime** — `SessionRevoked` is the only group-addressed (per-session) push; it accompanies access-token revocation.
 
 ## Concurrency, failure modes & security

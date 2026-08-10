@@ -104,6 +104,8 @@ namespace Cotton.Server.Controllers
             _webDavAuthCache.BumpUsernameCacheVersion(user.Username);
             await _notifications.SendWebDavTokenResetAsync(
                 _geoLookup,
+                _settings,
+                _logger,
                 userId,
                 GetRequestIpAddress(),
                 Request.Headers.UserAgent);
@@ -126,7 +128,7 @@ namespace Cotton.Server.Controllers
                 sessionId,
                 revokedAt,
                 cancellationToken);
-            if (revocation.RevokedTokens > 0 || revocation.RevokedPushDeviceTokens > 0)
+            if (revocation.RevokedTokens > 0)
             {
                 await _sessionRevocationNotifier.NotifyRevokedAsync(
                     userId,
@@ -183,6 +185,8 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             await _notifications.SendOtpDisabledAsync(
                 _geoLookup,
+                _settings,
+                _logger,
                 userId,
                 GetRequestIpAddress(),
                 Request.Headers.UserAgent);
@@ -226,6 +230,8 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             await _notifications.SendOtpEnabledAsync(
                 _geoLookup,
+                _settings,
+                _logger,
                 userId,
                 GetRequestIpAddress(),
                 Request.Headers.UserAgent);
@@ -633,7 +639,7 @@ namespace Cotton.Server.Controllers
         {
             return Constants.IsPublicInstance
                 ? IPAddress.Loopback
-                : Request.GetRemoteIPAddress();
+                : Request.GetTrustedClientIPAddress();
         }
 
         private async Task<User?> TryGetNewUserAsync(CottonLoginRequestDto request)

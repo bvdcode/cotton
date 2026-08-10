@@ -42,11 +42,11 @@ The backup chunks themselves are written and re-read through the shared chunk-in
 Two timing details matter for operators:
 
 - The Quartz hosted service (`AddQuartzServer` inside `AddQuartzJobs`) is configured with `WaitForJobsToComplete = false`, `AwaitApplicationStarted = true`, and `StartDelay = TimeSpan.FromSeconds(5)`.
-- Inside `Execute`, the job's very first statement is `await Task.Delay(180_000)` — a hard 3-minute wait "for the server to start up and stabilize" — **before** doing any work. So even a manually triggered backup will not start producing a dump until ~3 minutes after the trigger fires.
+- The first `DumpDatabaseJob` execution in each process awaits the cancellation-aware 3-minute `JobStartupDelays.WaitForDumpDatabaseAsync` wait. Later scheduled or manual executions start immediately; a manual trigger waits only when it wins the race to become that process's first execution.
 
 Quartz is configured with the **in-memory** store: `AddQuartzJobs()` is called in `Program.cs` with no arguments, so its `postgresConnectionString` parameter is null and no `UsePersistentStore`/Postgres store is wired. Trigger schedules are therefore not persisted across restarts; each process start re-registers the 7-day repeating trigger fresh, starting now.
 
-An admin can force a run via `PATCH /api/v1/server/database-backup/trigger` (`ServerController.TriggerDatabaseBackup`, decorated `[Authorize(Roles = nameof(UserRole.Admin))]`, i.e. role `"Admin"`). The handler `TriggerDatabaseBackupRequestHandler` simply calls `ISchedulerFactory.TriggerJobAsync<DumpDatabaseJob>()`. The trigger only enqueues the existing job; the 3-minute internal delay still applies and the existing job registration still prevents overlap with a run already in progress.
+An admin can force a run via `PATCH /api/v1/server/database-backup/trigger` (`ServerController.TriggerDatabaseBackup`, decorated `[Authorize(Roles = nameof(UserRole.Admin))]`, i.e. role `"Admin"`). The handler `TriggerDatabaseBackupRequestHandler` simply calls `ISchedulerFactory.TriggerJobAsync<DumpDatabaseJob>()`. The trigger only enqueues the existing job; the one-shot startup delay applies only if this is the process's first dump execution, and the existing job registration still prevents overlap with a run already in progress.
 
 ### Dump → chunk → manifest → pointer
 
@@ -60,7 +60,7 @@ sequenceDiagram
     participant KP as DatabaseBackupKeyProvider
 
     Q->>J: Execute(ctx)
-    J->>J: Task.Delay(180_000)
+    J->>J: WaitForDumpDatabaseAsync (first execution only)
     J->>J: ResolveBackupOwnerIdAsync()  (first user by Id)
     J->>PD: DumpToFileAsync(tmp .dump)
     PD->>PD: pg_dump --format=custom --file
@@ -109,7 +109,7 @@ public string GetScopedPointerStorageKey()
 
 ## How it works — startup auto-restore
 
-Auto-restore is wired in `src/Cotton.Server/Program.cs`, after startup transition validation, after `app.MapControllers()` / `MapFallbackToFile`, after migrations, inside a service scope, executed **synchronously** before SignalR hub mapping and `app.RunAsync()`:
+Auto-restore is wired in `src/Cotton.Server/Program.cs`, after startup preflight checks, after `app.MapControllers()` / `MapFallbackToFile`, after migrations, inside a service scope, executed **synchronously** before SignalR hub mapping and `app.RunAsync()`:
 
 ```csharp
 app.ApplyMigrations<CottonDbContext>();
@@ -300,7 +300,7 @@ The DTO interface mirrored on the client (`LatestDatabaseBackupDto` in `adminApi
 
 ## Non-obvious design decisions & gotchas
 
-- **The 3-minute internal delay** (`Task.Delay(180_000)`) is the first statement in `DumpDatabaseJob.Execute` and applies to manual triggers too. An admin pressing "Trigger" will not see a new backup appear immediately.
+- **The 3-minute startup delay** (`JobStartupDelays.WaitForDumpDatabaseAsync`) applies once per process. A later admin trigger starts without this delay; only a manual trigger that becomes the first dump execution waits.
 - **Empty-detection precedence is migration-then-data.** Since migrations run before restore, the effective "empty" predicate is "no `users` and no `server_settings` rows." This is what lets a freshly migrated container still auto-restore.
 - **`server_settings` is read twice on a restored DB** — once via `ResolveServerTimeZoneAsync` in the restore notification, and again by the `SettingsProvider.GetServerSettings()` warm-up call immediately after restore in `Program.cs`. On a just-restored DB those rows now exist.
 - **Manifest is content-addressed, pointer is not.** The manifest object's key is the hash of its own bytes (immutable, dedup-friendly), while the pointer is a fixed master-scoped key that is `DeleteAsync`-ed then re-written each run.

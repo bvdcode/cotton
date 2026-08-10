@@ -285,4 +285,57 @@ public class CottonHttpTransportTests
             Assert.That(exception.ResponseBody, Is.EqualTo("Validation failed for remote folder."));
         });
     }
+
+    [Test]
+    public async Task DisposeAsync_DoesNotDisposeCallerOwnedHttpClient()
+    {
+        var handler = new DisposalTrackingHttpMessageHandler();
+        using var httpClient = new HttpClient(handler);
+        var client = new CottonCloudClient(httpClient, new InMemoryCottonTokenStore(), new CottonSdkOptions
+        {
+            BaseAddress = new Uri("https://cotton.test"),
+        });
+
+        await client.DisposeAsync();
+
+        Assert.That(handler.IsDisposed, Is.False);
+    }
+
+    [Test]
+    public async Task ConstructorWithoutHttpClient_OwnsAndDisposesItsHttpClient()
+    {
+        CottonCloudClient client = new(
+            new InMemoryCottonTokenStore(),
+            new CottonSdkOptions { BaseAddress = new Uri("https://cotton.test") });
+
+        await client.DisposeAsync();
+        await client.DisposeAsync();
+
+        Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await client.Settings.GetAsync());
+    }
+
+    private sealed class DisposalTrackingHttpMessageHandler : HttpMessageHandler
+    {
+        public int DisposeCount { get; private set; }
+
+        public bool IsDisposed => DisposeCount > 0;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                DisposeCount++;
+            }
+
+            base.Dispose(disposing);
+        }
+    }
 }

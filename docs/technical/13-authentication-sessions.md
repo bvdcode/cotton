@@ -265,7 +265,7 @@ The cache (`SessionAccessTokenRevocationCache`) is a singleton `MemoryCache` wit
 
 ### Refresh-token retention (`RefreshTokenRetentionJob`)
 
-A Quartz job (`[JobTrigger(days: 1)]`, i.e. a 1-day / 24-hour interval) that, after a hard-coded `Task.Delay(600_000)` (**10-minute** startup grace), revokes every refresh token where `RevokedAt == null` and `CreatedAt < now - RetentionPeriod` (`RetentionPeriod = 30 days`). It only sets `RevokedAt`; it does not delete rows, and it does **not** call the notifier (so it does not push the revocation into the access-token cache or to clients — those expire naturally). This caps an *idle* session's true server-side lifetime at ~30 days regardless of the 1-year trusted cookie. An actively-refreshing session is never pruned, because each rotation writes a fresh row with a new `CreatedAt`.
+A Quartz job (`[JobTrigger(days: 1)]`, i.e. a 1-day / 24-hour interval) whose first process execution observes the cancellation-aware **10-minute** `JobStartupDelays.WaitForRefreshTokenRetentionAsync` startup grace; later executions proceed immediately. It revokes every refresh token where `RevokedAt == null` and `CreatedAt < now - RetentionPeriod` (`RetentionPeriod = 30 days`). It only sets `RevokedAt`; it does not delete rows, and it does **not** call the notifier (so it does not push the revocation into the access-token cache or to clients — those expire naturally). This caps an *idle* session's true server-side lifetime at ~30 days regardless of the 1-year trusted cookie. An actively-refreshing session is never pruned, because each rotation writes a fresh row with a new `CreatedAt`.
 
 ## Password security
 
@@ -363,16 +363,16 @@ There is **no separate `/register` endpoint**: registration is folded into `POST
 
 ## Rate limiting (`EndpointRateLimitingExtensions` + `AuthRateLimitPolicies`)
 
-Two ASP.NET Core fixed-window policies, partitioned by **remote IP** (`HttpContext.Connection.RemoteIpAddress?.ToString()`, or `"unknown"`), with `AutoReplenishment = true`, `QueueLimit = 0` (excess requests are rejected, not queued) and HTTP 429 responses (`RejectionStatusCode = StatusCodes.Status429TooManyRequests`):
+Two ASP.NET Core fixed-window policies, partitioned by the client address resolved through `HttpRequest.GetTrustedClientIPAddress()`, with `AutoReplenishment = true`, `QueueLimit = 0` (excess requests are rejected, not queued) and HTTP 429 responses (`RejectionStatusCode = StatusCodes.Status429TooManyRequests`):
 
 | Policy constant | Name | Permit limit | Window | Applied to (verified via `[EnableRateLimiting(...)]`) |
 | --- | --- | --- | --- | --- |
 | `AuthRateLimitPolicies.Interactive` | `auth.interactive` | 10 | 1 minute | `login`, `forgot-password`, `reset-password`, `passkeys/assertion/options`, `passkeys/assertion/verify` |
 | `AuthRateLimitPolicies.Refresh` | `auth.refresh` | 60 | 1 minute | `refresh` |
 
-The endpoint policies are registered by `AddEndpointRateLimiting` and activated by `UseEndpointRateLimiting` in `Program.cs`. Ordinary application requests have no global rate limiter. `AddAuthHardening` separately registers the singleton `SessionAccessTokenRevocationCache`, the scoped `SessionAccessTokenRevocationStore`, and the JWT revocation `OnTokenValidated` hook (`AddSessionRevocationValidation`).
+The endpoint policies are registered by `AddEndpointRateLimiting` and activated by `UseEndpointRateLimiting` in `Program.cs`. The same registration adds `PublicShareLookupFailureLimiter`, which counts only unresolved or expired public-share tokens and allows 60 failed lookups per resolved client address per minute. Valid public-share navigation, previews, downloads, and range requests never consume that failure budget. Ordinary application requests have no global rate limiter. `AddAuthHardening` separately registers the singleton `SessionAccessTokenRevocationCache`, the scoped `SessionAccessTokenRevocationStore`, and the JWT revocation `OnTokenValidated` hook (`AddSessionRevocationValidation`).
 
-> Note the partition key uses `Connection.RemoteIpAddress` directly. Behind a reverse proxy this is meaningful only because `Program.cs` calls `app.UseForwardedHeaders()` before `app.UseAuthHardening()`; operators must configure forwarded-headers/known-proxies correctly or all clients will share the proxy's IP partition.
+> Both endpoint policies and failed public-share lookup tracking use `HttpRequest.GetTrustedClientIPAddress()`. With a proxy, configure its immediate address or network in General settings and make it overwrite client-supplied forwarding headers; the resolver then prefers `CF-Connecting-IP`, `X-Real-IP`, and `X-Forwarded-For` in that order. Without a proxy, select **No proxy** to use the connection peer and ignore those headers. Leaving the setting empty keeps the legacy trust-all mode and lowers the security score by two.
 
 ## Geo lookup (`GeoLookupService`)
 

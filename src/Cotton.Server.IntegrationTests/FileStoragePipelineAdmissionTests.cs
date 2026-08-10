@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2025-2026 Vadim Belov <https://belov.us>
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
@@ -143,8 +143,7 @@ public class FileStoragePipelineAdmissionTests
 
         public async Task WriteAsync(
             string uid,
-            Stream stream,
-            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing)
+            Stream stream)
         {
             using MemoryStream destination = new();
             await stream.CopyToAsync(destination);

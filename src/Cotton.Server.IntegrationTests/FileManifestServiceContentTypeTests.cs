@@ -3,7 +3,6 @@
 
 using Cotton.Server.Services;
 using NUnit.Framework;
-using System.Text.RegularExpressions;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -103,24 +102,6 @@ public class FileManifestServiceContentTypeTests
     public void IsSourceTextFileName_ClassifiesPreviewableSourceNames(string fileName, bool expected)
     {
         bool actual = FileManifestService.IsSourceTextFileName(fileName);
-
-        Assert.That(actual, Is.EqualTo(expected));
-    }
-
-    [TestCase("sample.apk", true)]
-    [TestCase("bundle.aab", true)]
-    [TestCase("bundle.apks", true)]
-    [TestCase("bundle.xapk", true)]
-    [TestCase("bundle.apkm", true)]
-    [TestCase("Program.cs", true)]
-    [TestCase("Dockerfile", true)]
-    [TestCase("archive.zip", false)]
-    public void PreviewableFileNameRegexPattern_MatchesLegacyNamesThatCanBeNormalized(string fileName, bool expected)
-    {
-        bool actual = Regex.IsMatch(
-            fileName,
-            FileManifestService.PreviewableFileNameRegexPattern,
-            RegexOptions.IgnoreCase);
 
         Assert.That(actual, Is.EqualTo(expected));
     }

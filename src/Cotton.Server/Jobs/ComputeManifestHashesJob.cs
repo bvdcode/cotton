@@ -78,8 +78,10 @@ namespace Cotton.Server.Jobs
                 {
                     FileSizeBytes = manifest.SizeBytes
                 };
-                using Stream stream = _storage.GetBlobStream(hashes, pipelineContext);
-                var computedContentHash = Hasher.HashData(stream);
+                await using Stream stream = _storage.GetBlobStream(hashes, pipelineContext);
+                byte[] computedContentHash = await Hasher.HashDataAsync(
+                    stream,
+                    context.CancellationToken);
                 if (computedContentHash.SequenceEqual(manifest.ProposedContentHash))
                 {
                     manifest.ComputedContentHash = computedContentHash;

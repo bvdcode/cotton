@@ -3,6 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 using System.Net;
+using System.Net.Http.Headers;
 
 namespace Cotton.Previews.Http
 {
@@ -322,14 +323,18 @@ namespace Cotton.Previews.Http
                 return true;
             }
 
-            if (!TryValidateRangeHeaderPrefix(range))
+            if (!RangeHeaderValue.TryParse(range, out RangeHeaderValue? rangeHeader)
+                || !string.Equals(rangeHeader.Unit, "bytes", StringComparison.OrdinalIgnoreCase)
+                || rangeHeader.Ranges.Count != 1)
             {
                 errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
                 return false;
             }
 
-            if (!TryParseRangeValue(range[6..], out var start, out var end, out errorStatusCode))
+            RangeItemHeaderValue requestedRange = rangeHeader.Ranges.Single();
+            if (!TryResolveRange(requestedRange, out long start, out long end))
             {
+                errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
                 return false;
             }
 
@@ -345,73 +350,25 @@ namespace Cotton.Previews.Http
             return true;
         }
 
-        private bool TryValidateRangeHeaderPrefix(string range)
-        {
-            if (range.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            _logger?.LogDebug("[RangeServer {ServerId}] Invalid range header", _serverId);
-            return false;
-        }
-
-        private bool TryParseRangeValue(string value, out long start, out long end, out int errorStatusCode)
-        {
-            errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-            start = 0;
-            end = 0;
-
-            var parts = value.Split('-', 2);
-            if (parts.Length != 2)
-            {
-                return false;
-            }
-
-            // suffix range: bytes=-N
-            if (parts[0].Length == 0)
-            {
-                return TryParseSuffixRange(parts[1], out start, out end);
-            }
-
-            return TryParseStartEndRange(parts[0], parts[1], out start, out end);
-        }
-
-        private bool TryParseSuffixRange(string suffixLenPart, out long start, out long end)
+        private bool TryResolveRange(RangeItemHeaderValue range, out long start, out long end)
         {
             start = 0;
             end = 0;
 
-            if (!long.TryParse(suffixLenPart, out var suffixLen) || suffixLen <= 0)
+            if (range.From is null)
             {
-                return false;
-            }
+                if (range.To is not long suffixLength || suffixLength <= 0)
+                {
+                    return false;
+                }
 
-            start = Math.Max(0, _length - suffixLen);
-            end = _length - 1;
-            return true;
-        }
-
-        private bool TryParseStartEndRange(string startPart, string endPart, out long start, out long end)
-        {
-            end = 0;
-
-            if (!long.TryParse(startPart, out start) || start < 0)
-            {
-                return false;
-            }
-
-            if (endPart.Length == 0)
-            {
+                start = Math.Max(0, _length - suffixLength);
                 end = _length - 1;
                 return true;
             }
 
-            if (!long.TryParse(endPart, out end) || end < start)
-            {
-                return false;
-            }
-
+            start = range.From.Value;
+            end = range.To ?? _length - 1;
             return true;
         }
 

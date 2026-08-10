@@ -99,42 +99,69 @@ namespace Cotton.Server.Handlers.WebDav
             // Re-resolve the target inside the transaction: the original path result can be stale after a long upload stream.
             Guid expectedLayoutId = target.Parent.ParentNode!.LayoutId;
             await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(expectedLayoutId, ct);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-
-            var (refreshedTarget, refreshedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
-            if (refreshedTargetError is not null)
+            (PutTarget? finalTarget, NodeFile? resultNodeFile, WebDavPutFileResult? commitError) =
+                await CommitPutAsync(request, fileManifest.Id, expectedLayoutId, ct);
+            if (commitError is not null)
             {
-                return refreshedTargetError;
+                return commitError;
             }
 
-            PutTarget finalTarget = refreshedTarget!;
-            if (finalTarget.Parent.ParentNode!.LayoutId != expectedLayoutId)
-            {
-                _logger.LogDebug("WebDAV PUT: Parent layout changed before commit: {Path}", request.Path);
-                return Fail(WebDavPutFileError.ParentNotFound);
-            }
-
-            var (quotaError, addedBytes) = await TryEnsureQuotaAsync(request, finalTarget, fileManifest.Id, ct);
-            if (quotaError is not null)
-            {
-                return quotaError;
-            }
-
-            var (resultNodeFile, capture) = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
-            _syncChanges.StageFileChange(
-                finalTarget.Created ? SyncChangeKind.FileCreated : SyncChangeKind.FileContentUpdated,
-                resultNodeFile,
-                finalTarget.Parent.ParentNode.LayoutId);
-            await _dbContext.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-            _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
-            if (capture.RemovedBytes > 0)
-            {
-                _quota.RecordLogicalBytesRemoved(request.UserId, capture.RemovedBytes);
-            }
-
-            await NotifyPutCompletedAsync(request, created: finalTarget.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
+            await NotifyPutCompletedAsync(
+                request,
+                created: finalTarget!.Created,
+                chunkCount: content.Chunks.Count,
+                nodeFileId: resultNodeFile!.Id,
+                ct);
             return new WebDavPutFileResult(true, finalTarget.Created, null, resultNodeFile.Id);
+        }
+
+        private async Task<(PutTarget? Target, NodeFile? NodeFile, WebDavPutFileResult? Error)> CommitPutAsync(
+            WebDavPutFileRequest request,
+            Guid fileManifestId,
+            Guid expectedLayoutId,
+            CancellationToken ct)
+        {
+            await using (IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(request.UserId, ct))
+            await using (IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct))
+            {
+                (PutTarget? refreshedTarget, WebDavPutFileResult? refreshedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
+                if (refreshedTargetError is not null)
+                {
+                    return (null, null, refreshedTargetError);
+                }
+
+                PutTarget finalTarget = refreshedTarget!;
+                if (finalTarget.Parent.ParentNode!.LayoutId != expectedLayoutId)
+                {
+                    _logger.LogDebug("WebDAV PUT: Parent layout changed before commit: {Path}", request.Path);
+                    return (null, null, Fail(WebDavPutFileError.ParentNotFound));
+                }
+
+                (WebDavPutFileResult? quotaError, long addedBytes) = await TryEnsureQuotaAsync(request, finalTarget, fileManifestId, ct);
+                if (quotaError is not null)
+                {
+                    return (null, null, quotaError);
+                }
+
+                (NodeFile resultNodeFile, FileVersionCaptureResult capture) = await UpsertNodeFileAsync(
+                    request,
+                    finalTarget,
+                    fileManifestId,
+                    ct);
+                _syncChanges.StageFileChange(
+                    finalTarget.Created ? SyncChangeKind.FileCreated : SyncChangeKind.FileContentUpdated,
+                    resultNodeFile,
+                    finalTarget.Parent.ParentNode.LayoutId);
+                await _dbContext.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+                _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
+                if (capture.RemovedBytes > 0)
+                {
+                    _quota.RecordLogicalBytesRemoved(request.UserId, capture.RemovedBytes);
+                }
+
+                return (finalTarget, resultNodeFile, null);
+            }
         }
 
         private async Task<(PutTarget? Target, WebDavPutFileResult? Error)> TryResolveAndValidateTargetAsync(WebDavPutFileRequest request, CancellationToken ct)
@@ -320,7 +347,8 @@ namespace Cotton.Server.Handlers.WebDav
                     resourceName,
                     contentType,
                     fileHash,
-                    ct);
+                    userId,
+                    cancellationToken: ct);
             }
 
             return fileManifest;

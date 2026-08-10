@@ -79,11 +79,5 @@ namespace Cotton.Server.Services
         /// </summary>
         [Column("smtp_password_encrypted")]
         public string? SmtpPasswordEncrypted { get; set; }
-
-        /// <summary>
-        /// Raw encrypted Firebase Cloud Messaging service account JSON.
-        /// </summary>
-        [Column("fcm_service_account_json_encrypted")]
-        public string? FcmServiceAccountJsonEncrypted { get; set; }
     }
 }

@@ -124,6 +124,15 @@ export const useUpdateAdminUserMutation = () => {
   });
 };
 
+export const useDeleteAdminUserMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminApi.deleteUser(userId),
+    onSuccess: () => invalidateAdminUsers(queryClient),
+  });
+};
+
 export const useTriggerGarbageCollectorMutation = () => {
   const queryClient = useQueryClient();
 

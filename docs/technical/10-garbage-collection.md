@@ -1,6 +1,6 @@
 # 10. Garbage Collection & Storage Consistency
 
-Cotton stores file content as deduplicated, content-addressed encrypted chunks. Once a file is deleted or a manifest becomes unreferenced, the underlying storage objects must eventually be reclaimed — but never so eagerly that an in-flight upload, a revived reference, or a database backup is destroyed. This section documents the reclamation and reconciliation subsystem: the `GarbageCollectorJob` that schedules and deletes orphaned chunks behind a retention window, the `StorageConsistencyJob` that reconciles raw backend objects against database rows, the `ChunkUsageService` that is the single source of truth for "is this object live", the `BackfillChunkStoredSizeJob` housekeeping pass, and the admin-facing GC observability path (`GetGcChunksTimelineQuery`).
+Cotton stores file content as deduplicated, content-addressed encrypted chunks. Once a file is deleted or a manifest becomes unreferenced, the underlying storage objects must eventually be reclaimed — but never so eagerly that an in-flight upload, a revived reference, or a database backup is destroyed. This section documents the reclamation and reconciliation subsystem: the `GarbageCollectorJob` that schedules and deletes orphaned chunks behind a retention window, the `StorageConsistencyJob` that reconciles raw backend objects against database rows, the `ChunkUsageService` that is the single source of truth for "is this object live", and the admin-facing GC observability path (`GetGcChunksTimelineQuery`).
 
 The governing design principle — stated in `README.md` as "do not reclaim first and ask questions later" — is implemented as: **the database is the source of truth for liveness, deletions are delayed by a retention window, and every candidate is re-checked immediately before deletion**.
 
@@ -23,7 +23,6 @@ This creates a reference-counting problem with no explicit refcount column. Inst
 | `GarbageCollectorJob` | `src/Cotton.Server/Jobs/GarbageCollectorJob.cs` | Schedules orphans for deletion after a retention window, clears schedules for revived/protected chunks, performs delayed physical deletion, removes orphaned `FileManifest` rows. |
 | `StorageConsistencyJob` | `src/Cotton.Server/Jobs/StorageConsistencyJob.cs` | Reconciles backend object keys vs `chunks` rows; handles DB-rows-missing-from-storage; registers storage-orphans as `Chunk` rows so GC can schedule them. |
 | `ChunkUsageService` | `src/Cotton.Server/Services/ChunkUsageService.cs` | Source of truth for liveness queries and for the protected-storage-key set; clears GC schedules for live chunks. |
-| `BackfillChunkStoredSizeJob` | `src/Cotton.Server/Jobs/BackfillChunkStoredSizeJob.cs` | Backfills `Chunk.StoredSizeBytes` for rows that predate the column or were never populated. |
 | `GetGcChunksTimelineQuery` (+ handler) | `src/Cotton.Server/Handlers/Server/GetGcChunksTimelineQuery.cs` | Admin observability: aggregates pending-deletion chunks into a time-bucketed timeline plus storage-usage stats. |
 | `GcChunkTimelineDto`, `GcChunkTimelineBucketDto`, `StorageUsageStatsDto` | `src/Cotton.Server/Models/Dto/` | API payloads for the timeline and storage statistics. |
 | `ChunkIngestService` | `src/Cotton.Server/Services/ChunkIngestService.cs` | Ingestion side of the GC coordination contract (revives chunks, waits out in-progress deletes). |
@@ -93,21 +92,20 @@ A storage object can also enter the lifecycle from the right: `StorageConsistenc
 
 ```mermaid
 flowchart TD
-    A[Execute] --> B{StorageSpaceMode == Limited?}
+    A[Execute] --> F{First run since process start?}
+    F -- yes --> G[Delay 15 minutes]
+    F -- no --> B
+    G --> B{StorageSpaceMode == Limited?}
     B -- no --> C{IsNightTime?}
     C -- yes --> D[Skip run, log, return]
     C -- no --> E[continue]
     B -- yes --> E
-    E --> F{First run since process start?}
-    F -- yes --> G[Delay 15 minutes]
-    F -- no --> H[continue]
-    G --> H
-    H --> I[Pick batchSize by StorageSpaceMode]
+    E --> I[Pick batchSize by StorageSpaceMode]
     I --> J[RunOnceAsync now, batchSize]
 ```
 
 - **Night-time gating:** `PerfTracker.IsNightTime()` (`src/Cotton.Server/Services/PerfTracker.cs`) returns true when the server-timezone local hour is `< 7` or `>= 22` (the timezone comes from `CottonServerSettings.GetTimezoneInfo()`). If the server is **not** in `StorageSpaceMode.Limited` (the "aggressive" mode) and it is currently night time, the run is skipped entirely. In `Limited` mode this gate is bypassed and GC runs around the clock.
-- **First-run delay:** A `static bool _isFirstRun` causes a one-time `await Task.Delay(900_000)` (15 minutes) before the very first pass, to let the server stabilize after startup. Because the flag is static and process-scoped, this delay happens once per process lifetime, not once per trigger.
+- **First-run delay:** `JobStartupDelays.WaitForGarbageCollectorAsync` uses a private process-static atomic flag to apply a cancellation-aware 15-minute delay to the first execution only. The flag is consumed before the night-time gate, so even a first run that later skips still absorbs its startup slot; later scheduled or manual executions never inherit a stale startup delay.
 - **Batch size** is chosen in `Execute()` by `StorageSpaceMode` (`src/Cotton.Database/Models/Enums/StorageSpaceMode.cs`), while the **retention window** is chosen by a separate switch in `ScheduleOrphanedChunksAsync`. Both switches key off the same mode value, so the per-mode pairing is:
 
 | `StorageSpaceMode` | `batchSize` | Retention window (`deleteAfter`) |
@@ -215,7 +213,7 @@ The ingest path (`ChunkIngestService.UpsertChunkAsync`, `src/Cotton.Server/Servi
 
 ## `StorageConsistencyJob`
 
-`StorageConsistencyJob` (`src/Cotton.Server/Jobs/StorageConsistencyJob.cs`) is marked `[JobTrigger(days: 30)]` — i.e. it runs at startup and then every 30 days. The `[JobTrigger]` registration makes it single-flight. `Execute()` waits `Task.Delay(300_000)` (5 minutes) for startup to settle, then calls `RunOnceAsync`.
+`StorageConsistencyJob` (`src/Cotton.Server/Jobs/StorageConsistencyJob.cs`) is marked `[JobTrigger(days: 30)]` — i.e. it runs at startup and then every 30 days. The `[JobTrigger]` registration makes it single-flight. Its first process execution waits for the cancellation-aware 5-minute `JobStartupDelays.WaitForStorageConsistencyAsync` delay, then calls `RunOnceAsync`; later executions call it immediately.
 
 `RunOnceAsync` performs a full bidirectional reconciliation:
 
@@ -280,12 +278,6 @@ The private helper `GetChunkHashesFromStorageKeys` maps storage keys to `Chunk.H
 A critical fail-safe: if the pointer object exists but the latest manifest **cannot** be resolved (`TryGetLatestManifestAsync` returns `null`), it throws `InvalidOperationException` ("…Aborting chunk garbage collection to avoid deleting backup data."). This propagates out of `RunOnceAsync` and aborts the entire GC pass rather than risk deleting backup chunks whose protection set is unknown.
 
 Because the protected set is resolved once at the top of `RunOnceAsync` and threaded through all four phases, and is also subtracted in `StorageConsistencyJob` and used by the timeline query, backup data is protected uniformly across reclamation, scheduling, re-registration, and observability. See the *Database Backup & Restore* section for how the backup pointer and manifest are produced.
-
-## `BackfillChunkStoredSizeJob`
-
-`BackfillChunkStoredSizeJob` (`src/Cotton.Server/Jobs/BackfillChunkStoredSizeJob.cs`) is a `[JobTrigger(days: 1)]` housekeeping pass that populates `Chunk.StoredSizeBytes` for rows where it is missing. The `stored_size_bytes` column was added later (migration `20260421040421_AddChunkStoredSizeBytes`); rows created before it, or rows where the size was never resolved, carry `StoredSizeBytes <= 0`.
-
-The job repeatedly selects `chunks` with `StoredSizeBytes <= 0` ordered by hash, `BatchSize` = 1000 at a time, until a batch comes back empty. For each chunk it reads `_storage.GetSizeAsync(uid)` and writes the result back, **but only when `storedSizeBytes > 0` or the uid is the zero-hash** (`Hasher.ZeroHashHexString`). This is a data-loss guard: a genuine non-zero chunk that momentarily reports size 0 is left untouched rather than overwritten. Note the consequence — because the query has no offset/skip cursor and a row that legitimately reports size 0 (and is not the zero-hash) is never updated, such a row would remain in the `StoredSizeBytes <= 0` set and could be re-selected on every loop iteration. In practice the only legitimate zero-size object is the empty-content chunk, which is handled by the zero-hash branch. Progress (processed/updated) is logged per batch. Accurate `StoredSizeBytes` matters because the GC timeline and storage-usage statistics sum this column to report reclaimable bytes and compression savings.
 
 ## GC observability — the timeline query
 
@@ -372,7 +364,7 @@ The React client consumes this under `src/cotton.client/src/pages/admin/storage-
 - **DB-before-storage ordering.** The `Chunk`/`ChunkOwnership` deletion commits in a transaction before any storage object is removed. A crash in between leaves a backend object with no DB row — recoverable by `StorageConsistencyJob`. The opposite (object deleted, row kept) would cause silent read failures and is avoided.
 - **Repeated liveness re-checks.** Liveness is verified at selection time, again per batch (`stillScheduledHashes`), and again for newly-referenced hashes (`nowReferencedHashes`) inside `DeleteEligibleBatchAsync`. Any revival between phases drops the chunk from deletion and clears its schedule. The idempotent `GCScheduledAfter == null` / `!= null` guards on every UPDATE make concurrent passes safe.
 - **Backup protection is fail-closed.** If the backup pointer exists but its manifest can't be resolved, GC (and the timeline query, and consistency registration — anything that calls `GetProtectedStorageKeysAsync`) aborts entirely. Protected keys are also re-checked at delete time (queued to `protectedHashesToClear` and excluded), so a chunk that is both scheduled and protected is un-scheduled rather than deleted.
-- **Zero-byte data-loss guards.** Both `StorageConsistencyJob` (registration) and `BackfillChunkStoredSizeJob` treat a `GetSizeAsync` result of `0` as suspicious unless the uid is the canonical empty-content hash (`Hasher.ZeroHashHexString`); the consistency job aborts the run on an unexpected zero size, the backfill job declines to write it.
+- **Zero-byte data-loss guard.** `StorageConsistencyJob` treats a `GetSizeAsync` result of `0` as suspicious unless the uid is the canonical empty-content hash (`Hasher.ZeroHashHexString`) and aborts orphan registration rather than recording an ambiguous size.
 - **Night-time throttling.** Outside `Limited` mode, GC will not run during local night hours (`< 7` or `>= 22` in the server timezone), trading reclaim latency for lower nighttime I/O.
 - **Storage delete failures are non-fatal.** `_storage.DeleteAsync` returning `false` or throwing is logged (debug/warning) but does not roll back the DB delete or fail the batch; orphaned-on-storage results are reconciled later.
 - **Partial manifest cleanup is transactional and re-checked**, rolling back the whole batch if any candidate becomes referenced mid-operation.

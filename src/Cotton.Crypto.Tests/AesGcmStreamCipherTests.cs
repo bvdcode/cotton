@@ -85,6 +85,22 @@ public class AesGcmStreamCipherTests
     }
 
     [Test]
+    public void Operations_AfterDispose_ThrowObjectDisposedException()
+    {
+        AesGcmStreamCipher cipher = CreateCipher(ValidMasterKey());
+        cipher.Dispose();
+
+        using MemoryStream input = new([]);
+        using MemoryStream output = new();
+
+        Assert.ThrowsAsync<ObjectDisposedException>(async () => await cipher.EncryptAsync(input, output));
+        Assert.ThrowsAsync<ObjectDisposedException>(async () => await cipher.DecryptAsync(input, output));
+        Assert.Throws<ObjectDisposedException>(() => cipher.EncryptAsync(input));
+        Assert.Throws<ObjectDisposedException>(() => cipher.DecryptAsync(input));
+        Assert.DoesNotThrow(cipher.Dispose);
+    }
+
+    [Test]
     public void Encrypt_InvalidChunkSize_Throws_BelowMin()
     {
         var mk = ValidMasterKey();

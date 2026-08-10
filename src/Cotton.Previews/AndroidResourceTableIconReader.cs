@@ -168,9 +168,54 @@ namespace Cotton.Previews
             Func<string, bool> pathFilter,
             List<AndroidResourcePathCandidate> candidates)
         {
-            if (!AndroidBinaryResourceReader.HasRange(resourceTableBytes, typeOffset, 20))
+            (int HeaderSize, int TypeId, int EntryCount, int EntriesStart)? typeChunk =
+                TryReadTypeChunk(resourceTableBytes, typeOffset, requestedTypeId);
+            if (typeChunk is null)
             {
                 return;
+            }
+
+            (int headerSize, int typeId, int entryCount, int entriesStart) = typeChunk.Value;
+            int? entryPosition = TryReadEntryPosition(
+                resourceTableBytes,
+                typeOffset,
+                headerSize,
+                entryCount,
+                entriesStart,
+                requestedEntryIndex);
+            if (!entryPosition.HasValue)
+            {
+                return;
+            }
+
+            string? path = TryReadResourcePath(
+                resourceTableBytes,
+                entryPosition.Value,
+                keyStrings,
+                globalStrings);
+            if (path is null || !pathFilter(path))
+            {
+                return;
+            }
+
+            int density = ReadDensity(resourceTableBytes, typeOffset);
+            int score = ScoreDensity(density) + ScoreResourcePath(path);
+            if (typeId > 0 && typeId <= typeStrings.Count && typeStrings[typeId - 1] == "mipmap")
+            {
+                score += 1_000;
+            }
+
+            candidates.Add(new AndroidResourcePathCandidate(path, density, score));
+        }
+
+        private static (int HeaderSize, int TypeId, int EntryCount, int EntriesStart)? TryReadTypeChunk(
+            byte[] resourceTableBytes,
+            int typeOffset,
+            int requestedTypeId)
+        {
+            if (!AndroidBinaryResourceReader.HasRange(resourceTableBytes, typeOffset, 20))
+            {
+                return null;
             }
 
             int headerSize = AndroidBinaryResourceReader.ReadUInt16(resourceTableBytes, typeOffset + 2);
@@ -185,17 +230,35 @@ namespace Cotton.Previews
                 || entriesStartValue > int.MaxValue
                 || entryCountValue > int.MaxValue / sizeof(uint))
             {
-                return;
+                return null;
             }
 
             int entryCount = (int)entryCountValue;
             int entriesStart = (int)entriesStartValue;
-            if (requestedEntryIndex >= entryCount
-                || entriesStart <= 0
+            if (entriesStart <= 0
                 || entriesStart > chunkSize
-                || !AndroidBinaryResourceReader.HasRange(resourceTableBytes, typeOffset + headerSize, entryCount * sizeof(uint)))
+                || !AndroidBinaryResourceReader.HasRange(
+                    resourceTableBytes,
+                    typeOffset + headerSize,
+                    entryCount * sizeof(uint)))
             {
-                return;
+                return null;
+            }
+
+            return (headerSize, typeId, entryCount, entriesStart);
+        }
+
+        private static int? TryReadEntryPosition(
+            byte[] resourceTableBytes,
+            int typeOffset,
+            int headerSize,
+            int entryCount,
+            int entriesStart,
+            int requestedEntryIndex)
+        {
+            if (requestedEntryIndex >= entryCount)
+            {
+                return null;
             }
 
             uint entryOffset = AndroidBinaryResourceReader.ReadUInt32(
@@ -203,16 +266,21 @@ namespace Cotton.Previews
                 typeOffset + headerSize + (requestedEntryIndex * sizeof(uint)));
             if (entryOffset == ResourceEntryNoEntry || entryOffset > int.MaxValue)
             {
-                return;
+                return null;
             }
 
-            int entriesBase = typeOffset + entriesStart;
-            int entryPosition = entriesBase + (int)entryOffset;
-            if (!AndroidBinaryResourceReader.HasRange(resourceTableBytes, entryPosition, 16))
-            {
-                return;
-            }
+            int entryPosition = typeOffset + entriesStart + (int)entryOffset;
+            return AndroidBinaryResourceReader.HasRange(resourceTableBytes, entryPosition, 16)
+                ? entryPosition
+                : null;
+        }
 
+        private static string? TryReadResourcePath(
+            byte[] resourceTableBytes,
+            int entryPosition,
+            IReadOnlyList<string> keyStrings,
+            IReadOnlyList<string> globalStrings)
+        {
             int entrySize = AndroidBinaryResourceReader.ReadUInt16(resourceTableBytes, entryPosition);
             ushort flags = AndroidBinaryResourceReader.ReadUInt16(resourceTableBytes, entryPosition + 2);
             int keyIndex = (int)AndroidBinaryResourceReader.ReadUInt32(resourceTableBytes, entryPosition + 4);
@@ -223,30 +291,17 @@ namespace Cotton.Previews
                 || keyIndex >= keyStrings.Count
                 || !AndroidBinaryResourceReader.HasRange(resourceTableBytes, valuePosition, 8))
             {
-                return;
+                return null;
             }
 
             byte dataType = resourceTableBytes[valuePosition + 3];
             int stringIndex = (int)AndroidBinaryResourceReader.ReadUInt32(resourceTableBytes, valuePosition + 4);
             if (dataType != ResValueDataTypeString || stringIndex < 0 || stringIndex >= globalStrings.Count)
             {
-                return;
+                return null;
             }
 
-            string path = NormalizeResourcePath(globalStrings[stringIndex]);
-            if (!pathFilter(path))
-            {
-                return;
-            }
-
-            int density = ReadDensity(resourceTableBytes, typeOffset);
-            int score = ScoreDensity(density) + ScoreResourcePath(path);
-            if (typeId > 0 && typeId <= typeStrings.Count && typeStrings[typeId - 1] == "mipmap")
-            {
-                score += 1_000;
-            }
-
-            candidates.Add(new AndroidResourcePathCandidate(path, density, score));
+            return NormalizeResourcePath(globalStrings[stringIndex]);
         }
 
         private static int ReadDensity(byte[] resourceTableBytes, int typeOffset)

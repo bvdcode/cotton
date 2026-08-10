@@ -8,7 +8,8 @@ using Cotton.Server.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
-using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Npgsql;
 
 namespace Cotton.Server.Services
 {
@@ -17,12 +18,14 @@ namespace Cotton.Server.Services
     /// </summary>
     public class FileManifestService(
         CottonDbContext _dbContext,
-        IChunkIngestService _chunkIngest)
+        IChunkIngestService _chunkIngest,
+        ILogger<FileManifestService> _logger)
     {
         /// <summary>
         /// Defines the default content type.
         /// </summary>
         public const string DefaultContentType = "application/octet-stream";
+        private const string ProposedContentHashConstraintName = "IX_file_manifests_proposed_content_hash";
         private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
         private static readonly IReadOnlyDictionary<string, (string ContentType, bool ForceContentType)> extensionContentTypeOverrides =
             new Dictionary<string, (string ContentType, bool ForceContentType)>(StringComparer.OrdinalIgnoreCase)
@@ -151,16 +154,6 @@ namespace Cotton.Server.Services
         };
 
         /// <summary>
-        /// Regex pattern matching filenames that Cotton treats as source-code text previews.
-        /// </summary>
-        public static string SourceTextFileNameRegexPattern { get; } = BuildSourceTextFileNameRegexPattern();
-
-        /// <summary>
-        /// Regex pattern matching legacy octet-stream filenames that Cotton can normalize for previews.
-        /// </summary>
-        public static string PreviewableFileNameRegexPattern { get; } = BuildPreviewableFileNameRegexPattern();
-
-        /// <summary>
         /// Resolves content type.
         /// </summary>
         public static string ResolveContentType(string? fileName, string? contentType)
@@ -271,28 +264,6 @@ namespace Cotton.Server.Services
 
             return normalizedContentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
                 || normalizedContentType.StartsWith("application/x-", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string BuildSourceTextFileNameRegexPattern()
-        {
-            IOrderedEnumerable<string> extensions = sourceTextExtensions
-                .Select(extension => Regex.Escape(extension.TrimStart('.')))
-                .OrderByDescending(extension => extension.Length)
-                .ThenBy(extension => extension, StringComparer.Ordinal);
-
-            return $"^(?:dockerfile(?:\\..*)?|\\.dockerignore|.+\\.(?:{string.Join("|", extensions)}))$";
-        }
-
-        private static string BuildPreviewableFileNameRegexPattern()
-        {
-            IOrderedEnumerable<string> extensions = sourceTextExtensions
-                .Concat(extensionContentTypeOverrides.Keys)
-                .Select(extension => Regex.Escape(extension.TrimStart('.')))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderByDescending(extension => extension.Length)
-                .ThenBy(extension => extension, StringComparer.Ordinal);
-
-            return $"^(?:dockerfile(?:\\..*)?|\\.dockerignore|.+\\.(?:{string.Join("|", extensions)}))$";
         }
 
         private static string NormalizeContentType(string? contentType)
@@ -410,13 +381,15 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
-        /// Creates new file manifest async.
+        /// Creates a file manifest or reuses an equivalent manifest inserted concurrently.
         /// </summary>
         public async Task<FileManifest> CreateNewFileManifestAsync(
             List<Chunk> chunks,
             string fileName,
             string? contentType,
             byte[] proposedContentHash,
+            Guid userId,
+            bool includeChunks = false,
             CancellationToken cancellationToken = default)
         {
             var newFileManifest = new FileManifest()
@@ -443,8 +416,51 @@ namespace Cotton.Server.Services
                 };
                 await _dbContext.FileManifestChunks.AddAsync(fileChunk, cancellationToken);
             }
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            return newFileManifest;
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return newFileManifest;
+            }
+            catch (DbUpdateException ex) when (IsConcurrentManifestInsertConflict(ex))
+            {
+                _logger.LogDebug(ex, "File manifest was created concurrently, reloading the existing row");
+                DetachPendingManifest(newFileManifest);
+            }
+
+            return await GetReusableOwnedManifestAsync(
+                proposedContentHash,
+                userId,
+                includeChunks,
+                cancellationToken)
+                ?? throw new InvalidOperationException(
+                    "A file manifest was inserted concurrently but could not be reloaded.");
+        }
+
+        private void DetachPendingManifest(FileManifest manifest)
+        {
+            foreach (EntityEntry<FileManifestChunk> entry in _dbContext.ChangeTracker
+                .Entries<FileManifestChunk>()
+                .Where(x => x.State == EntityState.Added
+                    && ReferenceEquals(x.Entity.FileManifest, manifest))
+                .ToArray())
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            EntityEntry<FileManifest> manifestEntry = _dbContext.Entry(manifest);
+            if (manifestEntry.State == EntityState.Added)
+            {
+                manifestEntry.State = EntityState.Detached;
+            }
+        }
+
+        private static bool IsConcurrentManifestInsertConflict(DbUpdateException ex)
+        {
+            return ex.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: ProposedContentHashConstraintName,
+            };
         }
 
         /// <summary>

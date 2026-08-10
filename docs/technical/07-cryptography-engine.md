@@ -24,7 +24,7 @@ Per the README, the encryption core was conceived and built first, on the premis
 | `AesGcmStreamCipher` | `src/Cotton.Crypto/AesGcmStreamCipher.cs` | Public cipher. Implements `IStreamCipher` and `IDisposable`. Generates the per-file key + nonce prefix, wraps the file key, writes the file header, and drives the encrypt/decrypt pipelines. Holds the master key. |
 | `AesGcmStreamFormat` | `src/Cotton.Crypto/Internals/AesGcmStreamFormat.cs` | `internal static` helpers for nonce composition, AAD construction, header build/parse, and exact-length stream reads. |
 | `FileHeader`, `ChunkHeader` | `src/Cotton.Crypto/Internals/Headers.cs` | `internal readonly struct` layouts for the per-file header and per-chunk header, with `TryWrite`/`TryRead` and `ComputeLength`. |
-| `FormatConstants` | `src/Cotton.Crypto/Internals/FormatConstants.cs` | Magic bytes and format versions (`CTN1` legacy, `CTN2` current), version detection, and the terminator-required rule. |
+| `FormatConstants` | `src/Cotton.Crypto/Internals/FormatConstants.cs` | Current `CTN2` magic bytes and format version. |
 | `Tag128` | `src/Cotton.Crypto/Internals/Tag128.cs` | Allocation-free 128-bit GCM tag value type (two `ulong`s) with little-endian span conversion. |
 | `EncryptionPipeline` | `src/Cotton.Crypto/Internals/Pipelines/EncryptionPipeline.cs` | Producer → worker pool → ordered consumer for encryption; writes framed chunks and the end marker. |
 | `DecryptionPipeline` | `src/Cotton.Crypto/Internals/Pipelines/DecryptionPipeline.cs` | Producer (parse + read ciphertext) → worker pool → reorder writer for decryption; verifies the terminator and total length. |
@@ -34,12 +34,9 @@ Per the README, the encryption core was conceived and built first, on the premis
 | `BufferScope` | `src/Cotton.Crypto/Internals/BufferScope.cs` | Pooled buffer manager with count/byte caps, reference-identity tracking, and zero-on-dispose. |
 | `ReferenceEqualityComparer<T>` | `src/Cotton.Crypto/Internals/ReferenceEqualityComparer.cs` | Reference-identity comparer used by `BufferScope` so equal-content arrays aren't conflated. |
 | `KeyDerivation` | `src/Cotton.Crypto/KeyDerivation.cs` | HKDF (RFC 5869) over HMAC-SHA256 subkey derivation. |
-| `HashHelpers` | `src/Cotton.Crypto/Helpers/HashHelpers.cs` | 256-bit lowercase-hex hash validation; legacy `HashToHex` (marked `[Obsolete]`). |
-| `RandomHelpers` | `src/Cotton.Crypto/Helpers/RandomHelpers.cs` | `GetRandomBytes(int)` via a freshly created `RandomNumberGenerator`. |
 | `AesGcmKeyHeader` | `src/Cotton.Crypto/Models/AesGcmKeyHeader.cs` | Public `readonly record struct` for serializing/parsing a header outside the pipeline. |
 | `ByteChunk` | `src/Cotton.Crypto/Models/ByteChunk.cs` | Public `(byte[] Buffer, int Length)` `readonly struct` documenting pool-ownership transfer. |
 | `StreamCipherFactory` | `src/Cotton.Server/Services/StreamCipherFactory.cs` | `internal static` server-side construction of `AesGcmStreamCipher` from `CottonEncryptionSettings`. |
-| `CryptoExtensions` | `src/Cotton.Server/Extensions/CryptoExtensions.cs` | Presigned-token encrypt/decrypt helpers built on the `IStreamCipher` string helpers. |
 | `CryptoProcessor` | `src/Cotton.Storage/Processors/CryptoProcessor.cs` | Storage-pipeline processor (`IStorageProcessor`) that calls `EncryptAsync`/`DecryptAsync` on blob streams. |
 
 The project also ships `src/Cotton.Crypto/InternalsVisibleTo.Tests.cs`, which grants `Cotton.Crypto.Tests` access to internal types so the format, pipelines, and `BufferScope` can be unit-tested directly.
@@ -60,7 +57,7 @@ Produced by `FileHeader.TryWrite` (`Headers.cs`). `FileHeader.ComputeLength(nonc
 
 | Offset | Size | Field | Notes |
 |---|---|---|---|
-| 0 | 4 | magic | `CTN2` (current) or `CTN1` (legacy) |
+| 0 | 4 | magic | `CTN2` |
 | 4 | 4 | header length | equals 84 for the current sizes; validated on read |
 | 8 | 8 | `TotalPlaintextLength` | total plaintext bytes if the input was seekable, else `0` |
 | 16 | 4 | `KeyId` | must match the configured key id on decrypt |
@@ -77,7 +74,7 @@ Produced by `ChunkHeader.TryWrite`. `ChunkHeader.ComputeLength(tagSize) = 4 + 4 
 
 | Offset | Size | Field | Notes |
 |---|---|---|---|
-| 0 | 4 | magic | `CTN2`/`CTN1` |
+| 0 | 4 | magic | `CTN2` |
 | 4 | 4 | header length | equals 36 |
 | 8 | 8 | `PlaintextLength` | length of this chunk's plaintext; `0` marks the authenticated terminator |
 | 16 | 4 | `KeyId` | must match the file's key id |
@@ -87,14 +84,7 @@ The ciphertext immediately follows its header and is exactly `PlaintextLength` b
 
 ### Format versions
 
-`FormatConstants` defines:
-
-| Constant | Value | Magic |
-|---|---|---|
-| `LegacyVersion` | 1 | `CTN1` (`"CTN1"u8`) |
-| `CurrentVersion` | 2 | `CTN2` (`"CTN2"u8`) |
-
-`CTN1` predates the authenticated terminator. `FormatConstants.RequiresAuthenticatedTerminator(formatVersion)` returns `true` for `formatVersion >= CurrentVersion` (i.e. `CTN2` and newer): a `CTN2` reader must see the zero-length MACed terminator and throws `EndOfStreamException` ("Encrypted stream ended before its authenticated terminator.") if the stream ends without it. `CTN1` blobs are treated as complete at transport EOF. New writes always emit `CTN2` (header and chunk headers default to `FormatConstants.CurrentVersion`). The format version is read from the file-header magic and threaded through to the decryption pipeline and per-chunk parsing: `ChunkHeader.TryRead` accepts an `expectedFormatVersion` and rejects a chunk whose magic does not match, so a reader fast-fails on mixed-version chunks.
+`FormatConstants.CurrentVersion` is `2` and `FormatConstants.MagicBytes` is `"CTN2"u8`. The server accepts no other stream version. Every encrypted stream must end with the zero-length authenticated terminator; EOF before it throws `EndOfStreamException` ("Encrypted stream ended before its authenticated terminator."). A file beginning with the obsolete `CTN1` magic throws the temporary `Ctn1NotSupportedException`, which instructs the operator to complete the transition on Cotton 0.4.35. Other invalid file magic and mixed-format chunk headers remain ordinary corruption errors.
 
 ### 12-byte nonce layout
 
@@ -110,8 +100,8 @@ The cipher binds metadata into GCM associated data so it is authenticated even t
 
 | Offset | Size | Field (source) |
 |---|---|---|
-| 0 | 4 | magic for the format version (`GetMagicBytes`) |
-| 4 | 4 | format version (`Int32`) |
+| 0 | 4 | `CTN2` magic |
+| 4 | 4 | format version `2` (`Int32`) |
 | 8 | 4 | `keyId` (`Int32`) |
 | 12 | 8 | chunk index (`Int64`) |
 | 20 | 8 | plaintext length of the chunk (`Int64`) |
@@ -197,8 +187,8 @@ sequenceDiagram
 
 `DecryptionPipeline.RunAsync`:
 
-- **`ProduceCoreAsync` / `TryReadAndPublishJobAsync`** read each chunk header. A zero-`PlaintextLength` header is treated as the terminator: `VerifyEndMarker` re-derives the AAD/nonce for that index and GCM-decrypts the empty record; on tag failure it throws `AuthenticationTagMismatchException` ("Stream terminator authentication failed."). It then calls `EnsureNoTrailingBytesAfterEndMarkerAsync` (seekable: `input.Position` must equal `input.Length`; non-seekable: a 1-byte probe read must return 0) to reject appended bytes with `InvalidDataException` ("Unexpected data after encrypted stream terminator."). For a data chunk, `ValidateDataChunkHeader` checks `KeyId` and `0 < PlaintextLength ≤ maxChunkSize` (and, for seekable input, that enough bytes remain), then `ReadCiphertextAsync` reads exactly `PlaintextLength` bytes (`ReadExactlyAsync`) and a `DecryptionJob` is published. If the stream ends without a terminator and the format requires one (`CTN2`), `TryReadAndPublishJobAsync` throws `EndOfStreamException`; for `CTN1` it simply stops at transport EOF.
-- **`StartWorkersAsync`** mirrors encryption: per-worker `AesGcm`, nonce buffer, and AAD (initialized with the stream's `formatVersion`). Each worker GCM-decrypts into a rented plaintext buffer; a `CryptographicException` is wrapped as `AuthenticationTagMismatchException` ("Chunk authentication failed."). The ciphertext (job) buffer is always recycled.
+- **`ProduceCoreAsync` / `TryReadAndPublishJobAsync`** read each chunk header. A zero-`PlaintextLength` header is treated as the terminator: `VerifyEndMarker` re-derives the AAD/nonce for that index and GCM-decrypts the empty record; on tag failure it throws `AuthenticationTagMismatchException` ("Stream terminator authentication failed."). It then calls `EnsureNoTrailingBytesAfterEndMarkerAsync` (seekable: `input.Position` must equal `input.Length`; non-seekable: a 1-byte probe read must return 0) to reject appended bytes with `InvalidDataException` ("Unexpected data after encrypted stream terminator."). For a data chunk, `ValidateDataChunkHeader` checks `KeyId` and `0 < PlaintextLength ≤ maxChunkSize` (and, for seekable input, that enough bytes remain), then `ReadCiphertextAsync` reads exactly `PlaintextLength` bytes (`ReadExactlyAsync`) and a `DecryptionJob` is published. EOF before the authenticated terminator throws `EndOfStreamException`.
+- **`StartWorkersAsync`** mirrors encryption: per-worker `AesGcm`, nonce buffer, and CTN2 AAD. Each worker GCM-decrypts into a rented plaintext buffer; a `CryptographicException` is wrapped as `AuthenticationTagMismatchException` ("Chunk authentication failed."). The ciphertext (job) buffer is always recycled.
 - **`ConsumeAsync`** drives a private nested `ReorderWriter` (a growable ring buffer) that writes plaintext to the output strictly in index order, accumulating `TotalWritten`. Duplicate indices (`result.Index < _nextToWrite`) throw `InvalidDataException` ("Duplicate chunk index detected…") and ring-slot collisions throw `InvalidDataException` ("Reorder buffer slot collision…").
 - After all stages complete (and a cancellation re-check), if `strictLength` is enabled and the header recorded a positive `TotalPlaintextLength`, the pipeline throws `InvalidDataException` ("Decrypted length mismatch. Expected: … Actual: …") unless `written == expectedTotal`.
 
@@ -289,9 +279,9 @@ Both endpoints below live on `SettingsController`, which is routed at both `Rout
 
 `EncryptionThreads` defaults to **2** (`defaultEncryptionThreads`). Note the asymmetry: the settings endpoint caps `EncryptionThreads` at `ProcessorCount`, while the factory/cipher hard cap is `ProcessorCount * 2` (via `threadsLimitMultiplier = 2`). Changing either setting writes through `SettingsProvider.SetPropertyAsync`, which refreshes the cached pipeline values.
 
-### String/token helpers
+### String helpers
 
-`CryptoExtensions` (`src/Cotton.Server/Extensions/CryptoExtensions.cs`) builds presigned download tokens. `GetPresignedToken` formats `"{hexHash}|{expireAt:R}"` (expiry default `TimeSpan.FromDays(1)`), encrypts it with `IStreamCipher.EncryptString` (from `Cotton.Crypto.StreamCipherExtensions`), and hex-encodes the bytes via `Convert.ToHexString(...).ToLower()`. `DecryptPresignedToken` reverses this: it converts from a hex hash string (`Hasher.FromHexStringHash`), `DecryptString`s it, splits on `|`, parses the expiry, throws if expired, and returns the decoded hash bytes. The same `EncryptString`/`DecryptString` helpers back TOTP-secret encryption in `AuthController` (`user.TotpSecretEncrypted`), transparent column encryption in `CottonDbContext`, and master-key sentinel handling in `MasterKeyStartupStorage`.
+`Cotton.Crypto.StreamCipherExtensions` provides `EncryptString` and `DecryptString` for short encrypted values. These helpers back TOTP-secret encryption in `AuthController` (`user.TotpSecretEncrypted`), transparent column encryption in `CottonDbContext`, and master-key sentinel handling in `MasterKeyStartupStorage`.
 
 ## Buffer management
 
@@ -307,8 +297,6 @@ Both endpoints below live on `SettingsController`, which is routed at both `Rout
 ## KeyDerivation, hashing, randomness
 
 - **`KeyDerivation`** (`src/Cotton.Crypto/KeyDerivation.cs`) implements HKDF (RFC 5869) over HMAC-SHA256 manually: `HkdfExtract` (HMAC over the IKM with the salt as key, defaulting to `HmacOutputLength = 32` zero bytes per RFC 5869 §2.2) then `HkdfExpand` (`T(1) = HMAC(PRK, info || 0x01)`, `T(i) = HMAC(PRK, T(i-1) || info || i)`). Intermediate buffers (`prk`, `tPrev`, `data`, `infoBytes`, plus the string overload's UTF-8 inputs) are zeroed via `CryptographicOperations.ZeroMemory`. Expansion is capped at 255 blocks (`n > 255` throws `ArgumentOutOfRangeException`). `DeriveSubkey(ReadOnlySpan<byte> masterKey, ReadOnlySpan<byte> info, int lengthBytes, ReadOnlySpan<byte> salt = default)` is the byte-span core; the string overloads UTF-8-encode their inputs, and `DeriveSubkeyBase64` returns base64. This is what `Autoconfig` uses to split the root master key into the data master key and the pepper.
-- **`HashHelpers`** (`src/Cotton.Crypto/Helpers/HashHelpers.cs`) validates lowercase 64-hex-char (256-bit) strings via a `[GeneratedRegex]` compiled `^[0-9a-f]{64}$` (`IsValidHash`). `HashToHex(Stream)` computes a SHA-256 lowercase-hex digest and is marked `[Obsolete]`. **Note:** its obsolete message points callers to `Cotton.Crypto.Hashing.HashingExtensions.ComputeHashToHex`, but no such type, namespace, or method exists anywhere in the repository — the suggested replacement is a dangling reference. `HashToHex` itself remains the only functioning hash-to-hex helper in `Cotton.Crypto`.
-- **`RandomHelpers.GetRandomBytes(int)`** (`src/Cotton.Crypto/Helpers/RandomHelpers.cs`) creates a fresh `RandomNumberGenerator` per call (in a `using`) and fills a new array. The cipher itself uses its injected (or `RandomNumberGenerator.Create()`) instance for the file key and nonce prefix, not this helper.
 
 ## Concurrency, failure modes, and edge cases
 

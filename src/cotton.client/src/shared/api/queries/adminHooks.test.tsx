@@ -28,6 +28,7 @@ const { queryKeys } = await import("./queryKeys");
 const {
   useAdminUsersQuery,
   useCreateAdminUserMutation,
+  useDeleteAdminUserMutation,
   useGcChunksTimelineQuery,
   useLatestDatabaseBackupQuery,
   useTriggerDatabaseBackupMutation,
@@ -218,6 +219,29 @@ describe("admin mutations", () => {
       },
     });
 
+    expect(
+      queryClient
+        .getQueryCache()
+        .findAll({ queryKey: queryKeys.admin.users.all() })
+        .every((query) => query.state.isInvalidated),
+    ).toBe(true);
+  });
+
+  it("invalidates admin user caches after deleting a user", async () => {
+    vi.spyOn(adminApi, "deleteUser").mockResolvedValue();
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(
+      queryKeys.admin.users.list({ withStorage: false }),
+      [makeAdminUser("1")],
+    );
+
+    const { result } = renderHook(() => useDeleteAdminUserMutation(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync("1");
+
+    expect(adminApi.deleteUser).toHaveBeenCalledWith("1");
     expect(
       queryClient
         .getQueryCache()

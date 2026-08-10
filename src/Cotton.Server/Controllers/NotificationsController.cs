@@ -4,19 +4,14 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
-using Cotton.Server.Handlers.Notifications;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using EasyExtensions;
-using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.Mediator;
 using Gridify;
 using Gridify.EntityFramework;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace Cotton.Server.Controllers
 {
@@ -26,8 +21,7 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class NotificationsController(
         CottonDbContext _dbContext,
-        INotificationsProvider _notifications,
-        IMediator _mediator) : ControllerBase
+        INotificationsProvider _notifications) : ControllerBase
     {
         /// <summary>
         /// Sends a test notification to the current user.
@@ -57,46 +51,6 @@ namespace Cotton.Server.Controllers
             Response.Headers.Append("X-Total-Count", notifications.Count.ToString());
             IEnumerable<NotificationDto> dto = notifications.Data.Adapt<IEnumerable<NotificationDto>>();
             return Ok(dto);
-        }
-
-        /// <summary>
-        /// Registers or refreshes the current session push device token.
-        /// </summary>
-        [Authorize]
-        [HttpPut(Routes.V1.Notifications + "/device-tokens/current")]
-        public async Task<IActionResult> RegisterCurrentDeviceToken(
-            [FromBody] PushDeviceTokenRegistrationRequestDto request,
-            CancellationToken cancellationToken)
-        {
-            string? sessionId = GetCurrentSessionId();
-            if (string.IsNullOrWhiteSpace(sessionId))
-            {
-                return this.ApiUnauthorized("Session id is required");
-            }
-
-            PushDeviceTokenDto token = await _mediator.Send(
-                new RegisterPushDeviceTokenRequest(User.GetUserId(), sessionId, request),
-                cancellationToken);
-            return Ok(token);
-        }
-
-        /// <summary>
-        /// Revokes push device tokens registered by the current session.
-        /// </summary>
-        [Authorize]
-        [HttpDelete(Routes.V1.Notifications + "/device-tokens/current-session")]
-        public async Task<IActionResult> RevokeCurrentSessionDeviceTokens(CancellationToken cancellationToken)
-        {
-            string? sessionId = GetCurrentSessionId();
-            if (string.IsNullOrWhiteSpace(sessionId))
-            {
-                return this.ApiUnauthorized("Session id is required");
-            }
-
-            PushDeviceTokenRevocationResultDto result = await _mediator.Send(
-                new RevokeCurrentSessionPushDeviceTokensRequest(User.GetUserId(), sessionId),
-                cancellationToken);
-            return Ok(result);
         }
 
         /// <summary>
@@ -153,11 +107,6 @@ namespace Cotton.Server.Controllers
             notification.ReadAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync();
             return Ok();
-        }
-
-        private string? GetCurrentSessionId()
-        {
-            return User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sid)?.Value;
         }
     }
 }

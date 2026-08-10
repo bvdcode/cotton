@@ -14,12 +14,12 @@ namespace Cotton.Crypto.Internals
 
         public static int ComputeLength(int tagSize) => 4 + 4 + 8 + 4 + tagSize;
 
-        public static bool TryWrite(Span<byte> destination, in ChunkHeader header, int tagSize, int formatVersion = FormatConstants.CurrentVersion)
+        public static bool TryWrite(Span<byte> destination, in ChunkHeader header, int tagSize)
         {
             int required = ComputeLength(tagSize);
             if (destination.Length < required) return false;
             int offset = 0;
-            FormatConstants.GetMagicBytes(formatVersion).CopyTo(destination[offset..]); offset += 4;
+            FormatConstants.MagicBytes.CopyTo(destination[offset..]); offset += 4;
             BinaryPrimitives.WriteInt32LittleEndian(destination[offset..], required); offset += 4;
             BinaryPrimitives.WriteInt64LittleEndian(destination[offset..], header.PlaintextLength); offset += 8;
             BinaryPrimitives.WriteInt32LittleEndian(destination[offset..], header.KeyId); offset += 4;
@@ -28,9 +28,6 @@ namespace Cotton.Crypto.Internals
         }
 
         public static bool TryRead(ReadOnlySpan<byte> source, int tagSize, out ChunkHeader header)
-            => TryRead(source, tagSize, expectedFormatVersion: null, out header);
-
-        public static bool TryRead(ReadOnlySpan<byte> source, int tagSize, int? expectedFormatVersion, out ChunkHeader header)
         {
             header = default;
             int required = ComputeLength(tagSize);
@@ -38,11 +35,7 @@ namespace Cotton.Crypto.Internals
             {
                 return false;
             }
-            if (!FormatConstants.TryGetVersion(source[..4], out int actualFormatVersion))
-            {
-                return false;
-            }
-            if (expectedFormatVersion.HasValue && actualFormatVersion != expectedFormatVersion.Value)
+            if (!source[..4].SequenceEqual(FormatConstants.MagicBytes))
             {
                 return false;
             }

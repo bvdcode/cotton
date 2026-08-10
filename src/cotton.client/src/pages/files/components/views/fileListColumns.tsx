@@ -31,6 +31,7 @@ import {
   isFolderEncryptionPolicyEnabled,
   type FolderEncryptionPolicyState,
 } from "../../../../shared/crypto";
+import { buildPreviewUrl } from "@shared/api/previewUrl";
 
 export interface FileListRow {
   id: string;
@@ -141,9 +142,7 @@ export const createIconColumn = (
     const previewUrl =
       params.row.type === "file" && params.row.tile?.kind === "file"
         ? params.row.tile.file?.previewHashEncryptedHex
-          ? `/api/v1/preview/${encodeURIComponent(
-              params.row.tile.file.previewHashEncryptedHex,
-            )}.webp`
+          ? buildPreviewUrl(params.row.tile.file.previewHashEncryptedHex)
           : null
         : null;
 

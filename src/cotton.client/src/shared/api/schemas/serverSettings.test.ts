@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DIRECT_CONNECTION_IP_ADDRESS,
   chunkSizeResponseSchema,
   chunkSizeSettingsResponseSchema,
   emailConfigSchema,
@@ -12,6 +13,9 @@ import {
   storageTypeResponseSchema,
   telemetrySettingSchema,
   timezoneSchema,
+  trustedProxyIpAddressSchema,
+  observedProxyInfoSchema,
+  trustedProxyVerificationResultSchema,
   defaultUserTemplateNodeIdSchema,
 } from "./serverSettings";
 
@@ -107,6 +111,49 @@ describe("server settings schemas", () => {
     expect(timezoneSchema.parse({ timezone: null })).toBe("UTC");
     expect(publicBaseUrlSchema.parse({ publicBaseUrl: null })).toBe("");
     expect(serverUsageListSchema.parse({ serverUsage: [] })).toEqual(["Other"]);
+  });
+
+  it("parses trusted proxy settings and verification results", () => {
+    expect(DIRECT_CONNECTION_IP_ADDRESS).toBe("0.0.0.0");
+    expect(
+      trustedProxyIpAddressSchema.parse({ trustedProxyIpAddress: null }),
+    ).toBe("");
+    expect(
+      observedProxyInfoSchema.parse({
+        observedProxyIpAddress: "172.18.0.2",
+        suggestedTrustedProxy: "172.16.0.0/12",
+        detectedProxyServices: ["cloudflare", "reverse-proxy"],
+        cloudflare: {
+          visitorCountryCode: "US",
+          datacenterCode: "LAX",
+        },
+      }),
+    ).toEqual({
+      observedProxyIpAddress: "172.18.0.2",
+      suggestedTrustedProxy: "172.16.0.0/12",
+      detectedProxyServices: ["cloudflare", "reverse-proxy"],
+      cloudflare: {
+        visitorCountryCode: "US",
+        datacenterCode: "LAX",
+      },
+    });
+    expect(
+      trustedProxyVerificationResultSchema.parse({
+        trustedProxyIpAddress: "172.18.0.3",
+        observedProxyIpAddress: "172.18.0.2",
+        detectedProxyServices: ["cloudflare", "traefik"],
+        cloudflare: null,
+        matches: false,
+        saved: false,
+      }),
+    ).toEqual({
+      trustedProxyIpAddress: "172.18.0.3",
+      observedProxyIpAddress: "172.18.0.2",
+      detectedProxyServices: ["cloudflare", "traefik"],
+      cloudflare: null,
+      matches: false,
+      saved: false,
+    });
   });
 
   it("normalizes storage and email config payloads", () => {

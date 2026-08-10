@@ -182,29 +182,6 @@
         "adminOnly": true
       },
       {
-        "id": "privacy-global-indexing",
-        "title": "Globální indexace",
-        "description": "Soukromí a bezpečnost",
-        "path": "/admin/privacy-settings",
-        "keywords": [
-          "global indexing",
-          "global index",
-          "indexing",
-          "search indexing",
-          "search index",
-          "deep search",
-          "full text search",
-          "content search",
-          "decrypt files",
-          "file content search",
-          "Globální indexace",
-          "Soukromí a bezpečnost",
-          "Privacy and security"
-        ],
-        "highlightSettingId": "allowGlobalIndexing",
-        "adminOnly": true
-      },
-      {
         "id": "privacy-telemetry",
         "title": "Telemetrie",
         "description": "Soukromí a bezpečnost",
@@ -233,6 +210,7 @@
         "title": "Režim překladu IP",
         "description": "Soukromí a bezpečnost",
         "path": "/admin/privacy-settings",
+        "highlightSettingId": "geoIpLookupMode",
         "keywords": [
           "geoip",
           "geo ip",
@@ -2805,17 +2783,22 @@
     "title": "Správa",
     "menu": {
       "navigate": "Sekce",
+      "expand": "Rozbalit navigaci",
+      "collapse": "Sbalit navigaci",
+      "sections": {
+        "people": "Lidé",
+        "storage": "Úložiště",
+        "security": "Zabezpečení",
+        "system": "Systém"
+      },
       "users": "Uživatelé",
-      "usersAndGroups": "Uživatelé a skupiny",
       "generalSettings": "Obecná nastavení",
-      "privacySettings": "Soukromí a bezpečnost",
+      "privacySettings": "Soukromí",
       "storageSettings": "Úložiště",
-      "storageAndStatistics": "Úložiště a statistiky",
       "notificationsSettings": "Oznámení",
       "databaseBackup": "Záloha databáze",
       "storageStatistics": "Statistiky úložiště",
       "securityDiagnostics": "Kontrola zabezpečení",
-      "groups": "Skupiny",
       "identityProviders": "Identity providers"
     },
     "roles": {
@@ -2842,12 +2825,15 @@
         "actions": "Akce"
       },
       "actions": {
-        "edit": "Upravit"
+        "edit": "Upravit",
+        "delete": "Smazat účet",
+        "deleteCurrent": "Vlastní účet nelze smazat"
       },
       "errors": {
         "loadFailed": "Načtení uživatelů se nezdařilo.",
         "createFailed": "Vytvoření uživatele se nezdařilo.",
-        "updateFailed": "Aktualizace uživatele se nezdařila."
+        "updateFailed": "Aktualizace uživatele se nezdařila.",
+        "deleteFailed": "Smazání uživatele se nezdařilo."
       },
       "create": {
         "title": "Vytvořit uživatele",
@@ -2868,6 +2854,14 @@
         "saving": "Ukládání...",
         "success": "Uživatel byl aktualizován."
       },
+      "delete": {
+        "title": "Smazat účet",
+        "warning": "Účet, všechny soubory a související data budou trvale smazány. Tuto akci nelze vrátit zpět.",
+        "confirmation": "Pro potvrzení zadejte {{username}}.",
+        "confirmationLabel": "Uživatelské jméno",
+        "button": "Smazat účet",
+        "deleting": "Mazání..."
+      },
       "storageUsage": {
         "calculating": "Výpočet využití úložiště"
       }
@@ -2886,6 +2880,25 @@
         "saveFailed": "Uložení nastavení se nezdařilo."
       },
       "general": {
+        "trustedProxy": {
+          "title": "Důvěryhodný proxy server",
+          "description": "IP adresa nebo síť CIDR přímého reverzního proxy serveru, který smí předávat adresu klienta. Proxy musí přepsat nebo odstranit klientské hlavičky CF-Connecting-IP, X-Real-IP a X-Forwarded-For. Pro přímé nasazení zvolte Bez proxy.",
+          "emptyHint": "Ponechte prázdné pro původní chování, které důvěřuje přeposlaným adresám ze všech připojení.",
+          "placeholder": "Například 172.16.0.0/12",
+          "direct": "Bez proxy",
+          "directMode": "Přímé připojení (bez proxy); předávané hlavičky se ignorují",
+          "directSaved": "Režim přímého připojení byl uložen. Předávané hlavičky budou ignorovány.",
+          "detect": "Automaticky",
+          "verifyAndSave": "Ověřit a uložit",
+          "unavailable": "Adresu připojeného proxy serveru nelze pro tento požadavek zjistit.",
+          "detected": "Navržený důvěryhodný proxy server: {{address}}.",
+          "detectedPath": "Zjištěná síťová cesta",
+          "genericProxy": "Reverzní proxy",
+          "internet": "Internet",
+          "saved": "Adresa důvěryhodného proxy serveru byla ověřena a uložena.",
+          "disabled": "Omezení na důvěryhodný proxy server bylo vypnuto.",
+          "mismatch": "Zadali jste {{entered}}, ale požadavek přišel z {{observed}}. Nastavení nebylo uloženo."
+        },
         "title": "Obecná nastavení",
         "description": "Základní chování serveru a vyhledávání polohy pro oznámení.",
         "fields": {
@@ -3031,6 +3044,8 @@
         "loadFailed": "Načtení nastavení úložiště se nezdařilo.",
         "s3SaveFailed": "Uložení konfigurace S3 se nezdařilo.",
         "storageSaveFailed": "Přepnutí režimu úložiště se nezdařilo.",
+        "quotaInvalid": "Zadejte nulu nebo kladné číslo.",
+        "templateNodeIdInvalid": "Zadejte platné ID uzlu složky.",
         "quotaSaveFailed": "Uložení výchozí kvóty uživatele se nezdařilo.",
         "templateSaveFailed": "Uložení šablony výchozích souborů se nezdařilo.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",
@@ -3164,6 +3179,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "Důvěryhodný proxy server",
+        "threatVector": "Útočník s přímým přístupem ke Cottonu nebo přes proxy bez čištění hlaviček může měnit zdánlivou adresu klienta a obcházet IP limity.",
+        "fix": "V Obecných nastaveních zvolte Bez proxy pro přímé nasazení, nebo použijte Automaticky či zadejte adresu přímého proxy serveru a poté ji ověřte a uložte. Proxy musí přepisovat klientské přeposílací hlavičky.",
+        "passed": "Režim důvěry adresy klienta je výslovně nastaven"
+      },
       "title": "Kontrola zabezpečení",
       "description": "Serverové kontroly hygieny účtu, zacházení s hlavním klíčem a expozice paměti procesu.",
       "errors": {
@@ -3331,6 +3352,7 @@
     "identityProviders": {
       "title": "Identity providers",
       "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "empty": "Nejsou nastaveni žádní poskytovatelé identity.",
       "actions": {
         "create": "Add provider",
         "edit": "Edit provider",

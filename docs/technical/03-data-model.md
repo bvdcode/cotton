@@ -102,13 +102,13 @@ public override Task<int> SaveChangesAsync(CancellationToken cancellationToken =
 }
 ```
 
-Because `AuditedDbContext` also overrides these methods (to stamp timestamps), the effective ordering on a save is: Cotton's override signs pending rows → base `AuditedDbContext` updates `CreatedAt`/`UpdatedAt` → EF persists. The signer is null at design-time and in any DI configuration that doesn't register it, in which case signing is silently skipped. The signer implementation (`src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityChangeSigner.cs`) is part of the server's database-integrity subsystem; this section documents only the schema-side contract. See the *Database Integrity* and *Cryptography Engine* sections for the signing/verification algorithm.
+Because `AuditedDbContext` also overrides these methods (to stamp timestamps), the effective ordering on a save is: Cotton's override signs pending rows → base `AuditedDbContext` updates `CreatedAt`/`UpdatedAt` → EF persists. The signer remains nullable so design-time tooling can construct the context, but the server always registers the strict signer and verifier. The signer implementation (`src/Cotton.Server/Services/DatabaseIntegrity/DatabaseIntegrityChangeSigner.cs`) is part of the server's database-integrity subsystem; this section documents only the schema-side contract. See the *Database Integrity* and *Cryptography Engine* sections for the signing/verification algorithm.
 
 ### OnModelCreating
 
 ```mermaid
 flowchart TD
-    A[base.OnModelCreating] --> B[ConfigureIntegrityShadowProperties&lt;T&gt; for 14 protected entities]
+    A[base.OnModelCreating] --> B[Configure integrity shadow properties for 13 protected entities]
     B --> C[FileManifest.PreviewGeneratorVersion default = 0]
     C --> D[Build encryptedStringConverter using streamCipher]
     D --> E[Scan every entity type's properties]
@@ -119,7 +119,7 @@ flowchart TD
 
 `OnModelCreating` does exactly three things beyond the base call:
 
-1. **Integrity shadow properties.** A private generic helper `ConfigureIntegrityShadowProperties<TEntity>` is called for 14 entity types: `User`, `UserPasskeyCredential`, `OidcProvider`, `UserExternalIdentity`, `OidcLoginState`, `ExtendedRefreshToken`, `DownloadToken`, `NodeShareToken`, `CottonServerSettings`, `Node`, `NodeFile`, `FileManifest`, `FileManifestChunk`, `Chunk`. Each gets two shadow properties (see *Integrity shadow columns*).
+1. **Integrity shadow properties.** `DatabaseIntegrityModelConfiguration` registers two shadow properties for 13 entity types: `User`, `UserPasskeyCredential`, `OidcProvider`, `UserExternalIdentity`, `OidcLoginState`, `ExtendedRefreshToken`, `DownloadToken`, `NodeShareToken`, `Node`, `NodeFile`, `FileManifest`, `FileManifestChunk`, `Chunk` (see *Integrity shadow columns*).
 2. **One default value.** `FileManifest.PreviewGeneratorVersion` gets a database default of `0` via `.HasDefaultValue(0)`.
 3. **Transparent encryption.** A `ValueConverter<string?, string?>` is built from the private `EncryptString`/`DecryptString` methods. The model is then scanned with `modelBuilder.Model.GetEntityTypes()`; for every property of every entity that (a) is decorated `[Encrypted]` and (b) has CLR type `string`, the converter is attached via `.HasConversion(encryptedStringConverter)`.
 
@@ -456,7 +456,7 @@ There is no explicit FK navigation back to `User` defined on this type (only the
 | Cipher/pipeline | `encryption_threads`, `cipher_chunk_size_bytes`, `compression_level`, `max_chunk_size_bytes` | ints |
 | Sessions | `session_timeout_hours` | C# default `30 * 24` (720h = 30 days) |
 | Policy flags | `allow_cross_user_deduplication`, `allow_global_indexing`, `telemetry_enabled` | bools |
-| Instance | `timezone` (text), `instance_id` (uuid), `public_base_url` (text) | |
+| Instance | `timezone` (text), `instance_id` (uuid), `public_base_url` (text), `trusted_proxy_ip_address` (`inet`?), `trusted_proxy_prefix_length` (smallint?) | The trusted-proxy fields are nullable and excluded from the row's integrity canonical data. `null` is legacy compatibility mode, `0.0.0.0` without a prefix is the reserved direct-connection marker, and other values identify an exact trusted peer or CIDR network. |
 | SMTP | `smtp_server_address`, `smtp_server_port` (int?), `smtp_username`, `smtp_sender_email`, `smtp_use_ssl`, `smtp_password_encrypted` (**`[Encrypted]`**) | host/user/sender are nullable text |
 | S3 | `s3_access_key_id`, `s3_bucket_name`, `s3_region`, `s3_endpoint_url`, `s3_secret_access_key_encrypted` (**`[Encrypted]`**) | nullable text |
 | Modes | `email_mode` (`EmailMode`), `compution_mode` (`ComputionMode`), `storage_type` (`StorageType`), `storage_space_mode` (`StorageSpaceMode`), `geo_ip_lookup_mode` (`GeoIpLookupMode`) | enums |
@@ -508,12 +508,12 @@ Row-level tamper-evidence is implemented with two **shadow** properties (not pre
 | `VersionColumn` | `"integrity_version"` | DB column (`integer`, nullable) |
 | `MacColumn` | `"integrity_mac"` | DB column (`bytea`, nullable) |
 
-`ConfigureIntegrityShadowProperties<TEntity>` maps the `int?` shadow property `IntegrityVersion` to column `integrity_version` and the `byte[]?` shadow property `IntegrityMac` to column `integrity_mac`. These are nullable so existing rows can be backfilled rather than migrated atomically.
+`ConfigureIntegrityShadowProperties<TEntity>` maps the `int?` shadow property `IntegrityVersion` to column `integrity_version` and the `byte[]?` shadow property `IntegrityMac` to column `integrity_mac`. The columns remain nullable so the schema can represent rows that predate the integrity transition; version 0.5 treats that state as an upgrade error and does not backfill it.
 
 The save-time contract is defined by `IDatabaseIntegrityChangeSigner` (`src/Cotton.Database/Integrity/IDatabaseIntegrityChangeSigner.cs`), a one-method interface: `void SignPendingChanges(DbContext dbContext)`. `CottonDbContext` invokes it before every save. The server-side implementation (`DatabaseIntegrityChangeSigner` in `src/Cotton.Server/Services/DatabaseIntegrity/`) walks the change tracker for `Added`/`Modified` entries that (a) have a registered descriptor (`IDatabaseIntegrityDescriptorRegistry.TryGet`) and (b) carry the two shadow properties, then:
 
 1. Refuses to sign a row whose `Id` property is still `Guid.Empty` or marked temporary by EF (the PK participates in the signed payload, so a temporary key would produce a MAC that cannot verify after insert), throwing `InvalidOperationException`. Entities without an `Id` property (i.e. `Chunk`) skip this check.
-2. For `Modified` rows, re-verifies the **original** stored MAC/version against the original values before re-signing. If the original MAC or version is null (a backfilled row), re-verification is skipped; otherwise a version mismatch or a failed `protector.Verify(originalEntity, descriptor, originalMac)` reports a failure and throws `DatabaseIntegrityException`, blocking the save.
+2. For `Modified` rows, requires and re-verifies the **original** stored MAC/version against the original values before re-signing. Missing metadata reports a failure and throws `DatabaseIntegritySignatureMissingException`; a version mismatch or failed `protector.Verify(originalEntity, descriptor, originalMac)` reports a failure and throws `DatabaseIntegrityException`. Both paths block the save.
 3. Sets `IntegrityVersion = descriptor.SchemaVersion` and `IntegrityMac = protector.Sign(entity, descriptor)`.
 
 This catches in-place tampering on the normal write path; direct SQL edits that bypass the application are caught later at read-time verification. The signing algorithm and descriptor registry live in the server's database-integrity subsystem — see the *Database Integrity* section.
@@ -567,14 +567,14 @@ The practical consequence: deleting a `User` cascades through `Layout`, `Node`, 
 
 Migrations are generated with the EF Core tooling (`dotnet ef migrations add <Name>`) and committed under `src/Cotton.Database/Migrations/` as `<timestamp>_<Name>.cs` + `.Designer.cs` pairs, plus a single `CottonDbContextModelSnapshot.cs`. The history starts at `20260102064107_Initial` and currently runs forward to `20260526073016_AddOidcProviders` — 66 migrations (133 `.cs` files counting designers and the snapshot). They are not individually enumerated here because they are mechanically generated and the snapshot is the source of truth for the current schema. The `Initial` migration enables the `citext` extension; the `hstore` extension is enabled later, by `20260210183506_AddNotifications`.
 
-At startup, `Cotton.Server` calls `app.ApplyMigrations<CottonDbContext>()` (`src/Cotton.Server/Program.cs`), implemented in EasyExtensions. It applies only pending migrations (via `Database.GetPendingMigrations()` + `Database.Migrate()`); if none are pending it is a no-op. The boot sequence in `Program.cs` is: build the app → validate startup transition rules against app-version history → if blocked, serve the startup-blocked SPA and `/api/v1/startup/status` → otherwise build the HTTP pipeline (auth, static files, controllers, fallback) → `app.ApplyMigrations<CottonDbContext>()` → (in a service scope) `IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync()` and `SettingsProvider.GetServerSettings()` → map the SignalR hub → `app.RunAsync()`. Because migrations run automatically on every boot, the operational contract is "deploy new binaries, restart, schema upgrades itself" — there is no separate migration step. Operators should ensure only one instance applies migrations concurrently (EF's `Migrate()` is not designed for simultaneous multi-node execution).
+At startup, `Cotton.Server` calls `app.ApplyMigrations<CottonDbContext>()` (`src/Cotton.Server/Program.cs`), implemented in EasyExtensions. It applies only pending migrations (via `Database.GetPendingMigrations()` + `Database.Migrate()`); if none are pending it is a no-op. The boot sequence in `Program.cs` is: build the app → run generic preflight checks → build the HTTP pipeline (auth, static files, controllers, fallback) → apply migrations → run `IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync()` → load settings → map the SignalR hub → run. Because migrations run automatically on every boot, the operational contract is "deploy new binaries, restart, schema upgrades itself" — there is no separate migration step. Operators should ensure only one instance applies migrations concurrently (EF's `Migrate()` is not designed for simultaneous multi-node execution).
 
 ## Concurrency, failure modes, edge cases, security considerations
 
 - **No lazy loading.** `UseLazyLoadingProxies = false`, so accessing an unloaded `virtual` navigation returns null/empty instead of issuing a query. Always project or `Include`.
 - **DbContext is not thread-safe.** The inherited `AuditedDbContext` XML docs reiterate EF's rule: never use one context instance from concurrent threads/async operations.
 - **Encryption converter is fail-soft on read.** A decryption failure logs a warning and returns the raw stored value; downstream code may then receive ciphertext where it expects plaintext. This avoids hard read failures during key rotation but can mask misconfiguration. Encryption on write is a no-op when no `IStreamCipher` is registered (e.g. design-time), so a misconfigured runtime could silently persist plaintext into `_encrypted` columns.
-- **Integrity signing throws on tamper.** Modifying an integrity-protected row whose stored MAC/version no longer matches its original values raises `DatabaseIntegrityException` during `SaveChanges`, aborting the transaction. Missing MAC/version metadata on protected existing rows is also a hard failure.
+- **Integrity signing throws on tamper.** Modifying an integrity-protected row whose stored MAC/version no longer matches its original values raises `DatabaseIntegrityException` during `SaveChanges`, aborting the transaction. A protected read or modification with missing MAC/version metadata raises the temporary `DatabaseIntegritySignatureMissingException` with instructions to complete the transition on Cotton 0.4.35.
 - **citext + diacritic folding.** `Username`, `Email`, and the `*NameKey` columns are `citext` (case-insensitive), so `Alice` and `alice` collide on the unique indexes. In addition, `NameKey` values are produced by `NameValidator.GetNameKey`, which folds case **and** strips combining diacritic marks — so names differing only by accents also collide. The sibling-uniqueness index on `Node` (`LayoutId, ParentId, Type, NameKey`) inherits both behaviors.
 - **`Chunk` has no audit/ownership.** It is content-addressed and intentionally lacks `Id`/`CreatedAt`/`UpdatedAt`/`Owner`; ownership is modeled separately via `ChunkOwnership`. Cross-user dedup is gated by `CottonServerSettings.AllowCrossUserDeduplication`.
 - **Restrict can block deletes you expect to succeed.** Because content and several user-referencing tokens use Restrict, deleting users or content requires explicit cleanup of dependent rows first (or relying on the application's own deletion ordering / garbage collection).
@@ -590,7 +590,7 @@ At startup, `Cotton.Server` calls `app.ApplyMigrations<CottonDbContext>()` (`src
 ## Related sections
 
 - *Cryptography Engine* — the `IStreamCipher` used by the encryption value converter and the key material behind it.
-- *Database Integrity* — the `DatabaseIntegrityChangeSigner`, descriptor registry, MAC algorithm, read-time verifier, and startup transition guard.
+- *Database Integrity* — the `DatabaseIntegrityChangeSigner`, descriptor registry, MAC algorithm, read-time verifier, and strict 0.5 cutover errors.
 - *Storage Pipeline & Deduplication* — how `Chunk`, `FileManifest`, `FileManifestChunk`, and `ChunkOwnership` are produced and verified.
 - *Garbage Collection* — how `Chunk.GCScheduledAfter` drives reclamation of unreferenced content.
 - *Authentication & Sessions* — `User`, `ExtendedRefreshToken`, `UserPasskeyCredential`, and the OIDC entities.

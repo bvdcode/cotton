@@ -9,9 +9,7 @@ using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Notifications;
 using Cotton.Server.Providers;
-using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.AspNetCore.Exceptions;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
@@ -31,8 +29,6 @@ namespace Cotton.Server.Services
         SettingsProvider _settingsProvider,
         CottonPublicEmailProvider _publicEmailProvider,
         ILogger<CottonNotifications> _logger,
-        IPushNotificationDeliveryService _pushDeliveryService,
-        IDatabaseIntegrityVerifier _integrity,
         IHubContext<EventHub> _hubContext) : INotificationsProvider
     {
         /// <summary>
@@ -335,104 +331,19 @@ namespace Cotton.Server.Services
             NotificationPriority priority = NotificationPriority.None,
             Dictionary<string, string>? metadata = null)
         {
-            Dictionary<string, string> notificationMetadata = metadata is null
-                ? []
-                : new Dictionary<string, string>(metadata);
-            PushNotificationEventCategoryResolver.Enrich(notificationMetadata);
-
             Notification notification = new()
             {
                 Title = title,
                 UserId = userId,
                 Content = content,
                 Priority = priority,
-                Metadata = notificationMetadata
+                Metadata = metadata ?? []
             };
             await _dbContext.Notifications.AddAsync(notification);
             await _dbContext.SaveChangesAsync();
-            Dictionary<string, string>? userPreferences = await _dbContext.Users
-                .AsNoTracking()
-                .Where(x => x.Id == userId)
-                .Select(x => x.Preferences)
-                .FirstOrDefaultAsync();
             await _hubContext.Clients.User(userId.ToString()).SendAsync(
                 EventHub.NotificationMethod,
                 notification.Adapt<NotificationDto>());
-
-            PushNotificationPayloadPlan pushPayloadPlan =
-                PushNotificationPayloadPlanner.Create(notification, userPreferences);
-            if (pushPayloadPlan.IsEligible)
-            {
-                // TODO(push): Move remote push fanout to a background job so notification writes do not wait on FCM.
-                await SendRemotePushAsync(userId, notification.Id, pushPayloadPlan);
-            }
-        }
-
-        private async Task SendRemotePushAsync(
-            Guid userId,
-            Guid notificationId,
-            PushNotificationPayloadPlan pushPayloadPlan)
-        {
-            List<PushDeviceToken> deviceTokens = await _dbContext.PushDeviceTokens
-                .Where(x => x.UserId == userId
-                    && x.Provider == PushDeviceTokenProvider.FirebaseCloudMessaging
-                    && x.Platform == PushDeviceTokenPlatform.Android
-                    && x.RevokedAt == null)
-                .ToListAsync();
-
-            if (deviceTokens.Count == 0)
-            {
-                _logger.LogDebug(
-                    "No active Android FCM tokens are registered for notification {NotificationId}.",
-                    notificationId);
-                return;
-            }
-
-            DateTime revokedAt = DateTime.UtcNow;
-            int sentCount = 0;
-            int invalidCount = 0;
-            int skippedCount = 0;
-            foreach (PushDeviceToken deviceToken in deviceTokens)
-            {
-                _integrity.RequireValid(_dbContext, deviceToken, "push.device-token");
-
-                PushNotificationDeliveryResult result = await _pushDeliveryService.SendAsync(
-                    new PushNotificationDeliveryRequest(deviceToken.Token, pushPayloadPlan),
-                    CancellationToken.None);
-
-                switch (result.Status)
-                {
-                    case PushNotificationDeliveryStatus.Sent:
-                        sentCount++;
-                        break;
-                    case PushNotificationDeliveryStatus.InvalidToken:
-                        deviceToken.RevokedAt = revokedAt;
-                        invalidCount++;
-                        break;
-                    case PushNotificationDeliveryStatus.NotConfigured:
-                        skippedCount++;
-                        break;
-                    default:
-                        _logger.LogWarning(
-                            "Remote push delivery for notification {NotificationId} returned {Status} with provider error {ErrorCode}.",
-                            notificationId,
-                            result.Status,
-                            result.ErrorCode);
-                        break;
-                }
-            }
-
-            if (invalidCount > 0)
-            {
-                await _dbContext.SaveChangesAsync();
-            }
-
-            _logger.LogDebug(
-                "Remote push fanout for notification {NotificationId}: {SentCount} sent, {InvalidCount} invalid, {SkippedCount} skipped.",
-                notificationId,
-                sentCount,
-                invalidCount,
-                skippedCount);
         }
     }
 }

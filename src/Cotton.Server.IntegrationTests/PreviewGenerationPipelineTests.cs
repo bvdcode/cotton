@@ -56,8 +56,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         byte[]? SmallFilePreviewHash,
         byte[]? SmallFilePreviewHashEncrypted,
         byte[]? LargeFilePreviewHash,
-        string? PreviewGenerationError,
-        string ContentType);
+        string? PreviewGenerationError);
 
     private record FileManifestMetadataState(
         Dictionary<string, string>? Metadata);
@@ -148,7 +147,8 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         NodeFileManifestDto listedFile = await GetNodeFileAsync(root.Id, "notes.txt");
         Assert.That(listedFile.PreviewHashEncryptedHex, Is.EqualTo(GetPreviewHashEncryptedHex(manifest.Id, manifest.SmallFilePreviewHashEncrypted)));
 
-        HttpResponseMessage previewResponse = await _client!.GetAsync($"{PreviewRouteBase}/{listedFile.PreviewHashEncryptedHex}");
+        string previewUrl = $"{PreviewRouteBase}/{listedFile.PreviewHashEncryptedHex}";
+        HttpResponseMessage previewResponse = await _client!.GetAsync(previewUrl);
         previewResponse.EnsureSuccessStatusCode();
 
         Assert.That(previewResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("image/webp"));
@@ -161,40 +161,23 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         HttpResponseMessage rawTokenResponse = await _client!.GetAsync($"{PreviewRouteBase}/{Convert.ToHexStringLower(manifest.SmallFilePreviewHashEncrypted!)}");
         Assert.That(rawTokenResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
-        using var conditional = new HttpRequestMessage(HttpMethod.Get, $"{PreviewRouteBase}/{listedFile.PreviewHashEncryptedHex}");
+        using HttpRequestMessage conditional = new(HttpMethod.Get, previewUrl);
         conditional.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag!));
 
-        HttpResponseMessage notModified = await _client.SendAsync(conditional);
-        Assert.That(notModified.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
-    }
+        using HttpResponseMessage strongNotModified = await _client.SendAsync(conditional);
+        Assert.That(strongNotModified.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
 
-    [Test]
-    public async Task PreviewPipeline_SourceTextFile_WithLegacyOctetStreamContentType_GeneratesTextPreview()
-    {
-        string token = await LoginAsync();
-        SetBearer(token);
+        using HttpRequestMessage weakConditional = new(HttpMethod.Get, previewUrl);
+        weakConditional.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag!, isWeak: true));
 
-        NodeDto root = await GetRootNodeAsync();
-        byte[] source = Encoding.UTF8.GetBytes("def hello():\n    print(\"Hello\")\n");
+        using HttpResponseMessage weakNotModified = await _client.SendAsync(weakConditional);
+        Assert.That(weakNotModified.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
 
-        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, "app.py", FileManifestService.DefaultContentType, source);
-        await SetManifestContentTypeAsync(createdFile.Id, FileManifestService.DefaultContentType);
+        using HttpRequestMessage anyConditional = new(HttpMethod.Get, previewUrl);
+        anyConditional.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Any);
 
-        await ExecuteGeneratePreviewJobAsync();
-
-        FileManifestPreviewState manifest = await GetFileManifestByNodeFileIdAsync(createdFile.Id);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(manifest.ContentType, Is.EqualTo("text/plain"));
-            Assert.That(manifest.SmallFilePreviewHash, Is.Not.Null);
-            Assert.That(manifest.SmallFilePreviewHashEncrypted, Is.Not.Null);
-            Assert.That(manifest.LargeFilePreviewHash, Is.Null);
-            Assert.That(manifest.PreviewGenerationError, Is.Null);
-        });
-
-        byte[] smallPreview = await ReadPreviewBlobAsync(manifest.SmallFilePreviewHash!);
-        AssertWebpSignature(smallPreview);
+        using HttpResponseMessage anyNotModified = await _client.SendAsync(anyConditional);
+        Assert.That(anyNotModified.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
     }
 
     [Test]
@@ -842,24 +825,6 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             .SingleAsync();
     }
 
-    private async Task SetManifestContentTypeAsync(Guid nodeFileId, string contentType)
-    {
-        await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
-        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-
-        Guid manifestId = await dbContext.NodeFiles
-            .AsNoTracking()
-            .Where(x => x.Id == nodeFileId)
-            .Select(x => x.FileManifestId)
-            .SingleAsync();
-
-        FileManifest? manifest = await dbContext.FileManifests.FindAsync(manifestId);
-        Assert.That(manifest, Is.Not.Null);
-
-        manifest!.ContentType = contentType;
-        await dbContext.SaveChangesAsync();
-    }
-
     private async Task<FileManifestPreviewState> GetFileManifestByNodeFileIdAsync(Guid nodeFileId)
     {
         await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
@@ -873,8 +838,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
                 x.FileManifest.SmallFilePreviewHash,
                 x.FileManifest.SmallFilePreviewHashEncrypted,
                 x.FileManifest.LargeFilePreviewHash,
-                x.FileManifest.PreviewGenerationError,
-                x.FileManifest.ContentType))
+                x.FileManifest.PreviewGenerationError))
             .SingleOrDefaultAsync();
 
         Assert.That(manifest, Is.Not.Null);

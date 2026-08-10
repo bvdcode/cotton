@@ -8,6 +8,5 @@ namespace Cotton.Server.Services
     /// </summary>
     public record RefreshTokenRevocationResult(
         int RevokedTokens,
-        IReadOnlyList<string> SessionIds,
-        int RevokedPushDeviceTokens);
+        IReadOnlyList<string> SessionIds);
 }

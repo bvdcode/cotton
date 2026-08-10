@@ -3,6 +3,7 @@
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
+using Cotton.Database.Integrity;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
@@ -21,6 +22,7 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Quartz.Extensions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
@@ -124,11 +126,19 @@ namespace Cotton.Server
                 client.Timeout = TimeSpan.FromSeconds(10);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
             });
-            builder.Services.AddHttpClient<IPushNotificationDeliveryService, FirebaseCloudMessagingPushNotificationDeliveryService>(client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(15);
-            });
             builder.Services
+                .AddHttpClient<IProxyTopologyProbeService, ProxyTopologyProbeService>(client =>
+                {
+                    client.Timeout = TimeSpan.FromSeconds(3);
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton-Proxy-Topology-Probe/1.0");
+                })
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    AllowAutoRedirect = false,
+                    UseCookies = false,
+                });
+            builder.Services
+                .AddExceptionHandler<UntrustedProxyConnectionExceptionHandler>()
                 .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()
                 .Bind(builder.Configuration);
@@ -172,7 +182,6 @@ namespace Cotton.Server
                 .AddScoped<OidcProviderService>()
                 .AddScoped<OidcAuthenticationService>()
                 .AddScoped(sp => new OidcDiscoveryService(sp.GetRequiredService<IHttpClientFactory>().CreateClient(OidcDiscoveryService.HttpClientName)))
-                .AddScoped<PushDeviceTokenRevocationService>()
                 .AddScoped<RefreshTokenRevocationService>()
                 .AddScoped<SessionRevocationNotifier>()
                 .AddScoped<DownloadTokenExpirationService>()
@@ -180,7 +189,10 @@ namespace Cotton.Server
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
                 .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()
                 .AddScoped<FileManifestService>()
+                .AddSingleton<UserStorageQuotaCache>()
+                .AddSingleton<UserStorageQuotaMutationGate>()
                 .AddScoped<UserStorageQuotaService>()
+                .AddScoped<PublicShareTokenGenerator>()
                 .AddSingleton<ArchiveDownloadTicketStore>()
                 .AddSingleton<StoredZipArchiveWriter>()
                 .AddScoped<ArchiveDownloadService>()
@@ -204,7 +216,11 @@ namespace Cotton.Server
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
-                .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
+                .AddScoped<MasterKeyStartupValidator>()
+                .AddPostgresDbContext<CottonDbContext>(
+                    x => x.UseLazyLoadingProxies = false,
+                    (sp, options) => options.AddInterceptors(
+                        sp.GetRequiredService<DatabaseIntegritySaveChangesInterceptor>()))
                 .AddSingleton<ILayoutMutationGate, LayoutMutationGate>()
                 .AddScoped<ILayoutService, StorageLayoutService>()
                 .AddScoped<ILayoutNavigator, LayoutNavigator>()
@@ -215,7 +231,6 @@ namespace Cotton.Server
                 .AddStartupValidation()
                 .AddChunkServices()
                 .AddFileContentMetadataServices()
-                .AddLayoutPathServices()
                 .AddLayoutSearchServices()
                 .AddWebDavServices()
                 .AddWebDavAuth()
@@ -234,12 +249,12 @@ namespace Cotton.Server
             }
 
             app.UseAuthHardening();
+            app.UseExceptionHandler();
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()
                 .UseEndpointRateLimiting()
-                .UseAuthorization()
-                .UseExceptionHandler();
+                .UseAuthorization();
             app.MapStartupStatusEndpoint(null);
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
@@ -247,7 +262,10 @@ namespace Cotton.Server
             using (IServiceScope scope = app.Services.CreateScope())
             {
                 IDatabaseAutoRestoreService autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
-                autoRestore.TryRestoreIfEmptyAsync().GetAwaiter().GetResult();
+                await autoRestore.TryRestoreIfEmptyAsync();
+                MasterKeyStartupValidator masterKeyValidator = scope.ServiceProvider
+                    .GetRequiredService<MasterKeyStartupValidator>();
+                await masterKeyValidator.ValidateAsync();
                 scope.ServiceProvider.GetRequiredService<SettingsProvider>().GetServerSettings();
             }
             app.MapHub<EventHub>(Routes.V1.EventHub);

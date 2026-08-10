@@ -64,7 +64,7 @@ export function looksLikeContainer(bytes: Uint8Array): boolean {
 export function requiresAuthenticatedTerminator(
   formatVersion: ContainerFormatVersion,
 ): boolean {
-  return formatVersion >= CONTAINER_VERSION;
+  return !isLegacyContainerVersion(formatVersion);
 }
 
 export function buildHeader(header: ContainerHeader): Uint8Array {
@@ -331,8 +331,9 @@ function magicForVersion(formatVersion: ContainerFormatVersion): Uint8Array {
     return MAGIC;
   }
 
-  if (formatVersion === LEGACY_CONTAINER_VERSION) {
-    return LEGACY_MAGIC;
+  const legacyMagic = getLegacyMagic(formatVersion);
+  if (legacyMagic) {
+    return legacyMagic;
   }
 
   throw new InvalidCryptoInputError("Unsupported container format version.");
@@ -347,11 +348,7 @@ function readFormatVersion(bytes: Uint8Array): ContainerFormatVersion | null {
     return CONTAINER_VERSION;
   }
 
-  if (startsWith(bytes, LEGACY_MAGIC)) {
-    return LEGACY_CONTAINER_VERSION;
-  }
-
-  return null;
+  return readLegacyFormatVersion(bytes);
 }
 
 function startsWith(bytes: Uint8Array, prefix: Uint8Array): boolean {
@@ -448,11 +445,42 @@ function assertFormatVersion(
   formatVersion: number,
 ): asserts formatVersion is ContainerFormatVersion {
   if (
-    formatVersion !== LEGACY_CONTAINER_VERSION &&
-    formatVersion !== CONTAINER_VERSION
+    formatVersion !== CONTAINER_VERSION &&
+    !isLegacyContainerVersion(formatVersion)
   ) {
     throw new InvalidCryptoInputError("Unsupported container format version.");
   }
+}
+
+/**
+ * @deprecated OBSOLETE TRANSITION: browser-only CTN1 reads remain temporarily
+ * available for legacy client-encrypted files. Remove this helper with all
+ * CTN1 browser compatibility.
+ */
+function getLegacyMagic(formatVersion: number): Uint8Array | null {
+  return formatVersion === LEGACY_CONTAINER_VERSION ? LEGACY_MAGIC : null;
+}
+
+/**
+ * @deprecated OBSOLETE TRANSITION: browser-only CTN1 reads remain temporarily
+ * available for legacy client-encrypted files. Remove this helper with all
+ * CTN1 browser compatibility.
+ */
+function readLegacyFormatVersion(
+  bytes: Uint8Array,
+): typeof LEGACY_CONTAINER_VERSION | null {
+  return startsWith(bytes, LEGACY_MAGIC) ? LEGACY_CONTAINER_VERSION : null;
+}
+
+/**
+ * @deprecated OBSOLETE TRANSITION: browser-only CTN1 reads remain temporarily
+ * available for legacy client-encrypted files. Remove this helper with all
+ * CTN1 browser compatibility.
+ */
+function isLegacyContainerVersion(
+  formatVersion: number,
+): formatVersion is typeof LEGACY_CONTAINER_VERSION {
+  return formatVersion === LEGACY_CONTAINER_VERSION;
 }
 
 function assertByteLength(

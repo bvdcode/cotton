@@ -182,29 +182,6 @@
         "adminOnly": true
       },
       {
-        "id": "privacy-global-indexing",
-        "title": "Globale indexering",
-        "description": "Privacy en beveiliging",
-        "path": "/admin/privacy-settings",
-        "keywords": [
-          "global indexing",
-          "global index",
-          "indexing",
-          "search indexing",
-          "search index",
-          "deep search",
-          "full text search",
-          "content search",
-          "decrypt files",
-          "file content search",
-          "Globale indexering",
-          "Privacy en beveiliging",
-          "Privacy and security"
-        ],
-        "highlightSettingId": "allowGlobalIndexing",
-        "adminOnly": true
-      },
-      {
         "id": "privacy-telemetry",
         "title": "Telemetrie",
         "description": "Privacy en beveiliging",
@@ -233,6 +210,7 @@
         "title": "IP-opzoekmodus",
         "description": "Privacy en beveiliging",
         "path": "/admin/privacy-settings",
+        "highlightSettingId": "geoIpLookupMode",
         "keywords": [
           "geoip",
           "geo ip",
@@ -2765,17 +2743,22 @@
     "title": "Beheer",
     "menu": {
       "navigate": "Sectie",
+      "expand": "Navigatie uitklappen",
+      "collapse": "Navigatie inklappen",
+      "sections": {
+        "people": "Mensen",
+        "storage": "Opslag",
+        "security": "Beveiliging",
+        "system": "Systeem"
+      },
       "users": "Gebruikers",
-      "usersAndGroups": "Gebruikers en groepen",
       "generalSettings": "Algemene instellingen",
-      "privacySettings": "Privacy en beveiliging",
+      "privacySettings": "Privacy",
       "storageSettings": "Opslag",
-      "storageAndStatistics": "Opslag en statistieken",
       "notificationsSettings": "Meldingen",
       "databaseBackup": "Databaseback-up",
       "storageStatistics": "Opslagstatistieken",
       "securityDiagnostics": "Beveiligingscontrole",
-      "groups": "Groepen",
       "identityProviders": "Identity providers"
     },
     "roles": {
@@ -2802,12 +2785,15 @@
         "actions": "Acties"
       },
       "actions": {
-        "edit": "Bewerken"
+        "edit": "Bewerken",
+        "delete": "Account verwijderen",
+        "deleteCurrent": "Je kunt je eigen account niet verwijderen"
       },
       "errors": {
         "loadFailed": "Laden van gebruikers mislukt.",
         "createFailed": "Aanmaken van gebruiker mislukt.",
-        "updateFailed": "Bijwerken van gebruiker mislukt."
+        "updateFailed": "Bijwerken van gebruiker mislukt.",
+        "deleteFailed": "Verwijderen van gebruiker mislukt."
       },
       "create": {
         "title": "Gebruiker aanmaken",
@@ -2828,6 +2814,14 @@
         "saving": "Bezig met opslaan...",
         "success": "Gebruiker bijgewerkt."
       },
+      "delete": {
+        "title": "Account verwijderen",
+        "warning": "Het account, alle bestanden en alle gerelateerde gegevens worden permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
+        "confirmation": "Typ {{username}} om te bevestigen.",
+        "confirmationLabel": "Gebruikersnaam",
+        "button": "Account verwijderen",
+        "deleting": "Bezig met verwijderen..."
+      },
       "storageUsage": {
         "calculating": "Opslaggebruik berekenen"
       }
@@ -2846,6 +2840,25 @@
         "saveFailed": "Opslaan van instellingen mislukt."
       },
       "general": {
+        "trustedProxy": {
+          "title": "Vertrouwde proxy",
+          "description": "Het IP-adres of CIDR-netwerk van de direct verbonden reverse proxy die het clientadres mag aanleveren. De proxy moet door de client ingestelde headers CF-Connecting-IP, X-Real-IP en X-Forwarded-For overschrijven of verwijderen. Kies Zonder proxy voor een directe installatie.",
+          "emptyHint": "Laat leeg om het oude gedrag te behouden dat doorgestuurde clientadressen van elke verbinding vertrouwt.",
+          "placeholder": "Bijvoorbeeld 172.16.0.0/12",
+          "direct": "Zonder proxy",
+          "directMode": "Directe verbinding (zonder proxy); forwarding-headers worden genegeerd",
+          "directSaved": "De modus voor directe verbinding is opgeslagen. Forwarding-headers worden genegeerd.",
+          "detect": "Automatisch",
+          "verifyAndSave": "Controleren en opslaan",
+          "unavailable": "Het adres van de verbonden proxy is voor deze aanvraag niet beschikbaar.",
+          "detected": "Voorgestelde vertrouwde proxy: {{address}}.",
+          "detectedPath": "Gedetecteerd netwerkpad",
+          "genericProxy": "Reverseproxy",
+          "internet": "Internet",
+          "saved": "Het adres van de vertrouwde proxy is gecontroleerd en opgeslagen.",
+          "disabled": "De beperking tot een vertrouwde proxy is uitgeschakeld.",
+          "mismatch": "Je hebt {{entered}} ingevoerd, maar de aanvraag kwam van {{observed}}. De instelling is niet opgeslagen."
+        },
         "title": "Algemene instellingen",
         "description": "Algemeen servergedrag en locatieopzoeking voor meldingen.",
         "fields": {
@@ -2991,6 +3004,8 @@
         "loadFailed": "Laden van opslaginstellingen mislukt.",
         "s3SaveFailed": "Opslaan van S3-configuratie mislukt.",
         "storageSaveFailed": "Wisselen van opslagmodus mislukt.",
+        "quotaInvalid": "Voer nul of een positief getal in.",
+        "templateNodeIdInvalid": "Voer een geldige mapknooppunt-ID in.",
         "quotaSaveFailed": "Opslaan van het standaardquotum per gebruiker mislukt.",
         "templateSaveFailed": "Opslaan van het standaardbestandensjabloon mislukt.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",
@@ -3124,6 +3139,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "Vertrouwde proxy",
+        "threatVector": "Een aanvaller die Cotton rechtstreeks kan bereiken, of via een proxy die headers niet opschoont, kan het zichtbare clientadres wijzigen en IP-limieten omzeilen.",
+        "fix": "Kies bij Algemene instellingen Zonder proxy voor een directe installatie, of gebruik Automatisch of voer het adres van de direct verbonden proxy in en controleer en bewaar dit. Een proxy moet doorgestuurde clientheaders overschrijven.",
+        "passed": "De vertrouwensmodus voor clientadressen is expliciet ingesteld"
+      },
       "title": "Beveiligingscontrole",
       "description": "Controles aan de serverzijde voor accounthygiëne, behandeling van de hoofdsleutel en blootstelling van procesgeheugen.",
       "errors": {
@@ -3291,6 +3312,7 @@
     "identityProviders": {
       "title": "Identity providers",
       "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "empty": "Geen identiteitsproviders ingesteld.",
       "actions": {
         "create": "Add provider",
         "edit": "Edit provider",

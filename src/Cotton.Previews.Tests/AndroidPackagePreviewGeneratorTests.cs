@@ -488,5 +488,4 @@ public class AndroidPackagePreviewGeneratorTests
             Assert.That(Encoding.ASCII.GetString(imageBytes, 8, 4), Is.EqualTo("WEBP"));
         }
     }
-
 }

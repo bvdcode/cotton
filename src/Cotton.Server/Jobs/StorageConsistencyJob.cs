@@ -32,7 +32,7 @@ namespace Cotton.Server.Jobs
         /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
-            await Task.Delay(300_000, context.CancellationToken); // Wait for 5 minutes for the server to start up and stabilize
+            await JobStartupDelays.WaitForStorageConsistencyAsync(context.CancellationToken);
 
             await RunOnceAsync(context.CancellationToken);
         }

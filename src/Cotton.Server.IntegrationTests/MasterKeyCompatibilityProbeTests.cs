@@ -7,6 +7,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.IntegrationTests.Abstractions;
+using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
@@ -35,10 +36,7 @@ namespace Cotton.Server.IntegrationTests
         [TearDown]
         public void TearDown()
         {
-            if (Directory.Exists(_storageBasePath))
-            {
-                Directory.Delete(_storageBasePath, recursive: true);
-            }
+            TestDirectory.Delete(_storageBasePath);
         }
 
         [Test]
@@ -231,8 +229,7 @@ namespace Cotton.Server.IntegrationTests
             public Task<Stream> ReadAsync(string uid) => throw StorageTouched();
             public Task WriteAsync(
                 string uid,
-                Stream stream,
-                StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing) => throw StorageTouched();
+                Stream stream) => throw StorageTouched();
             public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => throw StorageTouched();
 
             private static InvalidOperationException StorageTouched() =>
@@ -281,8 +278,10 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task StoreEncryptedServerSettingsTextAsync(CottonEncryptionSettings settings)
         {
-            using AesGcmStreamCipher cipher = MasterKeySentinelStore.CreateCipher(settings);
-            await using CottonDbContext encryptedDbContext = CreateEncryptedDbContext(cipher);
+            using DatabaseFieldProtector protector = new(
+                settings,
+                NullLogger<DatabaseFieldProtector>.Instance);
+            await using CottonDbContext encryptedDbContext = CreateEncryptedDbContext(protector);
             encryptedDbContext.ServerSettings.Add(new CottonServerSettings
             {
                 AllowCrossUserDeduplication = false,
@@ -303,13 +302,12 @@ namespace Cotton.Server.IntegrationTests
                 ServerUsage = [ServerUsage.Other],
                 StorageSpaceMode = StorageSpaceMode.Optimal,
                 GeoIpLookupMode = GeoIpLookupMode.Disabled,
-                FcmProjectId = "cotton-test",
-                FcmServiceAccountJsonEncrypted = "{\"project_id\":\"cotton-test\"}"
+                SmtpPasswordEncrypted = "cotton-test-secret"
             });
             await encryptedDbContext.SaveChangesAsync();
         }
 
-        private CottonDbContext CreateEncryptedDbContext(IStreamCipher cipher)
+        private CottonDbContext CreateEncryptedDbContext(IDatabaseFieldProtector databaseFieldProtector)
         {
             string connectionString = DbContext.Database.GetConnectionString()
                 ?? throw new InvalidOperationException("Test database connection string is not configured.");
@@ -317,7 +315,7 @@ namespace Cotton.Server.IntegrationTests
                 .UseNpgsql(connectionString)
                 .EnableServiceProviderCaching(false)
                 .Options;
-            return new CottonDbContext(options, cipher);
+            return new CottonDbContext(options, databaseFieldProtector);
         }
     }
 }

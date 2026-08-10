@@ -27,10 +27,13 @@ import type {
   SecurityDiagnosticWarningDto,
   SecurityDiagnosticsDto,
 } from "../../../shared/api/adminApi";
+import { DIRECT_CONNECTION_IP_ADDRESS } from "../../../shared/api/settingsApi";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { AdminPageHeader } from "../components/AdminPageHeader";
 
 const knownThreatVectorCodes = new Set([
   "public-instance",
+  "trusted-proxy-not-configured",
   "master-key-from-environment",
   "admins-without-2fa",
   "dotnet-diagnostics-enabled",
@@ -134,7 +137,9 @@ const getThreatVector = (
   t: TFunction<"admin">,
 ): string | null =>
   knownThreatVectorCodes.has(warning.code)
-    ? t(`securityDiagnostics.threatVectors.${warning.code}`)
+    ? warning.code === "trusted-proxy-not-configured"
+      ? t("securityDiagnostics.trustedProxy.threatVector")
+      : t(`securityDiagnostics.threatVectors.${warning.code}`)
     : null;
 
 const getFixText = (
@@ -142,7 +147,9 @@ const getFixText = (
   t: TFunction<"admin">,
 ): string | null =>
   knownThreatVectorCodes.has(warning.code)
-    ? t(`securityDiagnostics.fixes.${warning.code}`)
+    ? warning.code === "trusted-proxy-not-configured"
+      ? t("securityDiagnostics.trustedProxy.fix")
+      : t(`securityDiagnostics.fixes.${warning.code}`)
     : null;
 
 const formatNullable = (
@@ -481,6 +488,7 @@ const getPassedCheckCodes = (d: SecurityDiagnosticsDto): string[] => {
   const lc = d.linuxContainer;
   const checks: ReadonlyArray<readonly [string, boolean]> = [
     ["public-instance", d.isPublicInstance === false],
+    ["trusted-proxy-not-configured", Boolean(d.trustedProxyIpAddress)],
     [
       "master-key-from-environment",
       d.masterKeyEnvironmentVariableWasConfigured === false,
@@ -571,7 +579,14 @@ const SecurityPassedCard = ({ code, t }: SecurityPassedCardProps) => {
     : null;
 
   return (
-    <PositiveCard title={t(`securityDiagnostics.passed.${code}`)} code={code}>
+    <PositiveCard
+      title={
+        code === "trusted-proxy-not-configured"
+          ? t("securityDiagnostics.trustedProxy.passed")
+          : t(`securityDiagnostics.passed.${code}`)
+      }
+      code={code}
+    >
       {guardsAgainst && (
         <RiskLabeledBlock
           label={t("securityDiagnostics.labels.guardsAgainst")}
@@ -653,6 +668,15 @@ const InstanceDiagnosticsSection = ({
       label={t("securityDiagnostics.fields.publicInstance")}
       value={yesNo(diagnostics.isPublicInstance, t)}
       color={diagnostics.isPublicInstance ? "warning" : "success"}
+    />
+    <DiagnosticsRow
+      label={t("securityDiagnostics.trustedProxy.field")}
+      value={
+        diagnostics.trustedProxyIpAddress === DIRECT_CONNECTION_IP_ADDRESS
+          ? t("settings.general.trustedProxy.directMode")
+          : formatNullable(diagnostics.trustedProxyIpAddress, t)
+      }
+      color={diagnostics.trustedProxyIpAddress ? "success" : "warning"}
     />
     <DiagnosticsRow
       label={t("securityDiagnostics.fields.admins")}
@@ -921,17 +945,11 @@ export const AdminSecurityDiagnosticsPage = () => {
     <Stack>
       <AdminPageSurface>
         <Stack p={3} spacing={3} divider={<Divider flexItem />}>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <SecurityIcon color="primary" />
-            <Stack spacing={0.5}>
-              <Typography variant="h5" fontWeight={700}>
-                {t("securityDiagnostics.title")}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t("securityDiagnostics.description")}
-              </Typography>
-            </Stack>
-          </Stack>
+          <AdminPageHeader
+            title={t("securityDiagnostics.title")}
+            description={t("securityDiagnostics.description")}
+            icon={<SecurityIcon color="primary" />}
+          />
 
           {diagnosticsQuery.isPending && (
             <Stack spacing={1.5}>

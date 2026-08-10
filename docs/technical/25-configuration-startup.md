@@ -6,7 +6,7 @@ Cotton draws a deliberate line between *deployment-fixed* configuration (master 
 
 ## Runtime settings — `CottonServerSettings`
 
-The single source of truth for operational configuration is the entity `CottonServerSettings` (`src/Cotton.Database/Models/CottonServerSettings.cs`), mapped to the table `server_settings`. It derives from `BaseEntity<Guid>` (from `EasyExtensions.EntityFrameworkCore.Abstractions`), so it carries `Id`, `CreatedAt`, and `UpdatedAt` from the base type. The server keeps a *history* of settings rows; the "current" settings are always the row with the most recent `CreatedAt` (see `SettingsProvider.LoadLatestSettingsAsync`, which uses `OrderByDescending(s => s.CreatedAt)`). Four columns are marked `[Encrypted]` (`Cotton.Database.Models.Attributes`) and are transparently encrypted at rest with the derived master key (see the *Cryptography Engine* and *Database Integrity* sections).
+The single source of truth for operational configuration is the entity `CottonServerSettings` (`src/Cotton.Database/Models/CottonServerSettings.cs`), mapped to the table `server_settings`. It derives from `BaseEntity<Guid>` (from `EasyExtensions.EntityFrameworkCore.Abstractions`), so it carries `Id`, `CreatedAt`, and `UpdatedAt` from the base type. The server keeps a *history* of settings rows; the "current" settings are always the row with the most recent `CreatedAt` (see `SettingsProvider.LoadLatestSettingsAsync`, which uses `OrderByDescending(s => s.CreatedAt)`). Four columns are marked `[Encrypted]` (`Cotton.Database.Models.Attributes`) and are transparently authenticated and encrypted at rest with the derived master key (see the *Cryptography Engine* section). The settings row is not covered by the database-integrity MAC used for security identities, tokens, and file metadata.
 
 ### Fields
 
@@ -23,6 +23,8 @@ The single source of truth for operational configuration is the entity `CottonSe
 | `Timezone` | `timezone` | `string` | IANA/Windows timezone id for admin-facing timestamps. `GetTimezoneInfo()` falls back to UTC if unresolvable. |
 | `InstanceId` | `instance_id` | `Guid` | Stable per-installation identifier. Never exposed raw — `GetInstanceIdHash()` returns its SHA-256. |
 | `PublicBaseUrl` | `public_base_url` | `string` | Externally reachable base URL for generated links/callbacks. |
+| `TrustedProxyIpAddress` | `trusted_proxy_ip_address` | `IPAddress?` / PostgreSQL `inet` | Client-address trust mode: `null` preserves legacy trust-all behavior, reserved `0.0.0.0` without a prefix selects direct mode, and any other value is an immediate reverse-proxy address or network base. |
+| `TrustedProxyPrefixLength` | `trusted_proxy_prefix_length` | `byte?` / PostgreSQL `smallint` | Optional CIDR prefix for `TrustedProxyIpAddress`; null keeps exact-address matching. |
 | `SmtpServerAddress` | `smtp_server_address` | `string?` | Custom SMTP host. |
 | `SmtpServerPort` | `smtp_server_port` | `int?` | Custom SMTP port. |
 | `SmtpUsername` | `smtp_username` | `string?` | Custom SMTP username. |
@@ -71,6 +73,8 @@ When no row exists yet, two code paths in `SettingsProvider` supply defaults. `G
 | `GeoIpLookupMode` | `Disabled` |
 | `AllowCrossUserDeduplication` / `AllowGlobalIndexing` / `TelemetryEnabled` | `false` |
 | `DefaultUserStorageQuotaBytes` / `DefaultUserTemplateNodeId` | `null` |
+| `TrustedProxyIpAddress` | `null` (legacy forwarded-header trust; security score penalty: 2) |
+| `TrustedProxyPrefixLength` | `null` (exact-address matching) |
 
 ### Configuration enums
 
@@ -89,13 +93,12 @@ The three "Cloud" modes (`EmailMode.Cloud`, `ComputionMode.Cloud`, `GeoIpLookupM
 
 ## `SettingsProvider` and the runtime cache
 
-`SettingsProvider` (`src/Cotton.Server/Providers/SettingsProvider.cs`, registered scoped in `Program.cs`) is the central read/write gateway for settings. Its constructor takes the `CottonDbContext` plus two optional dependencies: an `IStorageBackendTypeCache?` and an `IDatabaseIntegrityVerifier?`.
+`SettingsProvider` (`src/Cotton.Server/Providers/SettingsProvider.cs`, registered scoped in `Program.cs`) is the central read/write gateway for settings. Its constructor takes the `CottonDbContext` and an optional `IStorageBackendTypeCache?`.
 
 - **In-process cache.** A `static CottonServerSettings? _cache` holds the current settings; `GetServerSettings()` uses double-checked locking on a `static Lock _cacheLock`. Because the cache is static, it is shared across all scopes/requests in the process. Writes (`UpdateSettingsAsync`, `SetPropertyAsync`, `EnsureServerSettingsAsync`) call `InvalidateSettingsCache(serverIsInitialized: true)`, which nulls `_cache`, resets the injected `IStorageBackendTypeCache`, and marks the server as initialized in the boolean cache.
 - **Runtime pipeline cache.** `CacheRuntimePipelineSettings` mirrors `EncryptionThreads` into a `static int _cachedEncryptionThreads` via `Volatile.Write`. `GetCachedEncryptionThreads()` exposes it (returning `null` when zero) to `AddStreamCipher`, so the cipher factory can pick a thread count even outside a DI scope.
 - **Short-TTL boolean caches.** `IsServerInitializedAsync()` (any `server_settings` row exists) and `ServerHasUsersAsync()` (any `users` row exists) cache their boolean result for `_boolCacheTtl = TimeSpan.FromMinutes(1)`. Note `InvalidateSettingsCache` proactively sets the *initialized* cache to `true` but does not reset the *has-users* cache, which therefore tolerates up to one minute of staleness after the first user is created.
 - **Missing-table tolerance.** Every query catches `PostgresException` where `SqlState == PostgresErrorCodes.UndefinedTable` and treats it as "not initialized" — important during the first migrate-on-startup, before tables exist.
-- **Integrity binding.** When an `IDatabaseIntegrityVerifier` is injected, tracked loads call `_integrity.RequireValid(_dbContext, settings, ...)` to verify the row's integrity signature (descriptor labels `settings.cache-load` in `GetServerSettings()` and `settings.load` in `LoadLatestSettingsAsync` when not `AsNoTracking`). See the *Database Integrity* section.
 - **Creation lock.** `EnsureServerSettingsAsync` serializes first-row creation through a `static SemaphoreSlim _settingsCreationLock(1, 1)` and re-checks under the lock to avoid duplicate rows.
 - **Validation helpers.** The provider centralizes validation used by the controller: `ValidateTimezone`; `ValidatePublicBaseUrl` / `NormalizePublicBaseUrl` (absolute http/https, trimmed and trailing slash removed; invalid normalizes to `http://localhost`); `ValidateCustomGeoIpLookupUrl` (same absolute-URL rule); `ValidateS3ConfigAsync` (shape check, then a real connectivity round-trip via `ValidateS3Async`: `PutObjectAsync` a test object, `GetObjectAsync` and compare body, `ListObjectsV2Async` with `MaxKeys = 1`, then `DeleteObjectAsync`); `ValidateEmailConfig`; `ValidateDefaultUserStorageQuotaBytes`; and `ValidateDefaultUserTemplateNodeIdAsync` (the node must exist, be owned by the caller, and be `NodeType.Default`). `CheckCottonBridgeHealthAsync` issues a 10-second-timeout GET against `Constants.CottonBridgeHealthUrl` and requires the response `Status == "Healthy"`.
 - **S3-from-stored-secret nuance.** `ValidateStorageTypeAsync(StorageType.S3)` builds an `S3Config` from the *stored* settings, setting `SecretKey = settings.S3SecretAccessKeyEncrypted` (the already-encrypted column value, not a plaintext secret), then — provided the shape check passes — *always* runs the same connectivity round-trip. `S3Config.SecretKey` is therefore reused for two different meanings (plaintext on `PATCH s3-config`, ciphertext here).
@@ -144,6 +147,9 @@ The settings endpoints (relative to either base route):
 | `GET` / `PATCH default-user-template-node` | Admin | Read / set onboarding template node |
 | `GET` / `PATCH timezone` | Admin | Read / set timezone |
 | `GET` / `PATCH public-base-url` | Admin | Read / set public base URL |
+| `GET trusted-proxy-ip-address` | Admin | Read the nullable client-address trust value |
+| `GET trusted-proxy-ip-address/observed` | Admin | Return the current connection peer for the admin UI's **Auto** action |
+| `POST trusted-proxy-ip-address/verify-and-save` | Admin | Save null for legacy mode, reserved `0.0.0.0` for direct mode, or a proxy IP only when it equals the current connection peer; a mismatch returns both entered and observed addresses with `saved: false` |
 | `GET` / `PATCH compution-mode` (`/{mode}` on PATCH) | Admin | Read / set compute mode |
 | `GET` / `PATCH email-mode` (`/{mode}` on PATCH) | Admin | Read / set email mode |
 | `GET` / `PATCH allow-cross-user-deduplication` | Admin | Read / set cross-user dedup flag |
@@ -163,6 +169,23 @@ The settings endpoints (relative to either base route):
 | `PATCH gc/trigger` | Admin | Triggers `GarbageCollectorJob` via the Quartz scheduler |
 | `GET database-backup/latest` | Admin | `GetLatestDatabaseBackupInfoQuery` (404 when none) |
 | `GET gc/chunks/timeline` | Admin | `GetGcChunksTimelineQuery` (honors the `X-Timezone` header and `bucket` query, default `hour`) |
+
+### Trusted proxy and client-address resolution
+
+All application code that needs a client IP calls `HttpRequest.GetTrustedClientIPAddress()` rather than the package helper directly. The wrapper first reads `CottonServerSettings.TrustedProxyIpAddress` and `TrustedProxyPrefixLength`:
+
+- When the setting is `null`, Cotton preserves backward compatibility and accepts forwarded client-address headers from every connection. Security diagnostics emits `trusted-proxy-not-configured` with severity `warning`, which subtracts **2** from the 10-point score.
+- When the setting is the reserved value `0.0.0.0`, Cotton is in direct-connection mode. It uses `HttpContext.Connection.RemoteIpAddress` as the client address and ignores `CF-Connecting-IP`, `X-Real-IP`, and `X-Forwarded-For`. The marker is stored as an address, not interpreted as a CIDR.
+- For any other configured address, Cotton normalizes IPv4-mapped IPv6 addresses and compares it with `HttpContext.Connection.RemoteIpAddress`, the peer that opened the current TCP connection. When a prefix is present, the peer must belong to that CIDR network. Only after the peer matches does Cotton resolve the client address. A different or unavailable peer causes `UntrustedProxyConnectionException`; its forwarded headers are never used.
+- After a real proxy passes the trust check, the retained package resolver uses this priority: `CF-Connecting-IP`, then `X-Real-IP`, then `X-Forwarded-For`, then `Connection.RemoteIpAddress`.
+
+The admin UI's **Auto** action calls the `observed` endpoint and fills an explicit CIDR candidate: `/32` for an ordinary IPv4 peer, `/128` for IPv6, or `172.16.0.0/12` for a peer in that private range so Docker can recreate its bridge with a different private `172.*` subnet. **Verify and save** sends the candidate back over the same proxy path. The server saves an address or network only when it contains the observed peer; otherwise the response includes both values so the operator can correct the deployment without guessing. **No proxy** stores the reserved direct-mode marker without exposing it as a second setting. Clearing the field explicitly restores legacy trust-all behavior.
+
+Both detection responses also return informational `detectedProxyServices[]`. Cotton combines product-specific request headers with a three-second, unauthenticated `HEAD` probe of `PublicBaseUrl` through the server's own DNS path; the browser additionally normalizes known response headers. The UI renders the merged topology from Cotton outward, for example `Cotton → nginx → Cloudflare → Internet`. Standard forwarding headers cannot uniquely distinguish nginx, Caddy, HAProxy, Apache, Traefik, or a CDN without a distinctive header; such a hop remains an intentionally generic reverse proxy.
+
+When Cloudflare is detected, the same responses may include normalized `cloudflare.visitorCountryCode` from `CF-IPCountry` and `cloudflare.datacenterCode` from the suffix of `CF-Ray`. Cotton never returns the ray identifier itself. The data-center code describes the Cloudflare location on the origin-facing request path and, with tiered routing, is not guaranteed to be the visitor's nearest edge. All topology and location hints are display-only: they never establish trust and do not affect client-address validation.
+
+Except for the reserved direct marker, this can be an exact IP or a CIDR network. Keep the network as narrow as the deployment allows. When a proxy is used, it must overwrite or remove client-supplied `CF-Connecting-IP`, `X-Real-IP`, and `X-Forwarded-For` values. The address and prefix are deliberately excluded from the database-integrity canonical signature, so changing them does not require or trigger an integrity-format transition.
 
 ### DTOs
 
@@ -270,17 +293,18 @@ flowchart TD
     I --> J[Singletons: encryption settings, MasterKeyRuntimeState, ProcessHardeningStatus, ApplicationStartupClock]
     J --> K[Bind HlsSegmentCache / StoragePressure options]
     K --> L[DI graph: Mediator, Quartz, MemoryCache, SignalR, services, EF DbContext, controllers, AddStreamCipher/AddDatabaseIntegrity/AddChunkServices/AddLayout*/AddWebDav*/AddJwt]
-    L --> M[AddAuthHardening + AddHostedService AppVersionTrackerService]
+    L --> M[AddAuthHardening + AddEndpointRateLimiting + AddHostedService AppVersionTrackerService]
     M --> N[builder.Build]
-    N --> O[Validate startup transition rules]
+    N --> O[Run startup preflight checks]
     O --> P{blocked?}
     P -- yes --> Q[StartupBlockedServer: SPA + startup/status]
-    P -- no --> R[Pipeline: UseForwardedHeaders, UseAuthHardening, UseDefaultFiles, MapStaticAssets, UseAuthentication/Authorization/ExceptionHandler, MapStartupStatusEndpoint, MapControllers, MapFallbackToFile]
+    P -- no --> R[Pipeline: UseAuthHardening, UseExceptionHandler, UseDefaultFiles, MapStaticAssets, UseAuthentication, UseEndpointRateLimiting, UseAuthorization, MapStartupStatusEndpoint, MapControllers, MapFallbackToFile]
     R --> S[ApplyMigrations CottonDbContext]
-    S --> T[scope: DatabaseAutoRestore.TryRestoreIfEmptyAsync GetAwaiter GetResult]
-    T --> U[same scope: SettingsProvider.GetServerSettings prime cache]
-    U --> V[MapHub EventHub]
-    V --> W[app.RunAsync]
+    S --> T[scope: DatabaseAutoRestore.TryRestoreIfEmptyAsync]
+    T --> U[same scope: MasterKeyStartupValidator.ValidateAsync]
+    U --> V[same scope: SettingsProvider.GetServerSettings prime cache]
+    V --> X[MapHub EventHub]
+    X --> W[app.RunAsync]
 ```
 
 ### Step-by-step
@@ -292,17 +316,18 @@ flowchart TD
    - `builder.Configuration.AddCottonOptions(encryptionSettings)` re-reads `COTTON_PG_*` (and erases `COTTON_PG_PASSWORD`), generates a fresh `JwtSettings:Key`, and injects `DatabaseSettings:*` plus the derived `CottonEncryptionSettings` keys into in-memory config.
    - Logging: on Windows non-production it resets providers to console/debug; it always lowers `Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager` logging to `Error`.
    - HTTP clients: a named GitHub client (`AppVersionTrackerService.GitHubHttpClientName` = `"Cotton.GitHub"`, base address `https://api.github.com/`), a named `OidcDiscoveryService.HttpClientName` client, and a typed `OidcAvatarImportService` client.
-   - `ForwardedHeadersOptions` is configured to honor `X-Forwarded-Proto` and `X-Forwarded-Host`, and **clears** `KnownIPNetworks`/`KnownProxies` (the server trusts the headers from any proxy — it is expected to run behind a controlled reverse proxy).
+   - Client-IP-sensitive controls use `HttpRequest.GetTrustedClientIPAddress()`. Direct mode ignores forwarding headers; a configured real trusted proxy is checked against the connection peer before `CF-Connecting-IP`, `X-Real-IP`, or `X-Forwarded-For` is accepted. `RequestBaseUrlHelpers` applies the same peer check before using `X-Forwarded-Proto` to derive an external base URL from a request.
    - Singletons: the bound `CottonEncryptionSettings`, `MasterKeyRuntimeState`, `ProcessHardeningStatus`, and `new ApplicationStartupClock(DateTimeOffset.UtcNow)`.
    - Options binding: `HlsSegmentCacheOptions` ← `HlsSegmentCache` section; `StoragePressureOptions` ← `StoragePressure` section.
-   - The large fluent block registers Mediator (`AddMediator`), Quartz jobs (`AddQuartzJobs`), `AddMemoryCache`, SignalR, the HTTP context accessor, and the full service graph (settings, security diagnostics, storage probe, passkey/OIDC/auth, backup/restore, archive/zip, storage-pressure guard, default-user seeder, the storage pipeline processors `CryptoProcessor` + `CompressionProcessor` and `FileStoragePipeline`, the EF `CottonDbContext` via `AddPostgresDbContext` with `UseLazyLoadingProxies = false`, layout services, the PBKDF2 password hash service via `AddPbkdf2PasswordHashService`, controllers). It then chains the project extension methods `AddStreamCipher`, `AddDatabaseIntegrity`, `AddChunkServices`, `AddLayoutPathServices`, `AddLayoutSearchServices`, `AddWebDavServices`, and `AddWebDavAuth` (all defined in `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`), and finally `AddJwt` (from the external EasyExtensions packages; `AddPbkdf2PasswordHashService` is likewise external).
-   - `builder.Services.AddAuthHardening()` registers the rate limiter and the session-revocation JWT validation hook; `AddHostedService<AppVersionTrackerService>()` registers the background version tracker.
-5. **Startup preflight validation** — `IStartupPreflightValidator` runs ordered `IStartupCheck` implementations before normal traffic, migrations, restore, and jobs. The temp-directory check first verifies that `Path.GetTempPath()` can create/write/delete a probe file; if it cannot, Cotton blocks startup and instructs the operator to mount writable scratch storage at `/tmp` (`tmpfs` or a fast-disk bind mount). The version-transition check then validates code-defined rules against `app_versions`. If any check returns a blocker, the normal host is disposed and `StartupBlockedServer` serves the SPA plus `GET /api/v1/startup/status`; other API calls return HTTP 503.
-6. **Middleware pipeline** (order is significant): `UseForwardedHeaders` → `UseAuthHardening` → `UseDefaultFiles` → `MapStaticAssets` → `UseAuthentication` → `UseAuthorization` → `UseExceptionHandler` → `MapStartupStatusEndpoint` → `MapControllers` → `MapFallbackToFile("/index.html")` (SPA fallback).
+   - The large fluent block registers Mediator (`AddMediator`), Quartz jobs (`AddQuartzJobs`), `AddMemoryCache`, SignalR, the HTTP context accessor, and the full service graph (settings, security diagnostics, storage probe, passkey/OIDC/auth, backup/restore, archive/zip, storage-pressure guard, default-user seeder, the storage pipeline processors `CryptoProcessor` + `CompressionProcessor` and `FileStoragePipeline`, the EF `CottonDbContext` via `AddPostgresDbContext` with `UseLazyLoadingProxies = false`, layout services, the PBKDF2 password hash service via `AddPbkdf2PasswordHashService`, controllers). It then chains the project extension methods `AddStreamCipher`, `AddDatabaseIntegrity`, `AddChunkServices`, `AddLayoutSearchServices`, `AddWebDavServices`, and `AddWebDavAuth` (all defined in `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`), and finally `AddJwt` (from the external EasyExtensions packages; `AddPbkdf2PasswordHashService` is likewise external).
+   - `builder.Services.AddAuthHardening()` registers the session-revocation JWT validation hook; `AddEndpointRateLimiting()` registers endpoint abuse policies and failed public-share lookup tracking; `AddHostedService<AppVersionTrackerService>()` registers the background version tracker.
+5. **Startup preflight validation** — `IStartupPreflightValidator` runs registered `IStartupCheck` implementations before normal traffic, migrations, restore, and jobs. The temp-directory check verifies that `Path.GetTempPath()` can create/write/delete a probe file; if it cannot, Cotton blocks startup and instructs the operator to mount writable scratch storage at `/tmp` (`tmpfs` or a fast-disk bind mount). There is no version-transition or data-migration startup guard in 0.5.
+6. **Middleware pipeline** (order is significant): `UseAuthHardening` → `UseExceptionHandler` → `UseDefaultFiles` → `MapStaticAssets` → `UseAuthentication` → `UseEndpointRateLimiting` → `UseAuthorization` → `MapStartupStatusEndpoint` → `MapControllers` → `MapFallbackToFile("/index.html")` (SPA fallback). The exception handler wraps authentication and rate limiting so a rejected proxy peer is handled consistently.
 7. **`ApplyMigrations<CottonDbContext>()`** — migrate-on-startup; EF migrations are applied automatically every boot.
-8. **Restore-if-empty** — in a fresh `IServiceScope`, `IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync()` is awaited synchronously (`GetAwaiter().GetResult()`).
-9. **Prime the settings cache** — still in that scope, `SettingsProvider.GetServerSettings()` is called once to warm the static cache (and, when settings exist, to verify their integrity).
-10. **`MapHub<EventHub>(Routes.V1.EventHub)`** (`/api/v1/hub/events`) then **`app.RunAsync()`**.
+8. **Restore-if-empty** — in a fresh `IServiceScope`, `IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync()` is awaited before any settings are cached.
+9. **Validate the master key** — still in that scope, `MasterKeyStartupValidator.ValidateAsync()` uses the normal configured backend. It strictly validates an existing sentinel; when the sentinel is absent, it validates up to three existing encrypted storage objects before creating one. Existing evidence that cannot be decrypted stops startup. Empty storage initializes a sentinel directly.
+10. **Prime the settings cache** — `SettingsProvider.GetServerSettings()` is called once after restore and key validation to warm the static cache.
+11. **`MapHub<EventHub>(Routes.V1.EventHub)`** (`/api/v1/hub/events`) then **`app.RunAsync()`**.
 
 > Ordering note: `MapHub` is registered *after* `MapControllers`/`MapFallbackToFile` and after the DB bootstrap, not in the earlier middleware block. Functionally this is fine — hub mapping just adds an endpoint — but it is later in `Program.cs` than one might expect.
 
@@ -315,22 +340,23 @@ flowchart TD
 | Service | File | Role |
 | --- | --- | --- |
 | `ApplicationStartupClock` | `Services/ApplicationStartupClock.cs` | Singleton capturing `StartedAtUtc`; exposes `Uptime`. `AuthController` uses `_startupClock.Uptime.TotalMinutes > Constants.AdminAutocreateMinutesDelay` (5 min) to decide whether the initial-admin bootstrap window is still open. |
-| `IStartupPreflightValidator` / `IStartupCheck` | `Services/Startup/*.cs` | Ordered preflight checks that may return `StartupBlocker` before the normal app starts. Current checks validate OS temp writability first, then version-transition requirements. |
+| `IStartupPreflightValidator` / `IStartupCheck` | `Services/Startup/*.cs` | Ordered preflight checks that may return `StartupBlocker` before the normal app starts. The current registered check validates OS temp writability; version 0.5 has no version-transition or data-migration startup check. |
 | `AppVersionTrackerService` | `Services/AppVersionTrackerService.cs` | Hosted `BackgroundService`. After a 45 s startup delay it records the running version (`APP_VERSION`) into `app_versions`, then (unless in a `Testing`/`IntegrationTests` environment or `AppVersionTracker:ReleaseCheckEnabled=false`) GETs GitHub `repos/bvdcode/cotton/releases/latest` and notifies admins of newer non-draft, non-prerelease releases. Logs a warning on a detected downgrade (`SemanticVersionComparer.IsDowngrade`). |
 | `StoragePipelineProbeService` | `Services/StoragePipelineProbeService.cs` | Scoped service that pushes a 64 MiB (`PayloadSizeBytes`) synthetic random blob through the *real* storage pipeline (one warmup + one measured iteration), verifying the read-back SHA-256 with `FixedTimeEquals`, then deletes the probe blob. Serialized by a static `ProbeLock`. Invoked by `CollectPerformanceJob`, not at boot. |
 | `DefaultUserContentSeeder` | `Services/DefaultUserContentSeeder.cs` | Scoped service; entry point `SeedAsync(userId, ct)`. When `DefaultUserTemplateNodeId` is set and the template node exists (`NodeType.Default`), recursively copies the template's folders and files (referencing the same `FileManifestId`, i.e. zero re-upload) into a new user's default layout inside a single transaction (via an EF execution strategy). Called from guest signup (`AuthController`), admin user creation (`AdminCreateUserRequest` handler), and OIDC login (`OidcAuthenticationService`). |
 | `MasterKeyCompatibilityProbe` / `IMasterKeyCompatibilityProbe` | `Services/MasterKeyCompatibilityProbe.cs` | Validates a candidate master key against existing encrypted DB/storage evidence during unlock; also exposes `HasExistingCottonDataAsync` and `BuildConnectionStringFromEnvironment`. |
 | `MasterKeyStartupStorage` | `Services/MasterKeyStartupStorage.cs` | Builds the pre-DI storage backend + `MasterKeySentinelStore` from a raw SQL read of `server_settings`. |
+| `MasterKeyStartupValidator` | `Services/MasterKeyStartupValidator.cs` | Uses the normal application DI graph and configured storage backend to validate every resolved master key before traffic and jobs start. |
 
 ## Concurrency, failure modes & security considerations
 
 - **Static settings cache.** `SettingsProvider._cache` and `_cachedEncryptionThreads` are `static`, deliberately shared process-wide across DI scopes. All access is guarded by a `Lock`/`Volatile`. Any write path must call `InvalidateSettingsCache` or stale reads will persist until process restart; the boolean caches additionally tolerate up to 1 minute of staleness.
-- **Master key never persists in config or env.** It is cleared from Process/User env after derivation; `COTTON_PG_PASSWORD` is likewise erased after the connection string is built. Encrypted settings columns are `[Encrypted]` at rest, and the compatibility probe proves key/data match before the full app starts.
+- **Master key never persists in config or env.** It is cleared from Process/User env after derivation; `COTTON_PG_PASSWORD` is likewise erased after the connection string is built. Encrypted settings columns are `[Encrypted]` at rest. Interactive unlock performs its compatibility check, and the normal startup validator verifies either the sentinel or existing encrypted storage before traffic and jobs start.
 - **JWT key per restart.** A fresh `JwtSettings:Key` per boot means every restart logs everyone out — intentional, but operators should expect it.
-- **Forwarded headers trust.** `KnownProxies`/`KnownIPNetworks` are cleared, so the server unconditionally trusts `X-Forwarded-Proto`/`X-Forwarded-Host`. Cotton must be deployed behind a trusted reverse proxy that strips client-supplied forwarded headers.
+- **Forwarded headers share one trust boundary.** Client-address headers and `X-Forwarded-Proto` are accepted only in legacy mode or when the immediate peer matches `TrustedProxyIpAddress` and its optional CIDR prefix; direct mode ignores them. The client-address resolver rejects a mismatched configured proxy because it cannot establish a reliable client identity, while request-derived URL generation safely falls back to `Request.Scheme`. Cotton does not install ASP.NET Core `ForwardedHeadersMiddleware` or configure `KnownProxies`/`KnownIPNetworks`.
 - **Migrate-on-startup.** `ApplyMigrations` runs on every boot; concurrent instances against one database can race on migrations and should not start simultaneously against an unmigrated schema.
 - **Writable OS temp is mandatory.** Startup is blocked when the OS temp directory cannot accept a probe file. With a read-only container root filesystem, mount writable scratch storage at `/tmp`; a `tmpfs` mount and a fast-disk bind mount are both valid.
-- **Synchronous restore.** `TryRestoreIfEmptyAsync().GetAwaiter().GetResult()` blocks startup; a hang or failure here blocks the whole server from accepting traffic. Restore is also strictly opt-in via `COTTON_RESTORE_DATABASE_IF_EMPTY`.
+- **Restore blocks readiness.** `TryRestoreIfEmptyAsync()` is awaited during startup; a hang or failure prevents the server from accepting traffic. Restore is strictly opt-in via `COTTON_RESTORE_DATABASE_IF_EMPTY`.
 - **First-table-missing tolerance.** Many provider/probe queries swallow `UndefinedTable`/`InvalidCatalogName` so the pre-migration boot does not crash; this is correct but means errors during early boot can look like "uninitialized" rather than "broken".
 - **Process hardening is best-effort.** A failed `prctl` is reported via `ProcessHardeningStatus.Error` and surfaced in `GET /api/v1/server/security/status`, but does not stop startup.
 
@@ -347,4 +373,4 @@ flowchart TD
 
 ## Related sections
 
-See the *Cryptography Engine* section (key derivation, `AesGcmStreamCipher`, `[Encrypted]` columns), the *Database Integrity* section (`RequireValid`, strict signatures, integrity descriptors, startup transition guard), the *Storage Pipeline & Backends* section (`IStoragePipeline`, `CryptoProcessor`/`CompressionProcessor`, S3 vs local backends), the *Background Jobs (Quartz)* section (job triggers including `CollectPerformanceJob`, `GarbageCollectorJob`, and the database dump job), the *Authentication & Sessions* section (JWT, rate limiting, session revocation, initial-admin bootstrap), and the *Telemetry & Cotton Bridge* section (telemetry-gated Cloud modes).
+See the *Cryptography Engine* section (key derivation, `AesGcmStreamCipher`, `[Encrypted]` columns), the *Database Integrity* section (`RequireValid`, strict signatures, integrity descriptors, and cutover errors), the *Storage Pipeline & Backends* section (`IStoragePipeline`, `CryptoProcessor`/`CompressionProcessor`, S3 vs local backends), the *Background Jobs (Quartz)* section (job triggers including `CollectPerformanceJob`, `GarbageCollectorJob`, and the database dump job), the *Authentication & Sessions* section (JWT, rate limiting, session revocation, initial-admin bootstrap), and the *Telemetry & Cotton Bridge* section (telemetry-gated Cloud modes).

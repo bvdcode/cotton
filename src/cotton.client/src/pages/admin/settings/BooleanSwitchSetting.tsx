@@ -2,6 +2,7 @@ import { Switch } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { SettingsSection } from "./SettingsSection";
 import { useAutoSavedSetting } from "./useAutoSavedSetting";
+import type { SaveStatus } from "./useAutoSavedSetting";
 import type { ReactNode } from "react";
 
 type BooleanSwitchSettingProps = {
@@ -15,27 +16,28 @@ type BooleanSwitchSettingProps = {
   highlightKey?: string;
 };
 
-export const BooleanSwitchSetting = ({
+type BooleanSwitchSettingControlProps = Omit<
+  BooleanSwitchSettingProps,
+  "toastIdPrefix" | "load" | "save"
+> & {
+  value: boolean;
+  commitValue: (value: boolean) => void;
+  status: SaveStatus;
+  loadFailed: boolean;
+};
+
+export const BooleanSwitchSettingControl = ({
   title,
   titleAction,
   description,
-  toastIdPrefix,
-  load,
-  save,
+  value,
+  commitValue,
+  status,
+  loadFailed,
   highlight = false,
   highlightKey,
-}: BooleanSwitchSettingProps) => {
-  const { t } = useTranslation("admin");
-
-  const { value, commitValue, status } = useAutoSavedSetting<boolean>({
-    initial: false,
-    load,
-    save,
-    toastIdPrefix,
-    errorMessage: t("settings.errors.saveFailed"),
-  });
-
-  const disabled = status === "loading" || status === "saving";
+}: BooleanSwitchSettingControlProps) => {
+  const disabled = loadFailed || status === "loading" || status === "saving";
 
   return (
     <SettingsSection
@@ -52,6 +54,43 @@ export const BooleanSwitchSetting = ({
           disabled={disabled}
         />
       }
+    />
+  );
+};
+
+export const BooleanSwitchSetting = ({
+  title,
+  titleAction,
+  description,
+  toastIdPrefix,
+  load,
+  save,
+  highlight = false,
+  highlightKey,
+}: BooleanSwitchSettingProps) => {
+  const { t } = useTranslation("admin");
+
+  const { value, commitValue, status, loadFailed } =
+    useAutoSavedSetting<boolean>({
+      initial: false,
+      load,
+      save,
+      toastIdPrefix,
+      loadErrorMessage: t("settings.errors.loadFailed"),
+      saveErrorMessage: t("settings.errors.saveFailed"),
+    });
+
+  return (
+    <BooleanSwitchSettingControl
+      title={title}
+      titleAction={titleAction}
+      description={description}
+      value={value}
+      commitValue={commitValue}
+      status={status}
+      loadFailed={loadFailed}
+      highlight={highlight}
+      highlightKey={highlightKey}
     />
   );
 };

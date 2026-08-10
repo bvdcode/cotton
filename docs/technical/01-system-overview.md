@@ -105,7 +105,7 @@ Frontend (`src/cotton.client/package.json`), built with **Vite** (`vite ^8.0.13`
 | PWA | vite-plugin-pwa | `^1.2.0` |
 | Previews | pdfjs-dist, hls.js, three / @react-three, heic2any, monaco-editor | various |
 
-> Crypto provenance. The runtime cipher is the **in-repo `Cotton.Crypto` project** (`src/Cotton.Crypto/AesGcmStreamCipher.cs`, `src/Cotton.Crypto/KeyDerivation.cs`), registered through `AddStreamCipher()` (`src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`) and constructed by `StreamCipherFactory` (`src/Cotton.Server/Services/StreamCipherFactory.cs`). `Cotton.Crypto` also owns the `IStreamCipher` contract and byte/string helpers. Legacy-format (`CTN1`) interop is validated by local golden vectors; the current format is `CTN2`. See the *Cryptography Engine* section for the authoritative description.
+> Crypto provenance. The runtime cipher is the **in-repo `Cotton.Crypto` project** (`src/Cotton.Crypto/AesGcmStreamCipher.cs`, `src/Cotton.Crypto/KeyDerivation.cs`), registered through `AddStreamCipher()` (`src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs`) and constructed by `StreamCipherFactory` (`src/Cotton.Server/Services/StreamCipherFactory.cs`). `Cotton.Crypto` also owns the `IStreamCipher` contract and byte/string helpers. The server reads and writes only the authenticated `CTN2` format; temporary browser-only `CTN1` reads are deprecated. See the *Cryptography Engine* section for the authoritative description.
 
 ## Major Subsystems
 
@@ -317,8 +317,6 @@ Quartz jobs (`src/Cotton.Server/Jobs/`, each annotated with `[JobTrigger]` and r
 | `ClearTempFolderJob` | `hours: 36` | clear the storage temp directory |
 | `DownloadTokenRetentionJob` | `days: 1` | sweep expired/used download tokens |
 | `RefreshTokenRetentionJob` | `days: 1` | clean expired refresh tokens |
-| `FixMimeTypesJob` | `days: 1` | correct stored MIME types |
-| `BackfillChunkStoredSizeJob` | `days: 1` | backfill `Chunk.StoredSizeBytes` |
 | `CollectPerformanceJob` | `days: 1` | collect performance/telemetry samples |
 | `DumpDatabaseJob` | `days: 7` | create chunked, storage-native PostgreSQL backups |
 | `StorageConsistencyJob` | `days: 30` | re-check stored data against the real backend, notify on loss |
@@ -327,12 +325,12 @@ Heavier jobs are load-aware: for example `ComputeManifestHashesJob` skips when a
 
 ## Concurrency, Failure Modes, and Security Considerations (overview)
 
-- **Startup ordering.** `RunApplicationAsync` builds the `WebApplication`, validates startup transition rules against recorded app-version history, serves the startup-blocked SPA if a required transition release is missing, otherwise configures forwarded headers and auth hardening, maps controllers and the SPA fallback, applies EF migrations (`ApplyMigrations<CottonDbContext>`), attempts auto-restore (`IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync`, active when `COTTON_RESTORE_DATABASE_IF_EMPTY=true` and the DB is empty), warms `SettingsProvider`, maps the SignalR `EventHub`, and finally starts Kestrel (`app.RunAsync()`).
+- **Startup ordering.** `RunApplicationAsync` builds the `WebApplication`, runs generic preflight checks, configures auth hardening and endpoint rate limiting, maps controllers and the SPA fallback, applies EF migrations (`ApplyMigrations<CottonDbContext>`), attempts auto-restore (`IDatabaseAutoRestoreService.TryRestoreIfEmptyAsync`, active when `COTTON_RESTORE_DATABASE_IF_EMPTY=true` and the DB is empty), validates the resolved master key against the configured storage, warms `SettingsProvider`, maps the SignalR `EventHub`, and finally starts Kestrel (`app.RunAsync()`).
 - **GC vs ingest.** Ingest waits out an in-flight GC of the same chunk and clears `GCScheduledAfter` when a chunk becomes live again; this is the central concurrency invariant of the storage lifetime contract.
 - **Storage pressure.** Filesystem-backed writes are guarded by `StoragePressureGuard`; crossing the reserve raises `StoragePressureException` and returns **HTTP 507** on chunk upload (`ChunkController`), WebDAV (`WebDavController`), and avatar (`UserController`) paths, and notifies admins (throttled).
 - **Integrity.** Upload hash mismatch → notification; storage consistency loss → notification; protected DB rows carry integrity signatures derived from the master key (see *Database Integrity*).
 - **Master key exposure.** Even with `DOTNET_EnableDiagnostics=0`, `PR_SET_DUMPABLE=0` (via `LinuxProcessHardening`), and `COTTON_PROCESS_HARDENING=true`, the README is explicit that an attacker executing code inside the process can still reach the in-memory key; these flags protect against accidental dumps and over-privileged neighbors, not in-process compromise.
-- **Forwarded headers.** `ForwardedHeadersOptions` is configured for `XForwardedProto | XForwardedHost` with cleared `KnownIPNetworks`/`KnownProxies` lists, relevant when running behind a reverse proxy.
+- **Proxy forwarding.** A null `TrustedProxyIpAddress` preserves legacy trust-all behavior and costs two security-checkup points; the reserved `0.0.0.0` value selects direct-connection mode and ignores forwarded headers; any other value must match the immediate connection peer or contain it when `TrustedProxyPrefixLength` defines a CIDR network. Abuse controls apply this policy through `HttpRequest.GetTrustedClientIPAddress()`, and request-derived URL generation applies the same trust decision before accepting `X-Forwarded-Proto`.
 
 ## Non-Obvious Design Decisions & Gotchas
 

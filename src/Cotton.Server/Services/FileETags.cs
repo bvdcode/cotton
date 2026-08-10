@@ -102,6 +102,25 @@ namespace Cotton.Server.Services
             return request.Headers.TryGetValue(HeaderNames.IfMatch, out StringValues value) ? value.ToString() : null;
         }
 
+        /// <summary>
+        /// Determines whether the request's If-None-Match condition matches the current entity tag.
+        /// </summary>
+        public static bool MatchesIfNoneMatchHeader(HttpRequest request, EntityTagHeaderValue entityTag)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            ArgumentNullException.ThrowIfNull(entityTag);
+
+            if (!request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out StringValues values))
+            {
+                return false;
+            }
+
+            IList<EntityTagHeaderValue> clientEntityTags = EntityTagHeaderValue.ParseList([.. values!]);
+            return clientEntityTags.Any(clientEntityTag =>
+                EntityTagHeaderValue.Any.Equals(clientEntityTag)
+                || clientEntityTag.Compare(entityTag, useStrongComparison: false));
+        }
+
         private static string QuoteETag(string value)
         {
             return $"\"{value}\"";

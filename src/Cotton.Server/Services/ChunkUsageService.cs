@@ -4,7 +4,6 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
-using Cotton.Server.Jobs;
 using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Storage.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -118,10 +117,7 @@ namespace Cotton.Server.Services
                 databaseBackupPointerStorageKey,
 
                 // Master-key sentinel is stored outside normal user manifests, so database references will not protect it.
-                MasterKeySentinelStore.SentinelStorageKey,
-
-                // One-time CTN2 rewrite completion marker. Keep it until the transition job is deleted.
-                Ctn2RewriteJob.CompletionStorageMarkerKey
+                MasterKeySentinelStore.SentinelStorageKey
             };
 
             if (!await _storage.ExistsAsync(databaseBackupPointerStorageKey))

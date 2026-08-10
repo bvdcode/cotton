@@ -3,6 +3,7 @@ import { nodesApi } from "../api/nodesApi";
 import type { AudioPlaylistItem } from "../types/audio";
 import { getAudioPlaylistMetadata } from "../utils/mediaMetadata";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
+import { buildPreviewUrl } from "../api/previewUrl";
 
 interface AudioPlayerState {
   open: boolean;
@@ -163,7 +164,7 @@ const tryBuildPreviewUrl = (
   token: string | null | undefined,
 ): string | undefined => {
   if (!token) return undefined;
-  return `/api/v1/preview/${encodeURIComponent(token)}.webp`;
+  return buildPreviewUrl(token);
 };
 
 const buildRecursiveAudioPlaylist = async (

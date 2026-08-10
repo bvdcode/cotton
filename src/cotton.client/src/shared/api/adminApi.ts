@@ -166,6 +166,7 @@ export interface SecurityDiagnosticsDto {
   isLinux: boolean;
   isContainer: boolean;
   isPublicInstance: boolean;
+  trustedProxyIpAddress: string | null;
   securityScore: number;
   maxSecurityScore: number;
   masterKeySource: string;
@@ -219,6 +220,10 @@ export const adminApi = {
       request,
     );
     return response.data;
+  },
+
+  deleteUser: async (userId: string): Promise<void> => {
+    await httpClient.delete(`users/${userId}`);
   },
 
   getLatestDatabaseBackup: async (

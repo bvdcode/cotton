@@ -182,29 +182,6 @@
         "adminOnly": true
       },
       {
-        "id": "privacy-global-indexing",
-        "title": "Глобальна індексація",
-        "description": "Приватність і безпека",
-        "path": "/admin/privacy-settings",
-        "keywords": [
-          "global indexing",
-          "global index",
-          "indexing",
-          "search indexing",
-          "search index",
-          "deep search",
-          "full text search",
-          "content search",
-          "decrypt files",
-          "file content search",
-          "Глобальна індексація",
-          "Приватність і безпека",
-          "Privacy and security"
-        ],
-        "highlightSettingId": "allowGlobalIndexing",
-        "adminOnly": true
-      },
-      {
         "id": "privacy-telemetry",
         "title": "Телеметрія",
         "description": "Приватність і безпека",
@@ -233,6 +210,7 @@
         "title": "Режим визначення IP",
         "description": "Приватність і безпека",
         "path": "/admin/privacy-settings",
+        "highlightSettingId": "geoIpLookupMode",
         "keywords": [
           "geoip",
           "geo ip",
@@ -2779,17 +2757,22 @@
     "title": "Адміністрування",
     "menu": {
       "navigate": "Розділ",
+      "expand": "Розгорнути навігацію",
+      "collapse": "Згорнути навігацію",
+      "sections": {
+        "people": "Користувачі",
+        "storage": "Сховище",
+        "security": "Безпека",
+        "system": "Система"
+      },
       "users": "Користувачі",
-      "usersAndGroups": "Користувачі та групи",
       "generalSettings": "Загальні налаштування",
-      "privacySettings": "Приватність і безпека",
+      "privacySettings": "Приватність",
       "storageSettings": "Сховище",
-      "storageAndStatistics": "Сховище та статистика",
       "notificationsSettings": "Сповіщення",
       "databaseBackup": "Резервне копіювання бази даних",
       "storageStatistics": "Статистика сховища",
       "securityDiagnostics": "Перевірка безпеки",
-      "groups": "Групи",
       "identityProviders": "Identity providers"
     },
     "roles": {
@@ -2816,12 +2799,15 @@
         "actions": "Дії"
       },
       "actions": {
-        "edit": "Редагувати"
+        "edit": "Редагувати",
+        "delete": "Видалити обліковий запис",
+        "deleteCurrent": "Не можна видалити власний обліковий запис"
       },
       "errors": {
         "loadFailed": "Не вдалося завантажити користувачів.",
         "createFailed": "Не вдалося створити користувача.",
-        "updateFailed": "Не вдалося оновити користувача."
+        "updateFailed": "Не вдалося оновити користувача.",
+        "deleteFailed": "Не вдалося видалити користувача."
       },
       "create": {
         "title": "Створити користувача",
@@ -2842,6 +2828,14 @@
         "saving": "Збереження...",
         "success": "Користувача оновлено."
       },
+      "delete": {
+        "title": "Видалити обліковий запис",
+        "warning": "Обліковий запис, усі файли та пов'язані дані буде видалено назавжди. Цю дію неможливо скасувати.",
+        "confirmation": "Введіть {{username}}, щоб підтвердити видалення.",
+        "confirmationLabel": "Ім'я користувача",
+        "button": "Видалити обліковий запис",
+        "deleting": "Видалення..."
+      },
       "storageUsage": {
         "calculating": "Обчислення використання сховища"
       }
@@ -2860,6 +2854,25 @@
         "saveFailed": "Не вдалося зберегти налаштування."
       },
       "general": {
+        "trustedProxy": {
+          "title": "Довірений проксі",
+          "description": "IP-адреса або CIDR-підмережа безпосереднього reverse proxy, якому дозволено передавати адресу клієнта. Проксі має перезаписувати або видаляти надіслані клієнтом заголовки CF-Connecting-IP, X-Real-IP і X-Forwarded-For. Для прямого підключення виберіть «Без проксі».",
+          "emptyHint": "Залиште порожнім, щоб зберегти попередню довіру до forwarded-заголовків від усіх підключень.",
+          "placeholder": "Наприклад, 172.16.0.0/12",
+          "direct": "Без проксі",
+          "directMode": "Пряме підключення (без проксі); forwarded-заголовки ігноруються",
+          "directSaved": "Режим прямого підключення збережено. Forwarded-заголовки ігноруватимуться.",
+          "detect": "Авто",
+          "verifyAndSave": "Перевірити й зберегти",
+          "unavailable": "Не вдалося визначити адресу підключеного проксі для цього запиту.",
+          "detected": "Запропоноване налаштування довіреного проксі: {{address}}.",
+          "detectedPath": "Виявлений мережевий маршрут",
+          "genericProxy": "Зворотний проксі",
+          "internet": "Інтернет",
+          "saved": "Адресу довіреного проксі перевірено й збережено.",
+          "disabled": "Обмеження довіреного проксі вимкнено.",
+          "mismatch": "Введено {{entered}}, але запит надійшов від {{observed}}. Налаштування не збережено."
+        },
         "title": "Загальні налаштування",
         "description": "Основна поведінка сервера та геолокаційний пошук для сповіщень.",
         "fields": {
@@ -3005,6 +3018,8 @@
         "loadFailed": "Не вдалося завантажити налаштування сховища.",
         "s3SaveFailed": "Не вдалося зберегти конфігурацію S3.",
         "storageSaveFailed": "Не вдалося перемкнути режим сховища.",
+        "quotaInvalid": "Введіть нуль або додатне число.",
+        "templateNodeIdInvalid": "Введіть коректний ID вузла папки.",
         "quotaSaveFailed": "Не вдалося зберегти квоту користувача за замовчуванням.",
         "templateSaveFailed": "Не вдалося зберегти шаблон файлів за замовчуванням.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",
@@ -3138,6 +3153,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "Довірений проксі",
+        "threatVector": "Якщо зловмисник може звернутися до Cotton напряму або проксі не очищує заголовки, він може змінювати видиму адресу клієнта й обходити IP-ліміти.",
+        "fix": "В основних налаштуваннях виберіть «Без проксі» для прямого підключення або натисніть Авто чи введіть адресу безпосереднього проксі, потім перевірте й збережіть її. Проксі має перезаписувати forwarded-заголовки клієнта.",
+        "passed": "Режим довіри до адреси клієнта явно налаштовано"
+      },
       "title": "Перевірка безпеки",
       "description": "Серверні перевірки гігієни облікових записів, обробки головного ключа та доступу до пам'яті процесу.",
       "errors": {
@@ -3305,6 +3326,7 @@
     "identityProviders": {
       "title": "Identity providers",
       "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "empty": "Немає налаштованих постачальників ідентифікації.",
       "actions": {
         "create": "Add provider",
         "edit": "Edit provider",

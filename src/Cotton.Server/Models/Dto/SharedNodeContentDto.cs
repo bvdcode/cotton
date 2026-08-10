@@ -12,11 +12,6 @@ namespace Cotton.Server.Models.Dto
     public class SharedNodeContentDto : BaseDto<Guid>
     {
         /// <summary>
-        /// Gets or sets total count.
-        /// </summary>
-        public int TotalCount { get; set; }
-
-        /// <summary>
         /// Gets or sets nodes.
         /// </summary>
         public IEnumerable<NodeDto> Nodes { get; set; } = [];

@@ -17,7 +17,7 @@ The split between projects is enforced by layering: low-level primitives (`Cotto
 | Project (file) | Display name | TFM | Output | Responsibility |
 |---|---|---|---|---|
 | `src/Cotton.Server/Cotton.Server.csproj` | Cotton.Server | `net10.0` | Web (`Microsoft.NET.Sdk.Web`) | The ASP.NET Core host: controllers, SignalR hubs, Quartz jobs, WebDAV, auth, DI composition root. The only runnable app. |
-| `src/Cotton.Crypto/Cotton.Crypto.csproj` | Cotton.Crypto | `net10.0` | Library (`Microsoft.NET.Sdk`) | In-repo streaming AES-GCM cipher (`AesGcmStreamCipher`), key derivation (`KeyDerivation`), hashing (`HashHelpers`), RNG helpers (`RandomHelpers`). No internal project references. |
+| `src/Cotton.Crypto/Cotton.Crypto.csproj` | Cotton.Crypto | `net10.0` | Library (`Microsoft.NET.Sdk`) | In-repo streaming AES-GCM cipher (`AesGcmStreamCipher`) and key derivation (`KeyDerivation`). No internal project references. |
 | `src/Cotton.Storage/Cotton.Storage.csproj` | Cotton.Storage | `net10.0` | Library | Content-addressed storage pipeline: filesystem & S3 backends, compression and crypto processors. |
 | `src/Cotton.Topology/Cotton.Topology.csproj` | Cotton.Topology | `net10.0` | Library | Layout/topology graph services (`ILayoutService`, `ILayoutNavigator`, `LayoutNavigator`, `StorageLayoutService`). |
 | `src/Cotton.Database/Cotton.Database.csproj` | Cotton.Database | `net10.0` | Library | EF Core + Npgsql data model, `DbContext`, entities, migrations. |
@@ -126,7 +126,7 @@ Versions below are exactly as pinned in the `.csproj` files. Note the minor vers
 | `Microsoft.Extensions.DependencyInjection` / `.Logging` / `.Logging.Console` | 10.0.8 | Benchmark | DI + console logging host for the benchmark console app. |
 | `Microsoft.SourceLink.GitHub` | 10.0.300 | Shared | Source Link for the published NuGet symbols. |
 
-> Crypto provenance note: The cipher, `IStreamCipher` contract, and byte/string helpers are implemented **in-repo** in `Cotton.Crypto` (`src/Cotton.Crypto/AesGcmStreamCipher.cs`). `Cotton.Crypto.csproj` has no NuGet package references, and legacy `CTN1` interop is validated with local golden vectors; the current format is `CTN2` (see `LegacyMagicBytes => "CTN1"u8` / `CurrentMagicBytes => "CTN2"u8`). FFmpeg integration is via `Xabe.FFmpeg` (no `FFMpegCore` reference exists in any `.csproj`). See the *Cryptography Engine* section for details.
+> Crypto provenance note: The cipher, `IStreamCipher` contract, and byte/string helpers are implemented **in-repo** in `Cotton.Crypto` (`src/Cotton.Crypto/AesGcmStreamCipher.cs`). `Cotton.Crypto.csproj` has no NuGet package references, and the server accepts only the authenticated `CTN2` stream format. FFmpeg integration is via `Xabe.FFmpeg` (no `FFMpegCore` reference exists in any `.csproj`). See the *Cryptography Engine* section for details.
 
 ## The plugin abstraction
 
@@ -350,7 +350,7 @@ The `Cotton.Shared` `.csproj` also carries the NuGet packaging metadata: `Packag
 
 ## Related sections
 
-- See the *Cryptography Engine* section for the in-repo `Cotton.Crypto` AES-GCM cipher, key derivation, and the `CTN2` (current) / `CTN1` (legacy) stream formats.
+- See the *Cryptography Engine* section for the in-repo `Cotton.Crypto` AES-GCM cipher, key derivation, and authenticated `CTN2` stream format.
 - See the *Storage Pipeline* section for `Cotton.Storage` processors (compression → crypto), backends, and the storage pipeline probe surfaced in `TelemetryRequest`.
 - See the *Layout & Topology* section for `Cotton.Topology` services.
 - See the *Data Model & Persistence* section for `Cotton.Database` (EF Core + Npgsql).

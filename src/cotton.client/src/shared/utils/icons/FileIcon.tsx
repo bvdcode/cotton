@@ -13,6 +13,7 @@ import { Box, Typography } from "@mui/material";
 import type { IconResult } from "./types";
 import { ICON_SIZE } from "./FolderIcon";
 import { getFileTypeInfo, type FileType } from "../fileTypes";
+import { buildPreviewUrl } from "../../api/previewUrl";
 
 const MAX_EXTENSION_LENGTH = 6;
 const CREDENTIAL_FILE_EXTENSIONS = new Set<string>([
@@ -53,7 +54,7 @@ export function getFileIcon(
   options?: FileIconOptions,
 ): IconResult {
   if (previewHash) {
-    return getPreviewImageUrl(previewHash);
+    return buildPreviewUrl(previewHash);
   }
 
   const extension = extractExtension(fileName);
@@ -83,13 +84,6 @@ function extractExtension(fileName: string): string {
 
 function isCredentialFileExtension(extension: string): boolean {
   return CREDENTIAL_FILE_EXTENSIONS.has(extension);
-}
-
-/**
- * Generate preview image URL
- */
-function getPreviewImageUrl(previewHash: string): string {
-  return `/api/v1/preview/${encodeURIComponent(previewHash)}.webp`;
 }
 
 function getFileTypeIcon(fileType: FileType): IconResult | null {

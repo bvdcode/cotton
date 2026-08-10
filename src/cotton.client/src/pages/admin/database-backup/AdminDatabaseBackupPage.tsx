@@ -18,6 +18,7 @@ import {
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { AdminPageHeader } from "../components/AdminPageHeader";
 
 type TriggerFeedback =
   | { kind: "idle" }
@@ -144,47 +145,42 @@ export const AdminDatabaseBackupPage = () => {
     <Stack spacing={2}>
       <AdminPageSurface>
         <Stack p={3} spacing={3}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={1}
-            justifyContent="space-between"
-            alignItems={{ xs: "stretch", md: "center" }}
-          >
-            <Typography variant="h5" fontWeight={700}>
-              {t("databaseBackup.title")}
-            </Typography>
-
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              useFlexGap
-              sx={{ flexWrap: "wrap" }}
-            >
-              <Button
-                variant="outlined"
-                onClick={() => void refreshLatestBackup()}
-                disabled={isLoading || isTriggering}
+          <AdminPageHeader
+            title={t("databaseBackup.title")}
+            description={t("databaseBackup.description")}
+            action={
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                useFlexGap
+                sx={{ flexWrap: "wrap" }}
               >
-                {t("databaseBackup.actions.refresh")}
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => void handleTriggerBackup()}
-                disabled={isTriggering}
-              >
-                {isTriggering ? (
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <CircularProgress size={16} color="inherit" />
-                    <Typography variant="button">
-                      {t("databaseBackup.actions.triggering")}
-                    </Typography>
-                  </Stack>
-                ) : (
-                  t("databaseBackup.actions.trigger")
-                )}
-              </Button>
-            </Stack>
-          </Stack>
+                <Button
+                  variant="outlined"
+                  onClick={() => void refreshLatestBackup()}
+                  disabled={isLoading || isTriggering}
+                >
+                  {t("databaseBackup.actions.refresh")}
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => void handleTriggerBackup()}
+                  disabled={isTriggering}
+                >
+                  {isTriggering ? (
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <CircularProgress size={16} color="inherit" />
+                      <Typography variant="button">
+                        {t("databaseBackup.actions.triggering")}
+                      </Typography>
+                    </Stack>
+                  ) : (
+                    t("databaseBackup.actions.trigger")
+                  )}
+                </Button>
+              </Stack>
+            }
+          />
 
           {loadErrorMessage && (
             <Alert severity="error">{loadErrorMessage}</Alert>

@@ -42,8 +42,6 @@ namespace Cotton.Server.Jobs
         /// </summary>
         public static bool IsChunkBeingDeleted(string uid) => CurrentlyDeletingChunks.ContainsKey(uid);
 
-        private static bool _isFirstRun = true;
-
         /// <summary>
         /// Executes the scheduled Quartz job.
         /// </summary>
@@ -52,17 +50,13 @@ namespace Cotton.Server.Jobs
             bool isNightTime = _perf.IsNightTime();
             StorageSpaceMode spaceMode = _settingsProvider.GetServerSettings().StorageSpaceMode;
             bool isAggressiveMode = spaceMode == StorageSpaceMode.Limited;
+
+            await JobStartupDelays.WaitForGarbageCollectorAsync(context.CancellationToken);
+
             if (!isAggressiveMode && isNightTime)
             {
                 _logger.LogInformation("Skipping garbage collection run because it's currently night time and aggressive GC mode is not enabled.");
                 return;
-            }
-
-            if (_isFirstRun)
-            {
-                _isFirstRun = false;
-                _logger.LogInformation("Waiting for 15 minutes before the first garbage collection run to allow the server to start up.");
-                await Task.Delay(900_000, context.CancellationToken); // Wait for 15 minutes for the server to start up and stabilize
             }
 
             int batchSize = spaceMode switch

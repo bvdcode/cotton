@@ -182,29 +182,6 @@
         "adminOnly": true
       },
       {
-        "id": "privacy-global-indexing",
-        "title": "全局索引",
-        "description": "隐私与安全",
-        "path": "/admin/privacy-settings",
-        "keywords": [
-          "global indexing",
-          "global index",
-          "indexing",
-          "search indexing",
-          "search index",
-          "deep search",
-          "full text search",
-          "content search",
-          "decrypt files",
-          "file content search",
-          "全局索引",
-          "隐私与安全",
-          "Privacy and security"
-        ],
-        "highlightSettingId": "allowGlobalIndexing",
-        "adminOnly": true
-      },
-      {
         "id": "privacy-telemetry",
         "title": "遥测",
         "description": "隐私与安全",
@@ -233,6 +210,7 @@
         "title": "IP 查询模式",
         "description": "隐私与安全",
         "path": "/admin/privacy-settings",
+        "highlightSettingId": "geoIpLookupMode",
         "keywords": [
           "geoip",
           "geo ip",
@@ -2773,17 +2751,22 @@
     "title": "管理",
     "menu": {
       "navigate": "板块",
+      "expand": "展开导航",
+      "collapse": "收起导航",
+      "sections": {
+        "people": "用户",
+        "storage": "存储",
+        "security": "安全",
+        "system": "系统"
+      },
       "users": "用户",
-      "usersAndGroups": "用户与用户组",
       "generalSettings": "常规设置",
-      "privacySettings": "隐私与安全",
+      "privacySettings": "隐私",
       "storageSettings": "存储",
-      "storageAndStatistics": "存储与统计",
       "notificationsSettings": "通知",
       "databaseBackup": "数据库备份",
       "storageStatistics": "存储统计",
       "securityDiagnostics": "安全检查",
-      "groups": "用户组",
       "identityProviders": "Identity providers"
     },
     "roles": {
@@ -2810,12 +2793,15 @@
         "actions": "操作"
       },
       "actions": {
-        "edit": "编辑"
+        "edit": "编辑",
+        "delete": "删除账户",
+        "deleteCurrent": "无法删除自己的账户"
       },
       "errors": {
         "loadFailed": "加载用户失败。",
         "createFailed": "创建用户失败。",
-        "updateFailed": "更新用户失败。"
+        "updateFailed": "更新用户失败。",
+        "deleteFailed": "删除用户失败。"
       },
       "create": {
         "title": "创建用户",
@@ -2836,6 +2822,14 @@
         "saving": "正在保存……",
         "success": "用户已更新。"
       },
+      "delete": {
+        "title": "删除账户",
+        "warning": "该账户、所有文件及所有相关数据将被永久删除。此操作无法撤销。",
+        "confirmation": "请输入 {{username}} 以确认。",
+        "confirmationLabel": "用户名",
+        "button": "删除账户",
+        "deleting": "正在删除……"
+      },
       "storageUsage": {
         "calculating": "正在计算存储使用量"
       }
@@ -2854,6 +2848,25 @@
         "saveFailed": "保存设置失败。"
       },
       "general": {
+        "trustedProxy": {
+          "title": "受信任代理",
+          "description": "允许提供客户端地址的直接反向代理 IP 地址或 CIDR 网络。代理必须覆盖或删除客户端提供的 CF-Connecting-IP、X-Real-IP 和 X-Forwarded-For 标头。直接部署请选择“无代理”。",
+          "emptyHint": "留空可保留旧行为，即信任来自所有连接的转发客户端地址。",
+          "placeholder": "例如 172.16.0.0/12",
+          "direct": "无代理",
+          "directMode": "直接连接（无代理）；忽略转发标头",
+          "directSaved": "已保存直接连接模式。转发标头将被忽略。",
+          "detect": "自动",
+          "verifyAndSave": "验证并保存",
+          "unavailable": "此请求无法获取连接代理的地址。",
+          "detected": "建议的受信任代理：{{address}}。",
+          "detectedPath": "检测到的网络路径",
+          "genericProxy": "反向代理",
+          "internet": "互联网",
+          "saved": "受信任代理地址已验证并保存。",
+          "disabled": "受信任代理限制已禁用。",
+          "mismatch": "输入的是 {{entered}}，但此请求来自 {{observed}}。设置未保存。"
+        },
         "title": "常规设置",
         "description": "核心服务器行为以及通知中的位置解析。",
         "fields": {
@@ -2999,6 +3012,8 @@
         "loadFailed": "加载存储设置失败。",
         "s3SaveFailed": "保存 S3 配置失败。",
         "storageSaveFailed": "切换存储模式失败。",
+        "quotaInvalid": "请输入零或正数。",
+        "templateNodeIdInvalid": "请输入有效的文件夹节点 ID。",
         "quotaSaveFailed": "保存默认用户配额失败。",
         "templateSaveFailed": "保存默认文件模板失败。",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",
@@ -3132,6 +3147,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "受信任代理",
+        "threatVector": "能够直接访问 Cotton，或通过未清理标头的代理访问的攻击者，可以更改其显示的客户端地址并绕过基于 IP 的限制。",
+        "fix": "在常规设置中，直接部署请选择“无代理”；否则使用“自动”或输入直接连接代理的地址，然后验证并保存。代理必须覆盖客户端提供的转发标头。",
+        "passed": "客户端地址信任模式已明确配置"
+      },
       "title": "安全检查",
       "description": "对账户卫生、主密钥处理以及进程内存暴露进行的服务端检查。",
       "errors": {
@@ -3299,6 +3320,7 @@
     "identityProviders": {
       "title": "Identity providers",
       "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "empty": "尚未配置身份提供商。",
       "actions": {
         "create": "Add provider",
         "edit": "Edit provider",

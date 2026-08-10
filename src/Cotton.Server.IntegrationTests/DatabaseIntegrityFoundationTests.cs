@@ -162,8 +162,7 @@ public class DatabaseIntegrityFoundationTests
         var signer = new DatabaseIntegrityChangeSigner(
             protector,
             new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance,
-            new DatabaseIntegrityRuntimeOptions(true, true));
+            NullDatabaseIntegrityFailureReporter.Instance);
         signer.SignPendingChanges(dbContext);
         DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
 
@@ -171,7 +170,7 @@ public class DatabaseIntegrityFoundationTests
     }
 
     [Test]
-    public void Verifier_RejectsUnsignedProtectedEntity()
+    public void Verifier_ReportsRequiredTransitionVersionForUnsignedProtectedEntity()
     {
         DatabaseIntegrityProtector protector = CreateProtector();
         var descriptor = new UserIntegrityDescriptor();
@@ -181,8 +180,33 @@ public class DatabaseIntegrityFoundationTests
         dbContext.Attach(user);
         DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
 
-        Assert.Throws<DatabaseIntegrityException>(() =>
+#pragma warning disable CS0618 // OBSOLETE TRANSITION: pin the operator-facing unsigned-row cutover error.
+        DatabaseIntegritySignatureMissingException? exception = Assert.Throws<DatabaseIntegritySignatureMissingException>(() =>
             verifier.RequireValid(dbContext, user, "test.unsigned"));
+#pragma warning restore CS0618
+
+        Assert.That(exception!.Message, Does.Contain("Cotton 0.4.35"));
+    }
+
+    [Test]
+    public void Verifier_RejectsInvalidSignatureAsIntegrityFailure()
+    {
+        DatabaseIntegrityProtector protector = CreateProtector();
+        var descriptor = new UserIntegrityDescriptor();
+        User user = CreateUser();
+
+        using CottonDbContext dbContext = CreateDbContext();
+        dbContext.Users.Add(user);
+        var signer = new DatabaseIntegrityChangeSigner(
+            protector,
+            new DatabaseIntegrityDescriptorRegistry([descriptor]),
+            NullDatabaseIntegrityFailureReporter.Instance);
+        signer.SignPendingChanges(dbContext);
+        user.Role = UserRole.Admin;
+        DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
+
+        Assert.Throws<DatabaseIntegrityException>(() =>
+            verifier.RequireValid(dbContext, user, "test.invalid-signature"));
     }
 
     [Test]
@@ -217,10 +241,35 @@ public class DatabaseIntegrityFoundationTests
         var signer = new DatabaseIntegrityChangeSigner(
             protector,
             new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance,
-            new DatabaseIntegrityRuntimeOptions(true, true));
+            NullDatabaseIntegrityFailureReporter.Instance);
 
         Assert.Throws<DatabaseIntegrityException>(() => signer.SignPendingChanges(dbContext));
+    }
+
+    [Test]
+    public void ChangeSigner_ReportsRequiredTransitionVersionWhenOriginalIntegrityMetadataIsMissing()
+    {
+        DatabaseIntegrityProtector protector = CreateProtector();
+        var descriptor = new UserIntegrityDescriptor();
+        User user = CreateUser();
+
+        using CottonDbContext dbContext = CreateDbContext();
+        EntityEntry<User> entry = dbContext.Attach(user);
+        entry.State = EntityState.Unchanged;
+        user.Email = "alice.changed@example.test";
+        dbContext.ChangeTracker.DetectChanges();
+
+        var signer = new DatabaseIntegrityChangeSigner(
+            protector,
+            new DatabaseIntegrityDescriptorRegistry([descriptor]),
+            NullDatabaseIntegrityFailureReporter.Instance);
+
+#pragma warning disable CS0618 // OBSOLETE TRANSITION: pin the operator-facing unsigned-row cutover error.
+        DatabaseIntegritySignatureMissingException? exception =
+            Assert.Throws<DatabaseIntegritySignatureMissingException>(() => signer.SignPendingChanges(dbContext));
+#pragma warning restore CS0618
+
+        Assert.That(exception!.Message, Does.Contain("Cotton 0.4.35"));
     }
 
     [Test]
@@ -244,8 +293,7 @@ public class DatabaseIntegrityFoundationTests
         var signer = new DatabaseIntegrityChangeSigner(
             protector,
             new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance,
-            new DatabaseIntegrityRuntimeOptions(true, true));
+            NullDatabaseIntegrityFailureReporter.Instance);
 
         Assert.DoesNotThrow(() => signer.SignPendingChanges(dbContext));
 
@@ -299,28 +347,6 @@ public class DatabaseIntegrityFoundationTests
         credential.PublicKey = [9, 9, 9];
 
         Assert.That(protector.Verify(credential, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void ServerSettingsDescriptor_DetectsStorageCredentialTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new CottonServerSettingsIntegrityDescriptor();
-        var settings = new CottonServerSettings
-        {
-            InstanceId = Guid.Parse("30000000-0000-0000-0000-000000000002"),
-            PublicBaseUrl = "https://cloud.example.test",
-            S3AccessKeyId = "access-key",
-            S3BucketName = "bucket",
-            S3Region = "auto",
-            S3EndpointUrl = "https://s3.example.test",
-            S3SecretAccessKeyEncrypted = "encrypted-secret"
-        };
-        byte[] mac = protector.Sign(settings, descriptor);
-
-        settings.S3SecretAccessKeyEncrypted = "other-secret";
-
-        Assert.That(protector.Verify(settings, descriptor, mac), Is.False);
     }
 
     [Test]

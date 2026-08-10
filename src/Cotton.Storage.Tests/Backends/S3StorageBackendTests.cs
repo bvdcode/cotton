@@ -4,6 +4,7 @@
 using Amazon.S3;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
+using Cotton.Storage.Helpers;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Crypto;
@@ -88,17 +89,12 @@ namespace Cotton.Storage.Tests.Backends
 
             _bucketName = _testConfig.Bucket;
 
-            var config = new AmazonS3Config
-            {
-                ServiceURL = _testConfig.Endpoint,
-                ForcePathStyle = true,
-                UseHttp = false,
-                MaxErrorRetry = 3,
-                Timeout = TimeSpan.FromMinutes(2),
-                AuthenticationRegion = _testConfig.Region,
-            };
-
-            _s3Client = new AmazonS3Client(_testConfig.AccessKey, _testConfig.SecretKey, config);
+            _s3Client = S3CompatibilityFactory.BuildClient(
+                _testConfig.Endpoint,
+                _testConfig.Region,
+                _testConfig.AccessKey,
+                _testConfig.SecretKey,
+                TimeSpan.FromMinutes(2));
 
             var s3Provider = new TestS3Provider(_s3Client, _bucketName);
             _backend = new S3StorageBackend(s3Provider);
@@ -108,18 +104,9 @@ namespace Cotton.Storage.Tests.Backends
         [TearDown]
         public async Task TearDown()
         {
-            foreach (var uid in _createdKeys)
+            foreach (string uid in _createdKeys)
             {
-                try
-                {
-                    var (p1, p2, fileName) = Storage.Helpers.StorageKeyHelper.GetSegments(uid);
-                    var key = $"{p1}/{p2}/{fileName}";
-                    await _s3Client.DeleteObjectAsync(_bucketName, key);
-                }
-                catch
-                {
-                    // Best effort cleanup
-                }
+                await _backend.DeleteAsync(uid);
             }
 
             _s3Client?.Dispose();
@@ -147,6 +134,18 @@ namespace Cotton.Storage.Tests.Backends
             using var result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
+        }
+
+        [Test]
+        public async Task S3Backend_WriteAndRead_EmptyObject_ReturnsEmptyStream()
+        {
+            string uid = NewUid();
+            _createdKeys.Add(uid);
+
+            await _backend.WriteAsync(uid, new MemoryStream([]));
+            await using Stream readStream = await _backend.ReadAsync(uid);
+
+            Assert.That(readStream.ReadByte(), Is.EqualTo(-1));
         }
 
         [Test]

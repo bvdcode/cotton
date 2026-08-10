@@ -14,6 +14,10 @@ type VisibleActionsState = {
   keys: string[];
 };
 
+const ACTION_GAP = 4;
+const DEFAULT_ACTION_BUTTON_WIDTH = 36;
+const MORE_BUTTON_WIDTH = 36;
+
 const sameKeys = (
   left: ReadonlyArray<string>,
   right: ReadonlyArray<string>,
@@ -33,6 +37,7 @@ export const useOverflowActionKeys = ({
   actionsContainerRef,
   actionButtonRefs,
 }: UseOverflowActionKeysParams): string[] => {
+  const measuredActionWidthsRef = React.useRef<Record<string, number>>({});
   const actionKeys = React.useMemo(
     () => actions.map((action) => action.key),
     [actions],
@@ -74,9 +79,6 @@ export const useOverflowActionKeys = ({
       return;
     }
 
-    const ACTION_GAP = 4;
-    const MORE_BUTTON_WIDTH = 36;
-
     const measure = () => {
       const available = container.clientWidth;
       if (available <= 0) {
@@ -86,10 +88,20 @@ export const useOverflowActionKeys = ({
 
       const widths = actions.map((action) => {
         const el = actionButtonRefs.current[action.key];
-        if (!el) return 36;
+        const previousWidth =
+          measuredActionWidthsRef.current[action.key] ??
+          DEFAULT_ACTION_BUTTON_WIDTH;
+        if (!el) {
+          return previousWidth;
+        }
 
         const measured = Math.ceil(el.getBoundingClientRect().width);
-        return measured > 0 ? measured : 36;
+        if (measured <= 0) {
+          return previousWidth;
+        }
+
+        measuredActionWidthsRef.current[action.key] = measured;
+        return measured;
       });
 
       const totalWidth =
@@ -109,7 +121,7 @@ export const useOverflowActionKeys = ({
       let consumed = 0;
 
       for (let index = 0; index < actions.length; index += 1) {
-        const width = widths[index] ?? 36;
+        const width = widths[index] ?? DEFAULT_ACTION_BUTTON_WIDTH;
         const projected =
           consumed + width + (nextVisible.length > 0 ? ACTION_GAP : 0);
 

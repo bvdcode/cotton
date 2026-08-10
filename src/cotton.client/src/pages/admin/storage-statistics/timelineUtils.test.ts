@@ -25,4 +25,46 @@ describe("storage statistics timeline utils", () => {
   it("returns null for invalid timestamps", () => {
     expect(toBucketIndex("not-a-date", "hour")).toBeNull();
   });
+
+  it("uses the local calendar date for daily buckets east of UTC", () => {
+    const index = toBucketIndex(
+      "2026-05-04T19:00:00.000Z",
+      "day",
+      "Asia/Tashkent",
+    );
+
+    expect(index).not.toBeNull();
+    expect(fromBucketIndexToIso(index ?? 0, "day")).toBe(
+      "2026-05-05T00:00:00.000Z",
+    );
+  });
+
+  it("uses the local calendar date for daily buckets west of UTC", () => {
+    const index = toBucketIndex(
+      "2026-05-05T07:00:00.000Z",
+      "day",
+      "America/Los_Angeles",
+    );
+
+    expect(index).not.toBeNull();
+    expect(fromBucketIndexToIso(index ?? 0, "day")).toBe(
+      "2026-05-05T00:00:00.000Z",
+    );
+  });
+
+  it("keeps consecutive local days adjacent across daylight saving time", () => {
+    const beforeTransition = toBucketIndex(
+      "2026-03-08T08:00:00.000Z",
+      "day",
+      "America/Los_Angeles",
+    );
+    const afterTransition = toBucketIndex(
+      "2026-03-09T07:00:00.000Z",
+      "day",
+      "America/Los_Angeles",
+    );
+
+    expect(beforeTransition).not.toBeNull();
+    expect(afterTransition).toBe((beforeTransition ?? 0) + 1);
+  });
 });

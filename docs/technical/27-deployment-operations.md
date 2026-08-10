@@ -9,7 +9,7 @@ Cotton ships as a single ASP.NET Core process (`Cotton.Server`) that serves both
 Startup is a two-phase process driven entirely from `src/Cotton.Server/Program.cs`:
 
 1. **Master-key resolution.** Before the main application is built, Cotton resolves the runtime encryption settings either from the `COTTON_MASTER_KEY` environment variable or, if that is absent, from an interactive `/unlock` mini-web-server. The process clock is pinned to UTC and Linux process hardening (`PR_SET_DUMPABLE=0`) is requested *before* key resolution.
-2. **Application run.** The full web app is built (`RunApplicationAsync`), startup transition rules are validated, EF migrations are applied, optional auto-restore runs, server settings are warmed, the SignalR hub is mapped, and finally `app.RunAsync()` is awaited.
+2. **Application run.** The full web app is built (`RunApplicationAsync`), startup preflight checks run, EF migrations are applied, optional auto-restore runs, server settings are warmed, the SignalR hub is mapped, and finally `app.RunAsync()` is awaited.
 
 ```mermaid
 flowchart TD
@@ -21,7 +21,7 @@ flowchart TD
     E --> G[RunApplicationAsync]
     F --> G
     G --> H[Build WebApplication + AddCottonOptions]
-    H --> I[Validate startup transition rules]
+    H --> I[Run startup preflight checks]
     I --> J{blocked?}
     J -- yes --> K[StartupBlockedServer]
     J -- no --> L[ApplyMigrations CottonDbContext]
@@ -182,7 +182,7 @@ Writes are atomic and corruption-safe:
 `S3StorageBackend` stores chunks as bucket objects keyed `p1/p2/fileName.ctn`. It implements `IStorageBackendUsesEncryptedConfiguration` (the S3 secret is stored encrypted). Behavior:
 
 - `WriteAsync` calls `ExistsAsync` first and skips redundant uploads (dedup), then buffers to an OS temp file (`Path.GetTempFileName()`) and `PutObject`s it as `application/octet-stream` with chunked encoding disabled (`WithFileBodyCompatibility`).
-- `ReadAsync` uses `GetObject` with `ChecksumMode("DISABLED")`.
+- `ReadAsync` uses a full-content Range GET (`bytes=0-`) to avoid provider-specific ETag parsing in the AWS SDK; `416 InvalidRange` represents an existing empty object, while other S3 errors propagate.
 - `ExistsAsync`/`GetSizeAsync` use `GetObjectMetadata` and treat `NotFound` as absent.
 - `ListAllKeysAsync` paginates `ListObjectsV2` (1000 keys/page) and reconstructs UIDs from `.ctn` keys.
 - `CleanupTempFiles` is a no-op for S3.
@@ -203,7 +203,8 @@ OIDC is configured per-provider in the admin UI; see `docs/oidc-setup.md` and th
 
 - The callback path is fixed at `<public-base-url>/api/v1/auth/oidc/callback` — `OidcController` is routed at `Routes.V1.Auth + "/oidc"` with `[HttpGet("callback")]`, and `OidcAuthenticationService.BuildRedirectUri` constructs the URI as `{baseUrl}{Routes.V1.Auth}/oidc/callback`. The provider slug is **not** part of it.
 - The base URL comes from `OidcAuthenticationService.ResolvePublicBaseUrl`, which reads `server_settings.public_base_url` (entity `PublicBaseUrl`), trimming a trailing slash. It must be the externally reachable HTTPS origin.
-- Behind a reverse proxy, forward `X-Forwarded-Proto` and `X-Forwarded-Host`. `Program.cs` configures `ForwardedHeadersOptions` for exactly these two headers (`ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost`) and clears the known-proxy/known-network allow-lists (`KnownIPNetworks.Clear()`, `KnownProxies.Clear()`), so the proxy's forwarded values are honored unconditionally. Put Cotton behind a trusted proxy you control.
+- Behind a reverse proxy, configure `PublicBaseUrl` to the externally reachable HTTPS origin and set the trusted proxy in General settings to the immediate peer or its narrow CIDR network (the **Auto** action detects it, and **Verify and save** proves the current peer belongs to it). Cotton accepts `CF-Connecting-IP`, `X-Real-IP`, `X-Forwarded-For`, and request-derived `X-Forwarded-Proto` only in legacy mode or from that address or network. The proxy must overwrite client-supplied values.
+- Without a reverse proxy, choose **No proxy** in General settings. Cotton stores the reserved `0.0.0.0` direct-mode marker, uses the TCP connection peer as the client address, and ignores forwarded client-address headers.
 - The Issuer URL must omit `/.well-known/openid-configuration`. `openid` scope is required; `openid profile email` is the recommended set. The client secret is `[Encrypted]` in `server_settings` (column `oidc_client_secret_encrypted`, entity `OidcClientSecretEncrypted`).
 - Provider options (see the `OidcProvider` entity and *Authentication & Identity*) include enabling sign-in, allowing auto account creation, requiring `email_verified=true`, an allowed-email-domain allow-list, a default role (Admin disallowed as a default), profile-name sync, and avatar import.
 
@@ -213,7 +214,7 @@ Backups are storage-native: PostgreSQL dumps are chunked through Cotton's own st
 
 ### Scheduled backups
 
-`DumpDatabaseJob` (`src/Cotton.Server/Jobs/DumpDatabaseJob.cs`) carries `[JobTrigger(days: 7)]`. The trigger starts shortly after startup, repeats every 7 days, and is registered single-flight. The `Execute` method begins with `await Task.Delay(180_000)` (3 minutes) to let the server stabilize before dumping.
+`DumpDatabaseJob` (`src/Cotton.Server/Jobs/DumpDatabaseJob.cs`) carries `[JobTrigger(days: 7)]`. The trigger starts shortly after startup, repeats every 7 days, and is registered single-flight. The first execution in each process observes the cancellation-aware 3-minute `JobStartupDelays.WaitForDumpDatabaseAsync` delay; later scheduled and manual executions start immediately.
 
 Flow per run:
 
@@ -238,7 +239,7 @@ PATCH /api/v1/server/database-backup/trigger
 
 ### Auto-restore for empty instances
 
-`DatabaseAutoRestoreService.TryRestoreIfEmptyAsync` runs during startup (`Program.RunApplicationAsync`, after startup transition validation and migrations). It is a no-op unless `COTTON_RESTORE_DATABASE_IF_EMPTY` parses (via `bool.TryParse`) to `true`.
+`DatabaseAutoRestoreService.TryRestoreIfEmptyAsync` runs during startup (`Program.RunApplicationAsync`, after startup preflight checks and migrations). It is a no-op unless `COTTON_RESTORE_DATABASE_IF_EMPTY` parses (via `bool.TryParse`) to `true`.
 
 "Empty" means either no rows in `__EFMigrationsHistory`, **or** no rows in both `users` and `server_settings`. When empty, it:
 
@@ -289,7 +290,7 @@ Each row below is a real warning code from `SecurityDiagnosticsService` with the
 | `mandatory-access-control-unconfined` | warning | No enforcing AppArmor/SELinux detected (or AppArmor `unconfined`, or SELinux permissive) | Use Docker's default AppArmor, a custom profile, or an enforcing SELinux context. |
 | `core-dumps-enabled` | warning | Core soft limit not disabled (`!= 0`) **and** process still dumpable | Set `ulimit core=0` and keep `COTTON_PROCESS_HARDENING=true`. |
 | `process-hardening-failed` | warning | Hardening requested but `prctl` failed (`HardeningRequested && !HardeningApplied`) | Investigate the recorded errno; ensure Linux + permitted `prctl`. |
-| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` (protected rows lack valid integrity signatures) | Restore affected rows from backup or run the required transition version before upgrading. |
+| `db-integrity-unsigned-rows` | **critical** | `UnsignedProtectedRows > 0` (protected rows lack valid integrity signatures) | Restore affected rows from backup or complete the transition on Cotton 0.4.35 before upgrading; version 0.5 does not repair them. |
 
 The temp-directory check is evaluated on every host because database dumps/restores, S3 upload spooling, and preview tooling all depend on the OS temp directory. The Linux process warnings (`process-dumpable`, `sys-ptrace-capability`, `new-privileges-allowed`, `seccomp-disabled`, `running-as-root`) are only evaluated on Linux. Container-only warnings (`root-filesystem-writable`, `docker-socket-mounted`, `host-pid-namespace`, MAC) are emitted only when `IsContainer()` is true; the core-dump warning is evaluated on any Linux host. `CAP_SYS_PTRACE` is read from the `CapEff` hex mask in `/proc/self/status` by testing bit 19.
 
@@ -378,7 +379,7 @@ Setting `COTTON_PUBLIC_INSTANCE=true` flips `Constants.IsPublicInstance` (evalua
 ## Upgrade behavior
 
 - **Auto-migrate on startup.** `Program.cs` calls `app.ApplyMigrations<CottonDbContext>()` before serving, so pulling a newer image and restarting applies pending EF migrations automatically. Take a backup (or rely on the backup job) before upgrading.
-- **DB-integrity startup transition guard.** Strict releases validate recorded `AppVersion` history before serving normal traffic. A release such as `0.5.0+` can require evidence that a transition release (for example `0.4.33`) already ran; if not, Cotton serves the startup-blocked SPA and `GET /api/v1/startup/status` instead of starting the normal API.
+- **Strict CTN2/database-integrity cutover.** Version 0.5 contains no CTN1 decryptor, rewrite job, or startup migration guard. Encountering CTN1 encrypted data or a protected row without an integrity signature throws a specific exception instructing the operator to start Cotton 0.4.35 with the same database, storage, and master key, wait for the transition to finish, and then upgrade again. Present but invalid database signatures remain corruption/tamper failures and do not suggest downgrading.
 - **App version tracking.** `AppVersionTrackerService` (a hosted `BackgroundService`) records the running version (`AppVersion` rows), warns on downgrades (an unsupported scenario), and — unless disabled via `AppVersionTracker:ReleaseCheckEnabled=false` or the `Testing`/`IntegrationTests` environments — checks `https://api.github.com/repos/bvdcode/cotton/releases/latest` ~45 s after start and notifies admins (Medium priority) when a newer non-draft/non-prerelease release exists. The image build stamps `APP_VERSION` (a `BUILD_VERSION` build arg sourced from GitVersion's SemVer in CI).
 - **Image tags.** `:latest` and `:<semver>` are published from `main`; `:dev` from `develop` (see CI under `.github/workflows`). Pin a specific SemVer tag for reproducible upgrades.
 - **JWT signing key is regenerated every boot.** `ConfigurationBuilderExtensions.AddCottonOptions` sets `JwtSettings:Key` to a fresh random 32-char string (`StringHelpers.CreateRandomString(DefaultKeyLength)`) on each start (the value in `appsettings.Development.json` is dev-only). Consequence: every restart/upgrade invalidates outstanding access tokens (JWTs), so active users must re-authenticate; refresh tokens persist in the database and clients re-issue access tokens against them.
@@ -401,9 +402,7 @@ All jobs use `[JobTrigger(...)]` with startup firing, repeated intervals, and si
 | `GarbageCollectorJob` | 6 hours | Reclaim orphaned chunks (also triggerable via `PATCH /api/v1/server/gc/trigger`). |
 | `DownloadTokenRetentionJob` | 1 day | Sweep expired download/share tokens. |
 | `RefreshTokenRetentionJob` | 1 day | Sweep expired refresh tokens. |
-| `FixMimeTypesJob` | 1 day | Repair MIME types. |
 | `CollectPerformanceJob` | 1 day | Collect performance metrics. |
-| `BackfillChunkStoredSizeJob` | 1 day | Backfill stored chunk sizes. |
 | `ClearTempFolderJob` | 36 hours | Clean storage temp files. |
 | `DumpDatabaseJob` | 7 days | Database backup (3-min internal startup delay; triggerable via `PATCH /api/v1/server/database-backup/trigger`). |
 | `StorageConsistencyJob` | 30 days | Re-verify stored data against the backend. |

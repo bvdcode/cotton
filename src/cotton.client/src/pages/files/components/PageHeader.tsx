@@ -484,7 +484,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             flexShrink: 0,
             minWidth: 0,
             gap: 0.5,
-            order: { xs: 2, md: 1 },
+            order: { xs: 1, md: 1 },
             width: { xs: "100%", md: "auto" },
           }}
         >
@@ -493,6 +493,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             sx={{
               display: "flex",
               alignItems: "center",
+              justifyContent: { xs: "space-between", md: "flex-start" },
               gap: 0.5,
               minWidth: 0,
               overflow: "hidden",
@@ -590,7 +591,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             flex: 1,
             gap: 1,
             minWidth: 0,
-            order: { xs: 1, md: 2 },
+            order: { xs: 2, md: 2 },
           }}
         >
           <FileBreadcrumbs

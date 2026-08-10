@@ -223,7 +223,7 @@ Layout and constants:
 
 - **Object key**: `GetS3Key(uid)` → `"{p1}/{p2}/{fileName}.ctn"`. There is **no namespace/prefix segment** in front of `p1` — the README's mention of an S3 `"segments"` namespace/partitioning does not correspond to this code (see *Non-obvious design decisions & gotchas* below).
 - **Existence/size**: `GetObjectMetadataAsync` (a HEAD); `ExistsAsync` returns `true` when the response status is `HttpStatusCode.OK`, and an `AmazonS3Exception` with `StatusCode == NotFound` is swallowed (`ExistsAsync` → `false`, `GetSizeAsync` → `0`). `GetSizeAsync` returns `res.ContentLength`.
-- **Read**: `GetObjectAsync` with `ChecksumMode = new ChecksumMode("DISABLED")`, wrapped in an `S3ResponseStream` so both the `GetObjectResponse` and its `ResponseStream` get disposed together (sync `Dispose` and async `DisposeAsync`).
+- **Read**: `GetObjectAsync` requests the complete object as `bytes=0-` via `.WithFullContentReadCompatibility()`. This prevents the AWS SDK from applying its full-response ETag-as-MD5 wrapper, which fails with some S3-compatible endpoints. A precise `416 InvalidRange` response means the existing object is empty and returns an empty stream; other S3 errors propagate. Non-empty responses are wrapped in an `S3ResponseStream` so both the `GetObjectResponse` and its `ResponseStream` get disposed together (sync `Dispose` and async `DisposeAsync`).
 - **Write**: **existence check before write** (dedup) — if `ExistsAsync(uid)` it returns immediately. Otherwise it spools the (already compressed+encrypted) stream to a local OS temp file (`Path.GetTempFileName()`, `FileMode.Create`, 2 MiB buffer, `useAsync: true`, rewinding seekable sources), then `PutObjectAsync` using `FilePath = tmpPath`, `ContentType = MediaTypeNames.Application.Octet` (`application/octet-stream`), and `.WithFileBodyCompatibility()` (sets `UseChunkEncoding = false`). The temp file is always deleted in `finally`. Spooling to disk lets the SDK send a known `Content-Length` from a file body, which is friendly to S3-compatible providers that reject AWS chunked transfer encoding.
 - **Delete**: `DeleteObjectAsync`; returns `true` only when the response is `HttpStatusCode.NoContent` (HTTP 204).
 - **`CleanupTempFiles`**: an explicit no-op for S3 (uploads use OS temp files cleaned up inline).
@@ -238,6 +238,7 @@ Layout and constants:
 - `BuildClient(endpoint, region, accessKey, secretKey, timeout? = null, maxErrorRetry = 3)` constructs an `AmazonS3Client` from `BasicAWSCredentials` + the config above.
 - `WithFileBodyCompatibility()` → `UseChunkEncoding = false` (used by the file-body PUT in the backend).
 - `WithInMemoryBodyCompatibility()` → `UseChunkEncoding = false` **and** `DisablePayloadSigning = true` (used by `SettingsProvider`'s S3 connectivity self-test, which PUTs a small in-memory body, then reads, lists, and deletes a `cotton_server_test_object_*` key during setup/validation).
+- `WithFullContentReadCompatibility()` → `ByteRange = "bytes=0-"`, which keeps full-content streaming while bypassing the SDK's full-response ETag-as-MD5 wrapper.
 
 ### Backend resolution (server)
 
@@ -404,7 +405,7 @@ So the probe reports backend type plus observed read/write throughput of the ful
 
 ## Maintenance: temp cleanup job
 
-`ClearTempFolderJob` (`src/Cotton.Server/Jobs/ClearTempFolderJob.cs`, `[JobTrigger(hours: 36)]`) resolves the active backend and calls `CleanupTempFiles(TimeSpan.FromHours(1))` — i.e. it deletes filesystem temp files older than 1 hour roughly every 36 hours. It first awaits a 7-minute startup delay (`Task.Delay(420_000)`) and returns early if `_perf.IsNightTime()`. For S3 this is a no-op, since S3 uploads clean their OS temp files inline.
+`ClearTempFolderJob` (`src/Cotton.Server/Jobs/ClearTempFolderJob.cs`, `[JobTrigger(hours: 36)]`) resolves the active backend and calls `CleanupTempFiles(TimeSpan.FromHours(1))` — i.e. it deletes filesystem temp files older than 1 hour roughly every 36 hours. Its first execution in each process awaits the cancellation-aware 7-minute `JobStartupDelays.WaitForClearTempFolderAsync` delay; later executions proceed immediately. It then returns early if `_perf.IsNightTime()`. For S3 cleanup is a no-op, since S3 uploads remove their OS temp files inline.
 
 ## Concurrency, failure modes, edge cases, security
 
@@ -415,7 +416,7 @@ So the probe reports backend type plus observed read/write throughput of the ful
 - **Dedup races**: handled at three layers — pipeline pre-write `ExistsAsync`, backend pre-write `File.Exists`/S3 `ExistsAsync`, and the filesystem `File.Move` `IOException`-when-exists catch. All converge on "identical content already stored, do nothing."
 - **Fail-open pressure guard**: unknown capacity (S3, capacity read errors, `Enabled = false`) never blocks writes. Pressure protection is filesystem-only by design.
 - **Security boundary**: backends are key-agnostic and store only ciphertext; the `CryptoProcessor` is the encryption boundary, and S3 credentials reach `S3Provider` already decrypted (the EF `[Encrypted]` value converter decrypts on load). Blobs are content-addressed by plaintext hash *above* this layer, so dedup works even though the stored bytes are encrypted (the server never needs to know "what the data is" to dedup). The probe uses cryptographically random payloads and constant-time hash comparison.
-- **S3 checksum compatibility**: reads disable checksum mode (`ChecksumMode("DISABLED")`) and the client config sets checksums to `WHEN_REQUIRED`; this is a deliberate interop choice for non-AWS S3 implementations and means Cotton relies on its own AES-GCM tags for integrity, not S3 checksums.
+- **S3 integrity compatibility**: the client config sets checksums to `WHEN_REQUIRED`, and reads use a full-content Range request so the AWS SDK does not apply its ETag-based MD5 stream wrapper. Cotton relies on its own AES-GCM tags for stored-content integrity rather than provider ETag semantics.
 
 ## Non-obvious design decisions & gotchas
 

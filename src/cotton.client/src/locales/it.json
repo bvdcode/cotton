@@ -182,29 +182,6 @@
         "adminOnly": true
       },
       {
-        "id": "privacy-global-indexing",
-        "title": "Indicizzazione globale",
-        "description": "Privacy e sicurezza",
-        "path": "/admin/privacy-settings",
-        "keywords": [
-          "global indexing",
-          "global index",
-          "indexing",
-          "search indexing",
-          "search index",
-          "deep search",
-          "full text search",
-          "content search",
-          "decrypt files",
-          "file content search",
-          "Indicizzazione globale",
-          "Privacy e sicurezza",
-          "Privacy and security"
-        ],
-        "highlightSettingId": "allowGlobalIndexing",
-        "adminOnly": true
-      },
-      {
         "id": "privacy-telemetry",
         "title": "Telemetria",
         "description": "Privacy e sicurezza",
@@ -233,6 +210,7 @@
         "title": "Modalità di lookup IP",
         "description": "Privacy e sicurezza",
         "path": "/admin/privacy-settings",
+        "highlightSettingId": "geoIpLookupMode",
         "keywords": [
           "geoip",
           "geo ip",
@@ -2766,17 +2744,22 @@
     "title": "Amministrazione",
     "menu": {
       "navigate": "Sezione",
+      "expand": "Espandi navigazione",
+      "collapse": "Riduci navigazione",
+      "sections": {
+        "people": "Persone",
+        "storage": "Archiviazione",
+        "security": "Sicurezza",
+        "system": "Sistema"
+      },
       "users": "Utenti",
-      "usersAndGroups": "Utenti e gruppi",
       "generalSettings": "Impostazioni generali",
-      "privacySettings": "Privacy e sicurezza",
+      "privacySettings": "Privacy",
       "storageSettings": "Archiviazione",
-      "storageAndStatistics": "Archiviazione e statistiche",
       "notificationsSettings": "Notifiche",
       "databaseBackup": "Backup del database",
       "storageStatistics": "Statistiche di archiviazione",
       "securityDiagnostics": "Controllo della sicurezza",
-      "groups": "Gruppi",
       "identityProviders": "Identity providers"
     },
     "roles": {
@@ -2803,12 +2786,15 @@
         "actions": "Azioni"
       },
       "actions": {
-        "edit": "Modifica"
+        "edit": "Modifica",
+        "delete": "Elimina account",
+        "deleteCurrent": "Non puoi eliminare il tuo account"
       },
       "errors": {
         "loadFailed": "Impossibile caricare gli utenti.",
         "createFailed": "Impossibile creare l'utente.",
-        "updateFailed": "Impossibile aggiornare l'utente."
+        "updateFailed": "Impossibile aggiornare l'utente.",
+        "deleteFailed": "Impossibile eliminare l'utente."
       },
       "create": {
         "title": "Crea utente",
@@ -2829,6 +2815,14 @@
         "saving": "Salvataggio...",
         "success": "Utente aggiornato."
       },
+      "delete": {
+        "title": "Elimina account",
+        "warning": "L'account, tutti i file e tutti i dati correlati verranno eliminati definitivamente. Questa azione non può essere annullata.",
+        "confirmation": "Digita {{username}} per confermare.",
+        "confirmationLabel": "Nome utente",
+        "button": "Elimina account",
+        "deleting": "Eliminazione..."
+      },
       "storageUsage": {
         "calculating": "Calcolo dell'utilizzo dello spazio"
       }
@@ -2847,6 +2841,25 @@
         "saveFailed": "Impossibile salvare le impostazioni."
       },
       "general": {
+        "trustedProxy": {
+          "title": "Proxy attendibile",
+          "description": "Indirizzo IP o rete CIDR del reverse proxy collegato direttamente e autorizzato a fornire l’indirizzo del client. Il proxy deve sovrascrivere o rimuovere gli header CF-Connecting-IP, X-Real-IP e X-Forwarded-For inviati dal client. Per una distribuzione diretta, scegli Senza proxy.",
+          "emptyHint": "Lascia vuoto per mantenere il comportamento precedente, che considera attendibili gli indirizzi inoltrati da ogni connessione.",
+          "placeholder": "Ad esempio, 172.16.0.0/12",
+          "direct": "Senza proxy",
+          "directMode": "Connessione diretta (senza proxy); gli header di inoltro vengono ignorati",
+          "directSaved": "La modalità di connessione diretta è stata salvata. Gli header di inoltro verranno ignorati.",
+          "detect": "Auto",
+          "verifyAndSave": "Verifica e salva",
+          "unavailable": "L’indirizzo del proxy connesso non è disponibile per questa richiesta.",
+          "detected": "Proxy attendibile suggerito: {{address}}.",
+          "detectedPath": "Percorso di rete rilevato",
+          "genericProxy": "Proxy inverso",
+          "internet": "Internet",
+          "saved": "L’indirizzo del proxy attendibile è stato verificato e salvato.",
+          "disabled": "La restrizione al proxy attendibile è stata disattivata.",
+          "mismatch": "Hai inserito {{entered}}, ma la richiesta proviene da {{observed}}. L’impostazione non è stata salvata."
+        },
         "title": "Impostazioni generali",
         "description": "Comportamento di base del server e risoluzione della posizione per le notifiche.",
         "fields": {
@@ -2992,6 +3005,8 @@
         "loadFailed": "Impossibile caricare le impostazioni di archiviazione.",
         "s3SaveFailed": "Impossibile salvare la configurazione S3.",
         "storageSaveFailed": "Impossibile cambiare la modalità di archiviazione.",
+        "quotaInvalid": "Inserisci zero o un numero positivo.",
+        "templateNodeIdInvalid": "Inserisci un ID nodo cartella valido.",
         "quotaSaveFailed": "Impossibile salvare la quota utente predefinita.",
         "templateSaveFailed": "Impossibile salvare il modello di file predefiniti.",
         "chunkSizeSaveFailed": "Failed to save upload chunk size.",
@@ -3125,6 +3140,12 @@
       }
     },
     "securityDiagnostics": {
+      "trustedProxy": {
+        "field": "Proxy attendibile",
+        "threatVector": "Un attaccante che può raggiungere Cotton direttamente, o tramite un proxy che non pulisce gli header, può cambiare l’indirizzo apparente e aggirare i limiti basati su IP.",
+        "fix": "Nelle impostazioni generali scegli Senza proxy per una distribuzione diretta, oppure usa Auto o inserisci l’indirizzo del proxy collegato direttamente, quindi verifica e salva. Il proxy deve sovrascrivere gli header di inoltro inviati dal client.",
+        "passed": "La modalità di attendibilità dell’indirizzo client è configurata esplicitamente"
+      },
       "title": "Controllo della sicurezza",
       "description": "Controlli lato server per l'igiene degli account, la gestione della chiave master e l'esposizione della memoria del processo.",
       "errors": {
@@ -3292,6 +3313,7 @@
     "identityProviders": {
       "title": "Identity providers",
       "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "empty": "Nessun provider di identità configurato.",
       "actions": {
         "create": "Add provider",
         "edit": "Edit provider",

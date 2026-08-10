@@ -54,23 +54,27 @@ namespace Cotton.Server.Handlers.WebDav
             }
 
             await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(preTransaction.LayoutId!.Value, ct);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
-
-            CopyPreparationOutcome preparedCopy = await PrepareCopyInTransactionAsync(request, preTransaction.LayoutId.Value, ct);
-            if (preparedCopy.Failure is not null)
+            CopyPreparationOutcome preparedCopy;
+            CopyOperationOutcome copyResult;
+            await using (IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(request.UserId, ct))
+            await using (IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct))
             {
-                return preparedCopy.Failure;
-            }
+                preparedCopy = await PrepareCopyInTransactionAsync(request, preTransaction.LayoutId.Value, ct);
+                if (preparedCopy.Failure is not null)
+                {
+                    return preparedCopy.Failure;
+                }
 
-            CopyOperationOutcome copyResult = await TryPerformCopyAsync(request, preparedCopy.Source!, preparedCopy.DestinationParent!, ct);
-            if (copyResult.Failure is not null)
-            {
-                return copyResult.Failure;
-            }
+                copyResult = await TryPerformCopyAsync(request, preparedCopy.Source!, preparedCopy.DestinationParent!, ct);
+                if (copyResult.Failure is not null)
+                {
+                    return copyResult.Failure;
+                }
 
-            await _dbContext.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-            _quota.RecordLogicalBytesAdded(request.UserId, copyResult.AddedBytes);
+                await _dbContext.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+                _quota.RecordLogicalBytesAdded(request.UserId, copyResult.AddedBytes);
+            }
 
             await NotifyCopyCompletedAsync(request, copyResult.NodeId, copyResult.NodeFileId, ct);
             return Ok(preparedCopy.Created, copyResult.NodeId, copyResult.NodeFileId);

@@ -14,7 +14,7 @@ namespace Cotton.Crypto.Internals.Pipelines
 {
     internal class DecryptionPipeline(Stream input, Stream output,
         byte[] fileKey, uint noncePrefix, int threads, int keyId, int nonceSize,
-        int tagSize, int maxChunkSize, int windowCap, long expectedTotal, bool strictLength, int formatVersion, ArrayPool<byte> pool)
+        int tagSize, int maxChunkSize, int windowCap, long expectedTotal, bool strictLength, ArrayPool<byte> pool)
     {
         private class ReorderWriter
         {
@@ -261,13 +261,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             ChunkHeader? maybeChunkHeader = await ReadNextChunkHeaderAsync(ct).ConfigureAwait(false);
             if (!maybeChunkHeader.HasValue)
             {
-                if (FormatConstants.RequiresAuthenticatedTerminator(formatVersion))
-                {
-                    throw new EndOfStreamException("Encrypted stream ended before its authenticated terminator.");
-                }
-
-                // CTN1 blobs are legacy-complete at transport EOF; CTN2 and newer prove EOF with a MACed terminator.
-                return false;
+                throw new EndOfStreamException("Encrypted stream ended before its authenticated terminator.");
             }
 
             ChunkHeader chunkHeader = maybeChunkHeader.Value;
@@ -296,7 +290,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             }
 
             return await AesGcmStreamFormat
-                .TryReadChunkHeaderAsync(input, tagSize, ct, formatVersion)
+                .TryReadChunkHeaderAsync(input, tagSize, ct)
                 .ConfigureAwait(false);
         }
 
@@ -352,7 +346,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             try
             {
                 AesGcmStreamFormat.ComposeNonce(nonceBuffer.AsSpan(0, nonceSize), noncePrefix, idx);
-                AesGcmStreamFormat.InitAadPrefix(aad.AsSpan(0, 32), keyId, formatVersion);
+                AesGcmStreamFormat.InitAadPrefix(aad.AsSpan(0, 32), keyId);
                 AesGcmStreamFormat.FillAadMutable(aad.AsSpan(0, 32), idx, 0);
 
                 Tag128 tagCopy = chunkHeader.Tag;
@@ -471,7 +465,7 @@ namespace Cotton.Crypto.Internals.Pipelines
                     using var gcm = new AesGcm(fileKey, tagSize);
                     byte[] nonceBuffer = new byte[nonceSize];
                     byte[] aad = new byte[32];
-                    AesGcmStreamFormat.InitAadPrefix(aad, keyId, formatVersion);
+                    AesGcmStreamFormat.InitAadPrefix(aad, keyId);
                     await foreach (DecryptionJob job in reader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();

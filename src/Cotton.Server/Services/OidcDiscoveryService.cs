@@ -46,6 +46,48 @@ namespace Cotton.Server.Services
         }
 
         /// <summary>
+        /// Verifies that an enabled provider publishes the metadata required for sign-in.
+        /// </summary>
+        public async Task ValidateConfigurationAsync(OidcProvider provider, CancellationToken ct)
+        {
+            OpenIdConnectConfiguration configuration = await GetConfigurationAsync(provider, ct);
+            ValidateConfiguration(provider, configuration);
+        }
+
+        internal static void ValidateConfiguration(
+            OidcProvider provider,
+            OpenIdConnectConfiguration configuration)
+        {
+            ArgumentNullException.ThrowIfNull(provider);
+            ArgumentNullException.ThrowIfNull(configuration);
+
+            string discoveredIssuer = configuration.Issuer?.TrimEnd('/') ?? string.Empty;
+            if (!string.Equals(discoveredIssuer, provider.Issuer, StringComparison.Ordinal))
+            {
+                throw new BadRequestException<OidcProvider>(
+                    "OIDC discovery issuer does not match the configured issuer.");
+            }
+
+            if (!IsAbsoluteHttpsUrl(configuration.AuthorizationEndpoint))
+            {
+                throw new BadRequestException<OidcProvider>(
+                    "OIDC discovery document does not publish a valid HTTPS authorization endpoint.");
+            }
+
+            if (!IsAbsoluteHttpsUrl(configuration.TokenEndpoint))
+            {
+                throw new BadRequestException<OidcProvider>(
+                    "OIDC discovery document does not publish a valid HTTPS token endpoint.");
+            }
+
+            if (configuration.SigningKeys.Count == 0)
+            {
+                throw new BadRequestException<OidcProvider>(
+                    "OIDC discovery document does not publish signing keys.");
+            }
+        }
+
+        /// <summary>
         /// Exchanges an authorization code for provider tokens.
         /// </summary>
         public async Task<OidcTokenResponse> ExchangeCodeAsync(
@@ -156,6 +198,13 @@ namespace Cotton.Server.Services
                 JsonValueKind.String => bool.TryParse(value.GetString(), out bool parsed) ? parsed : null,
                 _ => null
             };
+        }
+
+        private static bool IsAbsoluteHttpsUrl(string? value)
+        {
+            return Uri.TryCreate(value, UriKind.Absolute, out Uri? uri)
+                && uri.Scheme == Uri.UriSchemeHttps
+                && !string.IsNullOrWhiteSpace(uri.Host);
         }
     }
 }

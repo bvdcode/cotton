@@ -9,13 +9,13 @@ The HTTP/application layer exists to keep transport concerns (routing, model bin
 - **Controllers** (`src/Cotton.Server/Controllers/*.cs`) are thin. They read route/query/body params, call `User.GetUserId()` to obtain the authenticated user id, and either send a mediator request or invoke an injected domain service.
 - **Handlers** (`src/Cotton.Server/Handlers/**`) implement `IRequestHandler<TRequest>` / `IRequestHandler<TRequest, TResponse>` and contain the orchestration: transactions, per-layout locks, validation, EF Core queries, and storage-pipeline calls.
 - **Services / Providers** (`src/Cotton.Server/Services`, `src/Cotton.Server/Providers`) hold reusable domain operations that both controllers and handlers call.
-- **`Program.cs`** is logic-free: it resolves encryption settings (env-var master key or interactive unlock), registers services, validates startup transition rules, builds the middleware pipeline, applies migrations, performs optional auto-restore on an empty database, maps the SignalR hub, then runs.
+- **`Program.cs`** resolves encryption settings (env-var master key or interactive unlock), registers services, runs startup preflight checks, builds the middleware pipeline, applies migrations, performs optional auto-restore on an empty database, maps the SignalR hub, then runs.
 
 Not every controller routes through the mediator. Several controllers (e.g. `ChunkController`, `NotificationsController`, `SettingsController`, `PreviewController`, and large parts of `FileController`/`LayoutController`) call domain services or `CottonDbContext` directly when there is no command/query handler for the operation. The mediator is used where an operation benefits from being a discrete, reusable, testable unit (file/node create-from-chunks/move/delete/restore/share, WebDAV verbs, user admin, auth sessions, server maintenance).
 
 ```mermaid
 flowchart LR
-    Client[HTTP client / browser / WebDAV] --> MW[ASP.NET Core pipeline<br/>ForwardedHeaders, RateLimiter,<br/>AuthN, AuthZ, ExceptionHandler]
+    Client[HTTP client / browser / WebDAV] --> MW[ASP.NET Core pipeline<br/>ExceptionHandler, RateLimiter,<br/>AuthN, AuthZ]
     MW --> Ctl[Controller action]
     Ctl -->|IMediator.Send| Med[Mediator]
     Med --> H[IRequestHandler]
@@ -35,7 +35,7 @@ flowchart LR
 | Route constants | `src/Cotton.Shared/Routes.cs` | `Routes.V1.*` string constants; base prefix `/api/v1`. |
 | Mediator registration | `src/Cotton.Server/Program.cs` (`AddMediator()`) | Scans the calling assembly (`Cotton.Server`), registers all handlers + `IMediator` as transient. |
 | Mapster config | `src/Cotton.Server/Mappings/MapsterConfig.cs` | Entity→DTO adapter rules; registered once via `MapsterConfig.Register()` in `Program.cs`. |
-| Service registration extensions | `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs` | `AddStreamCipher`, `AddWebDavServices`, `AddChunkServices`, `AddDatabaseIntegrity`, `AddLayoutPathServices`, `AddLayoutSearchServices`, `AddWebDavAuth`. |
+| Service registration extensions | `src/Cotton.Server/Extensions/ServiceCollectionExtensions.cs` | `AddStreamCipher`, `AddWebDavServices`, `AddChunkServices`, `AddDatabaseIntegrity`, `AddLayoutSearchServices`, `AddWebDavAuth`. |
 | Auth hardening | `src/Cotton.Server/Extensions/AuthHardeningExtensions.cs` | `AddAuthHardening`/`UseAuthHardening`; configures the two rate-limit policies and JWT session-revocation validation. |
 | Rate-limit policy names | `src/Cotton.Server/Auth/AuthRateLimitPolicies.cs` | `Interactive = "auth.interactive"`, `Refresh = "auth.refresh"`. |
 | WebDAV auth handler | `src/Cotton.Server/Auth/WebDavBasicAuthenticationHandler.cs` | `SchemeName = "WebDavBasic"`, `PolicyName = "WebDav"`. |
@@ -297,6 +297,9 @@ Every route below exists under **both** prefixes (two class-level `[Route]` attr
 | PATCH / GET | `default-user-template-node` | `SetDefaultUserTemplateNode` · `GetDefaultUserTemplateNode` | Admin | Template node id for new-user seeding. |
 | PATCH / GET | `timezone` | `SetTimezone` · `GetTimezone` | Admin | Display timezone. |
 | PATCH / GET | `public-base-url` | `SetPublicBaseUrl` · `GetPublicBaseUrl` | Admin | Public base URL. |
+| GET | `trusted-proxy-ip-address` | `GetTrustedProxyIpAddress` | Admin | Client-address trust mode: null, reserved direct marker `0.0.0.0`, or an immediate proxy IP/CIDR network. |
+| GET | `trusted-proxy-ip-address/observed` | `GetObservedProxyIpAddress` | Admin | Current connection peer plus informational `detectedProxyServices[]` and normalized Cloudflare country/data-center hints, assembled from allowlisted request headers and a bounded self-probe of `PublicBaseUrl`; used by the admin **Auto** action. |
+| POST | `trusted-proxy-ip-address/verify-and-save` | `VerifyAndSaveTrustedProxyIpAddress` | Admin | Saves null for legacy mode, accepts reserved direct marker `0.0.0.0`, or saves an IP/CIDR candidate only when it contains the current peer; mismatch returns entered/observed values with `saved: false`. The response also includes informational topology and Cloudflare location hints. |
 | PATCH / GET | `compution-mode/{mode}` · `compution-mode` | `SetComputionMode` · `GetComputionMode` | Admin | `ComputionMode` (sic — spelled "compution" in code). |
 | PATCH / GET | `email-mode/{mode}` · `email-mode` | `SetEmailMode` · `GetEmailMode` | Admin | `EmailMode`. |
 | PATCH / GET | `allow-cross-user-deduplication` | `SetAllowCrossUserDeduplication` · `GetAllowCrossUserDeduplication` | Admin | Cross-user dedup toggle. |
@@ -387,7 +390,9 @@ Controllers use `.Adapt<NodeDto>()`, `.Adapt<UserDto>()`, `.Adapt<NodeFileManife
 | `AuthRateLimitPolicies.Interactive` | `auth.interactive` | Fixed-window, partitioned by remote IP | 10 | 1 minute | login, password reset start/confirm, passkey assertion options/verify, OIDC start/link/callback |
 | `AuthRateLimitPolicies.Refresh` | `auth.refresh` | Fixed-window, partitioned by remote IP | 60 | 1 minute | token refresh |
 
-These endpoint policies use `QueueLimit = 0` (excess requests are rejected immediately) and `AutoReplenishment = true`. Rejections return HTTP 429. The partition key is `httpContext.Connection.RemoteIpAddress?.ToString()` (falling back to `"unknown"`). `EndpointRateLimitingExtensions` registers the policies and enables `UseRateLimiter`; ordinary application requests are not globally rate-limited.
+These endpoint policies use `QueueLimit = 0` (excess requests are rejected immediately) and `AutoReplenishment = true`. Rejections return HTTP 429. The partition key comes from `HttpRequest.GetTrustedClientIPAddress()`. A null `TrustedProxyIpAddress` retains legacy trust-all behavior. The reserved `0.0.0.0` value without a prefix selects direct mode, where the connection peer is used and forwarded client-address headers are ignored. Any other configured address or CIDR network must match or contain the connection peer before the resolver considers `CF-Connecting-IP`, `X-Real-IP`, or `X-Forwarded-For`; otherwise it throws. `EndpointRateLimitingExtensions` registers the policies and enables `UseRateLimiter`; ordinary application requests are not globally rate-limited.
+
+Public-share enumeration uses a separate singleton `PublicShareLookupFailureLimiter`: it records only unresolved or expired share-token lookups, permits 60 failures per resolved client IP per minute, and returns HTTP 429 on later failures. Successful folder navigation, HEAD requests, previews, downloads, and HTTP range requests do not consume this limit. Archive-link creation retains its dedicated `public-share.archive` endpoint policy at 5 requests per client IP per minute.
 
 ### DI registration — `Program.cs` + extension methods
 
@@ -397,7 +402,6 @@ These endpoint policies use `QueueLimit = 0` (excess requests are rejected immed
 .AddStreamCipher()        // IStreamCipher (scoped) from CottonEncryptionSettings
 .AddDatabaseIntegrity()   // signers/verifiers + descriptor registry + failure-reporter hosted service
 .AddChunkServices()       // IChunkIngestService, file-version services, IEventNotificationService
-.AddLayoutPathServices()  // ILayoutPathResolver
 .AddLayoutSearchServices()// ILayoutSearchService + name/no-op-vector providers
 .AddWebDavServices()      // IWebDavPathResolver
 .AddWebDavAuth()          // WebDavBasic auth scheme + "WebDav" authorization policy
@@ -405,9 +409,9 @@ These endpoint policies use `QueueLimit = 0` (excess requests are rejected immed
 builder.Services.AddAuthHardening(); // rate limiting + session-revocation token validation
 ```
 
-`AddWebDavAuth` registers the `WebDavBasic` authentication scheme (`WebDavBasicAuthenticationHandler.SchemeName`) and an authorization policy named `WebDav` (`WebDavBasicAuthenticationHandler.PolicyName`) requiring an authenticated user on that scheme; it also registers `WebDavAuthCache`. `AddJwt` wires the default bearer scheme used by `[Authorize]`. `AddAuthHardening` registers `SessionAccessTokenRevocationCache`/`Store`, the two rate-limit policies, and post-configures `JwtBearerOptions.OnTokenValidated` (via `PostConfigure<JwtBearerOptions>`) to require a user-id claim (`sub`, falling back to `NameIdentifier`) and a session-id claim (`sid`, falling back to `Sid`), and to fail validation if the session has been revoked (`SessionAccessTokenRevocationStore.IsRevokedAsync`).
+`AddWebDavAuth` registers the `WebDavBasic` authentication scheme (`WebDavBasicAuthenticationHandler.SchemeName`) and an authorization policy named `WebDav` (`WebDavBasicAuthenticationHandler.PolicyName`) requiring an authenticated user on that scheme; it also registers `WebDavAuthCache`. `AddJwt` wires the default bearer scheme used by `[Authorize]`. `AddAuthHardening` registers `SessionAccessTokenRevocationCache`/`Store` and post-configures `JwtBearerOptions.OnTokenValidated` (via `PostConfigure<JwtBearerOptions>`) to require a user-id claim (`sub`, falling back to `NameIdentifier`) and a session-id claim (`sid`, falling back to `Sid`), and to fail validation if the session has been revoked (`SessionAccessTokenRevocationStore.IsRevokedAsync`). `AddEndpointRateLimiting` registers the endpoint policies and the public-share failed-lookup limiter.
 
-The middleware pipeline order in `Program.cs` is: `UseForwardedHeaders()` → `UseAuthHardening()` (rate limiter) → `UseDefaultFiles()` → `MapStaticAssets()` → `UseAuthentication()` → `UseAuthorization()` → `UseExceptionHandler()` → `MapStartupStatusEndpoint()` → `MapControllers()` → `MapFallbackToFile("/index.html")`. Before that normal pipeline starts, startup transition validation may switch to `StartupBlockedServer`; after the normal pipeline is mapped, Cotton applies EF migrations, attempts auto-restore on an empty database, eagerly materializes server settings, and finally maps the SignalR hub.
+The middleware pipeline order in `Program.cs` is: `UseAuthHardening()` → `UseDefaultFiles()` → `MapStaticAssets()` → `UseAuthentication()` → `UseEndpointRateLimiting()` → `UseAuthorization()` → `UseExceptionHandler()` → `MapStartupStatusEndpoint()` → `MapControllers()` → `MapFallbackToFile("/index.html")`. Before the normal pipeline starts, generic preflight validation may switch to `StartupBlockedServer`; after the pipeline is mapped, Cotton applies EF migrations, attempts auto-restore on an empty database, eagerly materializes server settings, and finally maps the SignalR hub.
 
 ### Identity & error conventions
 
@@ -426,7 +430,7 @@ The middleware pipeline order in `Program.cs` is: `UseForwardedHeaders()` → `U
 - **Preview concurrency gate**: `PreviewController` uses a static `SemaphoreSlim(8)`, so at most 8 preview reads decrypt/stream concurrently.
 - **Node-graph traversal guards**: ancestor/subtree walks are depth- and cycle-guarded (`MaxDepth = 256` for ancestors, `512` for shared-subtree membership). Exceeding the depth or detecting a cycle returns a 409 (`ApiConflict`) for the authenticated ancestor walks.
 - **Initial-admin / guest auto-provisioning**: `AuthController.Login` creates the first user as an `Admin` on an empty instance, but only within `Constants.AdminAutocreateMinutesDelay` (5) minutes of process uptime — beyond that it throws a `BadRequestException<User>` instructing a restart. On a public instance (`Constants.IsPublicInstance`), unknown logins auto-create a guest `User` and seed default content. On public instances `GetRequestIpAddress()` returns `IPAddress.Loopback` to avoid logging client IPs.
-- **Rate limiting is IP-partitioned**; behind a proxy, accuracy depends on `UseForwardedHeaders` (configured in `Program.cs` to honor `X-Forwarded-Proto`/`X-Forwarded-Host`). Note that `KnownProxies` and `KnownIPNetworks` are cleared, and the rate-limit partition reads `Connection.RemoteIpAddress` directly.
+- **Rate limiting is client-IP-partitioned** through `HttpRequest.GetTrustedClientIPAddress()`, which applies the configured legacy, direct, or exact-proxy trust mode before selecting the partition address. Public-share content is not endpoint-rate-limited; only failed share-token lookups consume its 60-per-minute failure budget.
 - **Settings secrets are write-only**: `GetS3Config` and `GetEmailConfig` return empty strings for the `SecretKey`/`Password` fields; the encrypted stored values are never sent back to clients.
 
 ## Non-obvious design decisions & gotchas

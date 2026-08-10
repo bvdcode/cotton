@@ -62,7 +62,6 @@ namespace Cotton.Storage.Pipelines
             string uid,
             Stream stream,
             PipelineContext? context = null,
-            StorageWriteMode writeMode = StorageWriteMode.CreateIfMissing,
             CancellationToken cancellationToken = default)
         {
             await _maxParallel.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -74,8 +73,7 @@ namespace Cotton.Storage.Pipelines
                 {
                     _logger.LogWarning("No storage processors are registered. Writing the stream directly to the backend.");
                 }
-                if (writeMode == StorageWriteMode.CreateIfMissing
-                    && orderedProcessors.Length > 0
+                if (orderedProcessors.Length > 0
                     && await backend.ExistsAsync(uid).ConfigureAwait(false))
                 {
                     _logger.LogDebug("File {Uid} deduplicated, skipping processor pipeline", uid);
@@ -94,7 +92,7 @@ namespace Cotton.Storage.Pipelines
                 {
                     throw new InvalidOperationException($"No registered processor produced a valid stream to write for UID {uid}");
                 }
-                await backend.WriteAsync(uid, currentStream, writeMode);
+                await backend.WriteAsync(uid, currentStream);
             }
             finally
             {

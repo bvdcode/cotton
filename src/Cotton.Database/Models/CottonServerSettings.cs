@@ -6,6 +6,7 @@ using Cotton.Database.Models.Attributes;
 using Cotton.Database.Models.Enums;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Net;
 
 namespace Cotton.Database.Models
 {
@@ -80,6 +81,18 @@ namespace Cotton.Database.Models
         /// </summary>
         [Column("public_base_url")]
         public string PublicBaseUrl { get; set; } = null!;
+
+        /// <summary>
+        /// Immediate reverse-proxy address that is allowed to supply client-address headers.
+        /// </summary>
+        [Column("trusted_proxy_ip_address")]
+        public IPAddress? TrustedProxyIpAddress { get; set; }
+
+        /// <summary>
+        /// Optional CIDR prefix length for the trusted reverse-proxy network.
+        /// </summary>
+        [Column("trusted_proxy_prefix_length")]
+        public byte? TrustedProxyPrefixLength { get; set; }
 
         /// <summary>
         /// SMTP host used for custom email delivery.
@@ -196,12 +209,6 @@ namespace Cotton.Database.Models
         public string? OidcIssuer { get; set; }
 
         /// <summary>
-        /// Firebase Cloud Messaging project identifier used for Android push delivery.
-        /// </summary>
-        [Column("fcm_project_id")]
-        public string? FcmProjectId { get; set; }
-
-        /// <summary>
         /// Encrypted token used to access Cotton Bridge services.
         /// </summary>
         [Encrypted]
@@ -228,13 +235,6 @@ namespace Cotton.Database.Models
         [Encrypted]
         [Column("smtp_password_encrypted")]
         public string? SmtpPasswordEncrypted { get; set; }
-
-        /// <summary>
-        /// Encrypted Firebase Cloud Messaging service account JSON.
-        /// </summary>
-        [Encrypted]
-        [Column("fcm_service_account_json_encrypted")]
-        public string? FcmServiceAccountJsonEncrypted { get; set; }
 
         /// <summary>
         /// Configured geolocation lookup mode.

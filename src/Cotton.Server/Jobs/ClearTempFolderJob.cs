@@ -21,7 +21,7 @@ namespace Cotton.Server.Jobs
         /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
-            await Task.Delay(420_000); // Wait for 7 minutes for the server to start up and stabilize
+            await JobStartupDelays.WaitForClearTempFolderAsync(context.CancellationToken);
 
             if (_perf.IsNightTime())
             {

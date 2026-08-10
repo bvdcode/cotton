@@ -25,7 +25,6 @@ using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
@@ -56,10 +55,10 @@ namespace Cotton.Server.Controllers
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
         ILayoutMutationGate _layoutGate,
+        PublicShareTokenGenerator _publicShareTokens,
+        PublicShareLookupFailureLimiter _publicShareLookupFailures,
         ArchiveDownloadService _archives) : ControllerBase
     {
-        private const int DefaultSharedFolderTokenLength = 16;
-
         /// <summary>
         /// Gets recent nodes.
         /// </summary>
@@ -87,9 +86,9 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             SearchLayoutsQuery request = new(userId, layoutId, query, page, pageSize);
-            SearchLayoutsResultDto result = await _mediator.Send(request);
+            PagedResult<SearchResultDto> result = await _mediator.Send(request);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
-            return Ok(result);
+            return Ok(result.Payload);
         }
 
         /// <summary>
@@ -516,9 +515,9 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize, depth);
-            NodeContentDto result = await _mediator.Send(query);
+            PagedResult<NodeContentDto> result = await _mediator.Send(query);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
-            return Ok(result);
+            return Ok(result.Payload);
         }
 
         /// <summary>
@@ -558,7 +557,7 @@ namespace Cotton.Server.Controllers
             }
             else
             {
-                token = await CreateUniqueShareTokenAsync(DefaultSharedFolderTokenLength);
+                token = await _publicShareTokens.CreateUniqueAsync(HttpContext.RequestAborted);
             }
 
             NodeShareToken newToken = new()
@@ -582,10 +581,21 @@ namespace Cotton.Server.Controllers
         [HttpGet("shared/{token}")]
         public async Task<IActionResult> GetSharedNodeInfo([FromRoute] string token)
         {
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiNotFound("Shared folder not found.");
+                return this.ApiPublicShareNotFound(
+                    _publicShareLookupFailures,
+                    token,
+                    "Shared folder not found.");
             }
 
             return Ok(new SharedNodeInfoDto
@@ -611,10 +621,21 @@ namespace Cotton.Server.Controllers
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
 
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiNotFound("Shared folder not found.");
+                return this.ApiPublicShareNotFound(
+                    _publicShareLookupFailures,
+                    token,
+                    "Shared folder not found.");
             }
 
             Guid targetNodeId = nodeId ?? nodeShareToken.NodeId;
@@ -673,10 +694,9 @@ namespace Cotton.Server.Controllers
                 Id = targetNode.Id,
                 CreatedAt = targetNode.CreatedAt,
                 UpdatedAt = targetNode.UpdatedAt,
-                TotalCount = nodesCount + filesCount,
             };
 
-            Response.Headers.Append("X-Total-Count", response.TotalCount.ToString());
+            Response.Headers.Append("X-Total-Count", (nodesCount + filesCount).ToString());
             return Ok(response);
         }
 
@@ -689,10 +709,21 @@ namespace Cotton.Server.Controllers
             [FromRoute] string token,
             [FromRoute] Guid nodeId)
         {
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiNotFound("Shared folder not found.");
+                return this.ApiPublicShareNotFound(
+                    _publicShareLookupFailures,
+                    token,
+                    "Shared folder not found.");
             }
 
             bool canAccessNode = await IsNodeInSharedSubtreeAsync(
@@ -715,28 +746,45 @@ namespace Cotton.Server.Controllers
                 return this.ApiNotFound("Folder not found.");
             }
 
+            (List<NodeDto> ancestors, string? error) = await LoadSharedAncestorsAsync(
+                currentNode,
+                nodeShareToken.NodeId,
+                nodeShareToken.CreatedByUserId);
+            if (error is not null)
+            {
+                return this.ApiConflict(error);
+            }
+
+            return Ok(ancestors);
+        }
+
+        private async Task<(List<NodeDto> Ancestors, string? Error)> LoadSharedAncestorsAsync(
+            Node currentNode,
+            Guid sharedRootNodeId,
+            Guid ownerId)
+        {
             const int maxDepth = 256;
             int depth = 0;
-            var visited = new HashSet<Guid> { currentNode.Id };
+            HashSet<Guid> visited = [currentNode.Id];
             List<NodeDto> ancestors = [];
 
             while (currentNode.ParentId.HasValue)
             {
                 if (depth++ >= maxDepth)
                 {
-                    return this.ApiConflict("Maximum node hierarchy depth exceeded.");
+                    return ([], "Maximum node hierarchy depth exceeded.");
                 }
 
                 Guid parentId = currentNode.ParentId.Value;
                 if (!visited.Add(parentId))
                 {
-                    return this.ApiConflict("Circular reference detected in node hierarchy.");
+                    return ([], "Circular reference detected in node hierarchy.");
                 }
 
                 Node? parentNode = await _dbContext.Nodes
                     .AsNoTracking()
                     .Where(x => x.Id == parentId
-                        && x.OwnerId == nodeShareToken.CreatedByUserId
+                        && x.OwnerId == ownerId
                         && x.Type == NodeType.Default)
                     .SingleOrDefaultAsync();
 
@@ -745,7 +793,7 @@ namespace Cotton.Server.Controllers
                     break;
                 }
 
-                if (parentNode.Id == nodeShareToken.NodeId)
+                if (parentNode.Id == sharedRootNodeId)
                 {
                     ancestors.Add(parentNode.Adapt<NodeDto>());
                     break;
@@ -756,7 +804,7 @@ namespace Cotton.Server.Controllers
             }
 
             ancestors.Reverse();
-            return Ok(ancestors);
+            return (ancestors, null);
         }
 
         /// <summary>
@@ -770,10 +818,21 @@ namespace Cotton.Server.Controllers
             [FromQuery] Guid? nodeId,
             CancellationToken cancellationToken)
         {
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiNotFound("Shared folder not found.");
+                return this.ApiPublicShareNotFound(
+                    _publicShareLookupFailures,
+                    token,
+                    "Shared folder not found.");
             }
 
             Guid targetNodeId = nodeId ?? nodeShareToken.NodeId;
@@ -815,34 +874,28 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool download = true,
             [FromQuery] bool preview = false)
         {
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
             NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
-                return this.ApiNotFound("File not found.");
+                return this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found.");
             }
 
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId
-                    && x.OwnerId == nodeShareToken.CreatedByUserId);
-
+            NodeFile? nodeFile = await LoadSharedNodeFileAsync(nodeFileId, nodeShareToken.CreatedByUserId);
             if (nodeFile is null)
             {
                 return this.ApiNotFound("File not found.");
             }
 
             bool servesPreview = preview && nodeFile.FileManifest.LargeFilePreviewHash is not null;
-            if (servesPreview)
-            {
-                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "shared-folder.preview");
-            }
-            else
-            {
-                _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "shared-folder.download");
-            }
+            RequireSharedFileIntegrity(nodeFile, servesPreview);
 
             if (nodeFile.Node.Type != NodeType.Default)
             {
@@ -858,27 +911,49 @@ namespace Cotton.Server.Controllers
                 return this.ApiNotFound("File not found.");
             }
 
-            if (preview && nodeFile.FileManifest.LargeFilePreviewHash is not null)
+            return servesPreview
+                ? ServeSharedLargePreview(nodeFile)
+                : ServeSharedFileDownload(nodeFile, download);
+        }
+
+        private Task<NodeFile?> LoadSharedNodeFileAsync(Guid nodeFileId, Guid ownerId)
+        {
+            return _dbContext.NodeFiles
+                .Include(x => x.Node)
+                .Include(x => x.FileManifest)
+                .ThenInclude(x => x.FileManifestChunks)
+                .ThenInclude(x => x.Chunk)
+                .SingleOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == ownerId);
+        }
+
+        private void RequireSharedFileIntegrity(NodeFile nodeFile, bool servesPreview)
+        {
+            if (servesPreview)
             {
-                string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash);
-                Stream previewStream = _storage.GetBlobStream([previewHashHex]);
-                string etag = $"\"sha256-{previewHashHex}\"";
-                var etagHeader = new EntityTagHeaderValue(etag);
-                if (Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out Microsoft.Extensions.Primitives.StringValues inmValues))
-                {
-                    IList<EntityTagHeaderValue> clientEtags = EntityTagHeaderValue.ParseList([.. inmValues!]);
-                    if (clientEtags.Any(x => x.Compare(etagHeader, useStrongComparison: true)))
-                    {
-                        Response.Headers.ETag = etagHeader.ToString();
-                        Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-                        return StatusCode(StatusCodes.Status304NotModified);
-                    }
-                }
-                Response.Headers.ETag = etag;
-                Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-                return File(previewStream, "image/webp");
+                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "shared-folder.preview");
+                return;
             }
 
+            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "shared-folder.download");
+        }
+
+        private IActionResult ServeSharedLargePreview(NodeFile nodeFile)
+        {
+            string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash!);
+            EntityTagHeaderValue entityTag = new($"\"sha256-{previewHashHex}\"");
+            Response.Headers.ETag = entityTag.ToString();
+            Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+            if (FileETags.MatchesIfNoneMatchHeader(Request, entityTag))
+            {
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
+
+            Stream previewStream = _storage.GetBlobStream([previewHashHex]);
+            return File(previewStream, "image/webp");
+        }
+
+        private IActionResult ServeSharedFileDownload(NodeFile nodeFile, bool download)
+        {
             string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
             PipelineContext context = new()
             {
@@ -893,7 +968,6 @@ namespace Cotton.Server.Controllers
             bool requestedInline = !download;
             FileResponseSecurity.ApplyFileResponseHeaders(Response, nodeFile.FileManifest.ContentType, requestedInline);
 
-            var lastModified = new DateTimeOffset(nodeFile.CreatedAt);
             return File(
                 stream,
                 FileResponseSecurity.ResolveContentTypeForResponse(nodeFile.FileManifest.ContentType, requestedInline),
@@ -901,7 +975,7 @@ namespace Cotton.Server.Controllers
                     nodeFile.Name,
                     requestedInline,
                     nodeFile.FileManifest.ContentType),
-                lastModified: lastModified,
+                lastModified: new DateTimeOffset(nodeFile.CreatedAt),
                 entityTag: entityTag,
                 enableRangeProcessing: true);
         }
@@ -1031,29 +1105,6 @@ namespace Cotton.Server.Controllers
                 return null;
             }
             return node;
-        }
-
-        private async Task<string> CreateUniqueShareTokenAsync(int length)
-        {
-            const int maxAttempts = 8;
-
-            for (int attempt = 0; attempt < maxAttempts; attempt++)
-            {
-                string candidate = StringHelpers.CreateRandomString(length);
-                bool existsInFileTokens = await _dbContext.DownloadTokens.AnyAsync(x => x.Token == candidate);
-                if (existsInFileTokens)
-                {
-                    continue;
-                }
-
-                bool existsInNodeTokens = await _dbContext.NodeShareTokens.AnyAsync(x => x.Token == candidate);
-                if (!existsInNodeTokens)
-                {
-                    return candidate;
-                }
-            }
-
-            throw new InvalidOperationException("Unable to generate a unique share token.");
         }
 
         private static async Task<List<SharedNodeFileDto>> LoadSharedFilesAsync(
