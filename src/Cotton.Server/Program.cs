@@ -199,6 +199,7 @@ namespace Cotton.Server
                 .AddScoped<FileManifestService>()
                 .AddSingleton<UserStorageQuotaCache>()
                 .AddSingleton<UserStorageQuotaMutationGate>()
+                .AddSingleton<AppCodeRequestStore>()
                 .AddScoped<UserStorageQuotaService>()
                 .AddScoped<PublicShareTokenGenerator>()
                 .AddSingleton<ArchiveDownloadTicketStore>()
