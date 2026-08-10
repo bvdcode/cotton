@@ -746,28 +746,45 @@ namespace Cotton.Server.Controllers
                 return this.ApiNotFound("Folder not found.");
             }
 
+            (List<NodeDto> ancestors, string? error) = await LoadSharedAncestorsAsync(
+                currentNode,
+                nodeShareToken.NodeId,
+                nodeShareToken.CreatedByUserId);
+            if (error is not null)
+            {
+                return this.ApiConflict(error);
+            }
+
+            return Ok(ancestors);
+        }
+
+        private async Task<(List<NodeDto> Ancestors, string? Error)> LoadSharedAncestorsAsync(
+            Node currentNode,
+            Guid sharedRootNodeId,
+            Guid ownerId)
+        {
             const int maxDepth = 256;
             int depth = 0;
-            var visited = new HashSet<Guid> { currentNode.Id };
+            HashSet<Guid> visited = [currentNode.Id];
             List<NodeDto> ancestors = [];
 
             while (currentNode.ParentId.HasValue)
             {
                 if (depth++ >= maxDepth)
                 {
-                    return this.ApiConflict("Maximum node hierarchy depth exceeded.");
+                    return ([], "Maximum node hierarchy depth exceeded.");
                 }
 
                 Guid parentId = currentNode.ParentId.Value;
                 if (!visited.Add(parentId))
                 {
-                    return this.ApiConflict("Circular reference detected in node hierarchy.");
+                    return ([], "Circular reference detected in node hierarchy.");
                 }
 
                 Node? parentNode = await _dbContext.Nodes
                     .AsNoTracking()
                     .Where(x => x.Id == parentId
-                        && x.OwnerId == nodeShareToken.CreatedByUserId
+                        && x.OwnerId == ownerId
                         && x.Type == NodeType.Default)
                     .SingleOrDefaultAsync();
 
@@ -776,7 +793,7 @@ namespace Cotton.Server.Controllers
                     break;
                 }
 
-                if (parentNode.Id == nodeShareToken.NodeId)
+                if (parentNode.Id == sharedRootNodeId)
                 {
                     ancestors.Add(parentNode.Adapt<NodeDto>());
                     break;
@@ -787,7 +804,7 @@ namespace Cotton.Server.Controllers
             }
 
             ancestors.Reverse();
-            return Ok(ancestors);
+            return (ancestors, null);
         }
 
         /// <summary>
@@ -871,28 +888,14 @@ namespace Cotton.Server.Controllers
                 return this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found.");
             }
 
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId
-                    && x.OwnerId == nodeShareToken.CreatedByUserId);
-
+            NodeFile? nodeFile = await LoadSharedNodeFileAsync(nodeFileId, nodeShareToken.CreatedByUserId);
             if (nodeFile is null)
             {
                 return this.ApiNotFound("File not found.");
             }
 
             bool servesPreview = preview && nodeFile.FileManifest.LargeFilePreviewHash is not null;
-            if (servesPreview)
-            {
-                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "shared-folder.preview");
-            }
-            else
-            {
-                _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "shared-folder.download");
-            }
+            RequireSharedFileIntegrity(nodeFile, servesPreview);
 
             if (nodeFile.Node.Type != NodeType.Default)
             {
@@ -908,23 +911,49 @@ namespace Cotton.Server.Controllers
                 return this.ApiNotFound("File not found.");
             }
 
-            if (preview && nodeFile.FileManifest.LargeFilePreviewHash is not null)
+            return servesPreview
+                ? ServeSharedLargePreview(nodeFile)
+                : ServeSharedFileDownload(nodeFile, download);
+        }
+
+        private Task<NodeFile?> LoadSharedNodeFileAsync(Guid nodeFileId, Guid ownerId)
+        {
+            return _dbContext.NodeFiles
+                .Include(x => x.Node)
+                .Include(x => x.FileManifest)
+                .ThenInclude(x => x.FileManifestChunks)
+                .ThenInclude(x => x.Chunk)
+                .SingleOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == ownerId);
+        }
+
+        private void RequireSharedFileIntegrity(NodeFile nodeFile, bool servesPreview)
+        {
+            if (servesPreview)
             {
-                string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash);
-                Stream previewStream = _storage.GetBlobStream([previewHashHex]);
-                string etag = $"\"sha256-{previewHashHex}\"";
-                EntityTagHeaderValue etagHeader = new(etag);
-                if (FileETags.MatchesIfNoneMatchHeader(Request, etagHeader))
-                {
-                    Response.Headers.ETag = etagHeader.ToString();
-                    Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-                    return StatusCode(StatusCodes.Status304NotModified);
-                }
-                Response.Headers.ETag = etag;
-                Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-                return File(previewStream, "image/webp");
+                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "shared-folder.preview");
+                return;
             }
 
+            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "shared-folder.download");
+        }
+
+        private IActionResult ServeSharedLargePreview(NodeFile nodeFile)
+        {
+            string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash!);
+            EntityTagHeaderValue entityTag = new($"\"sha256-{previewHashHex}\"");
+            Response.Headers.ETag = entityTag.ToString();
+            Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+            if (FileETags.MatchesIfNoneMatchHeader(Request, entityTag))
+            {
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
+
+            Stream previewStream = _storage.GetBlobStream([previewHashHex]);
+            return File(previewStream, "image/webp");
+        }
+
+        private IActionResult ServeSharedFileDownload(NodeFile nodeFile, bool download)
+        {
             string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
             PipelineContext context = new()
             {
@@ -939,7 +968,6 @@ namespace Cotton.Server.Controllers
             bool requestedInline = !download;
             FileResponseSecurity.ApplyFileResponseHeaders(Response, nodeFile.FileManifest.ContentType, requestedInline);
 
-            var lastModified = new DateTimeOffset(nodeFile.CreatedAt);
             return File(
                 stream,
                 FileResponseSecurity.ResolveContentTypeForResponse(nodeFile.FileManifest.ContentType, requestedInline),
@@ -947,7 +975,7 @@ namespace Cotton.Server.Controllers
                     nodeFile.Name,
                     requestedInline,
                     nodeFile.FileManifest.ContentType),
-                lastModified: lastModified,
+                lastModified: new DateTimeOffset(nodeFile.CreatedAt),
                 entityTag: entityTag,
                 enableRangeProcessing: true);
         }

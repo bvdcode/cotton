@@ -98,67 +98,80 @@ namespace Cotton.Server.Controllers
                 }
             }
 
-            switch (result.Kind)
+            return result.Kind switch
             {
-                case "badRequest":
-                    return this.ApiBadRequest(result.ErrorMessage ?? "Bad request");
-                case "notFound":
-                    return this.ApiNotFound(result.ErrorMessage ?? "File not found");
-                case "redirect":
-                    return Redirect(result.RedirectUrl ?? "/");
-                case "html":
-                    return Content(result.HtmlContent ?? string.Empty, "text/html; charset=utf-8");
-                case "head":
-                    bool headRequestedInline = result.Inline == true;
-                    FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, headRequestedInline);
-                    Response.Headers.ContentEncoding = "identity";
-                    Response.Headers.CacheControl = "private, no-store, no-transform";
-                    Response.ContentType = FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, headRequestedInline);
-                    Response.ContentLength = result.ContentLength;
-                    if (!string.IsNullOrWhiteSpace(result.EntityTag))
-                    {
-                        Response.Headers.ETag = result.EntityTag;
-                    }
-                    var cd = new ContentDispositionHeaderValue(
-                        FileResponseSecurity.ResolveContentDispositionType(result.ContentType, headRequestedInline))
-                    {
-                        FileNameStar = result.FileName,
-                        FileName = result.FileName,
-                    };
-                    Response.Headers[HeaderNames.ContentDisposition] = cd.ToString();
-                    return new EmptyResult();
-                case "stream":
-                    bool streamRequestedInline = string.IsNullOrWhiteSpace(result.DownloadName);
-                    FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, streamRequestedInline);
-                    Response.Headers.ContentEncoding = "identity";
-                    Response.Headers.CacheControl = "private, no-store, no-transform";
-                    if (result.DeleteAfterUse && result.DeleteTokenId.HasValue)
-                    {
-                        Response.OnCompleted(async () =>
-                        {
-                            DownloadToken? tokenEntity = await _dbContext.DownloadTokens
-                                .FirstOrDefaultAsync(x => x.Id == result.DeleteTokenId.Value);
-                            if (tokenEntity is not null)
-                            {
-                                _dbContext.DownloadTokens.Remove(tokenEntity);
-                                await _dbContext.SaveChangesAsync();
-                            }
-                        });
-                    }
-                    string streamFileName = result.FileName ?? result.DownloadName ?? "download";
-                    string? streamDownloadName = streamRequestedInline
-                        ? FileResponseSecurity.ResolveFileDownloadName(streamFileName, requestedInline: true, result.ContentType)
-                        : result.DownloadName;
-                    return File(
-                        result.FileStream!,
-                        FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, streamRequestedInline),
-                        fileDownloadName: streamDownloadName,
-                        lastModified: result.LastModified,
-                        entityTag: result.EntityTagValue!,
-                        enableRangeProcessing: true);
-                default:
-                    return this.ApiBadRequest("Invalid share response");
+                "badRequest" => this.ApiBadRequest(result.ErrorMessage ?? "Bad request"),
+                "notFound" => this.ApiNotFound(result.ErrorMessage ?? "File not found"),
+                "redirect" => Redirect(result.RedirectUrl ?? "/"),
+                "html" => Content(result.HtmlContent ?? string.Empty, "text/html; charset=utf-8"),
+                "head" => CreateShareHeadResponse(result),
+                "stream" => CreateShareStreamResponse(result),
+                _ => this.ApiBadRequest("Invalid share response")
+            };
+        }
+
+        private IActionResult CreateShareHeadResponse(ShareFileResult result)
+        {
+            bool requestedInline = result.Inline == true;
+            FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, requestedInline);
+            Response.Headers.ContentEncoding = "identity";
+            Response.Headers.CacheControl = "private, no-store, no-transform";
+            Response.ContentType = FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline);
+            Response.ContentLength = result.ContentLength;
+            if (!string.IsNullOrWhiteSpace(result.EntityTag))
+            {
+                Response.Headers.ETag = result.EntityTag;
             }
+
+            ContentDispositionHeaderValue contentDisposition = new(
+                FileResponseSecurity.ResolveContentDispositionType(result.ContentType, requestedInline))
+            {
+                FileNameStar = result.FileName,
+                FileName = result.FileName,
+            };
+            Response.Headers[HeaderNames.ContentDisposition] = contentDisposition.ToString();
+            return new EmptyResult();
+        }
+
+        private IActionResult CreateShareStreamResponse(ShareFileResult result)
+        {
+            bool requestedInline = string.IsNullOrWhiteSpace(result.DownloadName);
+            FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, requestedInline);
+            Response.Headers.ContentEncoding = "identity";
+            Response.Headers.CacheControl = "private, no-store, no-transform";
+            RegisterDeleteAfterUse(result);
+
+            string streamFileName = result.FileName ?? result.DownloadName ?? "download";
+            string? streamDownloadName = requestedInline
+                ? FileResponseSecurity.ResolveFileDownloadName(streamFileName, requestedInline: true, result.ContentType)
+                : result.DownloadName;
+            return File(
+                result.FileStream!,
+                FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline),
+                fileDownloadName: streamDownloadName,
+                lastModified: result.LastModified,
+                entityTag: result.EntityTagValue!,
+                enableRangeProcessing: true);
+        }
+
+        private void RegisterDeleteAfterUse(ShareFileResult result)
+        {
+            if (!result.DeleteAfterUse || !result.DeleteTokenId.HasValue)
+            {
+                return;
+            }
+
+            Guid tokenId = result.DeleteTokenId.Value;
+            Response.OnCompleted(async () =>
+            {
+                DownloadToken? tokenEntity = await _dbContext.DownloadTokens
+                    .FirstOrDefaultAsync(x => x.Id == tokenId);
+                if (tokenEntity is not null)
+                {
+                    _dbContext.DownloadTokens.Remove(tokenEntity);
+                    await _dbContext.SaveChangesAsync();
+                }
+            });
         }
 
         /// <summary>
@@ -1110,10 +1123,29 @@ namespace Cotton.Server.Controllers
 
             RegisterDeleteAfterUse(downloadToken);
 
+            return await TranscodeHlsSegmentAsync(
+                nodeFile,
+                nodeFileId,
+                segmentIndex,
+                cacheKey,
+                manifestPlan,
+                rendition,
+                probe);
+        }
+
+        private async Task<IActionResult> TranscodeHlsSegmentAsync(
+            NodeFile nodeFile,
+            Guid nodeFileId,
+            int segmentIndex,
+            string cacheKey,
+            HlsManifestBuilder.HlsManifestPlan manifestPlan,
+            HlsRendition rendition,
+            MediaProbeInfo probe)
+        {
             await using IAsyncDisposable segmentLease = await _hlsTranscodes.EnterSegmentAsync(
                 cacheKey,
                 HttpContext.RequestAborted);
-            if (_segmentCache.TryGet(cacheKey, out cachedBytes))
+            if (_segmentCache.TryGet(cacheKey, out byte[]? cachedBytes))
             {
                 return ServeCachedHlsSegment(cachedBytes);
             }
@@ -1131,8 +1163,8 @@ namespace Cotton.Server.Controllers
             Response.Headers.CacheControl = "private, max-age=300";
             Response.Headers.ContentEncoding = "identity";
 
-            using var captureStream = new MemoryStream();
-            var tee = new TeeStream(Response.Body, captureStream);
+            using MemoryStream captureStream = new();
+            TeeStream tee = new(Response.Body, captureStream);
             bool transcodeSucceeded = false;
 
             await using Stream sourceStream = OpenSourceStream(nodeFile);
