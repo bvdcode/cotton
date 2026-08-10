@@ -115,7 +115,7 @@ Important guards:
 
 #### Database-integrity strict mode
 
-`DatabaseIntegrityDiagnosticsService.GetSnapshotAsync` returns a DTO with `Enabled = true`. `UnsignedProtectedRows` is a live count, summed across every registered descriptor, of protected rows whose MAC property (`IntegrityMac` column, `DatabaseIntegrityColumns.MacProperty`) is null or whose version property (`IntegrityVersion`, `DatabaseIntegrityColumns.VersionProperty`) differs from the descriptor `SchemaVersion`. Those rows are hard failures at read boundaries and during save-time original-state verification. `ProtectedEntityTypes` is the count of descriptors in `IDatabaseIntegrityDescriptorRegistry.All` (currently 15). See the *Database Integrity* section for the signing model and strict cutover exceptions raised when unsigned rows are encountered.
+`DatabaseIntegrityDiagnosticsService.GetSnapshotAsync` returns a DTO with `Enabled = true`. `UnsignedProtectedRows` is a live count, summed across every registered descriptor, of protected rows whose MAC property (`IntegrityMac` column, `DatabaseIntegrityColumns.MacProperty`) is null or whose version property (`IntegrityVersion`, `DatabaseIntegrityColumns.VersionProperty`) differs from the descriptor `SchemaVersion`. Those rows are hard failures at read boundaries and during save-time original-state verification. `ProtectedEntityTypes` is the count of descriptors in `IDatabaseIntegrityDescriptorRegistry.All` (currently 13). See the *Database Integrity* section for the signing model and strict cutover exceptions raised when unsigned rows are encountered.
 
 ### SecurityDiagnosticsDto shape
 
