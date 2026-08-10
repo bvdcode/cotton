@@ -24,8 +24,6 @@ namespace Cotton.Database.Migrations
             migrationBuilder.DropColumn(
                 name: "fcm_service_account_json_encrypted",
                 table: "server_settings");
-
-            migrationBuilder.Sql("UPDATE server_settings SET integrity_mac = NULL, integrity_version = NULL;");
         }
 
         /// <inheritdoc />
@@ -84,8 +82,6 @@ namespace Cotton.Database.Migrations
                 name: "IX_push_device_tokens_user_id_session_id_provider_platform",
                 table: "push_device_tokens",
                 columns: new[] { "user_id", "session_id", "provider", "platform" });
-
-            migrationBuilder.Sql("UPDATE server_settings SET integrity_mac = NULL, integrity_version = NULL;");
         }
     }
 }
