@@ -55,24 +55,36 @@ namespace Cotton.Server.Extensions
                         "The direct client connection IP address is unavailable for this request.");
             }
 
-            if (trustedProxyIpAddress is not null)
+            if (trustedProxyIpAddress is not null
+                && !request.CanTrustForwardedHeaders(
+                    trustedProxyIpAddress,
+                    trustedProxyPrefixLength))
             {
                 IPAddress? connectingIpAddress = request.GetConnectingIPAddress();
-                if (!MatchesTrustedProxy(
-                        trustedProxyIpAddress,
-                        trustedProxyPrefixLength,
-                        connectingIpAddress))
-                {
-                    throw new UntrustedProxyConnectionException(
-                        Normalize(trustedProxyIpAddress),
-                        trustedProxyPrefixLength,
-                        connectingIpAddress);
-                }
+                throw new UntrustedProxyConnectionException(
+                    Normalize(trustedProxyIpAddress),
+                    trustedProxyPrefixLength,
+                    connectingIpAddress);
             }
 
             // EasyExtensions currently resolves CF-Connecting-IP, then X-Real-IP, then X-Forwarded-For, and finally
             // Connection.RemoteIpAddress. The configured peer check above is the trust boundary around those headers.
             return EasyHttpRequestExtensions.GetRemoteIPAddress(request);
+        }
+
+        internal static bool CanTrustForwardedHeaders(
+            this HttpRequest request,
+            IPAddress? trustedProxyIpAddress,
+            byte? trustedProxyPrefixLength = null)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            return !IsDirectConnectionMode(trustedProxyIpAddress, trustedProxyPrefixLength)
+                && (trustedProxyIpAddress is null
+                    || MatchesTrustedProxy(
+                        trustedProxyIpAddress,
+                        trustedProxyPrefixLength,
+                        request.GetConnectingIPAddress()));
         }
 
         internal static bool IsDirectConnectionMode(

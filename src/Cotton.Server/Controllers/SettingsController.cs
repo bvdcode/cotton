@@ -876,7 +876,11 @@ namespace Cotton.Server.Controllers
 
         private string GetFallbackPublicBaseUrl()
         {
-            return RequestBaseUrlHelpers.GetBaseUrl(Request);
+            CottonServerSettings settings = _settings.GetServerSettings();
+            return RequestBaseUrlHelpers.GetBaseUrl(
+                Request,
+                settings.TrustedProxyIpAddress,
+                settings.TrustedProxyPrefixLength);
         }
 
         private static void ThrowIfInvalid(string? error)

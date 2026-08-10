@@ -1,6 +1,9 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Extensions;
+using System.Net;
+
 namespace Cotton.Server.Helpers
 {
     /// <summary>
@@ -13,11 +16,21 @@ namespace Cotton.Server.Helpers
         /// <summary>
         /// Gets request base URL, honoring proxy-forwarded scheme for URL generation only.
         /// </summary>
-        public static string GetBaseUrl(HttpRequest request)
+        public static string GetBaseUrl(
+            HttpRequest request,
+            IPAddress? trustedProxyIpAddress = null,
+            byte? trustedProxyPrefixLength = null)
         {
             ArgumentNullException.ThrowIfNull(request);
 
-            string scheme = GetForwardedScheme(request) ?? request.Scheme;
+            string scheme = request.Scheme;
+            if (request.CanTrustForwardedHeaders(
+                    trustedProxyIpAddress,
+                    trustedProxyPrefixLength))
+            {
+                scheme = GetForwardedScheme(request) ?? scheme;
+            }
+
             return $"{scheme}://{request.Host.Value}".TrimEnd('/');
         }
 
