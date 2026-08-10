@@ -85,15 +85,15 @@ namespace Cotton.Previews
 
         private static async Task<byte[]?> TryExtractCoverArtAsync(Uri url)
         {
-            var tempFile = Path.Combine(Path.GetTempPath(), $"cotton_cover_{Guid.NewGuid():N}");
+            string tempFile = Path.Combine(Path.GetTempPath(), $"cotton_cover_{Guid.NewGuid():N}");
             try
             {
-                var args =
+                string args =
                     "-hide_banner -loglevel error " +
                     $"-dump_attachment:t:0 \"{tempFile}\" " +
                     $"-i \"{url}\" -y";
 
-                var startInfo = new ProcessStartInfo
+                ProcessStartInfo startInfo = new()
                 {
                     FileName = FfmpegBinary.GetFfmpegPath(),
                     Arguments = args,
@@ -103,30 +103,28 @@ namespace Cotton.Previews
                     CreateNoWindow = true
                 };
 
-                using var process = new Process { StartInfo = startInfo };
+                using Process process = new() { StartInfo = startInfo };
                 if (!process.Start())
                 {
-                    return null;
+                    throw new InvalidOperationException(
+                        "Failed to start ffmpeg for video cover art extraction.");
                 }
 
                 Task<string> stderrTask = process.StandardError.ReadToEndAsync();
 
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-                try
+                bool completed = await FfmpegBinary.WaitForProcessAsync(
+                    process,
+                    TimeSpan.FromSeconds(15),
+                    CancellationToken.None).ConfigureAwait(false);
+                await stderrTask.ConfigureAwait(false);
+                if (!completed)
                 {
-                    await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
-                }
-                catch
-                {
-                    try { process.Kill(true); } catch { }
                     return null;
                 }
 
-                await stderrTask.ConfigureAwait(false);
-
                 if (File.Exists(tempFile))
                 {
-                    var data = await File.ReadAllBytesAsync(tempFile).ConfigureAwait(false);
+                    byte[] data = await File.ReadAllBytesAsync(tempFile).ConfigureAwait(false);
                     if (data.Length > 0)
                     {
                         return data;
@@ -145,7 +143,7 @@ namespace Cotton.Previews
         {
             string ss = seekSeconds > 0 ? $"-ss {seekSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)} " : string.Empty;
 
-            var args =
+            string args =
                 "-hide_banner -loglevel error " +
                 ss +
                 $"-i \"{url}\" " +
@@ -153,43 +151,12 @@ namespace Cotton.Previews
                 "-an -sn -dn " +
                 "-f image2pipe -vcodec png pipe:1";
 
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = FfmpegBinary.GetFfmpegPath(),
-                Arguments = args,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            using var process = new Process { StartInfo = startInfo };
-            if (!process.Start())
-            {
-                throw new InvalidOperationException("Failed to start ffmpeg for video preview.");
-            }
-
-            await using Stream stdout = process.StandardOutput.BaseStream;
-            await using var outputMs = new MemoryStream();
-            Task copyOutputTask = stdout.CopyToAsync(outputMs);
-            Task<string> errorTask = process.StandardError.ReadToEndAsync();
-
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            try
-            {
-                await Task.WhenAll(copyOutputTask, process.WaitForExitAsync(cts.Token)).ConfigureAwait(false);
-            }
-            catch
-            {
-                try { process.Kill(true); } catch { }
-                throw new InvalidOperationException("ffmpeg video preview timed out.");
-            }
-
-            var stderr = await errorTask.ConfigureAwait(false);
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException($"ffmpeg video preview failed. exitCode={process.ExitCode}; stderr={stderr}");
-            }
+            await using MemoryStream outputMs = new();
+            await FfmpegProcessRunner.RunAsync(
+                args,
+                outputMs,
+                TimeSpan.FromSeconds(30),
+                "video preview").ConfigureAwait(false);
 
             if (outputMs.Length == 0)
             {

@@ -7,7 +7,6 @@ using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using System.Diagnostics;
 
 namespace Cotton.Previews
 {
@@ -147,49 +146,19 @@ namespace Cotton.Previews
 
         private static async Task<short[]> DecodePcm16MonoAsync(Uri url)
         {
-            var args =
+            string args =
                 "-hide_banner -loglevel error -nostdin " +
                 $"-i \"{url}\" " +
                 "-vn -sn -dn " +
                 $"-ac 1 -ar {WaveformSampleRateHz} " +
                 "-f s16le pipe:1";
 
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = FfmpegBinary.GetFfmpegPath(),
-                Arguments = args,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            using var process = new Process { StartInfo = startInfo };
-            if (!process.Start())
-            {
-                throw new InvalidOperationException("Failed to start ffmpeg for waveform extraction.");
-            }
-
-            await using var outputMs = new MemoryStream();
-            Task copyOutputTask = process.StandardOutput.BaseStream.CopyToAsync(outputMs);
-            Task<string> errorTask = process.StandardError.ReadToEndAsync();
-
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(WaveformExtractionTimeoutSeconds));
-            try
-            {
-                await Task.WhenAll(copyOutputTask, process.WaitForExitAsync(cts.Token)).ConfigureAwait(false);
-            }
-            catch
-            {
-                try { process.Kill(true); } catch { }
-                throw new InvalidOperationException($"ffmpeg waveform extraction timed out after {WaveformExtractionTimeoutSeconds} seconds.");
-            }
-
-            var stderr = await errorTask.ConfigureAwait(false);
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException($"ffmpeg waveform extraction failed. exitCode={process.ExitCode}; stderr={stderr}");
-            }
+            await using MemoryStream outputMs = new();
+            await FfmpegProcessRunner.RunAsync(
+                args,
+                outputMs,
+                TimeSpan.FromSeconds(WaveformExtractionTimeoutSeconds),
+                "waveform extraction").ConfigureAwait(false);
 
             byte[] bytes = outputMs.ToArray();
             if (bytes.Length == 0)
@@ -256,50 +225,19 @@ namespace Cotton.Previews
 
         private static async Task<byte[]> ExtractCoverArtAsync(Uri url)
         {
-            var args =
+            string args =
                 "-hide_banner -loglevel error -nostdin " +
                 $"-i \"{url}\" " +
                 "-an -sn -dn " +
                 "-frames:v 1 " +
                 "-f image2pipe -vcodec png pipe:1";
 
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = FfmpegBinary.GetFfmpegPath(),
-                Arguments = args,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            using var process = new Process { StartInfo = startInfo };
-            if (!process.Start())
-            {
-                throw new InvalidOperationException("Failed to start ffmpeg for audio cover art extraction.");
-            }
-
-            await using Stream stdout = process.StandardOutput.BaseStream;
-            await using var outputMs = new MemoryStream();
-            Task copyOutputTask = stdout.CopyToAsync(outputMs);
-            Task<string> errorTask = process.StandardError.ReadToEndAsync();
-
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(CoverArtExtractionTimeoutSeconds));
-            try
-            {
-                await Task.WhenAll(copyOutputTask, process.WaitForExitAsync(cts.Token)).ConfigureAwait(false);
-            }
-            catch
-            {
-                try { process.Kill(true); } catch { }
-                throw new InvalidOperationException($"ffmpeg audio cover art extraction timed out after {CoverArtExtractionTimeoutSeconds} seconds.");
-            }
-
-            var stderr = await errorTask.ConfigureAwait(false);
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException($"ffmpeg audio cover art extraction failed. exitCode={process.ExitCode}; stderr={stderr}");
-            }
+            await using MemoryStream outputMs = new();
+            await FfmpegProcessRunner.RunAsync(
+                args,
+                outputMs,
+                TimeSpan.FromSeconds(CoverArtExtractionTimeoutSeconds),
+                "audio cover art extraction").ConfigureAwait(false);
 
             if (outputMs.Length == 0)
             {
