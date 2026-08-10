@@ -289,20 +289,17 @@ const useMediaLightboxRender = ({
     ],
   );
 
-export const MediaLightbox: React.FC<MediaLightboxProps> = ({
-  items,
-  open,
-  initialIndex,
-  onClose,
-  getSignedMediaUrl,
-  smoothTransitions = true,
-  getDownloadUrl,
-  onDelete,
-}) => {
-  const { t } = useTranslation(["files", "common"]);
+const useLightboxIndex = (
+  open: boolean,
+  initialIndex: number,
+  items: MediaLightboxProps["items"],
+) => {
   const indexKey = buildLightboxIndexKey(open, initialIndex, items);
   const [indexState, setIndexState] = React.useState<LightboxIndexState>(
-    () => ({ key: indexKey, index: initialIndex }),
+    () => ({
+      key: indexKey,
+      index: initialIndex,
+    }),
   );
   const rawIndex =
     indexState.key === indexKey ? indexState.index : initialIndex;
@@ -324,6 +321,59 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     },
     [indexKey, initialIndex],
   );
+
+  return { index, indexKey, setLightboxIndex };
+};
+
+const useActiveVideoElement = (
+  indexKey: string,
+  currentItemId: string | null,
+) => {
+  const [activeVideoState, setActiveVideoState] =
+    React.useState<ActiveVideoState | null>(null);
+  const activeVideoElement =
+    activeVideoState?.key === indexKey &&
+    activeVideoState.fileId === currentItemId
+      ? activeVideoState.element
+      : null;
+  const setActiveVideoElementForFile = React.useCallback(
+    (fileId: string, element: HTMLVideoElement | null) => {
+      setActiveVideoState((current) => {
+        if (!element) {
+          return current?.key === indexKey && current.fileId === fileId
+            ? null
+            : current;
+        }
+
+        return { key: indexKey, fileId, element };
+      });
+    },
+    [indexKey],
+  );
+
+  return {
+    activeVideoElement,
+    setActiveVideoElementForFile,
+    setActiveVideoState,
+  };
+};
+
+export const MediaLightbox: React.FC<MediaLightboxProps> = ({
+  items,
+  open,
+  initialIndex,
+  onClose,
+  getSignedMediaUrl,
+  smoothTransitions = true,
+  getDownloadUrl,
+  onDelete,
+}) => {
+  const { t } = useTranslation(["files", "common"]);
+  const { index, indexKey, setLightboxIndex } = useLightboxIndex(
+    open,
+    initialIndex,
+    items,
+  );
   const hlsNoticeText = t("preview.video.transcodeNotice");
   const hlsErrorText = t("preview.video.transcodeError");
   const preferPreview = useUserPreferencesStore(selectGalleryPreferPreview);
@@ -333,27 +383,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   );
   const currentItem = open ? items[index] : undefined;
   const currentIsVideo = currentItem?.kind === "video";
-  const [activeVideoState, setActiveVideoState] =
-    React.useState<ActiveVideoState | null>(null);
-  const activeVideoElement =
-    activeVideoState?.key === indexKey &&
-    activeVideoState.fileId === currentItemId
-      ? activeVideoState.element
-      : null;
-
-  const setActiveVideoElementForFile = React.useCallback(
-    (fileId: string, element: HTMLVideoElement | null) => {
-      setActiveVideoState((current) => {
-        if (!element) {
-          return current?.key === indexKey && current.fileId === fileId
-            ? null
-            : current;
-        }
-        return { key: indexKey, fileId, element };
-      });
-    },
-    [indexKey],
-  );
+  const {
+    activeVideoElement,
+    setActiveVideoElementForFile,
+    setActiveVideoState,
+  } = useActiveVideoElement(indexKey, currentItemId);
 
   const videoMediaSessionTrack = React.useMemo(
     () =>
@@ -431,7 +465,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     setActiveVideoState(null);
     setTouchControlsVisible(true);
     onClose();
-  }, [onClose, open]);
+  }, [onClose, open, setActiveVideoState]);
 
   const toggleTouchControls = React.useCallback(() => {
     if (!isTouchDevice) return;

@@ -15,7 +15,11 @@ import { uploadConfig } from "./config";
 import { uploadFileToNode } from "./uploadFileToNode";
 import { RollingBytesPerSecondEstimator } from "./RollingBytesPerSecondEstimator";
 import { globalHashWorkerPool } from "./hash/HashWorkerPool";
-import type { UploadFileQueueItem, UploadServerParams } from "./types";
+import type {
+  UploadFileQueueItem,
+  UploadProgressSnapshot,
+  UploadServerParams,
+} from "./types";
 import { formatBytes } from "../utils/formatBytes";
 import type {
   AppTask,
@@ -60,6 +64,13 @@ interface UploadTaskInternal extends UploadTask {
   _laneProbeTimeout?: ReturnType<typeof setTimeout>;
   _bytesTransferredForSpeed?: number;
   _quotaReservationBytes?: number;
+}
+
+interface UploadExecutionState {
+  encryptionTask: AppTaskHandle | null;
+  encryptionTaskFinished: boolean;
+  lastEmitTime: number;
+  taskEstimator: RollingBytesPerSecondEstimator;
 }
 
 interface ExternalTaskInternal extends AppTask {
@@ -706,15 +717,15 @@ export class UploadManager {
     task._laneProbeConsumed = false;
     task._bytesTransferredForSpeed = 0;
 
-    const taskEstimator = new RollingBytesPerSecondEstimator({
-      windowMs: 1500,
-      minDurationMs: 250,
-    });
-    let lastEmitTime = 0;
-    const encryptionTaskRef: { current: AppTaskHandle | null } = {
-      current: null,
+    const executionState: UploadExecutionState = {
+      encryptionTask: null,
+      encryptionTaskFinished: false,
+      lastEmitTime: 0,
+      taskEstimator: new RollingBytesPerSecondEstimator({
+        windowMs: 1500,
+        minDurationMs: 250,
+      }),
     };
-    let encryptionTaskFinished = false;
 
     task._laneProbeTimeout = setTimeout(() => {
       this.maybeOpenLaneForHeadOfLine(task, Date.now());
@@ -722,173 +733,256 @@ export class UploadManager {
 
     this.emit();
 
-    void (async () => {
+    void this.executeTask(task, server, executionState);
+  }
+
+  private async executeTask(
+    task: UploadTaskInternal,
+    server: UploadServerParams,
+    state: UploadExecutionState,
+  ): Promise<void> {
+    try {
+      const uploadedFile = await uploadFileToNode({
+        file: task._file,
+        nodeId: task.nodeId,
+        replaceNodeFileId: task._replaceNodeFileId,
+        server,
+        encrypt: task._encrypt,
+        onEncryptProgress: (bytesEncrypted, bytesTotal) =>
+          this.updateEncryptionProgress(
+            task,
+            state,
+            bytesEncrypted,
+            bytesTotal,
+          ),
+        onEncryptComplete: () => this.completeEncryption(state),
+        onProgress: (bytesUploaded, snapshot) =>
+          this.updateUploadProgress(task, state, bytesUploaded, snapshot),
+        onFinalizing: () => {
+          task.status = "finalizing";
+          this.emit();
+        },
+      });
+
+      this.completeUpload(task, uploadedFile);
+    } catch (error) {
+      this.failUpload(task, state, error instanceof Error ? error : null);
+    } finally {
+      this.finishTaskExecution(task);
+    }
+  }
+
+  private updateEncryptionProgress(
+    task: UploadTaskInternal,
+    state: UploadExecutionState,
+    bytesEncrypted: number,
+    bytesTotal: number,
+  ): void {
+    state.encryptionTask ??= this.createTask({
+      kind: "encrypt",
+      label: task.fileName,
+      scopeLabel: task.nodeLabel,
+      bytesTotal,
+    });
+    state.encryptionTask.update({
+      status: "running",
+      bytesTotal,
+      bytesCompleted: bytesEncrypted,
+    });
+  }
+
+  private completeEncryption(state: UploadExecutionState): void {
+    state.encryptionTaskFinished = true;
+    state.encryptionTask?.complete();
+  }
+
+  private updateUploadProgress(
+    task: UploadTaskInternal,
+    state: UploadExecutionState,
+    bytesUploaded: number,
+    snapshot?: UploadProgressSnapshot,
+  ): void {
+    const previousBytesUploaded = task.bytesUploaded;
+    task.bytesUploaded = Math.min(task.bytesTotal, Math.max(0, bytesUploaded));
+    task.progress01 =
+      task.bytesTotal > 0 ? task.bytesUploaded / task.bytesTotal : 1;
+
+    const now = Date.now();
+    this.updateUploadSpeed(task, state, snapshot, now);
+    const delta = task.bytesUploaded - previousBytesUploaded;
+    this.updateOverallUploadProgress(delta);
+
+    if (this.shouldEmitUploadProgress(task, state.lastEmitTime, delta, now)) {
+      state.lastEmitTime = now;
+      this.emit();
+    }
+  }
+
+  private updateUploadSpeed(
+    task: UploadTaskInternal,
+    state: UploadExecutionState,
+    snapshot: UploadProgressSnapshot | undefined,
+    now: number,
+  ): void {
+    if (task.bytesUploaded > 0) {
+      task._sawProgress = true;
+      this.maybeOpenLaneForHeadOfLine(task, now);
+    }
+
+    const previousSpeedBytes = task._bytesTransferredForSpeed ?? 0;
+    const nextSpeedBytes = Math.max(
+      previousSpeedBytes,
+      snapshot?.bytesTransmitted ?? 0,
+      task.bytesUploaded,
+    );
+    const speedDelta = nextSpeedBytes - previousSpeedBytes;
+    if (speedDelta <= 0) {
+      return;
+    }
+
+    task._bytesTransferredForSpeed = nextSpeedBytes;
+    const taskRate = state.taskEstimator.update(nextSpeedBytes, now);
+    task.uploadSpeedBytesPerSec =
+      taskRate.rollingBytesPerSec > 0
+        ? taskRate.rollingBytesPerSec
+        : taskRate.averageBytesPerSec;
+    this.overallBytesTransferredForSpeed += speedDelta;
+    this.overallEstimator.update(this.overallBytesTransferredForSpeed, now);
+  }
+
+  private updateOverallUploadProgress(delta: number): void {
+    if (delta === 0) {
+      return;
+    }
+
+    this.overallBytesUploaded += delta;
+    this.overallBytesUploaded = Math.max(
+      0,
+      Math.min(this.overallBytesTotal, this.overallBytesUploaded),
+    );
+  }
+
+  private shouldEmitUploadProgress(
+    task: UploadTaskInternal,
+    lastEmitTime: number,
+    delta: number,
+    now: number,
+  ): boolean {
+    return (
+      delta < 0 ||
+      now - lastEmitTime >= uploadConfig.progressEmitIntervalMs ||
+      task.bytesUploaded >= task.bytesTotal
+    );
+  }
+
+  private completeUpload(
+    task: UploadTaskInternal,
+    uploadedFile: NodeFileManifestDto | undefined,
+  ): void {
+    let uploadedFileCached = false;
+    if (uploadedFile) {
+      uploadedFileCached = useNodesStore
+        .getState()
+        .upsertFileInCache(task.nodeId, uploadedFile);
       try {
-        const uploadedFile = await uploadFileToNode({
-          file: task._file,
-          nodeId: task.nodeId,
-          replaceNodeFileId: task._replaceNodeFileId,
-          server,
-          encrypt: task._encrypt,
-          onEncryptProgress: (bytesEncrypted, bytesTotal) => {
-            encryptionTaskRef.current ??= this.createTask({
-              kind: "encrypt",
-              label: task.fileName,
-              scopeLabel: task.nodeLabel,
-              bytesTotal,
-            });
-            encryptionTaskRef.current.update({
-              status: "running",
-              bytesTotal,
-              bytesCompleted: bytesEncrypted,
-            });
-          },
-          onEncryptComplete: () => {
-            encryptionTaskFinished = true;
-            encryptionTaskRef.current?.complete();
-          },
-          onProgress: (bytesUploaded, snapshot) => {
-            const prevBytesUploaded = task.bytesUploaded;
-            task.bytesUploaded = Math.min(
-              task.bytesTotal,
-              Math.max(0, bytesUploaded),
-            );
-            task.progress01 =
-              task.bytesTotal > 0 ? task.bytesUploaded / task.bytesTotal : 1;
-
-            const now = Date.now();
-            if (task.bytesUploaded > 0) {
-              task._sawProgress = true;
-              this.maybeOpenLaneForHeadOfLine(task, now);
-            }
-
-            const prevSpeedBytes = task._bytesTransferredForSpeed ?? 0;
-            const nextSpeedBytes = Math.max(
-              prevSpeedBytes,
-              snapshot?.bytesTransmitted ?? 0,
-              task.bytesUploaded,
-            );
-            const speedDelta = nextSpeedBytes - prevSpeedBytes;
-            if (speedDelta > 0) {
-              task._bytesTransferredForSpeed = nextSpeedBytes;
-              const taskRate = taskEstimator.update(nextSpeedBytes, now);
-              task.uploadSpeedBytesPerSec =
-                taskRate.rollingBytesPerSec > 0
-                  ? taskRate.rollingBytesPerSec
-                  : taskRate.averageBytesPerSec;
-
-              this.overallBytesTransferredForSpeed += speedDelta;
-              this.overallEstimator.update(
-                this.overallBytesTransferredForSpeed,
-                now,
-              );
-            }
-
-            const delta = task.bytesUploaded - prevBytesUploaded;
-            if (delta !== 0) {
-              this.overallBytesUploaded += delta;
-              this.overallBytesUploaded = Math.max(
-                0,
-                Math.min(this.overallBytesTotal, this.overallBytesUploaded),
-              );
-            }
-
-            if (
-              delta < 0 ||
-              now - lastEmitTime >= uploadConfig.progressEmitIntervalMs ||
-              task.bytesUploaded >= task.bytesTotal
-            ) {
-              lastEmitTime = now;
-              this.emit();
-            }
-          },
-          onFinalizing: () => {
-            task.status = "finalizing";
-            this.emit();
-          },
-        });
-
-        let uploadedFileCached = false;
-        if (uploadedFile) {
-          uploadedFileCached = useNodesStore
-            .getState()
-            .upsertFileInCache(task.nodeId, uploadedFile);
-          try {
-            task._onFileUploaded?.(uploadedFile);
-          } catch (listenerError) {
-            console.error("Upload completion listener failed:", listenerError);
-          }
-        }
-
-        task.status = "completed";
-        this.releaseQuotaReservation(task, true);
-        task.completedAt = Date.now();
-        const beforeFinalize = task.bytesUploaded;
-        task.bytesUploaded = task.bytesTotal;
-        task.progress01 = 1;
-
-        const finalizeDelta = task.bytesUploaded - beforeFinalize;
-        if (finalizeDelta > 0) {
-          this.overallBytesUploaded += finalizeDelta;
-          this.overallEstimator.update(this.overallBytesUploaded, Date.now());
-        }
-
-        this.fileConcurrency.observe({
-          bytes: task.bytesTotal,
-          durationMs: task.completedAt - (task._startedAt ?? task.completedAt),
-          succeeded: true,
-        });
-        this.emit();
-
-        if (!uploadedFileCached) {
-          this.scheduleNodeRefresh(task.nodeId);
-        }
-      } catch (e) {
-        this.releaseQuotaReservation(task, false);
-        if (encryptionTaskRef.current && !encryptionTaskFinished) {
-          encryptionTaskRef.current.fail({
-            message: e instanceof Error ? e.message : undefined,
-            key:
-              e instanceof NoKeyError
-                ? "encryptionVaultLocked"
-                : e instanceof ClientEncryptionSizeLimitError
-                  ? "clientEncryptionFileTooLarge"
-                  : "encryptionFailed",
-            params:
-              e instanceof ClientEncryptionSizeLimitError
-                ? { maxSize: formatBytes(e.maxBytes) }
-                : undefined,
-          });
-        }
-
-        task.status = "failed";
-        task.completedAt = Date.now();
-        task.error = e instanceof Error ? e.message : undefined;
-        if (e instanceof NoKeyError) {
-          task.errorKey = "encryptionVaultLocked";
-          task.errorParams = undefined;
-        } else if (e instanceof ClientEncryptionSizeLimitError) {
-          task.errorKey = "clientEncryptionFileTooLarge";
-          task.errorParams = { maxSize: formatBytes(e.maxBytes) };
-        } else {
-          task.errorKey = "uploadFailed";
-          task.errorParams = undefined;
-        }
-        this.fileConcurrency.observe({
-          bytes: task.bytesTotal,
-          durationMs: task.completedAt - (task._startedAt ?? task.completedAt),
-          succeeded: false,
-        });
-        this.emit();
-      } finally {
-        if (task._laneProbeTimeout) {
-          clearTimeout(task._laneProbeTimeout);
-          task._laneProbeTimeout = undefined;
-        }
-        this.activeUploads = Math.max(0, this.activeUploads - 1);
-        this.pump();
+        task._onFileUploaded?.(uploadedFile);
+      } catch (listenerError) {
+        console.error("Upload completion listener failed:", listenerError);
       }
-    })();
+    }
+
+    task.status = "completed";
+    this.releaseQuotaReservation(task, true);
+    task.completedAt = Date.now();
+    const beforeFinalize = task.bytesUploaded;
+    task.bytesUploaded = task.bytesTotal;
+    task.progress01 = 1;
+
+    const finalizeDelta = task.bytesUploaded - beforeFinalize;
+    if (finalizeDelta > 0) {
+      this.overallBytesUploaded += finalizeDelta;
+      this.overallEstimator.update(this.overallBytesUploaded, Date.now());
+    }
+
+    this.fileConcurrency.observe({
+      bytes: task.bytesTotal,
+      durationMs: task.completedAt - (task._startedAt ?? task.completedAt),
+      succeeded: true,
+    });
+    this.emit();
+
+    if (!uploadedFileCached) {
+      this.scheduleNodeRefresh(task.nodeId);
+    }
+  }
+
+  private failUpload(
+    task: UploadTaskInternal,
+    state: UploadExecutionState,
+    error: Error | null,
+  ): void {
+    this.releaseQuotaReservation(task, false);
+    if (state.encryptionTask && !state.encryptionTaskFinished) {
+      state.encryptionTask.fail({
+        message: error?.message,
+        key: this.getEncryptionErrorKey(error),
+        params: this.getUploadErrorParams(error),
+      });
+    }
+
+    task.status = "failed";
+    task.completedAt = Date.now();
+    task.error = error?.message;
+    task.errorKey = this.getUploadErrorKey(error);
+    task.errorParams = this.getUploadErrorParams(error);
+    this.fileConcurrency.observe({
+      bytes: task.bytesTotal,
+      durationMs: task.completedAt - (task._startedAt ?? task.completedAt),
+      succeeded: false,
+    });
+    this.emit();
+  }
+
+  private getEncryptionErrorKey(error: Error | null): string {
+    if (error instanceof NoKeyError) {
+      return "encryptionVaultLocked";
+    }
+
+    if (error instanceof ClientEncryptionSizeLimitError) {
+      return "clientEncryptionFileTooLarge";
+    }
+
+    return "encryptionFailed";
+  }
+
+  private getUploadErrorKey(error: Error | null): string {
+    if (error instanceof NoKeyError) {
+      return "encryptionVaultLocked";
+    }
+
+    if (error instanceof ClientEncryptionSizeLimitError) {
+      return "clientEncryptionFileTooLarge";
+    }
+
+    return "uploadFailed";
+  }
+
+  private getUploadErrorParams(
+    error: Error | null,
+  ): Record<string, string | number> | undefined {
+    return error instanceof ClientEncryptionSizeLimitError
+      ? { maxSize: formatBytes(error.maxBytes) }
+      : undefined;
+  }
+
+  private finishTaskExecution(task: UploadTaskInternal): void {
+    if (task._laneProbeTimeout) {
+      clearTimeout(task._laneProbeTimeout);
+      task._laneProbeTimeout = undefined;
+    }
+
+    this.activeUploads = Math.max(0, this.activeUploads - 1);
+    this.pump();
   }
 
   private maybeOpenLaneForHeadOfLine(task: UploadTaskInternal, now: number) {

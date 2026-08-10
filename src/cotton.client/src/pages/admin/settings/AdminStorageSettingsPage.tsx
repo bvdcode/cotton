@@ -184,9 +184,47 @@ const isAnyStatusSaving = (...statuses: SaveStatus[]): boolean =>
   statuses.includes("saving");
 
 const isStorageTypeDisabled = (
+  loadFailed: boolean,
   storageTypeStatus: SaveStatus,
   s3Status: SaveStatus,
-): boolean => isStatusBusy(storageTypeStatus) || s3Status === "saving";
+): boolean =>
+  loadFailed || isStatusBusy(storageTypeStatus) || s3Status === "saving";
+
+const isLoadedSettingDisabled = (
+  loadFailed: boolean,
+  status: SaveStatus,
+): boolean => loadFailed || isStatusBusy(status);
+
+const hasValidationError = (invalid: boolean, status: SaveStatus): boolean =>
+  invalid || status === "error";
+
+interface SettingsSaveButtonProps {
+  changed: boolean;
+  disabled: boolean;
+  label: string;
+  onSave: () => void;
+  saving: boolean;
+}
+
+const SettingsSaveButton = ({
+  changed,
+  disabled,
+  label,
+  onSave,
+  saving,
+}: SettingsSaveButtonProps) => (
+  <Button
+    variant="contained"
+    onClick={onSave}
+    disabled={disabled || !changed}
+    startIcon={
+      saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />
+    }
+    sx={{ minWidth: { xs: "100%", sm: 120 } }}
+  >
+    {label}
+  </Button>
+);
 
 export const AdminStorageSettingsPage = () => {
   const { t } = useTranslation("admin");
@@ -665,28 +703,41 @@ export const AdminStorageSettingsPage = () => {
     }
   };
 
-  const storageTypeDisabled =
-    loadFailed || isStorageTypeDisabled(storageTypeStatus, s3Status);
-  const s3Disabled = loadFailed || isStatusBusy(s3Status);
+  const storageTypeDisabled = isStorageTypeDisabled(
+    loadFailed,
+    storageTypeStatus,
+    s3Status,
+  );
+  const s3Disabled = isLoadedSettingDisabled(loadFailed, s3Status);
   const s3Saving = isAnyStatusSaving(s3Status, storageTypeStatus);
-  const storageSpaceDisabled =
-    loadFailed || isStatusBusy(storageSpaceModeStatus);
+  const storageSpaceDisabled = isLoadedSettingDisabled(
+    loadFailed,
+    storageSpaceModeStatus,
+  );
   const storagePipelineGroupStatus = combineStatuses(
     chunkSizeStatus,
     storagePipelineStatus,
   );
-  const storagePipelineGroupDisabled =
-    loadFailed || isStatusBusy(storagePipelineGroupStatus);
+  const storagePipelineGroupDisabled = isLoadedSettingDisabled(
+    loadFailed,
+    storagePipelineGroupStatus,
+  );
   const chunkSizeDisabled = storagePipelineGroupDisabled;
   const storagePipelineDisabled = storagePipelineGroupDisabled;
   const compressionLevelChanged =
     compressionLevelInput.trim() !==
     savedStoragePipelineSettings.compressionLevel.toString();
   const quotaSaving = defaultUserQuotaStatus === "saving";
-  const quotaDisabled = loadFailed || isStatusBusy(defaultUserQuotaStatus);
+  const quotaDisabled = isLoadedSettingDisabled(
+    loadFailed,
+    defaultUserQuotaStatus,
+  );
   const quotaChanged = defaultUserQuotaGiB !== savedDefaultUserQuotaGiB;
   const templateSaving = defaultTemplateStatus === "saving";
-  const templateDisabled = loadFailed || isStatusBusy(defaultTemplateStatus);
+  const templateDisabled = isLoadedSettingDisabled(
+    loadFailed,
+    defaultTemplateStatus,
+  );
   const templateChanged = defaultTemplateNodeId !== savedDefaultTemplateNodeId;
 
   return (
@@ -908,23 +959,13 @@ export const AdminStorageSettingsPage = () => {
                     }}
                     fullWidth
                   />
-                  <Button
-                    variant="contained"
-                    onClick={() => void handleCompressionLevelSave()}
-                    disabled={
-                      storagePipelineDisabled || !compressionLevelChanged
-                    }
-                    startIcon={
-                      storagePipelineStatus === "saving" ? (
-                        <CircularProgress size={16} color="inherit" />
-                      ) : (
-                        <SaveIcon />
-                      )
-                    }
-                    sx={{ minWidth: { xs: "100%", sm: 120 } }}
-                  >
-                    {t("settings.actions.save")}
-                  </Button>
+                  <SettingsSaveButton
+                    changed={compressionLevelChanged}
+                    disabled={storagePipelineDisabled}
+                    label={t("settings.actions.save")}
+                    onSave={() => void handleCompressionLevelSave()}
+                    saving={storagePipelineStatus === "saving"}
+                  />
                 </Stack>
 
                 <Box>
@@ -1021,9 +1062,10 @@ export const AdminStorageSettingsPage = () => {
                   }
                 }}
                 disabled={quotaDisabled}
-                error={
-                  defaultUserQuotaInvalid || defaultUserQuotaStatus === "error"
-                }
+                error={hasValidationError(
+                  defaultUserQuotaInvalid,
+                  defaultUserQuotaStatus,
+                )}
                 helperText={
                   defaultUserQuotaInvalid
                     ? t("storageSettings.errors.quotaInvalid")
@@ -1033,21 +1075,13 @@ export const AdminStorageSettingsPage = () => {
                 inputProps={{ min: 0, step: 0.25 }}
                 fullWidth
               />
-              <Button
-                variant="contained"
-                onClick={() => void saveDefaultUserQuota()}
-                disabled={quotaDisabled || !quotaChanged}
-                startIcon={
-                  quotaSaving ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <SaveIcon />
-                  )
-                }
-                sx={{ minWidth: { xs: "100%", sm: 120 } }}
-              >
-                {t("settings.actions.save")}
-              </Button>
+              <SettingsSaveButton
+                changed={quotaChanged}
+                disabled={quotaDisabled}
+                label={t("settings.actions.save")}
+                onSave={() => void saveDefaultUserQuota()}
+                saving={quotaSaving}
+              />
             </Stack>
           </SettingsSection>
 
@@ -1072,10 +1106,10 @@ export const AdminStorageSettingsPage = () => {
                   }
                 }}
                 disabled={templateDisabled}
-                error={
-                  defaultTemplateNodeIdInvalid ||
-                  defaultTemplateStatus === "error"
-                }
+                error={hasValidationError(
+                  defaultTemplateNodeIdInvalid,
+                  defaultTemplateStatus,
+                )}
                 helperText={
                   defaultTemplateNodeIdInvalid
                     ? t("storageSettings.errors.templateNodeIdInvalid")
@@ -1083,21 +1117,13 @@ export const AdminStorageSettingsPage = () => {
                 }
                 fullWidth
               />
-              <Button
-                variant="contained"
-                onClick={() => void saveDefaultTemplateNode()}
-                disabled={templateDisabled || !templateChanged}
-                startIcon={
-                  templateSaving ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <SaveIcon />
-                  )
-                }
-                sx={{ minWidth: { xs: "100%", sm: 120 } }}
-              >
-                {t("settings.actions.save")}
-              </Button>
+              <SettingsSaveButton
+                changed={templateChanged}
+                disabled={templateDisabled}
+                label={t("settings.actions.save")}
+                onSave={() => void saveDefaultTemplateNode()}
+                saving={templateSaving}
+              />
             </Stack>
           </SettingsSection>
         </Stack>
