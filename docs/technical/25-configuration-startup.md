@@ -101,7 +101,7 @@ The three "Cloud" modes (`EmailMode.Cloud`, `ComputionMode.Cloud`, `GeoIpLookupM
 - **Missing-table tolerance.** Every query catches `PostgresException` where `SqlState == PostgresErrorCodes.UndefinedTable` and treats it as "not initialized" — important during the first migrate-on-startup, before tables exist.
 - **Creation lock.** `EnsureServerSettingsAsync` serializes first-row creation through a `static SemaphoreSlim _settingsCreationLock(1, 1)` and re-checks under the lock to avoid duplicate rows.
 - **Validation helpers.** The provider centralizes validation used by the controller: `ValidateTimezone`; `ValidatePublicBaseUrl` / `NormalizePublicBaseUrl` (absolute http/https, trimmed and trailing slash removed; invalid normalizes to `http://localhost`); `ValidateCustomGeoIpLookupUrl` (same absolute-URL rule); `ValidateS3ConfigAsync` (shape check, then a real connectivity round-trip via `ValidateS3Async`: `PutObjectAsync` a test object, `GetObjectAsync` and compare body, `ListObjectsV2Async` with `MaxKeys = 1`, then `DeleteObjectAsync`); `ValidateEmailConfig`; `ValidateDefaultUserStorageQuotaBytes`; and `ValidateDefaultUserTemplateNodeIdAsync` (the node must exist, be owned by the caller, and be `NodeType.Default`). `CheckCottonBridgeHealthAsync` issues a 10-second-timeout GET against `Constants.CottonBridgeHealthUrl` and requires the response `Status == "Healthy"`.
-- **S3-from-stored-secret nuance.** `ValidateStorageTypeAsync(StorageType.S3)` builds an `S3Config` from the *stored* settings, setting `SecretKey = settings.S3SecretAccessKeyEncrypted` (the already-encrypted column value, not a plaintext secret), then — provided the shape check passes — *always* runs the same connectivity round-trip. `S3Config.SecretKey` is therefore reused for two different meanings (plaintext on `PATCH s3-config`, ciphertext here).
+- **S3-from-stored-secret nuance.** `ValidateStorageTypeAsync(StorageType.S3)` builds an `S3Config` from the stored settings. Although the entity property keeps its historical `S3SecretAccessKeyEncrypted` name, the regular EF value converter has already decrypted it to plaintext before `SettingsProvider` reads it. The same connectivity round-trip is then run against the persisted configuration.
 
 ### Settings consumers
 
@@ -207,12 +207,12 @@ Except for the reserved direct marker, this can be an exact IP or a CIDR network
 
 ## Environment variables
 
-The table below lists every `COTTON_*` literal and the other environment variables read by production code under `src/` (test-only variables are noted as such). The `COTTON_PG_*` group is read in three places that must stay in sync: `ConfigurationBuilderExtensions.AddCottonOptions`, `MasterKeyCompatibilityProbe.BuildConnectionStringFromEnvironment`, and `CottonDbContextDesignTimeFactory` (design-time migrations) — all with the same names and defaults.
+The table below lists every `COTTON_*` literal and the other environment variables read by production code under `src/` (test-only variables are noted as such). The `COTTON_PG_*` group is read by `ConfigurationBuilderExtensions.AddCottonOptions`, `MasterKeyUnlockValidator`, and `CottonDbContextDesignTimeFactory` (design-time migrations); all three use the same names and defaults.
 
 | Variable | Default | Read in | Meaning |
 | --- | --- | --- | --- |
 | `COTTON_MASTER_KEY` | (none) | `Program.cs`, `ConfigurationBuilderExtensions` | Root master key. Must be exactly **32** characters (`DefaultKeyLength`). If absent, the server enters interactive unlock mode. Cleared from Process and User env after derivation. |
-| `COTTON_PG_HOST` | `localhost` | `ConfigurationBuilderExtensions`, `MasterKeyCompatibilityProbe`, design-time factory | PostgreSQL host. |
+| `COTTON_PG_HOST` | `localhost` | `ConfigurationBuilderExtensions`, `MasterKeyUnlockValidator`, design-time factory | PostgreSQL host. |
 | `COTTON_PG_PORT` | `5432` | same | PostgreSQL port (parsed as `ushort` in `AddCottonOptions`, as `int` elsewhere). |
 | `COTTON_PG_DATABASE` | `cotton_dev` | same | PostgreSQL database name. |
 | `COTTON_PG_USERNAME` | `postgres` | same | PostgreSQL user. |
@@ -252,27 +252,20 @@ The master key never enters EF configuration directly. Instead, `Program.Main` d
 
 `MasterKeyRuntimeState` (`src/Cotton.Server/Services/MasterKeyRuntimeState.cs`) is a singleton `record` recording how the key was obtained: `FromEnvironment(...)` sets `Source = "Environment"` (and `EnvironmentVariableWasConfigured = true`) when `COTTON_MASTER_KEY` was set, or `FromUnlock(...)` sets `Source = "Unlock"` when the interactive unlock server was used.
 
-### Interactive unlock & compatibility probe
+### Interactive unlock
 
 If `COTTON_MASTER_KEY` is empty, `MasterKeyUnlockServer.WaitForUnlockAsync` (`src/Cotton.Server/Services/MasterKeyUnlockServer.cs`) starts a *minimal* `WebApplication` that serves only the `/unlock` UI and unlock endpoints and returns `423 Locked` for every other `/api/v1` request. It:
 
 - generates a one-time hex **bootstrap token** (16 random bytes, lower-case hex) and logs it together with the unlock URL(s);
 - exposes `GET /api/v1/unlock/status`, `GET /api/v1/unlock/key` (suggests a random 32-char key, base64 of 24 random bytes), and `POST /api/v1/unlock`;
 - requires the bootstrap token for the first unlock when `RequiresBootstrapTokenAsync` returns true — i.e. *not* a Development environment **and** no existing Cotton data — within a window of `Constants.AdminAutocreateMinutesDelay` (= 5) minutes, comparing tokens with `CryptographicOperations.FixedTimeEquals`;
-- on submit, derives encryption settings (rejecting a wrong-length key with the same `DefaultKeyLength` validation) and validates them with `MasterKeySentinelStore.ValidateOrInitializeAsync(..., MasterKeySentinelInitializationMode.RequireCompatibilityEvidenceForExistingData)`. Only on success does it complete the `TaskCompletionSource` (after a short delay), stop the unlock app, and let `Program` proceed to the real application. If `ApplicationStopping` fires first, the completion is canceled and `Main` exits.
+- on submit, derives encryption settings and calls `MasterKeyUnlockValidator`. Only on success does it complete the `TaskCompletionSource` (after a short delay), stop the unlock app, and let `Program` proceed to the real application. If `ApplicationStopping` fires first, the completion is canceled and `Main` exits.
 
-The sentinel validation is backed by `MasterKeyCompatibilityProbe` (`src/Cotton.Server/Services/MasterKeyCompatibilityProbe.cs`, interface `IMasterKeyCompatibilityProbe`). Its `ValidateAsync(settings, MasterKeyCompatibilityMode mode, ...)` first checks whether the database already holds Cotton data — any row in `users`, `nodes`, `file_manifests`, `chunks`, or `server_settings` — and, if so, tries to decrypt real evidence to prove the submitted key matches:
+`MasterKeyUnlockValidator` uses the ordinary `CottonDbContext` model with a candidate-specific `DatabaseFieldProtector`. It reads the latest `StorageType`, resolves Local or S3 through the shared `StorageBackendFactory`, and calls the same `MasterKeyValidator` used during normal startup.
 
-1. **Encrypted-column probe.** Up to 8 candidates from each `[Encrypted]` column: `users.totp_secret_encrypted`, `users.avatar_hash_encrypted`, `file_manifests.small_file_preview_hash_encrypted` (all `bytea`), and the four `server_settings.*_encrypted` columns (`base64` text). A successful decrypt of any candidate proves compatibility.
-2. **Storage-chunk probe.** Only if the encrypted-column probe found no usable evidence *and* the storage backend is **not** `IStorageBackendUsesEncryptedConfiguration` (so its own config secret is trustworthy): up to 16 stored chunks (ordered by `stored_size_bytes asc nulls last` when that column exists), decrypted from the configured storage backend.
+Local storage requires a valid sentinel, a decryptable existing storage object, valid database-integrity evidence, or a genuinely empty instance. S3 additionally requires the regular encrypted EF conversion to authenticate the persisted S3 secret with the submitted key before the backend can be contacted. That authenticated configuration is sufficient to seed a missing S3 sentinel. There are no startup-only EF entities, compatibility modes, or raw database queries.
 
-The result is a `MasterKeyCompatibilityResult(Success, ExistingDataFound, EvidenceFound, Error)` built via `Compatible(...)` or `Fail(...)`:
-
-- decrypt succeeded → `Compatible(existingDataFound: true, evidenceFound: true)`;
-- a candidate failed to decrypt (wrong key) → `Fail("Master key does not match existing encrypted Cotton data.")`;
-- existing data but no decryptable evidence → under `MasterKeyCompatibilityMode.RequireEvidenceForExistingData` this is a `Fail` instructing the operator to boot once with the original `COTTON_MASTER_KEY`; under `AllowMissingEvidence` it returns a "compatible without evidence" result (`Compatible(existingDataFound: true, evidenceFound: false)`) that trusts the existing sentinel.
-
-`MasterKeyStartupStorage` (`src/Cotton.Server/Services/MasterKeyStartupStorage.cs`) builds the storage backend the probe needs (`FileSystemStorageBackend`, or `S3StorageBackend` over a `StaticS3Provider` that decrypts `s3_secret_access_key_encrypted` with the candidate key) directly from a **raw SQL** read of the latest `server_settings` row, so the probe can run before EF/DI exist. `BuildConnectionStringFromEnvironment` and `HasExistingCottonDataAsync` are the static helpers used both here and by the unlock server.
+Cryptographic rejection and storage availability are kept separate: invalid keys return `400`, while S3/network failures return `503` and leave the unlock server running.
 
 ## Server startup sequence — `Program.cs`
 
@@ -344,20 +337,20 @@ flowchart TD
 | `AppVersionTrackerService` | `Services/AppVersionTrackerService.cs` | Hosted `BackgroundService`. After a 45 s startup delay it records the running version (`APP_VERSION`) into `app_versions`, then (unless in a `Testing`/`IntegrationTests` environment or `AppVersionTracker:ReleaseCheckEnabled=false`) GETs GitHub `repos/bvdcode/cotton/releases/latest` and notifies admins of newer non-draft, non-prerelease releases. Logs a warning on a detected downgrade (`SemanticVersionComparer.IsDowngrade`). |
 | `StoragePipelineProbeService` | `Services/StoragePipelineProbeService.cs` | Scoped service that pushes a 64 MiB (`PayloadSizeBytes`) synthetic random blob through the *real* storage pipeline (one warmup + one measured iteration), verifying the read-back SHA-256 with `FixedTimeEquals`, then deletes the probe blob. Serialized by a static `ProbeLock`. Invoked by `CollectPerformanceJob`, not at boot. |
 | `DefaultUserContentSeeder` | `Services/DefaultUserContentSeeder.cs` | Scoped service; entry point `SeedAsync(userId, ct)`. When `DefaultUserTemplateNodeId` is set and the template node exists (`NodeType.Default`), recursively copies the template's folders and files (referencing the same `FileManifestId`, i.e. zero re-upload) into a new user's default layout inside a single transaction (via an EF execution strategy). Called from guest signup (`AuthController`), admin user creation (`AdminCreateUserRequest` handler), and OIDC login (`OidcAuthenticationService`). |
-| `MasterKeyCompatibilityProbe` / `IMasterKeyCompatibilityProbe` | `Services/MasterKeyCompatibilityProbe.cs` | Validates a candidate master key against existing encrypted DB/storage evidence during unlock; also exposes `HasExistingCottonDataAsync` and `BuildConnectionStringFromEnvironment`. |
-| `MasterKeyStartupStorage` | `Services/MasterKeyStartupStorage.cs` | Builds the pre-DI storage backend + `MasterKeySentinelStore` from a raw SQL read of `server_settings`. |
-| `MasterKeyStartupValidator` | `Services/MasterKeyStartupValidator.cs` | Uses the normal application DI graph and configured storage backend to validate every resolved master key before traffic and jobs start. |
+| `MasterKeyUnlockValidator` | `Services/MasterKeyUnlockValidator.cs` | Validates browser-submitted keys through the regular EF model and shared backend factory. |
+| `MasterKeyValidator` | `Services/MasterKeyValidator.cs` | Common sentinel, storage-evidence, and database-integrity algorithm used by unlock and startup. |
+| `MasterKeyStartupValidator` | `Services/MasterKeyStartupValidator.cs` | Resolves the normal runtime backend and delegates to `MasterKeyValidator` before traffic and jobs start. |
 
 ## Concurrency, failure modes & security considerations
 
 - **Static settings cache.** `SettingsProvider._cache` and `_cachedEncryptionThreads` are `static`, deliberately shared process-wide across DI scopes. All access is guarded by a `Lock`/`Volatile`. Any write path must call `InvalidateSettingsCache` or stale reads will persist until process restart; the boolean caches additionally tolerate up to 1 minute of staleness.
-- **Master key never persists in config or env.** It is cleared from Process/User env after derivation; `COTTON_PG_PASSWORD` is likewise erased after the connection string is built. Encrypted settings columns are `[Encrypted]` at rest. Interactive unlock performs its compatibility check, and the normal startup validator verifies either the sentinel or existing encrypted storage before traffic and jobs start.
+- **Master key never persists in config or env.** It is cleared from Process/User env after derivation; `COTTON_PG_PASSWORD` is likewise erased after the connection string is built. Encrypted settings columns are `[Encrypted]` at rest. Interactive unlock and normal startup share the same validation algorithm.
 - **JWT key per restart.** A fresh `JwtSettings:Key` per boot means every restart logs everyone out — intentional, but operators should expect it.
 - **Forwarded headers share one trust boundary.** Client-address headers and `X-Forwarded-Proto` are accepted only in legacy mode or when the immediate peer matches `TrustedProxyIpAddress` and its optional CIDR prefix; direct mode ignores them. The client-address resolver rejects a mismatched configured proxy because it cannot establish a reliable client identity, while request-derived URL generation safely falls back to `Request.Scheme`. Cotton does not install ASP.NET Core `ForwardedHeadersMiddleware` or configure `KnownProxies`/`KnownIPNetworks`.
 - **Migrate-on-startup.** `ApplyMigrations` runs on every boot; concurrent instances against one database can race on migrations and should not start simultaneously against an unmigrated schema.
 - **Writable OS temp is mandatory.** Startup is blocked when the OS temp directory cannot accept a probe file. With a read-only container root filesystem, mount writable scratch storage at `/tmp`; a `tmpfs` mount and a fast-disk bind mount are both valid.
 - **Restore blocks readiness.** `TryRestoreIfEmptyAsync()` is awaited during startup; a hang or failure prevents the server from accepting traffic. Restore is strictly opt-in via `COTTON_RESTORE_DATABASE_IF_EMPTY`.
-- **First-table-missing tolerance.** Many provider/probe queries swallow `UndefinedTable`/`InvalidCatalogName` so the pre-migration boot does not crash; this is correct but means errors during early boot can look like "uninitialized" rather than "broken".
+- **Pre-migration tolerance.** Unlock existence and storage-type queries treat a not-yet-created database or missing pre-migration table as an uninitialized Local instance. Existing rows without usable key evidence are still rejected; other database and storage failures remain explicit.
 - **Process hardening is best-effort.** A failed `prctl` is reported via `ProcessHardeningStatus.Error` and surfaced in `GET /api/v1/server/security/status`, but does not stop startup.
 
 ## Non-obvious design decisions & gotchas
@@ -366,9 +359,8 @@ flowchart TD
 - `GetServerSettings()` returns a non-persisted default with `InstanceId = Guid.Empty`; only the persisted-creation path (`CreateDefaultSettings`) assigns a real `Guid.NewGuid()`. Code that needs a stable instance id must go through `EnsureServerSettingsAsync`, not `GetServerSettings`.
 - The 32-character master-key length (`DefaultKeyLength`) is a hard, immutable contract — changing it bricks all derived-key data.
 - `GeoIpLookupMode.MaxMindLocal` and `ComputionMode.Remote` exist in the enums but are not fully wired (`ValidateGeoIpLookupMode` explicitly rejects MaxMind as "not configurable yet").
-- Two distinct mode enums govern the unlock flow: `MasterKeySentinelInitializationMode.RequireCompatibilityEvidenceForExistingData` (passed by `MasterKeyUnlockServer`) and `MasterKeyCompatibilityMode` (`AllowMissingEvidence` / `RequireEvidenceForExistingData`, used by the probe itself). Do not confuse them.
-- `ValidateStorageTypeAsync` reuses the *encrypted* `s3_secret_access_key_encrypted` value as `S3Config.SecretKey` and still runs a full S3 connectivity round-trip — the same `S3Config.SecretKey` field carries plaintext on `PATCH s3-config` and ciphertext here.
-- `StoragePipelineProbeService` and the `MasterKeyCompatibilityProbe` operate on the **real** storage backend; the probe is sized 64 MiB and is meant to run only on demand (performance collection / unlock), not on every request.
+- `ValidateStorageTypeAsync` runs a full S3 connectivity round-trip with the transparently decrypted persisted secret; the `S3SecretAccessKeyEncrypted` CLR property name describes storage-at-rest, not the materialized value.
+- `StoragePipelineProbeService` operates on the **real** storage backend; its 64 MiB payload is meant to run only on demand for performance collection, not on every request.
 - The unlock mini-server and the main app are two distinct `WebApplication` instances; the unlock app fully stops before the real app starts, so they never bind the listener simultaneously.
 
 ## Related sections

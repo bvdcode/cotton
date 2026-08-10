@@ -126,21 +126,21 @@ When `COTTON_MASTER_KEY` is absent, `MasterKeyUnlockServer.WaitForUnlockAsync` s
 | `GET /api/v1/unlock/key` | Generates a candidate key: `Convert.ToBase64String(RandomNumberGenerator.GetBytes(24))` (24 bytes → 32 Base64 chars). |
 | `POST /api/v1/unlock` | Submits `masterKey` (+ `bootstrapToken` when required), as JSON or form. |
 
-On submit, Cotton derives encryption settings and validates them against the encrypted **master-key sentinel** in storage via `MasterKeySentinelStore.ValidateOrInitializeAsync` (mode `RequireCompatibilityEvidenceForExistingData`). If the sentinel does not yet exist it is created; if it exists, the submitted key must validate against it (or, if the sentinel is unreadable but the key decrypts existing encrypted data, the sentinel is silently repaired). On success the unlock server stops (after a 750 ms delay in `CompleteUnlockAsync`) and the main app boots with the resolved settings; `MasterKeyRuntimeState.FromUnlock` records `Source = "Unlock"` and `EnvironmentVariableWasConfigured = false`.
+On submit, Cotton derives encryption settings and passes them to `MasterKeyUnlockValidator`. The validator uses the regular `CottonDbContext`, the shared Local/S3 backend factory, and the common `MasterKeyValidator`. An existing sentinel must authenticate successfully and is never silently repaired. A missing sentinel is created only after independent evidence validates the key. On success the unlock server stops (after a 750 ms delay in `CompleteUnlockAsync`) and the main app boots with the resolved settings; `MasterKeyRuntimeState.FromUnlock` records `Source = "Unlock"` and `EnvironmentVariableWasConfigured = false`.
 
-**Bootstrap token.** A token is required only for the *first* sentinel creation — i.e. when `RequiresBootstrapTokenAsync` returns true: the environment is **not** Development **and** no existing Cotton data is found (`MasterKeyStartupStorage.HasExistingCottonDataAsync`). The token is `Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant()` (32 hex chars), printed as a warning in the container logs at unlock-server startup along with the unlock URL and an expiry timestamp. The window equals `Constants.AdminAutocreateMinutesDelay` = **5 minutes** (`MasterKeyUnlockServer.FirstUnlockWindow = TimeSpan.FromMinutes(...)`). After expiry, first unlock returns `403 Forbidden`; restart to get a fresh token. Token comparison is constant-time (`CryptographicOperations.FixedTimeEquals` after a length check). Later unlocks (sentinel already present) only validate the key and need no token.
+**Bootstrap token.** A token is required only for the first initialization — i.e. when `RequiresBootstrapTokenAsync` returns true: the environment is **not** Development **and** no existing Cotton data is found (`MasterKeyUnlockValidator.HasExistingCottonDataAsync`). The token is `Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant()` (32 hex chars), printed as a warning in the container logs at unlock-server startup along with the unlock URL and an expiry timestamp. The window equals `Constants.AdminAutocreateMinutesDelay` = **5 minutes** (`MasterKeyUnlockServer.FirstUnlockWindow = TimeSpan.FromMinutes(...)`). After expiry, first unlock returns `403 Forbidden`; restart to get a fresh token. Token comparison is constant-time (`CryptographicOperations.FixedTimeEquals` after a length check). Later unlocks only validate the key and need no token.
 
 ```mermaid
 sequenceDiagram
     participant Op as Operator
     participant U as /unlock server
-    participant S as Sentinel store
+    participant V as MasterKeyUnlockValidator
     Op->>U: GET /unlock/status
     U-->>Op: requiresBootstrapToken, firstUnlockExpiresAtUtc
     Op->>U: POST /unlock {masterKey, bootstrapToken}
     U->>U: Validate bootstrap token (constant-time, in window)
-    U->>S: ValidateOrInitializeAsync(settings)
-    S-->>U: Created | Repaired | Accepted
+    U->>V: ValidateAsync(settings)
+    V-->>U: Created | Accepted
     U-->>Op: 200 "...Cotton is starting."
     U->>U: Stop unlock server (after 750 ms), start main app
 ```
@@ -188,14 +188,11 @@ Writes are atomic and corruption-safe:
 - `CleanupTempFiles` is a no-op for S3.
 - It does **not** implement `IStorageCapacityReporter`, so the storage-pressure guard treats S3 as unknown-capacity (no 507 from disk-reserve logic; the README confirms S3 is treated as unknown unless the provider exposes a hard limit).
 
-S3 connection settings are read from `server_settings`: `S3EndpointUrl`, `S3Region`, `S3AccessKeyId`, `S3BucketName`, and `S3SecretAccessKeyEncrypted` (entity `CottonServerSettings`, columns `s3_endpoint_url`, `s3_region`, `s3_access_key_id`, `s3_bucket_name`, `s3_secret_access_key_encrypted`). The secret column is annotated `[Encrypted]` and decrypted transparently by the EF value converter when read through the entity:
+S3 connection settings are read from `server_settings`: `S3EndpointUrl`, `S3Region`, `S3AccessKeyId`, `S3BucketName`, and `S3SecretAccessKeyEncrypted` (entity `CottonServerSettings`, columns `s3_endpoint_url`, `s3_region`, `s3_access_key_id`, `s3_bucket_name`, `s3_secret_access_key_encrypted`). The secret column is annotated `[Encrypted]` and decrypted transparently by the regular EF value converter.
 
-- **Runtime path** (`S3Provider.GetS3Client`): the provider reads `settings.S3SecretAccessKeyEncrypted` — which EF has already decrypted to plaintext — and passes it straight to `S3CompatibilityFactory.BuildClient`. It does **not** invoke a cipher itself.
-- **Startup path** (before EF is available): `MasterKeyStartupStorage` reads `server_settings` with raw SQL and builds a private `StaticS3Provider`, which AES-GCM-decrypts the secret manually with `MasterKeySentinelStore.CreateCipher` (a `StreamCipherFactory`-produced `AesGcmStreamCipher`). A wrong master key surfaces as `"S3 secret access key could not be decrypted with the configured master key."`.
+Both runtime and browser unlock create S3 through `S3Provider`, `StorageBackendFactory`, and `S3StorageBackend`. During browser unlock, successful AES-GCM authentication of the stored S3 secret proves the submitted master key before Cotton contacts S3. Cotton then validates an existing sentinel in the bucket or creates one when upgrading an older S3-backed instance without a sentinel. A decryption failure returns `400`; S3/network unavailability returns `503` and is not reported as a bad key.
 
-In both paths the client is built via `S3CompatibilityFactory.BuildClient(endpoint, region, accessKeyId, secret)`, which configures `ForcePathStyle = true`, a custom `ServiceURL`, `AuthenticationRegion`, a 5-minute timeout, and `WHEN_REQUIRED` checksum behavior — i.e. it supports custom (non-AWS) S3-compatible endpoints.
-
-When S3 is selected, the master-key sentinel is not written through the filesystem; `MasterKeyStartupStorage.CreateConfiguredBackend` builds the configured backend (filesystem or S3) before validating the sentinel, and because S3 is an `IStorageBackendUsesEncryptedConfiguration` backend the sentinel write is skipped — the master key is instead verified against compatibility evidence in existing encrypted data.
+The client is built via `S3CompatibilityFactory.BuildClient(endpoint, region, accessKeyId, secret)`, which configures `ForcePathStyle = true`, a custom `ServiceURL`, `AuthenticationRegion`, a 5-minute timeout, and `WHEN_REQUIRED` checksum behavior — i.e. it supports custom (non-AWS) S3-compatible endpoints.
 
 ## OIDC setup
 

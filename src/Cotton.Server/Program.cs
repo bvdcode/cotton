@@ -215,7 +215,9 @@ namespace Cotton.Server
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
+                .AddSingleton<StorageBackendFactory>()
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
+                .AddScoped<MasterKeyValidator>()
                 .AddScoped<MasterKeyStartupValidator>()
                 .AddPostgresDbContext<CottonDbContext>(
                     x => x.UseLazyLoadingProxies = false,
