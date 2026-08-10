@@ -266,6 +266,10 @@ namespace Cotton.Server
                 MasterKeyStartupValidator masterKeyValidator = scope.ServiceProvider
                     .GetRequiredService<MasterKeyStartupValidator>();
                 await masterKeyValidator.ValidateAsync();
+#pragma warning disable CS0618 // TEMPORARY 0.5 RECOVERY: remove after the upgrade window.
+                await scope.ServiceProvider.GetRequiredService<LegacyZeroKeySettingsRecovery>()
+                    .RepairAsync(scope.ServiceProvider);
+#pragma warning restore CS0618
                 scope.ServiceProvider.GetRequiredService<SettingsProvider>().GetServerSettings();
             }
             app.MapHub<EventHub>(Routes.V1.EventHub);
