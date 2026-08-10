@@ -126,6 +126,11 @@ namespace Cotton.Server
                 client.Timeout = TimeSpan.FromSeconds(10);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
             });
+            builder.Services.AddHttpClient<CottonPublicEmailProvider>(client =>
+            {
+                client.BaseAddress = new Uri(CottonPublicEmailProvider.CottonBridgeBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(15);
+            });
             builder.Services
                 .AddHttpClient<IProxyTopologyProbeService, ProxyTopologyProbeService>(client =>
                 {
@@ -173,7 +178,6 @@ namespace Cotton.Server
                 .AddHttpContextAccessor()
                 .AddSingleton<PerfTracker>()
                 .AddSingleton<IStorageBackendTypeCache, StorageBackendTypeCache>()
-                .AddSingleton<CottonPublicEmailProvider>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<SecurityDiagnosticsService>()
                 .AddScoped<StoragePipelineProbeService>()

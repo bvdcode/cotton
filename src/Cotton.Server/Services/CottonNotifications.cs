@@ -140,6 +140,7 @@ namespace Cotton.Server.Services
             string recipientName = GetRecipientDisplayName(user);
 
             bool sent = await _publicEmailProvider.SendEmailAsync(
+                settings.InstanceId,
                 template,
                 serverBaseUrl,
                 email,
