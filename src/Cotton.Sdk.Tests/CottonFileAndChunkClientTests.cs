@@ -412,7 +412,6 @@ public class CottonFileAndChunkClientTests
         });
     }
 
-
     private class RecordingProgress : IProgress<long>
     {
         public List<long> Values { get; } = [];

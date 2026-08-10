@@ -18,10 +18,7 @@ namespace Cotton.Previews
             ArgumentException.ThrowIfNullOrWhiteSpace(arguments);
             ArgumentNullException.ThrowIfNull(standardOutput);
             ArgumentException.ThrowIfNullOrWhiteSpace(operation);
-            if (timeout <= TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(timeout));
-            }
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(timeout, TimeSpan.Zero);
 
             ProcessStartInfo startInfo = new()
             {

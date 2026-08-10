@@ -90,6 +90,5 @@ namespace Cotton.Server.Extensions
             });
             return services;
         }
-
     }
 }

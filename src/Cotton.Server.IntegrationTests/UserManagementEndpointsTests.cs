@@ -672,5 +672,4 @@ public class UserManagementEndpointsTests : IntegrationTestBase
             Assert.That(defaultTemplateNodeId, Is.Null);
         });
     }
-
 }
