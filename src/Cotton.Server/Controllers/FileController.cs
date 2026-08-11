@@ -5,8 +5,6 @@ using Cotton.Files;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
-using Cotton.Models.Enums;
-using Cotton.Server.Abstractions;
 using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
@@ -40,7 +38,6 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
-        ISyncChangeRecorder _syncChanges,
         ISchedulerFactory _scheduler,
         IHubContext<EventHub> _hubContext,
         FileVersionService _versions,
@@ -168,45 +165,21 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeFileId,
             [FromBody] Dictionary<string, string?>? patch)
         {
-            if (patch is null)
-            {
-                return CottonResult.BadRequest("Metadata patch is required.");
-            }
-
-            if (patch.Any(x => string.IsNullOrWhiteSpace(x.Key)))
-            {
-                return CottonResult.BadRequest("Metadata keys must be non-empty strings.");
-            }
-
-            if (patch.Any(x => x.Value is null))
-            {
-                return CottonResult.BadRequest("Metadata values must be strings.");
-            }
-
             Guid userId = User.GetUserId();
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
-            if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
+            UpdateFileMetadataResult result = await _mediator.Send(
+                new UpdateFileMetadataRequest(userId, nodeFileId, patch),
+                HttpContext.RequestAborted);
+            if (result.Status != UpdateFileMetadataStatus.Updated)
             {
-                return CottonResult.NotFound("File not found.");
+                return result.Status switch
+                {
+                    UpdateFileMetadataStatus.InvalidPatch => CottonResult.BadRequest(result.Error!),
+                    UpdateFileMetadataStatus.FileNotFound => CottonResult.NotFound(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
-            Dictionary<string, string> metadata = nodeFile.Metadata is null
-                ? []
-                : new Dictionary<string, string>(nodeFile.Metadata);
-            foreach ((string? key, string? value) in patch)
-            {
-                metadata[key] = value!;
-            }
-
-            nodeFile.Metadata = metadata;
-            _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, nodeFile.Node.LayoutId);
-            await _dbContext.SaveChangesAsync();
-
-            NodeFileManifestDto mapped = nodeFile.Adapt<NodeFileManifestDto>();
+            NodeFileManifestDto mapped = result.File!;
             try
             {
                 await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
