@@ -86,34 +86,14 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetLayoutStats([FromRoute] Guid layoutId)
         {
             Guid userId = User.GetUserId();
-            Layout? layout = await _dbContext.UserLayouts
-                .AsNoTracking()
-                .Where(x => x.Id == layoutId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
-            if (layout is null)
+            LayoutStatsDto? stats = await _mediator.Send(
+                new GetLayoutStatsQuery(userId, layoutId),
+                HttpContext.RequestAborted);
+            if (stats is null)
             {
                 return CottonResult.NotFound("Layout not found.");
             }
-            int nodeCount = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.LayoutId == layout.Id && x.OwnerId == userId)
-                .CountAsync();
-            int fileCount = await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.Node.LayoutId == layout.Id && x.Node.OwnerId == userId)
-                .CountAsync();
-            long sizeBytes = await _dbContext.NodeFiles
-                .Include(x => x.FileManifest)
-                .AsNoTracking()
-                .Where(x => x.Node.LayoutId == layout.Id && x.Node.OwnerId == userId)
-                .SumAsync(x => (long?)x.FileManifest.SizeBytes) ?? 0L;
-            LayoutStatsDto stats = new()
-            {
-                SizeBytes = sizeBytes,
-                LayoutId = layout.Id,
-                NodeCount = nodeCount,
-                FileCount = fileCount
-            };
+
             return Ok(stats);
         }
 
