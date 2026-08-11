@@ -1424,6 +1424,27 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Folder_Custom_Share_Token_Cannot_Collide_With_File_Share_Token()
+    {
+        string authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        NodeFileManifestDto file = await UploadTextFileAsync(root!, "shared-file.txt", "file body");
+        NodeDto folder = await CreateFolderAsync(root!.Id, "shared-folder");
+
+        const string token = "shared-token-collision";
+        HttpResponseMessage fileShare = await _client.GetAsync(
+            $"/api/v1/files/{file.Id}/download-link?customToken={token}");
+        fileShare.EnsureSuccessStatusCode();
+
+        HttpResponseMessage folderShare = await _client.GetAsync(
+            $"/api/v1/layouts/nodes/{folder.Id}/share-link?customToken={token}");
+        Assert.That(folderShare.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+    }
+
+    [Test]
     public async Task Generated_File_And_Folder_Share_Tokens_Are_Eight_Lowercase_Alphanumeric_Characters()
     {
         string authToken = await LoginAsync();

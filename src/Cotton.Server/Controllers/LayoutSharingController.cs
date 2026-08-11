@@ -9,6 +9,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
+using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
@@ -19,6 +20,7 @@ using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
+using EasyExtensions.Mediator;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,11 +36,11 @@ namespace Cotton.Server.Controllers
     [ApiController]
     [Route(Routes.V1.Layouts)]
     public class LayoutSharingController(
+        IMediator _mediator,
         CottonDbContext _dbContext,
         IStoragePipeline _storage,
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
-        PublicShareTokenGenerator _publicShareTokens,
         PublicShareLookupFailureLimiter _publicShareLookupFailures,
         ArchiveDownloadService _archives) : ControllerBase
     {
@@ -52,48 +54,24 @@ namespace Cotton.Server.Controllers
             [FromQuery] int expireAfterMinutes = 1440,
             [FromQuery] string? customToken = "")
         {
-            const int maxExpireMinutes = 60 * 24 * 365;
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(expireAfterMinutes, maxExpireMinutes, nameof(expireAfterMinutes));
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expireAfterMinutes, nameof(expireAfterMinutes));
-
             Guid userId = User.GetUserId();
-            Node? node = await _dbContext.Nodes
-                .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (node is null)
-            {
-                return CottonResult.NotFound("Node not found.");
-            }
+            CreateNodeShareLinkRequest request = new(
+                userId,
+                nodeId,
+                expireAfterMinutes,
+                customToken);
+            CreateNodeShareLinkResult result = await _mediator.Send(
+                request,
+                HttpContext.RequestAborted);
 
-            string token;
-            if (!string.IsNullOrWhiteSpace(customToken))
+            return result.Status switch
             {
-                bool exists = await _dbContext.DownloadTokens.AnyAsync(x => x.Token == customToken)
-                    || await _dbContext.NodeShareTokens.AnyAsync(x => x.Token == customToken);
-                if (exists)
-                {
-                    return this.ApiConflict("The custom token is already in use. Please choose a different one.");
-                }
-
-                token = customToken;
-            }
-            else
-            {
-                token = await _publicShareTokens.CreateUniqueAsync(HttpContext.RequestAborted);
-            }
-
-            NodeShareToken newToken = new()
-            {
-                Name = node.Name,
-                NodeId = node.Id,
-                CreatedByUserId = userId,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
-                Token = token,
+                CreateNodeShareLinkStatus.Created => Ok(result.Link),
+                CreateNodeShareLinkStatus.NodeNotFound => CottonResult.NotFound("Node not found."),
+                CreateNodeShareLinkStatus.TokenConflict => this.ApiConflict(
+                    "The custom token is already in use. Please choose a different one."),
+                _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
             };
-
-            await _dbContext.NodeShareTokens.AddAsync(newToken);
-            await _dbContext.SaveChangesAsync();
-            return Ok($"/s/{newToken.Token}");
         }
 
         /// <summary>
