@@ -34,7 +34,6 @@ namespace Cotton.Server.Controllers
         IStoragePipeline _storage,
         ISchedulerFactory _scheduler,
         IHubContext<EventHub> _hubContext,
-        FileVersionService _versions,
         ILogger<FileController> _logger) : ControllerBase
     {
 
@@ -216,7 +215,9 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            IReadOnlyList<FileVersionDto> versions = await _versions.ListVersionsAsync(userId, nodeFileId, cancellationToken);
+            IReadOnlyList<FileVersionDto> versions = await _mediator.Send(
+                new GetFileVersionsQuery(userId, nodeFileId),
+                cancellationToken);
             return Ok(versions);
         }
 
@@ -231,7 +232,9 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            NodeFileManifestDto restored = await _versions.RestoreVersionAsync(userId, nodeFileId, versionId, cancellationToken);
+            NodeFileManifestDto restored = await _mediator.Send(
+                new RestoreFileVersionRequest(userId, nodeFileId, versionId),
+                cancellationToken);
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", restored, cancellationToken);
             return Ok(restored);
         }
@@ -247,7 +250,9 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            await _versions.DeleteVersionAsync(userId, nodeFileId, versionId, cancellationToken);
+            await _mediator.Send(
+                new DeleteFileVersionRequest(userId, nodeFileId, versionId),
+                cancellationToken);
             return NoContent();
         }
 
@@ -263,11 +268,12 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken = default)
         {
             Guid userId = User.GetUserId();
-            string link = await _versions.CreateVersionDownloadLinkAsync(
-                userId,
-                nodeFileId,
-                versionId,
-                expireAfterMinutes,
+            string link = await _mediator.Send(
+                new CreateFileVersionDownloadLinkRequest(
+                    userId,
+                    nodeFileId,
+                    versionId,
+                    expireAfterMinutes),
                 cancellationToken);
             return Ok(link);
         }
