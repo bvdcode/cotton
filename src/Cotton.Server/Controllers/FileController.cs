@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Files;
@@ -6,8 +6,6 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
-using Cotton.Previews;
-using Cotton.Previews.Http;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
@@ -32,7 +30,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Net.Http.Headers;
 using Quartz;
 using FileVersionDto = Cotton.Files.FileVersionDto;
@@ -54,10 +51,6 @@ namespace Cotton.Server.Controllers
         FileManifestService _fileManifestService,
         FileVersionService _versions,
         UserStorageQuotaService _quota,
-        VideoTranscoder _videoTranscoder,
-        HlsTranscodeCoordinator _hlsTranscodes,
-        HlsSegmentCache _segmentCache,
-        IMemoryCache _cache,
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
         ILayoutMutationGate _layoutGate,
@@ -65,7 +58,6 @@ namespace Cotton.Server.Controllers
         PublicShareLookupFailureLimiter _publicShareLookupFailures,
         ILogger<FileController> _logger) : ControllerBase
     {
-        private static readonly TimeSpan HlsMediaProbeCacheLifetime = TimeSpan.FromHours(1);
 
         /// <summary>
         /// Creates or returns a public file share response.
@@ -791,7 +783,7 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            DownloadToken? downloadToken = await LoadValidDownloadTokenAsync(token, nodeFileId);
+            DownloadToken? downloadToken = await _dbContext.DownloadTokens.FindActiveAsync(token, nodeFileId);
             if (downloadToken is null)
             {
                 return this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found");
@@ -822,19 +814,6 @@ namespace Cotton.Server.Controllers
                 .ThenInclude(x => x.Chunk)
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId);
         }
-
-        private async Task<DownloadToken?> LoadValidDownloadTokenAsync(string token, Guid nodeFileId)
-        {
-            DownloadToken? downloadToken = await _dbContext.DownloadTokens
-                .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFileId);
-
-            return downloadToken is null || IsExpired(downloadToken)
-                ? null
-                : downloadToken;
-        }
-
-        private static bool IsExpired(DownloadToken downloadToken) =>
-            downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow;
 
         private static bool CanServeTokenDownload(NodeFile nodeFile) =>
             nodeFile.Node.Type == NodeType.Default || FileVersionService.IsHistoricalVersion(nodeFile);
@@ -881,7 +860,7 @@ namespace Cotton.Server.Controllers
             DownloadToken downloadToken,
             bool download)
         {
-            RegisterDeleteAfterUse(downloadToken);
+            Response.RegisterDeleteAfterUse(_dbContext, downloadToken);
             return ServeFileDownload(nodeFile, download);
         }
 
@@ -969,358 +948,6 @@ namespace Cotton.Server.Controllers
             }
 
             return firstChunkLength;
-        }
-
-        private void RegisterDeleteAfterUse(DownloadToken downloadToken)
-        {
-            if (!downloadToken.DeleteAfterUse)
-            {
-                return;
-            }
-
-            Response.OnCompleted(async () =>
-            {
-                _dbContext.DownloadTokens.Remove(downloadToken);
-                await _dbContext.SaveChangesAsync();
-            });
-        }
-
-        /// <summary>
-        /// Returns an HLS master playlist for a token-authorized file.
-        /// </summary>
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/master.m3u8")]
-        public async Task<IActionResult> HlsMasterPlaylistByToken(
-            [FromRoute] Guid nodeFileId,
-            [FromQuery] string token)
-        {
-            TranscodableLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
-            if (lookup.Failure is not null)
-            {
-                return lookup.Failure;
-            }
-
-            string encodedToken = Uri.EscapeDataString(token);
-            string PlaylistUrl(string qualityName) =>
-                Routes.V1.Files + $"/{nodeFileId}/hls/playlist.m3u8?token={encodedToken}&quality={qualityName}";
-
-            const string variantCodecs = "avc1.640029,mp4a.40.2";
-            HlsManifestBuilder.HlsVariant[] variants = new[]
-            {
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "Source",
-                    BandwidthBitsPerSecond: 8_000_000,
-                    Width: 1920,
-                    Height: 1080,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("source")),
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "1080p",
-                    BandwidthBitsPerSecond: 3_000_000,
-                    Width: 1920,
-                    Height: 1080,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("high")),
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "720p",
-                    BandwidthBitsPerSecond: 1_500_000,
-                    Width: 1280,
-                    Height: 720,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("medium")),
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "480p",
-                    BandwidthBitsPerSecond: 700_000,
-                    Width: 854,
-                    Height: 480,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("low")),
-            };
-
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            RegisterDeleteAfterUse(lookup.DownloadToken!);
-            return Content(
-                HlsManifestBuilder.BuildMaster(variants),
-                HlsManifestBuilder.ContentType,
-                System.Text.Encoding.UTF8);
-        }
-
-        /// <summary>
-        /// Returns an HLS media playlist for a token-authorized file.
-        /// </summary>
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/playlist.m3u8")]
-        public async Task<IActionResult> HlsVodPlaylistByToken(
-            [FromRoute] Guid nodeFileId,
-            [FromQuery] string token,
-            [FromQuery] string? quality = null)
-        {
-            TranscodableLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
-            if (lookup.Failure is not null)
-            {
-                return lookup.Failure;
-            }
-
-            MediaProbeInfo? probe = await ProbeMediaAsync(lookup.NodeFile!);
-            HlsRendition rendition = HlsRenditionProfile.Parse(quality);
-            string encodedToken = Uri.EscapeDataString(token);
-            string qualityName = rendition.ToString().ToLowerInvariant();
-            string manifest = HlsManifestBuilder.Build(
-                probe?.DurationSeconds ?? 0,
-                segmentIndex => Routes.V1.Files
-                    + $"/{nodeFileId}/hls/seg-{segmentIndex}.ts?token={encodedToken}&quality={qualityName}");
-
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            RegisterDeleteAfterUse(lookup.DownloadToken!);
-            return Content(manifest, HlsManifestBuilder.ContentType, System.Text.Encoding.UTF8);
-        }
-
-        /// <summary>
-        /// Returns one HLS transport-stream segment for a token-authorized file.
-        /// </summary>
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/seg-{segmentIndex:int}.ts")]
-        public async Task<IActionResult> HlsSegmentByToken(
-            [FromRoute] Guid nodeFileId,
-            [FromRoute] int segmentIndex,
-            [FromQuery] string token,
-            [FromQuery] string? quality = null)
-        {
-            if (segmentIndex < 0)
-            {
-                return CottonResult.BadRequest("Segment index must be non-negative.");
-            }
-
-            TranscodableLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
-            if (lookup.Failure is not null)
-            {
-                return lookup.Failure;
-            }
-
-            NodeFile nodeFile = lookup.NodeFile!;
-            DownloadToken downloadToken = lookup.DownloadToken!;
-            HlsRendition rendition = HlsRenditionProfile.Parse(quality);
-            string qualityName = rendition.ToString().ToLowerInvariant();
-            string cacheKey = HlsSegmentCache.BuildKey(
-                nodeFile.FileManifest.Id,
-                qualityName,
-                segmentIndex);
-
-            if (_segmentCache.TryGet(cacheKey, out byte[]? cachedBytes))
-            {
-                RegisterDeleteAfterUse(downloadToken);
-                return ServeCachedHlsSegment(cachedBytes);
-            }
-
-            MediaProbeInfo? probe = await ProbeMediaAsync(nodeFile);
-            if (probe?.DurationSeconds is null or <= 0)
-            {
-                return CottonResult.BadRequest("Could not determine source duration for HLS segmentation.");
-            }
-
-            HlsManifestBuilder.HlsManifestPlan manifestPlan = HlsManifestBuilder.Plan(probe.DurationSeconds.Value);
-            if (segmentIndex >= manifestPlan.SegmentCount)
-            {
-                return CottonResult.NotFound("Segment index out of range.");
-            }
-
-            RegisterDeleteAfterUse(downloadToken);
-
-            return await TranscodeHlsSegmentAsync(
-                nodeFile,
-                nodeFileId,
-                segmentIndex,
-                cacheKey,
-                manifestPlan,
-                rendition,
-                probe);
-        }
-
-        private async Task<IActionResult> TranscodeHlsSegmentAsync(
-            NodeFile nodeFile,
-            Guid nodeFileId,
-            int segmentIndex,
-            string cacheKey,
-            HlsManifestBuilder.HlsManifestPlan manifestPlan,
-            HlsRendition rendition,
-            MediaProbeInfo probe)
-        {
-            await using IAsyncDisposable segmentLease = await _hlsTranscodes.EnterSegmentAsync(
-                cacheKey,
-                HttpContext.RequestAborted);
-            if (_segmentCache.TryGet(cacheKey, out byte[]? cachedBytes))
-            {
-                return ServeCachedHlsSegment(cachedBytes);
-            }
-
-            await using IAsyncDisposable transcodeLease = await _hlsTranscodes.EnterTranscodeAsync(
-                HttpContext.RequestAborted);
-            double startSeconds = HlsManifestBuilder.StartTimeOf(segmentIndex);
-            double segmentDuration = manifestPlan.DurationOf(segmentIndex);
-            HlsRenditionProfile.EncoderPlan encoderPlan = HlsRenditionProfile.Plan(
-                rendition,
-                probe.VideoCodec,
-                probe.AudioCodec);
-
-            Response.ContentType = VideoTranscoder.SegmentContentType;
-            Response.Headers.CacheControl = "private, max-age=300";
-            Response.Headers.ContentEncoding = "identity";
-
-            using MemoryStream captureStream = new();
-            TeeStream tee = new(Response.Body, captureStream);
-            bool transcodeSucceeded = false;
-
-            await using Stream sourceStream = OpenSourceStream(nodeFile);
-            try
-            {
-                await _videoTranscoder.TranscodeSegmentAsync(
-                    sourceStream,
-                    tee,
-                    startSeconds,
-                    segmentDuration,
-                    encoderPlan,
-                    HttpContext.RequestAborted);
-                transcodeSucceeded = true;
-            }
-            catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
-            {
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "HLS segment {SegmentIndex} failed for node file {NodeFileId}",
-                    segmentIndex,
-                    nodeFileId);
-                if (!Response.HasStarted)
-                {
-                    return StatusCode(StatusCodes.Status500InternalServerError);
-                }
-            }
-
-            if (transcodeSucceeded && captureStream.Length > 0)
-            {
-                _segmentCache.Set(cacheKey, captureStream.ToArray());
-            }
-
-            return new EmptyResult();
-        }
-
-        private IActionResult ServeCachedHlsSegment(byte[] cachedBytes)
-        {
-            Response.Headers.CacheControl = "private, max-age=300";
-            Response.Headers.ContentEncoding = "identity";
-            return File(cachedBytes, VideoTranscoder.SegmentContentType);
-        }
-
-        private record TranscodableLookup(
-            NodeFile? NodeFile,
-            DownloadToken? DownloadToken,
-            IActionResult? Failure);
-
-        private async Task<TranscodableLookup> ResolveTranscodableSourceAsync(Guid nodeFileId, string? token)
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return new TranscodableLookup(
-                    null,
-                    null,
-                    this.ApiNotFound("File not found"));
-            }
-
-            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
-                _publicShareLookupFailures,
-                token);
-            if (blocked is not null)
-            {
-                return new TranscodableLookup(null, null, blocked);
-            }
-
-            DownloadToken? downloadToken = await LoadValidDownloadTokenAsync(token, nodeFileId);
-            if (downloadToken is null)
-            {
-                return new TranscodableLookup(
-                    null,
-                    null,
-                    this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found"));
-            }
-
-            _integrity.RequireValid(_dbContext, downloadToken, "file.hls-token");
-
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile is null)
-            {
-                return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
-            }
-
-            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.hls-source");
-            if (nodeFile.Node.Type != NodeType.Default)
-            {
-                return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
-            }
-
-            VideoPlaybackMode playbackMode = VideoPlaybackResolver.Resolve(
-                nodeFile.FileManifest.ContentType,
-                hasPreview: nodeFile.FileManifest.SmallFilePreviewHash is not null);
-            if (playbackMode != VideoPlaybackMode.Transcode)
-            {
-                return new TranscodableLookup(null, null, CottonResult.BadRequest(
-                    "This file is not eligible for on-the-fly transcoding."));
-            }
-
-            return new TranscodableLookup(nodeFile, downloadToken, null);
-        }
-
-        private Stream OpenSourceStream(NodeFile nodeFile)
-        {
-            FileManifest manifest = nodeFile.FileManifest;
-            string[] uids = manifest.FileManifestChunks.GetChunkHashes();
-            PipelineContext context = new()
-            {
-                FileSizeBytes = manifest.SizeBytes,
-                ChunkLengths = manifest.FileManifestChunks.GetChunkLengths(),
-            };
-
-            return _storage.GetBlobStream(uids, context);
-        }
-
-        private async Task<MediaProbeInfo?> ProbeMediaAsync(NodeFile nodeFile)
-        {
-            Guid manifestId = nodeFile.FileManifest.Id;
-            string cacheKey = $"hls-media-probe:{manifestId}";
-            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out MediaProbeInfo? cached))
-            {
-                return cached;
-            }
-
-            await using IAsyncDisposable manifestLease = await _hlsTranscodes.EnterProbeManifestAsync(
-                manifestId,
-                HttpContext.RequestAborted);
-            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out cached))
-            {
-                return cached;
-            }
-
-            await using IAsyncDisposable probeLease = await _hlsTranscodes.EnterProbeAsync(
-                HttpContext.RequestAborted);
-            MediaProbeInfo? probe;
-            await using (Stream probeStream = OpenSourceStream(nodeFile))
-            await using (var probeServer = new RangeStreamServer(probeStream, _logger))
-            {
-                probe = await FfmpegBinary.TryGetMediaProbeAsync(
-                    probeServer.Url,
-                    cancellationToken: HttpContext.RequestAborted)
-                    .ConfigureAwait(false);
-            }
-
-            if (probe is not null)
-            {
-                _cache.Set(cacheKey, probe, HlsMediaProbeCacheLifetime);
-            }
-
-            return probe;
         }
 
         /// <summary>
