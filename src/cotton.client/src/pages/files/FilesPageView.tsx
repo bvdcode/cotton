@@ -33,23 +33,10 @@ import { readEnvelopeFromPreferences } from "../../shared/crypto";
 import Loader from "../../shared/ui/Loader";
 import { blurredDialogBackdropSlotProps } from "../../shared/ui/dialogBackdrop";
 import { ClientEncryptionUnlockForm } from "../profile/components/ClientEncryptionUnlockForm";
-
-export type ClientEncryptionFolderAction =
-  | "encrypt-existing"
-  | "decrypt-existing";
-
-export type ClientEncryptionUnlockPrompt =
-  | { kind: "current" }
-  | { kind: "open"; folderId: string }
-  | { kind: "action"; action: ClientEncryptionFolderAction };
-
-export type FolderEncryptionPromptModel = {
-  severity: "info" | "warning";
-  message: string;
-  action: string;
-  disabled: boolean;
-  onAction: () => void;
-};
+import type {
+  ClientEncryptionUnlockPrompt,
+  FolderEncryptionPromptModel,
+} from "./filesPageModel";
 
 type FilesPageViewProps = {
   activeUnlockPrompt: ClientEncryptionUnlockPrompt | null;
