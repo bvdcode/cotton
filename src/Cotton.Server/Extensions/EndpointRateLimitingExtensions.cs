@@ -149,7 +149,7 @@ namespace Cotton.Server.Extensions
             return "1";
         }
 
-        private sealed class FixedWindowEndpointPolicy(
+        private class FixedWindowEndpointPolicy(
             Func<HttpContext, string> getPartitionKey,
             int permitLimit) : IRateLimiterPolicy<string>
         {

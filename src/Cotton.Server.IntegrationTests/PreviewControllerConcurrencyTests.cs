@@ -94,7 +94,7 @@ public class PreviewControllerConcurrencyTests
         return (controller, capturingFeature);
     }
 
-    private sealed class CapturingResponseFeature : HttpResponseFeature
+    private class CapturingResponseFeature : HttpResponseFeature
     {
         private readonly object _completionLock = new();
         private readonly List<(Func<object, Task> Callback, object State)> _completed = [];

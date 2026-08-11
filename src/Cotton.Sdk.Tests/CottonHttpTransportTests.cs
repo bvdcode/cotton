@@ -376,7 +376,7 @@ public class CottonHttpTransportTests
             await client.Settings.GetAsync());
     }
 
-    private sealed class DisposalTrackingHttpMessageHandler : HttpMessageHandler
+    private class DisposalTrackingHttpMessageHandler : HttpMessageHandler
     {
         public int DisposeCount { get; private set; }
 

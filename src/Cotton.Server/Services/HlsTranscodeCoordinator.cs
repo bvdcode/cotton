@@ -9,7 +9,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates HLS work ownership and process-wide ffmpeg/ffprobe concurrency.
     /// </summary>
-    public sealed class HlsTranscodeCoordinator
+    public class HlsTranscodeCoordinator
     {
         private readonly SemaphoreSlim _transcodeGate;
         private readonly SemaphoreSlim _probeGate;

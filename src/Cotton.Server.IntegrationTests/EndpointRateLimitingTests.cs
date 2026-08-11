@@ -368,7 +368,7 @@ public class EndpointRateLimitingTests
         return context.Request;
     }
 
-    private sealed class StaticResponseHandler(HttpResponseMessage response) : HttpMessageHandler
+    private class StaticResponseHandler(HttpResponseMessage response) : HttpMessageHandler
     {
         public HttpMethod? RequestMethod { get; private set; }
 

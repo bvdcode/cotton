@@ -11,7 +11,7 @@ namespace Cotton.Server.Services
     /// Performs a bounded, unauthenticated request to the configured public endpoint to discover response-layer
     /// proxy hints through the server's own DNS path.
     /// </summary>
-    public sealed class ProxyTopologyProbeService(
+    public class ProxyTopologyProbeService(
         HttpClient _httpClient,
         ILogger<ProxyTopologyProbeService> _logger) : IProxyTopologyProbeService
     {

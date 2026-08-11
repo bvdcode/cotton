@@ -140,7 +140,7 @@ public class TestAppFactory : WebApplicationFactory<Program>
         return Path.Combine(StorageRoot, storageId);
     }
 
-    private sealed class TestRemoteIpStartupFilter : IStartupFilter
+    private class TestRemoteIpStartupFilter : IStartupFilter
     {
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
         {
@@ -161,7 +161,7 @@ public class TestAppFactory : WebApplicationFactory<Program>
         }
     }
 
-    private sealed class NoOpProxyTopologyProbeService : IProxyTopologyProbeService
+    private class NoOpProxyTopologyProbeService : IProxyTopologyProbeService
     {
         public Task<ProxyTopologyProbeResult> DetectAsync(
             string publicBaseUrl,

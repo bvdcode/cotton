@@ -266,7 +266,7 @@ public class StoredZipArchiveWriterTests
     private static TaskCompletionSource CreateCompletionSource() =>
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    private sealed class BlockingReadStream(
+    private class BlockingReadStream(
         TaskCompletionSource readStarted,
         TaskCompletionSource releaseRead) : Stream
     {

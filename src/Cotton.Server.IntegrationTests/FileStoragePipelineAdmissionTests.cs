@@ -66,7 +66,7 @@ public class FileStoragePipelineAdmissionTests
         });
     }
 
-    private sealed class BlockingWriteProcessor(int expectedBlockers) : IStorageProcessor
+    private class BlockingWriteProcessor(int expectedBlockers) : IStorageProcessor
     {
         private readonly ConcurrentDictionary<string, byte> _entered =
             new(StringComparer.Ordinal);
@@ -112,12 +112,12 @@ public class FileStoragePipelineAdmissionTests
         }
     }
 
-    private sealed class StaticBackendProvider(IStorageBackend backend) : IStorageBackendProvider
+    private class StaticBackendProvider(IStorageBackend backend) : IStorageBackendProvider
     {
         public IStorageBackend GetBackend() => backend;
     }
 
-    private sealed class InMemoryBackend : IStorageBackend
+    private class InMemoryBackend : IStorageBackend
     {
         private readonly ConcurrentDictionary<string, byte[]> _storage =
             new(StringComparer.Ordinal);
