@@ -1,10 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@shared/ui/notifications";
-import {
-  FileListViewFactory,
-  PageHeader,
-} from "./components";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
@@ -20,12 +16,8 @@ import { useFilesLayout } from "@shared/hooks/useFilesLayout";
 import { useFilesData } from "./hooks/useFilesData";
 import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
 import { useFileSelection } from "@shared/hooks/useFileSelection";
-import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
+import { buildBreadcrumbs } from "./utils/nodeUtils";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
-import {
-  buildFolderOperations,
-  buildFileOperations,
-} from "../../shared/utils/operationsAdapters";
 import { invalidateAllFileVersions } from "../../shared/api/queries/fileVersions";
 import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
@@ -39,6 +31,7 @@ import { useFileMoveController } from "./hooks/useFileMoveController";
 import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
 import { useFilesContentOperations } from "./hooks/useFilesContentOperations";
 import { useFilesEncryptionController } from "./hooks/useFilesEncryptionController";
+import { useFilesPagePresentation } from "./hooks/useFilesPagePresentation";
 import { useFilesSelectionActions } from "./hooks/useFilesSelectionActions";
 import { FilesPageView } from "./FilesPageView";
 import {
@@ -156,7 +149,7 @@ export const FilesPage: React.FC = () => {
     sourceKind: "nodes",
   });
 
-  const { isContentTransitioning, sortedFiles, tiles } = fileListLogic;
+  const { sortedFiles, tiles } = fileListLogic;
 
   const setScanRootNodeId = useAudioPlayerStore((s) => s.setScanRootNodeId);
 
@@ -169,8 +162,6 @@ export const FilesPage: React.FC = () => {
     previewState,
     closePreview,
     handleFileClick,
-    handleDownloadFile,
-    handleShareFile,
     lightboxOpen,
     lightboxIndex,
     mediaItems,
@@ -214,20 +205,7 @@ export const FilesPage: React.FC = () => {
     [],
   );
 
-  const {
-    activeUnlockPrompt,
-    clientEncryptionEnvelope,
-    currentFolderEncryptionPolicy,
-    ensureCurrentFolderUnlocked,
-    folderEncryptionPrompt,
-    getChildFolderEncryptionPolicyState,
-    goHome,
-    goToFolder,
-    handleToggleFolderEncryption,
-    handleUnlockCancel,
-    handleUnlockSuccess,
-    unlockDialogOpen,
-  } = useFilesEncryptionController({
+  const encryption = useFilesEncryptionController({
     activeCurrentNode,
     ancestors,
     content,
@@ -236,23 +214,10 @@ export const FilesPage: React.FC = () => {
   });
 
   const fileSelection = useFileSelection();
-  const [versionDialogFile, setVersionDialogFile] = React.useState<{
-    id: string;
-    name: string;
-  } | null>(null);
 
   const goUpParentId = getGoUpParentId(ancestors);
 
-  const {
-    moveSupport,
-    clipboardCount,
-    handleCutSelection,
-    handlePasteHere,
-    handleCutFolder,
-    handleCutFile,
-    goUpDropHandlers,
-    breadcrumbsDropHandlers,
-  } = useFileMoveController({
+  const move = useFileMoveController({
     nodeId,
     tiles,
     selectedIds: fileSelection.selectedIds,
@@ -267,20 +232,12 @@ export const FilesPage: React.FC = () => {
     selectGallerySmoothTransitions,
   );
 
-  const {
-    fileOps,
-    fileUpload,
-    folderOps,
-    handleCreateMarkdownFile,
-    handleLightboxDelete,
-    handleNewFolderClick,
-    isCreatingMarkdownFile,
-  } = useFilesContentOperations({
+  const contentOperations = useFilesContentOperations({
     breadcrumbs,
     content,
     currentFolderEncryptionEnabled:
-      currentFolderEncryptionPolicy.effectiveEnabled,
-    ensureCurrentFolderUnlocked,
+      encryption.currentFolderEncryptionPolicy.effectiveEnabled,
+    ensureCurrentFolderUnlocked: encryption.ensureCurrentFolderUnlocked,
     handleFolderChanged,
     loading,
     nodeId,
@@ -291,29 +248,14 @@ export const FilesPage: React.FC = () => {
     tiles,
   });
 
-  const stats = useMemo(
-    () => calculateFolderStats(content?.nodes, content?.files),
-    [content?.files, content?.nodes],
-  );
-
-  const handleGoUp = React.useCallback(() => {
-    if (ancestors.length > 0) {
-      const parent = ancestors[ancestors.length - 1];
-      navigate(`/files/${parent.id}`);
-    } else {
-      navigate("/files");
-    }
-  }, [ancestors, navigate]);
-
-  const { customActionItems, handleDownloadFolder, handleShareFolder } =
-    useFilesSelectionActions({
+  const selectionActions = useFilesSelectionActions({
       activeCurrentNode,
-      clipboardCount,
+      clipboardCount: move.clipboardCount,
       confirm,
       currentFolderName: currentNode?.name,
       fileSelection,
-      handleCutSelection,
-      handlePasteHere,
+      handleCutSelection: move.handleCutSelection,
+      handlePasteHere: move.handlePasteHere,
       loading,
       nodeId,
       optimisticDeleteFile,
@@ -323,202 +265,60 @@ export const FilesPage: React.FC = () => {
       tiles,
     });
 
-  const folderOperations = buildFolderOperations(
-    folderOps,
-    goToFolder,
-    handleShareFolder,
-    handleCutFolder,
-    handleToggleFolderEncryption,
-    getChildFolderEncryptionPolicyState,
-    handleDownloadFolder,
-  );
-
-  const handleOpenVersions = React.useCallback(
-    (fileId: string, fileName: string) => {
-      setVersionDialogFile({ id: fileId, name: fileName });
-    },
-    [],
-  );
-
-  const handleCloseVersions = React.useCallback(() => {
-    setVersionDialogFile(null);
-  }, []);
-
-  const handleVersionsChanged = React.useCallback(() => {
-    if (nodeId) {
-      void refreshNodeContent(nodeId);
-    }
-  }, [nodeId]);
-
-  const fileOperations = buildFileOperations(fileOps, {
-    onDownload: handleDownloadFile,
-    onVersions: handleOpenVersions,
-    onShare: handleShareFile,
-    onCut: handleCutFile,
-    onClick: handleFileClick,
-    onMediaClick: handleMediaClick,
+  const presentation = useFilesPagePresentation({
+    ancestors,
+    breadcrumbs,
+    content,
+    contentOperations,
+    cycleViewMode,
+    encryption,
+    error,
+    fileListLogic,
+    fileSelection,
+    isHugeFolder,
+    layoutType,
+    loading,
+    move,
+    navigate,
+    nodeId,
+    selectionActions,
+    t,
+    tiles,
+    tilesSize,
+    viewMode,
   });
-
-  const isCreatingInThisFolder =
-    folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
-
-  const pageHeaderProps = useMemo(
-    (): React.ComponentProps<typeof PageHeader> => ({
-      loading,
-      breadcrumbs,
-      stats,
-      viewMode,
-      canGoUp: ancestors.length > 0,
-      onGoUp: handleGoUp,
-      onHomeClick: goHome,
-      onViewModeCycle: cycleViewMode,
-      showViewModeToggle: !isHugeFolder,
-      showUpload: !!nodeId,
-      showNewFile: !!nodeId,
-      showNewFolder: !!nodeId,
-      onUploadClick: fileUpload.handleUploadClick,
-      onNewFileClick: handleCreateMarkdownFile,
-      onNewFolderClick: handleNewFolderClick,
-      isCreatingFile: isCreatingMarkdownFile,
-      isCreatingFolder: folderOps.isCreatingFolder,
-      selectionMode: fileSelection.selectionMode,
-      selectedCount: fileSelection.selectedCount,
-      onToggleSelectionMode: fileSelection.toggleSelectionMode,
-      onSelectAll: () => fileSelection.selectAll(tiles),
-      onDeselectAll: fileSelection.deselectAll,
-      customActionItems,
-      breadcrumbsDropHandlers,
-      goUpDropHandlers,
-    }),
-    [
-      ancestors.length,
-      breadcrumbs,
-      breadcrumbsDropHandlers,
-      customActionItems,
-      cycleViewMode,
-      goUpDropHandlers,
-      fileSelection,
-      fileUpload.handleUploadClick,
-      handleCreateMarkdownFile,
-      handleNewFolderClick,
-      isCreatingMarkdownFile,
-      folderOps.isCreatingFolder,
-      goHome,
-      handleGoUp,
-      isHugeFolder,
-      loading,
-      nodeId,
-      stats,
-      tiles,
-      viewMode,
-    ],
-  );
-
-  const handleToggleItem = React.useCallback(
-    (
-      id: string,
-      options?: { shiftKey?: boolean; orderedIds?: ReadonlyArray<string> },
-    ) => {
-      if (!fileSelection.selectionMode) {
-        fileSelection.toggleSelectionMode();
-      }
-      fileSelection.toggleItem(id, options);
-    },
-    [fileSelection],
-  );
-
-  const fileListViewProps = useMemo(
-    (): React.ComponentProps<typeof FileListViewFactory> => ({
-      layoutType,
-      tiles,
-      folderOperations,
-      fileOperations,
-      onNavigateBack: handleGoUp,
-      isCreatingFolder: isCreatingInThisFolder,
-      tileSize: tilesSize,
-      loading:
-        layoutType === InterfaceLayoutType.List
-          ? !content && !error
-          : (!content && !error) || isContentTransitioning,
-      loadingTitle: t("loading.title"),
-      loadingCaption: t("loading.caption"),
-      emptyStateText:
-        !error && layoutType === InterfaceLayoutType.Tiles
-          ? t("empty.all")
-          : undefined,
-      newFolderName: folderOps.newFolderName,
-      onNewFolderNameChange: folderOps.setNewFolderName,
-      onConfirmNewFolder: folderOps.handleConfirmNewFolder,
-      onCancelNewFolder: folderOps.handleCancelNewFolder,
-      folderNamePlaceholder: t("actions.folderNamePlaceholder"),
-      fileNamePlaceholder: t("rename.fileNamePlaceholder", {
-        ns: "files",
-      }),
-      selectionMode: fileSelection.selectionMode,
-      selectedIds: fileSelection.selectedIds,
-      onToggleItem: handleToggleItem,
-      moveSupport,
-    }),
-    [
-      content,
-      error,
-      fileOperations,
-      fileSelection.selectionMode,
-      fileSelection.selectedIds,
-      handleToggleItem,
-      handleGoUp,
-      folderOperations,
-      folderOps.handleCancelNewFolder,
-      folderOps.handleConfirmNewFolder,
-      folderOps.newFolderName,
-      folderOps.setNewFolderName,
-      isContentTransitioning,
-      isCreatingInThisFolder,
-      layoutType,
-      moveSupport,
-      t,
-      tiles,
-      tilesSize,
-    ],
-  );
 
   const shouldRenderFileList = shouldRenderFilesList(error, content);
 
-  const refreshCurrentNodeContent = React.useCallback(() => {
-    if (nodeId) {
-      void refreshNodeContent(nodeId);
-    }
-  }, [nodeId]);
-
   return (
     <FilesPageView
-      activeUnlockPrompt={activeUnlockPrompt}
-      clientEncryptionEnvelope={clientEncryptionEnvelope}
+      activeUnlockPrompt={encryption.activeUnlockPrompt}
+      clientEncryptionEnvelope={encryption.clientEncryptionEnvelope}
       closePreview={closePreview}
       error={error}
-      fileListViewProps={fileListViewProps}
-      fileUpload={fileUpload}
-      folderEncryptionPrompt={folderEncryptionPrompt}
+      fileListViewProps={presentation.fileListViewProps}
+      fileUpload={contentOperations.fileUpload}
+      folderEncryptionPrompt={encryption.folderEncryptionPrompt}
       getDownloadUrl={getDownloadUrl}
       getSignedMediaUrl={getSignedMediaUrl}
-      handleCloseVersions={handleCloseVersions}
-      handleLightboxDelete={handleLightboxDelete}
-      handleUnlockCancel={handleUnlockCancel}
-      handleUnlockSuccess={handleUnlockSuccess}
-      handleVersionsChanged={handleVersionsChanged}
+      handleCloseVersions={presentation.handleCloseVersions}
+      handleLightboxDelete={contentOperations.handleLightboxDelete}
+      handleUnlockCancel={encryption.handleUnlockCancel}
+      handleUnlockSuccess={encryption.handleUnlockSuccess}
+      handleVersionsChanged={presentation.handleVersionsChanged}
       layoutType={layoutType}
       lightboxIndex={lightboxIndex}
       lightboxOpen={lightboxOpen}
       mediaItems={mediaItems}
-      pageHeaderProps={pageHeaderProps}
+      pageHeaderProps={presentation.pageHeaderProps}
       previewState={previewState}
-      refreshCurrentNodeContent={refreshCurrentNodeContent}
+      refreshCurrentNodeContent={presentation.refreshCurrentNodeContent}
       setLightboxOpen={setLightboxOpen}
       shouldRenderFileList={shouldRenderFileList}
       smoothGalleryTransitions={smoothGalleryTransitions}
       t={t}
-      unlockDialogOpen={unlockDialogOpen}
-      versionDialogFile={versionDialogFile}
+      unlockDialogOpen={encryption.unlockDialogOpen}
+      versionDialogFile={presentation.versionDialogFile}
     />
   );
 };
