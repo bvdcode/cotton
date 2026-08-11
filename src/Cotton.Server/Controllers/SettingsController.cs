@@ -4,7 +4,6 @@
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
-using Cotton.Server.Extensions;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
@@ -15,7 +14,6 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
 using System.Text.Json;
 using Cotton.Server.Models;
 
@@ -30,8 +28,7 @@ namespace Cotton.Server.Controllers
     public class SettingsController(
         SettingsProvider settings,
         ServerSettingsValidator _validator,
-        INotificationsProvider _notifications,
-        IProxyTopologyProbeService _proxyTopologyProbe) : SettingsControllerBase(settings)
+        INotificationsProvider _notifications) : SettingsControllerBase(settings)
     {
 
         /// <summary>
@@ -258,126 +255,6 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
-        /// Gets the configured immediate reverse-proxy address.
-        /// </summary>
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpGet("trusted-proxy-ip-address")]
-        public IActionResult GetTrustedProxyIpAddress()
-        {
-            ServerSettingsSnapshot settings = Settings.GetServerSettings();
-            IPAddress? configuredProxy = settings.TrustedProxyIpAddress;
-            string? trustedProxyIpAddress = configuredProxy is null
-                ? null
-                : TrustedProxyRequestExtensions.FormatConfiguredProxy(
-                    configuredProxy,
-                    settings.TrustedProxyPrefixLength);
-            return Ok(new { trustedProxyIpAddress });
-        }
-
-        /// <summary>
-        /// Gets the address of the peer that opened the current connection for trusted-proxy auto-detection.
-        /// </summary>
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpGet("trusted-proxy-ip-address/observed")]
-        public async Task<IActionResult> GetObservedProxyIpAddress(CancellationToken cancellationToken)
-        {
-            IPAddress? observedProxy = Request.GetConnectingIPAddress();
-            string? observedProxyIpAddress = observedProxy?.ToString();
-            string? suggestedTrustedProxy = observedProxy is null
-                ? null
-                : TrustedProxyRequestExtensions.GetSuggestedProxyConfiguration(observedProxy);
-            ProxyTopologyProbeResult topology = await DetectProxyTopologyAsync(cancellationToken);
-            return Ok(new
-            {
-                observedProxyIpAddress,
-                suggestedTrustedProxy,
-                detectedProxyServices = topology.Services,
-                cloudflare = topology.Cloudflare,
-            });
-        }
-
-        /// <summary>
-        /// Selects direct-connection mode, or verifies an immediate reverse-proxy address and saves it on success.
-        /// </summary>
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpPost("trusted-proxy-ip-address/verify-and-save")]
-        public async Task<IActionResult> VerifyAndSaveTrustedProxyIpAddress(
-            [FromBody] string? ipAddress,
-            CancellationToken cancellationToken)
-        {
-            await EnsureSettingsAsync(cancellationToken);
-            ProxyTopologyProbeResult topology = await DetectProxyTopologyAsync(cancellationToken);
-
-            IPAddress? observedProxyIpAddress = Request.GetConnectingIPAddress();
-            if (observedProxyIpAddress is null)
-            {
-                return this.ApiBadRequest("The connecting proxy IP address is unavailable for this request.");
-            }
-
-            if (string.IsNullOrWhiteSpace(ipAddress))
-            {
-                await Settings.UpdateSettingsAsync(
-                    settings =>
-                    {
-                        settings.TrustedProxyIpAddress = null;
-                        settings.TrustedProxyPrefixLength = null;
-                    },
-                    GetFallbackPublicBaseUrl(),
-                    cancellationToken);
-                return Ok(CreateTrustedProxyVerificationResponse(
-                    configuredProxyIpAddress: null,
-                    configuredProxyPrefixLength: null,
-                    observedProxyIpAddress,
-                    topology,
-                    matches: true,
-                    saved: true));
-            }
-
-            if (!TrustedProxyRequestExtensions.TryParseTrustedProxy(
-                    ipAddress.Trim(),
-                    out IPAddress candidateProxyIpAddress,
-                    out byte? candidateProxyPrefixLength))
-            {
-                return this.ApiBadRequest(
-                    "Trusted proxy must be a valid IPv4, IPv6, or CIDR network.");
-            }
-
-            bool matches = TrustedProxyRequestExtensions.IsDirectConnectionMode(
-                    candidateProxyIpAddress,
-                    candidateProxyPrefixLength)
-                || TrustedProxyRequestExtensions.MatchesTrustedProxy(
-                    candidateProxyIpAddress,
-                    candidateProxyPrefixLength,
-                    observedProxyIpAddress);
-            if (!matches)
-            {
-                return Ok(CreateTrustedProxyVerificationResponse(
-                    candidateProxyIpAddress,
-                    candidateProxyPrefixLength,
-                    observedProxyIpAddress,
-                    topology,
-                    matches: false,
-                    saved: false));
-            }
-
-            await Settings.UpdateSettingsAsync(
-                settings =>
-                {
-                    settings.TrustedProxyIpAddress = candidateProxyIpAddress;
-                    settings.TrustedProxyPrefixLength = candidateProxyPrefixLength;
-                },
-                GetFallbackPublicBaseUrl(),
-                cancellationToken);
-            return Ok(CreateTrustedProxyVerificationResponse(
-                candidateProxyIpAddress,
-                candidateProxyPrefixLength,
-                observedProxyIpAddress,
-                topology,
-                matches: true,
-                saved: true));
-        }
-
-        /// <summary>
         /// Sets compution mode.
         /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -599,44 +476,6 @@ namespace Cotton.Server.Controllers
             return Ok(emailConfig);
         }
 
-
-        private static object CreateTrustedProxyVerificationResponse(
-            IPAddress? configuredProxyIpAddress,
-            byte? configuredProxyPrefixLength,
-            IPAddress observedProxyIpAddress,
-            ProxyTopologyProbeResult topology,
-            bool matches,
-            bool saved)
-        {
-            return new
-            {
-                trustedProxyIpAddress = configuredProxyIpAddress is null
-                    ? null
-                    : TrustedProxyRequestExtensions.FormatConfiguredProxy(
-                        configuredProxyIpAddress,
-                        configuredProxyPrefixLength),
-                observedProxyIpAddress = observedProxyIpAddress.ToString(),
-                detectedProxyServices = topology.Services,
-                cloudflare = topology.Cloudflare,
-                matches,
-                saved,
-            };
-        }
-
-        private async Task<ProxyTopologyProbeResult> DetectProxyTopologyAsync(
-            CancellationToken cancellationToken)
-        {
-            IReadOnlyList<string> requestServices = Request.DetectProxyServices();
-            string publicBaseUrl = Settings.GetServerSettings().PublicBaseUrl;
-            ProxyTopologyProbeResult probe = await _proxyTopologyProbe.DetectAsync(
-                publicBaseUrl,
-                cancellationToken);
-            return new(
-                ProxyServiceDetectionExtensions.MergeProxyServices(requestServices, probe.Services),
-                ProxyServiceDetectionExtensions.MergeCloudflareMetadata(
-                    Request.DetectCloudflareMetadata(),
-                    probe.Cloudflare));
-        }
 
         private static ServerUsage[] ParseServerUsage(JsonElement value)
         {
