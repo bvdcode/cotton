@@ -224,42 +224,21 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeId,
             [FromBody] Dictionary<string, string?>? patch)
         {
-            if (patch is null)
-            {
-                return CottonResult.BadRequest("Metadata patch is required.");
-            }
-
-            if (patch.Any(x => string.IsNullOrWhiteSpace(x.Key)))
-            {
-                return CottonResult.BadRequest("Metadata keys must be non-empty strings.");
-            }
-
-            if (patch.Any(x => x.Value is null))
-            {
-                return CottonResult.BadRequest("Metadata values must be strings.");
-            }
-
             Guid userId = User.GetUserId();
-            Node? node = await _dbContext.Nodes
-                .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (node is null)
+            UpdateNodeMetadataResult result = await _mediator.Send(
+                new UpdateNodeMetadataRequest(userId, nodeId, patch),
+                HttpContext.RequestAborted);
+            if (result.Status != UpdateNodeMetadataStatus.Updated)
             {
-                return CottonResult.NotFound("Node not found.");
+                return result.Status switch
+                {
+                    UpdateNodeMetadataStatus.InvalidPatch => CottonResult.BadRequest(result.Error!),
+                    UpdateNodeMetadataStatus.NodeNotFound => CottonResult.NotFound(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
-            Dictionary<string, string> metadata = node.Metadata is null
-                ? []
-                : new Dictionary<string, string>(node.Metadata);
-            foreach ((string? key, string? value) in patch)
-            {
-                metadata[key] = value!;
-            }
-
-            node.Metadata = metadata;
-            await _dbContext.SaveChangesAsync();
-
-            NodeDto mapped = node.Adapt<NodeDto>();
+            NodeDto mapped = result.Node!;
             try
             {
                 await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeMetadataUpdated", mapped);
