@@ -1,16 +1,7 @@
-import SaveIcon from "@mui/icons-material/Save";
 import {
   Alert,
-  Box,
-  Button,
-  CircularProgress,
   Divider,
-  MenuItem,
   Stack,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-  Typography,
 } from "@mui/material";
 import {
   useEffect,
@@ -33,14 +24,14 @@ import {
   selectDeveloperSettingsUnlocked,
   useLocalPreferencesStore,
 } from "../../../shared/store/localPreferencesStore";
-import { SettingsSection } from "./SettingsSection";
-import { storageSpaceOptions } from "./adminGeneralSettingsModel";
 import type { SaveStatus } from "./useAutoSavedSetting";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 import { AdminPageHeader } from "../components/AdminPageHeader";
 import { SAVED_STATUS_VISIBLE_MS } from "./adminSettingSaveStatus";
 import { DefaultUserStorageSettings } from "./DefaultUserStorageSettings";
-import { SettingsSaveButton } from "./SettingsSaveButton";
+import { StorageBackendSettings } from "./StorageBackendSettings";
+import { StoragePipelineSettingsSection } from "./StoragePipelineSettingsSection";
+import { StorageSpaceModeSetting } from "./StorageSpaceModeSetting";
 
 type FlashTimers = {
   storageType: number | null;
@@ -80,11 +71,6 @@ const defaultStoragePipelineSettings: StoragePipelineSettings = {
   minEncryptionThreads: 1,
   maxEncryptionThreads: 1,
   supportedEncryptionThreads: [1],
-};
-
-const formatChunkSize = (bytes: number): string => {
-  const mib = bytes / bytesPerMiB;
-  return `${Number(mib.toFixed(2)).toString()} MiB`;
 };
 
 const getSupportedChunkSizeOptions = (settings: ChunkSizeSettings): number[] =>
@@ -290,13 +276,6 @@ export const AdminStorageSettingsPage = () => {
       clearFlashTimers(flashTimers);
     };
   }, [flashTimers, t]);
-
-  const updateS3Config = <K extends keyof S3Config>(
-    key: K,
-    value: S3Config[K],
-  ) => {
-    setS3Config((current) => ({ ...current, [key]: value }));
-  };
 
   const handleStorageTypeChange = async (next: StorageType) => {
     if (
@@ -571,294 +550,55 @@ export const AdminStorageSettingsPage = () => {
 
           {loadError && <Alert severity="error">{loadError}</Alert>}
 
-          <SettingsSection
-            title={t("storageSettings.fields.storageType")}
-            status={storageTypeStatus}
-          >
-            <TextField
-              select
-              value={storageType}
-              onChange={(event) =>
-                void handleStorageTypeChange(event.target.value as StorageType)
-              }
-              disabled={storageTypeDisabled}
-              fullWidth
-            >
-              <MenuItem value="Local">
-                {t("storageSettings.storageType.Local")}
-              </MenuItem>
-              <MenuItem value="S3">
-                {t("storageSettings.storageType.S3")}
-              </MenuItem>
-            </TextField>
-          </SettingsSection>
+          <StorageBackendSettings
+            onS3Change={setS3Config}
+            onSaveS3={() => void saveS3AndActivate()}
+            onStorageTypeChange={(next) =>
+              void handleStorageTypeChange(next)
+            }
+            s3Config={s3Config}
+            s3Disabled={s3Disabled}
+            s3Saving={s3Saving}
+            s3Status={s3Status}
+            storageType={storageType}
+            storageTypeDisabled={storageTypeDisabled}
+            storageTypeStatus={storageTypeStatus}
+          />
 
-          {storageType === "S3" && (
-            <SettingsSection
-              title={t("storageSettings.s3.title")}
-              status={s3Status}
-            >
-              <Stack spacing={2}>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gap: 2,
-                    gridTemplateColumns: {
-                      xs: "1fr",
-                      md: "1fr 1fr",
-                    },
-                  }}
-                >
-                  <TextField
-                    label={t("storageSettings.s3.fields.endpoint")}
-                    value={s3Config.endpoint}
-                    onChange={(event) =>
-                      updateS3Config("endpoint", event.target.value)
-                    }
-                    disabled={s3Disabled}
-                    fullWidth
-                  />
-                  <TextField
-                    label={t("storageSettings.s3.fields.region")}
-                    value={s3Config.region}
-                    onChange={(event) =>
-                      updateS3Config("region", event.target.value)
-                    }
-                    disabled={s3Disabled}
-                    fullWidth
-                  />
-                  <TextField
-                    label={t("storageSettings.s3.fields.bucket")}
-                    value={s3Config.bucket}
-                    onChange={(event) =>
-                      updateS3Config("bucket", event.target.value)
-                    }
-                    disabled={s3Disabled}
-                    fullWidth
-                  />
-                  <TextField
-                    label={t("storageSettings.s3.fields.accessKey")}
-                    value={s3Config.accessKey}
-                    onChange={(event) =>
-                      updateS3Config("accessKey", event.target.value)
-                    }
-                    disabled={s3Disabled}
-                    fullWidth
-                  />
-                  <TextField
-                    label={t("storageSettings.s3.fields.secretKey")}
-                    value={s3Config.secretKey}
-                    onChange={(event) =>
-                      updateS3Config("secretKey", event.target.value)
-                    }
-                    disabled={s3Disabled}
-                    type="password"
-                    fullWidth
-                  />
-                </Box>
-
-                <Box>
-                  <Button
-                    variant="contained"
-                    onClick={() => void saveS3AndActivate()}
-                    disabled={s3Disabled || s3Saving}
-                    startIcon={
-                      s3Saving ? (
-                        <CircularProgress size={16} color="inherit" />
-                      ) : (
-                        <SaveIcon />
-                      )
-                    }
-                  >
-                    {t("settings.actions.save")}
-                  </Button>
-                </Box>
-              </Stack>
-            </SettingsSection>
-          )}
-
-          <SettingsSection
-            title={t("settings.general.fields.storageSpaceMode")}
-            description={t("settings.general.storageSpaceHelp.description")}
+          <StorageSpaceModeSetting
+            disabled={storageSpaceDisabled}
+            onChange={(next) => void handleStorageSpaceModeChange(next)}
             status={storageSpaceModeStatus}
-          >
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              value={storageSpaceMode}
-              onChange={(_, next) =>
-                void handleStorageSpaceModeChange(
-                  next as StorageSpaceMode | null,
-                )
-              }
-              disabled={storageSpaceDisabled}
-              aria-label={t("settings.general.fields.storageSpaceMode")}
-              fullWidth
-              sx={{
-                "& .MuiToggleButton-root": {
-                  flex: 1,
-                  minWidth: 0,
-                  whiteSpace: "normal",
-                  lineHeight: 1.2,
-                },
-              }}
-            >
-              {storageSpaceOptions.map((option) => (
-                <ToggleButton key={option} value={option}>
-                  {t(`settings.general.storageSpaceMode.${option}`)}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </SettingsSection>
+            value={storageSpaceMode}
+          />
 
           {developerSettingsUnlocked && (
-            <SettingsSection
-              title={t("storageSettings.pipeline.title")}
-              description={t("storageSettings.pipeline.description")}
-              status={storagePipelineGroupStatus}
-            >
-              <Stack spacing={2}>
-                <Box>
-                  <Typography variant="subtitle2" gutterBottom>
-                    {t("storageSettings.chunkSize.title")}
-                  </Typography>
-                  <ToggleButtonGroup
-                    size="small"
-                    exclusive
-                    value={chunkSizeBytes}
-                    onChange={(_, next: number | null) =>
-                      void handleChunkSizeChange(next)
-                    }
-                    disabled={chunkSizeDisabled}
-                    aria-label={t("storageSettings.chunkSize.ariaLabel")}
-                    fullWidth
-                    sx={{
-                      "& .MuiToggleButton-root": {
-                        flex: 1,
-                        minWidth: 0,
-                        whiteSpace: "normal",
-                        lineHeight: 1.2,
-                      },
-                    }}
-                  >
-                    {supportedChunkSizeBytes.map((option) => (
-                      <ToggleButton key={option} value={option}>
-                        {formatChunkSize(option)}
-                      </ToggleButton>
-                    ))}
-                  </ToggleButtonGroup>
-                </Box>
-
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={2}
-                  alignItems={{ xs: "stretch", sm: "flex-start" }}
-                >
-                  <TextField
-                    label={t(
-                      "storageSettings.pipeline.fields.compressionLevel",
-                    )}
-                    value={compressionLevelInput}
-                    onChange={(event) => {
-                      setCompressionLevelInput(event.target.value);
-                      if (storagePipelineStatus === "error") {
-                        setStoragePipelineStatus("idle");
-                      }
-                    }}
-                    disabled={storagePipelineDisabled}
-                    error={storagePipelineStatus === "error"}
-                    helperText={t("storageSettings.pipeline.compressionHelp", {
-                      min: storagePipelineSettings.minCompressionLevel,
-                      max: storagePipelineSettings.maxCompressionLevel,
-                    })}
-                    type="number"
-                    inputProps={{
-                      min: storagePipelineSettings.minCompressionLevel,
-                      max: storagePipelineSettings.maxCompressionLevel,
-                      step: 1,
-                    }}
-                    fullWidth
-                  />
-                  <SettingsSaveButton
-                    changed={compressionLevelChanged}
-                    disabled={storagePipelineDisabled}
-                    label={t("settings.actions.save")}
-                    onSave={() => void handleCompressionLevelSave()}
-                    saving={storagePipelineStatus === "saving"}
-                  />
-                </Stack>
-
-                <Box>
-                  <Typography variant="subtitle2" gutterBottom>
-                    {t("storageSettings.pipeline.fields.cipherChunkSize")}
-                  </Typography>
-                  <ToggleButtonGroup
-                    size="small"
-                    exclusive
-                    value={storagePipelineSettings.cipherChunkSizeBytes}
-                    onChange={(_, next: number | null) =>
-                      void handleCipherChunkSizeChange(next)
-                    }
-                    disabled={storagePipelineDisabled}
-                    aria-label={t(
-                      "storageSettings.pipeline.fields.cipherChunkSize",
-                    )}
-                    fullWidth
-                    sx={{
-                      "& .MuiToggleButton-root": {
-                        flex: 1,
-                        minWidth: 0,
-                        whiteSpace: "normal",
-                        lineHeight: 1.2,
-                      },
-                    }}
-                  >
-                    {storagePipelineSettings.supportedCipherChunkSizeBytes.map(
-                      (option) => (
-                        <ToggleButton key={option} value={option}>
-                          {formatChunkSize(option)}
-                        </ToggleButton>
-                      ),
-                    )}
-                  </ToggleButtonGroup>
-                </Box>
-
-                <Box>
-                  <Typography variant="subtitle2" gutterBottom>
-                    {t("storageSettings.pipeline.fields.encryptionThreads")}
-                  </Typography>
-                  <ToggleButtonGroup
-                    size="small"
-                    exclusive
-                    value={storagePipelineSettings.encryptionThreads}
-                    onChange={(_, next: number | null) =>
-                      void handleEncryptionThreadsChange(next)
-                    }
-                    disabled={storagePipelineDisabled}
-                    aria-label={t(
-                      "storageSettings.pipeline.fields.encryptionThreads",
-                    )}
-                    fullWidth
-                    sx={{
-                      "& .MuiToggleButton-root": {
-                        flex: 1,
-                        minWidth: 0,
-                        whiteSpace: "normal",
-                        lineHeight: 1.2,
-                      },
-                    }}
-                  >
-                    {storagePipelineSettings.supportedEncryptionThreads.map(
-                      (option) => (
-                        <ToggleButton key={option} value={option}>
-                          {option.toString()}
-                        </ToggleButton>
-                      ),
-                    )}
-                  </ToggleButtonGroup>
-                </Box>
-              </Stack>
-            </SettingsSection>
+            <StoragePipelineSettingsSection
+              chunkSizeBytes={chunkSizeBytes}
+              compressionLevelChanged={compressionLevelChanged}
+              compressionLevelInput={compressionLevelInput}
+              disabled={storagePipelineDisabled || chunkSizeDisabled}
+              onChunkSizeChange={(next) => void handleChunkSizeChange(next)}
+              onCipherChunkSizeChange={(next) =>
+                void handleCipherChunkSizeChange(next)
+              }
+              onCompressionLevelChange={(value) => {
+                setCompressionLevelInput(value);
+                if (storagePipelineStatus === "error") {
+                  setStoragePipelineStatus("idle");
+                }
+              }}
+              onCompressionLevelSave={() =>
+                void handleCompressionLevelSave()
+              }
+              onEncryptionThreadsChange={(next) =>
+                void handleEncryptionThreadsChange(next)
+              }
+              pipelineStatus={storagePipelineStatus}
+              settings={storagePipelineSettings}
+              sectionStatus={storagePipelineGroupStatus}
+              supportedChunkSizeBytes={supportedChunkSizeBytes}
+            />
           )}
 
           <DefaultUserStorageSettings
