@@ -1,13 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@mui/material";
-import {
-  ContentCut,
-  ContentPaste,
-  Delete,
-  Download,
-  Share as ShareIcon,
-} from "@mui/icons-material";
 import { toast } from "@shared/ui/notifications";
 import {
   FileListViewFactory,
@@ -18,7 +11,6 @@ import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useNodesStore } from "../../shared/store/nodesStore";
 import {
-  deleteFolder,
   loadNode,
   loadRoot,
   refreshNodeContent,
@@ -32,7 +24,6 @@ import { useFilesLayout } from "@shared/hooks/useFilesLayout";
 import { useFilesData } from "./hooks/useFilesData";
 import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
 import { useFileSelection } from "@shared/hooks/useFileSelection";
-import { useDeleteSelectedItems } from "./hooks/useDeleteSelectedItems";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import {
@@ -54,7 +45,6 @@ import {
 } from "../../shared/crypto";
 import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
-import { shareFolder } from "../../shared/utils/shareFolder";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 import {
   selectGallerySmoothTransitions,
@@ -68,12 +58,11 @@ import {
 } from "./hooks/useFileListPageLogic";
 import { useFolderClientEncryptionActions } from "./hooks/useFolderClientEncryptionActions";
 import { useFolderEncryptionPolicy } from "./hooks/useFolderEncryptionPolicy";
-import { downloadArchive } from "@shared/utils/fileHandlers";
 import { uploadFileToNode } from "@shared/upload";
+import { useFilesSelectionActions } from "./hooks/useFilesSelectionActions";
 import { FilesPageView } from "./FilesPageView";
 import {
   buildFolderEncryptionPrompt,
-  buildSelectionArchiveRequest,
   buildUniqueSiblingName,
   getActiveCurrentNode,
   getCurrentContent,
@@ -90,76 +79,6 @@ import {
 } from "./filesPageModel";
 
 const MARKDOWN_FILE_CONTENT_TYPE = "text/markdown";
-
-const buildFilesCustomActionItems = (options: {
-  clipboardCount: number;
-  cutTitle: string;
-  currentFolderId: string | null;
-  deleteSelectedTitle: string;
-  downloadSelectedTitle: string;
-  handleCutSelection: () => void;
-  handleDeleteSelected: () => void;
-  handleDownloadSelection: () => void;
-  handlePasteHere: () => void;
-  handleShareCurrentFolder: () => void;
-  loading: boolean;
-  nodeId: string | null;
-  pasteHereTitle: string;
-  selectedCount: number;
-  selectionMode: boolean;
-  shareCurrentFolderTitle: string;
-}): React.ComponentProps<typeof PageHeader>["customActionItems"] => {
-  const items: NonNullable<
-    React.ComponentProps<typeof PageHeader>["customActionItems"]
-  > = [];
-
-  if (!options.selectionMode && options.currentFolderId) {
-    items.push({
-      key: "share-current-folder",
-      icon: <ShareIcon />,
-      title: options.shareCurrentFolderTitle,
-      onClick: options.handleShareCurrentFolder,
-      disabled: options.loading,
-    });
-  }
-
-  if (options.selectionMode && options.selectedCount > 0) {
-    items.push({
-      key: "download-selected",
-      icon: <Download />,
-      title: options.downloadSelectedTitle,
-      onClick: options.handleDownloadSelection,
-      disabled: options.loading,
-    });
-    items.push({
-      key: "cut-selected",
-      icon: <ContentCut />,
-      title: options.cutTitle,
-      onClick: options.handleCutSelection,
-      disabled: options.loading,
-    });
-    items.push({
-      key: "delete-selected",
-      icon: <Delete />,
-      title: options.deleteSelectedTitle,
-      onClick: options.handleDeleteSelected,
-      disabled: options.loading,
-      color: "error" as const,
-    });
-  }
-
-  if (options.clipboardCount > 0 && options.nodeId) {
-    items.push({
-      key: "paste-here",
-      icon: <ContentPaste />,
-      title: options.pasteHereTitle,
-      onClick: options.handlePasteHere,
-      disabled: options.loading,
-    });
-  }
-
-  return items.length > 0 ? items : undefined;
-};
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -749,48 +668,23 @@ export const FilesPage: React.FC = () => {
     }
   }, [ancestors, navigate]);
 
-  const handleShareFolder = React.useCallback(
-    async (folderId: string, folderName: string) => {
-      await shareFolder(folderId, folderName, t);
-    },
-    [t],
-  );
-
-  const handleShareCurrentFolder = React.useCallback(() => {
-    if (!activeCurrentNode) return;
-    void handleShareFolder(activeCurrentNode.id, activeCurrentNode.name);
-  }, [activeCurrentNode, handleShareFolder]);
-
-  const handleDownloadFolder = React.useCallback(
-    async (folderId: string, folderName: string) => {
-      try {
-        await downloadArchive({
-          fileIds: [],
-          nodeIds: [folderId],
-          archiveName: folderName,
-        });
-      } catch {
-        showToast(t("selection.downloadFailed", { ns: "files" }), "error");
-      }
-    },
-    [showToast, t],
-  );
-
-  const handleDownloadSelection = React.useCallback(async () => {
-    const request = buildSelectionArchiveRequest(
+  const { customActionItems, handleDownloadFolder, handleShareFolder } =
+    useFilesSelectionActions({
+      activeCurrentNode,
+      clipboardCount,
+      confirm,
+      currentFolderName: currentNode?.name,
+      fileSelection,
+      handleCutSelection,
+      handlePasteHere,
+      loading,
+      nodeId,
+      optimisticDeleteFile,
+      reloadCurrentNode,
+      showToast,
+      t,
       tiles,
-      fileSelection.selectedIds,
-      currentNode?.name,
-    );
-    if (!request) return;
-
-    try {
-      await downloadArchive(request);
-      fileSelection.deselectAll();
-    } catch {
-      showToast(t("selection.downloadFailed", { ns: "files" }), "error");
-    }
-  }, [currentNode?.name, fileSelection, showToast, t, tiles]);
+    });
 
   const folderOperations = buildFolderOperations(
     folderOps,
@@ -828,62 +722,8 @@ export const FilesPage: React.FC = () => {
     onMediaClick: handleMediaClick,
   });
 
-  const handleDeleteSelected = useDeleteSelectedItems({
-    nodeId,
-    fileSelection,
-    tiles,
-    confirm,
-    t,
-    deleteFolder,
-    optimisticDeleteFile,
-    reloadCurrentNode,
-  });
-
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
-
-  const customActionItems = useMemo(
-    () =>
-      buildFilesCustomActionItems({
-        clipboardCount,
-        cutTitle: t("move.cut", { ns: "files" }),
-        currentFolderId: activeCurrentNode?.id ?? null,
-        deleteSelectedTitle: t("selection.deleteSelected", { ns: "files" }),
-        downloadSelectedTitle: t("selection.downloadSelected", { ns: "files" }),
-        handleCutSelection,
-        handleDeleteSelected: () => {
-          void handleDeleteSelected();
-        },
-        handleDownloadSelection: () => {
-          void handleDownloadSelection();
-        },
-        handlePasteHere,
-        handleShareCurrentFolder,
-        loading,
-        nodeId,
-        pasteHereTitle: t("move.pasteHere", {
-          ns: "files",
-          count: clipboardCount,
-        }),
-        selectedCount: fileSelection.selectedCount,
-        selectionMode: fileSelection.selectionMode,
-        shareCurrentFolderTitle: t("actions.share", { ns: "common" }),
-      }),
-    [
-      activeCurrentNode?.id,
-      clipboardCount,
-      fileSelection.selectedCount,
-      fileSelection.selectionMode,
-      handleCutSelection,
-      handleDeleteSelected,
-      handleDownloadSelection,
-      handlePasteHere,
-      handleShareCurrentFolder,
-      loading,
-      nodeId,
-      t,
-    ],
-  );
 
   const pageHeaderProps = useMemo(
     (): React.ComponentProps<typeof PageHeader> => ({
