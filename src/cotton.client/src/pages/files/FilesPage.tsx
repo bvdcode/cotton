@@ -45,16 +45,15 @@ import {
   invalidateFileVersions,
 } from "../../shared/api/queries/fileVersions";
 import { fetchServerSettings } from "../../shared/api/queries/serverSettings";
-import { nodesApi, type NodeFileManifestDto } from "../../shared/api/nodesApi";
+import { type NodeFileManifestDto } from "../../shared/api/nodesApi";
 import {
   applyDisplayMetaToFile,
-  FOLDER_ENCRYPTION_POLICY_KEY,
   getFolderEncryptionPolicyState,
   readEnvelopeFromPreferences,
   useVault,
 } from "../../shared/crypto";
 import { useFolderFileList } from "../../shared/hooks/useFileListSource";
-import { InterfaceLayoutType, type NodeDto } from "../../shared/api/layoutsApi";
+import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFolder } from "../../shared/utils/shareFolder";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 import {
@@ -68,9 +67,9 @@ import {
   type FileListPageLogic,
 } from "./hooks/useFileListPageLogic";
 import { useFolderClientEncryptionActions } from "./hooks/useFolderClientEncryptionActions";
+import { useFolderEncryptionPolicy } from "./hooks/useFolderEncryptionPolicy";
 import { downloadArchive } from "@shared/utils/fileHandlers";
 import { uploadFileToNode } from "@shared/upload";
-import { collectFoldersInFoldersForClientEncryption } from "@shared/utils/clientEncryptionFolderScan";
 import { FilesPageView } from "./FilesPageView";
 import {
   buildFolderEncryptionPrompt,
@@ -91,32 +90,6 @@ import {
 } from "./filesPageModel";
 
 const MARKDOWN_FILE_CONTENT_TYPE = "text/markdown";
-
-const updateFolderEncryptionPolicyTree = async (
-  folderId: string,
-  nextEnabled: boolean,
-): Promise<NodeDto[]> => {
-  const value = String(nextEnabled);
-  const scan = await collectFoldersInFoldersForClientEncryption([folderId]);
-  const foldersToUpdate = [
-    folderId,
-    ...scan.folders
-      .filter(
-        (folder) => folder.metadata?.[FOLDER_ENCRYPTION_POLICY_KEY] !== value,
-      )
-      .map((folder) => folder.id),
-  ];
-  const updatedNodes: NodeDto[] = [];
-
-  for (const nodeId of foldersToUpdate) {
-    const updated = await nodesApi.updateNodeMetadata(nodeId, {
-      [FOLDER_ENCRYPTION_POLICY_KEY]: value,
-    });
-    updatedNodes.push(updated);
-  }
-
-  return updatedNodes;
-};
 
 const buildFilesCustomActionItems = (options: {
   clipboardCount: number;
@@ -389,6 +362,8 @@ export const FilesPage: React.FC = () => {
     isEncryptingPlainFiles,
     plainFiles,
   } = folderEncryptionActions;
+  const { toggleFolderEncryptionPolicy: handleToggleFolderEncryption } =
+    useFolderEncryptionPolicy({ onToast: showToast });
 
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
   const handleFileUploaded = React.useCallback(
@@ -785,34 +760,6 @@ export const FilesPage: React.FC = () => {
     if (!activeCurrentNode) return;
     void handleShareFolder(activeCurrentNode.id, activeCurrentNode.name);
   }, [activeCurrentNode, handleShareFolder]);
-
-  const handleToggleFolderEncryption = React.useCallback(
-    async (folderId: string, currentlyEnabled: boolean) => {
-      const nextEnabled = !currentlyEnabled;
-
-      try {
-        const updatedNodes = await updateFolderEncryptionPolicyTree(
-          folderId,
-          nextEnabled,
-        );
-        const store = useNodesStore.getState();
-        for (const updated of updatedNodes) {
-          store.updateNode(updated);
-        }
-        showToast(
-          nextEnabled
-            ? t("clientEncryption.toasts.policyEnabled", { ns: "files" })
-            : t("clientEncryption.toasts.policyDisabled", { ns: "files" }),
-        );
-      } catch {
-        showToast(
-          t("clientEncryption.toasts.policyToggleFailed", { ns: "files" }),
-          "error",
-        );
-      }
-    },
-    [showToast, t],
-  );
 
   const handleDownloadFolder = React.useCallback(
     async (folderId: string, folderName: string) => {
