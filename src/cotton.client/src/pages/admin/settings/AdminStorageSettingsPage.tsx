@@ -34,19 +34,18 @@ import {
   useLocalPreferencesStore,
 } from "../../../shared/store/localPreferencesStore";
 import { SettingsSection } from "./SettingsSection";
-import { isGuidString } from "../../../shared/utils/guid";
 import { storageSpaceOptions } from "./adminGeneralSettingsModel";
 import type { SaveStatus } from "./useAutoSavedSetting";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 import { AdminPageHeader } from "../components/AdminPageHeader";
 import { SAVED_STATUS_VISIBLE_MS } from "./adminSettingSaveStatus";
+import { DefaultUserStorageSettings } from "./DefaultUserStorageSettings";
+import { SettingsSaveButton } from "./SettingsSaveButton";
 
 type FlashTimers = {
   storageType: number | null;
   s3: number | null;
   storageSpace: number | null;
-  quota: number | null;
-  template: number | null;
   chunkSize: number | null;
   pipeline: number | null;
 };
@@ -55,13 +54,10 @@ const flashTimerKeys: Array<keyof FlashTimers> = [
   "storageType",
   "s3",
   "storageSpace",
-  "quota",
-  "template",
   "chunkSize",
   "pipeline",
 ];
 
-const bytesPerGiB = 1024 ** 3;
 const bytesPerMiB = 1024 ** 2;
 const defaultChunkSizeOptionsBytes = [4, 8, 16].map(
   (value) => value * bytesPerMiB,
@@ -84,45 +80,6 @@ const defaultStoragePipelineSettings: StoragePipelineSettings = {
   minEncryptionThreads: 1,
   maxEncryptionThreads: 1,
   supportedEncryptionThreads: [1],
-};
-
-const formatQuotaInput = (quotaBytes: number | null): string => {
-  if (!quotaBytes || quotaBytes <= 0) {
-    return "";
-  }
-
-  return Number((quotaBytes / bytesPerGiB).toFixed(3)).toString();
-};
-
-const parseQuotaInput = (input: string): number | null => {
-  const normalized = input.trim().replace(",", ".");
-  if (normalized.length === 0) {
-    return null;
-  }
-
-  const value = Number(normalized);
-  if (!Number.isFinite(value) || value < 0) {
-    throw new Error("invalid-quota");
-  }
-
-  if (value === 0) {
-    return null;
-  }
-
-  return Math.round(value * bytesPerGiB);
-};
-
-const parseTemplateNodeIdInput = (input: string): string | null => {
-  const trimmed = input.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-
-  if (!isGuidString(trimmed)) {
-    throw new Error("invalid-template-node-id");
-  }
-
-  return trimmed.toLowerCase();
 };
 
 const formatChunkSize = (bytes: number): string => {
@@ -195,37 +152,6 @@ const isLoadedSettingDisabled = (
   status: SaveStatus,
 ): boolean => loadFailed || isStatusBusy(status);
 
-const hasValidationError = (invalid: boolean, status: SaveStatus): boolean =>
-  invalid || status === "error";
-
-interface SettingsSaveButtonProps {
-  changed: boolean;
-  disabled: boolean;
-  label: string;
-  onSave: () => void;
-  saving: boolean;
-}
-
-const SettingsSaveButton = ({
-  changed,
-  disabled,
-  label,
-  onSave,
-  saving,
-}: SettingsSaveButtonProps) => (
-  <Button
-    variant="contained"
-    onClick={onSave}
-    disabled={disabled || !changed}
-    startIcon={
-      saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />
-    }
-    sx={{ minWidth: { xs: "100%", sm: 120 } }}
-  >
-    {label}
-  </Button>
-);
-
 export const AdminStorageSettingsPage = () => {
   const { t } = useTranslation("admin");
   const developerSettingsUnlocked = useLocalPreferencesStore(
@@ -251,19 +177,12 @@ export const AdminStorageSettingsPage = () => {
   const [storageSpaceModeStatus, setStorageSpaceModeStatus] =
     useState<SaveStatus>("loading");
 
-  const [defaultUserQuotaGiB, setDefaultUserQuotaGiB] = useState("");
-  const [savedDefaultUserQuotaGiB, setSavedDefaultUserQuotaGiB] = useState("");
-  const [defaultUserQuotaInvalid, setDefaultUserQuotaInvalid] = useState(false);
-  const [defaultUserQuotaStatus, setDefaultUserQuotaStatus] =
-    useState<SaveStatus>("loading");
-
-  const [defaultTemplateNodeId, setDefaultTemplateNodeId] = useState("");
-  const [savedDefaultTemplateNodeId, setSavedDefaultTemplateNodeId] =
-    useState("");
-  const [defaultTemplateNodeIdInvalid, setDefaultTemplateNodeIdInvalid] =
-    useState(false);
-  const [defaultTemplateStatus, setDefaultTemplateStatus] =
-    useState<SaveStatus>("loading");
+  const [defaultUserQuotaBytes, setDefaultUserQuotaBytes] = useState<
+    number | null | undefined
+  >(undefined);
+  const [defaultTemplateNodeId, setDefaultTemplateNodeId] = useState<
+    string | null | undefined
+  >(undefined);
 
   const [chunkSizeBytes, setChunkSizeBytes] = useState(
     defaultChunkSizeOptionsBytes[0],
@@ -291,8 +210,6 @@ export const AdminStorageSettingsPage = () => {
       storageType: null,
       s3: null,
       storageSpace: null,
-      quota: null,
-      template: null,
       chunkSize: null,
       pipeline: null,
     }),
@@ -307,8 +224,6 @@ export const AdminStorageSettingsPage = () => {
       setStorageTypeStatus("loading");
       setS3Status("loading");
       setStorageSpaceModeStatus("loading");
-      setDefaultUserQuotaStatus("loading");
-      setDefaultTemplateStatus("loading");
       setChunkSizeStatus("loading");
       setStoragePipelineStatus("loading");
 
@@ -338,11 +253,8 @@ export const AdminStorageSettingsPage = () => {
         setS3Config(nextS3Config);
         setStorageSpaceMode(nextStorageSpaceMode);
         setSavedStorageSpaceMode(nextStorageSpaceMode);
-        const quotaInput = formatQuotaInput(nextDefaultUserQuotaBytes);
-        setDefaultUserQuotaGiB(quotaInput);
-        setSavedDefaultUserQuotaGiB(quotaInput);
-        setDefaultTemplateNodeId(nextDefaultTemplateNodeId ?? "");
-        setSavedDefaultTemplateNodeId(nextDefaultTemplateNodeId ?? "");
+        setDefaultUserQuotaBytes(nextDefaultUserQuotaBytes);
+        setDefaultTemplateNodeId(nextDefaultTemplateNodeId);
         setChunkSizeBytes(nextChunkSizeSettings.maxChunkSizeBytes);
         setSavedChunkSizeBytes(nextChunkSizeSettings.maxChunkSizeBytes);
         setSupportedChunkSizeBytes(
@@ -357,8 +269,6 @@ export const AdminStorageSettingsPage = () => {
         setStorageTypeStatus("idle");
         setS3Status("idle");
         setStorageSpaceModeStatus("idle");
-        setDefaultUserQuotaStatus("idle");
-        setDefaultTemplateStatus("idle");
         setChunkSizeStatus("idle");
         setStoragePipelineStatus("idle");
       } catch {
@@ -368,8 +278,6 @@ export const AdminStorageSettingsPage = () => {
         setStorageTypeStatus("error");
         setS3Status("error");
         setStorageSpaceModeStatus("error");
-        setDefaultUserQuotaStatus("error");
-        setDefaultTemplateStatus("error");
         setChunkSizeStatus("error");
         setStoragePipelineStatus("error");
       }
@@ -452,82 +360,6 @@ export const AdminStorageSettingsPage = () => {
         error,
         t("storageSettings.errors.storageSaveFailed"),
         "admin-storage-settings:s3:save-failed",
-      );
-    }
-  };
-
-  const saveDefaultUserQuota = async () => {
-    if (
-      defaultUserQuotaStatus === "loading" ||
-      defaultUserQuotaStatus === "saving"
-    ) {
-      return;
-    }
-
-    setDefaultUserQuotaInvalid(false);
-    let quotaBytes: number | null;
-    try {
-      quotaBytes = parseQuotaInput(defaultUserQuotaGiB);
-    } catch {
-      setDefaultUserQuotaInvalid(true);
-      setDefaultUserQuotaStatus("error");
-      return;
-    }
-
-    const previous = savedDefaultUserQuotaGiB;
-    setDefaultUserQuotaStatus("saving");
-
-    try {
-      await settingsApi.setDefaultUserStorageQuotaBytes(quotaBytes);
-      const saved = formatQuotaInput(quotaBytes);
-      setDefaultUserQuotaGiB(saved);
-      setSavedDefaultUserQuotaGiB(saved);
-      flashStatus(setDefaultUserQuotaStatus, flashTimers, "quota");
-    } catch (error) {
-      setDefaultUserQuotaGiB(previous);
-      setDefaultUserQuotaStatus("error");
-      showApiErrorToast(
-        error,
-        t("storageSettings.errors.quotaSaveFailed"),
-        "admin-storage-settings:quota:save-failed",
-      );
-    }
-  };
-
-  const saveDefaultTemplateNode = async () => {
-    if (
-      defaultTemplateStatus === "loading" ||
-      defaultTemplateStatus === "saving"
-    ) {
-      return;
-    }
-
-    setDefaultTemplateNodeIdInvalid(false);
-    let nodeId: string | null;
-    try {
-      nodeId = parseTemplateNodeIdInput(defaultTemplateNodeId);
-    } catch {
-      setDefaultTemplateNodeIdInvalid(true);
-      setDefaultTemplateStatus("error");
-      return;
-    }
-
-    const previous = savedDefaultTemplateNodeId;
-    setDefaultTemplateStatus("saving");
-
-    try {
-      await settingsApi.setDefaultUserTemplateNodeId(nodeId);
-      const saved = nodeId ?? "";
-      setDefaultTemplateNodeId(saved);
-      setSavedDefaultTemplateNodeId(saved);
-      flashStatus(setDefaultTemplateStatus, flashTimers, "template");
-    } catch (error) {
-      setDefaultTemplateNodeId(previous);
-      setDefaultTemplateStatus("error");
-      showApiErrorToast(
-        error,
-        t("storageSettings.errors.templateSaveFailed"),
-        "admin-storage-settings:template:save-failed",
       );
     }
   };
@@ -727,18 +559,6 @@ export const AdminStorageSettingsPage = () => {
   const compressionLevelChanged =
     compressionLevelInput.trim() !==
     savedStoragePipelineSettings.compressionLevel.toString();
-  const quotaSaving = defaultUserQuotaStatus === "saving";
-  const quotaDisabled = isLoadedSettingDisabled(
-    loadFailed,
-    defaultUserQuotaStatus,
-  );
-  const quotaChanged = defaultUserQuotaGiB !== savedDefaultUserQuotaGiB;
-  const templateSaving = defaultTemplateStatus === "saving";
-  const templateDisabled = isLoadedSettingDisabled(
-    loadFailed,
-    defaultTemplateStatus,
-  );
-  const templateChanged = defaultTemplateNodeId !== savedDefaultTemplateNodeId;
 
   return (
     <Stack>
@@ -1041,91 +861,11 @@ export const AdminStorageSettingsPage = () => {
             </SettingsSection>
           )}
 
-          <SettingsSection
-            title={t("storageSettings.quota.title")}
-            description={t("storageSettings.quota.description")}
-            status={defaultUserQuotaStatus}
-          >
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={2}
-              alignItems={{ xs: "stretch", sm: "flex-start" }}
-            >
-              <TextField
-                label={t("storageSettings.quota.fields.defaultUserQuotaGiB")}
-                value={defaultUserQuotaGiB}
-                onChange={(event) => {
-                  setDefaultUserQuotaGiB(event.target.value);
-                  setDefaultUserQuotaInvalid(false);
-                  if (defaultUserQuotaStatus === "error") {
-                    setDefaultUserQuotaStatus("idle");
-                  }
-                }}
-                disabled={quotaDisabled}
-                error={hasValidationError(
-                  defaultUserQuotaInvalid,
-                  defaultUserQuotaStatus,
-                )}
-                helperText={
-                  defaultUserQuotaInvalid
-                    ? t("storageSettings.errors.quotaInvalid")
-                    : t("storageSettings.quota.help")
-                }
-                type="number"
-                inputProps={{ min: 0, step: 0.25 }}
-                fullWidth
-              />
-              <SettingsSaveButton
-                changed={quotaChanged}
-                disabled={quotaDisabled}
-                label={t("settings.actions.save")}
-                onSave={() => void saveDefaultUserQuota()}
-                saving={quotaSaving}
-              />
-            </Stack>
-          </SettingsSection>
-
-          <SettingsSection
-            title={t("storageSettings.template.title")}
-            description={t("storageSettings.template.description")}
-            status={defaultTemplateStatus}
-          >
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={2}
-              alignItems={{ xs: "stretch", sm: "flex-start" }}
-            >
-              <TextField
-                label={t("storageSettings.template.fields.nodeId")}
-                value={defaultTemplateNodeId}
-                onChange={(event) => {
-                  setDefaultTemplateNodeId(event.target.value);
-                  setDefaultTemplateNodeIdInvalid(false);
-                  if (defaultTemplateStatus === "error") {
-                    setDefaultTemplateStatus("idle");
-                  }
-                }}
-                disabled={templateDisabled}
-                error={hasValidationError(
-                  defaultTemplateNodeIdInvalid,
-                  defaultTemplateStatus,
-                )}
-                helperText={
-                  defaultTemplateNodeIdInvalid
-                    ? t("storageSettings.errors.templateNodeIdInvalid")
-                    : t("storageSettings.template.help")
-                }
-                fullWidth
-              />
-              <SettingsSaveButton
-                changed={templateChanged}
-                disabled={templateDisabled}
-                label={t("settings.actions.save")}
-                onSave={() => void saveDefaultTemplateNode()}
-                saving={templateSaving}
-              />
-            </Stack>
-          </SettingsSection>
+          <DefaultUserStorageSettings
+            defaultUserQuotaBytes={defaultUserQuotaBytes}
+            defaultTemplateNodeId={defaultTemplateNodeId}
+            loadFailed={loadFailed}
+          />
         </Stack>
       </AdminPageSurface>
     </Stack>
