@@ -9,6 +9,8 @@ import { TimezoneSetting } from "./TimezoneSetting";
 import { TrustedProxyIpAddressSetting } from "./TrustedProxyIpAddressSetting";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 import { AdminPageHeader } from "../components/AdminPageHeader";
+import { BooleanSwitchSetting } from "./BooleanSwitchSetting";
+import { settingsApi } from "../../../shared/api/settingsApi";
 
 export const AdminGeneralSettingsPage = () => {
   const { t } = useTranslation("admin");
@@ -40,6 +42,13 @@ export const AdminGeneralSettingsPage = () => {
           <TimezoneSetting />
           <ComputationModeSetting />
           <ServerUsageSetting />
+          <BooleanSwitchSetting
+            title={t("settings.general.fields.disableVersionCheck")}
+            description={t("settings.general.help.disableVersionCheck")}
+            toastIdPrefix="admin-general:disable-version-check"
+            load={settingsApi.getDisableVersionCheck}
+            save={settingsApi.setDisableVersionCheck}
+          />
         </Stack>
       </AdminPageSurface>
     </Stack>

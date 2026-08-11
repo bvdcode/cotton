@@ -2865,6 +2865,7 @@
           "publicBaseUrl": "Openbare basis-URL",
           "timezone": "Tijdzone",
           "telemetry": "Telemetrie",
+          "disableVersionCheck": "Controleren op updates uitschakelen",
           "allowDeduplication": "Deduplicatie tussen gebruikers",
           "allowGlobalIndexing": "Globale indexering",
           "serverUsage": "Servergebruik",
@@ -2884,6 +2885,7 @@
           "publicBaseUrl": "Ondanks deze instelling bepaalt Cotton de openbare URL bijna overal automatisch. Stel deze alleen in wanneer de automatische detectie onjuist is.",
           "timezone": "Dit helpt ons om geen achtergrondtaken uit te voeren terwijl u slaapt, zodat uw schijven 's nachts geen geluid maken.",
           "telemetry": "Cotton verzamelt minimale technische diagnostische gegevens, zodat de ontwikkelaar fouten kan zien en oplossen, omdat niet iedereen problemen meldt. Het inschakelen van telemetrie ontgrendelt ook Cotton Bridge-diensten standaard.",
+          "disableVersionCheck": "Voorkomt dat Cotton bij het opstarten contact opneemt met GitHub om naar nieuwe versies te zoeken. De geïnstalleerde versie wordt nog steeds lokaal vastgelegd.",
           "allowDeduplication": "Bepaalt of een gebruiker kan vernemen dat een andere gebruiker hetzelfde bestand al opslaat. Wanneer uitgeschakeld worden identieke gegevens nog steeds gededupliceerd op de server na de upload, maar worden ze onnodig eerst overgedragen. Wanneer ingeschakeld, kan een andere gebruiker vernemen dat iemand in deze cloud dat bestand eerder heeft geüpload. Dit is veilig voor familie en vertrouwde vrienden.",
           "allowGlobalIndexing": "Staat de server toe gebruikersbestanden te ontsleutelen en een diepgaande zoekindex op te bouwen. Zonder dit gebruikt het zoeken alleen bestands- en mapnamen.",
           "serverUsage": "Optimaliseert aanbevelingen voor functies en enkele instellingen. Het is geen kritieke parameter, dus kies wat goed voelt."

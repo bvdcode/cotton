@@ -182,6 +182,10 @@ export const telemetrySettingSchema = z
   .object({ telemetryEnabled: z.boolean() })
   .transform((value) => value.telemetryEnabled);
 
+export const disableVersionCheckSettingSchema = z
+  .object({ disableVersionCheck: z.boolean() })
+  .transform((value) => value.disableVersionCheck);
+
 export const allowCrossUserDeduplicationSchema = z
   .object({ allowCrossUserDeduplication: z.boolean() })
   .transform((value) => value.allowCrossUserDeduplication);

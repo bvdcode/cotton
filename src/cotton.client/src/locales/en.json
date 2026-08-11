@@ -2661,6 +2661,7 @@
           "publicBaseUrl": "Public base URL",
           "timezone": "Time zone",
           "telemetry": "Telemetry",
+          "disableVersionCheck": "Disable update checks",
           "allowDeduplication": "Cross-user deduplication",
           "allowGlobalIndexing": "Global indexing",
           "serverUsage": "Server usage",
@@ -2680,6 +2681,7 @@
           "publicBaseUrl": "Despite this setting, Cotton determines the public URL automatically almost everywhere. Set it only when automatic detection is wrong.",
           "timezone": "This helps us avoid running background jobs while you sleep, so your disks do not grind at night.",
           "telemetry": "Cotton collects minimal technical diagnostics so the developer can see errors and fix them, because not everyone reports issues. Enabling telemetry also unlocks Cotton Bridge services out of the box.",
+          "disableVersionCheck": "Prevents Cotton from contacting GitHub at startup to check for new releases. The installed version is still recorded locally.",
           "allowDeduplication": "Controls whether one user can learn that another user already stores the same file. When disabled, identical data is still deduplicated on the server after upload, but it is needlessly transferred first. When enabled, another user may learn that someone in this cloud uploaded that file before. This is safe for family and trusted friends.",
           "allowGlobalIndexing": "Allows the server to decrypt user files and build a deep search index. Without it, search only uses file and folder names.",
           "serverUsage": "Optimizes feature recommendations and a few settings. It is not a critical parameter, so choose whatever feels right."

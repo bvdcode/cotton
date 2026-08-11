@@ -17,6 +17,7 @@ import {
   observedProxyInfoSchema,
   trustedProxyVerificationResultSchema,
   defaultUserTemplateNodeIdSchema,
+  disableVersionCheckSettingSchema,
 } from "./serverSettings";
 
 describe("server settings schemas", () => {
@@ -193,6 +194,9 @@ describe("server settings schemas", () => {
 
   it("validates boolean settings", () => {
     expect(telemetrySettingSchema.parse({ telemetryEnabled: true })).toBe(true);
+    expect(
+      disableVersionCheckSettingSchema.parse({ disableVersionCheck: true }),
+    ).toBe(true);
     expect(() =>
       telemetrySettingSchema.parse({ telemetryEnabled: "true" }),
     ).toThrow();

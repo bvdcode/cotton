@@ -2864,6 +2864,7 @@
           "publicBaseUrl": "URL de base publique",
           "timezone": "Fuseau horaire",
           "telemetry": "Télémétrie",
+          "disableVersionCheck": "Désactiver la recherche de mises à jour",
           "allowDeduplication": "Déduplication inter-utilisateurs",
           "allowGlobalIndexing": "Indexation globale",
           "serverUsage": "Utilisation du serveur",
@@ -2883,6 +2884,7 @@
           "publicBaseUrl": "Malgré ce paramètre, Cotton détermine l'URL publique automatiquement presque partout. Ne le définissez que si la détection automatique est erronée.",
           "timezone": "Cela nous aide à éviter d'exécuter des tâches d'arrière-plan pendant votre sommeil, afin que vos disques ne grincent pas la nuit.",
           "telemetry": "Cotton collecte des diagnostics techniques minimaux pour que le développeur puisse voir les erreurs et les corriger, car tout le monde ne signale pas les problèmes. Activer la télémétrie débloque également les services Cotton Bridge par défaut.",
+          "disableVersionCheck": "Empêche Cotton de contacter GitHub au démarrage pour rechercher de nouvelles versions. La version installée reste enregistrée localement.",
           "allowDeduplication": "Contrôle si un utilisateur peut apprendre qu'un autre utilisateur stocke déjà le même fichier. Lorsque désactivée, les données identiques sont quand même dédupliquées sur le serveur après envoi, mais elles sont inutilement transférées d'abord. Lorsque activée, un autre utilisateur peut apprendre que quelqu'un dans ce cloud a déjà téléversé ce fichier. C'est sûr pour la famille et les amis de confiance.",
           "allowGlobalIndexing": "Permet au serveur de déchiffrer les fichiers utilisateurs et de construire un index de recherche approfondi. Sans cela, la recherche n'utilise que les noms de fichiers et de dossiers.",
           "serverUsage": "Optimise les recommandations de fonctionnalités et quelques paramètres. Ce n'est pas un paramètre critique, choisissez donc ce qui vous semble juste."

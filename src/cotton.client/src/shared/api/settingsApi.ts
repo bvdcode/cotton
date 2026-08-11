@@ -10,6 +10,7 @@ import {
   customGeoIpLookupUrlSchema,
   defaultUserStorageQuotaBytesSchema,
   defaultUserTemplateNodeIdSchema,
+  disableVersionCheckSettingSchema,
   emailConfigSchema,
   emailModeResponseSchema,
   geoIpLookupModeResponseSchema,
@@ -359,6 +360,16 @@ export const settingsApi = {
 
   setTelemetry: async (enabled: boolean): Promise<void> => {
     await httpClient.patch("server/settings/telemetry", enabled);
+  },
+
+  getDisableVersionCheck: (): Promise<boolean> =>
+    getValidated(
+      "server/settings/disable-version-check",
+      disableVersionCheckSettingSchema,
+    ),
+
+  setDisableVersionCheck: async (disabled: boolean): Promise<void> => {
+    await httpClient.patch("server/settings/disable-version-check", disabled);
   },
 
   getAllowCrossUserDeduplication: (): Promise<boolean> =>

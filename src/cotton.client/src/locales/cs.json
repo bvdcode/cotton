@@ -2905,6 +2905,7 @@
           "publicBaseUrl": "Veřejná základní URL",
           "timezone": "Časové pásmo",
           "telemetry": "Telemetrie",
+          "disableVersionCheck": "Zakázat kontrolu aktualizací",
           "allowDeduplication": "Deduplikace mezi uživateli",
           "allowGlobalIndexing": "Globální indexace",
           "serverUsage": "Využití serveru",
@@ -2924,6 +2925,7 @@
           "publicBaseUrl": "I přes toto nastavení Cotton téměř všude určuje veřejnou URL automaticky. Nastavte ji jen tehdy, když je automatická detekce nesprávná.",
           "timezone": "Pomáhá nám neprovádět úlohy na pozadí, když spíte, aby vaše disky v noci nehlučely.",
           "telemetry": "Cotton sbírá minimální technickou diagnostiku, aby vývojář mohl vidět chyby a opravovat je, protože ne každý problémy hlásí. Zapnutí telemetrie také odemyká služby Cotton Bridge ihned.",
+          "disableVersionCheck": "Zabrání Cottonu kontaktovat GitHub při spuštění kvůli kontrole nových verzí. Nainstalovaná verze se nadále zaznamenává lokálně.",
           "allowDeduplication": "Řídí, zda jeden uživatel může zjistit, že jiný uživatel již ukládá stejný soubor. Když je vypnuto, identická data jsou na serveru po nahrání stále deduplikována, ale jsou zbytečně nejprve přenášena. Když je zapnuto, jiný uživatel se může dozvědět, že někdo v tomto cloudu tento soubor již dříve nahrál. To je bezpečné pro rodinu a důvěryhodné přátele.",
           "allowGlobalIndexing": "Umožňuje serveru dešifrovat uživatelské soubory a vytvořit hluboký vyhledávací index. Bez toho hledání používá pouze názvy souborů a složek.",
           "serverUsage": "Optimalizuje doporučení funkcí a několik nastavení. Není to kritický parametr, takže zvolte, co vám vyhovuje."
