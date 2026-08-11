@@ -16,7 +16,6 @@ using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
-using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
@@ -43,7 +42,6 @@ namespace Cotton.Server.Controllers
         ISyncChangeRecorder _syncChanges,
         IHubContext<EventHub> _hubContext,
         ILogger<LayoutController> _logger,
-        ILayoutNavigator _navigator,
         ILayoutMutationGate _layoutGate) : ControllerBase
     {
         /// <summary>
@@ -202,16 +200,15 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
         {
             Guid userId = User.GetUserId();
-            Node? node = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
+            NodeDto? node = await _mediator.Send(
+                new GetOwnedNodeQuery(userId, nodeId),
+                HttpContext.RequestAborted);
             if (node is null)
             {
                 return CottonResult.NotFound("Node not found.");
             }
-            NodeDto mapped = node.Adapt<NodeDto>();
-            return Ok(mapped);
+
+            return Ok(node);
         }
 
         /// <summary>
@@ -497,13 +494,15 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType nodeType = NodeType.Default)
         {
             Guid userId = User.GetUserId();
-            Node? currentNode = await _navigator.ResolveNodeByPathAsync(userId, path, nodeType);
-            if (currentNode is null)
+            NodeDto? node = await _mediator.Send(
+                new ResolveLayoutPathQuery(userId, path, nodeType),
+                HttpContext.RequestAborted);
+            if (node is null)
             {
                 return CottonResult.NotFound("Layout node was not found.");
             }
 
-            return Ok(currentNode.Adapt<NodeDto>());
+            return Ok(node);
         }
     }
 }
