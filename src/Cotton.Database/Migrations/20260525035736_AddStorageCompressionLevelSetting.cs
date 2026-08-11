@@ -19,8 +19,6 @@ namespace Cotton.Database.Migrations
                 type: "integer",
                 nullable: false,
                 defaultValue: 1);
-
-            migrationBuilder.Sql("UPDATE server_settings SET integrity_mac = NULL, integrity_version = NULL;");
         }
 
         /// <inheritdoc />
@@ -29,8 +27,6 @@ namespace Cotton.Database.Migrations
             migrationBuilder.DropColumn(
                 name: "compression_level",
                 table: "server_settings");
-
-            migrationBuilder.Sql("UPDATE server_settings SET integrity_mac = NULL, integrity_version = NULL;");
         }
     }
 }
