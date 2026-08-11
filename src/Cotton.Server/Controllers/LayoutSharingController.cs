@@ -39,7 +39,6 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         CottonDbContext _dbContext,
         IStoragePipeline _storage,
-        IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
         PublicShareLookupFailureLimiter _publicShareLookupFailures,
         ArchiveDownloadService _archives) : ControllerBase
@@ -486,90 +485,16 @@ namespace Cotton.Server.Controllers
                 new ResolveSharedNodeAccessQuery(token),
                 HttpContext.RequestAborted);
 
-        private async Task<bool> IsNodeInSharedSubtreeAsync(
+        private Task<bool> IsNodeInSharedSubtreeAsync(
             Guid nodeId,
             Guid sharedRootNodeId,
-            Guid ownerId)
-        {
-            const int maxDepth = 512;
-
-            Node? currentNode = await LoadVerifiedSharedDefaultNodeAsync(
-                nodeId,
-                ownerId,
-                "shared-folder.subtree.node");
-
-            if (currentNode is null)
-            {
-                return false;
-            }
-
-            if (currentNode.Id == sharedRootNodeId)
-            {
-                return true;
-            }
-
-            HashSet<Guid> visited = [currentNode.Id];
-            int depth = 0;
-
-            while (currentNode.ParentId.HasValue)
-            {
-                if (depth++ >= maxDepth)
-                {
-                    return false;
-                }
-
-                Guid parentId = currentNode.ParentId.Value;
-                if (!visited.Add(parentId))
-                {
-                    return false;
-                }
-
-                currentNode = await LoadVerifiedSharedDefaultNodeAsync(
-                    parentId,
-                    ownerId,
-                    "shared-folder.subtree.ancestor");
-
-                if (currentNode is null)
-                {
-                    return false;
-                }
-
-                if (currentNode.Id == sharedRootNodeId)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private async Task<Node?> LoadVerifiedSharedDefaultNodeAsync(
-            Guid nodeId,
-            Guid ownerId,
-            string boundary)
-        {
-            Node? node = await _dbContext.Nodes
-                .Where(x => x.Id == nodeId
-                    && x.OwnerId == ownerId
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-
-            if (node is null)
-            {
-                return null;
-            }
-
-            try
-            {
-                _integrity.RequireValid(_dbContext, node, boundary);
-            }
-            catch (DatabaseIntegrityException)
-            {
-                return null;
-            }
-
-            return node;
-        }
+            Guid ownerId) =>
+            _mediator.Send(
+                new VerifySharedNodeSubtreeAccessQuery(
+                    nodeId,
+                    sharedRootNodeId,
+                    ownerId),
+                HttpContext.RequestAborted);
 
         private static async Task<List<SharedNodeFileDto>> LoadSharedFilesAsync(
             IQueryable<NodeFile> filesBaseQuery,
