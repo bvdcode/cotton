@@ -66,25 +66,26 @@ namespace Cotton.Autoconfig.Extensions
             this IConfigurationBuilder configurationBuilder,
             CottonEncryptionSettings encryptionSettings)
         {
-            string postgresHost = Environment.GetEnvironmentVariable("COTTON_PG_HOST") ?? "localhost";
-            string postgresPortStr = Environment.GetEnvironmentVariable("COTTON_PG_PORT") ?? "5432";
-            string postgresDb = Environment.GetEnvironmentVariable("COTTON_PG_DATABASE") ?? "cotton_dev";
-            string postgresUser = Environment.GetEnvironmentVariable("COTTON_PG_USERNAME") ?? "postgres";
-            string postgresPass = Environment.GetEnvironmentVariable("COTTON_PG_PASSWORD") ?? "postgres";
-            ushort postgresPort = ushort.Parse(postgresPortStr);
-            Environment.SetEnvironmentVariable("COTTON_PG_PASSWORD", null, EnvironmentVariableTarget.Process);
-            Environment.SetEnvironmentVariable("COTTON_PG_PASSWORD", null, EnvironmentVariableTarget.User);
+            PostgresEnvironmentSettings postgres = PostgresEnvironmentSettings.FromEnvironment();
+            Environment.SetEnvironmentVariable(
+                PostgresEnvironmentSettings.PasswordEnvironmentVariable,
+                null,
+                EnvironmentVariableTarget.Process);
+            Environment.SetEnvironmentVariable(
+                PostgresEnvironmentSettings.PasswordEnvironmentVariable,
+                null,
+                EnvironmentVariableTarget.User);
 
             string jwtKey = StringHelpers.CreateRandomString(DefaultKeyLength);
 
             var dict = new Dictionary<string, string?>
             {
                 ["JwtSettings:Key"] = jwtKey,
-                ["DatabaseSettings:Host"] = postgresHost,
-                ["DatabaseSettings:Port"] = postgresPort.ToString(),
-                ["DatabaseSettings:Database"] = postgresDb,
-                ["DatabaseSettings:Username"] = postgresUser,
-                ["DatabaseSettings:Password"] = postgresPass,
+                ["DatabaseSettings:Host"] = postgres.Host,
+                ["DatabaseSettings:Port"] = postgres.Port.ToString(),
+                ["DatabaseSettings:Database"] = postgres.Database,
+                ["DatabaseSettings:Username"] = postgres.Username,
+                ["DatabaseSettings:Password"] = postgres.Password,
 
                 [nameof(CottonEncryptionSettings.Pepper)] = encryptionSettings.Pepper,
                 [nameof(CottonEncryptionSettings.MasterEncryptionKey)] = encryptionSettings.MasterEncryptionKey,

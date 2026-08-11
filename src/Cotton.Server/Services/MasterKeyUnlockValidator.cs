@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Autoconfig;
 using Cotton.Crypto;
 using Cotton.Database;
 using Cotton.Database.Integrity;
@@ -193,19 +194,14 @@ namespace Cotton.Server.Services
 
         private static string BuildConnectionStringFromEnvironment()
         {
-            string postgresPort = Environment.GetEnvironmentVariable("COTTON_PG_PORT") ?? "5432";
-            if (!int.TryParse(postgresPort, out int port))
-            {
-                throw new InvalidOperationException("COTTON_PG_PORT must be a valid integer.");
-            }
-
+            PostgresEnvironmentSettings postgres = PostgresEnvironmentSettings.FromEnvironment();
             NpgsqlConnectionStringBuilder builder = new()
             {
-                Host = Environment.GetEnvironmentVariable("COTTON_PG_HOST") ?? "localhost",
-                Port = port,
-                Database = Environment.GetEnvironmentVariable("COTTON_PG_DATABASE") ?? "cotton_dev",
-                Username = Environment.GetEnvironmentVariable("COTTON_PG_USERNAME") ?? "postgres",
-                Password = Environment.GetEnvironmentVariable("COTTON_PG_PASSWORD") ?? "postgres"
+                Host = postgres.Host,
+                Port = postgres.Port,
+                Database = postgres.Database,
+                Username = postgres.Username,
+                Password = postgres.Password,
             };
             return builder.ConnectionString;
         }
