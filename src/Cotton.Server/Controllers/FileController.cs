@@ -45,9 +45,7 @@ namespace Cotton.Server.Controllers
         ISyncChangeRecorder _syncChanges,
         ISchedulerFactory _scheduler,
         IHubContext<EventHub> _hubContext,
-        FileManifestService _fileManifestService,
         FileVersionService _versions,
-        UserStorageQuotaService _quota,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
         ILayoutMutationGate _layoutGate,
         ILogger<FileController> _logger) : ControllerBase
@@ -428,164 +426,37 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeFileId,
             [FromBody] CreateFileFromChunksRequestDto request)
         {
-            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
-                out string normalizedName,
-                out string? errorMessage);
-            if (!isValidName)
-            {
-                return CottonResult.BadRequest(errorMessage);
-            }
-
             Guid userId = User.GetUserId();
-            Guid? layoutId = await GetOwnedFileLayoutIdAsync(nodeFileId, userId);
-            if (layoutId is null)
+            UpdateFileContentRequest command = new(
+                userId,
+                nodeFileId,
+                request.Name,
+                request.ContentType,
+                request.Hash,
+                [.. request.ChunkHashes],
+                request.Metadata,
+                FileETags.ReadIfMatch(Request));
+            UpdateFileContentResult result = await _mediator.Send(
+                command,
+                HttpContext.RequestAborted);
+            if (result.Status != UpdateFileContentStatus.Updated)
             {
-                return this.ApiNotFound("Node file not found.");
-            }
-
-            byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
-            FileManifest newFile = await ResolveUpdateManifestAsync(request, proposedHash, userId);
-
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId.Value, HttpContext.RequestAborted);
-            NodeFile nodeFile;
-            await using (IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(userId, HttpContext.RequestAborted))
-            await using (IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync())
-            {
-                NodeFile? editableNodeFile = await LoadEditableNodeFileAsync(nodeFileId, userId);
-                if (editableNodeFile is null)
+                return result.Status switch
                 {
-                    return this.ApiNotFound("Node file not found.");
-                }
-
-                nodeFile = editableNodeFile;
-                if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
-                {
-                    throw new FilePreconditionFailedException<NodeFile>("File content changed before update.");
-                }
-
-                string nameKey = NameValidator.NormalizeAndGetNameKey(normalizedName);
-                string? conflictMessage = await FindUpdateNameConflictAsync(nodeFile, userId, nodeFileId, nameKey);
-                if (conflictMessage is not null)
-                {
-                    return this.ApiConflict(conflictMessage);
-                }
-
-                long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(userId, nodeFile.Id, newFile.Id);
-                FileVersionCaptureResult capture = await ApplyUpdatedFileContentAsync(
-                    nodeFile,
-                    newFile,
-                    proposedHash,
-                    normalizedName,
-                    request.Metadata,
-                    userId);
-
-                _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, layoutId.Value);
-                await _dbContext.SaveChangesAsync();
-                await tx.CommitAsync();
-                _quota.RecordLogicalBytesAdded(userId, addedBytes);
-                if (capture.RemovedBytes > 0)
-                {
-                    _quota.RecordLogicalBytesRemoved(userId, capture.RemovedBytes);
-                }
+                    UpdateFileContentStatus.InvalidName => CottonResult.BadRequest(result.Error!),
+                    UpdateFileContentStatus.FileNotFound => this.ApiNotFound(result.Error!),
+                    UpdateFileContentStatus.NameConflict => this.ApiConflict(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
             await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
 
-            NodeFileManifestDto mapped = nodeFile.Adapt<NodeFileManifestDto>();
+            NodeFileManifestDto mapped = result.File!;
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
             return Ok(mapped);
-        }
-
-        private async Task<Guid?> GetOwnedFileLayoutIdAsync(Guid nodeFileId, Guid userId)
-        {
-            return await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .Select(x => (Guid?)x.Node.LayoutId)
-                .SingleOrDefaultAsync();
-        }
-
-        private async Task<FileManifest> ResolveUpdateManifestAsync(
-            CreateFileFromChunksRequestDto request,
-            byte[] proposedHash,
-            Guid userId)
-        {
-            List<Chunk> chunks = await _fileManifestService.GetChunksAsync([.. request.ChunkHashes], userId);
-            return await _fileManifestService.GetReusableOwnedManifestAsync(proposedHash, userId)
-                ?? await _fileManifestService.CreateNewFileManifestAsync(
-                    chunks,
-                    request.Name,
-                    request.ContentType,
-                    proposedHash,
-                    userId);
-        }
-
-        private async Task<NodeFile?> LoadEditableNodeFileAsync(Guid nodeFileId, Guid userId)
-        {
-            return await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId && x.Node.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-        }
-
-        private async Task<string?> FindUpdateNameConflictAsync(
-            NodeFile nodeFile,
-            Guid userId,
-            Guid nodeFileId,
-            string nameKey)
-        {
-            if (string.Equals(nodeFile.NameKey, nameKey, StringComparison.Ordinal))
-            {
-                return null;
-            }
-
-            bool fileExists = await _dbContext.NodeFiles.AnyAsync(x =>
-                x.NodeId == nodeFile.NodeId &&
-                x.OwnerId == userId &&
-                x.NameKey == nameKey &&
-                x.Id != nodeFileId);
-            if (fileExists)
-            {
-                return "A file with the same name key already exists in this folder: " + nameKey;
-            }
-
-            bool nodeExists = await _dbContext.Nodes.AnyAsync(x =>
-                x.ParentId == nodeFile.NodeId &&
-                x.OwnerId == userId &&
-                x.Type == nodeFile.Node.Type &&
-                x.NameKey == nameKey);
-            return nodeExists
-                ? "A folder with the same name key already exists in this folder: " + nameKey
-                : null;
-        }
-
-        private async Task<FileVersionCaptureResult> ApplyUpdatedFileContentAsync(
-            NodeFile nodeFile,
-            FileManifest newFile,
-            byte[] proposedHash,
-            string normalizedName,
-            Dictionary<string, string>? metadata,
-            Guid userId)
-        {
-            FileVersionCaptureResult capture = FileVersionCaptureResult.Empty;
-            if (!nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
-            {
-                capture = await _versions.CaptureAndUpdateManifestAsync(nodeFile, newFile.Id, userId);
-                nodeFile.FileManifest = newFile;
-            }
-
-            nodeFile.SetName(normalizedName);
-            if (metadata is not null)
-            {
-                nodeFile.Metadata = metadata.Count > 0
-                    ? new Dictionary<string, string>(metadata)
-                    : [];
-            }
-
-            return capture;
         }
 
         private static FileContentManifestDto CreateContentManifestDto(NodeFile nodeFile)
