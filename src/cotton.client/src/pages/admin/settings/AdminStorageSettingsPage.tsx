@@ -27,6 +27,21 @@ export const AdminStorageSettingsPage = () => {
   const storageBackend = useStorageBackendSettings();
   const storageSpaceMode = useStorageSpaceModeSetting();
   const storagePipeline = useStoragePipelineSettings();
+  const {
+    beginLoad: beginStorageBackendLoad,
+    failLoad: failStorageBackendLoad,
+    initialize: initializeStorageBackend,
+  } = storageBackend;
+  const {
+    beginLoad: beginStorageSpaceModeLoad,
+    failLoad: failStorageSpaceModeLoad,
+    initialize: initializeStorageSpaceMode,
+  } = storageSpaceMode;
+  const {
+    beginLoad: beginStoragePipelineLoad,
+    failLoad: failStoragePipelineLoad,
+    initialize: initializeStoragePipeline,
+  } = storagePipeline;
 
   const [defaultUserQuotaBytes, setDefaultUserQuotaBytes] = useState<
     number | null | undefined
@@ -40,9 +55,9 @@ export const AdminStorageSettingsPage = () => {
 
     const load = async () => {
       setLoadError(null);
-      storageBackend.beginLoad();
-      storageSpaceMode.beginLoad();
-      storagePipeline.beginLoad();
+      beginStorageBackendLoad();
+      beginStorageSpaceModeLoad();
+      beginStoragePipelineLoad();
 
       try {
         const [
@@ -65,9 +80,9 @@ export const AdminStorageSettingsPage = () => {
 
         if (!active) return;
 
-        storageBackend.initialize(nextStorageType, nextS3Config);
-        storageSpaceMode.initialize(nextStorageSpaceMode);
-        storagePipeline.initialize(
+        initializeStorageBackend(nextStorageType, nextS3Config);
+        initializeStorageSpaceMode(nextStorageSpaceMode);
+        initializeStoragePipeline(
           nextChunkSizeSettings,
           nextStoragePipelineSettings,
         );
@@ -78,9 +93,9 @@ export const AdminStorageSettingsPage = () => {
         if (!active) return;
         setLoadError(t("storageSettings.errors.loadFailed"));
         setLoadFailed(true);
-        storageBackend.failLoad();
-        storageSpaceMode.failLoad();
-        storagePipeline.failLoad();
+        failStorageBackendLoad();
+        failStorageSpaceModeLoad();
+        failStoragePipelineLoad();
       }
     };
 
@@ -90,15 +105,15 @@ export const AdminStorageSettingsPage = () => {
       active = false;
     };
   }, [
-    storageBackend.beginLoad,
-    storageBackend.failLoad,
-    storageBackend.initialize,
-    storagePipeline.beginLoad,
-    storagePipeline.failLoad,
-    storagePipeline.initialize,
-    storageSpaceMode.beginLoad,
-    storageSpaceMode.failLoad,
-    storageSpaceMode.initialize,
+    beginStorageBackendLoad,
+    beginStoragePipelineLoad,
+    beginStorageSpaceModeLoad,
+    failStorageBackendLoad,
+    failStoragePipelineLoad,
+    failStorageSpaceModeLoad,
+    initializeStorageBackend,
+    initializeStoragePipeline,
+    initializeStorageSpaceMode,
     t,
   ]);
 

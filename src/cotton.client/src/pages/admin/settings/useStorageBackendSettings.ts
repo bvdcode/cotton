@@ -23,8 +23,16 @@ export const useStorageBackendSettings = () => {
     useState<StorageType>("Local");
   const [s3Config, setS3Config] = useState<S3Config>(emptyS3Config);
   const [loadFailed, setLoadFailed] = useState(false);
-  const storageTypeSave = useSaveStatus();
-  const s3Save = useSaveStatus();
+  const {
+    markSaved: markStorageTypeSaved,
+    setStatus: setStorageTypeStatus,
+    status: storageTypeStatus,
+  } = useSaveStatus();
+  const {
+    markSaved: markS3Saved,
+    setStatus: setS3Status,
+    status: s3Status,
+  } = useSaveStatus();
 
   const initialize = useCallback(
     (nextStorageType: StorageType, nextS3Config: S3Config) => {
@@ -32,30 +40,30 @@ export const useStorageBackendSettings = () => {
       setSavedStorageType(nextStorageType);
       setS3Config(nextS3Config);
       setLoadFailed(false);
-      storageTypeSave.setStatus("idle");
-      s3Save.setStatus("idle");
+      setStorageTypeStatus("idle");
+      setS3Status("idle");
     },
-    [s3Save.setStatus, storageTypeSave.setStatus],
+    [setS3Status, setStorageTypeStatus],
   );
 
   const beginLoad = useCallback(() => {
-    storageTypeSave.setStatus("loading");
-    s3Save.setStatus("loading");
-  }, [s3Save.setStatus, storageTypeSave.setStatus]);
+    setStorageTypeStatus("loading");
+    setS3Status("loading");
+  }, [setS3Status, setStorageTypeStatus]);
 
   const failLoad = useCallback(() => {
     setLoadFailed(true);
-    storageTypeSave.setStatus("error");
-    s3Save.setStatus("error");
-  }, [s3Save.setStatus, storageTypeSave.setStatus]);
+    setStorageTypeStatus("error");
+    setS3Status("error");
+  }, [setS3Status, setStorageTypeStatus]);
 
   const handleStorageTypeChange = useCallback(
     async (next: StorageType) => {
       if (
         next === storageType ||
-        storageTypeSave.status === "loading" ||
-        storageTypeSave.status === "saving" ||
-        s3Save.status === "saving"
+        storageTypeStatus === "loading" ||
+        storageTypeStatus === "saving" ||
+        s3Status === "saving"
       ) {
         return;
       }
@@ -63,20 +71,20 @@ export const useStorageBackendSettings = () => {
       setStorageType(next);
 
       if (next === "S3") {
-        storageTypeSave.setStatus("idle");
+        setStorageTypeStatus("idle");
         return;
       }
 
       const previous = savedStorageType;
-      storageTypeSave.setStatus("saving");
+      setStorageTypeStatus("saving");
 
       try {
         await settingsApi.setStorageType(next);
         setSavedStorageType(next);
-        storageTypeSave.markSaved();
+        markStorageTypeSaved();
       } catch (error) {
         setStorageType(previous);
-        storageTypeSave.setStatus("error");
+        setStorageTypeStatus("error");
         showApiErrorToast(
           error,
           t("storageSettings.errors.storageSaveFailed"),
@@ -85,56 +93,65 @@ export const useStorageBackendSettings = () => {
       }
     },
     [
-      s3Save.status,
+      markStorageTypeSaved,
+      s3Status,
       savedStorageType,
+      setStorageTypeStatus,
       storageType,
-      storageTypeSave,
+      storageTypeStatus,
       t,
     ],
   );
 
   const saveS3AndActivate = useCallback(async () => {
     if (
-      storageTypeSave.status === "loading" ||
-      storageTypeSave.status === "saving" ||
-      s3Save.status === "loading" ||
-      s3Save.status === "saving"
+      storageTypeStatus === "loading" ||
+      storageTypeStatus === "saving" ||
+      s3Status === "loading" ||
+      s3Status === "saving"
     ) {
       return;
     }
 
-    storageTypeSave.setStatus("saving");
-    s3Save.setStatus("saving");
+    setStorageTypeStatus("saving");
+    setS3Status("saving");
 
     try {
       await settingsApi.setS3Config(s3Config);
       await settingsApi.setStorageType("S3");
       setStorageType("S3");
       setSavedStorageType("S3");
-      storageTypeSave.markSaved();
-      s3Save.markSaved();
+      markStorageTypeSaved();
+      markS3Saved();
     } catch (error) {
-      storageTypeSave.setStatus("error");
-      s3Save.setStatus("error");
+      setStorageTypeStatus("error");
+      setS3Status("error");
       showApiErrorToast(
         error,
         t("storageSettings.errors.storageSaveFailed"),
         "admin-storage-settings:s3:save-failed",
       );
     }
-  }, [s3Config, s3Save, storageTypeSave, t]);
+  }, [
+    markS3Saved,
+    markStorageTypeSaved,
+    s3Config,
+    s3Status,
+    setS3Status,
+    setStorageTypeStatus,
+    storageTypeStatus,
+    t,
+  ]);
 
   const storageTypeBusy =
-    storageTypeSave.status === "loading" ||
-    storageTypeSave.status === "saving";
+    storageTypeStatus === "loading" || storageTypeStatus === "saving";
   const storageTypeDisabled =
     loadFailed ||
     storageTypeBusy ||
-    s3Save.status === "saving";
+    s3Status === "saving";
   const s3Disabled =
     loadFailed ||
-    s3Save.status === "loading" ||
-    s3Save.status === "saving";
+    s3Status === "loading" || s3Status === "saving";
 
   return {
     beginLoad,
@@ -144,12 +161,12 @@ export const useStorageBackendSettings = () => {
     s3Config,
     s3Disabled,
     s3Saving:
-      s3Save.status === "saving" || storageTypeSave.status === "saving",
-    s3Status: s3Save.status,
+      s3Status === "saving" || storageTypeStatus === "saving",
+    s3Status,
     saveS3AndActivate,
     setS3Config,
     storageType,
     storageTypeDisabled,
-    storageTypeStatus: storageTypeSave.status,
+    storageTypeStatus,
   };
 };

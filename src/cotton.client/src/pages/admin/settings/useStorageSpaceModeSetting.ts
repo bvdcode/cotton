@@ -12,49 +12,49 @@ export const useStorageSpaceModeSetting = () => {
   const [value, setValue] = useState<StorageSpaceMode>("Optimal");
   const [savedValue, setSavedValue] = useState<StorageSpaceMode>("Optimal");
   const [loadFailed, setLoadFailed] = useState(false);
-  const save = useSaveStatus();
+  const { markSaved, setStatus, status } = useSaveStatus();
 
   const initialize = useCallback(
     (next: StorageSpaceMode) => {
       setValue(next);
       setSavedValue(next);
       setLoadFailed(false);
-      save.setStatus("idle");
+      setStatus("idle");
     },
-    [save.setStatus],
+    [setStatus],
   );
 
   const beginLoad = useCallback(() => {
-    save.setStatus("loading");
-  }, [save.setStatus]);
+    setStatus("loading");
+  }, [setStatus]);
 
   const failLoad = useCallback(() => {
     setLoadFailed(true);
-    save.setStatus("error");
-  }, [save.setStatus]);
+    setStatus("error");
+  }, [setStatus]);
 
   const handleChange = useCallback(
     async (next: StorageSpaceMode | null) => {
       if (
         !next ||
         next === value ||
-        save.status === "loading" ||
-        save.status === "saving"
+        status === "loading" ||
+        status === "saving"
       ) {
         return;
       }
 
       const previous = savedValue;
       setValue(next);
-      save.setStatus("saving");
+      setStatus("saving");
 
       try {
         await settingsApi.setStorageSpaceMode(next);
         setSavedValue(next);
-        save.markSaved();
+        markSaved();
       } catch (error) {
         setValue(previous);
-        save.setStatus("error");
+        setStatus("error");
         showApiErrorToast(
           error,
           t("settings.errors.saveFailed"),
@@ -62,19 +62,19 @@ export const useStorageSpaceModeSetting = () => {
         );
       }
     },
-    [save, savedValue, t, value],
+    [markSaved, savedValue, setStatus, status, t, value],
   );
 
   return {
     beginLoad,
     disabled:
       loadFailed ||
-      save.status === "loading" ||
-      save.status === "saving",
+      status === "loading" ||
+      status === "saving",
     failLoad,
     handleChange,
     initialize,
-    status: save.status,
+    status,
     value,
   };
 };

@@ -284,6 +284,7 @@ export const useFilesEncryptionController = ({
             void decryptEncryptedFiles();
             return;
         }
+        return;
       case "current":
       case undefined:
         return;

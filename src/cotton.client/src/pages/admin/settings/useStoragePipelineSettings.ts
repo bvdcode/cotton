@@ -67,8 +67,16 @@ export const useStoragePipelineSettings = () => {
     defaultStoragePipelineSettings.compressionLevel.toString(),
   );
   const [loadFailed, setLoadFailed] = useState(false);
-  const chunkSizeSave = useSaveStatus();
-  const pipelineSave = useSaveStatus();
+  const {
+    markSaved: markChunkSizeSaved,
+    setStatus: setChunkSizeStatus,
+    status: chunkSizeStatus,
+  } = useSaveStatus();
+  const {
+    markSaved: markPipelineSaved,
+    setStatus: setPipelineStatus,
+    status: pipelineStatus,
+  } = useSaveStatus();
 
   const applySettings = useCallback((next: StoragePipelineSettings) => {
     setSettings(next);
@@ -88,28 +96,28 @@ export const useStoragePipelineSettings = () => {
       );
       applySettings(nextPipelineSettings);
       setLoadFailed(false);
-      chunkSizeSave.setStatus("idle");
-      pipelineSave.setStatus("idle");
+      setChunkSizeStatus("idle");
+      setPipelineStatus("idle");
     },
-    [applySettings, chunkSizeSave.setStatus, pipelineSave.setStatus],
+    [applySettings, setChunkSizeStatus, setPipelineStatus],
   );
 
   const beginLoad = useCallback(() => {
-    chunkSizeSave.setStatus("loading");
-    pipelineSave.setStatus("loading");
-  }, [chunkSizeSave.setStatus, pipelineSave.setStatus]);
+    setChunkSizeStatus("loading");
+    setPipelineStatus("loading");
+  }, [setChunkSizeStatus, setPipelineStatus]);
 
   const failLoad = useCallback(() => {
     setLoadFailed(true);
-    chunkSizeSave.setStatus("error");
-    pipelineSave.setStatus("error");
-  }, [chunkSizeSave.setStatus, pipelineSave.setStatus]);
+    setChunkSizeStatus("error");
+    setPipelineStatus("error");
+  }, [setChunkSizeStatus, setPipelineStatus]);
 
   const isBusy =
-    chunkSizeSave.status === "loading" ||
-    chunkSizeSave.status === "saving" ||
-    pipelineSave.status === "loading" ||
-    pipelineSave.status === "saving";
+    chunkSizeStatus === "loading" ||
+    chunkSizeStatus === "saving" ||
+    pipelineStatus === "loading" ||
+    pipelineStatus === "saving";
   const disabled = loadFailed || isBusy;
 
   const handleChunkSizeChange = useCallback(
@@ -120,7 +128,7 @@ export const useStoragePipelineSettings = () => {
 
       const previous = savedChunkSizeBytes;
       setChunkSizeBytes(next);
-      chunkSizeSave.setStatus("saving");
+      setChunkSizeStatus("saving");
 
       try {
         const nextSettings = await settingsApi.setChunkSize(next);
@@ -129,27 +137,35 @@ export const useStoragePipelineSettings = () => {
         setSupportedChunkSizeBytes(
           getSupportedChunkSizeOptions(nextSettings),
         );
-        chunkSizeSave.markSaved();
+        markChunkSizeSaved();
       } catch (error) {
         setChunkSizeBytes(previous);
-        chunkSizeSave.setStatus("error");
+        setChunkSizeStatus("error");
         showApiErrorToast(
           error,
           t("storageSettings.errors.chunkSizeSaveFailed"),
           "admin-storage-settings:chunk-size:save-failed",
         );
       }
-    }, [chunkSizeBytes, chunkSizeSave, isBusy, savedChunkSizeBytes, t],
+    },
+    [
+      chunkSizeBytes,
+      isBusy,
+      markChunkSizeSaved,
+      savedChunkSizeBytes,
+      setChunkSizeStatus,
+      t,
+    ],
   );
 
   const handleCompressionLevelChange = useCallback(
     (value: string) => {
       setCompressionLevelInput(value);
-      if (pipelineSave.status === "error") {
-        pipelineSave.setStatus("idle");
+      if (pipelineStatus === "error") {
+        setPipelineStatus("idle");
       }
     },
-    [pipelineSave.setStatus, pipelineSave.status],
+    [pipelineStatus, setPipelineStatus],
   );
 
   const handleCompressionLevelSave = useCallback(async () => {
@@ -159,20 +175,20 @@ export const useStoragePipelineSettings = () => {
 
     const next = Number(compressionLevelInput.trim());
     if (!Number.isInteger(next)) {
-      pipelineSave.setStatus("error");
+      setPipelineStatus("error");
       return;
     }
 
     const previous = savedSettings;
-    pipelineSave.setStatus("saving");
+    setPipelineStatus("saving");
     try {
       const nextSettings = await settingsApi.setCompressionLevel(next);
       applySettings(nextSettings);
-      pipelineSave.markSaved();
+      markPipelineSaved();
     } catch (error) {
       setSettings(previous);
       setCompressionLevelInput(previous.compressionLevel.toString());
-      pipelineSave.setStatus("error");
+      setPipelineStatus("error");
       showApiErrorToast(
         error,
         t("storageSettings.errors.storagePipelineSaveFailed"),
@@ -183,8 +199,9 @@ export const useStoragePipelineSettings = () => {
     applySettings,
     compressionLevelInput,
     isBusy,
-    pipelineSave,
+    markPipelineSaved,
     savedSettings,
+    setPipelineStatus,
     t,
   ]);
 
@@ -196,21 +213,30 @@ export const useStoragePipelineSettings = () => {
 
       const previous = savedSettings;
       setSettings((current) => ({ ...current, cipherChunkSizeBytes: next }));
-      pipelineSave.setStatus("saving");
+      setPipelineStatus("saving");
       try {
         const nextSettings = await settingsApi.setCipherChunkSize(next);
         applySettings(nextSettings);
-        pipelineSave.markSaved();
+        markPipelineSaved();
       } catch (error) {
         setSettings(previous);
-        pipelineSave.setStatus("error");
+        setPipelineStatus("error");
         showApiErrorToast(
           error,
           t("storageSettings.errors.storagePipelineSaveFailed"),
           "admin-storage-settings:pipeline:cipher-chunk-size-save-failed",
         );
       }
-    }, [applySettings, isBusy, pipelineSave, savedSettings, settings, t],
+    },
+    [
+      applySettings,
+      isBusy,
+      markPipelineSaved,
+      savedSettings,
+      setPipelineStatus,
+      settings,
+      t,
+    ],
   );
 
   const handleEncryptionThreadsChange = useCallback(
@@ -221,21 +247,30 @@ export const useStoragePipelineSettings = () => {
 
       const previous = savedSettings;
       setSettings((current) => ({ ...current, encryptionThreads: next }));
-      pipelineSave.setStatus("saving");
+      setPipelineStatus("saving");
       try {
         const nextSettings = await settingsApi.setEncryptionThreads(next);
         applySettings(nextSettings);
-        pipelineSave.markSaved();
+        markPipelineSaved();
       } catch (error) {
         setSettings(previous);
-        pipelineSave.setStatus("error");
+        setPipelineStatus("error");
         showApiErrorToast(
           error,
           t("storageSettings.errors.storagePipelineSaveFailed"),
           "admin-storage-settings:pipeline:encryption-threads-save-failed",
         );
       }
-    }, [applySettings, isBusy, pipelineSave, savedSettings, settings, t],
+    },
+    [
+      applySettings,
+      isBusy,
+      markPipelineSaved,
+      savedSettings,
+      setPipelineStatus,
+      settings,
+      t,
+    ],
   );
 
   return {
@@ -252,8 +287,8 @@ export const useStoragePipelineSettings = () => {
     handleCompressionLevelSave,
     handleEncryptionThreadsChange,
     initialize,
-    pipelineStatus: pipelineSave.status,
-    sectionStatus: combineStatuses(chunkSizeSave.status, pipelineSave.status),
+    pipelineStatus,
+    sectionStatus: combineStatuses(chunkSizeStatus, pipelineStatus),
     settings,
     supportedChunkSizeBytes,
   };
