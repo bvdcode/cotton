@@ -27,6 +27,7 @@ namespace Cotton.Server.Services
     public class CottonNotifications(
         CottonDbContext _dbContext,
         SettingsProvider _settingsProvider,
+        ServerSettingsValidator _settingsValidator,
         CottonPublicEmailProvider _publicEmailProvider,
         ILogger<CottonNotifications> _logger,
         IHubContext<EventHub> _hubContext) : INotificationsProvider
@@ -78,7 +79,7 @@ namespace Cotton.Server.Services
                 UseSSL = settings.SmtpUseSsl,
             };
 
-            string? validationError = _settingsProvider.ValidateEmailConfig(emailConfig);
+            string? validationError = _settingsValidator.ValidateEmailConfig(emailConfig);
             if (validationError is not null)
             {
                 _logger.LogWarning("SMTP test email validation failed: {ValidationError}", validationError);
@@ -248,7 +249,7 @@ namespace Cotton.Server.Services
             string body,
             EmailConfig settings)
         {
-            if (!SettingsProvider.TryParsePort(settings.Port, out int port))
+            if (!ServerSettingsValidator.TryParsePort(settings.Port, out int port))
             {
                 throw new InvalidOperationException("SMTP port is not configured.");
             }

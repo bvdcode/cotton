@@ -14,6 +14,8 @@ namespace Cotton.Server.Services
         HttpClient _httpClient,
         ILogger<CottonPublicEmailProvider> _logger)
     {
+        private static readonly TimeSpan HealthTimeout = TimeSpan.FromSeconds(10);
+
         /// <summary>
         /// Defines the Cotton Bridge base URL.
         /// </summary>
@@ -21,12 +23,20 @@ namespace Cotton.Server.Services
         /// <summary>
         /// Checks health.
         /// </summary>
-        public async Task<bool> CheckHealthAsync()
+        public async Task<bool> CheckHealthAsync(CancellationToken cancellationToken = default)
         {
+            using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(HealthTimeout);
             try
             {
-                HealthResponse? response = await _httpClient.GetFromJsonAsync<HealthResponse>("health");
+                HealthResponse? response = await _httpClient.GetFromJsonAsync<HealthResponse>(
+                    "health",
+                    timeout.Token);
                 return response is not null && response.Status == "Healthy";
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
