@@ -5,7 +5,6 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;
-using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -28,7 +27,6 @@ namespace Cotton.Server.Handlers.WebDav
         CottonDbContext _dbContext,
         IMediator _mediator,
         IWebDavPathResolver _pathResolver,
-        IEventNotificationService _eventNotification,
         ILogger<WebDavDeleteRequestHandler> _logger)
         : IRequestHandler<WebDavDeleteRequest, WebDavDeleteResult>
     {
@@ -62,15 +60,10 @@ namespace Cotton.Server.Handlers.WebDav
                 {
                     return new WebDavDeleteResult(false, NotFound: true);
                 }
-                Guid? originalParentId = node.ParentId;
-
-                // Use existing delete handler
-                var deleteQuery = new DeleteNodeQuery(request.UserId, node.Id, request.SkipTrash);
-                await _mediator.Send(deleteQuery, ct);
+                DeleteNodeRequest deleteRequest = new(request.UserId, node.Id, request.SkipTrash);
+                await _mediator.Send(deleteRequest, ct);
 
                 _logger.LogInformation("WebDAV DELETE: Deleted directory {Path} for user {UserId}", request.Path, request.UserId);
-
-                await _eventNotification.NotifyNodeDeletedAsync(request.UserId, node.Id, originalParentId, ct);
 
                 return new WebDavDeleteResult(true, false, node.Id, null);
             }
@@ -84,15 +77,10 @@ namespace Cotton.Server.Handlers.WebDav
                 {
                     return new WebDavDeleteResult(false, NotFound: true);
                 }
-                Guid originalNodeId = nodeFile.NodeId;
-
-                // Use existing delete handler
-                var deleteQuery = new DeleteFileQuery(request.UserId, nodeFile.Id, request.SkipTrash);
-                await _mediator.Send(deleteQuery, ct);
+                DeleteFileRequest deleteRequest = new(request.UserId, nodeFile.Id, request.SkipTrash);
+                await _mediator.Send(deleteRequest, ct);
 
                 _logger.LogInformation("WebDAV DELETE: Deleted file {Path} for user {UserId}", request.Path, request.UserId);
-
-                await _eventNotification.NotifyFileDeletedAsync(request.UserId, nodeFile.Id, originalNodeId, ct);
 
                 return new WebDavDeleteResult(true, false, null, nodeFile.Id);
             }

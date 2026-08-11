@@ -728,8 +728,10 @@ namespace Cotton.Server.IntegrationTests
             WebDavDeleteEventRecorder recorder = customFactory.Services.GetRequiredService<WebDavDeleteEventRecorder>();
             Assert.Multiple(() =>
             {
+                Assert.That(recorder.FileDeletedCount, Is.EqualTo(1));
                 Assert.That(recorder.FileDeletedNodeFileId, Is.EqualTo(file.Id));
                 Assert.That(recorder.FileDeletedParentNodeId, Is.EqualTo(fileParent.Id));
+                Assert.That(recorder.NodeDeletedCount, Is.EqualTo(1));
                 Assert.That(recorder.NodeDeletedNodeId, Is.EqualTo(folder.Id));
                 Assert.That(recorder.NodeDeletedParentNodeId, Is.EqualTo(root.Id));
             });
@@ -999,20 +1001,30 @@ namespace Cotton.Server.IntegrationTests
     internal class ThrowingEventNotificationService : IEventNotificationService
     {
         public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyFileCreatedAsync(NodeFileManifestDto file, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
         public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyFileUpdatedAsync(NodeFileManifestDto file, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
         public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
         public Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
         public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyFileRenamedAsync(NodeFileManifestDto file, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyFileRestoredAsync(Guid userId, Guid nodeFileId, NodeFileManifestDto? file, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
         public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyNodeCreatedAsync(Guid userId, NodeDto node, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
         public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
         public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
         public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyNodeRenamedAsync(Guid userId, NodeDto node, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyNodeMetadataUpdatedAsync(Guid userId, NodeDto node, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyNodeRestoredAsync(Guid userId, Guid nodeId, NodeDto? node, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     }
 
     internal class WebDavDeleteEventRecorder
     {
+        public int FileDeletedCount { get; set; }
         public Guid? FileDeletedNodeFileId { get; set; }
         public Guid? FileDeletedParentNodeId { get; set; }
+        public int NodeDeletedCount { get; set; }
         public Guid? NodeDeletedNodeId { get; set; }
         public Guid? NodeDeletedParentNodeId { get; set; }
     }
@@ -1021,10 +1033,13 @@ namespace Cotton.Server.IntegrationTests
         WebDavDeleteEventRecorder recorder) : IEventNotificationService
     {
         public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyFileCreatedAsync(NodeFileManifestDto file, CancellationToken ct = default) => Task.CompletedTask;
         public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyFileUpdatedAsync(NodeFileManifestDto file, CancellationToken ct = default) => Task.CompletedTask;
 
         public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default)
         {
+            recorder.FileDeletedCount++;
             recorder.FileDeletedNodeFileId = nodeFileId;
             recorder.FileDeletedParentNodeId = parentNodeId;
             return Task.CompletedTask;
@@ -1032,10 +1047,14 @@ namespace Cotton.Server.IntegrationTests
 
         public Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default) => Task.CompletedTask;
         public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyFileRenamedAsync(NodeFileManifestDto file, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyFileRestoredAsync(Guid userId, Guid nodeFileId, NodeFileManifestDto? file, CancellationToken ct = default) => Task.CompletedTask;
         public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyNodeCreatedAsync(Guid userId, NodeDto node, CancellationToken ct = default) => Task.CompletedTask;
 
         public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default)
         {
+            recorder.NodeDeletedCount++;
             recorder.NodeDeletedNodeId = nodeId;
             recorder.NodeDeletedParentNodeId = parentNodeId;
             return Task.CompletedTask;
@@ -1043,5 +1062,8 @@ namespace Cotton.Server.IntegrationTests
 
         public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => Task.CompletedTask;
         public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyNodeRenamedAsync(Guid userId, NodeDto node, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyNodeMetadataUpdatedAsync(Guid userId, NodeDto node, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyNodeRestoredAsync(Guid userId, Guid nodeId, NodeDto? node, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

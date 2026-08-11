@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Nodes;
+using Cotton.Server.Services;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
@@ -23,7 +24,10 @@ namespace Cotton.Server.Handlers.Nodes
     /// <summary>
     /// Handles node metadata updates.
     /// </summary>
-    public class UpdateNodeMetadataRequestHandler(CottonDbContext _dbContext)
+    public class UpdateNodeMetadataRequestHandler(
+        CottonDbContext _dbContext,
+        IEventNotificationService _notifications,
+        ILogger<UpdateNodeMetadataRequestHandler> _logger)
         : IRequestHandler<UpdateNodeMetadataRequest, UpdateNodeMetadataResult>
     {
         /// <inheritdoc />
@@ -59,9 +63,25 @@ namespace Cotton.Server.Handlers.Nodes
 
             node.Metadata = metadata;
             await _dbContext.SaveChangesAsync(ct);
+            NodeDto nodeDto = node.Adapt<NodeDto>();
+            try
+            {
+                await _notifications.NotifyNodeMetadataUpdatedAsync(
+                    request.UserId,
+                    nodeDto,
+                    ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to send node metadata update notification for node {NodeId}",
+                    request.NodeId);
+            }
+
             return new UpdateNodeMetadataResult(
                 UpdateNodeMetadataStatus.Updated,
-                node.Adapt<NodeDto>());
+                nodeDto);
         }
 
         private static string? ValidatePatch(

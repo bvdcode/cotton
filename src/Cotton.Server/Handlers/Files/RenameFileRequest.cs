@@ -33,7 +33,8 @@ namespace Cotton.Server.Handlers.Files
     public class RenameFileRequestHandler(
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
-        ILayoutMutationGate _layoutGate)
+        ILayoutMutationGate _layoutGate,
+        IEventNotificationService _notifications)
         : IRequestHandler<RenameFileRequest, RenameFileResult>
     {
         /// <summary>
@@ -63,51 +64,55 @@ namespace Cotton.Server.Handlers.Files
                 return Failure(RenameFileStatus.FileNotFound, "File not found.");
             }
 
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(
+            NodeFileManifestDto file;
+            await using (IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(
                 layoutId.Value,
-                ct);
-            await using IDbContextTransaction tx = await _dbContext.Database
-                .BeginTransactionAsync(ct);
-
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .Where(x => x.Id == request.NodeFileId
-                    && x.OwnerId == request.UserId)
-                .SingleOrDefaultAsync(ct);
-            if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
+                ct))
+            await using (IDbContextTransaction tx = await _dbContext.Database
+                .BeginTransactionAsync(ct))
             {
-                return Failure(RenameFileStatus.FileNotFound, "File not found.");
+                NodeFile? nodeFile = await _dbContext.NodeFiles
+                    .Include(x => x.Node)
+                    .Include(x => x.FileManifest)
+                    .Where(x => x.Id == request.NodeFileId
+                        && x.OwnerId == request.UserId)
+                    .SingleOrDefaultAsync(ct);
+                if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
+                {
+                    return Failure(RenameFileStatus.FileNotFound, "File not found.");
+                }
+
+                if (!FileETags.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
+                {
+                    throw new FilePreconditionFailedException<NodeFile>(
+                        "File content changed before rename.");
+                }
+
+                string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
+                string? conflict = await FindNameConflictAsync(
+                    nodeFile,
+                    request,
+                    nameKey,
+                    ct);
+                if (conflict is not null)
+                {
+                    return Failure(RenameFileStatus.NameConflict, conflict);
+                }
+
+                nodeFile.SetName(request.Name);
+                _syncChanges.StageFileChange(
+                    SyncChangeKind.FileRenamed,
+                    nodeFile,
+                    nodeFile.Node.LayoutId);
+                await _dbContext.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+                file = nodeFile.Adapt<NodeFileManifestDto>();
             }
 
-            if (!FileETags.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
-            {
-                throw new FilePreconditionFailedException<NodeFile>(
-                    "File content changed before rename.");
-            }
-
-            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            string? conflict = await FindNameConflictAsync(
-                nodeFile,
-                request,
-                nameKey,
-                ct);
-            if (conflict is not null)
-            {
-                return Failure(RenameFileStatus.NameConflict, conflict);
-            }
-
-            nodeFile.SetName(request.Name);
-            _syncChanges.StageFileChange(
-                SyncChangeKind.FileRenamed,
-                nodeFile,
-                nodeFile.Node.LayoutId);
-            await _dbContext.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-
+            await _notifications.NotifyFileRenamedAsync(file, ct);
             return new RenameFileResult(
                 RenameFileStatus.Renamed,
-                nodeFile.Adapt<NodeFileManifestDto>());
+                file);
         }
 
         private async Task<string?> FindNameConflictAsync(

@@ -19,19 +19,23 @@ namespace Cotton.Server.Handlers.Files
     /// <summary>
     /// Handles file version restore requests.
     /// </summary>
-    public class RestoreFileVersionRequestHandler(FileVersionService _versions)
+    public class RestoreFileVersionRequestHandler(
+        FileVersionService _versions,
+        IEventNotificationService _notifications)
         : IRequestHandler<RestoreFileVersionRequest, NodeFileManifestDto>
     {
         /// <inheritdoc />
-        public Task<NodeFileManifestDto> Handle(
+        public async Task<NodeFileManifestDto> Handle(
             RestoreFileVersionRequest request,
             CancellationToken ct)
         {
-            return _versions.RestoreVersionAsync(
+            NodeFileManifestDto restored = await _versions.RestoreVersionAsync(
                 request.UserId,
                 request.NodeFileId,
                 request.VersionId,
                 ct);
+            await _notifications.NotifyFileUpdatedAsync(restored, ct);
+            return restored;
         }
     }
 }

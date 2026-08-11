@@ -55,6 +55,7 @@ namespace Cotton.Server.Handlers.Files
         TrashRestoreCoordinator _restore,
         ISyncChangeRecorder _syncChanges,
         ILayoutMutationGate _layoutGate,
+        IEventNotificationService _notifications,
         ILogger<RestoreFileQueryHandler> _logger)
         : IRequestHandler<RestoreFileQuery, RestoreOutcomeDto>
     {
@@ -62,6 +63,23 @@ namespace Cotton.Server.Handlers.Files
         /// Handles the request through the mediator pipeline.
         /// </summary>
         public async Task<RestoreOutcomeDto> Handle(RestoreFileQuery request, CancellationToken ct)
+        {
+            RestoreOutcomeDto outcome = await RestoreAsync(request, ct);
+            if (outcome.Status == RestoreStatus.Restored)
+            {
+                await _notifications.NotifyFileRestoredAsync(
+                    request.UserId,
+                    request.NodeFileId,
+                    outcome.RestoredFile,
+                    ct);
+            }
+
+            return outcome;
+        }
+
+        private async Task<RestoreOutcomeDto> RestoreAsync(
+            RestoreFileQuery request,
+            CancellationToken ct)
         {
             Guid layoutId = await GetLayoutIdOrThrowAsync(request, ct);
 

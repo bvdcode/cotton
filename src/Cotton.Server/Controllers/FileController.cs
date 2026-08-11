@@ -6,8 +6,6 @@ using Cotton.Database.Models;
 using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
-using Cotton.Server.Hubs;
-using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
@@ -15,12 +13,8 @@ using Cotton.Storage.Abstractions;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
-using EasyExtensions.Quartz.Extensions;
-using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using Quartz;
 using FileVersionDto = Cotton.Files.FileVersionDto;
 
 namespace Cotton.Server.Controllers
@@ -31,10 +25,7 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class FileController(
         IMediator _mediator,
-        IStoragePipeline _storage,
-        ISchedulerFactory _scheduler,
-        IHubContext<EventHub> _hubContext,
-        ILogger<FileController> _logger) : ControllerBase
+        IStoragePipeline _storage) : ControllerBase
     {
 
         /// <summary>
@@ -47,14 +38,14 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool skipTrash = false)
         {
             Guid userId = User.GetUserId();
-            DeleteFileQuery query = new(userId, nodeFileId, skipTrash, FileETags.ReadIfMatch(Request));
-            Guid? parentNodeId = await _mediator.Send(
-                query,
+            DeleteFileRequest request = new(
+                userId,
+                nodeFileId,
+                skipTrash,
+                FileETags.ReadIfMatch(Request));
+            await _mediator.Send(
+                request,
                 HttpContext.RequestAborted);
-
-            await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                "FileDeleted",
-                new NodeFileDeletedEventDto(nodeFileId, parentNodeId));
             return NoContent();
         }
 
@@ -75,16 +66,6 @@ namespace Cotton.Server.Controllers
                 nodeFileId,
                 request.CreateMissingParents,
                 request.Overwrite));
-
-            if (outcome.Status == RestoreStatus.Restored)
-            {
-                object restoredFilePayload = outcome.RestoredFile is not null
-                    ? outcome.RestoredFile
-                    : new { id = nodeFileId };
-                await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                    "FileRestored",
-                    restoredFilePayload);
-            }
 
             return Ok(outcome);
         }
@@ -137,9 +118,7 @@ namespace Cotton.Server.Controllers
                 };
             }
 
-            NodeFileManifestDto mapped = result.File!;
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileRenamed", mapped);
-            return Ok(mapped);
+            return Ok(result.File!);
         }
 
         /// <summary>
@@ -168,20 +147,7 @@ namespace Cotton.Server.Controllers
                 };
             }
 
-            NodeFileManifestDto mapped = result.File!;
-            try
-            {
-                await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Failed to send file metadata update notification for file {NodeFileId}",
-                    nodeFileId);
-            }
-
-            return Ok(mapped);
+            return Ok(result.File!);
         }
 
         /// <summary>
@@ -235,7 +201,6 @@ namespace Cotton.Server.Controllers
             NodeFileManifestDto restored = await _mediator.Send(
                 new RestoreFileVersionRequest(userId, nodeFileId, versionId),
                 cancellationToken);
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", restored, cancellationToken);
             return Ok(restored);
         }
 
@@ -358,13 +323,7 @@ namespace Cotton.Server.Controllers
                 };
             }
 
-            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
-            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
-            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
-
-            NodeFileManifestDto mapped = result.File!;
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
-            return Ok(mapped);
+            return Ok(result.File!);
         }
 
         /// <summary>
@@ -376,10 +335,6 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             NodeFileManifestDto manifest = await _mediator.Send(ToCreateFileRequest(request, userId));
-            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
-            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
-            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileCreated", manifest);
             return Ok(manifest);
         }
 

@@ -7,15 +7,18 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Services;
 using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
+using EasyExtensions.Quartz.Extensions;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Quartz;
 
 namespace Cotton.Server.Handlers.Files
 {
@@ -41,7 +44,9 @@ namespace Cotton.Server.Handlers.Files
         FileManifestService _fileManifestService,
         FileVersionService _versions,
         UserStorageQuotaService _quota,
-        ILayoutMutationGate _layoutGate)
+        ILayoutMutationGate _layoutGate,
+        ISchedulerFactory _scheduler,
+        IEventNotificationService _notifications)
         : IRequestHandler<UpdateFileContentRequest, UpdateFileContentResult>
     {
         /// <summary>
@@ -74,62 +79,68 @@ namespace Cotton.Server.Handlers.Files
                 proposedHash,
                 ct);
 
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(
+            NodeFile nodeFile;
+            long addedBytes;
+            FileVersionCaptureResult capture;
+            await using (IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(
                 layoutId.Value,
-                ct);
-            await using IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(
+                ct))
+            await using (IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(
                 request.UserId,
-                ct);
-            await using IDbContextTransaction tx = await _dbContext.Database
-                .BeginTransactionAsync(ct);
-
-            NodeFile? nodeFile = await LoadEditableNodeFileAsync(request, ct);
-            if (nodeFile is null)
+                ct))
+            await using (IDbContextTransaction tx = await _dbContext.Database
+                .BeginTransactionAsync(ct))
             {
-                return Failure(
-                    UpdateFileContentStatus.FileNotFound,
-                    "Node file not found.");
+                NodeFile? loadedNodeFile = await LoadEditableNodeFileAsync(request, ct);
+                if (loadedNodeFile is null)
+                {
+                    return Failure(
+                        UpdateFileContentStatus.FileNotFound,
+                        "Node file not found.");
+                }
+
+                nodeFile = loadedNodeFile;
+
+                if (!FileETags.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
+                {
+                    throw new FilePreconditionFailedException<NodeFile>(
+                        "File content changed before update.");
+                }
+
+                string nameKey = NameValidator.NormalizeAndGetNameKey(normalizedName);
+                string? conflictMessage = await FindNameConflictAsync(
+                    nodeFile,
+                    request,
+                    nameKey,
+                    ct);
+                if (conflictMessage is not null)
+                {
+                    return Failure(
+                        UpdateFileContentStatus.NameConflict,
+                        conflictMessage);
+                }
+
+                addedBytes = await _quota.EnsureCanChangeFileManifestAsync(
+                    request.UserId,
+                    nodeFile.Id,
+                    newFile.Id,
+                    ct);
+                capture = await ApplyUpdatedContentAsync(
+                    nodeFile,
+                    newFile,
+                    proposedHash,
+                    normalizedName,
+                    request.Metadata,
+                    request.UserId,
+                    ct);
+
+                _syncChanges.StageFileChange(
+                    SyncChangeKind.FileContentUpdated,
+                    nodeFile,
+                    layoutId.Value);
+                await _dbContext.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
             }
-
-            if (!FileETags.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
-            {
-                throw new FilePreconditionFailedException<NodeFile>(
-                    "File content changed before update.");
-            }
-
-            string nameKey = NameValidator.NormalizeAndGetNameKey(normalizedName);
-            string? conflictMessage = await FindNameConflictAsync(
-                nodeFile,
-                request,
-                nameKey,
-                ct);
-            if (conflictMessage is not null)
-            {
-                return Failure(
-                    UpdateFileContentStatus.NameConflict,
-                    conflictMessage);
-            }
-
-            long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(
-                request.UserId,
-                nodeFile.Id,
-                newFile.Id,
-                ct);
-            FileVersionCaptureResult capture = await ApplyUpdatedContentAsync(
-                nodeFile,
-                newFile,
-                proposedHash,
-                normalizedName,
-                request.Metadata,
-                request.UserId,
-                ct);
-
-            _syncChanges.StageFileChange(
-                SyncChangeKind.FileContentUpdated,
-                nodeFile,
-                layoutId.Value);
-            await _dbContext.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
 
             _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
             if (capture.RemovedBytes > 0)
@@ -139,9 +150,15 @@ namespace Cotton.Server.Handlers.Files
                     capture.RemovedBytes);
             }
 
+            NodeFileManifestDto file = nodeFile.Adapt<NodeFileManifestDto>();
+            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
+            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
+            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
+            await _notifications.NotifyFileUpdatedAsync(file, ct);
+
             return new UpdateFileContentResult(
                 UpdateFileContentStatus.Updated,
-                nodeFile.Adapt<NodeFileManifestDto>());
+                file);
         }
 
         private async Task<Guid?> GetOwnedFileLayoutIdAsync(

@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Nodes;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Services;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
@@ -32,7 +33,8 @@ namespace Cotton.Server.Handlers.Nodes
         CottonDbContext _dbContext,
         ILayoutService _layouts,
         ISyncChangeRecorder _syncChanges,
-        ILayoutMutationGate _layoutGate)
+        ILayoutMutationGate _layoutGate,
+        IEventNotificationService _notifications)
         : IRequestHandler<CreateNodeRequest, CreateNodeResult>
     {
         /// <inheritdoc />
@@ -67,54 +69,58 @@ namespace Cotton.Server.Handlers.Nodes
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(
+            NodeDto nodeDto;
+            await using (IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(
                 layout.Id,
-                ct);
-            await using IDbContextTransaction tx = await _dbContext.Database
-                .BeginTransactionAsync(ct);
-
-            Node? parentNode = await _dbContext.Nodes
-                .Where(x => x.Id == request.ParentId
-                    && x.OwnerId == request.UserId
-                    && x.LayoutId == layout.Id
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync(ct);
-            if (parentNode is null)
+                ct))
+            await using (IDbContextTransaction tx = await _dbContext.Database
+                .BeginTransactionAsync(ct))
             {
-                return Failure(
-                    CreateNodeStatus.ParentNotFound,
-                    "Parent node not found.");
+                Node? parentNode = await _dbContext.Nodes
+                    .Where(x => x.Id == request.ParentId
+                        && x.OwnerId == request.UserId
+                        && x.LayoutId == layout.Id
+                        && x.Type == NodeType.Default)
+                    .SingleOrDefaultAsync(ct);
+                if (parentNode is null)
+                {
+                    return Failure(
+                        CreateNodeStatus.ParentNotFound,
+                        "Parent node not found.");
+                }
+
+                string? conflict = await FindNameConflictAsync(
+                    parentNode,
+                    request,
+                    nameKey,
+                    ct);
+                if (conflict is not null)
+                {
+                    return Failure(CreateNodeStatus.NameConflict, conflict);
+                }
+
+                Node node = new()
+                {
+                    OwnerId = request.UserId,
+                    Type = NodeType.Default,
+                    LayoutId = layout.Id,
+                };
+                node.SetParent(parentNode);
+                node.SetName(request.Name);
+                await _dbContext.Nodes.AddAsync(node, ct);
+                _syncChanges.StageFolderChange(
+                    SyncChangeKind.FolderCreated,
+                    node,
+                    parentNode.Id);
+                await _dbContext.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+                nodeDto = node.Adapt<NodeDto>();
             }
 
-            string? conflict = await FindNameConflictAsync(
-                parentNode,
-                request,
-                nameKey,
-                ct);
-            if (conflict is not null)
-            {
-                return Failure(CreateNodeStatus.NameConflict, conflict);
-            }
-
-            Node node = new()
-            {
-                OwnerId = request.UserId,
-                Type = NodeType.Default,
-                LayoutId = layout.Id,
-            };
-            node.SetParent(parentNode);
-            node.SetName(request.Name);
-            await _dbContext.Nodes.AddAsync(node, ct);
-            _syncChanges.StageFolderChange(
-                SyncChangeKind.FolderCreated,
-                node,
-                parentNode.Id);
-            await _dbContext.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-
+            await _notifications.NotifyNodeCreatedAsync(request.UserId, nodeDto, ct);
             return new CreateNodeResult(
                 CreateNodeStatus.Created,
-                node.Adapt<NodeDto>());
+                nodeDto);
         }
 
         private async Task<string?> FindNameConflictAsync(

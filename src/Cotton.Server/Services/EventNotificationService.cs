@@ -33,8 +33,14 @@ namespace Cotton.Server.Services
             if (nodeFile is not null)
             {
                 NodeFileManifestDto dto = nodeFile.Adapt<NodeFileManifestDto>();
-                await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileCreated", dto, ct);
+                await NotifyFileCreatedAsync(dto, ct);
             }
+        }
+
+        /// <inheritdoc />
+        public Task NotifyFileCreatedAsync(NodeFileManifestDto file, CancellationToken ct = default)
+        {
+            return _hubContext.Clients.User(file.OwnerId.ToString()).SendAsync("FileCreated", file, ct);
         }
 
         /// <summary>
@@ -50,8 +56,14 @@ namespace Cotton.Server.Services
             if (nodeFile is not null)
             {
                 NodeFileManifestDto dto = nodeFile.Adapt<NodeFileManifestDto>();
-                await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileUpdated", dto, ct);
+                await NotifyFileUpdatedAsync(dto, ct);
             }
+        }
+
+        /// <inheritdoc />
+        public Task NotifyFileUpdatedAsync(NodeFileManifestDto file, CancellationToken ct = default)
+        {
+            return _hubContext.Clients.User(file.OwnerId.ToString()).SendAsync("FileUpdated", file, ct);
         }
 
         /// <summary>
@@ -98,8 +110,27 @@ namespace Cotton.Server.Services
             if (nodeFile is not null)
             {
                 NodeFileManifestDto dto = nodeFile.Adapt<NodeFileManifestDto>();
-                await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileRenamed", dto, ct);
+                await NotifyFileRenamedAsync(dto, ct);
             }
+        }
+
+        /// <inheritdoc />
+        public Task NotifyFileRenamedAsync(NodeFileManifestDto file, CancellationToken ct = default)
+        {
+            return _hubContext.Clients.User(file.OwnerId.ToString()).SendAsync("FileRenamed", file, ct);
+        }
+
+        /// <inheritdoc />
+        public Task NotifyFileRestoredAsync(
+            Guid userId,
+            Guid nodeFileId,
+            NodeFileManifestDto? file,
+            CancellationToken ct = default)
+        {
+            object payload = file is not null
+                ? file
+                : new { id = nodeFileId };
+            return _hubContext.Clients.User(userId.ToString()).SendAsync("FileRestored", payload, ct);
         }
 
         /// <summary>
@@ -114,8 +145,14 @@ namespace Cotton.Server.Services
             if (node is not null)
             {
                 NodeDto dto = node.Adapt<NodeDto>();
-                await _hubContext.Clients.User(node.OwnerId.ToString()).SendAsync("NodeCreated", dto, ct);
+                await NotifyNodeCreatedAsync(node.OwnerId, dto, ct);
             }
+        }
+
+        /// <inheritdoc />
+        public Task NotifyNodeCreatedAsync(Guid userId, NodeDto node, CancellationToken ct = default)
+        {
+            return _hubContext.Clients.User(userId.ToString()).SendAsync("NodeCreated", node, ct);
         }
 
         /// <summary>
@@ -160,8 +197,33 @@ namespace Cotton.Server.Services
             if (node is not null)
             {
                 NodeDto dto = node.Adapt<NodeDto>();
-                await _hubContext.Clients.User(node.OwnerId.ToString()).SendAsync("NodeRenamed", dto, ct);
+                await NotifyNodeRenamedAsync(node.OwnerId, dto, ct);
             }
+        }
+
+        /// <inheritdoc />
+        public Task NotifyNodeRenamedAsync(Guid userId, NodeDto node, CancellationToken ct = default)
+        {
+            return _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", node, ct);
+        }
+
+        /// <inheritdoc />
+        public Task NotifyNodeMetadataUpdatedAsync(Guid userId, NodeDto node, CancellationToken ct = default)
+        {
+            return _hubContext.Clients.User(userId.ToString()).SendAsync("NodeMetadataUpdated", node, ct);
+        }
+
+        /// <inheritdoc />
+        public Task NotifyNodeRestoredAsync(
+            Guid userId,
+            Guid nodeId,
+            NodeDto? node,
+            CancellationToken ct = default)
+        {
+            object payload = node is not null
+                ? node
+                : new { id = nodeId };
+            return _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRestored", payload, ct);
         }
     }
 }

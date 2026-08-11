@@ -7,6 +7,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Services;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
@@ -27,7 +28,9 @@ namespace Cotton.Server.Handlers.Files
     /// </summary>
     public class UpdateFileMetadataRequestHandler(
         CottonDbContext _dbContext,
-        ISyncChangeRecorder _syncChanges)
+        ISyncChangeRecorder _syncChanges,
+        IEventNotificationService _notifications,
+        ILogger<UpdateFileMetadataRequestHandler> _logger)
         : IRequestHandler<UpdateFileMetadataRequest, UpdateFileMetadataResult>
     {
         /// <summary>
@@ -73,9 +76,22 @@ namespace Cotton.Server.Handlers.Files
                 nodeFile.Node.LayoutId);
             await _dbContext.SaveChangesAsync(ct);
 
+            NodeFileManifestDto file = nodeFile.Adapt<NodeFileManifestDto>();
+            try
+            {
+                await _notifications.NotifyFileUpdatedAsync(file, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to send file metadata update notification for file {NodeFileId}",
+                    request.NodeFileId);
+            }
+
             return new UpdateFileMetadataResult(
                 UpdateFileMetadataStatus.Updated,
-                nodeFile.Adapt<NodeFileManifestDto>());
+                file);
         }
 
         private static string? ValidatePatch(

@@ -7,7 +7,6 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Handlers.Nodes;
-using Cotton.Server.Hubs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
@@ -16,8 +15,6 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 
 namespace Cotton.Server.Controllers
 {
@@ -26,10 +23,7 @@ namespace Cotton.Server.Controllers
     /// </summary>
     [ApiController]
     [Route(Routes.V1.Layouts)]
-    public class LayoutController(
-        IMediator _mediator,
-        IHubContext<EventHub> _hubContext,
-        ILogger<LayoutController> _logger) : ControllerBase
+    public class LayoutController(IMediator _mediator) : ControllerBase
     {
         /// <summary>
         /// Gets recent nodes.
@@ -125,9 +119,7 @@ namespace Cotton.Server.Controllers
                 };
             }
 
-            NodeDto mapped = result.Node!;
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", mapped);
-            return Ok(mapped);
+            return Ok(result.Node!);
         }
 
         /// <summary>
@@ -175,20 +167,7 @@ namespace Cotton.Server.Controllers
                 };
             }
 
-            NodeDto mapped = result.Node!;
-            try
-            {
-                await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeMetadataUpdated", mapped);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Failed to send node metadata update notification for node {NodeId}",
-                    nodeId);
-            }
-
-            return Ok(mapped);
+            return Ok(result.Node!);
         }
 
         /// <summary>
@@ -201,13 +180,10 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool skipTrash = false)
         {
             Guid userId = User.GetUserId();
-            DeleteNodeQuery query = new(userId, nodeId, skipTrash);
-            Guid parentNodeId = await _mediator.Send(
-                query,
+            DeleteNodeRequest request = new(userId, nodeId, skipTrash);
+            await _mediator.Send(
+                request,
                 HttpContext.RequestAborted);
-            await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                "NodeDeleted",
-                new NodeDeletedEventDto(nodeId, parentNodeId));
             return Ok();
         }
 
@@ -228,16 +204,6 @@ namespace Cotton.Server.Controllers
                 nodeId,
                 request.CreateMissingParents,
                 request.Overwrite));
-
-            if (outcome.Status == RestoreStatus.Restored)
-            {
-                object restoredNodePayload = outcome.RestoredNode is not null
-                    ? outcome.RestoredNode
-                    : new { id = nodeId };
-                await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                    "NodeRestored",
-                    restoredNodePayload);
-            }
 
             return Ok(outcome);
         }
@@ -264,9 +230,7 @@ namespace Cotton.Server.Controllers
                 };
             }
 
-            NodeDto mapped = result.Node!;
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeCreated", mapped);
-            return Ok(mapped);
+            return Ok(result.Node!);
         }
 
         /// <summary>

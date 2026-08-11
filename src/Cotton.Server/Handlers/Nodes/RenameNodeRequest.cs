@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Models.Enums;
 using Cotton.Nodes;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Services;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
@@ -30,7 +31,8 @@ namespace Cotton.Server.Handlers.Nodes
     public class RenameNodeRequestHandler(
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
-        ILayoutMutationGate _layoutGate)
+        ILayoutMutationGate _layoutGate,
+        IEventNotificationService _notifications)
         : IRequestHandler<RenameNodeRequest, RenameNodeResult>
     {
         /// <inheritdoc />
@@ -58,46 +60,51 @@ namespace Cotton.Server.Handlers.Nodes
                 return Failure(RenameNodeStatus.NodeNotFound, "Node not found.");
             }
 
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(
+            NodeDto nodeDto;
+            await using (IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(
                 layoutId.Value,
-                ct);
-            await using IDbContextTransaction tx = await _dbContext.Database
-                .BeginTransactionAsync(ct);
-
-            Node? node = await _dbContext.Nodes
-                .Where(x => x.Id == request.NodeId
-                    && x.OwnerId == request.UserId)
-                .SingleOrDefaultAsync(ct);
-            if (node is null)
+                ct))
+            await using (IDbContextTransaction tx = await _dbContext.Database
+                .BeginTransactionAsync(ct))
             {
-                return Failure(RenameNodeStatus.NodeNotFound, "Node not found.");
-            }
+                Node? node = await _dbContext.Nodes
+                    .Where(x => x.Id == request.NodeId
+                        && x.OwnerId == request.UserId)
+                    .SingleOrDefaultAsync(ct);
+                if (node is null)
+                {
+                    return Failure(RenameNodeStatus.NodeNotFound, "Node not found.");
+                }
 
-            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            string? conflict = await FindNameConflictAsync(
-                node,
-                request,
-                nameKey,
-                ct);
-            if (conflict is not null)
-            {
-                return Failure(RenameNodeStatus.NameConflict, conflict);
-            }
-
-            node.SetName(request.Name);
-            if (node.ParentId.HasValue)
-            {
-                _syncChanges.StageFolderChange(
-                    SyncChangeKind.FolderRenamed,
+                string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
+                string? conflict = await FindNameConflictAsync(
                     node,
-                    node.ParentId.Value);
+                    request,
+                    nameKey,
+                    ct);
+                if (conflict is not null)
+                {
+                    return Failure(RenameNodeStatus.NameConflict, conflict);
+                }
+
+                node.SetName(request.Name);
+                if (node.ParentId.HasValue)
+                {
+                    _syncChanges.StageFolderChange(
+                        SyncChangeKind.FolderRenamed,
+                        node,
+                        node.ParentId.Value);
+                }
+
+                await _dbContext.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+                nodeDto = node.Adapt<NodeDto>();
             }
 
-            await _dbContext.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
+            await _notifications.NotifyNodeRenamedAsync(request.UserId, nodeDto, ct);
             return new RenameNodeResult(
                 RenameNodeStatus.Renamed,
-                node.Adapt<NodeDto>());
+                nodeDto);
         }
 
         private async Task<string?> FindNameConflictAsync(
