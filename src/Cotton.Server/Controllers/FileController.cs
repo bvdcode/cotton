@@ -17,8 +17,6 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
-using Cotton.Storage.Extensions;
-using Cotton.Storage.Pipelines;
 using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -30,7 +28,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Net.Http.Headers;
 using Quartz;
 using FileVersionDto = Cotton.Files.FileVersionDto;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -51,120 +48,10 @@ namespace Cotton.Server.Controllers
         FileManifestService _fileManifestService,
         FileVersionService _versions,
         UserStorageQuotaService _quota,
-        IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
         ILayoutMutationGate _layoutGate,
-        PublicShareTokenGenerator _publicShareTokens,
-        PublicShareLookupFailureLimiter _publicShareLookupFailures,
         ILogger<FileController> _logger) : ControllerBase
     {
-
-        /// <summary>
-        /// Creates or returns a public file share response.
-        /// </summary>
-        [HttpGet("/s/{token}")]
-        [HttpHead("/s/{token}")]
-        public async Task<IActionResult> Share(
-            [FromRoute] string token,
-            [FromQuery] string? view = null,
-            [FromQuery] bool preview = false)
-        {
-            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
-                _publicShareLookupFailures,
-                token);
-            if (blocked is not null)
-            {
-                return blocked;
-            }
-
-            ShareFileResult result = await _mediator.Send(new ShareFileQuery(token, view, preview, Request));
-
-            if (result.IsTokenLookupFailure)
-            {
-                IActionResult? rejection = this.GetPublicShareLookupFailureRejection(
-                    _publicShareLookupFailures,
-                    token);
-                if (rejection is not null)
-                {
-                    return rejection;
-                }
-            }
-
-            return result.Kind switch
-            {
-                "badRequest" => this.ApiBadRequest(result.ErrorMessage ?? "Bad request"),
-                "notFound" => this.ApiNotFound(result.ErrorMessage ?? "File not found"),
-                "redirect" => Redirect(result.RedirectUrl ?? "/"),
-                "html" => Content(result.HtmlContent ?? string.Empty, "text/html; charset=utf-8"),
-                "head" => CreateShareHeadResponse(result),
-                "stream" => CreateShareStreamResponse(result),
-                _ => this.ApiBadRequest("Invalid share response")
-            };
-        }
-
-        private IActionResult CreateShareHeadResponse(ShareFileResult result)
-        {
-            bool requestedInline = result.Inline == true;
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, requestedInline);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            Response.ContentType = FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline);
-            Response.ContentLength = result.ContentLength;
-            if (!string.IsNullOrWhiteSpace(result.EntityTag))
-            {
-                Response.Headers.ETag = result.EntityTag;
-            }
-
-            ContentDispositionHeaderValue contentDisposition = new(
-                FileResponseSecurity.ResolveContentDispositionType(result.ContentType, requestedInline))
-            {
-                FileNameStar = result.FileName,
-                FileName = result.FileName,
-            };
-            Response.Headers[HeaderNames.ContentDisposition] = contentDisposition.ToString();
-            return new EmptyResult();
-        }
-
-        private IActionResult CreateShareStreamResponse(ShareFileResult result)
-        {
-            bool requestedInline = string.IsNullOrWhiteSpace(result.DownloadName);
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, requestedInline);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            RegisterDeleteAfterUse(result);
-
-            string streamFileName = result.FileName ?? result.DownloadName ?? "download";
-            string? streamDownloadName = requestedInline
-                ? FileResponseSecurity.ResolveFileDownloadName(streamFileName, requestedInline: true, result.ContentType)
-                : result.DownloadName;
-            return File(
-                result.FileStream!,
-                FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline),
-                fileDownloadName: streamDownloadName,
-                lastModified: result.LastModified,
-                entityTag: result.EntityTagValue!,
-                enableRangeProcessing: true);
-        }
-
-        private void RegisterDeleteAfterUse(ShareFileResult result)
-        {
-            if (!result.DeleteAfterUse || !result.DeleteTokenId.HasValue)
-            {
-                return;
-            }
-
-            Guid tokenId = result.DeleteTokenId.Value;
-            Response.OnCompleted(async () =>
-            {
-                DownloadToken? tokenEntity = await _dbContext.DownloadTokens
-                    .FirstOrDefaultAsync(x => x.Id == tokenId);
-                if (tokenEntity is not null)
-                {
-                    _dbContext.DownloadTokens.Remove(tokenEntity);
-                    await _dbContext.SaveChangesAsync();
-                }
-            });
-        }
 
         /// <summary>
         /// Deletes file.
@@ -472,65 +359,6 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
-        /// Downloads file.
-        /// </summary>
-        [Authorize]
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download-link")]
-        public async Task<IActionResult> DownloadFile(
-            [FromRoute] Guid nodeFileId,
-            [FromQuery] int expireAfterMinutes = 1440,
-            [FromQuery] string? customToken = "",
-            [FromQuery] bool deleteAfterUse = false)
-        {
-            const int maxExpireMinutes = 60 * 24 * 365; // 1 year
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(expireAfterMinutes, maxExpireMinutes, nameof(expireAfterMinutes));
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expireAfterMinutes, nameof(expireAfterMinutes));
-
-            if (!string.IsNullOrWhiteSpace(customToken))
-            {
-                bool exists = await ShareTokenExistsAsync(customToken);
-                if (exists)
-                {
-                    return this.ApiConflict("The custom token is already in use. Please choose a different one.");
-                }
-            }
-
-            Guid userId = User.GetUserId();
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .SingleOrDefaultAsync();
-            if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
-            {
-                return CottonResult.NotFound("Node file not found");
-            }
-
-            DownloadToken newToken = new()
-            {
-                FileName = nodeFile.Name,
-                DeleteAfterUse = deleteAfterUse,
-                CreatedByUserId = userId,
-                NodeFileId = nodeFile.Id,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
-                Token = !string.IsNullOrWhiteSpace(customToken)
-                    ? customToken
-                    : await _publicShareTokens.CreateUniqueAsync(HttpContext.RequestAborted),
-            };
-            await _dbContext.DownloadTokens.AddAsync(newToken);
-            await _dbContext.SaveChangesAsync();
-            string link = Routes.V1.Files + $"/{nodeFileId}/download?token={newToken.Token}";
-            return Ok(link);
-        }
-
-        private async Task<bool> ShareTokenExistsAsync(string token)
-        {
-            return await _dbContext.DownloadTokens.AnyAsync(x => x.Token == token)
-                || await _dbContext.NodeShareTokens.AnyAsync(x => x.Token == token);
-        }
-
-        /// <summary>
         /// Downloads an owned file through normal bearer-token authentication.
         /// </summary>
         [Authorize]
@@ -548,7 +376,7 @@ namespace Cotton.Server.Controllers
 
             _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.content");
             EnsureContentETagPrecondition(nodeFile, "File content changed before download.");
-            return ServeFileDownload(nodeFile, download);
+            return FileDownloadResultFactory.Create(Response, _storage, nodeFile, download);
         }
 
         /// <summary>
@@ -758,137 +586,6 @@ namespace Cotton.Server.Controllers
             }
 
             return capture;
-        }
-
-        /// <summary>
-        /// Downloads file by token.
-        /// </summary>
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download")]
-        public async Task<IActionResult> DownloadFileByToken(
-            [FromRoute] Guid nodeFileId,
-            [FromQuery] string token,
-            [FromQuery] bool download = true,
-            [FromQuery] bool preview = false)
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return this.ApiNotFound("File not found");
-            }
-
-            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
-                _publicShareLookupFailures,
-                token);
-            if (blocked is not null)
-            {
-                return blocked;
-            }
-
-            DownloadToken? downloadToken = await _dbContext.DownloadTokens.FindActiveAsync(token, nodeFileId);
-            if (downloadToken is null)
-            {
-                return this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found");
-            }
-
-            _integrity.RequireValid(_dbContext, downloadToken, "file.download-token");
-
-            NodeFile? nodeFile = await LoadDownloadNodeFileAsync(nodeFileId);
-            if (nodeFile is null || !CanServeTokenDownload(nodeFile))
-            {
-                return CottonResult.NotFound("File not found");
-            }
-
-            bool servesPreview = CanServeLargePreview(nodeFile, preview);
-            RequireDownloadGraphIntegrity(nodeFile, servesPreview);
-
-            return servesPreview
-                ? ServeLargePreview(nodeFile)
-                : ServeTokenFileDownload(nodeFile, downloadToken, download);
-        }
-
-        private Task<NodeFile?> LoadDownloadNodeFileAsync(Guid nodeFileId)
-        {
-            return _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-        }
-
-        private static bool CanServeTokenDownload(NodeFile nodeFile) =>
-            nodeFile.Node.Type == NodeType.Default || FileVersionService.IsHistoricalVersion(nodeFile);
-
-        private static bool CanServeLargePreview(NodeFile nodeFile, bool preview) =>
-            preview && nodeFile.FileManifest.LargeFilePreviewHash is not null;
-
-        private void RequireDownloadGraphIntegrity(
-            NodeFile nodeFile,
-            bool servesPreview)
-        {
-            if (servesPreview)
-            {
-                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "file.preview");
-                return;
-            }
-
-            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.download");
-        }
-
-        private IActionResult ServeLargePreview(NodeFile nodeFile)
-        {
-            string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash!);
-            EntityTagHeaderValue etagHeader = new($"\"sha256-{previewHashHex}\"");
-            SetLargePreviewCacheHeaders(etagHeader);
-
-            if (FileETags.MatchesIfNoneMatchHeader(Request, etagHeader))
-            {
-                return StatusCode(StatusCodes.Status304NotModified);
-            }
-
-            Stream previewStream = _storage.GetBlobStream([previewHashHex]);
-            return File(previewStream, "image/webp");
-        }
-
-        private void SetLargePreviewCacheHeaders(EntityTagHeaderValue etagHeader)
-        {
-            Response.Headers.ETag = etagHeader.ToString();
-            Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-        }
-
-        private IActionResult ServeTokenFileDownload(
-            NodeFile nodeFile,
-            DownloadToken downloadToken,
-            bool download)
-        {
-            Response.RegisterDeleteAfterUse(_dbContext, downloadToken);
-            return ServeFileDownload(nodeFile, download);
-        }
-
-        private IActionResult ServeFileDownload(NodeFile nodeFile, bool download)
-        {
-            string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
-            PipelineContext context = new()
-            {
-                FileSizeBytes = nodeFile.FileManifest.SizeBytes,
-                ChunkLengths = nodeFile.FileManifest.FileManifestChunks.GetChunkLengths()
-            };
-            Stream stream = _storage.GetBlobStream(uids, context);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            EntityTagHeaderValue entityTag = FileETags.CreateContentEntityTag(nodeFile);
-            bool requestedInline = !download;
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, nodeFile.FileManifest.ContentType, requestedInline);
-
-            return File(
-                stream,
-                FileResponseSecurity.ResolveContentTypeForResponse(nodeFile.FileManifest.ContentType, requestedInline),
-                fileDownloadName: FileResponseSecurity.ResolveFileDownloadName(
-                    nodeFile.Name,
-                    requestedInline,
-                    nodeFile.FileManifest.ContentType),
-                lastModified: new DateTimeOffset(nodeFile.CreatedAt),
-                entityTag: entityTag,
-                enableRangeProcessing: true);
         }
 
         private static FileContentManifestDto CreateContentManifestDto(NodeFile nodeFile)
