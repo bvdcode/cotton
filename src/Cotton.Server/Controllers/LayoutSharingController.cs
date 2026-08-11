@@ -117,9 +117,6 @@ namespace Cotton.Server.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 100)
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
-
             IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
                 _publicShareLookupFailures,
                 token);
@@ -128,76 +125,27 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            SharedNodeAccess? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken is null)
+            GetSharedNodeChildrenQuery query = new(token, nodeId, page, pageSize);
+            GetSharedNodeChildrenResult result = await _mediator.Send(
+                query,
+                HttpContext.RequestAborted);
+            switch (result.Status)
             {
-                return this.ApiPublicShareNotFound(
-                    _publicShareLookupFailures,
-                    token,
-                    "Shared folder not found.");
+                case GetSharedNodeChildrenStatus.Success:
+                    Response.Headers.Append(
+                        "X-Total-Count",
+                        result.TotalCount.ToString());
+                    return Ok(result.Content);
+                case GetSharedNodeChildrenStatus.SharedFolderNotFound:
+                    return this.ApiPublicShareNotFound(
+                        _publicShareLookupFailures,
+                        token,
+                        "Shared folder not found.");
+                case GetSharedNodeChildrenStatus.FolderNotFound:
+                    return this.ApiNotFound("Folder not found.");
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(result.Status));
             }
-
-            Guid targetNodeId = nodeId ?? nodeShareToken.NodeId;
-            bool canAccessNode = await IsNodeInSharedSubtreeAsync(
-                targetNodeId,
-                nodeShareToken.NodeId,
-                nodeShareToken.CreatedByUserId);
-
-            if (!canAccessNode)
-            {
-                return this.ApiNotFound("Folder not found.");
-            }
-
-            Node? targetNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == targetNodeId
-                    && x.OwnerId == nodeShareToken.CreatedByUserId
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (targetNode is null)
-            {
-                return this.ApiNotFound("Folder not found.");
-            }
-
-            int skip = (page - 1) * pageSize;
-
-            IQueryable<NodeDto> nodesQuery = _dbContext.Nodes
-                .AsNoTracking()
-                .OrderBy(x => x.NameKey)
-                .Where(x => x.ParentId == targetNodeId
-                    && x.OwnerId == nodeShareToken.CreatedByUserId
-                    && x.Type == NodeType.Default)
-                .ProjectToType<NodeDto>();
-
-            IQueryable<NodeFile> filesBaseQuery = _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.NodeId == targetNodeId
-                    && x.OwnerId == nodeShareToken.CreatedByUserId);
-
-            int nodesCount = await nodesQuery.CountAsync();
-            int filesCount = await filesBaseQuery.CountAsync();
-
-            int nodesToTake = Math.Max(0, Math.Min(pageSize, nodesCount - skip));
-            int filesSkip = Math.Max(0, skip - nodesCount);
-            int filesToTake = Math.Max(0, pageSize - nodesToTake);
-
-            List<NodeDto> nodes = nodesToTake == 0 ? []
-                : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync();
-
-            List<SharedNodeFileDto> files = filesToTake == 0 ? []
-                : await LoadSharedFilesAsync(filesBaseQuery, filesSkip, filesToTake);
-
-            SharedNodeContentDto response = new()
-            {
-                Nodes = nodes,
-                Files = files,
-                Id = targetNode.Id,
-                CreatedAt = targetNode.CreatedAt,
-                UpdatedAt = targetNode.UpdatedAt,
-            };
-
-            Response.Headers.Append("X-Total-Count", (nodesCount + filesCount).ToString());
-            return Ok(response);
         }
 
         /// <summary>
@@ -496,29 +444,5 @@ namespace Cotton.Server.Controllers
                     ownerId),
                 HttpContext.RequestAborted);
 
-        private static async Task<List<SharedNodeFileDto>> LoadSharedFilesAsync(
-            IQueryable<NodeFile> filesBaseQuery,
-            int filesSkip,
-            int filesToTake)
-        {
-            List<NodeFile> fileEntities = await filesBaseQuery
-                .OrderBy(x => x.NameKey)
-                .Include(x => x.FileManifest)
-                .Skip(filesSkip)
-                .Take(filesToTake)
-                .ToListAsync();
-
-            return [.. fileEntities.Select(x => new SharedNodeFileDto
-            {
-                Id = x.Id,
-                CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt,
-                NodeId = x.NodeId,
-                Name = x.Name,
-                ContentType = x.FileManifest.ContentType,
-                SizeBytes = x.FileManifest.SizeBytes,
-                PreviewHashEncryptedHex = x.FileManifest.GetPreviewHashEncryptedHex(),
-            })];
-        }
     }
 }
