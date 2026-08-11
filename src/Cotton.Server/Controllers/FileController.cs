@@ -2,7 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Files;
-using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
@@ -21,7 +20,6 @@ using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using Quartz;
 using FileVersionDto = Cotton.Files.FileVersionDto;
 
@@ -34,7 +32,6 @@ namespace Cotton.Server.Controllers
     public class FileController(
         IMediator _mediator,
         IStoragePipeline _storage,
-        CottonDbContext _dbContext,
         ISchedulerFactory _scheduler,
         IHubContext<EventHub> _hubContext,
         FileVersionService _versions,
@@ -51,13 +48,10 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool skipTrash = false)
         {
             Guid userId = User.GetUserId();
-            Guid? parentNodeId = await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .Select(x => (Guid?)x.NodeId)
-                .SingleOrDefaultAsync();
             DeleteFileQuery query = new(userId, nodeFileId, skipTrash, FileETags.ReadIfMatch(Request));
-            await _mediator.Send(query);
+            Guid? parentNodeId = await _mediator.Send(
+                query,
+                HttpContext.RequestAborted);
 
             await _hubContext.Clients.User(userId.ToString()).SendAsync(
                 "FileDeleted",

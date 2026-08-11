@@ -19,7 +19,8 @@ namespace Cotton.Server.Handlers.Files
     /// <summary>
     /// Represents a delete file query sent through the mediator pipeline.
     /// </summary>
-    public class DeleteFileQuery(Guid userId, Guid nodeFileId, bool skipTrash, string? expectedETag = null) : IRequest
+    public class DeleteFileQuery(Guid userId, Guid nodeFileId, bool skipTrash, string? expectedETag = null)
+        : IRequest<Guid>
     {
         /// <summary>
         /// Gets the owning user identifier.
@@ -54,12 +55,12 @@ namespace Cotton.Server.Handlers.Files
         ISyncChangeRecorder _syncChanges,
         ILayoutMutationGate _layoutGate,
         FileVersionService _versions)
-            : IRequestHandler<DeleteFileQuery>
+            : IRequestHandler<DeleteFileQuery, Guid>
     {
         /// <summary>
         /// Handles the request through the mediator pipeline.
         /// </summary>
-        public async Task Handle(DeleteFileQuery request, CancellationToken ct)
+        public async Task<Guid> Handle(DeleteFileQuery request, CancellationToken ct)
         {
             NodeFile nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
@@ -68,13 +69,14 @@ namespace Cotton.Server.Handlers.Files
                     && x.OwnerId == request.UserId, cancellationToken: ct)
                     ?? throw new EntityNotFoundException(nameof(FileManifest));
             EnsureETagPrecondition(request, nodeFile);
+            Guid parentNodeId = nodeFile.NodeId;
 
             if (request.SkipTrash)
             {
                 if (FileVersionService.IsHistoricalVersion(nodeFile))
                 {
                     await _versions.DeleteHistoricalVersionAsync(request.UserId, nodeFile.Id, ct);
-                    return;
+                    return parentNodeId;
                 }
 
                 await DeletePermanentlyAsync(request, nodeFile, ct);
@@ -83,6 +85,8 @@ namespace Cotton.Server.Handlers.Files
             {
                 await MoveToTrashAsync(request, nodeFile, ct);
             }
+
+            return parentNodeId;
         }
 
         private async Task DeletePermanentlyAsync(DeleteFileQuery command, NodeFile nodeFile, CancellationToken ct)
