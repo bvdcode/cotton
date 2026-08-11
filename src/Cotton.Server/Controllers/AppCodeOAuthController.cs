@@ -441,6 +441,5 @@ public class AppCodeOAuthController(
     {
         return string.IsNullOrWhiteSpace(value) ? "Unknown" : value;
     }
-
 }
 }

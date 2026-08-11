@@ -3,15 +3,16 @@
 
 using Cotton.Settings;
 
-namespace Cotton.Sdk.Settings;
-
-/// <summary>
-/// Provides client-visible Cotton server settings.
-/// </summary>
-public interface ICottonSettingsClient
+namespace Cotton.Sdk.Settings
 {
     /// <summary>
-    /// Gets settings required by SDK file transfer operations.
+    /// Provides client-visible Cotton server settings.
     /// </summary>
-    Task<ClientSettingsDto> GetAsync(CancellationToken cancellationToken = default);
+    public interface ICottonSettingsClient
+    {
+        /// <summary>
+        /// Gets settings required by SDK file transfer operations.
+        /// </summary>
+        Task<ClientSettingsDto> GetAsync(CancellationToken cancellationToken = default);
+    }
 }

@@ -25,1022 +25,1023 @@ using System.Text;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 
-namespace Cotton.Server.IntegrationTests;
-
-public class MoveEndpointsTests : IntegrationTestBase
+namespace Cotton.Server.IntegrationTests
 {
-    private TestAppFactory? _factory;
-    private HttpClient? _client;
-    private Dictionary<string, string?> _overrides = new();
-
-    [SetUp]
-    public void SetUp()
+    public class MoveEndpointsTests : IntegrationTestBase
     {
-        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
-        creator.EnsureDeleted();
-        creator.Create();
+        private TestAppFactory? _factory;
+        private HttpClient? _client;
+        private Dictionary<string, string?> _overrides = new();
 
-        var csb = new NpgsqlConnectionStringBuilder
+        [SetUp]
+        public void SetUp()
         {
-            Host = "localhost",
-            Port = 5432,
-            Database = DatabaseName,
-            Username = "postgres",
-            Password = "postgres"
-        };
-        _overrides = new Dictionary<string, string?>
-        {
-            ["DatabaseSettings:Host"] = csb.Host,
-            ["DatabaseSettings:Port"] = csb.Port.ToString(),
-            ["DatabaseSettings:Database"] = csb.Database,
-            ["DatabaseSettings:Username"] = csb.Username,
-            ["DatabaseSettings:Password"] = csb.Password,
-            ["MasterEncryptionKey"] = Convert.ToBase64String(Hasher.HashData(Encoding.UTF8.GetBytes("super"))),
-            ["MasterEncryptionKeyId"] = "1",
-            ["EncryptionThreads"] = "1",
-            ["MaxChunkSizeBytes"] = "16777216",
-            ["CipherChunkSizeBytes"] = "20971520",
-            ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
-        };
+            IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
+            creator.EnsureDeleted();
+            creator.Create();
 
-        _factory = new TestAppFactory(_overrides);
-        _client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-    }
-
-    [TearDown]
-    public void TearDown()
-    {
-        _client?.Dispose();
-        _factory?.Dispose();
-    }
-
-    // ---------------------------------------------------------------------
-    // MoveFile
-    // ---------------------------------------------------------------------
-
-    [Test]
-    public async Task MoveFile_ToAnotherFolder_Succeeds()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto src = await CreateFolderAsync(root.Id, "src");
-        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
-        NodeFileManifestDto file = await CreateFileAsync(src.Id, "doc.txt", "hello-1");
-
-        HttpResponseMessage res = await MoveFileAsync(file.Id, dst.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-
-        NodeContentDto children = await GetChildrenAsync(dst.Id);
-        Assert.That(children.Files.Any(f => f.Id == file.Id), Is.True, "moved file must appear in destination");
-
-        NodeContentDto srcChildren = await GetChildrenAsync(src.Id);
-        Assert.That(srcChildren.Files.Any(f => f.Id == file.Id), Is.False, "moved file must not remain in source");
-    }
-
-    [Test]
-    public async Task MoveFile_SameParent_IsNoOp()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto folder = await CreateFolderAsync(root.Id, "folder");
-        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "doc.txt", "hello-2");
-
-        HttpResponseMessage res = await MoveFileAsync(file.Id, folder.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-
-        NodeContentDto children = await GetChildrenAsync(folder.Id);
-        Assert.That(children.Files.Count(f => f.Id == file.Id), Is.EqualTo(1));
-    }
-
-    [Test]
-    public async Task MoveFile_NameCollisionWithSiblingFile_Returns409()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto src = await CreateFolderAsync(root.Id, "src");
-        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
-        NodeFileManifestDto moving = await CreateFileAsync(src.Id, "doc.txt", "moving-content");
-        await CreateFileAsync(dst.Id, "doc.txt", "blocker-content");
-
-        HttpResponseMessage res = await MoveFileAsync(moving.Id, dst.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
-    }
-
-    [Test]
-    public async Task MoveFile_NameCollisionWithSiblingFolder_Returns409()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto src = await CreateFolderAsync(root.Id, "src");
-        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
-        NodeFileManifestDto moving = await CreateFileAsync(src.Id, "thing", "moving-content");
-        await CreateFolderAsync(dst.Id, "thing");
-
-        HttpResponseMessage res = await MoveFileAsync(moving.Id, dst.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
-    }
-
-    [Test]
-    public async Task MoveFile_TargetNotFound_Returns404()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto src = await CreateFolderAsync(root.Id, "src");
-        NodeFileManifestDto file = await CreateFileAsync(src.Id, "doc.txt", "hello-3");
-
-        HttpResponseMessage res = await MoveFileAsync(file.Id, Guid.NewGuid());
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
-    }
-
-    [Test]
-    public async Task MoveFile_AcrossLayouts_Returns400()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto src = await CreateFolderAsync(root.Id, "src");
-        NodeFileManifestDto file = await CreateFileAsync(src.Id, "doc.txt", "across-layouts");
-
-        (Guid OwnerId, Guid RootId) additionalLayout = await CreateAdditionalLayoutRootAsync(
-            _factory!.Services,
-            "other-root");
-
-        HttpResponseMessage res = await MoveFileAsync(file.Id, additionalLayout.RootId);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-    }
-
-    [Test]
-    public async Task MoveFile_EmptyParentId_Returns400()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto folder = await CreateFolderAsync(root.Id, "src");
-        NodeFileManifestDto file = await CreateFileAsync(folder.Id, "doc.txt", "hello-4");
-
-        HttpResponseMessage res = await MoveFileAsync(file.Id, Guid.Empty);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-    }
-
-    // ---------------------------------------------------------------------
-    // MoveNode
-    // ---------------------------------------------------------------------
-
-    [Test]
-    public async Task MoveNode_ToAnotherFolder_Succeeds()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto src = await CreateFolderAsync(root.Id, "src");
-        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
-        NodeDto moving = await CreateFolderAsync(src.Id, "moving");
-
-        HttpResponseMessage res = await MoveNodeAsync(moving.Id, dst.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-
-        NodeContentDto dstChildren = await GetChildrenAsync(dst.Id);
-        Assert.That(dstChildren.Nodes.Any(n => n.Id == moving.Id), Is.True);
-    }
-
-    [Test]
-    public async Task MoveNode_SameParent_IsNoOp()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto folder = await CreateFolderAsync(root.Id, "folder");
-        NodeDto child = await CreateFolderAsync(folder.Id, "child");
-
-        HttpResponseMessage res = await MoveNodeAsync(child.Id, folder.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-    }
-
-    [Test]
-    public async Task MoveNode_RootNode_Returns403()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
-
-        HttpResponseMessage res = await MoveNodeAsync(root.Id, dst.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
-    }
-
-    [Test]
-    public async Task MoveNode_IntoSelf_Returns400()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto folder = await CreateFolderAsync(root.Id, "folder");
-
-        HttpResponseMessage res = await MoveNodeAsync(folder.Id, folder.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-    }
-
-    [Test]
-    public async Task MoveNode_IntoDescendant_Returns400()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto parent = await CreateFolderAsync(root.Id, "parent");
-        NodeDto middle = await CreateFolderAsync(parent.Id, "middle");
-        NodeDto leaf = await CreateFolderAsync(middle.Id, "leaf");
-
-        HttpResponseMessage res = await MoveNodeAsync(parent.Id, leaf.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-    }
-
-    [Test]
-    public async Task MoveNode_IntoDeepUnrelatedFolder_Succeeds()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto moving = await CreateFolderAsync(root.Id, "moving");
-
-        Guid deepestId;
-        using (IServiceScope scope = _factory!.Services.CreateScope())
-        {
-            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            Node rootEntity = await db.Nodes.AsNoTracking().SingleAsync(n => n.Id == root.Id);
-            Guid parentId = root.Id;
-
-            for (int i = 0; i < 300; i++)
+            var csb = new NpgsqlConnectionStringBuilder
             {
-                var node = new Cotton.Database.Models.Node
+                Host = "localhost",
+                Port = 5432,
+                Database = DatabaseName,
+                Username = "postgres",
+                Password = "postgres"
+            };
+            _overrides = new Dictionary<string, string?>
+            {
+                ["DatabaseSettings:Host"] = csb.Host,
+                ["DatabaseSettings:Port"] = csb.Port.ToString(),
+                ["DatabaseSettings:Database"] = csb.Database,
+                ["DatabaseSettings:Username"] = csb.Username,
+                ["DatabaseSettings:Password"] = csb.Password,
+                ["MasterEncryptionKey"] = Convert.ToBase64String(Hasher.HashData(Encoding.UTF8.GetBytes("super"))),
+                ["MasterEncryptionKeyId"] = "1",
+                ["EncryptionThreads"] = "1",
+                ["MaxChunkSizeBytes"] = "16777216",
+                ["CipherChunkSizeBytes"] = "20971520",
+                ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
+            };
+
+            _factory = new TestAppFactory(_overrides);
+            _client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _client?.Dispose();
+            _factory?.Dispose();
+        }
+
+        // ---------------------------------------------------------------------
+        // MoveFile
+        // ---------------------------------------------------------------------
+
+        [Test]
+        public async Task MoveFile_ToAnotherFolder_Succeeds()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeFileManifestDto file = await CreateFileAsync(src.Id, "doc.txt", "hello-1");
+
+            HttpResponseMessage res = await MoveFileAsync(file.Id, dst.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+            NodeContentDto children = await GetChildrenAsync(dst.Id);
+            Assert.That(children.Files.Any(f => f.Id == file.Id), Is.True, "moved file must appear in destination");
+
+            NodeContentDto srcChildren = await GetChildrenAsync(src.Id);
+            Assert.That(srcChildren.Files.Any(f => f.Id == file.Id), Is.False, "moved file must not remain in source");
+        }
+
+        [Test]
+        public async Task MoveFile_SameParent_IsNoOp()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto folder = await CreateFolderAsync(root.Id, "folder");
+            NodeFileManifestDto file = await CreateFileAsync(folder.Id, "doc.txt", "hello-2");
+
+            HttpResponseMessage res = await MoveFileAsync(file.Id, folder.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+            NodeContentDto children = await GetChildrenAsync(folder.Id);
+            Assert.That(children.Files.Count(f => f.Id == file.Id), Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task MoveFile_NameCollisionWithSiblingFile_Returns409()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeFileManifestDto moving = await CreateFileAsync(src.Id, "doc.txt", "moving-content");
+            await CreateFileAsync(dst.Id, "doc.txt", "blocker-content");
+
+            HttpResponseMessage res = await MoveFileAsync(moving.Id, dst.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        }
+
+        [Test]
+        public async Task MoveFile_NameCollisionWithSiblingFolder_Returns409()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeFileManifestDto moving = await CreateFileAsync(src.Id, "thing", "moving-content");
+            await CreateFolderAsync(dst.Id, "thing");
+
+            HttpResponseMessage res = await MoveFileAsync(moving.Id, dst.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        }
+
+        [Test]
+        public async Task MoveFile_TargetNotFound_Returns404()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeFileManifestDto file = await CreateFileAsync(src.Id, "doc.txt", "hello-3");
+
+            HttpResponseMessage res = await MoveFileAsync(file.Id, Guid.NewGuid());
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
+
+        [Test]
+        public async Task MoveFile_AcrossLayouts_Returns400()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeFileManifestDto file = await CreateFileAsync(src.Id, "doc.txt", "across-layouts");
+
+            (Guid OwnerId, Guid RootId) additionalLayout = await CreateAdditionalLayoutRootAsync(
+                _factory!.Services,
+                "other-root");
+
+            HttpResponseMessage res = await MoveFileAsync(file.Id, additionalLayout.RootId);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        [Test]
+        public async Task MoveFile_EmptyParentId_Returns400()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto folder = await CreateFolderAsync(root.Id, "src");
+            NodeFileManifestDto file = await CreateFileAsync(folder.Id, "doc.txt", "hello-4");
+
+            HttpResponseMessage res = await MoveFileAsync(file.Id, Guid.Empty);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        // ---------------------------------------------------------------------
+        // MoveNode
+        // ---------------------------------------------------------------------
+
+        [Test]
+        public async Task MoveNode_ToAnotherFolder_Succeeds()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeDto moving = await CreateFolderAsync(src.Id, "moving");
+
+            HttpResponseMessage res = await MoveNodeAsync(moving.Id, dst.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+            NodeContentDto dstChildren = await GetChildrenAsync(dst.Id);
+            Assert.That(dstChildren.Nodes.Any(n => n.Id == moving.Id), Is.True);
+        }
+
+        [Test]
+        public async Task MoveNode_SameParent_IsNoOp()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto folder = await CreateFolderAsync(root.Id, "folder");
+            NodeDto child = await CreateFolderAsync(folder.Id, "child");
+
+            HttpResponseMessage res = await MoveNodeAsync(child.Id, folder.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        }
+
+        [Test]
+        public async Task MoveNode_RootNode_Returns403()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+
+            HttpResponseMessage res = await MoveNodeAsync(root.Id, dst.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        }
+
+        [Test]
+        public async Task MoveNode_IntoSelf_Returns400()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto folder = await CreateFolderAsync(root.Id, "folder");
+
+            HttpResponseMessage res = await MoveNodeAsync(folder.Id, folder.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        [Test]
+        public async Task MoveNode_IntoDescendant_Returns400()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto parent = await CreateFolderAsync(root.Id, "parent");
+            NodeDto middle = await CreateFolderAsync(parent.Id, "middle");
+            NodeDto leaf = await CreateFolderAsync(middle.Id, "leaf");
+
+            HttpResponseMessage res = await MoveNodeAsync(parent.Id, leaf.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        [Test]
+        public async Task MoveNode_IntoDeepUnrelatedFolder_Succeeds()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto moving = await CreateFolderAsync(root.Id, "moving");
+
+            Guid deepestId;
+            using (IServiceScope scope = _factory!.Services.CreateScope())
+            {
+                CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                Node rootEntity = await db.Nodes.AsNoTracking().SingleAsync(n => n.Id == root.Id);
+                Guid parentId = root.Id;
+
+                for (int i = 0; i < 300; i++)
+                {
+                    var node = new Cotton.Database.Models.Node
+                    {
+                        LayoutId = rootEntity.LayoutId,
+                        OwnerId = rootEntity.OwnerId,
+                        Type = Cotton.Database.Models.Enums.NodeType.Default,
+                        ParentId = parentId,
+                    };
+                    node.SetName($"deep-{i:D3}");
+                    db.Nodes.Add(node);
+                    await db.SaveChangesAsync();
+                    parentId = node.Id;
+                }
+
+                deepestId = parentId;
+            }
+
+            HttpResponseMessage res = await MoveNodeAsync(moving.Id, deepestId);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+            using IServiceScope verifyScope = _factory!.Services.CreateScope();
+            CottonDbContext verifyDb = verifyScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            Node moved = await verifyDb.Nodes.AsNoTracking().SingleAsync(n => n.Id == moving.Id);
+            Assert.That(moved.ParentId, Is.EqualTo(deepestId));
+        }
+
+        [Test]
+        public async Task MoveNode_NameCollisionWithSiblingFolder_Returns409()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeDto moving = await CreateFolderAsync(src.Id, "thing");
+            await CreateFolderAsync(dst.Id, "thing");
+
+            HttpResponseMessage res = await MoveNodeAsync(moving.Id, dst.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        }
+
+        [Test]
+        public async Task MoveNode_NameCollisionWithSiblingFile_Returns409()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeDto moving = await CreateFolderAsync(src.Id, "thing");
+            await CreateFileAsync(dst.Id, "thing", "blocker");
+
+            HttpResponseMessage res = await MoveNodeAsync(moving.Id, dst.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        }
+
+        [Test]
+        public async Task MoveNode_TargetNotFound_Returns404()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto folder = await CreateFolderAsync(root.Id, "folder");
+
+            HttpResponseMessage res = await MoveNodeAsync(folder.Id, Guid.NewGuid());
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
+
+        [Test]
+        public async Task ConcurrentMoveFileAndCreateFolder_SameNameSameTarget_OnlyOneWins()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeFileManifestDto movingFile = await CreateFileAsync(src.Id, "thing", "cross-handler-race");
+
+            // Without the lock applied to CreateNode too, MoveFile would see no folder
+            // "thing" in dst and CreateNode would see no file "thing" in dst — both
+            // pre-checks pass independently and dst would end up with both.
+            Task<HttpResponseMessage> moveFile = MoveFileAsync(movingFile.Id, dst.Id);
+            Task<HttpResponseMessage> createFolder = _client!.PutAsJsonAsync(
+                "/api/v1/layouts/nodes",
+                new CreateNodeRequestDto { ParentId = dst.Id, Name = "thing" });
+            HttpResponseMessage[] results = await Task.WhenAll(moveFile, createFolder);
+
+            int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
+            int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
+            Assert.That(oks, Is.EqualTo(1), "Exactly one cross-handler write must win.");
+            Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
+
+            using IServiceScope scope = _factory!.Services.CreateScope();
+            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == dst.Id && f.NameKey == "thing");
+            int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == dst.Id && n.NameKey == "thing");
+            Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
+                "Destination must have exactly one entry named 'thing' across both tables.");
+        }
+
+        [Test]
+        public async Task ConcurrentCreateFileAndCreateFolder_SameNameSameTarget_OnlyOneWins()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto target = await CreateFolderAsync(root.Id, "dst");
+            var hash = await UploadChunkViaClientAsync(_client!, "create-file-folder-race");
+
+            Task<HttpResponseMessage> createFile = _client!.PostAsJsonAsync(
+                "/api/v1/files/from-chunks",
+                new CreateFileFromChunksRequestDto
+                {
+                    ChunkHashes = [hash],
+                    Name = "thing",
+                    ContentType = "application/octet-stream",
+                    Hash = hash,
+                    NodeId = target.Id
+                });
+            Task<HttpResponseMessage> createFolder = _client!.PutAsJsonAsync(
+                "/api/v1/layouts/nodes",
+                new CreateNodeRequestDto { ParentId = target.Id, Name = "thing" });
+
+            HttpResponseMessage[] results = await Task.WhenAll(createFile, createFolder);
+
+            int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
+            int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
+            Assert.That(oks, Is.EqualTo(1), "Exactly one cross-table create must win.");
+            Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
+
+            using IServiceScope scope = _factory!.Services.CreateScope();
+            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == target.Id && f.NameKey == "thing");
+            int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == target.Id && n.NameKey == "thing");
+            Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
+                "Destination must have exactly one entry named 'thing' across both tables.");
+        }
+
+        [Test]
+        public async Task ConcurrentMoveFileAndMoveNode_SameNameSameTarget_OnlyOneWins()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src1 = await CreateFolderAsync(root.Id, "src1");
+            NodeDto src2 = await CreateFolderAsync(root.Id, "src2");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeFileManifestDto movingFile = await CreateFileAsync(src1.Id, "thing", "cross-table-race");
+            NodeDto movingFolder = await CreateFolderAsync(src2.Id, "thing");
+
+            // Without the per-layout advisory lock, file's collision pre-check and
+            // folder's collision pre-check would both pass on the pre-update tree
+            // and both commits would land — dst would end up with both a file and a
+            // folder named "thing", which the create/rename paths normally forbid.
+            Task<HttpResponseMessage> moveFile = MoveFileAsync(movingFile.Id, dst.Id);
+            Task<HttpResponseMessage> moveFolder = MoveNodeAsync(movingFolder.Id, dst.Id);
+            HttpResponseMessage[] results = await Task.WhenAll(moveFile, moveFolder);
+
+            int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
+            int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
+            Assert.That(oks, Is.EqualTo(1), "Exactly one cross-table move must win.");
+            Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
+
+            using IServiceScope scope = _factory!.Services.CreateScope();
+            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == dst.Id && f.NameKey == "thing");
+            int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == dst.Id && n.NameKey == "thing");
+            Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
+                "Destination must have exactly one entry named 'thing' across both tables.");
+        }
+
+        [Test]
+        public async Task MoveNode_ConcurrentSwap_DoesNotCreateCycle()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto a = await CreateFolderAsync(root.Id, "a");
+            NodeDto b = await CreateFolderAsync(root.Id, "b");
+
+            // Without the per-layout advisory lock, both descendant checks could pass
+            // on the pre-update tree and both commits would land — leaving A.parent=B
+            // and B.parent=A. With the lock the second request re-runs the descendant
+            // check inside the lock and rejects as into-descendant.
+            Task<HttpResponseMessage> moveAIntoB = MoveNodeAsync(a.Id, b.Id);
+            Task<HttpResponseMessage> moveBIntoA = MoveNodeAsync(b.Id, a.Id);
+            HttpResponseMessage[] results = await Task.WhenAll(moveAIntoB, moveBIntoA);
+
+            int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
+            int bads = results.Count(r => r.StatusCode == HttpStatusCode.BadRequest);
+            Assert.That(oks, Is.EqualTo(1), "Exactly one swap leg must succeed.");
+            Assert.That(bads, Is.EqualTo(1), "The losing leg must be rejected (into-descendant).");
+
+            using IServiceScope scope = _factory!.Services.CreateScope();
+            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            Assert.That(await ParentWalkReachesRoot(db, a.Id), Is.True, "A must reach the root with no cycle.");
+            Assert.That(await ParentWalkReachesRoot(db, b.Id), Is.True, "B must reach the root with no cycle.");
+        }
+
+        private static async Task<bool> ParentWalkReachesRoot(CottonDbContext db, Guid startId)
+        {
+            var seen = new HashSet<Guid>();
+            Guid? current = startId;
+            while (current.HasValue)
+            {
+                if (!seen.Add(current.Value)) return false;
+                if (seen.Count > 1024) return false;
+                current = await db.Nodes
+                    .AsNoTracking()
+                    .Where(n => n.Id == current.Value)
+                    .Select(n => n.ParentId)
+                    .SingleOrDefaultAsync();
+            }
+            return true;
+        }
+
+        [Test]
+        public async Task MoveNode_NonDefaultType_Returns404()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+
+            // Build a Trash-type sibling under root via the DI scope — the API does
+            // not expose creation of non-Default nodes.
+            Guid trashNodeId;
+            using (IServiceScope scope = _factory!.Services.CreateScope())
+            {
+                CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                Guid ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
+                Node rootEntity = await db.Nodes.AsNoTracking().SingleAsync(n => n.Id == root.Id);
+                var trash = new Cotton.Database.Models.Node
                 {
                     LayoutId = rootEntity.LayoutId,
-                    OwnerId = rootEntity.OwnerId,
-                    Type = Cotton.Database.Models.Enums.NodeType.Default,
-                    ParentId = parentId,
+                    OwnerId = ownerId,
+                    Type = Cotton.Database.Models.Enums.NodeType.Trash,
+                    ParentId = rootEntity.Id,
                 };
-                node.SetName($"deep-{i:D3}");
-                db.Nodes.Add(node);
+                trash.SetName("trash-thing");
+                db.Nodes.Add(trash);
                 await db.SaveChangesAsync();
-                parentId = node.Id;
+                trashNodeId = trash.Id;
             }
 
-            deepestId = parentId;
+            HttpResponseMessage res = await MoveNodeAsync(trashNodeId, dst.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound),
+                "Move endpoint must reject non-Default node types as not-found (no leak).");
         }
 
-        HttpResponseMessage res = await MoveNodeAsync(moving.Id, deepestId);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        [Test]
+        public async Task MoveNode_AcrossLayouts_Returns400()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto moving = await CreateFolderAsync(root.Id, "moving");
 
-        using IServiceScope verifyScope = _factory!.Services.CreateScope();
-        CottonDbContext verifyDb = verifyScope.ServiceProvider.GetRequiredService<CottonDbContext>();
-        Node moved = await verifyDb.Nodes.AsNoTracking().SingleAsync(n => n.Id == moving.Id);
-        Assert.That(moved.ParentId, Is.EqualTo(deepestId));
-    }
+            (Guid OwnerId, Guid RootId) additionalLayout = await CreateAdditionalLayoutRootAsync(
+                _factory!.Services,
+                "other-root");
 
-    [Test]
-    public async Task MoveNode_NameCollisionWithSiblingFolder_Returns409()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto src = await CreateFolderAsync(root.Id, "src");
-        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
-        NodeDto moving = await CreateFolderAsync(src.Id, "thing");
-        await CreateFolderAsync(dst.Id, "thing");
+            HttpResponseMessage res = await MoveNodeAsync(moving.Id, additionalLayout.RootId);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
 
-        HttpResponseMessage res = await MoveNodeAsync(moving.Id, dst.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
-    }
+        // ---------------------------------------------------------------------
+        // Notification failure does not fail the move
+        // ---------------------------------------------------------------------
 
-    [Test]
-    public async Task MoveNode_NameCollisionWithSiblingFile_Returns409()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto src = await CreateFolderAsync(root.Id, "src");
-        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
-        NodeDto moving = await CreateFolderAsync(src.Id, "thing");
-        await CreateFileAsync(dst.Id, "thing", "blocker");
+        [Test]
+        public async Task ConcurrentWebDavPutAndMkCol_SameNameSameTarget_OnlyOneWins()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto target = await CreateFolderAsync(root.Id, "webdav-race");
 
-        HttpResponseMessage res = await MoveNodeAsync(moving.Id, dst.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
-    }
+            await UseWebDavBasicAuthAsync(_client!);
 
-    [Test]
-    public async Task MoveNode_TargetNotFound_Returns404()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto folder = await CreateFolderAsync(root.Id, "folder");
+            Task<HttpResponseMessage> putFile = SendWebDavPutAsync(_client!, "/api/v1/webdav/webdav-race/thing", "webdav-put-race");
+            Task<HttpResponseMessage> mkcol = SendWebDavMkColAsync(_client!, "/api/v1/webdav/webdav-race/thing");
+            HttpResponseMessage[] results = await Task.WhenAll(putFile, mkcol);
 
-        HttpResponseMessage res = await MoveNodeAsync(folder.Id, Guid.NewGuid());
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
-    }
+            int successes = results.Count(r => r.StatusCode is HttpStatusCode.Created or HttpStatusCode.NoContent);
+            int rejections = results.Count(r => r.StatusCode is HttpStatusCode.Conflict
+                or HttpStatusCode.MethodNotAllowed
+                or HttpStatusCode.PreconditionFailed);
+            Assert.That(successes, Is.EqualTo(1), "Exactly one WebDAV namespace write must win.");
+            Assert.That(rejections, Is.EqualTo(1), "The other WebDAV write must be rejected.");
 
-    [Test]
-    public async Task ConcurrentMoveFileAndCreateFolder_SameNameSameTarget_OnlyOneWins()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto src = await CreateFolderAsync(root.Id, "src");
-        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
-        NodeFileManifestDto movingFile = await CreateFileAsync(src.Id, "thing", "cross-handler-race");
+            using IServiceScope scope = _factory!.Services.CreateScope();
+            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == target.Id && f.NameKey == "thing");
+            int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == target.Id && n.NameKey == "thing");
+            Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
+                "Destination must have exactly one WebDAV entry named 'thing' across both tables.");
+        }
 
-        // Without the lock applied to CreateNode too, MoveFile would see no folder
-        // "thing" in dst and CreateNode would see no file "thing" in dst — both
-        // pre-checks pass independently and dst would end up with both.
-        Task<HttpResponseMessage> moveFile = MoveFileAsync(movingFile.Id, dst.Id);
-        Task<HttpResponseMessage> createFolder = _client!.PutAsJsonAsync(
-            "/api/v1/layouts/nodes",
-            new CreateNodeRequestDto { ParentId = dst.Id, Name = "thing" });
-        HttpResponseMessage[] results = await Task.WhenAll(moveFile, createFolder);
+        [Test]
+        public async Task ConcurrentFileUpdates_AcrossLayouts_DoNotExceedUserStorageQuota()
+        {
+            _client?.Dispose();
+            _factory?.Dispose();
 
-        int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
-        int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
-        Assert.That(oks, Is.EqualTo(1), "Exactly one cross-handler write must win.");
-        Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
+            QuotaMutationBarrier barrier = new();
+            using TestAppFactory factory = new(_overrides);
+            using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<ILayoutMutationGate>();
+                    services.AddSingleton(barrier);
+                    services.AddSingleton<ILayoutMutationGate>(serviceProvider =>
+                        new QuotaBarrierLayoutMutationGate(
+                            serviceProvider.GetRequiredService<QuotaMutationBarrier>()));
+                });
+            });
+            using HttpClient client = customFactory.CreateClient(
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-        using IServiceScope scope = _factory!.Services.CreateScope();
-        CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-        int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == dst.Id && f.NameKey == "thing");
-        int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == dst.Id && n.NameKey == "thing");
-        Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
-            "Destination must have exactly one entry named 'thing' across both tables.");
-    }
+            string token = await LoginViaClientAsync(client);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using HttpResponseMessage quotaResponse = await client.PatchAsJsonAsync(
+                "/api/v1/server/settings/default-user-storage-quota-bytes",
+                10L);
+            quotaResponse.EnsureSuccessStatusCode();
+            try
+            {
+                NodeDto? primaryRoot = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+                Assert.That(primaryRoot, Is.Not.Null);
+                (Guid OwnerId, Guid RootId) additionalLayout = await CreateAdditionalLayoutRootAsync(
+                    customFactory.Services,
+                    "quota-other-root");
+                Guid primaryFileId = await CreateEmptyFileAsync(
+                    customFactory.Services,
+                    additionalLayout.OwnerId,
+                    primaryRoot!.Id,
+                    "quota-a.txt");
+                Guid secondaryFileId = await CreateEmptyFileAsync(
+                    customFactory.Services,
+                    additionalLayout.OwnerId,
+                    additionalLayout.RootId,
+                    "quota-b.txt");
+                string firstHash = await UploadChunkViaClientAsync(client, "123456");
+                string secondHash = await UploadChunkViaClientAsync(client, "abcdef");
+                barrier.Enable();
 
-    [Test]
-    public async Task ConcurrentCreateFileAndCreateFolder_SameNameSameTarget_OnlyOneWins()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto target = await CreateFolderAsync(root.Id, "dst");
-        var hash = await UploadChunkViaClientAsync(_client!, "create-file-folder-race");
+                Task<HttpResponseMessage> firstUpdate = SendUpdateFileViaClientAsync(
+                    client,
+                    primaryFileId,
+                    primaryRoot.Id,
+                    "quota-a.txt",
+                    firstHash);
+                Task<HttpResponseMessage> secondUpdate = SendUpdateFileViaClientAsync(
+                    client,
+                    secondaryFileId,
+                    additionalLayout.RootId,
+                    "quota-b.txt",
+                    secondHash);
+                HttpResponseMessage[] responses = await Task.WhenAll(firstUpdate, secondUpdate);
+                using HttpResponseMessage firstResponse = responses[0];
+                using HttpResponseMessage secondResponse = responses[1];
 
-        Task<HttpResponseMessage> createFile = _client!.PostAsJsonAsync(
-            "/api/v1/files/from-chunks",
-            new CreateFileFromChunksRequestDto
+                int successes = responses.Count(response => response.IsSuccessStatusCode);
+                int quotaRejections = responses.Count(response => response.StatusCode == (HttpStatusCode)507);
+                using (Assert.EnterMultipleScope())
+                {
+                    Assert.That(successes, Is.EqualTo(1));
+                    Assert.That(quotaRejections, Is.EqualTo(1));
+                }
+
+                using IServiceScope scope = customFactory.Services.CreateScope();
+                CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                long usedBytes = await dbContext.NodeFiles
+                    .AsNoTracking()
+                    .Where(nodeFile => nodeFile.OwnerId == additionalLayout.OwnerId)
+                    .SumAsync(nodeFile => nodeFile.FileManifest.SizeBytes);
+                Assert.That(usedBytes, Is.EqualTo(6));
+            }
+            finally
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                using HttpResponseMessage resetQuotaResponse = await client.PatchAsJsonAsync<long?>(
+                    "/api/v1/server/settings/default-user-storage-quota-bytes",
+                    null);
+                resetQuotaResponse.EnsureSuccessStatusCode();
+            }
+        }
+
+        [Test]
+        public async Task WebDavMove_NotificationFailureDoesNotFailRequest()
+        {
+            // Reset the standard factory so we can wire a throwing notifier.
+            _client?.Dispose();
+            _factory?.Dispose();
+
+            using var factory = new TestAppFactory(_overrides);
+            using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IEventNotificationService>();
+                    services.AddScoped<IEventNotificationService, ThrowingEventNotificationService>();
+                });
+            });
+            using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            // Provision the user + source/destination folders + a file via REST first.
+            var token = await LoginViaClientAsync(client);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            NodeDto src = await CreateFolderViaClientAsync(client, root!.Id, "src");
+            NodeDto dst = await CreateFolderViaClientAsync(client, root.Id, "dst");
+            NodeFileManifestDto file = await CreateFileViaClientAsync(client, src.Id, "doc.txt", "webdav-fail-notify");
+
+            // Switch to WebDAV basic auth for the MOVE request.
+            await UseWebDavBasicAuthAsync(client);
+
+            using var moveRequest = new HttpRequestMessage(new HttpMethod("MOVE"), "/api/v1/webdav/src/doc.txt");
+            moveRequest.Headers.Add("Destination", "/api/v1/webdav/dst/doc.txt");
+            moveRequest.Headers.Add("Overwrite", "F");
+            HttpResponseMessage res = await client.SendAsync(moveRequest);
+
+            // WebDAV MOVE returns 201 Created when the destination did not previously exist,
+            // or 204 NoContent on overwrite. Either is success — but it MUST NOT fail
+            // because the realtime notifier threw after the move already committed.
+            Assert.That((int)res.StatusCode, Is.AnyOf(201, 204),
+                $"WebDAV MOVE must succeed despite notification failure (got {(int)res.StatusCode}).");
+
+            using (IServiceScope scope = customFactory.Services.CreateScope())
+            {
+                CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                NodeFile moved = await db.NodeFiles.AsNoTracking().SingleAsync(x => x.Id == file.Id);
+                Assert.That(moved.NodeId, Is.EqualTo(dst.Id), "File must have been moved despite notification failure.");
+            }
+        }
+
+        [Test]
+        public async Task WebDavDelete_NotificationsUseOriginalParents()
+        {
+            _client?.Dispose();
+            _factory?.Dispose();
+
+            using var factory = new TestAppFactory(_overrides);
+            using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IEventNotificationService>();
+                    services.AddSingleton<WebDavDeleteEventRecorder>();
+                    services.AddScoped<IEventNotificationService, RecordingWebDavDeleteEventNotificationService>();
+                });
+            });
+            using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            var token = await LoginViaClientAsync(client);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            NodeDto fileParent = await CreateFolderViaClientAsync(client, root!.Id, "delete-file-parent");
+            NodeFileManifestDto file = await CreateFileViaClientAsync(client, fileParent.Id, "doc.txt", "webdav-delete-file");
+            NodeDto folder = await CreateFolderViaClientAsync(client, root.Id, "delete-folder-parent");
+
+            await UseWebDavBasicAuthAsync(client);
+
+            using var deleteFileRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-file-parent/doc.txt");
+            HttpResponseMessage deleteFileResponse = await client.SendAsync(deleteFileRequest);
+            Assert.That(deleteFileResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+            using var deleteFolderRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-folder-parent");
+            HttpResponseMessage deleteFolderResponse = await client.SendAsync(deleteFolderRequest);
+            Assert.That(deleteFolderResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+            WebDavDeleteEventRecorder recorder = customFactory.Services.GetRequiredService<WebDavDeleteEventRecorder>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(recorder.FileDeletedNodeFileId, Is.EqualTo(file.Id));
+                Assert.That(recorder.FileDeletedParentNodeId, Is.EqualTo(fileParent.Id));
+                Assert.That(recorder.NodeDeletedNodeId, Is.EqualTo(folder.Id));
+                Assert.That(recorder.NodeDeletedParentNodeId, Is.EqualTo(root.Id));
+            });
+        }
+
+        [Test]
+        public async Task MoveFile_NotificationFailureDoesNotFailRequest()
+        {
+            // Reset the standard factory so we can wire a throwing notifier.
+            _client?.Dispose();
+            _factory?.Dispose();
+
+            using var factory = new TestAppFactory(_overrides);
+            using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IEventNotificationService>();
+                    services.AddScoped<IEventNotificationService, ThrowingEventNotificationService>();
+                });
+            });
+            using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            // Authenticate via this client.
+            var token = await LoginViaClientAsync(client);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
+            NodeDto src = await CreateFolderViaClientAsync(client, root!.Id, "src");
+            NodeDto dst = await CreateFolderViaClientAsync(client, root.Id, "dst");
+            NodeFileManifestDto file = await CreateFileViaClientAsync(client, src.Id, "doc.txt", "fail-notify-content");
+
+            HttpResponseMessage res = await client.PatchAsJsonAsync(
+                $"/api/v1/files/{file.Id}/move",
+                new MoveFileRequestDto { ParentId = dst.Id });
+
+            // The handler must catch the notifier exception and still return 200.
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK),
+                "Notification failure must not turn a committed move into a failed response.");
+
+            // Verify the move actually happened in DB.
+            await using CottonDbContext db = NewReadOnlyDbContext();
+            NodeFile moved = await db.NodeFiles.AsNoTracking().SingleAsync(x => x.Id == file.Id);
+            Assert.That(moved.NodeId, Is.EqualTo(dst.Id));
+        }
+
+        // ---------------------------------------------------------------------
+        // Helpers
+        // ---------------------------------------------------------------------
+
+        private CottonDbContext NewReadOnlyDbContext()
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<CottonDbContext>();
+            var csb = new NpgsqlConnectionStringBuilder
+            {
+                Host = "localhost",
+                Port = 5432,
+                Database = DatabaseName,
+                Username = "postgres",
+                Password = "postgres",
+                // Disable pooling so each test sees a fresh connection — between tests we
+                // recreate the schema (EnsureDeleted + Create + migrations) and Postgres
+                // type OIDs may change, which trips cached type lookups otherwise.
+                Pooling = false,
+            };
+            optionsBuilder.UseNpgsql(csb.ConnectionString);
+            return new CottonDbContext(optionsBuilder.Options);
+        }
+
+        private async Task AuthenticateAsync()
+        {
+            var token = await LoginViaClientAsync(_client!);
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        private static async Task<string> LoginViaClientAsync(HttpClient client)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            {
+                Content = JsonContent.Create(new LoginRequestDto()
+                {
+                    Username = "testuser",
+                    Password = "testpassword"
+                })
+            };
+            request.Headers.Add("X-Forwarded-For", "8.8.8.8");
+            HttpResponseMessage res = await client.SendAsync(request);
+            res.EnsureSuccessStatusCode();
+            TokenPairResponseDto? login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+            return login!.AccessToken;
+        }
+
+        private static async Task UseWebDavBasicAuthAsync(HttpClient client)
+        {
+            string webDavToken = await client.GetStringAsync("/api/v1/auth/webdav/token");
+            Assert.That(webDavToken, Is.Not.Empty);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Basic",
+                Convert.ToBase64String(Encoding.UTF8.GetBytes($"testuser:{webDavToken}")));
+        }
+
+        private async Task<NodeDto> GetRootAsync()
+        {
+            NodeDto? root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            return root!;
+        }
+
+        private Task<NodeDto> CreateFolderAsync(Guid parentId, string name)
+            => CreateFolderViaClientAsync(_client!, parentId, name);
+
+        private static async Task<NodeDto> CreateFolderViaClientAsync(HttpClient client, Guid parentId, string name)
+        {
+            HttpResponseMessage res = await client.PutAsJsonAsync("/api/v1/layouts/nodes", new CreateNodeRequestDto { ParentId = parentId, Name = name });
+            res.EnsureSuccessStatusCode();
+            NodeDto? node = await res.Content.ReadFromJsonAsync<NodeDto>();
+            return node!;
+        }
+
+        private Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
+            => CreateFileViaClientAsync(_client!, nodeId, name, body);
+
+        private static async Task<NodeFileManifestDto> CreateFileViaClientAsync(HttpClient client, Guid nodeId, string name, string body)
+        {
+            string hash = await UploadChunkViaClientAsync(client, body);
+            CreateFileFromChunksRequestDto request = new()
             {
                 ChunkHashes = [hash],
-                Name = "thing",
+                Name = name,
                 ContentType = "application/octet-stream",
                 Hash = hash,
-                NodeId = target.Id
-            });
-        Task<HttpResponseMessage> createFolder = _client!.PutAsJsonAsync(
-            "/api/v1/layouts/nodes",
-            new CreateNodeRequestDto { ParentId = target.Id, Name = "thing" });
-
-        HttpResponseMessage[] results = await Task.WhenAll(createFile, createFolder);
-
-        int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
-        int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
-        Assert.That(oks, Is.EqualTo(1), "Exactly one cross-table create must win.");
-        Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
-
-        using IServiceScope scope = _factory!.Services.CreateScope();
-        CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-        int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == target.Id && f.NameKey == "thing");
-        int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == target.Id && n.NameKey == "thing");
-        Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
-            "Destination must have exactly one entry named 'thing' across both tables.");
-    }
-
-    [Test]
-    public async Task ConcurrentMoveFileAndMoveNode_SameNameSameTarget_OnlyOneWins()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto src1 = await CreateFolderAsync(root.Id, "src1");
-        NodeDto src2 = await CreateFolderAsync(root.Id, "src2");
-        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
-        NodeFileManifestDto movingFile = await CreateFileAsync(src1.Id, "thing", "cross-table-race");
-        NodeDto movingFolder = await CreateFolderAsync(src2.Id, "thing");
-
-        // Without the per-layout advisory lock, file's collision pre-check and
-        // folder's collision pre-check would both pass on the pre-update tree
-        // and both commits would land — dst would end up with both a file and a
-        // folder named "thing", which the create/rename paths normally forbid.
-        Task<HttpResponseMessage> moveFile = MoveFileAsync(movingFile.Id, dst.Id);
-        Task<HttpResponseMessage> moveFolder = MoveNodeAsync(movingFolder.Id, dst.Id);
-        HttpResponseMessage[] results = await Task.WhenAll(moveFile, moveFolder);
-
-        int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
-        int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
-        Assert.That(oks, Is.EqualTo(1), "Exactly one cross-table move must win.");
-        Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
-
-        using IServiceScope scope = _factory!.Services.CreateScope();
-        CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-        int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == dst.Id && f.NameKey == "thing");
-        int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == dst.Id && n.NameKey == "thing");
-        Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
-            "Destination must have exactly one entry named 'thing' across both tables.");
-    }
-
-    [Test]
-    public async Task MoveNode_ConcurrentSwap_DoesNotCreateCycle()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto a = await CreateFolderAsync(root.Id, "a");
-        NodeDto b = await CreateFolderAsync(root.Id, "b");
-
-        // Without the per-layout advisory lock, both descendant checks could pass
-        // on the pre-update tree and both commits would land — leaving A.parent=B
-        // and B.parent=A. With the lock the second request re-runs the descendant
-        // check inside the lock and rejects as into-descendant.
-        Task<HttpResponseMessage> moveAIntoB = MoveNodeAsync(a.Id, b.Id);
-        Task<HttpResponseMessage> moveBIntoA = MoveNodeAsync(b.Id, a.Id);
-        HttpResponseMessage[] results = await Task.WhenAll(moveAIntoB, moveBIntoA);
-
-        int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
-        int bads = results.Count(r => r.StatusCode == HttpStatusCode.BadRequest);
-        Assert.That(oks, Is.EqualTo(1), "Exactly one swap leg must succeed.");
-        Assert.That(bads, Is.EqualTo(1), "The losing leg must be rejected (into-descendant).");
-
-        using IServiceScope scope = _factory!.Services.CreateScope();
-        CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-        Assert.That(await ParentWalkReachesRoot(db, a.Id), Is.True, "A must reach the root with no cycle.");
-        Assert.That(await ParentWalkReachesRoot(db, b.Id), Is.True, "B must reach the root with no cycle.");
-    }
-
-    private static async Task<bool> ParentWalkReachesRoot(CottonDbContext db, Guid startId)
-    {
-        var seen = new HashSet<Guid>();
-        Guid? current = startId;
-        while (current.HasValue)
-        {
-            if (!seen.Add(current.Value)) return false;
-            if (seen.Count > 1024) return false;
-            current = await db.Nodes
-                .AsNoTracking()
-                .Where(n => n.Id == current.Value)
-                .Select(n => n.ParentId)
-                .SingleOrDefaultAsync();
-        }
-        return true;
-    }
-
-    [Test]
-    public async Task MoveNode_NonDefaultType_Returns404()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto dst = await CreateFolderAsync(root.Id, "dst");
-
-        // Build a Trash-type sibling under root via the DI scope — the API does
-        // not expose creation of non-Default nodes.
-        Guid trashNodeId;
-        using (IServiceScope scope = _factory!.Services.CreateScope())
-        {
-            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            Guid ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
-            Node rootEntity = await db.Nodes.AsNoTracking().SingleAsync(n => n.Id == root.Id);
-            var trash = new Cotton.Database.Models.Node
-            {
-                LayoutId = rootEntity.LayoutId,
-                OwnerId = ownerId,
-                Type = Cotton.Database.Models.Enums.NodeType.Trash,
-                ParentId = rootEntity.Id,
+                NodeId = nodeId,
             };
-            trash.SetName("trash-thing");
-            db.Nodes.Add(trash);
-            await db.SaveChangesAsync();
-            trashNodeId = trash.Id;
+            using HttpResponseMessage createRes = await client.PostAsJsonAsync("/api/v1/files/from-chunks", request);
+            createRes.EnsureSuccessStatusCode();
+
+            // Read back from the folder so callers get the same projection as the files UI.
+            NodeContentDto? children = await client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
+            NodeFileManifestDto dto = children!.Files.SingleOrDefault(f => f.Name == name)
+                ?? throw new InvalidOperationException($"Created file '{name}' not found in node {nodeId}.");
+            return dto;
         }
 
-        HttpResponseMessage res = await MoveNodeAsync(trashNodeId, dst.Id);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound),
-            "Move endpoint must reject non-Default node types as not-found (no leak).");
-    }
-
-    [Test]
-    public async Task MoveNode_AcrossLayouts_Returns400()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto moving = await CreateFolderAsync(root.Id, "moving");
-
-        (Guid OwnerId, Guid RootId) additionalLayout = await CreateAdditionalLayoutRootAsync(
-            _factory!.Services,
-            "other-root");
-
-        HttpResponseMessage res = await MoveNodeAsync(moving.Id, additionalLayout.RootId);
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-    }
-
-    // ---------------------------------------------------------------------
-    // Notification failure does not fail the move
-    // ---------------------------------------------------------------------
-
-    [Test]
-    public async Task ConcurrentWebDavPutAndMkCol_SameNameSameTarget_OnlyOneWins()
-    {
-        await AuthenticateAsync();
-        NodeDto root = await GetRootAsync();
-        NodeDto target = await CreateFolderAsync(root.Id, "webdav-race");
-
-        await UseWebDavBasicAuthAsync(_client!);
-
-        Task<HttpResponseMessage> putFile = SendWebDavPutAsync(_client!, "/api/v1/webdav/webdav-race/thing", "webdav-put-race");
-        Task<HttpResponseMessage> mkcol = SendWebDavMkColAsync(_client!, "/api/v1/webdav/webdav-race/thing");
-        HttpResponseMessage[] results = await Task.WhenAll(putFile, mkcol);
-
-        int successes = results.Count(r => r.StatusCode is HttpStatusCode.Created or HttpStatusCode.NoContent);
-        int rejections = results.Count(r => r.StatusCode is HttpStatusCode.Conflict
-            or HttpStatusCode.MethodNotAllowed
-            or HttpStatusCode.PreconditionFailed);
-        Assert.That(successes, Is.EqualTo(1), "Exactly one WebDAV namespace write must win.");
-        Assert.That(rejections, Is.EqualTo(1), "The other WebDAV write must be rejected.");
-
-        using IServiceScope scope = _factory!.Services.CreateScope();
-        CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-        int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == target.Id && f.NameKey == "thing");
-        int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == target.Id && n.NameKey == "thing");
-        Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
-            "Destination must have exactly one WebDAV entry named 'thing' across both tables.");
-    }
-
-    [Test]
-    public async Task ConcurrentFileUpdates_AcrossLayouts_DoNotExceedUserStorageQuota()
-    {
-        _client?.Dispose();
-        _factory?.Dispose();
-
-        QuotaMutationBarrier barrier = new();
-        using TestAppFactory factory = new(_overrides);
-        using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+        private static Task<HttpResponseMessage> SendUpdateFileViaClientAsync(
+            HttpClient client,
+            Guid nodeFileId,
+            Guid nodeId,
+            string name,
+            string hash)
         {
-            builder.ConfigureTestServices(services =>
+            CreateFileFromChunksRequestDto request = new()
             {
-                services.RemoveAll<ILayoutMutationGate>();
-                services.AddSingleton(barrier);
-                services.AddSingleton<ILayoutMutationGate>(serviceProvider =>
-                    new QuotaBarrierLayoutMutationGate(
-                        serviceProvider.GetRequiredService<QuotaMutationBarrier>()));
-            });
-        });
-        using HttpClient client = customFactory.CreateClient(
-            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+                ChunkHashes = [hash],
+                Name = name,
+                ContentType = "application/octet-stream",
+                Hash = hash,
+                NodeId = nodeId,
+            };
+            return client.PatchAsJsonAsync($"/api/v1/files/{nodeFileId}/update-content", request);
+        }
 
-        string token = await LoginViaClientAsync(client);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        using HttpResponseMessage quotaResponse = await client.PatchAsJsonAsync(
-            "/api/v1/server/settings/default-user-storage-quota-bytes",
-            10L);
-        quotaResponse.EnsureSuccessStatusCode();
-        try
+        private static async Task<(Guid OwnerId, Guid RootId)> CreateAdditionalLayoutRootAsync(
+            IServiceProvider services,
+            string rootName)
         {
-            NodeDto? primaryRoot = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-            Assert.That(primaryRoot, Is.Not.Null);
-            (Guid OwnerId, Guid RootId) additionalLayout = await CreateAdditionalLayoutRootAsync(
-                customFactory.Services,
-                "quota-other-root");
-            Guid primaryFileId = await CreateEmptyFileAsync(
-                customFactory.Services,
-                additionalLayout.OwnerId,
-                primaryRoot!.Id,
-                "quota-a.txt");
-            Guid secondaryFileId = await CreateEmptyFileAsync(
-                customFactory.Services,
-                additionalLayout.OwnerId,
-                additionalLayout.RootId,
-                "quota-b.txt");
-            string firstHash = await UploadChunkViaClientAsync(client, "123456");
-            string secondHash = await UploadChunkViaClientAsync(client, "abcdef");
-            barrier.Enable();
-
-            Task<HttpResponseMessage> firstUpdate = SendUpdateFileViaClientAsync(
-                client,
-                primaryFileId,
-                primaryRoot.Id,
-                "quota-a.txt",
-                firstHash);
-            Task<HttpResponseMessage> secondUpdate = SendUpdateFileViaClientAsync(
-                client,
-                secondaryFileId,
-                additionalLayout.RootId,
-                "quota-b.txt",
-                secondHash);
-            HttpResponseMessage[] responses = await Task.WhenAll(firstUpdate, secondUpdate);
-            using HttpResponseMessage firstResponse = responses[0];
-            using HttpResponseMessage secondResponse = responses[1];
-
-            int successes = responses.Count(response => response.IsSuccessStatusCode);
-            int quotaRejections = responses.Count(response => response.StatusCode == (HttpStatusCode)507);
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(successes, Is.EqualTo(1));
-                Assert.That(quotaRejections, Is.EqualTo(1));
-            }
-
-            using IServiceScope scope = customFactory.Services.CreateScope();
+            using IServiceScope scope = services.CreateScope();
             CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            long usedBytes = await dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(nodeFile => nodeFile.OwnerId == additionalLayout.OwnerId)
-                .SumAsync(nodeFile => nodeFile.FileManifest.SizeBytes);
-            Assert.That(usedBytes, Is.EqualTo(6));
+            Guid ownerId = await dbContext.Users.AsNoTracking().Select(user => user.Id).FirstAsync();
+            Cotton.Database.Models.Layout layout = new()
+            {
+                OwnerId = ownerId,
+                IsActive = false,
+            };
+            dbContext.UserLayouts.Add(layout);
+            await dbContext.SaveChangesAsync();
+
+            Cotton.Database.Models.Node root = new()
+            {
+                LayoutId = layout.Id,
+                OwnerId = ownerId,
+                Type = Cotton.Database.Models.Enums.NodeType.Default,
+                ParentId = null,
+            };
+            root.SetName(rootName);
+            dbContext.Nodes.Add(root);
+            await dbContext.SaveChangesAsync();
+            return (ownerId, root.Id);
         }
-        finally
+
+        private static async Task<Guid> CreateEmptyFileAsync(
+            IServiceProvider services,
+            Guid ownerId,
+            Guid nodeId,
+            string name)
         {
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            using HttpResponseMessage resetQuotaResponse = await client.PatchAsJsonAsync<long?>(
-                "/api/v1/server/settings/default-user-storage-quota-bytes",
-                null);
-            resetQuotaResponse.EnsureSuccessStatusCode();
+            using IServiceScope scope = services.CreateScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            FileManifest manifest = new()
+            {
+                ProposedContentHash = Hasher.HashData(Guid.NewGuid().ToByteArray()),
+                ContentType = "application/octet-stream",
+                SizeBytes = 0,
+            };
+            NodeFile nodeFile = new()
+            {
+                OwnerId = ownerId,
+                NodeId = nodeId,
+                FileManifest = manifest,
+            };
+            nodeFile.OriginalNodeFileId = nodeFile.Id;
+            nodeFile.SetName(name);
+            dbContext.NodeFiles.Add(nodeFile);
+            await dbContext.SaveChangesAsync();
+            return nodeFile.Id;
         }
-    }
 
-    [Test]
-    public async Task WebDavMove_NotificationFailureDoesNotFailRequest()
-    {
-        // Reset the standard factory so we can wire a throwing notifier.
-        _client?.Dispose();
-        _factory?.Dispose();
-
-        using var factory = new TestAppFactory(_overrides);
-        using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+        private static async Task<string> UploadChunkViaClientAsync(HttpClient client, string body)
         {
-            builder.ConfigureTestServices(services =>
+            var content = Encoding.UTF8.GetBytes(body);
+            var hash = Hasher.ToHexStringHash(Hasher.HashData(content));
+            using var form = new MultipartFormDataContent
             {
-                services.RemoveAll<IEventNotificationService>();
-                services.AddScoped<IEventNotificationService, ThrowingEventNotificationService>();
-            });
-        });
-        using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-
-        // Provision the user + source/destination folders + a file via REST first.
-        var token = await LoginViaClientAsync(client);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        NodeDto src = await CreateFolderViaClientAsync(client, root!.Id, "src");
-        NodeDto dst = await CreateFolderViaClientAsync(client, root.Id, "dst");
-        NodeFileManifestDto file = await CreateFileViaClientAsync(client, src.Id, "doc.txt", "webdav-fail-notify");
-
-        // Switch to WebDAV basic auth for the MOVE request.
-        await UseWebDavBasicAuthAsync(client);
-
-        using var moveRequest = new HttpRequestMessage(new HttpMethod("MOVE"), "/api/v1/webdav/src/doc.txt");
-        moveRequest.Headers.Add("Destination", "/api/v1/webdav/dst/doc.txt");
-        moveRequest.Headers.Add("Overwrite", "F");
-        HttpResponseMessage res = await client.SendAsync(moveRequest);
-
-        // WebDAV MOVE returns 201 Created when the destination did not previously exist,
-        // or 204 NoContent on overwrite. Either is success — but it MUST NOT fail
-        // because the realtime notifier threw after the move already committed.
-        Assert.That((int)res.StatusCode, Is.AnyOf(201, 204),
-            $"WebDAV MOVE must succeed despite notification failure (got {(int)res.StatusCode}).");
-
-        using (IServiceScope scope = customFactory.Services.CreateScope())
-        {
-            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            NodeFile moved = await db.NodeFiles.AsNoTracking().SingleAsync(x => x.Id == file.Id);
-            Assert.That(moved.NodeId, Is.EqualTo(dst.Id), "File must have been moved despite notification failure.");
-        }
-    }
-
-    [Test]
-    public async Task WebDavDelete_NotificationsUseOriginalParents()
-    {
-        _client?.Dispose();
-        _factory?.Dispose();
-
-        using var factory = new TestAppFactory(_overrides);
-        using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureTestServices(services =>
-            {
-                services.RemoveAll<IEventNotificationService>();
-                services.AddSingleton<WebDavDeleteEventRecorder>();
-                services.AddScoped<IEventNotificationService, RecordingWebDavDeleteEventNotificationService>();
-            });
-        });
-        using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-
-        var token = await LoginViaClientAsync(client);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        NodeDto fileParent = await CreateFolderViaClientAsync(client, root!.Id, "delete-file-parent");
-        NodeFileManifestDto file = await CreateFileViaClientAsync(client, fileParent.Id, "doc.txt", "webdav-delete-file");
-        NodeDto folder = await CreateFolderViaClientAsync(client, root.Id, "delete-folder-parent");
-
-        await UseWebDavBasicAuthAsync(client);
-
-        using var deleteFileRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-file-parent/doc.txt");
-        HttpResponseMessage deleteFileResponse = await client.SendAsync(deleteFileRequest);
-        Assert.That(deleteFileResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
-
-        using var deleteFolderRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-folder-parent");
-        HttpResponseMessage deleteFolderResponse = await client.SendAsync(deleteFolderRequest);
-        Assert.That(deleteFolderResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
-
-        WebDavDeleteEventRecorder recorder = customFactory.Services.GetRequiredService<WebDavDeleteEventRecorder>();
-        Assert.Multiple(() =>
-        {
-            Assert.That(recorder.FileDeletedNodeFileId, Is.EqualTo(file.Id));
-            Assert.That(recorder.FileDeletedParentNodeId, Is.EqualTo(fileParent.Id));
-            Assert.That(recorder.NodeDeletedNodeId, Is.EqualTo(folder.Id));
-            Assert.That(recorder.NodeDeletedParentNodeId, Is.EqualTo(root.Id));
-        });
-    }
-
-    [Test]
-    public async Task MoveFile_NotificationFailureDoesNotFailRequest()
-    {
-        // Reset the standard factory so we can wire a throwing notifier.
-        _client?.Dispose();
-        _factory?.Dispose();
-
-        using var factory = new TestAppFactory(_overrides);
-        using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureTestServices(services =>
-            {
-                services.RemoveAll<IEventNotificationService>();
-                services.AddScoped<IEventNotificationService, ThrowingEventNotificationService>();
-            });
-        });
-        using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-
-        // Authenticate via this client.
-        var token = await LoginViaClientAsync(client);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
-        NodeDto src = await CreateFolderViaClientAsync(client, root!.Id, "src");
-        NodeDto dst = await CreateFolderViaClientAsync(client, root.Id, "dst");
-        NodeFileManifestDto file = await CreateFileViaClientAsync(client, src.Id, "doc.txt", "fail-notify-content");
-
-        HttpResponseMessage res = await client.PatchAsJsonAsync(
-            $"/api/v1/files/{file.Id}/move",
-            new MoveFileRequestDto { ParentId = dst.Id });
-
-        // The handler must catch the notifier exception and still return 200.
-        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK),
-            "Notification failure must not turn a committed move into a failed response.");
-
-        // Verify the move actually happened in DB.
-        await using CottonDbContext db = NewReadOnlyDbContext();
-        NodeFile moved = await db.NodeFiles.AsNoTracking().SingleAsync(x => x.Id == file.Id);
-        Assert.That(moved.NodeId, Is.EqualTo(dst.Id));
-    }
-
-    // ---------------------------------------------------------------------
-    // Helpers
-    // ---------------------------------------------------------------------
-
-    private CottonDbContext NewReadOnlyDbContext()
-    {
-        var optionsBuilder = new DbContextOptionsBuilder<CottonDbContext>();
-        var csb = new NpgsqlConnectionStringBuilder
-        {
-            Host = "localhost",
-            Port = 5432,
-            Database = DatabaseName,
-            Username = "postgres",
-            Password = "postgres",
-            // Disable pooling so each test sees a fresh connection — between tests we
-            // recreate the schema (EnsureDeleted + Create + migrations) and Postgres
-            // type OIDs may change, which trips cached type lookups otherwise.
-            Pooling = false,
-        };
-        optionsBuilder.UseNpgsql(csb.ConnectionString);
-        return new CottonDbContext(optionsBuilder.Options);
-    }
-
-    private async Task AuthenticateAsync()
-    {
-        var token = await LoginViaClientAsync(_client!);
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-    }
-
-    private static async Task<string> LoginViaClientAsync(HttpClient client)
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
-        {
-            Content = JsonContent.Create(new LoginRequestDto()
-            {
-                Username = "testuser",
-                Password = "testpassword"
-            })
-        };
-        request.Headers.Add("X-Forwarded-For", "8.8.8.8");
-        HttpResponseMessage res = await client.SendAsync(request);
-        res.EnsureSuccessStatusCode();
-        TokenPairResponseDto? login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
-        return login!.AccessToken;
-    }
-
-    private static async Task UseWebDavBasicAuthAsync(HttpClient client)
-    {
-        string webDavToken = await client.GetStringAsync("/api/v1/auth/webdav/token");
-        Assert.That(webDavToken, Is.Not.Empty);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Basic",
-            Convert.ToBase64String(Encoding.UTF8.GetBytes($"testuser:{webDavToken}")));
-    }
-
-    private async Task<NodeDto> GetRootAsync()
-    {
-        NodeDto? root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        return root!;
-    }
-
-    private Task<NodeDto> CreateFolderAsync(Guid parentId, string name)
-        => CreateFolderViaClientAsync(_client!, parentId, name);
-
-    private static async Task<NodeDto> CreateFolderViaClientAsync(HttpClient client, Guid parentId, string name)
-    {
-        HttpResponseMessage res = await client.PutAsJsonAsync("/api/v1/layouts/nodes", new CreateNodeRequestDto { ParentId = parentId, Name = name });
-        res.EnsureSuccessStatusCode();
-        NodeDto? node = await res.Content.ReadFromJsonAsync<NodeDto>();
-        return node!;
-    }
-
-    private Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
-        => CreateFileViaClientAsync(_client!, nodeId, name, body);
-
-    private static async Task<NodeFileManifestDto> CreateFileViaClientAsync(HttpClient client, Guid nodeId, string name, string body)
-    {
-        string hash = await UploadChunkViaClientAsync(client, body);
-        CreateFileFromChunksRequestDto request = new()
-        {
-            ChunkHashes = [hash],
-            Name = name,
-            ContentType = "application/octet-stream",
-            Hash = hash,
-            NodeId = nodeId,
-        };
-        using HttpResponseMessage createRes = await client.PostAsJsonAsync("/api/v1/files/from-chunks", request);
-        createRes.EnsureSuccessStatusCode();
-
-        // Read back from the folder so callers get the same projection as the files UI.
-        NodeContentDto? children = await client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
-        NodeFileManifestDto dto = children!.Files.SingleOrDefault(f => f.Name == name)
-            ?? throw new InvalidOperationException($"Created file '{name}' not found in node {nodeId}.");
-        return dto;
-    }
-
-    private static Task<HttpResponseMessage> SendUpdateFileViaClientAsync(
-        HttpClient client,
-        Guid nodeFileId,
-        Guid nodeId,
-        string name,
-        string hash)
-    {
-        CreateFileFromChunksRequestDto request = new()
-        {
-            ChunkHashes = [hash],
-            Name = name,
-            ContentType = "application/octet-stream",
-            Hash = hash,
-            NodeId = nodeId,
-        };
-        return client.PatchAsJsonAsync($"/api/v1/files/{nodeFileId}/update-content", request);
-    }
-
-    private static async Task<(Guid OwnerId, Guid RootId)> CreateAdditionalLayoutRootAsync(
-        IServiceProvider services,
-        string rootName)
-    {
-        using IServiceScope scope = services.CreateScope();
-        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-        Guid ownerId = await dbContext.Users.AsNoTracking().Select(user => user.Id).FirstAsync();
-        Cotton.Database.Models.Layout layout = new()
-        {
-            OwnerId = ownerId,
-            IsActive = false,
-        };
-        dbContext.UserLayouts.Add(layout);
-        await dbContext.SaveChangesAsync();
-
-        Cotton.Database.Models.Node root = new()
-        {
-            LayoutId = layout.Id,
-            OwnerId = ownerId,
-            Type = Cotton.Database.Models.Enums.NodeType.Default,
-            ParentId = null,
-        };
-        root.SetName(rootName);
-        dbContext.Nodes.Add(root);
-        await dbContext.SaveChangesAsync();
-        return (ownerId, root.Id);
-    }
-
-    private static async Task<Guid> CreateEmptyFileAsync(
-        IServiceProvider services,
-        Guid ownerId,
-        Guid nodeId,
-        string name)
-    {
-        using IServiceScope scope = services.CreateScope();
-        CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-        FileManifest manifest = new()
-        {
-            ProposedContentHash = Hasher.HashData(Guid.NewGuid().ToByteArray()),
-            ContentType = "application/octet-stream",
-            SizeBytes = 0,
-        };
-        NodeFile nodeFile = new()
-        {
-            OwnerId = ownerId,
-            NodeId = nodeId,
-            FileManifest = manifest,
-        };
-        nodeFile.OriginalNodeFileId = nodeFile.Id;
-        nodeFile.SetName(name);
-        dbContext.NodeFiles.Add(nodeFile);
-        await dbContext.SaveChangesAsync();
-        return nodeFile.Id;
-    }
-
-    private static async Task<string> UploadChunkViaClientAsync(HttpClient client, string body)
-    {
-        var content = Encoding.UTF8.GetBytes(body);
-        var hash = Hasher.ToHexStringHash(Hasher.HashData(content));
-        using var form = new MultipartFormDataContent
-        {
-            {
-                new ByteArrayContent(content)
                 {
-                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                    new ByteArrayContent(content)
+                    {
+                        Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                    },
+                    "file",
+                    "chunk.bin"
                 },
-                "file",
-                "chunk.bin"
-            },
-            { new StringContent(hash), "hash" }
-        };
-        HttpResponseMessage upRes = await client.PostAsync("/api/v1/chunks", form);
-        upRes.EnsureSuccessStatusCode();
-        return hash;
-    }
+                { new StringContent(hash), "hash" }
+            };
+            HttpResponseMessage upRes = await client.PostAsync("/api/v1/chunks", form);
+            upRes.EnsureSuccessStatusCode();
+            return hash;
+        }
 
-    private static async Task<HttpResponseMessage> SendWebDavPutAsync(HttpClient client, string path, string body)
-    {
-        using var content = new StringContent(body, Encoding.UTF8, "text/plain");
-        using var request = new HttpRequestMessage(HttpMethod.Put, path)
+        private static async Task<HttpResponseMessage> SendWebDavPutAsync(HttpClient client, string path, string body)
         {
-            Content = content
-        };
-        return await client.SendAsync(request);
+            using var content = new StringContent(body, Encoding.UTF8, "text/plain");
+            using var request = new HttpRequestMessage(HttpMethod.Put, path)
+            {
+                Content = content
+            };
+            return await client.SendAsync(request);
+        }
+
+        private static async Task<HttpResponseMessage> SendWebDavMkColAsync(HttpClient client, string path)
+        {
+            using var request = new HttpRequestMessage(new HttpMethod("MKCOL"), path);
+            return await client.SendAsync(request);
+        }
+
+        private async Task<NodeContentDto> GetChildrenAsync(Guid nodeId)
+        {
+            NodeContentDto? res = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
+            return res!;
+        }
+
+        private Task<HttpResponseMessage> MoveFileAsync(Guid fileId, Guid parentId)
+            => _client!.PatchAsJsonAsync($"/api/v1/files/{fileId}/move", new MoveFileRequestDto { ParentId = parentId });
+
+        private Task<HttpResponseMessage> MoveNodeAsync(Guid nodeId, Guid parentId)
+            => _client!.PatchAsJsonAsync($"/api/v1/layouts/nodes/{nodeId}/move", new MoveNodeRequestDto { ParentId = parentId });
     }
 
-    private static async Task<HttpResponseMessage> SendWebDavMkColAsync(HttpClient client, string path)
+    internal class ThrowingEventNotificationService : IEventNotificationService
     {
-        using var request = new HttpRequestMessage(new HttpMethod("MKCOL"), path);
-        return await client.SendAsync(request);
+        public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+        public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     }
 
-    private async Task<NodeContentDto> GetChildrenAsync(Guid nodeId)
+    internal class WebDavDeleteEventRecorder
     {
-        NodeContentDto? res = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
-        return res!;
+        public Guid? FileDeletedNodeFileId { get; set; }
+        public Guid? FileDeletedParentNodeId { get; set; }
+        public Guid? NodeDeletedNodeId { get; set; }
+        public Guid? NodeDeletedParentNodeId { get; set; }
     }
 
-    private Task<HttpResponseMessage> MoveFileAsync(Guid fileId, Guid parentId)
-        => _client!.PatchAsJsonAsync($"/api/v1/files/{fileId}/move", new MoveFileRequestDto { ParentId = parentId });
-
-    private Task<HttpResponseMessage> MoveNodeAsync(Guid nodeId, Guid parentId)
-        => _client!.PatchAsJsonAsync($"/api/v1/layouts/nodes/{nodeId}/move", new MoveNodeRequestDto { ParentId = parentId });
-}
-
-internal class ThrowingEventNotificationService : IEventNotificationService
-{
-    public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-}
-
-internal class WebDavDeleteEventRecorder
-{
-    public Guid? FileDeletedNodeFileId { get; set; }
-    public Guid? FileDeletedParentNodeId { get; set; }
-    public Guid? NodeDeletedNodeId { get; set; }
-    public Guid? NodeDeletedParentNodeId { get; set; }
-}
-
-internal class RecordingWebDavDeleteEventNotificationService(
-    WebDavDeleteEventRecorder recorder) : IEventNotificationService
-{
-    public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
-    public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
-
-    public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default)
+    internal class RecordingWebDavDeleteEventNotificationService(
+        WebDavDeleteEventRecorder recorder) : IEventNotificationService
     {
-        recorder.FileDeletedNodeFileId = nodeFileId;
-        recorder.FileDeletedParentNodeId = parentNodeId;
-        return Task.CompletedTask;
+        public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default)
+        {
+            recorder.FileDeletedNodeFileId = nodeFileId;
+            recorder.FileDeletedParentNodeId = parentNodeId;
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default)
+        {
+            recorder.NodeDeletedNodeId = nodeId;
+            recorder.NodeDeletedParentNodeId = parentNodeId;
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
     }
-
-    public Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default) => Task.CompletedTask;
-    public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
-    public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
-
-    public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default)
-    {
-        recorder.NodeDeletedNodeId = nodeId;
-        recorder.NodeDeletedParentNodeId = parentNodeId;
-        return Task.CompletedTask;
-    }
-
-    public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => Task.CompletedTask;
-    public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
 }

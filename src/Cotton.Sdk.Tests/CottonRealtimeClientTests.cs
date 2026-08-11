@@ -3,63 +3,64 @@
 
 using Cotton.Sdk.Realtime;
 
-namespace Cotton.Sdk.Tests;
-
-public class CottonRealtimeClientTests
+namespace Cotton.Sdk.Tests
 {
-    [Test]
-    public void CreateUri_UsesApiV1EventHubRoute()
+    public class CottonRealtimeClientTests
     {
-        Uri uri = CottonRealtimeHubEndpoint.CreateUri(new Uri("https://app.cottoncloud.dev"));
-
-        Assert.That(uri, Is.EqualTo(new Uri("https://app.cottoncloud.dev/api/v1/hub/events")));
-    }
-
-    [Test]
-    public void CreateUri_PreservesBaseAddressPath()
-    {
-        Uri uri = CottonRealtimeHubEndpoint.CreateUri(new Uri("https://app.cottoncloud.dev/cloud"));
-
-        Assert.That(uri, Is.EqualTo(new Uri("https://app.cottoncloud.dev/cloud/api/v1/hub/events")));
-    }
-
-    [Test]
-    public void RemoteFileTreeChanged_IncludesServerMutationMethods()
-    {
-        Assert.That(
-            CottonRealtimeHubMethods.RemoteFileTreeChanged,
-            Is.EqualTo(new[]
-            {
-                "FileCreated",
-                "FileUpdated",
-                "FileDeleted",
-                "FileMoved",
-                "FileRenamed",
-                "FileRestored",
-                "NodeCreated",
-                "NodeDeleted",
-                "NodeMetadataUpdated",
-                "NodeMoved",
-                "NodeRenamed",
-                "NodeRestored",
-            }));
-    }
-
-    [Test]
-    public void NotificationReceived_UsesServerHubMethod()
-    {
-        Assert.Multiple(() =>
+        [Test]
+        public void CreateUri_UsesApiV1EventHubRoute()
         {
-            Assert.That(CottonRealtimeHubMethods.NotificationReceived, Is.EqualTo("OnNotificationReceived"));
-            Assert.That((int)CottonRealtimeEventKind.NotificationReceived, Is.EqualTo(3));
-        });
-    }
+            Uri uri = CottonRealtimeHubEndpoint.CreateUri(new Uri("https://app.cottoncloud.dev"));
 
-    [Test]
-    public void CottonRealtimeEvent_RejectsUnknownKind()
-    {
-        Assert.That(
-            () => new CottonRealtimeEvent(CottonRealtimeEventKind.Unknown, "FileCreated", DateTime.UtcNow),
-            Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.That(uri, Is.EqualTo(new Uri("https://app.cottoncloud.dev/api/v1/hub/events")));
+        }
+
+        [Test]
+        public void CreateUri_PreservesBaseAddressPath()
+        {
+            Uri uri = CottonRealtimeHubEndpoint.CreateUri(new Uri("https://app.cottoncloud.dev/cloud"));
+
+            Assert.That(uri, Is.EqualTo(new Uri("https://app.cottoncloud.dev/cloud/api/v1/hub/events")));
+        }
+
+        [Test]
+        public void RemoteFileTreeChanged_IncludesServerMutationMethods()
+        {
+            Assert.That(
+                CottonRealtimeHubMethods.RemoteFileTreeChanged,
+                Is.EqualTo(new[]
+                {
+                    "FileCreated",
+                    "FileUpdated",
+                    "FileDeleted",
+                    "FileMoved",
+                    "FileRenamed",
+                    "FileRestored",
+                    "NodeCreated",
+                    "NodeDeleted",
+                    "NodeMetadataUpdated",
+                    "NodeMoved",
+                    "NodeRenamed",
+                    "NodeRestored",
+                }));
+        }
+
+        [Test]
+        public void NotificationReceived_UsesServerHubMethod()
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(CottonRealtimeHubMethods.NotificationReceived, Is.EqualTo("OnNotificationReceived"));
+                Assert.That((int)CottonRealtimeEventKind.NotificationReceived, Is.EqualTo(3));
+            });
+        }
+
+        [Test]
+        public void CottonRealtimeEvent_RejectsUnknownKind()
+        {
+            Assert.That(
+                () => new CottonRealtimeEvent(CottonRealtimeEventKind.Unknown, "FileCreated", DateTime.UtcNow),
+                Throws.TypeOf<ArgumentOutOfRangeException>());
+        }
     }
 }

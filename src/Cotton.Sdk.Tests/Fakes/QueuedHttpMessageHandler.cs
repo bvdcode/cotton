@@ -5,89 +5,90 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 
-namespace Cotton.Sdk.Tests.Fakes;
-
-internal class QueuedHttpMessageHandler : HttpMessageHandler
+namespace Cotton.Sdk.Tests.Fakes
 {
-    private readonly Queue<Func<HttpRequestMessage, HttpResponseMessage>> _responses = new();
-
-    public List<HttpRequestMessageSnapshot> Requests { get; } = [];
-
-    public void EnqueueJson(
-        HttpStatusCode statusCode,
-        object payload,
-        IReadOnlyDictionary<string, string>? headers = null)
+    internal class QueuedHttpMessageHandler : HttpMessageHandler
     {
-        _responses.Enqueue(_ =>
+        private readonly Queue<Func<HttpRequestMessage, HttpResponseMessage>> _responses = new();
+
+        public List<HttpRequestMessageSnapshot> Requests { get; } = [];
+
+        public void EnqueueJson(
+            HttpStatusCode statusCode,
+            object payload,
+            IReadOnlyDictionary<string, string>? headers = null)
         {
-            HttpResponseMessage response = new(statusCode)
+            _responses.Enqueue(_ =>
             {
-                Content = new StringContent(
-                    JsonSerializer.Serialize(payload, JsonSerializerOptions.Web),
-                    Encoding.UTF8,
-                    "application/json"),
-            };
-            if (headers is not null)
-            {
-                foreach (KeyValuePair<string, string> header in headers)
+                HttpResponseMessage response = new(statusCode)
                 {
-                    response.Headers.Add(header.Key, header.Value);
+                    Content = new StringContent(
+                        JsonSerializer.Serialize(payload, JsonSerializerOptions.Web),
+                        Encoding.UTF8,
+                        "application/json"),
+                };
+                if (headers is not null)
+                {
+                    foreach (KeyValuePair<string, string> header in headers)
+                    {
+                        response.Headers.Add(header.Key, header.Value);
+                    }
                 }
-            }
 
-            return response;
-        });
-    }
-
-    public void Enqueue(HttpStatusCode statusCode, string body = "")
-    {
-        _responses.Enqueue(_ => new HttpResponseMessage(statusCode)
-        {
-            Content = new StringContent(body, Encoding.UTF8, "text/plain"),
-        });
-    }
-
-    public void Enqueue(Func<HttpRequestMessage, HttpResponseMessage> responseFactory)
-    {
-        _responses.Enqueue(responseFactory);
-    }
-
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        string body = request.Content is null
-            ? string.Empty
-            : await request.Content.ReadAsStringAsync(cancellationToken);
-        byte[] rawBody = request.Content is null
-            ? []
-            : await request.Content.ReadAsByteArrayAsync(cancellationToken);
-        Requests.Add(new HttpRequestMessageSnapshot(
-            request.Method,
-            request.RequestUri?.PathAndQuery ?? string.Empty,
-            request.Headers.Authorization?.Scheme,
-            request.Headers.Authorization?.Parameter,
-            request.Headers.ToDictionary(
-                header => header.Key,
-                header => string.Join(",", header.Value),
-                StringComparer.OrdinalIgnoreCase),
-            request.Content?.Headers.ContentType?.MediaType,
-            body,
-            rawBody));
-
-        if (_responses.Count == 0)
-        {
-            throw new InvalidOperationException("No queued HTTP response is available.");
+                return response;
+            });
         }
 
-        return _responses.Dequeue()(request);
-    }
-}
+        public void Enqueue(HttpStatusCode statusCode, string body = "")
+        {
+            _responses.Enqueue(_ => new HttpResponseMessage(statusCode)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "text/plain"),
+            });
+        }
 
-internal record HttpRequestMessageSnapshot(
-    HttpMethod Method,
-    string PathAndQuery,
-    string? AuthorizationScheme,
-    string? AuthorizationParameter,
-    IReadOnlyDictionary<string, string> Headers,
-    string? ContentType,
-    string Body,
-    byte[] RawBody);
+        public void Enqueue(Func<HttpRequestMessage, HttpResponseMessage> responseFactory)
+        {
+            _responses.Enqueue(responseFactory);
+        }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            string body = request.Content is null
+                ? string.Empty
+                : await request.Content.ReadAsStringAsync(cancellationToken);
+            byte[] rawBody = request.Content is null
+                ? []
+                : await request.Content.ReadAsByteArrayAsync(cancellationToken);
+            Requests.Add(new HttpRequestMessageSnapshot(
+                request.Method,
+                request.RequestUri?.PathAndQuery ?? string.Empty,
+                request.Headers.Authorization?.Scheme,
+                request.Headers.Authorization?.Parameter,
+                request.Headers.ToDictionary(
+                    header => header.Key,
+                    header => string.Join(",", header.Value),
+                    StringComparer.OrdinalIgnoreCase),
+                request.Content?.Headers.ContentType?.MediaType,
+                body,
+                rawBody));
+
+            if (_responses.Count == 0)
+            {
+                throw new InvalidOperationException("No queued HTTP response is available.");
+            }
+
+            return _responses.Dequeue()(request);
+        }
+    }
+
+    internal record HttpRequestMessageSnapshot(
+        HttpMethod Method,
+        string PathAndQuery,
+        string? AuthorizationScheme,
+        string? AuthorizationParameter,
+        IReadOnlyDictionary<string, string> Headers,
+        string? ContentType,
+        string Body,
+        byte[] RawBody);
+}

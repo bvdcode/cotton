@@ -11,37 +11,38 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using System.Net;
 
-namespace Cotton.Server.IntegrationTests;
-
-public class FileManifestMetadataPersistenceTests
+namespace Cotton.Server.IntegrationTests
 {
-    [Test]
-    public void SaveManifestMetadataAsync_MapsConcurrencyConflict()
+    public class FileManifestMetadataPersistenceTests
     {
-        DbContextOptionsBuilder<CottonDbContext> optionsBuilder = new();
-        using ConcurrencyThrowingCottonDbContext dbContext = new(optionsBuilder.Options);
-        ExtractFileManifestMetadataRequestHandler handler = new(
-            dbContext,
-            null!,
-            new FileContentMetadataExtractorProvider([]),
-            null!,
-            NullLogger<ExtractFileManifestMetadataRequestHandler>.Instance);
-        FileManifest manifest = new();
-
-        WebApiException? exception = Assert.ThrowsAsync<WebApiException>(
-            async () => await handler.SaveManifestMetadataAsync(
-                manifest,
-                CancellationToken.None));
-
-        Assert.That(exception?.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
-    }
-
-    private class ConcurrencyThrowingCottonDbContext(DbContextOptions options)
-        : CottonDbContext(options)
-    {
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        [Test]
+        public void SaveManifestMetadataAsync_MapsConcurrencyConflict()
         {
-            return Task.FromException<int>(new DbUpdateConcurrencyException());
+            DbContextOptionsBuilder<CottonDbContext> optionsBuilder = new();
+            using ConcurrencyThrowingCottonDbContext dbContext = new(optionsBuilder.Options);
+            ExtractFileManifestMetadataRequestHandler handler = new(
+                dbContext,
+                null!,
+                new FileContentMetadataExtractorProvider([]),
+                null!,
+                NullLogger<ExtractFileManifestMetadataRequestHandler>.Instance);
+            FileManifest manifest = new();
+
+            WebApiException? exception = Assert.ThrowsAsync<WebApiException>(
+                async () => await handler.SaveManifestMetadataAsync(
+                    manifest,
+                    CancellationToken.None));
+
+            Assert.That(exception?.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        }
+
+        private class ConcurrencyThrowingCottonDbContext(DbContextOptions options)
+            : CottonDbContext(options)
+        {
+            public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+            {
+                return Task.FromException<int>(new DbUpdateConcurrencyException());
+            }
         }
     }
 }

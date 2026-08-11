@@ -19,162 +19,163 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Cotton.Server.IntegrationTests.Common;
-
-public class TestAppFactory : WebApplicationFactory<Program>
+namespace Cotton.Server.IntegrationTests.Common
 {
-    public const string RemoteIpAddressHeader = "X-Cotton-Test-Remote-IP";
-
-    private const string TestRootMasterKey = "testtesttesttesttesttesttesttest";
-    private static readonly string StorageRoot = Path.Combine(
-        Path.GetTempPath(),
-        "cotton-server-integration-storage",
-        Guid.NewGuid().ToString("N"));
-    private readonly Dictionary<string, string?> _overrides;
-    private readonly Dictionary<string, string?> _previousEnvironmentVariables = [];
-
-    public TestAppFactory(Dictionary<string, string?> overrides)
+    public class TestAppFactory : WebApplicationFactory<Program>
     {
-        _overrides = overrides;
-        SetEnvironmentVariable(ConfigurationBuilderExtensions.MasterKeyEnvironmentVariable, TestRootMasterKey);
-        SetDatabaseEnvironmentVariable("COTTON_PG_HOST", "DatabaseSettings:Host");
-        SetDatabaseEnvironmentVariable("COTTON_PG_PORT", "DatabaseSettings:Port");
-        SetDatabaseEnvironmentVariable("COTTON_PG_DATABASE", "DatabaseSettings:Database");
-        SetDatabaseEnvironmentVariable("COTTON_PG_USERNAME", "DatabaseSettings:Username");
-        SetDatabaseEnvironmentVariable("COTTON_PG_PASSWORD", "DatabaseSettings:Password");
-    }
+        public const string RemoteIpAddressHeader = "X-Cotton-Test-Remote-IP";
 
-    protected override void Dispose(bool disposing)
-    {
-        foreach ((string key, string? value) in _previousEnvironmentVariables)
+        private const string TestRootMasterKey = "testtesttesttesttesttesttesttest";
+        private static readonly string StorageRoot = Path.Combine(
+            Path.GetTempPath(),
+            "cotton-server-integration-storage",
+            Guid.NewGuid().ToString("N"));
+        private readonly Dictionary<string, string?> _overrides;
+        private readonly Dictionary<string, string?> _previousEnvironmentVariables = [];
+
+        public TestAppFactory(Dictionary<string, string?> overrides)
         {
+            _overrides = overrides;
+            SetEnvironmentVariable(ConfigurationBuilderExtensions.MasterKeyEnvironmentVariable, TestRootMasterKey);
+            SetDatabaseEnvironmentVariable("COTTON_PG_HOST", "DatabaseSettings:Host");
+            SetDatabaseEnvironmentVariable("COTTON_PG_PORT", "DatabaseSettings:Port");
+            SetDatabaseEnvironmentVariable("COTTON_PG_DATABASE", "DatabaseSettings:Database");
+            SetDatabaseEnvironmentVariable("COTTON_PG_USERNAME", "DatabaseSettings:Username");
+            SetDatabaseEnvironmentVariable("COTTON_PG_PASSWORD", "DatabaseSettings:Password");
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            foreach ((string key, string? value) in _previousEnvironmentVariables)
+            {
+                Environment.SetEnvironmentVariable(key, value);
+            }
+
+            base.Dispose(disposing);
+        }
+
+        private void SetDatabaseEnvironmentVariable(string environmentVariable, string overrideKey)
+        {
+            if (_overrides.TryGetValue(overrideKey, out string? value))
+            {
+                SetEnvironmentVariable(environmentVariable, value);
+            }
+        }
+
+        private void SetEnvironmentVariable(string key, string? value)
+        {
+            _previousEnvironmentVariables.TryAdd(key, Environment.GetEnvironmentVariable(key));
             Environment.SetEnvironmentVariable(key, value);
         }
 
-        base.Dispose(disposing);
-    }
-
-    private void SetDatabaseEnvironmentVariable(string environmentVariable, string overrideKey)
-    {
-        if (_overrides.TryGetValue(overrideKey, out string? value))
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            SetEnvironmentVariable(environmentVariable, value);
-        }
-    }
+            Quartz.Logging.LogProvider.IsDisabled = true;
+            string storagePath = GetStoragePath();
 
-    private void SetEnvironmentVariable(string key, string? value)
-    {
-        _previousEnvironmentVariables.TryAdd(key, Environment.GetEnvironmentVariable(key));
-        Environment.SetEnvironmentVariable(key, value);
-    }
-
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        Quartz.Logging.LogProvider.IsDisabled = true;
-        string storagePath = GetStoragePath();
-
-        builder.ConfigureAppConfiguration((context, config) =>
-        {
-            config.AddInMemoryCollection(_overrides);
-        });
-
-        builder.UseEnvironment("Testing");
-        base.ConfigureWebHost(builder);
-
-        builder.ConfigureServices(services =>
-        {
-            var quartzHosted = services
-                .Where(d => d.ServiceType == typeof(IHostedService) &&
-                    (d.ImplementationType == typeof(QuartzHostedService) ||
-                        d.ImplementationFactory?.Method.ReturnType == typeof(QuartzHostedService)))
-                .ToList();
-            foreach (ServiceDescriptor? d in quartzHosted)
+            builder.ConfigureAppConfiguration((context, config) =>
             {
-                services.Remove(d);
-            }
-
-            var schedulerFactoryDescriptors = services
-                .Where(d => d.ServiceType == typeof(ISchedulerFactory))
-                .ToList();
-            foreach (ServiceDescriptor? d in schedulerFactoryDescriptors)
-            {
-                services.Remove(d);
-            }
-            services.AddSingleton<ISchedulerFactory, NoOpSchedulerFactory>();
-            services.AddSingleton<IStartupFilter, TestRemoteIpStartupFilter>();
-            services.AddSingleton<IProxyTopologyProbeService, NoOpProxyTopologyProbeService>();
-
-            ServiceDescriptor[] storageBackendProviders = services
-                .Where(descriptor => descriptor.ServiceType == typeof(IStorageBackendProvider))
-                .ToArray();
-            foreach (ServiceDescriptor descriptor in storageBackendProviders)
-            {
-                services.Remove(descriptor);
-            }
-            services.AddSingleton<IStorageBackendProvider>(serviceProvider =>
-                new StaticStorageBackendProvider(
-                    ActivatorUtilities.CreateInstance<FileSystemStorageBackend>(
-                        serviceProvider,
-                        storagePath)));
-
-            services.AddSingleton(new CottonServerSettings
-            {
-                MaxChunkSizeBytes = 128 * 1024 * 1024,
-                CipherChunkSizeBytes = 20 * 1024 * 1024,
-                EncryptionThreads = 1,
+                config.AddInMemoryCollection(_overrides);
             });
-        });
-    }
 
-    internal static void DeleteStorage()
-    {
-        TestDirectory.Delete(StorageRoot);
-    }
+            builder.UseEnvironment("Testing");
+            base.ConfigureWebHost(builder);
 
-    private string GetStoragePath()
-    {
-        string database = _overrides.GetValueOrDefault("DatabaseSettings:Database") ?? "default";
-        string masterKey = _overrides.GetValueOrDefault("MasterEncryptionKey") ?? TestRootMasterKey;
-        byte[] identity = Encoding.UTF8.GetBytes($"{database}\n{masterKey}");
-        string storageId = Convert.ToHexStringLower(SHA256.HashData(identity));
-        return Path.Combine(StorageRoot, storageId);
-    }
-
-    private class TestRemoteIpStartupFilter : IStartupFilter
-    {
-        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
-        {
-            return app =>
+            builder.ConfigureServices(services =>
             {
-                app.Use(async (context, nextMiddleware) =>
+                var quartzHosted = services
+                    .Where(d => d.ServiceType == typeof(IHostedService) &&
+                        (d.ImplementationType == typeof(QuartzHostedService) ||
+                            d.ImplementationFactory?.Method.ReturnType == typeof(QuartzHostedService)))
+                    .ToList();
+                foreach (ServiceDescriptor? d in quartzHosted)
                 {
-                    if (context.Request.Headers.TryGetValue(RemoteIpAddressHeader, out var values)
-                        && IPAddress.TryParse(values.ToString(), out IPAddress? remoteIpAddress))
-                    {
-                        context.Connection.RemoteIpAddress = remoteIpAddress;
-                    }
+                    services.Remove(d);
+                }
 
-                    await nextMiddleware();
+                var schedulerFactoryDescriptors = services
+                    .Where(d => d.ServiceType == typeof(ISchedulerFactory))
+                    .ToList();
+                foreach (ServiceDescriptor? d in schedulerFactoryDescriptors)
+                {
+                    services.Remove(d);
+                }
+                services.AddSingleton<ISchedulerFactory, NoOpSchedulerFactory>();
+                services.AddSingleton<IStartupFilter, TestRemoteIpStartupFilter>();
+                services.AddSingleton<IProxyTopologyProbeService, NoOpProxyTopologyProbeService>();
+
+                ServiceDescriptor[] storageBackendProviders = services
+                    .Where(descriptor => descriptor.ServiceType == typeof(IStorageBackendProvider))
+                    .ToArray();
+                foreach (ServiceDescriptor descriptor in storageBackendProviders)
+                {
+                    services.Remove(descriptor);
+                }
+                services.AddSingleton<IStorageBackendProvider>(serviceProvider =>
+                    new StaticStorageBackendProvider(
+                        ActivatorUtilities.CreateInstance<FileSystemStorageBackend>(
+                            serviceProvider,
+                            storagePath)));
+
+                services.AddSingleton(new CottonServerSettings
+                {
+                    MaxChunkSizeBytes = 128 * 1024 * 1024,
+                    CipherChunkSizeBytes = 20 * 1024 * 1024,
+                    EncryptionThreads = 1,
                 });
-                next(app);
-            };
+            });
         }
-    }
 
-    private class NoOpProxyTopologyProbeService : IProxyTopologyProbeService
-    {
-        public Task<ProxyTopologyProbeResult> DetectAsync(
-            string publicBaseUrl,
-            CancellationToken cancellationToken = default)
+        internal static void DeleteStorage()
         {
-            return Task.FromResult(new ProxyTopologyProbeResult([], null));
+            TestDirectory.Delete(StorageRoot);
         }
-    }
 
-    protected override IHost CreateHost(IHostBuilder builder)
-    {
-        // Ensure host is created per test without cross-test reuse
-        builder.UseEnvironment("IntegrationTests");
-        return base.CreateHost(builder);
+        private string GetStoragePath()
+        {
+            string database = _overrides.GetValueOrDefault("DatabaseSettings:Database") ?? "default";
+            string masterKey = _overrides.GetValueOrDefault("MasterEncryptionKey") ?? TestRootMasterKey;
+            byte[] identity = Encoding.UTF8.GetBytes($"{database}\n{masterKey}");
+            string storageId = Convert.ToHexStringLower(SHA256.HashData(identity));
+            return Path.Combine(StorageRoot, storageId);
+        }
+
+        private class TestRemoteIpStartupFilter : IStartupFilter
+        {
+            public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
+            {
+                return app =>
+                {
+                    app.Use(async (context, nextMiddleware) =>
+                    {
+                        if (context.Request.Headers.TryGetValue(RemoteIpAddressHeader, out var values)
+                            && IPAddress.TryParse(values.ToString(), out IPAddress? remoteIpAddress))
+                        {
+                            context.Connection.RemoteIpAddress = remoteIpAddress;
+                        }
+
+                        await nextMiddleware();
+                    });
+                    next(app);
+                };
+            }
+        }
+
+        private class NoOpProxyTopologyProbeService : IProxyTopologyProbeService
+        {
+            public Task<ProxyTopologyProbeResult> DetectAsync(
+                string publicBaseUrl,
+                CancellationToken cancellationToken = default)
+            {
+                return Task.FromResult(new ProxyTopologyProbeResult([], null));
+            }
+        }
+
+        protected override IHost CreateHost(IHostBuilder builder)
+        {
+            // Ensure host is created per test without cross-test reuse
+            builder.UseEnvironment("IntegrationTests");
+            return base.CreateHost(builder);
+        }
     }
 }

@@ -7,38 +7,39 @@ using Cotton.Server.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 
-namespace Cotton.Server.IntegrationTests;
-
-public class StoragePipelineProbeServiceTests
+namespace Cotton.Server.IntegrationTests
 {
-    [Test]
-    public async Task RunAsync_UsesWarmupThenMeasuredIteration_AndDeletesTemporaryBlobs()
+    public class StoragePipelineProbeServiceTests
     {
-        var storage = new InMemoryStorage();
-        var service = new StoragePipelineProbeService(
-            storage,
-            NullLogger<StoragePipelineProbeService>.Instance);
-
-        StoragePipelineProbeResult result = await service.RunAsync("local", CancellationToken.None);
-
-        var keys = new List<string>();
-        await foreach (string key in storage.ListAllKeysAsync())
+        [Test]
+        public async Task RunAsync_UsesWarmupThenMeasuredIteration_AndDeletesTemporaryBlobs()
         {
-            keys.Add(key);
-        }
+            var storage = new InMemoryStorage();
+            var service = new StoragePipelineProbeService(
+                storage,
+                NullLogger<StoragePipelineProbeService>.Instance);
 
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(result.PayloadSizeBytes, Is.EqualTo(StoragePipelineProbeService.PayloadSizeBytes));
-            Assert.That(result.StorageBackend, Is.EqualTo("local"));
-            Assert.That(result.CompletedAt, Is.Not.EqualTo(default(DateTimeOffset)));
-            Assert.That(result.Warmup.IsWarmup, Is.True);
-            Assert.That(result.Measured.IsWarmup, Is.False);
-            Assert.That(result.Warmup.StoredSizeBytes, Is.EqualTo(StoragePipelineProbeService.PayloadSizeBytes));
-            Assert.That(result.Measured.StoredSizeBytes, Is.EqualTo(StoragePipelineProbeService.PayloadSizeBytes));
-            Assert.That(result.Measured.WriteMebibytesPerSecond, Is.GreaterThan(0));
-            Assert.That(result.Measured.ReadMebibytesPerSecond, Is.GreaterThan(0));
-            Assert.That(keys, Is.Empty);
+            StoragePipelineProbeResult result = await service.RunAsync("local", CancellationToken.None);
+
+            var keys = new List<string>();
+            await foreach (string key in storage.ListAllKeysAsync())
+            {
+                keys.Add(key);
+            }
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.PayloadSizeBytes, Is.EqualTo(StoragePipelineProbeService.PayloadSizeBytes));
+                Assert.That(result.StorageBackend, Is.EqualTo("local"));
+                Assert.That(result.CompletedAt, Is.Not.EqualTo(default(DateTimeOffset)));
+                Assert.That(result.Warmup.IsWarmup, Is.True);
+                Assert.That(result.Measured.IsWarmup, Is.False);
+                Assert.That(result.Warmup.StoredSizeBytes, Is.EqualTo(StoragePipelineProbeService.PayloadSizeBytes));
+                Assert.That(result.Measured.StoredSizeBytes, Is.EqualTo(StoragePipelineProbeService.PayloadSizeBytes));
+                Assert.That(result.Measured.WriteMebibytesPerSecond, Is.GreaterThan(0));
+                Assert.That(result.Measured.ReadMebibytesPerSecond, Is.GreaterThan(0));
+                Assert.That(keys, Is.Empty);
+            }
         }
     }
 }
