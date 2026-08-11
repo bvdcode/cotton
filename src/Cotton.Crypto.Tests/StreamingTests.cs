@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Crypto.Internals;
 using Cotton.Crypto.Tests.TestUtils;
 
 namespace Cotton.Crypto.Tests;
@@ -76,7 +77,7 @@ public class StreamingTests
     }
 
     [Test]
-    public void HugeFile_SyntheticStream_HeaderAndIndices_LongVsInt()
+    public async Task HugeFile_SyntheticStream_HeaderAndIndices_LongVsInt()
     {
         var key = Key();
         var cipher = new AesGcmStreamCipher(key, keyId: 8);
@@ -84,11 +85,11 @@ public class StreamingTests
         using var fake = new SeekableSyntheticReadStream(huge);
         using var outEnc = new MemoryStream();
         // Only header will be written (input immediately EOF), but code path uses long for lengths
-        cipher.EncryptAsync(fake, outEnc, chunkSize: AesGcmStreamCipher.DefaultChunkSize).GetAwaiter().GetResult();
+        await cipher.EncryptAsync(fake, outEnc, chunkSize: AesGcmStreamCipher.DefaultChunkSize);
         outEnc.Position = 0;
         // Should be able to parse headers without overflow
-        var hdr = Cotton.Crypto.Models.AesGcmKeyHeader.FromStream(outEnc, AesGcmStreamCipher.NonceSize, AesGcmStreamCipher.TagSize);
-        Assert.That(hdr.DataLength, Is.EqualTo(huge));
+        FileHeader header = await StreamHeaderReader.ReadFileAsync(outEnc);
+        Assert.That(header.TotalPlaintextLength, Is.EqualTo(huge));
     }
 
     [Test]

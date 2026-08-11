@@ -1,7 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Crypto.Models;
+using Cotton.Crypto.Internals;
 using Cotton.Crypto.Tests.TestUtils;
 using System.Security.Cryptography;
 using System.Text;
@@ -43,22 +43,13 @@ public class AesGcmStreamCipherTests
         return output;
     }
 
-    private static (AesGcmKeyHeader fileHeader, AesGcmKeyHeader? firstChunkHeader, int firstCiphertextOffset) ParseHeaders(byte[] encrypted)
+    private static async Task<(FileHeader fileHeader, ChunkHeader? firstChunkHeader, int firstCiphertextOffset)> ParseHeadersAsync(
+        byte[] encrypted)
     {
-        using var ms = new MemoryStream(encrypted, writable: false);
-        var fileHeader = AesGcmKeyHeader.FromStream(ms, NonceSize, TagSize);
-
-        AesGcmKeyHeader? chunkHeader = null;
-        int firstCiphertextOffset = (int)ms.Position;
-        try
-        {
-            chunkHeader = AesGcmKeyHeader.FromStream(ms, NonceSize, TagSize);
-            firstCiphertextOffset = (int)ms.Position;
-        }
-        catch (EndOfStreamException)
-        {
-            // no chunks
-        }
+        using MemoryStream stream = new(encrypted, writable: false);
+        FileHeader fileHeader = await StreamHeaderReader.ReadFileAsync(stream);
+        ChunkHeader? chunkHeader = await StreamHeaderReader.TryReadChunkAsync(stream);
+        int firstCiphertextOffset = (int)stream.Position;
 
         return (fileHeader, chunkHeader, firstCiphertextOffset);
     }
@@ -168,22 +159,19 @@ public class AesGcmStreamCipherTests
         MemoryStream encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize: 65_536);
 
         var bytes = encrypted.ToArray();
-        var (fileHeader, firstChunkHeader, _) = ParseHeaders(bytes);
+        var (fileHeader, firstChunkHeader, _) = await ParseHeadersAsync(bytes);
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(fileHeader.KeyId, Is.EqualTo(keyId));
-            Assert.That(fileHeader.DataLength, Is.EqualTo(data.Length));
+            Assert.That(fileHeader.TotalPlaintextLength, Is.EqualTo(data.Length));
             Assert.That(fileHeader.Nonce, Has.Length.EqualTo(NonceSize));
-            Assert.That(fileHeader.Tag, Has.Length.EqualTo(TagSize));
             Assert.That(firstChunkHeader, Is.Not.Null);
         }
         using (Assert.EnterMultipleScope())
         {
-            // Compact chunk header: nonce is not serialized
-            Assert.That(firstChunkHeader!.Value.Nonce, Has.Length.EqualTo(0));
-            Assert.That(firstChunkHeader!.Value.Tag, Has.Length.EqualTo(TagSize));
-            Assert.That(firstChunkHeader!.Value.DataLength, Is.GreaterThan(0));
+            Assert.That(firstChunkHeader!.Value.KeyId, Is.EqualTo(keyId));
+            Assert.That(firstChunkHeader!.Value.PlaintextLength, Is.GreaterThan(0));
         }
     }
 
@@ -201,26 +189,26 @@ public class AesGcmStreamCipherTests
         await cipher.EncryptAsync(nonSeek, encrypted, chunkSize: 65_536);
         var bytes = encrypted.ToArray();
 
-        var (fileHeader, _, _) = ParseHeaders(bytes);
-        Assert.That(fileHeader.DataLength, Is.Zero);
+        var (fileHeader, _, _) = await ParseHeadersAsync(bytes);
+        Assert.That(fileHeader.TotalPlaintextLength, Is.Zero);
     }
 
     [Test]
-    public void Decrypt_Fails_OnTamperedCiphertext()
+    public async Task Decrypt_Fails_OnTamperedCiphertext()
     {
         var mk = ValidMasterKey();
         AesGcmStreamCipher cipher = CreateCipher(mk);
 
         var data = CreateRandomBytes(120_000);
         using var input = new MemoryStream(data);
-        MemoryStream encrypted = EncryptToMemoryAsync(cipher, input, chunkSize: 65_536).GetAwaiter().GetResult();
+        MemoryStream encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize: 65_536);
 
         var bytes = encrypted.ToArray();
-        var (_, firstChunkHeader, firstCipherOffset) = ParseHeaders(bytes);
+        var (_, firstChunkHeader, firstCipherOffset) = await ParseHeadersAsync(bytes);
         Assert.That(firstChunkHeader, Is.Not.Null, "Expected at least one chunk.");
 
         // Flip one byte in the first chunk ciphertext
-        if (firstChunkHeader!.Value.DataLength > 0)
+        if (firstChunkHeader!.Value.PlaintextLength > 0)
         {
             bytes[firstCipherOffset] ^= 0xFF;
         }

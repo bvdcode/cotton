@@ -1,7 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Crypto.Models;
+using Cotton.Crypto.Internals;
 using Cotton.Crypto.Tests.TestUtils;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
@@ -15,27 +15,27 @@ public class ReliabilityTests
 
     // 10. Non-seekable empty file
     [Test]
-    public void NonSeekable_EmptyFile_RoundTrip_EndMarkerOnly()
+    public async Task NonSeekable_EmptyFile_RoundTrip_EndMarkerOnly()
     {
         var key = Key();
         var cipher = new AesGcmStreamCipher(key, keyId: 10, threads: 1);
         using var input = new MemoryStream([]);
         using var nonSeek = new NonSeekableReadStream(input);
         using var outEnc = new MemoryStream();
-        cipher.EncryptAsync(nonSeek, outEnc, chunkSize: AesGcmStreamCipher.MinChunkSize).GetAwaiter().GetResult();
+        await cipher.EncryptAsync(nonSeek, outEnc, chunkSize: AesGcmStreamCipher.MinChunkSize);
         outEnc.Position = 0;
-        var hdr = AesGcmKeyHeader.FromStream(outEnc, AesGcmStreamCipher.NonceSize, AesGcmStreamCipher.TagSize);
-        var endMarker = AesGcmKeyHeader.FromStream(outEnc, AesGcmStreamCipher.NonceSize, AesGcmStreamCipher.TagSize);
+        FileHeader header = await StreamHeaderReader.ReadFileAsync(outEnc);
+        ChunkHeader endMarker = await StreamHeaderReader.ReadChunkAsync(outEnc);
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(hdr.DataLength, Is.Zero);
-            Assert.That(endMarker.DataLength, Is.Zero);
+            Assert.That(header.TotalPlaintextLength, Is.Zero);
+            Assert.That(endMarker.PlaintextLength, Is.Zero);
             Assert.That(outEnc.Position, Is.EqualTo(outEnc.Length));
         }
         // Decrypt back and verify 0 bytes
         outEnc.Position = 0;
         using var outDec = new MemoryStream();
-        cipher.DecryptAsync(outEnc, outDec).GetAwaiter().GetResult();
+        await cipher.DecryptAsync(outEnc, outDec);
         Assert.That(outDec.Length, Is.Zero);
     }
 
