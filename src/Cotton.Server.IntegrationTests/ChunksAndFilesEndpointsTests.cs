@@ -1552,6 +1552,45 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Hls_Master_Playlist_Exposes_All_Renditions_For_Transcodable_Share()
+    {
+        string authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        NodeFileManifestDto file = await UploadTextFileAsync(
+            root!,
+            "transcodable.avi",
+            "video payload",
+            contentType: "video/x-msvideo");
+        byte[] previewBytes = CreateWebpSignatureBytes("video preview");
+        await StoreSmallPreviewAsync(file.Id, Hasher.HashData(previewBytes), previewBytes);
+
+        using HttpResponseMessage linkResponse = await _client.GetAsync(
+            $"/api/v1/files/{file.Id}/download-link");
+        linkResponse.EnsureSuccessStatusCode();
+        string downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string shareToken = ExtractToken(downloadLink);
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        using HttpResponseMessage response = await _client.GetAsync(
+            $"/api/v1/files/{file.Id}/hls/master.m3u8?token={shareToken}");
+        response.EnsureSuccessStatusCode();
+        string playlist = await response.Content.ReadAsStringAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/vnd.apple.mpegurl"));
+            Assert.That(response.Headers.CacheControl?.NoStore, Is.True);
+            Assert.That(playlist, Does.Contain("quality=source"));
+            Assert.That(playlist, Does.Contain("quality=high"));
+            Assert.That(playlist, Does.Contain("quality=medium"));
+            Assert.That(playlist, Does.Contain("quality=low"));
+        });
+    }
+
+    [Test]
     public async Task File_Versions_List_Download_And_Restore_Previous_Content()
     {
         var token = await LoginAsync();
@@ -1872,7 +1911,8 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         NodeDto root,
         string name,
         string text,
-        Dictionary<string, string>? metadata = null)
+        Dictionary<string, string>? metadata = null,
+        string contentType = "text/plain")
     {
         var content = Encoding.UTF8.GetBytes(text);
         var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
@@ -1895,7 +1935,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         {
             ChunkHashes = [chunkHashLower],
             Name = name,
-            ContentType = "text/plain",
+            ContentType = contentType,
             Hash = chunkHashLower,
             NodeId = root.Id,
             Metadata = metadata
