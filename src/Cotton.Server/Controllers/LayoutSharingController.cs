@@ -89,7 +89,7 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
+            SharedNodeAccess? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
                 return this.ApiPublicShareNotFound(
@@ -129,7 +129,7 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
+            SharedNodeAccess? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
                 return this.ApiPublicShareNotFound(
@@ -218,7 +218,7 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
+            SharedNodeAccess? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
                 return this.ApiPublicShareNotFound(
@@ -278,7 +278,7 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
+            SharedNodeAccess? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
                 return this.ApiPublicShareNotFound(
@@ -334,7 +334,7 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
+            SharedNodeAccess? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
             if (nodeShareToken is null)
             {
                 return this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found.");
@@ -481,29 +481,10 @@ namespace Cotton.Server.Controllers
                 enableRangeProcessing: true);
         }
 
-        private async Task<NodeShareToken?> ResolveActiveNodeShareTokenAsync(string token)
-        {
-            DateTime now = DateTime.UtcNow;
-            NodeShareToken? nodeShareToken = await _dbContext.NodeShareTokens
-                .Include(x => x.Node)
-                .Where(x => x.Token == token
-                    && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
-                .SingleOrDefaultAsync();
-
-            if (nodeShareToken is null)
-            {
-                return null;
-            }
-
-            _integrity.RequireValid(_dbContext, nodeShareToken, "shared-folder.node-token");
-            _integrity.RequireValid(_dbContext, nodeShareToken.Node, "shared-folder.root-node");
-            if (nodeShareToken.Node.Type != NodeType.Default)
-            {
-                return null;
-            }
-
-            return nodeShareToken;
-        }
+        private Task<SharedNodeAccess?> ResolveActiveNodeShareTokenAsync(string token) =>
+            _mediator.Send(
+                new ResolveSharedNodeAccessQuery(token),
+                HttpContext.RequestAborted);
 
         private async Task<bool> IsNodeInSharedSubtreeAsync(
             Guid nodeId,
