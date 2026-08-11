@@ -1,16 +1,14 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
-using Cotton.Crypto;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
-using Cotton.Storage.Processors;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
@@ -30,23 +28,12 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Settings)]
     [Route(Routes.V1.Server + "/settings")]
     public class SettingsController(
-        SettingsProvider _settings,
+        SettingsProvider settings,
         ServerSettingsValidator _validator,
         INotificationsProvider _notifications,
         IGeoLookupService _geoLookup,
-        IProxyTopologyProbeService _proxyTopologyProbe) : ControllerBase
+        IProxyTopologyProbeService _proxyTopologyProbe) : SettingsControllerBase(settings)
     {
-        private const int KiB = 1024;
-        private const int MiB = 1024 * KiB;
-        private static readonly int[] SupportedMaxChunkSizeBytes = [4 * MiB, 8 * MiB, 16 * MiB];
-        private static readonly int[] DefaultSupportedCipherChunkSizeBytes =
-        [
-            Math.Max(128 * KiB, AesGcmStreamCipher.MinChunkSize),
-            1 * MiB,
-            4 * MiB,
-            16 * MiB,
-            AesGcmStreamCipher.MaxChunkSize,
-        ];
 
         /// <summary>
         /// Gets client settings.
@@ -55,7 +42,7 @@ namespace Cotton.Server.Controllers
         [Authorize]
         public IActionResult GetClientSettings()
         {
-            ServerSettingsSnapshot settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = Settings.GetServerSettings();
             string? currentVersion = AppVersionHelpers.GetAppVersion();
             return Ok(new
             {
@@ -72,195 +59,10 @@ namespace Cotton.Server.Controllers
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> IsServerInitialized()
         {
-            bool isServerInitialized = await _settings.IsServerInitializedAsync();
+            bool isServerInitialized = await Settings.IsServerInitializedAsync();
             return Ok(new { IsServerInitialized = isServerInitialized });
         }
 
-        /// <summary>
-        /// Gets chunk size.
-        /// </summary>
-        [Authorize]
-        [HttpGet("chunk-size")]
-        public IActionResult GetChunkSize()
-        {
-            return Ok(CreateChunkSizeResponse());
-        }
-
-        /// <summary>
-        /// Sets the maximum upload chunk size used by clients.
-        /// </summary>
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpPatch("chunk-size/{maxChunkSizeBytes:int}")]
-        public async Task<IActionResult> SetChunkSize([FromRoute] int maxChunkSizeBytes, CancellationToken cancellationToken)
-        {
-            if (!SupportedMaxChunkSizeBytes.Contains(maxChunkSizeBytes))
-            {
-                return BadRequest(new
-                {
-                    error = "Unsupported chunk size.",
-                    supportedMaxChunkSizeBytes = SupportedMaxChunkSizeBytes
-                });
-            }
-
-            await _settings.SetPropertyAsync(
-                x => x.MaxChunkSizeBytes,
-                maxChunkSizeBytes,
-                GetFallbackPublicBaseUrl(),
-                cancellationToken);
-
-            return Ok(CreateChunkSizeResponse());
-        }
-
-        private object CreateChunkSizeResponse()
-        {
-            int maxChunkSizeBytes = _settings.GetServerSettings().MaxChunkSizeBytes;
-            return new
-            {
-                maxChunkSizeBytes,
-                supportedMaxChunkSizeBytes = SupportedMaxChunkSizeBytes,
-            };
-        }
-
-        /// <summary>
-        /// Gets tunable storage pipeline settings.
-        /// </summary>
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpGet("storage-pipeline")]
-        public IActionResult GetStoragePipelineSettings()
-        {
-            return Ok(CreateStoragePipelineResponse());
-        }
-
-        /// <summary>
-        /// Sets the Zstandard compression level used by future storage writes.
-        /// </summary>
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpPatch("compression-level/{compressionLevel:int}")]
-        public async Task<IActionResult> SetCompressionLevel([FromRoute] int compressionLevel, CancellationToken cancellationToken)
-        {
-            try
-            {
-                CompressionProcessor.ThrowIfInvalidLevel(compressionLevel);
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                return BadRequest(new
-                {
-                    error = ex.Message,
-                    minCompressionLevel = CompressionProcessor.MinCompressionLevel,
-                    maxCompressionLevel = CompressionProcessor.MaxCompressionLevel,
-                });
-            }
-
-            await _settings.SetPropertyAsync(
-                x => x.CompressionLevel,
-                compressionLevel,
-                GetFallbackPublicBaseUrl(),
-                cancellationToken);
-
-            return Ok(CreateStoragePipelineResponse());
-        }
-
-        /// <summary>
-        /// Sets the plaintext chunk size used by the AES-GCM storage encryption pipeline.
-        /// </summary>
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpPatch("cipher-chunk-size/{cipherChunkSizeBytes:int}")]
-        public async Task<IActionResult> SetCipherChunkSize([FromRoute] int cipherChunkSizeBytes, CancellationToken cancellationToken)
-        {
-            if (cipherChunkSizeBytes < AesGcmStreamCipher.MinChunkSize || cipherChunkSizeBytes > AesGcmStreamCipher.MaxChunkSize)
-            {
-                return BadRequest(new
-                {
-                    error = "Unsupported cipher chunk size.",
-                    minCipherChunkSizeBytes = AesGcmStreamCipher.MinChunkSize,
-                    maxCipherChunkSizeBytes = AesGcmStreamCipher.MaxChunkSize,
-                    supportedCipherChunkSizeBytes = CreateSupportedCipherChunkSizeBytes(cipherChunkSizeBytes),
-                });
-            }
-
-            await _settings.SetPropertyAsync(
-                x => x.CipherChunkSizeBytes,
-                cipherChunkSizeBytes,
-                GetFallbackPublicBaseUrl(),
-                cancellationToken);
-
-            return Ok(CreateStoragePipelineResponse());
-        }
-
-        /// <summary>
-        /// Sets the number of AES-GCM storage encryption worker threads.
-        /// </summary>
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpPatch("encryption-threads/{encryptionThreads:int}")]
-        public async Task<IActionResult> SetEncryptionThreads([FromRoute] int encryptionThreads, CancellationToken cancellationToken)
-        {
-            int maxEncryptionThreads = GetMaxEncryptionThreads();
-            if (encryptionThreads < 1 || encryptionThreads > maxEncryptionThreads)
-            {
-                return BadRequest(new
-                {
-                    error = "Unsupported encryption thread count.",
-                    minEncryptionThreads = 1,
-                    maxEncryptionThreads,
-                    supportedEncryptionThreads = CreateSupportedEncryptionThreads(encryptionThreads),
-                });
-            }
-
-            await _settings.SetPropertyAsync(
-                x => x.EncryptionThreads,
-                encryptionThreads,
-                GetFallbackPublicBaseUrl(),
-                cancellationToken);
-
-            return Ok(CreateStoragePipelineResponse());
-        }
-
-        private object CreateStoragePipelineResponse()
-        {
-            ServerSettingsSnapshot settings = _settings.GetServerSettings();
-            int maxEncryptionThreads = GetMaxEncryptionThreads();
-            return new
-            {
-                settings.CompressionLevel,
-                minCompressionLevel = CompressionProcessor.MinCompressionLevel,
-                maxCompressionLevel = CompressionProcessor.MaxCompressionLevel,
-                settings.CipherChunkSizeBytes,
-                minCipherChunkSizeBytes = AesGcmStreamCipher.MinChunkSize,
-                maxCipherChunkSizeBytes = AesGcmStreamCipher.MaxChunkSize,
-                supportedCipherChunkSizeBytes = CreateSupportedCipherChunkSizeBytes(settings.CipherChunkSizeBytes),
-                settings.EncryptionThreads,
-                minEncryptionThreads = 1,
-                maxEncryptionThreads,
-                supportedEncryptionThreads = CreateSupportedEncryptionThreads(settings.EncryptionThreads),
-            };
-        }
-
-        private static int[] CreateSupportedCipherChunkSizeBytes(int current)
-        {
-            return DefaultSupportedCipherChunkSizeBytes
-                .Append(current)
-                .Where(x => x >= AesGcmStreamCipher.MinChunkSize && x <= AesGcmStreamCipher.MaxChunkSize)
-                .Distinct()
-                .OrderBy(x => x)
-                .ToArray();
-        }
-
-        private static int[] CreateSupportedEncryptionThreads(int current)
-        {
-            int maxEncryptionThreads = GetMaxEncryptionThreads();
-            return Enumerable.Range(1, maxEncryptionThreads)
-                .Append(current)
-                .Where(x => x >= 1 && x <= maxEncryptionThreads)
-                .Distinct()
-                .OrderBy(x => x)
-                .ToArray();
-        }
-
-        private static int GetMaxEncryptionThreads()
-        {
-            return Math.Max(1, Environment.ProcessorCount);
-        }
 
         /// <summary>
         /// Gets supported hash algorithms.
@@ -281,7 +83,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_validator.ValidateGeoIpLookupMode(mode));
-            await _settings.SetPropertyAsync(x => x.GeoIpLookupMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
+            await Settings.SetPropertyAsync(x => x.GeoIpLookupMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
 
@@ -292,7 +94,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("geoip-lookup-mode")]
         public IActionResult GetGeoIpLookupMode()
         {
-            GeoIpLookupMode geoIpLookupMode = _settings.GetServerSettings().GeoIpLookupMode;
+            GeoIpLookupMode geoIpLookupMode = Settings.GetServerSettings().GeoIpLookupMode;
             return Ok(new { geoIpLookupMode = geoIpLookupMode.ToString() });
         }
 
@@ -305,7 +107,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_validator.ValidateCustomGeoIpLookupUrl(url));
-            await _settings.SetPropertyAsync(
+            await Settings.SetPropertyAsync(
                 x => x.CustomGeoIpLookupUrl,
                 SettingsProvider.NormalizePublicBaseUrl(url),
                 GetFallbackPublicBaseUrl(),
@@ -320,7 +122,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("custom-geoip-lookup-url")]
         public IActionResult GetCustomGeoIpLookupUrl()
         {
-            string? customGeoIpLookupUrl = _settings.GetServerSettings().CustomGeoIpLookupUrl;
+            string? customGeoIpLookupUrl = Settings.GetServerSettings().CustomGeoIpLookupUrl;
             return Ok(new { customGeoIpLookupUrl });
         }
 
@@ -332,7 +134,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> TestCustomGeoIpLookupUrl(CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_validator.ValidateCustomGeoIpLookupUrl(_settings.GetServerSettings().CustomGeoIpLookupUrl));
+            ThrowIfInvalid(_validator.ValidateCustomGeoIpLookupUrl(Settings.GetServerSettings().CustomGeoIpLookupUrl));
             CustomGeoLookupTestResult testResult = await _geoLookup.TestCustomLookupAsync(GetFallbackPublicBaseUrl(), cancellationToken);
             ThrowIfInvalid(testResult.Error);
             return Ok(new CustomGeoLookupTestResultDto
@@ -354,7 +156,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ServerUsage[] parsedUsage = ParseServerUsage(usage);
-            await _settings.SetPropertyAsync(x => x.ServerUsage, parsedUsage, GetFallbackPublicBaseUrl(), cancellationToken);
+            await Settings.SetPropertyAsync(x => x.ServerUsage, parsedUsage, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
 
@@ -365,7 +167,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("server-usage")]
         public IActionResult GetServerUsage()
         {
-            string[] serverUsage = [.. _settings.GetServerSettings().ServerUsage.Select(x => x.ToString())];
+            string[] serverUsage = [.. Settings.GetServerSettings().ServerUsage.Select(x => x.ToString())];
             return Ok(new { serverUsage });
         }
 
@@ -378,7 +180,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_validator.ValidateTelemetryChange(enabled));
-            await _settings.SetPropertyAsync(x => x.TelemetryEnabled, enabled, GetFallbackPublicBaseUrl(), cancellationToken);
+            await Settings.SetPropertyAsync(x => x.TelemetryEnabled, enabled, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
 
@@ -389,7 +191,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("telemetry")]
         public IActionResult GetTelemetry()
         {
-            bool telemetryEnabled = _settings.GetServerSettings().TelemetryEnabled;
+            bool telemetryEnabled = Settings.GetServerSettings().TelemetryEnabled;
             return Ok(new { telemetryEnabled });
         }
 
@@ -402,7 +204,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(Enum.IsDefined(mode) ? null : "Invalid storage space mode: " + mode);
-            await _settings.SetPropertyAsync(x => x.StorageSpaceMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
+            await Settings.SetPropertyAsync(x => x.StorageSpaceMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
 
@@ -413,7 +215,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("storage-space-mode")]
         public IActionResult GetStorageSpaceMode()
         {
-            StorageSpaceMode storageSpaceMode = _settings.GetServerSettings().StorageSpaceMode;
+            StorageSpaceMode storageSpaceMode = Settings.GetServerSettings().StorageSpaceMode;
             return Ok(new { storageSpaceMode = storageSpaceMode.ToString() });
         }
 
@@ -427,7 +229,7 @@ namespace Cotton.Server.Controllers
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_validator.ValidateDefaultUserStorageQuotaBytes(quotaBytes));
             long? normalizedQuotaBytes = quotaBytes is null or 0 ? null : quotaBytes;
-            await _settings.SetPropertyAsync(
+            await Settings.SetPropertyAsync(
                 x => x.DefaultUserStorageQuotaBytes,
                 normalizedQuotaBytes,
                 GetFallbackPublicBaseUrl(),
@@ -442,7 +244,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("default-user-storage-quota-bytes")]
         public IActionResult GetDefaultUserStorageQuotaBytes()
         {
-            long? defaultUserStorageQuotaBytes = _settings.GetServerSettings().DefaultUserStorageQuotaBytes;
+            long? defaultUserStorageQuotaBytes = Settings.GetServerSettings().DefaultUserStorageQuotaBytes;
             return Ok(new { defaultUserStorageQuotaBytes });
         }
 
@@ -457,7 +259,7 @@ namespace Cotton.Server.Controllers
             Guid? normalizedNodeId = nodeId is null || nodeId == Guid.Empty ? null : nodeId;
             Guid ownerId = User.GetUserId();
             ThrowIfInvalid(await _validator.ValidateDefaultUserTemplateNodeIdAsync(normalizedNodeId, ownerId, cancellationToken));
-            await _settings.SetPropertyAsync(
+            await Settings.SetPropertyAsync(
                 x => x.DefaultUserTemplateNodeId,
                 normalizedNodeId,
                 GetFallbackPublicBaseUrl(),
@@ -472,7 +274,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("default-user-template-node")]
         public IActionResult GetDefaultUserTemplateNode()
         {
-            Guid? defaultUserTemplateNodeId = _settings.GetServerSettings().DefaultUserTemplateNodeId;
+            Guid? defaultUserTemplateNodeId = Settings.GetServerSettings().DefaultUserTemplateNodeId;
             return Ok(new { defaultUserTemplateNodeId });
         }
 
@@ -485,7 +287,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_validator.ValidateTimezone(timezone));
-            await _settings.SetPropertyAsync(x => x.Timezone, timezone!.Trim(), GetFallbackPublicBaseUrl(), cancellationToken);
+            await Settings.SetPropertyAsync(x => x.Timezone, timezone!.Trim(), GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
 
@@ -496,7 +298,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("timezone")]
         public IActionResult GetTimezone()
         {
-            string timezone = _settings.GetServerSettings().Timezone;
+            string timezone = Settings.GetServerSettings().Timezone;
             return Ok(new { timezone });
         }
 
@@ -509,7 +311,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_validator.ValidatePublicBaseUrl(url));
-            await _settings.SetPropertyAsync(
+            await Settings.SetPropertyAsync(
                 x => x.PublicBaseUrl,
                 SettingsProvider.NormalizePublicBaseUrl(url),
                 GetFallbackPublicBaseUrl(),
@@ -524,7 +326,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("public-base-url")]
         public IActionResult GetPublicBaseUrl()
         {
-            string? publicBaseUrl = _settings.GetServerSettings().PublicBaseUrl;
+            string? publicBaseUrl = Settings.GetServerSettings().PublicBaseUrl;
             return Ok(new { publicBaseUrl });
         }
 
@@ -535,7 +337,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("trusted-proxy-ip-address")]
         public IActionResult GetTrustedProxyIpAddress()
         {
-            ServerSettingsSnapshot settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = Settings.GetServerSettings();
             IPAddress? configuredProxy = settings.TrustedProxyIpAddress;
             string? trustedProxyIpAddress = configuredProxy is null
                 ? null
@@ -587,7 +389,7 @@ namespace Cotton.Server.Controllers
 
             if (string.IsNullOrWhiteSpace(ipAddress))
             {
-                await _settings.UpdateSettingsAsync(
+                await Settings.UpdateSettingsAsync(
                     settings =>
                     {
                         settings.TrustedProxyIpAddress = null;
@@ -631,7 +433,7 @@ namespace Cotton.Server.Controllers
                     saved: false));
             }
 
-            await _settings.UpdateSettingsAsync(
+            await Settings.UpdateSettingsAsync(
                 settings =>
                 {
                     settings.TrustedProxyIpAddress = candidateProxyIpAddress;
@@ -657,7 +459,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_validator.ValidateComputionMode(mode));
-            await _settings.SetPropertyAsync(x => x.ComputionMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
+            await Settings.SetPropertyAsync(x => x.ComputionMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
 
@@ -668,7 +470,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("compution-mode")]
         public IActionResult GetComputionMode()
         {
-            ComputionMode computionMode = _settings.GetServerSettings().ComputionMode;
+            ComputionMode computionMode = Settings.GetServerSettings().ComputionMode;
             return Ok(new { computionMode = computionMode.ToString() });
         }
 
@@ -681,7 +483,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(await _validator.ValidateEmailModeAsync(mode, cancellationToken));
-            await _settings.SetPropertyAsync(x => x.EmailMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
+            await Settings.SetPropertyAsync(x => x.EmailMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
 
@@ -692,7 +494,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("email-mode")]
         public IActionResult GetEmailMode()
         {
-            EmailMode emailMode = _settings.GetServerSettings().EmailMode;
+            EmailMode emailMode = Settings.GetServerSettings().EmailMode;
             return Ok(new { emailMode = emailMode.ToString() });
         }
 
@@ -703,7 +505,7 @@ namespace Cotton.Server.Controllers
         [HttpPatch("allow-cross-user-deduplication")]
         public async Task<IActionResult> SetAllowCrossUserDeduplication([FromBody] bool allow, CancellationToken cancellationToken)
         {
-            await _settings.SetPropertyAsync(x => x.AllowCrossUserDeduplication, allow, GetFallbackPublicBaseUrl(), cancellationToken);
+            await Settings.SetPropertyAsync(x => x.AllowCrossUserDeduplication, allow, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
 
@@ -714,7 +516,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("allow-cross-user-deduplication")]
         public IActionResult GetAllowCrossUserDeduplication()
         {
-            bool allowCrossUserDeduplication = _settings.GetServerSettings().AllowCrossUserDeduplication;
+            bool allowCrossUserDeduplication = Settings.GetServerSettings().AllowCrossUserDeduplication;
             return Ok(new { allowCrossUserDeduplication });
         }
 
@@ -725,7 +527,7 @@ namespace Cotton.Server.Controllers
         [HttpPatch("allow-global-indexing")]
         public async Task<IActionResult> SetAllowGlobalIndexing([FromBody] bool allow, CancellationToken cancellationToken)
         {
-            await _settings.SetPropertyAsync(x => x.AllowGlobalIndexing, allow, GetFallbackPublicBaseUrl(), cancellationToken);
+            await Settings.SetPropertyAsync(x => x.AllowGlobalIndexing, allow, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
 
@@ -736,7 +538,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("allow-global-indexing")]
         public IActionResult GetAllowGlobalIndexing()
         {
-            bool allowGlobalIndexing = _settings.GetServerSettings().AllowGlobalIndexing;
+            bool allowGlobalIndexing = Settings.GetServerSettings().AllowGlobalIndexing;
             return Ok(new { allowGlobalIndexing });
         }
 
@@ -749,7 +551,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(await _validator.ValidateStorageTypeAsync(type, cancellationToken));
-            await _settings.SetPropertyAsync(x => x.StorageType, type, GetFallbackPublicBaseUrl(), cancellationToken);
+            await Settings.SetPropertyAsync(x => x.StorageType, type, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
 
@@ -760,7 +562,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("storage-type")]
         public IActionResult GetStorageType()
         {
-            StorageType storageType = _settings.GetServerSettings().StorageType;
+            StorageType storageType = Settings.GetServerSettings().StorageType;
             return Ok(new { storageType = storageType.ToString() });
         }
 
@@ -773,7 +575,7 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(await _validator.ValidateS3ConfigAsync(s3Config, cancellationToken));
-            await _settings.UpdateSettingsAsync(settings =>
+            await Settings.UpdateSettingsAsync(settings =>
             {
                 settings.S3AccessKeyId = s3Config.AccessKey.Trim();
                 settings.S3SecretAccessKeyEncrypted = s3Config.SecretKey;
@@ -791,7 +593,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("s3-config")]
         public IActionResult GetS3Config()
         {
-            ServerSettingsSnapshot settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = Settings.GetServerSettings();
             var s3Config = new S3Config
             {
                 AccessKey = settings.S3AccessKeyId ?? string.Empty,
@@ -816,7 +618,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiBadRequest("Invalid SMTP port number.");
             }
-            await _settings.UpdateSettingsAsync(settings =>
+            await Settings.UpdateSettingsAsync(settings =>
             {
                 settings.SmtpServerAddress = emailConfig.SmtpServer.Trim();
                 settings.SmtpServerPort = smtpPort;
@@ -857,7 +659,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("email-config")]
         public IActionResult GetEmailConfig()
         {
-            ServerSettingsSnapshot settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = Settings.GetServerSettings();
             var emailConfig = new EmailConfig
             {
                 Username = settings.SmtpUsername ?? string.Empty,
@@ -870,27 +672,6 @@ namespace Cotton.Server.Controllers
             return Ok(emailConfig);
         }
 
-        private async Task EnsureSettingsAsync(CancellationToken cancellationToken)
-        {
-            await _settings.EnsureServerSettingsAsync(GetFallbackPublicBaseUrl(), cancellationToken);
-        }
-
-        private string GetFallbackPublicBaseUrl()
-        {
-            ServerSettingsSnapshot settings = _settings.GetServerSettings();
-            return RequestBaseUrlHelpers.GetBaseUrl(
-                Request,
-                settings.TrustedProxyIpAddress,
-                settings.TrustedProxyPrefixLength);
-        }
-
-        private static void ThrowIfInvalid(string? error)
-        {
-            if (error is not null)
-            {
-                throw new BadRequestException<CottonServerSettings>(error);
-            }
-        }
 
         private static object CreateTrustedProxyVerificationResponse(
             IPAddress? configuredProxyIpAddress,
@@ -919,7 +700,7 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             IReadOnlyList<string> requestServices = Request.DetectProxyServices();
-            string publicBaseUrl = _settings.GetServerSettings().PublicBaseUrl;
+            string publicBaseUrl = Settings.GetServerSettings().PublicBaseUrl;
             ProxyTopologyProbeResult probe = await _proxyTopologyProbe.DetectAsync(
                 publicBaseUrl,
                 cancellationToken);
