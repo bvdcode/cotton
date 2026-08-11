@@ -17,7 +17,6 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
-using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
@@ -30,7 +29,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 using FileVersionDto = Cotton.Files.FileVersionDto;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Controllers
 {
@@ -47,7 +45,6 @@ namespace Cotton.Server.Controllers
         IHubContext<EventHub> _hubContext,
         FileVersionService _versions,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
-        ILayoutMutationGate _layoutGate,
         ILogger<FileController> _logger) : ControllerBase
     {
 
@@ -135,70 +132,26 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeFileId,
             [FromBody] RenameFileRequestDto request)
         {
-            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
-                out string normalizedName,
-                out string? errorMessage);
-            if (!isValidName)
-            {
-                return CottonResult.BadRequest(errorMessage);
-            }
-
             Guid userId = User.GetUserId();
-            Guid? layoutId = await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .Select(x => (Guid?)x.Node.LayoutId)
-                .SingleOrDefaultAsync();
-            if (layoutId is null)
+            RenameFileResult result = await _mediator.Send(
+                new RenameFileRequest(
+                    userId,
+                    nodeFileId,
+                    request.Name,
+                    FileETags.ReadIfMatch(Request)),
+                HttpContext.RequestAborted);
+            if (result.Status != RenameFileStatus.Renamed)
             {
-                return CottonResult.NotFound("File not found.");
-            }
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId.Value, HttpContext.RequestAborted);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
-
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
-            if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
-            {
-                return CottonResult.NotFound("File not found.");
+                return result.Status switch
+                {
+                    RenameFileStatus.InvalidName => CottonResult.BadRequest(result.Error!),
+                    RenameFileStatus.FileNotFound => CottonResult.NotFound(result.Error!),
+                    RenameFileStatus.NameConflict => this.ApiConflict(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
-            if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
-            {
-                throw new FilePreconditionFailedException<NodeFile>("File content changed before rename.");
-            }
-
-            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            bool fileExists = await _dbContext.NodeFiles
-                .AnyAsync(x =>
-                    x.NodeId == nodeFile.NodeId &&
-                    x.OwnerId == userId &&
-                    x.NameKey == nameKey &&
-                    x.Id != nodeFileId);
-            if (fileExists)
-            {
-                return this.ApiConflict("A file with the same name key already exists in this folder: " + nameKey);
-            }
-
-            bool nodeExists = await _dbContext.Nodes
-                .AnyAsync(x =>
-                    x.ParentId == nodeFile.NodeId &&
-                    x.OwnerId == userId &&
-                    x.Type == nodeFile.Node.Type &&
-                    x.NameKey == nameKey);
-            if (nodeExists)
-            {
-                return this.ApiConflict("A folder with the same name key already exists in this folder: " + nameKey);
-            }
-
-            nodeFile.SetName(request.Name);
-            _syncChanges.StageFileChange(SyncChangeKind.FileRenamed, nodeFile, nodeFile.Node.LayoutId);
-            await _dbContext.SaveChangesAsync();
-            await tx.CommitAsync();
-            NodeFileManifestDto mapped = nodeFile.Adapt<NodeFileManifestDto>();
+            NodeFileManifestDto mapped = result.File!;
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileRenamed", mapped);
             return Ok(mapped);
         }
