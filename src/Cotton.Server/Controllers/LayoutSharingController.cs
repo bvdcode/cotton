@@ -12,7 +12,6 @@ using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
@@ -39,8 +38,7 @@ namespace Cotton.Server.Controllers
         CottonDbContext _dbContext,
         IStoragePipeline _storage,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
-        PublicShareLookupFailureLimiter _publicShareLookupFailures,
-        ArchiveDownloadService _archives) : ControllerBase
+        PublicShareLookupFailureLimiter _publicShareLookupFailures) : ControllerBase
     {
         /// <summary>
         /// Gets node share link.
@@ -205,41 +203,31 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            SharedNodeAccess? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken is null)
-            {
-                return this.ApiPublicShareNotFound(
-                    _publicShareLookupFailures,
-                    token,
-                    "Shared folder not found.");
-            }
-
-            Guid targetNodeId = nodeId ?? nodeShareToken.NodeId;
-            bool canAccessNode = await IsNodeInSharedSubtreeAsync(
-                targetNodeId,
-                nodeShareToken.NodeId,
-                nodeShareToken.CreatedByUserId);
-            if (!canAccessNode)
-            {
-                return this.ApiNotFound("Folder not found.");
-            }
-
-            CreateArchiveDownloadLinkResult result = await _archives.CreateDownloadLinkAsync(
-                nodeShareToken.CreatedByUserId,
-                new CreateArchiveDownloadLinkRequest
-                {
-                    NodeIds = [targetNodeId],
-                    EnforcePublicShareLimits = true,
-                },
+            CreateSharedArchiveDownloadLinkRequest request = new(token, nodeId);
+            CreateSharedArchiveDownloadLinkResult result = await _mediator.Send(
+                request,
                 cancellationToken);
-
-            return result.StatusCode switch
+            switch (result.Status)
             {
-                StatusCodes.Status200OK => Ok(result.Link),
-                StatusCodes.Status400BadRequest => BadRequest(result.Error),
-                StatusCodes.Status404NotFound => NotFound(result.Error),
-                _ => StatusCode(result.StatusCode, result.Error),
-            };
+                case CreateSharedArchiveDownloadLinkStatus.ArchiveResult:
+                    CreateArchiveDownloadLinkResult archive = result.Archive!;
+                    return archive.StatusCode switch
+                    {
+                        StatusCodes.Status200OK => Ok(archive.Link),
+                        StatusCodes.Status400BadRequest => BadRequest(archive.Error),
+                        StatusCodes.Status404NotFound => NotFound(archive.Error),
+                        _ => StatusCode(archive.StatusCode, archive.Error),
+                    };
+                case CreateSharedArchiveDownloadLinkStatus.SharedFolderNotFound:
+                    return this.ApiPublicShareNotFound(
+                        _publicShareLookupFailures,
+                        token,
+                        "Shared folder not found.");
+                case CreateSharedArchiveDownloadLinkStatus.FolderNotFound:
+                    return this.ApiNotFound("Folder not found.");
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(result.Status));
+            }
         }
 
         /// <summary>
