@@ -21,7 +21,6 @@ using Cotton.Storage.Pipelines;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
-using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -165,45 +164,26 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            SharedNodeAccess? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken is null)
+            GetSharedNodeAncestorsQuery query = new(token, nodeId);
+            GetSharedNodeAncestorsResult result = await _mediator.Send(
+                query,
+                HttpContext.RequestAborted);
+            switch (result.Status)
             {
-                return this.ApiPublicShareNotFound(
-                    _publicShareLookupFailures,
-                    token,
-                    "Shared folder not found.");
+                case GetSharedNodeAncestorsStatus.Success:
+                    return Ok(result.Ancestors);
+                case GetSharedNodeAncestorsStatus.SharedFolderNotFound:
+                    return this.ApiPublicShareNotFound(
+                        _publicShareLookupFailures,
+                        token,
+                        "Shared folder not found.");
+                case GetSharedNodeAncestorsStatus.FolderNotFound:
+                    return this.ApiNotFound("Folder not found.");
+                case GetSharedNodeAncestorsStatus.InvalidHierarchy:
+                    return this.ApiConflict(result.Error!);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(result.Status));
             }
-
-            bool canAccessNode = await IsNodeInSharedSubtreeAsync(
-                nodeId,
-                nodeShareToken.NodeId,
-                nodeShareToken.CreatedByUserId);
-            if (!canAccessNode)
-            {
-                return this.ApiNotFound("Folder not found.");
-            }
-
-            Node? currentNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId
-                    && x.OwnerId == nodeShareToken.CreatedByUserId
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (currentNode is null)
-            {
-                return this.ApiNotFound("Folder not found.");
-            }
-
-            (List<NodeDto> ancestors, string? error) = await LoadSharedAncestorsAsync(
-                currentNode,
-                nodeShareToken.NodeId,
-                nodeShareToken.CreatedByUserId);
-            if (error is not null)
-            {
-                return this.ApiConflict(error);
-            }
-
-            return Ok(ancestors);
         }
 
         /// <summary>
@@ -313,55 +293,6 @@ namespace Cotton.Server.Controllers
             return servesPreview
                 ? ServeSharedLargePreview(nodeFile)
                 : ServeSharedFileDownload(nodeFile, download);
-        }
-
-        private async Task<(List<NodeDto> Ancestors, string? Error)> LoadSharedAncestorsAsync(
-            Node currentNode,
-            Guid sharedRootNodeId,
-            Guid ownerId)
-        {
-            const int maxDepth = 256;
-            int depth = 0;
-            HashSet<Guid> visited = [currentNode.Id];
-            List<NodeDto> ancestors = [];
-
-            while (currentNode.ParentId.HasValue)
-            {
-                if (depth++ >= maxDepth)
-                {
-                    return ([], "Maximum node hierarchy depth exceeded.");
-                }
-
-                Guid parentId = currentNode.ParentId.Value;
-                if (!visited.Add(parentId))
-                {
-                    return ([], "Circular reference detected in node hierarchy.");
-                }
-
-                Node? parentNode = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => x.Id == parentId
-                        && x.OwnerId == ownerId
-                        && x.Type == NodeType.Default)
-                    .SingleOrDefaultAsync();
-
-                if (parentNode is null)
-                {
-                    break;
-                }
-
-                if (parentNode.Id == sharedRootNodeId)
-                {
-                    ancestors.Add(parentNode.Adapt<NodeDto>());
-                    break;
-                }
-
-                ancestors.Add(parentNode.Adapt<NodeDto>());
-                currentNode = parentNode;
-            }
-
-            ancestors.Reverse();
-            return (ancestors, null);
         }
 
         private Task<NodeFile?> LoadSharedNodeFileAsync(Guid nodeFileId, Guid ownerId)
