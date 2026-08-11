@@ -5,7 +5,6 @@ using Cotton.Server.Models.Configuration;
 using Cotton.Server.Services;
 using Microsoft.Extensions.Options;
 using System.Buffers.Binary;
-using System.Reflection;
 using System.Text;
 using NUnit.Framework;
 
@@ -132,34 +131,23 @@ public class StoredZipArchiveWriterTests
         byte[] pathBytes = Encoding.UTF8.GetBytes(path);
         long zip64Offset = uint.MaxValue;
 
-        Type writerType = typeof(StoredZipArchiveWriter);
-        Type planType = writerType.GetNestedType("ZipEntryPlan", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("ZIP entry plan type was not found.");
-        object plan = Activator.CreateInstance(
-            planType,
-            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
-            binder: null,
-            args: [path, pathBytes, 12L, false, false, zip64Offset],
-            culture: null)
-            ?? throw new InvalidOperationException("ZIP entry plan could not be created.");
-        planType.GetProperty("CentralExtraLength")?.SetValue(plan, 12L);
+        StoredZipArchiveWriter.ZipEntryPlan plan = new(
+            path,
+            pathBytes,
+            12L,
+            false,
+            false,
+            zip64Offset)
+        {
+            CentralExtraLength = 12L,
+        };
+        StoredZipArchiveWriter.WrittenZipEntry written = new(plan, 0u);
+        using MemoryStream destination = new();
 
-        Type writtenType = writerType.GetNestedType("WrittenZipEntry", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Written ZIP entry type was not found.");
-        object written = Activator.CreateInstance(
-            writtenType,
-            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
-            binder: null,
-            args: [plan, 0u],
-            culture: null)
-            ?? throw new InvalidOperationException("Written ZIP entry could not be created.");
-
-        MethodInfo method = writerType.GetMethod("WriteCentralDirectoryEntryAsync", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Central directory writer was not found.");
-        using var destination = new MemoryStream();
-        var task = (Task?)method.Invoke(null, [destination, written, CancellationToken.None]);
-        Assert.That(task, Is.Not.Null);
-        await task!;
+        await StoredZipArchiveWriter.WriteCentralDirectoryEntryAsync(
+            destination,
+            written,
+            CancellationToken.None);
 
         byte[] bytes = destination.ToArray();
         ushort nameLength = BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(28, 2));

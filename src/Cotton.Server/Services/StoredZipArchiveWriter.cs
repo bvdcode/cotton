@@ -281,7 +281,7 @@ namespace Cotton.Server.Services
             await WriteEndOfCentralDirectoryAsync(destination, entries.Count, plan, cancellationToken).ConfigureAwait(false);
         }
 
-        private static async Task WriteCentralDirectoryEntryAsync(
+        internal static async Task WriteCentralDirectoryEntryAsync(
             Stream destination,
             WrittenZipEntry written,
             CancellationToken cancellationToken)
@@ -486,7 +486,7 @@ namespace Cotton.Server.Services
             bool NeedsZip64End,
             long TotalLength);
 
-        private record ZipEntryPlan(
+        internal record ZipEntryPlan(
             string Path,
             byte[] PathBytes,
             long SizeBytes,
@@ -500,6 +500,6 @@ namespace Cotton.Server.Services
             public long CentralExtraLength { get; init; }
         }
 
-        private record WrittenZipEntry(ZipEntryPlan Plan, uint Crc32);
+        internal record WrittenZipEntry(ZipEntryPlan Plan, uint Crc32);
     }
 }
