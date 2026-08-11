@@ -31,9 +31,14 @@ import { useFileMoveController } from "./hooks/useFileMoveController";
 import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
 import { useFilesContentOperations } from "./hooks/useFilesContentOperations";
 import { useFilesEncryptionController } from "./hooks/useFilesEncryptionController";
-import { useFilesPagePresentation } from "./hooks/useFilesPagePresentation";
 import { useFilesSelectionActions } from "./hooks/useFilesSelectionActions";
-import { FilesPageView } from "./FilesPageView";
+import { FilesPageContent } from "./components/FilesPageContent";
+import { FilesPageHeader } from "./components/FilesPageHeader";
+import { FilesPageList } from "./components/FilesPageList";
+import {
+  FilesDropPreparationLoader,
+  FilesPageOverlays,
+} from "./components/FilesPageOverlays";
 import {
   getActiveCurrentNode,
   getCurrentContent,
@@ -158,18 +163,7 @@ export const FilesPage: React.FC = () => {
     setScanRootNodeId(nodeId);
   }, [nodeId, setScanRootNodeId]);
 
-  const {
-    previewState,
-    closePreview,
-    handleFileClick,
-    lightboxOpen,
-    lightboxIndex,
-    mediaItems,
-    getSignedMediaUrl,
-    getDownloadUrl,
-    handleMediaClick,
-    setLightboxOpen,
-  } = fileListLogic.interaction;
+  const { handleFileClick, handleMediaClick } = fileListLogic.interaction;
 
   // Consume selectedFileId from router state (e.g. dashboard → open file)
   React.useEffect(() => {
@@ -215,6 +209,16 @@ export const FilesPage: React.FC = () => {
 
   const fileSelection = useFileSelection();
 
+  const handleGoUp = React.useCallback(() => {
+    if (ancestors.length === 0) {
+      navigate("/files");
+      return;
+    }
+
+    const parent = ancestors[ancestors.length - 1];
+    navigate(`/files/${parent.id}`);
+  }, [ancestors, navigate]);
+
   const goUpParentId = getGoUpParentId(ancestors);
 
   const move = useFileMoveController({
@@ -249,76 +253,77 @@ export const FilesPage: React.FC = () => {
   });
 
   const selectionActions = useFilesSelectionActions({
-      activeCurrentNode,
-      clipboardCount: move.clipboardCount,
-      confirm,
-      currentFolderName: currentNode?.name,
-      fileSelection,
-      handleCutSelection: move.handleCutSelection,
-      handlePasteHere: move.handlePasteHere,
-      loading,
-      nodeId,
-      optimisticDeleteFile,
-      reloadCurrentNode,
-      showToast,
-      t,
-      tiles,
-    });
-
-  const presentation = useFilesPagePresentation({
-    ancestors,
-    breadcrumbs,
-    content,
-    contentOperations,
-    cycleViewMode,
-    encryption,
-    error,
-    fileListLogic,
+    activeCurrentNode,
+    clipboardCount: move.clipboardCount,
+    confirm,
+    currentFolderName: currentNode?.name,
     fileSelection,
-    isHugeFolder,
-    layoutType,
+    handleCutSelection: move.handleCutSelection,
+    handlePasteHere: move.handlePasteHere,
     loading,
-    move,
-    navigate,
     nodeId,
-    selectionActions,
+    optimisticDeleteFile,
+    reloadCurrentNode,
+    showToast,
     t,
     tiles,
-    tilesSize,
-    viewMode,
   });
 
   const shouldRenderFileList = shouldRenderFilesList(error, content);
 
   return (
-    <FilesPageView
-      activeUnlockPrompt={encryption.activeUnlockPrompt}
-      clientEncryptionEnvelope={encryption.clientEncryptionEnvelope}
-      closePreview={closePreview}
-      error={error}
-      fileListViewProps={presentation.fileListViewProps}
-      fileUpload={contentOperations.fileUpload}
-      folderEncryptionPrompt={encryption.folderEncryptionPrompt}
-      getDownloadUrl={getDownloadUrl}
-      getSignedMediaUrl={getSignedMediaUrl}
-      handleCloseVersions={presentation.handleCloseVersions}
-      handleLightboxDelete={contentOperations.handleLightboxDelete}
-      handleUnlockCancel={encryption.handleUnlockCancel}
-      handleUnlockSuccess={encryption.handleUnlockSuccess}
-      handleVersionsChanged={presentation.handleVersionsChanged}
-      layoutType={layoutType}
-      lightboxIndex={lightboxIndex}
-      lightboxOpen={lightboxOpen}
-      mediaItems={mediaItems}
-      pageHeaderProps={presentation.pageHeaderProps}
-      previewState={previewState}
-      refreshCurrentNodeContent={presentation.refreshCurrentNodeContent}
-      setLightboxOpen={setLightboxOpen}
-      shouldRenderFileList={shouldRenderFileList}
-      smoothGalleryTransitions={smoothGalleryTransitions}
-      t={t}
-      unlockDialogOpen={encryption.unlockDialogOpen}
-      versionDialogFile={presentation.versionDialogFile}
-    />
+    <>
+      <FilesDropPreparationLoader fileUpload={contentOperations.fileUpload} />
+      <FilesPageContent
+        error={error}
+        fileUpload={contentOperations.fileUpload}
+        header={
+          <FilesPageHeader
+            breadcrumbs={breadcrumbs}
+            canGoUp={ancestors.length > 0}
+            content={content}
+            contentOperations={contentOperations}
+            cycleViewMode={cycleViewMode}
+            fileSelection={fileSelection}
+            isHugeFolder={isHugeFolder}
+            loading={loading}
+            move={move}
+            nodeId={nodeId}
+            onGoHome={encryption.goHome}
+            onGoUp={handleGoUp}
+            selectionActions={selectionActions}
+            tiles={tiles}
+            viewMode={viewMode}
+          />
+        }
+        layoutType={layoutType}
+        unlockDialogOpen={encryption.unlockDialogOpen}
+      >
+        <FilesPageList
+          content={content}
+          contentOperations={contentOperations}
+          encryption={encryption}
+          error={error}
+          fileListLogic={fileListLogic}
+          fileSelection={fileSelection}
+          layoutType={layoutType}
+          move={move}
+          nodeId={nodeId}
+          onNavigateBack={handleGoUp}
+          selectionActions={selectionActions}
+          shouldRenderFileList={shouldRenderFileList}
+          tiles={tiles}
+          tilesSize={tilesSize}
+        />
+      </FilesPageContent>
+      <FilesPageOverlays
+        encryption={encryption}
+        fileUpload={contentOperations.fileUpload}
+        handleLightboxDelete={contentOperations.handleLightboxDelete}
+        interaction={fileListLogic.interaction}
+        nodeId={nodeId}
+        smoothGalleryTransitions={smoothGalleryTransitions}
+      />
+    </>
   );
 };
