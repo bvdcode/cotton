@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button } from "@mui/material";
 import { toast } from "@shared/ui/notifications";
 import {
   FileListViewFactory,
@@ -17,9 +16,6 @@ import {
   resolveRootInBackground,
 } from "../../shared/store/nodesActions";
 import { useAuthStore } from "../../shared/store/authStore";
-import { useFolderOperations } from "./hooks/useFolderOperations";
-import { useFileUpload } from "./hooks/useFileUpload";
-import { useFileOperations } from "./hooks/useFileOperations";
 import { useFilesLayout } from "@shared/hooks/useFilesLayout";
 import { useFilesData } from "./hooks/useFilesData";
 import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
@@ -30,14 +26,7 @@ import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
-import { filesApi } from "../../shared/api/filesApi";
-import {
-  invalidateAllFileVersions,
-  invalidateFileVersions,
-} from "../../shared/api/queries/fileVersions";
-import { fetchServerSettings } from "../../shared/api/queries/serverSettings";
-import { type NodeFileManifestDto } from "../../shared/api/nodesApi";
-import { applyDisplayMetaToFile } from "../../shared/crypto";
+import { invalidateAllFileVersions } from "../../shared/api/queries/fileVersions";
 import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
@@ -47,27 +36,19 @@ import {
 } from "../../shared/store/userPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 import { useFileMoveController } from "./hooks/useFileMoveController";
-import {
-  useFileListPageLogic,
-  type FileListPageLogic,
-} from "./hooks/useFileListPageLogic";
-import { uploadFileToNode } from "@shared/upload";
+import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
+import { useFilesContentOperations } from "./hooks/useFilesContentOperations";
 import { useFilesEncryptionController } from "./hooks/useFilesEncryptionController";
 import { useFilesSelectionActions } from "./hooks/useFilesSelectionActions";
 import { FilesPageView } from "./FilesPageView";
 import {
-  buildUniqueSiblingName,
   getActiveCurrentNode,
   getCurrentContent,
   getGoUpParentId,
-  isCreateFolderShortcut,
-  isEditableKeyboardTarget,
   isHugeFolderCount,
   resolveFilesNodeId,
   shouldRenderFilesList,
 } from "./filesPageModel";
-
-const MARKDOWN_FILE_CONTENT_TYPE = "text/markdown";
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -254,97 +235,6 @@ export const FilesPage: React.FC = () => {
     showToast,
   });
 
-  const folderOps = useFolderOperations(nodeId, handleFolderChanged);
-  const handleFileUploaded = React.useCallback(
-    (file: NodeFileManifestDto) => {
-      void invalidateFileVersions(queryClient, file.id);
-    },
-    [queryClient],
-  );
-  const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
-    onToast: showToast,
-    onFileUploaded: handleFileUploaded,
-  });
-  const fileOps = useFileOperations(reloadCurrentNode);
-  const [isCreatingMarkdownFile, setIsCreatingMarkdownFile] =
-    React.useState(false);
-
-  const getCurrentSiblingNames = React.useCallback(
-    () =>
-      tiles.map((tile) =>
-        tile.kind === "folder" ? tile.node.name : tile.file.name,
-      ),
-    [tiles],
-  );
-
-  const handleNewFolderClick = React.useCallback(() => {
-    const folderName = buildUniqueSiblingName(
-      t("actions.defaultNewFolderName", { ns: "files" }),
-      getCurrentSiblingNames(),
-    );
-    folderOps.handleNewFolder(folderName);
-  }, [folderOps, getCurrentSiblingNames, t]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        !nodeId ||
-        loading ||
-        folderOps.isCreatingFolder ||
-        !isCreateFolderShortcut(event) ||
-        isEditableKeyboardTarget(event.target)
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      handleNewFolderClick();
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [folderOps.isCreatingFolder, handleNewFolderClick, loading, nodeId]);
-  const handleRestoreLightboxFile = React.useCallback(
-    async (fileId: string) => {
-      try {
-        const outcome = await filesApi.restoreFile(fileId);
-        if (outcome.status !== "Restored") {
-          toast.error(t("preview.deleteUndoFailed", { ns: "files" }));
-          return;
-        }
-
-        if (nodeId) {
-          await refreshNodeContent(nodeId);
-        } else {
-          reloadCurrentNode();
-        }
-      } catch (error) {
-        console.error("Failed to undo media delete:", error);
-        toast.error(t("preview.deleteUndoFailed", { ns: "files" }));
-      }
-    },
-    [nodeId, reloadCurrentNode, t],
-  );
-  const handleLightboxDelete = React.useCallback(
-    async (item: FileListPageLogic["interaction"]["mediaItems"][number]) => {
-      await fileOps.deleteFile(item.id);
-      toast.info(t("preview.deleteToast", { ns: "files" }), {
-        action: (key) => (
-          <Button
-            color="inherit"
-            size="small"
-            onClick={() => {
-              toast.dismiss(key);
-              void handleRestoreLightboxFile(item.id);
-            }}
-          >
-            {t("common:actions.undo")}
-          </Button>
-        ),
-      });
-    },
-    [fileOps, handleRestoreLightboxFile, t],
-  );
   const fileSelection = useFileSelection();
   const [versionDialogFile, setVersionDialogFile] = React.useState<{
     id: string;
@@ -377,58 +267,29 @@ export const FilesPage: React.FC = () => {
     selectGallerySmoothTransitions,
   );
 
-  const handleCreateMarkdownFile = React.useCallback(async () => {
-    if (!nodeId || isCreatingMarkdownFile) {
-      return;
-    }
-
-    if (!ensureCurrentFolderUnlocked()) {
-      return;
-    }
-
-    const fileName = buildUniqueSiblingName(
-      t("actions.defaultMarkdownFileName", { ns: "files" }),
-      getCurrentSiblingNames(),
-    );
-
-    setIsCreatingMarkdownFile(true);
-
-    try {
-      const settings = await fetchServerSettings(queryClient);
-      const createdFile = await uploadFileToNode({
-        file: new File([""], fileName, { type: MARKDOWN_FILE_CONTENT_TYPE }),
-        nodeId,
-        server: {
-          maxChunkSizeBytes: settings.maxChunkSizeBytes,
-          supportedHashAlgorithm: settings.supportedHashAlgorithm,
-        },
-        encrypt: currentFolderEncryptionPolicy.effectiveEnabled,
-      });
-      const displayFile = await applyDisplayMetaToFile(createdFile);
-
-      useNodesStore.getState().moveFileInCache(displayFile, nodeId, nodeId);
-      fileOps.handleRenameFile(displayFile.id, displayFile.name);
-      void refreshNodeContent(nodeId);
-    } catch (error) {
-      console.error("Failed to create markdown file:", error);
-      showToast(
-        t("uploadDrop.errors.createMarkdownFileFailed", { ns: "files" }),
-        "error",
-      );
-    } finally {
-      setIsCreatingMarkdownFile(false);
-    }
-  }, [
-    currentFolderEncryptionPolicy.effectiveEnabled,
-    ensureCurrentFolderUnlocked,
+  const {
     fileOps,
-    getCurrentSiblingNames,
+    fileUpload,
+    folderOps,
+    handleCreateMarkdownFile,
+    handleLightboxDelete,
+    handleNewFolderClick,
     isCreatingMarkdownFile,
+  } = useFilesContentOperations({
+    breadcrumbs,
+    content,
+    currentFolderEncryptionEnabled:
+      currentFolderEncryptionPolicy.effectiveEnabled,
+    ensureCurrentFolderUnlocked,
+    handleFolderChanged,
+    loading,
     nodeId,
     queryClient,
+    reloadCurrentNode,
     showToast,
     t,
-  ]);
+    tiles,
+  });
 
   const stats = useMemo(
     () => calculateFolderStats(content?.nodes, content?.files),
