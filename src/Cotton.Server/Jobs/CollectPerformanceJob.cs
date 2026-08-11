@@ -22,8 +22,11 @@ namespace Cotton.Server.Jobs
         CottonDbContext _dbContext,
         SettingsProvider _settingsProvider,
         StoragePipelineProbeService _storagePipelineProbe,
+        IHttpClientFactory _httpClientFactory,
         ILogger<CollectPerformanceJob> _logger) : IJob
     {
+        internal const string HttpClientName = "CottonBridgeTelemetry";
+
         /// <summary>
         /// Executes the scheduled Quartz job.
         /// </summary>
@@ -60,7 +63,7 @@ namespace Cotton.Server.Jobs
                 MaxChunkSizeBytes = settings.MaxChunkSizeBytes,
                 StoragePipelineProbe = storagePipelineProbe,
             };
-            using var httpClient = new HttpClient();
+            using HttpClient httpClient = _httpClientFactory.CreateClient(HttpClientName);
             await httpClient.PostAsJsonAsync(
                 global::Cotton.Constants.CottonBridgeTelemetryUrl,
                 request,

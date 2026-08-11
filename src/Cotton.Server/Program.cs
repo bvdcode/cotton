@@ -7,6 +7,7 @@ using Cotton.Database.Integrity;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
+using Cotton.Server.Jobs;
 using Cotton.Server.Mappings;
 using Cotton.Server.Models.Configuration;
 using Cotton.Server.Providers;
@@ -135,6 +136,7 @@ namespace Cotton.Server
             {
                 client.Timeout = TimeSpan.FromSeconds(10);
             });
+            builder.Services.AddHttpClient(CollectPerformanceJob.HttpClientName);
             builder.Services
                 .AddHttpClient<IProxyTopologyProbeService, ProxyTopologyProbeService>(client =>
                 {
