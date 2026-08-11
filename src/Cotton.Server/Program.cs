@@ -199,7 +199,7 @@ namespace Cotton.Server
                 .AddScoped<DownloadTokenExpirationService>()
                 .AddScoped<IPostgresDumpService, PostgresDumpService>()
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
-                .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()
+                .AddScoped<DatabaseAutoRestoreService>()
                 .AddScoped<FileManifestService>()
                 .AddSingleton<UserStorageQuotaCache>()
                 .AddSingleton<UserStorageQuotaMutationGate>()
@@ -275,7 +275,7 @@ namespace Cotton.Server
             app.ApplyMigrations<CottonDbContext>();
             using (IServiceScope scope = app.Services.CreateScope())
             {
-                IDatabaseAutoRestoreService autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
+                DatabaseAutoRestoreService autoRestore = scope.ServiceProvider.GetRequiredService<DatabaseAutoRestoreService>();
                 await autoRestore.TryRestoreIfEmptyAsync();
                 MasterKeyStartupValidator masterKeyValidator = scope.ServiceProvider
                     .GetRequiredService<MasterKeyStartupValidator>();
@@ -293,7 +293,7 @@ namespace Cotton.Server
         private static async Task<StartupBlocker?> ValidateStartupAsync(WebApplication app)
         {
             using IServiceScope scope = app.Services.CreateScope();
-            IStartupPreflightValidator validator = scope.ServiceProvider.GetRequiredService<IStartupPreflightValidator>();
+            StartupPreflightValidator validator = scope.ServiceProvider.GetRequiredService<StartupPreflightValidator>();
             return await validator.ValidateAsync(CancellationToken.None);
         }
     }

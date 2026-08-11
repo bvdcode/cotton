@@ -26,7 +26,7 @@ namespace Cotton.Server.Services
         IPostgresDumpService postgresDump,
         IDatabaseBackupManifestService backupManifestService,
         INotificationsProvider notificationsProvider,
-        ILogger<DatabaseAutoRestoreService> logger) : IDatabaseAutoRestoreService
+        ILogger<DatabaseAutoRestoreService> logger)
     {
         private const string RestoreEnvKey = "COTTON_RESTORE_DATABASE_IF_EMPTY";
 

@@ -3,7 +3,7 @@
 
 namespace Cotton.Server.Services.Startup
 {
-    internal class StartupPreflightValidator(IEnumerable<IStartupCheck> _checks) : IStartupPreflightValidator
+    internal class StartupPreflightValidator(IEnumerable<IStartupCheck> _checks)
     {
         public async Task<StartupBlocker?> ValidateAsync(CancellationToken cancellationToken)
         {
