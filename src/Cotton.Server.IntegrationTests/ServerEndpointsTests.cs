@@ -91,6 +91,26 @@ public class ServerEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task DisableVersionCheck_CanBeChanged()
+    {
+        string token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        JsonElement initial = await _client.GetFromJsonAsync<JsonElement>(
+            "/api/v1/server/settings/disable-version-check");
+        Assert.That(initial.GetProperty("disableVersionCheck").GetBoolean(), Is.False);
+
+        using HttpResponseMessage response = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/disable-version-check",
+            true);
+        response.EnsureSuccessStatusCode();
+
+        JsonElement saved = await _client.GetFromJsonAsync<JsonElement>(
+            "/api/v1/server/settings/disable-version-check");
+        Assert.That(saved.GetProperty("disableVersionCheck").GetBoolean(), Is.True);
+    }
+
+    [Test]
     public async Task TrustedProxyAddress_IsSavedOnlyWhenItMatchesCurrentConnection()
     {
         string token = await LoginAsync();

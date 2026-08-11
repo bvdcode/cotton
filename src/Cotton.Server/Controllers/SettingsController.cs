@@ -116,6 +116,35 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
+        /// Sets whether release checks are disabled.
+        /// </summary>
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("disable-version-check")]
+        public async Task<IActionResult> SetDisableVersionCheck(
+            [FromBody] bool disabled,
+            CancellationToken cancellationToken = default)
+        {
+            await EnsureSettingsAsync(cancellationToken);
+            await Settings.SetPropertyAsync(
+                settings => settings.DisableVersionCheck,
+                disabled,
+                GetFallbackPublicBaseUrl(),
+                cancellationToken);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Gets whether release checks are disabled.
+        /// </summary>
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("disable-version-check")]
+        public IActionResult GetDisableVersionCheck()
+        {
+            bool disableVersionCheck = Settings.GetServerSettings().DisableVersionCheck;
+            return Ok(new { disableVersionCheck });
+        }
+
+        /// <summary>
         /// Sets storage space mode.
         /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]

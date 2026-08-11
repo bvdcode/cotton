@@ -20,6 +20,7 @@ The single source of truth for operational configuration is the entity `CottonSe
 | `AllowCrossUserDeduplication` | `allow_cross_user_deduplication` | `bool` | Whether identical chunks may be deduplicated across users. |
 | `AllowGlobalIndexing` | `allow_global_indexing` | `bool` | Whether server-side indexing is globally permitted. |
 | `TelemetryEnabled` | `telemetry_enabled` | `bool` | Whether optional telemetry is enabled. Gates the three Cotton Bridge "Cloud" modes. |
+| `DisableVersionCheck` | `disable_version_check` | `bool` | Prevents the startup release check from contacting GitHub; local running-version tracking remains enabled. |
 | `Timezone` | `timezone` | `string` | IANA/Windows timezone id for admin-facing timestamps. `GetTimezoneInfo()` falls back to UTC if unresolvable. |
 | `InstanceId` | `instance_id` | `Guid` | Stable per-installation identifier. Never exposed raw — `GetInstanceIdHash()` returns its SHA-256. |
 | `PublicBaseUrl` | `public_base_url` | `string` | Externally reachable base URL for generated links/callbacks. |
@@ -71,7 +72,7 @@ When no row exists yet, two code paths in `SettingsProvider` supply defaults. `G
 | `ServerUsage` | `[ServerUsage.Other]` |
 | `StorageSpaceMode` | `Optimal` |
 | `GeoIpLookupMode` | `Disabled` |
-| `AllowCrossUserDeduplication` / `AllowGlobalIndexing` / `TelemetryEnabled` | `false` |
+| `AllowCrossUserDeduplication` / `AllowGlobalIndexing` / `TelemetryEnabled` / `DisableVersionCheck` | `false` |
 | `DefaultUserStorageQuotaBytes` / `DefaultUserTemplateNodeId` | `null` |
 | `TrustedProxyIpAddress` | `null` (legacy forwarded-header trust; security score penalty: 2) |
 | `TrustedProxyPrefixLength` | `null` (exact-address matching) |
@@ -334,7 +335,7 @@ flowchart TD
 | --- | --- | --- |
 | `ApplicationStartupClock` | `Services/ApplicationStartupClock.cs` | Singleton capturing `StartedAtUtc`; exposes `Uptime`. `AuthController` uses `_startupClock.Uptime.TotalMinutes > Constants.AdminAutocreateMinutesDelay` (5 min) to decide whether the initial-admin bootstrap window is still open. |
 | `IStartupPreflightValidator` / `IStartupCheck` | `Services/Startup/*.cs` | Ordered preflight checks that may return `StartupBlocker` before the normal app starts. The current registered check validates OS temp writability; version 0.5 has no version-transition or data-migration startup check. |
-| `AppVersionTrackerService` | `Services/AppVersionTrackerService.cs` | Hosted `BackgroundService`. After a 45 s startup delay it records the running version (`APP_VERSION`) into `app_versions`, then (unless in a `Testing`/`IntegrationTests` environment or `AppVersionTracker:ReleaseCheckEnabled=false`) GETs GitHub `repos/bvdcode/cotton/releases/latest` and notifies admins of newer non-draft, non-prerelease releases. Logs a warning on a detected downgrade (`SemanticVersionComparer.IsDowngrade`). |
+| `AppVersionTrackerService` | `Services/AppVersionTrackerService.cs` | Hosted `BackgroundService`. After a 45 s startup delay it records the running version (`APP_VERSION`) into `app_versions`, then (unless disabled by the environment, `AppVersionTracker:ReleaseCheckEnabled=false`, or `server_settings.disable_version_check=true`) GETs GitHub `repos/bvdcode/cotton/releases/latest` and notifies admins of newer non-draft, non-prerelease releases. Logs a warning on a detected downgrade (`SemanticVersionComparer.IsDowngrade`). |
 | `StoragePipelineProbeService` | `Services/StoragePipelineProbeService.cs` | Scoped service that pushes a 64 MiB (`PayloadSizeBytes`) synthetic random blob through the *real* storage pipeline (one warmup + one measured iteration), verifying the read-back SHA-256 with `FixedTimeEquals`, then deletes the probe blob. Serialized by a static `ProbeLock`. Invoked by `CollectPerformanceJob`, not at boot. |
 | `DefaultUserContentSeeder` | `Services/DefaultUserContentSeeder.cs` | Scoped service; entry point `SeedAsync(userId, ct)`. When `DefaultUserTemplateNodeId` is set and the template node exists (`NodeType.Default`), recursively copies the template's folders and files (referencing the same `FileManifestId`, i.e. zero re-upload) into a new user's default layout inside a single transaction (via an EF execution strategy). Called from guest signup (`AuthController`), admin user creation (`AdminCreateUserRequest` handler), and OIDC login (`OidcAuthenticationService`). |
 | `MasterKeyUnlockValidator` | `Services/MasterKeyUnlockValidator.cs` | Validates browser-submitted keys through the regular EF model and shared backend factory. |

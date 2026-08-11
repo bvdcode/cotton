@@ -455,7 +455,7 @@ There is no explicit FK navigation back to `User` defined on this type (only the
 | --- | --- | --- |
 | Cipher/pipeline | `encryption_threads`, `cipher_chunk_size_bytes`, `compression_level`, `max_chunk_size_bytes` | ints |
 | Sessions | `session_timeout_hours` | C# default `30 * 24` (720h = 30 days) |
-| Policy flags | `allow_cross_user_deduplication`, `allow_global_indexing`, `telemetry_enabled` | bools |
+| Policy flags | `allow_cross_user_deduplication`, `allow_global_indexing`, `telemetry_enabled`, `disable_version_check` | bools |
 | Instance | `timezone` (text), `instance_id` (uuid), `public_base_url` (text), `trusted_proxy_ip_address` (`inet`?), `trusted_proxy_prefix_length` (smallint?) | The trusted-proxy fields are nullable and excluded from the row's integrity canonical data. `null` is legacy compatibility mode, `0.0.0.0` without a prefix is the reserved direct-connection marker, and other values identify an exact trusted peer or CIDR network. |
 | SMTP | `smtp_server_address`, `smtp_server_port` (int?), `smtp_username`, `smtp_sender_email`, `smtp_use_ssl`, `smtp_password_encrypted` (**`[Encrypted]`**) | host/user/sender are nullable text |
 | S3 | `s3_access_key_id`, `s3_bucket_name`, `s3_region`, `s3_endpoint_url`, `s3_secret_access_key_encrypted` (**`[Encrypted]`**) | nullable text |
