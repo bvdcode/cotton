@@ -124,71 +124,22 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeId,
             [FromBody] RenameNodeRequestDto request)
         {
-            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
-                out string normalizedName,
-                out string? errorMessage);
-            if (!isValidName)
-            {
-                return CottonResult.BadRequest(errorMessage);
-            }
-
             Guid userId = User.GetUserId();
-            Guid? layoutId = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId && x.OwnerId == userId)
-                .Select(x => (Guid?)x.LayoutId)
-                .SingleOrDefaultAsync();
-            if (layoutId is null)
+            RenameNodeResult result = await _mediator.Send(
+                new RenameNodeRequest(userId, nodeId, request.Name),
+                HttpContext.RequestAborted);
+            if (result.Status != RenameNodeStatus.Renamed)
             {
-                return CottonResult.NotFound("Node not found.");
-            }
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId.Value, HttpContext.RequestAborted);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
-
-            Node? node = await _dbContext.Nodes
-                .Where(x => x.Id == nodeId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
-            if (node is null)
-            {
-                return CottonResult.NotFound("Node not found.");
-            }
-
-            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-
-            bool nodeExists = await _dbContext.Nodes
-                .AnyAsync(x =>
-                    x.ParentId == node.ParentId &&
-                    x.OwnerId == userId &&
-                    x.NameKey == nameKey &&
-                    x.LayoutId == node.LayoutId &&
-                    x.Type == node.Type &&
-                    x.Id != nodeId);
-            if (nodeExists)
-            {
-                return this.ApiConflict("A folder with the same name key already exists in the parent folder: " + nameKey);
-            }
-
-            if (node.ParentId.HasValue)
-            {
-                bool fileExists = await _dbContext.NodeFiles
-                    .AnyAsync(x =>
-                        x.NodeId == node.ParentId.Value &&
-                        x.OwnerId == userId &&
-                        x.NameKey == nameKey);
-                if (fileExists)
+                return result.Status switch
                 {
-                    return this.ApiConflict("A file with the same name key already exists in the parent folder: " + nameKey);
-                }
+                    RenameNodeStatus.InvalidName => CottonResult.BadRequest(result.Error!),
+                    RenameNodeStatus.NodeNotFound => CottonResult.NotFound(result.Error!),
+                    RenameNodeStatus.NameConflict => this.ApiConflict(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
-            node.SetName(request.Name);
-            if (node.ParentId.HasValue)
-            {
-                _syncChanges.StageFolderChange(SyncChangeKind.FolderRenamed, node, node.ParentId.Value);
-            }
-            await _dbContext.SaveChangesAsync();
-            await tx.CommitAsync();
-            NodeDto mapped = node.Adapt<NodeDto>();
+            NodeDto mapped = result.Node!;
             await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", mapped);
             return Ok(mapped);
         }
