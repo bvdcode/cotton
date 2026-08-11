@@ -223,17 +223,14 @@ public class LayoutSearchServiceTests
     }
 
     [Test]
-    public void AddLayoutSearchServices_RegistersServiceAndProviders()
+    public void AddLayoutSearchProviders_RegistersProviders()
     {
         ServiceCollection services = new();
 
-        services.AddLayoutSearchServices();
+        services.AddLayoutSearchProviders();
 
         Assert.Multiple(() =>
         {
-            Assert.That(services.Any(x =>
-                x.ServiceType == typeof(ILayoutSearchService)
-                && x.ImplementationType == typeof(LayoutSearchService)), Is.True);
             Assert.That(services.Any(x =>
                 x.ServiceType == typeof(ILayoutSearchProvider)
                 && x.ImplementationType == typeof(NameLayoutSearchProvider)), Is.True);

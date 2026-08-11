@@ -117,9 +117,8 @@ namespace Cotton.Server.Extensions
         /// <summary>
         /// Registers layout search services.
         /// </summary>
-        public static IServiceCollection AddLayoutSearchServices(this IServiceCollection services)
+        public static IServiceCollection AddLayoutSearchProviders(this IServiceCollection services)
         {
-            services.AddScoped<ILayoutSearchService, LayoutSearchService>();
             services.AddScoped<ILayoutSearchProvider, NameLayoutSearchProvider>();
             services.AddScoped<ILayoutSearchProvider, NoOpVectorLayoutSearchProvider>();
             return services;

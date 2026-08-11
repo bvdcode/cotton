@@ -3,7 +3,6 @@
 
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Services.Search;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 
@@ -43,27 +42,5 @@ namespace Cotton.Server.Handlers.Layouts
         /// Gets the page size.
         /// </summary>
         public int PageSize { get; } = pageSize;
-    }
-
-    /// <summary>
-    /// Handles search layouts queries in the mediator pipeline.
-    /// </summary>
-    public class SearchLayoutsQueryHandler(ILayoutSearchService _searchService)
-        : IRequestHandler<SearchLayoutsQuery, PagedResult<SearchResultDto>>
-    {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
-        public Task<PagedResult<SearchResultDto>> Handle(SearchLayoutsQuery request, CancellationToken cancellationToken)
-        {
-            LayoutSearchRequest searchRequest = new(
-                request.UserId,
-                request.LayoutId,
-                request.Query,
-                request.Page,
-                request.PageSize);
-
-            return _searchService.SearchAsync(searchRequest, cancellationToken);
-        }
     }
 }
