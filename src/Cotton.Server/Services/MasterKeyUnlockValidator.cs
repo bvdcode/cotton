@@ -73,11 +73,12 @@ namespace Cotton.Server.Services
                 _localStorageBasePath);
 
             using AesGcmStreamCipher cipher = StreamCipherFactory.Create(encryptionSettings);
+            using DatabaseIntegrityKeyProvider keyProvider = new(encryptionSettings);
             MasterKeyValidator validator = new(
                 cipher,
                 encryptionSettings,
                 dbContext,
-                CreateIntegrityVerifier(encryptionSettings),
+                CreateIntegrityVerifier(keyProvider),
                 _loggerFactory.CreateLogger<MasterKeySentinelStore>(),
                 _loggerFactory.CreateLogger<MasterKeyValidator>());
             return await validator.ValidateAsync(
@@ -96,12 +97,10 @@ namespace Cotton.Server.Services
                 || await EntityHasRowsAsync(dbContext.ServerSettings, cancellationToken);
         }
 
-        private DatabaseIntegrityVerifier CreateIntegrityVerifier(
-            CottonEncryptionSettings encryptionSettings)
+        private DatabaseIntegrityVerifier CreateIntegrityVerifier(DatabaseIntegrityKeyProvider keyProvider)
         {
             UserIntegrityDescriptor descriptor = new();
-            DatabaseIntegrityProtector protector = new(
-                new DatabaseIntegrityKeyProvider(encryptionSettings));
+            DatabaseIntegrityProtector protector = new(keyProvider);
             return new DatabaseIntegrityVerifier(
                 protector,
                 new DatabaseIntegrityDescriptorRegistry([descriptor]),
