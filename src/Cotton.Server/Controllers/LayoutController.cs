@@ -16,6 +16,7 @@ using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
+using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
@@ -421,48 +422,20 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType nodeType = NodeType.Default)
         {
             Guid userId = User.GetUserId();
-            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, HttpContext.RequestAborted);
-
-            IQueryable<Node> nodesQuery = _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.OwnerId == userId
-                    && x.LayoutId == layout.Id
-                    && x.Type == nodeType);
-
-            Node? currentNode = await nodesQuery
-                .SingleOrDefaultAsync(x => x.Id == nodeId);
-
-            if (currentNode is null)
+            GetNodeAncestorsResult result = await _mediator.Send(
+                new GetNodeAncestorsQuery(userId, nodeId, nodeType),
+                HttpContext.RequestAborted);
+            switch (result.Status)
             {
-                return this.ApiNotFound("Node not found.");
+                case GetNodeAncestorsStatus.Success:
+                    return Ok(result.Ancestors);
+                case GetNodeAncestorsStatus.NodeNotFound:
+                    return this.ApiNotFound("Node not found.");
+                case GetNodeAncestorsStatus.InvalidHierarchy:
+                    return this.ApiConflict(result.Error!);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(result.Status));
             }
-
-            const int MaxDepth = 256;
-            var visited = new HashSet<Guid> { currentNode.Id };
-            int depth = 0;
-            List<NodeDto> ancestors = [];
-            while (currentNode.ParentId is not null)
-            {
-                if (depth++ >= MaxDepth)
-                {
-                    return this.ApiConflict("Maximum node hierarchy depth exceeded.");
-                }
-                Guid parentId = currentNode.ParentId.Value;
-                if (!visited.Add(parentId))
-                {
-                    return this.ApiConflict("Circular reference detected in node hierarchy.");
-                }
-                Node? parentNode = await nodesQuery
-                    .SingleOrDefaultAsync(x => x.Id == parentId);
-                if (parentNode is null)
-                {
-                    break;
-                }
-                ancestors.Add(parentNode.Adapt<NodeDto>());
-                currentNode = parentNode;
-            }
-            ancestors.Reverse();
-            return Ok(ancestors);
         }
 
         /// <summary>
