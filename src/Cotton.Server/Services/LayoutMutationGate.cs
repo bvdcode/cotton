@@ -2,7 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Abstractions;
-using System.Collections.Concurrent;
 
 namespace Cotton.Server.Services
 {
@@ -11,8 +10,10 @@ namespace Cotton.Server.Services
     /// </summary>
     public class LayoutMutationGate : ILayoutMutationGate
     {
-        private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _gates = new();
+        private readonly KeyedAsyncGate<Guid> _gates = new();
         private readonly AsyncLocal<Dictionary<Guid, LayoutMutationGateScope>?> _activeScopes = new();
+
+        internal int Count => _gates.Count;
 
         /// <inheritdoc />
         public Task<IAsyncDisposable> EnterAsync(Guid layoutId, CancellationToken cancellationToken)
@@ -32,24 +33,23 @@ namespace Cotton.Server.Services
                 activeScopes = _activeScopes.Value;
             }
 
-            SemaphoreSlim gate = _gates.GetOrAdd(layoutId, _ => new SemaphoreSlim(1, 1));
             activeScopes ??= [];
             _activeScopes.Value = activeScopes;
 
-            var scope = new LayoutMutationGateScope(gate);
+            LayoutMutationGateScope scope = new();
             activeScopes.Add(layoutId, scope);
 
-            Task waitTask = gate.WaitAsync(cancellationToken);
-            if (waitTask.IsCompletedSuccessfully)
+            ValueTask<IAsyncDisposable> enterTask = _gates.EnterAsync(layoutId, cancellationToken);
+            if (enterTask.IsCompletedSuccessfully)
             {
-                scope.MarkHeld();
+                scope.MarkHeld(enterTask.Result);
                 return Task.FromResult<IAsyncDisposable>(new LayoutMutationGateLease(this, layoutId, scope));
             }
 
-            return EnterAfterWaitAsync(layoutId, scope, waitTask);
+            return EnterAfterWaitAsync(layoutId, scope, enterTask);
         }
 
-        internal void Exit(Guid layoutId, LayoutMutationGateScope scope)
+        internal ValueTask ExitAsync(Guid layoutId, LayoutMutationGateScope scope)
         {
             Dictionary<Guid, LayoutMutationGateScope>? activeScopes = _activeScopes.Value;
             if (activeScopes is null
@@ -61,21 +61,22 @@ namespace Cotton.Server.Services
 
             if (scope.Exit())
             {
-                return;
+                return ValueTask.CompletedTask;
             }
 
             RemoveScope(layoutId, activeScopes, scope);
-            scope.Release();
+            return scope.ReleaseAsync();
         }
 
         private async Task<IAsyncDisposable> EnterAfterWaitAsync(
             Guid layoutId,
             LayoutMutationGateScope scope,
-            Task waitTask)
+            ValueTask<IAsyncDisposable> enterTask)
         {
+            IAsyncDisposable innerLease;
             try
             {
-                await waitTask;
+                innerLease = await enterTask;
             }
             catch
             {
@@ -84,7 +85,7 @@ namespace Cotton.Server.Services
                 throw;
             }
 
-            scope.MarkHeld();
+            scope.MarkHeld(innerLease);
             return new LayoutMutationGateLease(this, layoutId, scope);
         }
 
