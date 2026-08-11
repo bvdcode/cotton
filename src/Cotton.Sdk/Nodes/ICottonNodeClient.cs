@@ -24,7 +24,12 @@ public interface ICottonNodeClient
     /// <summary>
     /// Gets one page of child nodes and files.
     /// </summary>
-    Task<NodeContentDto> GetChildrenAsync(Guid nodeId, int page = 1, int pageSize = 100, int depth = 0, CancellationToken cancellationToken = default);
+    Task<CottonPagedResult<NodeContentDto>> GetChildrenAsync(
+        Guid nodeId,
+        int page = 1,
+        int pageSize = 100,
+        int depth = 0,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a child node under the specified parent.

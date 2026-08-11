@@ -264,6 +264,67 @@ public class CottonHttpTransportTests
     }
 
     [Test]
+    public void SendPagedJsonAsync_RequiresTotalCountHeader()
+    {
+        QueuedHttpMessageHandler handler = new();
+        handler.EnqueueJson(HttpStatusCode.OK, Array.Empty<object>());
+        CottonCloudClient client = new(
+            new HttpClient(handler),
+            new InMemoryCottonTokenStore(),
+            new CottonSdkOptions { BaseAddress = new Uri("https://cotton.test") });
+
+        CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            async () => await client.Notifications.GetNotificationsAsync());
+
+        Assert.That(exception?.Message, Does.Contain("required X-Total-Count response header"));
+    }
+
+    [TestCase("invalid")]
+    [TestCase("-1")]
+    [TestCase("2147483648")]
+    public void SendPagedJsonAsync_RejectsInvalidTotalCountHeader(string totalCount)
+    {
+        QueuedHttpMessageHandler handler = new();
+        handler.EnqueueJson(
+            HttpStatusCode.OK,
+            Array.Empty<object>(),
+            new Dictionary<string, string> { ["X-Total-Count"] = totalCount });
+        CottonCloudClient client = new(
+            new HttpClient(handler),
+            new InMemoryCottonTokenStore(),
+            new CottonSdkOptions { BaseAddress = new Uri("https://cotton.test") });
+
+        CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            async () => await client.Notifications.GetNotificationsAsync());
+
+        Assert.That(exception?.Message, Does.Contain("invalid X-Total-Count response header"));
+    }
+
+    [Test]
+    public void SendPagedJsonAsync_RejectsDuplicateTotalCountHeaders()
+    {
+        QueuedHttpMessageHandler handler = new();
+        handler.Enqueue(_ =>
+        {
+            HttpResponseMessage response = new(HttpStatusCode.OK)
+            {
+                Content = new StringContent("[]", Encoding.UTF8, "application/json"),
+            };
+            response.Headers.TryAddWithoutValidation("X-Total-Count", new[] { "1", "2" });
+            return response;
+        });
+        CottonCloudClient client = new(
+            new HttpClient(handler),
+            new InMemoryCottonTokenStore(),
+            new CottonSdkOptions { BaseAddress = new Uri("https://cotton.test") });
+
+        CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            async () => await client.Notifications.GetNotificationsAsync());
+
+        Assert.That(exception?.Message, Does.Contain("invalid X-Total-Count response header"));
+    }
+
+    [Test]
     public void SendNoContentAsync_IncludesFailureResponsePreview()
     {
         var handler = new QueuedHttpMessageHandler();

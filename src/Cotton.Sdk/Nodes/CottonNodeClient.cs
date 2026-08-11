@@ -48,7 +48,7 @@ public class CottonNodeClient : ICottonNodeClient
     /// <summary>
     /// Gets one page of child nodes and files.
     /// </summary>
-    public Task<NodeContentDto> GetChildrenAsync(
+    public Task<CottonPagedResult<NodeContentDto>> GetChildrenAsync(
         Guid nodeId,
         int page = 1,
         int pageSize = 100,
@@ -56,7 +56,7 @@ public class CottonNodeClient : ICottonNodeClient
         CancellationToken cancellationToken = default)
     {
         string route = $"{Routes.V1.Layouts}/nodes/{nodeId}/children?page={page}&pageSize={pageSize}&depth={depth}";
-        return _transport.SendJsonAsync<NodeContentDto>(HttpMethod.Get, route, cancellationToken: cancellationToken);
+        return _transport.SendPagedJsonAsync<NodeContentDto>(HttpMethod.Get, route, cancellationToken: cancellationToken);
     }
 
     /// <summary>
