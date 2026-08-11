@@ -35,7 +35,7 @@ namespace Cotton.Server.Jobs
             CancellationToken cancellationToken = context.CancellationToken;
             await JobStartupDelays.WaitForCollectPerformanceAsync(cancellationToken);
 
-            CottonServerSettings settings = _settingsProvider.GetServerSettings();
+            ServerSettingsSnapshot settings = _settingsProvider.GetServerSettings();
             if (!settings.TelemetryEnabled)
             {
                 _logger.LogInformation("Performance data collection skipped: telemetry is disabled.");

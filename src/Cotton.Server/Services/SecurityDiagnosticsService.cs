@@ -37,7 +37,7 @@ namespace Cotton.Server.Services
             bool dotnetDiagnosticsDisabled = IsZero(dotnetEnableDiagnostics) || IsZero(comPlusEnableDiagnostics);
             bool isContainer = IsContainer();
             bool isPublicInstance = Constants.IsPublicInstance;
-            CottonServerSettings settings = settingsProvider.GetServerSettings();
+            ServerSettingsSnapshot settings = settingsProvider.GetServerSettings();
             IPAddress? configuredProxy = settings.TrustedProxyIpAddress;
             string? trustedProxyIpAddress = configuredProxy is null
                 ? null

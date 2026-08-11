@@ -35,7 +35,7 @@ namespace Cotton.Server.Extensions
 
             SettingsProvider settingsProvider = request.HttpContext.RequestServices
                 .GetRequiredService<SettingsProvider>();
-            CottonServerSettings settings = settingsProvider.GetServerSettings();
+            ServerSettingsSnapshot settings = settingsProvider.GetServerSettings();
             return request.GetTrustedClientIPAddress(
                 settings.TrustedProxyIpAddress,
                 settings.TrustedProxyPrefixLength);

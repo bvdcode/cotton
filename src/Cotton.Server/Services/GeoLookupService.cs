@@ -28,7 +28,7 @@ namespace Cotton.Server.Services
         /// </summary>
         public async Task<GeoLookupResult?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default)
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             ArgumentNullException.ThrowIfNull(ipAddress);
 
             if (settings.GeoIpLookupMode == GeoIpLookupMode.Disabled)
@@ -67,7 +67,7 @@ namespace Cotton.Server.Services
             string serverBaseUrl,
             CancellationToken cancellationToken = default)
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             string? lookupUrl = settings.CustomGeoIpLookupUrl;
             if (string.IsNullOrWhiteSpace(lookupUrl))
             {

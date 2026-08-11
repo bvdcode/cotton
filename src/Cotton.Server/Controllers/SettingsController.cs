@@ -54,7 +54,7 @@ namespace Cotton.Server.Controllers
         [Authorize]
         public IActionResult GetClientSettings()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             string? currentVersion = AppVersionHelpers.GetAppVersion();
             return Ok(new
             {
@@ -217,7 +217,7 @@ namespace Cotton.Server.Controllers
 
         private object CreateStoragePipelineResponse()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             int maxEncryptionThreads = GetMaxEncryptionThreads();
             return new
             {
@@ -534,7 +534,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("trusted-proxy-ip-address")]
         public IActionResult GetTrustedProxyIpAddress()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             IPAddress? configuredProxy = settings.TrustedProxyIpAddress;
             string? trustedProxyIpAddress = configuredProxy is null
                 ? null
@@ -790,7 +790,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("s3-config")]
         public IActionResult GetS3Config()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             var s3Config = new S3Config
             {
                 AccessKey = settings.S3AccessKeyId ?? string.Empty,
@@ -856,7 +856,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("email-config")]
         public IActionResult GetEmailConfig()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             var emailConfig = new EmailConfig
             {
                 Username = settings.SmtpUsername ?? string.Empty,
@@ -876,7 +876,7 @@ namespace Cotton.Server.Controllers
 
         private string GetFallbackPublicBaseUrl()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             return RequestBaseUrlHelpers.GetBaseUrl(
                 Request,
                 settings.TrustedProxyIpAddress,

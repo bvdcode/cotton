@@ -16,7 +16,6 @@ using NUnit.Framework;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Reflection;
 using System.Text;
 
 namespace Cotton.Server.IntegrationTests;
@@ -34,8 +33,6 @@ public class RawChunkUploadThroughputTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
-        ResetSettingsProviderCaches();
-
         IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
@@ -73,7 +70,6 @@ public class RawChunkUploadThroughputTests : IntegrationTestBase
     {
         _client?.Dispose();
         _factory?.Dispose();
-        ResetSettingsProviderCaches();
     }
 
     [TestCase(4)]
@@ -172,16 +168,6 @@ public class RawChunkUploadThroughputTests : IntegrationTestBase
         TokenPairResponseDto? login = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         Assert.That(login, Is.Not.Null);
         return login!.AccessToken;
-    }
-
-    private static void ResetSettingsProviderCaches()
-    {
-        const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
-        Type settingsProviderType = typeof(SettingsProvider);
-
-        settingsProviderType.GetField("_cache", flags)?.SetValue(null, null);
-        settingsProviderType.GetField("_isServerInitializedCache", flags)?.SetValue(null, null);
-        settingsProviderType.GetField("_serverHasUsersCache", flags)?.SetValue(null, null);
     }
 
     private record ChunkPayload(byte[] Bytes, string Hash);

@@ -79,14 +79,14 @@ namespace Cotton.Server.Providers
             GC.SuppressFinalize(this);
         }
 
-        private static S3Config CreateConfiguration(CottonServerSettings settings)
+        private static S3Config CreateConfiguration(ServerSettingsSnapshot settings)
         {
             return new S3Config
             {
                 Endpoint = settings.S3EndpointUrl ?? string.Empty,
                 Region = settings.S3Region ?? string.Empty,
                 AccessKey = settings.S3AccessKeyId ?? string.Empty,
-                SecretKey = settings.S3SecretAccessKeyEncrypted ?? string.Empty,
+                SecretKey = settings.S3SecretAccessKey ?? string.Empty,
                 Bucket = settings.S3BucketName ?? string.Empty
             };
         }

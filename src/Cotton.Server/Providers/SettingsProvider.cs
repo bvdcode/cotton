@@ -22,15 +22,9 @@ namespace Cotton.Server.Providers
     /// </summary>
     public class SettingsProvider(
         CottonDbContext _dbContext,
+        ServerSettingsCache _cache,
         IStorageBackendTypeCache? _storageTypeCache = null)
     {
-        private static readonly Lock _cacheLock = new();
-        private static readonly SemaphoreSlim _settingsCreationLock = new(1, 1);
-        private static CottonServerSettings? _cache;
-        private static int _cachedEncryptionThreads;
-        private static readonly TimeSpan _boolCacheTtl = TimeSpan.FromMinutes(1);
-        private static (bool Value, DateTimeOffset CachedAt)? _isServerInitializedCache;
-        private static (bool Value, DateTimeOffset CachedAt)? _serverHasUsersCache;
         private const string defaultPublicBaseUrl = "http://localhost";
         private const string defaultTimezone = "UTC";
         private const int defaultSessionTimeoutHours = 24 * 30;
@@ -43,24 +37,15 @@ namespace Cotton.Server.Providers
         /// <summary>
         /// Gets server settings.
         /// </summary>
-        public CottonServerSettings GetServerSettings()
+        internal ServerSettingsSnapshot GetServerSettings()
         {
-            if (_cache is not null)
+            return _cache.GetOrAdd(() =>
             {
-                return _cache;
-            }
-
-            lock (_cacheLock)
-            {
-                if (_cache is not null)
-                {
-                    return _cache;
-                }
-
                 CottonServerSettings? settings;
                 try
                 {
                     settings = _dbContext.ServerSettings
+                        .AsNoTracking()
                         .OrderByDescending(s => s.CreatedAt)
                         .FirstOrDefault();
                 }
@@ -70,43 +55,12 @@ namespace Cotton.Server.Providers
                 }
                 if (settings is not null)
                 {
-                    CacheRuntimePipelineSettings(settings);
-                    _cache = settings;
-                    return _cache;
+                    return ServerSettingsSnapshot.FromEntity(settings);
                 }
 
-                _cache = new()
-                {
-                    AllowCrossUserDeduplication = false,
-                    AllowGlobalIndexing = false,
-                    CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
-                    CompressionLevel = defaultCompressionLevel,
-                    EncryptionThreads = defaultEncryptionThreads,
-                    MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
-                    SessionTimeoutHours = defaultSessionTimeoutHours,
-                    TelemetryEnabled = false,
-                    Timezone = defaultTimezone,
-                    TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
-                    EmailMode = EmailMode.None,
-                    ComputionMode = ComputionMode.Local,
-                    StorageType = StorageType.Local,
-                    InstanceId = Guid.Empty,
-                    PublicBaseUrl = defaultPublicBaseUrl,
-                    ServerUsage = [ServerUsage.Other],
-                    StorageSpaceMode = StorageSpaceMode.Optimal,
-                    DefaultUserStorageQuotaBytes = null,
-                    DefaultUserTemplateNodeId = null,
-                    GeoIpLookupMode = GeoIpLookupMode.Disabled,
-                };
-                CacheRuntimePipelineSettings(_cache);
-                return _cache;
-            }
-        }
-
-        internal static int? GetCachedEncryptionThreads()
-        {
-            int value = Volatile.Read(ref _cachedEncryptionThreads);
-            return value > 0 ? value : null;
+                CottonServerSettings defaults = CreateDefaultSettings(Guid.Empty, fallbackPublicBaseUrl: null);
+                return ServerSettingsSnapshot.FromEntity(defaults);
+            });
         }
 
         /// <summary>
@@ -136,8 +90,7 @@ namespace Cotton.Server.Providers
                 return settings;
             }
 
-            await _settingsCreationLock.WaitAsync(cancellationToken);
-            try
+            return await _cache.RunCreationExclusiveAsync(async () =>
             {
                 settings = await LoadLatestSettingsAsync(asNoTracking: false, cancellationToken);
                 if (settings is not null)
@@ -146,17 +99,13 @@ namespace Cotton.Server.Providers
                     return settings;
                 }
 
-                settings = CreateDefaultSettings(fallbackPublicBaseUrl);
+                settings = CreateDefaultSettings(Guid.NewGuid(), fallbackPublicBaseUrl);
                 await _dbContext.ServerSettings.AddAsync(settings, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 CacheRuntimePipelineSettings(settings);
                 InvalidateSettingsCache(serverIsInitialized: true);
                 return settings;
-            }
-            finally
-            {
-                _settingsCreationLock.Release();
-            }
+            }, cancellationToken);
         }
 
         /// <summary>
@@ -164,13 +113,9 @@ namespace Cotton.Server.Providers
         /// </summary>
         public async Task<bool> IsServerInitializedAsync()
         {
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            lock (_cacheLock)
+            if (_cache.TryGetServerInitialized(out bool cached))
             {
-                if (_isServerInitializedCache is { } cached && now - cached.CachedAt < _boolCacheTtl)
-                {
-                    return cached.Value;
-                }
+                return cached;
             }
 
             bool value;
@@ -183,10 +128,7 @@ namespace Cotton.Server.Providers
                 value = false;
             }
 
-            lock (_cacheLock)
-            {
-                _isServerInitializedCache = (value, DateTimeOffset.UtcNow);
-            }
+            _cache.SetServerInitialized(value);
             return value;
         }
 
@@ -195,13 +137,9 @@ namespace Cotton.Server.Providers
         /// </summary>
         public async Task<bool> ServerHasUsersAsync()
         {
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            lock (_cacheLock)
+            if (_cache.TryGetServerHasUsers(out bool cached))
             {
-                if (_serverHasUsersCache is { } cached && now - cached.CachedAt < _boolCacheTtl)
-                {
-                    return cached.Value;
-                }
+                return cached;
             }
 
             bool value;
@@ -214,10 +152,7 @@ namespace Cotton.Server.Providers
                 value = false;
             }
 
-            lock (_cacheLock)
-            {
-                _serverHasUsersCache = (value, DateTimeOffset.UtcNow);
-            }
+            _cache.SetServerHasUsers(value);
             return value;
         }
 
@@ -249,7 +184,7 @@ namespace Cotton.Server.Providers
                 return null;
             }
 
-            CottonServerSettings settings = GetServerSettings();
+            ServerSettingsSnapshot settings = GetServerSettings();
 
             if (settings.EmailMode == EmailMode.Cloud)
             {
@@ -274,7 +209,7 @@ namespace Cotton.Server.Providers
         /// </summary>
         public async Task<string?> ValidateEmailModeAsync(EmailMode mode)
         {
-            CottonServerSettings settings = GetServerSettings();
+            ServerSettingsSnapshot settings = GetServerSettings();
 
             if (mode == EmailMode.Cloud)
             {
@@ -327,7 +262,7 @@ namespace Cotton.Server.Providers
         /// </summary>
         public string? ValidateGeoIpLookupMode(GeoIpLookupMode mode)
         {
-            CottonServerSettings settings = GetServerSettings();
+            ServerSettingsSnapshot settings = GetServerSettings();
 
             if (mode == GeoIpLookupMode.CottonCloud && !settings.TelemetryEnabled)
             {
@@ -378,11 +313,11 @@ namespace Cotton.Server.Providers
                 return "Invalid storage type: " + type;
             }
 
-            CottonServerSettings settings = GetServerSettings();
+            ServerSettingsSnapshot settings = GetServerSettings();
             var s3Config = new S3Config
             {
                 AccessKey = settings.S3AccessKeyId ?? string.Empty,
-                SecretKey = settings.S3SecretAccessKeyEncrypted ?? string.Empty,
+                SecretKey = settings.S3SecretAccessKey ?? string.Empty,
                 Endpoint = settings.S3EndpointUrl ?? string.Empty,
                 Region = settings.S3Region ?? string.Empty,
                 Bucket = settings.S3BucketName ?? string.Empty
@@ -772,7 +707,9 @@ namespace Cotton.Server.Providers
             }
         }
 
-        private static CottonServerSettings CreateDefaultSettings(string? fallbackPublicBaseUrl)
+        private static CottonServerSettings CreateDefaultSettings(
+            Guid instanceId,
+            string? fallbackPublicBaseUrl)
         {
             return new()
             {
@@ -789,7 +726,7 @@ namespace Cotton.Server.Providers
                 EmailMode = EmailMode.None,
                 ComputionMode = ComputionMode.Local,
                 StorageType = StorageType.Local,
-                InstanceId = Guid.NewGuid(),
+                InstanceId = instanceId,
                 PublicBaseUrl = NormalizePublicBaseUrl(fallbackPublicBaseUrl),
                 ServerUsage = [ServerUsage.Other],
                 StorageSpaceMode = StorageSpaceMode.Optimal,
@@ -799,35 +736,27 @@ namespace Cotton.Server.Providers
             };
         }
 
-        private static bool IsEmailConfigComplete(CottonServerSettings settings)
+        private static bool IsEmailConfigComplete(ServerSettingsSnapshot settings)
         {
             return !string.IsNullOrWhiteSpace(settings.SmtpServerAddress)
                 && settings.SmtpServerPort is >= 1 and <= 65535
                 && !string.IsNullOrWhiteSpace(settings.SmtpUsername)
-                && !string.IsNullOrWhiteSpace(settings.SmtpPasswordEncrypted)
+                && !string.IsNullOrWhiteSpace(settings.SmtpPassword)
                 && !string.IsNullOrWhiteSpace(settings.SmtpSenderEmail);
         }
 
         private void InvalidateSettingsCache(bool serverIsInitialized)
         {
-            lock (_cacheLock)
-            {
-                _cache = null;
-                if (serverIsInitialized)
-                {
-                    _isServerInitializedCache = (true, DateTimeOffset.UtcNow);
-                }
-            }
+            _cache.InvalidateSettings(serverIsInitialized);
 
             // Reset after the settings cache is cleared: a backend-type fill racing with this
             // invalidation then either resolves fresh settings or gets wiped by the reset below.
             _storageTypeCache?.Reset();
         }
 
-        private static void CacheRuntimePipelineSettings(CottonServerSettings settings)
+        private void CacheRuntimePipelineSettings(CottonServerSettings settings)
         {
-            int encryptionThreads = settings.EncryptionThreads > 0 ? settings.EncryptionThreads : 0;
-            Volatile.Write(ref _cachedEncryptionThreads, encryptionThreads);
+            _cache.CacheEncryptionThreads(settings.EncryptionThreads);
         }
     }
 }

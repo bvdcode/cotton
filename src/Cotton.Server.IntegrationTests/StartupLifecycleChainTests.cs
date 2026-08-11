@@ -19,7 +19,6 @@ using NUnit.Framework;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using CottonLoginRequestDto = Cotton.Auth.LoginRequestDto;
@@ -51,8 +50,6 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         _factory = null;
 
         NpgsqlConnection.ClearAllPools();
-        ResetSettingsProviderCaches();
-
         IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
@@ -447,13 +444,4 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         });
     }
 
-    private static void ResetSettingsProviderCaches()
-    {
-        const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Static;
-        Type settingsProviderType = typeof(SettingsProvider);
-
-        settingsProviderType.GetField("_cache", flags)?.SetValue(null, null);
-        settingsProviderType.GetField("_isServerInitializedCache", flags)?.SetValue(null, null);
-        settingsProviderType.GetField("_serverHasUsersCache", flags)?.SetValue(null, null);
-    }
 }
