@@ -10,44 +10,33 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Provides cotton public email dependencies to server components.
     /// </summary>
-    public class CottonPublicEmailProvider : IDisposable
+    public class CottonPublicEmailProvider(
+        HttpClient _httpClient,
+        ILogger<CottonPublicEmailProvider> _logger)
     {
+        private static readonly TimeSpan HealthTimeout = TimeSpan.FromSeconds(10);
+
         /// <summary>
         /// Defines the Cotton Bridge base URL.
         /// </summary>
         public const string CottonBridgeBaseUrl = global::Cotton.Constants.CottonBridgeBaseUrl;
-        private readonly HttpClient _httpClient;
-        private readonly Guid _instanceId;
-        private readonly ILogger<CottonPublicEmailProvider> _logger;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CottonPublicEmailProvider"/> type.
-        /// </summary>
-        public CottonPublicEmailProvider(
-            IServiceProvider serviceProvider,
-            ILogger<CottonPublicEmailProvider> logger)
-        {
-            _logger = logger;
-            using IServiceScope scope = serviceProvider.CreateScope();
-            SettingsProvider settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider>();
-            CottonServerSettings settings = settingsProvider.GetServerSettings();
-            _instanceId = settings.InstanceId;
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(CottonBridgeBaseUrl),
-                Timeout = TimeSpan.FromSeconds(15)
-            };
-        }
-
         /// <summary>
         /// Checks health.
         /// </summary>
-        public async Task<bool> CheckHealthAsync()
+        public async Task<bool> CheckHealthAsync(CancellationToken cancellationToken = default)
         {
+            using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(HealthTimeout);
             try
             {
-                HealthResponse? response = await _httpClient.GetFromJsonAsync<HealthResponse>("health");
+                HealthResponse? response = await _httpClient.GetFromJsonAsync<HealthResponse>(
+                    "health",
+                    timeout.Token);
                 return response is not null && response.Status == "Healthy";
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -60,6 +49,7 @@ namespace Cotton.Server.Services
         /// Sends email async.
         /// </summary>
         public async Task<bool> SendEmailAsync(
+            Guid instanceId,
             EmailTemplate template,
             string serverUrl,
             string recipientEmail,
@@ -72,7 +62,7 @@ namespace Cotton.Server.Services
                 var request = new CottonBridgeEmailRequest
                 {
                     Template = template.ToString(),
-                    InstanceId = _instanceId,
+                    InstanceId = instanceId,
                     ServerUrl = serverUrl,
                     RecipientEmail = recipientEmail,
                     RecipientName = recipientName,
@@ -80,7 +70,7 @@ namespace Cotton.Server.Services
                     Parameters = parameters,
                 };
 
-                HttpResponseMessage response = await _httpClient.PostAsJsonAsync("email/send", request);
+                using HttpResponseMessage response = await _httpClient.PostAsJsonAsync("email/send", request);
                 if (!response.IsSuccessStatusCode)
                 {
                     string body = await response.Content.ReadAsStringAsync();
@@ -98,15 +88,6 @@ namespace Cotton.Server.Services
                 _logger.LogError(ex, "Failed to send {Template} email via Cotton Bridge.", template);
                 return false;
             }
-        }
-
-        /// <summary>
-        /// Releases resources held by this instance.
-        /// </summary>
-        public void Dispose()
-        {
-            GC.SuppressFinalize(this);
-            _httpClient.Dispose();
         }
 
         private static string MapLanguageCode(string code) => code switch

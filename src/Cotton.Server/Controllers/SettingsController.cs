@@ -31,6 +31,7 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Server + "/settings")]
     public class SettingsController(
         SettingsProvider _settings,
+        ServerSettingsValidator _validator,
         INotificationsProvider _notifications,
         IGeoLookupService _geoLookup,
         IProxyTopologyProbeService _proxyTopologyProbe) : ControllerBase
@@ -54,7 +55,7 @@ namespace Cotton.Server.Controllers
         [Authorize]
         public IActionResult GetClientSettings()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             string? currentVersion = AppVersionHelpers.GetAppVersion();
             return Ok(new
             {
@@ -217,7 +218,7 @@ namespace Cotton.Server.Controllers
 
         private object CreateStoragePipelineResponse()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             int maxEncryptionThreads = GetMaxEncryptionThreads();
             return new
             {
@@ -279,7 +280,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetGeoIpLookupMode([FromRoute] GeoIpLookupMode mode, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_settings.ValidateGeoIpLookupMode(mode));
+            ThrowIfInvalid(_validator.ValidateGeoIpLookupMode(mode));
             await _settings.SetPropertyAsync(x => x.GeoIpLookupMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
@@ -303,7 +304,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetCustomGeoIpLookupUrl([FromBody] string? url, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_settings.ValidateCustomGeoIpLookupUrl(url));
+            ThrowIfInvalid(_validator.ValidateCustomGeoIpLookupUrl(url));
             await _settings.SetPropertyAsync(
                 x => x.CustomGeoIpLookupUrl,
                 SettingsProvider.NormalizePublicBaseUrl(url),
@@ -331,7 +332,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> TestCustomGeoIpLookupUrl(CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_settings.ValidateCustomGeoIpLookupUrl(_settings.GetServerSettings().CustomGeoIpLookupUrl));
+            ThrowIfInvalid(_validator.ValidateCustomGeoIpLookupUrl(_settings.GetServerSettings().CustomGeoIpLookupUrl));
             CustomGeoLookupTestResult testResult = await _geoLookup.TestCustomLookupAsync(GetFallbackPublicBaseUrl(), cancellationToken);
             ThrowIfInvalid(testResult.Error);
             return Ok(new CustomGeoLookupTestResultDto
@@ -376,7 +377,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetTelemetry([FromBody] bool enabled, CancellationToken cancellationToken = default)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_settings.ValidateTelemetryChange(enabled));
+            ThrowIfInvalid(_validator.ValidateTelemetryChange(enabled));
             await _settings.SetPropertyAsync(x => x.TelemetryEnabled, enabled, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
@@ -424,7 +425,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetDefaultUserStorageQuotaBytes([FromBody] long? quotaBytes, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_settings.ValidateDefaultUserStorageQuotaBytes(quotaBytes));
+            ThrowIfInvalid(_validator.ValidateDefaultUserStorageQuotaBytes(quotaBytes));
             long? normalizedQuotaBytes = quotaBytes is null or 0 ? null : quotaBytes;
             await _settings.SetPropertyAsync(
                 x => x.DefaultUserStorageQuotaBytes,
@@ -455,7 +456,7 @@ namespace Cotton.Server.Controllers
             await EnsureSettingsAsync(cancellationToken);
             Guid? normalizedNodeId = nodeId is null || nodeId == Guid.Empty ? null : nodeId;
             Guid ownerId = User.GetUserId();
-            ThrowIfInvalid(await _settings.ValidateDefaultUserTemplateNodeIdAsync(normalizedNodeId, ownerId, cancellationToken));
+            ThrowIfInvalid(await _validator.ValidateDefaultUserTemplateNodeIdAsync(normalizedNodeId, ownerId, cancellationToken));
             await _settings.SetPropertyAsync(
                 x => x.DefaultUserTemplateNodeId,
                 normalizedNodeId,
@@ -483,7 +484,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetTimezone([FromBody] string? timezone, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_settings.ValidateTimezone(timezone));
+            ThrowIfInvalid(_validator.ValidateTimezone(timezone));
             await _settings.SetPropertyAsync(x => x.Timezone, timezone!.Trim(), GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
@@ -507,7 +508,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetPublicBaseUrl([FromBody] string? url, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_settings.ValidatePublicBaseUrl(url));
+            ThrowIfInvalid(_validator.ValidatePublicBaseUrl(url));
             await _settings.SetPropertyAsync(
                 x => x.PublicBaseUrl,
                 SettingsProvider.NormalizePublicBaseUrl(url),
@@ -534,7 +535,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("trusted-proxy-ip-address")]
         public IActionResult GetTrustedProxyIpAddress()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             IPAddress? configuredProxy = settings.TrustedProxyIpAddress;
             string? trustedProxyIpAddress = configuredProxy is null
                 ? null
@@ -655,7 +656,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetComputionMode([FromRoute] ComputionMode mode, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_settings.ValidateComputionMode(mode));
+            ThrowIfInvalid(_validator.ValidateComputionMode(mode));
             await _settings.SetPropertyAsync(x => x.ComputionMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
@@ -679,7 +680,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetEmailMode([FromRoute] EmailMode mode, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(await _settings.ValidateEmailModeAsync(mode));
+            ThrowIfInvalid(await _validator.ValidateEmailModeAsync(mode, cancellationToken));
             await _settings.SetPropertyAsync(x => x.EmailMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
@@ -747,7 +748,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetStorageType([FromRoute] StorageType type, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(await _settings.ValidateStorageTypeAsync(type));
+            ThrowIfInvalid(await _validator.ValidateStorageTypeAsync(type, cancellationToken));
             await _settings.SetPropertyAsync(x => x.StorageType, type, GetFallbackPublicBaseUrl(), cancellationToken);
             return NoContent();
         }
@@ -771,7 +772,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetS3Config([FromBody] S3Config s3Config, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(await _settings.ValidateS3ConfigAsync(s3Config));
+            ThrowIfInvalid(await _validator.ValidateS3ConfigAsync(s3Config, cancellationToken));
             await _settings.UpdateSettingsAsync(settings =>
             {
                 settings.S3AccessKeyId = s3Config.AccessKey.Trim();
@@ -790,7 +791,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("s3-config")]
         public IActionResult GetS3Config()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             var s3Config = new S3Config
             {
                 AccessKey = settings.S3AccessKeyId ?? string.Empty,
@@ -810,8 +811,8 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetEmailConfig([FromBody] EmailConfig emailConfig, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_settings.ValidateEmailConfig(emailConfig));
-            if (!SettingsProvider.TryParsePort(emailConfig.Port, out int smtpPort))
+            ThrowIfInvalid(_validator.ValidateEmailConfig(emailConfig));
+            if (!ServerSettingsValidator.TryParsePort(emailConfig.Port, out int smtpPort))
             {
                 return this.ApiBadRequest("Invalid SMTP port number.");
             }
@@ -835,7 +836,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SendEmailConfigTest(CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(await _settings.ValidateEmailModeAsync(EmailMode.Custom));
+            ThrowIfInvalid(await _validator.ValidateEmailModeAsync(EmailMode.Custom, cancellationToken));
 
             Guid userId = User.GetUserId();
             try
@@ -856,7 +857,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("email-config")]
         public IActionResult GetEmailConfig()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             var emailConfig = new EmailConfig
             {
                 Username = settings.SmtpUsername ?? string.Empty,
@@ -876,7 +877,7 @@ namespace Cotton.Server.Controllers
 
         private string GetFallbackPublicBaseUrl()
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             return RequestBaseUrlHelpers.GetBaseUrl(
                 Request,
                 settings.TrustedProxyIpAddress,

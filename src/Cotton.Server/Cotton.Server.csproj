@@ -21,6 +21,7 @@
 			<Version>10.0.8</Version>
 		</PackageReference>
 		<PackageReference Include="Microsoft.Bcl.Memory" Version="10.0.8" />
+		<PackageReference Include="NuGet.Versioning" Version="7.6.0" />
 		<ProjectReference Include="..\cotton.client\cotton.client.esproj">
 			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
 		</ProjectReference>

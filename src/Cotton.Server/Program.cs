@@ -7,6 +7,7 @@ using Cotton.Database.Integrity;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
+using Cotton.Server.Jobs;
 using Cotton.Server.Mappings;
 using Cotton.Server.Models.Configuration;
 using Cotton.Server.Providers;
@@ -126,6 +127,16 @@ namespace Cotton.Server
                 client.Timeout = TimeSpan.FromSeconds(10);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
             });
+            builder.Services.AddHttpClient<CottonPublicEmailProvider>(client =>
+            {
+                client.BaseAddress = new Uri(CottonPublicEmailProvider.CottonBridgeBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(15);
+            });
+            builder.Services.AddHttpClient<IGeoLookupService, GeoLookupService>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(10);
+            });
+            builder.Services.AddHttpClient(CollectPerformanceJob.HttpClientName);
             builder.Services
                 .AddHttpClient<IProxyTopologyProbeService, ProxyTopologyProbeService>(client =>
                 {
@@ -173,8 +184,9 @@ namespace Cotton.Server
                 .AddHttpContextAccessor()
                 .AddSingleton<PerfTracker>()
                 .AddSingleton<IStorageBackendTypeCache, StorageBackendTypeCache>()
-                .AddSingleton<CottonPublicEmailProvider>()
+                .AddSingleton<S3ConfigurationValidator>()
                 .AddScoped<SettingsProvider>()
+                .AddScoped<ServerSettingsValidator>()
                 .AddScoped<SecurityDiagnosticsService>()
                 .AddScoped<StoragePipelineProbeService>()
                 .AddScoped<PasskeyService>()
@@ -191,6 +203,7 @@ namespace Cotton.Server
                 .AddScoped<FileManifestService>()
                 .AddSingleton<UserStorageQuotaCache>()
                 .AddSingleton<UserStorageQuotaMutationGate>()
+                .AddSingleton<AppCodeRequestStore>()
                 .AddScoped<UserStorageQuotaService>()
                 .AddScoped<PublicShareTokenGenerator>()
                 .AddSingleton<ArchiveDownloadTicketStore>()
@@ -206,7 +219,6 @@ namespace Cotton.Server
                 .AddSingleton<DatabaseBackupKeyProvider>()
                 .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<INotificationsProvider, CottonNotifications>()
-                .AddScoped<IGeoLookupService, GeoLookupService>()
                 .AddScoped<ISharedFileDownloadNotifier, SharedFileDownloadNotifier>()
                 .AddScoped<NodeSubtreeService>()
                 .AddScoped<TrashRestoreCoordinator>()
@@ -215,7 +227,9 @@ namespace Cotton.Server
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
+                .AddSingleton<StorageBackendFactory>()
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
+                .AddScoped<MasterKeyValidator>()
                 .AddScoped<MasterKeyStartupValidator>()
                 .AddPostgresDbContext<CottonDbContext>(
                     x => x.UseLazyLoadingProxies = false,

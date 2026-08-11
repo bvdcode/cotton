@@ -4,22 +4,25 @@
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Tracks a layout mutation semaphore held by the current async control flow.
+    /// Tracks a layout mutation gate held by the current async control flow.
     /// </summary>
-    internal class LayoutMutationGateScope(SemaphoreSlim gate)
+    internal class LayoutMutationGateScope
     {
         private int _depth;
+        private IAsyncDisposable? _innerLease;
 
         public bool IsHeld { get; private set; }
 
-        public void MarkHeld()
+        public void MarkHeld(IAsyncDisposable innerLease)
         {
+            _innerLease = innerLease;
             IsHeld = true;
             _depth = 1;
         }
 
         public void Abandon()
         {
+            _innerLease = null;
             IsHeld = false;
             _depth = 0;
         }
@@ -51,9 +54,12 @@ namespace Cotton.Server.Services
             return false;
         }
 
-        public void Release()
+        public ValueTask ReleaseAsync()
         {
-            gate.Release();
+            IAsyncDisposable innerLease = _innerLease
+                ?? throw new InvalidOperationException("Layout mutation gate scope has no inner lease.");
+            _innerLease = null;
+            return innerLease.DisposeAsync();
         }
     }
 }

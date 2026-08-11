@@ -1,6 +1,9 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database.Integrity;
+using Microsoft.EntityFrameworkCore;
+
 namespace Cotton.Server.Services.DatabaseIntegrity
 {
     /// <summary>
@@ -12,6 +15,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </remarks>
     /// <typeparam name="T">The EF entity type represented by the descriptor.</typeparam>
     public abstract class DatabaseIntegrityDescriptor<T> : IDatabaseIntegrityDescriptor<T>
+        where T : class
     {
         /// <inheritdoc />
         public Type EntityType => typeof(T);
@@ -40,6 +44,21 @@ namespace Cotton.Server.Services.DatabaseIntegrity
                 writer.WriteEntityHeader(EntityName, SchemaVersion, GetEntityKey(typedEntity));
                 WriteCanonicalData(writer, typedEntity);
             });
+        }
+
+        /// <inheritdoc />
+        public Task<int> CountInvalidMetadataRowsAsync(
+            DbContext dbContext,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(dbContext);
+
+            return dbContext.Set<T>()
+                .CountAsync(entity => EF.Property<byte[]?>(entity, DatabaseIntegrityColumns.MacProperty) == null
+                    || EF.Property<int?>(
+                        entity,
+                        DatabaseIntegrityColumns.VersionProperty) != SchemaVersion,
+                    cancellationToken);
         }
 
         /// <inheritdoc />

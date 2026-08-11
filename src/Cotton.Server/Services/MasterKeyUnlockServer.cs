@@ -3,6 +3,7 @@
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Server.Extensions;
+using Amazon.S3;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -36,6 +37,7 @@ namespace Cotton.Server.Services
             ILogger logger = loggerFactory.CreateLogger("Cotton.Server.Unlock");
             IHostApplicationLifetime lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             IWebHostEnvironment environment = app.Services.GetRequiredService<IWebHostEnvironment>();
+            MasterKeyUnlockValidator unlockValidator = new(loggerFactory);
 
             app.UseDefaultFiles();
             app.Use(async (context, next) =>
@@ -55,6 +57,7 @@ namespace Cotton.Server.Services
                 context.Response.ApplyNoStoreHeaders();
                 bool requiresBootstrapToken = await RequiresBootstrapTokenAsync(
                     environment,
+                    unlockValidator,
                     context.RequestAborted);
                 return Results.Ok(new UnlockStatusResponse(
                     RequiresBootstrapToken: requiresBootstrapToken,
@@ -74,6 +77,7 @@ namespace Cotton.Server.Services
                     submitted.BootstrapToken,
                     bootstrapToken,
                     firstUnlockExpiresAtUtc,
+                    unlockValidator,
                     context.RequestAborted);
                 if (bootstrapError is not null)
                 {
@@ -90,35 +94,35 @@ namespace Cotton.Server.Services
                     return Results.BadRequest(new UnlockResponse(false, ex.Message));
                 }
 
-                MasterKeySentinelStore sentinel;
+                MasterKeySentinelResult validation;
                 try
                 {
-                    sentinel = await MasterKeyStartupStorage.CreateSentinelStoreAsync(
+                    validation = await unlockValidator.ValidateAsync(
                         encryptionSettings,
-                        loggerFactory,
                         context.RequestAborted);
+                }
+                catch (MasterKeyValidationException ex)
+                {
+                    logger.LogWarning(ex, "Master key unlock validation rejected the submitted key.");
+                    return Results.BadRequest(new UnlockResponse(false, ex.Message));
                 }
                 catch (InvalidOperationException ex)
                 {
-                    logger.LogWarning(ex, "Master key unlock failed before sentinel validation.");
+                    logger.LogWarning(ex, "Master key unlock could not load the configured storage.");
                     return Results.BadRequest(new UnlockResponse(false, ex.Message));
                 }
-
-                MasterKeySentinelResult validation = await sentinel.ValidateOrInitializeAsync(
-                    encryptionSettings,
-                    MasterKeySentinelInitializationMode.RequireCompatibilityEvidenceForExistingData,
-                    context.RequestAborted);
-                if (!validation.Success)
+                catch (Exception ex) when (IsStorageUnavailable(ex, context.RequestAborted))
                 {
-                    return Results.BadRequest(new UnlockResponse(false, validation.Error ?? "Unlock failed."));
+                    logger.LogError(ex, "Master key unlock could not reach the configured storage.");
+                    return Results.Json(
+                        new UnlockResponse(false, "Configured storage is unavailable. Check the server logs and try again."),
+                        statusCode: StatusCodes.Status503ServiceUnavailable);
                 }
 
                 _ = CompleteUnlockAsync(completion, app, encryptionSettings);
-                string message = validation.Repaired
-                    ? "Master key sentinel repaired. Cotton is starting."
-                    : validation.Created
-                        ? "Master key initialized. Cotton is starting."
-                        : "Master key accepted. Cotton is starting.";
+                string message = validation.Created
+                    ? "Master key initialized. Cotton is starting."
+                    : "Master key accepted. Cotton is starting.";
                 return Results.Ok(new UnlockResponse(true, message));
             });
 
@@ -128,7 +132,13 @@ namespace Cotton.Server.Services
                 () => completion.TrySetCanceled());
 
             await app.StartAsync();
-            await LogUnlockAddressesAsync(app, logger, environment, bootstrapToken, firstUnlockExpiresAtUtc);
+            await LogUnlockAddressesAsync(
+                app,
+                logger,
+                environment,
+                unlockValidator,
+                bootstrapToken,
+                firstUnlockExpiresAtUtc);
 
             try
             {
@@ -179,9 +189,10 @@ namespace Cotton.Server.Services
             string? submittedBootstrapToken,
             string expectedBootstrapToken,
             DateTimeOffset firstUnlockExpiresAtUtc,
+            MasterKeyUnlockValidator unlockValidator,
             CancellationToken cancellationToken)
         {
-            if (!await RequiresBootstrapTokenAsync(environment, cancellationToken))
+            if (!await RequiresBootstrapTokenAsync(environment, unlockValidator, cancellationToken))
             {
                 return null;
             }
@@ -205,11 +216,22 @@ namespace Cotton.Server.Services
 
         private static async Task<bool> RequiresBootstrapTokenAsync(
             IWebHostEnvironment environment,
+            MasterKeyUnlockValidator unlockValidator,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             return !environment.IsDevelopment()
-                && !await MasterKeyStartupStorage.HasExistingCottonDataAsync(cancellationToken);
+                && !await unlockValidator.HasExistingCottonDataAsync(cancellationToken);
+        }
+
+        private static bool IsStorageUnavailable(Exception exception, CancellationToken requestCancellationToken)
+        {
+            return !requestCancellationToken.IsCancellationRequested
+                && exception is AmazonS3Exception
+                    or HttpRequestException
+                    or IOException
+                    or TaskCanceledException
+                    or TimeoutException;
         }
 
         private static bool IsBootstrapTokenValid(string? submittedBootstrapToken, string expectedBootstrapToken)
@@ -254,11 +276,12 @@ namespace Cotton.Server.Services
             WebApplication app,
             ILogger logger,
             IWebHostEnvironment environment,
+            MasterKeyUnlockValidator unlockValidator,
             string bootstrapToken,
             DateTimeOffset firstUnlockExpiresAtUtc)
         {
             string[] addresses = [.. app.Urls];
-            bool requiresBootstrapToken = await RequiresBootstrapTokenAsync(environment);
+            bool requiresBootstrapToken = await RequiresBootstrapTokenAsync(environment, unlockValidator);
             if (addresses.Length == 0)
             {
                 if (requiresBootstrapToken)

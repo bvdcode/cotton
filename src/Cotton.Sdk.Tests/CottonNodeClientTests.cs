@@ -39,6 +39,42 @@ public class CottonNodeClientTests
     }
 
     [Test]
+    public async Task GetChildrenAsync_ReturnsPayloadAndTotalCount()
+    {
+        Guid nodeId = Guid.NewGuid();
+        QueuedHttpMessageHandler handler = new();
+        handler.EnqueueJson(
+            HttpStatusCode.OK,
+            new
+            {
+                id = nodeId,
+                createdAt = DateTime.UtcNow,
+                updatedAt = DateTime.UtcNow,
+                nodes = Array.Empty<object>(),
+                files = Array.Empty<object>(),
+            },
+            new Dictionary<string, string> { ["X-Total-Count"] = "123" });
+        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
+
+        CottonPagedResult<NodeContentDto> result = await client.Nodes.GetChildrenAsync(
+            nodeId,
+            page: 3,
+            pageSize: 20,
+            depth: 2);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Payload.Id, Is.EqualTo(nodeId));
+            Assert.That(result.Payload.Nodes, Is.Empty);
+            Assert.That(result.Payload.Files, Is.Empty);
+            Assert.That(result.TotalCount, Is.EqualTo(123));
+            Assert.That(
+                handler.Requests[0].PathAndQuery,
+                Is.EqualTo($"/api/v1/layouts/nodes/{nodeId}/children?page=3&pageSize=20&depth=2"));
+        });
+    }
+
+    [Test]
     public async Task CreateAsync_TrimsNameAndUsesPutNodesEndpoint()
     {
         Guid parentId = Guid.NewGuid();

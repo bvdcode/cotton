@@ -2,7 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
-using Cotton.Crypto;
 using Microsoft.Extensions.Configuration;
 
 namespace Cotton.Autoconfig.Tests
@@ -51,12 +50,10 @@ namespace Cotton.Autoconfig.Tests
         [Test]
         public void AddCottonOptions_Derives_Pepper_And_MasterKey_From_Root()
         {
-            // Arrange fixed 32-char master
-            const string root = "0123456789abcdef0123456789abcdef"; // 32 chars
+            const string root = "0123456789abcdef0123456789abcdef";
+            const string expectedPepper = "93KxynoTsD7Dur8jvNDVXs3K+rG9JipcGc9RjWTGws0=";
+            const string expectedMaster = "cn9Iuuhpj8AlOj0AioqiFXj18LdOg0QmuV/UoI8auro=";
             Environment.SetEnvironmentVariable(EnvVar, root);
-
-            string expectedPepper = KeyDerivation.DeriveSubkeyBase64(root, "CottonPepper", ConfigurationBuilderExtensions.DefaultKeyLength);
-            string expectedMaster = KeyDerivation.DeriveSubkeyBase64(root, "CottonMasterEncryptionKey", ConfigurationBuilderExtensions.DefaultKeyLength);
 
             // Act
             IConfigurationRoot cfg = new ConfigurationBuilder().AddCottonOptions().Build();

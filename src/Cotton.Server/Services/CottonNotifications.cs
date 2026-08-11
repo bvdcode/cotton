@@ -27,6 +27,7 @@ namespace Cotton.Server.Services
     public class CottonNotifications(
         CottonDbContext _dbContext,
         SettingsProvider _settingsProvider,
+        ServerSettingsValidator _settingsValidator,
         CottonPublicEmailProvider _publicEmailProvider,
         ILogger<CottonNotifications> _logger,
         IHubContext<EventHub> _hubContext) : INotificationsProvider
@@ -41,7 +42,7 @@ namespace Cotton.Server.Services
             string serverBaseUrl,
             string? recipientEmail = null)
         {
-            CottonServerSettings settings = _settingsProvider.GetServerSettings();
+            ServerSettingsSnapshot settings = _settingsProvider.GetServerSettings();
             switch (settings.EmailMode)
             {
                 case EmailMode.None:
@@ -67,18 +68,18 @@ namespace Cotton.Server.Services
             Guid userId,
             string serverBaseUrl)
         {
-            CottonServerSettings settings = _settingsProvider.GetServerSettings();
+            ServerSettingsSnapshot settings = _settingsProvider.GetServerSettings();
             var emailConfig = new EmailConfig
             {
                 SmtpServer = settings.SmtpServerAddress ?? string.Empty,
                 Port = settings.SmtpServerPort?.ToString() ?? string.Empty,
                 Username = settings.SmtpUsername ?? string.Empty,
-                Password = settings.SmtpPasswordEncrypted ?? string.Empty,
+                Password = settings.SmtpPassword ?? string.Empty,
                 FromAddress = settings.SmtpSenderEmail ?? string.Empty,
                 UseSSL = settings.SmtpUseSsl,
             };
 
-            string? validationError = _settingsProvider.ValidateEmailConfig(emailConfig);
+            string? validationError = _settingsValidator.ValidateEmailConfig(emailConfig);
             if (validationError is not null)
             {
                 _logger.LogWarning("SMTP test email validation failed: {ValidationError}", validationError);
@@ -91,25 +92,10 @@ namespace Cotton.Server.Services
                 throw new EntityNotFoundException<User>("User not found or does not have an email address.");
             }
 
-            if (!SettingsProvider.TryParsePort(emailConfig.Port, out int smtpPort))
-            {
-                throw new ArgumentException("Invalid SMTP port number.");
-            }
-
             string recipientName = GetRecipientDisplayName(user);
-            var smtpSettings = new CottonServerSettings
-            {
-                SmtpServerAddress = emailConfig.SmtpServer.Trim(),
-                SmtpServerPort = smtpPort,
-                SmtpUsername = emailConfig.Username.Trim(),
-                SmtpPasswordEncrypted = emailConfig.Password,
-                SmtpSenderEmail = emailConfig.FromAddress.Trim(),
-                SmtpUseSsl = emailConfig.UseSSL,
-            };
-
             string subject = "Cotton SMTP test email";
             string body = BuildSmtpTestBody(recipientName, serverBaseUrl);
-            SendSmtpEmail(user.Email, recipientName, subject, body, smtpSettings);
+            SendSmtpEmail(user.Email, recipientName, subject, body, emailConfig);
         }
 
         private async Task<bool> SendViaCottonBridgeAsync(
@@ -117,7 +103,7 @@ namespace Cotton.Server.Services
             EmailTemplate template,
             Dictionary<string, string> parameters,
             string serverBaseUrl,
-            CottonServerSettings settings,
+            ServerSettingsSnapshot settings,
             string? recipientEmail)
         {
             if (!settings.TelemetryEnabled)
@@ -140,6 +126,7 @@ namespace Cotton.Server.Services
             string recipientName = GetRecipientDisplayName(user);
 
             bool sent = await _publicEmailProvider.SendEmailAsync(
+                settings.InstanceId,
                 template,
                 serverBaseUrl,
                 email,
@@ -163,7 +150,7 @@ namespace Cotton.Server.Services
             EmailTemplate template,
             Dictionary<string, string> parameters,
             string serverBaseUrl,
-            CottonServerSettings settings,
+            ServerSettingsSnapshot settings,
             string? recipientEmail)
         {
             User? user = await _dbContext.Users.FindAsync(userId);
@@ -200,7 +187,7 @@ namespace Cotton.Server.Services
 
             try
             {
-                SendSmtpEmail(email, recipientName, subject, body, settings);
+                SendSmtpEmail(email, recipientName, subject, body, CreateEmailConfig(settings));
                 return true;
             }
             catch (Exception ex)
@@ -260,34 +247,25 @@ namespace Cotton.Server.Services
             string recipientName,
             string subject,
             string body,
-            CottonServerSettings settings)
+            EmailConfig settings)
         {
-            string host = settings.SmtpServerAddress
-                ?? throw new InvalidOperationException("SMTP server address is not configured.");
-            int port = settings.SmtpServerPort
-                ?? throw new InvalidOperationException("SMTP server port is not configured.");
-            string username = settings.SmtpUsername
-                ?? throw new InvalidOperationException("SMTP username is not configured.");
-            string senderEmail = settings.SmtpSenderEmail
-                ?? throw new InvalidOperationException("SMTP sender email is not configured.");
-            string? password = settings.SmtpPasswordEncrypted;
-            if (string.IsNullOrWhiteSpace(password))
+            if (!ServerSettingsValidator.TryParsePort(settings.Port, out int port))
             {
-                throw new InvalidOperationException("SMTP password is not configured.");
+                throw new InvalidOperationException("SMTP port is not configured.");
             }
 
             using SmtpClient client = new()
             {
-                Host = host,
+                Host = settings.SmtpServer,
                 Port = port,
                 Timeout = 15000,
-                EnableSsl = settings.SmtpUseSsl,
-                Credentials = new NetworkCredential(username, password)
+                EnableSsl = settings.UseSSL,
+                Credentials = new NetworkCredential(settings.Username, settings.Password)
             };
 
             using MailMessage mailMessage = new()
             {
-                From = new MailAddress(senderEmail, Constants.ProductName),
+                From = new MailAddress(settings.FromAddress, Constants.ProductName),
                 Subject = subject,
             };
 
@@ -319,6 +297,19 @@ namespace Cotton.Server.Services
             }
 
             client.Send(mailMessage);
+        }
+
+        private static EmailConfig CreateEmailConfig(ServerSettingsSnapshot settings)
+        {
+            return new EmailConfig
+            {
+                SmtpServer = settings.SmtpServerAddress ?? string.Empty,
+                Port = settings.SmtpServerPort?.ToString() ?? string.Empty,
+                Username = settings.SmtpUsername ?? string.Empty,
+                Password = settings.SmtpPassword ?? string.Empty,
+                FromAddress = settings.SmtpSenderEmail ?? string.Empty,
+                UseSSL = settings.SmtpUseSsl,
+            };
         }
 
         /// <summary>

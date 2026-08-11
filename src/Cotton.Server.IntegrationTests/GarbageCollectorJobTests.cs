@@ -21,7 +21,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
-using System.Reflection;
 using System.Text;
 
 namespace Cotton.Server.IntegrationTests;
@@ -31,8 +30,6 @@ public class GarbageCollectorJobTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
-        ResetSettingsProviderCaches();
-
         IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         DbContext.Database.Migrate();
@@ -130,7 +127,7 @@ public class GarbageCollectorJobTests : IntegrationTestBase
 
         ResolvedBackupManifest backup = CreateBackupManifest(Hasher.ToHexStringHash(backupHash));
         ChunkUsageService usage = CreateChunkUsageService(DbContext, storage, keyProvider, backup);
-        var settingsProvider = new SettingsProvider(DbContext);
+        SettingsProvider settingsProvider = new(DbContext, new ServerSettingsCache());
         using ServiceProvider services = new ServiceCollection()
             .AddSingleton(settingsProvider)
             .BuildServiceProvider();
@@ -189,7 +186,7 @@ public class GarbageCollectorJobTests : IntegrationTestBase
         DbContext.ChangeTracker.Clear();
 
         ChunkUsageService usage = CreateChunkUsageService(DbContext, storage, keyProvider, latestBackup: null);
-        var settingsProvider = new SettingsProvider(DbContext);
+        SettingsProvider settingsProvider = new(DbContext, new ServerSettingsCache());
         using ServiceProvider services = new ServiceCollection()
             .AddSingleton(settingsProvider)
             .BuildServiceProvider();
@@ -395,16 +392,6 @@ public class GarbageCollectorJobTests : IntegrationTestBase
     private static byte[] Hash(string value)
     {
         return Hasher.HashData(Encoding.UTF8.GetBytes(value));
-    }
-
-    private static void ResetSettingsProviderCaches()
-    {
-        BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
-        Type settingsProviderType = typeof(SettingsProvider);
-
-        settingsProviderType.GetField("_cache", flags)?.SetValue(null, null);
-        settingsProviderType.GetField("_isServerInitializedCache", flags)?.SetValue(null, null);
-        settingsProviderType.GetField("_serverHasUsersCache", flags)?.SetValue(null, null);
     }
 
     private class StaticBackupManifestService(ResolvedBackupManifest? _latestBackup) : IDatabaseBackupManifestService

@@ -1,6 +1,8 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Microsoft.EntityFrameworkCore;
+
 namespace Cotton.Server.Services.DatabaseIntegrity
 {
     /// <summary>
@@ -37,6 +39,13 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         /// Builds the canonical binary payload that will be MACed for the entity.
         /// </summary>
         byte[] BuildCanonicalPayload(object entity);
+
+        /// <summary>
+        /// Counts rows whose integrity metadata is missing or uses an unsupported schema version.
+        /// </summary>
+        Task<int> CountInvalidMetadataRowsAsync(
+            DbContext dbContext,
+            CancellationToken cancellationToken);
     }
 
     /// <summary>
@@ -44,6 +53,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </summary>
     /// <typeparam name="T">The EF entity type represented by the descriptor.</typeparam>
     public interface IDatabaseIntegrityDescriptor<in T> : IDatabaseIntegrityDescriptor
+        where T : class
     {
         /// <summary>
         /// Gets the stable row key written into the signed payload and failure reports.

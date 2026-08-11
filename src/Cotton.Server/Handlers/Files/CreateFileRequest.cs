@@ -189,7 +189,7 @@ namespace Cotton.Server.Handlers.Files
             {
                 await _fileManifestService.ClearGcSchedulesForManifestReferencesAsync(fileManifest.Id, ct);
 
-                CottonServerSettings settings = _settingsProvider.GetServerSettings();
+                ServerSettingsSnapshot settings = _settingsProvider.GetServerSettings();
                 if (!settings.AllowCrossUserDeduplication
                     && (fileManifest.SmallFilePreviewHash is not null
                         || fileManifest.SmallFilePreviewHashEncrypted is not null

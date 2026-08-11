@@ -3,6 +3,7 @@
 
 using Amazon.S3;
 using Cotton.Database.Models;
+using Cotton.Server.Models.Dto;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Helpers;
 
@@ -11,10 +12,26 @@ namespace Cotton.Server.Providers
     /// <summary>
     /// Provides s3 dependencies to server components.
     /// </summary>
-    public class S3Provider(SettingsProvider _settingsProvider) : IS3Provider
+    public class S3Provider : IS3Provider, IDisposable
     {
+        private readonly Func<S3Config> _getConfiguration;
         private IAmazonS3? _s3Client;
         private string? _bucketName;
+
+        /// <summary>
+        /// Initializes an S3 provider from the persisted server settings.
+        /// </summary>
+        public S3Provider(SettingsProvider settingsProvider)
+        {
+            ArgumentNullException.ThrowIfNull(settingsProvider);
+            _getConfiguration = () => CreateConfiguration(settingsProvider.GetServerSettings());
+        }
+
+        internal S3Provider(S3Config configuration)
+        {
+            ArgumentNullException.ThrowIfNull(configuration);
+            _getConfiguration = () => configuration;
+        }
 
         /// <summary>
         /// Gets bucket name.
@@ -25,13 +42,10 @@ namespace Cotton.Server.Providers
             {
                 return _bucketName;
             }
-            string? result = _settingsProvider.GetServerSettings().S3BucketName;
-            if (string.IsNullOrEmpty(result))
-            {
-                throw new InvalidOperationException("S3 bucket name is not configured.");
-            }
-            _bucketName = result;
-            return result;
+
+            S3Config configuration = _getConfiguration();
+            _bucketName = RequireConfigured(configuration.Bucket, "S3 bucket name");
+            return _bucketName;
         }
 
         /// <summary>
@@ -44,25 +58,44 @@ namespace Cotton.Server.Providers
                 return _s3Client;
             }
 
-            CottonServerSettings settings = _settingsProvider.GetServerSettings();
-            ArgumentNullException.ThrowIfNull(settings.S3EndpointUrl, nameof(settings.S3EndpointUrl));
-            ArgumentNullException.ThrowIfNull(settings.S3AccessKeyId, nameof(settings.S3AccessKeyId));
-            ArgumentNullException.ThrowIfNull(settings.S3SecretAccessKeyEncrypted, nameof(settings.S3SecretAccessKeyEncrypted));
-            ArgumentNullException.ThrowIfNull(settings.S3BucketName, nameof(settings.S3BucketName));
-            ArgumentNullException.ThrowIfNull(settings.S3Region, nameof(settings.S3Region));
-
-            string? secretAccessKey = settings.S3SecretAccessKeyEncrypted;
-            if (string.IsNullOrEmpty(secretAccessKey))
-            {
-                throw new InvalidOperationException("S3 secret access key is not configured.");
-            }
+            S3Config configuration = _getConfiguration();
+            string endpoint = RequireConfigured(configuration.Endpoint, "S3 endpoint URL");
+            string region = RequireConfigured(configuration.Region, "S3 region");
+            string accessKey = RequireConfigured(configuration.AccessKey, "S3 access key");
+            string secretKey = RequireConfigured(configuration.SecretKey, "S3 secret access key");
 
             _s3Client = S3CompatibilityFactory.BuildClient(
-                settings.S3EndpointUrl,
-                settings.S3Region,
-                settings.S3AccessKeyId,
-                secretAccessKey);
+                endpoint,
+                region,
+                accessKey,
+                secretKey);
             return _s3Client;
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            _s3Client?.Dispose();
+            GC.SuppressFinalize(this);
+        }
+
+        private static S3Config CreateConfiguration(ServerSettingsSnapshot settings)
+        {
+            return new S3Config
+            {
+                Endpoint = settings.S3EndpointUrl ?? string.Empty,
+                Region = settings.S3Region ?? string.Empty,
+                AccessKey = settings.S3AccessKeyId ?? string.Empty,
+                SecretKey = settings.S3SecretAccessKey ?? string.Empty,
+                Bucket = settings.S3BucketName ?? string.Empty
+            };
+        }
+
+        private static string RequireConfigured(string? value, string settingName)
+        {
+            return !string.IsNullOrWhiteSpace(value)
+                ? value
+                : throw new InvalidOperationException($"{settingName} is not configured.");
         }
     }
 }

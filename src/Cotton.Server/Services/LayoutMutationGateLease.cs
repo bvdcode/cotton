@@ -21,8 +21,7 @@ namespace Cotton.Server.Services
             }
 
             _disposed = true;
-            gate.Exit(layoutId, scope);
-            return ValueTask.CompletedTask;
+            return gate.ExitAsync(layoutId, scope);
         }
     }
 }

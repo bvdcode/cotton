@@ -13,11 +13,29 @@ internal class QueuedHttpMessageHandler : HttpMessageHandler
 
     public List<HttpRequestMessageSnapshot> Requests { get; } = [];
 
-    public void EnqueueJson(HttpStatusCode statusCode, object payload)
+    public void EnqueueJson(
+        HttpStatusCode statusCode,
+        object payload,
+        IReadOnlyDictionary<string, string>? headers = null)
     {
-        _responses.Enqueue(_ => new HttpResponseMessage(statusCode)
+        _responses.Enqueue(_ =>
         {
-            Content = new StringContent(JsonSerializer.Serialize(payload, JsonSerializerOptions.Web), Encoding.UTF8, "application/json"),
+            HttpResponseMessage response = new(statusCode)
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(payload, JsonSerializerOptions.Web),
+                    Encoding.UTF8,
+                    "application/json"),
+            };
+            if (headers is not null)
+            {
+                foreach (KeyValuePair<string, string> header in headers)
+                {
+                    response.Headers.Add(header.Key, header.Value);
+                }
+            }
+
+            return response;
         });
     }
 
