@@ -2,10 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
-using Cotton.Database.Integrity;
 using Cotton.Server.Models.Dto;
-using Microsoft.EntityFrameworkCore;
-using System.Reflection;
 
 namespace Cotton.Server.Services.DatabaseIntegrity
 {
@@ -21,16 +18,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         CottonDbContext _dbContext,
         IDatabaseIntegrityDescriptorRegistry _descriptors)
     {
-        // Descriptors are discovered at runtime, while EF's Set<TEntity>() API is generic. Reflection is contained in this
-        // adapter so descriptors can remain simple policy objects without knowing about DbSet plumbing.
-        private static readonly MethodInfo CountUnsignedRowsCoreMethod = typeof(DatabaseIntegrityDiagnosticsService)
-            .GetMethod(
-                nameof(CountUnsignedRowsCoreAsync),
-                BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new MissingMethodException(
-                nameof(DatabaseIntegrityDiagnosticsService),
-                nameof(CountUnsignedRowsCoreAsync));
-
         /// <summary>
         /// Returns counts of protected rows, missing metadata, and unsupported integrity versions.
         /// </summary>
@@ -39,7 +26,9 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             int unsignedRows = 0;
             foreach (IDatabaseIntegrityDescriptor descriptor in _descriptors.All)
             {
-                unsignedRows += await CountUnsignedRowsAsync(descriptor, cancellationToken);
+                unsignedRows += await descriptor.CountInvalidMetadataRowsAsync(
+                    _dbContext,
+                    cancellationToken);
             }
 
             return new DatabaseIntegrityDiagnosticsDto
@@ -48,30 +37,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
                 ProtectedEntityTypes = _descriptors.All.Count,
                 UnsignedProtectedRows = unsignedRows,
             };
-        }
-
-        private async Task<int> CountUnsignedRowsAsync(
-            IDatabaseIntegrityDescriptor descriptor,
-            CancellationToken cancellationToken)
-        {
-            // Keep this query on the database side: we only need counts for the check-up score, not entity materialization
-            // or cryptographic verification.
-            MethodInfo genericMethod = CountUnsignedRowsCoreMethod.MakeGenericMethod(descriptor.EntityType);
-            var task = (Task<int>)genericMethod.Invoke(this, [descriptor, cancellationToken])!;
-            return await task;
-        }
-
-        private Task<int> CountUnsignedRowsCoreAsync<TEntity>(
-            IDatabaseIntegrityDescriptor descriptor,
-            CancellationToken cancellationToken)
-            where TEntity : class
-        {
-            return _dbContext.Set<TEntity>()
-                .CountAsync(x => EF.Property<byte[]?>(x, DatabaseIntegrityColumns.MacProperty) == null
-                    || EF.Property<int?>(
-                        x,
-                        DatabaseIntegrityColumns.VersionProperty) != descriptor.SchemaVersion,
-                    cancellationToken);
         }
     }
 }
