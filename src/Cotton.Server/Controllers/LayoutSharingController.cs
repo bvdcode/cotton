@@ -3,27 +3,21 @@
 
 using Cotton.Files;
 using Cotton.Nodes;
-using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
-using Cotton.Models.Enums;
 using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
-using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
-using Cotton.Storage.Pipelines;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers
@@ -35,9 +29,7 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Layouts)]
     public class LayoutSharingController(
         IMediator _mediator,
-        CottonDbContext _dbContext,
         IStoragePipeline _storage,
-        FileGraphIntegrityVerifier _fileGraphIntegrity,
         PublicShareLookupFailureLimiter _publicShareLookupFailures) : ControllerBase
     {
         /// <summary>
@@ -249,59 +241,27 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            SharedNodeAccess? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken is null)
+            GetSharedNodeFileContentQuery query = new(token, nodeFileId, preview);
+            GetSharedNodeFileContentResult result = await _mediator.Send(
+                query,
+                HttpContext.RequestAborted);
+            switch (result.Status)
             {
-                return this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found.");
+                case GetSharedNodeFileContentStatus.Success:
+                    NodeFile nodeFile = result.NodeFile!;
+                    return result.ServesPreview
+                        ? ServeSharedLargePreview(nodeFile)
+                        : FileDownloadResultFactory.Create(Response, _storage, nodeFile, download);
+                case GetSharedNodeFileContentStatus.SharedFolderNotFound:
+                    return this.ApiPublicShareNotFound(
+                        _publicShareLookupFailures,
+                        token,
+                        "File not found.");
+                case GetSharedNodeFileContentStatus.FileNotFound:
+                    return this.ApiNotFound("File not found.");
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(result.Status));
             }
-
-            NodeFile? nodeFile = await LoadSharedNodeFileAsync(nodeFileId, nodeShareToken.CreatedByUserId);
-            if (nodeFile is null)
-            {
-                return this.ApiNotFound("File not found.");
-            }
-
-            bool servesPreview = preview && nodeFile.FileManifest.LargeFilePreviewHash is not null;
-            RequireSharedFileIntegrity(nodeFile, servesPreview);
-
-            if (nodeFile.Node.Type != NodeType.Default)
-            {
-                return this.ApiNotFound("File not found.");
-            }
-
-            bool canAccessFile = await IsNodeInSharedSubtreeAsync(
-                nodeFile.NodeId,
-                nodeShareToken.NodeId,
-                nodeShareToken.CreatedByUserId);
-            if (!canAccessFile)
-            {
-                return this.ApiNotFound("File not found.");
-            }
-
-            return servesPreview
-                ? ServeSharedLargePreview(nodeFile)
-                : ServeSharedFileDownload(nodeFile, download);
-        }
-
-        private Task<NodeFile?> LoadSharedNodeFileAsync(Guid nodeFileId, Guid ownerId)
-        {
-            return _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == ownerId);
-        }
-
-        private void RequireSharedFileIntegrity(NodeFile nodeFile, bool servesPreview)
-        {
-            if (servesPreview)
-            {
-                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "shared-folder.preview");
-                return;
-            }
-
-            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "shared-folder.download");
         }
 
         private IActionResult ServeSharedLargePreview(NodeFile nodeFile)
@@ -319,48 +279,9 @@ namespace Cotton.Server.Controllers
             return File(previewStream, "image/webp");
         }
 
-        private IActionResult ServeSharedFileDownload(NodeFile nodeFile, bool download)
-        {
-            string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
-            PipelineContext context = new()
-            {
-                FileSizeBytes = nodeFile.FileManifest.SizeBytes,
-                ChunkLengths = nodeFile.FileManifest.FileManifestChunks.GetChunkLengths(),
-            };
-
-            Stream stream = _storage.GetBlobStream(uids, context);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            EntityTagHeaderValue entityTag = FileETags.CreateContentEntityTag(nodeFile);
-            bool requestedInline = !download;
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, nodeFile.FileManifest.ContentType, requestedInline);
-
-            return File(
-                stream,
-                FileResponseSecurity.ResolveContentTypeForResponse(nodeFile.FileManifest.ContentType, requestedInline),
-                fileDownloadName: FileResponseSecurity.ResolveFileDownloadName(
-                    nodeFile.Name,
-                    requestedInline,
-                    nodeFile.FileManifest.ContentType),
-                lastModified: new DateTimeOffset(nodeFile.CreatedAt),
-                entityTag: entityTag,
-                enableRangeProcessing: true);
-        }
-
         private Task<SharedNodeAccess?> ResolveActiveNodeShareTokenAsync(string token) =>
             _mediator.Send(
                 new ResolveSharedNodeAccessQuery(token),
-                HttpContext.RequestAborted);
-
-        private Task<bool> IsNodeInSharedSubtreeAsync(
-            Guid nodeId,
-            Guid sharedRootNodeId,
-            Guid ownerId) =>
-            _mediator.Send(
-                new VerifySharedNodeSubtreeAccessQuery(
-                    nodeId,
-                    sharedRootNodeId,
-                    ownerId),
                 HttpContext.RequestAborted);
 
     }
