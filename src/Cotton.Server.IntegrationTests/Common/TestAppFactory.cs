@@ -70,7 +70,6 @@ namespace Cotton.Server.IntegrationTests.Common
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            Quartz.Logging.LogProvider.IsDisabled = true;
             string storagePath = GetStoragePath();
 
             builder.ConfigureAppConfiguration((context, config) =>
@@ -93,14 +92,6 @@ namespace Cotton.Server.IntegrationTests.Common
                     services.Remove(d);
                 }
 
-                var schedulerFactoryDescriptors = services
-                    .Where(d => d.ServiceType == typeof(ISchedulerFactory))
-                    .ToList();
-                foreach (ServiceDescriptor? d in schedulerFactoryDescriptors)
-                {
-                    services.Remove(d);
-                }
-                services.AddSingleton<ISchedulerFactory, NoOpSchedulerFactory>();
                 services.AddSingleton<IStartupFilter, TestRemoteIpStartupFilter>();
                 services.AddSingleton<IProxyTopologyProbeService, NoOpProxyTopologyProbeService>();
 
@@ -175,7 +166,9 @@ namespace Cotton.Server.IntegrationTests.Common
         {
             // Ensure host is created per test without cross-test reuse
             builder.UseEnvironment("IntegrationTests");
-            return base.CreateHost(builder);
+            IHost host = base.CreateHost(builder);
+            Quartz.Logging.LogProvider.SetCurrentLogProvider(new NoOpQuartzLogProvider());
+            return host;
         }
     }
 }

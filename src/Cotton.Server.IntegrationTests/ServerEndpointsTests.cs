@@ -386,6 +386,19 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.NotFound));
         }
 
+        [TestCase("/api/v1/server/database-backup/trigger")]
+        [TestCase("/api/v1/server/gc/trigger")]
+        public async Task Trigger_Background_Job_Works_Without_Hosted_Scheduler(string route)
+        {
+            string token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            using HttpRequestMessage request = new(HttpMethod.Patch, route);
+            using HttpResponseMessage response = await _client.SendAsync(request);
+
+            response.EnsureSuccessStatusCode();
+        }
+
         private int GetResolvedEncryptionThreads()
         {
             using IServiceScope scope = _factory!.Services.CreateScope();
