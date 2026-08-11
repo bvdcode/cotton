@@ -8,6 +8,7 @@ using Cotton.Nodes;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services.Search;
+using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
