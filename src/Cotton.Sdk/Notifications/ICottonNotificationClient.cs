@@ -11,7 +11,7 @@ public interface ICottonNotificationClient
     /// <summary>
     /// Gets one page of notifications ordered from newest to oldest.
     /// </summary>
-    Task<IReadOnlyList<CottonNotificationDto>> GetNotificationsAsync(
+    Task<CottonPagedResult<IReadOnlyList<CottonNotificationDto>>> GetNotificationsAsync(
         int page = 1,
         int pageSize = 50,
         CancellationToken cancellationToken = default);

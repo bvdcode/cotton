@@ -84,7 +84,7 @@ namespace Cotton.Database.Configuration
         private static InvalidOperationException CreateMissingDatabaseFieldProtectorException()
         {
             return new InvalidOperationException(
-                "Encrypted EF string conversion requires IDatabaseFieldProtector. Use a raw startup/probe DbContext for pre-unlock reads.");
+                "Encrypted EF string conversion requires IDatabaseFieldProtector. Construct CottonDbContext with a field protector before accessing encrypted properties.");
         }
     }
 }

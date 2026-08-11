@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -63,6 +64,32 @@ internal class CottonHttpTransport
             headers,
             cancellationToken).ConfigureAwait(false);
         return await ReadRequiredJsonAsync<T>(response, method, path, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<CottonPagedResult<T>> SendPagedJsonAsync<T>(
+        HttpMethod method,
+        string path,
+        object? body = null,
+        bool authorize = true,
+        IReadOnlyDictionary<string, string>? headers = null,
+        CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage response = await SendAsync(
+            method,
+            path,
+            body,
+            authorize,
+            headers,
+            cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, method, path, cancellationToken).ConfigureAwait(false);
+        int totalCount = ReadRequiredTotalCount(response, method, path);
+        T payload = await ReadRequiredJsonAsync<T>(
+            response,
+            method,
+            path,
+            cancellationToken,
+            ensureSuccess: false).ConfigureAwait(false);
+        return new CottonPagedResult<T>(payload, totalCount);
     }
 
     public async Task SendNoContentAsync(
@@ -420,6 +447,33 @@ internal class CottonHttpTransport
             response.StatusCode,
             null,
             $"Cotton API request {FormatRequestLabel(method, path)} returned an empty JSON response.");
+    }
+
+    private static int ReadRequiredTotalCount(
+        HttpResponseMessage response,
+        HttpMethod method,
+        string path)
+    {
+        const string headerName = "X-Total-Count";
+        if (!response.Headers.TryGetValues(headerName, out IEnumerable<string>? headerValues))
+        {
+            throw new CottonApiException(
+                response.StatusCode,
+                null,
+                $"Cotton API request {FormatRequestLabel(method, path)} did not include the required {headerName} response header.");
+        }
+
+        string[] values = [.. headerValues];
+        if (values.Length != 1
+            || !int.TryParse(values[0], NumberStyles.None, CultureInfo.InvariantCulture, out int totalCount))
+        {
+            throw new CottonApiException(
+                response.StatusCode,
+                null,
+                $"Cotton API request {FormatRequestLabel(method, path)} returned an invalid {headerName} response header.");
+        }
+
+        return totalCount;
     }
 
     private static string CreateResponsePreview(string responseBody)

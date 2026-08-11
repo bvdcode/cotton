@@ -6,7 +6,6 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton;
-using Cotton.Database.Models;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
@@ -198,13 +197,17 @@ public class AuthSmokeTests : IntegrationTestBase
         Assert.That(_customFactory, Is.Not.Null);
 
         using IServiceScope scope = _customFactory!.Services.CreateScope();
-        CottonServerSettings settings = scope.ServiceProvider
-            .GetRequiredService<SettingsProvider>()
-            .GetServerSettings();
+        SettingsProvider settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider>();
+        ServerSettingsSnapshot settings = settingsProvider.GetServerSettings();
         IPAddress? previousTrustedProxyIpAddress = settings.TrustedProxyIpAddress;
         byte? previousTrustedProxyPrefixLength = settings.TrustedProxyPrefixLength;
-        settings.TrustedProxyIpAddress = IPAddress.Parse("192.0.2.10");
-        settings.TrustedProxyPrefixLength = null;
+        await settingsProvider.UpdateSettingsAsync(
+            current =>
+            {
+                current.TrustedProxyIpAddress = IPAddress.Parse("192.0.2.10");
+                current.TrustedProxyPrefixLength = null;
+            },
+            fallbackPublicBaseUrl: null);
 
         try
         {
@@ -232,8 +235,13 @@ public class AuthSmokeTests : IntegrationTestBase
         }
         finally
         {
-            settings.TrustedProxyIpAddress = previousTrustedProxyIpAddress;
-            settings.TrustedProxyPrefixLength = previousTrustedProxyPrefixLength;
+            await settingsProvider.UpdateSettingsAsync(
+                current =>
+                {
+                    current.TrustedProxyIpAddress = previousTrustedProxyIpAddress;
+                    current.TrustedProxyPrefixLength = previousTrustedProxyPrefixLength;
+                },
+                fallbackPublicBaseUrl: null);
         }
     }
 

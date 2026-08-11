@@ -11,7 +11,8 @@ namespace Cotton.Server.Providers
     public class StorageBackendProvider(
         IStorageBackendTypeCache _storageTypeCache,
         SettingsProvider _settings,
-        IServiceProvider _serviceProvider) : global::Cotton.Storage.Abstractions.IStorageBackendProvider
+        StorageBackendFactory _backendFactory,
+        global::Cotton.Storage.Abstractions.IS3Provider _s3Provider) : global::Cotton.Storage.Abstractions.IStorageBackendProvider
     {
         /// <summary>
         /// Gets backend.
@@ -19,15 +20,7 @@ namespace Cotton.Server.Providers
         public global::Cotton.Storage.Abstractions.IStorageBackend GetBackend()
         {
             StorageType type = _storageTypeCache.GetOrAdd(() => _settings.GetServerSettings().StorageType);
-            if (type == StorageType.S3)
-            {
-                return ActivatorUtilities.CreateInstance<global::Cotton.Storage.Backends.S3StorageBackend>(_serviceProvider);
-            }
-            if (type == StorageType.Local)
-            {
-                return ActivatorUtilities.CreateInstance<global::Cotton.Storage.Backends.FileSystemStorageBackend>(_serviceProvider);
-            }
-            throw new NotSupportedException($"Storage type {type} is not supported.");
+            return _backendFactory.Create(type, _s3Provider);
         }
     }
 }

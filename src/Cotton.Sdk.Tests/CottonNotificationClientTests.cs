@@ -18,31 +18,35 @@ public class CottonNotificationClientTests
         Guid userId = Guid.NewGuid();
         DateTime createdAt = DateTime.UtcNow.AddMinutes(-1);
         var handler = new QueuedHttpMessageHandler();
-        handler.EnqueueJson(HttpStatusCode.OK, new[]
-        {
-            new
+        handler.EnqueueJson(
+            HttpStatusCode.OK,
+            new[]
             {
-                id = notificationId,
-                createdAt,
-                updatedAt = createdAt,
-                title = "Storage warning",
-                content = "Free space is low.",
-                readAt = (DateTime?)null,
-                metadata = new Dictionary<string, string> { ["kind"] = "storage-pressure" },
-                userId,
-                priority = 3,
-            }
-        });
+                new
+                {
+                    id = notificationId,
+                    createdAt,
+                    updatedAt = createdAt,
+                    title = "Storage warning",
+                    content = "Free space is low.",
+                    readAt = (DateTime?)null,
+                    metadata = new Dictionary<string, string> { ["kind"] = "storage-pressure" },
+                    userId,
+                    priority = 3,
+                }
+            },
+            new Dictionary<string, string> { ["X-Total-Count"] = "41" });
         CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
-        IReadOnlyList<CottonNotificationDto> notifications =
+        CottonPagedResult<IReadOnlyList<CottonNotificationDto>> result =
             await client.Notifications.GetNotificationsAsync(page: 2, pageSize: 25);
 
-        CottonNotificationDto notification = notifications.Single();
+        CottonNotificationDto notification = result.Payload.Single();
         Assert.Multiple(() =>
         {
             Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Get));
             Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/notifications?page=2&pageSize=25"));
+            Assert.That(result.TotalCount, Is.EqualTo(41));
             Assert.That(notification.Id, Is.EqualTo(notificationId));
             Assert.That(notification.CreatedAt, Is.EqualTo(createdAt).Within(TimeSpan.FromMilliseconds(1)));
             Assert.That(notification.Title, Is.EqualTo("Storage warning"));

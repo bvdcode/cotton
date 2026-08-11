@@ -34,19 +34,19 @@ namespace Cotton.Previews
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
-            using Image<Rgba32> image = DecodeToImage(stream);
+            using Image<Rgba32> image = await DecodeToImageAsync(stream).ConfigureAwait(false);
             return await ImagePreviewGenerator.EncodeMaxResizedWebpAsync(image, size);
         }
 
-        private static Image<Rgba32> DecodeToImage(Stream stream)
+        private static async Task<Image<Rgba32>> DecodeToImageAsync(Stream stream)
         {
             if (stream.CanSeek)
             {
                 stream.Position = 0;
             }
 
-            using var buffer = new MemoryStream();
-            stream.CopyTo(buffer);
+            using MemoryStream buffer = new();
+            await stream.CopyToAsync(buffer).ConfigureAwait(false);
 
             using var context = new HeifContext(buffer.ToArray());
             using HeifImageHandle handle = context.GetPrimaryImageHandle();

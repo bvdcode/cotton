@@ -476,7 +476,7 @@ namespace Cotton.Server.Handlers.WebDav
             Guid userId,
             CancellationToken ct)
         {
-            CottonServerSettings settings = _settings.GetServerSettings();
+            ServerSettingsSnapshot settings = _settings.GetServerSettings();
             int chunkSize = settings.MaxChunkSizeBytes;
             var chunks = new List<Chunk>();
 

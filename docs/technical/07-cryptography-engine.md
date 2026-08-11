@@ -281,7 +281,7 @@ Both endpoints below live on `SettingsController`, which is routed at both `Rout
 
 ### String helpers
 
-`Cotton.Crypto.StreamCipherExtensions` provides `EncryptString` and `DecryptString` for short encrypted values. These helpers back TOTP-secret encryption in `AuthController` (`user.TotpSecretEncrypted`), transparent column encryption in `CottonDbContext`, and master-key sentinel handling in `MasterKeyStartupStorage`.
+`Cotton.Crypto.StreamCipherExtensions` provides `EncryptString` and `DecryptString` for short encrypted values. These helpers back TOTP-secret encryption in `AuthController` (`user.TotpSecretEncrypted`), transparent column encryption in `CottonDbContext`, and master-key sentinel handling in `MasterKeySentinelStore`.
 
 ## Buffer management
 

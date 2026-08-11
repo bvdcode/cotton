@@ -49,7 +49,7 @@ namespace Cotton.Server.Services
 
             await WaitForGarbageCollectionAsync(storageKey, ct);
 
-            CottonServerSettings settings = _settingsProvider.GetServerSettings();
+            ServerSettingsSnapshot settings = _settingsProvider.GetServerSettings();
             Chunk? chunk = await _layouts.FindChunkAsync(chunkHash, ct);
             bool existsInStorage = await _storage.ExistsAsync(storageKey);
 
@@ -89,7 +89,7 @@ namespace Cotton.Server.Services
                 throw new ArgumentException("Chunk hash must be a SHA-256 digest.", nameof(chunkHash));
             }
 
-            CottonServerSettings settings = _settingsProvider.GetServerSettings();
+            ServerSettingsSnapshot settings = _settingsProvider.GetServerSettings();
             if (!settings.AllowCrossUserDeduplication)
             {
                 throw new EntityNotFoundException(nameof(Chunk));

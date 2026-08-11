@@ -26,7 +26,6 @@ using NUnit.Framework;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Reflection;
 using System.Text;
 using FileVersionDto = Cotton.Files.FileVersionDto;
 
@@ -44,8 +43,6 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
-        ResetSettingsProviderCaches();
-
         IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
@@ -59,7 +56,6 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
     {
         _client?.Dispose();
         _factory?.Dispose();
-        ResetSettingsProviderCaches();
     }
 
     [Test]
@@ -970,13 +966,4 @@ public class SyncChangesEndpointsTests : IntegrationTestBase
         return response.Changes.Single(x => x.ItemId == itemId);
     }
 
-    private static void ResetSettingsProviderCaches()
-    {
-        const BindingFlags Flags = BindingFlags.Static | BindingFlags.NonPublic;
-        Type settingsProviderType = typeof(SettingsProvider);
-
-        settingsProviderType.GetField("_cache", Flags)?.SetValue(null, null);
-        settingsProviderType.GetField("_isServerInitializedCache", Flags)?.SetValue(null, null);
-        settingsProviderType.GetField("_serverHasUsersCache", Flags)?.SetValue(null, null);
-    }
 }

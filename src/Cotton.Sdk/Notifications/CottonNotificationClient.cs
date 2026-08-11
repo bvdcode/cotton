@@ -18,7 +18,7 @@ public class CottonNotificationClient : ICottonNotificationClient
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<CottonNotificationDto>> GetNotificationsAsync(
+    public Task<CottonPagedResult<IReadOnlyList<CottonNotificationDto>>> GetNotificationsAsync(
         int page = 1,
         int pageSize = 50,
         CancellationToken cancellationToken = default)
@@ -27,9 +27,9 @@ public class CottonNotificationClient : ICottonNotificationClient
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
 
         string path = $"{Routes.V1.Notifications}?page={page}&pageSize={pageSize}";
-        return await _transport.SendJsonAsync<List<CottonNotificationDto>>(
+        return _transport.SendPagedJsonAsync<IReadOnlyList<CottonNotificationDto>>(
             HttpMethod.Get,
             path,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken);
     }
 }
