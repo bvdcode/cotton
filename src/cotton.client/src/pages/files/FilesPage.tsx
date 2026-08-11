@@ -37,12 +37,7 @@ import {
 } from "../../shared/api/queries/fileVersions";
 import { fetchServerSettings } from "../../shared/api/queries/serverSettings";
 import { type NodeFileManifestDto } from "../../shared/api/nodesApi";
-import {
-  applyDisplayMetaToFile,
-  getFolderEncryptionPolicyState,
-  readEnvelopeFromPreferences,
-  useVault,
-} from "../../shared/crypto";
+import { applyDisplayMetaToFile } from "../../shared/crypto";
 import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
@@ -56,26 +51,20 @@ import {
   useFileListPageLogic,
   type FileListPageLogic,
 } from "./hooks/useFileListPageLogic";
-import { useFolderClientEncryptionActions } from "./hooks/useFolderClientEncryptionActions";
-import { useFolderEncryptionPolicy } from "./hooks/useFolderEncryptionPolicy";
 import { uploadFileToNode } from "@shared/upload";
+import { useFilesEncryptionController } from "./hooks/useFilesEncryptionController";
 import { useFilesSelectionActions } from "./hooks/useFilesSelectionActions";
 import { FilesPageView } from "./FilesPageView";
 import {
-  buildFolderEncryptionPrompt,
   buildUniqueSiblingName,
   getActiveCurrentNode,
   getCurrentContent,
   getGoUpParentId,
   isCreateFolderShortcut,
   isEditableKeyboardTarget,
-  isFilesUnlockDialogOpen,
   isHugeFolderCount,
   resolveFilesNodeId,
-  shouldPromptForCurrentFolderUnlock,
   shouldRenderFilesList,
-  type ClientEncryptionFolderAction,
-  type ClientEncryptionUnlockPrompt,
 } from "./filesPageModel";
 
 const MARKDOWN_FILE_CONTENT_TYPE = "text/markdown";
@@ -175,27 +164,6 @@ export const FilesPage: React.FC = () => {
   );
 
   const activeCurrentNode = getActiveCurrentNode(nodeId, currentNode);
-  const activeAncestors = useMemo(
-    () => (activeCurrentNode ? ancestors : []),
-    [activeCurrentNode, ancestors],
-  );
-  const currentFolderEncryptionPolicy = useMemo(
-    () => getFolderEncryptionPolicyState(activeCurrentNode, activeAncestors),
-    [activeAncestors, activeCurrentNode],
-  );
-  const childFolderEncryptionAncestors = useMemo(
-    () =>
-      activeCurrentNode
-        ? [...activeAncestors, activeCurrentNode]
-        : activeAncestors,
-    [activeAncestors, activeCurrentNode],
-  );
-  const getChildFolderEncryptionPolicyState = React.useCallback(
-    (folder: NonNullable<typeof content>["nodes"][number]) =>
-      getFolderEncryptionPolicyState(folder, childFolderEncryptionAncestors),
-    [childFolderEncryptionAncestors],
-  );
-
   const fileListSource = useFolderFileList({
     nodeId,
     layoutType,
@@ -265,24 +233,26 @@ export const FilesPage: React.FC = () => {
     [],
   );
 
-  const folderEncryptionActions = useFolderClientEncryptionActions({
-    nodeId,
-    currentNode,
-    content,
-    folderPolicyEnabled: currentFolderEncryptionPolicy.effectiveEnabled,
-    onToast: showToast,
-  });
   const {
-    decryptEncryptedFiles,
-    encryptPlainFiles,
-    encryptedFiles,
-    folderPolicyEnabled,
-    isDecryptingEncryptedFiles,
-    isEncryptingPlainFiles,
-    plainFiles,
-  } = folderEncryptionActions;
-  const { toggleFolderEncryptionPolicy: handleToggleFolderEncryption } =
-    useFolderEncryptionPolicy({ onToast: showToast });
+    activeUnlockPrompt,
+    clientEncryptionEnvelope,
+    currentFolderEncryptionPolicy,
+    ensureCurrentFolderUnlocked,
+    folderEncryptionPrompt,
+    getChildFolderEncryptionPolicyState,
+    goHome,
+    goToFolder,
+    handleToggleFolderEncryption,
+    handleUnlockCancel,
+    handleUnlockSuccess,
+    unlockDialogOpen,
+  } = useFilesEncryptionController({
+    activeCurrentNode,
+    ancestors,
+    content,
+    nodeId,
+    showToast,
+  });
 
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
   const handleFileUploaded = React.useCallback(
@@ -406,44 +376,13 @@ export const FilesPage: React.FC = () => {
   const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
-  const preferences = useUserPreferencesStore((s) => s.preferences);
-  const isVaultUnlocked = useVault((state) => state.isUnlocked);
-  const clientEncryptionEnvelope = useMemo(
-    () => readEnvelopeFromPreferences(preferences),
-    [preferences],
-  );
-  const [unlockPrompt, setUnlockPrompt] =
-    React.useState<ClientEncryptionUnlockPrompt | null>(null);
-  const currentFolderRequiresUnlock = shouldPromptForCurrentFolderUnlock({
-    clientEncryptionEnabled: currentFolderEncryptionPolicy.effectiveEnabled,
-    currentNodeId: currentNode?.id,
-    isVaultUnlocked,
-    nodeId,
-  });
-  const activeUnlockPrompt =
-    useMemo<ClientEncryptionUnlockPrompt | null>(() => {
-      if (currentFolderRequiresUnlock && clientEncryptionEnvelope) {
-        return { kind: "current" };
-      }
-
-      return unlockPrompt;
-    }, [clientEncryptionEnvelope, currentFolderRequiresUnlock, unlockPrompt]);
 
   const handleCreateMarkdownFile = React.useCallback(async () => {
     if (!nodeId || isCreatingMarkdownFile) {
       return;
     }
 
-    if (currentFolderEncryptionPolicy.effectiveEnabled && !isVaultUnlocked) {
-      if (!clientEncryptionEnvelope) {
-        showToast(
-          t("clientEncryption.toasts.setupRequired", { ns: "files" }),
-          "error",
-        );
-        return;
-      }
-
-      setUnlockPrompt({ kind: "current" });
+    if (!ensureCurrentFolderUnlocked()) {
       return;
     }
 
@@ -480,184 +419,21 @@ export const FilesPage: React.FC = () => {
       setIsCreatingMarkdownFile(false);
     }
   }, [
-    clientEncryptionEnvelope,
     currentFolderEncryptionPolicy.effectiveEnabled,
+    ensureCurrentFolderUnlocked,
     fileOps,
     getCurrentSiblingNames,
     isCreatingMarkdownFile,
-    isVaultUnlocked,
     nodeId,
     queryClient,
     showToast,
     t,
   ]);
 
-  const runFolderClientEncryptionAction = React.useCallback(
-    (action: ClientEncryptionFolderAction) => {
-      const runAction =
-        action === "encrypt-existing"
-          ? encryptPlainFiles
-          : decryptEncryptedFiles;
-
-      if (isVaultUnlocked) {
-        void runAction();
-        return;
-      }
-
-      if (!clientEncryptionEnvelope) {
-        showToast(
-          t("clientEncryption.toasts.setupRequired", { ns: "files" }),
-          "error",
-        );
-        return;
-      }
-
-      setUnlockPrompt({ kind: "action", action });
-    },
-    [
-      clientEncryptionEnvelope,
-      decryptEncryptedFiles,
-      encryptPlainFiles,
-      isVaultUnlocked,
-      showToast,
-      t,
-    ],
-  );
-
-  const folderEncryptionPrompt = useMemo(
-    () =>
-      buildFolderEncryptionPrompt({
-        decryptEncryptedFiles: () =>
-          runFolderClientEncryptionAction("decrypt-existing"),
-        encryptedFilesCount: encryptedFiles.length,
-        encryptedFilesMessage: t(
-          "clientEncryption.encryptedFilesRemain.toast",
-          {
-            ns: "files",
-            count: encryptedFiles.length,
-          },
-        ),
-        encryptedFilesAction: t(
-          "clientEncryption.encryptedFilesRemain.action",
-          {
-            ns: "files",
-          },
-        ),
-        encryptPlainFiles: () =>
-          runFolderClientEncryptionAction("encrypt-existing"),
-        folderPolicyEnabled,
-        isDecryptingEncryptedFiles,
-        isEncryptingPlainFiles,
-        plainFilesCount: plainFiles.length,
-        plainFilesMessage: t("clientEncryption.mixedPlain.toast", {
-          ns: "files",
-          count: plainFiles.length,
-        }),
-        plainFilesAction: t("clientEncryption.mixedPlain.action", {
-          ns: "files",
-        }),
-      }),
-    [
-      encryptedFiles.length,
-      runFolderClientEncryptionAction,
-      folderPolicyEnabled,
-      isDecryptingEncryptedFiles,
-      isEncryptingPlainFiles,
-      plainFiles.length,
-      t,
-    ],
-  );
-
   const stats = useMemo(
     () => calculateFolderStats(content?.nodes, content?.files),
     [content?.files, content?.nodes],
   );
-
-  const goToFolder = React.useCallback(
-    (folderId: string) => {
-      const targetFolder = content?.nodes?.find(
-        (folder) => folder.id === folderId,
-      );
-      const requiresUnlock =
-        targetFolder &&
-        getFolderEncryptionPolicyState(
-          targetFolder,
-          childFolderEncryptionAncestors,
-        ).effectiveEnabled &&
-        !isVaultUnlocked;
-
-      if (requiresUnlock) {
-        if (!clientEncryptionEnvelope) {
-          showToast(
-            t("clientEncryption.toasts.setupRequired", { ns: "files" }),
-            "error",
-          );
-          return;
-        }
-
-        setUnlockPrompt({ kind: "open", folderId });
-        return;
-      }
-
-      navigate(`/files/${folderId}`);
-    },
-    [
-      clientEncryptionEnvelope,
-      childFolderEncryptionAncestors,
-      content?.nodes,
-      isVaultUnlocked,
-      navigate,
-      showToast,
-      t,
-    ],
-  );
-
-  const goHome = React.useCallback(() => navigate("/files"), [navigate]);
-
-  useEffect(() => {
-    if (!currentFolderRequiresUnlock || clientEncryptionEnvelope) {
-      return;
-    }
-
-    showToast(
-      t("clientEncryption.toasts.setupRequired", { ns: "files" }),
-      "error",
-    );
-    goHome();
-  }, [
-    clientEncryptionEnvelope,
-    currentFolderRequiresUnlock,
-    goHome,
-    showToast,
-    t,
-  ]);
-
-  const handleUnlockCancel = React.useCallback(() => {
-    const prompt = activeUnlockPrompt;
-    setUnlockPrompt(null);
-
-    if (prompt?.kind === "current") {
-      goHome();
-    }
-  }, [activeUnlockPrompt, goHome]);
-
-  const handleUnlockSuccess = React.useCallback(() => {
-    const prompt = activeUnlockPrompt;
-    setUnlockPrompt(null);
-
-    if (prompt?.kind === "open") {
-      navigate(`/files/${prompt.folderId}`);
-      return;
-    }
-
-    if (prompt?.kind === "action") {
-      const runAction =
-        prompt.action === "encrypt-existing"
-          ? encryptPlainFiles
-          : decryptEncryptedFiles;
-      void runAction();
-    }
-  }, [activeUnlockPrompt, decryptEncryptedFiles, encryptPlainFiles, navigate]);
 
   const handleGoUp = React.useCallback(() => {
     if (ancestors.length > 0) {
@@ -845,10 +621,6 @@ export const FilesPage: React.FC = () => {
     ],
   );
 
-  const unlockDialogOpen = isFilesUnlockDialogOpen(
-    activeUnlockPrompt,
-    clientEncryptionEnvelope,
-  );
   const shouldRenderFileList = shouldRenderFilesList(error, content);
 
   const refreshCurrentNodeContent = React.useCallback(() => {
