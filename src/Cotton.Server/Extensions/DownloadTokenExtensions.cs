@@ -12,10 +12,13 @@ namespace Cotton.Server.Extensions
         public static async Task<DownloadToken?> FindActiveAsync(
             this DbSet<DownloadToken> downloadTokens,
             string token,
-            Guid nodeFileId)
+            Guid nodeFileId,
+            CancellationToken ct = default)
         {
             DownloadToken? downloadToken = await downloadTokens
-                .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFileId);
+                .FirstOrDefaultAsync(
+                    x => x.Token == token && x.NodeFileId == nodeFileId,
+                    ct);
 
             if (downloadToken?.ExpiresAt is DateTime expiresAt && expiresAt < DateTime.UtcNow)
             {

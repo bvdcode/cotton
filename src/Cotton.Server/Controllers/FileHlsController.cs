@@ -3,21 +3,20 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Previews;
 using Cotton.Previews.Http;
 using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
+using Cotton.Server.Handlers.Files;
 using Cotton.Server.Models;
 using Cotton.Server.Services;
-using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.AspNetCore.Extensions;
+using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Controllers
@@ -33,8 +32,7 @@ namespace Cotton.Server.Controllers
         HlsTranscodeCoordinator _hlsTranscodes,
         HlsSegmentCache _segmentCache,
         IMemoryCache _cache,
-        IDatabaseIntegrityVerifier _integrity,
-        FileGraphIntegrityVerifier _fileGraphIntegrity,
+        IMediator _mediator,
         PublicShareLookupFailureLimiter _publicShareLookupFailures,
         ILogger<FileHlsController> _logger) : ControllerBase
     {
@@ -285,44 +283,38 @@ namespace Cotton.Server.Controllers
                 return new HlsSourceLookup(null, null, blocked);
             }
 
-            DownloadToken? downloadToken = await _dbContext.DownloadTokens.FindActiveAsync(token, nodeFileId);
-            if (downloadToken is null)
+            ResolveHlsSourceResult result = await _mediator.Send(
+                new ResolveHlsSourceQuery(nodeFileId, token),
+                HttpContext.RequestAborted);
+            switch (result.Status)
             {
-                return new HlsSourceLookup(
-                    null,
-                    null,
-                    this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found"));
+                case ResolveHlsSourceStatus.Success:
+                    return new HlsSourceLookup(
+                        result.NodeFile,
+                        result.DownloadToken,
+                        null);
+                case ResolveHlsSourceStatus.TokenNotFound:
+                    return new HlsSourceLookup(
+                        null,
+                        null,
+                        this.ApiPublicShareNotFound(
+                            _publicShareLookupFailures,
+                            token,
+                            "File not found"));
+                case ResolveHlsSourceStatus.FileNotFound:
+                    return new HlsSourceLookup(
+                        null,
+                        null,
+                        CottonResult.NotFound("File not found"));
+                case ResolveHlsSourceStatus.NotTranscodable:
+                    return new HlsSourceLookup(
+                        null,
+                        null,
+                        CottonResult.BadRequest(
+                            "This file is not eligible for on-the-fly transcoding."));
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(result.Status));
             }
-
-            _integrity.RequireValid(_dbContext, downloadToken, "file.hls-token");
-
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile is null)
-            {
-                return new HlsSourceLookup(null, null, CottonResult.NotFound("File not found"));
-            }
-
-            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.hls-source");
-            if (nodeFile.Node.Type != NodeType.Default)
-            {
-                return new HlsSourceLookup(null, null, CottonResult.NotFound("File not found"));
-            }
-
-            VideoPlaybackMode playbackMode = VideoPlaybackResolver.Resolve(
-                nodeFile.FileManifest.ContentType,
-                hasPreview: nodeFile.FileManifest.SmallFilePreviewHash is not null);
-            if (playbackMode != VideoPlaybackMode.Transcode)
-            {
-                return new HlsSourceLookup(null, null, CottonResult.BadRequest(
-                    "This file is not eligible for on-the-fly transcoding."));
-            }
-
-            return new HlsSourceLookup(nodeFile, downloadToken, null);
         }
 
         private Stream OpenSourceStream(NodeFile nodeFile)
