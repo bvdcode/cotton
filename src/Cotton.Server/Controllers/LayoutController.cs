@@ -3,11 +3,7 @@
 
 using Cotton.Files;
 using Cotton.Nodes;
-using Cotton.Database;
-using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
-using Cotton.Models.Enums;
-using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Handlers.Nodes;
@@ -15,19 +11,13 @@ using Cotton.Server.Hubs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
-using Cotton.Server.Services;
-using Cotton.Topology.Abstractions;
-using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
-using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Controllers
 {
@@ -38,12 +28,8 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Layouts)]
     public class LayoutController(
         IMediator _mediator,
-        CottonDbContext _dbContext,
-        ILayoutService _layouts,
-        ISyncChangeRecorder _syncChanges,
         IHubContext<EventHub> _hubContext,
-        ILogger<LayoutController> _logger,
-        ILayoutMutationGate _layoutGate) : ControllerBase
+        ILogger<LayoutController> _logger) : ControllerBase
     {
         /// <summary>
         /// Gets recent nodes.
@@ -263,78 +249,22 @@ namespace Cotton.Server.Controllers
         [HttpPut("nodes")]
         public async Task<IActionResult> CreateLayoutNode([FromBody] CreateNodeRequestDto request)
         {
-            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
-                out string normalizedName,
-                out string? errorMessage);
-            if (!isValidName)
-            {
-                return CottonResult.BadRequest(errorMessage);
-            }
-
             Guid userId = User.GetUserId();
-            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, HttpContext.RequestAborted);
-            Node? preTransactionParentNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == request.ParentId
-                    && x.OwnerId == userId
-                    && x.LayoutId == layout.Id
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (preTransactionParentNode is null)
+            CreateNodeResult result = await _mediator.Send(
+                new CreateNodeRequest(userId, request.ParentId, request.Name),
+                HttpContext.RequestAborted);
+            if (result.Status != CreateNodeStatus.Created)
             {
-                return CottonResult.NotFound("Parent node not found.");
+                return result.Status switch
+                {
+                    CreateNodeStatus.InvalidName => CottonResult.BadRequest(result.Error!),
+                    CreateNodeStatus.ParentNotFound => CottonResult.NotFound(result.Error!),
+                    CreateNodeStatus.NameConflict => this.ApiConflict(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
-            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layout.Id, HttpContext.RequestAborted);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
-
-            Node? parentNode = await _dbContext.Nodes
-                .Where(x => x.Id == request.ParentId
-                    && x.OwnerId == userId
-                    && x.LayoutId == layout.Id
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (parentNode is null)
-            {
-                return CottonResult.NotFound("Parent node not found.");
-            }
-
-            bool nodeExists = await _dbContext.Nodes
-                .AnyAsync(x =>
-                    x.ParentId == parentNode.Id &&
-                    x.OwnerId == userId &&
-                    x.NameKey == nameKey &&
-                    x.LayoutId == layout.Id &&
-                    x.Type == NodeType.Default);
-            if (nodeExists)
-            {
-                return this.ApiConflict("A folder with the same name key already exists in the target layout: " + nameKey);
-            }
-
-            bool fileExists = await _dbContext.NodeFiles
-                .AnyAsync(x =>
-                    x.NodeId == parentNode.Id &&
-                    x.OwnerId == userId &&
-                    x.NameKey == nameKey);
-            if (fileExists)
-            {
-                return this.ApiConflict("A file with the same name key already exists in the target layout: " + nameKey);
-            }
-
-            var newNode = new Node
-            {
-                OwnerId = userId,
-                Type = NodeType.Default,
-                LayoutId = layout.Id,
-            };
-            newNode.SetParent(parentNode);
-            newNode.SetName(request.Name);
-            await _dbContext.Nodes.AddAsync(newNode);
-            _syncChanges.StageFolderChange(SyncChangeKind.FolderCreated, newNode, parentNode.Id);
-            await _dbContext.SaveChangesAsync();
-            await tx.CommitAsync();
-            NodeDto mapped = newNode.Adapt<NodeDto>();
+            NodeDto mapped = result.Node!;
             await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeCreated", mapped);
             return Ok(mapped);
         }
