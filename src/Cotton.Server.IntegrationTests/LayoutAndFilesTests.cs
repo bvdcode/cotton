@@ -162,6 +162,69 @@ public class LayoutAndFilesTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Shared_Folder_Api_Exposes_Info_Navigation_And_File_Content()
+    {
+        string accessToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        NodeDto sharedRoot = await CreateNodeAsync(root!.Id, "shared-root-contract");
+        NodeDto nested = await CreateNodeAsync(sharedRoot.Id, "nested-contract");
+        NodeFileManifestDto file = await UploadTextFileAsync(nested.Id, "shared.txt", "shared body");
+
+        HttpResponseMessage shareLinkResponse = await _client.GetAsync(
+            $"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
+        shareLinkResponse.EnsureSuccessStatusCode();
+        string shareLink = (await shareLinkResponse.Content.ReadAsStringAsync()).Trim('"');
+        string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        SharedNodeInfoDto? info = await _client.GetFromJsonAsync<SharedNodeInfoDto>(
+            $"/api/v1/layouts/shared/{shareToken}");
+        Assert.Multiple(() =>
+        {
+            Assert.That(info, Is.Not.Null);
+            Assert.That(info!.Token, Is.EqualTo(shareToken));
+            Assert.That(info.NodeId, Is.EqualTo(sharedRoot.Id));
+            Assert.That(info.Name, Is.EqualTo(sharedRoot.Name));
+        });
+
+        using HttpResponseMessage rootChildrenResponse = await _client.GetAsync(
+            $"/api/v1/layouts/shared/{shareToken}/children");
+        rootChildrenResponse.EnsureSuccessStatusCode();
+        Assert.That(rootChildrenResponse.Headers.GetValues("X-Total-Count").Single(), Is.EqualTo("1"));
+        SharedNodeContentDto? rootChildren = await rootChildrenResponse.Content
+            .ReadFromJsonAsync<SharedNodeContentDto>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(rootChildren, Is.Not.Null);
+            Assert.That(rootChildren!.Id, Is.EqualTo(sharedRoot.Id));
+            Assert.That(rootChildren.Nodes.Select(node => node.Id), Is.EqualTo(new[] { nested.Id }));
+            Assert.That(rootChildren.Files, Is.Empty);
+        });
+
+        NodeDto[]? ancestors = await _client.GetFromJsonAsync<NodeDto[]>(
+            $"/api/v1/layouts/shared/{shareToken}/ancestors/{nested.Id}");
+        Assert.That(ancestors?.Select(node => node.Id), Is.EqualTo(new[] { sharedRoot.Id }));
+
+        SharedNodeContentDto? nestedChildren = await _client.GetFromJsonAsync<SharedNodeContentDto>(
+            $"/api/v1/layouts/shared/{shareToken}/children?nodeId={nested.Id}");
+        Assert.Multiple(() =>
+        {
+            Assert.That(nestedChildren, Is.Not.Null);
+            Assert.That(nestedChildren!.Nodes, Is.Empty);
+            Assert.That(nestedChildren.Files.Select(nodeFile => nodeFile.Id), Is.EqualTo(new[] { file.Id }));
+        });
+
+        string fileContent = await _client.GetStringAsync(
+            $"/api/v1/layouts/shared/{shareToken}/files/{file.Id}/content?download=false");
+        Assert.That(fileContent, Is.EqualTo("shared body"));
+    }
+
+    [Test]
     public async Task Shared_Children_Rejects_Tampered_Ancestor_Path_WithStrictIntegrity()
     {
         var token = await LoginAsync();
