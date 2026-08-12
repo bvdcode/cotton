@@ -165,7 +165,7 @@ namespace Cotton.Server.Services
                 return false;
             }
 
-            string token = parameters.GetValueOrDefault("token") ?? string.Empty;
+            string token = parameters.GetValueOrDefault(EmailTemplateParameterNames.Token) ?? string.Empty;
             string recipientName = GetRecipientDisplayName(user);
             Dictionary<string, string> variables = EmailTemplateRenderer.BuildVariables(
                 recipientName,

@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Email;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Providers;
@@ -76,7 +77,7 @@ namespace Cotton.Server.Handlers.Users
             string baseUrl = _settingsProvider.GetServerSettings().PublicBaseUrl;
             var parameters = new Dictionary<string, string>
             {
-                ["token"] = token,
+                [EmailTemplateParameterNames.Token] = token,
             };
 
             await _notifications.SendEmailAsync(

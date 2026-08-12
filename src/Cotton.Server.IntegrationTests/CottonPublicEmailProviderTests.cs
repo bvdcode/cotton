@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Email;
 using Cotton.Models.Enums;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Services;
@@ -36,7 +37,7 @@ namespace Cotton.Server.IntegrationTests
                 "recipient@example.com",
                 "Recipient",
                 "en",
-                new Dictionary<string, string> { ["token"] = "value" });
+                new Dictionary<string, string> { [EmailTemplateParameterNames.Token] = "value" });
 
             Assert.That(sent, Is.True);
             Assert.That(handler.RequestMethod, Is.EqualTo(HttpMethod.Post));

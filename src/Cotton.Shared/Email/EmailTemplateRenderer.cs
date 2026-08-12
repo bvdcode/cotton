@@ -116,12 +116,12 @@ namespace Cotton.Email
 
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["recipient_name"] = recipientName,
-                ["recipient_email"] = recipientEmail,
-                ["token"] = token,
-                ["confirmation_url"] = baseUrl + "/verify-email?token=" + escapedToken,
-                ["reset_url"] = baseUrl + "/reset-password?token=" + escapedToken,
-                ["year"] = DateTime.UtcNow.Year.ToString(),
+                [EmailTemplateParameterNames.RecipientName] = recipientName,
+                [EmailTemplateParameterNames.RecipientEmail] = recipientEmail,
+                [EmailTemplateParameterNames.Token] = token,
+                [EmailTemplateParameterNames.ConfirmationUrl] = baseUrl + "/verify-email?token=" + escapedToken,
+                [EmailTemplateParameterNames.ResetUrl] = baseUrl + "/reset-password?token=" + escapedToken,
+                [EmailTemplateParameterNames.Year] = DateTime.UtcNow.Year.ToString(),
             };
         }
 
