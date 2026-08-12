@@ -14,11 +14,11 @@ namespace Cotton.Server.IntegrationTests
         {
             Dictionary<string, string> variables = new(StringComparer.OrdinalIgnoreCase)
             {
-                ["security_title"] = "Password changed",
-                ["security_content"] = "Your password was changed.",
-                ["occurred_at"] = "2026-07-11 09:00:00",
-                ["server_url"] = "https://cloud.example.test",
-                ["year"] = "2026"
+                [EmailTemplateParameterNames.SecurityTitle] = "Password changed",
+                [EmailTemplateParameterNames.SecurityContent] = "Your password was changed.",
+                [EmailTemplateParameterNames.OccurredAt] = "2026-07-11 09:00:00",
+                [EmailTemplateParameterNames.ServerUrl] = "https://cloud.example.test",
+                [EmailTemplateParameterNames.Year] = "2026"
             };
 
             string body = EmailTemplateRenderer.Render(EmailTemplate.SecurityAlert, "en", variables);

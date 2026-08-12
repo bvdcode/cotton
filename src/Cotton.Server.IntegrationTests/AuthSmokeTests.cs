@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Auth;
+using Cotton.Email;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Helpers;
@@ -133,8 +134,8 @@ namespace Cotton.Server.IntegrationTests
             Assert.Multiple(() =>
             {
                 Assert.That(template, Is.EqualTo(EmailTemplate.SecurityAlert));
-                Assert.That(parameters["security_title"], Is.EqualTo("New login to your account"));
-                Assert.That(parameters["security_content"], Does.Contain("8.8.8.8"));
+                Assert.That(parameters[EmailTemplateParameterNames.SecurityTitle], Is.EqualTo("New login to your account"));
+                Assert.That(parameters[EmailTemplateParameterNames.SecurityContent], Does.Contain("8.8.8.8"));
             });
 
             var parts = payload.AccessToken.Split('.');

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models.Enums;
+using Cotton.Email;
 using Cotton.Localization;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
@@ -148,10 +149,10 @@ namespace Cotton.Server.Extensions
                 string serverBaseUrl = (await settings.GetPublicBaseUrlAsync(CancellationToken.None)).TrimEnd('/');
                 Dictionary<string, string> parameters = new()
                 {
-                    ["security_title"] = EncodeText(title),
-                    ["security_content"] = EncodeMultilineText(content),
-                    ["occurred_at"] = occurredAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-                    ["server_url"] = WebUtility.HtmlEncode(serverBaseUrl),
+                    [EmailTemplateParameterNames.SecurityTitle] = EncodeText(title),
+                    [EmailTemplateParameterNames.SecurityContent] = EncodeMultilineText(content),
+                    [EmailTemplateParameterNames.OccurredAt] = occurredAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                    [EmailTemplateParameterNames.ServerUrl] = WebUtility.HtmlEncode(serverBaseUrl),
                 };
 
                 bool sent = await notifications.SendEmailAsync(
