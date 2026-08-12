@@ -27,6 +27,8 @@ namespace Cotton.Server.Providers
 
         public required bool TelemetryEnabled { get; init; }
 
+        public required bool DisableVersionCheck { get; init; }
+
         public required string Timezone { get; init; }
 
         public required Guid InstanceId { get; init; }
@@ -111,6 +113,7 @@ namespace Cotton.Server.Providers
                 AllowCrossUserDeduplication = settings.AllowCrossUserDeduplication,
                 AllowGlobalIndexing = settings.AllowGlobalIndexing,
                 TelemetryEnabled = settings.TelemetryEnabled,
+                DisableVersionCheck = settings.DisableVersionCheck,
                 Timezone = settings.Timezone,
                 InstanceId = settings.InstanceId,
                 PublicBaseUrl = settings.PublicBaseUrl,

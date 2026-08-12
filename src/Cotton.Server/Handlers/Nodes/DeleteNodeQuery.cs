@@ -19,7 +19,7 @@ namespace Cotton.Server.Handlers.Nodes
     /// <summary>
     /// Represents a delete node query sent through the mediator pipeline.
     /// </summary>
-    public class DeleteNodeQuery(Guid userId, Guid nodeId, bool skipTrash) : IRequest
+    public class DeleteNodeQuery(Guid userId, Guid nodeId, bool skipTrash) : IRequest<Guid>
     {
         /// <summary>
         /// Gets the owning user identifier.
@@ -50,12 +50,12 @@ namespace Cotton.Server.Handlers.Nodes
         ISyncChangeRecorder _syncChanges,
         ILayoutMutationGate _layoutGate,
         FileVersionService _versions)
-            : IRequestHandler<DeleteNodeQuery>
+            : IRequestHandler<DeleteNodeQuery, Guid>
     {
         /// <summary>
         /// Handles the request through the mediator pipeline.
         /// </summary>
-        public async Task Handle(DeleteNodeQuery request, CancellationToken ct)
+        public async Task<Guid> Handle(DeleteNodeQuery request, CancellationToken ct)
         {
             Node node = await _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
@@ -65,6 +65,8 @@ namespace Cotton.Server.Handlers.Nodes
             {
                 throw new InvalidOperationException("Cannot delete root node.");
             }
+
+            Guid parentNodeId = node.ParentId.Value;
             if (request.SkipTrash)
             {
                 await DeletePermanentlyAsync(request, node, ct);
@@ -73,6 +75,8 @@ namespace Cotton.Server.Handlers.Nodes
             {
                 await MoveToTrashAsync(request, node, ct);
             }
+
+            return parentNodeId;
         }
 
         private async Task MoveToTrashAsync(DeleteNodeQuery command, Node node, CancellationToken ct)

@@ -1,278 +1,60 @@
-# 15. Background Jobs & Scheduling
+# 15. Background Jobs and Scheduling
 
-Cotton runs all of its recurring server-side maintenance as Quartz.NET jobs. Every job is a class in `src/Cotton.Server/Jobs/` that implements `Quartz.IJob` and carries a single `[JobTrigger(...)]` attribute from the **EasyExtensions.Quartz** package. There is no `quartz.config`/`quartz.properties`, no hand-written `JobDetail`/`Trigger` wiring, and no database-backed job store: jobs are discovered by reflection at startup and run from an in-memory scheduler. This section documents the registration pattern, the scheduler lifecycle, and every individual job — its cadence, what it reads and writes, its concurrency and failure behavior, and how it interacts with the rest of the system.
+Cotton uses Quartz for recurring and on-demand work that should not extend an HTTP request. Jobs are responsible for orchestration and bounded iteration; domain rules remain in reusable services and mediator operations.
 
-## Purpose & overview
+## Registration model
 
-Background jobs in Cotton fall into a few categories:
+Scheduled jobs declare their cadence through the project's job-trigger attribute. Registration discovers those declarations and configures Quartz with non-overlapping execution for each job type.
 
-- **Reclamation / consistency**: `GarbageCollectorJob`, `StorageConsistencyJob` — keep the `Chunks` table and the blob store in agreement and reclaim unreferenced space.
-- **Deferred content work**: `GeneratePreviewJob`, `ExtractFileMetadataJob`, `ComputeManifestHashesJob` — work that is too expensive to do inline on the upload path.
-- **Retention**: `DownloadTokenRetentionJob`, `RefreshTokenRetentionJob`, `SyncChangeRetentionJob` — prune expired security tokens and old sync changes.
-- **Backup**: `DumpDatabaseJob` — periodic logical PostgreSQL dump stored as content-addressed chunks.
-- **Housekeeping / telemetry**: `ClearTempFolderJob`, `CollectPerformanceJob`.
-
-Several jobs are also *fired on demand* in response to user actions or admin requests (uploads trigger preview/hash jobs; an admin endpoint triggers GC; a backup endpoint triggers the dump). Those triggers reuse the same registered `JobDetail`, so on-demand runs honor the same concurrency rules as scheduled runs.
+An on-demand trigger requests the same registered job; it does not call a private implementation path with different safeguards. Triggering is best-effort when equivalent work is already running.
 
-## Registration pattern
+## Job categories
 
-### The `[JobTrigger]` attribute
+Current recurring work includes:
 
-`JobTriggerAttribute` is defined in the vendored EasyExtensions repository at `/data/code/EasyExtensions/Sources/EasyExtensions.Quartz/Attributes/JobTriggerAttribute.cs` (consumed by Cotton as the NuGet package `EasyExtensions.Quartz`). Its public constructor includes the interval and startup behavior knobs Cotton uses:
+- garbage collection and storage consistency;
+- complete manifest-hash verification;
+- preview generation and metadata extraction;
+- database backup;
+- expired download-token, refresh-session, and sync-change retention;
+- temporary-folder cleanup;
+- performance snapshot collection.
 
-```csharp
-public JobTriggerAttribute(int days = 0, int hours = 0, int minutes = 0, int seconds = 0,
-    bool startNow = true, bool repeatForever = true, string? cronSchedule = "",
-    ...)
-```
+Historical backfill jobs for stored chunk size, MIME normalization, and null metadata have been removed. Current write paths are responsible for producing complete metadata at creation time.
 
-The constructor throws `ArgumentException` if the resulting `Interval` is `<= TimeSpan.Zero` *and* no `cronSchedule` is given, so every usable trigger must specify at least one of `days`/`hours`/`minutes`/`seconds` or a cron expression.
-
-Key behaviors derived from the constructor defaults, which Cotton's jobs all rely on:
+## Startup staggering
 
-| Property | Default | Effect in Cotton |
-| --- | --- | --- |
-| `Interval` | `new TimeSpan(days, hours, minutes, seconds)` | The simple-schedule repeat interval. Every Cotton job specifies exactly one of `days`/`hours`/`minutes`. |
-| `StartNow` | `true` | The trigger is registered with `.StartNow()`, so each job's first fire is attempted at startup (subject to the scheduler `StartDelay` and each job's own internal start-up `Task.Delay`). |
-| `RepeatForever` | `true` | `.RepeatForever()` — the simple schedule never stops repeating. |
-| `CronSchedule` | `""` | No Cotton job uses cron; all use the interval-based simple schedule. |
-| Single-flight registration | enabled | Each job is registered as non-overlapping, so a job does not run a second copy of itself while an earlier run is still active. |
+Maintenance jobs that would otherwise create a startup load spike use one shared startup-delay coordinator. Each configured delay is consumed once per process; later scheduled or manual executions are not delayed again.
 
-The important nuance: the single-flight behavior comes from `[JobTrigger]` registration itself. Cotton job classes should not add a separate Quartz class-level marker for the same behavior.
+The delay exists only for jobs whose startup execution is potentially heavy, such as backup, retention, consistency, collection, cleanup, and performance aggregation. It is not a generic delay added to every job.
 
-### Discovery and scheduler wiring
+All delays receive Quartz cancellation. Stopping the process therefore cancels pending startup waits instead of waiting several minutes for them to expire.
 
-`src/Cotton.Server/Program.cs` (line 149) registers everything with a single argument-less call inside the service-configuration chain:
+## Upload-aware derived work
 
-```csharp
-builder.Services
-    .AddMediator()
-    .AddQuartzJobs()
-    .AddMemoryCache()
-    .AddSignalR().Services
-    ...
-```
+Preview, metadata, and complete-hash jobs skip or defer a file while its upload is still active. They process independent items in bounded batches and isolate item-level failures so one unsupported or corrupt file does not stop the whole pass.
 
-`AddQuartzJobs()` (in `/data/code/EasyExtensions/Sources/EasyExtensions.Quartz/Extensions/ServiceCollectionExtensions.cs`) does the following:
+An `ffmpeg` or `ffprobe` failure is classified from the actual process result. Expected unsupported-media failures are recorded for that item; cancellation and infrastructure failures are not swallowed as ordinary media misses.
 
-1. Calls `ReflectionHelpers.GetTypesOfInterface<IJob>()` to find every loaded type implementing `IJob`.
-2. For each type that has a `[JobTrigger]` attribute (types without it are skipped), it:
-   - Creates a `JobKey(job.Name)` (the bare class name, e.g. `GarbageCollectorJob`).
-   - Registers the job with the attribute's single-flight flag.
-   - Registers one trigger identified `job.Name + "Trigger"` (e.g. `GarbageCollectorJobTrigger`). When `Interval > 0` and no cron is set, it uses `.WithSimpleSchedule(x => x.WithInterval(interval).WithMisfireHandlingInstructionFireNow())`, adding `.RepeatForever()` when `RepeatForever` and `.StartNow()` when `StartNow`.
-3. Calls `.AddQuartzServer(...)` with:
-   - `WaitForJobsToComplete = false` — on shutdown the host does **not** block for running jobs to finish; jobs observe `IJobExecutionContext.CancellationToken` instead.
-   - `AwaitApplicationStarted = true` — the scheduler does not start firing until the ASP.NET host has fully started.
-   - `StartDelay = TimeSpan.FromSeconds(5)` — an additional 5-second delay before the scheduler begins.
+## Correctness rules
 
-Because `AddQuartzJobs()` is called with no `postgresConnectionString` and the default `useClustering = false`, **the scheduler uses the default in-memory store and clustering is off** (the extension only calls `UsePersistentStore`/`UsePostgres`/`UseClustering` when a connection string is supplied). Consequences:
+- A job must re-check mutable eligibility close to its write or delete boundary.
+- Database writes use asynchronous APIs and pass the cancellation token.
+- External-process and storage I/O is cancellation-aware.
+- Repeating work is idempotent or protected by uniqueness/concurrency checks.
+- Progress is persisted in bounded units so a process restart can resume safely.
+- A failed notification does not mark underlying verification work complete when notification delivery is part of that work's contract.
 
-- Schedules and trigger state are not persisted. On every restart all triggers re-arm fresh, and (because `StartNow` is true) each job attempts a first run shortly after startup. This is why nearly every job opens with an internal `await Task.Delay(...)` to defer real work past the startup storm (see per-job tables below).
-- Misfires are handled with **fire-now** semantics (`WithMisfireHandlingInstructionFireNow`) — a single catch-up fire, not a backlog replay.
-- Running multiple server instances would run these jobs **independently on each instance** (no cluster coordination). The GC job mitigates same-process double-deletion with an in-process reservation set, but cross-process coordination relies on the database-level checks each job performs, not on Quartz.
+## Failure and retry behavior
 
-```mermaid
-flowchart TD
-    A[Program.cs: AddQuartzJobs] --> B[Reflect IJob types]
-    B --> C{Has JobTrigger?}
-    C -- no --> B
-    C -- yes --> D[AddJob: JobKey=ClassName, single-flight]
-    D --> E[AddTrigger: SimpleSchedule interval, MisfireFireNow, RepeatForever, StartNow]
-    E --> F[AddQuartzServer: AwaitApplicationStarted, StartDelay 5s, WaitForJobsToComplete=false]
-    F --> G[In-memory store: no clustering, no persistence]
-```
+Quartz records job failures and applies the configured future schedule. Individual jobs decide whether a failed item should be retried in the next pass, marked as unsupported, or surfaced as a durable diagnostic.
 
-### On-demand triggering
+Long-running jobs log progress and the identity of the failing unit without logging decrypted content or secrets. Catch blocks log with context and either rethrow or deliberately continue at the item boundary; silent broad exception handling is not acceptable.
 
-`ISchedulerFactory.TriggerJobAsync<TJob>()` (extension in `/data/code/EasyExtensions/Sources/EasyExtensions.Quartz/Extensions/SchedulerFactoryExtensions.cs`) constructs `new JobKey(typeof(TJob).Name)`, resolves the scheduler, and calls `scheduler.TriggerJob(jobKey)`. Because the key matches the registered job, a manual trigger reuses the same `JobDetail` and therefore the same single-flight guard.
+## Performance
 
-| Call site | Job(s) triggered | When |
-| --- | --- | --- |
-| `Controllers/ServerController.cs` `TriggerGarbageCollector` (`PATCH /api/v1/server/gc/trigger`, `[Authorize(Roles = nameof(UserRole.Admin))]`) | `GarbageCollectorJob` | Admin requests an immediate GC pass |
-| `Handlers/Server/TriggerDatabaseBackupRequest.cs` (`TriggerDatabaseBackupRequestHandler`), reached via `ServerController.TriggerDatabaseBackup` (`PATCH /api/v1/server/database-backup/trigger`, Admin only) | `DumpDatabaseJob` | Admin requests an immediate backup |
-| `Controllers/FileController.cs` (`CreateFileFromChunks`, `POST /api/v1/files/from-chunks`; update-content path) | `ComputeManifestHashesJob`, `GeneratePreviewJob`, `ExtractFileMetadataJob` | After a file commit/update |
-| `Handlers/WebDav/WebDavPutFileRequest.cs` `NotifyPutCompletedAsync` | `GeneratePreviewJob`, `ExtractFileMetadataJob` | After a WebDAV `PUT` completes |
-
-## Job summary table
-
-Cadences below are the literal `[JobTrigger]` arguments. "Internal start delay" is the one-shot, process-static wait coordinated by `JobStartupDelays` before a job's first execution.
-
-| Job | Trigger / cadence | Internal start delay | Purpose | Primary writes |
-| --- | --- | --- | --- | --- |
-| `GarbageCollectorJob` | `[JobTrigger(hours: 6)]` | 15 min (first execution only) | Reclaim orphaned manifests & unreferenced chunks (schedule-then-delete) | `FileManifests`, `FileManifestChunks`, `DownloadTokens`, `Chunks` (`GCScheduledAfter`), `ChunkOwnerships`, blob-store deletes |
-| `StorageConsistencyJob` | `[JobTrigger(days: 30)]` | 5 min (first execution only) | Reconcile `Chunks` table against the blob store in both directions | `FileManifests` (clears preview hashes), `Users` (clears avatar hash), `Chunks` (registers orphans w/ `GCScheduledAfter`); sends notifications |
-| `ComputeManifestHashesJob` | `[JobTrigger(hours: 12)]` | none | Verify whole-file content hashes on schedule and after file creation/content update | `FileManifests.ComputedContentHash`; sends mismatch notifications |
-| `GeneratePreviewJob` | `[JobTrigger(minutes: 15)]` | none | Generate small/large WebP previews | blob store (preview blobs), `Chunks`, `FileManifests` (preview hashes, version, error); SignalR `PreviewGenerated` |
-| `ExtractFileMetadataJob` | `[JobTrigger(minutes: 15)]` | none | Extract deterministic image/audio/video metadata | `FileManifests.Metadata`; SignalR `FileUpdated` |
-| `DownloadTokenRetentionJob` | `[JobTrigger(days: 1)]` | 4 min (first execution only) | Delete download tokens expired > 30 days | `DownloadTokens` (delete) |
-| `RefreshTokenRetentionJob` | `[JobTrigger(days: 1)]` | 10 min (first execution only) | Revoke refresh tokens created > 30 days ago | `RefreshTokens.RevokedAt` |
-| `DumpDatabaseJob` | `[JobTrigger(days: 7)]` | 3 min (first execution only) | Logical `pg_dump` stored as content-addressed chunks + manifest pointer | blob store (dump chunks, manifest, pointer), `Chunks`/`ChunkOwnerships` via ingest |
-| `ClearTempFolderJob` | `[JobTrigger(hours: 36)]` | 7 min (first execution only) | Delete storage-backend temp files older than 1 hour | storage backend temp dir |
-| `SyncChangeRetentionJob` | `[JobTrigger(days: 1)]` | none | Prune `SyncChanges` older than 365 days (keeps the newest per owner) | `SyncChanges` (delete) |
-| `CollectPerformanceJob` | `[JobTrigger(days: 1)]` | 6 min (first execution only) | Send telemetry + optional storage-pipeline probe to Cotton Bridge | none (outbound HTTP POST only) |
-
-## Per-job reference
-
-### GarbageCollectorJob
-
-`src/Cotton.Server/Jobs/GarbageCollectorJob.cs` — `[JobTrigger(hours: 6)]`. Injects `PerfTracker`, `IStoragePipeline`, `CottonDbContext`, `ChunkUsageService`, `SettingsProvider`, `ILogger`.
-
-This is the most involved job; the deep mechanics are documented in the *Garbage Collection* section. Summary of control flow:
-
-1. **Night-time gate.** Reads `SettingsProvider.GetServerSettings().StorageSpaceMode`. `isAggressiveMode = spaceMode == StorageSpaceMode.Limited`. If the mode is *not* `Limited` and `PerfTracker.IsNightTime()` is true, the run logs and returns early. Night time is local hours `< 7` or `>= 22` evaluated against the server's configured timezone (`PerfTracker.IsNightTime` via `CottonServerSettings.GetTimezoneInfo()`).
-2. **First-run cool-down.** `JobStartupDelays.WaitForGarbageCollectorAsync` uses a private atomic process-static flag to delay the first execution by 15 minutes. It runs before the night-time gate, so the startup slot is consumed even when that first execution later skips.
-3. **Batch sizing by mode.** `StorageSpaceMode` selects the chunk batch size: `Limited` → `MaxChunkBatchSize` (100000), `Unlimited` → `MinChunkBatchSize` (1000), `Optimal` → midpoint `(MinChunkBatchSize + MaxChunkBatchSize) / 2` (50500); the fall-through default is `MinChunkBatchSize * 2` (2000).
-4. **`RunOnceAsync(now, batchSize, ct)`** loads `protectedStorageKeys` via `ChunkUsageService.GetProtectedStorageKeysAsync` and performs four phases:
-   - `DeleteOrphanedManifestsAsync` — deletes up to `ManifestBatchSize` (1000) `FileManifests` with no `NodeFiles`, inside a transaction that first `ExecuteDeleteAsync`-deletes dependent `DownloadTokens` (joined through `NodeFile.FileManifestId`) and `FileManifestChunks`. The manifest delete re-asserts `!fm.NodeFiles.Any()`; if a candidate became referenced mid-transaction (`deletedManifests != manifestIds.Count`) or a `DbUpdateException` is thrown, the whole transaction rolls back and the pass logs a warning rather than risking data loss.
-   - `ClearSchedulesForReferencedChunksAsync` — clears `GCScheduledAfter` for chunks that are now referenced or protected, via `ChunkUsageService.ClearGcSchedulesForReferencedChunksAsync` and `ClearGcSchedulesForProtectedChunksAsync`.
-   - `ScheduleOrphanedChunksAsync` — sets `Chunk.GCScheduledAfter` on unreferenced, unprotected chunks (`ChunkUsageService.WhereUnreferencedByDatabase` filtered by `WhereNotProtectedByStorageKeys`, only where `GCScheduledAfter == null`). The deletion delay depends on mode: `Limited` → `now + 1 day`; `Unlimited` → `now + 28 days` (`ChunkGcDelayDays * 4`); `Optimal`/default → `now + 7 days` (`ChunkGcDelayDays`). Scheduling is done in inner batches of `ScheduleInnerBatchSize` (2000) with `ExecuteUpdateAsync`, up to the mode-selected `batchSize` total.
-   - `DeleteScheduledChunksAsync` — selects unreferenced chunks whose `GCScheduledAfter != null && <= now` (up to `batchSize`), routes any protected hashes to a schedule-clear instead of deletion, reserves each remaining hash in the static `CurrentlyDeletingChunks` `ConcurrentDictionary` (case-insensitive), waits 5 s (`Task.Delay(5_000, ct)`), then for each `DeleteInnerBatchSize` (500) batch calls `DeleteEligibleBatchAsync`. Reservations are released in a `finally`.
-
-`DeleteEligibleBatchAsync` is the database-level safety net: it re-queries which hashes are still scheduled, re-queries which have become referenced (`WhereReferencedByDatabase`), clears `GCScheduledAfter` on the now-live ones, and only deletes the still-eligible (unreferenced, unprotected) hashes — removing `ChunkOwnerships` then `Chunks` rows in a transaction, then deleting blobs from storage with `Parallel.ForEachAsync` at `MaxDegreeOfParallelism = StorageDeleteConcurrency` (8) via `IStoragePipeline.DeleteAsync`.
-
-**Concurrency / ingest cooperation.** The `[JobTrigger]` registration prevents overlapping runs of the same `JobDetail`. The static `CurrentlyDeletingChunks` set is exposed through `public static bool IsChunkBeingDeleted(string uid)`. The ingest path (`ChunkIngestService.WaitForGarbageCollectionAsync`) polls this: while a chunk's storage key is being deleted it waits in steps, and if it is still being deleted after the wait budget it throws `InvalidOperationException` asking the caller to retry — this is the "GC and ingest coordinate" guarantee the README cites.
-
-**Failure handling.** Per-batch deletes are wrapped in try/catch and log a warning on failure without aborting the whole pass. Manifest cleanup rolls back on contention. Storage delete failures are logged at warning and swallowed (the DB row is already gone, so the orphaned blob will be re-detected by `StorageConsistencyJob`); a `DeleteAsync` returning `false` is logged at debug.
-
-See the *Garbage Collection* section for the full schedule-then-delete model.
-
-### StorageConsistencyJob
-
-`src/Cotton.Server/Jobs/StorageConsistencyJob.cs` — `[JobTrigger(days: 30)]`. Injects `IStoragePipeline`, `CottonDbContext`, `INotificationsProvider`, `ChunkUsageService`, `ILogger`.
-
-On the first execution per process, `JobStartupDelays.WaitForStorageConsistencyAsync` applies a cancellation-aware 5-minute delay; later executions proceed immediately. `RunOnceAsync` then does a two-directional reconciliation:
-
-1. **Collect all storage keys** into a case-insensitive `HashSet<string>` via `IStoragePipeline.ListAllKeysAsync`.
-2. **DB → storage** (`CheckDbChunksAgainstStorageAsync`): streams `Chunks` ordered by `Hash` with `AsNoTracking` so a running pass is not destabilized by concurrent chunk inserts. For each chunk hash (hex via `Hasher.ToHexStringHash`), if its key is present in the storage set it is `Remove`d (marking it accounted-for); otherwise it double-checks with `IStoragePipeline.ExistsAsync` (guard against listing races). Chunks that exist on direct lookup are counted and logged once with a sample; truly missing hashes are collected and handled after the DB stream closes.
-3. **storage → DB** (`RegisterOrphanedStorageKeysAsync`): keys still left in the set after step 2 are storage blobs with no DB chunk. Protected keys (`ChunkUsageService.GetProtectedStorageKeysAsync`) are removed first. Each remaining key is parsed back to a hash via `Hasher.FromHexStringHash` (invalid keys are logged and skipped), re-checked against the DB, sized via `IStoragePipeline.GetSizeAsync`, and inserted as a new `Chunk` (`PlainSizeBytes` and `StoredSizeBytes` = measured size, `CompressionAlgorithm = CompressionProcessor.Algorithm`, `GCScheduledAfter = now + 1 day`) so the GC job can reclaim it. A size-0 blob whose key is not the canonical zero hash (`Hasher.ZeroHashHexString`) is treated as corruption: the job **throws** `InvalidOperationException` to abort rather than risk registering bad data. Inserts are saved every `BatchSize` rows and once more at the end.
-
-`HandleMissingChunkAsync` distinguishes by reference type:
-
-- **Preview** (`FileManifest.SmallFilePreviewHash` / `LargeFilePreviewHash`): silently clears the matching preview hash columns — for a small-preview match it also clears `SmallFilePreviewHashEncrypted` — so previews regenerate.
-- **Avatar** (`User.AvatarHash`): clears `AvatarHash` and `AvatarHashEncrypted` via `ExecuteUpdateAsync`.
-- **Actual file data** (`FileManifestChunks.ChunkHash`): **does not delete anything**; instead resolves affected `FileManifestId`s → `NodeFiles`, and sends one `SendStorageChunkMissingNotificationAsync(ownerId, fileName)` per distinct `(OwnerId, Name)` via the `INotificationsProvider` extension. Notification failures are caught and logged.
-
-**Failure handling.** Most failures propagate (Quartz logs the failed execution); the size-0 guard intentionally aborts. Notification sends are individually try/caught. **Interactions.** `IStoragePipeline`, `ChunkUsageService`, `INotificationsProvider`; feeds work back to `GarbageCollectorJob` by scheduling orphaned keys.
-
-### ComputeManifestHashesJob
-
-`src/Cotton.Server/Jobs/ComputeManifestHashesJob.cs` — `[JobTrigger(hours: 12)]`. Injects `PerfTracker`, `IStoragePipeline`, `INotificationsProvider`, `ILogger`, `CottonDbContext`.
-
-Verifies that uploaded file content actually hashes to the value the client proposed.
-
-- **Gates:** returns early (logging the reason) if `PerfTracker.IsUploading()` or `PerfTracker.IsNightTime()`.
-- Builds the work set from manifests where `ComputedContentHash == null`, excludes ids in the process-local `KnownMismatchedManifestIds` set, includes `FileManifestChunks`, orders by id, applies `Take(MaxItemsPerRun)`, and materializes with `ToListAsync(context.CancellationToken)`. A run therefore processes up to 1000 deterministic candidates.
-- For each manifest, it delays *before* processing the item — `await Task.Delay(60_000, context.CancellationToken)` if `IsPreviewGenerating()` or `IsUploading()`, else `await Task.Delay(250, context.CancellationToken)`. It then assembles the blob stream via `_storage.GetBlobStream(hashes, pipelineContext)` (`pipelineContext.FileSizeBytes = manifest.SizeBytes`) and computes the hash asynchronously with `Hasher.HashDataAsync(stream, context.CancellationToken)`.
-  - **Match** (`computedContentHash.SequenceEqual(manifest.ProposedContentHash)`): sets `ComputedContentHash` and saves.
-  - **Mismatch:** logs a warning, records the manifest id in `KnownMismatchedManifestIds`, and, for every `NodeFile` referencing the manifest, sends `SendUploadHashMismatchNotificationAsync(ownerId, name, proposedHex, computedHex)`. It does **not** set `ComputedContentHash`; later runs in the same process skip the known mismatch, while a process restart can report it again.
-
-**Concurrency.** Single-flight via the `[JobTrigger]` registration. **Failure handling.** No outer try/catch; an exception fails the Quartz execution and the manifest stays unverified. In addition to scheduled maintenance, `FileController` triggers the same job after file creation and content update. See the *Garbage Collection* and storage-integrity material in the *Storage Pipeline* section.
-
-### GeneratePreviewJob
-
-`src/Cotton.Server/Jobs/GeneratePreviewJob.cs` — `[JobTrigger(minutes: 15)]`. Injects `PerfTracker`, `IStreamCipher`, `IStoragePipeline`, `CottonDbContext`, `IHubContext<EventHub>`, `ILogger`.
-
-Generates WebP previews. Deep detail lives in the *Previews* section; control flow:
-
-1. `LoadNextPreviewItemsAsync` → `CreateItemsToProcessQuery` — selects `FileManifest`s whose `ContentType` is in `PreviewGeneratorProvider.GetAllSupportedMimeTypes()` and that either lack a small preview (`SmallFilePreviewHash == null` && `PreviewGenerationError == null`) **or** are behind the current generator version for their content type (a `Union` over the `GetGeneratorVersionsByContentType()` groups drives regeneration on generator upgrades). Ordered by `CreatedAt` descending (newest first), `Take(MaxItemsPerRun)` (10000), then re-loaded by id with `NodeFiles` and `FileManifestChunks.Chunk` included as an `AsSplitQuery`.
-2. For each item: marks `PerfTracker.OnPreviewGenerating()`, resolves a generator via `PreviewGeneratorProvider.GetGeneratorByContentType(item.ContentType)`. If none, detaches the item and continues. Otherwise it streams the blob with `IStoragePipeline.GetBlobStream`, generates a `PreviewGeneratorProvider.DefaultSmallPreviewSize` (200) WebP, hashes it (`Hasher.HashData`), `WriteAsync`s it to storage, calls `EnsureChunkExistsAsync` (inserts a new `Chunk` or repairs an existing one — clearing `GCScheduledAfter`, backfilling `PlainSizeBytes`/`StoredSizeBytes`), then sets `SmallFilePreviewHash`, `SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash)`, clears `PreviewGenerationError`, and records `PreviewGeneratorVersion = generator.Version`. For `ImagePreviewGenerator`, `HeicPreviewGenerator`, or `SvgPreviewGenerator` it additionally generates and stores a `DefaultLargePreviewSize` (2000) preview into `LargeFilePreviewHash`.
-3. After a successful save it pushes, per owning `NodeFile`, a SignalR `PreviewGenerated` event with arguments `(nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex())` to that user via `IHubContext<EventHub>`.
-4. **Throttling:** the first `UnthrottledItemsCount` (1000) items run without delay; once `processed > UnthrottledItemsCount` it inserts `await Task.Delay(ThrottleDelayMs)` (250 ms) between items. If `PerfTracker.IsUploading()` after an item, it waits 5 s (`WaitForUploadPauseAsync`) and then **refreshes the queue** (`RefreshPreviewQueueAsync`, up to `RefreshItemsPerUploadPause` = 250 newest items inserted ahead of the cursor) so freshly uploaded files get previews promptly; the queue is trimmed back to `MaxItemsPerRun` (`TrimPreviewQueueToRunLimit`).
-
-**Failure handling.** Per-item failures other than cancellation are caught: the manifest's `PreviewGenerationError` is set to the exception message and `PreviewGeneratorVersion` is recorded, then saved — this surfaces the error and prevents an infinite retry loop (the item is excluded next run until a newer generator version exists). `OperationCanceledException` on the job's cancellation token re-throws. **Concurrency.** Single-flight via the `[JobTrigger]` registration. **Triggered on demand** after uploads and WebDAV PUTs. A code comment near the `PreviewGenerated` broadcast notes a minor cross-user dedup side-channel; see the *Previews* and *Cryptography* sections.
-
-### ExtractFileMetadataJob
-
-`src/Cotton.Server/Jobs/ExtractFileMetadataJob.cs` — `[JobTrigger(minutes: 15)]`. Injects `PerfTracker`, `CottonDbContext`, `IMediator`, `ILogger`.
-
-Extracts deterministic content metadata for supported image, audio, and video manifests. If an upload is active it waits 5 seconds, then loads up to `MaxItemsPerRun` (500) manifests that have at least one `NodeFile`, supported content type, and null `Metadata`. Each manifest is handled through `ExtractFileManifestMetadataRequest` with `Notify = true`; after the first `UnthrottledItemsCount` (100) items it waits `ThrottleDelayMs` (100 ms) between items and clears the EF change tracker after each manifest. The request handler updates only managed metadata keys, logs extraction failures without writing attempt state to the database, and sends `FileUpdated` events only when visible metadata changed.
-
-### DownloadTokenRetentionJob
-
-`src/Cotton.Server/Jobs/DownloadTokenRetentionJob.cs` — `[JobTrigger(days: 1)]`. Injects `CottonDbContext`, `ILogger`.
-
-The first execution per process awaits the cancellation-aware 4-minute `JobStartupDelays.WaitForDownloadTokenRetentionAsync` delay; later executions proceed immediately. It deletes `DownloadTokens` whose `ExpiresAt` is non-null and `<= now - 30 days` (i.e. expired for more than 30 days, not merely expired). The database query and save observe the same cancellation token. It loads the rows, calls `RemoveRange`, saves, and logs the count. Tokens with a null `ExpiresAt` are never removed here. See the *Sharing & Download Tokens* section.
-
-### RefreshTokenRetentionJob
-
-`src/Cotton.Server/Jobs/RefreshTokenRetentionJob.cs` — `[JobTrigger(days: 1)]`. Injects `CottonDbContext`, `ILogger`.
-
-The first execution per process awaits the cancellation-aware 10-minute `JobStartupDelays.WaitForRefreshTokenRetentionAsync` delay; later executions proceed immediately. It revokes (does not delete) auth refresh tokens. `RetentionPeriod` is `TimeSpan.FromDays(30)`. It loads `RefreshTokens` where `RevokedAt == null` and `CreatedAt < now - 30 days`, sets `RevokedAt = DateTime.UtcNow` on each, saves, and logs the count. Note this revokes by **creation age**, capping the absolute lifetime of any refresh token at 30 days regardless of recent use. See the *Authentication & Sessions* section.
-
-### DumpDatabaseJob
-
-`src/Cotton.Server/Jobs/DumpDatabaseJob.cs` — `[JobTrigger(days: 7)]`. Injects `IPostgresDumpService`, `IChunkIngestService`, `IStoragePipeline`, `SettingsProvider`, `CottonDbContext`, `DatabaseBackupKeyProvider`, `IConfiguration`, `ILogger`.
-
-Performs a logical PostgreSQL backup and stores it as content-addressed chunks. Its first process execution awaits the cancellation-aware 3-minute `JobStartupDelays.WaitForDumpDatabaseAsync` delay; later executions proceed immediately. It then:
-
-1. Resolves a backup owner (`ResolveBackupOwnerIdAsync` — the first user by `Id`); throws `InvalidOperationException` if no users exist.
-2. `IPostgresDumpService.DumpToFileAsync` writes a dump file to `{Path.GetTempPath()}/cotton/db-dumps/db-{yyyyMMdd-HHmmss}-{backupId}.dump` (path built by `BuildDumpFilePath`, `backupId` is a `Guid.NewGuid().ToString("N")`).
-3. `UploadDumpWithChunkerAsync` reads the dump in fixed-size pieces of `SettingsProvider.GetServerSettings().MaxChunkSizeBytes` (must be positive, else `InvalidOperationException`) using `ReadExactlyAsync`, hashing the whole file incrementally with `IncrementalHash` (`Hasher.SupportedHashAlgorithmName`, SHA-256), and ingesting each piece via `IChunkIngestService.UpsertChunkAsync(ownerId, buffer, bytesRead, ct)`. An empty dump still produces one empty chunk.
-4. Builds a `BackupManifest` (`SchemaVersion: 1`) recording `BackupId`, `Elapsed`, `CreatedAtUtc`, `Contains` (`"postgres_database_dump"`), `DumpFormat` (`"pg_dump_custom"`), source DB/host/port (from `DatabaseSettings:Database` / `DatabaseSettings:Host` / `DatabaseSettings:Port` config with `cotton_dev`/`localhost`/`5432` fallbacks via `GetConfigOrDefault`), `HashAlgorithm` (`Hasher.SupportedHashAlgorithm`, `"SHA256"`), chunk size, dump size, content hash, `ChunkCount`, and the ordered `Chunks` list; serializes it with web JSON defaults and writes it (`WriteObjectAsync` → `IStoragePipeline.WriteAsync`) to a content-addressed key (hash of the manifest bytes).
-5. Writes a `BackupManifestPointer` (`SchemaVersion: 1`, `LogicalKey = DatabaseBackupKeyProvider.ManifestPointerLogicalKey` = `"database.ctn"`, `LatestManifestStorageKey`, `LatestBackupId`) to `DatabaseBackupKeyProvider.GetScopedPointerStorageKey()` (a master-key-scoped key), deleting the previous pointer object first via `IStoragePipeline.DeleteAsync`, so restore can find the latest backup.
-6. A `finally` deletes the local dump file (`TryDeleteDumpFile`, errors swallowed).
-
-**Failure handling.** Errors propagate out of `Execute` (Quartz records the failed run) but the temp dump file is always cleaned up via `finally`. **Triggered on demand** by the admin backup endpoint. The full design is in the *Database Backup & Auto-Restore* section.
-
-### ClearTempFolderJob
-
-`src/Cotton.Server/Jobs/ClearTempFolderJob.cs` — `[JobTrigger(hours: 36)]`. Injects `PerfTracker`, `IStorageBackendProvider`.
-
-The first execution per process awaits the cancellation-aware 7-minute `JobStartupDelays.WaitForClearTempFolderAsync` delay; later executions proceed immediately. It then returns early if `PerfTracker.IsNightTime()`. Otherwise it resolves the active backend via `IStorageBackendProvider.GetBackend()` and calls `backend.CleanupTempFiles(_ttl)` with `_ttl = TimeSpan.FromHours(1)`, removing temp files older than one hour. Whether a backend actually has temp files depends on the configured backend; see the *Storage Backends* section.
-
-### SyncChangeRetentionJob
-
-`src/Cotton.Server/Jobs/SyncChangeRetentionJob.cs` — `[JobTrigger(days: 1)]`. Injects `CottonDbContext`, `ILogger`. No internal start delay.
-
-Prunes the sync-change log used by the delta-sync API. `RetentionPeriod` is `TimeSpan.FromDays(365)`. It `ExecuteDeleteAsync`-deletes `SyncChanges` older than the 365-day cutoff, **but only those that are superseded** — the predicate keeps, per `OwnerId`, the newest expired change (a row is deleted only when another expired change with the same owner and a higher `Id` exists), so the latest pre-cutoff sync state per owner is retained. Logs the deleted count when non-zero. See the *Sync & Delta API* section.
-
-### CollectPerformanceJob
-
-`src/Cotton.Server/Jobs/CollectPerformanceJob.cs` — `[JobTrigger(days: 1)]`. Injects `PerfTracker`, `CottonDbContext`, `SettingsProvider`, `StoragePipelineProbeService`, `ILogger`.
-
-Sends opt-in telemetry to Cotton Bridge. Its first process execution awaits the cancellation-aware 6-minute `JobStartupDelays.WaitForCollectPerformanceAsync` delay; later executions proceed immediately. It then:
-
-- **Gates:** returns early if `SettingsProvider.GetServerSettings().TelemetryEnabled` is false, or if `PerfTracker.IsUploading()`.
-- Optionally runs a bounded storage-pipeline throughput probe via `StoragePipelineProbeService.RunAsync(storageBackend, ct)`, where `storageBackend = settings.StorageType.ToString().ToLowerInvariant()`. Probe failures are caught (`TryRunStoragePipelineProbeAsync`) and the telemetry is sent with a null probe.
-- Builds a `TelemetryRequest` (defined in `src/Cotton.Shared/Models/TelemetryRequest.cs`, namespace `Cotton.Models`) and `POST`s it (`PostAsJsonAsync`, via a transient `HttpClient`) to `Cotton.Constants.CottonBridgeTelemetryUrl` (`"https://bridge.cottoncloud.dev/api/v1/telemetry"`, defined in `src/Cotton.Shared/Constants.cs`).
-
-`TelemetryRequest` fields populated by this job:
-
-| Property | Source |
-| --- | --- |
-| `InstanceId` (`Guid`) | `settings.InstanceId` |
-| `ServerUrl` (`string`) | `settings.PublicBaseUrl` |
-| `Nodes` (`int`) | `_dbContext.Nodes.CountAsync()` |
-| `Users` (`int`) | `_dbContext.Users.CountAsync()` |
-| `Files` (`int`) | `_dbContext.FileManifests.CountAsync()` |
-| `Version` (`string`) | `AppVersionHelpers.GetAppVersion() ?? "Unknown"` |
-| `MaxChunkSizeBytes` (`int`) | `settings.MaxChunkSizeBytes` |
-| `StoragePipelineProbe` (`StoragePipelineProbeResult?`) | optional probe result, or null |
-
-This job writes nothing to the database or storage — it only emits an outbound HTTP request. See the *Performance & Telemetry* section.
-
-## Concurrency, failure modes, and edge cases
-
-- **Non-concurrent by default.** `[JobTrigger]` registration makes each job single-flight, so no single job overlaps itself — including manual `TriggerJobAsync` fires, which target the same `JobDetail`.
-- **Startup storm + start delays.** With `StartNow = true` and an in-memory store, every trigger tries to fire right after `AwaitApplicationStarted` plus the scheduler `StartDelay`. `JobStartupDelays` keeps a private atomic process-static flag per delayed job, spreading only each job's first execution. Repeated scheduled and manual runs proceed immediately. Every wait observes `IJobExecutionContext.CancellationToken`, so shutdown cancels jobs still waiting instead of allowing them to proceed into application work.
-- **No persistence / no clustering.** Multi-instance deployments run each job on every node. Cross-node safety relies on the database-level re-checks inside the jobs (GC's `CurrentlyDeletingChunks` reservation set is process-local only), not on Quartz. Operators running more than one server replica should expect GC, consistency, dump, and telemetry to each run per-node.
-- **Misfire handling.** All triggers use `WithMisfireHandlingInstructionFireNow()` — a single catch-up fire after downtime, not a replay of missed occurrences.
-- **PerfTracker gating.** `IsUploading()` and `IsPreviewGenerating()` are time-window heuristics (both use the same 10-second `ChunkTimeoutSeconds`) backed by in-memory timestamps (`OnChunkCreated` is called from `ChunkController`; `OnPreviewGenerating` from `GeneratePreviewJob`). `IsNightTime()` is evaluated against the configured server timezone. Several jobs voluntarily yield to live traffic using these signals (GC night gate, `ComputeManifestHashesJob`, `GeneratePreviewJob`, `ClearTempFolderJob`, `CollectPerformanceJob`).
-- **Data-loss guards.** Both `StorageConsistencyJob` (size-0 abort) and `GarbageCollectorJob` (transactional manifest delete with rollback on contention, double-check before chunk delete) deliberately err toward *not deleting* when reality is ambiguous.
-
-## Non-obvious design decisions & gotchas
-
-- `[JobTrigger]` already carries the job-level single-flight behavior Cotton needs. Job classes should not add a redundant Quartz class-level concurrency marker.
-- `RefreshTokenRetentionJob` caps tokens by **creation age**, not idle age — long-lived sessions are forcibly rotated at 30 days. `DownloadTokenRetentionJob` keeps expired tokens for an extra 30 days before deleting them (grace window) and never deletes tokens with a null `ExpiresAt`.
-- Startup-delay flags in `JobStartupDelays` and `GarbageCollectorJob.CurrentlyDeletingChunks` are process-static and shared across all runs in that process.
-- The README describes background maintenance at a feature level; this section records the exact implemented jobs, schedules, and deferred GC delays.
+Batch sizes and deliberate throttling protect the database, storage backend, CPU, and external tools. Throttles are local coordination rather than user-facing rate limits. Increasing parallelism should be based on measured backend and CPU capacity, not merely on available request concurrency.
 
 ## Related sections
 
-- *Garbage Collection* — deep dive into `GarbageCollectorJob`, `ChunkUsageService`, protected keys, and the schedule-then-delete model.
-- *Storage Pipeline* and *Storage Backends* — `IStoragePipeline`, blob listing/sizing, the `GetBlobStream` assembly extension, and temp-file cleanup.
-- *Previews* — preview generators, sizes, versioning, and the SignalR `PreviewGenerated` event.
-- *Database Backup & Auto-Restore* — `DumpDatabaseJob`, `BackupManifest`/`BackupManifestPointer`, pointers, and restore.
-- *Sharing & Download Tokens* and *Authentication & Sessions* — the token entities the retention jobs prune.
-- *Performance & Telemetry* — `CollectPerformanceJob`, the storage-pipeline probe, and Cotton Bridge.
-- *Real-time Events (SignalR)* — `EventHub` and the events jobs emit.
+See [Garbage Collection](10-garbage-collection.md), [Previews and Media Processing](18-previews-media.md), [Database Backup and Restore](21-database-backup-restore.md), and [Performance and Testing](26-performance-benchmarking-testing.md).

@@ -22,233 +22,296 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 
-namespace Cotton.Server.IntegrationTests;
-
-public class LayoutAndFilesTests : IntegrationTestBase
+namespace Cotton.Server.IntegrationTests
 {
-    private TestAppFactory? _factory;
-    private HttpClient? _client;
-
-    [SetUp]
-    public void SetUp()
+    public class LayoutAndFilesTests : IntegrationTestBase
     {
-        // Reset DB to empty state
-        IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
-        creator.EnsureDeleted();
-        creator.Create();
-        Assert.Multiple(() =>
+        private TestAppFactory? _factory;
+        private HttpClient? _client;
+
+        [SetUp]
+        public void SetUp()
         {
-            Assert.That(creator.Exists(), Is.True, "DB must exist after Create()");
-            Assert.That(creator.HasTables(), Is.False, "DB must have no user tables after Create()");
-        });
-
-        // Build connection overrides
-        var csb = new NpgsqlConnectionStringBuilder
-        {
-            Host = "localhost",
-            Port = 5432,
-            Database = DatabaseName,
-            Username = "postgres",
-            Password = "postgres"
-        };
-        var overrides = new Dictionary<string, string?>
-        {
-            ["DatabaseSettings:Host"] = csb.Host,
-            ["DatabaseSettings:Port"] = csb.Port.ToString(),
-            ["DatabaseSettings:Database"] = csb.Database,
-            ["DatabaseSettings:Username"] = csb.Username,
-            ["DatabaseSettings:Password"] = csb.Password,
-            ["MasterEncryptionKey"] = Convert.ToBase64String(Hasher.HashData(Encoding.UTF8.GetBytes("super"))),
-            ["MasterEncryptionKeyId"] = "1",
-            ["EncryptionThreads"] = "1",
-            ["MaxChunkSizeBytes"] = "16777216",
-            ["CipherChunkSizeBytes"] = "20971520",
-            ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
-        };
-
-        _factory = new TestAppFactory(overrides);
-        _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false
-        });
-    }
-
-    [TearDown]
-    public void TearDown()
-    {
-        _client?.Dispose();
-        _factory?.Dispose();
-    }
-
-    [Test]
-    public async Task Resolve_Root_Layout_Returns_RootNode()
-    {
-        var token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        NodeDto? node = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(node, Is.Not.Null);
-        Assert.That(node!.Name, Is.EqualTo(NodeType.Default.ToString()));
-        Assert.That(node.ParentId, Is.Null);
-        Assert.That(node.LayoutId, Is.Not.EqualTo(Guid.Empty));
-        Assert.That(node.Id, Is.Not.EqualTo(Guid.Empty));
-        TestContext.Progress.WriteLine($"Resolved root layout. LayoutId={node.LayoutId}, RootId={node.Id}");
-    }
-
-    [Test]
-    public async Task Create_Node_And_10_Files()
-    {
-        var token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
-
-        // Create a new child node under root
-        var nodeName = "test";
-        var createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = nodeName };
-        HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
-        createNodeRes.EnsureSuccessStatusCode();
-        NodeDto? child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
-        Assert.That(child, Is.Not.Null);
-        TestContext.Progress.WriteLine($"Created node '{nodeName}' with Id={child!.Id}");
-
-        // Upload 10 unique chunks and create files from them
-        for (int i = 1; i <= 10; i++)
-        {
-            var content = Encoding.UTF8.GetBytes($"hello {i}");
-            var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
-            // Upload chunk
-            using var form = new MultipartFormDataContent
+            // Reset DB to empty state
+            IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
+            creator.EnsureDeleted();
+            creator.Create();
+            Assert.Multiple(() =>
             {
+                Assert.That(creator.Exists(), Is.True, "DB must exist after Create()");
+                Assert.That(creator.HasTables(), Is.False, "DB must have no user tables after Create()");
+            });
+
+            // Build connection overrides
+            var csb = new NpgsqlConnectionStringBuilder
+            {
+                Host = "localhost",
+                Port = 5432,
+                Database = DatabaseName,
+                Username = "postgres",
+                Password = "postgres"
+            };
+            var overrides = new Dictionary<string, string?>
+            {
+                ["DatabaseSettings:Host"] = csb.Host,
+                ["DatabaseSettings:Port"] = csb.Port.ToString(),
+                ["DatabaseSettings:Database"] = csb.Database,
+                ["DatabaseSettings:Username"] = csb.Username,
+                ["DatabaseSettings:Password"] = csb.Password,
+                ["MasterEncryptionKey"] = Convert.ToBase64String(Hasher.HashData(Encoding.UTF8.GetBytes("super"))),
+                ["MasterEncryptionKeyId"] = "1",
+                ["EncryptionThreads"] = "1",
+                ["MaxChunkSizeBytes"] = "16777216",
+                ["CipherChunkSizeBytes"] = "20971520",
+                ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
+            };
+
+            _factory = new TestAppFactory(overrides);
+            _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false
+            });
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _client?.Dispose();
+            _factory?.Dispose();
+        }
+
+        [Test]
+        public async Task Resolve_Root_Layout_Returns_RootNode()
+        {
+            var token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            NodeDto? node = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(node, Is.Not.Null);
+            Assert.That(node!.Name, Is.EqualTo(NodeType.Default.ToString()));
+            Assert.That(node.ParentId, Is.Null);
+            Assert.That(node.LayoutId, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(node.Id, Is.Not.EqualTo(Guid.Empty));
+            TestContext.Progress.WriteLine($"Resolved root layout. LayoutId={node.LayoutId}, RootId={node.Id}");
+        }
+
+        [Test]
+        public async Task Create_Node_And_10_Files()
+        {
+            var token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
+
+            // Create a new child node under root
+            var nodeName = "test";
+            var createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = nodeName };
+            HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
+            createNodeRes.EnsureSuccessStatusCode();
+            NodeDto? child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
+            Assert.That(child, Is.Not.Null);
+            TestContext.Progress.WriteLine($"Created node '{nodeName}' with Id={child!.Id}");
+
+            // Upload 10 unique chunks and create files from them
+            for (int i = 1; i <= 10; i++)
+            {
+                var content = Encoding.UTF8.GetBytes($"hello {i}");
+                var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+                // Upload chunk
+                using var form = new MultipartFormDataContent
                 {
-                    new ByteArrayContent(content)
                     {
-                        Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                        new ByteArrayContent(content)
+                        {
+                            Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                        },
+                        "file",
+                        $"chunk{i}.bin"
                     },
-                    "file",
-                    $"chunk{i}.bin"
-                },
-                { new StringContent(chunkHashLower), "hash" }
-            };
-            HttpResponseMessage upRes = await _client.PostAsync("/api/v1/chunks", form);
-            upRes.EnsureSuccessStatusCode();
-            TestContext.Progress.WriteLine($"Uploaded chunk {i}: {chunkHashLower[..16]}...");
+                    { new StringContent(chunkHashLower), "hash" }
+                };
+                HttpResponseMessage upRes = await _client.PostAsync("/api/v1/chunks", form);
+                upRes.EnsureSuccessStatusCode();
+                TestContext.Progress.WriteLine($"Uploaded chunk {i}: {chunkHashLower[..16]}...");
 
-            // Create file (server validates and maps hex → byte[] itself)
-            var fileName = $"file{i}.txt";
-            var fileReq = new CreateFileFromChunksRequestDto
+                // Create file (server validates and maps hex → byte[] itself)
+                var fileName = $"file{i}.txt";
+                var fileReq = new CreateFileFromChunksRequestDto
+                {
+                    ChunkHashes = [chunkHashLower],
+                    Name = fileName,
+                    ContentType = "text/plain",
+                    Hash = chunkHashLower,
+                    NodeId = child.Id
+                };
+                HttpResponseMessage createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+                createFileRes.EnsureSuccessStatusCode();
+            }
+
+            // Verify children listing shows 10 files
+            NodeContentDto? list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{child!.Id}/children");
+            Assert.That(list, Is.Not.Null);
+            Assert.That(list!.Files.Count, Is.EqualTo(10));
+            var names = list.Files
+                .OrderBy(x => x.CreatedAt)
+                .Select(f => f.Name)
+                .ToArray();
+            for (int i = 1; i <= 10; i++)
             {
-                ChunkHashes = [chunkHashLower],
-                Name = fileName,
-                ContentType = "text/plain",
-                Hash = chunkHashLower,
-                NodeId = child.Id
-            };
-            HttpResponseMessage createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
-            createFileRes.EnsureSuccessStatusCode();
+                Assert.That(names[i - 1], Is.EqualTo($"file{i}.txt"));
+            }
         }
 
-        // Verify children listing shows 10 files
-        NodeContentDto? list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{child!.Id}/children");
-        Assert.That(list, Is.Not.Null);
-        Assert.That(list!.Files.Count, Is.EqualTo(10));
-        var names = list.Files
-            .OrderBy(x => x.CreatedAt)
-            .Select(f => f.Name)
-            .ToArray();
-        for (int i = 1; i <= 10; i++)
+        [Test]
+        public async Task Shared_Folder_Api_Exposes_Info_Navigation_And_File_Content()
         {
-            Assert.That(names[i - 1], Is.EqualTo($"file{i}.txt"));
+            string accessToken = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
+
+            NodeDto sharedRoot = await CreateNodeAsync(root!.Id, "shared-root-contract");
+            NodeDto nested = await CreateNodeAsync(sharedRoot.Id, "nested-contract");
+            NodeFileManifestDto file = await UploadTextFileAsync(nested.Id, "shared.txt", "shared body");
+
+            HttpResponseMessage shareLinkResponse = await _client.GetAsync(
+                $"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
+            shareLinkResponse.EnsureSuccessStatusCode();
+            string shareLink = (await shareLinkResponse.Content.ReadAsStringAsync()).Trim('"');
+            string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+
+            _client.DefaultRequestHeaders.Authorization = null;
+
+            SharedNodeInfoDto? info = await _client.GetFromJsonAsync<SharedNodeInfoDto>(
+                $"/api/v1/layouts/shared/{shareToken}");
+            Assert.Multiple(() =>
+            {
+                Assert.That(info, Is.Not.Null);
+                Assert.That(info!.Token, Is.EqualTo(shareToken));
+                Assert.That(info.NodeId, Is.EqualTo(sharedRoot.Id));
+                Assert.That(info.Name, Is.EqualTo(sharedRoot.Name));
+            });
+
+            using HttpResponseMessage rootChildrenResponse = await _client.GetAsync(
+                $"/api/v1/layouts/shared/{shareToken}/children");
+            rootChildrenResponse.EnsureSuccessStatusCode();
+            Assert.That(rootChildrenResponse.Headers.GetValues("X-Total-Count").Single(), Is.EqualTo("1"));
+            SharedNodeContentDto? rootChildren = await rootChildrenResponse.Content
+                .ReadFromJsonAsync<SharedNodeContentDto>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(rootChildren, Is.Not.Null);
+                Assert.That(rootChildren!.Id, Is.EqualTo(sharedRoot.Id));
+                Assert.That(rootChildren.Nodes.Select(node => node.Id), Is.EqualTo(new[] { nested.Id }));
+                Assert.That(rootChildren.Files, Is.Empty);
+            });
+
+            NodeDto[]? ancestors = await _client.GetFromJsonAsync<NodeDto[]>(
+                $"/api/v1/layouts/shared/{shareToken}/ancestors/{nested.Id}");
+            Assert.That(ancestors?.Select(node => node.Id), Is.EqualTo(new[] { sharedRoot.Id }));
+
+            SharedNodeContentDto? nestedChildren = await _client.GetFromJsonAsync<SharedNodeContentDto>(
+                $"/api/v1/layouts/shared/{shareToken}/children?nodeId={nested.Id}");
+            Assert.Multiple(() =>
+            {
+                Assert.That(nestedChildren, Is.Not.Null);
+                Assert.That(nestedChildren!.Nodes, Is.Empty);
+                Assert.That(nestedChildren.Files.Select(nodeFile => nodeFile.Id), Is.EqualTo(new[] { file.Id }));
+            });
+
+            string fileContent = await _client.GetStringAsync(
+                $"/api/v1/layouts/shared/{shareToken}/files/{file.Id}/content?download=false");
+            Assert.That(fileContent, Is.EqualTo("shared body"));
         }
-    }
 
-    [Test]
-    public async Task Shared_Children_Rejects_Tampered_Ancestor_Path_WithStrictIntegrity()
-    {
-        var token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        [Test]
+        public async Task Shared_Children_Rejects_Tampered_Ancestor_Path_WithStrictIntegrity()
+        {
+            var token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
 
-        NodeDto sharedRoot = await CreateNodeAsync(root!.Id, "shared-root");
-        NodeDto outsideParent = await CreateNodeAsync(root.Id, "outside-parent");
-        NodeDto outsideChild = await CreateNodeAsync(outsideParent.Id, "outside-child");
+            NodeDto sharedRoot = await CreateNodeAsync(root!.Id, "shared-root");
+            NodeDto outsideParent = await CreateNodeAsync(root.Id, "outside-parent");
+            NodeDto outsideChild = await CreateNodeAsync(outsideParent.Id, "outside-child");
 
-        HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
-        shareLinkRes.EnsureSuccessStatusCode();
-        string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
-        string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+            HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
+            shareLinkRes.EnsureSuccessStatusCode();
+            string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
+            string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
 
-        await DbContext.Database.ExecuteSqlInterpolatedAsync(
-            $"UPDATE nodes SET parent_id = {sharedRoot.Id} WHERE id = {outsideParent.Id}");
+            await DbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE nodes SET parent_id = {sharedRoot.Id} WHERE id = {outsideParent.Id}");
 
-        _client.DefaultRequestHeaders.Authorization = null;
+            _client.DefaultRequestHeaders.Authorization = null;
 
-        HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/layouts/shared/{shareToken}/children?nodeId={outsideChild.Id}");
+            HttpResponseMessage response = await _client.GetAsync(
+                $"/api/v1/layouts/shared/{shareToken}/children?nodeId={outsideChild.Id}");
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
-    }
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
 
-    [Test]
-    public async Task Shared_Archive_Download_Link_Allows_Current_Shared_Folder_Only()
-    {
-        var token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        [Test]
+        public async Task Shared_Archive_Download_Link_Allows_Current_Shared_Folder_Only()
+        {
+            var token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
 
-        NodeDto sharedRoot = await CreateNodeAsync(root!.Id, "shared-root");
-        NodeDto nested = await CreateNodeAsync(sharedRoot.Id, "nested");
-        NodeDto outside = await CreateNodeAsync(root.Id, "outside");
-        await UploadTextFileAsync(sharedRoot.Id, "root.txt", "root body");
-        await UploadTextFileAsync(nested.Id, "deep.txt", "deep body");
+            NodeDto sharedRoot = await CreateNodeAsync(root!.Id, "shared-root");
+            NodeDto nested = await CreateNodeAsync(sharedRoot.Id, "nested");
+            NodeDto outside = await CreateNodeAsync(root.Id, "outside");
+            await UploadTextFileAsync(sharedRoot.Id, "root.txt", "root body");
+            await UploadTextFileAsync(nested.Id, "deep.txt", "deep body");
 
-        HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
-        shareLinkRes.EnsureSuccessStatusCode();
-        string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
-        string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+            HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
+            shareLinkRes.EnsureSuccessStatusCode();
+            string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
+            string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
 
-        _client.DefaultRequestHeaders.Authorization = null;
+            _client.DefaultRequestHeaders.Authorization = null;
 
-        HttpResponseMessage linkResponse = await _client.PostAsync(
-            $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={sharedRoot.Id}",
-            null);
-        linkResponse.EnsureSuccessStatusCode();
-        ArchiveDownloadLinkDto? archive = await linkResponse.Content.ReadFromJsonAsync<ArchiveDownloadLinkDto>();
-        Assert.That(archive, Is.Not.Null);
+            HttpResponseMessage linkResponse = await _client.PostAsync(
+                $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={sharedRoot.Id}",
+                null);
+            linkResponse.EnsureSuccessStatusCode();
+            ArchiveDownloadLinkDto? archive = await linkResponse.Content.ReadFromJsonAsync<ArchiveDownloadLinkDto>();
+            Assert.That(archive, Is.Not.Null);
 
-        HttpResponseMessage download = await _client.GetAsync(archive!.Url);
-        download.EnsureSuccessStatusCode();
-        byte[] bytes = await download.Content.ReadAsByteArrayAsync();
+            HttpResponseMessage download = await _client.GetAsync(archive!.Url);
+            download.EnsureSuccessStatusCode();
+            byte[] bytes = await download.Content.ReadAsByteArrayAsync();
 
-        using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
-        AssertZipEntry(zip, "shared-root/root.txt", "root body");
-        AssertZipEntry(zip, "shared-root/nested/deep.txt", "deep body");
+            using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+            AssertZipEntry(zip, "shared-root/root.txt", "root body");
+            AssertZipEntry(zip, "shared-root/nested/deep.txt", "deep body");
 
-        HttpResponseMessage outsideResponse = await _client.PostAsync(
-            $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={outside.Id}",
-            null);
-        Assert.That(outsideResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
-    }
+            HttpResponseMessage outsideResponse = await _client.PostAsync(
+                $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={outside.Id}",
+                null);
+            Assert.That(outsideResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
 
-    [Test]
-    public async Task Shared_Archive_Download_Link_Enforces_Public_Entry_Limit()
-    {
-        var token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        [Test]
+        public async Task Shared_Archive_Download_Link_Enforces_Public_Entry_Limit()
+        {
+            var token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
 
-        NodeDto sharedRoot = await CreateNodeAsync(root!.Id, "huge-shared-root");
-        var sharedRootEntity = await DbContext.Nodes
-            .AsNoTracking()
-            .Select(x => new { x.Id, x.LayoutId, x.OwnerId })
-            .SingleAsync(x => x.Id == sharedRoot.Id);
+            NodeDto sharedRoot = await CreateNodeAsync(root!.Id, "huge-shared-root");
+            var sharedRootEntity = await DbContext.Nodes
+                .AsNoTracking()
+                .Select(x => new { x.Id, x.LayoutId, x.OwnerId })
+                .SingleAsync(x => x.Id == sharedRoot.Id);
 
-        await DbContext.Database.ExecuteSqlInterpolatedAsync($@"
+            await DbContext.Database.ExecuteSqlInterpolatedAsync($@"
             INSERT INTO nodes (id, created_at, updated_at, owner_id, layout_id, parent_id, type, name, name_key, metadata)
             SELECT
                 md5(i::text || {sharedRoot.Id.ToString()})::uuid,
@@ -263,229 +326,230 @@ public class LayoutAndFilesTests : IntegrationTestBase
                 NULL
             FROM generate_series(0, 4999) AS s(i)");
 
-        HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
-        shareLinkRes.EnsureSuccessStatusCode();
-        string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
-        string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+            HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
+            shareLinkRes.EnsureSuccessStatusCode();
+            string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
+            string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
 
-        _client.DefaultRequestHeaders.Authorization = null;
-        HttpResponseMessage linkResponse = await _client.PostAsync(
-            $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={sharedRoot.Id}",
-            null);
+            _client.DefaultRequestHeaders.Authorization = null;
+            HttpResponseMessage linkResponse = await _client.PostAsync(
+                $"/api/v1/layouts/shared/{shareToken}/archives/download-link?nodeId={sharedRoot.Id}",
+                null);
 
-        Assert.That(linkResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-        string body = await linkResponse.Content.ReadAsStringAsync();
-        Assert.That(body, Does.Contain("limited to 5000 entries"));
-    }
+            Assert.That(linkResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            string body = await linkResponse.Content.ReadAsStringAsync();
+            Assert.That(body, Does.Contain("limited to 5000 entries"));
+        }
 
-    [Test]
-    public async Task Shared_Folder_Page_Contains_Social_Preview_Meta_Tags()
-    {
-        var token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        HttpResponseMessage publicBaseUrlRes = await _client.PatchAsJsonAsync(
-            "/api/v1/server/settings/public-base-url",
-            "https://public.example");
-        publicBaseUrlRes.EnsureSuccessStatusCode();
-
-        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
-
-        var createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = "shared-folder" };
-        HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
-        createNodeRes.EnsureSuccessStatusCode();
-
-        NodeDto? child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
-        Assert.That(child, Is.Not.Null);
-
-        HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{child!.Id}/share-link");
-        shareLinkRes.EnsureSuccessStatusCode();
-        var shareLink = await shareLinkRes.Content.ReadAsStringAsync();
-        Assert.That(shareLink, Is.Not.Null.And.Not.Empty);
-
-        _client.DefaultRequestHeaders.Authorization = null;
-
-        HttpResponseMessage sharedPageRes = await _client.GetAsync(shareLink.Trim('"'));
-        sharedPageRes.EnsureSuccessStatusCode();
-
-        Assert.That(sharedPageRes.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
-
-        var html = await sharedPageRes.Content.ReadAsStringAsync();
-        Assert.That(html, Does.Not.Contain("\\\""));
-        Assert.That(html, Does.Contain("<html lang=\"en\">"));
-        Assert.That(html, Does.Contain("<meta charset=\"utf-8\">"));
-        Assert.That(html, Does.Contain("<meta http-equiv=\"refresh\""));
-        Assert.That(html, Does.Contain("<link rel=\"canonical\""));
-        Assert.That(html, Does.Contain("<meta property=\"og:image\""));
-        Assert.That(html, Does.Contain("<meta name=\"twitter:image\""));
-        Assert.That(html, Does.Contain("<meta name=\"twitter:card\" content=\"summary_large_image\""));
-        Assert.That(html, Does.Contain("https://public.example/assets/images/social-preview.jpg"));
-        Assert.That(html, Does.Contain("https://public.example/share/"));
-    }
-
-    private async Task<NodeDto> CreateNodeAsync(Guid parentId, string name)
-    {
-        HttpResponseMessage response = await _client!.PutAsJsonAsync(
-            "/api/v1/layouts/nodes",
-            new CreateNodeRequestDto { ParentId = parentId, Name = name });
-        response.EnsureSuccessStatusCode();
-        NodeDto? node = await response.Content.ReadFromJsonAsync<NodeDto>();
-        Assert.That(node, Is.Not.Null);
-        return node!;
-    }
-
-    private async Task<NodeFileManifestDto> UploadTextFileAsync(Guid nodeId, string name, string body)
-    {
-        byte[] content = Encoding.UTF8.GetBytes(body);
-        string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
-        using var form = new MultipartFormDataContent
+        [Test]
+        public async Task Shared_Folder_Page_Contains_Social_Preview_Meta_Tags()
         {
+            var token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            HttpResponseMessage publicBaseUrlRes = await _client.PatchAsJsonAsync(
+                "/api/v1/server/settings/public-base-url",
+                "https://public.example");
+            publicBaseUrlRes.EnsureSuccessStatusCode();
+
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
+
+            var createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = "shared-folder" };
+            HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
+            createNodeRes.EnsureSuccessStatusCode();
+
+            NodeDto? child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
+            Assert.That(child, Is.Not.Null);
+
+            HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{child!.Id}/share-link");
+            shareLinkRes.EnsureSuccessStatusCode();
+            var shareLink = await shareLinkRes.Content.ReadAsStringAsync();
+            Assert.That(shareLink, Is.Not.Null.And.Not.Empty);
+
+            _client.DefaultRequestHeaders.Authorization = null;
+
+            HttpResponseMessage sharedPageRes = await _client.GetAsync(shareLink.Trim('"'));
+            sharedPageRes.EnsureSuccessStatusCode();
+
+            Assert.That(sharedPageRes.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
+
+            var html = await sharedPageRes.Content.ReadAsStringAsync();
+            Assert.That(html, Does.Not.Contain("\\\""));
+            Assert.That(html, Does.Contain("<html lang=\"en\">"));
+            Assert.That(html, Does.Contain("<meta charset=\"utf-8\">"));
+            Assert.That(html, Does.Contain("<meta http-equiv=\"refresh\""));
+            Assert.That(html, Does.Contain("<link rel=\"canonical\""));
+            Assert.That(html, Does.Contain("<meta property=\"og:image\""));
+            Assert.That(html, Does.Contain("<meta name=\"twitter:image\""));
+            Assert.That(html, Does.Contain("<meta name=\"twitter:card\" content=\"summary_large_image\""));
+            Assert.That(html, Does.Contain("https://public.example/assets/images/social-preview.jpg"));
+            Assert.That(html, Does.Contain("https://public.example/share/"));
+        }
+
+        private async Task<NodeDto> CreateNodeAsync(Guid parentId, string name)
+        {
+            HttpResponseMessage response = await _client!.PutAsJsonAsync(
+                "/api/v1/layouts/nodes",
+                new CreateNodeRequestDto { ParentId = parentId, Name = name });
+            response.EnsureSuccessStatusCode();
+            NodeDto? node = await response.Content.ReadFromJsonAsync<NodeDto>();
+            Assert.That(node, Is.Not.Null);
+            return node!;
+        }
+
+        private async Task<NodeFileManifestDto> UploadTextFileAsync(Guid nodeId, string name, string body)
+        {
+            byte[] content = Encoding.UTF8.GetBytes(body);
+            string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
+            using var form = new MultipartFormDataContent
             {
-                new ByteArrayContent(content)
                 {
-                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                    new ByteArrayContent(content)
+                    {
+                        Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                    },
+                    "file",
+                    $"{name}.chunk"
                 },
-                "file",
-                $"{name}.chunk"
-            },
-            { new StringContent(hash), "hash" }
-        };
+                { new StringContent(hash), "hash" }
+            };
 
-        HttpResponseMessage uploadResponse = await _client!.PostAsync("/api/v1/chunks", form);
-        uploadResponse.EnsureSuccessStatusCode();
+            HttpResponseMessage uploadResponse = await _client!.PostAsync("/api/v1/chunks", form);
+            uploadResponse.EnsureSuccessStatusCode();
 
-        var fileReq = new CreateFileFromChunksRequestDto
-        {
-            ChunkHashes = [hash],
-            Name = name,
-            ContentType = "text/plain",
-            Hash = hash,
-            NodeId = nodeId
-        };
-        HttpResponseMessage createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
-        createResponse.EnsureSuccessStatusCode();
-        NodeFileManifestDto? file = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
-        Assert.That(file, Is.Not.Null);
-        return file!;
-    }
-
-    private static void AssertZipEntry(ZipArchive zip, string path, string expectedText)
-    {
-        ZipArchiveEntry? entry = zip.GetEntry(path);
-        Assert.That(entry, Is.Not.Null, $"Archive entry '{path}' was not found.");
-        using var reader = new StreamReader(entry!.Open(), Encoding.UTF8);
-        Assert.That(reader.ReadToEnd(), Is.EqualTo(expectedText));
-    }
-
-    private async Task<string> LoginAsync()
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
-        {
-            Content = JsonContent.Create(new LoginRequestDto()
+            var fileReq = new CreateFileFromChunksRequestDto
             {
-                Username = "testuser",
-                Password = "testpassword"
-            })
-        };
-        request.Headers.Add("X-Forwarded-For", "8.8.8.8");
-        HttpResponseMessage res = await _client!.SendAsync(request);
-        res.EnsureSuccessStatusCode();
-        TokenPairResponseDto? login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
-        Assert.That(login, Is.Not.Null);
-        TestContext.Progress.WriteLine($"Login OK. Token: {login!.AccessToken[..Math.Min(16, login.AccessToken.Length)]}...");
-        return login.AccessToken;
-    }
+                ChunkHashes = [hash],
+                Name = name,
+                ContentType = "text/plain",
+                Hash = hash,
+                NodeId = nodeId
+            };
+            HttpResponseMessage createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+            createResponse.EnsureSuccessStatusCode();
+            NodeFileManifestDto? file = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+            Assert.That(file, Is.Not.Null);
+            return file!;
+        }
 
-    [Test]
-    public async Task GetChildren_NullMetadataInDb_IsSerializedAsEmptyObject()
-    {
-        var token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
-
-        HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync(
-            "/api/v1/layouts/nodes",
-            new CreateNodeRequestDto { ParentId = root!.Id, Name = "null-meta" });
-        createNodeRes.EnsureSuccessStatusCode();
-        NodeDto? folder = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
-        Assert.That(folder, Is.Not.Null);
-
-        var content = Encoding.UTF8.GetBytes("payload");
-        var hash = Hasher.ToHexStringHash(Hasher.HashData(content));
-        using var form = new MultipartFormDataContent
+        private static void AssertZipEntry(ZipArchive zip, string path, string expectedText)
         {
+            ZipArchiveEntry? entry = zip.GetEntry(path);
+            Assert.That(entry, Is.Not.Null, $"Archive entry '{path}' was not found.");
+            using var reader = new StreamReader(entry!.Open(), Encoding.UTF8);
+            Assert.That(reader.ReadToEnd(), Is.EqualTo(expectedText));
+        }
+
+        private async Task<string> LoginAsync()
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
-                new ByteArrayContent(content)
+                Content = JsonContent.Create(new LoginRequestDto()
                 {
-                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
-                },
-                "file",
-                "chunk.bin"
-            },
-            { new StringContent(hash), "hash" }
-        };
-        HttpResponseMessage uploadRes = await _client.PostAsync("/api/v1/chunks", form);
-        uploadRes.EnsureSuccessStatusCode();
+                    Username = "testuser",
+                    Password = "testpassword"
+                })
+            };
+            request.Headers.Add("X-Forwarded-For", "8.8.8.8");
+            HttpResponseMessage res = await _client!.SendAsync(request);
+            res.EnsureSuccessStatusCode();
+            TokenPairResponseDto? login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+            Assert.That(login, Is.Not.Null);
+            TestContext.Progress.WriteLine($"Login OK. Token: {login!.AccessToken[..Math.Min(16, login.AccessToken.Length)]}...");
+            return login.AccessToken;
+        }
 
-        var fileReq = new CreateFileFromChunksRequestDto
+        [Test]
+        public async Task GetChildren_NullMetadataInDb_IsSerializedAsEmptyObject()
         {
-            ChunkHashes = [hash],
-            Name = "legacy.txt",
-            ContentType = "text/plain",
-            Hash = hash,
-            NodeId = folder!.Id
-        };
-        HttpResponseMessage createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
-        createFileRes.EnsureSuccessStatusCode();
+            var token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        int updated = await DbContext.NodeFiles
-            .Where(f => f.NodeId == folder.Id)
-            .ExecuteUpdateAsync(s => s.SetProperty(
-                x => x.Metadata,
-                (Dictionary<string, string>?)null));
-        Assert.That(updated, Is.EqualTo(1));
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
 
-        HttpResponseMessage listRes = await _client.GetAsync($"/api/v1/layouts/nodes/{folder.Id}/children");
-        listRes.EnsureSuccessStatusCode();
-        var rawJson = await listRes.Content.ReadAsStringAsync();
-        Assert.That(rawJson, Does.Not.Contain("\"metadata\":null"));
+            HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync(
+                "/api/v1/layouts/nodes",
+                new CreateNodeRequestDto { ParentId = root!.Id, Name = "null-meta" });
+            createNodeRes.EnsureSuccessStatusCode();
+            NodeDto? folder = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
+            Assert.That(folder, Is.Not.Null);
 
-        NodeContentDto? list = JsonSerializer.Deserialize<NodeContentDto>(
-            rawJson,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        Assert.That(list, Is.Not.Null);
-        NodeFileManifestDto[] files = list!.Files.ToArray();
-        Assert.That(files, Has.Length.EqualTo(1));
-        Assert.That(files[0].Metadata, Is.Not.Null);
-        Assert.That(files[0].Metadata, Is.Empty);
-    }
+            var content = Encoding.UTF8.GetBytes("payload");
+            var hash = Hasher.ToHexStringHash(Hasher.HashData(content));
+            using var form = new MultipartFormDataContent
+            {
+                {
+                    new ByteArrayContent(content)
+                    {
+                        Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                    },
+                    "file",
+                    "chunk.bin"
+                },
+                { new StringContent(hash), "hash" }
+            };
+            HttpResponseMessage uploadRes = await _client.PostAsync("/api/v1/chunks", form);
+            uploadRes.EnsureSuccessStatusCode();
 
-    [Test]
-    public async Task Cannot_Create_Duplicate_Node_Name_Within_Same_Parent()
-    {
-        var token = await LoginAsync();
-        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-        Assert.That(root, Is.Not.Null);
+            var fileReq = new CreateFileFromChunksRequestDto
+            {
+                ChunkHashes = [hash],
+                Name = "legacy.txt",
+                ContentType = "text/plain",
+                Hash = hash,
+                NodeId = folder!.Id
+            };
+            HttpResponseMessage createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+            createFileRes.EnsureSuccessStatusCode();
 
-        var name = "dup";
-        var req = new CreateNodeRequestDto { ParentId = root!.Id, Name = name };
-        // First create should succeed
-        HttpResponseMessage r1 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
-        r1.EnsureSuccessStatusCode();
-        // Second create with same name under same parent should return conflict (409)
-        HttpResponseMessage r2 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
-        Assert.That(r2.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
-        TestContext.Progress.WriteLine($"Duplicate create returned status: {(int)r2.StatusCode} {r2.StatusCode}");
+            int updated = await DbContext.NodeFiles
+                .Where(f => f.NodeId == folder.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(
+                    x => x.Metadata,
+                    (Dictionary<string, string>?)null));
+            Assert.That(updated, Is.EqualTo(1));
 
-        // Verify DB has only one such node
-        var duplicates = await DbContext.Nodes
-            .AsNoTracking()
-            .Where(n => n.ParentId == root.Id && n.Name == name)
-            .CountAsync();
-        Assert.That(duplicates, Is.EqualTo(1));
+            HttpResponseMessage listRes = await _client.GetAsync($"/api/v1/layouts/nodes/{folder.Id}/children");
+            listRes.EnsureSuccessStatusCode();
+            var rawJson = await listRes.Content.ReadAsStringAsync();
+            Assert.That(rawJson, Does.Not.Contain("\"metadata\":null"));
+
+            NodeContentDto? list = JsonSerializer.Deserialize<NodeContentDto>(
+                rawJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            Assert.That(list, Is.Not.Null);
+            NodeFileManifestDto[] files = list!.Files.ToArray();
+            Assert.That(files, Has.Length.EqualTo(1));
+            Assert.That(files[0].Metadata, Is.Not.Null);
+            Assert.That(files[0].Metadata, Is.Empty);
+        }
+
+        [Test]
+        public async Task Cannot_Create_Duplicate_Node_Name_Within_Same_Parent()
+        {
+            var token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
+
+            var name = "dup";
+            var req = new CreateNodeRequestDto { ParentId = root!.Id, Name = name };
+            // First create should succeed
+            HttpResponseMessage r1 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
+            r1.EnsureSuccessStatusCode();
+            // Second create with same name under same parent should return conflict (409)
+            HttpResponseMessage r2 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
+            Assert.That(r2.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            TestContext.Progress.WriteLine($"Duplicate create returned status: {(int)r2.StatusCode} {r2.StatusCode}");
+
+            // Verify DB has only one such node
+            var duplicates = await DbContext.Nodes
+                .AsNoTracking()
+                .Where(n => n.ParentId == root.Id && n.Name == name)
+                .CountAsync();
+            Assert.That(duplicates, Is.EqualTo(1));
+        }
     }
 }

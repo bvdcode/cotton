@@ -139,7 +139,7 @@ namespace Cotton.Server.Controllers
 
         private readonly record struct PreviewToken(char Kind, byte[] EncryptedHash);
 
-        private sealed class PreviewGateLease(SemaphoreSlim gate) : IDisposable
+        private class PreviewGateLease(SemaphoreSlim gate) : IDisposable
         {
             private SemaphoreSlim? _gate = gate;
 

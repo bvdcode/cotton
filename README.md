@@ -287,7 +287,7 @@ Writes flow through the storage pipeline **compression → crypto → backend** 
 ## Repo Map
 
 - `src/Cotton.Server` — ASP.NET Core API, SPA hosting, controllers, mediator handlers, Quartz jobs, SignalR hub, application services.
-- `src/Cotton.Database` — EF Core `CottonDbContext`, entity models, migrations, integrity descriptors.
+- `src/Cotton.Database` — EF Core `CottonDbContext`, entity models, migrations, and integrity shadow-column integration.
 - `src/Cotton.Storage` — storage pipeline, processors (compression/crypto), filesystem & S3 backends, seekable read streams.
 - `src/Cotton.Crypto` — in-repo streaming AES-GCM cipher (`AesGcmStreamCipher`) and HKDF key derivation (`KeyDerivation`).
 - `src/Cotton.Topology` — layout/tree manipulation services.
@@ -296,11 +296,12 @@ Writes flow through the storage pipeline **compression → crypto → backend** 
 - `src/Cotton.Validators` — name/username validation (`NameValidator`, `NameKey` generation).
 - `src/Cotton.Localization` — server-side notification templates.
 - `src/Cotton.Shared` — shared contracts (`Constants`, `Routes`, DTOs, email templates); published as the `Cotton` NuGet package.
-- `src/Cotton.Benchmark` — BenchmarkDotNet-style suite over the real storage/crypto/preview paths.
+- `src/Cotton.Sdk` — typed HTTP and SignalR client published as the `Cotton.Sdk` NuGet package.
+- `src/Cotton.Benchmark` — repository benchmark harness over real storage and cryptography paths.
 - `src/cotton.client` — React/TypeScript/Vite frontend.
 - `docs/technical/` — full engineering documentation (28 sections).
 
-> Note: the runtime cipher and stream-cipher helpers are implemented in the in-repo `Cotton.Crypto` project. The server reads and writes only the authenticated `CTN2` stream format; temporary browser-only `CTN1` read compatibility remains deprecated.
+> Note: the runtime cipher and stream-cipher helpers are implemented in the in-repo `Cotton.Crypto` project. The server reads and writes only the authenticated `CTN2` stream format. CTN1 data must be converted by Cotton 0.4.35 before upgrading to version 0.5.
 
 ---
 

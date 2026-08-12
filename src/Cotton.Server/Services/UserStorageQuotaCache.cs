@@ -8,7 +8,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Coordinates process-wide cached storage usage for quota checks.
     /// </summary>
-    public sealed class UserStorageQuotaCache(IMemoryCache _cache)
+    public class UserStorageQuotaCache(IMemoryCache _cache)
     {
         private static readonly TimeSpan EntryDuration = TimeSpan.FromMinutes(15);
         private readonly Lock _cacheLock = new();

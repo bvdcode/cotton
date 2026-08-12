@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
-    internal sealed class DatabaseFieldProtector : IDatabaseFieldProtector, IDisposable
+    internal class DatabaseFieldProtector : IDatabaseFieldProtector, IDisposable
     {
         private readonly AesGcmStreamCipher _cipher;
         private readonly ILogger<DatabaseFieldProtector> _logger;

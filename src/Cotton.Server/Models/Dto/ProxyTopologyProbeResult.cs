@@ -6,7 +6,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Contains normalized service and location hints returned by a proxy topology probe.
     /// </summary>
-    public sealed record ProxyTopologyProbeResult(
+    public record ProxyTopologyProbeResult(
         IReadOnlyList<string> Services,
         CloudflareProxyMetadataDto? Cloudflare);
 }

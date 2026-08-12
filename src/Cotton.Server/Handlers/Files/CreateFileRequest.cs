@@ -8,6 +8,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
+using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -19,9 +20,11 @@ using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
+using EasyExtensions.Quartz.Extensions;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Quartz;
 
 namespace Cotton.Server.Handlers.Files
 {
@@ -88,7 +91,9 @@ namespace Cotton.Server.Handlers.Files
         FileManifestService _fileManifestService,
         ISyncChangeRecorder _syncChanges,
         UserStorageQuotaService _quota,
-        ILayoutMutationGate _layoutGate) : IRequestHandler<CreateFileRequest, NodeFileManifestDto>
+        ILayoutMutationGate _layoutGate,
+        ISchedulerFactory _scheduler,
+        IEventNotificationService _notifications) : IRequestHandler<CreateFileRequest, NodeFileManifestDto>
     {
         /// <summary>
         /// Handles the request through the mediator pipeline.
@@ -107,18 +112,48 @@ namespace Cotton.Server.Handlers.Files
             FileManifest fileManifest = await GetOrCreateFileManifestAsync(chunks, request, proposedHash, cancellationToken);
 
             await ValidateContentHashIfRequestedAsync(request, fileManifest, proposedHash, cancellationToken);
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(preTransactionNode.LayoutId, cancellationToken);
-            await using IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(request.UserId, cancellationToken);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            NodeFile nodeFile;
+            long addedBytes;
+            await using (IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(
+                preTransactionNode.LayoutId,
+                cancellationToken))
+            await using (IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(
+                request.UserId,
+                cancellationToken))
+            await using (IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(
+                cancellationToken))
+            {
+                Node node = await GetTargetNodeAsync(
+                    request,
+                    preTransactionNode.LayoutId,
+                    tracking: true,
+                    cancellationToken);
+                await EnsureNoDuplicatesAsync(
+                    node.Id,
+                    request.UserId,
+                    nameKey,
+                    cancellationToken);
+                addedBytes = await _quota.EnsureCanAddFileReferenceAsync(
+                    request.UserId,
+                    fileManifest.Id,
+                    cancellationToken);
 
-            Node node = await GetTargetNodeAsync(request, preTransactionNode.LayoutId, tracking: true, cancellationToken);
-            await EnsureNoDuplicatesAsync(node.Id, request.UserId, nameKey, cancellationToken);
-            long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifest.Id, cancellationToken);
+                nodeFile = await CreateNodeFileAsync(
+                    node,
+                    fileManifest,
+                    request,
+                    cancellationToken);
+                await tx.CommitAsync(cancellationToken);
+            }
 
-            NodeFile nodeFile = await CreateNodeFileAsync(node, fileManifest, request, cancellationToken);
-            await tx.CommitAsync(cancellationToken);
             _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
-            return nodeFile.Adapt<NodeFileManifestDto>();
+
+            NodeFileManifestDto file = nodeFile.Adapt<NodeFileManifestDto>();
+            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
+            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
+            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
+            await _notifications.NotifyFileCreatedAsync(file, cancellationToken);
+            return file;
         }
 
         private async Task<Node> GetTargetNodeAsync(CreateFileRequest request, Guid layoutId, bool tracking, CancellationToken ct)

@@ -2866,6 +2866,7 @@
           "publicBaseUrl": "URL base pubblico",
           "timezone": "Fuso orario",
           "telemetry": "Telemetria",
+          "disableVersionCheck": "Disabilita il controllo degli aggiornamenti",
           "allowDeduplication": "Deduplicazione tra utenti",
           "allowGlobalIndexing": "Indicizzazione globale",
           "serverUsage": "Uso del server",
@@ -2885,6 +2886,7 @@
           "publicBaseUrl": "Nonostante questa impostazione, Cotton determina l'URL pubblico automaticamente quasi ovunque. La imposti solo quando il rilevamento automatico è errato.",
           "timezone": "Questo ci aiuta a evitare l'esecuzione di attività in background mentre dorme, così i Suoi dischi non gireranno di notte.",
           "telemetry": "Cotton raccoglie una diagnostica tecnica minima in modo che lo sviluppatore possa vedere gli errori e correggerli, perché non tutti segnalano i problemi. L’attivazione della telemetria sblocca anche i servizi Cotton Bridge predefiniti.",
+          "disableVersionCheck": "Impedisce a Cotton di contattare GitHub all'avvio per cercare nuove versioni. La versione installata continua a essere registrata localmente.",
           "allowDeduplication": "Controlla se un utente può scoprire che un altro utente archivia già lo stesso file. Quando è disattivata, i dati identici vengono comunque deduplicati sul server dopo il caricamento, ma vengono trasferiti inutilmente prima. Quando è attiva, un altro utente può scoprire che qualcuno in questo cloud aveva già caricato quel file. È sicuro per la famiglia e gli amici fidati.",
           "allowGlobalIndexing": "Consente al server di decifrare i file degli utenti e di costruire un indice di ricerca approfondito. Senza di esso, la ricerca utilizza solo i nomi dei file e delle cartelle.",
           "serverUsage": "Ottimizza i consigli sulle funzionalità e alcune impostazioni. Non è un parametro critico, quindi scelga ciò che ritiene opportuno."

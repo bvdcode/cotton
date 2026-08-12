@@ -22,7 +22,7 @@ Cotton builds OIDC callbacks from the configured public base URL. For reverse-pr
 https://cloud.example.com
 ```
 
-If Cotton is behind a reverse proxy, the proxy should preserve the external scheme and host with forwarded headers such as `X-Forwarded-Proto` and `X-Forwarded-Host`.
+If Cotton is behind a reverse proxy, configure Cotton's trusted-proxy address or CIDR first. The proxy should overwrite client-supplied forwarding headers and then provide the external scheme and host through headers such as `X-Forwarded-Proto` and `X-Forwarded-Host`.
 
 ## Cotton provider fields
 
@@ -78,7 +78,7 @@ If the provider accepts the login but Cotton returns to the login page:
 - Check that `POST /api/v1/auth/refresh` succeeds after the callback.
 - Confirm that Cotton public base URL exactly matches the external HTTPS URL users open in the browser.
 - Confirm that the provider redirect URI exactly matches Cotton's callback URL.
-- If running behind a reverse proxy, confirm forwarded host/proto headers are passed through.
+- If running behind a reverse proxy, confirm its immediate address is inside Cotton's configured trusted-proxy boundary and that it overwrites forwarded host/proto headers.
 - Check whether browser privacy settings or embedded contexts block cookies for the Cotton domain.
 
 If the user is created but cannot sign in again, confirm that the provider sends the same stable `sub` claim for every login and that the provider remains enabled in Cotton.

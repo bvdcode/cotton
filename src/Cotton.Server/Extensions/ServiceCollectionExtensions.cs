@@ -72,7 +72,7 @@ namespace Cotton.Server.Extensions
         /// </summary>
         public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
         {
-            services.AddSingleton<IDatabaseIntegrityKeyProvider, DatabaseIntegrityKeyProvider>();
+            services.AddSingleton<DatabaseIntegrityKeyProvider>();
             services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
             services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
             services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
@@ -108,7 +108,7 @@ namespace Cotton.Server.Extensions
         public static IServiceCollection AddStartupValidation(this IServiceCollection services)
         {
             services.AddSingleton<TempDirectoryProbe>();
-            services.AddScoped<IStartupPreflightValidator, StartupPreflightValidator>();
+            services.AddScoped<StartupPreflightValidator>();
             services.AddScoped<IStartupCheck, TempDirectoryStartupCheck>();
 
             return services;
@@ -117,9 +117,8 @@ namespace Cotton.Server.Extensions
         /// <summary>
         /// Registers layout search services.
         /// </summary>
-        public static IServiceCollection AddLayoutSearchServices(this IServiceCollection services)
+        public static IServiceCollection AddLayoutSearchProviders(this IServiceCollection services)
         {
-            services.AddScoped<ILayoutSearchService, LayoutSearchService>();
             services.AddScoped<ILayoutSearchProvider, NameLayoutSearchProvider>();
             services.AddScoped<ILayoutSearchProvider, NoOpVectorLayoutSearchProvider>();
             return services;

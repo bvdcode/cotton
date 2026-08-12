@@ -65,6 +65,12 @@ namespace Cotton.Database.Models
         public bool TelemetryEnabled { get; set; }
 
         /// <summary>
+        /// Whether checking GitHub for newer Cotton releases is disabled.
+        /// </summary>
+        [Column("disable_version_check")]
+        public bool DisableVersionCheck { get; set; }
+
+        /// <summary>
         /// Server timezone identifier used for admin-facing timestamps.
         /// </summary>
         [Column("timezone")]

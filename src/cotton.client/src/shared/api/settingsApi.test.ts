@@ -133,6 +133,7 @@ describe("settingsApi getters", () => {
     const get = vi
       .spyOn(httpClient, "get")
       .mockResolvedValueOnce({ data: { telemetryEnabled: true } })
+      .mockResolvedValueOnce({ data: { disableVersionCheck: true } })
       .mockResolvedValueOnce({
         data: { allowCrossUserDeduplication: false },
       })
@@ -149,6 +150,7 @@ describe("settingsApi getters", () => {
       });
 
     await expect(settingsApi.getTelemetry()).resolves.toBe(true);
+    await expect(settingsApi.getDisableVersionCheck()).resolves.toBe(true);
     await expect(settingsApi.getAllowCrossUserDeduplication()).resolves.toBe(
       false,
     );
@@ -168,31 +170,36 @@ describe("settingsApi getters", () => {
     );
     expect(get).toHaveBeenNthCalledWith(
       2,
-      "server/settings/allow-cross-user-deduplication",
+      "server/settings/disable-version-check",
       undefined,
     );
     expect(get).toHaveBeenNthCalledWith(
       3,
-      "server/settings/allow-global-indexing",
+      "server/settings/allow-cross-user-deduplication",
       undefined,
     );
     expect(get).toHaveBeenNthCalledWith(
       4,
-      "server/settings/timezone",
+      "server/settings/allow-global-indexing",
       undefined,
     );
     expect(get).toHaveBeenNthCalledWith(
       5,
-      "server/settings/public-base-url",
+      "server/settings/timezone",
       undefined,
     );
     expect(get).toHaveBeenNthCalledWith(
       6,
-      "server/settings/default-user-storage-quota-bytes",
+      "server/settings/public-base-url",
       undefined,
     );
     expect(get).toHaveBeenNthCalledWith(
       7,
+      "server/settings/default-user-storage-quota-bytes",
+      undefined,
+    );
+    expect(get).toHaveBeenNthCalledWith(
+      8,
       "server/settings/default-user-template-node",
       undefined,
     );
@@ -339,6 +346,7 @@ describe("settingsApi setters", () => {
     });
 
     await settingsApi.setTelemetry(true);
+    await settingsApi.setDisableVersionCheck(true);
     await settingsApi.setAllowCrossUserDeduplication(false);
     await settingsApi.setAllowGlobalIndexing(true);
     await settingsApi.setServerUsage(["Photos", "Documents"]);
@@ -352,35 +360,40 @@ describe("settingsApi setters", () => {
     expect(patch).toHaveBeenNthCalledWith(1, "server/settings/telemetry", true);
     expect(patch).toHaveBeenNthCalledWith(
       2,
+      "server/settings/disable-version-check",
+      true,
+    );
+    expect(patch).toHaveBeenNthCalledWith(
+      3,
       "server/settings/allow-cross-user-deduplication",
       false,
     );
     expect(patch).toHaveBeenNthCalledWith(
-      3,
+      4,
       "server/settings/allow-global-indexing",
       true,
     );
-    expect(patch).toHaveBeenNthCalledWith(4, "server/settings/server-usage", [
+    expect(patch).toHaveBeenNthCalledWith(5, "server/settings/server-usage", [
       "Photos",
       "Documents",
     ]);
     expect(patch).toHaveBeenNthCalledWith(
-      5,
+      6,
       "server/settings/timezone",
       "Europe/Amsterdam",
     );
     expect(patch).toHaveBeenNthCalledWith(
-      6,
+      7,
       "server/settings/public-base-url",
       "https://cotton.example",
     );
     expect(patch).toHaveBeenNthCalledWith(
-      7,
+      8,
       "server/settings/default-user-storage-quota-bytes",
       1073741824,
     );
     expect(patch).toHaveBeenNthCalledWith(
-      8,
+      9,
       "server/settings/default-user-template-node",
       "019e2537-492b-77d3-83e4-efe942c6156c",
     );

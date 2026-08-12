@@ -1,42 +1,21 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Files;
-using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
-using Cotton.Models.Enums;
-using Cotton.Previews;
-using Cotton.Previews.Http;
-using Cotton.Server.Abstractions;
 using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
-using Cotton.Server.Hubs;
-using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
-using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
-using Cotton.Storage.Extensions;
-using Cotton.Storage.Pipelines;
-using Cotton.Validators;
 using EasyExtensions;
-using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
-using EasyExtensions.Quartz.Extensions;
-using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Net.Http.Headers;
-using Quartz;
 using FileVersionDto = Cotton.Files.FileVersionDto;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Controllers
 {
@@ -46,133 +25,8 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class FileController(
         IMediator _mediator,
-        IStoragePipeline _storage,
-        CottonDbContext _dbContext,
-        ISyncChangeRecorder _syncChanges,
-        ISchedulerFactory _scheduler,
-        IHubContext<EventHub> _hubContext,
-        FileManifestService _fileManifestService,
-        FileVersionService _versions,
-        UserStorageQuotaService _quota,
-        VideoTranscoder _videoTranscoder,
-        HlsTranscodeCoordinator _hlsTranscodes,
-        HlsSegmentCache _segmentCache,
-        IMemoryCache _cache,
-        IDatabaseIntegrityVerifier _integrity,
-        FileGraphIntegrityVerifier _fileGraphIntegrity,
-        ILayoutMutationGate _layoutGate,
-        PublicShareTokenGenerator _publicShareTokens,
-        PublicShareLookupFailureLimiter _publicShareLookupFailures,
-        ILogger<FileController> _logger) : ControllerBase
+        IStoragePipeline _storage) : ControllerBase
     {
-        private static readonly TimeSpan HlsMediaProbeCacheLifetime = TimeSpan.FromHours(1);
-
-        /// <summary>
-        /// Creates or returns a public file share response.
-        /// </summary>
-        [HttpGet("/s/{token}")]
-        [HttpHead("/s/{token}")]
-        public async Task<IActionResult> Share(
-            [FromRoute] string token,
-            [FromQuery] string? view = null,
-            [FromQuery] bool preview = false)
-        {
-            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
-                _publicShareLookupFailures,
-                token);
-            if (blocked is not null)
-            {
-                return blocked;
-            }
-
-            ShareFileResult result = await _mediator.Send(new ShareFileQuery(token, view, preview, Request));
-
-            if (result.IsTokenLookupFailure)
-            {
-                IActionResult? rejection = this.GetPublicShareLookupFailureRejection(
-                    _publicShareLookupFailures,
-                    token);
-                if (rejection is not null)
-                {
-                    return rejection;
-                }
-            }
-
-            return result.Kind switch
-            {
-                "badRequest" => this.ApiBadRequest(result.ErrorMessage ?? "Bad request"),
-                "notFound" => this.ApiNotFound(result.ErrorMessage ?? "File not found"),
-                "redirect" => Redirect(result.RedirectUrl ?? "/"),
-                "html" => Content(result.HtmlContent ?? string.Empty, "text/html; charset=utf-8"),
-                "head" => CreateShareHeadResponse(result),
-                "stream" => CreateShareStreamResponse(result),
-                _ => this.ApiBadRequest("Invalid share response")
-            };
-        }
-
-        private IActionResult CreateShareHeadResponse(ShareFileResult result)
-        {
-            bool requestedInline = result.Inline == true;
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, requestedInline);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            Response.ContentType = FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline);
-            Response.ContentLength = result.ContentLength;
-            if (!string.IsNullOrWhiteSpace(result.EntityTag))
-            {
-                Response.Headers.ETag = result.EntityTag;
-            }
-
-            ContentDispositionHeaderValue contentDisposition = new(
-                FileResponseSecurity.ResolveContentDispositionType(result.ContentType, requestedInline))
-            {
-                FileNameStar = result.FileName,
-                FileName = result.FileName,
-            };
-            Response.Headers[HeaderNames.ContentDisposition] = contentDisposition.ToString();
-            return new EmptyResult();
-        }
-
-        private IActionResult CreateShareStreamResponse(ShareFileResult result)
-        {
-            bool requestedInline = string.IsNullOrWhiteSpace(result.DownloadName);
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, requestedInline);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            RegisterDeleteAfterUse(result);
-
-            string streamFileName = result.FileName ?? result.DownloadName ?? "download";
-            string? streamDownloadName = requestedInline
-                ? FileResponseSecurity.ResolveFileDownloadName(streamFileName, requestedInline: true, result.ContentType)
-                : result.DownloadName;
-            return File(
-                result.FileStream!,
-                FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline),
-                fileDownloadName: streamDownloadName,
-                lastModified: result.LastModified,
-                entityTag: result.EntityTagValue!,
-                enableRangeProcessing: true);
-        }
-
-        private void RegisterDeleteAfterUse(ShareFileResult result)
-        {
-            if (!result.DeleteAfterUse || !result.DeleteTokenId.HasValue)
-            {
-                return;
-            }
-
-            Guid tokenId = result.DeleteTokenId.Value;
-            Response.OnCompleted(async () =>
-            {
-                DownloadToken? tokenEntity = await _dbContext.DownloadTokens
-                    .FirstOrDefaultAsync(x => x.Id == tokenId);
-                if (tokenEntity is not null)
-                {
-                    _dbContext.DownloadTokens.Remove(tokenEntity);
-                    await _dbContext.SaveChangesAsync();
-                }
-            });
-        }
 
         /// <summary>
         /// Deletes file.
@@ -184,17 +38,14 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool skipTrash = false)
         {
             Guid userId = User.GetUserId();
-            Guid? parentNodeId = await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .Select(x => (Guid?)x.NodeId)
-                .SingleOrDefaultAsync();
-            DeleteFileQuery query = new(userId, nodeFileId, skipTrash, FileETags.ReadIfMatch(Request));
-            await _mediator.Send(query);
-
-            await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                "FileDeleted",
-                new NodeFileDeletedEventDto(nodeFileId, parentNodeId));
+            DeleteFileRequest request = new(
+                userId,
+                nodeFileId,
+                skipTrash,
+                FileETags.ReadIfMatch(Request));
+            await _mediator.Send(
+                request,
+                HttpContext.RequestAborted);
             return NoContent();
         }
 
@@ -215,16 +66,6 @@ namespace Cotton.Server.Controllers
                 nodeFileId,
                 request.CreateMissingParents,
                 request.Overwrite));
-
-            if (outcome.Status == RestoreStatus.Restored)
-            {
-                object restoredFilePayload = outcome.RestoredFile is not null
-                    ? outcome.RestoredFile
-                    : new { id = nodeFileId };
-                await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                    "FileRestored",
-                    restoredFilePayload);
-            }
 
             return Ok(outcome);
         }
@@ -258,72 +99,26 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeFileId,
             [FromBody] RenameFileRequestDto request)
         {
-            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
-                out string normalizedName,
-                out string? errorMessage);
-            if (!isValidName)
-            {
-                return CottonResult.BadRequest(errorMessage);
-            }
-
             Guid userId = User.GetUserId();
-            Guid? layoutId = await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .Select(x => (Guid?)x.Node.LayoutId)
-                .SingleOrDefaultAsync();
-            if (layoutId is null)
+            RenameFileResult result = await _mediator.Send(
+                new RenameFileRequest(
+                    userId,
+                    nodeFileId,
+                    request.Name,
+                    FileETags.ReadIfMatch(Request)),
+                HttpContext.RequestAborted);
+            if (result.Status != RenameFileStatus.Renamed)
             {
-                return CottonResult.NotFound("File not found.");
-            }
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId.Value, HttpContext.RequestAborted);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
-
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
-            if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
-            {
-                return CottonResult.NotFound("File not found.");
+                return result.Status switch
+                {
+                    RenameFileStatus.InvalidName => CottonResult.BadRequest(result.Error!),
+                    RenameFileStatus.FileNotFound => CottonResult.NotFound(result.Error!),
+                    RenameFileStatus.NameConflict => this.ApiConflict(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
-            if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
-            {
-                throw new FilePreconditionFailedException<NodeFile>("File content changed before rename.");
-            }
-
-            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            bool fileExists = await _dbContext.NodeFiles
-                .AnyAsync(x =>
-                    x.NodeId == nodeFile.NodeId &&
-                    x.OwnerId == userId &&
-                    x.NameKey == nameKey &&
-                    x.Id != nodeFileId);
-            if (fileExists)
-            {
-                return this.ApiConflict("A file with the same name key already exists in this folder: " + nameKey);
-            }
-
-            bool nodeExists = await _dbContext.Nodes
-                .AnyAsync(x =>
-                    x.ParentId == nodeFile.NodeId &&
-                    x.OwnerId == userId &&
-                    x.Type == nodeFile.Node.Type &&
-                    x.NameKey == nameKey);
-            if (nodeExists)
-            {
-                return this.ApiConflict("A folder with the same name key already exists in this folder: " + nameKey);
-            }
-
-            nodeFile.SetName(request.Name);
-            _syncChanges.StageFileChange(SyncChangeKind.FileRenamed, nodeFile, nodeFile.Node.LayoutId);
-            await _dbContext.SaveChangesAsync();
-            await tx.CommitAsync();
-            NodeFileManifestDto mapped = nodeFile.Adapt<NodeFileManifestDto>();
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileRenamed", mapped);
-            return Ok(mapped);
+            return Ok(result.File!);
         }
 
         /// <summary>
@@ -338,58 +133,21 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeFileId,
             [FromBody] Dictionary<string, string?>? patch)
         {
-            if (patch is null)
-            {
-                return CottonResult.BadRequest("Metadata patch is required.");
-            }
-
-            if (patch.Any(x => string.IsNullOrWhiteSpace(x.Key)))
-            {
-                return CottonResult.BadRequest("Metadata keys must be non-empty strings.");
-            }
-
-            if (patch.Any(x => x.Value is null))
-            {
-                return CottonResult.BadRequest("Metadata values must be strings.");
-            }
-
             Guid userId = User.GetUserId();
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
-            if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
+            UpdateFileMetadataResult result = await _mediator.Send(
+                new UpdateFileMetadataRequest(userId, nodeFileId, patch),
+                HttpContext.RequestAborted);
+            if (result.Status != UpdateFileMetadataStatus.Updated)
             {
-                return CottonResult.NotFound("File not found.");
+                return result.Status switch
+                {
+                    UpdateFileMetadataStatus.InvalidPatch => CottonResult.BadRequest(result.Error!),
+                    UpdateFileMetadataStatus.FileNotFound => CottonResult.NotFound(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
-            Dictionary<string, string> metadata = nodeFile.Metadata is null
-                ? []
-                : new Dictionary<string, string>(nodeFile.Metadata);
-            foreach ((string? key, string? value) in patch)
-            {
-                metadata[key] = value!;
-            }
-
-            nodeFile.Metadata = metadata;
-            _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, nodeFile.Node.LayoutId);
-            await _dbContext.SaveChangesAsync();
-
-            NodeFileManifestDto mapped = nodeFile.Adapt<NodeFileManifestDto>();
-            try
-            {
-                await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Failed to send file metadata update notification for file {NodeFileId}",
-                    nodeFileId);
-            }
-
-            return Ok(mapped);
+            return Ok(result.File!);
         }
 
         /// <summary>
@@ -423,7 +181,9 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            IReadOnlyList<FileVersionDto> versions = await _versions.ListVersionsAsync(userId, nodeFileId, cancellationToken);
+            IReadOnlyList<FileVersionDto> versions = await _mediator.Send(
+                new GetFileVersionsQuery(userId, nodeFileId),
+                cancellationToken);
             return Ok(versions);
         }
 
@@ -438,8 +198,9 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            NodeFileManifestDto restored = await _versions.RestoreVersionAsync(userId, nodeFileId, versionId, cancellationToken);
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", restored, cancellationToken);
+            NodeFileManifestDto restored = await _mediator.Send(
+                new RestoreFileVersionRequest(userId, nodeFileId, versionId),
+                cancellationToken);
             return Ok(restored);
         }
 
@@ -454,7 +215,9 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            await _versions.DeleteVersionAsync(userId, nodeFileId, versionId, cancellationToken);
+            await _mediator.Send(
+                new DeleteFileVersionRequest(userId, nodeFileId, versionId),
+                cancellationToken);
             return NoContent();
         }
 
@@ -470,72 +233,14 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken = default)
         {
             Guid userId = User.GetUserId();
-            string link = await _versions.CreateVersionDownloadLinkAsync(
-                userId,
-                nodeFileId,
-                versionId,
-                expireAfterMinutes,
+            string link = await _mediator.Send(
+                new CreateFileVersionDownloadLinkRequest(
+                    userId,
+                    nodeFileId,
+                    versionId,
+                    expireAfterMinutes),
                 cancellationToken);
             return Ok(link);
-        }
-
-        /// <summary>
-        /// Downloads file.
-        /// </summary>
-        [Authorize]
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download-link")]
-        public async Task<IActionResult> DownloadFile(
-            [FromRoute] Guid nodeFileId,
-            [FromQuery] int expireAfterMinutes = 1440,
-            [FromQuery] string? customToken = "",
-            [FromQuery] bool deleteAfterUse = false)
-        {
-            const int maxExpireMinutes = 60 * 24 * 365; // 1 year
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(expireAfterMinutes, maxExpireMinutes, nameof(expireAfterMinutes));
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expireAfterMinutes, nameof(expireAfterMinutes));
-
-            if (!string.IsNullOrWhiteSpace(customToken))
-            {
-                bool exists = await ShareTokenExistsAsync(customToken);
-                if (exists)
-                {
-                    return this.ApiConflict("The custom token is already in use. Please choose a different one.");
-                }
-            }
-
-            Guid userId = User.GetUserId();
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .SingleOrDefaultAsync();
-            if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
-            {
-                return CottonResult.NotFound("Node file not found");
-            }
-
-            DownloadToken newToken = new()
-            {
-                FileName = nodeFile.Name,
-                DeleteAfterUse = deleteAfterUse,
-                CreatedByUserId = userId,
-                NodeFileId = nodeFile.Id,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
-                Token = !string.IsNullOrWhiteSpace(customToken)
-                    ? customToken
-                    : await _publicShareTokens.CreateUniqueAsync(HttpContext.RequestAborted),
-            };
-            await _dbContext.DownloadTokens.AddAsync(newToken);
-            await _dbContext.SaveChangesAsync();
-            string link = Routes.V1.Files + $"/{nodeFileId}/download?token={newToken.Token}";
-            return Ok(link);
-        }
-
-        private async Task<bool> ShareTokenExistsAsync(string token)
-        {
-            return await _dbContext.DownloadTokens.AnyAsync(x => x.Token == token)
-                || await _dbContext.NodeShareTokens.AnyAsync(x => x.Token == token);
         }
 
         /// <summary>
@@ -548,15 +253,19 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool download = false)
         {
             Guid userId = User.GetUserId();
-            NodeFile? nodeFile = await LoadOwnedDefaultNodeFileWithContentAsync(nodeFileId, userId);
+            NodeFile? nodeFile = await _mediator.Send(
+                new ResolveOwnedFileContentQuery(
+                    userId,
+                    nodeFileId,
+                    OwnedFileContentPurpose.Download,
+                    FileETags.ReadIfMatch(Request)),
+                HttpContext.RequestAborted);
             if (nodeFile is null)
             {
                 return CottonResult.NotFound("Node file not found");
             }
 
-            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.content");
-            EnsureContentETagPrecondition(nodeFile, "File content changed before download.");
-            return ServeFileDownload(nodeFile, download);
+            return FileDownloadResultFactory.Create(Response, _storage, nodeFile, download);
         }
 
         /// <summary>
@@ -567,36 +276,18 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetOwnedFileContentManifest([FromRoute] Guid nodeFileId)
         {
             Guid userId = User.GetUserId();
-            NodeFile? nodeFile = await LoadOwnedDefaultNodeFileWithContentAsync(nodeFileId, userId);
-            if (nodeFile is null)
+            FileContentManifestDto? manifest = await _mediator.Send(
+                new GetOwnedFileContentManifestQuery(
+                    userId,
+                    nodeFileId,
+                    FileETags.ReadIfMatch(Request)),
+                HttpContext.RequestAborted);
+            if (manifest is null)
             {
                 return CottonResult.NotFound("Node file not found");
             }
 
-            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.content-manifest");
-            EnsureContentETagPrecondition(nodeFile, "File content changed before manifest fetch.");
-            return Ok(CreateContentManifestDto(nodeFile));
-        }
-
-        private Task<NodeFile?> LoadOwnedDefaultNodeFileWithContentAsync(Guid nodeFileId, Guid userId)
-        {
-            return _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x =>
-                    x.Id == nodeFileId &&
-                    x.OwnerId == userId &&
-                    x.Node.Type == NodeType.Default);
-        }
-
-        private void EnsureContentETagPrecondition(NodeFile nodeFile, string message)
-        {
-            if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
-            {
-                throw new FilePreconditionFailedException<NodeFile>(message);
-            }
+            return Ok(manifest);
         }
 
         /// <summary>
@@ -608,719 +299,31 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeFileId,
             [FromBody] CreateFileFromChunksRequestDto request)
         {
-            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
-                out string normalizedName,
-                out string? errorMessage);
-            if (!isValidName)
-            {
-                return CottonResult.BadRequest(errorMessage);
-            }
-
             Guid userId = User.GetUserId();
-            Guid? layoutId = await GetOwnedFileLayoutIdAsync(nodeFileId, userId);
-            if (layoutId is null)
-            {
-                return this.ApiNotFound("Node file not found.");
-            }
-
-            byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
-            FileManifest newFile = await ResolveUpdateManifestAsync(request, proposedHash, userId);
-
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId.Value, HttpContext.RequestAborted);
-            NodeFile nodeFile;
-            await using (IAsyncDisposable quotaGate = await _quota.EnterMutationAsync(userId, HttpContext.RequestAborted))
-            await using (IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync())
-            {
-                NodeFile? editableNodeFile = await LoadEditableNodeFileAsync(nodeFileId, userId);
-                if (editableNodeFile is null)
-                {
-                    return this.ApiNotFound("Node file not found.");
-                }
-
-                nodeFile = editableNodeFile;
-                if (!FileETags.MatchesIfMatchHeader(FileETags.ReadIfMatch(Request), nodeFile))
-                {
-                    throw new FilePreconditionFailedException<NodeFile>("File content changed before update.");
-                }
-
-                string nameKey = NameValidator.NormalizeAndGetNameKey(normalizedName);
-                string? conflictMessage = await FindUpdateNameConflictAsync(nodeFile, userId, nodeFileId, nameKey);
-                if (conflictMessage is not null)
-                {
-                    return this.ApiConflict(conflictMessage);
-                }
-
-                long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(userId, nodeFile.Id, newFile.Id);
-                FileVersionCaptureResult capture = await ApplyUpdatedFileContentAsync(
-                    nodeFile,
-                    newFile,
-                    proposedHash,
-                    normalizedName,
-                    request.Metadata,
-                    userId);
-
-                _syncChanges.StageFileChange(SyncChangeKind.FileContentUpdated, nodeFile, layoutId.Value);
-                await _dbContext.SaveChangesAsync();
-                await tx.CommitAsync();
-                _quota.RecordLogicalBytesAdded(userId, addedBytes);
-                if (capture.RemovedBytes > 0)
-                {
-                    _quota.RecordLogicalBytesRemoved(userId, capture.RemovedBytes);
-                }
-            }
-
-            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
-            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
-            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
-
-            NodeFileManifestDto mapped = nodeFile.Adapt<NodeFileManifestDto>();
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
-            return Ok(mapped);
-        }
-
-        private async Task<Guid?> GetOwnedFileLayoutIdAsync(Guid nodeFileId, Guid userId)
-        {
-            return await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .Select(x => (Guid?)x.Node.LayoutId)
-                .SingleOrDefaultAsync();
-        }
-
-        private async Task<FileManifest> ResolveUpdateManifestAsync(
-            CreateFileFromChunksRequestDto request,
-            byte[] proposedHash,
-            Guid userId)
-        {
-            List<Chunk> chunks = await _fileManifestService.GetChunksAsync([.. request.ChunkHashes], userId);
-            return await _fileManifestService.GetReusableOwnedManifestAsync(proposedHash, userId)
-                ?? await _fileManifestService.CreateNewFileManifestAsync(
-                    chunks,
-                    request.Name,
-                    request.ContentType,
-                    proposedHash,
-                    userId);
-        }
-
-        private async Task<NodeFile?> LoadEditableNodeFileAsync(Guid nodeFileId, Guid userId)
-        {
-            return await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId && x.Node.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-        }
-
-        private async Task<string?> FindUpdateNameConflictAsync(
-            NodeFile nodeFile,
-            Guid userId,
-            Guid nodeFileId,
-            string nameKey)
-        {
-            if (string.Equals(nodeFile.NameKey, nameKey, StringComparison.Ordinal))
-            {
-                return null;
-            }
-
-            bool fileExists = await _dbContext.NodeFiles.AnyAsync(x =>
-                x.NodeId == nodeFile.NodeId &&
-                x.OwnerId == userId &&
-                x.NameKey == nameKey &&
-                x.Id != nodeFileId);
-            if (fileExists)
-            {
-                return "A file with the same name key already exists in this folder: " + nameKey;
-            }
-
-            bool nodeExists = await _dbContext.Nodes.AnyAsync(x =>
-                x.ParentId == nodeFile.NodeId &&
-                x.OwnerId == userId &&
-                x.Type == nodeFile.Node.Type &&
-                x.NameKey == nameKey);
-            return nodeExists
-                ? "A folder with the same name key already exists in this folder: " + nameKey
-                : null;
-        }
-
-        private async Task<FileVersionCaptureResult> ApplyUpdatedFileContentAsync(
-            NodeFile nodeFile,
-            FileManifest newFile,
-            byte[] proposedHash,
-            string normalizedName,
-            Dictionary<string, string>? metadata,
-            Guid userId)
-        {
-            FileVersionCaptureResult capture = FileVersionCaptureResult.Empty;
-            if (!nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
-            {
-                capture = await _versions.CaptureAndUpdateManifestAsync(nodeFile, newFile.Id, userId);
-                nodeFile.FileManifest = newFile;
-            }
-
-            nodeFile.SetName(normalizedName);
-            if (metadata is not null)
-            {
-                nodeFile.Metadata = metadata.Count > 0
-                    ? new Dictionary<string, string>(metadata)
-                    : [];
-            }
-
-            return capture;
-        }
-
-        /// <summary>
-        /// Downloads file by token.
-        /// </summary>
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download")]
-        public async Task<IActionResult> DownloadFileByToken(
-            [FromRoute] Guid nodeFileId,
-            [FromQuery] string token,
-            [FromQuery] bool download = true,
-            [FromQuery] bool preview = false)
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return this.ApiNotFound("File not found");
-            }
-
-            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
-                _publicShareLookupFailures,
-                token);
-            if (blocked is not null)
-            {
-                return blocked;
-            }
-
-            DownloadToken? downloadToken = await LoadValidDownloadTokenAsync(token, nodeFileId);
-            if (downloadToken is null)
-            {
-                return this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found");
-            }
-
-            _integrity.RequireValid(_dbContext, downloadToken, "file.download-token");
-
-            NodeFile? nodeFile = await LoadDownloadNodeFileAsync(nodeFileId);
-            if (nodeFile is null || !CanServeTokenDownload(nodeFile))
-            {
-                return CottonResult.NotFound("File not found");
-            }
-
-            bool servesPreview = CanServeLargePreview(nodeFile, preview);
-            RequireDownloadGraphIntegrity(nodeFile, servesPreview);
-
-            return servesPreview
-                ? ServeLargePreview(nodeFile)
-                : ServeTokenFileDownload(nodeFile, downloadToken, download);
-        }
-
-        private Task<NodeFile?> LoadDownloadNodeFileAsync(Guid nodeFileId)
-        {
-            return _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-        }
-
-        private async Task<DownloadToken?> LoadValidDownloadTokenAsync(string token, Guid nodeFileId)
-        {
-            DownloadToken? downloadToken = await _dbContext.DownloadTokens
-                .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFileId);
-
-            return downloadToken is null || IsExpired(downloadToken)
-                ? null
-                : downloadToken;
-        }
-
-        private static bool IsExpired(DownloadToken downloadToken) =>
-            downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow;
-
-        private static bool CanServeTokenDownload(NodeFile nodeFile) =>
-            nodeFile.Node.Type == NodeType.Default || FileVersionService.IsHistoricalVersion(nodeFile);
-
-        private static bool CanServeLargePreview(NodeFile nodeFile, bool preview) =>
-            preview && nodeFile.FileManifest.LargeFilePreviewHash is not null;
-
-        private void RequireDownloadGraphIntegrity(
-            NodeFile nodeFile,
-            bool servesPreview)
-        {
-            if (servesPreview)
-            {
-                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "file.preview");
-                return;
-            }
-
-            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.download");
-        }
-
-        private IActionResult ServeLargePreview(NodeFile nodeFile)
-        {
-            string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash!);
-            EntityTagHeaderValue etagHeader = new($"\"sha256-{previewHashHex}\"");
-            SetLargePreviewCacheHeaders(etagHeader);
-
-            if (FileETags.MatchesIfNoneMatchHeader(Request, etagHeader))
-            {
-                return StatusCode(StatusCodes.Status304NotModified);
-            }
-
-            Stream previewStream = _storage.GetBlobStream([previewHashHex]);
-            return File(previewStream, "image/webp");
-        }
-
-        private void SetLargePreviewCacheHeaders(EntityTagHeaderValue etagHeader)
-        {
-            Response.Headers.ETag = etagHeader.ToString();
-            Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-        }
-
-        private IActionResult ServeTokenFileDownload(
-            NodeFile nodeFile,
-            DownloadToken downloadToken,
-            bool download)
-        {
-            RegisterDeleteAfterUse(downloadToken);
-            return ServeFileDownload(nodeFile, download);
-        }
-
-        private IActionResult ServeFileDownload(NodeFile nodeFile, bool download)
-        {
-            string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
-            PipelineContext context = new()
-            {
-                FileSizeBytes = nodeFile.FileManifest.SizeBytes,
-                ChunkLengths = nodeFile.FileManifest.FileManifestChunks.GetChunkLengths()
-            };
-            Stream stream = _storage.GetBlobStream(uids, context);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            EntityTagHeaderValue entityTag = FileETags.CreateContentEntityTag(nodeFile);
-            bool requestedInline = !download;
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, nodeFile.FileManifest.ContentType, requestedInline);
-
-            return File(
-                stream,
-                FileResponseSecurity.ResolveContentTypeForResponse(nodeFile.FileManifest.ContentType, requestedInline),
-                fileDownloadName: FileResponseSecurity.ResolveFileDownloadName(
-                    nodeFile.Name,
-                    requestedInline,
-                    nodeFile.FileManifest.ContentType),
-                lastModified: new DateTimeOffset(nodeFile.CreatedAt),
-                entityTag: entityTag,
-                enableRangeProcessing: true);
-        }
-
-        private static FileContentManifestDto CreateContentManifestDto(NodeFile nodeFile)
-        {
-            FileManifest manifest = nodeFile.FileManifest;
-            List<FileManifestChunk> orderedChunks = [.. manifest.FileManifestChunks.OrderBy(x => x.ChunkOrder)];
-            var chunkDtos = new List<FileContentManifestChunkDto>(orderedChunks.Count);
-            long offset = 0;
-
-            foreach (FileManifestChunk manifestChunk in orderedChunks)
-            {
-                string chunkHash = Hasher.ToHexStringHash(manifestChunk.ChunkHash);
-                long length = manifestChunk.Chunk.PlainSizeBytes;
-                chunkDtos.Add(new FileContentManifestChunkDto
-                {
-                    Index = manifestChunk.ChunkOrder,
-                    Offset = offset,
-                    Length = length,
-                    Hash = chunkHash,
-                    ChunkId = chunkHash,
-                });
-
-                offset = checked(offset + length);
-            }
-
-            return new FileContentManifestDto
-            {
-                NodeFileId = nodeFile.Id,
-                FileManifestId = manifest.Id,
-                ContentHash = Hasher.ToHexStringHash(manifest.ProposedContentHash),
-                ETag = FileETags.GetContentETag(manifest),
-                SizeBytes = manifest.SizeBytes,
-                ChunkSizeBytes = ResolveNominalChunkSizeBytes(chunkDtos),
-                Chunks = chunkDtos,
-            };
-        }
-
-        private static long? ResolveNominalChunkSizeBytes(IReadOnlyList<FileContentManifestChunkDto> chunks)
-        {
-            if (chunks.Count == 0)
-            {
-                return 0;
-            }
-
-            if (chunks.Count == 1)
-            {
-                return chunks[0].Length;
-            }
-
-            long firstChunkLength = chunks[0].Length;
-            for (int i = 0; i < chunks.Count - 1; i++)
-            {
-                if (chunks[i].Length != firstChunkLength)
-                {
-                    return null;
-                }
-            }
-
-            return firstChunkLength;
-        }
-
-        private void RegisterDeleteAfterUse(DownloadToken downloadToken)
-        {
-            if (!downloadToken.DeleteAfterUse)
-            {
-                return;
-            }
-
-            Response.OnCompleted(async () =>
-            {
-                _dbContext.DownloadTokens.Remove(downloadToken);
-                await _dbContext.SaveChangesAsync();
-            });
-        }
-
-        /// <summary>
-        /// Returns an HLS master playlist for a token-authorized file.
-        /// </summary>
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/master.m3u8")]
-        public async Task<IActionResult> HlsMasterPlaylistByToken(
-            [FromRoute] Guid nodeFileId,
-            [FromQuery] string token)
-        {
-            TranscodableLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
-            if (lookup.Failure is not null)
-            {
-                return lookup.Failure;
-            }
-
-            string encodedToken = Uri.EscapeDataString(token);
-            string PlaylistUrl(string qualityName) =>
-                Routes.V1.Files + $"/{nodeFileId}/hls/playlist.m3u8?token={encodedToken}&quality={qualityName}";
-
-            const string variantCodecs = "avc1.640029,mp4a.40.2";
-            HlsManifestBuilder.HlsVariant[] variants = new[]
-            {
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "Source",
-                    BandwidthBitsPerSecond: 8_000_000,
-                    Width: 1920,
-                    Height: 1080,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("source")),
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "1080p",
-                    BandwidthBitsPerSecond: 3_000_000,
-                    Width: 1920,
-                    Height: 1080,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("high")),
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "720p",
-                    BandwidthBitsPerSecond: 1_500_000,
-                    Width: 1280,
-                    Height: 720,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("medium")),
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "480p",
-                    BandwidthBitsPerSecond: 700_000,
-                    Width: 854,
-                    Height: 480,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("low")),
-            };
-
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            RegisterDeleteAfterUse(lookup.DownloadToken!);
-            return Content(
-                HlsManifestBuilder.BuildMaster(variants),
-                HlsManifestBuilder.ContentType,
-                System.Text.Encoding.UTF8);
-        }
-
-        /// <summary>
-        /// Returns an HLS media playlist for a token-authorized file.
-        /// </summary>
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/playlist.m3u8")]
-        public async Task<IActionResult> HlsVodPlaylistByToken(
-            [FromRoute] Guid nodeFileId,
-            [FromQuery] string token,
-            [FromQuery] string? quality = null)
-        {
-            TranscodableLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
-            if (lookup.Failure is not null)
-            {
-                return lookup.Failure;
-            }
-
-            MediaProbeInfo? probe = await ProbeMediaAsync(lookup.NodeFile!);
-            HlsRendition rendition = HlsRenditionProfile.Parse(quality);
-            string encodedToken = Uri.EscapeDataString(token);
-            string qualityName = rendition.ToString().ToLowerInvariant();
-            string manifest = HlsManifestBuilder.Build(
-                probe?.DurationSeconds ?? 0,
-                segmentIndex => Routes.V1.Files
-                    + $"/{nodeFileId}/hls/seg-{segmentIndex}.ts?token={encodedToken}&quality={qualityName}");
-
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            RegisterDeleteAfterUse(lookup.DownloadToken!);
-            return Content(manifest, HlsManifestBuilder.ContentType, System.Text.Encoding.UTF8);
-        }
-
-        /// <summary>
-        /// Returns one HLS transport-stream segment for a token-authorized file.
-        /// </summary>
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/seg-{segmentIndex:int}.ts")]
-        public async Task<IActionResult> HlsSegmentByToken(
-            [FromRoute] Guid nodeFileId,
-            [FromRoute] int segmentIndex,
-            [FromQuery] string token,
-            [FromQuery] string? quality = null)
-        {
-            if (segmentIndex < 0)
-            {
-                return CottonResult.BadRequest("Segment index must be non-negative.");
-            }
-
-            TranscodableLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
-            if (lookup.Failure is not null)
-            {
-                return lookup.Failure;
-            }
-
-            NodeFile nodeFile = lookup.NodeFile!;
-            DownloadToken downloadToken = lookup.DownloadToken!;
-            HlsRendition rendition = HlsRenditionProfile.Parse(quality);
-            string qualityName = rendition.ToString().ToLowerInvariant();
-            string cacheKey = HlsSegmentCache.BuildKey(
-                nodeFile.FileManifest.Id,
-                qualityName,
-                segmentIndex);
-
-            if (_segmentCache.TryGet(cacheKey, out byte[]? cachedBytes))
-            {
-                RegisterDeleteAfterUse(downloadToken);
-                return ServeCachedHlsSegment(cachedBytes);
-            }
-
-            MediaProbeInfo? probe = await ProbeMediaAsync(nodeFile);
-            if (probe?.DurationSeconds is null or <= 0)
-            {
-                return CottonResult.BadRequest("Could not determine source duration for HLS segmentation.");
-            }
-
-            HlsManifestBuilder.HlsManifestPlan manifestPlan = HlsManifestBuilder.Plan(probe.DurationSeconds.Value);
-            if (segmentIndex >= manifestPlan.SegmentCount)
-            {
-                return CottonResult.NotFound("Segment index out of range.");
-            }
-
-            RegisterDeleteAfterUse(downloadToken);
-
-            return await TranscodeHlsSegmentAsync(
-                nodeFile,
+            UpdateFileContentRequest command = new(
+                userId,
                 nodeFileId,
-                segmentIndex,
-                cacheKey,
-                manifestPlan,
-                rendition,
-                probe);
-        }
-
-        private async Task<IActionResult> TranscodeHlsSegmentAsync(
-            NodeFile nodeFile,
-            Guid nodeFileId,
-            int segmentIndex,
-            string cacheKey,
-            HlsManifestBuilder.HlsManifestPlan manifestPlan,
-            HlsRendition rendition,
-            MediaProbeInfo probe)
-        {
-            await using IAsyncDisposable segmentLease = await _hlsTranscodes.EnterSegmentAsync(
-                cacheKey,
+                request.Name,
+                request.ContentType,
+                request.Hash,
+                [.. request.ChunkHashes],
+                request.Metadata,
+                FileETags.ReadIfMatch(Request));
+            UpdateFileContentResult result = await _mediator.Send(
+                command,
                 HttpContext.RequestAborted);
-            if (_segmentCache.TryGet(cacheKey, out byte[]? cachedBytes))
+            if (result.Status != UpdateFileContentStatus.Updated)
             {
-                return ServeCachedHlsSegment(cachedBytes);
-            }
-
-            await using IAsyncDisposable transcodeLease = await _hlsTranscodes.EnterTranscodeAsync(
-                HttpContext.RequestAborted);
-            double startSeconds = HlsManifestBuilder.StartTimeOf(segmentIndex);
-            double segmentDuration = manifestPlan.DurationOf(segmentIndex);
-            HlsRenditionProfile.EncoderPlan encoderPlan = HlsRenditionProfile.Plan(
-                rendition,
-                probe.VideoCodec,
-                probe.AudioCodec);
-
-            Response.ContentType = VideoTranscoder.SegmentContentType;
-            Response.Headers.CacheControl = "private, max-age=300";
-            Response.Headers.ContentEncoding = "identity";
-
-            using MemoryStream captureStream = new();
-            TeeStream tee = new(Response.Body, captureStream);
-            bool transcodeSucceeded = false;
-
-            await using Stream sourceStream = OpenSourceStream(nodeFile);
-            try
-            {
-                await _videoTranscoder.TranscodeSegmentAsync(
-                    sourceStream,
-                    tee,
-                    startSeconds,
-                    segmentDuration,
-                    encoderPlan,
-                    HttpContext.RequestAborted);
-                transcodeSucceeded = true;
-            }
-            catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
-            {
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "HLS segment {SegmentIndex} failed for node file {NodeFileId}",
-                    segmentIndex,
-                    nodeFileId);
-                if (!Response.HasStarted)
+                return result.Status switch
                 {
-                    return StatusCode(StatusCodes.Status500InternalServerError);
-                }
+                    UpdateFileContentStatus.InvalidName => CottonResult.BadRequest(result.Error!),
+                    UpdateFileContentStatus.FileNotFound => this.ApiNotFound(result.Error!),
+                    UpdateFileContentStatus.NameConflict => this.ApiConflict(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
-            if (transcodeSucceeded && captureStream.Length > 0)
-            {
-                _segmentCache.Set(cacheKey, captureStream.ToArray());
-            }
-
-            return new EmptyResult();
-        }
-
-        private IActionResult ServeCachedHlsSegment(byte[] cachedBytes)
-        {
-            Response.Headers.CacheControl = "private, max-age=300";
-            Response.Headers.ContentEncoding = "identity";
-            return File(cachedBytes, VideoTranscoder.SegmentContentType);
-        }
-
-        private record TranscodableLookup(
-            NodeFile? NodeFile,
-            DownloadToken? DownloadToken,
-            IActionResult? Failure);
-
-        private async Task<TranscodableLookup> ResolveTranscodableSourceAsync(Guid nodeFileId, string? token)
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return new TranscodableLookup(
-                    null,
-                    null,
-                    this.ApiNotFound("File not found"));
-            }
-
-            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
-                _publicShareLookupFailures,
-                token);
-            if (blocked is not null)
-            {
-                return new TranscodableLookup(null, null, blocked);
-            }
-
-            DownloadToken? downloadToken = await LoadValidDownloadTokenAsync(token, nodeFileId);
-            if (downloadToken is null)
-            {
-                return new TranscodableLookup(
-                    null,
-                    null,
-                    this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found"));
-            }
-
-            _integrity.RequireValid(_dbContext, downloadToken, "file.hls-token");
-
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile is null)
-            {
-                return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
-            }
-
-            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "file.hls-source");
-            if (nodeFile.Node.Type != NodeType.Default)
-            {
-                return new TranscodableLookup(null, null, CottonResult.NotFound("File not found"));
-            }
-
-            VideoPlaybackMode playbackMode = VideoPlaybackResolver.Resolve(
-                nodeFile.FileManifest.ContentType,
-                hasPreview: nodeFile.FileManifest.SmallFilePreviewHash is not null);
-            if (playbackMode != VideoPlaybackMode.Transcode)
-            {
-                return new TranscodableLookup(null, null, CottonResult.BadRequest(
-                    "This file is not eligible for on-the-fly transcoding."));
-            }
-
-            return new TranscodableLookup(nodeFile, downloadToken, null);
-        }
-
-        private Stream OpenSourceStream(NodeFile nodeFile)
-        {
-            FileManifest manifest = nodeFile.FileManifest;
-            string[] uids = manifest.FileManifestChunks.GetChunkHashes();
-            PipelineContext context = new()
-            {
-                FileSizeBytes = manifest.SizeBytes,
-                ChunkLengths = manifest.FileManifestChunks.GetChunkLengths(),
-            };
-
-            return _storage.GetBlobStream(uids, context);
-        }
-
-        private async Task<MediaProbeInfo?> ProbeMediaAsync(NodeFile nodeFile)
-        {
-            Guid manifestId = nodeFile.FileManifest.Id;
-            string cacheKey = $"hls-media-probe:{manifestId}";
-            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out MediaProbeInfo? cached))
-            {
-                return cached;
-            }
-
-            await using IAsyncDisposable manifestLease = await _hlsTranscodes.EnterProbeManifestAsync(
-                manifestId,
-                HttpContext.RequestAborted);
-            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out cached))
-            {
-                return cached;
-            }
-
-            await using IAsyncDisposable probeLease = await _hlsTranscodes.EnterProbeAsync(
-                HttpContext.RequestAborted);
-            MediaProbeInfo? probe;
-            await using (Stream probeStream = OpenSourceStream(nodeFile))
-            await using (var probeServer = new RangeStreamServer(probeStream, _logger))
-            {
-                probe = await FfmpegBinary.TryGetMediaProbeAsync(
-                    probeServer.Url,
-                    cancellationToken: HttpContext.RequestAborted)
-                    .ConfigureAwait(false);
-            }
-
-            if (probe is not null)
-            {
-                _cache.Set(cacheKey, probe, HlsMediaProbeCacheLifetime);
-            }
-
-            return probe;
+            return Ok(result.File!);
         }
 
         /// <summary>
@@ -1332,10 +335,6 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             NodeFileManifestDto manifest = await _mediator.Send(ToCreateFileRequest(request, userId));
-            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
-            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
-            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileCreated", manifest);
             return Ok(manifest);
         }
 

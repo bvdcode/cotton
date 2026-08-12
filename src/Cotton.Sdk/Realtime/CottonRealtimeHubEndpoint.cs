@@ -4,19 +4,20 @@
 using Cotton;
 using Cotton.Sdk.Internal;
 
-namespace Cotton.Sdk.Realtime;
-
-/// <summary>
-/// Builds the Cotton realtime hub endpoint.
-/// </summary>
-public static class CottonRealtimeHubEndpoint
+namespace Cotton.Sdk.Realtime
 {
     /// <summary>
-    /// Creates an absolute event hub URI from a server base address.
+    /// Builds the Cotton realtime hub endpoint.
     /// </summary>
-    public static Uri CreateUri(Uri baseAddress)
+    public static class CottonRealtimeHubEndpoint
     {
-        ArgumentNullException.ThrowIfNull(baseAddress);
-        return CottonRouteUri.Create(baseAddress, Routes.V1.EventHub);
+        /// <summary>
+        /// Creates an absolute event hub URI from a server base address.
+        /// </summary>
+        public static Uri CreateUri(Uri baseAddress)
+        {
+            ArgumentNullException.ThrowIfNull(baseAddress);
+            return CottonRouteUri.Create(baseAddress, Routes.V1.EventHub);
+        }
     }
 }

@@ -2873,6 +2873,7 @@
           "publicBaseUrl": "公共基础 URL",
           "timezone": "时区",
           "telemetry": "遥测",
+          "disableVersionCheck": "禁用更新检查",
           "allowDeduplication": "跨用户去重",
           "allowGlobalIndexing": "全局索引",
           "serverUsage": "服务器用途",
@@ -2892,6 +2893,7 @@
           "publicBaseUrl": "尽管有此设置，Cotton 在绝大多数情况下都会自动确定公共 URL。仅在自动检测出错时才需要设置。",
           "timezone": "这有助于我们避免在您睡觉时运行后台任务，让磁盘在夜间保持安静。",
           "telemetry": "Cotton 会收集最少的技术诊断数据，以便开发者能看到错误并修复，因为并非所有人都会主动反馈问题。启用遥测还能开箱即用地解锁 Cotton Bridge 服务。",
+          "disableVersionCheck": "阻止 Cotton 在启动时联系 GitHub 检查新版本。已安装的版本仍会记录在本地。",
           "allowDeduplication": "控制一个用户是否能得知另一个用户已存储了相同的文件。禁用后，相同的数据仍会在上传后在服务器上去重，但会先被不必要地传输一次。启用后，其他用户可能得知本云端中已有人上传过该文件。在家庭或可信好友之间使用是安全的。",
           "allowGlobalIndexing": "允许服务器解密用户文件并构建深度搜索索引。未启用时，搜索仅基于文件名和文件夹名。",
           "serverUsage": "用于优化功能推荐和少量设置。它并非关键参数，按您的需要选择即可。"

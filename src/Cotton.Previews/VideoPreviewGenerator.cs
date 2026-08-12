@@ -135,7 +135,7 @@ namespace Cotton.Previews
             }
             finally
             {
-                try { File.Delete(tempFile); } catch { }
+                File.Delete(tempFile);
             }
         }
 

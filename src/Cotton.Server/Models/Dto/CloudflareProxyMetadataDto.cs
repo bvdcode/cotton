@@ -6,7 +6,7 @@ namespace Cotton.Server.Models.Dto
     /// <summary>
     /// Contains normalized, non-sensitive Cloudflare request-location hints.
     /// </summary>
-    public sealed class CloudflareProxyMetadataDto
+    public class CloudflareProxyMetadataDto
     {
         /// <summary>
         /// Gets the two-character visitor country code reported by Cloudflare, including special XX and T1 values.

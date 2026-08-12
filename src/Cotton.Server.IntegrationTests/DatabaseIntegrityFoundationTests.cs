@@ -15,703 +15,704 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
-namespace Cotton.Server.IntegrationTests;
-
-public class DatabaseIntegrityFoundationTests
+namespace Cotton.Server.IntegrationTests
 {
-    [Test]
-    public void IntegrityModel_UsesMacAsConcurrencyTokenForEveryProtectedEntity()
+    public class DatabaseIntegrityFoundationTests
     {
-        using CottonDbContext dbContext = CreateDbContext();
-        var protectedEntityTypes = dbContext.Model
-            .GetEntityTypes()
-            .Where(entityType => entityType.FindProperty(DatabaseIntegrityColumns.MacProperty) is not null)
-            .ToList();
-
-        Assert.That(protectedEntityTypes, Is.Not.Empty);
-        Assert.That(
-            protectedEntityTypes.All(entityType =>
-                entityType.FindProperty(DatabaseIntegrityColumns.MacProperty)!.IsConcurrencyToken),
-            Is.True,
-            "Every integrity-protected entity must reject stale writes through its persisted MAC.");
-    }
-
-    [Test]
-    public void CanonicalWriter_SortsDictionaryKeys()
-    {
-        var first = new IntegrityTestEntity
+        [Test]
+        public void IntegrityModel_UsesMacAsConcurrencyTokenForEveryProtectedEntity()
         {
-            Name = "file.txt",
-            Metadata = new Dictionary<string, string>
-            {
-                ["z"] = "last",
-                ["a"] = "first"
-            }
-        };
-        IntegrityTestEntity second = first with
-        {
-            Metadata = new Dictionary<string, string>
-            {
-                ["a"] = "first",
-                ["z"] = "last"
-            }
-        };
-        var descriptor = new IntegrityTestEntityDescriptor();
+            using CottonDbContext dbContext = CreateDbContext();
+            var protectedEntityTypes = dbContext.Model
+                .GetEntityTypes()
+                .Where(entityType => entityType.FindProperty(DatabaseIntegrityColumns.MacProperty) is not null)
+                .ToList();
 
-        byte[] firstPayload = descriptor.BuildCanonicalPayload(first);
-        byte[] secondPayload = descriptor.BuildCanonicalPayload(second);
-
-        Assert.That(firstPayload, Is.EqualTo(secondPayload));
-    }
-
-    [Test]
-    public void CanonicalWriter_PreservesArrayOrder()
-    {
-        var descriptor = new IntegrityTestEntityDescriptor();
-        var first = new IntegrityTestEntity
-        {
-            Name = "file.txt",
-            Transports = ["usb", "nfc"]
-        };
-        IntegrityTestEntity second = first with
-        {
-            Transports = ["nfc", "usb"]
-        };
-
-        byte[] firstPayload = descriptor.BuildCanonicalPayload(first);
-        byte[] secondPayload = descriptor.BuildCanonicalPayload(second);
-
-        Assert.That(firstPayload, Is.Not.EqualTo(secondPayload));
-    }
-
-    [Test]
-    public void CanonicalWriter_NormalizesDateTimeToDatabasePrecision()
-    {
-        var descriptor = new IntegrityTestEntityDescriptor();
-        IntegrityTestEntity first = CreateEntity() with
-        {
-            SeenAt = new DateTime(2026, 5, 22, 12, 0, 0, DateTimeKind.Utc).AddTicks(1)
-        };
-        IntegrityTestEntity second = first with
-        {
-            SeenAt = first.SeenAt!.Value.AddTicks(TimeSpan.TicksPerMicrosecond - 2)
-        };
-
-        byte[] firstPayload = descriptor.BuildCanonicalPayload(first);
-        byte[] secondPayload = descriptor.BuildCanonicalPayload(second);
-
-        Assert.That(firstPayload, Is.EqualTo(secondPayload));
-    }
-
-    [Test]
-    public void Protector_VerifiesSignedEntity()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new IntegrityTestEntityDescriptor();
-        IntegrityTestEntity entity = CreateEntity();
-
-        byte[] mac = protector.Sign(entity, descriptor);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(mac, Has.Length.EqualTo(32));
-            Assert.That(protector.Verify(entity, descriptor, mac), Is.True);
-        }
-    }
-
-    [Test]
-    public void Protector_DetectsTamperedEntity()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new IntegrityTestEntityDescriptor();
-        IntegrityTestEntity entity = CreateEntity();
-        byte[] mac = protector.Sign(entity, descriptor);
-
-        IntegrityTestEntity tampered = entity with { Name = "evil.txt" };
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(protector.Verify(tampered, descriptor, mac), Is.False);
-            Assert.Throws<DatabaseIntegrityException>(() => protector.RequireValid(tampered, descriptor, mac));
-        }
-    }
-
-    [Test]
-    public void Protector_UsesPurposeSeparatedMasterDerivedKey()
-    {
-        var descriptor = new IntegrityTestEntityDescriptor();
-        IntegrityTestEntity entity = CreateEntity();
-        DatabaseIntegrityProtector firstProtector = CreateProtector("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-        DatabaseIntegrityProtector secondProtector = CreateProtector("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
-
-        byte[] firstMac = firstProtector.Sign(entity, descriptor);
-        byte[] secondMac = secondProtector.Sign(entity, descriptor);
-
-        Assert.That(firstMac, Is.Not.EqualTo(secondMac));
-    }
-
-    [Test]
-    public void Verifier_AcceptsSignedProtectedEntity()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new UserIntegrityDescriptor();
-        User user = CreateUser();
-
-        using CottonDbContext dbContext = CreateDbContext();
-        dbContext.Users.Add(user);
-        var signer = new DatabaseIntegrityChangeSigner(
-            protector,
-            new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance);
-        signer.SignPendingChanges(dbContext);
-        DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
-
-        Assert.DoesNotThrow(() => verifier.RequireValid(dbContext, user, "test.signed"));
-    }
-
-    [Test]
-    public void Verifier_ReportsRequiredTransitionVersionForUnsignedProtectedEntity()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new UserIntegrityDescriptor();
-        User user = CreateUser();
-
-        using CottonDbContext dbContext = CreateDbContext();
-        dbContext.Attach(user);
-        DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
-
-#pragma warning disable CS0618 // OBSOLETE TRANSITION: pin the operator-facing unsigned-row cutover error.
-        DatabaseIntegritySignatureMissingException? exception = Assert.Throws<DatabaseIntegritySignatureMissingException>(() =>
-            verifier.RequireValid(dbContext, user, "test.unsigned"));
-#pragma warning restore CS0618
-
-        Assert.That(exception!.Message, Does.Contain("Cotton 0.4.35"));
-    }
-
-    [Test]
-    public void Verifier_RejectsInvalidSignatureAsIntegrityFailure()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new UserIntegrityDescriptor();
-        User user = CreateUser();
-
-        using CottonDbContext dbContext = CreateDbContext();
-        dbContext.Users.Add(user);
-        var signer = new DatabaseIntegrityChangeSigner(
-            protector,
-            new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance);
-        signer.SignPendingChanges(dbContext);
-        user.Role = UserRole.Admin;
-        DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
-
-        Assert.Throws<DatabaseIntegrityException>(() =>
-            verifier.RequireValid(dbContext, user, "test.invalid-signature"));
-    }
-
-    [Test]
-    public void ChangeSigner_RejectsModifiedEntityWhenOriginalMacDoesNotMatch()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new UserIntegrityDescriptor();
-        User tamperedUser = CreateUser();
-
-        using CottonDbContext dbContext = CreateDbContext();
-        EntityEntry<User> entry = dbContext.Attach(tamperedUser);
-        entry.State = EntityState.Unchanged;
-        byte[] originalMac = protector.Sign(tamperedUser, descriptor);
-        tamperedUser.Role = UserRole.Admin;
-        entry.Property(nameof(User.Role)).OriginalValue = UserRole.Admin;
-        entry.Property(nameof(User.Role)).CurrentValue = UserRole.Admin;
-        entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue = descriptor.SchemaVersion;
-        entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
-        entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue = originalMac;
-        entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue = originalMac;
-
-        tamperedUser.FirstName = "Legitimate edit";
-        dbContext.ChangeTracker.DetectChanges();
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(entry.State, Is.EqualTo(EntityState.Modified));
-            Assert.That(entry.OriginalValues[nameof(User.Role)], Is.EqualTo(UserRole.Admin));
+            Assert.That(protectedEntityTypes, Is.Not.Empty);
             Assert.That(
-                protector.Verify(entry.OriginalValues.ToObject(), descriptor, originalMac),
-                Is.False);
+                protectedEntityTypes.All(entityType =>
+                    entityType.FindProperty(DatabaseIntegrityColumns.MacProperty)!.IsConcurrencyToken),
+                Is.True,
+                "Every integrity-protected entity must reject stale writes through its persisted MAC.");
         }
-        var signer = new DatabaseIntegrityChangeSigner(
-            protector,
-            new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance);
 
-        Assert.Throws<DatabaseIntegrityException>(() => signer.SignPendingChanges(dbContext));
-    }
+        [Test]
+        public void CanonicalWriter_SortsDictionaryKeys()
+        {
+            var first = new IntegrityTestEntity
+            {
+                Name = "file.txt",
+                Metadata = new Dictionary<string, string>
+                {
+                    ["z"] = "last",
+                    ["a"] = "first"
+                }
+            };
+            IntegrityTestEntity second = first with
+            {
+                Metadata = new Dictionary<string, string>
+                {
+                    ["a"] = "first",
+                    ["z"] = "last"
+                }
+            };
+            var descriptor = new IntegrityTestEntityDescriptor();
 
-    [Test]
-    public void ChangeSigner_ReportsRequiredTransitionVersionWhenOriginalIntegrityMetadataIsMissing()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new UserIntegrityDescriptor();
-        User user = CreateUser();
+            byte[] firstPayload = descriptor.BuildCanonicalPayload(first);
+            byte[] secondPayload = descriptor.BuildCanonicalPayload(second);
 
-        using CottonDbContext dbContext = CreateDbContext();
-        EntityEntry<User> entry = dbContext.Attach(user);
-        entry.State = EntityState.Unchanged;
-        user.Email = "alice.changed@example.test";
-        dbContext.ChangeTracker.DetectChanges();
+            Assert.That(firstPayload, Is.EqualTo(secondPayload));
+        }
 
-        var signer = new DatabaseIntegrityChangeSigner(
-            protector,
-            new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance);
+        [Test]
+        public void CanonicalWriter_PreservesArrayOrder()
+        {
+            var descriptor = new IntegrityTestEntityDescriptor();
+            var first = new IntegrityTestEntity
+            {
+                Name = "file.txt",
+                Transports = ["usb", "nfc"]
+            };
+            IntegrityTestEntity second = first with
+            {
+                Transports = ["nfc", "usb"]
+            };
+
+            byte[] firstPayload = descriptor.BuildCanonicalPayload(first);
+            byte[] secondPayload = descriptor.BuildCanonicalPayload(second);
+
+            Assert.That(firstPayload, Is.Not.EqualTo(secondPayload));
+        }
+
+        [Test]
+        public void CanonicalWriter_NormalizesDateTimeToDatabasePrecision()
+        {
+            var descriptor = new IntegrityTestEntityDescriptor();
+            IntegrityTestEntity first = CreateEntity() with
+            {
+                SeenAt = new DateTime(2026, 5, 22, 12, 0, 0, DateTimeKind.Utc).AddTicks(1)
+            };
+            IntegrityTestEntity second = first with
+            {
+                SeenAt = first.SeenAt!.Value.AddTicks(TimeSpan.TicksPerMicrosecond - 2)
+            };
+
+            byte[] firstPayload = descriptor.BuildCanonicalPayload(first);
+            byte[] secondPayload = descriptor.BuildCanonicalPayload(second);
+
+            Assert.That(firstPayload, Is.EqualTo(secondPayload));
+        }
+
+        [Test]
+        public void Protector_VerifiesSignedEntity()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new IntegrityTestEntityDescriptor();
+            IntegrityTestEntity entity = CreateEntity();
+
+            byte[] mac = protector.Sign(entity, descriptor);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(mac, Has.Length.EqualTo(32));
+                Assert.That(protector.Verify(entity, descriptor, mac), Is.True);
+            }
+        }
+
+        [Test]
+        public void Protector_DetectsTamperedEntity()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new IntegrityTestEntityDescriptor();
+            IntegrityTestEntity entity = CreateEntity();
+            byte[] mac = protector.Sign(entity, descriptor);
+
+            IntegrityTestEntity tampered = entity with { Name = "evil.txt" };
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(protector.Verify(tampered, descriptor, mac), Is.False);
+                Assert.Throws<DatabaseIntegrityException>(() => protector.RequireValid(tampered, descriptor, mac));
+            }
+        }
+
+        [Test]
+        public void Protector_UsesPurposeSeparatedMasterDerivedKey()
+        {
+            var descriptor = new IntegrityTestEntityDescriptor();
+            IntegrityTestEntity entity = CreateEntity();
+            DatabaseIntegrityProtector firstProtector = CreateProtector("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            DatabaseIntegrityProtector secondProtector = CreateProtector("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+
+            byte[] firstMac = firstProtector.Sign(entity, descriptor);
+            byte[] secondMac = secondProtector.Sign(entity, descriptor);
+
+            Assert.That(firstMac, Is.Not.EqualTo(secondMac));
+        }
+
+        [Test]
+        public void Verifier_AcceptsSignedProtectedEntity()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new UserIntegrityDescriptor();
+            User user = CreateUser();
+
+            using CottonDbContext dbContext = CreateDbContext();
+            dbContext.Users.Add(user);
+            var signer = new DatabaseIntegrityChangeSigner(
+                protector,
+                new DatabaseIntegrityDescriptorRegistry([descriptor]),
+                NullDatabaseIntegrityFailureReporter.Instance);
+            signer.SignPendingChanges(dbContext);
+            DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
+
+            Assert.DoesNotThrow(() => verifier.RequireValid(dbContext, user, "test.signed"));
+        }
+
+        [Test]
+        public void Verifier_ReportsRequiredTransitionVersionForUnsignedProtectedEntity()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new UserIntegrityDescriptor();
+            User user = CreateUser();
+
+            using CottonDbContext dbContext = CreateDbContext();
+            dbContext.Attach(user);
+            DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
 
 #pragma warning disable CS0618 // OBSOLETE TRANSITION: pin the operator-facing unsigned-row cutover error.
-        DatabaseIntegritySignatureMissingException? exception =
-            Assert.Throws<DatabaseIntegritySignatureMissingException>(() => signer.SignPendingChanges(dbContext));
+            DatabaseIntegritySignatureMissingException? exception = Assert.Throws<DatabaseIntegritySignatureMissingException>(() =>
+                verifier.RequireValid(dbContext, user, "test.unsigned"));
 #pragma warning restore CS0618
 
-        Assert.That(exception!.Message, Does.Contain("Cotton 0.4.35"));
-    }
-
-    [Test]
-    public void ChangeSigner_AcceptsModifiedEntityWhenOriginalMacMatches()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new UserIntegrityDescriptor();
-        User user = CreateUser();
-
-        using CottonDbContext dbContext = CreateDbContext();
-        EntityEntry<User> entry = dbContext.Attach(user);
-        entry.State = EntityState.Unchanged;
-        byte[] originalMac = protector.Sign(user, descriptor);
-        entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue = descriptor.SchemaVersion;
-        entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
-        entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue = originalMac;
-        entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue = originalMac;
-
-        user.Email = "alice.changed@example.test";
-        dbContext.ChangeTracker.DetectChanges();
-        var signer = new DatabaseIntegrityChangeSigner(
-            protector,
-            new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance);
-
-        Assert.DoesNotThrow(() => signer.SignPendingChanges(dbContext));
-
-        byte[] newMac = (byte[])entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue!;
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(newMac, Is.Not.EqualTo(originalMac));
-            Assert.That(protector.Verify(user, descriptor, newMac), Is.True);
-            Assert.That(protector.Verify(user, descriptor, originalMac), Is.False);
+            Assert.That(exception!.Message, Does.Contain("Cotton 0.4.35"));
         }
-    }
 
-    [Test]
-    public void UserDescriptor_DetectsRoleTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new UserIntegrityDescriptor();
-        var user = new User
+        [Test]
+        public void Verifier_RejectsInvalidSignatureAsIntegrityFailure()
         {
-            Username = "alice",
-            PasswordPhc = "password",
-            WebDavTokenPhc = "webdav",
-            Role = UserRole.User,
-            Email = "alice@example.test",
-            IsEmailVerified = true
-        };
-        byte[] mac = protector.Sign(user, descriptor);
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new UserIntegrityDescriptor();
+            User user = CreateUser();
 
-        user.Role = UserRole.Admin;
+            using CottonDbContext dbContext = CreateDbContext();
+            dbContext.Users.Add(user);
+            var signer = new DatabaseIntegrityChangeSigner(
+                protector,
+                new DatabaseIntegrityDescriptorRegistry([descriptor]),
+                NullDatabaseIntegrityFailureReporter.Instance);
+            signer.SignPendingChanges(dbContext);
+            user.Role = UserRole.Admin;
+            DatabaseIntegrityVerifier verifier = CreateVerifier(protector, descriptor);
 
-        Assert.That(protector.Verify(user, descriptor, mac), Is.False);
-    }
+            Assert.Throws<DatabaseIntegrityException>(() =>
+                verifier.RequireValid(dbContext, user, "test.invalid-signature"));
+        }
 
-    [Test]
-    public void PasskeyDescriptor_DetectsPublicKeyTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new UserPasskeyCredentialIntegrityDescriptor();
-        var credential = new UserPasskeyCredential
+        [Test]
+        public void ChangeSigner_RejectsModifiedEntityWhenOriginalMacDoesNotMatch()
         {
-            UserId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
-            CredentialId = [1, 2, 3],
-            PublicKey = [4, 5, 6],
-            UserHandle = [7, 8, 9],
-            SignatureCounter = 10,
-            Transports = ["usb"],
-            AaGuid = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
-        };
-        byte[] mac = protector.Sign(credential, descriptor);
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new UserIntegrityDescriptor();
+            User tamperedUser = CreateUser();
 
-        credential.PublicKey = [9, 9, 9];
+            using CottonDbContext dbContext = CreateDbContext();
+            EntityEntry<User> entry = dbContext.Attach(tamperedUser);
+            entry.State = EntityState.Unchanged;
+            byte[] originalMac = protector.Sign(tamperedUser, descriptor);
+            tamperedUser.Role = UserRole.Admin;
+            entry.Property(nameof(User.Role)).OriginalValue = UserRole.Admin;
+            entry.Property(nameof(User.Role)).CurrentValue = UserRole.Admin;
+            entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue = descriptor.SchemaVersion;
+            entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
+            entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue = originalMac;
+            entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue = originalMac;
 
-        Assert.That(protector.Verify(credential, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void DownloadTokenDescriptor_DetectsNodeFileTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new DownloadTokenIntegrityDescriptor();
-        var token = new DownloadToken
-        {
-            Token = "share-token",
-            NodeFileId = Guid.Parse("40000000-0000-0000-0000-000000000002"),
-            CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000001")
-        };
-        byte[] mac = protector.Sign(token, descriptor);
-
-        token.NodeFileId = Guid.Parse("40000000-0000-0000-0000-000000000003");
-
-        Assert.That(protector.Verify(token, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void NodeShareTokenDescriptor_DetectsNodeTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new NodeShareTokenIntegrityDescriptor();
-        var token = new NodeShareToken
-        {
-            Token = "share-token",
-            NodeId = Guid.Parse("50000000-0000-0000-0000-000000000002"),
-            CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000001")
-        };
-        byte[] mac = protector.Sign(token, descriptor);
-
-        token.NodeId = Guid.Parse("50000000-0000-0000-0000-000000000003");
-
-        Assert.That(protector.Verify(token, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void RefreshTokenDescriptor_DetectsSessionTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new ExtendedRefreshTokenIntegrityDescriptor();
-        var token = new ExtendedRefreshToken
-        {
-            UserId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
-            Token = "refresh-token-hash",
-            SessionId = "session-a",
-            IsTrusted = true,
-            AuthType = AuthType.Credentials,
-            IpAddress = System.Net.IPAddress.Loopback,
-            UserAgent = "test",
-            Device = "test",
-            City = "test",
-            Region = "test",
-            Country = "test"
-        };
-        byte[] mac = protector.Sign(token, descriptor);
-
-        token.SessionId = "session-b";
-
-        Assert.That(protector.Verify(token, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void NodeDescriptor_DetectsParentTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new NodeIntegrityDescriptor();
-        var node = new Node
-        {
-            OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
-            LayoutId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
-            ParentId = Guid.Parse("60000000-0000-0000-0000-000000000001"),
-            Type = NodeType.Default
-        };
-        node.SetName("Documents");
-        byte[] mac = protector.Sign(node, descriptor);
-
-        node.ParentId = Guid.Parse("60000000-0000-0000-0000-000000000003");
-
-        Assert.That(protector.Verify(node, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void NodeFileDescriptor_DetectsManifestTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new NodeFileIntegrityDescriptor();
-        var file = new NodeFile
-        {
-            OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
-            NodeId = Guid.Parse("60000000-0000-0000-0000-000000000002"),
-            OriginalNodeFileId = Guid.Parse("80000000-0000-0000-0000-000000000002"),
-            FileManifestId = Guid.Parse("90000000-0000-0000-0000-000000000001")
-        };
-        file.SetName("report.pdf");
-        byte[] mac = protector.Sign(file, descriptor);
-
-        file.FileManifestId = Guid.Parse("90000000-0000-0000-0000-000000000002");
-
-        Assert.That(protector.Verify(file, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void FileManifestDescriptor_DetectsContentHashTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new FileManifestIntegrityDescriptor();
-        var manifest = new FileManifest
-        {
-            ProposedContentHash = [1, 2, 3],
-            ComputedContentHash = [1, 2, 3],
-            ContentType = "text/plain",
-            SizeBytes = 3,
-            PreviewGeneratorVersion = 1
-        };
-        byte[] mac = protector.Sign(manifest, descriptor);
-
-        manifest.ProposedContentHash = [9, 9, 9];
-
-        Assert.That(protector.Verify(manifest, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void FileManifestDescriptor_UsesReleaseSchemaVersion()
-    {
-        Assert.That(new FileManifestIntegrityDescriptor().SchemaVersion, Is.EqualTo(1));
-    }
-
-    [Test]
-    public void FileManifestDescriptor_IgnoresExtractedMetadata()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new FileManifestIntegrityDescriptor();
-        var manifest = new FileManifest
-        {
-            ProposedContentHash = [1, 2, 3],
-            ComputedContentHash = [1, 2, 3],
-            ContentType = "audio/flac",
-            SizeBytes = 3,
-            Metadata = new Dictionary<string, string>
+            tamperedUser.FirstName = "Legitimate edit";
+            dbContext.ChangeTracker.DetectChanges();
+            using (Assert.EnterMultipleScope())
             {
-                ["media.title"] = "Song",
-            },
-        };
-        byte[] mac = protector.Sign(manifest, descriptor);
-
-        manifest.Metadata["media.title"] = "Other";
-
-        Assert.That(protector.Verify(manifest, descriptor, mac), Is.True);
-    }
-
-    [Test]
-    public void FileManifestDescriptor_IgnoresOperationalPreviewState()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new FileManifestIntegrityDescriptor();
-        var manifest = new FileManifest
-        {
-            ProposedContentHash = [1, 2, 3],
-            ComputedContentHash = [1, 2, 3],
-            ContentType = "text/plain",
-            SizeBytes = 3,
-            PreviewGenerationError = "ffmpeg failed before the runtime image was fixed",
-            PreviewGeneratorVersion = 1
-        };
-        byte[] mac = protector.Sign(manifest, descriptor);
-
-        manifest.PreviewGenerationError = null;
-        manifest.PreviewGeneratorVersion = 2;
-
-        Assert.That(protector.Verify(manifest, descriptor, mac), Is.True);
-    }
-
-    [Test]
-    public void FileManifestChunkDescriptor_DetectsOrderTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new FileManifestChunkIntegrityDescriptor();
-        var mapping = new FileManifestChunk
-        {
-            FileManifestId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
-            ChunkOrder = 0,
-            ChunkHash = [1, 2, 3]
-        };
-        byte[] mac = protector.Sign(mapping, descriptor);
-
-        mapping.ChunkOrder = 1;
-
-        Assert.That(protector.Verify(mapping, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void ChunkDescriptor_DetectsSizeTampering()
-    {
-        DatabaseIntegrityProtector protector = CreateProtector();
-        var descriptor = new ChunkIntegrityDescriptor();
-        var chunk = new Chunk
-        {
-            Hash = [1, 2, 3],
-            PlainSizeBytes = 3,
-            StoredSizeBytes = 4,
-            CompressionAlgorithm = CompressionAlgorithm.Zstd
-        };
-        byte[] mac = protector.Sign(chunk, descriptor);
-
-        chunk.PlainSizeBytes = 5;
-
-        Assert.That(protector.Verify(chunk, descriptor, mac), Is.False);
-    }
-
-    [Test]
-    public void FileGraphVerifier_RejectsNonContiguousChunkOrder()
-    {
-        DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
-            .UseNpgsql("Host=localhost;Database=cotton_dev;Username=postgres;Password=postgres")
-            .Options;
-        using var dbContext = new CottonDbContext(options);
-        var verifier = new FileGraphIntegrityVerifier(new NoopDatabaseIntegrityVerifier(), NullDatabaseIntegrityFailureReporter.Instance);
-
-        var node = new Node
-        {
-            OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
-            LayoutId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
-            Type = NodeType.Default
-        };
-        node.SetName("Documents");
-
-        var manifest = new FileManifest
-        {
-            ProposedContentHash = [1, 2, 3],
-            ContentType = "text/plain",
-            SizeBytes = 3
-        };
-        var chunk = new Chunk
-        {
-            Hash = [1, 2, 3],
-            PlainSizeBytes = 3,
-            StoredSizeBytes = 4,
-            CompressionAlgorithm = CompressionAlgorithm.Zstd
-        };
-        var manifestChunk = new FileManifestChunk
-        {
-            FileManifestId = manifest.Id,
-            ChunkOrder = 1,
-            ChunkHash = chunk.Hash,
-            Chunk = chunk
-        };
-        manifest.FileManifestChunks.Add(manifestChunk);
-
-        var nodeFile = new NodeFile
-        {
-            OwnerId = node.OwnerId,
-            NodeId = node.Id,
-            Node = node,
-            FileManifestId = manifest.Id,
-            FileManifest = manifest,
-            OriginalNodeFileId = Guid.Parse("80000000-0000-0000-0000-000000000002")
-        };
-        nodeFile.SetName("report.txt");
-
-        Assert.Throws<DatabaseIntegrityException>(() =>
-            verifier.RequireValidContent(dbContext, nodeFile, "test.file-graph"));
-    }
-
-    private static DatabaseIntegrityProtector CreateProtector(
-        string rootMasterKey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-    {
-        CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey);
-        return new DatabaseIntegrityProtector(new DatabaseIntegrityKeyProvider(settings));
-    }
-
-    private static CottonDbContext CreateDbContext()
-    {
-        DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
-            .UseNpgsql("Host=localhost;Database=cotton_dev;Username=postgres;Password=postgres")
-            .Options;
-        return new CottonDbContext(options);
-    }
-
-    private static DatabaseIntegrityVerifier CreateVerifier(
-        IDatabaseIntegrityProtector protector,
-        IDatabaseIntegrityDescriptor descriptor)
-    {
-        return new DatabaseIntegrityVerifier(
-            protector,
-            new DatabaseIntegrityDescriptorRegistry([descriptor]),
-            NullDatabaseIntegrityFailureReporter.Instance,
-            NullLogger<DatabaseIntegrityVerifier>.Instance);
-    }
-
-    private static User CreateUser()
-    {
-        return new User
-        {
-            Username = "alice",
-            PasswordPhc = "password",
-            WebDavTokenPhc = "webdav",
-            Role = UserRole.User,
-            Email = "alice@example.test",
-            IsEmailVerified = true
-        };
-    }
-
-    private static IntegrityTestEntity CreateEntity()
-    {
-        return new IntegrityTestEntity
-        {
-            OwnerId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-            Name = "file.txt",
-            SizeBytes = 12345,
-            IsEnabled = true,
-            SeenAt = new DateTime(2026, 5, 22, 12, 0, 0, DateTimeKind.Utc),
-            Transports = ["usb", "nfc"],
-            Metadata = new Dictionary<string, string>
-            {
-                ["purpose"] = "test",
-                ["kind"] = "fixture"
+                Assert.That(entry.State, Is.EqualTo(EntityState.Modified));
+                Assert.That(entry.OriginalValues[nameof(User.Role)], Is.EqualTo(UserRole.Admin));
+                Assert.That(
+                    protector.Verify(entry.OriginalValues.ToObject(), descriptor, originalMac),
+                    Is.False);
             }
-        };
-    }
+            var signer = new DatabaseIntegrityChangeSigner(
+                protector,
+                new DatabaseIntegrityDescriptorRegistry([descriptor]),
+                NullDatabaseIntegrityFailureReporter.Instance);
 
-    private class NoopDatabaseIntegrityVerifier : IDatabaseIntegrityVerifier
-    {
-        public void RequireValid<TEntity>(CottonDbContext dbContext, TEntity entity, string boundary)
-            where TEntity : class
-        {
-        }
-    }
-
-    private record IntegrityTestEntity
-    {
-        public Guid Id { get; init; }
-        public Guid? OwnerId { get; init; }
-        public string? Name { get; init; }
-        public long SizeBytes { get; init; }
-        public bool IsEnabled { get; init; }
-        public DateTime? SeenAt { get; init; }
-        public string[]? Transports { get; init; }
-        public Dictionary<string, string>? Metadata { get; init; }
-    }
-
-    private class IntegrityTestEntityDescriptor : DatabaseIntegrityDescriptor<IntegrityTestEntity>
-    {
-        public override string EntityName => "test_entity";
-        public override int SchemaVersion => 1;
-
-        public override string GetEntityKey(IntegrityTestEntity entity)
-        {
-            return entity.Id.ToString("D");
+            Assert.Throws<DatabaseIntegrityException>(() => signer.SignPendingChanges(dbContext));
         }
 
-        public override void WriteCanonicalData(
-            DatabaseIntegrityCanonicalWriter writer,
-            IntegrityTestEntity entity)
+        [Test]
+        public void ChangeSigner_ReportsRequiredTransitionVersionWhenOriginalIntegrityMetadataIsMissing()
         {
-            writer.WriteGuidField(nameof(entity.Id), entity.Id);
-            writer.WriteNullableGuidField(nameof(entity.OwnerId), entity.OwnerId);
-            writer.WriteStringField(nameof(entity.Name), entity.Name);
-            writer.WriteInt64Field(nameof(entity.SizeBytes), entity.SizeBytes);
-            writer.WriteBooleanField(nameof(entity.IsEnabled), entity.IsEnabled);
-            writer.WriteNullableDateTimeField(nameof(entity.SeenAt), entity.SeenAt);
-            writer.WriteStringArrayField(nameof(entity.Transports), entity.Transports);
-            writer.WriteStringDictionaryField(nameof(entity.Metadata), entity.Metadata);
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new UserIntegrityDescriptor();
+            User user = CreateUser();
+
+            using CottonDbContext dbContext = CreateDbContext();
+            EntityEntry<User> entry = dbContext.Attach(user);
+            entry.State = EntityState.Unchanged;
+            user.Email = "alice.changed@example.test";
+            dbContext.ChangeTracker.DetectChanges();
+
+            var signer = new DatabaseIntegrityChangeSigner(
+                protector,
+                new DatabaseIntegrityDescriptorRegistry([descriptor]),
+                NullDatabaseIntegrityFailureReporter.Instance);
+
+#pragma warning disable CS0618 // OBSOLETE TRANSITION: pin the operator-facing unsigned-row cutover error.
+            DatabaseIntegritySignatureMissingException? exception =
+                Assert.Throws<DatabaseIntegritySignatureMissingException>(() => signer.SignPendingChanges(dbContext));
+#pragma warning restore CS0618
+
+            Assert.That(exception!.Message, Does.Contain("Cotton 0.4.35"));
+        }
+
+        [Test]
+        public void ChangeSigner_AcceptsModifiedEntityWhenOriginalMacMatches()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new UserIntegrityDescriptor();
+            User user = CreateUser();
+
+            using CottonDbContext dbContext = CreateDbContext();
+            EntityEntry<User> entry = dbContext.Attach(user);
+            entry.State = EntityState.Unchanged;
+            byte[] originalMac = protector.Sign(user, descriptor);
+            entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue = descriptor.SchemaVersion;
+            entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
+            entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue = originalMac;
+            entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue = originalMac;
+
+            user.Email = "alice.changed@example.test";
+            dbContext.ChangeTracker.DetectChanges();
+            var signer = new DatabaseIntegrityChangeSigner(
+                protector,
+                new DatabaseIntegrityDescriptorRegistry([descriptor]),
+                NullDatabaseIntegrityFailureReporter.Instance);
+
+            Assert.DoesNotThrow(() => signer.SignPendingChanges(dbContext));
+
+            byte[] newMac = (byte[])entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue!;
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(newMac, Is.Not.EqualTo(originalMac));
+                Assert.That(protector.Verify(user, descriptor, newMac), Is.True);
+                Assert.That(protector.Verify(user, descriptor, originalMac), Is.False);
+            }
+        }
+
+        [Test]
+        public void UserDescriptor_DetectsRoleTampering()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new UserIntegrityDescriptor();
+            var user = new User
+            {
+                Username = "alice",
+                PasswordPhc = "password",
+                WebDavTokenPhc = "webdav",
+                Role = UserRole.User,
+                Email = "alice@example.test",
+                IsEmailVerified = true
+            };
+            byte[] mac = protector.Sign(user, descriptor);
+
+            user.Role = UserRole.Admin;
+
+            Assert.That(protector.Verify(user, descriptor, mac), Is.False);
+        }
+
+        [Test]
+        public void PasskeyDescriptor_DetectsPublicKeyTampering()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new UserPasskeyCredentialIntegrityDescriptor();
+            var credential = new UserPasskeyCredential
+            {
+                UserId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+                CredentialId = [1, 2, 3],
+                PublicKey = [4, 5, 6],
+                UserHandle = [7, 8, 9],
+                SignatureCounter = 10,
+                Transports = ["usb"],
+                AaGuid = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+            };
+            byte[] mac = protector.Sign(credential, descriptor);
+
+            credential.PublicKey = [9, 9, 9];
+
+            Assert.That(protector.Verify(credential, descriptor, mac), Is.False);
+        }
+
+        [Test]
+        public void DownloadTokenDescriptor_DetectsNodeFileTampering()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new DownloadTokenIntegrityDescriptor();
+            var token = new DownloadToken
+            {
+                Token = "share-token",
+                NodeFileId = Guid.Parse("40000000-0000-0000-0000-000000000002"),
+                CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000001")
+            };
+            byte[] mac = protector.Sign(token, descriptor);
+
+            token.NodeFileId = Guid.Parse("40000000-0000-0000-0000-000000000003");
+
+            Assert.That(protector.Verify(token, descriptor, mac), Is.False);
+        }
+
+        [Test]
+        public void NodeShareTokenDescriptor_DetectsNodeTampering()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new NodeShareTokenIntegrityDescriptor();
+            var token = new NodeShareToken
+            {
+                Token = "share-token",
+                NodeId = Guid.Parse("50000000-0000-0000-0000-000000000002"),
+                CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000001")
+            };
+            byte[] mac = protector.Sign(token, descriptor);
+
+            token.NodeId = Guid.Parse("50000000-0000-0000-0000-000000000003");
+
+            Assert.That(protector.Verify(token, descriptor, mac), Is.False);
+        }
+
+        [Test]
+        public void RefreshTokenDescriptor_DetectsSessionTampering()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new ExtendedRefreshTokenIntegrityDescriptor();
+            var token = new ExtendedRefreshToken
+            {
+                UserId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+                Token = "refresh-token-hash",
+                SessionId = "session-a",
+                IsTrusted = true,
+                AuthType = AuthType.Credentials,
+                IpAddress = System.Net.IPAddress.Loopback,
+                UserAgent = "test",
+                Device = "test",
+                City = "test",
+                Region = "test",
+                Country = "test"
+            };
+            byte[] mac = protector.Sign(token, descriptor);
+
+            token.SessionId = "session-b";
+
+            Assert.That(protector.Verify(token, descriptor, mac), Is.False);
+        }
+
+        [Test]
+        public void NodeDescriptor_DetectsParentTampering()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new NodeIntegrityDescriptor();
+            var node = new Node
+            {
+                OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+                LayoutId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
+                ParentId = Guid.Parse("60000000-0000-0000-0000-000000000001"),
+                Type = NodeType.Default
+            };
+            node.SetName("Documents");
+            byte[] mac = protector.Sign(node, descriptor);
+
+            node.ParentId = Guid.Parse("60000000-0000-0000-0000-000000000003");
+
+            Assert.That(protector.Verify(node, descriptor, mac), Is.False);
+        }
+
+        [Test]
+        public void NodeFileDescriptor_DetectsManifestTampering()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new NodeFileIntegrityDescriptor();
+            var file = new NodeFile
+            {
+                OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+                NodeId = Guid.Parse("60000000-0000-0000-0000-000000000002"),
+                OriginalNodeFileId = Guid.Parse("80000000-0000-0000-0000-000000000002"),
+                FileManifestId = Guid.Parse("90000000-0000-0000-0000-000000000001")
+            };
+            file.SetName("report.pdf");
+            byte[] mac = protector.Sign(file, descriptor);
+
+            file.FileManifestId = Guid.Parse("90000000-0000-0000-0000-000000000002");
+
+            Assert.That(protector.Verify(file, descriptor, mac), Is.False);
+        }
+
+        [Test]
+        public void FileManifestDescriptor_DetectsContentHashTampering()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new FileManifestIntegrityDescriptor();
+            var manifest = new FileManifest
+            {
+                ProposedContentHash = [1, 2, 3],
+                ComputedContentHash = [1, 2, 3],
+                ContentType = "text/plain",
+                SizeBytes = 3,
+                PreviewGeneratorVersion = 1
+            };
+            byte[] mac = protector.Sign(manifest, descriptor);
+
+            manifest.ProposedContentHash = [9, 9, 9];
+
+            Assert.That(protector.Verify(manifest, descriptor, mac), Is.False);
+        }
+
+        [Test]
+        public void FileManifestDescriptor_UsesReleaseSchemaVersion()
+        {
+            Assert.That(new FileManifestIntegrityDescriptor().SchemaVersion, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void FileManifestDescriptor_IgnoresExtractedMetadata()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new FileManifestIntegrityDescriptor();
+            var manifest = new FileManifest
+            {
+                ProposedContentHash = [1, 2, 3],
+                ComputedContentHash = [1, 2, 3],
+                ContentType = "audio/flac",
+                SizeBytes = 3,
+                Metadata = new Dictionary<string, string>
+                {
+                    ["media.title"] = "Song",
+                },
+            };
+            byte[] mac = protector.Sign(manifest, descriptor);
+
+            manifest.Metadata["media.title"] = "Other";
+
+            Assert.That(protector.Verify(manifest, descriptor, mac), Is.True);
+        }
+
+        [Test]
+        public void FileManifestDescriptor_IgnoresOperationalPreviewState()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new FileManifestIntegrityDescriptor();
+            var manifest = new FileManifest
+            {
+                ProposedContentHash = [1, 2, 3],
+                ComputedContentHash = [1, 2, 3],
+                ContentType = "text/plain",
+                SizeBytes = 3,
+                PreviewGenerationError = "ffmpeg failed before the runtime image was fixed",
+                PreviewGeneratorVersion = 1
+            };
+            byte[] mac = protector.Sign(manifest, descriptor);
+
+            manifest.PreviewGenerationError = null;
+            manifest.PreviewGeneratorVersion = 2;
+
+            Assert.That(protector.Verify(manifest, descriptor, mac), Is.True);
+        }
+
+        [Test]
+        public void FileManifestChunkDescriptor_DetectsOrderTampering()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new FileManifestChunkIntegrityDescriptor();
+            var mapping = new FileManifestChunk
+            {
+                FileManifestId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
+                ChunkOrder = 0,
+                ChunkHash = [1, 2, 3]
+            };
+            byte[] mac = protector.Sign(mapping, descriptor);
+
+            mapping.ChunkOrder = 1;
+
+            Assert.That(protector.Verify(mapping, descriptor, mac), Is.False);
+        }
+
+        [Test]
+        public void ChunkDescriptor_DetectsSizeTampering()
+        {
+            DatabaseIntegrityProtector protector = CreateProtector();
+            var descriptor = new ChunkIntegrityDescriptor();
+            var chunk = new Chunk
+            {
+                Hash = [1, 2, 3],
+                PlainSizeBytes = 3,
+                StoredSizeBytes = 4,
+                CompressionAlgorithm = CompressionAlgorithm.Zstd
+            };
+            byte[] mac = protector.Sign(chunk, descriptor);
+
+            chunk.PlainSizeBytes = 5;
+
+            Assert.That(protector.Verify(chunk, descriptor, mac), Is.False);
+        }
+
+        [Test]
+        public void FileGraphVerifier_RejectsNonContiguousChunkOrder()
+        {
+            DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
+                .UseNpgsql("Host=localhost;Database=cotton_dev;Username=postgres;Password=postgres")
+                .Options;
+            using var dbContext = new CottonDbContext(options);
+            var verifier = new FileGraphIntegrityVerifier(new NoopDatabaseIntegrityVerifier(), NullDatabaseIntegrityFailureReporter.Instance);
+
+            var node = new Node
+            {
+                OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+                LayoutId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
+                Type = NodeType.Default
+            };
+            node.SetName("Documents");
+
+            var manifest = new FileManifest
+            {
+                ProposedContentHash = [1, 2, 3],
+                ContentType = "text/plain",
+                SizeBytes = 3
+            };
+            var chunk = new Chunk
+            {
+                Hash = [1, 2, 3],
+                PlainSizeBytes = 3,
+                StoredSizeBytes = 4,
+                CompressionAlgorithm = CompressionAlgorithm.Zstd
+            };
+            var manifestChunk = new FileManifestChunk
+            {
+                FileManifestId = manifest.Id,
+                ChunkOrder = 1,
+                ChunkHash = chunk.Hash,
+                Chunk = chunk
+            };
+            manifest.FileManifestChunks.Add(manifestChunk);
+
+            var nodeFile = new NodeFile
+            {
+                OwnerId = node.OwnerId,
+                NodeId = node.Id,
+                Node = node,
+                FileManifestId = manifest.Id,
+                FileManifest = manifest,
+                OriginalNodeFileId = Guid.Parse("80000000-0000-0000-0000-000000000002")
+            };
+            nodeFile.SetName("report.txt");
+
+            Assert.Throws<DatabaseIntegrityException>(() =>
+                verifier.RequireValidContent(dbContext, nodeFile, "test.file-graph"));
+        }
+
+        private static DatabaseIntegrityProtector CreateProtector(
+            string rootMasterKey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        {
+            CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey);
+            return new DatabaseIntegrityProtector(new DatabaseIntegrityKeyProvider(settings));
+        }
+
+        private static CottonDbContext CreateDbContext()
+        {
+            DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
+                .UseNpgsql("Host=localhost;Database=cotton_dev;Username=postgres;Password=postgres")
+                .Options;
+            return new CottonDbContext(options);
+        }
+
+        private static DatabaseIntegrityVerifier CreateVerifier(
+            IDatabaseIntegrityProtector protector,
+            IDatabaseIntegrityDescriptor descriptor)
+        {
+            return new DatabaseIntegrityVerifier(
+                protector,
+                new DatabaseIntegrityDescriptorRegistry([descriptor]),
+                NullDatabaseIntegrityFailureReporter.Instance,
+                NullLogger<DatabaseIntegrityVerifier>.Instance);
+        }
+
+        private static User CreateUser()
+        {
+            return new User
+            {
+                Username = "alice",
+                PasswordPhc = "password",
+                WebDavTokenPhc = "webdav",
+                Role = UserRole.User,
+                Email = "alice@example.test",
+                IsEmailVerified = true
+            };
+        }
+
+        private static IntegrityTestEntity CreateEntity()
+        {
+            return new IntegrityTestEntity
+            {
+                OwnerId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                Name = "file.txt",
+                SizeBytes = 12345,
+                IsEnabled = true,
+                SeenAt = new DateTime(2026, 5, 22, 12, 0, 0, DateTimeKind.Utc),
+                Transports = ["usb", "nfc"],
+                Metadata = new Dictionary<string, string>
+                {
+                    ["purpose"] = "test",
+                    ["kind"] = "fixture"
+                }
+            };
+        }
+
+        private class NoopDatabaseIntegrityVerifier : IDatabaseIntegrityVerifier
+        {
+            public void RequireValid<TEntity>(CottonDbContext dbContext, TEntity entity, string boundary)
+                where TEntity : class
+            {
+            }
+        }
+
+        private record IntegrityTestEntity
+        {
+            public Guid Id { get; init; }
+            public Guid? OwnerId { get; init; }
+            public string? Name { get; init; }
+            public long SizeBytes { get; init; }
+            public bool IsEnabled { get; init; }
+            public DateTime? SeenAt { get; init; }
+            public string[]? Transports { get; init; }
+            public Dictionary<string, string>? Metadata { get; init; }
+        }
+
+        private class IntegrityTestEntityDescriptor : DatabaseIntegrityDescriptor<IntegrityTestEntity>
+        {
+            public override string EntityName => "test_entity";
+            public override int SchemaVersion => 1;
+
+            public override string GetEntityKey(IntegrityTestEntity entity)
+            {
+                return entity.Id.ToString("D");
+            }
+
+            public override void WriteCanonicalData(
+                DatabaseIntegrityCanonicalWriter writer,
+                IntegrityTestEntity entity)
+            {
+                writer.WriteGuidField(nameof(entity.Id), entity.Id);
+                writer.WriteNullableGuidField(nameof(entity.OwnerId), entity.OwnerId);
+                writer.WriteStringField(nameof(entity.Name), entity.Name);
+                writer.WriteInt64Field(nameof(entity.SizeBytes), entity.SizeBytes);
+                writer.WriteBooleanField(nameof(entity.IsEnabled), entity.IsEnabled);
+                writer.WriteNullableDateTimeField(nameof(entity.SeenAt), entity.SeenAt);
+                writer.WriteStringArrayField(nameof(entity.Transports), entity.Transports);
+                writer.WriteStringDictionaryField(nameof(entity.Metadata), entity.Metadata);
+            }
         }
     }
 }

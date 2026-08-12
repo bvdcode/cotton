@@ -3,13 +3,14 @@
 
 using Cotton.Storage.Processors;
 
-namespace Cotton.Benchmark.Infrastructure;
-
-/// <summary>
-/// Supplies a deterministic Zstandard level so benchmark profiles measure the configured pipeline.
-/// </summary>
-internal class FixedCompressionLevelProvider(int level) : ICompressionLevelProvider
+namespace Cotton.Benchmark.Infrastructure
 {
-    /// <inheritdoc />
-    public int Level { get; } = level;
+    /// <summary>
+    /// Supplies a deterministic Zstandard level so benchmark profiles measure the configured pipeline.
+    /// </summary>
+    internal class FixedCompressionLevelProvider(int level) : ICompressionLevelProvider
+    {
+        /// <inheritdoc />
+        public int Level { get; } = level;
+    }
 }

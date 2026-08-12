@@ -9,7 +9,7 @@ namespace Cotton.Server.Services
     /// <summary>
     /// Converts rejected trusted-proxy checks into an explicit client response.
     /// </summary>
-    public sealed class UntrustedProxyConnectionExceptionHandler : IExceptionHandler
+    public class UntrustedProxyConnectionExceptionHandler : IExceptionHandler
     {
         /// <inheritdoc />
         public async ValueTask<bool> TryHandleAsync(

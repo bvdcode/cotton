@@ -110,6 +110,29 @@ describe("AdminStorageSettingsPage", () => {
     expect(settingsApi.setDefaultUserStorageQuotaBytes).not.toHaveBeenCalled();
   });
 
+  it("loads and saves the default user quota", async () => {
+    settingsApi.getDefaultUserStorageQuotaBytes.mockResolvedValue(
+      2 * 1024 ** 3,
+    );
+    render(<AdminStorageSettingsPage />);
+
+    const input = await screen.findByLabelText(
+      "storageSettings.quota.fields.defaultUserQuotaGiB",
+    );
+    await waitFor(() => expect(input).toBeEnabled());
+    expect(input).toHaveValue(2);
+
+    fireEvent.change(input, { target: { value: "3.5" } });
+    fireEvent.click(await findEnabledSaveButton());
+
+    await waitFor(() =>
+      expect(settingsApi.setDefaultUserStorageQuotaBytes).toHaveBeenCalledWith(
+        Math.round(3.5 * 1024 ** 3),
+      ),
+    );
+    expect(input).toHaveValue(3.5);
+  });
+
   it("shows a specific validation message for an invalid template node", async () => {
     render(<AdminStorageSettingsPage />);
 
@@ -128,6 +151,26 @@ describe("AdminStorageSettingsPage", () => {
       screen.getByText("storageSettings.errors.templateNodeIdInvalid"),
     ).toBeInTheDocument();
     expect(settingsApi.setDefaultUserTemplateNodeId).not.toHaveBeenCalled();
+  });
+
+  it("normalizes and saves the default template node id", async () => {
+    render(<AdminStorageSettingsPage />);
+
+    const input = await screen.findByLabelText(
+      "storageSettings.template.fields.nodeId",
+    );
+    await waitFor(() => expect(input).toBeEnabled());
+    fireEvent.change(input, {
+      target: { value: "6F9619FF-8B86-D011-B42D-00CF4FC964FF" },
+    });
+    fireEvent.click(await findEnabledSaveButton());
+
+    await waitFor(() =>
+      expect(settingsApi.setDefaultUserTemplateNodeId).toHaveBeenCalledWith(
+        "6f9619ff-8b86-d011-b42d-00cf4fc964ff",
+      ),
+    );
+    expect(input).toHaveValue("6f9619ff-8b86-d011-b42d-00cf4fc964ff");
   });
 
   it("keeps settings disabled when the initial load fails", async () => {

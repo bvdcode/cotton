@@ -1,38 +1,50 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Files;
-using Cotton.Nodes;
 using Cotton.Database;
 using Cotton.Database.Models.Enums;
+using Cotton.Files;
+using Cotton.Nodes;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services.Search;
+using EasyExtensions.Mediator;
+using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cotton.Server.Services.Search
+namespace Cotton.Server.Handlers.Layouts
 {
     /// <summary>
-    /// Coordinates layout search providers and shapes the API result payload.
+    /// Handles layout search queries.
     /// </summary>
-    public class LayoutSearchService(
+    public class SearchLayoutsQueryHandler(
         CottonDbContext _dbContext,
-        IEnumerable<ILayoutSearchProvider> _providers) : ILayoutSearchService
+        IEnumerable<ILayoutSearchProvider> _providers)
+        : IRequestHandler<SearchLayoutsQuery, PagedResult<SearchResultDto>>
     {
         private const int MaxPageSize = 100;
 
         /// <inheritdoc />
-        public async Task<PagedResult<SearchResultDto>> SearchAsync(LayoutSearchRequest request, CancellationToken cancellationToken)
+        public async Task<PagedResult<SearchResultDto>> Handle(
+            SearchLayoutsQuery request,
+            CancellationToken cancellationToken)
         {
             ValidatePaging(request.Page, request.PageSize);
 
+            LayoutSearchRequest searchRequest = new(
+                request.UserId,
+                request.LayoutId,
+                request.Query,
+                request.Page,
+                request.PageSize);
             LayoutSearchCriteria criteria = LayoutSearchCriteriaBuilder.Build(request.Query);
             if (!criteria.HasText && !criteria.HasIds)
             {
                 return CreateEmptySearchResult(0);
             }
 
-            IQueryable<LayoutSearchHit>? hitsQuery = BuildHitsQuery(request, criteria);
+            IQueryable<LayoutSearchHit>? hitsQuery = BuildHitsQuery(searchRequest, criteria);
             if (hitsQuery is null)
             {
                 return CreateEmptySearchResult(0);
@@ -47,7 +59,11 @@ namespace Cotton.Server.Services.Search
             }
 
             int skip = checked((request.Page - 1) * request.PageSize);
-            List<LayoutSearchHit> hits = await LoadPagedHitsAsync(hitsQuery, skip, request.PageSize, cancellationToken);
+            List<LayoutSearchHit> hits = await LoadPagedHitsAsync(
+                hitsQuery,
+                skip,
+                request.PageSize,
+                cancellationToken);
             if (hits.Count == 0)
             {
                 return CreateEmptySearchResult(totalCount);
@@ -69,12 +85,14 @@ namespace Cotton.Server.Services.Search
             }, totalCount);
         }
 
-        private IQueryable<LayoutSearchHit>? BuildHitsQuery(LayoutSearchRequest request, LayoutSearchCriteria criteria)
+        private IQueryable<LayoutSearchHit>? BuildHitsQuery(
+            LayoutSearchRequest request,
+            LayoutSearchCriteria criteria)
         {
             LayoutSearchProviderContext context = new(request, criteria);
             IQueryable<LayoutSearchHit>? hitsQuery = null;
 
-            foreach (ILayoutSearchProvider provider in _providers.OrderBy(x => x.Priority))
+            foreach (ILayoutSearchProvider provider in _providers.OrderBy(provider => provider.Priority))
             {
                 if (!provider.CanSearch(criteria))
                 {
@@ -115,10 +133,10 @@ namespace Cotton.Server.Services.Search
             CancellationToken cancellationToken)
         {
             return await hitsQuery
-                .OrderByDescending(x => x.Score)
-                .ThenBy(x => x.Kind)
-                .ThenBy(x => x.NameKey)
-                .ThenBy(x => x.Id)
+                .OrderByDescending(hit => hit.Score)
+                .ThenBy(hit => hit.Kind)
+                .ThenBy(hit => hit.NameKey)
+                .ThenBy(hit => hit.Id)
                 .Skip(skip)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
@@ -129,14 +147,14 @@ namespace Cotton.Server.Services.Search
             CancellationToken cancellationToken)
         {
             Guid[] nodeIds = hits
-                .Where(x => x.Kind == LayoutSearchHitKind.Node)
-                .Select(x => x.Id)
+                .Where(hit => hit.Kind == LayoutSearchHitKind.Node)
+                .Select(hit => hit.Id)
                 .Distinct()
                 .ToArray();
 
             Guid[] fileIds = hits
-                .Where(x => x.Kind == LayoutSearchHitKind.File)
-                .Select(x => x.Id)
+                .Where(hit => hit.Kind == LayoutSearchHitKind.File)
+                .Select(hit => hit.Id)
                 .Distinct()
                 .ToArray();
 
@@ -145,7 +163,9 @@ namespace Cotton.Server.Services.Search
             return (OrderNodesLikeHits(nodes, nodeIds), OrderFilesLikeHits(files, fileIds));
         }
 
-        private async Task<List<NodeDto>> LoadNodesAsync(Guid[] nodeIds, CancellationToken cancellationToken)
+        private async Task<List<NodeDto>> LoadNodesAsync(
+            Guid[] nodeIds,
+            CancellationToken cancellationToken)
         {
             if (nodeIds.Length == 0)
             {
@@ -154,12 +174,14 @@ namespace Cotton.Server.Services.Search
 
             return await _dbContext.Nodes
                 .AsNoTracking()
-                .Where(x => nodeIds.Contains(x.Id))
+                .Where(node => nodeIds.Contains(node.Id))
                 .ProjectToType<NodeDto>()
                 .ToListAsync(cancellationToken);
         }
 
-        private async Task<List<NodeFileManifestDto>> LoadFilesAsync(Guid[] fileIds, CancellationToken cancellationToken)
+        private async Task<List<NodeFileManifestDto>> LoadFilesAsync(
+            Guid[] fileIds,
+            CancellationToken cancellationToken)
         {
             if (fileIds.Length == 0)
             {
@@ -168,13 +190,15 @@ namespace Cotton.Server.Services.Search
 
             return await _dbContext.NodeFiles
                 .AsNoTracking()
-                .Where(x => fileIds.Contains(x.Id))
-                .Include(x => x.FileManifest)
+                .Where(nodeFile => fileIds.Contains(nodeFile.Id))
+                .Include(nodeFile => nodeFile.FileManifest)
                 .ProjectToType<NodeFileManifestDto>()
                 .ToListAsync(cancellationToken);
         }
 
-        private static List<NodeDto> OrderNodesLikeHits(List<NodeDto> nodes, IReadOnlyList<Guid> orderedIds)
+        private static List<NodeDto> OrderNodesLikeHits(
+            List<NodeDto> nodes,
+            IReadOnlyList<Guid> orderedIds)
         {
             if (nodes.Count <= 1)
             {
@@ -183,10 +207,10 @@ namespace Cotton.Server.Services.Search
 
             var order = orderedIds
                 .Select((id, index) => new { id, index })
-                .ToDictionary(x => x.id, x => x.index);
+                .ToDictionary(item => item.id, item => item.index);
 
             return nodes
-                .OrderBy(x => order.GetValueOrDefault(x.Id, int.MaxValue))
+                .OrderBy(node => order.GetValueOrDefault(node.Id, int.MaxValue))
                 .ToList();
         }
 
@@ -201,10 +225,10 @@ namespace Cotton.Server.Services.Search
 
             var order = orderedIds
                 .Select((id, index) => new { id, index })
-                .ToDictionary(x => x.id, x => x.index);
+                .ToDictionary(item => item.id, item => item.index);
 
             return files
-                .OrderBy(x => order.GetValueOrDefault(x.Id, int.MaxValue))
+                .OrderBy(file => order.GetValueOrDefault(file.Id, int.MaxValue))
                 .ToList();
         }
 
@@ -215,13 +239,13 @@ namespace Cotton.Server.Services.Search
             CancellationToken cancellationToken)
         {
             var resultNodeIds = hits
-                .Where(x => x.Kind == LayoutSearchHitKind.Node)
-                .Select(x => x.Id)
+                .Where(hit => hit.Kind == LayoutSearchHitKind.Node)
+                .Select(hit => hit.Id)
                 .ToHashSet();
 
             var fileParentNodeIds = hits
-                .Where(x => x.Kind == LayoutSearchHitKind.File)
-                .Select(x => x.NodeIdForPath)
+                .Where(hit => hit.Kind == LayoutSearchHitKind.File)
+                .Select(hit => hit.NodeIdForPath)
                 .ToHashSet();
 
             var allNodeIdsNeededForPaths = resultNodeIds
@@ -239,7 +263,7 @@ namespace Cotton.Server.Services.Search
                 allNodeIdsNeededForPaths,
                 cancellationToken);
 
-            var nodePaths = new Dictionary<Guid, string>(resultNodeIds.Count);
+            Dictionary<Guid, string> nodePaths = new(resultNodeIds.Count);
             foreach (Guid nodeId in resultNodeIds)
             {
                 nodePaths[nodeId] = allNodePaths.TryGetValue(nodeId, out string? path)
@@ -247,8 +271,8 @@ namespace Cotton.Server.Services.Search
                     : Constants.DefaultPathSeparator.ToString();
             }
 
-            var filePaths = new Dictionary<Guid, string>();
-            foreach (LayoutSearchHit hit in hits.Where(x => x.Kind == LayoutSearchHitKind.File))
+            Dictionary<Guid, string> filePaths = [];
+            foreach (LayoutSearchHit hit in hits.Where(hit => hit.Kind == LayoutSearchHitKind.File))
             {
                 string parentPath = allNodePaths.TryGetValue(hit.NodeIdForPath, out string? path)
                     ? path
@@ -278,13 +302,17 @@ namespace Cotton.Server.Services.Search
             IEnumerable<Guid> startNodeIds,
             CancellationToken cancellationToken)
         {
-            var nodeIds = startNodeIds.ToHashSet();
+            HashSet<Guid> nodeIds = startNodeIds.ToHashSet();
             if (nodeIds.Count == 0)
             {
                 return [];
             }
 
-            Dictionary<Guid, (Guid? ParentId, string Name, int Type)> nodeInfo = await LoadNodeLineageAsync(userId, layoutId, nodeIds, cancellationToken);
+            Dictionary<Guid, (Guid? ParentId, string Name, int Type)> nodeInfo = await LoadNodeLineageAsync(
+                userId,
+                layoutId,
+                nodeIds,
+                cancellationToken);
 
             Dictionary<Guid, string> nodePaths = new(nodeIds.Count);
             foreach (Guid id in nodeIds)
@@ -302,7 +330,7 @@ namespace Cotton.Server.Services.Search
             CancellationToken cancellationToken)
         {
             Dictionary<Guid, (Guid? ParentId, string Name, int Type)> nodeInfo = [];
-            var frontier = new HashSet<Guid>(startNodeIds);
+            HashSet<Guid> frontier = new(startNodeIds);
 
             while (frontier.Count > 0)
             {
@@ -311,10 +339,10 @@ namespace Cotton.Server.Services.Search
 
                 var chunk = await _dbContext.Nodes
                     .AsNoTracking()
-                    .Where(x => x.OwnerId == userId
-                        && x.LayoutId == layoutId
-                        && ids.Contains(x.Id))
-                    .Select(x => new { x.Id, x.ParentId, x.Name, x.Type })
+                    .Where(node => node.OwnerId == userId
+                        && node.LayoutId == layoutId
+                        && ids.Contains(node.Id))
+                    .Select(node => new { node.Id, node.ParentId, node.Name, node.Type })
                     .ToListAsync(cancellationToken);
 
                 foreach (var node in chunk)
@@ -336,7 +364,9 @@ namespace Cotton.Server.Services.Search
             foreach ((Guid id, (Guid? ParentId, string Name, int Type) info) in nodeInfo.ToArray())
             {
                 if (info.ParentId.HasValue
-                    && nodeInfo.TryGetValue(info.ParentId.Value, out (Guid? ParentId, string Name, int Type) parent)
+                    && nodeInfo.TryGetValue(
+                        info.ParentId.Value,
+                        out (Guid? ParentId, string Name, int Type) parent)
                     && parent.Type != info.Type)
                 {
                     nodeInfo[id] = (null, info.Name, info.Type);
@@ -352,8 +382,8 @@ namespace Cotton.Server.Services.Search
         {
             const int MaxDepth = 256;
 
-            var parts = new Stack<string>();
-            var visited = new HashSet<Guid>();
+            Stack<string> parts = new();
+            HashSet<Guid> visited = [];
 
             Guid currentId = id;
             int depth = 0;

@@ -1,40 +1,20 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Files;
 using Cotton.Nodes;
-using Cotton.Database;
-using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
-using Cotton.Models.Enums;
-using Cotton.Server.Auth;
-using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Handlers.Nodes;
-using Cotton.Server.Hubs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
-using Cotton.Server.Services;
-using Cotton.Server.Services.DatabaseIntegrity;
-using Cotton.Storage.Abstractions;
-using Cotton.Storage.Extensions;
-using Cotton.Storage.Pipelines;
-using Cotton.Topology.Abstractions;
-using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
-using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Net.Http.Headers;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Controllers
 {
@@ -43,21 +23,7 @@ namespace Cotton.Server.Controllers
     /// </summary>
     [ApiController]
     [Route(Routes.V1.Layouts)]
-    public class LayoutController(
-        IMediator _mediator,
-        CottonDbContext _dbContext,
-        ILayoutService _layouts,
-        ISyncChangeRecorder _syncChanges,
-        IHubContext<EventHub> _hubContext,
-        ILogger<LayoutController> _logger,
-        ILayoutNavigator _navigator,
-        IStoragePipeline _storage,
-        IDatabaseIntegrityVerifier _integrity,
-        FileGraphIntegrityVerifier _fileGraphIntegrity,
-        ILayoutMutationGate _layoutGate,
-        PublicShareTokenGenerator _publicShareTokens,
-        PublicShareLookupFailureLimiter _publicShareLookupFailures,
-        ArchiveDownloadService _archives) : ControllerBase
+    public class LayoutController(IMediator _mediator) : ControllerBase
     {
         /// <summary>
         /// Gets recent nodes.
@@ -99,34 +65,14 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetLayoutStats([FromRoute] Guid layoutId)
         {
             Guid userId = User.GetUserId();
-            Layout? layout = await _dbContext.UserLayouts
-                .AsNoTracking()
-                .Where(x => x.Id == layoutId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
-            if (layout is null)
+            LayoutStatsDto? stats = await _mediator.Send(
+                new GetLayoutStatsQuery(userId, layoutId),
+                HttpContext.RequestAborted);
+            if (stats is null)
             {
                 return CottonResult.NotFound("Layout not found.");
             }
-            int nodeCount = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.LayoutId == layout.Id && x.OwnerId == userId)
-                .CountAsync();
-            int fileCount = await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.Node.LayoutId == layout.Id && x.Node.OwnerId == userId)
-                .CountAsync();
-            long sizeBytes = await _dbContext.NodeFiles
-                .Include(x => x.FileManifest)
-                .AsNoTracking()
-                .Where(x => x.Node.LayoutId == layout.Id && x.Node.OwnerId == userId)
-                .SumAsync(x => (long?)x.FileManifest.SizeBytes) ?? 0L;
-            LayoutStatsDto stats = new()
-            {
-                SizeBytes = sizeBytes,
-                LayoutId = layout.Id,
-                NodeCount = nodeCount,
-                FileCount = fileCount
-            };
+
             return Ok(stats);
         }
 
@@ -158,73 +104,22 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeId,
             [FromBody] RenameNodeRequestDto request)
         {
-            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
-                out string normalizedName,
-                out string? errorMessage);
-            if (!isValidName)
-            {
-                return CottonResult.BadRequest(errorMessage);
-            }
-
             Guid userId = User.GetUserId();
-            Guid? layoutId = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId && x.OwnerId == userId)
-                .Select(x => (Guid?)x.LayoutId)
-                .SingleOrDefaultAsync();
-            if (layoutId is null)
+            RenameNodeResult result = await _mediator.Send(
+                new RenameNodeRequest(userId, nodeId, request.Name),
+                HttpContext.RequestAborted);
+            if (result.Status != RenameNodeStatus.Renamed)
             {
-                return CottonResult.NotFound("Node not found.");
-            }
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layoutId.Value, HttpContext.RequestAborted);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
-
-            Node? node = await _dbContext.Nodes
-                .Where(x => x.Id == nodeId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
-            if (node is null)
-            {
-                return CottonResult.NotFound("Node not found.");
-            }
-
-            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-
-            bool nodeExists = await _dbContext.Nodes
-                .AnyAsync(x =>
-                    x.ParentId == node.ParentId &&
-                    x.OwnerId == userId &&
-                    x.NameKey == nameKey &&
-                    x.LayoutId == node.LayoutId &&
-                    x.Type == node.Type &&
-                    x.Id != nodeId);
-            if (nodeExists)
-            {
-                return this.ApiConflict("A folder with the same name key already exists in the parent folder: " + nameKey);
-            }
-
-            if (node.ParentId.HasValue)
-            {
-                bool fileExists = await _dbContext.NodeFiles
-                    .AnyAsync(x =>
-                        x.NodeId == node.ParentId.Value &&
-                        x.OwnerId == userId &&
-                        x.NameKey == nameKey);
-                if (fileExists)
+                return result.Status switch
                 {
-                    return this.ApiConflict("A file with the same name key already exists in the parent folder: " + nameKey);
-                }
+                    RenameNodeStatus.InvalidName => CottonResult.BadRequest(result.Error!),
+                    RenameNodeStatus.NodeNotFound => CottonResult.NotFound(result.Error!),
+                    RenameNodeStatus.NameConflict => this.ApiConflict(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
-            node.SetName(request.Name);
-            if (node.ParentId.HasValue)
-            {
-                _syncChanges.StageFolderChange(SyncChangeKind.FolderRenamed, node, node.ParentId.Value);
-            }
-            await _dbContext.SaveChangesAsync();
-            await tx.CommitAsync();
-            NodeDto mapped = node.Adapt<NodeDto>();
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", mapped);
-            return Ok(mapped);
+            return Ok(result.Node!);
         }
 
         /// <summary>
@@ -235,16 +130,15 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
         {
             Guid userId = User.GetUserId();
-            Node? node = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
+            NodeDto? node = await _mediator.Send(
+                new GetOwnedNodeQuery(userId, nodeId),
+                HttpContext.RequestAborted);
             if (node is null)
             {
                 return CottonResult.NotFound("Node not found.");
             }
-            NodeDto mapped = node.Adapt<NodeDto>();
-            return Ok(mapped);
+
+            return Ok(node);
         }
 
         /// <summary>
@@ -259,55 +153,21 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeId,
             [FromBody] Dictionary<string, string?>? patch)
         {
-            if (patch is null)
-            {
-                return CottonResult.BadRequest("Metadata patch is required.");
-            }
-
-            if (patch.Any(x => string.IsNullOrWhiteSpace(x.Key)))
-            {
-                return CottonResult.BadRequest("Metadata keys must be non-empty strings.");
-            }
-
-            if (patch.Any(x => x.Value is null))
-            {
-                return CottonResult.BadRequest("Metadata values must be strings.");
-            }
-
             Guid userId = User.GetUserId();
-            Node? node = await _dbContext.Nodes
-                .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (node is null)
+            UpdateNodeMetadataResult result = await _mediator.Send(
+                new UpdateNodeMetadataRequest(userId, nodeId, patch),
+                HttpContext.RequestAborted);
+            if (result.Status != UpdateNodeMetadataStatus.Updated)
             {
-                return CottonResult.NotFound("Node not found.");
+                return result.Status switch
+                {
+                    UpdateNodeMetadataStatus.InvalidPatch => CottonResult.BadRequest(result.Error!),
+                    UpdateNodeMetadataStatus.NodeNotFound => CottonResult.NotFound(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
-            Dictionary<string, string> metadata = node.Metadata is null
-                ? []
-                : new Dictionary<string, string>(node.Metadata);
-            foreach ((string? key, string? value) in patch)
-            {
-                metadata[key] = value!;
-            }
-
-            node.Metadata = metadata;
-            await _dbContext.SaveChangesAsync();
-
-            NodeDto mapped = node.Adapt<NodeDto>();
-            try
-            {
-                await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeMetadataUpdated", mapped);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Failed to send node metadata update notification for node {NodeId}",
-                    nodeId);
-            }
-
-            return Ok(mapped);
+            return Ok(result.Node!);
         }
 
         /// <summary>
@@ -320,16 +180,10 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool skipTrash = false)
         {
             Guid userId = User.GetUserId();
-            Guid? parentNodeId = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId && x.OwnerId == userId)
-                .Select(x => x.ParentId)
-                .SingleOrDefaultAsync();
-            DeleteNodeQuery query = new(userId, nodeId, skipTrash);
-            await _mediator.Send(query);
-            await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                "NodeDeleted",
-                new NodeDeletedEventDto(nodeId, parentNodeId));
+            DeleteNodeRequest request = new(userId, nodeId, skipTrash);
+            await _mediator.Send(
+                request,
+                HttpContext.RequestAborted);
             return Ok();
         }
 
@@ -351,16 +205,6 @@ namespace Cotton.Server.Controllers
                 request.CreateMissingParents,
                 request.Overwrite));
 
-            if (outcome.Status == RestoreStatus.Restored)
-            {
-                object restoredNodePayload = outcome.RestoredNode is not null
-                    ? outcome.RestoredNode
-                    : new { id = nodeId };
-                await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                    "NodeRestored",
-                    restoredNodePayload);
-            }
-
             return Ok(outcome);
         }
 
@@ -371,80 +215,22 @@ namespace Cotton.Server.Controllers
         [HttpPut("nodes")]
         public async Task<IActionResult> CreateLayoutNode([FromBody] CreateNodeRequestDto request)
         {
-            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
-                out string normalizedName,
-                out string? errorMessage);
-            if (!isValidName)
-            {
-                return CottonResult.BadRequest(errorMessage);
-            }
-
             Guid userId = User.GetUserId();
-            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, HttpContext.RequestAborted);
-            Node? preTransactionParentNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == request.ParentId
-                    && x.OwnerId == userId
-                    && x.LayoutId == layout.Id
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (preTransactionParentNode is null)
+            CreateNodeResult result = await _mediator.Send(
+                new CreateNodeRequest(userId, request.ParentId, request.Name),
+                HttpContext.RequestAborted);
+            if (result.Status != CreateNodeStatus.Created)
             {
-                return CottonResult.NotFound("Parent node not found.");
+                return result.Status switch
+                {
+                    CreateNodeStatus.InvalidName => CottonResult.BadRequest(result.Error!),
+                    CreateNodeStatus.ParentNotFound => CottonResult.NotFound(result.Error!),
+                    CreateNodeStatus.NameConflict => this.ApiConflict(result.Error!),
+                    _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+                };
             }
 
-            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(layout.Id, HttpContext.RequestAborted);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync();
-
-            Node? parentNode = await _dbContext.Nodes
-                .Where(x => x.Id == request.ParentId
-                    && x.OwnerId == userId
-                    && x.LayoutId == layout.Id
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (parentNode is null)
-            {
-                return CottonResult.NotFound("Parent node not found.");
-            }
-
-            bool nodeExists = await _dbContext.Nodes
-                .AnyAsync(x =>
-                    x.ParentId == parentNode.Id &&
-                    x.OwnerId == userId &&
-                    x.NameKey == nameKey &&
-                    x.LayoutId == layout.Id &&
-                    x.Type == NodeType.Default);
-            if (nodeExists)
-            {
-                return this.ApiConflict("A folder with the same name key already exists in the target layout: " + nameKey);
-            }
-
-            bool fileExists = await _dbContext.NodeFiles
-                .AnyAsync(x =>
-                    x.NodeId == parentNode.Id &&
-                    x.OwnerId == userId &&
-                    x.NameKey == nameKey);
-            if (fileExists)
-            {
-                return this.ApiConflict("A file with the same name key already exists in the target layout: " + nameKey);
-            }
-
-            var newNode = new Node
-            {
-                OwnerId = userId,
-                Type = NodeType.Default,
-                LayoutId = layout.Id,
-            };
-            newNode.SetParent(parentNode);
-            newNode.SetName(request.Name);
-            await _dbContext.Nodes.AddAsync(newNode);
-            _syncChanges.StageFolderChange(SyncChangeKind.FolderCreated, newNode, parentNode.Id);
-            await _dbContext.SaveChangesAsync();
-            await tx.CommitAsync();
-            NodeDto mapped = newNode.Adapt<NodeDto>();
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeCreated", mapped);
-            return Ok(mapped);
+            return Ok(result.Node!);
         }
 
         /// <summary>
@@ -457,48 +243,20 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType nodeType = NodeType.Default)
         {
             Guid userId = User.GetUserId();
-            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, HttpContext.RequestAborted);
-
-            IQueryable<Node> nodesQuery = _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.OwnerId == userId
-                    && x.LayoutId == layout.Id
-                    && x.Type == nodeType);
-
-            Node? currentNode = await nodesQuery
-                .SingleOrDefaultAsync(x => x.Id == nodeId);
-
-            if (currentNode is null)
+            GetNodeAncestorsResult result = await _mediator.Send(
+                new GetNodeAncestorsQuery(userId, nodeId, nodeType),
+                HttpContext.RequestAborted);
+            switch (result.Status)
             {
-                return this.ApiNotFound("Node not found.");
+                case GetNodeAncestorsStatus.Success:
+                    return Ok(result.Ancestors);
+                case GetNodeAncestorsStatus.NodeNotFound:
+                    return this.ApiNotFound("Node not found.");
+                case GetNodeAncestorsStatus.InvalidHierarchy:
+                    return this.ApiConflict(result.Error!);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(result.Status));
             }
-
-            const int MaxDepth = 256;
-            var visited = new HashSet<Guid> { currentNode.Id };
-            int depth = 0;
-            List<NodeDto> ancestors = [];
-            while (currentNode.ParentId is not null)
-            {
-                if (depth++ >= MaxDepth)
-                {
-                    return this.ApiConflict("Maximum node hierarchy depth exceeded.");
-                }
-                Guid parentId = currentNode.ParentId.Value;
-                if (!visited.Add(parentId))
-                {
-                    return this.ApiConflict("Circular reference detected in node hierarchy.");
-                }
-                Node? parentNode = await nodesQuery
-                    .SingleOrDefaultAsync(x => x.Id == parentId);
-                if (parentNode is null)
-                {
-                    break;
-                }
-                ancestors.Add(parentNode.Adapt<NodeDto>());
-                currentNode = parentNode;
-            }
-            ancestors.Reverse();
-            return Ok(ancestors);
         }
 
         /// <summary>
@@ -521,466 +279,6 @@ namespace Cotton.Server.Controllers
         }
 
         /// <summary>
-        /// Gets node share link.
-        /// </summary>
-        [Authorize]
-        [HttpGet("nodes/{nodeId:guid}/share-link")]
-        public async Task<IActionResult> GetNodeShareLink(
-            [FromRoute] Guid nodeId,
-            [FromQuery] int expireAfterMinutes = 1440,
-            [FromQuery] string? customToken = "")
-        {
-            const int maxExpireMinutes = 60 * 24 * 365; // 1 year
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(expireAfterMinutes, maxExpireMinutes, nameof(expireAfterMinutes));
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expireAfterMinutes, nameof(expireAfterMinutes));
-
-            Guid userId = User.GetUserId();
-            Node? node = await _dbContext.Nodes
-                .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (node is null)
-            {
-                return CottonResult.NotFound("Node not found.");
-            }
-
-            string token;
-            if (!string.IsNullOrWhiteSpace(customToken))
-            {
-                bool exists = await _dbContext.DownloadTokens.AnyAsync(x => x.Token == customToken)
-                    || await _dbContext.NodeShareTokens.AnyAsync(x => x.Token == customToken);
-                if (exists)
-                {
-                    return this.ApiConflict("The custom token is already in use. Please choose a different one.");
-                }
-
-                token = customToken;
-            }
-            else
-            {
-                token = await _publicShareTokens.CreateUniqueAsync(HttpContext.RequestAborted);
-            }
-
-            NodeShareToken newToken = new()
-            {
-                Name = node.Name,
-                NodeId = node.Id,
-                CreatedByUserId = userId,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
-                Token = token,
-            };
-
-            await _dbContext.NodeShareTokens.AddAsync(newToken);
-            await _dbContext.SaveChangesAsync();
-            return Ok($"/s/{newToken.Token}");
-        }
-
-        /// <summary>
-        /// Gets shared node info.
-        /// </summary>
-        [AllowAnonymous]
-        [HttpGet("shared/{token}")]
-        public async Task<IActionResult> GetSharedNodeInfo([FromRoute] string token)
-        {
-            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
-                _publicShareLookupFailures,
-                token);
-            if (blocked is not null)
-            {
-                return blocked;
-            }
-
-            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken is null)
-            {
-                return this.ApiPublicShareNotFound(
-                    _publicShareLookupFailures,
-                    token,
-                    "Shared folder not found.");
-            }
-
-            return Ok(new SharedNodeInfoDto
-            {
-                Token = nodeShareToken.Token,
-                NodeId = nodeShareToken.NodeId,
-                Name = nodeShareToken.Name,
-                ExpiresAt = nodeShareToken.ExpiresAt,
-            });
-        }
-
-        /// <summary>
-        /// Gets shared node children.
-        /// </summary>
-        [AllowAnonymous]
-        [HttpGet("shared/{token}/children")]
-        public async Task<IActionResult> GetSharedNodeChildren(
-            [FromRoute] string token,
-            [FromQuery] Guid? nodeId = null,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 100)
-        {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
-
-            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
-                _publicShareLookupFailures,
-                token);
-            if (blocked is not null)
-            {
-                return blocked;
-            }
-
-            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken is null)
-            {
-                return this.ApiPublicShareNotFound(
-                    _publicShareLookupFailures,
-                    token,
-                    "Shared folder not found.");
-            }
-
-            Guid targetNodeId = nodeId ?? nodeShareToken.NodeId;
-            bool canAccessNode = await IsNodeInSharedSubtreeAsync(
-                targetNodeId,
-                nodeShareToken.NodeId,
-                nodeShareToken.CreatedByUserId);
-
-            if (!canAccessNode)
-            {
-                return this.ApiNotFound("Folder not found.");
-            }
-
-            Node? targetNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == targetNodeId
-                    && x.OwnerId == nodeShareToken.CreatedByUserId
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (targetNode is null)
-            {
-                return this.ApiNotFound("Folder not found.");
-            }
-
-            int skip = (page - 1) * pageSize;
-
-            IQueryable<NodeDto> nodesQuery = _dbContext.Nodes
-                .AsNoTracking()
-                .OrderBy(x => x.NameKey)
-                .Where(x => x.ParentId == targetNodeId
-                    && x.OwnerId == nodeShareToken.CreatedByUserId
-                    && x.Type == NodeType.Default)
-                .ProjectToType<NodeDto>();
-
-            IQueryable<NodeFile> filesBaseQuery = _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.NodeId == targetNodeId
-                    && x.OwnerId == nodeShareToken.CreatedByUserId);
-
-            int nodesCount = await nodesQuery.CountAsync();
-            int filesCount = await filesBaseQuery.CountAsync();
-
-            int nodesToTake = Math.Max(0, Math.Min(pageSize, nodesCount - skip));
-            int filesSkip = Math.Max(0, skip - nodesCount);
-            int filesToTake = Math.Max(0, pageSize - nodesToTake);
-
-            List<NodeDto> nodes = nodesToTake == 0 ? []
-                : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync();
-
-            List<SharedNodeFileDto> files = filesToTake == 0 ? [] : await LoadSharedFilesAsync(filesBaseQuery, filesSkip, filesToTake);
-
-            SharedNodeContentDto response = new()
-            {
-                Nodes = nodes,
-                Files = files,
-                Id = targetNode.Id,
-                CreatedAt = targetNode.CreatedAt,
-                UpdatedAt = targetNode.UpdatedAt,
-            };
-
-            Response.Headers.Append("X-Total-Count", (nodesCount + filesCount).ToString());
-            return Ok(response);
-        }
-
-        /// <summary>
-        /// Gets shared node ancestors.
-        /// </summary>
-        [AllowAnonymous]
-        [HttpGet("shared/{token}/ancestors/{nodeId:guid}")]
-        public async Task<IActionResult> GetSharedNodeAncestors(
-            [FromRoute] string token,
-            [FromRoute] Guid nodeId)
-        {
-            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
-                _publicShareLookupFailures,
-                token);
-            if (blocked is not null)
-            {
-                return blocked;
-            }
-
-            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken is null)
-            {
-                return this.ApiPublicShareNotFound(
-                    _publicShareLookupFailures,
-                    token,
-                    "Shared folder not found.");
-            }
-
-            bool canAccessNode = await IsNodeInSharedSubtreeAsync(
-                nodeId,
-                nodeShareToken.NodeId,
-                nodeShareToken.CreatedByUserId);
-            if (!canAccessNode)
-            {
-                return this.ApiNotFound("Folder not found.");
-            }
-
-            Node? currentNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId
-                    && x.OwnerId == nodeShareToken.CreatedByUserId
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-            if (currentNode is null)
-            {
-                return this.ApiNotFound("Folder not found.");
-            }
-
-            (List<NodeDto> ancestors, string? error) = await LoadSharedAncestorsAsync(
-                currentNode,
-                nodeShareToken.NodeId,
-                nodeShareToken.CreatedByUserId);
-            if (error is not null)
-            {
-                return this.ApiConflict(error);
-            }
-
-            return Ok(ancestors);
-        }
-
-        private async Task<(List<NodeDto> Ancestors, string? Error)> LoadSharedAncestorsAsync(
-            Node currentNode,
-            Guid sharedRootNodeId,
-            Guid ownerId)
-        {
-            const int maxDepth = 256;
-            int depth = 0;
-            HashSet<Guid> visited = [currentNode.Id];
-            List<NodeDto> ancestors = [];
-
-            while (currentNode.ParentId.HasValue)
-            {
-                if (depth++ >= maxDepth)
-                {
-                    return ([], "Maximum node hierarchy depth exceeded.");
-                }
-
-                Guid parentId = currentNode.ParentId.Value;
-                if (!visited.Add(parentId))
-                {
-                    return ([], "Circular reference detected in node hierarchy.");
-                }
-
-                Node? parentNode = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => x.Id == parentId
-                        && x.OwnerId == ownerId
-                        && x.Type == NodeType.Default)
-                    .SingleOrDefaultAsync();
-
-                if (parentNode is null)
-                {
-                    break;
-                }
-
-                if (parentNode.Id == sharedRootNodeId)
-                {
-                    ancestors.Add(parentNode.Adapt<NodeDto>());
-                    break;
-                }
-
-                ancestors.Add(parentNode.Adapt<NodeDto>());
-                currentNode = parentNode;
-            }
-
-            ancestors.Reverse();
-            return (ancestors, null);
-        }
-
-        /// <summary>
-        /// Creates shared folder archive download link.
-        /// </summary>
-        [AllowAnonymous]
-        [EnableRateLimiting(AuthRateLimitPolicies.PublicShareArchive)]
-        [HttpPost("shared/{token}/archives/download-link")]
-        public async Task<IActionResult> CreateSharedArchiveDownloadLink(
-            [FromRoute] string token,
-            [FromQuery] Guid? nodeId,
-            CancellationToken cancellationToken)
-        {
-            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
-                _publicShareLookupFailures,
-                token);
-            if (blocked is not null)
-            {
-                return blocked;
-            }
-
-            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken is null)
-            {
-                return this.ApiPublicShareNotFound(
-                    _publicShareLookupFailures,
-                    token,
-                    "Shared folder not found.");
-            }
-
-            Guid targetNodeId = nodeId ?? nodeShareToken.NodeId;
-            bool canAccessNode = await IsNodeInSharedSubtreeAsync(
-                targetNodeId,
-                nodeShareToken.NodeId,
-                nodeShareToken.CreatedByUserId);
-            if (!canAccessNode)
-            {
-                return this.ApiNotFound("Folder not found.");
-            }
-
-            CreateArchiveDownloadLinkResult result = await _archives.CreateDownloadLinkAsync(
-                nodeShareToken.CreatedByUserId,
-                new CreateArchiveDownloadLinkRequest
-                {
-                    NodeIds = [targetNodeId],
-                    EnforcePublicShareLimits = true,
-                },
-                cancellationToken);
-
-            return result.StatusCode switch
-            {
-                StatusCodes.Status200OK => Ok(result.Link),
-                StatusCodes.Status400BadRequest => BadRequest(result.Error),
-                StatusCodes.Status404NotFound => NotFound(result.Error),
-                _ => StatusCode(result.StatusCode, result.Error),
-            };
-        }
-
-        /// <summary>
-        /// Downloads shared node file.
-        /// </summary>
-        [AllowAnonymous]
-        [HttpGet("shared/{token}/files/{nodeFileId:guid}/content")]
-        public async Task<IActionResult> DownloadSharedNodeFile(
-            [FromRoute] string token,
-            [FromRoute] Guid nodeFileId,
-            [FromQuery] bool download = true,
-            [FromQuery] bool preview = false)
-        {
-            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
-                _publicShareLookupFailures,
-                token);
-            if (blocked is not null)
-            {
-                return blocked;
-            }
-
-            NodeShareToken? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken is null)
-            {
-                return this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found.");
-            }
-
-            NodeFile? nodeFile = await LoadSharedNodeFileAsync(nodeFileId, nodeShareToken.CreatedByUserId);
-            if (nodeFile is null)
-            {
-                return this.ApiNotFound("File not found.");
-            }
-
-            bool servesPreview = preview && nodeFile.FileManifest.LargeFilePreviewHash is not null;
-            RequireSharedFileIntegrity(nodeFile, servesPreview);
-
-            if (nodeFile.Node.Type != NodeType.Default)
-            {
-                return this.ApiNotFound("File not found.");
-            }
-
-            bool canAccessFile = await IsNodeInSharedSubtreeAsync(
-                nodeFile.NodeId,
-                nodeShareToken.NodeId,
-                nodeShareToken.CreatedByUserId);
-            if (!canAccessFile)
-            {
-                return this.ApiNotFound("File not found.");
-            }
-
-            return servesPreview
-                ? ServeSharedLargePreview(nodeFile)
-                : ServeSharedFileDownload(nodeFile, download);
-        }
-
-        private Task<NodeFile?> LoadSharedNodeFileAsync(Guid nodeFileId, Guid ownerId)
-        {
-            return _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == ownerId);
-        }
-
-        private void RequireSharedFileIntegrity(NodeFile nodeFile, bool servesPreview)
-        {
-            if (servesPreview)
-            {
-                _fileGraphIntegrity.RequireValidMetadata(_dbContext, nodeFile, "shared-folder.preview");
-                return;
-            }
-
-            _fileGraphIntegrity.RequireValidContent(_dbContext, nodeFile, "shared-folder.download");
-        }
-
-        private IActionResult ServeSharedLargePreview(NodeFile nodeFile)
-        {
-            string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash!);
-            EntityTagHeaderValue entityTag = new($"\"sha256-{previewHashHex}\"");
-            Response.Headers.ETag = entityTag.ToString();
-            Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-            if (FileETags.MatchesIfNoneMatchHeader(Request, entityTag))
-            {
-                return StatusCode(StatusCodes.Status304NotModified);
-            }
-
-            Stream previewStream = _storage.GetBlobStream([previewHashHex]);
-            return File(previewStream, "image/webp");
-        }
-
-        private IActionResult ServeSharedFileDownload(NodeFile nodeFile, bool download)
-        {
-            string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
-            PipelineContext context = new()
-            {
-                FileSizeBytes = nodeFile.FileManifest.SizeBytes,
-                ChunkLengths = nodeFile.FileManifest.FileManifestChunks.GetChunkLengths(),
-            };
-
-            Stream stream = _storage.GetBlobStream(uids, context);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            EntityTagHeaderValue entityTag = FileETags.CreateContentEntityTag(nodeFile);
-            bool requestedInline = !download;
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, nodeFile.FileManifest.ContentType, requestedInline);
-
-            return File(
-                stream,
-                FileResponseSecurity.ResolveContentTypeForResponse(nodeFile.FileManifest.ContentType, requestedInline),
-                fileDownloadName: FileResponseSecurity.ResolveFileDownloadName(
-                    nodeFile.Name,
-                    requestedInline,
-                    nodeFile.FileManifest.ContentType),
-                lastModified: new DateTimeOffset(nodeFile.CreatedAt),
-                entityTag: entityTag,
-                enableRangeProcessing: true);
-        }
-
-        /// <summary>
         /// Resolves layout.
         /// </summary>
         [Authorize]
@@ -990,146 +288,15 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType nodeType = NodeType.Default)
         {
             Guid userId = User.GetUserId();
-            Node? currentNode = await _navigator.ResolveNodeByPathAsync(userId, path, nodeType);
-            if (currentNode is null)
+            NodeDto? node = await _mediator.Send(
+                new ResolveLayoutPathQuery(userId, path, nodeType),
+                HttpContext.RequestAborted);
+            if (node is null)
             {
                 return CottonResult.NotFound("Layout node was not found.");
             }
 
-            return Ok(currentNode.Adapt<NodeDto>());
-        }
-
-        private async Task<NodeShareToken?> ResolveActiveNodeShareTokenAsync(string token)
-        {
-            DateTime now = DateTime.UtcNow;
-            NodeShareToken? nodeShareToken = await _dbContext.NodeShareTokens
-                .Include(x => x.Node)
-                .Where(x => x.Token == token
-                    && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
-                .SingleOrDefaultAsync();
-
-            if (nodeShareToken is null)
-            {
-                return null;
-            }
-
-            _integrity.RequireValid(_dbContext, nodeShareToken, "shared-folder.node-token");
-            _integrity.RequireValid(_dbContext, nodeShareToken.Node, "shared-folder.root-node");
-            if (nodeShareToken.Node.Type != NodeType.Default)
-            {
-                return null;
-            }
-
-            return nodeShareToken;
-        }
-
-        private async Task<bool> IsNodeInSharedSubtreeAsync(
-            Guid nodeId,
-            Guid sharedRootNodeId,
-            Guid ownerId)
-        {
-            const int maxDepth = 512;
-
-            Node? currentNode = await LoadVerifiedSharedDefaultNodeAsync(
-                nodeId,
-                ownerId,
-                "shared-folder.subtree.node");
-
-            if (currentNode is null)
-            {
-                return false;
-            }
-
-            if (currentNode.Id == sharedRootNodeId)
-            {
-                return true;
-            }
-
-            var visited = new HashSet<Guid> { currentNode.Id };
-            int depth = 0;
-
-            while (currentNode.ParentId.HasValue)
-            {
-                if (depth++ >= maxDepth)
-                {
-                    return false;
-                }
-
-                Guid parentId = currentNode.ParentId.Value;
-                if (!visited.Add(parentId))
-                {
-                    return false;
-                }
-
-                currentNode = await LoadVerifiedSharedDefaultNodeAsync(
-                    parentId,
-                    ownerId,
-                    "shared-folder.subtree.ancestor");
-
-                if (currentNode is null)
-                {
-                    return false;
-                }
-
-                if (currentNode.Id == sharedRootNodeId)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private async Task<Node?> LoadVerifiedSharedDefaultNodeAsync(
-            Guid nodeId,
-            Guid ownerId,
-            string boundary)
-        {
-            Node? node = await _dbContext.Nodes
-                .Where(x => x.Id == nodeId
-                    && x.OwnerId == ownerId
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-
-            if (node is null)
-            {
-                return null;
-            }
-
-            try
-            {
-                _integrity.RequireValid(_dbContext, node, boundary);
-            }
-            catch (DatabaseIntegrityException)
-            {
-                return null;
-            }
-            return node;
-        }
-
-        private static async Task<List<SharedNodeFileDto>> LoadSharedFilesAsync(
-            IQueryable<NodeFile> filesBaseQuery,
-            int filesSkip,
-            int filesToTake)
-        {
-            List<NodeFile> fileEntities = await filesBaseQuery
-                .OrderBy(x => x.NameKey)
-                .Include(x => x.FileManifest)
-                .Skip(filesSkip)
-                .Take(filesToTake)
-                .ToListAsync();
-
-            return [.. fileEntities.Select(x => new SharedNodeFileDto
-            {
-                Id = x.Id,
-                CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt,
-                NodeId = x.NodeId,
-                Name = x.Name,
-                ContentType = x.FileManifest.ContentType,
-                SizeBytes = x.FileManifest.SizeBytes,
-                PreviewHashEncryptedHex = x.FileManifest.GetPreviewHashEncryptedHex(),
-            })];
+            return Ok(node);
         }
     }
 }

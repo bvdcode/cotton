@@ -2,7 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Models.Dto;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 
@@ -21,8 +20,11 @@ namespace Cotton.Server.Services
         public static CpuFeatureDiagnosticsDto Snapshot()
         {
             LinuxCpuInfo cpuInfo = ReadLinuxCpuInfo();
-            CpuFeatureAvailabilityDto aesNi = CreateRuntimeAndLinuxFeature("Aes", cpuInfo, "aes");
-            CpuFeatureAvailabilityDto pclmulqdq = CreateRuntimeAndLinuxFeature("Pclmulqdq", cpuInfo, "pclmulqdq");
+            CpuFeatureAvailabilityDto aesNi = CreateRuntimeAndLinuxFeature(Aes.IsSupported, cpuInfo, "aes");
+            CpuFeatureAvailabilityDto pclmulqdq = CreateRuntimeAndLinuxFeature(
+                Pclmulqdq.IsSupported,
+                cpuInfo,
+                "pclmulqdq");
 
             return new CpuFeatureDiagnosticsDto
             {
@@ -34,9 +36,9 @@ namespace Cotton.Server.Services
                 AesGcmHardwareAccelerationLikely = aesNi.RuntimeSupported == true && pclmulqdq.RuntimeSupported == true,
                 AesNi = aesNi,
                 Pclmulqdq = pclmulqdq,
-                Vaes = CreateRuntimeAndLinuxFeature("Vaes", cpuInfo, "vaes"),
-                Vpclmulqdq = CreateRuntimeAndLinuxFeature("Vpclmulqdq", cpuInfo, "vpclmulqdq"),
-                Avx2 = CreateRuntimeAndLinuxFeature("Avx2", cpuInfo, "avx2"),
+                Vaes = CreateLinuxOnlyFeature(cpuInfo, "vaes"),
+                Vpclmulqdq = CreateLinuxOnlyFeature(cpuInfo, "vpclmulqdq"),
+                Avx2 = CreateRuntimeAndLinuxFeature(Avx2.IsSupported, cpuInfo, "avx2"),
                 Tme = CreateLinuxOnlyFeature(cpuInfo, "tme"),
                 TmeMk = CreateLinuxOnlyFeature(cpuInfo, "mktme", "tme-mk"),
                 Pconfig = CreateLinuxOnlyFeature(cpuInfo, "pconfig"),
@@ -45,13 +47,13 @@ namespace Cotton.Server.Services
         }
 
         private static CpuFeatureAvailabilityDto CreateRuntimeAndLinuxFeature(
-            string intrinsicTypeName,
+            bool runtimeSupported,
             LinuxCpuInfo cpuInfo,
             params string[] linuxFlags)
         {
             return new CpuFeatureAvailabilityDto
             {
-                RuntimeSupported = TryReadX86IntrinsicSupport(intrinsicTypeName),
+                RuntimeSupported = runtimeSupported,
                 LinuxFlagPresent = cpuInfo.TryHasAnyFlag(linuxFlags),
             };
         }
@@ -65,18 +67,6 @@ namespace Cotton.Server.Services
                 RuntimeSupported = null,
                 LinuxFlagPresent = cpuInfo.TryHasAnyFlag(linuxFlags),
             };
-        }
-
-        private static bool? TryReadX86IntrinsicSupport(string typeName)
-        {
-            Type? type = typeof(X86Base).Assembly.GetType($"System.Runtime.Intrinsics.X86.{typeName}", throwOnError: false);
-            PropertyInfo? property = type?.GetProperty(
-                "IsSupported",
-                BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-
-            return property?.PropertyType == typeof(bool)
-                ? (bool?)property.GetValue(null)
-                : null;
         }
 
         private static LinuxCpuInfo ReadLinuxCpuInfo()

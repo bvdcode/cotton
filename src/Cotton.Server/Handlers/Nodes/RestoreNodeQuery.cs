@@ -57,6 +57,7 @@ namespace Cotton.Server.Handlers.Nodes
         NodeSubtreeService _subtree,
         ISyncChangeRecorder _syncChanges,
         ILayoutMutationGate _layoutGate,
+        IEventNotificationService _notifications,
         ILogger<RestoreNodeQueryHandler> _logger)
         : IRequestHandler<RestoreNodeQuery, RestoreOutcomeDto>
     {
@@ -64,6 +65,23 @@ namespace Cotton.Server.Handlers.Nodes
         /// Handles the request through the mediator pipeline.
         /// </summary>
         public async Task<RestoreOutcomeDto> Handle(RestoreNodeQuery request, CancellationToken ct)
+        {
+            RestoreOutcomeDto outcome = await RestoreAsync(request, ct);
+            if (outcome.Status == RestoreStatus.Restored)
+            {
+                await _notifications.NotifyNodeRestoredAsync(
+                    request.UserId,
+                    request.NodeId,
+                    outcome.RestoredNode,
+                    ct);
+            }
+
+            return outcome;
+        }
+
+        private async Task<RestoreOutcomeDto> RestoreAsync(
+            RestoreNodeQuery request,
+            CancellationToken ct)
         {
             Guid layoutId = await GetLayoutIdOrThrowAsync(request, ct);
 
@@ -104,7 +122,11 @@ namespace Cotton.Server.Handlers.Nodes
                     ct);
                 await tx.CommitAsync(ct);
 
-                return BuildRestoredOutcome(request, node, parentOutcome.Parent!, originalParentPath);
+                return BuildRestoredOutcome(
+                    request,
+                    node,
+                    parentOutcome.Parent!,
+                    originalParentPath);
             }
             catch (DbUpdateException ex) when (IsUniqueViolation(ex))
             {

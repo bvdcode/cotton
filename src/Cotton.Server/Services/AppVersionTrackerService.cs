@@ -66,7 +66,8 @@ namespace Cotton.Server.Services
                 currentVersion,
                 cancellationToken);
 
-            if (!IsReleaseCheckEnabled())
+            if (!IsReleaseCheckEnabled()
+                || await IsReleaseCheckDisabledAsync(dbContext, cancellationToken))
             {
                 return;
             }
@@ -87,6 +88,17 @@ namespace Cotton.Server.Services
             }
 
             return _configuration.GetValue("AppVersionTracker:ReleaseCheckEnabled", true);
+        }
+
+        private static async Task<bool> IsReleaseCheckDisabledAsync(
+            CottonDbContext dbContext,
+            CancellationToken cancellationToken)
+        {
+            return await dbContext.ServerSettings
+                .AsNoTracking()
+                .OrderByDescending(settings => settings.CreatedAt)
+                .Select(settings => settings.DisableVersionCheck)
+                .FirstOrDefaultAsync(cancellationToken);
         }
 
         private async Task<AppVersion> TrackVersionAsync(

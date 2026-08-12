@@ -8,134 +8,135 @@ using Cotton.Nodes;
 using Cotton.Sdk.Auth;
 using Cotton.Sdk.Tests.Fakes;
 
-namespace Cotton.Sdk.Tests;
-
-public class CottonNodeClientTests
+namespace Cotton.Sdk.Tests
 {
-    [Test]
-    public async Task ResolveAsync_EncodesPathAndDeserializesNode()
+    public class CottonNodeClientTests
     {
-        Guid nodeId = Guid.NewGuid();
-        var handler = new QueuedHttpMessageHandler();
-        handler.EnqueueJson(HttpStatusCode.OK, new
+        [Test]
+        public async Task ResolveAsync_EncodesPathAndDeserializesNode()
         {
-            id = nodeId,
-            createdAt = DateTime.UtcNow,
-            updatedAt = DateTime.UtcNow,
-            layoutId = Guid.NewGuid(),
-            parentId = (Guid?)null,
-            name = "docs",
-            metadata = new Dictionary<string, string>(),
-        });
-        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
-
-        NodeDto node = await client.Nodes.ResolveAsync("docs/reports");
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(node.Id, Is.EqualTo(nodeId));
-            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/layouts/resolver/docs/reports"));
-        });
-    }
-
-    [Test]
-    public async Task GetChildrenAsync_ReturnsPayloadAndTotalCount()
-    {
-        Guid nodeId = Guid.NewGuid();
-        QueuedHttpMessageHandler handler = new();
-        handler.EnqueueJson(
-            HttpStatusCode.OK,
-            new
+            Guid nodeId = Guid.NewGuid();
+            var handler = new QueuedHttpMessageHandler();
+            handler.EnqueueJson(HttpStatusCode.OK, new
             {
                 id = nodeId,
                 createdAt = DateTime.UtcNow,
                 updatedAt = DateTime.UtcNow,
-                nodes = Array.Empty<object>(),
-                files = Array.Empty<object>(),
-            },
-            new Dictionary<string, string> { ["X-Total-Count"] = "123" });
-        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
+                layoutId = Guid.NewGuid(),
+                parentId = (Guid?)null,
+                name = "docs",
+                metadata = new Dictionary<string, string>(),
+            });
+            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
-        CottonPagedResult<NodeContentDto> result = await client.Nodes.GetChildrenAsync(
-            nodeId,
-            page: 3,
-            pageSize: 20,
-            depth: 2);
+            NodeDto node = await client.Nodes.ResolveAsync("docs/reports");
 
-        Assert.Multiple(() =>
+            Assert.Multiple(() =>
+            {
+                Assert.That(node.Id, Is.EqualTo(nodeId));
+                Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/layouts/resolver/docs/reports"));
+            });
+        }
+
+        [Test]
+        public async Task GetChildrenAsync_ReturnsPayloadAndTotalCount()
         {
-            Assert.That(result.Payload.Id, Is.EqualTo(nodeId));
-            Assert.That(result.Payload.Nodes, Is.Empty);
-            Assert.That(result.Payload.Files, Is.Empty);
-            Assert.That(result.TotalCount, Is.EqualTo(123));
-            Assert.That(
-                handler.Requests[0].PathAndQuery,
-                Is.EqualTo($"/api/v1/layouts/nodes/{nodeId}/children?page=3&pageSize=20&depth=2"));
-        });
-    }
+            Guid nodeId = Guid.NewGuid();
+            QueuedHttpMessageHandler handler = new();
+            handler.EnqueueJson(
+                HttpStatusCode.OK,
+                new
+                {
+                    id = nodeId,
+                    createdAt = DateTime.UtcNow,
+                    updatedAt = DateTime.UtcNow,
+                    nodes = Array.Empty<object>(),
+                    files = Array.Empty<object>(),
+                },
+                new Dictionary<string, string> { ["X-Total-Count"] = "123" });
+            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
-    [Test]
-    public async Task CreateAsync_TrimsNameAndUsesPutNodesEndpoint()
-    {
-        Guid parentId = Guid.NewGuid();
-        Guid nodeId = Guid.NewGuid();
-        var handler = new QueuedHttpMessageHandler();
-        handler.EnqueueJson(HttpStatusCode.OK, new
+            CottonPagedResult<NodeContentDto> result = await client.Nodes.GetChildrenAsync(
+                nodeId,
+                page: 3,
+                pageSize: 20,
+                depth: 2);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Payload.Id, Is.EqualTo(nodeId));
+                Assert.That(result.Payload.Nodes, Is.Empty);
+                Assert.That(result.Payload.Files, Is.Empty);
+                Assert.That(result.TotalCount, Is.EqualTo(123));
+                Assert.That(
+                    handler.Requests[0].PathAndQuery,
+                    Is.EqualTo($"/api/v1/layouts/nodes/{nodeId}/children?page=3&pageSize=20&depth=2"));
+            });
+        }
+
+        [Test]
+        public async Task CreateAsync_TrimsNameAndUsesPutNodesEndpoint()
         {
-            id = nodeId,
-            createdAt = DateTime.UtcNow,
-            updatedAt = DateTime.UtcNow,
-            layoutId = Guid.NewGuid(),
-            parentId,
-            name = "reports",
-            metadata = new Dictionary<string, string>(),
-        });
-        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
+            Guid parentId = Guid.NewGuid();
+            Guid nodeId = Guid.NewGuid();
+            var handler = new QueuedHttpMessageHandler();
+            handler.EnqueueJson(HttpStatusCode.OK, new
+            {
+                id = nodeId,
+                createdAt = DateTime.UtcNow,
+                updatedAt = DateTime.UtcNow,
+                layoutId = Guid.NewGuid(),
+                parentId,
+                name = "reports",
+                metadata = new Dictionary<string, string>(),
+            });
+            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
-        NodeDto node = await client.Nodes.CreateAsync(parentId, " reports ");
+            NodeDto node = await client.Nodes.CreateAsync(parentId, " reports ");
 
-        Assert.Multiple(() =>
+            Assert.Multiple(() =>
+            {
+                Assert.That(node.Name, Is.EqualTo("reports"));
+                Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Put));
+                Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/layouts/nodes"));
+                Assert.That(handler.Requests[0].Body, Does.Contain("\"name\":\"reports\""));
+            });
+        }
+
+        [Test]
+        public async Task RestoreAsync_MapsNonSuccessRestoreOutcome()
         {
-            Assert.That(node.Name, Is.EqualTo("reports"));
-            Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Put));
-            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/layouts/nodes"));
-            Assert.That(handler.Requests[0].Body, Does.Contain("\"name\":\"reports\""));
-        });
-    }
+            Guid nodeId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+            var handler = new QueuedHttpMessageHandler();
+            handler.EnqueueJson(HttpStatusCode.OK, new
+            {
+                status = "ParentMissing",
+                originalParentPath = "/Projects/Old",
+                missingPath = "/Projects",
+            });
+            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
-    [Test]
-    public async Task RestoreAsync_MapsNonSuccessRestoreOutcome()
-    {
-        Guid nodeId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-        var handler = new QueuedHttpMessageHandler();
-        handler.EnqueueJson(HttpStatusCode.OK, new
+            RestoreOutcomeDto outcome = await client.Nodes.RestoreAsync(nodeId);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(outcome.Status, Is.EqualTo(RestoreStatus.ParentMissing));
+                Assert.That(outcome.OriginalParentPath, Is.EqualTo("/Projects/Old"));
+                Assert.That(outcome.MissingPath, Is.EqualTo("/Projects"));
+                Assert.That(outcome.RestoredNode, Is.Null);
+                Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Post));
+                Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/layouts/nodes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/restore"));
+            });
+        }
+
+        private static async Task<CottonCloudClient> CreateAuthorizedClientAsync(QueuedHttpMessageHandler handler)
         {
-            status = "ParentMissing",
-            originalParentPath = "/Projects/Old",
-            missingPath = "/Projects",
-        });
-        CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
-
-        RestoreOutcomeDto outcome = await client.Nodes.RestoreAsync(nodeId);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(outcome.Status, Is.EqualTo(RestoreStatus.ParentMissing));
-            Assert.That(outcome.OriginalParentPath, Is.EqualTo("/Projects/Old"));
-            Assert.That(outcome.MissingPath, Is.EqualTo("/Projects"));
-            Assert.That(outcome.RestoredNode, Is.Null);
-            Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Post));
-            Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/layouts/nodes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/restore"));
-        });
-    }
-
-    private static async Task<CottonCloudClient> CreateAuthorizedClientAsync(QueuedHttpMessageHandler handler)
-    {
-        var store = new InMemoryCottonTokenStore();
-        await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "refresh" });
-        return new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
-        {
-            BaseAddress = new Uri("https://cotton.test"),
-        });
+            var store = new InMemoryCottonTokenStore();
+            await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "refresh" });
+            return new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+            {
+                BaseAddress = new Uri("https://cotton.test"),
+            });
+        }
     }
 }

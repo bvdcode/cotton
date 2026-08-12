@@ -302,6 +302,7 @@ namespace Cotton.Server.Providers
                 MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                 SessionTimeoutHours = defaultSessionTimeoutHours,
                 TelemetryEnabled = false,
+                DisableVersionCheck = false,
                 Timezone = defaultTimezone,
                 TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
                 EmailMode = EmailMode.None,
