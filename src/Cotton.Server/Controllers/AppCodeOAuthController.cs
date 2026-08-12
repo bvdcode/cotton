@@ -29,9 +29,6 @@ using System.Text;
 
 namespace Cotton.Server.Controllers
 {
-/// <summary>
-/// Exposes in-memory app-code authorization endpoints for desktop and native applications.
-/// </summary>
 [ApiController]
 [Route(Routes.V1.AppCodeOAuth)]
 public class AppCodeOAuthController(
@@ -51,9 +48,6 @@ public class AppCodeOAuthController(
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan LongPollTimeout = TimeSpan.FromSeconds(25);
 
-    /// <summary>
-    /// Starts an app-code authorization request.
-    /// </summary>
     [AllowAnonymous]
     [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
     [HttpPost("start")]
@@ -100,9 +94,6 @@ public class AppCodeOAuthController(
         });
     }
 
-    /// <summary>
-    /// Gets details for the browser approval screen.
-    /// </summary>
     [Authorize]
     [HttpGet("{id:guid}")]
     public ActionResult<AppCodeDetailsDto> Get([FromRoute] Guid id)
@@ -121,9 +112,6 @@ public class AppCodeOAuthController(
         });
     }
 
-    /// <summary>
-    /// Approves an app-code request for the current authenticated user.
-    /// </summary>
     [Authorize]
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve([FromRoute] Guid id, CancellationToken cancellationToken)
@@ -167,9 +155,6 @@ public class AppCodeOAuthController(
         return Ok();
     }
 
-    /// <summary>
-    /// Denies an app-code request.
-    /// </summary>
     [Authorize]
     [HttpPost("{id:guid}/deny")]
     public async Task<IActionResult> Deny([FromRoute] Guid id, CancellationToken cancellationToken)
@@ -191,9 +176,6 @@ public class AppCodeOAuthController(
         return Ok();
     }
 
-    /// <summary>
-    /// Polls an app-code request until approval returns a token pair.
-    /// </summary>
     [AllowAnonymous]
     [EnableRateLimiting(AuthRateLimitPolicies.Refresh)]
     [HttpPost("poll")]

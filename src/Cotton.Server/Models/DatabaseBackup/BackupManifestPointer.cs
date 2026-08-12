@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Models.DatabaseBackup
 {
-    /// <summary>
-    /// Points to the active backup manifest.
-    /// </summary>
     public record BackupManifestPointer(
         int SchemaVersion,
         string LogicalKey,

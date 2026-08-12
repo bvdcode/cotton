@@ -16,9 +16,6 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates database auto restore.
-    /// </summary>
     public class DatabaseAutoRestoreService(
         IConfiguration configuration,
         CottonDbContext dbContext,
@@ -30,9 +27,6 @@ namespace Cotton.Server.Services
     {
         private const string RestoreEnvKey = "COTTON_RESTORE_DATABASE_IF_EMPTY";
 
-        /// <summary>
-        /// Attempts to restore if empty async.
-        /// </summary>
         public async Task TryRestoreIfEmptyAsync(CancellationToken cancellationToken = default)
         {
             if (!IsRestoreEnabled())

@@ -17,19 +17,10 @@ namespace Cotton.Server.Services
 {
     internal class CapacityCacheEntry(StorageCapacitySnapshot? snapshot)
     {
-        /// <summary>
-        /// Gets the snapshot.
-        /// </summary>
         public StorageCapacitySnapshot? Snapshot { get; } = snapshot;
 
-        /// <summary>
-        /// Gets or sets the reserved bytes.
-        /// </summary>
         public long ReservedBytes { get; private set; }
 
-        /// <summary>
-        /// Reserves bytes against the cached storage-capacity snapshot.
-        /// </summary>
         public void Reserve(long bytes)
         {
             long safeBytes = Math.Max(0, bytes);
@@ -38,9 +29,6 @@ namespace Cotton.Server.Services
                 : ReservedBytes + safeBytes;
         }
 
-        /// <summary>
-        /// Releases previously reserved bytes after a failed or abandoned write.
-        /// </summary>
         public void Release(long bytes)
         {
             ReservedBytes = Math.Max(0, ReservedBytes - Math.Max(0, bytes));

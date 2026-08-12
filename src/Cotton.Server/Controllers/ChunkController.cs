@@ -16,9 +16,6 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for chunk operations.
-    /// </summary>
     [ApiController]
     public class ChunkController(
         PerfTracker _perf,
@@ -28,9 +25,6 @@ namespace Cotton.Server.Controllers
         IChunkIngestService _chunkIngest,
         IStoragePipeline _storage) : ControllerBase
     {
-        /// <summary>
-        /// Checks whether a chunk hash is already stored.
-        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Chunks + "/{hash}/exists")]
         public async Task<IActionResult> CheckChunkExists([FromRoute] string hash)
@@ -67,9 +61,6 @@ namespace Cotton.Server.Controllers
             return ownershipExists && await _storage.ExistsAsync(storageKey);
         }
 
-        /// <summary>
-        /// Uploads a raw content-addressed chunk.
-        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Chunks)]
         [RequestSizeLimit(AesGcmStreamCipher.MaxChunkSize + ushort.MaxValue)]
@@ -115,9 +106,6 @@ namespace Cotton.Server.Controllers
             return Created();
         }
 
-        /// <summary>
-        /// Uploads a raw content-addressed chunk without multipart form parsing.
-        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Chunks + "/raw")]
         [RequestSizeLimit(AesGcmStreamCipher.MaxChunkSize)]

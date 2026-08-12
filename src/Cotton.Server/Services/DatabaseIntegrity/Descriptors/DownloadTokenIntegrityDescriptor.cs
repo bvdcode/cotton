@@ -14,19 +14,15 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// </remarks>
     public class DownloadTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<DownloadToken>
     {
-        /// <inheritdoc />
         public override string EntityName => "download_tokens";
 
-        /// <inheritdoc />
         public override int SchemaVersion => 1;
 
-        /// <inheritdoc />
         public override string GetEntityKey(DownloadToken entity)
         {
             return entity.Id.ToString("D");
         }
 
-        /// <inheritdoc />
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, DownloadToken entity)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);

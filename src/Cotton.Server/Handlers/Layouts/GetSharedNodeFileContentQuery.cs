@@ -11,26 +11,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Resolves file content inside a shared folder.
-    /// </summary>
     public record GetSharedNodeFileContentQuery(
         string Token,
         Guid NodeFileId,
         bool Preview) : IRequest<GetSharedNodeFileContentResult>;
 
-    /// <summary>
-    /// Handles shared file content queries.
-    /// </summary>
     public class GetSharedNodeFileContentQueryHandler(
         IMediator _mediator,
         CottonDbContext _dbContext,
         FileGraphIntegrityVerifier _fileGraphIntegrity)
         : IRequestHandler<GetSharedNodeFileContentQuery, GetSharedNodeFileContentResult>
     {
-        /// <summary>
-        /// Resolves and validates the requested file graph.
-        /// </summary>
         public async Task<GetSharedNodeFileContentResult> Handle(
             GetSharedNodeFileContentQuery request,
             CancellationToken ct)

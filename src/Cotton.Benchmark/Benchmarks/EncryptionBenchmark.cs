@@ -10,18 +10,12 @@ using System.Security.Cryptography;
 
 namespace Cotton.Benchmark.Benchmarks
 {
-    /// <summary>
-    /// Benchmark for Cotton.Storage AES-GCM encryption throughput.
-    /// </summary>
     public class EncryptionBenchmark : BenchmarkBase, IDisposable
     {
         private readonly byte[] _testData;
         private readonly CryptoProcessor _processor;
         private readonly AesGcmStreamCipher _cipher;
 
-        /// <summary>
-        /// Initializes the benchmark with a fixed measurement configuration.
-        /// </summary>
         public EncryptionBenchmark(BenchmarkConfiguration configuration)
             : base(configuration)
         {
@@ -40,13 +34,10 @@ namespace Cotton.Benchmark.Benchmarks
             _processor = new CryptoProcessor(_cipher);
         }
 
-        /// <inheritdoc/>
         public override string Name => "Cotton.Storage AES-GCM Encryption";
 
-        /// <inheritdoc/>
         public override string Description => $"Measures Cotton.Storage AES-GCM throughput with {_configuration.EncryptionThreads} threads";
 
-        /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
             await using var inputStream = new MemoryStream(_testData);
@@ -54,7 +45,6 @@ namespace Cotton.Benchmark.Benchmarks
             await outputStream.DisposeAsync();
         }
 
-        /// <inheritdoc/>
         protected override async Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
             var stopwatch = Stopwatch.StartNew();
@@ -71,7 +61,6 @@ namespace Cotton.Benchmark.Benchmarks
             return PerformanceMetrics.Create(_testData.Length, stopwatch.Elapsed);
         }
 
-        /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             Dictionary<string, object> baseMetrics = base.AggregateMetrics(metrics);
@@ -82,7 +71,6 @@ namespace Cotton.Benchmark.Benchmarks
             return baseMetrics;
         }
 
-        /// <inheritdoc />
         public void Dispose()
         {
             _cipher?.Dispose();

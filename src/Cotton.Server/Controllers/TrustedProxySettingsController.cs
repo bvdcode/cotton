@@ -14,9 +14,6 @@ using System.Net;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for trusted-proxy settings.
-    /// </summary>
     [ApiController]
     [Route(Routes.V1.Settings)]
     [Route(Routes.V1.Server + "/settings")]
@@ -24,9 +21,6 @@ namespace Cotton.Server.Controllers
         SettingsProvider settings,
         IProxyTopologyProbeService _proxyTopologyProbe) : SettingsControllerBase(settings)
     {
-        /// <summary>
-        /// Gets the configured immediate reverse-proxy address.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("trusted-proxy-ip-address")]
         public IActionResult GetTrustedProxyIpAddress()
@@ -41,9 +35,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { trustedProxyIpAddress });
         }
 
-        /// <summary>
-        /// Gets the address of the peer that opened the current connection for trusted-proxy auto-detection.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("trusted-proxy-ip-address/observed")]
         public async Task<IActionResult> GetObservedProxyIpAddress(CancellationToken cancellationToken)
@@ -63,9 +54,6 @@ namespace Cotton.Server.Controllers
             });
         }
 
-        /// <summary>
-        /// Selects direct-connection mode, or verifies an immediate reverse-proxy address and saves it on success.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPost("trusted-proxy-ip-address/verify-and-save")]
         public async Task<IActionResult> VerifyAndSaveTrustedProxyIpAddress(

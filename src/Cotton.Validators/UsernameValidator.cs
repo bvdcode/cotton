@@ -5,29 +5,12 @@ using System.Text.RegularExpressions;
 
 namespace Cotton.Validators
 {
-    /// <summary>
-    /// Normalizes and validates account usernames.
-    /// </summary>
     public static partial class UsernameValidator
     {
-        /// <summary>
-        /// Minimum username length.
-        /// </summary>
         public const int MinLength = 2;
 
-        /// <summary>
-        /// Maximum username length.
-        /// </summary>
         public const int MaxLength = 32;
 
-        /// <summary>
-        /// Normalizes (trim + lower) and validates username.
-        /// Policy:
-        /// - only lowercase latin letters, digits, underscores, dots and dashes
-        /// - length: 2..32
-        /// - must start with a letter
-        /// - can use underscores, dots and dashes as separators, but not consecutively or at the start/end
-        /// </summary>
         public static bool TryNormalizeAndValidate(
             string input,
             out string normalized,
@@ -60,9 +43,6 @@ namespace Cotton.Validators
             return true;
         }
 
-        /// <summary>
-        /// Validates a username without returning the normalized value.
-        /// </summary>
         public static bool IsValid(string username, out string errorMessage)
             => TryNormalizeAndValidate(username, out _, out errorMessage);
 

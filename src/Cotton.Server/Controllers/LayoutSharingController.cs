@@ -22,9 +22,6 @@ using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for shared layout operations.
-    /// </summary>
     [ApiController]
     [Route(Routes.V1.Layouts)]
     public class LayoutSharingController(
@@ -32,9 +29,6 @@ namespace Cotton.Server.Controllers
         IStoragePipeline _storage,
         PublicShareLookupFailureLimiter _publicShareLookupFailures) : ControllerBase
     {
-        /// <summary>
-        /// Gets node share link.
-        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}/share-link")]
         public async Task<IActionResult> GetNodeShareLink(
@@ -62,9 +56,6 @@ namespace Cotton.Server.Controllers
             };
         }
 
-        /// <summary>
-        /// Gets shared node info.
-        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}")]
         public async Task<IActionResult> GetSharedNodeInfo([FromRoute] string token)
@@ -95,9 +86,6 @@ namespace Cotton.Server.Controllers
             });
         }
 
-        /// <summary>
-        /// Gets shared node children.
-        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}/children")]
         public async Task<IActionResult> GetSharedNodeChildren(
@@ -137,9 +125,6 @@ namespace Cotton.Server.Controllers
             }
         }
 
-        /// <summary>
-        /// Gets shared node ancestors.
-        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}/ancestors/{nodeId:guid}")]
         public async Task<IActionResult> GetSharedNodeAncestors(
@@ -176,9 +161,6 @@ namespace Cotton.Server.Controllers
             }
         }
 
-        /// <summary>
-        /// Creates shared folder archive download link.
-        /// </summary>
         [AllowAnonymous]
         [EnableRateLimiting(AuthRateLimitPolicies.PublicShareArchive)]
         [HttpPost("shared/{token}/archives/download-link")]
@@ -222,9 +204,6 @@ namespace Cotton.Server.Controllers
             }
         }
 
-        /// <summary>
-        /// Downloads shared node file.
-        /// </summary>
         [AllowAnonymous]
         [HttpGet("shared/{token}/files/{nodeFileId:guid}/content")]
         public async Task<IActionResult> DownloadSharedNodeFile(

@@ -11,20 +11,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Nodes
 {
-    /// <summary>
-    /// Gets an owned node by identifier.
-    /// </summary>
     public record GetOwnedNodeQuery(
         Guid UserId,
         Guid NodeId) : IRequest<NodeDto?>;
 
-    /// <summary>
-    /// Handles owned node queries.
-    /// </summary>
     public class GetOwnedNodeQueryHandler(CottonDbContext _dbContext)
         : IRequestHandler<GetOwnedNodeQuery, NodeDto?>
     {
-        /// <inheritdoc />
         public async Task<NodeDto?> Handle(
             GetOwnedNodeQuery request,
             CancellationToken ct)

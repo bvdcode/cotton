@@ -18,18 +18,12 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Command for WebDAV MOVE operation
-    /// </summary>
     public record WebDavMoveRequest(
         Guid UserId,
         string SourcePath,
         string DestinationPath,
         bool Overwrite = false) : IRequest<WebDavMoveResult>;
 
-    /// <summary>
-    /// Handler for WebDAV MOVE operation
-    /// </summary>
     public class WebDavMoveRequestHandler(
         CottonDbContext _dbContext,
         IMediator _mediator,
@@ -40,9 +34,6 @@ namespace Cotton.Server.Handlers.WebDav
         ILogger<WebDavMoveRequestHandler> _logger)
         : IRequestHandler<WebDavMoveRequest, WebDavMoveResult>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<WebDavMoveResult> Handle(WebDavMoveRequest request, CancellationToken ct)
         {
             PreTransactionSourceOutcome preTransaction = await ResolvePreTransactionSourceAsync(request, ct);
@@ -170,14 +161,8 @@ namespace Cotton.Server.Handlers.WebDav
 
         private record PreTransactionSourceOutcome(Guid? LayoutId, WebDavMoveResult? Failure)
         {
-            /// <summary>
-            /// Creates a successful operation result.
-            /// </summary>
             public static PreTransactionSourceOutcome Success(Guid layoutId) => new(layoutId, null);
 
-            /// <summary>
-            /// Creates a failed operation result.
-            /// </summary>
             public static PreTransactionSourceOutcome Failed(WebDavMoveResult failure) => new(null, failure);
         }
 
@@ -188,18 +173,12 @@ namespace Cotton.Server.Handlers.WebDav
             Guid? OldParentId,
             WebDavMoveResult? Failure)
         {
-            /// <summary>
-            /// Creates a successful operation result.
-            /// </summary>
             public static MovePreparationOutcome Success(
                 WebDavResolveResult source,
                 WebDavParentResult destinationParent,
                 bool created,
                 Guid? oldParentId) => new(source, destinationParent, created, oldParentId, null);
 
-            /// <summary>
-            /// Creates a failed operation result.
-            /// </summary>
             public static MovePreparationOutcome Failed(WebDavMoveResult failure) => new(null, null, false, null, failure);
         }
 

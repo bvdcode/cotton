@@ -6,14 +6,8 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Describes a archive download file entry.
-    /// </summary>
     public record ArchiveDownloadFileEntry : ArchiveDownloadEntry
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ArchiveDownloadFileEntry"/> type.
-        /// </summary>
         public ArchiveDownloadFileEntry(
             string path,
             long sizeBytes,
@@ -25,9 +19,6 @@ namespace Cotton.Server.Services
             ChunkLengths = chunkLengths;
         }
 
-        /// <summary>
-        /// Gets the chunk hashes.
-        /// </summary>
         public IReadOnlyList<string> ChunkHashes { get; }
 
         /// <summary>

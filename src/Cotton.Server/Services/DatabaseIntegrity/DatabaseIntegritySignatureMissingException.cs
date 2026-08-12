@@ -3,15 +3,9 @@
 
 namespace Cotton.Server.Services.DatabaseIntegrity
 {
-    /// <summary>
-    /// Indicates that a protected database row predates the required integrity-signature transition.
-    /// </summary>
     [Obsolete("OBSOLETE TRANSITION: remove this exception and the unsigned-row branch after the 0.5 cutover window.")]
     public class DatabaseIntegritySignatureMissingException : Exception
     {
-        /// <summary>
-        /// Initializes the unsigned-row upgrade error.
-        /// </summary>
         public DatabaseIntegritySignatureMissingException(string entityName, string entityKey)
             : base(
                 $"Database integrity signature is missing for {entityName} '{entityKey}'. "
@@ -22,14 +16,8 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             EntityKey = entityKey;
         }
 
-        /// <summary>
-        /// Gets the stable descriptor name for the unsigned protected row.
-        /// </summary>
         public string EntityName { get; }
 
-        /// <summary>
-        /// Gets the stable key for the unsigned protected row.
-        /// </summary>
         public string EntityKey { get; }
     }
 }

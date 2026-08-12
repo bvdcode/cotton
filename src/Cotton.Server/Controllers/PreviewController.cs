@@ -14,9 +14,6 @@ using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for preview operations.
-    /// </summary>
     [ApiController]
     [DisableRateLimiting]
     [Route(Routes.V1.Previews)]
@@ -31,9 +28,6 @@ namespace Cotton.Server.Controllers
             PreviewConcurrencyLimit,
             PreviewConcurrencyLimit);
 
-        /// <summary>
-        /// Gets file preview.
-        /// </summary>
         [HttpGet("{previewHashEncryptedHex}")]
         [HttpGet("{previewHashEncryptedHex}.webp")]
         public async Task<IActionResult> GetFilePreview([FromRoute] string previewHashEncryptedHex)

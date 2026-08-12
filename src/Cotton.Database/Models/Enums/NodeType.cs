@@ -8,13 +8,7 @@ namespace Cotton.Database.Models.Enums
     /// </summary>
     public enum NodeType
     {
-        /// <summary>
-        /// Normal user-visible file tree.
-        /// </summary>
         Default = 0,
-        /// <summary>
-        /// Trash file tree.
-        /// </summary>
         Trash = 1,
     }
 }

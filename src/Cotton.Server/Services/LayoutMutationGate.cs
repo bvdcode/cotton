@@ -5,9 +5,6 @@ using Cotton.Server.Abstractions;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// In-process semaphore gate for layout namespace mutations.
-    /// </summary>
     public class LayoutMutationGate : ILayoutMutationGate
     {
         private readonly KeyedAsyncGate<Guid> _gates = new();
@@ -15,7 +12,6 @@ namespace Cotton.Server.Services
 
         internal int Count => _gates.Count;
 
-        /// <inheritdoc />
         public Task<IAsyncDisposable> EnterAsync(Guid layoutId, CancellationToken cancellationToken)
         {
             Dictionary<Guid, LayoutMutationGateScope>? activeScopes = _activeScopes.Value;

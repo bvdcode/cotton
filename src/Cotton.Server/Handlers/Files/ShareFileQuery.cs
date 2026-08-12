@@ -23,9 +23,6 @@ using System.Text.Json;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Represents a share file query sent through the mediator pipeline.
-    /// </summary>
     public class ShareFileQuery(string token, string? view, bool preview, HttpRequest httpRequest) : IRequest<ShareFileResult>
     {
         /// <summary>
@@ -33,25 +30,13 @@ namespace Cotton.Server.Handlers.Files
         /// </summary>
         public string Token { get; } = token;
 
-        /// <summary>
-        /// Gets the view.
-        /// </summary>
         public string? View { get; } = view;
 
-        /// <summary>
-        /// Gets whether the request should serve the generated small preview when available.
-        /// </summary>
         public bool Preview { get; } = preview;
 
-        /// <summary>
-        /// Gets the http request.
-        /// </summary>
         public HttpRequest HttpRequest { get; } = httpRequest;
     }
 
-    /// <summary>
-    /// Handles share file queries in the mediator pipeline.
-    /// </summary>
     public class ShareFileQueryHandler(
         CottonDbContext _dbContext,
         ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
@@ -61,9 +46,6 @@ namespace Cotton.Server.Handlers.Files
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity) : IRequestHandler<ShareFileQuery, ShareFileResult>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<ShareFileResult> Handle(ShareFileQuery request, CancellationToken ct)
         {
             (bool IsHtml, bool IsInlineFile)? viewMode = TryParseViewMode(request.View);

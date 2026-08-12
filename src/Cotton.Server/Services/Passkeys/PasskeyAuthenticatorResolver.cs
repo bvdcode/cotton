@@ -5,9 +5,6 @@ using Cotton.Server.Models.Enums;
 
 namespace Cotton.Server.Services.Passkeys
 {
-    /// <summary>
-    /// Resolves WebAuthn authenticator metadata from the AAGUID reported during registration.
-    /// </summary>
     public static class PasskeyAuthenticatorResolver
     {
         private static readonly string[] SecurityKeyTransports = ["ble", "nfc", "smart-card", "usb"];
@@ -59,9 +56,6 @@ namespace Cotton.Server.Services.Passkeys
                 [Guid.Parse("42b4fb4a-2866-43b2-9bf7-6c6669c2e5d3")] = "Google Titan Security Key v2"
             };
 
-        /// <summary>
-        /// Resolves a friendly authenticator name for display.
-        /// </summary>
         public static string? ResolveName(Guid aaGuid)
         {
             return aaGuid != Guid.Empty && KnownAuthenticators.TryGetValue(aaGuid, out string? name)
@@ -69,9 +63,6 @@ namespace Cotton.Server.Services.Passkeys
                 : null;
         }
 
-        /// <summary>
-        /// Resolves the generic authenticator category from reported transports.
-        /// </summary>
         public static PasskeyAuthenticatorKind ResolveKind(IEnumerable<string> transports)
         {
             HashSet<string> normalizedTransports = transports
@@ -92,9 +83,6 @@ namespace Cotton.Server.Services.Passkeys
             return PasskeyAuthenticatorKind.Unknown;
         }
 
-        /// <summary>
-        /// Resolves a stable server-side description for security audit messages.
-        /// </summary>
         public static string ResolveDisplayName(Guid aaGuid, IEnumerable<string> transports)
         {
             string? authenticatorName = ResolveName(aaGuid);

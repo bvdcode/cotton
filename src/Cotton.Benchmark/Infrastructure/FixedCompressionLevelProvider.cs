@@ -10,7 +10,6 @@ namespace Cotton.Benchmark.Infrastructure
     /// </summary>
     internal class FixedCompressionLevelProvider(int level) : ICompressionLevelProvider
     {
-        /// <inheritdoc />
         public int Level { get; } = level;
     }
 }

@@ -24,24 +24,12 @@ namespace Cotton.Server.Handlers.Files
     /// </summary>
     public class ExtractFileManifestMetadataRequest : IRequest<NodeFileManifestDto?>
     {
-        /// <summary>
-        /// Gets or sets the visible file entry identifier requested by a client.
-        /// </summary>
         public Guid? NodeFileId { get; set; }
 
-        /// <summary>
-        /// Gets or sets the immutable file manifest identifier requested by maintenance jobs.
-        /// </summary>
         public Guid? FileManifestId { get; set; }
 
-        /// <summary>
-        /// Gets or sets the user boundary for client-triggered extraction.
-        /// </summary>
         public Guid? UserId { get; set; }
 
-        /// <summary>
-        /// Gets or sets a value indicating whether updated file DTOs should be pushed to connected clients.
-        /// </summary>
         public bool Notify { get; set; }
     }
 
@@ -56,7 +44,6 @@ namespace Cotton.Server.Handlers.Files
         ILogger<ExtractFileManifestMetadataRequestHandler> _logger)
         : IRequestHandler<ExtractFileManifestMetadataRequest, NodeFileManifestDto?>
     {
-        /// <inheritdoc />
         public async Task<NodeFileManifestDto?> Handle(
             ExtractFileManifestMetadataRequest request,
             CancellationToken cancellationToken)

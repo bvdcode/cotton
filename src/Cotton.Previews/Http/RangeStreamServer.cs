@@ -7,9 +7,6 @@ using System.Net.Http.Headers;
 
 namespace Cotton.Previews.Http
 {
-    /// <summary>
-    /// Temporary local HTTP range server used by ffmpeg tools that require URL-based seeking.
-    /// </summary>
     public class RangeStreamServer : IAsyncDisposable
     {
         private readonly record struct ByteRange(long Start, long EndInclusive)
@@ -32,14 +29,8 @@ namespace Cotton.Previews.Http
         private int _activeHandlers;
         private bool _disposing;
 
-        /// <summary>
-        /// Gets the loopback URL that serves the supplied stream.
-        /// </summary>
         public Uri Url { get; }
 
-        /// <summary>
-        /// Starts a loopback range server for the supplied seekable stream.
-        /// </summary>
         public RangeStreamServer(
             Stream seekableStream,
             ILogger? logger = null,
@@ -442,7 +433,6 @@ namespace Cotton.Previews.Http
             return true;
         }
 
-        /// <inheritdoc />
         public async ValueTask DisposeAsync()
         {
             _logger?.LogDebug("[RangeServer {ServerId}] Disposing...", _serverId);

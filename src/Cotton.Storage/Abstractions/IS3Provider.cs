@@ -10,9 +10,6 @@ namespace Cotton.Storage.Abstractions
     /// </summary>
     public interface IS3Provider
     {
-        /// <summary>
-        /// Returns the target bucket name.
-        /// </summary>
         string GetBucketName();
 
         /// <summary>

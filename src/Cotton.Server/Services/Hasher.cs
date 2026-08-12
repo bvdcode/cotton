@@ -10,52 +10,24 @@ namespace Cotton.Server.Services
     /// </summary>
     public partial class Hasher
     {
-        /// <summary>
-        /// Gets the name of the hash algorithm supported by this implementation.
-        /// </summary>
         public static string SupportedHashAlgorithm => nameof(SHA256);
 
-        /// <summary>
-        /// Gets the hash algorithm name supported by this implementation.
-        /// </summary>
         public static HashAlgorithmName SupportedHashAlgorithmName => HashAlgorithmName.SHA256;
 
-        /// <summary>
-        /// SHA-256 hash size in bytes.
-        /// </summary>
         public const int HashSizeInBytes = 32;
 
-        /// <summary>
-        /// SHA-256 hash of empty input, as a lowercase hex string.
-        /// </summary>
         public const string ZeroHashHexString = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
-        /// <summary>
-        /// Computes the SHA-256 hash value for the specified byte array.
-        /// </summary>
-        /// <param name="content">The input data to compute the hash for. Cannot be null.</param>
-        /// <returns>A byte array containing the SHA-256 hash of the input data.</returns>
         public static byte[] HashData(byte[] content)
         {
             return SHA256.HashData(content);
         }
 
-        /// <summary>
-        /// Computes the SHA-256 hash value for the specified span of bytes.
-        /// </summary>
-        /// <param name="span">The span of bytes to compute the hash for.</param>
-        /// <returns>A byte array containing the SHA-256 hash of the input data.</returns>
         public static byte[] HashData(Span<byte> span)
         {
             return SHA256.HashData(span);
         }
 
-        /// <summary>
-        /// Computes the SHA-256 hash of the stream asynchronously.
-        /// </summary>
-        /// <param name="stream">The readable stream to hash from its current position to the end.</param>
-        /// <param name="cancellationToken">The token used to cancel asynchronous reads.</param>
-        /// <returns>The SHA-256 hash of the remaining stream content.</returns>
         public static async Task<byte[]> HashDataAsync(
             Stream stream,
             CancellationToken cancellationToken = default)
@@ -63,18 +35,11 @@ namespace Cotton.Server.Services
             return await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Converts a hash to its lowercase hex string representation.
-        /// </summary>
         public static string ToHexStringHash(byte[] hash)
         {
             return Convert.ToHexStringLower(hash);
         }
 
-        /// <summary>
-        /// Parses a hex string into a hash, validating its length and characters.
-        /// </summary>
-        /// <exception cref="ArgumentException">The string is empty, has an odd or wrong length, or contains non-hex characters.</exception>
         public static byte[] FromHexStringHash(string hexString)
         {
             if (string.IsNullOrWhiteSpace(hexString))
@@ -96,9 +61,6 @@ namespace Cotton.Server.Services
             return Convert.FromHexString(hexString);
         }
 
-        /// <summary>
-        /// Returns true if the string is a valid hex-encoded SHA-256 hash.
-        /// </summary>
         public static bool IsValidHash(string hash)
         {
             if (string.IsNullOrWhiteSpace(hash))

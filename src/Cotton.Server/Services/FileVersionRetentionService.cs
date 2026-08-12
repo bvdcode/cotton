@@ -9,9 +9,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates file version retention.
-    /// </summary>
     public class FileVersionRetentionService(
         CottonDbContext _dbContext,
         SettingsProvider _settingsProvider,
@@ -20,10 +17,6 @@ namespace Cotton.Server.Services
         private const int LimitedHistoricalVersionCount = 2;
         private const int OptimalHistoricalVersionCount = 10;
 
-        /// <summary>
-        /// Prunes historical versions of the given lineage down to the configured
-        /// retention limit and returns the total number of bytes removed.
-        /// </summary>
         public async Task<long> ApplyAsync(
             Guid userId,
             Guid lineageId,

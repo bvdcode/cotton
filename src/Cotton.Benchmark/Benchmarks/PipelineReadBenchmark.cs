@@ -12,9 +12,6 @@ using System.Security.Cryptography;
 
 namespace Cotton.Benchmark.Benchmarks
 {
-    /// <summary>
-    /// Benchmark for the storage pipeline read path.
-    /// </summary>
     public class PipelineReadBenchmark : BenchmarkBase, IDisposable
     {
         private readonly byte[] _testData;
@@ -22,9 +19,6 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly AesGcmStreamCipher _cipher;
         private readonly InMemoryStorageBackend _backend;
 
-        /// <summary>
-        /// Initializes the benchmark with the read processors used by stored chunks.
-        /// </summary>
         public PipelineReadBenchmark(BenchmarkConfiguration configuration)
             : base(configuration)
         {
@@ -44,25 +38,20 @@ namespace Cotton.Benchmark.Benchmarks
                 [new CryptoProcessor(_cipher), new CompressionProcessor(new FixedCompressionLevelProvider(configuration.CompressionLevel))]);
         }
 
-        /// <inheritdoc/>
         public override string Name => "Storage Pipeline Read (Decryption + Decompression)";
 
-        /// <inheritdoc/>
         public override string Description => "Measures the storage pipeline read path without SHA-256 hashing";
 
-        /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
             await ReadOnceAsync(measure: false, cancellationToken).ConfigureAwait(false);
         }
 
-        /// <inheritdoc/>
         protected override Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
             return ReadOnceAsync(measure: true, cancellationToken);
         }
 
-        /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             Dictionary<string, object> baseMetrics = base.AggregateMetrics(metrics);
@@ -76,7 +65,6 @@ namespace Cotton.Benchmark.Benchmarks
             return baseMetrics;
         }
 
-        /// <inheritdoc />
         public void Dispose()
         {
             _cipher.Dispose();

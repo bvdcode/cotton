@@ -19,36 +19,18 @@ using Npgsql;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Represents a restore file query sent through the mediator pipeline.
-    /// </summary>
     public class RestoreFileQuery(Guid userId, Guid nodeFileId, bool createMissingParents, bool overwrite)
         : IRequest<RestoreOutcomeDto>
     {
-        /// <summary>
-        /// Gets the owning user identifier.
-        /// </summary>
         public Guid UserId { get; } = userId;
 
-        /// <summary>
-        /// Gets the file entry identifier.
-        /// </summary>
         public Guid NodeFileId { get; } = nodeFileId;
 
-        /// <summary>
-        /// Creates missing parents.
-        /// </summary>
         public bool CreateMissingParents { get; } = createMissingParents;
 
-        /// <summary>
-        /// Gets whether restore should move an existing conflicting item to trash.
-        /// </summary>
         public bool Overwrite { get; } = overwrite;
     }
 
-    /// <summary>
-    /// Handles restore file queries in the mediator pipeline.
-    /// </summary>
     public class RestoreFileQueryHandler(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
@@ -59,9 +41,6 @@ namespace Cotton.Server.Handlers.Files
         ILogger<RestoreFileQueryHandler> _logger)
         : IRequestHandler<RestoreFileQuery, RestoreOutcomeDto>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<RestoreOutcomeDto> Handle(RestoreFileQuery request, CancellationToken ct)
         {
             RestoreOutcomeDto outcome = await RestoreAsync(request, ct);

@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Services.FileMetadata
 {
-    /// <summary>
-    /// Merges content metadata while keeping non-managed manifest metadata intact.
-    /// </summary>
     internal static class FileContentMetadataDictionary
     {
         public static Dictionary<string, string>? ReplaceManagedValues(

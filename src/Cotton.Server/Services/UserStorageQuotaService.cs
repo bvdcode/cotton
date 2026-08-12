@@ -29,9 +29,6 @@ namespace Cotton.Server.Services
     {
         private readonly Dictionary<Guid, long> _scopedUsedBytesByUser = [];
 
-        /// <summary>
-        /// Serializes the final quota check and storage-reference commit for one user.
-        /// </summary>
         public ValueTask<IAsyncDisposable> EnterMutationAsync(
             Guid userId,
             CancellationToken cancellationToken = default)
@@ -39,9 +36,6 @@ namespace Cotton.Server.Services
             return _mutationGate.EnterAsync(userId, cancellationToken);
         }
 
-        /// <summary>
-        /// Gets the logical bytes currently referenced by the user's visible and retained file versions.
-        /// </summary>
         public async Task<long> GetUsedBytesAsync(Guid userId, CancellationToken ct = default)
         {
             if (_scopedUsedBytesByUser.TryGetValue(userId, out long cachedUsedBytes))
@@ -54,9 +48,6 @@ namespace Cotton.Server.Services
             return resolvedUsedBytes;
         }
 
-        /// <summary>
-        /// Gets the storage usage snapshot shown to the user interface.
-        /// </summary>
         public async Task<UserStorageQuotaDto> GetSnapshotAsync(Guid userId, CancellationToken ct = default)
         {
             long usedBytes = await GetUsedBytesAsync(userId, ct);
@@ -79,9 +70,6 @@ namespace Cotton.Server.Services
             };
         }
 
-        /// <summary>
-        /// Ensures adding a file reference will not exceed the user's logical quota.
-        /// </summary>
         public async Task<long> EnsureCanAddFileReferenceAsync(
             Guid userId,
             Guid fileManifestId,
@@ -97,9 +85,6 @@ namespace Cotton.Server.Services
             return Math.Max(0, additionalBytes);
         }
 
-        /// <summary>
-        /// Ensures adding a known logical file size will not exceed the user's quota.
-        /// </summary>
         public Task EnsureCanAddKnownFileSizeAsync(
             Guid userId,
             long sizeBytes,
@@ -108,9 +93,6 @@ namespace Cotton.Server.Services
             return EnsureCanAddLogicalBytesAsync(userId, sizeBytes, reserveInRequestState: false, ct);
         }
 
-        /// <summary>
-        /// Ensures replacing a file manifest will not exceed quota after deduplication by content hash.
-        /// </summary>
         public async Task<long> EnsureCanChangeFileManifestAsync(
             Guid userId,
             Guid nodeFileId,
@@ -190,9 +172,6 @@ namespace Cotton.Server.Services
             }
         }
 
-        /// <summary>
-        /// Records logical bytes added in the in-memory cache.
-        /// </summary>
         public void RecordLogicalBytesAdded(Guid userId, long bytes)
         {
             long safeBytes = Math.Max(0, bytes);
@@ -204,9 +183,6 @@ namespace Cotton.Server.Services
             _usageCache.AddIfCached(userId, safeBytes);
         }
 
-        /// <summary>
-        /// Records logical bytes removed in the in-memory cache.
-        /// </summary>
         public void RecordLogicalBytesRemoved(Guid userId, long bytes)
         {
             long safeBytes = Math.Max(0, bytes);

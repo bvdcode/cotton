@@ -16,26 +16,11 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Lists the supported web dav mk col error values.
-    /// </summary>
     public enum WebDavMkColError
     {
-        /// <summary>
-        /// Represents the parent not found option.
-        /// </summary>
         ParentNotFound,
-        /// <summary>
-        /// Represents the already exists option.
-        /// </summary>
         AlreadyExists,
-        /// <summary>
-        /// Represents the invalid name option.
-        /// </summary>
         InvalidName,
-        /// <summary>
-        /// Represents the conflict option.
-        /// </summary>
         Conflict
     }
 }

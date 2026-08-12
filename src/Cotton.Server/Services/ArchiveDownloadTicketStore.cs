@@ -6,17 +6,11 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Stores archive download ticket state.
-    /// </summary>
     public class ArchiveDownloadTicketStore(IMemoryCache _cache)
     {
         private static readonly TimeSpan Lifetime = TimeSpan.FromHours(1);
         private const string CacheKeyPrefix = "archive-download:";
 
-        /// <summary>
-        /// Executes store.
-        /// </summary>
         public string Store(ArchiveDownloadTicket ticket)
         {
             ArgumentNullException.ThrowIfNull(ticket);
@@ -26,9 +20,6 @@ namespace Cotton.Server.Services
             return token;
         }
 
-        /// <summary>
-        /// Attempts to get value.
-        /// </summary>
         public bool TryGet(string token, out ArchiveDownloadTicket ticket)
         {
             ticket = null!;

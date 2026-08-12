@@ -13,17 +13,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Nodes
 {
-    /// <summary>
-    /// Gets the ancestor path of an owned node.
-    /// </summary>
     public record GetNodeAncestorsQuery(
         Guid UserId,
         Guid NodeId,
         NodeType NodeType) : IRequest<GetNodeAncestorsResult>;
 
-    /// <summary>
-    /// Handles owned node ancestor queries.
-    /// </summary>
     public class GetNodeAncestorsQueryHandler(
         CottonDbContext _dbContext,
         ILayoutService _layouts)
@@ -31,7 +25,6 @@ namespace Cotton.Server.Handlers.Nodes
     {
         private const int MaxDepth = 256;
 
-        /// <inheritdoc />
         public async Task<GetNodeAncestorsResult> Handle(
             GetNodeAncestorsQuery request,
             CancellationToken ct)

@@ -5,29 +5,18 @@ using Cotton.Benchmark.Abstractions;
 
 namespace Cotton.Benchmark.Models
 {
-    /// <summary>
-    /// Represents the result of a benchmark execution.
-    /// </summary>
     public class BenchmarkResult : IBenchmarkResult
     {
-        /// <inheritdoc/>
         public string BenchmarkName { get; init; } = string.Empty;
 
-        /// <inheritdoc/>
         public bool IsSuccess { get; init; }
 
-        /// <inheritdoc/>
         public string? ErrorMessage { get; init; }
 
-        /// <inheritdoc/>
         public TimeSpan TotalDuration { get; init; }
 
-        /// <inheritdoc/>
         public IReadOnlyDictionary<string, object> Metrics { get; init; } = new Dictionary<string, object>();
 
-        /// <summary>
-        /// Creates a successful benchmark result.
-        /// </summary>
         public static BenchmarkResult Success(
             string benchmarkName,
             TimeSpan duration,
@@ -42,9 +31,6 @@ namespace Cotton.Benchmark.Models
             };
         }
 
-        /// <summary>
-        /// Creates a failed benchmark result.
-        /// </summary>
         public static BenchmarkResult Failure(
             string benchmarkName,
             string errorMessage,

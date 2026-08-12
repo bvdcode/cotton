@@ -16,30 +16,15 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Users
 {
-    /// <summary>
-    /// Represents the change password request payload accepted by the API.
-    /// </summary>
     public class ChangePasswordRequest(Guid userId, string oldPassword, string newPassword) : IRequest
     {
-        /// <summary>
-        /// Gets the owning user identifier.
-        /// </summary>
         public Guid UserId { get; } = userId;
 
-        /// <summary>
-        /// Gets the old password.
-        /// </summary>
         public string OldPassword { get; } = oldPassword;
 
-        /// <summary>
-        /// Gets the new password.
-        /// </summary>
         public string NewPassword { get; } = newPassword;
     }
 
-    /// <summary>
-    /// Handles change password requests in the mediator pipeline.
-    /// </summary>
     public class ChangePasswordRequestHandler(
         CottonDbContext _dbContext,
         IPasswordHashService _hasher,
@@ -49,9 +34,6 @@ namespace Cotton.Server.Handlers.Users
         SettingsProvider _settings,
         ILogger<ChangePasswordRequestHandler> _logger) : IRequestHandler<ChangePasswordRequest>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task Handle(ChangePasswordRequest request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.OldPassword))

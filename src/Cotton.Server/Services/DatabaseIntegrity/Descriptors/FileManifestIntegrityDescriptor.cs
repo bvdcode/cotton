@@ -5,24 +5,17 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
 {
-    /// <summary>
-    /// Describes immutable file-content metadata that must match the chunks served to a reader.
-    /// </summary>
     public class FileManifestIntegrityDescriptor : DatabaseIntegrityDescriptor<FileManifest>
     {
-        /// <inheritdoc />
         public override string EntityName => "file_manifests";
 
-        /// <inheritdoc />
         public override int SchemaVersion => 1;
 
-        /// <inheritdoc />
         public override string GetEntityKey(FileManifest entity)
         {
             return entity.Id.ToString("D");
         }
 
-        /// <inheritdoc />
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, FileManifest entity)
         {
             WriteContentIdentityFields(writer, entity);

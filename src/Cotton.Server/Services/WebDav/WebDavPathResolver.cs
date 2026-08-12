@@ -10,35 +10,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services.WebDav
 {
-    /// <summary>
-    /// Resolves WebDAV paths to nodes and files
-    /// </summary>
     public class WebDavPathResolver(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
         ILayoutNavigator _navigator) : IWebDavPathResolver
     {
-        /// <summary>
-        /// The default node type used when resolving WebDAV paths.
-        /// </summary>
         public const NodeType DefaultNodeType = NodeType.Default;
 
-        /// <summary>
-        /// Gets or sets the path separator.
-        /// </summary>
         public const char PathSeparator = Constants.DefaultPathSeparator;
 
-        /// <summary>
-        /// Resolves path async.
-        /// </summary>
         public Task<WebDavResolveResult> ResolvePathAsync(Guid userId, string path, CancellationToken ct = default)
         {
             return ResolveInternalAsync(userId, path, includeFileContentGraph: true, ct);
         }
 
-        /// <summary>
-        /// Resolves metadata async.
-        /// </summary>
         public Task<WebDavResolveResult> ResolveMetadataAsync(Guid userId, string path, CancellationToken ct = default)
         {
             return ResolveInternalAsync(userId, path, includeFileContentGraph: false, ct);
@@ -136,9 +121,6 @@ namespace Cotton.Server.Services.WebDav
             return new WebDavResolveResult { Found = false };
         }
 
-        /// <summary>
-        /// Gets parent node async.
-        /// </summary>
         public async Task<WebDavParentResult> GetParentNodeAsync(Guid userId, string path, CancellationToken ct = default)
         {
             // Decode percent-encoded sequences so Windows WebDAV clients can upload names containing

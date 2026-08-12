@@ -10,24 +10,15 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Measures the active storage pipeline with a synthetic 64 MiB blob, without touching user files.
-    /// </summary>
     public class StoragePipelineProbeService(
         IStoragePipeline _storage,
         ILogger<StoragePipelineProbeService> _logger)
     {
-        /// <summary>
-        /// Size of the synthetic probe payload (64 MiB), large enough to produce stable throughput measurements.
-        /// </summary>
         public const int PayloadSizeBytes = 64 * 1024 * 1024;
 
         private static readonly SemaphoreSlim ProbeLock = new(1, 1);
         private const double BytesPerMebibyte = 1024.0 * 1024.0;
 
-        /// <summary>
-        /// Runs one warmup iteration and one measured iteration through the real storage pipeline.
-        /// </summary>
         public async Task<StoragePipelineProbeResult> RunAsync(string storageBackend, CancellationToken cancellationToken)
         {
             await ProbeLock.WaitAsync(cancellationToken).ConfigureAwait(false);

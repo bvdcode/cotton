@@ -8,14 +8,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates node subtree.
-    /// </summary>
     public class NodeSubtreeService(CottonDbContext _dbContext)
     {
-        /// <summary>
-        /// Collects subtree ids.
-        /// </summary>
         public async Task<HashSet<Guid>> CollectSubtreeIdsAsync(Guid userId, Guid rootId, CancellationToken ct)
         {
             var visited = new HashSet<Guid> { rootId };
@@ -46,9 +40,6 @@ namespace Cotton.Server.Services
             return visited;
         }
 
-        /// <summary>
-        /// Sets subtree type async.
-        /// </summary>
         public async Task SetSubtreeTypeAsync(Guid userId, Guid rootId, NodeType newType, CancellationToken ct)
         {
             Guid[] ids = (await CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();

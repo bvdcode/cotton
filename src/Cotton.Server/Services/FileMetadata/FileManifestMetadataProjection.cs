@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Services.FileMetadata
 {
-    /// <summary>
-    /// Builds the metadata dictionary returned by file DTOs.
-    /// </summary>
     internal static class FileManifestMetadataProjection
     {
         public static Dictionary<string, string> Merge(

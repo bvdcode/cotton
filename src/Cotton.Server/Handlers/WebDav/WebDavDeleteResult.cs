@@ -13,9 +13,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Result of WebDAV DELETE operation
-    /// </summary>
     public record WebDavDeleteResult(
         bool Success,
         bool NotFound = false,

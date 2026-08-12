@@ -15,9 +15,6 @@ using System.Globalization;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Represents storage pressure snapshot.
-    /// </summary>
     public record StoragePressureSnapshot(
         StorageCapacitySnapshot Capacity,
         long IncomingBytes,

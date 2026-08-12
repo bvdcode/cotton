@@ -6,9 +6,6 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Represents archive download ticket.
-    /// </summary>
     public record ArchiveDownloadTicket(
         string FileName,
         long SizeBytes,

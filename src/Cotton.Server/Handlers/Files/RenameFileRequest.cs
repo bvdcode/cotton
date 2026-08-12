@@ -18,18 +18,12 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Renames an owned file.
-    /// </summary>
     public record RenameFileRequest(
         Guid UserId,
         Guid NodeFileId,
         string Name,
         string? ExpectedETag) : IRequest<RenameFileResult>;
 
-    /// <summary>
-    /// Handles file rename requests.
-    /// </summary>
     public class RenameFileRequestHandler(
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
@@ -37,9 +31,6 @@ namespace Cotton.Server.Handlers.Files
         IEventNotificationService _notifications)
         : IRequestHandler<RenameFileRequest, RenameFileResult>
     {
-        /// <summary>
-        /// Renames the requested file inside its serialized layout mutation.
-        /// </summary>
         public async Task<RenameFileResult> Handle(
             RenameFileRequest request,
             CancellationToken ct)

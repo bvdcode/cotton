@@ -15,9 +15,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Handles layout search queries.
-    /// </summary>
     public class SearchLayoutsQueryHandler(
         CottonDbContext _dbContext,
         IEnumerable<ILayoutSearchProvider> _providers)
@@ -25,7 +22,6 @@ namespace Cotton.Server.Handlers.Layouts
     {
         private const int MaxPageSize = 100;
 
-        /// <inheritdoc />
         public async Task<PagedResult<SearchResultDto>> Handle(
             SearchLayoutsQuery request,
             CancellationToken cancellationToken)

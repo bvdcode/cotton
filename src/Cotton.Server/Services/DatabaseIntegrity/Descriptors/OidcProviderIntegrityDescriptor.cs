@@ -5,24 +5,17 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
 {
-    /// <summary>
-    /// Describes OIDC provider settings protected against direct database tampering.
-    /// </summary>
     public class OidcProviderIntegrityDescriptor : DatabaseIntegrityDescriptor<OidcProvider>
     {
-        /// <inheritdoc />
         public override string EntityName => "oidc_providers";
 
-        /// <inheritdoc />
         public override int SchemaVersion => 1;
 
-        /// <inheritdoc />
         public override string GetEntityKey(OidcProvider entity)
         {
             return entity.Id.ToString("D");
         }
 
-        /// <inheritdoc />
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, OidcProvider entity)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);

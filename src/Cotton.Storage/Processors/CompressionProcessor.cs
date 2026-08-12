@@ -10,56 +10,31 @@ using ZstdSharp;
 
 namespace Cotton.Storage.Processors
 {
-    /// <summary>
-    /// Storage processor that compresses blobs with Zstandard before they reach the backend.
-    /// </summary>
     public class CompressionProcessor : IStorageProcessor
     {
         private readonly ICompressionLevelProvider _compressionLevelProvider;
 
-        /// <summary>
-        /// Default Zstandard compression level used for stored blobs.
-        /// </summary>
         public const int DefaultCompressionLevel = 1;
 
-        /// <summary>
-        /// Minimum Zstandard compression level supported by the bundled ZstdSharp build.
-        /// </summary>
         public static readonly int MinCompressionLevel = Compressor.MinCompressionLevel;
 
-        /// <summary>
-        /// Maximum Zstandard compression level supported by the bundled ZstdSharp build.
-        /// </summary>
         public static readonly int MaxCompressionLevel = Compressor.MaxCompressionLevel;
 
-        /// <summary>
-        /// Compression algorithm used by this processor.
-        /// </summary>
         public const CompressionAlgorithm Algorithm = CompressionAlgorithm.Zstd;
 
-        /// <inheritdoc />
         public int Priority => 10000;
         private const int CompressBufferSize = 1 * 1024 * 1024;
 
-        /// <summary>
-        /// Initializes the processor with the default compression level.
-        /// </summary>
         public CompressionProcessor()
             : this(new StaticCompressionLevelProvider(DefaultCompressionLevel))
         {
         }
 
-        /// <summary>
-        /// Initializes the processor with a runtime compression level provider.
-        /// </summary>
         public CompressionProcessor(ICompressionLevelProvider compressionLevelProvider)
         {
             _compressionLevelProvider = compressionLevelProvider;
         }
 
-        /// <summary>
-        /// Validates a Zstandard compression level supported by the bundled ZstdSharp build.
-        /// </summary>
         public static void ThrowIfInvalidLevel(int level)
         {
             if (level < MinCompressionLevel || level > MaxCompressionLevel)
@@ -71,14 +46,12 @@ namespace Cotton.Storage.Processors
             }
         }
 
-        /// <inheritdoc />
         public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
         {
             var decompressor = new DecompressionStream(stream);
             return Task.FromResult<Stream>(decompressor);
         }
 
-        /// <inheritdoc />
         public Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
         {
             ArgumentNullException.ThrowIfNull(stream);

@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Services.Passkeys
 {
-    /// <summary>
-    /// Normalizes optional user-authored passkey labels consistently across registration and rename flows.
-    /// </summary>
     internal static class PasskeyLabelNormalizer
     {
         internal const int MaximumLength = 120;

@@ -6,9 +6,6 @@ using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Reads low-level Linux container hardening facts from procfs and sysfs.
-    /// </summary>
     public static class LinuxContainerSecurity
     {
         private static readonly string[] DockerSocketPaths =
@@ -19,9 +16,6 @@ namespace Cotton.Server.Services
 
         private static readonly Regex MultiWhitespace = new(@"\s{2,}", RegexOptions.Compiled);
 
-        /// <summary>
-        /// Builds a snapshot from the current Linux runtime.
-        /// </summary>
         public static LinuxContainerSecuritySnapshot Snapshot(bool isContainer)
         {
             if (!OperatingSystem.IsLinux())

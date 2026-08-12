@@ -13,26 +13,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Resolves and validates content for an owned file.
-    /// </summary>
     public record ResolveOwnedFileContentQuery(
         Guid UserId,
         Guid NodeFileId,
         OwnedFileContentPurpose Purpose,
         string? ExpectedETag) : IRequest<NodeFile?>;
 
-    /// <summary>
-    /// Handles owned file content resolution.
-    /// </summary>
     public class ResolveOwnedFileContentQueryHandler(
         CottonDbContext _dbContext,
         FileGraphIntegrityVerifier _fileGraphIntegrity)
         : IRequestHandler<ResolveOwnedFileContentQuery, NodeFile?>
     {
-        /// <summary>
-        /// Loads the file graph and enforces its integrity and ETag precondition.
-        /// </summary>
         public async Task<NodeFile?> Handle(
             ResolveOwnedFileContentQuery request,
             CancellationToken ct)

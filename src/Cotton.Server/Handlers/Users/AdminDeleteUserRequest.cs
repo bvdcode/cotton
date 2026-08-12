@@ -15,25 +15,13 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Users
 {
-    /// <summary>
-    /// Represents an administrator request to permanently delete a user account.
-    /// </summary>
     public class AdminDeleteUserRequest(Guid adminUserId, Guid userId) : IRequest
     {
-        /// <summary>
-        /// Gets the administrator user identifier.
-        /// </summary>
         public Guid AdminUserId { get; } = adminUserId;
 
-        /// <summary>
-        /// Gets the user identifier to delete.
-        /// </summary>
         public Guid UserId { get; } = userId;
     }
 
-    /// <summary>
-    /// Permanently deletes a user account and all user-owned database records.
-    /// </summary>
     public class AdminDeleteUserRequestHandler(
         CottonDbContext _dbContext,
         ILayoutMutationGate _layoutMutationGate,
@@ -41,9 +29,6 @@ namespace Cotton.Server.Handlers.Users
         SessionAccessTokenRevocationStore _sessionRevocations)
         : IRequestHandler<AdminDeleteUserRequest>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task Handle(AdminDeleteUserRequest request, CancellationToken cancellationToken)
         {
             if (request.AdminUserId == request.UserId)

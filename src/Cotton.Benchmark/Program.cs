@@ -13,9 +13,6 @@ using System.Globalization;
 
 namespace Cotton.Benchmark
 {
-    /// <summary>
-    /// Entry point for Cotton Cloud performance benchmarking application.
-    /// </summary>
     internal class Program
     {
         private static async Task<int> Main(string[] args)

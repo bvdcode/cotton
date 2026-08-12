@@ -9,34 +9,26 @@ using System.Diagnostics;
 
 namespace Cotton.Benchmark.Benchmarks
 {
-    /// <summary>
-    /// Benchmark for filesystem backend read throughput.
-    /// </summary>
     public class FileSystemReadBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
         private readonly byte[] _testData = TestDataGenerator.GenerateMixedData(configuration.DataSizeBytes);
         private readonly FileSystemStorageBackend _backend = new(NullLogger<FileSystemStorageBackend>.Instance);
         private readonly string _testBasePath = Path.Combine(AppContext.BaseDirectory, "files");
 
-        /// <inheritdoc/>
         public override string Name => "Filesystem Backend Read";
 
-        /// <inheritdoc/>
         public override string Description => "Measures filesystem backend read throughput";
 
-        /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
             await ReadOnceAsync(measure: false, cancellationToken).ConfigureAwait(false);
         }
 
-        /// <inheritdoc/>
         protected override Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
             return ReadOnceAsync(measure: true, cancellationToken);
         }
 
-        /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             Dictionary<string, object> baseMetrics = base.AggregateMetrics(metrics);

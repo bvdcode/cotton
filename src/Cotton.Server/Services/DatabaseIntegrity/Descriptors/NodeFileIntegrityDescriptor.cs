@@ -5,24 +5,17 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
 {
-    /// <summary>
-    /// Describes the file-entry row that binds a user-visible name and node location to immutable file content.
-    /// </summary>
     public class NodeFileIntegrityDescriptor : DatabaseIntegrityDescriptor<NodeFile>
     {
-        /// <inheritdoc />
         public override string EntityName => "node_files";
 
-        /// <inheritdoc />
         public override int SchemaVersion => 1;
 
-        /// <inheritdoc />
         public override string GetEntityKey(NodeFile entity)
         {
             return entity.Id.ToString("D");
         }
 
-        /// <inheritdoc />
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, NodeFile entity)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);

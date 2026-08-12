@@ -15,15 +15,9 @@ using System.Globalization;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Represents storage pressure exception.
-    /// </summary>
     public class StoragePressureException(StoragePressureSnapshot pressure)
         : InvalidOperationException(BuildMessage(pressure))
     {
-        /// <summary>
-        /// Gets the pressure.
-        /// </summary>
         public StoragePressureSnapshot Pressure { get; } = pressure;
 
         private static string BuildMessage(StoragePressureSnapshot pressure)

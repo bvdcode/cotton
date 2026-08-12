@@ -5,9 +5,6 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Providers
 {
-    /// <summary>
-    /// Holds the process-local immutable server settings snapshot and related runtime state.
-    /// </summary>
     public class ServerSettingsCache
     {
         private static readonly TimeSpan BooleanCacheLifetime = TimeSpan.FromMinutes(1);

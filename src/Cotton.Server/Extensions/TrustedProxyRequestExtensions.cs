@@ -10,9 +10,6 @@ using EasyHttpRequestExtensions = EasyExtensions.AspNetCore.Extensions.HttpReque
 
 namespace Cotton.Server.Extensions
 {
-    /// <summary>
-    /// Resolves client addresses only after validating the immediate reverse proxy when one is configured.
-    /// </summary>
     public static class TrustedProxyRequestExtensions
     {
         private const byte Ipv4PrefixLength = 32;
@@ -20,15 +17,8 @@ namespace Cotton.Server.Extensions
 
         private static IPNetwork Private172Network { get; } = IPNetwork.Parse("172.16.0.0/12");
 
-        /// <summary>
-        /// Reserved settings value that selects direct-connection mode and disables forwarded client-address headers.
-        /// </summary>
         internal static IPAddress DirectConnectionIpAddress { get; } = IPAddress.Any;
 
-        /// <summary>
-        /// Gets the client address according to the configured trust mode: direct connection, validated proxy, or
-        /// legacy header trust while no trusted proxy has been configured.
-        /// </summary>
         public static IPAddress GetTrustedClientIPAddress(this HttpRequest request)
         {
             ArgumentNullException.ThrowIfNull(request);

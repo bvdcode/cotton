@@ -8,14 +8,8 @@ namespace Cotton.Server.Services.FileMetadata
     /// </summary>
     public interface IFileContentMetadataExtractor
     {
-        /// <summary>
-        /// Returns true when this extractor supports the supplied content type.
-        /// </summary>
         bool Supports(string contentType);
 
-        /// <summary>
-        /// Extracts metadata from the supplied stream.
-        /// </summary>
         Task<IReadOnlyDictionary<string, string>> ExtractAsync(
             Stream stream,
             string contentType,

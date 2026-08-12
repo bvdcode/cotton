@@ -18,14 +18,8 @@ using Microsoft.AspNetCore.Authentication;
 
 namespace Cotton.Server.Extensions
 {
-    /// <summary>
-    /// Contains extension methods for configuring service collection.
-    /// </summary>
     public static class ServiceCollectionExtensions
     {
-        /// <summary>
-        /// Registers stream cipher and database field protection services.
-        /// </summary>
         public static IServiceCollection AddStreamCipher(this IServiceCollection services)
         {
             services.AddSingleton<ServerSettingsCache>();
@@ -43,18 +37,12 @@ namespace Cotton.Server.Extensions
             });
         }
 
-        /// <summary>
-        /// Registers WebDAV services.
-        /// </summary>
         public static IServiceCollection AddWebDavServices(this IServiceCollection services)
         {
             services.AddScoped<IWebDavPathResolver, WebDavPathResolver>();
             return services;
         }
 
-        /// <summary>
-        /// Registers chunk services.
-        /// </summary>
         public static IServiceCollection AddChunkServices(this IServiceCollection services)
         {
             services.AddScoped<IChunkIngestService, ChunkIngestService>();
@@ -67,9 +55,6 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
-        /// <summary>
-        /// Registers database integrity services.
-        /// </summary>
         public static IServiceCollection AddDatabaseIntegrity(this IServiceCollection services)
         {
             services.AddSingleton<DatabaseIntegrityKeyProvider>();
@@ -102,9 +87,6 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
-        /// <summary>
-        /// Registers startup validation services.
-        /// </summary>
         public static IServiceCollection AddStartupValidation(this IServiceCollection services)
         {
             services.AddSingleton<TempDirectoryProbe>();
@@ -114,9 +96,6 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
-        /// <summary>
-        /// Registers layout search services.
-        /// </summary>
         public static IServiceCollection AddLayoutSearchProviders(this IServiceCollection services)
         {
             services.AddScoped<ILayoutSearchProvider, NameLayoutSearchProvider>();
@@ -124,9 +103,6 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
-        /// <summary>
-        /// Registers file content metadata extraction services.
-        /// </summary>
         public static IServiceCollection AddFileContentMetadataServices(this IServiceCollection services)
         {
             services.AddScoped<FileContentMetadataExtractorProvider>();
@@ -135,9 +111,6 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
-        /// <summary>
-        /// Registers web dav auth services.
-        /// </summary>
         public static IServiceCollection AddWebDavAuth(this IServiceCollection services)
         {
             services.AddSingleton<Cotton.Server.Services.WebDav.WebDavAuthCache>();

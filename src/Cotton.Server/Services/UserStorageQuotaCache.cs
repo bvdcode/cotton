@@ -5,9 +5,6 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates process-wide cached storage usage for quota checks.
-    /// </summary>
     public class UserStorageQuotaCache(IMemoryCache _cache)
     {
         private static readonly TimeSpan EntryDuration = TimeSpan.FromMinutes(15);

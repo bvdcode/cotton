@@ -12,17 +12,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Command for WebDAV DELETE operation
-    /// </summary>
     public record WebDavDeleteRequest(
         Guid UserId,
         string Path,
         bool SkipTrash = false) : IRequest<WebDavDeleteResult>;
 
-    /// <summary>
-    /// Handler for WebDAV DELETE operation
-    /// </summary>
     public class WebDavDeleteRequestHandler(
         CottonDbContext _dbContext,
         IMediator _mediator,
@@ -30,9 +24,6 @@ namespace Cotton.Server.Handlers.WebDav
         ILogger<WebDavDeleteRequestHandler> _logger)
         : IRequestHandler<WebDavDeleteRequest, WebDavDeleteResult>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<WebDavDeleteResult> Handle(WebDavDeleteRequest request, CancellationToken ct)
         {
             WebDavResolveResult resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);

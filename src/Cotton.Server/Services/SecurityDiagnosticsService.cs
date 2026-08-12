@@ -13,9 +13,6 @@ using System.Net;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates security diagnostics.
-    /// </summary>
     public class SecurityDiagnosticsService(
         CottonDbContext dbContext,
         ProcessHardeningStatus hardeningStatus,
@@ -24,9 +21,6 @@ namespace Cotton.Server.Services
         TempDirectoryProbe tempDirectoryProbe,
         SettingsProvider settingsProvider)
     {
-        /// <summary>
-        /// Gets snapshot async.
-        /// </summary>
         public async Task<SecurityDiagnosticsDto> GetSnapshotAsync(CancellationToken cancellationToken)
         {
             LinuxProcStatus procStatus = LinuxProcessHardening.SnapshotProcStatus();

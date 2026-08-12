@@ -14,41 +14,18 @@ using System.Threading.Tasks;
 
 namespace Cotton.Crypto
 {
-    /// <summary>
-    /// AES-GCM streaming cipher with per-file key wrapping and per-chunk authentication.
-    /// Nonce layout: 12-byte IV = 4-byte file prefix || 8-byte chunk counter.
-    /// The maximum number of chunks per file is 2^64-1; exceeding this throws InvalidOperationException to avoid IV reuse.
-    /// </summary>
     public class AesGcmStreamCipher : IStreamCipher, IDisposable
     {
-        /// <summary>
-        /// Authentication tag size in bytes.
-        /// </summary>
         public const int TagSize = 16;
 
-        /// <summary>
-        /// AES key size in bytes.
-        /// </summary>
         public const int KeySize = 32;
 
-        /// <summary>
-        /// Nonce (IV) size in bytes.
-        /// </summary>
         public const int NonceSize = 12;
 
-        /// <summary>
-        /// Minimum allowed chunk size in bytes.
-        /// </summary>
         public const int MinChunkSize = 8 * 1024;
 
-        /// <summary>
-        /// Maximum allowed chunk size in bytes.
-        /// </summary>
         public const int MaxChunkSize = 64 * 1024 * 1024;
 
-        /// <summary>
-        /// Default chunk size in bytes (1 MiB).
-        /// </summary>
         public const int DefaultChunkSize = 1 * 1024 * 1024;
 
         private readonly int _keyId;
@@ -65,9 +42,6 @@ namespace Cotton.Crypto
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
         private readonly int _concurrencyLevel = Math.Min(4, Environment.ProcessorCount);
 
-        /// <summary>
-        /// Gets the effective maximum concurrency level used by chunk processing.
-        /// </summary>
         public int ConcurrencyLevel => _concurrencyLevel;
 
         /// <summary>
@@ -160,7 +134,6 @@ namespace Cotton.Crypto
             return Math.Min(_windowCap, effective);
         }
 
-        /// <inheritdoc/>
         public async Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, bool leaveInputOpen = true, bool leaveOutputOpen = true, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -234,7 +207,6 @@ namespace Cotton.Crypto
             }
         }
 
-        /// <inheritdoc/>
         public async Task DecryptAsync(Stream input, Stream output, bool leaveInputOpen = true, bool leaveOutputOpen = true, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -293,7 +265,6 @@ namespace Cotton.Crypto
             }
         }
 
-        /// <inheritdoc/>
         public Task<Stream> EncryptAsync(Stream input, int chunkSize = DefaultChunkSize, bool leaveOpen = false, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -348,7 +319,6 @@ namespace Cotton.Crypto
             return Task.FromResult<Stream>(readerStream);
         }
 
-        /// <inheritdoc/>
         public Task<Stream> DecryptAsync(Stream input, bool leaveOpen = false, CancellationToken ct = default)
         {
             ThrowIfDisposed();

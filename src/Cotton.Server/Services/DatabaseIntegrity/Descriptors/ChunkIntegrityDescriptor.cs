@@ -15,19 +15,15 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// </remarks>
     public class ChunkIntegrityDescriptor : DatabaseIntegrityDescriptor<Chunk>
     {
-        /// <inheritdoc />
         public override string EntityName => "chunks";
 
-        /// <inheritdoc />
         public override int SchemaVersion => 1;
 
-        /// <inheritdoc />
         public override string GetEntityKey(Chunk entity)
         {
             return Hasher.ToHexStringHash(entity.Hash);
         }
 
-        /// <inheritdoc />
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, Chunk entity)
         {
             writer.WriteBytesField(nameof(entity.Hash), entity.Hash);

@@ -13,28 +13,13 @@ using System.Security.Cryptography;
 
 namespace Cotton.Benchmark.Benchmarks
 {
-    /// <summary>
-    /// Data shape used by the chunk upload processing benchmark.
-    /// </summary>
     public enum ChunkUploadDataProfile
     {
-        /// <summary>
-        /// Log/document-like data that Zstandard can compress aggressively.
-        /// </summary>
         CompressibleText,
-        /// <summary>
-        /// Half patterned and half pseudo-random data.
-        /// </summary>
         MixedContent,
-        /// <summary>
-        /// Random binary data, similar to already-compressed media or archives.
-        /// </summary>
         RandomBinary
     }
 
-    /// <summary>
-    /// Measures the CPU-bound server chunk upload path as one operation.
-    /// </summary>
     public class ChunkUploadProcessingBenchmark : BenchmarkBase, IDisposable
     {
         private readonly byte[] _testData;
@@ -44,9 +29,6 @@ namespace Cotton.Benchmark.Benchmarks
         private readonly InMemoryStorageBackend _backend;
         private int _uidCounter;
 
-        /// <summary>
-        /// Initializes the benchmark with the same processors used by server chunk storage.
-        /// </summary>
         public ChunkUploadProcessingBenchmark(BenchmarkConfiguration configuration, ChunkUploadDataProfile profile)
             : base(configuration)
         {
@@ -66,19 +48,15 @@ namespace Cotton.Benchmark.Benchmarks
                 [new CryptoProcessor(_cipher), new CompressionProcessor(new FixedCompressionLevelProvider(configuration.CompressionLevel))]);
         }
 
-        /// <inheritdoc/>
         public override string Name => $"Chunk Upload Processing - {_dataType} (SHA-256 + Compression + Encryption)";
 
-        /// <inheritdoc/>
         public override string Description => "Measures current server-side chunk upload processing without HTTP, database, or disk latency";
 
-        /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
             await ProcessChunkAsync(cancellationToken);
         }
 
-        /// <inheritdoc/>
         protected override async Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
             var stopwatch = Stopwatch.StartNew();
@@ -88,7 +66,6 @@ namespace Cotton.Benchmark.Benchmarks
             return PerformanceMetrics.Create(_testData.Length, stopwatch.Elapsed);
         }
 
-        /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             Dictionary<string, object> baseMetrics = base.AggregateMetrics(metrics);
@@ -101,7 +78,6 @@ namespace Cotton.Benchmark.Benchmarks
             return baseMetrics;
         }
 
-        /// <inheritdoc />
         public void Dispose()
         {
             _cipher.Dispose();

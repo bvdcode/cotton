@@ -10,21 +10,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Topology
 {
-    /// <summary>
-    /// EF-backed service that creates and retrieves Cotton layout roots.
-    /// </summary>
     public class StorageLayoutService(CottonDbContext _dbContext) : ILayoutService
     {
         private static readonly SemaphoreSlim _layoutSemaphore = new(1, 1);
 
-        /// <inheritdoc />
         public async Task<Node> GetUserTrashRootAsync(Guid ownerId, CancellationToken ct = default)
         {
             Layout layout = await GetOrCreateLatestUserLayoutAsync(ownerId, ct);
             return await GetOrCreateRootNodeAsync(layout.Id, ownerId, NodeType.Trash, ct);
         }
 
-        /// <inheritdoc />
         public async Task<Node> GetOrCreateRootNodeAsync(Guid layoutId, Guid ownerId, NodeType nodeType, CancellationToken ct = default)
         {
             await _layoutSemaphore.WaitAsync(ct);
@@ -59,7 +54,6 @@ namespace Cotton.Topology
             }
         }
 
-        /// <inheritdoc />
         public async Task<Layout> GetOrCreateLatestUserLayoutAsync(Guid ownerId, CancellationToken ct = default)
         {
             await _layoutSemaphore.WaitAsync(ct);
@@ -88,13 +82,11 @@ namespace Cotton.Topology
             }
         }
 
-        /// <inheritdoc />
         public async Task<Chunk?> FindChunkAsync(byte[] hash, CancellationToken ct = default)
         {
             return await _dbContext.Chunks.FindAsync([hash], ct);
         }
 
-        /// <inheritdoc />
         public async Task<Node> CreateTrashItemAsync(Guid userId, CancellationToken ct = default)
         {
             Node trashRoot = await GetUserTrashRootAsync(userId, ct);

@@ -10,25 +10,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
-    /// <summary>
-    /// Represents a admin get users query sent through the mediator pipeline.
-    /// </summary>
     public class AdminGetUsersQuery : IRequest<IEnumerable<AdminUserDto>>
     { 
-        /// <summary>
-        /// When true, computes per-user storage usage.
-        /// </summary>
         public bool CalculateStorageUsage { get; set; }
     }
 
-    /// <summary>
-    /// Handles admin get users queries in the mediator pipeline.
-    /// </summary>
     public class AdminGetUsersQueryHandler(CottonDbContext _dbContext) : IRequestHandler<AdminGetUsersQuery, IEnumerable<AdminUserDto>>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<IEnumerable<AdminUserDto>> Handle(AdminGetUsersQuery request, CancellationToken cancellationToken)
         {
             List<User> users = await _dbContext.Users

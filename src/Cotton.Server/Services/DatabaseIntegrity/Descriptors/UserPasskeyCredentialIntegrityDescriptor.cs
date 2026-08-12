@@ -14,19 +14,15 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// </remarks>
     public class UserPasskeyCredentialIntegrityDescriptor : DatabaseIntegrityDescriptor<UserPasskeyCredential>
     {
-        /// <inheritdoc />
         public override string EntityName => "user_passkey_credentials";
 
-        /// <inheritdoc />
         public override int SchemaVersion => 1;
 
-        /// <inheritdoc />
         public override string GetEntityKey(UserPasskeyCredential entity)
         {
             return entity.Id.ToString("D");
         }
 
-        /// <inheritdoc />
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, UserPasskeyCredential entity)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);

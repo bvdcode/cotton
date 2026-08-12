@@ -22,9 +22,6 @@ using Quartz;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Updates a file from already uploaded chunks.
-    /// </summary>
     public record UpdateFileContentRequest(
         Guid UserId,
         Guid NodeFileId,
@@ -35,9 +32,6 @@ namespace Cotton.Server.Handlers.Files
         Dictionary<string, string>? Metadata,
         string? ExpectedETag) : IRequest<UpdateFileContentResult>;
 
-    /// <summary>
-    /// Handles file content updates.
-    /// </summary>
     public class UpdateFileContentRequestHandler(
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
@@ -49,9 +43,6 @@ namespace Cotton.Server.Handlers.Files
         IEventNotificationService _notifications)
         : IRequestHandler<UpdateFileContentRequest, UpdateFileContentResult>
     {
-        /// <summary>
-        /// Updates the requested file while preserving quota and version invariants.
-        /// </summary>
         public async Task<UpdateFileContentResult> Handle(
             UpdateFileContentRequest request,
             CancellationToken ct)

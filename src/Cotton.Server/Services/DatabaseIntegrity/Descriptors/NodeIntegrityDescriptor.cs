@@ -5,24 +5,17 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
 {
-    /// <summary>
-    /// Describes node fields that determine where a file entry is visible and which logical tree owns it.
-    /// </summary>
     public class NodeIntegrityDescriptor : DatabaseIntegrityDescriptor<Node>
     {
-        /// <inheritdoc />
         public override string EntityName => "nodes";
 
-        /// <inheritdoc />
         public override int SchemaVersion => 1;
 
-        /// <inheritdoc />
         public override string GetEntityKey(Node entity)
         {
             return entity.Id.ToString("D");
         }
 
-        /// <inheritdoc />
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, Node entity)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);

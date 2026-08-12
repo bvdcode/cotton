@@ -11,9 +11,6 @@ using System.Text.Json.Serialization;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Normalized provider user-info claims.
-    /// </summary>
     public record OidcUserInfoClaims(
         string? Subject,
         string? Email,

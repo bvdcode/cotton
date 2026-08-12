@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Models.DatabaseBackup
 {
-    /// <summary>
-    /// Describes a resolved backup manifest.
-    /// </summary>
     public record ResolvedBackupManifest(
         string ManifestStorageKey,
         BackupManifestPointer Pointer,

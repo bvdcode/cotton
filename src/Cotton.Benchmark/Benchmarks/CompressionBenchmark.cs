@@ -8,21 +8,15 @@ using System.Diagnostics;
 
 namespace Cotton.Benchmark.Benchmarks
 {
-    /// <summary>
-    /// Benchmark for Cotton.Storage compression throughput.
-    /// </summary>
     public class CompressionBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
         private readonly byte[] _testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
         private readonly CompressionProcessor _processor = new(new FixedCompressionLevelProvider(configuration.CompressionLevel));
 
-        /// <inheritdoc/>
         public override string Name => "Cotton.Storage Zstd Compression";
 
-        /// <inheritdoc/>
         public override string Description => $"Measures Cotton.Storage compression throughput on deterministic compressible text";
 
-        /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
             await using var inputStream = new MemoryStream(_testData);
@@ -30,7 +24,6 @@ namespace Cotton.Benchmark.Benchmarks
             await outputStream.DisposeAsync();
         }
 
-        /// <inheritdoc/>
         protected override async Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
             var stopwatch = Stopwatch.StartNew();
@@ -47,7 +40,6 @@ namespace Cotton.Benchmark.Benchmarks
             return PerformanceMetrics.Create(_testData.Length, stopwatch.Elapsed);
         }
 
-        /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             Dictionary<string, object> baseMetrics = base.AggregateMetrics(metrics);

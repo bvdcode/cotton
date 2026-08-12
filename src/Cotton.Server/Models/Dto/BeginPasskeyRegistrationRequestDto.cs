@@ -5,14 +5,8 @@ using Fido2NetLib;
 
 namespace Cotton.Server.Models.Dto
 {
-    /// <summary>
-    /// Represents the begin passkey registration request payload accepted by the API.
-    /// </summary>
     public class BeginPasskeyRegistrationRequestDto
     {
-        /// <summary>
-        /// Gets or sets the optional user-authored label.
-        /// </summary>
         public string? Label { get; set; }
     }
 }

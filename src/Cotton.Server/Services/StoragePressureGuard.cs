@@ -36,9 +36,6 @@ namespace Cotton.Server.Services
         private static readonly SemaphoreSlim CapacityReservationLock = new(initialCount: 1, maxCount: 1);
         private static readonly SemaphoreSlim NotificationLock = new(initialCount: 1, maxCount: 1);
 
-        /// <summary>
-        /// Ensures the backend can accept the incoming write and reserves that capacity for the request.
-        /// </summary>
         public async Task EnsureCanAcceptWriteAsync(long incomingBytes, CancellationToken ct = default)
         {
             using StoragePressureReservation reservation = await ReserveWriteAsync(incomingBytes, ct);

@@ -13,17 +13,11 @@ using Npgsql;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates file manifest.
-    /// </summary>
     public class FileManifestService(
         CottonDbContext _dbContext,
         IChunkIngestService _chunkIngest,
         ILogger<FileManifestService> _logger)
     {
-        /// <summary>
-        /// Defines the default content type.
-        /// </summary>
         public const string DefaultContentType = "application/octet-stream";
         private const string ProposedContentHashConstraintName = "IX_file_manifests_proposed_content_hash";
         private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
@@ -153,9 +147,6 @@ namespace Cotton.Server.Services
             ".svelte",
         };
 
-        /// <summary>
-        /// Resolves content type.
-        /// </summary>
         public static string ResolveContentType(string? fileName, string? contentType)
         {
             string normalizedContentType = NormalizeContentType(contentType);
@@ -222,9 +213,6 @@ namespace Cotton.Server.Services
                 ? DefaultContentType
                 : normalizedContentType;
 
-        /// <summary>
-        /// Returns true when the filename should be treated as source-code text for preview generation.
-        /// </summary>
         public static bool IsSourceTextFileName(string? fileName)
         {
             if (string.IsNullOrWhiteSpace(fileName))
@@ -304,9 +292,6 @@ namespace Cotton.Server.Services
             };
         }
 
-        /// <summary>
-        /// Gets chunks async.
-        /// </summary>
         public async Task<List<Chunk>> GetChunksAsync(string[] chunkHashes, Guid userId, CancellationToken cancellationToken = default)
         {
             List<byte[]> normalizedHashes = [.. chunkHashes.Select(Hasher.FromHexStringHash)];
@@ -334,9 +319,6 @@ namespace Cotton.Server.Services
             return result;
         }
 
-        /// <summary>
-        /// Finds an existing manifest by content hash only when the requesting user owns every data chunk it references.
-        /// </summary>
         public async Task<FileManifest?> GetReusableOwnedManifestAsync(
             byte[] proposedContentHash,
             Guid userId,
@@ -380,9 +362,6 @@ namespace Cotton.Server.Services
             return !hasForeignChunk;
         }
 
-        /// <summary>
-        /// Creates a file manifest or reuses an equivalent manifest inserted concurrently.
-        /// </summary>
         public async Task<FileManifest> CreateNewFileManifestAsync(
             List<Chunk> chunks,
             string fileName,
@@ -463,9 +442,6 @@ namespace Cotton.Server.Services
             };
         }
 
-        /// <summary>
-        /// Clears gc schedules for manifest references.
-        /// </summary>
         public async Task<int> ClearGcSchedulesForManifestReferencesAsync(
             Guid fileManifestId,
             CancellationToken cancellationToken = default)

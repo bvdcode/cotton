@@ -7,21 +7,14 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Deletes a retained file version.
-    /// </summary>
     public record DeleteFileVersionRequest(
         Guid UserId,
         Guid NodeFileId,
         Guid VersionId) : IRequest;
 
-    /// <summary>
-    /// Handles file version deletion requests.
-    /// </summary>
     public class DeleteFileVersionRequestHandler(FileVersionService _versions)
         : IRequestHandler<DeleteFileVersionRequest>
     {
-        /// <inheritdoc />
         public Task Handle(
             DeleteFileVersionRequest request,
             CancellationToken ct)

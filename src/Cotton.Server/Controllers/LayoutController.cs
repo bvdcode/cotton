@@ -18,16 +18,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for layout operations.
-    /// </summary>
     [ApiController]
     [Route(Routes.V1.Layouts)]
     public class LayoutController(IMediator _mediator) : ControllerBase
     {
-        /// <summary>
-        /// Gets recent nodes.
-        /// </summary>
         [Authorize]
         [HttpGet("{layoutId:guid}/recent")]
         public async Task<IActionResult> GetRecentNodes([FromRoute] Guid layoutId,
@@ -39,9 +33,6 @@ namespace Cotton.Server.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// Searches files and folders across a layout.
-        /// </summary>
         [Authorize]
         [HttpGet("{layoutId:guid}/search")]
         public async Task<IActionResult> SearchLayouts(
@@ -57,9 +48,6 @@ namespace Cotton.Server.Controllers
             return Ok(result.Payload);
         }
 
-        /// <summary>
-        /// Gets layout stats.
-        /// </summary>
         [Authorize]
         [HttpGet("{layoutId:guid}/stats")]
         public async Task<IActionResult> GetLayoutStats([FromRoute] Guid layoutId)
@@ -76,9 +64,6 @@ namespace Cotton.Server.Controllers
             return Ok(stats);
         }
 
-        /// <summary>
-        /// Moves layout node.
-        /// </summary>
         [Authorize]
         [HttpPatch("nodes/{nodeId:guid}/move")]
         public async Task<IActionResult> MoveLayoutNode(
@@ -95,9 +80,6 @@ namespace Cotton.Server.Controllers
             return Ok(dto);
         }
 
-        /// <summary>
-        /// Renames layout node.
-        /// </summary>
         [Authorize]
         [HttpPatch("nodes/{nodeId:guid}/rename")]
         public async Task<IActionResult> RenameLayoutNode(
@@ -122,9 +104,6 @@ namespace Cotton.Server.Controllers
             return Ok(result.Node!);
         }
 
-        /// <summary>
-        /// Gets layout node.
-        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}")]
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
@@ -141,9 +120,6 @@ namespace Cotton.Server.Controllers
             return Ok(node);
         }
 
-        /// <summary>
-        /// Updates layout node metadata.
-        /// </summary>
         [Authorize]
         [HttpPatch("nodes/{nodeId:guid}/metadata")]
         [ProducesResponseType<NodeDto>(StatusCodes.Status200OK)]
@@ -170,9 +146,6 @@ namespace Cotton.Server.Controllers
             return Ok(result.Node!);
         }
 
-        /// <summary>
-        /// Deletes layout node.
-        /// </summary>
         [Authorize]
         [HttpDelete("nodes/{nodeId:guid}")]
         public async Task<IActionResult> DeleteLayoutNode(
@@ -187,9 +160,6 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Restores layout node.
-        /// </summary>
         [Authorize]
         [HttpPost("nodes/{nodeId:guid}/restore")]
         public async Task<IActionResult> RestoreLayoutNode(
@@ -208,9 +178,6 @@ namespace Cotton.Server.Controllers
             return Ok(outcome);
         }
 
-        /// <summary>
-        /// Creates layout node.
-        /// </summary>
         [Authorize]
         [HttpPut("nodes")]
         public async Task<IActionResult> CreateLayoutNode([FromBody] CreateNodeRequestDto request)
@@ -233,9 +200,6 @@ namespace Cotton.Server.Controllers
             return Ok(result.Node!);
         }
 
-        /// <summary>
-        /// Gets ancestor nodes.
-        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}/ancestors")]
         public async Task<IActionResult> GetAncestorNodes(
@@ -259,9 +223,6 @@ namespace Cotton.Server.Controllers
             }
         }
 
-        /// <summary>
-        /// Gets child nodes.
-        /// </summary>
         [Authorize]
         [HttpGet("nodes/{nodeId:guid}/children")]
         public async Task<IActionResult> GetChildNodes(
@@ -278,9 +239,6 @@ namespace Cotton.Server.Controllers
             return Ok(result.Payload);
         }
 
-        /// <summary>
-        /// Resolves layout.
-        /// </summary>
         [Authorize]
         [HttpGet("resolver")]
         [HttpGet("resolver/{*path}")]

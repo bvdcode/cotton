@@ -5,9 +5,6 @@ using Cotton.Storage.Abstractions;
 
 namespace Cotton.Benchmark.Infrastructure
 {
-    /// <summary>
-    /// Returns a fixed storage backend instance for benchmark pipelines.
-    /// </summary>
     internal class StaticStorageBackendProvider(IStorageBackend backend) : IStorageBackendProvider
     {
         public IStorageBackend GetBackend() => backend;

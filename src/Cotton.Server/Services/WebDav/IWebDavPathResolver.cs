@@ -5,25 +5,12 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Services.WebDav
 {
-    /// <summary>
-    /// Resolves WebDAV paths to nodes and files
-    /// </summary>
     public interface IWebDavPathResolver
     {
-        /// <summary>
-        /// Resolves a WebDAV path to a node or file
-        /// </summary>
         Task<WebDavResolveResult> ResolvePathAsync(Guid userId, string path, CancellationToken ct = default);
 
-        /// <summary>
-        /// Resolves a WebDAV path to a node or file without loading heavy file content graph.
-        /// Intended for operations that only need metadata (DELETE/MOVE/COPY/PUT checks/etc.).
-        /// </summary>
         Task<WebDavResolveResult> ResolveMetadataAsync(Guid userId, string path, CancellationToken ct = default);
 
-        /// <summary>
-        /// Gets the parent node for a given path (for creating new resources)
-        /// </summary>
         Task<WebDavParentResult> GetParentNodeAsync(Guid userId, string path, CancellationToken ct = default);
     }
 }

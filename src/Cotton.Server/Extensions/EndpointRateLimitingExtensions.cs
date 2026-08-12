@@ -12,14 +12,8 @@ using System.Threading.RateLimiting;
 
 namespace Cotton.Server.Extensions
 {
-    /// <summary>
-    /// Configures rate limits for endpoints exposed to credential abuse.
-    /// </summary>
     public static class EndpointRateLimitingExtensions
     {
-        /// <summary>
-        /// Registers endpoint-specific abuse rate limits.
-        /// </summary>
         public static IServiceCollection AddEndpointRateLimiting(this IServiceCollection services)
         {
             services.AddSingleton<PublicShareLookupFailureLimiter>();
@@ -31,9 +25,6 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
-        /// <summary>
-        /// Adds endpoint rate-limit middleware.
-        /// </summary>
         public static IApplicationBuilder UseEndpointRateLimiting(this IApplicationBuilder app)
         {
             return app.UseRateLimiter();
@@ -61,9 +52,6 @@ namespace Cotton.Server.Extensions
             await context.HttpContext.Response.WriteAsJsonAsync(result, cancellationToken);
         }
 
-        /// <summary>
-        /// Returns a 429 result when the client is already blocked from short-token lookups.
-        /// </summary>
         public static IActionResult? GetPublicShareLookupBlockRejection(
             this ControllerBase controller,
             PublicShareLookupFailureLimiter limiter,
@@ -78,9 +66,6 @@ namespace Cotton.Server.Extensions
                 limiter.CheckAvailability(controller.Request, token));
         }
 
-        /// <summary>
-        /// Records a failed short-token lookup and returns a 429 result when its limit is exceeded.
-        /// </summary>
         public static IActionResult? GetPublicShareLookupFailureRejection(
             this ControllerBase controller,
             PublicShareLookupFailureLimiter limiter,
@@ -95,9 +80,6 @@ namespace Cotton.Server.Extensions
                 limiter.RecordFailure(controller.Request, token));
         }
 
-        /// <summary>
-        /// Returns a public-share not-found response unless the failed lookup limit was exceeded.
-        /// </summary>
         public static IActionResult ApiPublicShareNotFound(
             this ControllerBase controller,
             PublicShareLookupFailureLimiter limiter,

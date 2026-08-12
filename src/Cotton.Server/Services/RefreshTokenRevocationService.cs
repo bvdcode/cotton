@@ -7,16 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates refresh token revocation.
-    /// </summary>
     public class RefreshTokenRevocationService(CottonDbContext _dbContext)
     {
         private const int BatchSize = 1_000;
 
-        /// <summary>
-        /// Revokes session.
-        /// </summary>
         public Task<RefreshTokenRevocationResult> RevokeSessionAsync(
             Guid userId,
             string sessionId,
@@ -30,9 +24,6 @@ namespace Cotton.Server.Services
                 cancellationToken);
         }
 
-        /// <summary>
-        /// Revokes user sessions.
-        /// </summary>
         public Task<RefreshTokenRevocationResult> RevokeUserSessionsAsync(
             Guid userId,
             DateTime revokedAt,

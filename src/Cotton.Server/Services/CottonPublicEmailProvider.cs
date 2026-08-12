@@ -7,22 +7,13 @@ using Cotton.Server.Providers;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Provides cotton public email dependencies to server components.
-    /// </summary>
     public class CottonPublicEmailProvider(
         HttpClient _httpClient,
         ILogger<CottonPublicEmailProvider> _logger)
     {
         private static readonly TimeSpan HealthTimeout = TimeSpan.FromSeconds(10);
 
-        /// <summary>
-        /// Defines the Cotton Bridge base URL.
-        /// </summary>
         public const string CottonBridgeBaseUrl = global::Cotton.Constants.CottonBridgeBaseUrl;
-        /// <summary>
-        /// Checks health.
-        /// </summary>
         public async Task<bool> CheckHealthAsync(CancellationToken cancellationToken = default)
         {
             using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -45,9 +36,6 @@ namespace Cotton.Server.Services
             }
         }
 
-        /// <summary>
-        /// Sends email async.
-        /// </summary>
         public async Task<bool> SendEmailAsync(
             Guid instanceId,
             EmailTemplate template,
@@ -98,34 +86,16 @@ namespace Cotton.Server.Services
 
         private class CottonBridgeEmailRequest
         {
-            /// <summary>
-            /// Gets or sets the template.
-            /// </summary>
             public string Template { get; set; } = null!;
 
-            /// <summary>
-            /// Gets or sets the instance id.
-            /// </summary>
             public Guid InstanceId { get; set; }
 
-            /// <summary>
-            /// Gets or sets the server URL.
-            /// </summary>
             public string ServerUrl { get; set; } = null!;
 
-            /// <summary>
-            /// Gets or sets the recipient email.
-            /// </summary>
             public string RecipientEmail { get; set; } = null!;
 
-            /// <summary>
-            /// Gets or sets the recipient name.
-            /// </summary>
             public string RecipientName { get; set; } = null!;
 
-            /// <summary>
-            /// Gets or sets the language.
-            /// </summary>
             public string Language { get; set; } = "English";
             public Dictionary<string, string> Parameters { get; set; } = [];
         }

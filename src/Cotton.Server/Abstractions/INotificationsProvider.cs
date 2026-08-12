@@ -6,15 +6,8 @@ using Cotton.Models.Enums;
 
 namespace Cotton.Server.Abstractions
 {
-    /// <summary>
-    /// Defines the notifications provider contract used by the server runtime.
-    /// </summary>
     public interface INotificationsProvider
     {
-        /// <summary>
-        /// Sends an email to the specified user. Returns true if the email was
-        /// actually dispatched, false if it was skipped or delivery failed.
-        /// </summary>
         Task<bool> SendEmailAsync(
             Guid userId,
             EmailTemplate template,
@@ -22,16 +15,10 @@ namespace Cotton.Server.Abstractions
             string serverBaseUrl,
             string? recipientEmail = null);
 
-        /// <summary>
-        /// Sends smtp test email.
-        /// </summary>
         Task SendSmtpTestEmailAsync(
             Guid userId,
             string serverBaseUrl);
 
-        /// <summary>
-        /// Sends notification.
-        /// </summary>
         Task SendNotificationAsync(
             Guid userId,
             string title,

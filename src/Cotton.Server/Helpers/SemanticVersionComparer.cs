@@ -5,20 +5,11 @@ using NuGet.Versioning;
 
 namespace Cotton.Server.Helpers
 {
-    /// <summary>
-    /// Compares semantic version values.
-    /// </summary>
     public static class SemanticVersionComparer
     {
-        /// <summary>
-        /// Indicates whether downgrade.
-        /// </summary>
         public static bool IsDowngrade(string currentVersion, string latestVersion)
             => IsGreaterThan(latestVersion, currentVersion);
 
-        /// <summary>
-        /// Indicates whether newer.
-        /// </summary>
         public static bool IsNewer(string candidateVersion, string currentVersion)
             => IsGreaterThan(candidateVersion, currentVersion);
 

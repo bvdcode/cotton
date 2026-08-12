@@ -5,9 +5,6 @@ using Cotton.Server.Services;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Represents the outcome of creating a shared folder archive link.
-    /// </summary>
     public record CreateSharedArchiveDownloadLinkResult(
         CreateSharedArchiveDownloadLinkStatus Status,
         CreateArchiveDownloadLinkResult? Archive = null);

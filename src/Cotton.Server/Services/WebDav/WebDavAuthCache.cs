@@ -5,17 +5,11 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Services.WebDav
 {
-    /// <summary>
-    /// Supports WebDAV authentication cache behavior.
-    /// </summary>
     public class WebDavAuthCache(IMemoryCache cache)
     {
         private const string UsernameVersionPrefix = "webdav-basic:ver:";
         private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(1);
 
-        /// <summary>
-        /// Gets or bump username cache version.
-        /// </summary>
         public string GetOrBumpUsernameCacheVersion(string username)
         {
             var versionKey = GetUsernameVersionKey(username);
@@ -26,9 +20,6 @@ namespace Cotton.Server.Services.WebDav
             return BumpUsernameCacheVersion(username);
         }
 
-        /// <summary>
-        /// Executes bump username cache version.
-        /// </summary>
         public string BumpUsernameCacheVersion(string username)
         {
             var versionKey = GetUsernameVersionKey(username);
@@ -37,9 +28,6 @@ namespace Cotton.Server.Services.WebDav
             return version;
         }
 
-        /// <summary>
-        /// Gets cache key.
-        /// </summary>
         public string GetCacheKey(string username, string token)
         {
             var version = GetOrBumpUsernameCacheVersion(username);

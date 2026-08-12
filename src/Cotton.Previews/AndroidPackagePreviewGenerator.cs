@@ -8,9 +8,6 @@ using System.IO.Compression;
 
 namespace Cotton.Previews
 {
-    /// <summary>
-    /// Extracts lightweight previews for Android package archives.
-    /// </summary>
     public class AndroidPackagePreviewGenerator : IPreviewGenerator
     {
         private const int MaxEntriesToInspect = 20_000;
@@ -21,13 +18,10 @@ namespace Cotton.Previews
         private const long MaxResourceTableBytes = 32L * 1024 * 1024;
         private const int MaxNestedDepth = 1;
 
-        /// <inheritdoc />
         public int Version => 5;
 
-        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes => AndroidPackageContentTypes.All;
 
-        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentNullException.ThrowIfNull(stream);

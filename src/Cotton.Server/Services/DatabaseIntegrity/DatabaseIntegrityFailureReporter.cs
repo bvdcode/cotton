@@ -36,7 +36,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             });
         private readonly ConcurrentDictionary<string, DateTime> _recentFailures = new(StringComparer.Ordinal);
 
-        /// <inheritdoc />
         public void Report(DatabaseIntegrityFailure failure)
         {
             ArgumentNullException.ThrowIfNull(failure);
@@ -62,7 +61,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             }
         }
 
-        /// <inheritdoc />
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             await foreach (DatabaseIntegrityFailure failure in _queue.Reader.ReadAllAsync(stoppingToken))

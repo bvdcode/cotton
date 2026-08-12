@@ -11,9 +11,6 @@ using System.Linq.Expressions;
 
 namespace Cotton.Server.Providers
 {
-    /// <summary>
-    /// Provides settings dependencies to server components.
-    /// </summary>
     public class SettingsProvider(
         CottonDbContext _dbContext,
         ServerSettingsCache _cache,
@@ -28,9 +25,6 @@ namespace Cotton.Server.Providers
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
         private const int defaultCompressionLevel = CompressionProcessor.DefaultCompressionLevel;
 
-        /// <summary>
-        /// Gets server settings.
-        /// </summary>
         internal ServerSettingsSnapshot GetServerSettings()
         {
             return _cache.GetOrAdd(() =>
@@ -57,9 +51,6 @@ namespace Cotton.Server.Providers
             });
         }
 
-        /// <summary>
-        /// Gets the canonical public base URL from persisted server settings.
-        /// </summary>
         public async Task<string> GetPublicBaseUrlAsync(CancellationToken cancellationToken = default)
         {
             CottonServerSettings? settings = await LoadLatestSettingsAsync(asNoTracking: false, cancellationToken);
@@ -71,9 +62,6 @@ namespace Cotton.Server.Providers
             return settings.PublicBaseUrl.TrimEnd('/');
         }
 
-        /// <summary>
-        /// Ensures server settings async.
-        /// </summary>
         public async Task<CottonServerSettings> EnsureServerSettingsAsync(
             string? fallbackPublicBaseUrl,
             CancellationToken cancellationToken = default)
@@ -102,9 +90,6 @@ namespace Cotton.Server.Providers
             }, cancellationToken);
         }
 
-        /// <summary>
-        /// Indicates whether server initialized async.
-        /// </summary>
         public async Task<bool> IsServerInitializedAsync()
         {
             if (_cache.TryGetServerInitialized(out bool cached))
@@ -126,9 +111,6 @@ namespace Cotton.Server.Providers
             return value;
         }
 
-        /// <summary>
-        /// Checks whether any user account exists.
-        /// </summary>
         public async Task<bool> ServerHasUsersAsync()
         {
             if (_cache.TryGetServerHasUsers(out bool cached))
@@ -150,9 +132,6 @@ namespace Cotton.Server.Providers
             return value;
         }
 
-        /// <summary>
-        /// Clears the default user template when it belongs to the specified owner.
-        /// </summary>
         public async Task ClearDefaultUserTemplateForOwnerAsync(
             Guid ownerId,
             CancellationToken cancellationToken = default)
@@ -181,9 +160,6 @@ namespace Cotton.Server.Providers
             InvalidateSettingsCache(serverIsInitialized: true);
         }
 
-        /// <summary>
-        /// Updates settings async.
-        /// </summary>
         public async Task UpdateSettingsAsync(
             Action<CottonServerSettings> update,
             string? fallbackPublicBaseUrl,
@@ -196,17 +172,11 @@ namespace Cotton.Server.Providers
             InvalidateSettingsCache(serverIsInitialized: true);
         }
 
-        /// <summary>
-        /// Updates a single server setting property.
-        /// </summary>
         public async Task SetPropertyAsync<TProperty>(Expression<Func<CottonServerSettings, TProperty>> selector, TProperty value, CancellationToken cancellationToken = default)
         {
             await SetPropertyAsync(selector, value, fallbackPublicBaseUrl: null, cancellationToken);
         }
 
-        /// <summary>
-        /// Updates a single server setting property.
-        /// </summary>
         public async Task SetPropertyAsync<TProperty>(
             Expression<Func<CottonServerSettings, TProperty>> selector,
             TProperty value,
@@ -232,9 +202,6 @@ namespace Cotton.Server.Providers
             InvalidateSettingsCache(serverIsInitialized: true);
         }
 
-        /// <summary>
-        /// Normalizes the public base URL for storage and comparison.
-        /// </summary>
         public static string NormalizePublicBaseUrl(string? url)
         {
             return TryNormalizePublicBaseUrl(url, out string? normalized)

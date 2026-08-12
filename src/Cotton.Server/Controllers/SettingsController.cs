@@ -16,9 +16,6 @@ using Cotton.Server.Models;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for settings operations.
-    /// </summary>
     [ApiController]
     [Route(Routes.V1.Settings)]
     [Route(Routes.V1.Server + "/settings")]
@@ -27,9 +24,6 @@ namespace Cotton.Server.Controllers
         ServerSettingsValidator _validator) : SettingsControllerBase(settings)
     {
 
-        /// <summary>
-        /// Gets client settings.
-        /// </summary>
         [HttpGet]
         [Authorize]
         public IActionResult GetClientSettings()
@@ -44,9 +38,6 @@ namespace Cotton.Server.Controllers
             });
         }
 
-        /// <summary>
-        /// Indicates whether server initialized.
-        /// </summary>
         [HttpGet("is-setup-complete")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> IsServerInitialized()
@@ -56,9 +47,6 @@ namespace Cotton.Server.Controllers
         }
 
 
-        /// <summary>
-        /// Gets supported hash algorithms.
-        /// </summary>
         [Authorize]
         [HttpGet("supported-hash-algorithms")]
         public IActionResult GetSupportedHashAlgorithms()
@@ -67,9 +55,6 @@ namespace Cotton.Server.Controllers
         }
 
 
-        /// <summary>
-        /// Sets server usage.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("server-usage")]
         public async Task<IActionResult> SetServerUsage([FromBody] JsonElement usage, CancellationToken cancellationToken)
@@ -80,9 +65,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets server usage.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("server-usage")]
         public IActionResult GetServerUsage()
@@ -91,9 +73,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { serverUsage });
         }
 
-        /// <summary>
-        /// Sets telemetry.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("telemetry")]
         public async Task<IActionResult> SetTelemetry([FromBody] bool enabled, CancellationToken cancellationToken = default)
@@ -104,9 +83,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets telemetry.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("telemetry")]
         public IActionResult GetTelemetry()
@@ -115,9 +91,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { telemetryEnabled });
         }
 
-        /// <summary>
-        /// Sets whether release checks are disabled.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("disable-version-check")]
         public async Task<IActionResult> SetDisableVersionCheck(
@@ -133,9 +106,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets whether release checks are disabled.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("disable-version-check")]
         public IActionResult GetDisableVersionCheck()
@@ -144,9 +114,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { disableVersionCheck });
         }
 
-        /// <summary>
-        /// Sets storage space mode.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("storage-space-mode/{mode}")]
         public async Task<IActionResult> SetStorageSpaceMode([FromRoute] StorageSpaceMode mode, CancellationToken cancellationToken)
@@ -157,9 +124,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets storage space mode.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("storage-space-mode")]
         public IActionResult GetStorageSpaceMode()
@@ -168,9 +132,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { storageSpaceMode = storageSpaceMode.ToString() });
         }
 
-        /// <summary>
-        /// Sets default user storage quota bytes.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("default-user-storage-quota-bytes")]
         public async Task<IActionResult> SetDefaultUserStorageQuotaBytes([FromBody] long? quotaBytes, CancellationToken cancellationToken)
@@ -186,9 +147,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets default user storage quota bytes.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("default-user-storage-quota-bytes")]
         public IActionResult GetDefaultUserStorageQuotaBytes()
@@ -197,9 +155,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { defaultUserStorageQuotaBytes });
         }
 
-        /// <summary>
-        /// Sets default user template node.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("default-user-template-node")]
         public async Task<IActionResult> SetDefaultUserTemplateNode([FromBody] Guid? nodeId, CancellationToken cancellationToken)
@@ -216,9 +171,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets default user template node.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("default-user-template-node")]
         public IActionResult GetDefaultUserTemplateNode()
@@ -227,9 +179,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { defaultUserTemplateNodeId });
         }
 
-        /// <summary>
-        /// Sets timezone.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("timezone")]
         public async Task<IActionResult> SetTimezone([FromBody] string? timezone, CancellationToken cancellationToken)
@@ -240,9 +189,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets timezone.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("timezone")]
         public IActionResult GetTimezone()
@@ -251,9 +197,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { timezone });
         }
 
-        /// <summary>
-        /// Sets public base url.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("public-base-url")]
         public async Task<IActionResult> SetPublicBaseUrl([FromBody] string? url, CancellationToken cancellationToken)
@@ -268,9 +211,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets public base url.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("public-base-url")]
         public IActionResult GetPublicBaseUrl()
@@ -279,9 +219,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { publicBaseUrl });
         }
 
-        /// <summary>
-        /// Sets compution mode.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("compution-mode/{mode}")]
         public async Task<IActionResult> SetComputionMode([FromRoute] ComputionMode mode, CancellationToken cancellationToken)
@@ -292,9 +229,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets compution mode.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("compution-mode")]
         public IActionResult GetComputionMode()
@@ -303,9 +237,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { computionMode = computionMode.ToString() });
         }
 
-        /// <summary>
-        /// Sets allow cross user deduplication.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("allow-cross-user-deduplication")]
         public async Task<IActionResult> SetAllowCrossUserDeduplication([FromBody] bool allow, CancellationToken cancellationToken)
@@ -314,9 +245,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets allow cross user deduplication.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("allow-cross-user-deduplication")]
         public IActionResult GetAllowCrossUserDeduplication()
@@ -325,9 +253,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { allowCrossUserDeduplication });
         }
 
-        /// <summary>
-        /// Sets allow global indexing.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("allow-global-indexing")]
         public async Task<IActionResult> SetAllowGlobalIndexing([FromBody] bool allow, CancellationToken cancellationToken)
@@ -336,9 +261,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets allow global indexing.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("allow-global-indexing")]
         public IActionResult GetAllowGlobalIndexing()

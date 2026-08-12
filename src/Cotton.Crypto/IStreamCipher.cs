@@ -3,14 +3,8 @@
 
 namespace Cotton.Crypto
 {
-    /// <summary>
-    /// Encrypts and decrypts streams with Cotton's authenticated stream container format.
-    /// </summary>
     public interface IStreamCipher
     {
-        /// <summary>
-        /// Encrypts the input stream into the output stream.
-        /// </summary>
         Task EncryptAsync(
             Stream input,
             Stream output,
@@ -19,9 +13,6 @@ namespace Cotton.Crypto
             bool leaveOutputOpen = true,
             CancellationToken ct = default);
 
-        /// <summary>
-        /// Decrypts the input stream into the output stream.
-        /// </summary>
         Task DecryptAsync(
             Stream input,
             Stream output,
@@ -29,18 +20,12 @@ namespace Cotton.Crypto
             bool leaveOutputOpen = true,
             CancellationToken ct = default);
 
-        /// <summary>
-        /// Returns a readable encrypted stream for the input stream.
-        /// </summary>
         Task<Stream> EncryptAsync(
             Stream input,
             int chunkSize = AesGcmStreamCipher.DefaultChunkSize,
             bool leaveOpen = false,
             CancellationToken ct = default);
 
-        /// <summary>
-        /// Returns a readable decrypted stream for the input stream.
-        /// </summary>
         Task<Stream> DecryptAsync(
             Stream input,
             bool leaveOpen = false,

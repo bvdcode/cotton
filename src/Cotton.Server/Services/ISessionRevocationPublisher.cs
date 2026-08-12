@@ -3,14 +3,8 @@
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Publishes realtime session revocation events to connected clients.
-    /// </summary>
     public interface ISessionRevocationPublisher
     {
-        /// <summary>
-        /// Publishes one session revocation event.
-        /// </summary>
         Task PublishAsync(Guid userId, string sessionId, CancellationToken cancellationToken);
     }
 }

@@ -17,25 +17,19 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     public abstract class DatabaseIntegrityDescriptor<T> : IDatabaseIntegrityDescriptor<T>
         where T : class
     {
-        /// <inheritdoc />
         public Type EntityType => typeof(T);
 
-        /// <inheritdoc />
         public abstract string EntityName { get; }
 
-        /// <inheritdoc />
         public abstract int SchemaVersion { get; }
 
-        /// <inheritdoc />
         public abstract string GetEntityKey(T entity);
 
-        /// <inheritdoc />
         public string GetEntityKey(object entity)
         {
             return GetEntityKey(Cast(entity));
         }
 
-        /// <inheritdoc />
         public byte[] BuildCanonicalPayload(object entity)
         {
             T typedEntity = Cast(entity);
@@ -46,7 +40,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             });
         }
 
-        /// <inheritdoc />
         public Task<int> CountInvalidMetadataRowsAsync(
             DbContext dbContext,
             CancellationToken cancellationToken)
@@ -61,7 +54,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
                     cancellationToken);
         }
 
-        /// <inheritdoc />
         public abstract void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, T entity);
 
         private static T Cast(object entity)

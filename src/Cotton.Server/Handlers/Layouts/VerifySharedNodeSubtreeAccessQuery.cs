@@ -11,17 +11,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Verifies that a node belongs to a shared folder subtree.
-    /// </summary>
     public record VerifySharedNodeSubtreeAccessQuery(
         Guid NodeId,
         Guid SharedRootNodeId,
         Guid OwnerId) : IRequest<bool>;
 
-    /// <summary>
-    /// Handles shared subtree access verification.
-    /// </summary>
     public class VerifySharedNodeSubtreeAccessQueryHandler(
         CottonDbContext _dbContext,
         IDatabaseIntegrityVerifier _integrity)
@@ -29,9 +23,6 @@ namespace Cotton.Server.Handlers.Layouts
     {
         private const int MaxDepth = 512;
 
-        /// <summary>
-        /// Walks the verified parent chain until the shared root is reached.
-        /// </summary>
         public async Task<bool> Handle(
             VerifySharedNodeSubtreeAccessQuery request,
             CancellationToken ct)

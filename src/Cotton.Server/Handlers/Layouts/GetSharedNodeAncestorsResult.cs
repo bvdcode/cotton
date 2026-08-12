@@ -5,9 +5,6 @@ using Cotton.Nodes;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Represents the outcome of loading shared node ancestors.
-    /// </summary>
     public record GetSharedNodeAncestorsResult(
         GetSharedNodeAncestorsStatus Status,
         IReadOnlyList<NodeDto>? Ancestors = null,

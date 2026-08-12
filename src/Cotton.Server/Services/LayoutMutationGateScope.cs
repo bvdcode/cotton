@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Tracks a layout mutation gate held by the current async control flow.
-    /// </summary>
     internal class LayoutMutationGateScope
     {
         private int _depth;

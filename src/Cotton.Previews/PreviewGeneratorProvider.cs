@@ -3,24 +3,12 @@
 
 namespace Cotton.Previews
 {
-    /// <summary>
-    /// Central registry for preview generators and their supported MIME types.
-    /// </summary>
     public static class PreviewGeneratorProvider
     {
-        /// <summary>
-        /// Version used for files without a matching preview generator.
-        /// </summary>
         public const int DefaultGeneratorVersion = 0;
 
-        /// <summary>
-        /// Default size in pixels for small previews.
-        /// </summary>
         public const int DefaultSmallPreviewSize = 200;
 
-        /// <summary>
-        /// Default size in pixels for large previews.
-        /// </summary>
         public const int DefaultLargePreviewSize = 2560;
 
         private static readonly IPreviewGenerator[] Generators =
@@ -58,17 +46,11 @@ namespace Cotton.Previews
                     x => x.Value.Version,
                     StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>
-        /// Returns all MIME types that can produce previews.
-        /// </summary>
         public static string[] GetAllSupportedMimeTypes()
         {
             return [.. GeneratorsByContentType.Keys];
         }
 
-        /// <summary>
-        /// Finds a generator by MIME type.
-        /// </summary>
         public static IPreviewGenerator? GetGeneratorByContentType(string contentType)
         {
             if (string.IsNullOrWhiteSpace(contentType))
@@ -79,9 +61,6 @@ namespace Cotton.Previews
                 .TryGetValue(contentType, out IPreviewGenerator? generator) ? generator : null;
         }
 
-        /// <summary>
-        /// Returns preview generator versions keyed by MIME type.
-        /// </summary>
         public static IReadOnlyDictionary<string, int> GetGeneratorVersionsByContentType()
         {
             return GeneratorVersionsByContentType;

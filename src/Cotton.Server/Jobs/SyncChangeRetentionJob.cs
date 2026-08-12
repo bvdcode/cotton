@@ -8,9 +8,6 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
-    /// <summary>
-    /// Runs scheduled sync change retention maintenance.
-    /// </summary>
     [JobTrigger(days: 1)]
     public class SyncChangeRetentionJob(
         CottonDbContext _dbContext,
@@ -18,9 +15,6 @@ namespace Cotton.Server.Jobs
     {
         private static readonly TimeSpan RetentionPeriod = TimeSpan.FromDays(365);
 
-        /// <summary>
-        /// Executes the scheduled Quartz job.
-        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             DateTime cutoff = DateTime.UtcNow - RetentionPeriod;

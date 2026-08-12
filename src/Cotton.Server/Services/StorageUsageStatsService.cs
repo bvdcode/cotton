@@ -9,17 +9,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Calculates storage usage statistics for administrative diagnostics.
-    /// </summary>
     public class StorageUsageStatsService(
         CottonDbContext _dbContext,
         SettingsProvider _settings,
         ChunkUsageService _chunkUsage)
     {
-        /// <summary>
-        /// Gets a storage usage snapshot.
-        /// </summary>
         public async Task<StorageUsageStatsDto> GetAsync(
             DateTime nowUtc,
             IReadOnlyCollection<string> protectedStorageKeys,

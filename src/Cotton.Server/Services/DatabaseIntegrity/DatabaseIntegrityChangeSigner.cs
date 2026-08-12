@@ -20,9 +20,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         private readonly IDatabaseIntegrityDescriptorRegistry _descriptors;
         private readonly IDatabaseIntegrityFailureReporter _failures;
 
-        /// <summary>
-        /// Initializes a new save-time integrity signer.
-        /// </summary>
         public DatabaseIntegrityChangeSigner(
             IDatabaseIntegrityProtector protector,
             IDatabaseIntegrityDescriptorRegistry descriptors,
@@ -33,7 +30,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             _failures = failures;
         }
 
-        /// <inheritdoc />
         public void SignPendingChanges(DbContext dbContext)
         {
             ArgumentNullException.ThrowIfNull(dbContext);

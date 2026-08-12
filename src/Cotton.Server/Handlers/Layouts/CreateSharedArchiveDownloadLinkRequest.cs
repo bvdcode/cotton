@@ -8,24 +8,15 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Creates a download link for an archive inside a shared folder.
-    /// </summary>
     public record CreateSharedArchiveDownloadLinkRequest(
         string Token,
         Guid? NodeId) : IRequest<CreateSharedArchiveDownloadLinkResult>;
 
-    /// <summary>
-    /// Handles shared folder archive link creation.
-    /// </summary>
     public class CreateSharedArchiveDownloadLinkRequestHandler(
         IMediator _mediator,
         ArchiveDownloadService _archives)
         : IRequestHandler<CreateSharedArchiveDownloadLinkRequest, CreateSharedArchiveDownloadLinkResult>
     {
-        /// <summary>
-        /// Validates the shared selection and creates its archive link.
-        /// </summary>
         public async Task<CreateSharedArchiveDownloadLinkResult> Handle(
             CreateSharedArchiveDownloadLinkRequest request,
             CancellationToken ct)

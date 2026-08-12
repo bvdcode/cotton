@@ -10,20 +10,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Gets aggregate statistics for an owned layout.
-    /// </summary>
     public record GetLayoutStatsQuery(
         Guid UserId,
         Guid LayoutId) : IRequest<LayoutStatsDto?>;
 
-    /// <summary>
-    /// Handles layout statistics queries.
-    /// </summary>
     public class GetLayoutStatsQueryHandler(CottonDbContext _dbContext)
         : IRequestHandler<GetLayoutStatsQuery, LayoutStatsDto?>
     {
-        /// <inheritdoc />
         public async Task<LayoutStatsDto?> Handle(
             GetLayoutStatsQuery request,
             CancellationToken ct)

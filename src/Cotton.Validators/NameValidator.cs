@@ -6,21 +6,12 @@ using System.Text;
 
 namespace Cotton.Validators
 {
-    /// <summary>
-    /// Normalizes and validates file and folder names against Cotton's cross-platform name policy.
-    /// </summary>
     public static class NameValidator
     {
         private static readonly System.Buffers.SearchValues<char> _forbiddenAscii = System.Buffers.SearchValues.Create("/\\<>:\"|?*\0");
 
         // Policy
-        /// <summary>
-        /// Maximum UTF-8 byte length of one path segment.
-        /// </summary>
         public const int MaxSegmentBytes = 255;     // segment (name) in UTF-8
-        /// <summary>
-        /// Maximum user-perceived characters allowed in one path segment.
-        /// </summary>
         public const int MaxGraphemes = 255;     // to prevent abuse with combining characters
 
         // Frequently abused zero-width/format characters
@@ -40,10 +31,6 @@ namespace Cotton.Validators
             "LPT1","LPT2","LPT3","LPT4","LPT5","LPT6","LPT7","LPT8","LPT9",
         ];
 
-        /// <summary>
-        /// Normalizing and validating helper: normalizes the name (NFC, trims) and validates it.
-        /// Returns the normalized name.
-        /// </summary>
         public static bool TryNormalizeAndValidate(
             string input,
             out string normalized,
@@ -129,10 +116,6 @@ namespace Cotton.Validators
             return true;
         }
 
-        /// <summary>
-        /// Original contract: just validates without returning normalized name.
-        /// Internally calls TryNormalizeAndValidate and ignores normalized.
-        /// </summary>
         public static bool IsValidName(string name, out string errorMessage)
             => TryNormalizeAndValidate(name, out _, out errorMessage);
 
@@ -196,9 +179,6 @@ namespace Cotton.Validators
             return ReservedBaseNamesCI.Contains(up);
         }
 
-        /// <summary>
-        /// Normalizes, validates, and folds a name into its case/diacritic-insensitive lookup key.
-        /// </summary>
         public static string NormalizeAndGetNameKey(string normalized)
         {
             bool isValid = TryNormalizeAndValidate(normalized, out string norm, out string error);
@@ -209,9 +189,6 @@ namespace Cotton.Validators
             return GetNameKey(norm);
         }
 
-        /// <summary>
-        /// Folds an already-normalized name into its case/diacritic-insensitive lookup key.
-        /// </summary>
         public static string GetNameKey(string normalized)
         {
             var sb = new StringBuilder();

@@ -28,60 +28,27 @@ using Quartz;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Represents a create-file command in the mediator pipeline.
-    /// </summary>
     public class CreateFileRequest : IRequest<NodeFileManifestDto>
     {
-        /// <summary>
-        /// Gets or sets the node identifier.
-        /// </summary>
         public Guid NodeId { get; set; }
 
-        /// <summary>
-        /// Gets or sets the chunk hashes.
-        /// </summary>
         public string[] ChunkHashes { get; set; } = [];
 
-        /// <summary>
-        /// Gets or sets the name.
-        /// </summary>
         public string Name { get; set; } = null!;
 
-        /// <summary>
-        /// Gets or sets the content type.
-        /// </summary>
         public string ContentType { get; set; } = null!;
 
-        /// <summary>
-        /// Gets or sets the proposed file content hash.
-        /// </summary>
         public string Hash { get; set; } = null!;
 
-        /// <summary>
-        /// Gets or sets the original node file id.
-        /// </summary>
         public Guid? OriginalNodeFileId { get; set; }
 
-        /// <summary>
-        /// Gets or sets structured metadata attached to the resource.
-        /// </summary>
         public Dictionary<string, string>? Metadata { get; set; }
 
-        /// <summary>
-        /// Validates value.
-        /// </summary>
         public bool Validate { get; set; }
 
-        /// <summary>
-        /// Gets or sets the owning user identifier.
-        /// </summary>
         public Guid UserId { get; set; }
     }
 
-    /// <summary>
-    /// Handles create file requests in the mediator pipeline.
-    /// </summary>
     public class CreateFileRequestHandler(
         CottonDbContext _dbContext,
         IStoragePipeline _storage,
@@ -95,9 +62,6 @@ namespace Cotton.Server.Handlers.Files
         ISchedulerFactory _scheduler,
         IEventNotificationService _notifications) : IRequestHandler<CreateFileRequest, NodeFileManifestDto>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<NodeFileManifestDto> Handle(CreateFileRequest request, CancellationToken cancellationToken)
         {
             Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, cancellationToken);

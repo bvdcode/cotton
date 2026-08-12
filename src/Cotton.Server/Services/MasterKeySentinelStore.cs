@@ -9,34 +9,19 @@ using System.Text.Json;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Stores master key sentinel state.
-    /// </summary>
     public class MasterKeySentinelStore(
         ILogger<MasterKeySentinelStore> _logger,
         IStorageBackend _backend)
     {
-        /// <summary>
-        /// Defines the sentinel logical key.
-        /// </summary>
         public const string SentinelLogicalKey = "cotton.master-key.sentinel.v1";
 
-        /// <summary>
-        /// Gets the hashed storage key under which the sentinel is persisted.
-        /// </summary>
         public static readonly string SentinelStorageKey = Hasher.ToHexStringHash(
             Hasher.HashData(Encoding.UTF8.GetBytes(SentinelLogicalKey)));
 
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-        /// <summary>
-        /// Checks whether the master-key sentinel exists in storage.
-        /// </summary>
         public Task<bool> ExistsAsync() => _backend.ExistsAsync(SentinelStorageKey);
 
-        /// <summary>
-        /// Validates the existing sentinel or creates it for a previously validated key.
-        /// </summary>
         public async Task<MasterKeySentinelResult> ValidateOrInitializeAsync(
             CottonEncryptionSettings encryptionSettings,
             CancellationToken cancellationToken = default)

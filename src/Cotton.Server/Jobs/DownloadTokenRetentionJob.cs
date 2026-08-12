@@ -9,17 +9,11 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
-    /// <summary>
-    /// Runs the scheduled download token retention maintenance task.
-    /// </summary>
     [JobTrigger(days: 1)]
     public class DownloadTokenRetentionJob(
         CottonDbContext _dbContext,
         ILogger<DownloadTokenRetentionJob> _logger) : IJob
     {
-        /// <summary>
-        /// Executes the scheduled Quartz job.
-        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             CancellationToken cancellationToken = context.CancellationToken;

@@ -12,18 +12,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Query for WebDAV PROPFIND operation
-    /// </summary>
     public record WebDavPropFindQuery(
         Guid UserId,
         string Path,
         string HrefBase,
         int Depth = 1) : IRequest<WebDavPropFindResult>;
 
-    /// <summary>
-    /// Handler for WebDAV PROPFIND operation
-    /// </summary>
     public class WebDavPropFindQueryHandler(
         CottonDbContext _dbContext,
         IWebDavPathResolver _pathResolver,
@@ -33,9 +27,6 @@ namespace Cotton.Server.Handlers.WebDav
     {
         private const int MaxDepth = 32;
 
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<WebDavPropFindResult> Handle(WebDavPropFindQuery request, CancellationToken ct)
         {
             WebDavResolveResult resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);

@@ -12,15 +12,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Loads the ancestor path of a node inside a shared folder.
-    /// </summary>
     public record GetSharedNodeAncestorsQuery(string Token, Guid NodeId)
         : IRequest<GetSharedNodeAncestorsResult>;
 
-    /// <summary>
-    /// Handles shared node ancestor queries.
-    /// </summary>
     public class GetSharedNodeAncestorsQueryHandler(
         IMediator _mediator,
         CottonDbContext _dbContext)
@@ -28,9 +22,6 @@ namespace Cotton.Server.Handlers.Layouts
     {
         private const int MaxDepth = 256;
 
-        /// <summary>
-        /// Loads and validates the shared ancestor path.
-        /// </summary>
         public async Task<GetSharedNodeAncestorsResult> Handle(
             GetSharedNodeAncestorsQuery request,
             CancellationToken ct)

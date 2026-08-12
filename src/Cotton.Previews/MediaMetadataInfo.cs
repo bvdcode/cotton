@@ -3,9 +3,6 @@
 
 namespace Cotton.Previews
 {
-    /// <summary>
-    /// Media metadata extracted by ffprobe.
-    /// </summary>
     public record MediaMetadataInfo(
         double? DurationSeconds,
         string? VideoCodec,

@@ -11,21 +11,14 @@ using Mapster;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Resolves an owned node from a layout path.
-    /// </summary>
     public record ResolveLayoutPathQuery(
         Guid UserId,
         string? Path,
         NodeType NodeType) : IRequest<NodeDto?>;
 
-    /// <summary>
-    /// Handles layout path resolution.
-    /// </summary>
     public class ResolveLayoutPathQueryHandler(ILayoutNavigator _navigator)
         : IRequestHandler<ResolveLayoutPathQuery, NodeDto?>
     {
-        /// <inheritdoc />
         public async Task<NodeDto?> Handle(
             ResolveLayoutPathQuery request,
             CancellationToken ct)

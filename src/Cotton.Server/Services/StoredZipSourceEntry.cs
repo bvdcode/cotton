@@ -7,9 +7,6 @@ using System.Text;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Provides a ZIP entry path, fixed uncompressed length, and deferred stream opener.
-    /// </summary>
     public record StoredZipSourceEntry(
         string Path,
         long SizeBytes,

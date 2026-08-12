@@ -11,18 +11,12 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Represents default user content seeder.
-    /// </summary>
     public class DefaultUserContentSeeder(
         CottonDbContext _dbContext,
         SettingsProvider _settings,
         ILayoutService _layouts,
         ILogger<DefaultUserContentSeeder> _logger)
     {
-        /// <summary>
-        /// Seeds default onboarding content into a newly created user account.
-        /// </summary>
         public async Task SeedAsync(Guid userId, CancellationToken ct = default)
         {
             Guid? templateNodeId = _settings.GetServerSettings().DefaultUserTemplateNodeId;

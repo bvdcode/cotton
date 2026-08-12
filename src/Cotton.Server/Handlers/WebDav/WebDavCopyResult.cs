@@ -19,9 +19,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Result of WebDAV COPY operation
-    /// </summary>
     public record WebDavCopyResult(
         bool Success,
         bool Created,

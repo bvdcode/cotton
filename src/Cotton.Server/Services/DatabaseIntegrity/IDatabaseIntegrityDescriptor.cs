@@ -15,49 +15,24 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </remarks>
     public interface IDatabaseIntegrityDescriptor
     {
-        /// <summary>
-        /// Gets the EF entity type handled by this descriptor.
-        /// </summary>
         Type EntityType { get; }
 
-        /// <summary>
-        /// Gets the stable table-like name written into the signed payload and diagnostics.
-        /// </summary>
         string EntityName { get; }
 
-        /// <summary>
-        /// Gets the descriptor schema version expected in the row metadata.
-        /// </summary>
         int SchemaVersion { get; }
 
-        /// <summary>
-        /// Gets the stable row key written into the signed payload and failure reports.
-        /// </summary>
         string GetEntityKey(object entity);
 
-        /// <summary>
-        /// Builds the canonical binary payload that will be MACed for the entity.
-        /// </summary>
         byte[] BuildCanonicalPayload(object entity);
 
-        /// <summary>
-        /// Counts rows whose integrity metadata is missing or uses an unsupported schema version.
-        /// </summary>
         Task<int> CountInvalidMetadataRowsAsync(
             DbContext dbContext,
             CancellationToken cancellationToken);
     }
 
-    /// <summary>
-    /// Strongly typed descriptor contract used by concrete protected entity descriptors.
-    /// </summary>
-    /// <typeparam name="T">The EF entity type represented by the descriptor.</typeparam>
     public interface IDatabaseIntegrityDescriptor<in T> : IDatabaseIntegrityDescriptor
         where T : class
     {
-        /// <summary>
-        /// Gets the stable row key written into the signed payload and failure reports.
-        /// </summary>
         string GetEntityKey(T entity);
 
         /// <summary>

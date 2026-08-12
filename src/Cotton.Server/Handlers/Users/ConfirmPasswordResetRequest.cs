@@ -18,9 +18,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Users
 {
-    /// <summary>
-    /// Represents the confirm password reset request payload accepted by the API.
-    /// </summary>
     public class ConfirmPasswordResetRequest(string token, string newPassword) : IRequest
     {
         /// <summary>
@@ -28,15 +25,9 @@ namespace Cotton.Server.Handlers.Users
         /// </summary>
         public string Token { get; } = token;
 
-        /// <summary>
-        /// Gets the new password.
-        /// </summary>
         public string NewPassword { get; } = newPassword;
     }
 
-    /// <summary>
-    /// Handles confirm password reset requests in the mediator pipeline.
-    /// </summary>
     public class ConfirmPasswordResetRequestHandler(
         CottonDbContext _dbContext,
         IPasswordHashService _hasher,
@@ -49,9 +40,6 @@ namespace Cotton.Server.Handlers.Users
     {
         private static readonly TimeSpan TokenExpiration = TimeSpan.FromHours(1);
 
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task Handle(ConfirmPasswordResetRequest request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Token))

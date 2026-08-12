@@ -5,14 +5,10 @@ using Cotton.Benchmark.Abstractions;
 
 namespace Cotton.Benchmark.Reporting
 {
-    /// <summary>
-    /// Reports benchmark results to the console.
-    /// </summary>
     public class ConsoleReporter(IResultFormatter formatter) : IReporter
     {
         private readonly IResultFormatter _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
 
-        /// <inheritdoc/>
         public Task ReportAsync(IEnumerable<IBenchmarkResult> results, CancellationToken cancellationToken = default)
         {
             var formattedResults = _formatter.FormatCollection(results);

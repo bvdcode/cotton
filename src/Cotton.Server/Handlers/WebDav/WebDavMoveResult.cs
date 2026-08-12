@@ -18,9 +18,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Result of WebDAV MOVE operation
-    /// </summary>
     public record WebDavMoveResult(
         bool Success,
         bool Created,

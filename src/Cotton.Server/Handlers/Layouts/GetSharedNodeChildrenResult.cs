@@ -5,9 +5,6 @@ using Cotton.Server.Models.Dto;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Represents the outcome of loading shared node children.
-    /// </summary>
     public record GetSharedNodeChildrenResult(
         GetSharedNodeChildrenStatus Status,
         SharedNodeContentDto? Content = null,

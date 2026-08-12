@@ -10,18 +10,12 @@ using System.Net.Mail;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Validates server settings and external service connectivity.
-    /// </summary>
     public class ServerSettingsValidator(
         CottonDbContext _dbContext,
         SettingsProvider _settingsProvider,
         CottonPublicEmailProvider _publicEmailProvider,
         S3ConfigurationValidator _s3Validator)
     {
-        /// <summary>
-        /// Validates timezone.
-        /// </summary>
         public string? ValidateTimezone(string? timezone)
         {
             if (string.IsNullOrWhiteSpace(timezone))
@@ -34,9 +28,6 @@ namespace Cotton.Server.Services
                 : "Timezone not found: " + timezone;
         }
 
-        /// <summary>
-        /// Validates telemetry change.
-        /// </summary>
         public string? ValidateTelemetryChange(bool enabled)
         {
             if (enabled)
@@ -63,9 +54,6 @@ namespace Cotton.Server.Services
             return null;
         }
 
-        /// <summary>
-        /// Validates email mode async.
-        /// </summary>
         public async Task<string?> ValidateEmailModeAsync(
             EmailMode mode,
             CancellationToken cancellationToken = default)
@@ -99,9 +87,6 @@ namespace Cotton.Server.Services
             return "Invalid email mode: " + mode;
         }
 
-        /// <summary>
-        /// Validates compution mode.
-        /// </summary>
         public string? ValidateComputionMode(ComputionMode mode)
         {
             if (mode == ComputionMode.Cloud && !_settingsProvider.GetServerSettings().TelemetryEnabled)
@@ -114,9 +99,6 @@ namespace Cotton.Server.Services
                 : "Invalid computation mode: " + mode;
         }
 
-        /// <summary>
-        /// Validates geo ip lookup mode.
-        /// </summary>
         public string? ValidateGeoIpLookupMode(GeoIpLookupMode mode)
         {
             ServerSettingsSnapshot settings = _settingsProvider.GetServerSettings();
@@ -140,9 +122,6 @@ namespace Cotton.Server.Services
                 : "Invalid GeoIP lookup mode: " + mode;
         }
 
-        /// <summary>
-        /// Validates storage type async.
-        /// </summary>
         public async Task<string?> ValidateStorageTypeAsync(
             StorageType type,
             CancellationToken cancellationToken = default)
@@ -176,9 +155,6 @@ namespace Cotton.Server.Services
             return await _s3Validator.ValidateAsync(s3Config, cancellationToken);
         }
 
-        /// <summary>
-        /// Validates s3 config async.
-        /// </summary>
         public async Task<string?> ValidateS3ConfigAsync(
             S3Config? s3Config,
             CancellationToken cancellationToken = default)
@@ -186,9 +162,6 @@ namespace Cotton.Server.Services
             return await _s3Validator.ValidateAsync(s3Config, cancellationToken);
         }
 
-        /// <summary>
-        /// Validates email config.
-        /// </summary>
         public string? ValidateEmailConfig(EmailConfig? emailConfig)
         {
             if (emailConfig is null)
@@ -233,9 +206,6 @@ namespace Cotton.Server.Services
             return null;
         }
 
-        /// <summary>
-        /// Validates default user storage quota bytes.
-        /// </summary>
         public string? ValidateDefaultUserStorageQuotaBytes(long? quotaBytes)
         {
             if (quotaBytes is null or 0)
@@ -248,9 +218,6 @@ namespace Cotton.Server.Services
                 : "Default user storage quota must be zero, empty, or a positive byte value.";
         }
 
-        /// <summary>
-        /// Validates default user template node id async.
-        /// </summary>
         public async Task<string?> ValidateDefaultUserTemplateNodeIdAsync(
             Guid? nodeId,
             Guid ownerId,
@@ -274,9 +241,6 @@ namespace Cotton.Server.Services
                 : "Default user template folder was not found.";
         }
 
-        /// <summary>
-        /// Validates public base url.
-        /// </summary>
         public string? ValidatePublicBaseUrl(string? url)
         {
             return SettingsProvider.TryNormalizePublicBaseUrl(url, out _)
@@ -284,9 +248,6 @@ namespace Cotton.Server.Services
                 : "Public base URL must be an absolute HTTP or HTTPS URL.";
         }
 
-        /// <summary>
-        /// Validates custom geo ip lookup url.
-        /// </summary>
         public string? ValidateCustomGeoIpLookupUrl(string? url)
         {
             return SettingsProvider.TryNormalizePublicBaseUrl(url, out _)
@@ -294,9 +255,6 @@ namespace Cotton.Server.Services
                 : "Custom GeoIP lookup URL must be an absolute HTTP or HTTPS URL.";
         }
 
-        /// <summary>
-        /// Attempts to parse an SMTP port.
-        /// </summary>
         public static bool TryParsePort(string? value, out int port)
         {
             return int.TryParse(value, out port) && port is >= 1 and <= 65535;

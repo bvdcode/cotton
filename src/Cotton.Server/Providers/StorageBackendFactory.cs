@@ -7,16 +7,10 @@ using Cotton.Storage.Backends;
 
 namespace Cotton.Server.Providers
 {
-    /// <summary>
-    /// Creates the configured storage backend.
-    /// </summary>
     public class StorageBackendFactory(
         ILogger<FileSystemStorageBackend> _fileSystemLogger,
         ILogger<S3StorageBackend> _s3Logger)
     {
-        /// <summary>
-        /// Creates a storage backend for the supplied type.
-        /// </summary>
         public IStorageBackend Create(
             StorageType storageType,
             IS3Provider? s3Provider = null,

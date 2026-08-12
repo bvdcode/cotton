@@ -11,18 +11,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Creates a public share link for a node owned by the requesting user.
-    /// </summary>
     public record CreateNodeShareLinkRequest(
         Guid UserId,
         Guid NodeId,
         int ExpireAfterMinutes,
         string? CustomToken) : IRequest<CreateNodeShareLinkResult>;
 
-    /// <summary>
-    /// Handles node share link creation.
-    /// </summary>
     public class CreateNodeShareLinkRequestHandler(
         CottonDbContext _dbContext,
         PublicShareTokenGenerator _publicShareTokens)
@@ -30,9 +24,6 @@ namespace Cotton.Server.Handlers.Layouts
     {
         private const int MaxExpireMinutes = 60 * 24 * 365;
 
-        /// <summary>
-        /// Creates the share token and persists it.
-        /// </summary>
         public async Task<CreateNodeShareLinkResult> Handle(
             CreateNodeShareLinkRequest request,
             CancellationToken ct)

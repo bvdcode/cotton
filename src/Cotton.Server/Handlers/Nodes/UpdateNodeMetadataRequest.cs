@@ -13,24 +13,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Nodes
 {
-    /// <summary>
-    /// Updates metadata attached to an owned node.
-    /// </summary>
     public record UpdateNodeMetadataRequest(
         Guid UserId,
         Guid NodeId,
         Dictionary<string, string?>? Patch) : IRequest<UpdateNodeMetadataResult>;
 
-    /// <summary>
-    /// Handles node metadata updates.
-    /// </summary>
     public class UpdateNodeMetadataRequestHandler(
         CottonDbContext _dbContext,
         IEventNotificationService _notifications,
         ILogger<UpdateNodeMetadataRequestHandler> _logger)
         : IRequestHandler<UpdateNodeMetadataRequest, UpdateNodeMetadataResult>
     {
-        /// <inheritdoc />
         public async Task<UpdateNodeMetadataResult> Handle(
             UpdateNodeMetadataRequest request,
             CancellationToken ct)

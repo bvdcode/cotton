@@ -5,9 +5,6 @@ using Cotton.Nodes;
 
 namespace Cotton.Server.Handlers.Nodes
 {
-    /// <summary>
-    /// Represents the outcome of renaming a node.
-    /// </summary>
     public record RenameNodeResult(
         RenameNodeStatus Status,
         NodeDto? Node = null,

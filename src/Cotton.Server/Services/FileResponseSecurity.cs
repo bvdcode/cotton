@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Applies browser-facing safety rules for user-controlled file content.
-    /// </summary>
     public static class FileResponseSecurity
     {
         private const string BinaryDownloadContentType = "application/octet-stream";
@@ -25,9 +22,6 @@ namespace Cotton.Server.Services
                 "application/xml",
             };
 
-        /// <summary>
-        /// Returns whether the content type can execute active browser content when served inline.
-        /// </summary>
         public static bool IsDangerousInlineContentType(string? contentType)
         {
             string mediaType = NormalizeMediaType(contentType);
@@ -40,9 +34,6 @@ namespace Cotton.Server.Services
                 || mediaType.EndsWith("+xml", StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>
-        /// Resolves the content type that should be emitted on the HTTP response.
-        /// </summary>
         public static string ResolveContentTypeForResponse(string? contentType, bool requestedInline)
         {
             string resolvedContentType = string.IsNullOrWhiteSpace(contentType)
@@ -54,9 +45,6 @@ namespace Cotton.Server.Services
                 : resolvedContentType;
         }
 
-        /// <summary>
-        /// Resolves the Content-Disposition filename. A null result allows inline rendering.
-        /// </summary>
         public static string? ResolveFileDownloadName(string fileName, bool requestedInline, string? contentType)
         {
             return requestedInline && !IsDangerousInlineContentType(contentType)
@@ -64,9 +52,6 @@ namespace Cotton.Server.Services
                 : fileName;
         }
 
-        /// <summary>
-        /// Resolves the Content-Disposition disposition type for HEAD-style responses.
-        /// </summary>
         public static string ResolveContentDispositionType(string? contentType, bool requestedInline)
         {
             return requestedInline && !IsDangerousInlineContentType(contentType)
@@ -74,9 +59,6 @@ namespace Cotton.Server.Services
                 : "attachment";
         }
 
-        /// <summary>
-        /// Adds defensive browser headers to file responses.
-        /// </summary>
         public static void ApplyFileResponseHeaders(HttpResponse response, string? originalContentType, bool requestedInline)
         {
             response.Headers[NoSniffHeader] = "nosniff";

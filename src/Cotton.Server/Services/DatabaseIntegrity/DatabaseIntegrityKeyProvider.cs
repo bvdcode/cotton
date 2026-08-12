@@ -16,22 +16,13 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </remarks>
     public class DatabaseIntegrityKeyProvider : IDisposable
     {
-        /// <summary>
-        /// Purpose string used to domain-separate the integrity subkey from other master-key derivations.
-        /// </summary>
         public const string Purpose = "CottonDbIntegrityKey:v1";
 
-        /// <summary>
-        /// Size, in bytes, of the derived HMAC-SHA256 key.
-        /// </summary>
         public const int KeySizeBytes = 32;
 
         private readonly byte[] _key;
         private bool _disposed;
 
-        /// <summary>
-        /// Initializes a new integrity key provider from configured Cotton encryption settings.
-        /// </summary>
         public DatabaseIntegrityKeyProvider(CottonEncryptionSettings encryptionSettings)
         {
             ArgumentNullException.ThrowIfNull(encryptionSettings);
@@ -53,14 +44,12 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             }
         }
 
-        /// <inheritdoc />
         public HMACSHA256 CreateHmac()
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             return new HMACSHA256(_key);
         }
 
-        /// <inheritdoc />
         public void Dispose()
         {
             if (_disposed)

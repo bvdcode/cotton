@@ -5,14 +5,8 @@ using System.Text;
 
 namespace Cotton.Crypto
 {
-    /// <summary>
-    /// Provides byte-array and string helpers for Cotton stream ciphers.
-    /// </summary>
     public static class StreamCipherExtensions
     {
-        /// <summary>
-        /// Encrypts the specified bytes with the stream cipher.
-        /// </summary>
         public static byte[] Encrypt(
             this IStreamCipher streamCipher,
             byte[] plainBytes,
@@ -21,17 +15,11 @@ namespace Cotton.Crypto
             return EncryptAsync(streamCipher, plainBytes, chunkSize).GetAwaiter().GetResult();
         }
 
-        /// <summary>
-        /// Decrypts the specified bytes with the stream cipher.
-        /// </summary>
         public static byte[] Decrypt(this IStreamCipher streamCipher, byte[] cipherBytes)
         {
             return DecryptAsync(streamCipher, cipherBytes).GetAwaiter().GetResult();
         }
 
-        /// <summary>
-        /// Encrypts the specified UTF-8 text with the stream cipher.
-        /// </summary>
         public static byte[] EncryptString(
             this IStreamCipher streamCipher,
             string plainText,
@@ -42,18 +30,12 @@ namespace Cotton.Crypto
             return Encrypt(streamCipher, Encoding.UTF8.GetBytes(plainText), chunkSize);
         }
 
-        /// <summary>
-        /// Decrypts the specified bytes and decodes the result as UTF-8 text.
-        /// </summary>
         public static string DecryptString(this IStreamCipher streamCipher, byte[] cipherBytes)
         {
             byte[] plainBytes = Decrypt(streamCipher, cipherBytes);
             return Encoding.UTF8.GetString(plainBytes);
         }
 
-        /// <summary>
-        /// Encrypts the specified bytes with the stream cipher.
-        /// </summary>
         public static async Task<byte[]> EncryptAsync(
             this IStreamCipher streamCipher,
             byte[] plainBytes,
@@ -70,9 +52,6 @@ namespace Cotton.Crypto
             return output.ToArray();
         }
 
-        /// <summary>
-        /// Decrypts the specified bytes with the stream cipher.
-        /// </summary>
         public static async Task<byte[]> DecryptAsync(
             this IStreamCipher streamCipher,
             byte[] cipherBytes,
@@ -88,9 +67,6 @@ namespace Cotton.Crypto
             return output.ToArray();
         }
 
-        /// <summary>
-        /// Encrypts the specified UTF-8 text with the stream cipher.
-        /// </summary>
         public static async Task<byte[]> EncryptStringAsync(
             this IStreamCipher streamCipher,
             string plainText,
@@ -107,9 +83,6 @@ namespace Cotton.Crypto
                 .ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Decrypts the specified bytes and decodes the result as UTF-8 text.
-        /// </summary>
         public static async Task<string> DecryptStringAsync(
             this IStreamCipher streamCipher,
             byte[] cipherBytes,

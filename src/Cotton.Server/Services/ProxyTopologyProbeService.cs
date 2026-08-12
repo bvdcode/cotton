@@ -7,15 +7,10 @@ using Cotton.Server.Models.Dto;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Performs a bounded, unauthenticated request to the configured public endpoint to discover response-layer
-    /// proxy hints through the server's own DNS path.
-    /// </summary>
     public class ProxyTopologyProbeService(
         HttpClient _httpClient,
         ILogger<ProxyTopologyProbeService> _logger) : IProxyTopologyProbeService
     {
-        /// <inheritdoc />
         public async Task<ProxyTopologyProbeResult> DetectAsync(
             string publicBaseUrl,
             CancellationToken cancellationToken = default)

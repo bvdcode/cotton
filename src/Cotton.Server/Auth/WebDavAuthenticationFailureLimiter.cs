@@ -6,18 +6,12 @@ using System.Net;
 
 namespace Cotton.Server.Auth
 {
-    /// <summary>
-    /// Tracks failed WebDAV authentication attempts by client address and username.
-    /// </summary>
     public class WebDavAuthenticationFailureLimiter(IMemoryCache _cache)
     {
         internal const int FailedAttemptLimit = 10;
         private static readonly TimeSpan FailedAttemptWindow = TimeSpan.FromMinutes(1);
         private readonly Lock _sync = new();
 
-        /// <summary>
-        /// Determines whether the partition has reached the failed-attempt limit.
-        /// </summary>
         public bool IsLimited(IPAddress clientAddress, string username)
         {
             string key = GetCacheKey(clientAddress, username);
@@ -28,9 +22,6 @@ namespace Cotton.Server.Auth
             }
         }
 
-        /// <summary>
-        /// Records a failure and reports whether this request exceeded the limit.
-        /// </summary>
         public bool RecordFailure(IPAddress clientAddress, string username)
         {
             string key = GetCacheKey(clientAddress, username);
@@ -47,9 +38,6 @@ namespace Cotton.Server.Auth
             }
         }
 
-        /// <summary>
-        /// Clears failures for a successfully authenticated partition.
-        /// </summary>
         public void Clear(IPAddress clientAddress, string username)
         {
             string key = GetCacheKey(clientAddress, username);

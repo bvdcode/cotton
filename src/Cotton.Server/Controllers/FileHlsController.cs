@@ -21,9 +21,6 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for HLS file playback.
-    /// </summary>
     [ApiController]
     public class FileHlsController(
         IStoragePipeline _storage,
@@ -38,9 +35,6 @@ namespace Cotton.Server.Controllers
     {
         private static readonly TimeSpan MediaProbeCacheLifetime = TimeSpan.FromHours(1);
 
-        /// <summary>
-        /// Returns an HLS master playlist for a token-authorized file.
-        /// </summary>
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/master.m3u8")]
         public async Task<IActionResult> HlsMasterPlaylistByToken(
             [FromRoute] Guid nodeFileId,
@@ -97,9 +91,6 @@ namespace Cotton.Server.Controllers
                 System.Text.Encoding.UTF8);
         }
 
-        /// <summary>
-        /// Returns an HLS media playlist for a token-authorized file.
-        /// </summary>
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/playlist.m3u8")]
         public async Task<IActionResult> HlsVodPlaylistByToken(
             [FromRoute] Guid nodeFileId,
@@ -126,9 +117,6 @@ namespace Cotton.Server.Controllers
             return Content(manifest, HlsManifestBuilder.ContentType, System.Text.Encoding.UTF8);
         }
 
-        /// <summary>
-        /// Returns one HLS transport-stream segment for a token-authorized file.
-        /// </summary>
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/seg-{segmentIndex:int}.ts")]
         public async Task<IActionResult> HlsSegmentByToken(
             [FromRoute] Guid nodeFileId,

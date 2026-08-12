@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Models.DatabaseBackup
 {
-    /// <summary>
-    /// Describes a backup manifest.
-    /// </summary>
     public record BackupManifest(
         int SchemaVersion,
         string BackupId,

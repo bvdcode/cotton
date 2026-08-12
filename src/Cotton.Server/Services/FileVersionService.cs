@@ -39,15 +39,9 @@ namespace Cotton.Server.Services
     {
         private const int VersionDownloadTokenLength = 16;
 
-        /// <summary>
-        /// Indicates whether the file row is a historical version rather than the current visible file.
-        /// </summary>
         public static bool IsHistoricalVersion(NodeFile file)
             => file.OriginalNodeFileId != Guid.Empty && file.Id != file.OriginalNodeFileId;
 
-        /// <summary>
-        /// Lists the current file and its historical versions in display order.
-        /// </summary>
         public async Task<IReadOnlyList<FileVersionDto>> ListVersionsAsync(
             Guid userId,
             Guid nodeFileId,
@@ -58,9 +52,6 @@ namespace Cotton.Server.Services
             return BuildVersionDtos(current, historicalVersions);
         }
 
-        /// <summary>
-        /// Captures the current manifest as a historical version, then points the visible file at a new manifest.
-        /// </summary>
         public Task<FileVersionCaptureResult> CaptureAndUpdateManifestAsync(
             NodeFile nodeFile,
             Guid newFileManifestId,
@@ -98,9 +89,6 @@ namespace Cotton.Server.Services
             return new FileVersionCaptureResult(Captured: true, RemovedBytes: removedBytes);
         }
 
-        /// <summary>
-        /// Restores a historical version by first preserving the current state as the next version.
-        /// </summary>
         public async Task<NodeFileManifestDto> RestoreVersionAsync(
             Guid userId,
             Guid nodeFileId,
@@ -143,9 +131,6 @@ namespace Cotton.Server.Services
             return current.Adapt<NodeFileManifestDto>();
         }
 
-        /// <summary>
-        /// Deletes a user-selected historical version while keeping the original version protected.
-        /// </summary>
         public async Task DeleteVersionAsync(
             Guid userId,
             Guid nodeFileId,
@@ -173,9 +158,6 @@ namespace Cotton.Server.Services
                 nodeFileId);
         }
 
-        /// <summary>
-        /// Deletes a historical version by version identifier regardless of its current file entry.
-        /// </summary>
         public async Task DeleteHistoricalVersionAsync(
             Guid userId,
             Guid versionId,
@@ -201,9 +183,6 @@ namespace Cotton.Server.Services
                 versionId);
         }
 
-        /// <summary>
-        /// Creates a temporary download link for a historical version.
-        /// </summary>
         public async Task<string> CreateVersionDownloadLinkAsync(
             Guid userId,
             Guid nodeFileId,
@@ -234,9 +213,6 @@ namespace Cotton.Server.Services
             return Routes.V1.Files + $"/{version.Id}/download?token={token.Token}";
         }
 
-        /// <summary>
-        /// Deletes all historical versions that belong to a file lineage.
-        /// </summary>
         public async Task<long> DeleteLineageVersionsAsync(
             Guid userId,
             Guid nodeFileId,
@@ -253,9 +229,6 @@ namespace Cotton.Server.Services
             return await _storage.DeleteHistoricalVersionsAsync(userId, historicalVersions, ct);
         }
 
-        /// <summary>
-        /// Deletes historical versions for every current file in a folder subtree.
-        /// </summary>
         public async Task<long> DeleteLineageVersionsForCurrentFilesAsync(
             Guid userId,
             IReadOnlyCollection<Guid> nodeFileIds,
@@ -287,9 +260,6 @@ namespace Cotton.Server.Services
             return await _storage.DeleteHistoricalVersionsAsync(userId, historicalVersions, ct);
         }
 
-        /// <summary>
-        /// Checks whether any files inside the selected nodes still have historical versions.
-        /// </summary>
         public Task<bool> ContainsHistoricalVersionsAsync(
             Guid userId,
             IReadOnlyCollection<Guid> nodeIds,

@@ -6,12 +6,8 @@ using System.Text;
 
 namespace Cotton.Benchmark.Reporting
 {
-    /// <summary>
-    /// Formats benchmark results in a compact summary format.
-    /// </summary>
     public class SummaryResultFormatter : IResultFormatter
     {
-        /// <inheritdoc/>
         public string Format(IBenchmarkResult result)
         {
             var sb = new StringBuilder();
@@ -37,7 +33,6 @@ namespace Cotton.Benchmark.Reporting
             return sb.ToString();
         }
 
-        /// <inheritdoc/>
         public string FormatCollection(IEnumerable<IBenchmarkResult> results)
         {
             var sb = new StringBuilder();

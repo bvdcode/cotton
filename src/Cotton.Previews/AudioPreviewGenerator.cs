@@ -10,19 +10,14 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Cotton.Previews
 {
-    /// <summary>
-    /// Generates audio previews from embedded cover art or waveform data.
-    /// </summary>
     public class AudioPreviewGenerator : IPreviewGenerator
     {
         private const int CoverArtExtractionTimeoutSeconds = 15;
         private const int WaveformExtractionTimeoutSeconds = 120;
         private const int WaveformSampleRateHz = 400;
 
-        /// <inheritdoc />
         public int Version => 4;
 
-        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [
             "audio/mpeg",
@@ -41,7 +36,6 @@ namespace Cotton.Previews
             "audio/aiff",
         ];
 
-        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = 150)
         {
             await FfmpegBinary.EnsureAvailableAsync().ConfigureAwait(false);

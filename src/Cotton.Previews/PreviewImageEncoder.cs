@@ -17,14 +17,8 @@ namespace Cotton.Previews
     /// </remarks>
     public static class PreviewImageEncoder
     {
-        /// <summary>
-        /// WebP quality used for small previews (thumbnails and the social/OG image).
-        /// </summary>
         public const int SmallPreviewQuality = 75;
 
-        /// <summary>
-        /// WebP quality used for large previews (in-app full-size viewer).
-        /// </summary>
         public const int LargePreviewQuality = 85;
 
         /// <summary>

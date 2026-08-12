@@ -12,18 +12,8 @@ namespace Cotton.Database
     /// </remarks>
     public interface IDatabaseFieldProtector
     {
-        /// <summary>
-        /// Encrypts a plaintext database field value.
-        /// </summary>
-        /// <param name="plaintext">Plaintext value.</param>
-        /// <returns>The protected representation.</returns>
         string Protect(string plaintext);
 
-        /// <summary>
-        /// Decrypts a protected database field value.
-        /// </summary>
-        /// <param name="protectedValue">Protected value.</param>
-        /// <returns>The plaintext representation.</returns>
         string Unprotect(string protectedValue);
     }
 }

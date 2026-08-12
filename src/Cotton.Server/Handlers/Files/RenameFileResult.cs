@@ -5,9 +5,6 @@ using Cotton.Files;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Represents the outcome of renaming a file.
-    /// </summary>
     public record RenameFileResult(
         RenameFileStatus Status,
         NodeFileManifestDto? File = null,

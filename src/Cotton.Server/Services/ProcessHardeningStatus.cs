@@ -6,9 +6,6 @@ using System.Runtime.InteropServices;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Reports process hardening status.
-    /// </summary>
     public record ProcessHardeningStatus(
         bool Requested,
         bool Applied,

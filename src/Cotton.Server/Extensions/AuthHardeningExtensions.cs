@@ -9,17 +9,11 @@ using System.Security.Claims;
 
 namespace Cotton.Server.Extensions
 {
-    /// <summary>
-    /// Contains extension methods for configuring auth hardening.
-    /// </summary>
     public static class AuthHardeningExtensions
     {
         private const string RobotsTagHeader = "X-Robots-Tag";
         private const string RobotsNoIndexValue = "noindex";
 
-        /// <summary>
-        /// Registers auth hardening services.
-        /// </summary>
         public static IServiceCollection AddAuthHardening(this IServiceCollection services)
         {
             services.AddSingleton<SessionAccessTokenRevocationCache>();
@@ -29,9 +23,6 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
-        /// <summary>
-        /// Adds auth hardening middleware to the application pipeline.
-        /// </summary>
         public static IApplicationBuilder UseAuthHardening(this IApplicationBuilder app)
         {
             return app.UseSearchEngineExclusion();

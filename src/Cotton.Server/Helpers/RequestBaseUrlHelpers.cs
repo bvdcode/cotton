@@ -6,16 +6,10 @@ using System.Net;
 
 namespace Cotton.Server.Helpers
 {
-    /// <summary>
-    /// Builds externally visible request URLs without changing connection-level request metadata.
-    /// </summary>
     public static class RequestBaseUrlHelpers
     {
         private const string ForwardedProtoHeader = "X-Forwarded-Proto";
 
-        /// <summary>
-        /// Gets request base URL, honoring proxy-forwarded scheme for URL generation only.
-        /// </summary>
         public static string GetBaseUrl(
             HttpRequest request,
             IPAddress? trustedProxyIpAddress = null,

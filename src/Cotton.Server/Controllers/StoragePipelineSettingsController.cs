@@ -10,9 +10,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for storage pipeline settings.
-    /// </summary>
     [ApiController]
     [Route(Routes.V1.Settings)]
     [Route(Routes.V1.Server + "/settings")]
@@ -31,9 +28,6 @@ namespace Cotton.Server.Controllers
             AesGcmStreamCipher.MaxChunkSize,
         ];
 
-        /// <summary>
-        /// Gets chunk size.
-        /// </summary>
         [Authorize]
         [HttpGet("chunk-size")]
         public IActionResult GetChunkSize()
@@ -41,9 +35,6 @@ namespace Cotton.Server.Controllers
             return Ok(CreateChunkSizeResponse());
         }
 
-        /// <summary>
-        /// Sets the maximum upload chunk size used by clients.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("chunk-size/{maxChunkSizeBytes:int}")]
         public async Task<IActionResult> SetChunkSize(
@@ -68,9 +59,6 @@ namespace Cotton.Server.Controllers
             return Ok(CreateChunkSizeResponse());
         }
 
-        /// <summary>
-        /// Gets tunable storage pipeline settings.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("storage-pipeline")]
         public IActionResult GetStoragePipelineSettings()
@@ -78,9 +66,6 @@ namespace Cotton.Server.Controllers
             return Ok(CreateStoragePipelineResponse());
         }
 
-        /// <summary>
-        /// Sets the Zstandard compression level used by future storage writes.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("compression-level/{compressionLevel:int}")]
         public async Task<IActionResult> SetCompressionLevel(
@@ -110,9 +95,6 @@ namespace Cotton.Server.Controllers
             return Ok(CreateStoragePipelineResponse());
         }
 
-        /// <summary>
-        /// Sets the plaintext chunk size used by the AES-GCM storage encryption pipeline.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("cipher-chunk-size/{cipherChunkSizeBytes:int}")]
         public async Task<IActionResult> SetCipherChunkSize(
@@ -140,9 +122,6 @@ namespace Cotton.Server.Controllers
             return Ok(CreateStoragePipelineResponse());
         }
 
-        /// <summary>
-        /// Sets the number of AES-GCM storage encryption worker threads.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("encryption-threads/{encryptionThreads:int}")]
         public async Task<IActionResult> SetEncryptionThreads(

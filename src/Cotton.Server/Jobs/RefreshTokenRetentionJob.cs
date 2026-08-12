@@ -9,9 +9,6 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
-    /// <summary>
-    /// Runs the scheduled refresh token retention maintenance task.
-    /// </summary>
     [JobTrigger(days: 1)]
     public class RefreshTokenRetentionJob(
         CottonDbContext _dbContext,
@@ -19,9 +16,6 @@ namespace Cotton.Server.Jobs
     {
         private static readonly TimeSpan RetentionPeriod = TimeSpan.FromDays(30);
 
-        /// <summary>
-        /// Executes the scheduled Quartz job.
-        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             await JobStartupDelays.WaitForRefreshTokenRetentionAsync(context.CancellationToken);

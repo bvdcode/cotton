@@ -5,24 +5,17 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
 {
-    /// <summary>
-    /// Describes short-lived OIDC login state fields protected against direct database tampering.
-    /// </summary>
     public class OidcLoginStateIntegrityDescriptor : DatabaseIntegrityDescriptor<OidcLoginState>
     {
-        /// <inheritdoc />
         public override string EntityName => "oidc_login_states";
 
-        /// <inheritdoc />
         public override int SchemaVersion => 1;
 
-        /// <inheritdoc />
         public override string GetEntityKey(OidcLoginState entity)
         {
             return entity.Id.ToString("D");
         }
 
-        /// <inheritdoc />
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, OidcLoginState entity)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);
