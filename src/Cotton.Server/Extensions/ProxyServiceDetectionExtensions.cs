@@ -5,9 +5,6 @@ using Cotton.Server.Models.Dto;
 
 namespace Cotton.Server.Extensions
 {
-    /// <summary>
-    /// Detects informational reverse-proxy product hints from a safe allowlist of request-header names.
-    /// </summary>
     public static class ProxyServiceDetectionExtensions
     {
         internal const string CloudflareService = "cloudflare";
@@ -129,9 +126,6 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
-        /// <summary>
-        /// Returns stable service identifiers inferred from proxy-added response headers.
-        /// </summary>
         public static IReadOnlyList<string> DetectProxyServices(HttpResponseMessage response)
         {
             ArgumentNullException.ThrowIfNull(response);
@@ -155,9 +149,6 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
-        /// <summary>
-        /// Returns normalized Cloudflare country and data-center hints from an incoming request.
-        /// </summary>
         public static CloudflareProxyMetadataDto? DetectCloudflareMetadata(this HttpRequest request)
         {
             ArgumentNullException.ThrowIfNull(request);
@@ -168,9 +159,6 @@ namespace Cotton.Server.Extensions
                 GetFirstHeaderValue(request, "CF-Ray"));
         }
 
-        /// <summary>
-        /// Returns normalized Cloudflare data-center hints from a probe response.
-        /// </summary>
         public static CloudflareProxyMetadataDto? DetectCloudflareMetadata(HttpResponseMessage response)
         {
             ArgumentNullException.ThrowIfNull(response);
@@ -181,9 +169,6 @@ namespace Cotton.Server.Extensions
                 rayId: GetFirstHeaderValue(response, "CF-Ray"));
         }
 
-        /// <summary>
-        /// Merges Cloudflare metadata, preferring the current request and filling only missing values from a probe.
-        /// </summary>
         public static CloudflareProxyMetadataDto? MergeCloudflareMetadata(
             CloudflareProxyMetadataDto? requestMetadata,
             CloudflareProxyMetadataDto? probedMetadata)
@@ -207,10 +192,6 @@ namespace Cotton.Server.Extensions
             };
         }
 
-        /// <summary>
-        /// Merges current-request services with a self-probe. Edge services are placed farthest from Cotton, while
-        /// a concrete local service replaces an unidentified reverse-proxy hop.
-        /// </summary>
         public static IReadOnlyList<string> MergeProxyServices(
             IReadOnlyList<string> requestServices,
             IReadOnlyList<string> probedServices)

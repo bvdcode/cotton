@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Represents a verified active shared node boundary.
-    /// </summary>
     public record SharedNodeAccess(
         string Token,
         Guid NodeId,

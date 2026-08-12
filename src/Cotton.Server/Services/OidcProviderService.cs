@@ -14,9 +14,6 @@ using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Manages administrator-configured OpenID Connect providers.
-    /// </summary>
     public partial class OidcProviderService(
         CottonDbContext _dbContext,
         IDatabaseIntegrityVerifier _integrity,
@@ -25,9 +22,6 @@ namespace Cotton.Server.Services
         private static readonly string[] DefaultScopes = ["openid", "profile", "email"];
         private const int MaxSlugLength = 64;
 
-        /// <summary>
-        /// Lists enabled providers safe to show on the public login screen.
-        /// </summary>
         public async Task<IReadOnlyList<PublicOidcProviderDto>> ListPublicAsync(CancellationToken ct)
         {
             List<PublicOidcProviderDto> providers = await _dbContext.OidcProviders
@@ -44,9 +38,6 @@ namespace Cotton.Server.Services
             return providers;
         }
 
-        /// <summary>
-        /// Lists all configured providers for administrators.
-        /// </summary>
         public async Task<IReadOnlyList<OidcProviderDto>> ListAdminAsync(CancellationToken ct)
         {
             List<OidcProvider> providers = await _dbContext.OidcProviders
@@ -61,9 +52,6 @@ namespace Cotton.Server.Services
             return providers.Select(ToDto).ToArray();
         }
 
-        /// <summary>
-        /// Creates a provider.
-        /// </summary>
         public async Task<OidcProviderDto> CreateAsync(OidcProviderRequestDto request, CancellationToken ct)
         {
             NormalizedProviderInput input = Normalize(request, requireSecret: false);
@@ -92,9 +80,6 @@ namespace Cotton.Server.Services
             return ToDto(provider);
         }
 
-        /// <summary>
-        /// Updates a provider.
-        /// </summary>
         public async Task<OidcProviderDto> UpdateAsync(Guid providerId, OidcProviderRequestDto request, CancellationToken ct)
         {
             OidcProvider provider = await _dbContext.OidcProviders.FindAsync([providerId], ct)
@@ -128,9 +113,6 @@ namespace Cotton.Server.Services
             return ToDto(provider);
         }
 
-        /// <summary>
-        /// Deletes a provider and its links.
-        /// </summary>
         public async Task DeleteAsync(Guid providerId, CancellationToken ct)
         {
             OidcProvider provider = await _dbContext.OidcProviders.FindAsync([providerId], ct)

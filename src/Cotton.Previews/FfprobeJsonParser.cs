@@ -7,9 +7,6 @@ using System.Text.Json;
 
 namespace Cotton.Previews
 {
-    /// <summary>
-    /// Parses bounded ffprobe JSON payloads into media-domain models.
-    /// </summary>
     internal static class FfprobeJsonParser
     {
         public static MediaProbeInfo? ParseMediaProbe(string raw)

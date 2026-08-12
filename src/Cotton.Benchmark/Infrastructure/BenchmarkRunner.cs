@@ -6,14 +6,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Benchmark.Infrastructure
 {
-    /// <summary>
-    /// Orchestrates the execution of benchmarks.
-    /// </summary>
     public class BenchmarkRunner(ILogger<BenchmarkRunner> logger) : IBenchmarkRunner
     {
         private readonly ILogger<BenchmarkRunner> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        /// <inheritdoc/>
         public async Task<IEnumerable<IBenchmarkResult>> RunBenchmarksAsync(
             IEnumerable<IBenchmark> benchmarks,
             CancellationToken cancellationToken = default)

@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Services.Search
 {
-    /// <summary>
-    /// Represents a scoped layout search request.
-    /// </summary>
     public record LayoutSearchRequest(
         Guid UserId,
         Guid LayoutId,

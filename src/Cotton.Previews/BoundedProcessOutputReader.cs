@@ -6,9 +6,6 @@ using System.Text;
 
 namespace Cotton.Previews
 {
-    /// <summary>
-    /// Captures process output up to a byte limit while continuing to drain the source stream.
-    /// </summary>
     internal class BoundedProcessOutputReader
     {
         private const int ReadBufferSize = 8 * 1024;

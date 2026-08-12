@@ -7,9 +7,6 @@ using System.Threading.RateLimiting;
 
 namespace Cotton.Server.Auth
 {
-    /// <summary>
-    /// Limits short public-share token lookups after repeated failures.
-    /// </summary>
     public class PublicShareLookupFailureLimiter : IDisposable
     {
         private const int PermitLimit = 60;
@@ -17,9 +14,6 @@ namespace Cotton.Server.Auth
 
         private readonly PartitionedRateLimiter<HttpRequest> _limiter;
 
-        /// <summary>
-        /// Initializes the limiter with the application trusted-proxy resolver.
-        /// </summary>
         public PublicShareLookupFailureLimiter()
             : this(request => request.GetTrustedClientIPAddress().ToString())
         {
@@ -40,9 +34,6 @@ namespace Cotton.Server.Auth
                     }));
         }
 
-        /// <summary>
-        /// Checks whether short-token lookups are currently allowed without consuming a permit.
-        /// </summary>
         public RateLimitLease? CheckAvailability(HttpRequest request, string token)
         {
             ArgumentNullException.ThrowIfNull(request);
@@ -52,9 +43,6 @@ namespace Cotton.Server.Auth
                 : null;
         }
 
-        /// <summary>
-        /// Records one failed short-token lookup and returns its rate-limit lease.
-        /// </summary>
         public RateLimitLease? RecordFailure(HttpRequest request, string token)
         {
             ArgumentNullException.ThrowIfNull(request);
@@ -64,7 +52,6 @@ namespace Cotton.Server.Auth
                 : null;
         }
 
-        /// <inheritdoc />
         public void Dispose()
         {
             _limiter.Dispose();

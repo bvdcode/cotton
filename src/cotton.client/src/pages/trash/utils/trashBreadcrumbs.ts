@@ -1,5 +1,10 @@
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 
+type TrashWrapperContent = {
+  nodes?: ReadonlyArray<Pick<NodeDto, "id" | "parentId">>;
+  files?: ReadonlyArray<{ id: string; nodeId?: string | null }>;
+};
+
 const trashWrapperNamePrefix = "trash-item-";
 const originalParentPathMetadataKey = "originalParentPath";
 
@@ -62,4 +67,17 @@ export const isCurrentTrashWrapper = (
   return trashRootId
     ? currentNode.parentId === trashRootId
     : ancestors.length === 0;
+};
+
+export const findTrashWrapperNodeId = (
+  content: TrashWrapperContent | null | undefined,
+  itemId: string,
+): string | null => {
+  const node = content?.nodes?.find((candidate) => candidate.id === itemId);
+  if (node?.parentId) {
+    return node.parentId;
+  }
+
+  const file = content?.files?.find((candidate) => candidate.id === itemId);
+  return file?.nodeId ?? null;
 };

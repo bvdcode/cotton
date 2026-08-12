@@ -8,16 +8,12 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </summary>
     public class NullDatabaseIntegrityFailureReporter : IDatabaseIntegrityFailureReporter
     {
-        /// <summary>
-        /// Gets the singleton no-op reporter instance.
-        /// </summary>
         public static readonly NullDatabaseIntegrityFailureReporter Instance = new();
 
         private NullDatabaseIntegrityFailureReporter()
         {
         }
 
-        /// <inheritdoc />
         public void Report(DatabaseIntegrityFailure failure)
         {
         }

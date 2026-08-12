@@ -19,9 +19,6 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates chunk ingest.
-    /// </summary>
     public class ChunkIngestService(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
@@ -390,9 +387,6 @@ namespace Cotton.Server.Services
             return await UpsertChunkAsync(userId, ms.GetBuffer(), (int)ms.Length, computedHash, ct);
         }
 
-        /// <summary>
-        /// Stores a chunk from a stream when no caller-provided hash is available.
-        /// </summary>
         public async Task<Chunk> UpsertChunkAsync(Guid userId, Stream stream, long length, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(stream);

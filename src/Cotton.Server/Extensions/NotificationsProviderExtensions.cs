@@ -17,9 +17,6 @@ using System.Net;
 
 namespace Cotton.Server.Extensions
 {
-    /// <summary>
-    /// Contains extension methods for configuring notifications provider.
-    /// </summary>
     public static class NotificationsProviderExtensions
     {
         private const string UnknownGeoLabel = "Unknown";
@@ -211,9 +208,6 @@ namespace Cotton.Server.Extensions
                 .Replace("\n", "<br />", StringComparison.Ordinal);
         }
 
-        /// <summary>
-        /// Sends failed login attempt async.
-        /// </summary>
         public static async Task SendFailedLoginAttemptAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
@@ -248,9 +242,6 @@ namespace Cotton.Server.Extensions
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.FailedLoginAttemptTitle, contentKey));
         }
 
-        /// <summary>
-        /// Sends otp disabled async.
-        /// </summary>
         public static async Task SendOtpDisabledAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
@@ -287,9 +278,6 @@ namespace Cotton.Server.Extensions
                 CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpDisabledTitle, contentKey));
         }
 
-        /// <summary>
-        /// Sends otp enabled async.
-        /// </summary>
         public static async Task SendOtpEnabledAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
@@ -326,9 +314,6 @@ namespace Cotton.Server.Extensions
                 CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpEnabledTitle, contentKey));
         }
 
-        /// <summary>
-        /// Sends successful login async.
-        /// </summary>
         public static async Task SendSuccessfulLoginAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
@@ -365,9 +350,6 @@ namespace Cotton.Server.Extensions
                 CreateTemplateMetadata(metadata, NotificationTemplateKeys.SuccessfulLoginTitle, contentKey));
         }
 
-        /// <summary>
-        /// Sends totp failed attempt async.
-        /// </summary>
         public static async Task SendTotpFailedAttemptAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
@@ -402,9 +384,6 @@ namespace Cotton.Server.Extensions
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.TotpFailedAttemptTitle, contentKey));
         }
 
-        /// <summary>
-        /// Sends totp lockout async.
-        /// </summary>
         public static async Task SendTotpLockoutAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
@@ -439,9 +418,6 @@ namespace Cotton.Server.Extensions
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.TotpLockoutTitle, contentKey));
         }
 
-        /// <summary>
-        /// Sends web dav token reset async.
-        /// </summary>
         public static async Task SendWebDavTokenResetAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
@@ -478,9 +454,6 @@ namespace Cotton.Server.Extensions
                 CreateTemplateMetadata(metadata, NotificationTemplateKeys.WebDavTokenResetTitle, contentKey));
         }
 
-        /// <summary>
-        /// Sends shared file downloaded notification async.
-        /// </summary>
         public static async Task SendSharedFileDownloadedNotificationAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
@@ -515,9 +488,6 @@ namespace Cotton.Server.Extensions
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.SharedFileDownloadedTitle, contentKey));
         }
 
-        /// <summary>
-        /// Sends upload hash mismatch notification async.
-        /// </summary>
         public static async Task SendUploadHashMismatchNotificationAsync(
             this INotificationsProvider notifications,
             Guid userId,
@@ -547,9 +517,6 @@ namespace Cotton.Server.Extensions
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.UploadHashMismatchTitle, NotificationTemplateKeys.UploadHashMismatchContent));
         }
 
-        /// <summary>
-        /// Sends storage chunk missing notification async.
-        /// </summary>
         public static async Task SendStorageChunkMissingNotificationAsync(
             this INotificationsProvider notifications,
             Guid userId,

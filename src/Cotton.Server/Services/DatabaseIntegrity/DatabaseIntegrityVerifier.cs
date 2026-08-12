@@ -16,7 +16,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         IDatabaseIntegrityFailureReporter _failures,
         ILogger<DatabaseIntegrityVerifier> _logger) : IDatabaseIntegrityVerifier
     {
-        /// <inheritdoc />
         public void RequireValid<TEntity>(
             CottonDbContext dbContext,
             TEntity entity,

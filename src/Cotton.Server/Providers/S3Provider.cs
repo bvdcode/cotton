@@ -9,18 +9,12 @@ using Cotton.Storage.Helpers;
 
 namespace Cotton.Server.Providers
 {
-    /// <summary>
-    /// Provides s3 dependencies to server components.
-    /// </summary>
     public class S3Provider : IS3Provider, IDisposable
     {
         private readonly Func<S3Config> _getConfiguration;
         private IAmazonS3? _s3Client;
         private string? _bucketName;
 
-        /// <summary>
-        /// Initializes an S3 provider from the persisted server settings.
-        /// </summary>
         public S3Provider(SettingsProvider settingsProvider)
         {
             ArgumentNullException.ThrowIfNull(settingsProvider);
@@ -33,9 +27,6 @@ namespace Cotton.Server.Providers
             _getConfiguration = () => configuration;
         }
 
-        /// <summary>
-        /// Gets bucket name.
-        /// </summary>
         public string GetBucketName()
         {
             if (!string.IsNullOrEmpty(_bucketName))
@@ -48,9 +39,6 @@ namespace Cotton.Server.Providers
             return _bucketName;
         }
 
-        /// <summary>
-        /// Gets s3 client.
-        /// </summary>
         public IAmazonS3 GetS3Client()
         {
             if (_s3Client is not null)
@@ -72,7 +60,6 @@ namespace Cotton.Server.Providers
             return _s3Client;
         }
 
-        /// <inheritdoc />
         public void Dispose()
         {
             _s3Client?.Dispose();

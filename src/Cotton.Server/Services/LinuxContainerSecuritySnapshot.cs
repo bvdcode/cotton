@@ -6,9 +6,6 @@ using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Captures Linux container boundary signals that affect Cotton secret exposure.
-    /// </summary>
     public record LinuxContainerSecuritySnapshot(
         bool? RootFilesystemReadOnly,
         bool DockerSocketMounted,

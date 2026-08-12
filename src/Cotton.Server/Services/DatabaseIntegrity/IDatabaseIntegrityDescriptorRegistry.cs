@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Services.DatabaseIntegrity
 {
-    /// <summary>
-    /// Resolves database-integrity descriptors by EF entity type.
-    /// </summary>
     public interface IDatabaseIntegrityDescriptorRegistry
     {
         /// <summary>
@@ -13,9 +10,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         /// </summary>
         IReadOnlyCollection<IDatabaseIntegrityDescriptor> All { get; }
 
-        /// <summary>
-        /// Attempts to find the descriptor that protects the supplied EF entity type.
-        /// </summary>
         bool TryGet(Type entityType, out IDatabaseIntegrityDescriptor descriptor);
     }
 }

@@ -19,18 +19,12 @@ using FileVersionDto = Cotton.Files.FileVersionDto;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for file operations.
-    /// </summary>
     [ApiController]
     public class FileController(
         IMediator _mediator,
         IStoragePipeline _storage) : ControllerBase
     {
 
-        /// <summary>
-        /// Deletes file.
-        /// </summary>
         [Authorize]
         [HttpDelete(Routes.V1.Files + "/{nodeFileId:guid}")]
         public async Task<IActionResult> DeleteFile(
@@ -49,9 +43,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Restores file.
-        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/restore")]
         public async Task<IActionResult> RestoreFile(
@@ -70,9 +61,6 @@ namespace Cotton.Server.Controllers
             return Ok(outcome);
         }
 
-        /// <summary>
-        /// Moves file.
-        /// </summary>
         [Authorize]
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/move")]
         public async Task<IActionResult> MoveFile(
@@ -90,9 +78,6 @@ namespace Cotton.Server.Controllers
             return Ok(dto);
         }
 
-        /// <summary>
-        /// Renames file.
-        /// </summary>
         [Authorize]
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/rename")]
         public async Task<IActionResult> RenameFile(
@@ -121,9 +106,6 @@ namespace Cotton.Server.Controllers
             return Ok(result.File!);
         }
 
-        /// <summary>
-        /// Updates file metadata.
-        /// </summary>
         [Authorize]
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/metadata")]
         [ProducesResponseType<NodeFileManifestDto>(StatusCodes.Status200OK)]
@@ -150,9 +132,6 @@ namespace Cotton.Server.Controllers
             return Ok(result.File!);
         }
 
-        /// <summary>
-        /// Ensures content metadata has been extracted for the file.
-        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/metadata/extract")]
         [ProducesResponseType<NodeFileManifestDto>(StatusCodes.Status200OK)]
@@ -171,9 +150,6 @@ namespace Cotton.Server.Controllers
                 : Ok(mapped);
         }
 
-        /// <summary>
-        /// Gets file versions.
-        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/versions")]
         public async Task<IActionResult> GetFileVersions(
@@ -187,9 +163,6 @@ namespace Cotton.Server.Controllers
             return Ok(versions);
         }
 
-        /// <summary>
-        /// Restores file version.
-        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}/restore")]
         public async Task<IActionResult> RestoreFileVersion(
@@ -204,9 +177,6 @@ namespace Cotton.Server.Controllers
             return Ok(restored);
         }
 
-        /// <summary>
-        /// Deletes file version.
-        /// </summary>
         [Authorize]
         [HttpDelete(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}")]
         public async Task<IActionResult> DeleteFileVersion(
@@ -221,9 +191,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Downloads file version.
-        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/versions/{versionId:guid}/download-link")]
         public async Task<IActionResult> DownloadFileVersion(
@@ -243,9 +210,6 @@ namespace Cotton.Server.Controllers
             return Ok(link);
         }
 
-        /// <summary>
-        /// Downloads an owned file through normal bearer-token authentication.
-        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/content")]
         public async Task<IActionResult> DownloadOwnedFileContent(
@@ -268,9 +232,6 @@ namespace Cotton.Server.Controllers
             return FileDownloadResultFactory.Create(Response, _storage, nodeFile, download);
         }
 
-        /// <summary>
-        /// Gets an owned file content manifest with ordered verification chunks.
-        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/content-manifest")]
         public async Task<IActionResult> GetOwnedFileContentManifest([FromRoute] Guid nodeFileId)
@@ -290,9 +251,6 @@ namespace Cotton.Server.Controllers
             return Ok(manifest);
         }
 
-        /// <summary>
-        /// Updates file content.
-        /// </summary>
         [Authorize]
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/update-content")]
         public async Task<IActionResult> UpdateFileContent(
@@ -326,9 +284,6 @@ namespace Cotton.Server.Controllers
             return Ok(result.File!);
         }
 
-        /// <summary>
-        /// Creates file from chunks.
-        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Files + "/from-chunks")]
         public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileFromChunksRequestDto request)

@@ -19,34 +19,13 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Lists the supported web dav copy error values.
-    /// </summary>
     public enum WebDavCopyError
     {
-        /// <summary>
-        /// Represents the source not found option.
-        /// </summary>
         SourceNotFound,
-        /// <summary>
-        /// Represents the destination parent not found option.
-        /// </summary>
         DestinationParentNotFound,
-        /// <summary>
-        /// Represents the destination exists option.
-        /// </summary>
         DestinationExists,
-        /// <summary>
-        /// Represents the invalid name option.
-        /// </summary>
         InvalidName,
-        /// <summary>
-        /// Represents the cannot copy root option.
-        /// </summary>
         CannotCopyRoot,
-        /// <summary>
-        /// Represents the quota exceeded option.
-        /// </summary>
         QuotaExceeded
     }
 }

@@ -7,12 +7,8 @@ using Npgsql;
 
 namespace Cotton.Database
 {
-    /// <summary>
-    /// Creates <see cref="CottonDbContext"/> for EF tooling without booting the server host.
-    /// </summary>
     public class CottonDbContextDesignTimeFactory : IDesignTimeDbContextFactory<CottonDbContext>
     {
-        /// <inheritdoc />
         public CottonDbContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<CottonDbContext>();

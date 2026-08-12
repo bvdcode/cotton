@@ -36,9 +36,6 @@ namespace Cotton.Storage.Helpers
             };
         }
 
-        /// <summary>
-        /// Builds an S3 client from explicit endpoint credentials.
-        /// </summary>
         public static AmazonS3Client BuildClient(
             string endpoint,
             string region,
@@ -52,9 +49,6 @@ namespace Cotton.Storage.Helpers
             return new AmazonS3Client(credentials, config);
         }
 
-        /// <summary>
-        /// Disables chunked transfer encoding for file-backed uploads.
-        /// </summary>
         public static PutObjectRequest WithFileBodyCompatibility(this PutObjectRequest request)
         {
             request.UseChunkEncoding = false;
@@ -71,9 +65,6 @@ namespace Cotton.Storage.Helpers
             return request;
         }
 
-        /// <summary>
-        /// Requests the complete object as a byte range to bypass full-response ETag-as-MD5 validation.
-        /// </summary>
         public static GetObjectRequest WithFullContentReadCompatibility(this GetObjectRequest request)
         {
             request.ByteRange = new ByteRange(FullContentByteRange);

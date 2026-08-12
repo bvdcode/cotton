@@ -17,9 +17,6 @@ namespace Cotton.Server.Services
             new(StringComparer.Ordinal);
         private readonly KeyedAsyncGate<Guid> _probeManifestGates = new();
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="HlsTranscodeCoordinator"/> type.
-        /// </summary>
         public HlsTranscodeCoordinator(IOptions<ResourceConcurrencyOptions> options)
         {
             ArgumentNullException.ThrowIfNull(options);
@@ -29,9 +26,6 @@ namespace Cotton.Server.Services
             _probeGate = new SemaphoreSlim(value.HlsProbes, value.HlsProbes);
         }
 
-        /// <summary>
-        /// Serializes production of one exact HLS segment cache key.
-        /// </summary>
         public ValueTask<IAsyncDisposable> EnterSegmentAsync(
             string cacheKey,
             CancellationToken cancellationToken)
@@ -40,9 +34,6 @@ namespace Cotton.Server.Services
             return _segmentGates.EnterAsync(cacheKey, cancellationToken);
         }
 
-        /// <summary>
-        /// Waits for process-wide HLS transcode capacity.
-        /// </summary>
         public async ValueTask<IAsyncDisposable> EnterTranscodeAsync(
             CancellationToken cancellationToken)
         {
@@ -50,9 +41,6 @@ namespace Cotton.Server.Services
             return new AsyncGateLease(() => _transcodeGate.Release());
         }
 
-        /// <summary>
-        /// Serializes media probing for one immutable file manifest.
-        /// </summary>
         public ValueTask<IAsyncDisposable> EnterProbeManifestAsync(
             Guid manifestId,
             CancellationToken cancellationToken)
@@ -60,9 +48,6 @@ namespace Cotton.Server.Services
             return _probeManifestGates.EnterAsync(manifestId, cancellationToken);
         }
 
-        /// <summary>
-        /// Waits for process-wide HLS media-probe capacity.
-        /// </summary>
         public async ValueTask<IAsyncDisposable> EnterProbeAsync(
             CancellationToken cancellationToken)
         {

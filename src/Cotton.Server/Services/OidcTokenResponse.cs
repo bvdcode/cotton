@@ -11,20 +11,11 @@ using System.Text.Json.Serialization;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// OIDC token endpoint response fields used by Cotton.
-    /// </summary>
     public class OidcTokenResponse
     {
-        /// <summary>
-        /// Provider ID token.
-        /// </summary>
         [JsonPropertyName("id_token")]
         public string IdToken { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Provider access token for user-info.
-        /// </summary>
         [JsonPropertyName("access_token")]
         public string? AccessToken { get; set; }
     }

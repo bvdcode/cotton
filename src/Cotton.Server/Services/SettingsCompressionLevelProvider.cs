@@ -6,12 +6,8 @@ using Cotton.Storage.Processors;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Reads the runtime Zstandard compression level from server settings.
-    /// </summary>
     public class SettingsCompressionLevelProvider(SettingsProvider settings) : ICompressionLevelProvider
     {
-        /// <inheritdoc />
         public int Level => settings.GetServerSettings().CompressionLevel;
     }
 }

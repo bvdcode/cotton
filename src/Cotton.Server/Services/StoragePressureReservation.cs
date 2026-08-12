@@ -17,9 +17,6 @@ namespace Cotton.Server.Services
 {
     internal class StoragePressureReservation : IDisposable
     {
-        /// <summary>
-        /// Creates an empty storage pressure reservation.
-        /// </summary>
         public static StoragePressureReservation None => new(null, 0);
 
         private readonly StoragePressureGuard? _owner;
@@ -33,17 +30,11 @@ namespace Cotton.Server.Services
             _bytes = Math.Max(0, bytes);
         }
 
-        /// <summary>
-        /// Marks a storage pressure reservation as consumed by a successful write.
-        /// </summary>
         public void Commit()
         {
             _committed = true;
         }
 
-        /// <summary>
-        /// Releases resources held by this instance.
-        /// </summary>
         public void Dispose()
         {
             if (_disposed)

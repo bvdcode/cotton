@@ -7,24 +7,17 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Deletes an owned file and publishes its realtime notification.
-    /// </summary>
     public record DeleteFileRequest(
         Guid UserId,
         Guid NodeFileId,
         bool SkipTrash,
         string? ExpectedETag = null) : IRequest<Guid>;
 
-    /// <summary>
-    /// Handles explicit file deletion requests.
-    /// </summary>
     public class DeleteFileRequestHandler(
         IMediator _mediator,
         IEventNotificationService _notifications)
         : IRequestHandler<DeleteFileRequest, Guid>
     {
-        /// <inheritdoc />
         public async Task<Guid> Handle(DeleteFileRequest request, CancellationToken ct)
         {
             Guid parentNodeId = await _mediator.Send(

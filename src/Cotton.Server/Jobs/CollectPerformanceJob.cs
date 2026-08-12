@@ -13,9 +13,6 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
-    /// <summary>
-    /// Runs the scheduled collect performance maintenance task.
-    /// </summary>
     [JobTrigger(days: 1)]
     public class CollectPerformanceJob(
         PerfTracker _perf,
@@ -27,9 +24,6 @@ namespace Cotton.Server.Jobs
     {
         internal const string HttpClientName = "CottonBridgeTelemetry";
 
-        /// <summary>
-        /// Executes the scheduled Quartz job.
-        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             CancellationToken cancellationToken = context.CancellationToken;

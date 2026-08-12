@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Services.FileMetadata
 {
-    /// <summary>
-    /// Defines content metadata keys stored on file manifests.
-    /// </summary>
     internal static class FileContentMetadataKeys
     {
         public const string ExtractionProcessed = "contentMetadata.extractionProcessed";

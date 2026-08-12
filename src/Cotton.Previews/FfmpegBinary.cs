@@ -7,9 +7,6 @@ using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
 {
-    /// <summary>
-    /// Locates ffmpeg/ffprobe binaries used by preview generation and downloads them to a writable cache only when needed.
-    /// </summary>
     public static class FfmpegBinary
     {
         private const string FfmpegPathEnvironmentVariable = "COTTON_FFMPEG_PATH";
@@ -26,21 +23,12 @@ namespace Cotton.Previews
         private static string? _ffmpegPath;
         private static string? _ffprobePath;
 
-        /// <summary>
-        /// Returns the resolved ffmpeg executable path for the current OS.
-        /// </summary>
         public static string GetFfmpegPath() =>
             _ffmpegPath ?? ResolveExistingExecutable(FfmpegPathEnvironmentVariable, GetExecutableName("ffmpeg")) ?? GetDownloadedExecutablePath("ffmpeg");
 
-        /// <summary>
-        /// Returns the resolved ffprobe executable path for the current OS.
-        /// </summary>
         public static string GetFfprobePath() =>
             _ffprobePath ?? ResolveExistingExecutable(FfprobePathEnvironmentVariable, GetExecutableName("ffprobe")) ?? GetDownloadedExecutablePath("ffprobe");
 
-        /// <summary>
-        /// Ensures ffmpeg and ffprobe are available without writing to the application directory.
-        /// </summary>
         public static async Task EnsureAvailableAsync(CancellationToken cancellationToken = default)
         {
             if (TryResolveInstalledBinaries(out string ffmpegPath, out string ffprobePath))
@@ -88,9 +76,6 @@ namespace Cotton.Previews
             }
         }
 
-        /// <summary>
-        /// Returns media duration in seconds, or null when ffprobe cannot determine it.
-        /// </summary>
         public static async Task<double?> TryGetDurationSecondsAsync(
             Uri url,
             TimeSpan? timeout = null,
@@ -109,9 +94,6 @@ namespace Cotton.Previews
             return raw is null ? null : ParsePositiveDuration(raw.Trim());
         }
 
-        /// <summary>
-        /// Returns duration and primary audio/video codecs, or null when probing fails.
-        /// </summary>
         public static async Task<MediaProbeInfo?> TryGetMediaProbeAsync(
             Uri url,
             TimeSpan? timeout = null,
@@ -130,9 +112,6 @@ namespace Cotton.Previews
             return string.IsNullOrWhiteSpace(raw) ? null : FfprobeJsonParser.ParseMediaProbe(raw);
         }
 
-        /// <summary>
-        /// Returns common media stream fields and format tags, or null when probing fails.
-        /// </summary>
         public static async Task<MediaMetadataInfo?> TryGetMediaMetadataAsync(
             Uri url,
             TimeSpan? timeout = null,

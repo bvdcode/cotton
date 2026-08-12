@@ -23,9 +23,6 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Result of WebDAV PUT operation
-    /// </summary>
     public record WebDavPutFileResult(
         bool Success,
         bool Created,

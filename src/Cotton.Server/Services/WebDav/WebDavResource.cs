@@ -7,9 +7,6 @@ using System.Xml;
 
 namespace Cotton.Server.Services.WebDav
 {
-    /// <summary>
-    /// Represents a WebDAV resource (file or collection)
-    /// </summary>
     public record WebDavResource(
         string Href,
         string DisplayName,

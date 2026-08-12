@@ -6,14 +6,8 @@ using System.Text;
 
 namespace Cotton.Benchmark.Infrastructure
 {
-    /// <summary>
-    /// Generates realistic test data for benchmarks.
-    /// </summary>
     public static class TestDataGenerator
     {
-        /// <summary>
-        /// Generates compressible text data (like logs or documents).
-        /// </summary>
         public static byte[] GenerateCompressibleText(int sizeBytes)
         {
             var sb = new StringBuilder();
@@ -41,9 +35,6 @@ namespace Cotton.Benchmark.Infrastructure
             return Encoding.UTF8.GetBytes(text[..Math.Min(text.Length, sizeBytes)]);
         }
 
-        /// <summary>
-        /// Generates random binary data (incompressible).
-        /// </summary>
         public static byte[] GenerateRandomBinary(int sizeBytes)
         {
             var data = new byte[sizeBytes];
@@ -51,9 +42,6 @@ namespace Cotton.Benchmark.Infrastructure
             return data;
         }
 
-        /// <summary>
-        /// Generates semi-compressible data (realistic file content).
-        /// </summary>
         public static byte[] GenerateMixedData(int sizeBytes)
         {
             var data = new byte[sizeBytes];
@@ -77,9 +65,6 @@ namespace Cotton.Benchmark.Infrastructure
             return data;
         }
 
-        /// <summary>
-        /// Generates data that simulates JSON content.
-        /// </summary>
         public static byte[] GenerateJsonData(int sizeBytes)
         {
             var sb = new StringBuilder();

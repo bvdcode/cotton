@@ -6,9 +6,6 @@ using System.Runtime.InteropServices;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Reports linux proc status.
-    /// </summary>
     public record LinuxProcStatus(
         int? NoNewPrivileges,
         int? SeccompMode,
@@ -16,9 +13,6 @@ namespace Cotton.Server.Services
         string? EffectiveCapabilitiesHex,
         bool? HasSysPtraceCapability)
     {
-        /// <summary>
-        /// Creates an empty value object.
-        /// </summary>
         public static LinuxProcStatus Empty { get; } = new(null, null, null, null, null);
     }
 }

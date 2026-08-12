@@ -15,9 +15,6 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
-    /// <summary>
-    /// Runs the scheduled compute manifest hashes maintenance task.
-    /// </summary>
     [JobTrigger(hours: 12)]
     public class ComputeManifestHashesJob(
         PerfTracker _perf,
@@ -29,9 +26,6 @@ namespace Cotton.Server.Jobs
         private const int MaxItemsPerRun = 1000;
         private static readonly HashSet<Guid> KnownMismatchedManifestIds = [];
 
-        /// <summary>
-        /// Executes the scheduled Quartz job.
-        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             if (_perf.IsUploading())

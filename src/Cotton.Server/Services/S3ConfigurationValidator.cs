@@ -9,14 +9,8 @@ using System.Net;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Validates S3 configuration and access to its target bucket.
-    /// </summary>
     public class S3ConfigurationValidator(ILogger<S3ConfigurationValidator> _logger)
     {
-        /// <summary>
-        /// Validates S3 configuration and connectivity.
-        /// </summary>
         public async Task<string?> ValidateAsync(
             S3Config? configuration,
             CancellationToken cancellationToken = default)

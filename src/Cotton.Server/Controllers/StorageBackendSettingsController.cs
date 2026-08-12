@@ -12,9 +12,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for storage backend settings.
-    /// </summary>
     [ApiController]
     [Route(Routes.V1.Settings)]
     [Route(Routes.V1.Server + "/settings")]
@@ -22,9 +19,6 @@ namespace Cotton.Server.Controllers
         SettingsProvider settings,
         ServerSettingsValidator _validator) : SettingsControllerBase(settings)
     {
-        /// <summary>
-        /// Sets storage type.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("storage-type/{type}")]
         public async Task<IActionResult> SetStorageType(
@@ -41,9 +35,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets storage type.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("storage-type")]
         public IActionResult GetStorageType()
@@ -52,9 +43,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { storageType = storageType.ToString() });
         }
 
-        /// <summary>
-        /// Sets S3 config.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("s3-config")]
         public async Task<IActionResult> SetS3Config(
@@ -74,9 +62,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets S3 config.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("s3-config")]
         public IActionResult GetS3Config()

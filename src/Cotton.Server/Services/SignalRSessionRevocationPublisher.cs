@@ -6,13 +6,9 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Publishes session revocation events through the realtime event hub.
-    /// </summary>
     public class SignalRSessionRevocationPublisher(IHubContext<EventHub> _eventHub)
         : ISessionRevocationPublisher
     {
-        /// <inheritdoc />
         public Task PublishAsync(Guid userId, string sessionId, CancellationToken cancellationToken)
         {
             return _eventHub.Clients

@@ -13,9 +13,6 @@ using EasyExtensions.Clients.Models;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates geo lookup.
-    /// </summary>
     public class GeoLookupService(
         SettingsProvider _settings,
         HttpClient _httpClient) : IGeoLookupService
@@ -23,9 +20,6 @@ namespace Cotton.Server.Services
         private const string GoogleDnsIpAddress = "8.8.8.8";
         private static readonly GeoIpClient CottonBridgeGeoIpClient = new(global::Cotton.Constants.CottonBridgeGeoIpLookupUrl);
 
-        /// <summary>
-        /// Attempts to lookup async.
-        /// </summary>
         public async Task<GeoLookupResult?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default)
         {
             ServerSettingsSnapshot settings = _settings.GetServerSettings();
@@ -60,9 +54,6 @@ namespace Cotton.Server.Services
                 City: geo.City);
         }
 
-        /// <summary>
-        /// Executes test custom lookup.
-        /// </summary>
         public async Task<CustomGeoLookupTestResult> TestCustomLookupAsync(
             string serverBaseUrl,
             CancellationToken cancellationToken = default)
@@ -306,27 +297,15 @@ namespace Cotton.Server.Services
 
         private class GeoFieldMatch
         {
-            /// <summary>
-            /// Gets or sets the country.
-            /// </summary>
             public string? Country { get; set; }
 
-            /// <summary>
-            /// Gets or sets the region.
-            /// </summary>
             public string? Region { get; set; }
 
-            /// <summary>
-            /// Gets or sets the city.
-            /// </summary>
             public string? City { get; set; }
             private int _countryPriority;
             private int _regionPriority;
             private int _cityPriority;
 
-            /// <summary>
-            /// Attempts to set country.
-            /// </summary>
             public bool TrySetCountry(string value, int priority)
             {
                 if (priority <= _countryPriority)
@@ -339,9 +318,6 @@ namespace Cotton.Server.Services
                 return true;
             }
 
-            /// <summary>
-            /// Attempts to set region.
-            /// </summary>
             public bool TrySetRegion(string value, int priority)
             {
                 if (priority <= _regionPriority)
@@ -354,9 +330,6 @@ namespace Cotton.Server.Services
                 return true;
             }
 
-            /// <summary>
-            /// Attempts to set city.
-            /// </summary>
             public bool TrySetCity(string value, int priority)
             {
                 if (priority <= _cityPriority)

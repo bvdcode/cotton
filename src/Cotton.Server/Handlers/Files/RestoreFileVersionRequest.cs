@@ -8,23 +8,16 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Restores a retained file version.
-    /// </summary>
     public record RestoreFileVersionRequest(
         Guid UserId,
         Guid NodeFileId,
         Guid VersionId) : IRequest<NodeFileManifestDto>;
 
-    /// <summary>
-    /// Handles file version restore requests.
-    /// </summary>
     public class RestoreFileVersionRequestHandler(
         FileVersionService _versions,
         IEventNotificationService _notifications)
         : IRequestHandler<RestoreFileVersionRequest, NodeFileManifestDto>
     {
-        /// <inheritdoc />
         public async Task<NodeFileManifestDto> Handle(
             RestoreFileVersionRequest request,
             CancellationToken ct)

@@ -7,9 +7,6 @@ using System.Globalization;
 
 namespace Cotton.Server.Services.FileMetadata
 {
-    /// <summary>
-    /// Extracts raster image metadata through ImageSharp.
-    /// </summary>
     internal class ImageFileContentMetadataExtractor : IFileContentMetadataExtractor
     {
         public static readonly IReadOnlyCollection<string> SupportedContentTypes =
@@ -20,11 +17,9 @@ namespace Cotton.Server.Services.FileMetadata
                 .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
         ];
 
-        /// <inheritdoc />
         public bool Supports(string contentType) =>
             SupportedContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase);
 
-        /// <inheritdoc />
         public async Task<IReadOnlyDictionary<string, string>> ExtractAsync(
             Stream stream,
             string contentType,

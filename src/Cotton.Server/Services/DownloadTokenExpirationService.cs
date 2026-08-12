@@ -7,16 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates download token expiration.
-    /// </summary>
     public class DownloadTokenExpirationService(CottonDbContext _dbContext)
     {
         private const int BatchSize = 1_000;
 
-        /// <summary>
-        /// Expires active tokens created by user.
-        /// </summary>
         public async Task<int> ExpireActiveTokensCreatedByUserAsync(
             Guid userId,
             DateTime expiresAt,

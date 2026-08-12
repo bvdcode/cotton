@@ -5,18 +5,12 @@ using EasyExtensions.AspNetCore.Authorization.Abstractions;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Propagates revoked auth sessions to access-token validation and realtime clients.
-    /// </summary>
     public class SessionRevocationNotifier(
         SessionAccessTokenRevocationStore _sessionRevocations,
         ITokenProvider _tokens,
         ISessionRevocationPublisher _publisher,
         ILogger<SessionRevocationNotifier> _logger)
     {
-        /// <summary>
-        /// Marks each session revoked for access-token validation and asks connected clients to reconnect.
-        /// </summary>
         public async Task NotifyRevokedAsync(
             Guid userId,
             IEnumerable<string?> sessionIds,
@@ -54,9 +48,6 @@ namespace Cotton.Server.Services
             }
         }
 
-        /// <summary>
-        /// Marks one session revoked for access-token validation and asks connected clients to reconnect.
-        /// </summary>
         public async Task NotifyRevokedAsync(
             Guid userId,
             string? sessionId,

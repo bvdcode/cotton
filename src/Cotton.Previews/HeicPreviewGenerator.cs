@@ -8,18 +8,12 @@ using System.Runtime.InteropServices;
 
 namespace Cotton.Previews
 {
-    /// <summary>
-    /// Generates previews for HEIC and HEIF images by decoding with libheif into an
-    /// ImageSharp image, then encoding through the shared <see cref="PreviewImageEncoder"/>.
-    /// </summary>
     public class HeicPreviewGenerator : IPreviewGenerator
     {
         private const int Rgba32BytesPerPixel = 4;
 
-        /// <inheritdoc />
         public int Version => 2;
 
-        /// <inheritdoc />
         public IEnumerable<string> SupportedContentTypes =>
         [
             "image/heic",
@@ -28,7 +22,6 @@ namespace Cotton.Previews
             "image/heif-sequence"
         ];
 
-        /// <inheritdoc />
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentNullException.ThrowIfNull(stream);

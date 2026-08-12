@@ -18,9 +18,6 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Validates a browser-submitted master key through the regular database and storage models.
-    /// </summary>
     internal class MasterKeyUnlockValidator(
         ILoggerFactory _loggerFactory,
         string? _connectionString = null,

@@ -12,9 +12,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Result of WebDAV PROPFIND operation
-    /// </summary>
     public record WebDavPropFindResult(
         bool Found,
         string? XmlResponse);

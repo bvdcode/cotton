@@ -14,19 +14,15 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// </remarks>
     public class ExtendedRefreshTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<ExtendedRefreshToken>
     {
-        /// <inheritdoc />
         public override string EntityName => "refresh_tokens";
 
-        /// <inheritdoc />
         public override int SchemaVersion => 1;
 
-        /// <inheritdoc />
         public override string GetEntityKey(ExtendedRefreshToken entity)
         {
             return entity.Id.ToString("D");
         }
 
-        /// <inheritdoc />
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, ExtendedRefreshToken entity)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);

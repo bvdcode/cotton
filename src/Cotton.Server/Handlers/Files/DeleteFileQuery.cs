@@ -16,36 +16,18 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Represents a delete file query sent through the mediator pipeline.
-    /// </summary>
     public class DeleteFileQuery(Guid userId, Guid nodeFileId, bool skipTrash, string? expectedETag = null)
         : IRequest<Guid>
     {
-        /// <summary>
-        /// Gets the owning user identifier.
-        /// </summary>
         public Guid UserId { get; } = userId;
 
-        /// <summary>
-        /// Gets the file entry identifier.
-        /// </summary>
         public Guid NodeFileId { get; } = nodeFileId;
 
-        /// <summary>
-        /// Gets whether deletion bypasses trash and permanently removes the resource.
-        /// </summary>
         public bool SkipTrash { get; } = skipTrash;
 
-        /// <summary>
-        /// Gets the optional expected file content ETag.
-        /// </summary>
         public string? ExpectedETag { get; } = expectedETag;
     }
 
-    /// <summary>
-    /// Handles delete file queries in the mediator pipeline.
-    /// </summary>
     public class DeleteFileQueryHandler(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
@@ -57,9 +39,6 @@ namespace Cotton.Server.Handlers.Files
         FileVersionService _versions)
             : IRequestHandler<DeleteFileQuery, Guid>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<Guid> Handle(DeleteFileQuery request, CancellationToken ct)
         {
             NodeFile nodeFile = await _dbContext.NodeFiles

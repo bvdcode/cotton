@@ -13,9 +13,6 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Validates a master key against the selected storage backend and database.
-    /// </summary>
     internal class MasterKeyValidator(
         IStreamCipher _cipher,
         CottonEncryptionSettings _encryptionSettings,

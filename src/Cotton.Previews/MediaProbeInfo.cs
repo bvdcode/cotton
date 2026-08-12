@@ -8,8 +8,5 @@ using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
 {
-    /// <summary>
-    /// Media metadata extracted by ffprobe for preview and playback planning.
-    /// </summary>
     public record MediaProbeInfo(double? DurationSeconds, string? VideoCodec, string? AudioCodec);
 }

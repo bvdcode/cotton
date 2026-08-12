@@ -15,9 +15,6 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Result of WebDAV GET operation
-    /// </summary>
     public record WebDavGetFileResult(
         bool Found,
         bool IsCollection,

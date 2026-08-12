@@ -13,10 +13,6 @@ using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// WebDAV controller for file management via WebDAV protocol.
-    /// Supports: OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY
-    /// </summary>
     [ApiController]
     [Route("api/v1/webdav")]
     [Route("api/v1/webdav/{**path}")]
@@ -39,9 +35,6 @@ namespace Cotton.Server.Controllers
         private static readonly long LocksCleanupIntervalTicks = TimeSpan.FromSeconds(30).Ticks;
         private static string GetLockKey(Guid userId, string path) => $"{userId:N}:{path}";
 
-        /// <summary>
-        /// Handles the options WebDAV request.
-        /// </summary>
         [HttpOptions]
         [AllowAnonymous]
         public IActionResult HandleOptions()
@@ -53,9 +46,6 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Handles the prop find WebDAV request.
-        /// </summary>
         [AcceptVerbs("PROPFIND")]
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandlePropFindAsync(string? path)
@@ -84,9 +74,6 @@ namespace Cotton.Server.Controllers
             };
         }
 
-        /// <summary>
-        /// Handles the get WebDAV request.
-        /// </summary>
         [HttpGet]
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleGetAsync(string? path)
@@ -127,9 +114,6 @@ namespace Cotton.Server.Controllers
                 enableRangeProcessing: true);
         }
 
-        /// <summary>
-        /// Handles the head WebDAV request.
-        /// </summary>
         [HttpHead]
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleHeadAsync(string? path)
@@ -169,9 +153,6 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Handles the put WebDAV request.
-        /// </summary>
         [HttpPut]
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         [DisableRequestSizeLimit]
@@ -219,9 +200,6 @@ namespace Cotton.Server.Controllers
             return result.Created ? Created() : NoContent();
         }
 
-        /// <summary>
-        /// Handles the prop patch WebDAV request.
-        /// </summary>
         [AcceptVerbs("PROPPATCH")]
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandlePropPatchAsync(string? path)
@@ -252,9 +230,6 @@ namespace Cotton.Server.Controllers
             };
         }
 
-        /// <summary>
-        /// Handles the lock WebDAV request.
-        /// </summary>
         [AcceptVerbs("LOCK")]
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleLockAsync(string? path)
@@ -303,9 +278,6 @@ namespace Cotton.Server.Controllers
             return Content(xml, "application/xml; charset=\"utf-8\"");
         }
 
-        /// <summary>
-        /// Handles the unlock WebDAV request.
-        /// </summary>
         [AcceptVerbs("UNLOCK")]
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public IActionResult HandleUnlock(string? path)
@@ -331,9 +303,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Handles the delete WebDAV request.
-        /// </summary>
         [HttpDelete]
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleDeleteAsync(string? path)
@@ -362,9 +331,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Handles the mk col WebDAV request.
-        /// </summary>
         [AcceptVerbs("MKCOL")]
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleMkColAsync(string? path)
@@ -392,9 +358,6 @@ namespace Cotton.Server.Controllers
             return Created();
         }
 
-        /// <summary>
-        /// Handles the move WebDAV request.
-        /// </summary>
         [AcceptVerbs("MOVE")]
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleMoveAsync(string? path)
@@ -432,9 +395,6 @@ namespace Cotton.Server.Controllers
             return result.Created ? Created() : NoContent();
         }
 
-        /// <summary>
-        /// Handles the copy WebDAV request.
-        /// </summary>
         [AcceptVerbs("COPY")]
         [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public async Task<IActionResult> HandleCopyAsync(string? path)

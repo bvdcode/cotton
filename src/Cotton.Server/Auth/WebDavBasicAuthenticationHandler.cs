@@ -21,9 +21,6 @@ using System.Text.Encodings.Web;
 
 namespace Cotton.Server.Auth
 {
-    /// <summary>
-    /// Represents web dav basic authentication handler.
-    /// </summary>
     public class WebDavBasicAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
@@ -38,14 +35,8 @@ namespace Cotton.Server.Auth
         IDatabaseIntegrityVerifier integrity)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
-        /// <summary>
-        /// Defines the policy name.
-        /// </summary>
         public const string PolicyName = "WebDav";
 
-        /// <summary>
-        /// Defines the scheme name.
-        /// </summary>
         public const string SchemeName = "WebDavBasic";
         private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(1);
         private static readonly Encoding StrictUtf8 = new UTF8Encoding(
@@ -60,7 +51,6 @@ namespace Cotton.Server.Auth
                 : Request.GetTrustedClientIPAddress();
         }
 
-        /// <inheritdoc />
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
             string authHeader = Request.Headers.Authorization.ToString();
@@ -117,7 +107,6 @@ namespace Cotton.Server.Auth
             return AuthenticateSuccess(user.Id, user.Username);
         }
 
-        /// <inheritdoc />
         protected override Task HandleChallengeAsync(AuthenticationProperties properties)
         {
             if (Context.Items.ContainsKey(RateLimitedContextItemKey))

@@ -25,9 +25,6 @@ using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for public file sharing.
-    /// </summary>
     [ApiController]
     public class FileSharingController(
         IMediator _mediator,
@@ -38,9 +35,6 @@ namespace Cotton.Server.Controllers
         PublicShareTokenGenerator _publicShareTokens,
         PublicShareLookupFailureLimiter _publicShareLookupFailures) : ControllerBase
     {
-        /// <summary>
-        /// Creates or returns a public file share response.
-        /// </summary>
         [HttpGet("/s/{token}")]
         [HttpHead("/s/{token}")]
         public async Task<IActionResult> Share(
@@ -81,9 +75,6 @@ namespace Cotton.Server.Controllers
             };
         }
 
-        /// <summary>
-        /// Creates a public file download link.
-        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download-link")]
         public async Task<IActionResult> DownloadFile(
@@ -134,9 +125,6 @@ namespace Cotton.Server.Controllers
             return Ok(link);
         }
 
-        /// <summary>
-        /// Downloads a file by its public token.
-        /// </summary>
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download")]
         public async Task<IActionResult> DownloadFileByToken(
             [FromRoute] Guid nodeFileId,

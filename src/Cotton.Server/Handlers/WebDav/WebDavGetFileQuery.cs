@@ -15,16 +15,10 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Query for WebDAV GET operation
-    /// </summary>
     public record WebDavGetFileQuery(
         Guid UserId,
         string Path) : IRequest<WebDavGetFileResult>;
 
-    /// <summary>
-    /// Handler for WebDAV GET operation
-    /// </summary>
     public class WebDavGetFileQueryHandler(
         IWebDavPathResolver _pathResolver,
         IStoragePipeline _storage,
@@ -33,9 +27,6 @@ namespace Cotton.Server.Handlers.WebDav
         ILogger<WebDavGetFileQueryHandler> _logger)
         : IRequestHandler<WebDavGetFileQuery, WebDavGetFileResult>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<WebDavGetFileResult> Handle(WebDavGetFileQuery request, CancellationToken ct)
         {
             WebDavResolveResult resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);

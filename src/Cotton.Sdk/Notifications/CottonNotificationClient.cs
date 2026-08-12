@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using System.Globalization;
 using Cotton.Sdk.Internal;
 
 namespace Cotton.Sdk.Notifications
@@ -28,6 +29,28 @@ namespace Cotton.Sdk.Notifications
 
             string path = $"{Routes.V1.Notifications}?page={page}&pageSize={pageSize}";
             return _transport.SendPagedJsonAsync<IReadOnlyList<CottonNotificationDto>>(
+                HttpMethod.Get,
+                path,
+                cancellationToken: cancellationToken);
+        }
+
+        /// <inheritdoc />
+        public Task<CottonNotificationBatchDto> GetNotificationBatchAsync(
+            CottonNotificationCursorDto? cursor = null,
+            int detailLimit = 50,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(detailLimit);
+
+            string path = $"{Routes.V1.Notifications}/batch?detailLimit={detailLimit}";
+            if (cursor is not null)
+            {
+                string createdAt = Uri.EscapeDataString(
+                    cursor.CreatedAt.ToString("O", CultureInfo.InvariantCulture));
+                path += $"&cursorCreatedAt={createdAt}&cursorNotificationId={cursor.NotificationId:D}";
+            }
+
+            return _transport.SendJsonAsync<CottonNotificationBatchDto>(
                 HttpMethod.Get,
                 path,
                 cancellationToken: cancellationToken);

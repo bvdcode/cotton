@@ -15,25 +15,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
-    /// <summary>
-    /// Represents the send password reset request payload accepted by the API.
-    /// </summary>
     public class SendPasswordResetRequest(string usernameOrEmail, HttpRequest httpRequest) : IRequest
     {
-        /// <summary>
-        /// Gets the username or email.
-        /// </summary>
         public string UsernameOrEmail { get; } = usernameOrEmail;
 
-        /// <summary>
-        /// Gets the http request.
-        /// </summary>
         public HttpRequest HttpRequest { get; } = httpRequest;
     }
 
-    /// <summary>
-    /// Handles send password reset requests in the mediator pipeline.
-    /// </summary>
     public class SendPasswordResetRequestHandler(
         CottonDbContext _dbContext,
         INotificationsProvider _notifications,
@@ -42,9 +30,6 @@ namespace Cotton.Server.Handlers.Users
         private const int TokenLength = 32;
         private static readonly TimeSpan CooldownPeriod = TimeSpan.FromMinutes(2);
 
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task Handle(SendPasswordResetRequest request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.UsernameOrEmail))

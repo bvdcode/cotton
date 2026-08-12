@@ -3,14 +3,8 @@
 
 namespace Cotton.Server.Abstractions
 {
-    /// <summary>
-    /// Defines the shared file download notifier contract used by the server runtime.
-    /// </summary>
     public interface ISharedFileDownloadNotifier
     {
-        /// <summary>
-        /// Notifies connected clients that a shared-file download occurred.
-        /// </summary>
         Task NotifyOnceAsync(Guid ownerId, Guid tokenId, string fileName, HttpContext httpContext, CancellationToken ct);
     }
 }

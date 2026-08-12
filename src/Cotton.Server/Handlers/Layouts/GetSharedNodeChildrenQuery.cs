@@ -14,26 +14,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Loads one page of nodes and files inside a shared folder.
-    /// </summary>
     public record GetSharedNodeChildrenQuery(
         string Token,
         Guid? NodeId,
         int Page,
         int PageSize) : IRequest<GetSharedNodeChildrenResult>;
 
-    /// <summary>
-    /// Handles shared folder content queries.
-    /// </summary>
     public class GetSharedNodeChildrenQueryHandler(
         IMediator _mediator,
         CottonDbContext _dbContext)
         : IRequestHandler<GetSharedNodeChildrenQuery, GetSharedNodeChildrenResult>
     {
-        /// <summary>
-        /// Loads the requested shared folder page.
-        /// </summary>
         public async Task<GetSharedNodeChildrenResult> Handle(
             GetSharedNodeChildrenQuery request,
             CancellationToken ct)

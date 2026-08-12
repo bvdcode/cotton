@@ -7,14 +7,8 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Generates tokens for public file and folder share links.
-    /// </summary>
     public class PublicShareTokenGenerator(CottonDbContext _dbContext)
     {
-        /// <summary>
-        /// Maximum number of active public links that use compact tokens.
-        /// </summary>
         public const int CompactTokenActiveShareLimit = 1_000;
 
         private const int CompactTokenLength = 8;
@@ -23,9 +17,6 @@ namespace Cotton.Server.Services
         private const string CompactAlphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
         private const string ExpandedAlphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-        /// <summary>
-        /// Creates a unique token sized for the current number of active public links.
-        /// </summary>
         public async Task<string> CreateUniqueAsync(CancellationToken cancellationToken = default)
         {
             DateTime now = DateTime.UtcNow;

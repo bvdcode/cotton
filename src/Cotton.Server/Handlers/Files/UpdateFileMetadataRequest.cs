@@ -15,17 +15,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Updates metadata attached to an owned file.
-    /// </summary>
     public record UpdateFileMetadataRequest(
         Guid UserId,
         Guid NodeFileId,
         Dictionary<string, string?>? Patch) : IRequest<UpdateFileMetadataResult>;
 
-    /// <summary>
-    /// Handles file metadata updates.
-    /// </summary>
     public class UpdateFileMetadataRequestHandler(
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
@@ -33,9 +27,6 @@ namespace Cotton.Server.Handlers.Files
         ILogger<UpdateFileMetadataRequestHandler> _logger)
         : IRequestHandler<UpdateFileMetadataRequest, UpdateFileMetadataResult>
     {
-        /// <summary>
-        /// Validates and applies the metadata patch.
-        /// </summary>
         public async Task<UpdateFileMetadataResult> Handle(
             UpdateFileMetadataRequest request,
             CancellationToken ct)

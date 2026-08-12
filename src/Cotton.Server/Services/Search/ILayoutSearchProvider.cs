@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Services.Search
 {
-    /// <summary>
-    /// Defines a provider that contributes ranked hits to layout search.
-    /// </summary>
     public interface ILayoutSearchProvider
     {
         /// <summary>
@@ -13,14 +10,8 @@ namespace Cotton.Server.Services.Search
         /// </summary>
         int Priority { get; }
 
-        /// <summary>
-        /// Returns whether the provider can serve the supplied criteria.
-        /// </summary>
         bool CanSearch(LayoutSearchCriteria criteria);
 
-        /// <summary>
-        /// Builds the provider hit query.
-        /// </summary>
         IQueryable<LayoutSearchHit> BuildHitsQuery(LayoutSearchProviderContext context);
     }
 }

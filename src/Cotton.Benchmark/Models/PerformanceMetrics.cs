@@ -3,54 +3,24 @@
 
 namespace Cotton.Benchmark.Models
 {
-    /// <summary>
-    /// Represents performance metrics for a benchmark run.
-    /// </summary>
     public class PerformanceMetrics
     {
-        /// <summary>
-        /// Total bytes processed.
-        /// </summary>
         public long TotalBytes { get; init; }
 
-        /// <summary>
-        /// Total time taken.
-        /// </summary>
         public TimeSpan Duration { get; init; }
 
-        /// <summary>
-        /// Managed bytes allocated while the measured operation was running.
-        /// </summary>
         public long ManagedAllocatedBytes { get; init; }
 
-        /// <summary>
-        /// Process working set observed after the measured operation completed.
-        /// </summary>
         public long WorkingSetBytes { get; init; }
 
-        /// <summary>
-        /// Peak process working set observed after the measured operation completed.
-        /// </summary>
         public long PeakWorkingSetBytes { get; init; }
 
-        /// <summary>
-        /// Throughput in bytes per second.
-        /// </summary>
         public double BytesPerSecond => TotalBytes / Duration.TotalSeconds;
 
-        /// <summary>
-        /// Throughput in megabytes per second.
-        /// </summary>
         public double MegabytesPerSecond => BytesPerSecond / (1024 * 1024);
 
-        /// <summary>
-        /// Throughput in gigabytes per second.
-        /// </summary>
         public double GigabytesPerSecond => BytesPerSecond / (1024 * 1024 * 1024);
 
-        /// <summary>
-        /// Gets a human-readable throughput string.
-        /// </summary>
         public string ThroughputFormatted
         {
             get
@@ -70,9 +40,6 @@ namespace Cotton.Benchmark.Models
             }
         }
 
-        /// <summary>
-        /// Creates metrics from bytes and duration.
-        /// </summary>
         public static PerformanceMetrics Create(long totalBytes, TimeSpan duration)
         {
             return new PerformanceMetrics
@@ -82,9 +49,6 @@ namespace Cotton.Benchmark.Models
             };
         }
 
-        /// <summary>
-        /// Returns a copy of this metric enriched with process memory observations.
-        /// </summary>
         public PerformanceMetrics WithMemory(
             long managedAllocatedBytes,
             long workingSetBytes,

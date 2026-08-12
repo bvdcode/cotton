@@ -5,9 +5,6 @@ using System.Globalization;
 
 namespace Cotton.Autoconfig
 {
-    /// <summary>
-    /// Represents PostgreSQL connection settings read from the Cotton environment contract.
-    /// </summary>
     public record PostgresEnvironmentSettings(
         string Host,
         ushort Port,
@@ -27,9 +24,6 @@ namespace Cotton.Autoconfig
         internal const string DefaultUsername = "postgres";
         internal const string DefaultPassword = "postgres";
 
-        /// <summary>
-        /// Reads PostgreSQL settings from the current process environment.
-        /// </summary>
         public static PostgresEnvironmentSettings FromEnvironment()
         {
             string portValue = GetEnvironmentValue(

@@ -31,9 +31,6 @@ namespace Cotton.Server.Jobs
         private const int ThrottleDelayMs = 100;
         private static readonly string[] ImageContentTypes = [.. ImageFileContentMetadataExtractor.SupportedContentTypes];
 
-        /// <summary>
-        /// Executes the scheduled Quartz job.
-        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;

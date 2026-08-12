@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Services.Search
 {
-    /// <summary>
-    /// Carries search scope and normalized criteria into a provider.
-    /// </summary>
     public record LayoutSearchProviderContext(
         LayoutSearchRequest Request,
         LayoutSearchCriteria Criteria);

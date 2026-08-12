@@ -17,9 +17,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for email settings.
-    /// </summary>
     [ApiController]
     [Route(Routes.V1.Settings)]
     [Route(Routes.V1.Server + "/settings")]
@@ -28,9 +25,6 @@ namespace Cotton.Server.Controllers
         ServerSettingsValidator _validator,
         INotificationsProvider _notifications) : SettingsControllerBase(settings)
     {
-        /// <summary>
-        /// Sets email mode.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("email-mode/{mode}")]
         public async Task<IActionResult> SetEmailMode(
@@ -47,9 +41,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets email mode.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("email-mode")]
         public IActionResult GetEmailMode()
@@ -58,9 +49,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { emailMode = emailMode.ToString() });
         }
 
-        /// <summary>
-        /// Sets email config.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("email-config")]
         public async Task<IActionResult> SetEmailConfig(
@@ -86,9 +74,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Sends email config test.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPost("email-config/test")]
         public async Task<IActionResult> SendEmailConfigTest(CancellationToken cancellationToken)
@@ -108,9 +93,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets email config.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("email-config")]
         public IActionResult GetEmailConfig()

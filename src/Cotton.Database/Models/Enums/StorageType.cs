@@ -3,14 +3,8 @@
 
 namespace Cotton.Database.Models.Enums
 {
-    /// <summary>
-    /// Selects the physical storage backend.
-    /// </summary>
     public enum StorageType
     {
-        /// <summary>
-        /// Use local server resources.
-        /// </summary>
         Local = 0,
         /// <summary>
         /// Use S3-compatible object storage.

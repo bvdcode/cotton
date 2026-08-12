@@ -7,9 +7,6 @@ using System.Globalization;
 
 namespace Cotton.Server.Services.FileMetadata
 {
-    /// <summary>
-    /// Extracts audio and video metadata through ffprobe.
-    /// </summary>
     internal class MediaFileContentMetadataExtractor(ILogger<MediaFileContentMetadataExtractor> _logger) : IFileContentMetadataExtractor
     {
         private static readonly string[] TitleAliases = ["title"];
@@ -22,12 +19,10 @@ namespace Cotton.Server.Services.FileMetadata
         private static readonly string[] YearAliases = ["year"];
         private static readonly string[] GenreAliases = ["genre"];
 
-        /// <inheritdoc />
         public bool Supports(string contentType) =>
             contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase)
             || contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
 
-        /// <inheritdoc />
         public async Task<IReadOnlyDictionary<string, string>> ExtractAsync(
             Stream stream,
             string contentType,

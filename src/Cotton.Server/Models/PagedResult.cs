@@ -3,8 +3,5 @@
 
 namespace Cotton.Server.Models
 {
-    /// <summary>
-    /// Pairs an API payload with the total item count reported through the X-Total-Count response header.
-    /// </summary>
     public record PagedResult<T>(T Payload, int TotalCount);
 }

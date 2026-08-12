@@ -11,14 +11,8 @@ using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Creates consistent stream results for stored file content.
-    /// </summary>
     public static class FileDownloadResultFactory
     {
-        /// <summary>
-        /// Creates a range-enabled file response and applies its security and cache headers.
-        /// </summary>
         public static FileStreamResult Create(
             HttpResponse response,
             IStoragePipeline storage,

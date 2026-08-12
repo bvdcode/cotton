@@ -19,35 +19,17 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Represents a move file command sent through the mediator pipeline.
-    /// </summary>
     public class MoveFileCommand : IRequest<NodeFileManifestDto>
     {
-        /// <summary>
-        /// Gets or sets the file entry identifier.
-        /// </summary>
         public Guid NodeFileId { get; set; }
 
-        /// <summary>
-        /// Gets or sets the parent folder identifier.
-        /// </summary>
         public Guid ParentId { get; set; }
 
-        /// <summary>
-        /// Gets or sets the owning user identifier.
-        /// </summary>
         public Guid UserId { get; set; }
 
-        /// <summary>
-        /// Gets or sets the optional expected file content ETag.
-        /// </summary>
         public string? ExpectedETag { get; set; }
     }
 
-    /// <summary>
-    /// Handles move file commands in the mediator pipeline.
-    /// </summary>
     public class MoveFileCommandHandler(
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
@@ -56,9 +38,6 @@ namespace Cotton.Server.Handlers.Files
         ILogger<MoveFileCommandHandler> _logger)
         : IRequestHandler<MoveFileCommand, NodeFileManifestDto>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<NodeFileManifestDto> Handle(MoveFileCommand request, CancellationToken cancellationToken)
         {
             ValidateRequest(request);

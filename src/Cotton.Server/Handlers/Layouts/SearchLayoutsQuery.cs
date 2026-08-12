@@ -8,9 +8,6 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Represents a search layouts query sent through the mediator pipeline.
-    /// </summary>
     public class SearchLayoutsQuery(
         Guid userId,
         Guid layoutId,
@@ -18,29 +15,14 @@ namespace Cotton.Server.Handlers.Layouts
         int page,
         int pageSize) : IRequest<PagedResult<SearchResultDto>>
     {
-        /// <summary>
-        /// Gets the owning user identifier.
-        /// </summary>
         public Guid UserId { get; } = userId;
 
-        /// <summary>
-        /// Gets the layout identifier.
-        /// </summary>
         public Guid LayoutId { get; } = layoutId;
 
-        /// <summary>
-        /// Gets the query.
-        /// </summary>
         public string Query { get; } = query;
 
-        /// <summary>
-        /// Gets the page.
-        /// </summary>
         public int Page { get; } = page;
 
-        /// <summary>
-        /// Gets the page size.
-        /// </summary>
         public int PageSize { get; } = pageSize;
     }
 }

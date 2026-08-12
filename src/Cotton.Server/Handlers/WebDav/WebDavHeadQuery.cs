@@ -9,24 +9,15 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Query for WebDAV HEAD operation
-    /// </summary>
     public record WebDavHeadQuery(
         Guid UserId,
         string Path) : IRequest<WebDavHeadResult>;
 
-    /// <summary>
-    /// Handler for WebDAV HEAD operation
-    /// </summary>
     public class WebDavHeadQueryHandler(
         IWebDavPathResolver _pathResolver,
         ILogger<WebDavHeadQueryHandler> _logger)
         : IRequestHandler<WebDavHeadQuery, WebDavHeadResult>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<WebDavHeadResult> Handle(WebDavHeadQuery request, CancellationToken ct)
         {
             WebDavResolveResult resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);

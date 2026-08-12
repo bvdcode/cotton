@@ -3,15 +3,9 @@
 
 namespace Cotton.Crypto
 {
-    /// <summary>
-    /// Indicates that encrypted data still uses the obsolete CTN1 container format.
-    /// </summary>
     [Obsolete("OBSOLETE TRANSITION: remove this exception and CTN1 header detection after the 0.5 cutover window.")]
     public class Ctn1NotSupportedException : NotSupportedException
     {
-        /// <summary>
-        /// Initializes the CTN1 upgrade error.
-        /// </summary>
         public Ctn1NotSupportedException()
             : base(
                 "CTN1 encrypted data is not supported by this Cotton version. "

@@ -20,9 +20,6 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates WebAuthn passkey registration and assertion flows, including credential persistence and lifecycle management.
-    /// </summary>
     public class PasskeyService(
         CottonDbContext _dbContext,
         IMemoryCache _cache,
@@ -33,9 +30,6 @@ namespace Cotton.Server.Services
     {
         private static readonly TimeSpan OptionsLifetime = TimeSpan.FromMinutes(5);
 
-        /// <summary>
-        /// Gets credentials async.
-        /// </summary>
         public async Task<IReadOnlyList<PasskeyCredentialDto>> GetCredentialsAsync(
             Guid userId,
             CancellationToken ct)
@@ -67,9 +61,6 @@ namespace Cotton.Server.Services
             return credentials;
         }
 
-        /// <summary>
-        /// Begins registration async.
-        /// </summary>
         public async Task<PasskeyRegistrationOptionsResponseDto> BeginRegistrationAsync(
             Guid userId,
             string? requestedLabel,
@@ -117,9 +108,6 @@ namespace Cotton.Server.Services
             };
         }
 
-        /// <summary>
-        /// Finishes registration async.
-        /// </summary>
         public async Task<PasskeyCredentialDto> FinishRegistrationAsync(
             Guid userId,
             FinishPasskeyRegistrationRequestDto request,
@@ -185,9 +173,6 @@ namespace Cotton.Server.Services
             return ToDto(credential);
         }
 
-        /// <summary>
-        /// Begins assertion async.
-        /// </summary>
         public async Task<PasskeyAssertionOptionsResponseDto> BeginAssertionAsync(
             string? username,
             CancellationToken ct)
@@ -233,9 +218,6 @@ namespace Cotton.Server.Services
             };
         }
 
-        /// <summary>
-        /// Finishes assertion async.
-        /// </summary>
         public async Task<User> FinishAssertionAsync(
             FinishPasskeyAssertionRequestDto request,
             CancellationToken ct)
@@ -299,9 +281,6 @@ namespace Cotton.Server.Services
             return credential.User;
         }
 
-        /// <summary>
-        /// Sets the optional user-authored credential label.
-        /// </summary>
         public async Task<PasskeyCredentialDto> SetCredentialLabelAsync(
             Guid userId,
             Guid credentialId,
@@ -318,9 +297,6 @@ namespace Cotton.Server.Services
             return ToDto(credential);
         }
 
-        /// <summary>
-        /// Deletes credential async.
-        /// </summary>
         public async Task DeleteCredentialAsync(Guid userId, Guid credentialId, CancellationToken ct)
         {
             UserPasskeyCredential credential = await _dbContext.UserPasskeyCredentials

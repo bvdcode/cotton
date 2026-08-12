@@ -5,16 +5,10 @@ using System.Security;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Probes the active OS temp directory for writable scratch-file support.
-    /// </summary>
     public class TempDirectoryProbe
     {
         private readonly Func<string> _getTempPath;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="TempDirectoryProbe"/> class.
-        /// </summary>
         public TempDirectoryProbe()
             : this(Path.GetTempPath)
         {
@@ -25,9 +19,6 @@ namespace Cotton.Server.Services
             _getTempPath = getTempPath;
         }
 
-        /// <summary>
-        /// Checks whether the active OS temp directory can create, write, and delete a probe file.
-        /// </summary>
         public TempDirectoryProbeResult Probe()
         {
             string tempPath;

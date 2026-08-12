@@ -14,14 +14,6 @@ namespace Cotton.Crypto.Internals
 
     internal static class AesGcmStreamFormat
     {
-        /// <summary>
-        /// Compose the 12-byte nonce as: [4 bytes file prefix][8 bytes chunk counter].
-        /// The chunk counter space is 64-bit. To avoid IV reuse, the maximum number of chunks per file is 2^64 - 1.
-        /// If the counter equals ulong.MaxValue, this method throws InvalidOperationException.
-        /// </summary>
-        /// <param name="destination">Destination 12-byte buffer.</param>
-        /// <param name="fileNoncePrefix">Per-file 4-byte prefix.</param>
-        /// <param name="chunkIndex">Zero-based chunk index.</param>
         public static void ComposeNonce(Span<byte> destination, uint fileNoncePrefix, long chunkIndex)
         {
             // Guard: prevent wrapping the 64-bit counter in the nonce
@@ -50,19 +42,6 @@ namespace Cotton.Crypto.Internals
             BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(28, 4), 0);
         }
 
-        /// <summary>
-        /// Builds associated data used for per-file key wrapping. This AAD binds the wrapped file key to immutable
-        /// header metadata, preventing tampering with key id, nonce prefix, total plaintext length, and nonce.
-        /// Layout: magic(4) || headerLength(4) || totalPlaintextLength(8) || keyId(4) || noncePrefix(4) || nonce(NonceSize).
-        /// </summary>
-        /// <param name="keyId">The key id stored in the header.</param>
-        /// <param name="noncePrefix">Per-file 4-byte nonce prefix stored in the header.</param>
-        /// <param name="fileKeyNonce">The per-file nonce used to wrap the file key (full NonceSize bytes).</param>
-        /// <param name="totalPlaintextLength">Total plaintext length stored in the header.</param>
-        /// <param name="nonceSize">Size of the nonce in bytes.</param>
-        /// <param name="tagSize">Size of the tag in bytes (used to compute header length).</param>
-        /// <param name="keySize">Size of the encrypted file key in bytes (used to compute header length).</param>
-        /// <returns>Byte array containing the AAD.</returns>
         public static byte[] BuildKeyAad(int keyId, uint noncePrefix, ReadOnlySpan<byte> fileKeyNonce, long totalPlaintextLength, int nonceSize, int tagSize, int keySize)
         {
             if (fileKeyNonce.Length < nonceSize) throw new ArgumentException("Nonce span shorter than nonce size", nameof(fileKeyNonce));

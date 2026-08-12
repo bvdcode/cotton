@@ -6,9 +6,6 @@ using System.Runtime.CompilerServices;
 
 namespace Cotton.Benchmark.Infrastructure
 {
-    /// <summary>
-    /// In-memory storage backend used to isolate CPU-bound pipeline benchmarks from disk latency.
-    /// </summary>
     internal class InMemoryStorageBackend : IStorageBackend
     {
         private readonly Dictionary<string, byte[]> _storage = [];

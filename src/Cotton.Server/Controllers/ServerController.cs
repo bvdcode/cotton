@@ -16,9 +16,6 @@ using Quartz;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for server operations.
-    /// </summary>
     [ApiController]
     [Route(Routes.V1.Server)]
     public class ServerController(
@@ -27,9 +24,6 @@ namespace Cotton.Server.Controllers
         ISchedulerFactory _scheduler,
         SecurityDiagnosticsService _securityDiagnostics) : ControllerBase
     {
-        /// <summary>
-        /// Stops the server after an authenticated emergency shutdown request.
-        /// </summary>
         [HttpPost("emergency-shutdown")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> EmergencyShutdown(CancellationToken cancellationToken)
@@ -38,9 +32,6 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Gets server info.
-        /// </summary>
         [HttpGet("info")]
         public async Task<IActionResult> GetServerInfo()
         {
@@ -54,9 +45,6 @@ namespace Cotton.Server.Controllers
             });
         }
 
-        /// <summary>
-        /// Gets security diagnostics.
-        /// </summary>
         [HttpGet("security/status")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> GetSecurityDiagnostics(CancellationToken cancellationToken)
@@ -65,9 +53,6 @@ namespace Cotton.Server.Controllers
             return Ok(snapshot);
         }
 
-        /// <summary>
-        /// Schedules an immediate database backup.
-        /// </summary>
         [HttpPatch("database-backup/trigger")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> TriggerDatabaseBackup(CancellationToken cancellationToken)
@@ -76,9 +61,6 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Schedules an immediate chunk garbage-collection pass.
-        /// </summary>
         [HttpPatch("gc/trigger")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> TriggerGarbageCollector()
@@ -87,9 +69,6 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Gets latest database backup info.
-        /// </summary>
         [HttpGet("database-backup/latest")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> GetLatestDatabaseBackupInfo(CancellationToken cancellationToken)
@@ -103,9 +82,6 @@ namespace Cotton.Server.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// Gets gc chunks timeline.
-        /// </summary>
         [HttpGet("gc/chunks/timeline")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> GetGcChunksTimeline(

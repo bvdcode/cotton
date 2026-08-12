@@ -11,24 +11,12 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// </remarks>
     public static class DatabaseIntegritySignatureContract
     {
-        /// <summary>
-        /// Gets the magic marker written at the beginning of every canonical payload.
-        /// </summary>
         public const string PayloadMagic = "Cotton.DbIntegrity.Row";
 
-        /// <summary>
-        /// Gets the payload envelope format version.
-        /// </summary>
         public const int PayloadFormatVersion = 1;
 
-        /// <summary>
-        /// Gets the canonical field writer version.
-        /// </summary>
         public const int CanonicalWriterVersion = 1;
 
-        /// <summary>
-        /// Gets the MAC algorithm used by the integrity protector.
-        /// </summary>
         public const string MacAlgorithm = "HMAC-SHA-256";
     }
 }

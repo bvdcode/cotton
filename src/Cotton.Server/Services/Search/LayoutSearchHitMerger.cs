@@ -3,14 +3,8 @@
 
 namespace Cotton.Server.Services.Search
 {
-    /// <summary>
-    /// Merges hits returned by independent layout search providers.
-    /// </summary>
     public static class LayoutSearchHitMerger
     {
-        /// <summary>
-        /// Keeps the strongest hit for each returned entity before count and paging are applied.
-        /// </summary>
         public static IQueryable<LayoutSearchHit> MergeDuplicateHits(IQueryable<LayoutSearchHit> hits)
         {
             return hits
@@ -33,9 +27,6 @@ namespace Cotton.Server.Services.Search
                 });
         }
 
-        /// <summary>
-        /// Keeps the strongest hit for each returned entity in already materialized hit sets.
-        /// </summary>
         public static IReadOnlyList<LayoutSearchHit> MergeDuplicateHits(IEnumerable<LayoutSearchHit> hits)
         {
             return hits

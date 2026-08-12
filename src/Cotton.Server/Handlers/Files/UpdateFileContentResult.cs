@@ -5,9 +5,6 @@ using Cotton.Files;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Represents the outcome of updating file content.
-    /// </summary>
     public record UpdateFileContentResult(
         UpdateFileContentStatus Status,
         NodeFileManifestDto? File = null,

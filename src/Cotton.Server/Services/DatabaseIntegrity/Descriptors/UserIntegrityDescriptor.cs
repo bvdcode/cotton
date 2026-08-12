@@ -14,19 +14,15 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// </remarks>
     public class UserIntegrityDescriptor : DatabaseIntegrityDescriptor<User>
     {
-        /// <inheritdoc />
         public override string EntityName => "users";
 
-        /// <inheritdoc />
         public override int SchemaVersion => 1;
 
-        /// <inheritdoc />
         public override string GetEntityKey(User entity)
         {
             return entity.Id.ToString("D");
         }
 
-        /// <inheritdoc />
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, User entity)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);

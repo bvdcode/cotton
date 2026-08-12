@@ -23,9 +23,6 @@ using System.Security.Cryptography;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Command for WebDAV PUT operation (upload file)
-    /// </summary>
     public record WebDavPutFileRequest(
         Guid UserId,
         string Path,
@@ -34,10 +31,6 @@ namespace Cotton.Server.Handlers.WebDav
         bool Overwrite = true,
         long? ContentLength = null) : IRequest<WebDavPutFileResult>;
 
-    /// <summary>
-    /// Handler for WebDAV PUT operation with streaming chunk processing.
-    /// Processes large files without loading them entirely into memory.
-    /// </summary>
     public class WebDavPutFileRequestHandler(
         CottonDbContext _dbContext,
         SettingsProvider _settings,
@@ -64,9 +57,6 @@ namespace Cotton.Server.Handlers.WebDav
 
         private static WebDavPutFileResult Fail(WebDavPutFileError error) => new(false, false, error);
 
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<WebDavPutFileResult> Handle(WebDavPutFileRequest request, CancellationToken ct)
         {
             var (target, targetError) = await TryResolveAndValidateTargetAsync(request, ct);
@@ -467,10 +457,6 @@ namespace Cotton.Server.Handlers.WebDav
             }
         }
 
-        /// <summary>
-        /// Processes the input stream in chunks, creating and storing each chunk on the fly.
-        /// Uses a rented buffer to avoid allocations.
-        /// </summary>
         private async Task<(List<Chunk> Chunks, byte[] FileHash)> ProcessStreamInChunksAndHashAsync(
             Stream inputStream,
             Guid userId,
@@ -502,9 +488,6 @@ namespace Cotton.Server.Handlers.WebDav
             return (chunks, fileHasher.GetHashAndReset());
         }
 
-        /// <summary>
-        /// Reads exactly the specified number of bytes or until end of stream.
-        /// </summary>
         private static async Task<int> ReadExactlyAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)
         {
             int totalRead = 0;
@@ -526,9 +509,6 @@ namespace Cotton.Server.Handlers.WebDav
             return await _chunkIngest.UpsertChunkAsync(userId, buffer, length, ct);
         }
 
-        /// <summary>
-        /// Creates an empty chunk for empty files.
-        /// </summary>
         private async Task<List<Chunk>> CreateEmptyChunkAsync(Guid userId, CancellationToken ct)
         {
             Chunk chunk = await _chunkIngest.UpsertChunkAsync(userId, [], 0, ct);

@@ -7,10 +7,6 @@ using System.Collections.Concurrent;
 
 namespace Cotton.Server.IntegrationTests.Helpers
 {
-    /// <summary>
-    /// In-memory implementation of IStorage for integration tests.
-    /// Avoids filesystem side-effects and speeds up IO.
-    /// </summary>
     public class InMemoryStorage : IStoragePipeline
     {
         private readonly ConcurrentDictionary<string, byte[]> _blobs = new(StringComparer.OrdinalIgnoreCase);

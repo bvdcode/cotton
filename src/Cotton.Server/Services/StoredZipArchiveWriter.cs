@@ -23,9 +23,6 @@ namespace Cotton.Server.Services
         private const ushort UInt16Max = ushort.MaxValue;
         private readonly SemaphoreSlim _streamGate;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="StoredZipArchiveWriter"/> type.
-        /// </summary>
         public StoredZipArchiveWriter(IOptions<ResourceConcurrencyOptions> options)
         {
             ArgumentNullException.ThrowIfNull(options);
@@ -34,9 +31,6 @@ namespace Cotton.Server.Services
             _streamGate = new SemaphoreSlim(value.ArchiveStreams, value.ArchiveStreams);
         }
 
-        /// <summary>
-        /// Calculates the exact number of bytes that <see cref="WriteAsync"/> will emit for the entries.
-        /// </summary>
         public static long CalculateLength<TEntry>(IReadOnlyList<TEntry> entries)
             where TEntry : IStoredZipEntry
         {
@@ -48,9 +42,6 @@ namespace Cotton.Server.Services
             return RequiresZip64UInt32(sizeBytes) || RequiresZip64UInt32(localHeaderOffset);
         }
 
-        /// <summary>
-        /// Streams the entries as a STORED ZIP archive without buffering file contents in memory.
-        /// </summary>
         public async Task WriteAsync(
             Stream destination,
             IReadOnlyList<StoredZipSourceEntry> entries,
@@ -494,9 +485,6 @@ namespace Cotton.Server.Services
             bool UsesZip64DataDescriptor,
             long LocalHeaderOffset)
         {
-            /// <summary>
-            /// Gets or sets the central extra length.
-            /// </summary>
             public long CentralExtraLength { get; init; }
         }
 

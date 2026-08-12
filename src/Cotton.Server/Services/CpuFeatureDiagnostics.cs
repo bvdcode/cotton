@@ -7,16 +7,10 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Reads CPU feature diagnostics visible to the server process.
-    /// </summary>
     public static class CpuFeatureDiagnostics
     {
         private const string ProcCpuInfoPath = "/proc/cpuinfo";
 
-        /// <summary>
-        /// Gets a CPU feature snapshot.
-        /// </summary>
         public static CpuFeatureDiagnosticsDto Snapshot()
         {
             LinuxCpuInfo cpuInfo = ReadLinuxCpuInfo();

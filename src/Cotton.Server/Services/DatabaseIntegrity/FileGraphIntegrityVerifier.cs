@@ -19,9 +19,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     {
         private const string StructuralGraphEntityName = "file_graph";
 
-        /// <summary>
-        /// Verifies the signed file metadata graph without requiring chunk rows to be loaded.
-        /// </summary>
         public void RequireValidMetadata(CottonDbContext dbContext, NodeFile nodeFile, string boundary)
         {
             ArgumentNullException.ThrowIfNull(dbContext);
@@ -51,9 +48,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             _integrity.RequireValid(dbContext, nodeFile, boundary + ".node-file");
         }
 
-        /// <summary>
-        /// Verifies metadata plus the ordered chunk mapping used to stream file content.
-        /// </summary>
         public void RequireValidContent(CottonDbContext dbContext, NodeFile nodeFile, string boundary)
         {
             RequireValidMetadata(dbContext, nodeFile, boundary);

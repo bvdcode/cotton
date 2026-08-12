@@ -8,21 +8,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services.Search
 {
-    /// <summary>
-    /// Searches layout items by their normalized display names and identifiers.
-    /// </summary>
     public class NameLayoutSearchProvider(CottonDbContext _dbContext) : ILayoutSearchProvider
     {
-        /// <inheritdoc />
         public int Priority => 0;
 
-        /// <inheritdoc />
         public bool CanSearch(LayoutSearchCriteria criteria)
         {
             return criteria.HasText || criteria.HasIds;
         }
 
-        /// <inheritdoc />
         public IQueryable<LayoutSearchHit> BuildHitsQuery(LayoutSearchProviderContext context)
         {
             return BuildNodeHitsQuery(context)

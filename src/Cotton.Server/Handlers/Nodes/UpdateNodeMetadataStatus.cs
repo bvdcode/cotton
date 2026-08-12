@@ -3,24 +3,12 @@
 
 namespace Cotton.Server.Handlers.Nodes
 {
-    /// <summary>
-    /// Describes the outcome of updating node metadata.
-    /// </summary>
     public enum UpdateNodeMetadataStatus
     {
-        /// <summary>
-        /// The metadata was updated.
-        /// </summary>
         Updated,
 
-        /// <summary>
-        /// The metadata patch is invalid.
-        /// </summary>
         InvalidPatch,
 
-        /// <summary>
-        /// The requested node was not found.
-        /// </summary>
         NodeNotFound,
     }
 }

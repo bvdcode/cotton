@@ -6,15 +6,11 @@ using System.Text;
 
 namespace Cotton.Benchmark.Reporting
 {
-    /// <summary>
-    /// Formats benchmark results as a table.
-    /// </summary>
     public class TableResultFormatter : IResultFormatter
     {
         private const int NameWidth = 35;
         private const int ValueWidth = 25;
 
-        /// <inheritdoc/>
         public string Format(IBenchmarkResult result)
         {
             var sb = new StringBuilder();
@@ -45,7 +41,6 @@ namespace Cotton.Benchmark.Reporting
             return sb.ToString();
         }
 
-        /// <inheritdoc/>
         public string FormatCollection(IEnumerable<IBenchmarkResult> results)
         {
             var sb = new StringBuilder();

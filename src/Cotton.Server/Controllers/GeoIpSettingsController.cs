@@ -13,9 +13,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for GeoIP settings.
-    /// </summary>
     [ApiController]
     [Route(Routes.V1.Settings)]
     [Route(Routes.V1.Server + "/settings")]
@@ -24,9 +21,6 @@ namespace Cotton.Server.Controllers
         ServerSettingsValidator _validator,
         IGeoLookupService _geoLookup) : SettingsControllerBase(settings)
     {
-        /// <summary>
-        /// Sets geo ip lookup mode.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("geoip-lookup-mode/{mode}")]
         public async Task<IActionResult> SetGeoIpLookupMode(
@@ -43,9 +37,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets geo ip lookup mode.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("geoip-lookup-mode")]
         public IActionResult GetGeoIpLookupMode()
@@ -54,9 +45,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { geoIpLookupMode = geoIpLookupMode.ToString() });
         }
 
-        /// <summary>
-        /// Sets custom geo ip lookup url.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("custom-geoip-lookup-url")]
         public async Task<IActionResult> SetCustomGeoIpLookupUrl(
@@ -73,9 +61,6 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Gets custom geo ip lookup url.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("custom-geoip-lookup-url")]
         public IActionResult GetCustomGeoIpLookupUrl()
@@ -84,9 +69,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { customGeoIpLookupUrl });
         }
 
-        /// <summary>
-        /// Tests a custom GeoIP lookup URL before saving settings.
-        /// </summary>
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPost("custom-geoip-lookup-url/test")]
         public async Task<IActionResult> TestCustomGeoIpLookupUrl(CancellationToken cancellationToken)

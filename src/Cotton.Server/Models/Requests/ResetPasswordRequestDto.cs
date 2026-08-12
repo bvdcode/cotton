@@ -3,9 +3,6 @@
 
 namespace Cotton.Server.Models.Requests
 {
-    /// <summary>
-    /// Represents the reset password request payload accepted by the API.
-    /// </summary>
     public class ResetPasswordRequestDto
     {
         /// <summary>
@@ -13,9 +10,6 @@ namespace Cotton.Server.Models.Requests
         /// </summary>
         public string Token { get; set; } = null!;
 
-        /// <summary>
-        /// Gets or sets new password.
-        /// </summary>
         public string NewPassword { get; set; } = null!;
     }
 }

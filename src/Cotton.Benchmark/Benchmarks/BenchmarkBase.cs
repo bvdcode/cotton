@@ -7,23 +7,14 @@ using System.Diagnostics;
 
 namespace Cotton.Benchmark.Benchmarks
 {
-    /// <summary>
-    /// Base class for all benchmarks with common functionality.
-    /// </summary>
     public abstract class BenchmarkBase(BenchmarkConfiguration configuration) : IBenchmark
     {
-        /// <summary>
-        /// Benchmark configuration shared by warmup and measured iterations.
-        /// </summary>
         protected readonly BenchmarkConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
-        /// <inheritdoc/>
         public abstract string Name { get; }
 
-        /// <inheritdoc/>
         public abstract string Description { get; }
 
-        /// <inheritdoc/>
         public async Task<IBenchmarkResult> RunAsync(CancellationToken cancellationToken = default)
         {
             var stopwatch = Stopwatch.StartNew();
@@ -64,19 +55,10 @@ namespace Cotton.Benchmark.Benchmarks
             }
         }
 
-        /// <summary>
-        /// Executes a single iteration without measurement (for warmup).
-        /// </summary>
         protected abstract Task ExecuteIterationAsync(CancellationToken cancellationToken);
 
-        /// <summary>
-        /// Executes and measures a single iteration.
-        /// </summary>
         protected abstract Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken);
 
-        /// <summary>
-        /// Aggregates metrics from multiple iterations.
-        /// </summary>
         protected virtual Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             var avgThroughput = metrics.Average(m => m.MegabytesPerSecond);
@@ -105,9 +87,6 @@ namespace Cotton.Benchmark.Benchmarks
             return aggregated;
         }
 
-        /// <summary>
-        /// Adds shared managed allocation and process working-set metrics to an aggregate result.
-        /// </summary>
         protected static void AddMemoryMetrics(
             IDictionary<string, object> target,
             IReadOnlyList<PerformanceMetrics> metrics)
@@ -142,9 +121,6 @@ namespace Cotton.Benchmark.Benchmarks
             return (sortedValues[lowerIndex] * (1 - weight)) + (sortedValues[upperIndex] * weight);
         }
 
-        /// <summary>
-        /// Formats bytes into human-readable string.
-        /// </summary>
         protected static string FormatBytes(long bytes)
         {
             string[] sizes = ["B", "KB", "MB", "GB", "TB"];
@@ -158,9 +134,6 @@ namespace Cotton.Benchmark.Benchmarks
             return $"{len:F2} {sizes[order]}";
         }
 
-        /// <summary>
-        /// Generates test data of specified size.
-        /// </summary>
         protected static byte[] GenerateTestData(int size)
         {
             var data = new byte[size];

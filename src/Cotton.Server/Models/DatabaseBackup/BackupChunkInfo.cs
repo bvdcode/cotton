@@ -3,8 +3,5 @@
 
 namespace Cotton.Server.Models.DatabaseBackup
 {
-    /// <summary>
-    /// Describes backup chunk information.
-    /// </summary>
     public record BackupChunkInfo(int Order, string StorageKey, int SizeBytes);
 }

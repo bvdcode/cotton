@@ -5,9 +5,6 @@ using Cotton.Database.Models;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Represents an HLS source lookup result.
-    /// </summary>
     public record ResolveHlsSourceResult(
         ResolveHlsSourceStatus Status,
         NodeFile? NodeFile = null,

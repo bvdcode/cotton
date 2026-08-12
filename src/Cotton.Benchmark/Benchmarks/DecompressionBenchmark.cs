@@ -8,18 +8,12 @@ using System.Diagnostics;
 
 namespace Cotton.Benchmark.Benchmarks
 {
-    /// <summary>
-    /// Benchmark for Cotton.Storage decompression throughput.
-    /// </summary>
     public class DecompressionBenchmark : BenchmarkBase
     {
         private readonly byte[] _compressedData;
         private readonly int _originalSize;
         private readonly CompressionProcessor _processor;
 
-        /// <summary>
-        /// Initializes the benchmark with a fixed measurement configuration.
-        /// </summary>
         public DecompressionBenchmark(BenchmarkConfiguration configuration)
             : base(configuration)
         {
@@ -37,13 +31,10 @@ namespace Cotton.Benchmark.Benchmarks
             _compressedData = outputStream.ToArray();
         }
 
-        /// <inheritdoc/>
         public override string Name => "Cotton.Storage Zstd Decompression";
 
-        /// <inheritdoc/>
         public override string Description => "Measures Cotton.Storage decompression throughput";
 
-        /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
             await using var inputStream = new MemoryStream(_compressedData);
@@ -51,7 +42,6 @@ namespace Cotton.Benchmark.Benchmarks
             await outputStream.DisposeAsync();
         }
 
-        /// <inheritdoc/>
         protected override async Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
             var stopwatch = Stopwatch.StartNew();
@@ -68,7 +58,6 @@ namespace Cotton.Benchmark.Benchmarks
             return PerformanceMetrics.Create(_originalSize, stopwatch.Elapsed);
         }
 
-        /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             Dictionary<string, object> baseMetrics = base.AggregateMetrics(metrics);

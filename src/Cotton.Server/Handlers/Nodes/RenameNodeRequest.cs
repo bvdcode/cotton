@@ -17,17 +17,11 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Nodes
 {
-    /// <summary>
-    /// Renames an owned node.
-    /// </summary>
     public record RenameNodeRequest(
         Guid UserId,
         Guid NodeId,
         string Name) : IRequest<RenameNodeResult>;
 
-    /// <summary>
-    /// Handles node rename requests.
-    /// </summary>
     public class RenameNodeRequestHandler(
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
@@ -35,7 +29,6 @@ namespace Cotton.Server.Handlers.Nodes
         IEventNotificationService _notifications)
         : IRequestHandler<RenameNodeRequest, RenameNodeResult>
     {
-        /// <inheritdoc />
         public async Task<RenameNodeResult> Handle(
             RenameNodeRequest request,
             CancellationToken ct)

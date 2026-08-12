@@ -19,18 +19,12 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Command for WebDAV COPY operation
-    /// </summary>
     public record WebDavCopyRequest(
         Guid UserId,
         string SourcePath,
         string DestinationPath,
         bool Overwrite = false) : IRequest<WebDavCopyResult>;
 
-    /// <summary>
-    /// Handler for WebDAV COPY operation
-    /// </summary>
     public class WebDavCopyRequestHandler(
         CottonDbContext _dbContext,
         IMediator _mediator,
@@ -42,9 +36,6 @@ namespace Cotton.Server.Handlers.WebDav
         ILogger<WebDavCopyRequestHandler> _logger)
         : IRequestHandler<WebDavCopyRequest, WebDavCopyResult>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<WebDavCopyResult> Handle(WebDavCopyRequest request, CancellationToken ct)
         {
             PreTransactionCopyOutcome preTransaction = await ResolvePreTransactionPreconditionsAsync(request, ct);
@@ -186,14 +177,8 @@ namespace Cotton.Server.Handlers.WebDav
 
         private record PreTransactionCopyOutcome(Guid? LayoutId, WebDavCopyResult? Failure)
         {
-            /// <summary>
-            /// Creates a successful operation result.
-            /// </summary>
             public static PreTransactionCopyOutcome Success(Guid layoutId) => new(layoutId, null);
 
-            /// <summary>
-            /// Creates a failed operation result.
-            /// </summary>
             public static PreTransactionCopyOutcome Failed(WebDavCopyResult failure) => new(null, failure);
         }
 
@@ -203,17 +188,11 @@ namespace Cotton.Server.Handlers.WebDav
             bool Created,
             WebDavCopyResult? Failure)
         {
-            /// <summary>
-            /// Creates a successful operation result.
-            /// </summary>
             public static CopyPreparationOutcome Success(
                 WebDavResolveResult source,
                 WebDavParentResult destinationParent,
                 bool created) => new(source, destinationParent, created, null);
 
-            /// <summary>
-            /// Creates a failed operation result.
-            /// </summary>
             public static CopyPreparationOutcome Failed(WebDavCopyResult failure) => new(null, null, false, failure);
         }
 
@@ -223,15 +202,9 @@ namespace Cotton.Server.Handlers.WebDav
             long AddedBytes,
             WebDavCopyResult? Failure)
         {
-            /// <summary>
-            /// Creates a successful operation result.
-            /// </summary>
             public static CopyOperationOutcome Success(Guid? nodeId, Guid? nodeFileId, long addedBytes) =>
                 new(nodeId, nodeFileId, addedBytes, null);
 
-            /// <summary>
-            /// Creates a failed operation result.
-            /// </summary>
             public static CopyOperationOutcome Failed(WebDavCopyResult failure) => new(null, null, 0, failure);
         }
 

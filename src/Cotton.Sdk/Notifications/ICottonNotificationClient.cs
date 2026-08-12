@@ -15,5 +15,13 @@ namespace Cotton.Sdk.Notifications
             int page = 1,
             int pageSize = 50,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets unread notification details and an exact unread count after a stable cursor.
+        /// </summary>
+        Task<CottonNotificationBatchDto> GetNotificationBatchAsync(
+            CottonNotificationCursorDto? cursor = null,
+            int detailLimit = 50,
+            CancellationToken cancellationToken = default);
     }
 }

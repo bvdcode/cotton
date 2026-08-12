@@ -16,16 +16,10 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Command for WebDAV MKCOL operation (create directory)
-    /// </summary>
     public record WebDavMkColRequest(
         Guid UserId,
         string Path) : IRequest<WebDavMkColResult>;
 
-    /// <summary>
-    /// Handler for WebDAV MKCOL operation
-    /// </summary>
     public class WebDavMkColRequestHandler(
         CottonDbContext _dbContext,
         IWebDavPathResolver _pathResolver,
@@ -35,9 +29,6 @@ namespace Cotton.Server.Handlers.WebDav
         ILogger<WebDavMkColRequestHandler> _logger)
         : IRequestHandler<WebDavMkColRequest, WebDavMkColResult>
     {
-        /// <summary>
-        /// Handles the request through the mediator pipeline.
-        /// </summary>
         public async Task<WebDavMkColResult> Handle(WebDavMkColRequest request, CancellationToken ct)
         {
             WebDavMkColParent parent = await ResolveValidatedParentAsync(request, "path", ct);

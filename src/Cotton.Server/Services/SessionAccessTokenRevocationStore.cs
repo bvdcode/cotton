@@ -8,9 +8,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Stores session access token revocation state.
-    /// </summary>
     public class SessionAccessTokenRevocationStore(
         CottonDbContext _dbContext,
         SessionAccessTokenRevocationCache _cache,
@@ -20,9 +17,6 @@ namespace Cotton.Server.Services
         private static readonly TimeSpan RevokedSessionCacheDuration = TimeSpan.FromMinutes(65);
         private static readonly TimeSpan AccessTokenClockSkew = TimeSpan.FromMinutes(5);
 
-        /// <summary>
-        /// Creates a revocation marker for the current session.
-        /// </summary>
         public void Revoke(Guid userId, string sessionId, TimeSpan accessTokenLifetime)
         {
             if (string.IsNullOrWhiteSpace(sessionId))
@@ -37,9 +31,6 @@ namespace Cotton.Server.Services
             _cache.MarkRevoked(userId, sessionId, ttl);
         }
 
-        /// <summary>
-        /// Indicates whether revoked async.
-        /// </summary>
         public async Task<bool> IsRevokedAsync(
             Guid userId,
             string? sessionId,

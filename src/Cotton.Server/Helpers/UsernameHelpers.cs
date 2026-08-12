@@ -7,14 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Helpers
 {
-    /// <summary>
-    /// Contains helper methods for username.
-    /// </summary>
     public static class UsernameHelpers
     {
-        /// <summary>
-        /// Builds available username from email async.
-        /// </summary>
         public static async Task<string> BuildAvailableUsernameFromEmailAsync(
             CottonDbContext dbContext,
             string email,

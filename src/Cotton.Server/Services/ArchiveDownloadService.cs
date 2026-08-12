@@ -13,9 +13,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Coordinates archive download.
-    /// </summary>
     public class ArchiveDownloadService(
         CottonDbContext _dbContext,
         ArchiveDownloadTicketStore _tickets,
@@ -23,9 +20,6 @@ namespace Cotton.Server.Services
     {
         private const string DefaultArchiveName = "cotton-download.zip";
 
-        /// <summary>
-        /// Creates download link async.
-        /// </summary>
         public async Task<CreateArchiveDownloadLinkResult> CreateDownloadLinkAsync(
             Guid userId,
             CreateArchiveDownloadLinkRequest request,

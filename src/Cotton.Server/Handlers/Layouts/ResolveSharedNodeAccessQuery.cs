@@ -11,23 +11,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Layouts
 {
-    /// <summary>
-    /// Resolves and verifies an active shared node boundary.
-    /// </summary>
     public record ResolveSharedNodeAccessQuery(string Token)
         : IRequest<SharedNodeAccess?>;
 
-    /// <summary>
-    /// Handles shared node boundary resolution.
-    /// </summary>
     public class ResolveSharedNodeAccessQueryHandler(
         CottonDbContext _dbContext,
         IDatabaseIntegrityVerifier _integrity)
         : IRequestHandler<ResolveSharedNodeAccessQuery, SharedNodeAccess?>
     {
-        /// <summary>
-        /// Resolves an active token and verifies its signed database graph.
-        /// </summary>
         public async Task<SharedNodeAccess?> Handle(
             ResolveSharedNodeAccessQuery request,
             CancellationToken ct)

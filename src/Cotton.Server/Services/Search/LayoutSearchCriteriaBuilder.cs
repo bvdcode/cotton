@@ -7,9 +7,6 @@ using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Services.Search
 {
-    /// <summary>
-    /// Builds normalized search criteria from user input.
-    /// </summary>
     public static class LayoutSearchCriteriaBuilder
     {
         private const string LikeEscape = "\\";
@@ -22,9 +19,6 @@ namespace Cotton.Server.Services.Search
             @"[\p{L}\p{N}]+",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-        /// <summary>
-        /// Builds criteria for all registered layout search providers.
-        /// </summary>
         public static LayoutSearchCriteria Build(string query)
         {
             if (string.IsNullOrWhiteSpace(query))

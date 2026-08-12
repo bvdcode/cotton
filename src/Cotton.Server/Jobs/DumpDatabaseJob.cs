@@ -19,9 +19,6 @@ using System.Text.Json;
 
 namespace Cotton.Server.Jobs
 {
-    /// <summary>
-    /// Runs the scheduled dump database maintenance task.
-    /// </summary>
     [JobTrigger(days: 7)]
     public class DumpDatabaseJob(
         IPostgresDumpService _dumper,
@@ -35,9 +32,6 @@ namespace Cotton.Server.Jobs
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-        /// <summary>
-        /// Executes the scheduled Quartz job.
-        /// </summary>
         public async Task Execute(IJobExecutionContext context)
         {
             CancellationToken ct = context.CancellationToken;

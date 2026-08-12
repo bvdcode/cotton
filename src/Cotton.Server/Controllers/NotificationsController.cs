@@ -4,8 +4,10 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Handlers.Notifications;
 using Cotton.Server.Models.Dto;
 using EasyExtensions;
+using EasyExtensions.Mediator;
 using Gridify;
 using Gridify.EntityFramework;
 using Mapster;
@@ -15,17 +17,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
 {
-    /// <summary>
-    /// Exposes HTTP endpoints for notifications operations.
-    /// </summary>
     [ApiController]
     public class NotificationsController(
         CottonDbContext _dbContext,
-        INotificationsProvider _notifications) : ControllerBase
+        INotificationsProvider _notifications,
+        IMediator _mediator) : ControllerBase
     {
-        /// <summary>
-        /// Sends a test notification to the current user.
-        /// </summary>
         [Authorize]
         [HttpPost(Routes.V1.Notifications + "/test")]
         public async Task<IActionResult> TestNotification()
@@ -35,9 +32,6 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Gets notifications.
-        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Notifications)]
         public async Task<IActionResult> GetNotifications([FromQuery] GridifyQuery query)
@@ -53,9 +47,39 @@ namespace Cotton.Server.Controllers
             return Ok(dto);
         }
 
-        /// <summary>
-        /// Marks every notification for the current user as read.
-        /// </summary>
+        [Authorize]
+        [HttpGet(Routes.V1.Notifications + "/batch")]
+        public async Task<ActionResult<NotificationBatchDto>> GetNotificationBatch(
+            [FromQuery] DateTime? cursorCreatedAt = null,
+            [FromQuery] Guid? cursorNotificationId = null,
+            [FromQuery] int detailLimit = 50,
+            CancellationToken cancellationToken = default)
+        {
+            if (cursorCreatedAt.HasValue != cursorNotificationId.HasValue)
+            {
+                return BadRequest("Notification cursor timestamp and identifier must be supplied together.");
+            }
+
+            if (detailLimit <= 0)
+            {
+                return BadRequest("Detail limit must be greater than zero.");
+            }
+
+            NotificationCursorDto? cursor = cursorCreatedAt.HasValue
+                ? new NotificationCursorDto
+                {
+                    CreatedAt = cursorCreatedAt.Value,
+                    NotificationId = cursorNotificationId!.Value,
+                }
+                : null;
+            Guid userId = User.GetUserId();
+            NotificationBatchDto response = await _mediator.Send(
+                new GetNotificationBatchQuery(userId, cursor, detailLimit),
+                cancellationToken);
+
+            return Ok(response);
+        }
+
         [Authorize]
         [HttpPatch(Routes.V1.Notifications + "/mark-all-read")]
         public async Task<IActionResult> MarkAllNotificationsAsRead()
@@ -76,9 +100,6 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Gets unread notifications count.
-        /// </summary>
         [Authorize]
         [HttpGet(Routes.V1.Notifications + "/unread/count")]
         public async Task<IActionResult> GetUnreadNotificationsCount()
@@ -90,9 +111,6 @@ namespace Cotton.Server.Controllers
             return Ok(new { UnreadCount = unreadCount });
         }
 
-        /// <summary>
-        /// Marks one notification for the current user as read.
-        /// </summary>
         [Authorize]
         [HttpPatch(Routes.V1.Notifications + "/{id:guid}/read")]
         public async Task<IActionResult> MarkNotificationAsRead(Guid id)

@@ -5,9 +5,6 @@ using Cotton.Database.Models.Enums;
 
 namespace Cotton.Server.Providers
 {
-    /// <summary>
-    /// Caches storage backend type state.
-    /// </summary>
     public class StorageBackendTypeCache : IStorageBackendTypeCache
     {
         private readonly Lock _lock = new();
@@ -16,7 +13,6 @@ namespace Cotton.Server.Providers
         // and resolving under the same lock as Reset makes a stale value impossible to publish.
         private volatile object? _state;
 
-        /// <inheritdoc />
         public StorageType GetOrAdd(Func<StorageType> resolve)
         {
             if (_state is StorageType cached)
@@ -37,7 +33,6 @@ namespace Cotton.Server.Providers
             }
         }
 
-        /// <inheritdoc />
         public void Reset()
         {
             lock (_lock)

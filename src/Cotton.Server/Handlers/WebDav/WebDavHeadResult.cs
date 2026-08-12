@@ -9,9 +9,6 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.WebDav
 {
-    /// <summary>
-    /// Result of WebDAV HEAD operation
-    /// </summary>
     public record WebDavHeadResult(
         bool Found,
         bool IsCollection,

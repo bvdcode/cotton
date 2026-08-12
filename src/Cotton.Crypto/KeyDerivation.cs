@@ -15,9 +15,6 @@ namespace Cotton.Crypto
     {
         private const int MaxOutputLength = 255 * HMACSHA256.HashSizeInBytes;
 
-        /// <summary>
-        /// HKDF (RFC 5869) over HMAC-SHA256: masterKey + info (+ optional salt) -> subkey.
-        /// </summary>
         public static byte[] DeriveSubkey(
             ReadOnlySpan<byte> masterKey,
             ReadOnlySpan<byte> info,
@@ -79,9 +76,6 @@ namespace Cotton.Crypto
             }
         }
 
-        /// <summary>
-        /// Base64 helper.
-        /// </summary>
         public static string DeriveSubkeyBase64(
             string masterKey,
             string purpose,

@@ -10,23 +10,14 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Gets the ordered verification manifest for an owned file.
-    /// </summary>
     public record GetOwnedFileContentManifestQuery(
         Guid UserId,
         Guid NodeFileId,
         string? ExpectedETag) : IRequest<FileContentManifestDto?>;
 
-    /// <summary>
-    /// Handles owned content manifest queries.
-    /// </summary>
     public class GetOwnedFileContentManifestQueryHandler(IMediator _mediator)
         : IRequestHandler<GetOwnedFileContentManifestQuery, FileContentManifestDto?>
     {
-        /// <summary>
-        /// Resolves the file and creates its ordered content manifest.
-        /// </summary>
         public async Task<FileContentManifestDto?> Handle(
             GetOwnedFileContentManifestQuery request,
             CancellationToken ct)

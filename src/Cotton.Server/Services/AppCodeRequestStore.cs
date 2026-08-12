@@ -5,9 +5,6 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Stores pending app-code authorization requests for this server process.
-    /// </summary>
     public class AppCodeRequestStore : IDisposable
     {
         internal const int MaxActiveRequests = 1024;
@@ -45,9 +42,6 @@ namespace Cotton.Server.Services
             _requests.Remove(state.ApprovalId);
         }
 
-        /// <summary>
-        /// Releases the request cache.
-        /// </summary>
         public void Dispose()
         {
             _requests.Dispose();

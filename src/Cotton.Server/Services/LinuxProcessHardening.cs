@@ -6,14 +6,8 @@ using System.Runtime.InteropServices;
 
 namespace Cotton.Server.Services
 {
-    /// <summary>
-    /// Represents linux process hardening.
-    /// </summary>
     public static class LinuxProcessHardening
     {
-        /// <summary>
-        /// Defines the environment variable.
-        /// </summary>
         public const string EnvironmentVariable = "COTTON_PROCESS_HARDENING";
 
         private const int PR_GET_DUMPABLE = 3;
@@ -25,9 +19,6 @@ namespace Cotton.Server.Services
         [DllImport("libc")]
         private static extern uint geteuid();
 
-        /// <summary>
-        /// Applies from environment.
-        /// </summary>
         public static ProcessHardeningStatus ApplyFromEnvironment()
         {
             bool requested = IsEnabled(Environment.GetEnvironmentVariable(EnvironmentVariable));
@@ -55,9 +46,6 @@ namespace Cotton.Server.Services
             return new ProcessHardeningStatus(true, true, null, TryGetDumpable());
         }
 
-        /// <summary>
-        /// Attempts to get dumpable.
-        /// </summary>
         public static int? TryGetDumpable()
         {
             if (!OperatingSystem.IsLinux())
@@ -69,9 +57,6 @@ namespace Cotton.Server.Services
             return result >= 0 ? result : null;
         }
 
-        /// <summary>
-        /// Attempts to get effective user id.
-        /// </summary>
         public static uint? TryGetEffectiveUserId()
         {
             if (!OperatingSystem.IsLinux())
@@ -82,9 +67,6 @@ namespace Cotton.Server.Services
             return geteuid();
         }
 
-        /// <summary>
-        /// Reads Linux process status from /proc.
-        /// </summary>
         public static LinuxProcStatus SnapshotProcStatus()
         {
             if (!OperatingSystem.IsLinux())

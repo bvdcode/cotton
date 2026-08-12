@@ -18,17 +18,11 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Nodes
 {
-    /// <summary>
-    /// Creates a folder node in an owned layout.
-    /// </summary>
     public record CreateNodeRequest(
         Guid UserId,
         Guid ParentId,
         string Name) : IRequest<CreateNodeResult>;
 
-    /// <summary>
-    /// Handles node creation requests.
-    /// </summary>
     public class CreateNodeRequestHandler(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
@@ -37,7 +31,6 @@ namespace Cotton.Server.Handlers.Nodes
         IEventNotificationService _notifications)
         : IRequestHandler<CreateNodeRequest, CreateNodeResult>
     {
-        /// <inheritdoc />
         public async Task<CreateNodeResult> Handle(
             CreateNodeRequest request,
             CancellationToken ct)

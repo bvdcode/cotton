@@ -14,25 +14,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Files
 {
-    /// <summary>
-    /// Resolves a token-authorized source file for HLS transcoding.
-    /// </summary>
     public record ResolveHlsSourceQuery(
         Guid NodeFileId,
         string Token) : IRequest<ResolveHlsSourceResult>;
 
-    /// <summary>
-    /// Handles HLS source resolution.
-    /// </summary>
     public class ResolveHlsSourceQueryHandler(
         CottonDbContext _dbContext,
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity)
         : IRequestHandler<ResolveHlsSourceQuery, ResolveHlsSourceResult>
     {
-        /// <summary>
-        /// Resolves and validates a source file eligible for HLS transcoding.
-        /// </summary>
         public async Task<ResolveHlsSourceResult> Handle(
             ResolveHlsSourceQuery request,
             CancellationToken ct)
