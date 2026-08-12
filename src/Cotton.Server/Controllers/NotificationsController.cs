@@ -4,8 +4,10 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Handlers.Notifications;
 using Cotton.Server.Models.Dto;
 using EasyExtensions;
+using EasyExtensions.Mediator;
 using Gridify;
 using Gridify.EntityFramework;
 using Mapster;
@@ -18,7 +20,8 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class NotificationsController(
         CottonDbContext _dbContext,
-        INotificationsProvider _notifications) : ControllerBase
+        INotificationsProvider _notifications,
+        IMediator _mediator) : ControllerBase
     {
         [Authorize]
         [HttpPost(Routes.V1.Notifications + "/test")]
@@ -42,6 +45,39 @@ namespace Cotton.Server.Controllers
             Response.Headers.Append("X-Total-Count", notifications.Count.ToString());
             IEnumerable<NotificationDto> dto = notifications.Data.Adapt<IEnumerable<NotificationDto>>();
             return Ok(dto);
+        }
+
+        [Authorize]
+        [HttpGet(Routes.V1.Notifications + "/batch")]
+        public async Task<ActionResult<NotificationBatchDto>> GetNotificationBatch(
+            [FromQuery] DateTime? cursorCreatedAt = null,
+            [FromQuery] Guid? cursorNotificationId = null,
+            [FromQuery] int detailLimit = 50,
+            CancellationToken cancellationToken = default)
+        {
+            if (cursorCreatedAt.HasValue != cursorNotificationId.HasValue)
+            {
+                return BadRequest("Notification cursor timestamp and identifier must be supplied together.");
+            }
+
+            if (detailLimit <= 0)
+            {
+                return BadRequest("Detail limit must be greater than zero.");
+            }
+
+            NotificationCursorDto? cursor = cursorCreatedAt.HasValue
+                ? new NotificationCursorDto
+                {
+                    CreatedAt = cursorCreatedAt.Value,
+                    NotificationId = cursorNotificationId!.Value,
+                }
+                : null;
+            Guid userId = User.GetUserId();
+            NotificationBatchDto response = await _mediator.Send(
+                new GetNotificationBatchQuery(userId, cursor, detailLimit),
+                cancellationToken);
+
+            return Ok(response);
         }
 
         [Authorize]
