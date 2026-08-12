@@ -3,13 +3,6 @@ import { nodesApi } from "../../../shared/api/nodesApi";
 import { deleteFolder, renameFolder } from "../../../shared/store/nodesActions";
 import { useFolderRenameDeleteOperations } from "../../../shared/hooks/useFolderRenameDeleteOperations";
 
-/**
- * Hook for trash folder operations - similar to useFolderOperations
- * but uses skipTrash=true when deleting.
- *
- * @param resolveWrapperNodeId - When at the trash root, maps a displayed
- *   folder ID to the wrapper node ID that should actually be deleted.
- */
 export const useTrashFolderOperations = (
   currentNodeId: string | null,
   onDeleted?: () => void,
@@ -35,10 +28,8 @@ export const useTrashFolderOperations = (
     deleteFolder: async (folderId) => {
       const wrapperId = resolveWrapperNodeId?.(folderId);
       if (wrapperId) {
-        // Delete the wrapper node (permanent), which cascades to its contents
         await nodesApi.deleteNode(wrapperId, true);
       } else {
-        // Pass skipTrash=true for permanent deletion
         await deleteFolder(folderId, currentNodeId ?? undefined, true);
       }
 

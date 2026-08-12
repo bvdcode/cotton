@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import {
   buildVisibleTrashBreadcrumbs,
+  findTrashWrapperNodeId,
   isCurrentTrashWrapper,
   isTrashWrapperNode,
 } from "./trashBreadcrumbs";
@@ -69,5 +70,25 @@ describe("trashBreadcrumbs", () => {
       { id: root.id, name: root.name },
       { id: realFolder.id, name: realFolder.name },
     ]);
+  });
+
+  it("resolves the wrapper that owns a deleted item", () => {
+    expect(
+      findTrashWrapperNodeId(
+        {
+          nodes: [{ id: deletedFolder.id, parentId: wrapper.id }],
+          files: [{ id: "deleted-file", nodeId: "file-wrapper" }],
+        },
+        deletedFolder.id,
+      ),
+    ).toBe(wrapper.id);
+    expect(
+      findTrashWrapperNodeId(
+        {
+          files: [{ id: "deleted-file", nodeId: "file-wrapper" }],
+        },
+        "deleted-file",
+      ),
+    ).toBe("file-wrapper");
   });
 });
