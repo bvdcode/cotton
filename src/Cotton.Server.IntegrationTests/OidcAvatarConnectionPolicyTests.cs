@@ -10,6 +10,18 @@ namespace Cotton.Server.IntegrationTests
     public class OidcAvatarConnectionPolicyTests
     {
         [Test]
+        public void CreateHandler_DisablesConnectionReuse()
+        {
+            using SocketsHttpHandler handler = OidcAvatarConnectionPolicy.CreateHandler();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(handler.PooledConnectionIdleTimeout, Is.EqualTo(TimeSpan.Zero));
+                Assert.That(handler.PooledConnectionLifetime, Is.EqualTo(TimeSpan.Zero));
+            });
+        }
+
+        [Test]
         public void SelectAllowedAddresses_FiltersNonPublicAddresses()
         {
             DnsEndPoint destination = new("avatars.example.com", 443);

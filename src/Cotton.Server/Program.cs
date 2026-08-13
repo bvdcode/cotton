@@ -122,14 +122,7 @@ namespace Cotton.Server
                     client.Timeout = TimeSpan.FromSeconds(10);
                     client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
                 })
-                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-                {
-                    AllowAutoRedirect = true,
-                    MaxAutomaticRedirections = 5,
-                    UseCookies = false,
-                    UseProxy = false,
-                    ConnectCallback = OidcAvatarConnectionPolicy.ConnectAsync,
-                });
+                .ConfigurePrimaryHttpMessageHandler(OidcAvatarConnectionPolicy.CreateHandler);
             builder.Services.AddHttpClient<CottonPublicEmailProvider>(client =>
             {
                 client.BaseAddress = new Uri(CottonPublicEmailProvider.CottonBridgeBaseUrl);

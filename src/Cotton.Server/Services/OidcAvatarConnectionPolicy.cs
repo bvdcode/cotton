@@ -11,6 +11,20 @@ namespace Cotton.Server.Services
         public static HttpRequestOptionsKey<DnsEndPoint> TrustedPrivateEndpointOption { get; } =
             new("Cotton.OidcAvatar.TrustedPrivateEndpoint");
 
+        public static SocketsHttpHandler CreateHandler()
+        {
+            return new SocketsHttpHandler
+            {
+                AllowAutoRedirect = true,
+                MaxAutomaticRedirections = 5,
+                UseCookies = false,
+                UseProxy = false,
+                PooledConnectionIdleTimeout = TimeSpan.Zero,
+                PooledConnectionLifetime = TimeSpan.Zero,
+                ConnectCallback = ConnectAsync,
+            };
+        }
+
         public static async ValueTask<Stream> ConnectAsync(
             SocketsHttpConnectionContext context,
             CancellationToken cancellationToken)
