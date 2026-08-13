@@ -430,8 +430,51 @@ namespace Cotton.Server.IntegrationTests
             {
                 Assert.That(getResponse.Headers.ETag?.Tag, Is.EqualTo(quotedETag));
                 Assert.That(headResponse.Headers.ETag?.Tag, Is.EqualTo(quotedETag));
+                Assert.That(getResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/plain"));
+                Assert.That(headResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/plain"));
+                Assert.That(getResponse.Content.Headers.ContentDisposition, Is.Null);
+                Assert.That(headResponse.Content.Headers.ContentDisposition, Is.Null);
+                Assert.That(getResponse.Headers.GetValues("X-Content-Type-Options"), Does.Contain("nosniff"));
+                Assert.That(headResponse.Headers.GetValues("X-Content-Type-Options"), Does.Contain("nosniff"));
                 Assert.That(propFindResponse.StatusCode, Is.EqualTo(HttpStatusCode.MultiStatus));
                 Assert.That(propFindXml, Does.Contain(quotedETag));
+            });
+        }
+
+        [Test]
+        public async Task WebDav_Dangerous_Content_Is_Forced_To_Attachment()
+        {
+            string token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
+
+            const string fileName = "webdav-payload.svg";
+            const string svg = "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>";
+            await UploadTextFileAsync(
+                root!,
+                fileName,
+                svg,
+                contentType: "image/svg+xml");
+
+            string webDavToken = await GetWebDavTokenAsync();
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Basic",
+                Convert.ToBase64String(Encoding.UTF8.GetBytes($"testuser:{webDavToken}")));
+
+            using HttpResponseMessage getResponse = await _client.GetAsync($"/api/v1/webdav/{fileName}");
+            using HttpRequestMessage headRequest = new(HttpMethod.Head, $"/api/v1/webdav/{fileName}");
+            using HttpResponseMessage headResponse = await _client.SendAsync(headRequest);
+
+            getResponse.EnsureSuccessStatusCode();
+            headResponse.EnsureSuccessStatusCode();
+            Assert.That(await getResponse.Content.ReadAsStringAsync(), Is.EqualTo(svg));
+
+            Assert.Multiple(() =>
+            {
+                AssertWebDavSvgAttachmentHeaders(getResponse, fileName);
+                AssertWebDavSvgAttachmentHeaders(headResponse, fileName);
             });
         }
 
@@ -2013,6 +2056,15 @@ namespace Cotton.Server.IntegrationTests
             int index = downloadLink.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
             Assert.That(index, Is.GreaterThanOrEqualTo(0));
             return Uri.UnescapeDataString(downloadLink[(index + marker.Length)..]);
+        }
+
+        private static void AssertWebDavSvgAttachmentHeaders(HttpResponseMessage response, string fileName)
+        {
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("image/svg+xml"));
+            Assert.That(response.Content.Headers.ContentDisposition?.DispositionType, Is.EqualTo("attachment"));
+            Assert.That(response.Content.Headers.ContentDisposition?.FileNameStar, Is.EqualTo(fileName));
+            Assert.That(response.Headers.GetValues("X-Content-Type-Options"), Does.Contain("nosniff"));
+            Assert.That(response.Headers.GetValues("Content-Security-Policy"), Has.Some.Contains("sandbox"));
         }
 
         private async Task<bool> WaitForDownloadTokenAsync(string token, bool expectedExists)
