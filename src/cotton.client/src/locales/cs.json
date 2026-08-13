@@ -1646,6 +1646,10 @@
       "sending": "Odesílání...",
       "error": "Odeslání odkazu pro obnovení selhalo. Zkuste to prosím později."
     },
+    "demoInstance": {
+      "title": "Ukázková instance",
+      "message": "Pokud účet s tímto uživatelským jménem ještě neexistuje, bude vytvořen se zadaným heslem."
+    },
     "firstRun": {
       "title": "Úvodní nastavení",
       "message": "Žádní uživatelé zatím neexistují. Údaje, které zadáte, vytvoří první administrátorský účet. Tato možnost je dostupná pouze krátce po spuštění. V případě potřeby instanci restartujte.",

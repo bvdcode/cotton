@@ -1645,6 +1645,10 @@
       "sending": "Envoi en cours...",
       "error": "Échec de l'envoi du lien de réinitialisation. Veuillez réessayer plus tard."
     },
+    "demoInstance": {
+      "title": "Instance de démonstration",
+      "message": "Si aucun compte ne correspond à ce nom d’utilisateur, il sera créé avec le mot de passe saisi."
+    },
     "firstRun": {
       "title": "Configuration initiale",
       "message": "Aucun utilisateur n'existe encore. Les identifiants que vous saisirez créeront le premier compte administrateur. Ceci n'est disponible que peu de temps après le démarrage. Redémarrez l'instance si nécessaire.",

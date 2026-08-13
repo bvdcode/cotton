@@ -1644,6 +1644,10 @@
       "sending": "Enviando...",
       "error": "No se pudo enviar el enlace de restablecimiento. Inténtalo más tarde."
     },
+    "demoInstance": {
+      "title": "Instancia de demostración",
+      "message": "Si aún no existe una cuenta con este nombre de usuario, se creará con la contraseña introducida."
+    },
     "firstRun": {
       "title": "Configuración inicial",
       "message": "Aún no existen usuarios. Las credenciales que introduzcas crearán la primera cuenta de administrador. Esto solo está disponible poco después del inicio. Reinicia la instancia si es necesario.",

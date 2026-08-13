@@ -1649,6 +1649,10 @@
       "sending": "Wysyłanie...",
       "error": "Nie udało się wysłać linku do resetu. Spróbuj ponownie później."
     },
+    "demoInstance": {
+      "title": "Instancja demonstracyjna",
+      "message": "Jeśli konto o tej nazwie użytkownika jeszcze nie istnieje, zostanie utworzone z podanym hasłem."
+    },
     "firstRun": {
       "title": "Konfiguracja początkowa",
       "message": "Brak istniejących użytkowników. Wprowadzone dane logowania utworzą pierwsze konto administratora. Ta opcja jest dostępna tylko krótko po uruchomieniu. W razie potrzeby należy zrestartować instancję.",

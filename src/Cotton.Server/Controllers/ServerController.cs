@@ -40,7 +40,8 @@ namespace Cotton.Server.Controllers
             return Ok(new PublicServerInfo()
             {
                 InstanceIdHash = instanceIdHash,
-                CanCreateInitialAdmin = !serverHasUsers,
+                CanCreateInitialAdmin = !Constants.IsPublicInstance && !serverHasUsers,
+                IsPublicInstance = Constants.IsPublicInstance,
                 Product = Constants.ProductName,
             });
         }
