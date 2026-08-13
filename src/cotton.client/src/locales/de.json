@@ -1641,6 +1641,10 @@
       "sending": "Wird gesendet...",
       "error": "Link zum Zurücksetzen konnte nicht gesendet werden. Bitte versuche es später."
     },
+    "demoInstance": {
+      "title": "Demo-Instanz",
+      "message": "Wenn noch kein Konto mit diesem Benutzernamen existiert, wird es mit dem eingegebenen Passwort erstellt."
+    },
     "firstRun": {
       "title": "Erste Einrichtung",
       "message": "Es gibt noch keine Benutzer. Die Anmeldedaten, die du eingibst, erstellen das erste Administratorkonto. Das ist nur kurz nach dem Start möglich. Starte die Instanz bei Bedarf neu.",

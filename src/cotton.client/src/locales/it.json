@@ -1647,6 +1647,10 @@
       "sending": "Invio in corso...",
       "error": "Impossibile inviare il link di reimpostazione. Riprovi più tardi."
     },
+    "demoInstance": {
+      "title": "Istanza demo",
+      "message": "Se non esiste ancora un account con questo nome utente, verrà creato con la password inserita."
+    },
     "firstRun": {
       "title": "Configurazione iniziale",
       "message": "Non esiste ancora alcun utente. Le credenziali inserite creeranno il primo account amministratore. Questo è disponibile solo poco dopo l'avvio. Riavvii l'istanza se necessario.",

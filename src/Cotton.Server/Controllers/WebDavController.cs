@@ -3,6 +3,7 @@
 
 using Cotton.Server.Auth;
 using Cotton.Server.Handlers.WebDav;
+using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
@@ -98,6 +99,7 @@ namespace Cotton.Server.Controllers
             }
 
             AddDavHeaders();
+            ApplyFileResponseSecurity(result.ContentType, result.FileName);
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
 
@@ -134,6 +136,7 @@ namespace Cotton.Server.Controllers
             }
 
             AddDavHeaders();
+            ApplyFileResponseSecurity(result.ContentType, result.FileName);
             Response.ContentType = result.ContentType ?? "application/octet-stream";
             Response.ContentLength = result.ContentLength;
             Response.Headers.AcceptRanges = "bytes";
@@ -151,6 +154,21 @@ namespace Cotton.Server.Controllers
             }
 
             return Ok();
+        }
+
+        private void ApplyFileResponseSecurity(string? contentType, string? fileName)
+        {
+            FileResponseSecurity.ApplyFileResponseHeaders(Response, contentType, requestedInline: true);
+            if (!FileResponseSecurity.IsDangerousInlineContentType(contentType))
+            {
+                return;
+            }
+
+            ContentDispositionHeaderValue contentDisposition = new("attachment")
+            {
+                FileNameStar = fileName,
+            };
+            Response.Headers.ContentDisposition = contentDisposition.ToString();
         }
 
         [HttpPut]

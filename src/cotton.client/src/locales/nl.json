@@ -1646,6 +1646,10 @@
       "sending": "Bezig met verzenden...",
       "error": "Verzenden van de herstellink mislukt. Probeer het later opnieuw."
     },
+    "demoInstance": {
+      "title": "Demo-instantie",
+      "message": "Als er nog geen account met deze gebruikersnaam bestaat, wordt het aangemaakt met het ingevoerde wachtwoord."
+    },
     "firstRun": {
       "title": "Eerste installatie",
       "message": "Er bestaan nog geen gebruikers. De inloggegevens die u invoert, worden gebruikt om het eerste beheerdersaccount aan te maken. Dit is alleen kort na het opstarten beschikbaar. Herstart de instantie indien nodig.",

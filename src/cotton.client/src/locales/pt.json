@@ -1648,6 +1648,10 @@
       "sending": "Enviando...",
       "error": "Falha ao enviar o link de redefinição. Tente novamente mais tarde."
     },
+    "demoInstance": {
+      "title": "Instância de demonstração",
+      "message": "Se ainda não existir uma conta com este nome de usuário, ela será criada com a senha informada."
+    },
     "firstRun": {
       "title": "Configuração inicial",
       "message": "Ainda não existem usuários. As credenciais informadas criarão a primeira conta de administrador. Isso só está disponível pouco depois da inicialização. Reinicie a instância se necessário.",

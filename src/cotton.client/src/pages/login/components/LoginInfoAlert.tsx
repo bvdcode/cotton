@@ -1,11 +1,11 @@
 import { Alert, AlertTitle } from "@mui/material";
 
-interface FirstRunAlertProps {
+interface LoginInfoAlertProps {
   title: string;
   message: string;
 }
 
-export const FirstRunAlert = ({ title, message }: FirstRunAlertProps) => (
+export const LoginInfoAlert = ({ title, message }: LoginInfoAlertProps) => (
   <Alert severity="info">
     <AlertTitle>{title}</AlertTitle>
     {message}

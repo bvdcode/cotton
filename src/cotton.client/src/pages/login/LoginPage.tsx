@@ -20,7 +20,7 @@ import Loader from "../../shared/ui/Loader";
 import { useServerInfoStore } from "../../shared/store/serverInfoStore";
 import { getSafeAuthReturnPath } from "../../shared/utils/authReturnPath";
 import { CredentialsFields } from "./components/CredentialsFields";
-import { FirstRunAlert } from "./components/FirstRunAlert";
+import { LoginInfoAlert } from "./components/LoginInfoAlert";
 import { ForgotPasswordLink } from "./components/ForgotPasswordLink";
 import { TrustDeviceToggle } from "./components/TrustDeviceToggle";
 import { TwoFactorFields } from "./components/TwoFactorFields";
@@ -64,6 +64,8 @@ export const LoginPage = () => {
     !auth.hasChecked;
   const showFirstRunAlert =
     serverInfo !== null && serverInfo.canCreateInitialAdmin;
+  const showDemoAlert =
+    serverInfo?.isPublicInstance === true && !form.requiresTwoFactor;
   const isFirstRunMode = showFirstRunAlert && !form.requiresTwoFactor;
 
   return (
@@ -86,6 +88,7 @@ export const LoginPage = () => {
         >
           <Stack spacing={2.5}>
             <LoginFormFields form={form} />
+            {showDemoAlert && <DemoInstanceNotice />}
             {showFirstRunAlert && <FirstRunNotice />}
             <LoginActions form={form} isFirstRunMode={isFirstRunMode} />
             <OidcProviderButtons
@@ -211,9 +214,20 @@ const FirstRunNotice = () => {
   const { t } = useTranslation("login");
 
   return (
-    <FirstRunAlert
+    <LoginInfoAlert
       title={t("firstRun.title")}
       message={t("firstRun.message")}
+    />
+  );
+};
+
+const DemoInstanceNotice = () => {
+  const { t } = useTranslation("login");
+
+  return (
+    <LoginInfoAlert
+      title={t("demoInstance.title")}
+      message={t("demoInstance.message")}
     />
   );
 };

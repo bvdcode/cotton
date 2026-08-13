@@ -116,11 +116,13 @@ namespace Cotton.Server
                 client.Timeout = TimeSpan.FromSeconds(15);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
             });
-            builder.Services.AddHttpClient<OidcAvatarImportService>(client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(10);
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
-            });
+            builder.Services
+                .AddHttpClient<OidcAvatarImportService>(client =>
+                {
+                    client.Timeout = TimeSpan.FromSeconds(10);
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
+                })
+                .ConfigurePrimaryHttpMessageHandler(OidcAvatarConnectionPolicy.CreateHandler);
             builder.Services.AddHttpClient<CottonPublicEmailProvider>(client =>
             {
                 client.BaseAddress = new Uri(CottonPublicEmailProvider.CottonBridgeBaseUrl);

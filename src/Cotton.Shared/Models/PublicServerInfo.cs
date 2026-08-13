@@ -25,5 +25,10 @@ namespace Cotton.Models
         /// Gets or sets a value indicating whether the initial administrator can be created.
         /// </summary>
         public bool CanCreateInitialAdmin { get; set; }
+
+        /// <summary>
+        /// Indicates whether visitors can create user accounts by signing in with new credentials.
+        /// </summary>
+        public bool IsPublicInstance { get; set; }
     }
 }

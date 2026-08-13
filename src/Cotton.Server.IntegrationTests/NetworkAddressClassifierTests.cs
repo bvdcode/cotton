@@ -43,6 +43,39 @@ namespace Cotton.Server.IntegrationTests
                 Is.False);
         }
 
+        [TestCase("8.8.8.8")]
+        [TestCase("1.1.1.1")]
+        [TestCase("2001:4860:4860::8888")]
+        public void IsPublicInternetAddress_AcceptsPublicAddresses(string ipAddress)
+        {
+            Assert.That(
+                NetworkAddressClassifier.IsPublicInternetAddress(IPAddress.Parse(ipAddress)),
+                Is.True);
+        }
+
+        [TestCase("0.0.0.0")]
+        [TestCase("10.0.0.1")]
+        [TestCase("100.64.0.1")]
+        [TestCase("127.0.0.1")]
+        [TestCase("169.254.169.254")]
+        [TestCase("172.16.0.1")]
+        [TestCase("192.168.0.1")]
+        [TestCase("198.18.0.1")]
+        [TestCase("224.0.0.1")]
+        [TestCase("255.255.255.255")]
+        [TestCase("::")]
+        [TestCase("::1")]
+        [TestCase("::ffff:127.0.0.1")]
+        [TestCase("fc00::1")]
+        [TestCase("fe80::1")]
+        [TestCase("ff02::1")]
+        public void IsPublicInternetAddress_RejectsNonPublicAddresses(string ipAddress)
+        {
+            Assert.That(
+                NetworkAddressClassifier.IsPublicInternetAddress(IPAddress.Parse(ipAddress)),
+                Is.False);
+        }
+
         [Test]
         public async Task SharedFileDownloadedNotification_UsesLocalNetworkLocationForPrivateIp()
         {

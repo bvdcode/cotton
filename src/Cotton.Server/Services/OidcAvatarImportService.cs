@@ -7,6 +7,7 @@ using Cotton.Previews;
 using Cotton.Server.Abstractions;
 using Cotton.Storage.Abstractions;
 using System.Buffers;
+using System.Net;
 
 namespace Cotton.Server.Services
 {
@@ -23,6 +24,7 @@ namespace Cotton.Server.Services
         public async Task TryImportMissingAvatarAsync(
             User user,
             string? pictureUrl,
+            string issuer,
             CancellationToken ct)
         {
             if (user.AvatarHash is not null || user.AvatarHashEncrypted is not null)
@@ -38,7 +40,11 @@ namespace Cotton.Server.Services
 
             try
             {
-                byte[] sourceImage = await DownloadAvatarAsync(avatarUri, ct);
+                DnsEndPoint? trustedPrivateEndpoint = CreateTrustedPrivateEndpoint(issuer);
+                byte[] sourceImage = await DownloadAvatarAsync(
+                    avatarUri,
+                    trustedPrivateEndpoint,
+                    ct);
                 byte[] avatarPreviewWebP = await GenerateAvatarPreviewAsync(sourceImage);
                 Chunk avatarChunk = await _chunkIngest.UpsertChunkAsync(
                     user.Id,
@@ -51,7 +57,10 @@ namespace Cotton.Server.Services
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
-                _logger.LogWarning(ex, "Failed to import OIDC avatar from {AvatarUrl}", avatarUri);
+                _logger.LogWarning(
+                    ex,
+                    "Failed to import OIDC avatar from {AvatarHost}",
+                    avatarUri.Host);
             }
         }
 
@@ -72,17 +81,27 @@ namespace Cotton.Server.Services
                 : null;
         }
 
-        private async Task<byte[]> DownloadAvatarAsync(Uri uri, CancellationToken ct)
+        private async Task<byte[]> DownloadAvatarAsync(
+            Uri uri,
+            DnsEndPoint? trustedPrivateEndpoint,
+            CancellationToken ct)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            using HttpRequestMessage request = new(HttpMethod.Get, uri);
+            if (trustedPrivateEndpoint is not null)
+            {
+                request.Options.Set(
+                    OidcAvatarConnectionPolicy.TrustedPrivateEndpointOption,
+                    trustedPrivateEndpoint);
+            }
+
             using HttpResponseMessage response = await _httpClient.SendAsync(
                 request,
                 HttpCompletionOption.ResponseHeadersRead,
                 ct);
-
             if (!response.IsSuccessStatusCode)
             {
-                throw new InvalidOperationException($"Avatar download failed with HTTP {(int)response.StatusCode}.");
+                throw new InvalidOperationException(
+                    $"Avatar download failed with HTTP {(int)response.StatusCode}.");
             }
 
             long? contentLength = response.Content.Headers.ContentLength;
@@ -93,6 +112,14 @@ namespace Cotton.Server.Services
 
             await using Stream stream = await response.Content.ReadAsStreamAsync(ct);
             return await ReadLimitedAsync(stream, ct);
+        }
+
+        private static DnsEndPoint? CreateTrustedPrivateEndpoint(string issuer)
+        {
+            Uri? issuerUri = CreateHttpsUri(issuer);
+            return issuerUri is null
+                ? null
+                : new DnsEndPoint(issuerUri.IdnHost, issuerUri.Port);
         }
 
         private static async Task<byte[]> ReadLimitedAsync(Stream stream, CancellationToken ct)

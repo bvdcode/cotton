@@ -1442,6 +1442,10 @@
       "sending": "Sending...",
       "error": "Failed to send reset link. Please try again later."
     },
+    "demoInstance": {
+      "title": "Demo instance",
+      "message": "If an account with this username does not exist, it will be created with the password you enter."
+    },
     "firstRun": {
       "title": "Initial Setup",
       "message": "No users exist yet. The credentials you enter will create the first administrator account. This is only available shortly after startup. Restart the instance if needed.",

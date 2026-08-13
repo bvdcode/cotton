@@ -14,6 +14,7 @@ namespace Cotton.Server.Handlers.WebDav
         bool IsCollection,
         string? ContentType = null,
         long ContentLength = 0,
+        string? FileName = null,
         DateTimeOffset? LastModified = null,
         string? ETag = null);
 }

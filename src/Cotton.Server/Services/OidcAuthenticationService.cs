@@ -424,7 +424,11 @@ namespace Cotton.Server.Services
                 return;
             }
 
-            await _avatarImporter.TryImportMissingAvatarAsync(user, claims.PictureUrl, ct);
+            await _avatarImporter.TryImportMissingAvatarAsync(
+                user,
+                claims.PictureUrl,
+                provider.Issuer,
+                ct);
         }
 
         private static void ApplyProfileSync(User user, OidcProvider provider, OidcIdentityClaims claims)

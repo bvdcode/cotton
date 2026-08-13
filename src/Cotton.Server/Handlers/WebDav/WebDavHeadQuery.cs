@@ -47,6 +47,7 @@ namespace Cotton.Server.Handlers.WebDav
                     IsCollection: false,
                     ContentType: manifest.ContentType,
                     ContentLength: manifest.SizeBytes,
+                    FileName: resolveResult.NodeFile.Name,
                     LastModified: resolveResult.NodeFile.UpdatedAt,
                     ETag: FileETags.GetQuotedContentETag(manifest));
             }
