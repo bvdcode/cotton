@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "../api/httpClient";
 import type { Guid } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import { queryClient } from "../api/queries/queryClient";
@@ -922,9 +923,10 @@ export class UploadManager {
     error: Error | null,
   ): void {
     this.releaseQuotaReservation(task, false);
+    const errorMessage = getApiErrorMessage(error) ?? error?.message;
     if (state.encryptionTask && !state.encryptionTaskFinished) {
       state.encryptionTask.fail({
-        message: error?.message,
+        message: errorMessage,
         key: this.getEncryptionErrorKey(error),
         params: this.getUploadErrorParams(error),
       });
@@ -932,7 +934,7 @@ export class UploadManager {
 
     task.status = "failed";
     task.completedAt = Date.now();
-    task.error = error?.message;
+    task.error = errorMessage;
     task.errorKey = this.getUploadErrorKey(error);
     task.errorParams = this.getUploadErrorParams(error);
     this.fileConcurrency.observe({
