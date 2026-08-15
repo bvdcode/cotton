@@ -30,6 +30,11 @@ namespace Cotton.Server.IntegrationTests
                     Is.EqualTo("Security alert \u2014 Cotton Cloud"));
                 Assert.That(body, Does.Contain("Password changed"));
                 Assert.That(body, Does.Contain("Your password was changed."));
+                Assert.That(body, Does.Contain("https://cottoncloud.dev/favicon-96x96.png"));
+                Assert.That(body, Does.Contain("background:#151A21"));
+                Assert.That(body, Does.Contain("background:#96be02"));
+                Assert.That(body, Does.Not.Contain("cid:"));
+                Assert.That(body, Does.Not.Contain("linear-gradient"));
                 Assert.That(body, Does.Not.Contain("{{"));
             });
         }
