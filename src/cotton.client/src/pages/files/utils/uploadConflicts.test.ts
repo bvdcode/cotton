@@ -19,6 +19,54 @@ const createContent = (
   }) as NodeContentDto;
 
 describe("resolveUploadConflicts", () => {
+  it("normalizes names before resolving conflicts", async () => {
+    const file = new File(["new"], " image_028.jpg", { type: "image/jpeg" });
+    const confirmConflict = vi.fn(async () => ConflictAction.Overwrite);
+
+    const result = await resolveUploadConflicts(
+      [file],
+      createContent([{ id: "file-1", name: "image_028.jpg" }]),
+      confirmConflict,
+    );
+
+    expect(result.files).toHaveLength(1);
+    expect(result.files[0]?.file.name).toBe("image_028.jpg");
+    expect(result.files[0]?.replaceNodeFileId).toBe("file-1");
+    expect(confirmConflict).toHaveBeenCalledWith({
+      newName: "image_028 (1).jpg",
+      canOverwrite: true,
+    });
+  });
+
+  it("sends normalized names when no conflict exists", async () => {
+    const file = new File(["new"], " report.txt. ", { type: "text/plain" });
+
+    const result = await resolveUploadConflicts(
+      [file],
+      createContent([]),
+      vi.fn(),
+    );
+
+    expect(result.files[0]?.file.name).toBe("report.txt");
+  });
+
+  it("matches the server name key for diacritics", async () => {
+    const file = new File(["new"], "École.txt", { type: "text/plain" });
+    const confirmConflict = vi.fn(async () => ConflictAction.Rename);
+
+    const result = await resolveUploadConflicts(
+      [file],
+      createContent([], ["ecole.txt"]),
+      confirmConflict,
+    );
+
+    expect(result.files[0]?.file.name).toBe("École (1).txt");
+    expect(confirmConflict).toHaveBeenCalledWith({
+      newName: "École (1).txt",
+      canOverwrite: false,
+    });
+  });
+
   it("returns a replacement target when the user overwrites an existing file", async () => {
     const file = new File(["new"], "report.txt", { type: "text/plain" });
     const confirmConflict = vi.fn(async () => ConflictAction.Overwrite);
