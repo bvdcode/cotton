@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models.Enums;
+using Cotton.Localization;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
@@ -96,7 +97,53 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(geoLookup.LookupCount, Is.Zero);
                 Assert.That(sent.Metadata["location"], Is.EqualTo("local network"));
                 Assert.That(sent.Content, Does.Contain("local network"));
+                Assert.That(sent.Content, Does.Not.Contain("10.0.0.101"));
                 Assert.That(sent.Content, Does.Not.Contain("Unknown, Unknown, Unknown"));
+            });
+        }
+
+        [Test]
+        public async Task SharedFileDownloadedNotification_KeepsIpInDetailedMetadataOnly()
+        {
+            const string ipAddress = "2600:1700:6cf8:909f:146b:819e:793c:6937";
+            var notifications = new RecordingNotificationsProvider();
+            var geoLookup = new RecordingGeoLookupService();
+
+            await notifications.SendSharedFileDownloadedNotificationAsync(
+                geoLookup,
+                Guid.NewGuid(),
+                "report.pdf",
+                IPAddress.Parse(ipAddress),
+                new StringValues("Windows"));
+
+            SentNotification sent = notifications.Sent.Single();
+            Assert.Multiple(() =>
+            {
+                Assert.That(sent.Content, Does.Not.Contain(ipAddress));
+                Assert.That(sent.Content, Does.Not.Contain("…"));
+                Assert.That(sent.Metadata["ip"], Is.EqualTo(ipAddress));
+            });
+        }
+
+        [Test]
+        public void AppCodeApprovalContent_SeparatesPushAndDetailedText()
+        {
+            const string ipAddress = "2600:1700:6cf8:909f:146b:819e:793c:6937";
+            string pushContent = NotificationTemplates.AppCodeApprovalContent(
+                "Cotton Cloud",
+                "1.0.33",
+                origin: null);
+            string detailedContent = NotificationTemplates.AppCodeApprovalContent(
+                "Cotton Cloud",
+                "1.0.33",
+                ipAddress);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(pushContent, Is.EqualTo("Cotton Cloud 1.0.33 signed in."));
+                Assert.That(
+                    detailedContent,
+                    Is.EqualTo($"Cotton Cloud 1.0.33 signed in from {ipAddress}."));
             });
         }
 

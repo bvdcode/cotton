@@ -176,7 +176,8 @@ namespace Cotton.Server.Extensions
             ILogger logger,
             Guid userId,
             string title,
-            string content,
+            string notificationContent,
+            string emailContent,
             NotificationPriority priority,
             Dictionary<string, string> metadata)
         {
@@ -184,7 +185,7 @@ namespace Cotton.Server.Extensions
             await notifications.SendNotificationAsync(
                 userId,
                 title,
-                content,
+                notificationContent,
                 priority,
                 metadata);
             await notifications.SendSecurityEmailAsync(
@@ -192,7 +193,7 @@ namespace Cotton.Server.Extensions
                 logger,
                 userId,
                 title,
-                content,
+                emailContent,
                 occurredAt);
         }
 
@@ -230,14 +231,14 @@ namespace Cotton.Server.Extensions
                 title: NotificationTemplates.FailedLoginAttemptTitle,
                 content: context.HasDevice
                     ? NotificationTemplates.FailedLoginAttemptContent(
-                        username,
-                        context.Ip,
-                        context.DeviceName,
-                        context.Location)
+                        username: username,
+                        ipAddress: null,
+                        device: context.DeviceName,
+                        location: context.Location)
                     : NotificationTemplates.FailedLoginAttemptContentNoDevice(
-                        username,
-                        context.Ip,
-                        context.Location),
+                        username: username,
+                        ipAddress: null,
+                        location: context.Location),
                 priority: NotificationPriority.High,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.FailedLoginAttemptTitle, contentKey));
         }
@@ -258,7 +259,15 @@ namespace Cotton.Server.Extensions
             string contentKey = context.HasDevice
                 ? NotificationTemplateKeys.OtpDisabledWithDeviceContent
                 : NotificationTemplateKeys.OtpDisabledWithoutDeviceContent;
-            string content = context.HasDevice
+            string notificationContent = context.HasDevice
+                ? NotificationTemplates.OtpDisabledContent(
+                    ipAddress: null,
+                    device: context.DeviceName,
+                    location: context.Location)
+                : NotificationTemplates.OtpDisabledContentNoDevice(
+                    ipAddress: null,
+                    location: context.Location);
+            string emailContent = context.HasDevice
                 ? NotificationTemplates.OtpDisabledContent(
                     context.Ip,
                     context.DeviceName,
@@ -273,7 +282,8 @@ namespace Cotton.Server.Extensions
                 logger,
                 userId,
                 NotificationTemplates.OtpDisabledTitle,
-                content,
+                notificationContent,
+                emailContent,
                 NotificationPriority.High,
                 CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpDisabledTitle, contentKey));
         }
@@ -294,7 +304,15 @@ namespace Cotton.Server.Extensions
             string contentKey = context.HasDevice
                 ? NotificationTemplateKeys.OtpEnabledWithDeviceContent
                 : NotificationTemplateKeys.OtpEnabledWithoutDeviceContent;
-            string content = context.HasDevice
+            string notificationContent = context.HasDevice
+                ? NotificationTemplates.OtpEnabledContent(
+                    ipAddress: null,
+                    device: context.DeviceName,
+                    location: context.Location)
+                : NotificationTemplates.OtpEnabledContentNoDevice(
+                    ipAddress: null,
+                    location: context.Location);
+            string emailContent = context.HasDevice
                 ? NotificationTemplates.OtpEnabledContent(
                     context.Ip,
                     context.DeviceName,
@@ -309,7 +327,8 @@ namespace Cotton.Server.Extensions
                 logger,
                 userId,
                 NotificationTemplates.OtpEnabledTitle,
-                content,
+                notificationContent,
+                emailContent,
                 NotificationPriority.Medium,
                 CreateTemplateMetadata(metadata, NotificationTemplateKeys.OtpEnabledTitle, contentKey));
         }
@@ -330,7 +349,15 @@ namespace Cotton.Server.Extensions
             string contentKey = context.HasDevice
                 ? NotificationTemplateKeys.SuccessfulLoginWithDeviceContent
                 : NotificationTemplateKeys.SuccessfulLoginWithoutDeviceContent;
-            string content = context.HasDevice
+            string notificationContent = context.HasDevice
+                ? NotificationTemplates.SuccessfulLoginContent(
+                    ipAddress: null,
+                    device: context.DeviceName,
+                    location: context.Location)
+                : NotificationTemplates.SuccessfulLoginContentNoDevice(
+                    ipAddress: null,
+                    location: context.Location);
+            string emailContent = context.HasDevice
                 ? NotificationTemplates.SuccessfulLoginContent(
                     context.Ip,
                     context.DeviceName,
@@ -345,7 +372,8 @@ namespace Cotton.Server.Extensions
                 logger,
                 userId,
                 NotificationTemplates.SuccessfulLoginTitle,
-                content,
+                notificationContent,
+                emailContent,
                 NotificationPriority.None,
                 CreateTemplateMetadata(metadata, NotificationTemplateKeys.SuccessfulLoginTitle, contentKey));
         }
@@ -372,14 +400,14 @@ namespace Cotton.Server.Extensions
                 title: NotificationTemplates.TotpFailedAttemptTitle,
                 content: context.HasDevice
                     ? NotificationTemplates.TotpFailedAttemptContent(
-                        totpFailedAttempts,
-                        context.Ip,
-                        context.DeviceName,
-                        context.Location)
+                        failedAttempts: totpFailedAttempts,
+                        ipAddress: null,
+                        device: context.DeviceName,
+                        location: context.Location)
                     : NotificationTemplates.TotpFailedAttemptContentNoDevice(
-                        totpFailedAttempts,
-                        context.Ip,
-                        context.Location),
+                        failedAttempts: totpFailedAttempts,
+                        ipAddress: null,
+                        location: context.Location),
                 priority: NotificationPriority.Medium,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.TotpFailedAttemptTitle, contentKey));
         }
@@ -406,14 +434,14 @@ namespace Cotton.Server.Extensions
                 title: NotificationTemplates.TotpLockoutTitle,
                 content: context.HasDevice
                     ? NotificationTemplates.TotpLockoutContent(
-                        maxFailedAttempts,
-                        context.Ip,
-                        context.DeviceName,
-                        context.Location)
+                        maxFailedAttempts: maxFailedAttempts,
+                        ipAddress: null,
+                        device: context.DeviceName,
+                        location: context.Location)
                     : NotificationTemplates.TotpLockoutContentNoDevice(
-                        maxFailedAttempts,
-                        context.Ip,
-                        context.Location),
+                        maxFailedAttempts: maxFailedAttempts,
+                        ipAddress: null,
+                        location: context.Location),
                 priority: NotificationPriority.High,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.TotpLockoutTitle, contentKey));
         }
@@ -434,7 +462,15 @@ namespace Cotton.Server.Extensions
             string contentKey = context.HasDevice
                 ? NotificationTemplateKeys.WebDavTokenResetWithDeviceContent
                 : NotificationTemplateKeys.WebDavTokenResetWithoutDeviceContent;
-            string content = context.HasDevice
+            string notificationContent = context.HasDevice
+                ? NotificationTemplates.WebDavTokenResetContent(
+                    ipAddress: null,
+                    device: context.DeviceName,
+                    location: context.Location)
+                : NotificationTemplates.WebDavTokenResetContentNoDevice(
+                    ipAddress: null,
+                    location: context.Location);
+            string emailContent = context.HasDevice
                 ? NotificationTemplates.WebDavTokenResetContent(
                     context.Ip,
                     context.DeviceName,
@@ -449,7 +485,8 @@ namespace Cotton.Server.Extensions
                 logger,
                 userId,
                 NotificationTemplates.WebDavTokenResetTitle,
-                content,
+                notificationContent,
+                emailContent,
                 NotificationPriority.Medium,
                 CreateTemplateMetadata(metadata, NotificationTemplateKeys.WebDavTokenResetTitle, contentKey));
         }
@@ -476,14 +513,14 @@ namespace Cotton.Server.Extensions
                 title: NotificationTemplates.SharedFileDownloadedTitle,
                 content: context.HasDevice
                     ? NotificationTemplates.SharedFileDownloadedContent(
-                        fileName,
-                        context.Ip,
-                        context.DeviceName,
-                        context.Location)
+                        fileName: fileName,
+                        ipAddress: null,
+                        device: context.DeviceName,
+                        location: context.Location)
                     : NotificationTemplates.SharedFileDownloadedContentNoDevice(
-                        fileName,
-                        context.Ip,
-                        context.Location),
+                        fileName: fileName,
+                        ipAddress: null,
+                        location: context.Location),
                 priority: NotificationPriority.None,
                 metadata: CreateTemplateMetadata(metadata, NotificationTemplateKeys.SharedFileDownloadedTitle, contentKey));
         }

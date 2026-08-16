@@ -9,81 +9,81 @@ namespace Cotton.Localization
 
         public static string FailedLoginAttemptContentNoDevice(
             string username,
-            string ipAddress,
+            string? ipAddress,
             string location)
         {
             return $"Someone tried to log in to your account '{username}' but failed. " +
-                   $"The attempt was made from {location} ({ipAddress}).";
+                   $"The attempt was made from {FormatLocation(location, ipAddress)}.";
         }
 
         public static string FailedLoginAttemptContent(
             string username,
-            string ipAddress,
+            string? ipAddress,
             string device,
             string location)
         {
             return $"Someone tried to log in to your account '{username}' but failed. " +
-                   $"The attempt was made from {device} in {location} ({ipAddress}).";
+                   $"The attempt was made from {device} in {FormatLocation(location, ipAddress)}.";
         }
 
         public static string SuccessfulLoginTitle => "New login to your account";
 
         public static string SuccessfulLoginContentNoDevice(
-            string ipAddress,
+            string? ipAddress,
             string location)
         {
-            return $"Your account was accessed from {location} ({ipAddress}). " +
+            return $"Your account was accessed from {FormatLocation(location, ipAddress)}. " +
                    $"If this wasn't you, please secure your account immediately.";
         }
 
         public static string SuccessfulLoginContent(
-            string ipAddress,
+            string? ipAddress,
             string device,
             string location)
         {
-            return $"Your account was accessed from {device} in {location} ({ipAddress}). " +
+            return $"Your account was accessed from {device} in {FormatLocation(location, ipAddress)}. " +
                    $"If this wasn't you, please secure your account immediately.";
         }
 
         public static string OtpDisabledTitle => "Two-factor authentication disabled";
 
         public static string OtpDisabledContentNoDevice(
-            string ipAddress,
+            string? ipAddress,
             string location)
         {
             return $"Two-factor authentication has been disabled for your account " +
-                   $"from {location} ({ipAddress}). " +
+                   $"from {FormatLocation(location, ipAddress)}. " +
                    $"Your account is less secure now. If this wasn't you, please secure your account immediately.";
         }
 
         public static string OtpDisabledContent(
-            string ipAddress,
+            string? ipAddress,
             string device,
             string location)
         {
             return $"Two-factor authentication has been disabled for your account from {device} " +
-                   $"in {location} ({ipAddress}). " +
+                   $"in {FormatLocation(location, ipAddress)}. " +
                    $"Your account is less secure now. If this wasn't you, please secure your account immediately.";
         }
 
         public static string OtpEnabledTitle => "Two-factor authentication activated";
 
         public static string OtpEnabledContentNoDevice(
-            string ipAddress,
+            string? ipAddress,
             string location)
         {
             return $"Two-factor authentication has been enabled for your account " +
-                   $"from {location} ({ipAddress}). " +
+                   $"from {FormatLocation(location, ipAddress)}. " +
                    $"Your account is now more secure.";
         }
 
         public static string OtpEnabledContent(
-            string ipAddress,
+            string? ipAddress,
             string device,
             string location)
         {
             return $"Two-factor authentication has been enabled for your account from {device} " +
-                   $"in {location} ({ipAddress}). " +
+                   $"in {FormatLocation(location, ipAddress)}. " +
                    $"Your account is now more secure.";
         }
 
@@ -91,22 +91,22 @@ namespace Cotton.Localization
 
         public static string TotpFailedAttemptContentNoDevice(
             int failedAttempts,
-            string ipAddress,
+            string? ipAddress,
             string location)
         {
             return $"An invalid two-factor authentication code was entered ({failedAttempts} failed attempt(s)). " +
-                   $"The attempt was made from {location} ({ipAddress}). " +
+                   $"The attempt was made from {FormatLocation(location, ipAddress)}. " +
                    $"If this wasn't you, your account may be under attack.";
         }
 
         public static string TotpFailedAttemptContent(
             int failedAttempts,
-            string ipAddress,
+            string? ipAddress,
             string device,
             string location)
         {
             return $"An invalid two-factor authentication code was entered ({failedAttempts} failed attempt(s)). " +
-                   $"The attempt was made from {device} in {location} ({ipAddress}). " +
+                   $"The attempt was made from {device} in {FormatLocation(location, ipAddress)}. " +
                    $"If this wasn't you, your account may be under attack.";
         }
 
@@ -114,43 +114,43 @@ namespace Cotton.Localization
 
         public static string TotpLockoutContentNoDevice(
             int maxFailedAttempts,
-            string ipAddress,
+            string? ipAddress,
             string location)
         {
             return $"Your account has been temporarily locked due to {maxFailedAttempts} failed authentication attempts. " +
-                   $"The last attempt was from {location} ({ipAddress}). " +
+                   $"The last attempt was from {FormatLocation(location, ipAddress)}. " +
                    $"Please wait before trying again.";
         }
 
         public static string TotpLockoutContent(
             int maxFailedAttempts,
-            string ipAddress,
+            string? ipAddress,
             string device,
             string location)
         {
             return $"Your account has been temporarily locked due to {maxFailedAttempts} failed authentication attempts. " +
-                   $"The last attempt was from {device} in {location} ({ipAddress}). " +
+                   $"The last attempt was from {device} in {FormatLocation(location, ipAddress)}. " +
                    $"Please wait before trying again.";
         }
 
         public static string WebDavTokenResetTitle => "WebDAV access token changed";
 
         public static string WebDavTokenResetContentNoDevice(
-            string ipAddress,
+            string? ipAddress,
             string location)
         {
             return $"Your WebDAV access token has been reset " +
-                   $"from {location} ({ipAddress}). " +
+                   $"from {FormatLocation(location, ipAddress)}. " +
                    $"You will need to update your WebDAV client with the new token.";
         }
 
         public static string WebDavTokenResetContent(
-            string ipAddress,
+            string? ipAddress,
             string device,
             string location)
         {
             return $"Your WebDAV access token has been reset from {device} " +
-                   $"in {location} ({ipAddress}). " +
+                   $"in {FormatLocation(location, ipAddress)}. " +
                    $"You will need to update your WebDAV client with the new token.";
         }
 
@@ -209,21 +209,21 @@ namespace Cotton.Localization
 
         public static string SharedFileDownloadedContentNoDevice(
             string fileName,
-            string ipAddress,
+            string? ipAddress,
             string location)
         {
             return $"Your shared file '{fileName}' was downloaded " +
-                   $"from {location} ({ipAddress}).";
+                   $"from {FormatLocation(location, ipAddress)}.";
         }
 
         public static string SharedFileDownloadedContent(
             string fileName,
-            string ipAddress,
+            string? ipAddress,
             string device,
             string location)
         {
             return $"Your shared file '{fileName}' was downloaded from {device} " +
-                   $"in {location} ({ipAddress}).";
+                   $"in {FormatLocation(location, ipAddress)}.";
         }
 
         public static string UploadHashMismatchTitle => "Upload verification failed";
@@ -276,8 +276,13 @@ namespace Cotton.Localization
         public static string AppCodeApprovalContent(
             string applicationName,
             string applicationVersion,
-            string origin)
+            string? origin)
         {
+            if (string.IsNullOrWhiteSpace(origin))
+            {
+                return $"{applicationName} {applicationVersion} signed in.";
+            }
+
             return $"{applicationName} {applicationVersion} signed in from {origin}.";
         }
 
@@ -293,6 +298,16 @@ namespace Cotton.Localization
             return normalized.Length <= maxLength
                 ? normalized
                 : normalized[..maxLength].TrimEnd() + "...";
+        }
+
+        private static string FormatLocation(string location, string? ipAddress)
+        {
+            if (string.IsNullOrWhiteSpace(ipAddress))
+            {
+                return location;
+            }
+
+            return $"{location} ({ipAddress})";
         }
 
         public static string StoragePressureTitle => "Storage is running out of free space";

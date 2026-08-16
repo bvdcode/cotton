@@ -256,7 +256,11 @@ public class AppCodeOAuthController(
 
     private async Task SendApprovedSecurityEventAsync(Guid userId, AppCodeRequestState state)
     {
-        string content = NotificationTemplates.AppCodeApprovalContent(
+        string notificationContent = NotificationTemplates.AppCodeApprovalContent(
+            state.ApplicationName,
+            state.ApplicationVersion,
+            origin: null);
+        string emailContent = NotificationTemplates.AppCodeApprovalContent(
             state.ApplicationName,
             state.ApplicationVersion,
             state.Origin);
@@ -278,7 +282,7 @@ public class AppCodeOAuthController(
             await _notifications.SendNotificationAsync(
                 userId,
                 NotificationTemplates.AppCodeApprovalTitle,
-                content,
+                notificationContent,
                 NotificationPriority.Medium,
                 templateMetadata);
         }
@@ -295,7 +299,7 @@ public class AppCodeOAuthController(
             _logger,
             userId,
             NotificationTemplates.AppCodeApprovalTitle,
-            content,
+            emailContent,
             state.ApprovedAt ?? DateTime.UtcNow);
     }
 
