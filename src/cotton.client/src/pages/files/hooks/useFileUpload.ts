@@ -541,7 +541,7 @@ export const useFileUpload = (
       const now = Date.now();
       const count = files.length;
       if (count === lastNotifiedCount) return;
-      if (now - lastNotifyTime < 120 && count < 10_000) return;
+      if (now - lastNotifyTime < 120) return;
       lastNotifiedCount = count;
       lastNotifyTime = now;
       onFileFound(count);

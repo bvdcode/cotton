@@ -1,6 +1,10 @@
 import type { NodeContentDto } from "../../../shared/api/nodesApi";
 import type { UploadFileQueueItem } from "../../../shared/upload/types";
-import { nextAvailableName } from "./fileNameUtils";
+import {
+  getFileNameKey,
+  nextAvailableName,
+  normalizeFileName,
+} from "./fileNameUtils";
 
 export const ConflictAction = {
   Overwrite: "overwrite",
@@ -37,22 +41,30 @@ export async function resolveUploadConflicts(
   content: NodeContentDto,
   confirmConflict: (prompt: UploadConflictPrompt) => Promise<ConflictAction>,
 ): Promise<ConflictResult> {
-  const filesByNameLower = new Map(
-    content.files.map((file) => [file.name.toLowerCase(), file]),
+  const filesByNameKey = new Map(
+    content.files.map((file) => [getFileNameKey(file.name), file]),
   );
-  const takenLower = new Set<string>([
-    ...content.nodes.map((n) => n.name.toLowerCase()),
-    ...filesByNameLower.keys(),
+  const takenNameKeys = new Set<string>([
+    ...content.nodes.map((node) => getFileNameKey(node.name)),
+    ...filesByNameKey.keys(),
   ]);
 
   const resolved: UploadFileQueueItem[] = [];
   const replacedFileIds = new Set<string>();
   let skipAllConflicts = false;
 
-  for (const file of files) {
-    const desiredNameLower = file.name.toLowerCase();
-    if (!takenLower.has(desiredNameLower)) {
-      takenLower.add(desiredNameLower);
+  for (const sourceFile of files) {
+    const normalizedName = normalizeFileName(sourceFile.name);
+    const file =
+      normalizedName === sourceFile.name
+        ? sourceFile
+        : new File([sourceFile], normalizedName, {
+            type: sourceFile.type,
+            lastModified: sourceFile.lastModified,
+          });
+    const desiredNameKey = getFileNameKey(file.name);
+    if (!takenNameKeys.has(desiredNameKey)) {
+      takenNameKeys.add(desiredNameKey);
       resolved.push({ file });
       continue;
     }
@@ -61,8 +73,8 @@ export async function resolveUploadConflicts(
       continue;
     }
 
-    const newName = nextAvailableName(file.name, takenLower);
-    const existingFile = filesByNameLower.get(desiredNameLower);
+    const newName = nextAvailableName(file.name, takenNameKeys);
+    const existingFile = filesByNameKey.get(desiredNameKey);
     const canOverwrite = Boolean(
       existingFile && !replacedFileIds.has(existingFile.id),
     );
@@ -91,7 +103,7 @@ export async function resolveUploadConflicts(
       type: file.type,
       lastModified: file.lastModified,
     });
-    takenLower.add(newName.toLowerCase());
+    takenNameKeys.add(getFileNameKey(newName));
     resolved.push({ file: renamed });
   }
 

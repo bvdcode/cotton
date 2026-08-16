@@ -16,7 +16,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
 using System.Net;
 using System.Net.Mail;
-using System.Net.Mime;
 using System.Text;
 
 namespace Cotton.Server.Services
@@ -258,34 +257,14 @@ namespace Cotton.Server.Services
             {
                 From = new MailAddress(settings.FromAddress, Constants.ProductName),
                 Subject = subject,
+                SubjectEncoding = Encoding.UTF8,
+                Body = body,
+                BodyEncoding = Encoding.UTF8,
+                IsBodyHtml = body.Contains("<html", StringComparison.OrdinalIgnoreCase),
             };
 
             var recipient = new MailAddress(recipientEmail, recipientName);
             mailMessage.To.Add(recipient);
-
-            bool isHtml = body.Contains("<html", StringComparison.OrdinalIgnoreCase);
-            if (!isHtml)
-            {
-                mailMessage.Body = body;
-                mailMessage.IsBodyHtml = false;
-            }
-            else
-            {
-                var htmlView = AlternateView.CreateAlternateViewFromString(
-                    body, Encoding.UTF8, MediaTypeNames.Text.Html);
-
-                var iconBytes = EmailTemplateRenderer.GetIconBytes();
-                var iconStream = new MemoryStream(iconBytes);
-                var iconResource = new LinkedResource(iconStream, EmailTemplateRenderer.IconContentType)
-                {
-                    ContentId = EmailTemplateRenderer.IconContentId,
-                    TransferEncoding = System.Net.Mime.TransferEncoding.Base64,
-                };
-                htmlView.LinkedResources.Add(iconResource);
-
-                mailMessage.AlternateViews.Add(htmlView);
-                mailMessage.IsBodyHtml = true;
-            }
 
             client.Send(mailMessage);
         }

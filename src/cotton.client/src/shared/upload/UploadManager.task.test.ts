@@ -409,6 +409,33 @@ describe("UploadManager task facade", () => {
 
     consoleError.mockRestore();
   });
+
+  it("preserves the server failure detail for failed upload tasks", async () => {
+    const taskManager = createManager();
+    const apiError = Object.assign(
+      new Error("Request failed with status 500"),
+      {
+        isAxiosError: true,
+        response: { data: { detail: "The storage backend is unavailable." } },
+      },
+    );
+    mocks.uploadFileToNode.mockRejectedValue(apiError);
+
+    taskManager.enqueue(
+      [new File(["report"], "report.txt")],
+      "node-1",
+      "Library",
+    );
+
+    await waitFor(
+      () => taskManager.getSnapshot().tasks[0]?.status === "failed",
+    );
+
+    expect(taskManager.getSnapshot().tasks[0]).toMatchObject({
+      error: "The storage backend is unavailable.",
+      errorKey: "uploadFailed",
+    });
+  });
 });
 
 const waitFor = async (predicate: () => boolean): Promise<void> => {

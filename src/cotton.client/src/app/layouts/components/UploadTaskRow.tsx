@@ -1,5 +1,12 @@
 import React from "react";
-import { Box, Divider, LinearProgress, Typography } from "@mui/material";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import {
+  Box,
+  Divider,
+  LinearProgress,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import type { LinearProgressProps } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../../shared/utils/formatBytes";
@@ -25,6 +32,8 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
     task.kind === "upload" &&
     task.status === "running" &&
     task.speedBytesPerSec != null;
+  const errorDetails =
+    isFailed && task.errorKey ? task.error?.trim() : undefined;
 
   return (
     <Box sx={{ pr: 0.5, pb: 1 }}>
@@ -67,16 +76,33 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
             ? `${formatBytes(task.speedBytesPerSec ?? 0)}/s`
             : t(`status.${task.status}`)}
         </Typography>
-        <Typography
-          variant="caption"
-          color={isFailed ? "error" : "text.secondary"}
-        >
-          {isFailed
-            ? task.errorKey
-              ? t(`errors.${task.errorKey}`, task.errorParams)
-              : (task.error ?? t("status.failed"))
-            : `${progressPercent}%`}
-        </Typography>
+        <Box display="flex" alignItems="center" gap={0.5} minWidth={0}>
+          {errorDetails && (
+            <Tooltip title={errorDetails} arrow>
+              <Box
+                component="span"
+                display="inline-flex"
+                color="error.main"
+                tabIndex={0}
+                aria-label={errorDetails}
+                sx={{ cursor: "help" }}
+              >
+                <ErrorOutlineIcon sx={{ fontSize: "1rem" }} />
+              </Box>
+            </Tooltip>
+          )}
+          <Typography
+            variant="caption"
+            color={isFailed ? "error" : "text.secondary"}
+            noWrap
+          >
+            {isFailed
+              ? task.errorKey
+                ? t(`errors.${task.errorKey}`, task.errorParams)
+                : (task.error ?? t("status.failed"))
+              : `${progressPercent}%`}
+          </Typography>
+        </Box>
       </Box>
     </Box>
   );

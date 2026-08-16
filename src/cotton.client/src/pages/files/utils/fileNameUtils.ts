@@ -45,8 +45,26 @@ export function parseFileName(name: string): {
   };
 }
 
+export function normalizeFileName(name: string): string {
+  let normalized = name.normalize("NFC").trim();
+  while (normalized.endsWith(".")) {
+    normalized = normalized.slice(0, -1);
+  }
+
+  return normalized;
+}
+
+export function getFileNameKey(name: string): string {
+  const folded = normalizeFileName(name)
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  const lower = Array.from(folded, (rune) => rune.toLowerCase()).join("");
+
+  return lower.normalize("NFC");
+}
+
 /**
- * Generate the next available filename given a set of taken names (case-insensitive).
+ * Generate the next available filename given a set of normalized name keys.
  * If the original name is free, returns it unchanged.
  * Otherwise, finds the next available "baseName (N).ext" where N starts from 1
  * (or increments from an existing counter).
@@ -58,10 +76,9 @@ export function parseFileName(name: string): {
  */
 export function nextAvailableName(
   originalName: string,
-  takenLower: Set<string>,
+  takenNameKeys: Set<string>,
 ): string {
-  const originalLower = originalName.toLowerCase();
-  if (!takenLower.has(originalLower)) {
+  if (!takenNameKeys.has(getFileNameKey(originalName))) {
     return originalName;
   }
 
@@ -72,7 +89,7 @@ export function nextAvailableName(
 
   for (let i = startFrom; i < 1_000_000; i += 1) {
     const candidate = `${baseName} (${i})${ext}`;
-    if (!takenLower.has(candidate.toLowerCase())) {
+    if (!takenNameKeys.has(getFileNameKey(candidate))) {
       return candidate;
     }
   }
