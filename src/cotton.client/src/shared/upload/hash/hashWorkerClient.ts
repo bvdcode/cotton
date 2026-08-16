@@ -5,6 +5,7 @@ type HashChunkResult = {
   type: "hashChunkResult";
   requestId: string;
   chunkHash: string;
+  buffer: ArrayBuffer;
 };
 type UpdateFileHashResult = { type: "updateFileHashResult"; requestId: string };
 type DigestFileResult = {
@@ -26,12 +27,21 @@ type PendingRequest<T> = {
   reject: (err: Error) => void;
 };
 
+export interface HashedChunkBuffer {
+  chunkHash: string;
+  buffer: ArrayBuffer;
+}
+
 const makeRequestId = () =>
   `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export class HashWorkerClient {
   private readonly worker: Worker;
-  private readonly pending = new Map<string, PendingRequest<string>>();
+  private readonly pendingStrings = new Map<string, PendingRequest<string>>();
+  private readonly pendingChunks = new Map<
+    string,
+    PendingRequest<HashedChunkBuffer>
+  >();
   private readonly pendingVoid = new Map<string, PendingRequest<void>>();
   private initBarrier: Promise<void> | null = null;
 
@@ -41,39 +51,20 @@ export class HashWorkerClient {
     });
     this.worker.onmessage = (ev: MessageEvent<OutMessage>) => {
       const msg = ev.data;
-      if (msg.type === "error") {
-        if (msg.requestId) {
-          const p = this.pending.get(msg.requestId);
-          if (p) {
-            this.pending.delete(msg.requestId);
-            p.reject(new Error(msg.message));
-          }
-          const pVoid = this.pendingVoid.get(msg.requestId);
-          if (pVoid) {
-            this.pendingVoid.delete(msg.requestId);
-            pVoid.reject(new Error(msg.message));
-          }
-        }
-        return;
-      }
-
-      if (msg.type === "initResult" || msg.type === "updateFileHashResult") {
-        const pVoid = this.pendingVoid.get(msg.requestId);
-        if (pVoid) {
-          this.pendingVoid.delete(msg.requestId);
-          pVoid.resolve();
-        }
-        return;
-      }
-
-      const p = this.pending.get(msg.requestId);
-      if (!p) return;
-      this.pending.delete(msg.requestId);
-
-      if (msg.type === "hashChunkResult") {
-        p.resolve(msg.chunkHash);
-      } else if (msg.type === "digestFileResult") {
-        p.resolve(msg.fileHash);
+      switch (msg.type) {
+        case "error":
+          this.rejectRequest(msg);
+          return;
+        case "initResult":
+        case "updateFileHashResult":
+          this.resolveVoidRequest(msg.requestId);
+          return;
+        case "hashChunkResult":
+          this.resolveChunkRequest(msg);
+          return;
+        case "digestFileResult":
+          this.resolveStringRequest(msg.requestId, msg.fileHash);
+          return;
       }
     };
   }
@@ -101,19 +92,22 @@ export class HashWorkerClient {
   async hashChunk(
     buffer: ArrayBuffer,
     options?: { updateFileHash?: boolean },
-  ): Promise<string> {
+  ): Promise<HashedChunkBuffer> {
     await this.ensureInitialized();
     const requestId = makeRequestId();
-    const promise = new Promise<string>((resolve, reject) => {
-      this.pending.set(requestId, { resolve, reject });
+    const promise = new Promise<HashedChunkBuffer>((resolve, reject) => {
+      this.pendingChunks.set(requestId, { resolve, reject });
     });
 
-    this.worker.postMessage({
-      type: "hashChunk",
-      requestId,
-      buffer,
-      updateFileHash: options?.updateFileHash,
-    });
+    this.worker.postMessage(
+      {
+        type: "hashChunk",
+        requestId,
+        buffer,
+        updateFileHash: options?.updateFileHash,
+      },
+      [buffer],
+    );
     return promise;
   }
 
@@ -136,7 +130,7 @@ export class HashWorkerClient {
     await this.ensureInitialized();
     const requestId = makeRequestId();
     const promise = new Promise<string>((resolve, reject) => {
-      this.pending.set(requestId, { resolve, reject });
+      this.pendingStrings.set(requestId, { resolve, reject });
     });
 
     this.worker.postMessage({ type: "digestFile", requestId });
@@ -145,9 +139,68 @@ export class HashWorkerClient {
 
   terminate() {
     this.worker.terminate();
-    this.pending.clear();
+    this.pendingStrings.clear();
+    this.pendingChunks.clear();
     this.pendingVoid.clear();
     this.initBarrier = null;
+  }
+
+  private rejectRequest(message: ErrorResult): void {
+    if (!message.requestId) {
+      return;
+    }
+
+    const error = new Error(message.message);
+    const stringRequest = this.pendingStrings.get(message.requestId);
+    if (stringRequest) {
+      this.pendingStrings.delete(message.requestId);
+      stringRequest.reject(error);
+    }
+
+    const chunkRequest = this.pendingChunks.get(message.requestId);
+    if (chunkRequest) {
+      this.pendingChunks.delete(message.requestId);
+      chunkRequest.reject(error);
+    }
+
+    const voidRequest = this.pendingVoid.get(message.requestId);
+    if (voidRequest) {
+      this.pendingVoid.delete(message.requestId);
+      voidRequest.reject(error);
+    }
+  }
+
+  private resolveVoidRequest(requestId: string): void {
+    const request = this.pendingVoid.get(requestId);
+    if (!request) {
+      return;
+    }
+
+    this.pendingVoid.delete(requestId);
+    request.resolve();
+  }
+
+  private resolveChunkRequest(message: HashChunkResult): void {
+    const request = this.pendingChunks.get(message.requestId);
+    if (!request) {
+      return;
+    }
+
+    this.pendingChunks.delete(message.requestId);
+    request.resolve({
+      chunkHash: message.chunkHash,
+      buffer: message.buffer,
+    });
+  }
+
+  private resolveStringRequest(requestId: string, value: string): void {
+    const request = this.pendingStrings.get(requestId);
+    if (!request) {
+      return;
+    }
+
+    this.pendingStrings.delete(requestId);
+    request.resolve(value);
   }
 }
 

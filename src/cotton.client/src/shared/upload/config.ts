@@ -3,8 +3,12 @@ export const uploadConfig = {
   // endpoint still receives the hash so the server can validate bytes on ingest.
   sendChunkHashForValidation: true,
 
-  // Upload at most 4 chunks in parallel inside one large file.
-  maxChunkUploadConcurrency: 4,
+  // Fixed network consumer pool for prepared chunks inside one file.
+  maxChunkUploadConcurrency: 8,
+
+  // Backpressure for chunks prepared by the sequential hash worker.
+  maxPreparedChunkCount: 16,
+  maxPreparedChunkBytes: 128 * 1024 * 1024,
 
   // If a chunk upload is interrupted by transport/network failure, retry that
   // byte range with smaller chunks down to this floor.

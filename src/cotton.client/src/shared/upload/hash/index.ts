@@ -1,4 +1,8 @@
-export { HashWorkerClient, canUseHashWorker } from "./hashWorkerClient";
+export {
+  HashWorkerClient,
+  canUseHashWorker,
+  type HashedChunkBuffer,
+} from "./hashWorkerClient";
 export { HashWorkerPool, globalHashWorkerPool } from "./HashWorkerPool";
 export type { SupportedHashAlgorithm, IncrementalHasher } from "./hashing";
 export {

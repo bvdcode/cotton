@@ -121,7 +121,7 @@ describe("UploadManager task facade", () => {
     mocks.uploadFileToNode.mockReset();
   });
 
-  it("uses visible upload progress for speed when transport bytes are unavailable", async () => {
+  it("uses transmitted bytes rather than optimistic progress for speed", async () => {
     const taskManager = createManager();
     let finishUpload!: () => void;
     const uploadFinished = new Promise<void>((resolve) => {
@@ -131,9 +131,9 @@ describe("UploadManager task facade", () => {
     mocks.uploadFileToNode.mockImplementation(async (options) => {
       options.onProgress?.(512, {
         bytesUploaded: 512,
-        bytesConfirmed: 512,
-        bytesInFlight: 0,
-        bytesTransmitted: 0,
+        bytesConfirmed: 0,
+        bytesInFlight: 512,
+        bytesTransmitted: 128,
       });
       await uploadFinished;
     });
@@ -153,7 +153,7 @@ describe("UploadManager task facade", () => {
     expect(taskManager.getSnapshot().tasks[0]).toMatchObject({
       bytesCompleted: 512,
       progress01: 0.5,
-      speedBytesPerSec: expect.any(Number),
+      speedBytesPerSec: 512,
       status: "running",
     });
 

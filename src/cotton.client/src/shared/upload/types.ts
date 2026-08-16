@@ -28,7 +28,7 @@ export interface UploadProgressSnapshot {
   // Bytes currently sent by active chunk requests but not yet acknowledged.
   bytesInFlight: number;
 
-  // Monotonic network-send counter used for speed estimation.
+  // Monotonic network-send counter, including retransmitted bytes.
   bytesTransmitted: number;
 }
 

@@ -10,6 +10,29 @@ vi.mock("react-i18next", () => ({
 }));
 
 describe("UploadTaskRow", () => {
+  it("shows live upload speed and bounded progress", () => {
+    const task: AppTask = {
+      id: "upload-1",
+      kind: "upload",
+      label: "video.mov",
+      scopeLabel: "Library",
+      bytesTotal: 1024,
+      bytesCompleted: 512,
+      progress01: 0.5,
+      speedBytesPerSec: 512,
+      status: "running",
+    };
+
+    render(<UploadTaskRow task={task} showDivider={false} />);
+
+    expect(screen.getByText("512 B/s")).toBeInTheDocument();
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "50",
+    );
+  });
+
   it("shows the exact failure reason in a tooltip", async () => {
     const errorDetails = "The server rejected the uploaded chunk.";
     const task: AppTask = {

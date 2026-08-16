@@ -45,6 +45,7 @@ type HashChunkResult = {
   type: "hashChunkResult";
   requestId: string;
   chunkHash: string;
+  buffer: ArrayBuffer;
 };
 
 type UpdateFileHashResult = { type: "updateFileHashResult"; requestId: string };
@@ -172,8 +173,9 @@ self.onmessage = async (ev: MessageEvent<InMessage>) => {
         type: "hashChunkResult",
         requestId: msg.requestId,
         chunkHash,
+        buffer: msg.buffer,
       };
-      self.postMessage(out);
+      self.postMessage(out, { transfer: [msg.buffer] });
       return;
     }
 
