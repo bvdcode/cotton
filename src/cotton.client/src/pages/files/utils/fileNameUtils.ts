@@ -55,11 +55,12 @@ export function normalizeFileName(name: string): string {
 }
 
 export function getFileNameKey(name: string): string {
-  return normalizeFileName(name)
+  const folded = normalizeFileName(name)
     .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .normalize("NFC");
+    .replace(/\p{M}/gu, "");
+  const lower = Array.from(folded, (rune) => rune.toLowerCase()).join("");
+
+  return lower.normalize("NFC");
 }
 
 /**

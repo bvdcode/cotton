@@ -67,6 +67,23 @@ describe("resolveUploadConflicts", () => {
     });
   });
 
+  it("matches the server name key for contextual Unicode casing", async () => {
+    const file = new File(["new"], "οσ", { type: "text/plain" });
+    const confirmConflict = vi.fn(async () => ConflictAction.Overwrite);
+
+    const result = await resolveUploadConflicts(
+      [file],
+      createContent([{ id: "file-1", name: "ΟΣ" }]),
+      confirmConflict,
+    );
+
+    expect(result.files[0]?.replaceNodeFileId).toBe("file-1");
+    expect(confirmConflict).toHaveBeenCalledWith({
+      newName: "οσ (1)",
+      canOverwrite: true,
+    });
+  });
+
   it("returns a replacement target when the user overwrites an existing file", async () => {
     const file = new File(["new"], "report.txt", { type: "text/plain" });
     const confirmConflict = vi.fn(async () => ConflictAction.Overwrite);
