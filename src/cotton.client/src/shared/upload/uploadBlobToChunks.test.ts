@@ -1,4 +1,9 @@
-import { AxiosError } from "axios";
+import {
+  AxiosError,
+  AxiosHeaders,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UploadProgressSnapshot } from "./types";
 import { uploadBlobToChunks } from "./uploadBlobToChunks";
@@ -63,6 +68,26 @@ const createWorker = () => {
     hashBlob: vi.fn(async () => "file-hash"),
     digestFile: vi.fn(async () => "file-hash"),
   };
+};
+
+const createResponseError = (status: number): AxiosError => {
+  const config: InternalAxiosRequestConfig = {
+    headers: new AxiosHeaders(),
+  };
+  const response: AxiosResponse = {
+    data: null,
+    status,
+    statusText: "Transient gateway failure",
+    headers: new AxiosHeaders(),
+    config,
+  };
+  return new AxiosError(
+    response.statusText,
+    AxiosError.ERR_BAD_RESPONSE,
+    config,
+    undefined,
+    response,
+  );
 };
 
 describe("uploadBlobToChunks", () => {
@@ -283,6 +308,34 @@ describe("uploadBlobToChunks", () => {
       expect.any(ArrayBuffer),
       "SHA-256",
     );
+    expect(worker.hashBlob).toHaveBeenCalledOnce();
+  });
+
+  it("retries a transient existence gateway failure without rehashing", async () => {
+    const worker = createWorker();
+    mocks.acquire.mockResolvedValue(worker);
+    mocks.chunkExists
+      .mockRejectedValueOnce(createResponseError(502))
+      .mockResolvedValueOnce(false);
+
+    const upload = uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(256 * 1024)]),
+      fileName: "gateway-retry.bin",
+      server: {
+        maxChunkSizeBytes: 256 * 1024,
+        supportedHashAlgorithm: "sha256",
+      },
+      client: { concurrency: 1 },
+    });
+
+    await expect(upload).resolves.toEqual({
+      chunkHashes: ["chunk-0"],
+      fileHash: "file-hash",
+    });
+    expect(mocks.chunkExists).toHaveBeenCalledTimes(2);
+    expect(mocks.uploadChunk).toHaveBeenCalledOnce();
+    expect(worker.hashChunk).not.toHaveBeenCalled();
+    expect(mocks.hashBuffer).toHaveBeenCalledOnce();
     expect(worker.hashBlob).toHaveBeenCalledOnce();
   });
 });

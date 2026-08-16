@@ -37,8 +37,19 @@ const getRetryDelayMs = (networkFailures: number): number =>
   Math.min(5000, 250 * 2 ** Math.min(Math.max(0, networkFailures - 1), 4));
 
 const isConnectionInterruption = (error: Error): boolean => {
-  if (!isAxiosError(error) || error.response) {
+  if (!isAxiosError(error)) {
     return false;
+  }
+
+  if (error.response) {
+    switch (error.response.status) {
+      case 502:
+      case 503:
+      case 504:
+        return true;
+      default:
+        return false;
+    }
   }
 
   const code = (error.code ?? "").toUpperCase();
@@ -210,7 +221,7 @@ export class ChunkUploadPipeline {
     try {
       if (
         this.options.sendChunkHashForValidation &&
-        (await chunksApi.exists(prepared.hash, this.abortController.signal))
+        (await this.chunkExists(prepared))
       ) {
         this.completeWithoutTransfer(prepared);
         return;
@@ -244,6 +255,38 @@ export class ChunkUploadPipeline {
 
       throw failure;
     }
+  }
+
+  private async chunkExists(prepared: PreparedChunk): Promise<boolean> {
+    let networkFailures = prepared.segment.networkFailures;
+
+    while (!this.fatalError) {
+      try {
+        return await chunksApi.exists(
+          prepared.hash,
+          this.abortController.signal,
+        );
+      } catch (error) {
+        const failure =
+          error instanceof Error
+            ? error
+            : new Error("Chunk verification failed.");
+        if (!isConnectionInterruption(failure)) {
+          throw failure;
+        }
+
+        networkFailures += 1;
+        await waitForDelay(
+          getRetryDelayMs(networkFailures),
+          this.abortController.signal,
+        );
+        await waitForBrowserOnline(this.abortController.signal);
+        this.throwIfFailed();
+      }
+    }
+
+    this.throwIfFailed();
+    throw new Error("Upload pipeline failed.");
   }
 
   private async recoverInterruptedChunk(
