@@ -168,6 +168,9 @@ namespace Cotton.Server
                 .Validate(
                     options => options.ArchiveStreams > 0,
                     "ResourceConcurrency:ArchiveStreams must be greater than zero.")
+                .Validate(
+                    options => options.StorageWrites > 0,
+                    "ResourceConcurrency:StorageWrites must be greater than zero.")
                 .ValidateOnStart();
             builder.Services
                 .AddOptions<StoragePressureOptions>()
@@ -222,6 +225,13 @@ namespace Cotton.Server
                 .AddScoped<ICompressionLevelProvider, SettingsCompressionLevelProvider>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
+                .AddSingleton(sp =>
+                {
+                    ResourceConcurrencyOptions options = sp
+                        .GetRequiredService<IOptions<ResourceConcurrencyOptions>>()
+                        .Value;
+                    return new StorageWriteAdmissionGate(options.StorageWrites);
+                })
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddSingleton<StorageBackendFactory>()
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()

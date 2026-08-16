@@ -13,11 +13,14 @@ namespace Cotton.Server.Models.Configuration
 
         public int ArchiveStreams { get; set; } = 4;
 
+        public int StorageWrites { get; set; } = 8;
+
         public void Validate()
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(HlsTranscodes);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(HlsProbes);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(ArchiveStreams);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(StorageWrites);
         }
     }
 }

@@ -14,7 +14,6 @@ using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Npgsql;
-using System.Buffers;
 using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
@@ -42,13 +41,35 @@ namespace Cotton.Server.Services
 
         private async Task<Chunk> UpsertChunkAsync(Guid userId, byte[] buffer, int length, byte[] chunkHash, CancellationToken ct)
         {
-            string storageKey = Hasher.ToHexStringHash(chunkHash);
+            return await UpsertChunkCoreAsync(
+                userId,
+                length,
+                chunkHash,
+                async (storageKey, existsInStorage, cancellationToken) =>
+                {
+                    if (!existsInStorage)
+                    {
+                        await WriteChunkAsync(storageKey, buffer, length, cancellationToken);
+                    }
+                },
+                ct);
+        }
 
+        private async Task<Chunk> UpsertChunkCoreAsync(
+            Guid userId,
+            int length,
+            byte[] chunkHash,
+            Func<string, bool, CancellationToken, Task> prepareContentAsync,
+            CancellationToken ct)
+        {
+            string storageKey = Hasher.ToHexStringHash(chunkHash);
             await WaitForGarbageCollectionAsync(storageKey, ct);
 
             ServerSettingsSnapshot settings = _settingsProvider.GetServerSettings();
             Chunk? chunk = await _layouts.FindChunkAsync(chunkHash, ct);
             bool existsInStorage = await _storage.ExistsAsync(storageKey);
+
+            await prepareContentAsync(storageKey, existsInStorage, ct);
 
             Chunk? reusedChunk = await TryReuseDeduplicatedChunkAsync(
                 chunk,
@@ -61,11 +82,6 @@ namespace Cotton.Server.Services
             if (reusedChunk is not null)
             {
                 return reusedChunk;
-            }
-
-            if (!existsInStorage)
-            {
-                await WriteChunkAsync(storageKey, buffer, length, ct);
             }
 
             long storedSizeBytes = await _storage.GetSizeAsync(storageKey);
@@ -245,11 +261,16 @@ namespace Cotton.Server.Services
 
         private async Task WriteChunkAsync(string storageKey, byte[] buffer, int length, CancellationToken ct)
         {
+            using MemoryStream chunkStream = new(buffer, 0, length, writable: false);
+            await WriteChunkAsync(storageKey, chunkStream, length, ct);
+        }
+
+        private async Task WriteChunkAsync(string storageKey, Stream stream, long length, CancellationToken ct)
+        {
             using StoragePressureReservation writeReservation = await _storagePressure.ReserveWriteAsync(length, ct);
-            using var chunkStream = new MemoryStream(buffer, 0, length, writable: false);
             await _storage.WriteAsync(
                 storageKey,
-                chunkStream,
+                stream,
                 new PipelineContext(),
                 cancellationToken: ct);
             writeReservation.Commit();
@@ -348,43 +369,27 @@ namespace Cotton.Server.Services
                 throw new ArgumentException("Expected hash must be a SHA-256 digest.", nameof(expectedHash));
             }
 
-            using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            using var ms = new MemoryStream(capacity: checked((int)Math.Min(length, int.MaxValue)));
-            byte[] rented = ArrayPool<byte>.Shared.Rent(128 * 1024);
-            long totalBytesRead = 0;
-
-            try
-            {
-                int bytesRead;
-                while ((bytesRead = await stream.ReadAsync(rented, ct)) > 0)
+            int plainSizeBytes = checked((int)length);
+            using HashValidatingReadStream validatingStream = new(stream, length, expectedHash, ct);
+            return await UpsertChunkCoreAsync(
+                userId,
+                plainSizeBytes,
+                expectedHash,
+                async (storageKey, existsInStorage, cancellationToken) =>
                 {
-                    totalBytesRead += bytesRead;
-                    if (totalBytesRead > length)
+                    if (!existsInStorage)
                     {
-                        throw new InvalidOperationException("Unexpected stream length.");
+                        await WriteChunkAsync(storageKey, validatingStream, length, cancellationToken);
                     }
 
-                    hasher.AppendData(rented, 0, bytesRead);
-                    await ms.WriteAsync(rented.AsMemory(0, bytesRead), ct);
-                }
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(rented);
-            }
+                    if (!validatingStream.IsValidated)
+                    {
+                        await validatingStream.CopyToAsync(Stream.Null, cancellationToken);
+                    }
 
-            if (totalBytesRead != length)
-            {
-                throw new InvalidOperationException("Unexpected stream length.");
-            }
-
-            byte[] computedHash = hasher.GetHashAndReset();
-            if (!CryptographicOperations.FixedTimeEquals(computedHash, expectedHash))
-            {
-                throw new InvalidDataException("Hash mismatch: the provided hash does not match the uploaded file.");
-            }
-
-            return await UpsertChunkAsync(userId, ms.GetBuffer(), (int)ms.Length, computedHash, ct);
+                    validatingStream.EnsureValidated();
+                },
+                ct);
         }
 
         public async Task<Chunk> UpsertChunkAsync(Guid userId, Stream stream, long length, CancellationToken ct = default)

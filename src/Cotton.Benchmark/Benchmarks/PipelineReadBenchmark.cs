@@ -35,7 +35,8 @@ namespace Cotton.Benchmark.Benchmarks
             _pipeline = new FileStoragePipeline(
                 NullLogger<FileStoragePipeline>.Instance,
                 new StaticStorageBackendProvider(_backend),
-                [new CryptoProcessor(_cipher), new CompressionProcessor(new FixedCompressionLevelProvider(configuration.CompressionLevel))]);
+                [new CryptoProcessor(_cipher), new CompressionProcessor(new FixedCompressionLevelProvider(configuration.CompressionLevel))],
+                new StorageWriteAdmissionGate(Environment.ProcessorCount));
         }
 
         public override string Name => "Storage Pipeline Read (Decryption + Decompression)";

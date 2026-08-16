@@ -222,6 +222,31 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task Upload_Raw_Chunk_With_Mismatched_Hash_Does_Not_Publish_Storage()
+        {
+            string token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            byte[] content = RandomNumberGenerator.GetBytes(2 * 1024 * 1024);
+            byte[] differentContent = content.ToArray();
+            differentContent[^1] ^= 0xff;
+            string expectedHash = Hasher.ToHexStringHash(Hasher.HashData(differentContent));
+            using ByteArrayContent body = new(content)
+            {
+                Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+            };
+
+            using HttpResponseMessage response = await _client.PostAsync(
+                $"/api/v1/chunks/raw?hash={expectedHash}",
+                body);
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            using IServiceScope scope = _factory!.Services.CreateScope();
+            IStoragePipeline storage = scope.ServiceProvider.GetRequiredService<IStoragePipeline>();
+            Assert.That(await storage.ExistsAsync(expectedHash), Is.False);
+        }
+
+        [Test]
         public async Task Create_File_Returns_Sync_Metadata_In_Create_Response_And_Children_List()
         {
             var token = await LoginAsync();

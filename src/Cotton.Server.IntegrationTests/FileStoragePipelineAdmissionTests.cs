@@ -16,14 +16,15 @@ namespace Cotton.Server.IntegrationTests
         [NonParallelizable]
         public async Task CancelledWriteWaiterDoesNotRunAfterCapacityIsReleased()
         {
-            int parallelism = Environment.ProcessorCount;
+            const int parallelism = 3;
             InMemoryBackend backend = new();
             StaticBackendProvider provider = new(backend);
             BlockingWriteProcessor processor = new(parallelism);
             FileStoragePipeline pipeline = new(
                 NullLogger<FileStoragePipeline>.Instance,
                 provider,
-                [processor]);
+                [processor],
+                new StorageWriteAdmissionGate(parallelism));
             Task[] blockers = Enumerable.Range(0, parallelism)
                 .Select(index => pipeline.WriteAsync(
                     $"blocker-{index}",

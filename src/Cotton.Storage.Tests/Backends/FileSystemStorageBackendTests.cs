@@ -289,9 +289,12 @@ namespace Cotton.Storage.Tests.Backends
             string uid = NewUid();
             var data = new byte[2 * 1024 * 1024];
             RandomNumberGenerator.Fill(data);
+            MemoryStream[] streams = Enumerable.Range(0, 16)
+                .Select(_ => new MemoryStream(data))
+                .ToArray();
 
-            Task[] tasks = Enumerable.Range(0, 16)
-                .Select(_ => _backend.WriteAsync(uid, new MemoryStream(data)))
+            Task[] tasks = streams
+                .Select(stream => _backend.WriteAsync(uid, stream))
                 .ToArray();
 
             // Act & Assert
@@ -300,7 +303,16 @@ namespace Cotton.Storage.Tests.Backends
             await using Stream readStream = await _backend.ReadAsync(uid);
             var result = new MemoryStream();
             await readStream.CopyToAsync(result);
-            Assert.That(result.ToArray(), Is.EqualTo(data));
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.ToArray(), Is.EqualTo(data));
+                Assert.That(streams.All(stream => stream.Position == stream.Length), Is.True);
+            });
+
+            foreach (MemoryStream stream in streams)
+            {
+                stream.Dispose();
+            }
         }
     }
 }

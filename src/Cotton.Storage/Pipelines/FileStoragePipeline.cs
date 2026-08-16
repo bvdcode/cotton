@@ -9,12 +9,9 @@ namespace Cotton.Storage.Pipelines
     public class FileStoragePipeline(
         ILogger<FileStoragePipeline> _logger,
         IStorageBackendProvider _backendProvider,
-        IEnumerable<IStorageProcessor> _processors) : IStoragePipeline
+        IEnumerable<IStorageProcessor> _processors,
+        StorageWriteAdmissionGate _writeAdmissionGate) : IStoragePipeline
     {
-        private static readonly SemaphoreSlim _maxParallel = new(
-            initialCount: Environment.ProcessorCount,
-            maxCount: Environment.ProcessorCount);
-
         public Task<bool> ExistsAsync(string uid)
         {
             return _backendProvider.GetBackend().ExistsAsync(uid);
@@ -56,7 +53,7 @@ namespace Cotton.Storage.Pipelines
             PipelineContext? context = null,
             CancellationToken cancellationToken = default)
         {
-            await _maxParallel.WaitAsync(cancellationToken).ConfigureAwait(false);
+            await _writeAdmissionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 IStorageBackend backend = _backendProvider.GetBackend();
@@ -88,7 +85,7 @@ namespace Cotton.Storage.Pipelines
             }
             finally
             {
-                _maxParallel.Release();
+                _writeAdmissionGate.Release();
             }
         }
 

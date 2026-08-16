@@ -167,7 +167,11 @@ namespace Cotton.Storage.Tests.Backends
 
             var backendProvider = new TestBackendProvider(_backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(logger.Object, backendProvider, processors);
+            var pipeline = new FileStoragePipeline(
+                logger.Object,
+                backendProvider,
+                processors,
+                new StorageWriteAdmissionGate(1));
 
             var originalData = new byte[1024 * 1024]; // 1 MB
             RandomNumberGenerator.Fill(originalData);
@@ -203,7 +207,11 @@ namespace Cotton.Storage.Tests.Backends
 
             var backendProvider = new TestBackendProvider(_backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(logger.Object, backendProvider, processors);
+            var pipeline = new FileStoragePipeline(
+                logger.Object,
+                backendProvider,
+                processors,
+                new StorageWriteAdmissionGate(1));
 
             var originalData = Encoding.UTF8.GetBytes("Non-seekable stream test data");
             var nonSeekableStream = new NonSeekableMemoryStream(originalData);
@@ -239,7 +247,11 @@ namespace Cotton.Storage.Tests.Backends
 
             var backendProvider = new TestBackendProvider(_backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(logger.Object, backendProvider, processors);
+            var pipeline = new FileStoragePipeline(
+                logger.Object,
+                backendProvider,
+                processors,
+                new StorageWriteAdmissionGate(1));
 
             var originalData = new byte[3 * 1024 * 1024]; // 3 MB, stays above the S3 backend write buffer without burning test-bucket quota
             RandomNumberGenerator.Fill(originalData);

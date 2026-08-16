@@ -177,11 +177,6 @@ namespace Cotton.Storage.Backends
 
             string dirPath = GetFolderByUid(uid);
             string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
-            if (File.Exists(filePath))
-            {
-                _logger.LogDebug("File {Uid} deduplicated, skipping write", uid);
-                return;
-            }
 
             string tmpFilePath = CreateTempFilePath(fileName);
             var fso = new FileStreamOptions
@@ -196,7 +191,7 @@ namespace Cotton.Storage.Backends
             try
             {
                 _logger.LogDebug("Storing new file {Uid}", uid);
-                await using var tmp = new FileStream(tmpFilePath, fso);
+                await using FileStream tmp = new(tmpFilePath, fso);
                 if (stream.CanSeek)
                 {
                     stream.Seek(default, SeekOrigin.Begin);

@@ -126,7 +126,11 @@ namespace Cotton.Storage.Tests.Pipelines
             var backend = new FakeStorageBackend();
             var provider = new FakeBackendProvider(backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(logger.Object, provider, []);
+            var pipeline = new FileStoragePipeline(
+                logger.Object,
+                provider,
+                [],
+                new StorageWriteAdmissionGate(1));
 
             var originalData = Encoding.UTF8.GetBytes("Test data");
             await backend.WriteAsync("test-uid", new MemoryStream(originalData));
@@ -147,7 +151,11 @@ namespace Cotton.Storage.Tests.Pipelines
             var backend = new FakeStorageBackend();
             var provider = new FakeBackendProvider(backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(logger.Object, provider, []);
+            var pipeline = new FileStoragePipeline(
+                logger.Object,
+                provider,
+                [],
+                new StorageWriteAdmissionGate(1));
 
             var originalData = Encoding.UTF8.GetBytes("Test data");
 
@@ -176,7 +184,11 @@ namespace Cotton.Storage.Tests.Pipelines
                 new MarkerProcessor(50, 0xCC)   // Highest priority (lowest number)
             };
 
-            var pipeline = new FileStoragePipeline(logger.Object, provider, processors);
+            var pipeline = new FileStoragePipeline(
+                logger.Object,
+                provider,
+                processors,
+                new StorageWriteAdmissionGate(1));
 
             // Arrange markers so that each processor actually sees its marker at the end
             // Order: CC (50), AA (100), BB (200) on read
@@ -208,7 +220,11 @@ namespace Cotton.Storage.Tests.Pipelines
                 new MarkerProcessor(50, 0xCC)
             };
 
-            var pipeline = new FileStoragePipeline(logger.Object, provider, processors);
+            var pipeline = new FileStoragePipeline(
+                logger.Object,
+                provider,
+                processors,
+                new StorageWriteAdmissionGate(1));
 
             var originalData = new byte[] { 0x01 };
 
@@ -231,7 +247,11 @@ namespace Cotton.Storage.Tests.Pipelines
             var provider = new FakeBackendProvider(backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
             var processor = new CountingProcessor();
-            var pipeline = new FileStoragePipeline(logger.Object, provider, [processor]);
+            var pipeline = new FileStoragePipeline(
+                logger.Object,
+                provider,
+                [processor],
+                new StorageWriteAdmissionGate(1));
 
             byte[] originalData = Encoding.UTF8.GetBytes("already stored");
             byte[] duplicateData = Encoding.UTF8.GetBytes("duplicate upload");
@@ -264,7 +284,11 @@ namespace Cotton.Storage.Tests.Pipelines
             mockProcessor.Setup(p => p.ReadAsync(It.IsAny<string>(), It.IsAny<Stream>()))
                 .ReturnsAsync(Stream.Null);
 
-            var pipeline = new FileStoragePipeline(logger.Object, provider, [mockProcessor.Object]);
+            var pipeline = new FileStoragePipeline(
+                logger.Object,
+                provider,
+                [mockProcessor.Object],
+                new StorageWriteAdmissionGate(1));
 
             var data = Encoding.UTF8.GetBytes("Test");
             backend.WriteAsync("test-uid", new MemoryStream(data)).Wait();
@@ -288,7 +312,11 @@ namespace Cotton.Storage.Tests.Pipelines
             mockProcessor.Setup(p => p.WriteAsync(It.IsAny<string>(), It.IsAny<Stream>()))
                 .ReturnsAsync(Stream.Null);
 
-            var pipeline = new FileStoragePipeline(logger.Object, provider, [mockProcessor.Object]);
+            var pipeline = new FileStoragePipeline(
+                logger.Object,
+                provider,
+                [mockProcessor.Object],
+                new StorageWriteAdmissionGate(1));
 
             var data = Encoding.UTF8.GetBytes("Test");
 
@@ -312,7 +340,11 @@ namespace Cotton.Storage.Tests.Pipelines
                 new MarkerProcessor(200, 0xBB)
             };
 
-            var pipeline = new FileStoragePipeline(logger.Object, provider, processors);
+            var pipeline = new FileStoragePipeline(
+                logger.Object,
+                provider,
+                processors,
+                new StorageWriteAdmissionGate(1));
 
             var originalData = Encoding.UTF8.GetBytes("Hello, World!");
 
