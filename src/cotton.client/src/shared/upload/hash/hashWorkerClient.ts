@@ -8,6 +8,11 @@ type HashChunkResult = {
   buffer: ArrayBuffer;
 };
 type UpdateFileHashResult = { type: "updateFileHashResult"; requestId: string };
+type HashBlobResult = {
+  type: "hashBlobResult";
+  requestId: string;
+  fileHash: string;
+};
 type DigestFileResult = {
   type: "digestFileResult";
   requestId: string;
@@ -18,6 +23,7 @@ type ErrorResult = { type: "error"; requestId?: string; message: string };
 type OutMessage =
   | InitResult
   | HashChunkResult
+  | HashBlobResult
   | UpdateFileHashResult
   | DigestFileResult
   | ErrorResult;
@@ -63,6 +69,9 @@ export class HashWorkerClient {
           this.resolveChunkRequest(msg);
           return;
         case "digestFileResult":
+          this.resolveStringRequest(msg.requestId, msg.fileHash);
+          return;
+        case "hashBlobResult":
           this.resolveStringRequest(msg.requestId, msg.fileHash);
           return;
       }
@@ -122,6 +131,22 @@ export class HashWorkerClient {
       type: "updateFileHash",
       requestId,
       buffer,
+    });
+    return promise;
+  }
+
+  async hashBlob(blob: Blob, readSizeBytes: number): Promise<string> {
+    await this.ensureInitialized();
+    const requestId = makeRequestId();
+    const promise = new Promise<string>((resolve, reject) => {
+      this.pendingStrings.set(requestId, { resolve, reject });
+    });
+
+    this.worker.postMessage({
+      type: "hashBlob",
+      requestId,
+      blob,
+      readSizeBytes,
     });
     return promise;
   }

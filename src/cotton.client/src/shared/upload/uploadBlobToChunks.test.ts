@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   release: vi.fn(),
   chunkExists: vi.fn(),
   uploadChunk: vi.fn(),
+  hashBuffer: vi.fn(),
   toWebCryptoAlgorithm: vi.fn(() => "SHA-256"),
 }));
 
@@ -35,7 +36,7 @@ vi.mock("../api/chunksApi", () => ({
 
 vi.mock("./hash/hashing", () => ({
   createIncrementalHasher: vi.fn(),
-  hashBuffer: vi.fn(),
+  hashBuffer: mocks.hashBuffer,
   toWebCryptoAlgorithm: mocks.toWebCryptoAlgorithm,
 }));
 
@@ -59,6 +60,7 @@ const createWorker = () => {
       hashIndex += 1;
       return { buffer, chunkHash };
     }),
+    hashBlob: vi.fn(async () => "file-hash"),
     digestFile: vi.fn(async () => "file-hash"),
   };
 };
@@ -66,11 +68,17 @@ const createWorker = () => {
 describe("uploadBlobToChunks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    let hashIndex = 0;
+    mocks.hashBuffer.mockImplementation(async () => {
+      const hash = `chunk-${hashIndex}`;
+      hashIndex += 1;
+      return hash;
+    });
     mocks.chunkExists.mockResolvedValue(true);
     mocks.uploadChunk.mockResolvedValue(undefined);
   });
 
-  it("hashes sequentially ahead of blocked network consumers", async () => {
+  it("hashes chunks ahead of blocked network consumers", async () => {
     const worker = createWorker();
     const probeGate = createDeferred<void>();
     mocks.acquire.mockResolvedValue(worker);
@@ -90,7 +98,7 @@ describe("uploadBlobToChunks", () => {
     });
 
     await vi.waitFor(() => {
-      expect(worker.hashChunk).toHaveBeenCalledTimes(4);
+      expect(mocks.hashBuffer).toHaveBeenCalledTimes(4);
       expect(mocks.chunkExists).toHaveBeenCalledTimes(2);
     });
 
@@ -99,8 +107,10 @@ describe("uploadBlobToChunks", () => {
       chunkHashes: ["chunk-0", "chunk-1", "chunk-2", "chunk-3"],
       fileHash: "file-hash",
     });
-    expect(worker.digestFile).toHaveBeenCalledOnce();
-    expect(mocks.release).toHaveBeenCalledWith(worker);
+    expect(worker.hashBlob).toHaveBeenCalledOnce();
+    await vi.waitFor(() => {
+      expect(mocks.release).toHaveBeenCalledWith(worker);
+    });
   });
 
   it("keeps a fixed number of network consumers active", async () => {
@@ -156,16 +166,16 @@ describe("uploadBlobToChunks", () => {
     });
 
     await vi.waitFor(() => {
-      expect(worker.hashChunk).toHaveBeenCalledTimes(18);
+      expect(mocks.hashBuffer).toHaveBeenCalledTimes(12);
     });
     await new Promise((resolve) => {
       globalThis.setTimeout(resolve, 0);
     });
-    expect(worker.hashChunk).toHaveBeenCalledTimes(18);
+    expect(mocks.hashBuffer).toHaveBeenCalledTimes(12);
 
     probeGate.resolve();
     await expect(upload).resolves.toMatchObject({ fileHash: "file-hash" });
-    expect(worker.hashChunk).toHaveBeenCalledTimes(25);
+    expect(mocks.hashBuffer).toHaveBeenCalledTimes(25);
   });
 
   it("reports parallel transport progress and confirms 100 percent last", async () => {
@@ -230,7 +240,7 @@ describe("uploadBlobToChunks", () => {
     );
   });
 
-  it("rehashes retry segments without updating the whole-file hash", async () => {
+  it("rehashes retry segments without restarting the whole-file hash", async () => {
     const worker = createWorker();
     const chunkBytes = 256 * 1024;
     let uploadCalls = 0;
@@ -257,20 +267,22 @@ describe("uploadBlobToChunks", () => {
       chunkHashes: ["chunk-1", "chunk-2"],
       fileHash: "file-hash",
     });
-    expect(worker.hashChunk).toHaveBeenNthCalledWith(
+    expect(mocks.hashBuffer).toHaveBeenCalledTimes(3);
+    expect(mocks.hashBuffer).toHaveBeenNthCalledWith(
       1,
       expect.any(ArrayBuffer),
-      { updateFileHash: true },
+      "SHA-256",
     );
-    expect(worker.hashChunk).toHaveBeenNthCalledWith(
+    expect(mocks.hashBuffer).toHaveBeenNthCalledWith(
       2,
       expect.any(ArrayBuffer),
-      { updateFileHash: false },
+      "SHA-256",
     );
-    expect(worker.hashChunk).toHaveBeenNthCalledWith(
+    expect(mocks.hashBuffer).toHaveBeenNthCalledWith(
       3,
       expect.any(ArrayBuffer),
-      { updateFileHash: false },
+      "SHA-256",
     );
+    expect(worker.hashBlob).toHaveBeenCalledOnce();
   });
 });

@@ -20,13 +20,19 @@ export async function uploadBlobToChunks(options: {
 }): Promise<{ chunkHashes: string[]; fileHash: string }> {
   const algorithm = toWebCryptoAlgorithm(options.server.supportedHashAlgorithm);
   const chunkSizeBytes = Math.max(1, options.server.maxChunkSizeBytes);
-  const hashSession = await ChunkHashSession.create(options.blob, algorithm);
+  const hashSession = await ChunkHashSession.create(
+    options.blob,
+    algorithm,
+    uploadConfig.chunkHashConcurrency,
+    uploadConfig.wholeFileHashReadSizeBytes,
+  );
 
   try {
     const pipeline = new ChunkUploadPipeline({
       blob: options.blob,
       fileName: options.fileName,
       hashSession,
+      hashPreparationConcurrency: hashSession.maxParallelPreparations,
       sendChunkHashForValidation:
         options.client?.sendChunkHashForValidation ??
         uploadConfig.sendChunkHashForValidation,

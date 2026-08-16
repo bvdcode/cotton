@@ -15,6 +15,7 @@ interface ChunkUploadPipelineOptions {
   blob: Blob;
   fileName: string;
   hashSession: ChunkHashSession;
+  hashPreparationConcurrency: number;
   sendChunkHashForValidation: boolean;
   chunkSizeBytes: number;
   minRetryChunkSizeBytes: number;
@@ -153,6 +154,7 @@ export class ChunkUploadPipeline {
   }
 
   private async produce(): Promise<void> {
+    let batch: ChunkSegment[] = [];
     for (
       let start = 0;
       start < this.options.blob.size;
@@ -167,11 +169,28 @@ export class ChunkUploadPipeline {
         ),
         networkFailures: 0,
       };
-      const prepared = await this.options.hashSession.prepare(segment, true);
-      await this.queue.enqueue(prepared, getChunkLength(segment));
+      batch.push(segment);
+      if (batch.length >= this.options.hashPreparationConcurrency) {
+        await this.prepareAndEnqueue(batch);
+        batch = [];
+      }
+    }
+
+    if (batch.length > 0) {
+      await this.prepareAndEnqueue(batch);
     }
 
     this.queue.close();
+  }
+
+  private async prepareAndEnqueue(segments: ChunkSegment[]): Promise<void> {
+    const preparedChunks = await Promise.all(
+      segments.map((segment) => this.options.hashSession.prepare(segment, true)),
+    );
+    for (const prepared of preparedChunks) {
+      this.throwIfFailed();
+      await this.queue.enqueue(prepared, getChunkLength(prepared.segment));
+    }
   }
 
   private async consume(): Promise<void> {
