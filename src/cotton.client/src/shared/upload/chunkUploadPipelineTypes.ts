@@ -6,9 +6,8 @@ export interface ChunkSegment {
 
 export interface PreparedChunk {
   segment: ChunkSegment;
-  buffer: ArrayBuffer;
+  blob: Blob;
   hash: string;
-  contentType: string;
 }
 
 export interface UploadedChunkSegment {

@@ -97,14 +97,13 @@ export class ChunkHashSession {
     updateFileHash: boolean,
   ): Promise<PreparedChunk> {
     const chunk = this.blob.slice(segment.start, segment.end);
-    let buffer = await chunk.arrayBuffer();
+    const buffer = await chunk.arrayBuffer();
     let hash: string;
 
     if (this.nativeChunkHashing) {
       hash = await hashBuffer(buffer, this.algorithm);
     } else if (this.worker) {
       const result = await this.worker.hashChunk(buffer, { updateFileHash });
-      buffer = result.buffer;
       hash = result.chunkHash;
     } else {
       if (updateFileHash) {
@@ -115,9 +114,8 @@ export class ChunkHashSession {
 
     return {
       segment,
-      buffer,
+      blob: chunk,
       hash,
-      contentType: chunk.type,
     };
   }
 
