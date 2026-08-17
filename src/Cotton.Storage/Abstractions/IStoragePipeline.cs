@@ -15,7 +15,7 @@ namespace Cotton.Storage.Abstractions
 
         Task<Stream> ReadAsync(string uid, PipelineContext? context = null);
 
-        Task WriteAsync(
+        Task<long> WriteAsync(
             string uid,
             Stream stream,
             PipelineContext? context = null,

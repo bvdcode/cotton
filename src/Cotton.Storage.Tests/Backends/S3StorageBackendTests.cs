@@ -127,13 +127,45 @@ namespace Cotton.Storage.Tests.Backends
             var originalData = Encoding.UTF8.GetBytes("Test content for S3 backend");
 
             // Act
-            await _backend.WriteAsync(uid, new MemoryStream(originalData));
+            long storedSizeBytes = await _backend.WriteAsync(
+                uid,
+                new MemoryStream(originalData));
             await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
             using var result = new MemoryStream();
             await readStream.CopyToAsync(result);
-            Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(storedSizeBytes, Is.EqualTo(originalData.Length));
+                Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            }
+        }
+
+        [Test]
+        public async Task S3Backend_Write_DuplicateUid_ReturnsExistingSize()
+        {
+            string uid = NewUid();
+            _createdKeys.Add(uid);
+            byte[] originalData = Encoding.UTF8.GetBytes("first");
+            byte[] duplicateData = Encoding.UTF8.GetBytes("second payload");
+
+            long firstSizeBytes = await _backend.WriteAsync(
+                uid,
+                new MemoryStream(originalData));
+            long duplicateSizeBytes = await _backend.WriteAsync(
+                uid,
+                new MemoryStream(duplicateData));
+            await using Stream readStream = await _backend.ReadAsync(uid);
+            using MemoryStream result = new();
+            await readStream.CopyToAsync(result);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(firstSizeBytes, Is.EqualTo(originalData.Length));
+                Assert.That(duplicateSizeBytes, Is.EqualTo(originalData.Length));
+                Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            }
         }
 
         [Test]

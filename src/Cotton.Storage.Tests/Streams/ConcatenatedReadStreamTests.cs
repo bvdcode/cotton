@@ -45,7 +45,7 @@ namespace Cotton.Storage.Tests.Streams
                 return Task.FromResult<Stream>(new MemoryStream(data));
             }
 
-            public Task WriteAsync(
+            public Task<long> WriteAsync(
                 string uid,
                 Stream stream,
                 PipelineContext? context = null,

@@ -45,14 +45,15 @@ namespace Cotton.Storage.Tests.Pipelines
                 return Task.FromResult<Stream>(new MemoryStream(data));
             }
 
-            public Task WriteAsync(
+            public Task<long> WriteAsync(
                 string uid,
                 Stream stream)
             {
                 var ms = new MemoryStream();
                 stream.CopyTo(ms);
-                _storage[uid] = ms.ToArray();
-                return Task.CompletedTask;
+                byte[] stored = ms.ToArray();
+                _storage[uid] = stored;
+                return Task.FromResult(stored.LongLength);
             }
 
             public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
@@ -160,13 +161,19 @@ namespace Cotton.Storage.Tests.Pipelines
             var originalData = Encoding.UTF8.GetBytes("Test data");
 
             // Act
-            await pipeline.WriteAsync("test-uid", new MemoryStream(originalData));
+            long storedSizeBytes = await pipeline.WriteAsync(
+                "test-uid",
+                new MemoryStream(originalData));
 
             // Assert
             Stream stream = await backend.ReadAsync("test-uid");
             var result = new MemoryStream();
             await stream.CopyToAsync(result);
-            Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(storedSizeBytes, Is.EqualTo(originalData.Length));
+                Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            }
         }
 
         [Test]
@@ -258,7 +265,9 @@ namespace Cotton.Storage.Tests.Pipelines
             await backend.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            await pipeline.WriteAsync("test-uid", new MemoryStream(duplicateData));
+            long storedSizeBytes = await pipeline.WriteAsync(
+                "test-uid",
+                new MemoryStream(duplicateData));
 
             // Assert
             Stream stream = await backend.ReadAsync("test-uid");
@@ -267,6 +276,7 @@ namespace Cotton.Storage.Tests.Pipelines
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(processor.WriteCalls, Is.Zero);
+                Assert.That(storedSizeBytes, Is.EqualTo(originalData.Length));
                 Assert.That(result.ToArray(), Is.EqualTo(originalData));
             }
         }

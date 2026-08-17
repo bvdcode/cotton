@@ -19,7 +19,7 @@ namespace Cotton.Server.IntegrationTests.Common
 
         public Task<Stream> ReadAsync(string uid) => _inner.ReadAsync(uid);
 
-        public Task WriteAsync(string uid, Stream stream) => _inner.WriteAsync(uid, stream);
+        public Task<long> WriteAsync(string uid, Stream stream) => _inner.WriteAsync(uid, stream);
 
         public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) =>
             _inner.ListAllKeysAsync(ct);

@@ -168,7 +168,7 @@ namespace Cotton.Storage.Backends
             return Task.FromResult<Stream>(new FileStream(filePath, fso));
         }
 
-        public async Task WriteAsync(string uid, Stream stream)
+        public async Task<long> WriteAsync(string uid, Stream stream)
         {
             const int WriteBufferSize = 2 * 1024 * 1024;
 
@@ -188,6 +188,7 @@ namespace Cotton.Storage.Backends
                 Options = FileOptions.Asynchronous,
             };
 
+            long storedSizeBytes;
             try
             {
                 _logger.LogDebug("Storing new file {Uid}", uid);
@@ -198,6 +199,7 @@ namespace Cotton.Storage.Backends
                 }
                 await stream.CopyToAsync(tmp, WriteBufferSize).ConfigureAwait(false);
                 await tmp.FlushAsync().ConfigureAwait(false);
+                storedSizeBytes = tmp.Length;
             }
             catch (Exception)
             {
@@ -209,11 +211,13 @@ namespace Cotton.Storage.Backends
             {
                 File.Move(tmpFilePath, filePath);
                 File.SetAttributes(filePath, FileAttributes.ReadOnly | FileAttributes.NotContentIndexed);
+                return storedSizeBytes;
             }
             catch (IOException ex) when (File.Exists(filePath))
             {
                 _logger.LogDebug(ex, "File {Uid} was written concurrently, deduplicated temp write", uid);
                 TryDelete(tmpFilePath);
+                return await GetSizeAsync(uid).ConfigureAwait(false);
             }
             catch (Exception)
             {

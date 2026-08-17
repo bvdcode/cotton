@@ -84,13 +84,19 @@ namespace Cotton.Storage.Tests.Backends
             var originalData = Encoding.UTF8.GetBytes("Test content");
 
             // Act
-            await _backend.WriteAsync(uid, new MemoryStream(originalData));
+            long storedSizeBytes = await _backend.WriteAsync(
+                uid,
+                new MemoryStream(originalData));
             await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
             using var result = new MemoryStream();
             await readStream.CopyToAsync(result);
-            Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(storedSizeBytes, Is.EqualTo(originalData.Length));
+                Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            }
         }
 
         [Test]
@@ -166,16 +172,25 @@ namespace Cotton.Storage.Tests.Backends
         }
 
         [Test]
-        public void FileSystemBackend_Write_DuplicateUid_DoesNotThrowIOException()
+        public async Task FileSystemBackend_Write_DuplicateUid_ReturnsExistingSize()
         {
             // Arrange
             string uid = NewUid();
             var data1 = Encoding.UTF8.GetBytes("First");
             var data2 = Encoding.UTF8.GetBytes("Second");
 
-            // Act & Assert
-            Assert.DoesNotThrowAsync(() => _backend.WriteAsync(uid, new MemoryStream(data1)));
-            Assert.DoesNotThrowAsync(() => _backend.WriteAsync(uid, new MemoryStream(data2)));
+            long firstSizeBytes = await _backend.WriteAsync(uid, new MemoryStream(data1));
+            long duplicateSizeBytes = await _backend.WriteAsync(uid, new MemoryStream(data2));
+            await using Stream readStream = await _backend.ReadAsync(uid);
+            using MemoryStream result = new();
+            await readStream.CopyToAsync(result);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(firstSizeBytes, Is.EqualTo(data1.Length));
+                Assert.That(duplicateSizeBytes, Is.EqualTo(data1.Length));
+                Assert.That(result.ToArray(), Is.EqualTo(data1));
+            }
         }
 
         [Test]

@@ -45,7 +45,7 @@ namespace Cotton.Server.IntegrationTests.Helpers
             return Task.FromResult(result: (Stream)ms);
         }
 
-        public async Task WriteAsync(
+        public async Task<long> WriteAsync(
             string uid,
             Stream stream,
             PipelineContext? context = null,
@@ -59,7 +59,9 @@ namespace Cotton.Server.IntegrationTests.Helpers
                 stream.Seek(0, SeekOrigin.Begin);
             }
             await stream.CopyToAsync(ms).ConfigureAwait(false);
-            _blobs[uid] = ms.ToArray();
+            byte[] stored = ms.ToArray();
+            _blobs[uid] = stored;
+            return stored.LongLength;
         }
 
         public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
