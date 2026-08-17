@@ -16,6 +16,7 @@ export class ChunkHashSession {
   private readonly fileHasher: IncrementalHasher | null;
   private readonly fileHashPromise: Promise<string> | null;
   private readonly nativeChunkHashing: boolean;
+  private fileHashCompleted = false;
   readonly maxParallelPreparations: number;
 
   private constructor(
@@ -34,6 +35,14 @@ export class ChunkHashSession {
     this.fileHashPromise = fileHashPromise;
     this.nativeChunkHashing = nativeChunkHashing;
     this.maxParallelPreparations = maxParallelPreparations;
+    if (fileHashPromise) {
+      void fileHashPromise.then(
+        () => {
+          this.fileHashCompleted = true;
+        },
+        () => undefined,
+      );
+    }
   }
 
   static async create(
@@ -136,11 +145,8 @@ export class ChunkHashSession {
     this.released = true;
     const worker = this.worker;
     if (worker) {
-      if (this.fileHashPromise) {
-        void this.fileHashPromise.then(
-          () => globalHashWorkerPool.release(worker),
-          () => globalHashWorkerPool.release(worker),
-        );
+      if (this.fileHashPromise && !this.fileHashCompleted) {
+        globalHashWorkerPool.replace(worker);
         return;
       }
 

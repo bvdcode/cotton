@@ -26,6 +26,7 @@ const createDeferred = <T>(): Deferred<T> => {
 const mocks = vi.hoisted(() => ({
   acquire: vi.fn(),
   release: vi.fn(),
+  replace: vi.fn(),
   chunkExists: vi.fn(),
   uploadChunk: vi.fn(),
   hashBuffer: vi.fn(),
@@ -54,6 +55,7 @@ vi.mock("./hash/HashWorkerPool", () => ({
   globalHashWorkerPool: {
     acquire: mocks.acquire,
     release: mocks.release,
+    replace: mocks.replace,
   },
 }));
 
@@ -309,6 +311,51 @@ describe("uploadBlobToChunks", () => {
       "SHA-256",
     );
     expect(worker.hashBlob).toHaveBeenCalledOnce();
+  });
+
+  it("replaces the worker when upload fails before file hashing completes", async () => {
+    const worker = createWorker();
+    const fileHashGate = createDeferred<string>();
+    worker.hashBlob.mockReturnValue(fileHashGate.promise);
+    mocks.acquire.mockResolvedValue(worker);
+    mocks.chunkExists.mockResolvedValue(false);
+    mocks.uploadChunk.mockRejectedValue(new Error("upload failed"));
+
+    const upload = uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(256 * 1024)]),
+      fileName: "failed.bin",
+      server: {
+        maxChunkSizeBytes: 256 * 1024,
+        supportedHashAlgorithm: "sha256",
+      },
+      client: { concurrency: 1 },
+    });
+
+    await expect(upload).rejects.toThrow("upload failed");
+    expect(mocks.replace).toHaveBeenCalledWith(worker);
+    expect(mocks.release).not.toHaveBeenCalledWith(worker);
+    fileHashGate.resolve("unused-file-hash");
+  });
+
+  it("releases the worker when file hashing finished before upload failure", async () => {
+    const worker = createWorker();
+    mocks.acquire.mockResolvedValue(worker);
+    mocks.chunkExists.mockResolvedValue(false);
+    mocks.uploadChunk.mockRejectedValue(new Error("upload failed"));
+
+    const upload = uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(256 * 1024)]),
+      fileName: "failed-after-hash.bin",
+      server: {
+        maxChunkSizeBytes: 256 * 1024,
+        supportedHashAlgorithm: "sha256",
+      },
+      client: { concurrency: 1 },
+    });
+
+    await expect(upload).rejects.toThrow("upload failed");
+    expect(mocks.release).toHaveBeenCalledWith(worker);
+    expect(mocks.replace).not.toHaveBeenCalledWith(worker);
   });
 
   it("retries a transient existence gateway failure without rehashing", async () => {
