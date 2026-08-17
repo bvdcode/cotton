@@ -215,46 +215,59 @@ export class ChunkUploadPipeline {
     }
   }
 
-  private async processPreparedChunk(prepared: PreparedChunk): Promise<void> {
-    let attemptId: number | null = null;
+  private async processPreparedChunk(
+    initialPrepared: PreparedChunk,
+  ): Promise<void> {
+    let prepared = initialPrepared;
+    let probeBeforeUpload = this.options.sendChunkHashForValidation;
 
-    try {
-      if (
-        this.options.sendChunkHashForValidation &&
-        (await this.chunkExists(prepared))
-      ) {
-        this.completeWithoutTransfer(prepared);
+    while (!this.fatalError) {
+      let attemptId: number | null = null;
+
+      try {
+        if (probeBeforeUpload && (await this.chunkExists(prepared))) {
+          this.completeWithoutTransfer(prepared);
+          return;
+        }
+
+        attemptId = this.progress.beginAttempt();
+        const uploadAttemptId = attemptId;
+        const chunkBytes = getChunkLength(prepared.segment);
+        await chunksApi.uploadChunk({
+          blob: new Blob([prepared.buffer], { type: prepared.contentType }),
+          fileName: this.options.fileName,
+          hash: prepared.hash,
+          signal: this.abortController.signal,
+          onProgress: (bytesUploaded) => {
+            this.progress.updateTransmission(uploadAttemptId, bytesUploaded);
+          },
+        });
+        this.progress.completeAttempt(uploadAttemptId, chunkBytes);
+        this.recordUploadedSegment(prepared);
         return;
-      }
+      } catch (error) {
+        if (attemptId !== null) {
+          this.progress.discardAttempt(attemptId);
+        }
 
-      attemptId = this.progress.beginAttempt();
-      const uploadAttemptId = attemptId;
-      const chunkBytes = getChunkLength(prepared.segment);
-      await chunksApi.uploadChunk({
-        blob: new Blob([prepared.buffer], { type: prepared.contentType }),
-        fileName: this.options.fileName,
-        hash: prepared.hash,
-        signal: this.abortController.signal,
-        onProgress: (bytesUploaded) => {
-          this.progress.updateTransmission(uploadAttemptId, bytesUploaded);
-        },
-      });
-      this.progress.completeAttempt(uploadAttemptId, chunkBytes);
-      this.recordUploadedSegment(prepared);
-    } catch (error) {
-      if (attemptId !== null) {
-        this.progress.discardAttempt(attemptId);
-      }
+        const failure =
+          error instanceof Error ? error : new Error("Chunk upload failed.");
+        if (!this.fatalError && isConnectionInterruption(failure)) {
+          const retry = await this.recoverInterruptedChunk(prepared);
+          if (!retry) {
+            return;
+          }
 
-      const failure =
-        error instanceof Error ? error : new Error("Chunk upload failed.");
-      if (!this.fatalError && isConnectionInterruption(failure)) {
-        await this.recoverInterruptedChunk(prepared);
-        return;
-      }
+          prepared = retry;
+          probeBeforeUpload = false;
+          continue;
+        }
 
-      throw failure;
+        throw failure;
+      }
     }
+
+    this.throwIfFailed();
   }
 
   private async chunkExists(prepared: PreparedChunk): Promise<boolean> {
@@ -291,7 +304,7 @@ export class ChunkUploadPipeline {
 
   private async recoverInterruptedChunk(
     prepared: PreparedChunk,
-  ): Promise<void> {
+  ): Promise<PreparedChunk | null> {
     let networkFailures = prepared.segment.networkFailures + 1;
 
     while (!this.fatalError) {
@@ -313,7 +326,7 @@ export class ChunkUploadPipeline {
         );
         if (exists) {
           this.completeWithoutTransfer(prepared);
-          return;
+          return null;
         }
         break;
       } catch (error) {
@@ -329,18 +342,31 @@ export class ChunkUploadPipeline {
     }
 
     this.throwIfFailed();
-    await this.uploadRetrySegments(prepared, networkFailures);
-  }
-
-  private async uploadRetrySegments(
-    prepared: PreparedChunk,
-    networkFailures: number,
-  ): Promise<void> {
     const chunkBytes = getChunkLength(prepared.segment);
     const retrySize = Math.min(
       chunkBytes,
       Math.max(this.options.minRetryChunkSizeBytes, Math.floor(chunkBytes / 2)),
     );
+
+    if (retrySize === chunkBytes) {
+      return {
+        ...prepared,
+        segment: {
+          ...prepared.segment,
+          networkFailures,
+        },
+      };
+    }
+
+    await this.uploadRetrySegments(prepared, networkFailures, retrySize);
+    return null;
+  }
+
+  private async uploadRetrySegments(
+    prepared: PreparedChunk,
+    networkFailures: number,
+    retrySize: number,
+  ): Promise<void> {
 
     for (
       let start = prepared.segment.start;

@@ -313,6 +313,39 @@ describe("uploadBlobToChunks", () => {
     expect(worker.hashBlob).toHaveBeenCalledOnce();
   });
 
+  it("reuses the prepared minimum-size chunk across transport retries", async () => {
+    const worker = createWorker();
+    const chunkBytes = 128 * 1024;
+    let uploadCalls = 0;
+    mocks.acquire.mockResolvedValue(worker);
+    mocks.chunkExists.mockResolvedValue(false);
+    mocks.uploadChunk.mockImplementation(async () => {
+      uploadCalls += 1;
+      if (uploadCalls < 3) {
+        throw new AxiosError("interrupted", "ERR_NETWORK");
+      }
+    });
+
+    const upload = uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(chunkBytes)]),
+      fileName: "minimum-retry.bin",
+      server: {
+        maxChunkSizeBytes: chunkBytes,
+        supportedHashAlgorithm: "sha256",
+      },
+      client: { concurrency: 1 },
+    });
+
+    await expect(upload).resolves.toEqual({
+      chunkHashes: ["chunk-0"],
+      fileHash: "file-hash",
+    });
+    expect(mocks.uploadChunk).toHaveBeenCalledTimes(3);
+    expect(mocks.chunkExists).toHaveBeenCalledTimes(3);
+    expect(mocks.hashBuffer).toHaveBeenCalledOnce();
+    expect(worker.hashBlob).toHaveBeenCalledOnce();
+  });
+
   it("replaces the worker when upload fails before file hashing completes", async () => {
     const worker = createWorker();
     const fileHashGate = createDeferred<string>();
