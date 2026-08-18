@@ -74,22 +74,6 @@ class HashWorkerPool {
     this.available.push(worker);
   }
 
-  replace(worker: HashWorkerClient): void {
-    if (!this.inUse.delete(worker)) {
-      return;
-    }
-
-    const index = this.workers.indexOf(worker);
-    if (index >= 0) {
-      this.workers.splice(index, 1);
-    }
-    worker.terminate();
-
-    const replacement = new HashWorkerClient();
-    this.workers.push(replacement);
-    this.available.push(replacement);
-  }
-
   /**
    * Terminate all workers and clear the pool.
    * Call this when unmounting the upload manager or on session end.

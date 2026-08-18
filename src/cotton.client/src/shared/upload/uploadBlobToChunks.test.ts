@@ -26,7 +26,6 @@ const createDeferred = <T>(): Deferred<T> => {
 const mocks = vi.hoisted(() => ({
   acquire: vi.fn(),
   release: vi.fn(),
-  replace: vi.fn(),
   chunkExists: vi.fn(),
   uploadChunk: vi.fn(),
   hashBuffer: vi.fn(),
@@ -55,7 +54,6 @@ vi.mock("./hash/HashWorkerPool", () => ({
   globalHashWorkerPool: {
     acquire: mocks.acquire,
     release: mocks.release,
-    replace: mocks.replace,
   },
 }));
 
@@ -67,7 +65,9 @@ const createWorker = () => {
       hashIndex += 1;
       return { buffer, chunkHash };
     }),
-    hashBlob: vi.fn(async () => "file-hash"),
+    updateFileHash: vi.fn<(buffers: ArrayBuffer[]) => Promise<void>>(
+      async () => undefined,
+    ),
     digestFile: vi.fn(async () => "file-hash"),
   };
 };
@@ -134,10 +134,74 @@ describe("uploadBlobToChunks", () => {
       chunkHashes: ["chunk-0", "chunk-1", "chunk-2", "chunk-3"],
       fileHash: "file-hash",
     });
-    expect(worker.hashBlob).toHaveBeenCalledOnce();
+    expect(worker.updateFileHash).toHaveBeenCalledOnce();
     await vi.waitFor(() => {
       expect(mocks.release).toHaveBeenCalledWith(worker);
     });
+  });
+
+  it("updates the whole-file hash in source order before enqueueing", async () => {
+    const worker = createWorker();
+    const hashedBytes: number[][] = [];
+    mocks.acquire.mockResolvedValue(worker);
+    mocks.hashBuffer.mockImplementation(async (buffer: ArrayBuffer) => {
+      const byte = new Uint8Array(buffer)[0];
+      await new Promise((resolve) => {
+        globalThis.setTimeout(resolve, 5 - byte);
+      });
+      return `chunk-${byte}`;
+    });
+    worker.updateFileHash.mockImplementation(async (buffers: ArrayBuffer[]) => {
+      hashedBytes.push(buffers.map((buffer) => new Uint8Array(buffer)[0]));
+    });
+
+    await expect(
+      uploadBlobToChunks({
+        blob: new Blob([new Uint8Array([1, 4, 2, 3])]),
+        fileName: "ordered.bin",
+        server: {
+          maxChunkSizeBytes: 1,
+          supportedHashAlgorithm: "sha256",
+        },
+        client: { concurrency: 2 },
+      }),
+    ).resolves.toEqual({
+      chunkHashes: ["chunk-1", "chunk-4", "chunk-2", "chunk-3"],
+      fileHash: "file-hash",
+    });
+    expect(hashedBytes).toEqual([[1, 4, 2, 3]]);
+  });
+
+  it("keeps only one whole-file hash batch in flight", async () => {
+    const worker = createWorker();
+    const firstFileHashGate = createDeferred<void>();
+    let fileHashUpdateCount = 0;
+    mocks.acquire.mockResolvedValue(worker);
+    worker.updateFileHash.mockImplementation(async () => {
+      fileHashUpdateCount += 1;
+      if (fileHashUpdateCount === 1) {
+        await firstFileHashGate.promise;
+      }
+    });
+
+    const upload = uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(8)]),
+      fileName: "bounded-hash.bin",
+      server: {
+        maxChunkSizeBytes: 1,
+        supportedHashAlgorithm: "sha256",
+      },
+      client: { concurrency: 2 },
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.hashBuffer).toHaveBeenCalledTimes(8);
+    });
+    expect(worker.updateFileHash).toHaveBeenCalledOnce();
+
+    firstFileHashGate.resolve();
+    await expect(upload).resolves.toMatchObject({ fileHash: "file-hash" });
+    expect(worker.updateFileHash).toHaveBeenCalledTimes(2);
   });
 
   it("keeps a fixed number of network consumers active", async () => {
@@ -310,7 +374,7 @@ describe("uploadBlobToChunks", () => {
       expect.any(ArrayBuffer),
       "SHA-256",
     );
-    expect(worker.hashBlob).toHaveBeenCalledOnce();
+    expect(worker.updateFileHash).toHaveBeenCalledOnce();
   });
 
   it("reuses the prepared minimum-size chunk across transport retries", async () => {
@@ -343,20 +407,21 @@ describe("uploadBlobToChunks", () => {
     expect(mocks.uploadChunk).toHaveBeenCalledTimes(3);
     expect(mocks.chunkExists).toHaveBeenCalledTimes(3);
     expect(mocks.hashBuffer).toHaveBeenCalledOnce();
-    expect(worker.hashBlob).toHaveBeenCalledOnce();
+    expect(worker.updateFileHash).toHaveBeenCalledOnce();
   });
 
-  it("replaces the worker when upload fails before file hashing completes", async () => {
+  it("overlaps whole-file hashing with network work and awaits it before digest", async () => {
     const worker = createWorker();
-    const fileHashGate = createDeferred<string>();
-    worker.hashBlob.mockReturnValue(fileHashGate.promise);
+    const fileHashGate = createDeferred<void>();
+    worker.updateFileHash.mockImplementation(async () => {
+      await fileHashGate.promise;
+    });
     mocks.acquire.mockResolvedValue(worker);
     mocks.chunkExists.mockResolvedValue(false);
-    mocks.uploadChunk.mockRejectedValue(new Error("upload failed"));
 
     const upload = uploadBlobToChunks({
       blob: new Blob([new Uint8Array(256 * 1024)]),
-      fileName: "failed.bin",
+      fileName: "hash-gated.bin",
       server: {
         maxChunkSizeBytes: 256 * 1024,
         supportedHashAlgorithm: "sha256",
@@ -364,17 +429,28 @@ describe("uploadBlobToChunks", () => {
       client: { concurrency: 1 },
     });
 
-    await expect(upload).rejects.toThrow("upload failed");
-    expect(mocks.replace).toHaveBeenCalledWith(worker);
-    expect(mocks.release).not.toHaveBeenCalledWith(worker);
-    fileHashGate.resolve("unused-file-hash");
+    await vi.waitFor(() => {
+      expect(worker.updateFileHash).toHaveBeenCalledOnce();
+      expect(mocks.uploadChunk).toHaveBeenCalledOnce();
+    });
+    expect(worker.digestFile).not.toHaveBeenCalled();
+
+    fileHashGate.resolve();
+    await expect(upload).resolves.toEqual({
+      chunkHashes: ["chunk-0"],
+      fileHash: "file-hash",
+    });
   });
 
-  it("releases the worker when file hashing finished before upload failure", async () => {
+  it("releases the worker after an upload failure", async () => {
     const worker = createWorker();
+    const fileHashGate = createDeferred<void>();
     mocks.acquire.mockResolvedValue(worker);
     mocks.chunkExists.mockResolvedValue(false);
     mocks.uploadChunk.mockRejectedValue(new Error("upload failed"));
+    worker.updateFileHash.mockImplementation(async () => {
+      await fileHashGate.promise;
+    });
 
     const upload = uploadBlobToChunks({
       blob: new Blob([new Uint8Array(256 * 1024)]),
@@ -386,9 +462,14 @@ describe("uploadBlobToChunks", () => {
       client: { concurrency: 1 },
     });
 
+    await vi.waitFor(() => {
+      expect(mocks.uploadChunk).toHaveBeenCalledOnce();
+    });
+    expect(mocks.release).not.toHaveBeenCalled();
+
+    fileHashGate.resolve();
     await expect(upload).rejects.toThrow("upload failed");
     expect(mocks.release).toHaveBeenCalledWith(worker);
-    expect(mocks.replace).not.toHaveBeenCalledWith(worker);
   });
 
   it("retries a transient existence gateway failure without rehashing", async () => {
@@ -416,6 +497,6 @@ describe("uploadBlobToChunks", () => {
     expect(mocks.uploadChunk).toHaveBeenCalledOnce();
     expect(worker.hashChunk).not.toHaveBeenCalled();
     expect(mocks.hashBuffer).toHaveBeenCalledOnce();
-    expect(worker.hashBlob).toHaveBeenCalledOnce();
+    expect(worker.updateFileHash).toHaveBeenCalledOnce();
   });
 });

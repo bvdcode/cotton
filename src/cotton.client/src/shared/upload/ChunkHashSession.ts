@@ -14,9 +14,8 @@ export class ChunkHashSession {
   private readonly algorithm: SupportedHashAlgorithm;
   private readonly worker: HashWorkerClient | null;
   private readonly fileHasher: IncrementalHasher | null;
-  private readonly fileHashPromise: Promise<string> | null;
   private readonly nativeChunkHashing: boolean;
-  private fileHashCompleted = false;
+  private fileHashUpdate: Promise<void> | null = null;
   readonly maxParallelPreparations: number;
 
   private constructor(
@@ -24,7 +23,6 @@ export class ChunkHashSession {
     algorithm: SupportedHashAlgorithm,
     worker: HashWorkerClient | null,
     fileHasher: IncrementalHasher | null,
-    fileHashPromise: Promise<string> | null,
     nativeChunkHashing: boolean,
     maxParallelPreparations: number,
   ) {
@@ -32,64 +30,33 @@ export class ChunkHashSession {
     this.algorithm = algorithm;
     this.worker = worker;
     this.fileHasher = fileHasher;
-    this.fileHashPromise = fileHashPromise;
     this.nativeChunkHashing = nativeChunkHashing;
     this.maxParallelPreparations = maxParallelPreparations;
-    if (fileHashPromise) {
-      void fileHashPromise.then(
-        () => {
-          this.fileHashCompleted = true;
-        },
-        () => undefined,
-      );
-    }
   }
 
   static async create(
     blob: Blob,
     algorithm: SupportedHashAlgorithm,
     chunkHashConcurrency: number,
-    wholeFileHashReadSizeBytes: number,
   ): Promise<ChunkHashSession> {
     if (canUseHashWorker()) {
       const worker = await globalHashWorkerPool.acquire(algorithm);
       if (globalThis.crypto?.subtle) {
-        const fileHashPromise = worker.hashBlob(
-          blob,
-          wholeFileHashReadSizeBytes,
-        );
         return new ChunkHashSession(
           blob,
           algorithm,
           worker,
           null,
-          fileHashPromise,
           true,
           Math.max(1, chunkHashConcurrency),
         );
       }
 
-      return new ChunkHashSession(
-        blob,
-        algorithm,
-        worker,
-        null,
-        null,
-        false,
-        1,
-      );
+      return new ChunkHashSession(blob, algorithm, worker, null, false, 1);
     }
 
     const fileHasher = await createIncrementalHasher(algorithm);
-    return new ChunkHashSession(
-      blob,
-      algorithm,
-      null,
-      fileHasher,
-      null,
-      false,
-      1,
-    );
+    return new ChunkHashSession(blob, algorithm, null, fileHasher, false, 1);
   }
 
   async prepare(
@@ -121,9 +88,55 @@ export class ChunkHashSession {
     };
   }
 
+  async prepareBatch(segments: ChunkSegment[]): Promise<PreparedChunk[]> {
+    if (!this.nativeChunkHashing) {
+      return Promise.all(
+        segments.map((segment) => this.prepare(segment, true)),
+      );
+    }
+
+    if (!this.worker) {
+      throw new Error("File hash worker is unavailable.");
+    }
+
+    const pendingChunks = await Promise.all(
+      segments.map(async (segment) => {
+        const chunk = this.blob.slice(segment.start, segment.end);
+        const buffer = await chunk.arrayBuffer();
+        return {
+          segment,
+          buffer,
+          fileHashBuffer: buffer.slice(0),
+          hash: hashBuffer(buffer, this.algorithm),
+          contentType: chunk.type,
+        };
+      }),
+    );
+
+    if (this.fileHashUpdate) {
+      await this.fileHashUpdate;
+    }
+
+    const fileHashUpdate = this.worker.updateFileHash(
+      pendingChunks.map((prepared) => prepared.fileHashBuffer),
+    );
+    this.fileHashUpdate = fileHashUpdate;
+    void fileHashUpdate.catch(() => undefined);
+    const hashes = await Promise.all(
+      pendingChunks.map((prepared) => prepared.hash),
+    );
+
+    return pendingChunks.map((prepared, index) => ({
+      segment: prepared.segment,
+      buffer: prepared.buffer,
+      hash: hashes[index],
+      contentType: prepared.contentType,
+    }));
+  }
+
   async digestFile(): Promise<string> {
-    if (this.fileHashPromise) {
-      return this.fileHashPromise;
+    if (this.fileHashUpdate) {
+      await this.fileHashUpdate;
     }
 
     if (this.worker) {
@@ -137,20 +150,19 @@ export class ChunkHashSession {
     return this.fileHasher.digestHex();
   }
 
-  release(): void {
+  async release(): Promise<void> {
     if (this.released) {
       return;
     }
 
     this.released = true;
-    const worker = this.worker;
-    if (worker) {
-      if (this.fileHashPromise && !this.fileHashCompleted) {
-        globalHashWorkerPool.replace(worker);
-        return;
+    if (this.worker) {
+      try {
+        await this.fileHashUpdate;
+      } catch {
+        // The upload path already owns the hashing failure.
       }
-
-      globalHashWorkerPool.release(worker);
+      globalHashWorkerPool.release(this.worker);
     }
   }
 }

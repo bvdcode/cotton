@@ -195,9 +195,8 @@ export class ChunkUploadPipeline {
   }
 
   private async prepareAndEnqueue(segments: ChunkSegment[]): Promise<void> {
-    const preparedChunks = await Promise.all(
-      segments.map((segment) => this.options.hashSession.prepare(segment, true)),
-    );
+    const preparedChunks =
+      await this.options.hashSession.prepareBatch(segments);
     for (const prepared of preparedChunks) {
       this.throwIfFailed();
       await this.queue.enqueue(prepared, getChunkLength(prepared.segment));
@@ -367,7 +366,6 @@ export class ChunkUploadPipeline {
     networkFailures: number,
     retrySize: number,
   ): Promise<void> {
-
     for (
       let start = prepared.segment.start;
       start < prepared.segment.end;

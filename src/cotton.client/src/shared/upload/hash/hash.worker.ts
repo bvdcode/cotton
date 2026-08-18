@@ -28,14 +28,7 @@ type HashChunkMessage = {
 type UpdateFileHashMessage = {
   type: "updateFileHash";
   requestId: string;
-  buffer: ArrayBuffer;
-};
-
-type HashBlobMessage = {
-  type: "hashBlob";
-  requestId: string;
-  blob: Blob;
-  readSizeBytes: number;
+  buffers: ArrayBuffer[];
 };
 
 type DigestFileMessage = { type: "digestFile"; requestId: string };
@@ -43,7 +36,6 @@ type DigestFileMessage = { type: "digestFile"; requestId: string };
 type InMessage =
   | InitMessage
   | HashChunkMessage
-  | HashBlobMessage
   | UpdateFileHashMessage
   | DigestFileMessage;
 
@@ -57,11 +49,6 @@ type HashChunkResult = {
 };
 
 type UpdateFileHashResult = { type: "updateFileHashResult"; requestId: string };
-type HashBlobResult = {
-  type: "hashBlobResult";
-  requestId: string;
-  fileHash: string;
-};
 
 type DigestFileResult = {
   type: "digestFileResult";
@@ -74,7 +61,6 @@ type ErrorResult = { type: "error"; requestId?: string; message: string };
 type OutMessage =
   | InitResult
   | HashChunkResult
-  | HashBlobResult
   | UpdateFileHashResult
   | DigestFileResult
   | ErrorResult;
@@ -152,44 +138,12 @@ self.onmessage = async (ev: MessageEvent<InMessage>) => {
         return;
       }
 
-      fileHasher.update(new Uint8Array(msg.buffer));
+      for (const buffer of msg.buffers) {
+        fileHasher.update(new Uint8Array(buffer));
+      }
       const out: OutMessage = {
         type: "updateFileHashResult",
         requestId: msg.requestId,
-      };
-      self.postMessage(out);
-      return;
-    }
-
-    if (msg.type === "hashBlob") {
-      if (!initialized || !fileHasher || !currentAlgorithm) {
-        const out: OutMessage = {
-          type: "error",
-          requestId: msg.requestId,
-          message: "Hasher is not initialized",
-        };
-        self.postMessage(out);
-        return;
-      }
-
-      if (msg.readSizeBytes <= 0) {
-        throw new Error("Hash read size must be greater than zero");
-      }
-
-      fileHasher.init();
-      for (let start = 0; start < msg.blob.size; start += msg.readSizeBytes) {
-        const buffer = await msg.blob
-          .slice(start, Math.min(msg.blob.size, start + msg.readSizeBytes))
-          .arrayBuffer();
-        fileHasher.update(new Uint8Array(buffer));
-      }
-
-      const fileHash = fileHasher.digest("hex");
-      fileHasher.init();
-      const out: OutMessage = {
-        type: "hashBlobResult",
-        requestId: msg.requestId,
-        fileHash,
       };
       self.postMessage(out);
       return;
