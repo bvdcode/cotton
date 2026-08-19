@@ -448,7 +448,7 @@ namespace Cotton.Server.Controllers
         {
             if (string.IsNullOrEmpty(refreshToken))
             {
-                if (Request.Cookies.TryGetValue(CookieRefreshTokenKey, out var cookieToken))
+                if (Request.Cookies.TryGetValue(CookieRefreshTokenKey, out string? cookieToken))
                 {
                     refreshToken = cookieToken;
                 }
@@ -471,7 +471,7 @@ namespace Cotton.Server.Controllers
                 return NotFound();
             }
             _integrity.RequireValid(_dbContext, user, "auth.refresh-user");
-            var accessToken = _sessionIssuer.CreateAccessToken(user, dbToken.SessionId!);
+            string accessToken = _sessionIssuer.CreateAccessToken(user, dbToken.SessionId!);
             dbToken.RevokedAt = DateTime.UtcNow;
             var (newDbToken, newRefreshToken) = await _sessionIssuer.CreateRefreshTokenAsync(
                 user,
@@ -493,7 +493,7 @@ namespace Cotton.Server.Controllers
         {
             if (string.IsNullOrEmpty(refreshToken))
             {
-                if (Request.Cookies.TryGetValue(CookieRefreshTokenKey, out var cookieToken))
+                if (Request.Cookies.TryGetValue(CookieRefreshTokenKey, out string? cookieToken))
                 {
                     refreshToken = cookieToken;
                 }
@@ -527,7 +527,7 @@ namespace Cotton.Server.Controllers
             [FromBody] ForgotPasswordRequestDto request,
             CancellationToken cancellationToken)
         {
-            var command = new SendPasswordResetRequest(request.UsernameOrEmail, Request);
+            SendPasswordResetRequest command = new SendPasswordResetRequest(request.UsernameOrEmail, Request);
             await _mediator.Send(command, cancellationToken);
             return Ok();
         }
@@ -538,7 +538,7 @@ namespace Cotton.Server.Controllers
             [FromBody] ResetPasswordRequestDto request,
             CancellationToken cancellationToken)
         {
-            var command = new ConfirmPasswordResetRequest(request.Token, request.NewPassword);
+            ConfirmPasswordResetRequest command = new ConfirmPasswordResetRequest(request.Token, request.NewPassword);
             await _mediator.Send(command, cancellationToken);
             return Ok();
         }

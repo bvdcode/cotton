@@ -23,7 +23,7 @@ namespace Cotton.Previews
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
             using MemoryStream svgContent = await ReadSvgContentAsync(stream).ConfigureAwait(false);
-            using var svg = new SKSvg();
+            using SKSvg svg = new SKSvg();
             svg.Load(svgContent);
 
             SKPicture? picture = svg.Picture ?? throw new InvalidOperationException("Unable to parse SVG image.");
@@ -58,7 +58,7 @@ namespace Cotton.Previews
                 stream.Position = 0;
             }
 
-            var source = new MemoryStream();
+            MemoryStream source = new MemoryStream();
             await stream.CopyToAsync(source).ConfigureAwait(false);
             source.Position = 0;
 
@@ -67,9 +67,9 @@ namespace Cotton.Previews
                 return source;
             }
 
-            var decompressed = new MemoryStream();
+            MemoryStream decompressed = new MemoryStream();
             source.Position = 0;
-            using (var gzip = new GZipStream(source, CompressionMode.Decompress, leaveOpen: true))
+            using (GZipStream gzip = new GZipStream(source, CompressionMode.Decompress, leaveOpen: true))
             {
                 await gzip.CopyToAsync(decompressed).ConfigureAwait(false);
             }

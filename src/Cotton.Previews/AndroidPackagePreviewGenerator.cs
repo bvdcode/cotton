@@ -47,7 +47,7 @@ namespace Cotton.Previews
                 return null;
             }
 
-            var copy = new MemoryStream();
+            MemoryStream copy = new MemoryStream();
             await CopyBoundedAsync(stream, copy, MaxNonSeekablePackageBytes).ConfigureAwait(false);
             copy.Position = 0;
             return copy;
@@ -278,7 +278,7 @@ namespace Cotton.Previews
             }
 
             canvasSize = Math.Max(canvasSize, PreviewGeneratorProvider.DefaultSmallPreviewSize);
-            using var canvas = new Image<Rgba32>(canvasSize, canvasSize, new Rgba32(0, 0, 0, 0));
+            using Image<Rgba32> canvas = new Image<Rgba32>(canvasSize, canvasSize, new Rgba32(0, 0, 0, 0));
             if (background is not null)
             {
                 DrawCenteredLayer(canvas, background);
@@ -286,7 +286,7 @@ namespace Cotton.Previews
 
             DrawCenteredLayer(canvas, foreground);
 
-            using var output = new MemoryStream();
+            using MemoryStream output = new MemoryStream();
             await canvas.SaveAsPngAsync(output).ConfigureAwait(false);
             return output.ToArray();
         }
@@ -592,7 +592,7 @@ namespace Cotton.Previews
             }
 
             await using Stream entryStream = entry.Open();
-            var output = new MemoryStream((int)Math.Min(entry.Length, int.MaxValue));
+            MemoryStream output = new MemoryStream((int)Math.Min(entry.Length, int.MaxValue));
             await CopyBoundedAsync(entryStream, output, maxBytes).ConfigureAwait(false);
             return output.ToArray();
         }
@@ -716,7 +716,7 @@ namespace Cotton.Previews
                 }));
             }
 
-            using var output = new MemoryStream();
+            using MemoryStream output = new MemoryStream();
             await image.SaveAsWebpAsync(output, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
             return output.ToArray();
         }
@@ -724,14 +724,14 @@ namespace Cotton.Previews
         private static async Task<byte[]> CreateFallbackPreviewAsync(int size)
         {
             int renderSize = Math.Max(size * 4, 256);
-            var background = new Rgba32(18, 24, 33);
-            var accent = new Rgba32(
+            Rgba32 background = new Rgba32(18, 24, 33);
+            Rgba32 accent = new Rgba32(
                 PreviewColorPalette.AccentGreenRed,
                 PreviewColorPalette.AccentGreenGreen,
                 PreviewColorPalette.AccentGreenBlue);
-            var dark = new Rgba32(18, 24, 33);
+            Rgba32 dark = new Rgba32(18, 24, 33);
 
-            using var canvas = new Image<Rgba32>(renderSize, renderSize, background);
+            using Image<Rgba32> canvas = new Image<Rgba32>(renderSize, renderSize, background);
             DrawAndroidPackageGlyph(canvas, accent, dark);
 
             using Image<Rgba32> output = canvas.Clone(x => x.Resize(new ResizeOptions
@@ -742,7 +742,7 @@ namespace Cotton.Previews
                 PremultiplyAlpha = true,
             }));
 
-            using var stream = new MemoryStream();
+            using MemoryStream stream = new MemoryStream();
             await output.SaveAsWebpAsync(stream, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
             return stream.ToArray();
         }

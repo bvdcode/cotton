@@ -44,7 +44,7 @@ namespace Cotton.Storage.Helpers
             TimeSpan? timeout = null,
             int maxErrorRetry = 3)
         {
-            var credentials = new BasicAWSCredentials(accessKey, secretKey);
+            BasicAWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
             AmazonS3Config config = BuildConfig(endpoint, region, timeout, maxErrorRetry);
             return new AmazonS3Client(credentials, config);
         }

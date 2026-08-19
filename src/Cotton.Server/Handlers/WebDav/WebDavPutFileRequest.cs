@@ -238,7 +238,7 @@ namespace Cotton.Server.Handlers.WebDav
             Guid layoutId,
             CancellationToken ct)
         {
-            var folderExists = await _dbContext.Nodes
+            bool folderExists = await _dbContext.Nodes
                 .AnyAsync(n => n.ParentId == parentNodeId
                     && n.OwnerId == userId
                     && n.NameKey == nameKey
@@ -415,7 +415,7 @@ namespace Cotton.Server.Handlers.WebDav
                 return (nodeFile, capture);
             }
 
-            var createdNodeFile = new NodeFile
+            NodeFile createdNodeFile = new NodeFile
             {
                 OwnerId = request.UserId,
                 NodeId = target.Parent.ParentNode!.Id,
@@ -464,9 +464,9 @@ namespace Cotton.Server.Handlers.WebDav
         {
             ServerSettingsSnapshot settings = _settings.GetServerSettings();
             int chunkSize = settings.MaxChunkSizeBytes;
-            var chunks = new List<Chunk>();
+            List<Chunk> chunks = new List<Chunk>();
 
-            using var fileHasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
+            using IncrementalHash fileHasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
 
             // Rent a buffer from the array pool to avoid allocations
             byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(chunkSize);

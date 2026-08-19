@@ -127,7 +127,7 @@ namespace Cotton.Server.Services
             byte[] buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
             try
             {
-                using var output = new MemoryStream();
+                using MemoryStream output = new MemoryStream();
                 while (true)
                 {
                     int read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), ct);
@@ -152,7 +152,7 @@ namespace Cotton.Server.Services
 
         private static async Task<byte[]> GenerateAvatarPreviewAsync(byte[] sourceImage)
         {
-            await using var sourceStream = new MemoryStream(sourceImage, writable: false);
+            await using MemoryStream sourceStream = new MemoryStream(sourceImage, writable: false);
             return await _avatarGenerator.GeneratePreviewWebPAsync(
                 sourceStream,
                 PreviewGeneratorProvider.DefaultSmallPreviewSize);

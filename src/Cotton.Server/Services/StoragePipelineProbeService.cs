@@ -56,12 +56,12 @@ namespace Cotton.Server.Services
                 },
             };
 
-            var roundtrip = Stopwatch.StartNew();
-            var writeStopwatch = Stopwatch.StartNew();
+            Stopwatch roundtrip = Stopwatch.StartNew();
+            Stopwatch writeStopwatch = Stopwatch.StartNew();
             long storedSizeBytes = 0;
             try
             {
-                await using (var input = new MemoryStream(payload, writable: false))
+                await using (MemoryStream input = new MemoryStream(payload, writable: false))
                 {
                     await _storage.WriteAsync(
                         uid,
@@ -73,7 +73,7 @@ namespace Cotton.Server.Services
                 writeStopwatch.Stop();
                 storedSizeBytes = await _storage.GetSizeAsync(uid).ConfigureAwait(false);
 
-                var readStopwatch = Stopwatch.StartNew();
+                Stopwatch readStopwatch = Stopwatch.StartNew();
                 await using Stream output = await _storage.ReadAsync(uid, context).ConfigureAwait(false);
                 var (readBytes, actualHash) = await ReadAndHashAsync(output, cancellationToken).ConfigureAwait(false);
                 readStopwatch.Stop();

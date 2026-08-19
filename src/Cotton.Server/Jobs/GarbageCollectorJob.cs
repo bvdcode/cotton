@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Quartz;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace Cotton.Server.Jobs
 {
@@ -148,7 +149,7 @@ namespace Cotton.Server.Jobs
             };
 
             int totalScheduled = 0;
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
             TimeSpan lastProgressLogAt = TimeSpan.Zero;
 
             while (totalScheduled < batchSize)
@@ -252,7 +253,7 @@ namespace Cotton.Server.Jobs
 
             int deletedChunksCounter = 0;
             int processedCounter = 0;
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
             TimeSpan lastProgressLogAt = TimeSpan.Zero;
 
             try

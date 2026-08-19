@@ -28,7 +28,7 @@ namespace Cotton.Server.Models
 
         public Task ExecuteResultAsync(ActionContext context)
         {
-            var objectResult = new ObjectResult(this)
+            ObjectResult objectResult = new ObjectResult(this)
             {
                 StatusCode = (int)StatusCode,
                 ContentTypes = { MediaTypeNames.Application.Json }

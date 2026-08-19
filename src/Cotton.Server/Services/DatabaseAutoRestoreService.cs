@@ -128,8 +128,8 @@ namespace Cotton.Server.Services
                 Directory.CreateDirectory(directory);
             }
 
-            await using var output = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
-            using var hasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
+            await using FileStream output = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+            using IncrementalHash hasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
             byte[] buffer = ArrayPool<byte>.Shared.Rent(81920);
             long totalBytes = 0;
 

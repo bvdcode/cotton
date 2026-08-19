@@ -41,9 +41,9 @@ namespace Cotton.Previews
             stream.Seek(0, SeekOrigin.Begin);
 
             byte[] imageBytes;
-            await using (var server = new RangeStreamServer(stream))
+            await using (RangeStreamServer server = new RangeStreamServer(stream))
             {
-                var coverArt = await TryExtractCoverArtAsync(server.Url).ConfigureAwait(false);
+                byte[]? coverArt = await TryExtractCoverArtAsync(server.Url).ConfigureAwait(false);
                 if (coverArt is not null)
                 {
                     imageBytes = coverArt;
@@ -60,8 +60,8 @@ namespace Cotton.Previews
             }
 
             ImagePreviewGenerator imagePreviewGenerator = new();
-            await using var imageStream = new MemoryStream(imageBytes);
-            var result = await imagePreviewGenerator.GeneratePreviewWebPAsync(imageStream, size);
+            await using MemoryStream imageStream = new MemoryStream(imageBytes);
+            byte[] result = await imagePreviewGenerator.GeneratePreviewWebPAsync(imageStream, size);
             return result;
         }
 

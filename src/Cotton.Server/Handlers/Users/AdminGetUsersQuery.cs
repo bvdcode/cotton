@@ -24,7 +24,7 @@ namespace Cotton.Server.Handlers.Users
                 .OrderBy(x => x.Username)
                 .ToListAsync(cancellationToken);
 
-            var userIds = users.Select(x => x.Id).ToList();
+            List<Guid> userIds = users.Select(x => x.Id).ToList();
 
             var activity = await _dbContext.RefreshTokens
                 .AsNoTracking()

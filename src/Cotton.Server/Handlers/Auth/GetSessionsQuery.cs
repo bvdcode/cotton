@@ -83,7 +83,7 @@ namespace Cotton.Server.Handlers.Auth
             IEnumerable<ExtendedRefreshToken> tokens,
             TimeSpan tokenLifetime)
         {
-            var intervals = tokens
+            List<(DateTime start, DateTime end)> intervals = tokens
                 .Select(t =>
                 {
                     DateTime start = t.CreatedAt;

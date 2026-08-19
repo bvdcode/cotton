@@ -76,11 +76,11 @@ namespace Cotton.Storage.Backends
                 string tmpDir = GetTempDirectory();
                 DateTimeOffset cutoff = DateTimeOffset.UtcNow - ttl;
 
-                foreach (var file in Directory.EnumerateFiles(tmpDir, "*.tmp", SearchOption.TopDirectoryOnly))
+                foreach (string file in Directory.EnumerateFiles(tmpDir, "*.tmp", SearchOption.TopDirectoryOnly))
                 {
                     try
                     {
-                        var info = new FileInfo(file);
+                        FileInfo info = new FileInfo(file);
                         DateTime lastWrite = info.LastWriteTimeUtc;
                         if (lastWrite <= cutoff.UtcDateTime)
                         {
@@ -158,7 +158,7 @@ namespace Cotton.Storage.Backends
             {
                 throw new FileNotFoundException("File not found", filePath);
             }
-            var fso = new FileStreamOptions
+            FileStreamOptions fso = new FileStreamOptions
             {
                 Mode = FileMode.Open,
                 Share = FileShare.Read,
@@ -179,7 +179,7 @@ namespace Cotton.Storage.Backends
             string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
 
             string tmpFilePath = CreateTempFilePath(fileName);
-            var fso = new FileStreamOptions
+            FileStreamOptions fso = new FileStreamOptions
             {
                 Share = FileShare.None,
                 Mode = FileMode.CreateNew,
@@ -247,7 +247,7 @@ namespace Cotton.Storage.Backends
                 return Task.FromResult(0L);
             }
 
-            var info = new FileInfo(filePath);
+            FileInfo info = new FileInfo(filePath);
             return Task.FromResult(info.Length);
         }
 

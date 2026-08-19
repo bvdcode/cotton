@@ -290,7 +290,7 @@ namespace Cotton.Server.Handlers.WebDav
                 return destParentResult;
             }
 
-            if (!NameValidator.TryNormalizeAndValidate(destParentResult.ResourceName, out _, out var errorMessage))
+            if (!NameValidator.TryNormalizeAndValidate(destParentResult.ResourceName, out _, out string? errorMessage))
             {
                 _logger.LogDebug("WebDAV MOVE: Invalid name: {Name}, Error: {Error}", destParentResult.ResourceName, errorMessage);
                 return destParentResult with { Found = false };

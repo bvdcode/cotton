@@ -4,6 +4,7 @@
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 
 namespace Cotton.Previews.Http
 {
@@ -63,7 +64,7 @@ namespace Cotton.Previews.Http
 
         private static int GetFreeTcpPort()
         {
-            var l = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+            TcpListener l = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
             l.Start();
             int port = ((IPEndPoint)l.LocalEndpoint).Port;
             l.Stop();
@@ -188,7 +189,7 @@ namespace Cotton.Previews.Http
 
         private async Task HandleAsync(HttpListenerContext ctx, CancellationToken ct)
         {
-            var reqId = Guid.NewGuid().ToString("N")[..6];
+            string reqId = Guid.NewGuid().ToString("N")[..6];
             try
             {
                 if (!TryAuthorize(ctx, reqId))
@@ -198,8 +199,8 @@ namespace Cotton.Previews.Http
 
                 ConfigureResponseBase(ctx);
 
-                var rangeHeader = ctx.Request.Headers["Range"];
-                if (!TryParseRange(rangeHeader, out ByteRange? range, out var statusCode, out var contentRangeHeaderValue))
+                string? rangeHeader = ctx.Request.Headers["Range"];
+                if (!TryParseRange(rangeHeader, out ByteRange? range, out int statusCode, out string? contentRangeHeaderValue))
                 {
                     ctx.Response.StatusCode = statusCode;
                     if (!string.IsNullOrEmpty(contentRangeHeaderValue))
@@ -278,7 +279,7 @@ namespace Cotton.Previews.Http
                 return false;
             }
 
-            var token = ctx.Request.QueryString["token"];
+            string? token = ctx.Request.QueryString["token"];
             if (!string.Equals(token, _token, StringComparison.Ordinal))
             {
                 _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Invalid token", _serverId, reqId);
@@ -367,7 +368,7 @@ namespace Cotton.Previews.Http
         {
             ctx.Response.StatusCode = (int)HttpStatusCode.OK;
             ctx.Response.ContentLength64 = _length;
-            var ok = await CopyRangeAsync(reqId, start: 0, endInclusive: _length - 1, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+            bool ok = await CopyRangeAsync(reqId, start: 0, endInclusive: _length - 1, ctx.Response.OutputStream, ct).ConfigureAwait(false);
             if (!ok)
             {
                 _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Full copy failed", _serverId, reqId);
@@ -382,7 +383,7 @@ namespace Cotton.Previews.Http
             ctx.Response.ContentLength64 = range.ContentLength;
             ctx.Response.Headers["Content-Range"] = $"bytes {range.Start}-{range.EndInclusive}/{_length}";
 
-            var ok = await CopyRangeAsync(reqId, range.Start, range.EndInclusive, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+            bool ok = await CopyRangeAsync(reqId, range.Start, range.EndInclusive, ctx.Response.OutputStream, ct).ConfigureAwait(false);
             if (!ok)
             {
                 _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Range copy failed", _serverId, reqId);

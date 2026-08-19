@@ -30,7 +30,7 @@ namespace Cotton.Previews
             uint resourceId,
             Func<string, bool> pathFilter)
         {
-            var candidates = new List<AndroidResourcePathCandidate>();
+            List<AndroidResourcePathCandidate> candidates = new List<AndroidResourcePathCandidate>();
             if (!AndroidBinaryResourceReader.HasRange(resourceTableBytes, 0, 12)
                 || AndroidBinaryResourceReader.ReadUInt16(resourceTableBytes, 0) != ResTableType)
             {

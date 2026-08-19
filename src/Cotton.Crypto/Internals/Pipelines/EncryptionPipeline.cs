@@ -18,8 +18,8 @@ namespace Cotton.Crypto.Internals.Pipelines
     {
         public async Task RunAsync(CancellationToken ct)
         {
-            var jobCh = Channel.CreateBounded<EncryptionJob>(new BoundedChannelOptions(threads * 4) { SingleWriter = true, SingleReader = false, FullMode = BoundedChannelFullMode.Wait });
-            var resCh = Channel.CreateBounded<EncryptionResult>(new BoundedChannelOptions(threads * 4) { SingleWriter = false, SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
+            Channel<EncryptionJob> jobCh = Channel.CreateBounded<EncryptionJob>(new BoundedChannelOptions(threads * 4) { SingleWriter = true, SingleReader = false, FullMode = BoundedChannelFullMode.Wait });
+            Channel<EncryptionResult> resCh = Channel.CreateBounded<EncryptionResult>(new BoundedChannelOptions(threads * 4) { SingleWriter = false, SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
 
             int jobCap = threads * 4;
             int resCap = threads * 4;
@@ -42,14 +42,14 @@ namespace Cotton.Crypto.Internals.Pipelines
             }
             long estSize = NextPow2(chunkSize);
             long maxBytes = estSize * maxCount;
-            using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
+            using BufferScope scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
 
-            using var pipelineCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            using CancellationTokenSource pipelineCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             CancellationToken pipelineCt = pipelineCts.Token;
 
             Task producer = ProduceAsync(jobCh.Writer, scope, pipelineCt);
             Task[] workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, scope, pipelineCt);
-            var workersDone = Task.WhenAll(workers);
+            Task workersDone = Task.WhenAll(workers);
             Task resultsDone = PipelineTaskHelpers.CompleteWhenFinishedAsync(workersDone, resCh.Writer);
             Task consumer = ConsumeAsync(resCh.Reader, scope, pipelineCt);
 
@@ -143,12 +143,12 @@ namespace Cotton.Crypto.Internals.Pipelines
 
         private Task[] StartWorkersAsync(ChannelReader<EncryptionJob> reader, ChannelWriter<EncryptionResult> writer, BufferScope scope, CancellationToken ct)
         {
-            var tasks = new Task[threads];
+            Task[] tasks = new Task[threads];
             for (int i = 0; i < threads; i++)
             {
                 tasks[i] = Task.Run(async () =>
                 {
-                    using var gcm = new AesGcm(fileKey, tagSize);
+                    using AesGcm gcm = new AesGcm(fileKey, tagSize);
                     byte[] nonceBuffer = new byte[nonceSize];
                     byte[] aad = new byte[32];
                     AesGcmStreamFormat.InitAadPrefix(aad, keyId);
@@ -219,7 +219,7 @@ namespace Cotton.Crypto.Internals.Pipelines
 
                 Tag128 tag = default;
                 Span<byte> tagSpan = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref tag, 1));
-                using var gcm = new AesGcm(fileKey, tagSize);
+                using AesGcm gcm = new AesGcm(fileKey, tagSize);
                 gcm.Encrypt(
                     nonceBuffer.AsSpan(0, nonceSize),
                     ReadOnlySpan<byte>.Empty,
@@ -243,7 +243,7 @@ namespace Cotton.Crypto.Internals.Pipelines
         {
             return Task.Run(async () =>
             {
-                var pending = new SortedDictionary<long, EncryptionResult>();
+                SortedDictionary<long, EncryptionResult> pending = new SortedDictionary<long, EncryptionResult>();
                 long next = 0;
                 try
                 {

@@ -53,9 +53,9 @@ namespace Cotton.Crypto.Internals.Pipelines
                 {
                     newWindow = Math.Min(newWindow * 2, _windowCap);
                 }
-                var newRing = new DecryptionResult[newWindow];
-                var newFilled = new bool[newWindow];
-                var newSlotIndex = new long[newWindow];
+                DecryptionResult[] newRing = new DecryptionResult[newWindow];
+                bool[] newFilled = new bool[newWindow];
+                long[] newSlotIndex = new long[newWindow];
                 for (int i = 0; i < _window; i++)
                 {
                     if (!_filled[i])
@@ -155,13 +155,13 @@ namespace Cotton.Crypto.Internals.Pipelines
 
         public async Task RunAsync(CancellationToken ct)
         {
-            var jobCh = Channel.CreateBounded<DecryptionJob>(new BoundedChannelOptions(threads * 4)
+            Channel<DecryptionJob> jobCh = Channel.CreateBounded<DecryptionJob>(new BoundedChannelOptions(threads * 4)
             {
                 SingleWriter = true,
                 SingleReader = false,
                 FullMode = BoundedChannelFullMode.Wait
             });
-            var resCh = Channel.CreateBounded<DecryptionResult>(new BoundedChannelOptions(threads * 4)
+            Channel<DecryptionResult> resCh = Channel.CreateBounded<DecryptionResult>(new BoundedChannelOptions(threads * 4)
             {
                 SingleWriter = false,
                 SingleReader = true,
@@ -174,14 +174,14 @@ namespace Cotton.Crypto.Internals.Pipelines
             int allowedBacklog = Math.Min(windowCap * 2, 8192);
             int maxCount = jobCap + threads + resCap + allowedBacklog;
             long maxBytes = (long)maxChunkSize * maxCount * 4;
-            using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
+            using BufferScope scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
 
-            using var pipelineCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            using CancellationTokenSource pipelineCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             CancellationToken pipelineCt = pipelineCts.Token;
 
             Task producer = ProduceAsync(jobCh.Writer, scope, pipelineCt);
             Task[] workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, scope, pipelineCt);
-            var workersDone = Task.WhenAll(workers);
+            Task workersDone = Task.WhenAll(workers);
             Task resultsDone = PipelineTaskHelpers.CompleteWhenFinishedAsync(workersDone, resCh.Writer);
             Task<long> consumerTask = ConsumeAsync(resCh.Reader, scope, pipelineCt);
 
@@ -351,7 +351,7 @@ namespace Cotton.Crypto.Internals.Pipelines
 
                 Tag128 tagCopy = chunkHeader.Tag;
                 Span<byte> tagSpan = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref tagCopy, 1));
-                using var gcm = new AesGcm(fileKey, tagSize);
+                using AesGcm gcm = new AesGcm(fileKey, tagSize);
                 try
                 {
                     gcm.Decrypt(
@@ -457,12 +457,12 @@ namespace Cotton.Crypto.Internals.Pipelines
         private Task[] StartWorkersAsync(ChannelReader<DecryptionJob> reader,
             ChannelWriter<DecryptionResult> writer, BufferScope scope, CancellationToken ct)
         {
-            var tasks = new Task[threads];
+            Task[] tasks = new Task[threads];
             for (int i = 0; i < threads; i++)
             {
                 tasks[i] = Task.Run(async () =>
                 {
-                    using var gcm = new AesGcm(fileKey, tagSize);
+                    using AesGcm gcm = new AesGcm(fileKey, tagSize);
                     byte[] nonceBuffer = new byte[nonceSize];
                     byte[] aad = new byte[32];
                     AesGcmStreamFormat.InitAadPrefix(aad, keyId);
@@ -502,7 +502,7 @@ namespace Cotton.Crypto.Internals.Pipelines
         {
             return Task.Run(async () =>
             {
-                var writer = new ReorderWriter(output, scope, threads, windowCap);
+                ReorderWriter writer = new ReorderWriter(output, scope, threads, windowCap);
                 try
                 {
                     await foreach (DecryptionResult result in reader.ReadAllAsync(ct))

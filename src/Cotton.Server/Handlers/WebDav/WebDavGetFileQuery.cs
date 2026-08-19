@@ -48,12 +48,12 @@ namespace Cotton.Server.Handlers.WebDav
 
             FileManifest manifest = nodeFile.FileManifest;
 
-            var chunkHashes = manifest.FileManifestChunks
+            string[] chunkHashes = manifest.FileManifestChunks
                 .OrderBy(c => c.ChunkOrder)
                 .Select(c => Convert.ToHexString(c.ChunkHash).ToLowerInvariant())
                 .ToArray();
 
-            var context = new PipelineContext
+            PipelineContext context = new PipelineContext
             {
                 FileSizeBytes = manifest.SizeBytes,
                 ChunkLengths = manifest.FileManifestChunks.GetChunkLengths()

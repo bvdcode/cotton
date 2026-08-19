@@ -29,13 +29,13 @@ namespace Cotton.Topology
                 return currentNode;
             }
 
-            var parts = (path ?? string.Empty)
+            string[] parts = (path ?? string.Empty)
                 .Replace('\\', Constants.DefaultPathSeparator)
                 .Trim(Constants.DefaultPathSeparator)
                 .Split(Constants.DefaultPathSeparator, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var part in parts)
+            foreach (string part in parts)
             {
-                var nameKey = NameValidator.NormalizeAndGetNameKey(part);
+                string nameKey = NameValidator.NormalizeAndGetNameKey(part);
                 Node? nextNode = await _dbContext.Nodes
                     .AsNoTracking()
                     .Where(x => x.LayoutId == layout.Id
@@ -70,9 +70,9 @@ namespace Cotton.Topology
                 return null;
             }
 
-            var parts = new Stack<string>();
-            var visited = new HashSet<Guid>();
-            var depth = 0;
+            Stack<string> parts = new Stack<string>();
+            HashSet<Guid> visited = new HashSet<Guid>();
+            int depth = 0;
 
             while (current.ParentId.HasValue)
             {
@@ -98,15 +98,15 @@ namespace Cotton.Topology
 
         public async Task<(Node Parent, string ResourceName)?> ResolveParentAndNameAsync(Guid userId, string path, NodeType nodeType, CancellationToken ct = default)
         {
-            var cleanPath = (path ?? string.Empty).Replace('\\', Constants.DefaultPathSeparator).Trim(Constants.DefaultPathSeparator);
+            string cleanPath = (path ?? string.Empty).Replace('\\', Constants.DefaultPathSeparator).Trim(Constants.DefaultPathSeparator);
             if (string.IsNullOrEmpty(cleanPath))
             {
                 return null;
             }
 
-            var parts = cleanPath.Split(Constants.DefaultPathSeparator, StringSplitOptions.RemoveEmptyEntries);
-            var resourceName = parts[^1];
-            var parentPath = parts.Length == 1 ? null : string.Join(Constants.DefaultPathSeparator, parts.Take(parts.Length - 1));
+            string[] parts = cleanPath.Split(Constants.DefaultPathSeparator, StringSplitOptions.RemoveEmptyEntries);
+            string resourceName = parts[^1];
+            string? parentPath = parts.Length == 1 ? null : string.Join(Constants.DefaultPathSeparator, parts.Take(parts.Length - 1));
 
             Node? parent = await ResolveNodeByPathAsync(userId, parentPath, nodeType, ct);
             return parent is null ? null : (parent, resourceName);

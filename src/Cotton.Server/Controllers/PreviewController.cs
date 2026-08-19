@@ -33,7 +33,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetFilePreview([FromRoute] string previewHashEncryptedHex)
         {
             await _previewGate.WaitAsync(HttpContext.RequestAborted);
-            var gateLease = new PreviewGateLease(_previewGate);
+            PreviewGateLease gateLease = new PreviewGateLease(_previewGate);
             try
             {
                 Response.RegisterForDispose(gateLease);

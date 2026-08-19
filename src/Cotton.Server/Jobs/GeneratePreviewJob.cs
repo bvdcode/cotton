@@ -36,7 +36,7 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
-            var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
+            string[] allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
             IReadOnlyDictionary<string, int> generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
 
@@ -222,7 +222,7 @@ namespace Cotton.Server.Jobs
             _logger.LogDebug("Storing {PreviewKind} (hash={Hash}) for FileManifest {FileManifestId}...",
                 previewKind, hashStr, fileManifestId);
 
-            using var resultStream = new MemoryStream(previewImage);
+            using MemoryStream resultStream = new MemoryStream(previewImage);
             await _storage.WriteAsync(
                 hashStr,
                 resultStream,
@@ -372,7 +372,7 @@ namespace Cotton.Server.Jobs
                 .AsSplitQuery()
                 .ToListAsync(cancellationToken);
 
-            var itemsToProcessById = itemsToProcess.ToDictionary(x => x.Id);
+            Dictionary<Guid, FileManifest> itemsToProcessById = itemsToProcess.ToDictionary(x => x.Id);
             return [.. itemIds.Where(itemsToProcessById.ContainsKey).Select(id => itemsToProcessById[id])];
         }
 

@@ -13,16 +13,16 @@ namespace Cotton.Server.Services.WebDav
 
         public static string BuildMultiStatusResponse(IEnumerable<WebDavResource> resources)
         {
-            var sb = new StringBuilder();
-            var settings = new XmlWriterSettings
+            StringBuilder sb = new StringBuilder();
+            XmlWriterSettings settings = new XmlWriterSettings
             {
                 OmitXmlDeclaration = true, // Windows WebDAV client doesn't like encoding declaration
                 Indent = false,
                 Encoding = Encoding.UTF8
             };
 
-            using var stringWriter = new StringWriter(sb);
-            using (var writer = XmlWriter.Create(stringWriter, settings))
+            using StringWriter stringWriter = new StringWriter(sb);
+            using (XmlWriter writer = XmlWriter.Create(stringWriter, settings))
             {
                 writer.WriteStartElement("d", "multistatus", DavNamespace);
 
@@ -39,16 +39,16 @@ namespace Cotton.Server.Services.WebDav
 
         public static string BuildPropPatchOkResponse(string href)
         {
-            var sb = new StringBuilder();
-            var settings = new XmlWriterSettings
+            StringBuilder sb = new StringBuilder();
+            XmlWriterSettings settings = new XmlWriterSettings
             {
                 OmitXmlDeclaration = true,
                 Indent = false,
                 Encoding = Encoding.UTF8
             };
 
-            using var stringWriter = new StringWriter(sb);
-            using (var writer = XmlWriter.Create(stringWriter, settings))
+            using StringWriter stringWriter = new StringWriter(sb);
+            using (XmlWriter writer = XmlWriter.Create(stringWriter, settings))
             {
                 writer.WriteStartElement("d", "multistatus", DavNamespace);
 
@@ -70,16 +70,16 @@ namespace Cotton.Server.Services.WebDav
 
         public static string BuildLockDiscoveryResponse(string token, TimeSpan timeout)
         {
-            var sb = new StringBuilder();
-            var settings = new XmlWriterSettings
+            StringBuilder sb = new StringBuilder();
+            XmlWriterSettings settings = new XmlWriterSettings
             {
                 OmitXmlDeclaration = true,
                 Indent = false,
                 Encoding = Encoding.UTF8
             };
 
-            using var stringWriter = new StringWriter(sb);
-            using (var writer = XmlWriter.Create(stringWriter, settings))
+            using StringWriter stringWriter = new StringWriter(sb);
+            using (XmlWriter writer = XmlWriter.Create(stringWriter, settings))
             {
                 writer.WriteStartElement("d", "prop", DavNamespace);
 

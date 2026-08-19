@@ -197,7 +197,7 @@ namespace Cotton.Server.Services
             string codeVerifier = CreateOpaqueValue();
             string nonce = CreateOpaqueValue();
             string redirectUri = await BuildRedirectUriAsync(ct);
-            var loginState = new OidcLoginState
+            OidcLoginState loginState = new OidcLoginState
             {
                 ProviderId = provider.Id,
                 StateHash = HashOpaqueValue(state),
@@ -212,7 +212,7 @@ namespace Cotton.Server.Services
             await _dbContext.OidcLoginStates.AddAsync(loginState, ct);
             await _dbContext.SaveChangesAsync(ct);
 
-            var parameters = new Dictionary<string, string?>
+            Dictionary<string, string?> parameters = new Dictionary<string, string?>
             {
                 ["response_type"] = OpenIdConnectResponseType.Code,
                 ["client_id"] = provider.ClientId,
@@ -279,7 +279,7 @@ namespace Cotton.Server.Services
 
             string username = await BuildUsernameAsync(claims, ct);
             string randomSecret = CreateOpaqueValue();
-            var user = new User
+            User user = new User
             {
                 Username = username,
                 Role = provider.DefaultRole,
@@ -383,7 +383,7 @@ namespace Cotton.Server.Services
             string issuer,
             OidcIdentityClaims claims)
         {
-            var identity = new UserExternalIdentity
+            UserExternalIdentity identity = new UserExternalIdentity
             {
                 UserId = userId,
                 ProviderId = providerId,
@@ -453,11 +453,11 @@ namespace Cotton.Server.Services
             string idToken,
             string nonce)
         {
-            var handler = new JwtSecurityTokenHandler
+            JwtSecurityTokenHandler handler = new JwtSecurityTokenHandler
             {
                 MapInboundClaims = false
             };
-            var validationParameters = new TokenValidationParameters
+            TokenValidationParameters validationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
                 ValidIssuer = configuration.Issuer ?? provider.Issuer,

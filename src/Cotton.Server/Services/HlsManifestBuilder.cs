@@ -49,7 +49,7 @@ namespace Cotton.Server.Services
 
             HlsManifestPlan plan = Plan(durationSeconds);
             int targetDuration = (int)Math.Ceiling(SegmentDurationSeconds);
-            var sb = new StringBuilder(256 + (64 * plan.SegmentCount));
+            StringBuilder sb = new StringBuilder(256 + (64 * plan.SegmentCount));
 
             sb.Append("#EXTM3U\n");
             sb.Append("#EXT-X-VERSION:4\n");
@@ -75,7 +75,7 @@ namespace Cotton.Server.Services
         {
             ArgumentNullException.ThrowIfNull(variants);
 
-            var sb = new StringBuilder(256);
+            StringBuilder sb = new StringBuilder(256);
             sb.Append("#EXTM3U\n");
             sb.Append("#EXT-X-VERSION:4\n");
             sb.Append("#EXT-X-INDEPENDENT-SEGMENTS\n");

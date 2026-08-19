@@ -61,7 +61,7 @@ namespace Cotton.Server.Services
             Guid? parentNodeId,
             CancellationToken ct = default)
         {
-            var payload = new NodeFileDeletedEventDto(nodeFileId, parentNodeId);
+            NodeFileDeletedEventDto payload = new NodeFileDeletedEventDto(nodeFileId, parentNodeId);
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileDeleted", payload, ct);
         }
 
@@ -75,7 +75,7 @@ namespace Cotton.Server.Services
             if (nodeFile is not null)
             {
                 NodeFileManifestDto dto = nodeFile.Adapt<NodeFileManifestDto>();
-                var payload = new NodeFileMovedEventDto(dto, oldParentId, nodeFile.NodeId);
+                NodeFileMovedEventDto payload = new NodeFileMovedEventDto(dto, oldParentId, nodeFile.NodeId);
                 await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileMoved", payload, ct);
             }
         }
@@ -135,7 +135,7 @@ namespace Cotton.Server.Services
             Guid? parentNodeId,
             CancellationToken ct = default)
         {
-            var payload = new NodeDeletedEventDto(nodeId, parentNodeId);
+            NodeDeletedEventDto payload = new NodeDeletedEventDto(nodeId, parentNodeId);
             await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeDeleted", payload, ct);
         }
 
@@ -148,7 +148,7 @@ namespace Cotton.Server.Services
             if (node is not null && node.ParentId.HasValue)
             {
                 NodeDto dto = node.Adapt<NodeDto>();
-                var payload = new NodeMovedEventDto(dto, oldParentId, node.ParentId.Value);
+                NodeMovedEventDto payload = new NodeMovedEventDto(dto, oldParentId, node.ParentId.Value);
                 await _hubContext.Clients.User(node.OwnerId.ToString()).SendAsync("NodeMoved", payload, ct);
             }
         }

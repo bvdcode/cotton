@@ -57,7 +57,7 @@ namespace Cotton.Server.Services
             NormalizedProviderInput input = Normalize(request, requireSecret: false);
             string slug = await ResolveSlugAsync(input.Slug, input.Name, null, ct);
 
-            var provider = new OidcProvider
+            OidcProvider provider = new OidcProvider
             {
                 Name = input.Name,
                 Slug = slug,

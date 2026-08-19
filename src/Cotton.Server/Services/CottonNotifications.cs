@@ -59,7 +59,7 @@ namespace Cotton.Server.Services
             string serverBaseUrl)
         {
             ServerSettingsSnapshot settings = _settingsProvider.GetServerSettings();
-            var emailConfig = new EmailConfig
+            EmailConfig emailConfig = new EmailConfig
             {
                 SmtpServer = settings.SmtpServerAddress ?? string.Empty,
                 Port = settings.SmtpServerPort?.ToString() ?? string.Empty,
@@ -263,7 +263,7 @@ namespace Cotton.Server.Services
                 IsBodyHtml = body.Contains("<html", StringComparison.OrdinalIgnoreCase),
             };
 
-            var recipient = new MailAddress(recipientEmail, recipientName);
+            MailAddress recipient = new MailAddress(recipientEmail, recipientName);
             mailMessage.To.Add(recipient);
 
             client.Send(mailMessage);

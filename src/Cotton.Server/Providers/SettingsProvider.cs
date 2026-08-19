@@ -183,7 +183,7 @@ namespace Cotton.Server.Providers
             string? fallbackPublicBaseUrl,
             CancellationToken cancellationToken = default)
         {
-            var memberExpression = selector.Body as MemberExpression;
+            MemberExpression? memberExpression = selector.Body as MemberExpression;
             if (memberExpression is null && selector.Body is UnaryExpression unaryExpression)
             {
                 memberExpression = unaryExpression.Operand as MemberExpression;

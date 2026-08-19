@@ -143,7 +143,7 @@ namespace Cotton.Server.Handlers.WebDav
 
         private static Node BuildNode(Guid userId, WebDavParentResult parentResult)
         {
-            var newNode = new Node
+            Node newNode = new Node
             {
                 OwnerId = userId,
                 Type = WebDavPathResolver.DefaultNodeType,
@@ -158,7 +158,7 @@ namespace Cotton.Server.Handlers.WebDav
 
         private WebDavMkColResult? ValidateResourceName(string resourceName)
         {
-            if (NameValidator.TryNormalizeAndValidate(resourceName, out _, out var errorMessage))
+            if (NameValidator.TryNormalizeAndValidate(resourceName, out _, out string? errorMessage))
             {
                 return null;
             }

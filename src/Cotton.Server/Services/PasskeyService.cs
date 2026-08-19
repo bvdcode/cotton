@@ -335,7 +335,7 @@ namespace Cotton.Server.Services
 
         private async Task<Fido2> CreateFido2Async(CancellationToken ct)
         {
-            var publicBaseUri = new Uri(await _settings.GetPublicBaseUrlAsync(ct), UriKind.Absolute);
+            Uri publicBaseUri = new Uri(await _settings.GetPublicBaseUrlAsync(ct), UriKind.Absolute);
             string origin = publicBaseUri.GetLeftPart(UriPartial.Authority);
 
             return new Fido2(new Fido2Configuration

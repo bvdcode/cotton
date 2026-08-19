@@ -29,7 +29,7 @@ namespace Cotton.Server.Services
             {
                 Node trashNode = await _layouts.CreateTrashItemAsync(userId, ct);
 
-                var versionFile = new NodeFile
+                NodeFile versionFile = new NodeFile
                 {
                     NodeId = trashNode.Id,
                     OwnerId = userId,

@@ -51,7 +51,7 @@ namespace Cotton.Previews
 
             byte[]? imageBytes = null;
             Exception? coverArtException = null;
-            await using (var server = new RangeStreamServer(stream))
+            await using (RangeStreamServer server = new RangeStreamServer(stream))
             {
                 try
                 {
@@ -78,7 +78,7 @@ namespace Cotton.Previews
             }
 
             ImagePreviewGenerator imagePreviewGenerator = new();
-            await using var imageStream = new MemoryStream(imageBytes);
+            await using MemoryStream imageStream = new MemoryStream(imageBytes);
             return await imagePreviewGenerator.GeneratePreviewWebPAsync(imageStream, size);
         }
 
@@ -88,7 +88,7 @@ namespace Cotton.Previews
             int bars = Math.Clamp(size / 10, 8, 20);
             float[] amplitudes = BuildAmplitudes(samples, bars);
 
-            using var image = new Image<Rgba32>(size, size, new Rgba32(0, 0, 0, 0));
+            using Image<Rgba32> image = new Image<Rgba32>(size, size, new Rgba32(0, 0, 0, 0));
             image.Mutate(ctx =>
             {
                 float barGap = Math.Max(5f, size / 48f);
@@ -133,7 +133,7 @@ namespace Cotton.Previews
                 });
             });
 
-            await using var output = new MemoryStream();
+            await using MemoryStream output = new MemoryStream();
             await image.SaveAsWebpAsync(output, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
             return output.ToArray();
         }
@@ -160,14 +160,14 @@ namespace Cotton.Previews
                 throw new InvalidOperationException("No audio samples were produced for waveform preview.");
             }
 
-            var samples = new short[bytes.Length / 2];
+            short[] samples = new short[bytes.Length / 2];
             Buffer.BlockCopy(bytes, 0, samples, 0, samples.Length * 2);
             return samples;
         }
 
         private static float[] BuildAmplitudes(short[] samples, int bars)
         {
-            var result = new float[bars];
+            float[] result = new float[bars];
             if (samples.Length == 0)
             {
                 return result;
@@ -191,8 +191,8 @@ namespace Cotton.Previews
                     count++;
                 }
 
-                var rms = count == 0 ? 0 : Math.Sqrt(sumSquares / count);
-                var value = (float)Math.Pow(rms, 0.55);
+                double rms = count == 0 ? 0 : Math.Sqrt(sumSquares / count);
+                float value = (float)Math.Pow(rms, 0.55);
 
                 result[i] = value;
                 max = Math.Max(max, value);

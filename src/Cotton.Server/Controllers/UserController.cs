@@ -34,7 +34,7 @@ namespace Cotton.Server.Controllers
             [FromQuery] string token,
             CancellationToken cancellationToken)
         {
-            var command = new ConfirmEmailVerificationRequest(token);
+            ConfirmEmailVerificationRequest command = new ConfirmEmailVerificationRequest(token);
             await _mediator.Send(command, cancellationToken);
             return Ok();
         }
@@ -44,7 +44,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SendEmailVerification(CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            var request = new SendEmailVerificationRequest(userId);
+            SendEmailVerificationRequest request = new SendEmailVerificationRequest(userId);
             await _mediator.Send(request, cancellationToken);
             return Ok();
         }
@@ -102,7 +102,7 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            var command = new UpdateCurrentUserRequest(
+            UpdateCurrentUserRequest command = new UpdateCurrentUserRequest(
                 userId,
                 request.Email,
                 request.Username,

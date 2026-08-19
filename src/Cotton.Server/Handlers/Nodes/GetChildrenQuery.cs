@@ -122,7 +122,7 @@ namespace Cotton.Server.Handlers.Nodes
             int nodesCount = await nodesQuery.CountAsync(cancellationToken: ct);
             int filesCount = await filesBaseQuery.CountAsync(cancellationToken: ct);
 
-            var nodesToTake = Math.Max(0, Math.Min(request.PageSize, nodesCount - skip));
+            int nodesToTake = Math.Max(0, Math.Min(request.PageSize, nodesCount - skip));
             int filesSkip = Math.Max(0, skip - nodesCount);
             int filesToTake = Math.Max(0, request.PageSize - nodesToTake);
 

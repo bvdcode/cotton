@@ -73,7 +73,7 @@ namespace Cotton.Server.Services
 
             foreach (var sourceChild in sourceChildren)
             {
-                var targetChild = new Node
+                Node targetChild = new Node
                 {
                     OwnerId = targetUserId,
                     LayoutId = targetLayoutId,
@@ -110,7 +110,7 @@ namespace Cotton.Server.Services
 
             foreach (var sourceFile in sourceFiles)
             {
-                var targetFile = new NodeFile
+                NodeFile targetFile = new NodeFile
                 {
                     OwnerId = targetUserId,
                     NodeId = targetParentNodeId,

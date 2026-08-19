@@ -17,7 +17,7 @@ namespace Cotton.Server.Services
 
         public static async Task<CottonEncryptionSettings> WaitForUnlockAsync(string[] args)
         {
-            var completion = new TaskCompletionSource<CottonEncryptionSettings>(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<CottonEncryptionSettings> completion = new TaskCompletionSource<CottonEncryptionSettings>(TaskCreationOptions.RunContinuationsAsynchronously);
             DateTimeOffset startedAtUtc = DateTimeOffset.UtcNow;
             DateTimeOffset firstUnlockExpiresAtUtc = startedAtUtc.Add(FirstUnlockWindow);
             string bootstrapToken = GenerateBootstrapToken();

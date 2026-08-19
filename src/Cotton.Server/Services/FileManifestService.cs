@@ -371,7 +371,7 @@ namespace Cotton.Server.Services
             bool includeChunks = false,
             CancellationToken cancellationToken = default)
         {
-            var newFileManifest = new FileManifest()
+            FileManifest newFileManifest = new FileManifest()
             {
                 ContentType = ResolveContentType(fileName, contentType),
                 SizeBytes = chunks.Sum(x => x.PlainSizeBytes),
@@ -387,7 +387,7 @@ namespace Cotton.Server.Services
                     chunks[i].GCScheduledAfter = null;
                 }
 
-                var fileChunk = new FileManifestChunk
+                FileManifestChunk fileChunk = new FileManifestChunk
                 {
                     ChunkOrder = i,
                     ChunkHash = chunks[i].Hash,

@@ -12,7 +12,7 @@ namespace Cotton.Server.Services.WebDav
 
         public string GetOrBumpUsernameCacheVersion(string username)
         {
-            var versionKey = GetUsernameVersionKey(username);
+            string versionKey = GetUsernameVersionKey(username);
             if (cache.TryGetValue(versionKey, out string? version) && !string.IsNullOrWhiteSpace(version))
             {
                 return version;
@@ -22,15 +22,15 @@ namespace Cotton.Server.Services.WebDav
 
         public string BumpUsernameCacheVersion(string username)
         {
-            var versionKey = GetUsernameVersionKey(username);
-            var version = Guid.NewGuid().ToString("N");
+            string versionKey = GetUsernameVersionKey(username);
+            string version = Guid.NewGuid().ToString("N");
             cache.Set(versionKey, version, CacheTtl);
             return version;
         }
 
         public string GetCacheKey(string username, string token)
         {
-            var version = GetOrBumpUsernameCacheVersion(username);
+            string version = GetOrBumpUsernameCacheVersion(username);
             return $"webdav-basic:{username}:{version}:{token}";
         }
 

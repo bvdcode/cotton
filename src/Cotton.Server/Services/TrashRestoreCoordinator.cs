@@ -144,12 +144,12 @@ namespace Cotton.Server.Services
                 return new ParentResolution(current, null, []);
             }
 
-            var parts = originalParentPath
+            string[] parts = originalParentPath
                 .Replace('\\', Constants.DefaultPathSeparator)
                 .Trim(Constants.DefaultPathSeparator)
                 .Split(Constants.DefaultPathSeparator, StringSplitOptions.RemoveEmptyEntries);
 
-            var createdParents = new List<Node>();
+            List<Node> createdParents = new List<Node>();
             foreach (string part in parts)
             {
                 if (!NameValidator.TryNormalizeAndValidate(part, out string normalized, out _))
@@ -175,7 +175,7 @@ namespace Cotton.Server.Services
                     continue;
                 }
 
-                var created = new Node
+                Node created = new Node
                 {
                     OwnerId = userId,
                     Type = NodeType.Default,

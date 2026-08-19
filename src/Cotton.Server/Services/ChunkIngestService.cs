@@ -309,7 +309,7 @@ namespace Cotton.Server.Services
             long storedSizeBytes,
             CancellationToken ct)
         {
-            var chunk = new Chunk
+            Chunk chunk = new Chunk
             {
                 Hash = chunkHash,
                 PlainSizeBytes = plainSizeBytes,
@@ -414,7 +414,7 @@ namespace Cotton.Server.Services
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegative(length);
 
-            using var ms = new MemoryStream(capacity: checked((int)Math.Min(length, int.MaxValue)));
+            using MemoryStream ms = new MemoryStream(capacity: checked((int)Math.Min(length, int.MaxValue)));
             await stream.CopyToAsync(ms, ct);
 
             if (ms.Length != length)
@@ -422,13 +422,13 @@ namespace Cotton.Server.Services
                 throw new InvalidOperationException("Unexpected stream length.");
             }
 
-            var buffer = ms.GetBuffer();
+            byte[] buffer = ms.GetBuffer();
             return await UpsertChunkAsync(userId, buffer, (int)ms.Length, ct);
         }
 
         private async Task EnsureOwnershipAsync(byte[] chunkHash, Guid userId, CancellationToken ct)
         {
-            var ownershipExists = await _dbContext.ChunkOwnerships
+            bool ownershipExists = await _dbContext.ChunkOwnerships
                 .AnyAsync(co => co.ChunkHash == chunkHash && co.OwnerId == userId, ct);
 
             if (!ownershipExists)

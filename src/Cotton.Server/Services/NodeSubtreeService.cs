@@ -12,8 +12,8 @@ namespace Cotton.Server.Services
     {
         public async Task<HashSet<Guid>> CollectSubtreeIdsAsync(Guid userId, Guid rootId, CancellationToken ct)
         {
-            var visited = new HashSet<Guid> { rootId };
-            var frontier = new List<Guid> { rootId };
+            HashSet<Guid> visited = new HashSet<Guid> { rootId };
+            List<Guid> frontier = new List<Guid> { rootId };
 
             while (frontier.Count > 0)
             {

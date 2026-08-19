@@ -45,7 +45,7 @@ namespace Cotton.Server.Services
                 .GetSnapshotAsync(cancellationToken);
             CpuFeatureDiagnosticsDto cpuFeatures = CpuFeatureDiagnostics.Snapshot();
 
-            var linuxProcess = new LinuxProcessSecurityDto
+            LinuxProcessSecurityDto linuxProcess = new LinuxProcessSecurityDto
             {
                 HardeningRequested = hardeningStatus.Requested,
                 HardeningApplied = hardeningStatus.Applied,
@@ -60,14 +60,14 @@ namespace Cotton.Server.Services
                 HasSysPtraceCapability = procStatus.HasSysPtraceCapability,
             };
 
-            var dotnetDiagnostics = new DotNetDiagnosticsDto
+            DotNetDiagnosticsDto dotnetDiagnostics = new DotNetDiagnosticsDto
             {
                 Disabled = dotnetDiagnosticsDisabled,
                 DotNetEnableDiagnostics = dotnetEnableDiagnostics,
                 ComPlusEnableDiagnostics = comPlusEnableDiagnostics,
             };
 
-            var linuxContainer = new LinuxContainerSecurityDto
+            LinuxContainerSecurityDto linuxContainer = new LinuxContainerSecurityDto
             {
                 RootFilesystemReadOnly = containerSecurity.RootFilesystemReadOnly,
                 DockerSocketMounted = containerSecurity.DockerSocketMounted,
@@ -145,7 +145,7 @@ namespace Cotton.Server.Services
             TempDirectoryProbeResult tempDirectory,
             string? trustedProxyIpAddress)
         {
-            var warnings = new List<SecurityDiagnosticWarningDto>();
+            List<SecurityDiagnosticWarningDto> warnings = new List<SecurityDiagnosticWarningDto>();
             AddPublicInstanceWarning(warnings, isPublicInstance);
             AddTrustedProxyWarning(warnings, trustedProxyIpAddress);
             AddMasterKeyWarning(warnings, masterKey);

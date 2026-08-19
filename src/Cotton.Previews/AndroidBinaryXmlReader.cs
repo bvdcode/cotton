@@ -58,7 +58,7 @@ namespace Cotton.Previews
             }
 
             int count = byteCount / sizeof(uint);
-            var map = new uint[count];
+            uint[] map = new uint[count];
             int offset = chunkOffset + headerSize;
             for (int i = 0; i < map.Length; i++)
             {

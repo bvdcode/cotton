@@ -52,13 +52,13 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> HandlePropFindAsync(string? path)
         {
             Guid userId = User.GetUserId();
-            var depth = GetDepthHeader();
-            var hrefBase = Url.Content("~" + WebDavRoute) ?? WebDavRoute;
+            int depth = GetDepthHeader();
+            string hrefBase = Url.Content("~" + WebDavRoute) ?? WebDavRoute;
 
             _logger.LogDebug("WebDAV PROPFIND: {Path}, depth: {Depth}, user: {UserId}, ip: {Ip}",
                 path ?? "/", depth, userId, Request.GetRemoteAddress());
 
-            var query = new WebDavPropFindQuery(userId, path ?? string.Empty, hrefBase, depth);
+            WebDavPropFindQuery query = new WebDavPropFindQuery(userId, path ?? string.Empty, hrefBase, depth);
             WebDavPropFindResult result = await _mediator.Send(query, HttpContext.RequestAborted);
 
             if (!result.Found)
@@ -84,7 +84,7 @@ namespace Cotton.Server.Controllers
             _logger.LogDebug("WebDAV GET: {Path}, user: {UserId}, ip: {Ip}",
                 path ?? "/", userId, Request.GetRemoteAddress());
 
-            var query = new WebDavGetFileQuery(userId, path ?? string.Empty);
+            WebDavGetFileQuery query = new WebDavGetFileQuery(userId, path ?? string.Empty);
             WebDavGetFileResult result = await _mediator.Send(query, HttpContext.RequestAborted);
 
             if (!result.Found)
@@ -121,7 +121,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> HandleHeadAsync(string? path)
         {
             Guid userId = User.GetUserId();
-            var query = new WebDavHeadQuery(userId, path ?? string.Empty);
+            WebDavHeadQuery query = new WebDavHeadQuery(userId, path ?? string.Empty);
             WebDavHeadResult result = await _mediator.Send(query, HttpContext.RequestAborted);
 
             if (!result.Found)
@@ -182,10 +182,10 @@ namespace Cotton.Server.Controllers
                 AddDavHeaders();
                 return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
             }
-            var overwrite = GetOverwriteHeader();
-            var contentType = Request.ContentType;
+            bool overwrite = GetOverwriteHeader();
+            string? contentType = Request.ContentType;
 
-            var command = new WebDavPutFileRequest(
+            WebDavPutFileRequest command = new WebDavPutFileRequest(
                 userId,
                 path ?? string.Empty,
                 Request.Body,
@@ -225,7 +225,7 @@ namespace Cotton.Server.Controllers
             Guid userId = User.GetUserId();
             path ??= string.Empty;
 
-            var query = new WebDavHeadQuery(userId, path);
+            WebDavHeadQuery query = new WebDavHeadQuery(userId, path);
             WebDavHeadResult result = await _mediator.Send(query, HttpContext.RequestAborted);
             if (!result.Found)
             {
@@ -234,11 +234,11 @@ namespace Cotton.Server.Controllers
 
             AddDavHeaders();
 
-            var hrefBase = Url.Content("~" + WebDavRoute) ?? WebDavRoute;
-            var href = hrefBase.TrimEnd(WebDavPathResolver.PathSeparator)
+            string hrefBase = Url.Content("~" + WebDavRoute) ?? WebDavRoute;
+            string href = hrefBase.TrimEnd(WebDavPathResolver.PathSeparator)
                 + WebDavPathResolver.PathSeparator
                 + path.TrimStart(WebDavPathResolver.PathSeparator);
-            var xml = WebDavXmlBuilder.BuildPropPatchOkResponse(href);
+            string xml = WebDavXmlBuilder.BuildPropPatchOkResponse(href);
 
             return new ContentResult
             {
@@ -256,23 +256,23 @@ namespace Cotton.Server.Controllers
             path ??= string.Empty;
 
             // Allow lock-null resources (common behavior in Windows WebDAV)
-            var query = new WebDavHeadQuery(userId, path);
+            WebDavHeadQuery query = new WebDavHeadQuery(userId, path);
             WebDavHeadResult result = await _mediator.Send(query, HttpContext.RequestAborted);
 
             AddDavHeaders();
 
-            var timeoutHeader = Request.Headers["Timeout"].ToString();
+            string timeoutHeader = Request.Headers["Timeout"].ToString();
             TimeSpan timeout = TimeSpan.FromHours(1);
             if (!string.IsNullOrWhiteSpace(timeoutHeader)
                 && timeoutHeader.StartsWith("Second-", StringComparison.OrdinalIgnoreCase)
-                && int.TryParse(timeoutHeader["Second-".Length..], out var seconds)
+                && int.TryParse(timeoutHeader["Second-".Length..], out int seconds)
                 && seconds > 0)
             {
                 timeout = TimeSpan.FromSeconds(seconds);
             }
 
-            var token = $"opaquelocktoken:{Guid.NewGuid():D}";
-            var lockInfo = new WebDavLock(
+            string token = $"opaquelocktoken:{Guid.NewGuid():D}";
+            WebDavLock lockInfo = new WebDavLock(
                 userId,
                 path.Trim(WebDavPathResolver.PathSeparator),
                 token,
@@ -282,7 +282,7 @@ namespace Cotton.Server.Controllers
             Response.Headers["Lock-Token"] = $"<{token}>";
             Response.Headers["Timeout"] = $"Second-{(int)timeout.TotalSeconds}";
 
-            var xml = WebDavXmlBuilder.BuildLockDiscoveryResponse(token, timeout);
+            string xml = WebDavXmlBuilder.BuildLockDiscoveryResponse(token, timeout);
             if (!result.Found)
             {
                 return new ContentResult
@@ -305,11 +305,11 @@ namespace Cotton.Server.Controllers
 
             AddDavHeaders();
 
-            var tokenHeader = Request.Headers["Lock-Token"].ToString();
+            string tokenHeader = Request.Headers["Lock-Token"].ToString();
             if (!string.IsNullOrWhiteSpace(tokenHeader))
             {
-                var token = tokenHeader.Trim().Trim('<', '>');
-                var key = GetLockKey(userId, path.Trim(WebDavPathResolver.PathSeparator));
+                string token = tokenHeader.Trim().Trim('<', '>');
+                string key = GetLockKey(userId, path.Trim(WebDavPathResolver.PathSeparator));
 
                 if (_locks.TryGetValue(key, out WebDavLock? info)
                     && string.Equals(info.Token, token, StringComparison.Ordinal))
@@ -331,7 +331,7 @@ namespace Cotton.Server.Controllers
                 AddDavHeaders();
                 return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
             }
-            var command = new WebDavDeleteRequest(userId, path ?? string.Empty);
+            WebDavDeleteRequest command = new WebDavDeleteRequest(userId, path ?? string.Empty);
             WebDavDeleteResult result = await _mediator.Send(command, HttpContext.RequestAborted);
 
             AddDavHeaders();
@@ -359,7 +359,7 @@ namespace Cotton.Server.Controllers
                 AddDavHeaders();
                 return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
             }
-            var command = new WebDavMkColRequest(userId, path ?? string.Empty);
+            WebDavMkColRequest command = new WebDavMkColRequest(userId, path ?? string.Empty);
             WebDavMkColResult result = await _mediator.Send(command, HttpContext.RequestAborted);
             AddDavHeaders();
             if (!result.Success)
@@ -386,15 +386,15 @@ namespace Cotton.Server.Controllers
                 AddDavHeaders();
                 return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
             }
-            var destination = GetDestinationPath();
-            var overwrite = GetOverwriteHeader();
+            string? destination = GetDestinationPath();
+            bool overwrite = GetOverwriteHeader();
 
             if (string.IsNullOrEmpty(destination))
             {
                 return BadRequest("Destination header is required");
             }
 
-            var command = new WebDavMoveRequest(userId, path ?? string.Empty, destination, overwrite);
+            WebDavMoveRequest command = new WebDavMoveRequest(userId, path ?? string.Empty, destination, overwrite);
             WebDavMoveResult result = await _mediator.Send(command, HttpContext.RequestAborted);
             AddDavHeaders();
             if (!result.Success)
@@ -423,14 +423,14 @@ namespace Cotton.Server.Controllers
                 AddDavHeaders();
                 return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
             }
-            var destination = GetDestinationPath();
-            var overwrite = GetOverwriteHeader();
+            string? destination = GetDestinationPath();
+            bool overwrite = GetOverwriteHeader();
 
             if (string.IsNullOrEmpty(destination))
             {
                 return BadRequest("Destination header is required");
             }
-            var command = new WebDavCopyRequest(userId, path ?? string.Empty, destination, overwrite);
+            WebDavCopyRequest command = new WebDavCopyRequest(userId, path ?? string.Empty, destination, overwrite);
             WebDavCopyResult result = await _mediator.Send(command, HttpContext.RequestAborted);
             AddDavHeaders();
             if (!result.Success)
@@ -457,7 +457,7 @@ namespace Cotton.Server.Controllers
                 "OPTIONS", "PROPFIND", "PROPPATCH", "GET", "HEAD", "PUT", "DELETE", "MKCOL", "MOVE", "COPY", "LOCK", "UNLOCK"
             ];
 
-            var excludeSet = new HashSet<string>(exclude, StringComparer.OrdinalIgnoreCase);
+            HashSet<string> excludeSet = new HashSet<string>(exclude, StringComparer.OrdinalIgnoreCase);
             Response.Headers["DAV"] = "1, 2";
             Response.Headers["MS-Author-Via"] = "DAV";
             Response.Headers.Allow = string.Join(", ",
@@ -471,12 +471,12 @@ namespace Cotton.Server.Controllers
             CleanupExpiredLocksIfNeeded(force: false);
 
             // Check exact and all parents: "a/b/c" -> "a/b/c", "a/b", "a", ""
-            for (var p = path; ; p = ParentPath(p))
+            for (string p = path; ; p = ParentPath(p))
             {
-                var key = GetLockKey(userId, p);
+                string key = GetLockKey(userId, p);
                 if (_locks.TryGetValue(key, out WebDavLock? lockInfo))
                 {
-                    var lockToken = ExtractLockToken();
+                    string? lockToken = ExtractLockToken();
                     return lockToken is not null
                            && string.Equals(lockToken, lockInfo.Token, StringComparison.Ordinal);
                 }
@@ -492,14 +492,14 @@ namespace Cotton.Server.Controllers
 
         private static string ParentPath(string path)
         {
-            var i = path.LastIndexOf(WebDavPathResolver.PathSeparator);
+            int i = path.LastIndexOf(WebDavPathResolver.PathSeparator);
             return i < 0 ? string.Empty : path[..i];
         }
 
         private static void CleanupExpiredLocksIfNeeded(bool force)
         {
-            var nowTicks = DateTimeOffset.UtcNow.UtcTicks;
-            var last = System.Threading.Interlocked.Read(ref _lastLocksCleanupTicks);
+            long nowTicks = DateTimeOffset.UtcNow.UtcTicks;
+            long last = System.Threading.Interlocked.Read(ref _lastLocksCleanupTicks);
             if (!force && nowTicks - last < LocksCleanupIntervalTicks)
             {
                 return;
@@ -520,26 +520,26 @@ namespace Cotton.Server.Controllers
 
         private string? ExtractLockToken()
         {
-            var lockTokenHeader = Request.Headers["Lock-Token"].ToString();
+            string lockTokenHeader = Request.Headers["Lock-Token"].ToString();
             if (!string.IsNullOrWhiteSpace(lockTokenHeader))
             {
                 return lockTokenHeader.Trim().Trim('<', '>');
             }
 
-            var ifHeader = Request.Headers["If"].ToString();
+            string ifHeader = Request.Headers["If"].ToString();
             if (string.IsNullOrWhiteSpace(ifHeader))
             {
                 return null;
             }
 
             // Very small parser: just find first <opaquelocktoken:...>
-            var start = ifHeader.IndexOf("<opaquelocktoken:", StringComparison.OrdinalIgnoreCase);
+            int start = ifHeader.IndexOf("<opaquelocktoken:", StringComparison.OrdinalIgnoreCase);
             if (start < 0)
             {
                 return null;
             }
 
-            var end = ifHeader.IndexOf('>', start);
+            int end = ifHeader.IndexOf('>', start);
             if (end < 0)
             {
                 return null;
@@ -550,7 +550,7 @@ namespace Cotton.Server.Controllers
 
         private int GetDepthHeader()
         {
-            var depthHeader = Request.Headers["Depth"].FirstOrDefault();
+            string? depthHeader = Request.Headers["Depth"].FirstOrDefault();
             if (string.IsNullOrWhiteSpace(depthHeader))
             {
                 return 1;
@@ -577,7 +577,7 @@ namespace Cotton.Server.Controllers
 
         private string? GetDestinationPath()
         {
-            var destination = Request.Headers["Destination"].FirstOrDefault();
+            string? destination = Request.Headers["Destination"].FirstOrDefault();
             if (string.IsNullOrEmpty(destination))
             {
                 return null;
@@ -592,7 +592,7 @@ namespace Cotton.Server.Controllers
             destination = Uri.UnescapeDataString(destination);
 
             // Remove the WebDAV route prefix (with or without trailing slash)
-            var idx = destination.IndexOf(WebDavPrefix, StringComparison.OrdinalIgnoreCase);
+            int idx = destination.IndexOf(WebDavPrefix, StringComparison.OrdinalIgnoreCase);
             if (idx >= 0)
             {
                 destination = destination[(idx + WebDavPrefix.Length)..];
@@ -604,7 +604,7 @@ namespace Cotton.Server.Controllers
 
         private bool GetOverwriteHeader()
         {
-            var overwrite = Request.Headers["Overwrite"].FirstOrDefault();
+            string? overwrite = Request.Headers["Overwrite"].FirstOrDefault();
             return !string.Equals(overwrite, "F", StringComparison.OrdinalIgnoreCase);
         }
     }

@@ -74,7 +74,7 @@ namespace Cotton.Storage.Backends
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
 
-            var req = new GetObjectMetadataRequest
+            GetObjectMetadataRequest req = new GetObjectMetadataRequest
             {
                 Key = key,
                 BucketName = bucket,
@@ -99,7 +99,7 @@ namespace Cotton.Storage.Backends
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
 
-            var req = new GetObjectMetadataRequest
+            GetObjectMetadataRequest req = new GetObjectMetadataRequest
             {
                 Key = key,
                 BucketName = bucket,
@@ -132,7 +132,7 @@ namespace Cotton.Storage.Backends
             string tmpPath = Path.GetTempFileName();
             try
             {
-                await using (var fs = new FileStream(
+                await using (FileStream fs = new FileStream(
                     tmpPath,
                     FileMode.Create,
                     FileAccess.Write,
@@ -185,7 +185,7 @@ namespace Cotton.Storage.Backends
 
             do
             {
-                var request = new ListObjectsV2Request
+                ListObjectsV2Request request = new ListObjectsV2Request
                 {
                     BucketName = bucket,
                     MaxKeys = 1000,

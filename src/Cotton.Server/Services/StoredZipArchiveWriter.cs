@@ -79,7 +79,7 @@ namespace Cotton.Server.Services
             where TEntry : IStoredZipEntry
         {
             long offset = 0;
-            var plans = new ZipEntryPlan[entries.Count];
+            ZipEntryPlan[] plans = new ZipEntryPlan[entries.Count];
 
             for (int i = 0; i < entries.Count; i++)
             {
@@ -152,7 +152,7 @@ namespace Cotton.Server.Services
                 return 0;
             }
 
-            var crc = new Crc32Accumulator();
+            Crc32Accumulator crc = new Crc32Accumulator();
             long bytesWritten = 0;
             byte[] buffer = ArrayPool<byte>.Shared.Rent(128 * 1024);
             try

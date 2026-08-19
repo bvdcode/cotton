@@ -48,7 +48,7 @@ namespace Cotton.Storage.Processors
 
         public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
         {
-            var decompressor = new DecompressionStream(stream);
+            DecompressionStream decompressor = new DecompressionStream(stream);
             return Task.FromResult<Stream>(decompressor);
         }
 
@@ -56,7 +56,7 @@ namespace Cotton.Storage.Processors
         {
             ArgumentNullException.ThrowIfNull(stream);
 
-            var pipe = new Pipe(new PipeOptions(
+            Pipe pipe = new Pipe(new PipeOptions(
                 pool: MemoryPool<byte>.Shared,
                 readerScheduler: null,
                 writerScheduler: null,
@@ -71,7 +71,7 @@ namespace Cotton.Storage.Processors
                 try
                 {
                     await using Stream writerStream = pipe.Writer.AsStream(leaveOpen: true);
-                    await using (var compressor = new CompressionStream(
+                    await using (CompressionStream compressor = new CompressionStream(
                         writerStream,
                         level: _compressionLevelProvider.Level,
                         leaveOpen: true))

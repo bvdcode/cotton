@@ -37,17 +37,17 @@ namespace Cotton.Server.Handlers.WebDav
                 return new WebDavPropFindResult(false, null);
             }
 
-            var resources = new List<WebDavResource>();
-            var hrefBase = EnsureTrailingSlash(request.HrefBase);
-            var depth = Math.Clamp(request.Depth, 0, MaxDepth);
-            var pathCache = new Dictionary<Guid, Database.Models.Node>();
+            List<WebDavResource> resources = new List<WebDavResource>();
+            string hrefBase = EnsureTrailingSlash(request.HrefBase);
+            int depth = Math.Clamp(request.Depth, 0, MaxDepth);
+            Dictionary<Guid, Node> pathCache = new Dictionary<Guid, Database.Models.Node>();
             WebDavQuota quota = await GetQuotaPropertiesAsync(request.UserId, ct);
 
             if (resolveResult.IsCollection && resolveResult.Node is not null)
             {
                 Node node = resolveResult.Node;
-                var nodePath = await BuildNodePathAsync(node, pathCache, ct);
-                var nodeHref = BuildHref(hrefBase, nodePath);
+                string nodePath = await BuildNodePathAsync(node, pathCache, ct);
+                string nodeHref = BuildHref(hrefBase, nodePath);
 
                 // Add the collection itself
                 resources.Add(new WebDavResource(
@@ -72,11 +72,11 @@ namespace Cotton.Server.Handlers.WebDav
                     .AsNoTracking()
                     .FirstOrDefaultAsync(n => n.Id == nodeFile.NodeId, ct);
 
-                var parentPath = parentNode is not null
+                string parentPath = parentNode is not null
                     ? await BuildNodePathAsync(parentNode, pathCache, ct)
                     : string.Empty;
 
-                var fileHref = BuildHref(hrefBase, parentPath, nodeFile.Name);
+                string fileHref = BuildHref(hrefBase, parentPath, nodeFile.Name);
 
                 resources.Add(new WebDavResource(
                     Href: fileHref,
@@ -89,7 +89,7 @@ namespace Cotton.Server.Handlers.WebDav
                     Quota: quota));
             }
 
-            var xml = WebDavXmlBuilder.BuildMultiStatusResponse(resources);
+            string xml = WebDavXmlBuilder.BuildMultiStatusResponse(resources);
             return new WebDavPropFindResult(true, xml);
         }
 
@@ -121,7 +121,7 @@ namespace Cotton.Server.Handlers.WebDav
 
             foreach (Node? childNode in childNodes)
             {
-                var childPath = string.IsNullOrEmpty(parentPath)
+                string childPath = string.IsNullOrEmpty(parentPath)
                     ? childNode.Name
                     : $"{parentPath}{WebDavPathResolver.PathSeparator}{childNode.Name}";
 
@@ -150,7 +150,7 @@ namespace Cotton.Server.Handlers.WebDav
 
             foreach (NodeFile? childFile in childFiles)
             {
-                var filePath = string.IsNullOrEmpty(parentPath)
+                string filePath = string.IsNullOrEmpty(parentPath)
                     ? childFile.Name
                     : $"{parentPath}{WebDavPathResolver.PathSeparator}{childFile.Name}";
 
@@ -174,7 +174,7 @@ namespace Cotton.Server.Handlers.WebDav
             {
                 cache[node.Id] = node;
             }
-            var parts = new List<string>();
+            List<string> parts = new List<string>();
             Node? current = node;
 
             // Don't include root node in path
@@ -208,7 +208,7 @@ namespace Cotton.Server.Handlers.WebDav
 
         private static string BuildHref(string baseHref, params string[] pathParts)
         {
-            var path = string.Join(
+            string path = string.Join(
                 WebDavPathResolver.PathSeparator,
                 pathParts
                     .Where(p => !string.IsNullOrEmpty(p))

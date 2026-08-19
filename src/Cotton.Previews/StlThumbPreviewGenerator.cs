@@ -209,7 +209,7 @@ namespace Cotton.Previews
                     }
 
                     using Stream entryStream = entry.Open();
-                    using var imageBytes = new MemoryStream();
+                    using MemoryStream imageBytes = new MemoryStream();
                     await entryStream.CopyToAsync(imageBytes).ConfigureAwait(false);
                     if (imageBytes.Length == 0)
                     {

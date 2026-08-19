@@ -45,8 +45,8 @@ namespace Cotton.Crypto
             ArgumentNullException.ThrowIfNull(streamCipher);
             ArgumentNullException.ThrowIfNull(plainBytes);
 
-            await using var input = new MemoryStream(plainBytes, writable: false);
-            await using var output = new MemoryStream();
+            await using MemoryStream input = new MemoryStream(plainBytes, writable: false);
+            await using MemoryStream output = new MemoryStream();
             await streamCipher.EncryptAsync(input, output, chunkSize, true, true, cancellationToken)
                 .ConfigureAwait(false);
             return output.ToArray();
@@ -60,8 +60,8 @@ namespace Cotton.Crypto
             ArgumentNullException.ThrowIfNull(streamCipher);
             ArgumentNullException.ThrowIfNull(cipherBytes);
 
-            await using var input = new MemoryStream(cipherBytes, writable: false);
-            await using var output = new MemoryStream();
+            await using MemoryStream input = new MemoryStream(cipherBytes, writable: false);
+            await using MemoryStream output = new MemoryStream();
             await streamCipher.DecryptAsync(input, output, true, true, cancellationToken)
                 .ConfigureAwait(false);
             return output.ToArray();

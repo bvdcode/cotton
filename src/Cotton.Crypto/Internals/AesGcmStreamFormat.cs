@@ -63,7 +63,7 @@ namespace Cotton.Crypto.Internals
 
         public static void BuildFileHeader(Span<byte> header, int keyId, uint noncePrefix, ReadOnlySpan<byte> fileKeyNonce, Tag128 fileKeyTag, ReadOnlySpan<byte> encryptedFileKey, long totalPlaintextLength, int nonceSize, int tagSize, int keySize)
         {
-            var fh = new FileHeader(keyId, noncePrefix, fileKeyNonce.ToArray(), fileKeyTag, encryptedFileKey.ToArray(), totalPlaintextLength);
+            FileHeader fh = new FileHeader(keyId, noncePrefix, fileKeyNonce.ToArray(), fileKeyTag, encryptedFileKey.ToArray(), totalPlaintextLength);
             if (!FileHeader.TryWrite(header, fh, nonceSize, tagSize, keySize))
                 throw new ArgumentException("Header buffer too small", nameof(header));
         }
@@ -73,7 +73,7 @@ namespace Cotton.Crypto.Internals
 
         public static void BuildChunkHeader(Span<byte> header, int keyId, Tag128 tag, int textLength, int tagSize)
         {
-            var chunkHeader = new ChunkHeader(textLength, keyId, tag);
+            ChunkHeader chunkHeader = new ChunkHeader(textLength, keyId, tag);
             if (!ChunkHeader.TryWrite(header, chunkHeader, tagSize))
                 throw new ArgumentException("Header buffer too small", nameof(header));
         }

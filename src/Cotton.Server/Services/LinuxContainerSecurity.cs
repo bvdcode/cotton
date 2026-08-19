@@ -60,7 +60,7 @@ namespace Cotton.Server.Services
                 return [];
             }
 
-            var entries = new List<LinuxMountInfoEntry>();
+            List<LinuxMountInfoEntry> entries = new List<LinuxMountInfoEntry>();
             foreach (string line in File.ReadLines(mountInfoPath))
             {
                 LinuxMountInfoEntry? entry = TryParseMountInfo(line);
