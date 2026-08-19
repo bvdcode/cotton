@@ -14,8 +14,8 @@ namespace Cotton.Benchmark.Infrastructure
             IEnumerable<IBenchmark> benchmarks,
             CancellationToken cancellationToken = default)
         {
-            var benchmarkList = benchmarks.ToList();
-            var results = new List<IBenchmarkResult>();
+            List<IBenchmark> benchmarkList = benchmarks.ToList();
+            List<IBenchmarkResult> results = new List<IBenchmarkResult>();
 
             _logger.LogInformation("Starting benchmark suite with {Count} benchmarks", benchmarkList.Count);
 

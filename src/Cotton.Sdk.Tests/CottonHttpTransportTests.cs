@@ -16,7 +16,7 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task Client_ReusesAlreadyStartedHttpClientWhenBaseAddressMatches()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.OK, "warmup");
             handler.EnqueueJson(HttpStatusCode.OK, new
             {
@@ -24,14 +24,14 @@ namespace Cotton.Sdk.Tests
                 maxChunkSizeBytes = 4194304,
                 supportedHashAlgorithm = "SHA256",
             });
-            var baseAddress = new Uri("https://cotton.test");
-            var httpClient = new HttpClient(handler)
+            Uri baseAddress = new Uri("https://cotton.test");
+            HttpClient httpClient = new HttpClient(handler)
             {
                 BaseAddress = baseAddress,
             };
             using HttpResponseMessage warmupResponse = await httpClient.GetAsync("/warmup");
             warmupResponse.EnsureSuccessStatusCode();
-            var client = new CottonCloudClient(
+            CottonCloudClient client = new CottonCloudClient(
                 httpClient,
                 new InMemoryCottonTokenStore(),
                 new CottonSdkOptions
@@ -55,7 +55,7 @@ namespace Cotton.Sdk.Tests
         [Test]
         public void Client_RejectsPreconfiguredHttpClientWhenBaseAddressDiffers()
         {
-            var httpClient = new HttpClient(new QueuedHttpMessageHandler())
+            HttpClient httpClient = new HttpClient(new QueuedHttpMessageHandler())
             {
                 BaseAddress = new Uri("https://other.test"),
             };
@@ -74,15 +74,15 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task RequestLogging_RecordsMethodPathAndStatus()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new
             {
                 version = "1.2.3",
                 maxChunkSizeBytes = 4194304,
                 supportedHashAlgorithm = "SHA256",
             });
-            var loggerFactory = new RecordingLoggerFactory();
-            var client = new CottonCloudClient(
+            RecordingLoggerFactory loggerFactory = new RecordingLoggerFactory();
+            CottonCloudClient client = new CottonCloudClient(
                 new HttpClient(handler),
                 new InMemoryCottonTokenStore(),
                 new CottonSdkOptions
@@ -105,7 +105,7 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task RequestLogging_RedactsRefreshTokenQueryValues()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.Unauthorized, "expired");
             handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "new-access", refreshToken = "new-refresh" });
             handler.EnqueueJson(HttpStatusCode.OK, new
@@ -114,10 +114,10 @@ namespace Cotton.Sdk.Tests
                 maxChunkSizeBytes = 4194304,
                 supportedHashAlgorithm = "SHA256",
             });
-            var loggerFactory = new RecordingLoggerFactory();
-            var store = new InMemoryCottonTokenStore();
+            RecordingLoggerFactory loggerFactory = new RecordingLoggerFactory();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "secret refresh token" });
-            var client = new CottonCloudClient(
+            CottonCloudClient client = new CottonCloudClient(
                 new HttpClient(handler),
                 store,
                 new CottonSdkOptions
@@ -141,7 +141,7 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task AuthorizedRequest_RefreshesOnUnauthorizedAndRetriesWithNewAccessToken()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.Unauthorized, "expired");
             handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "new-access", refreshToken = "new-refresh" });
             handler.EnqueueJson(HttpStatusCode.OK, new
@@ -150,9 +150,9 @@ namespace Cotton.Sdk.Tests
                 maxChunkSizeBytes = 4194304,
                 supportedHashAlgorithm = "SHA256",
             });
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old refresh" });
-            var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+            CottonCloudClient client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
             {
                 BaseAddress = new Uri("https://cotton.test"),
             });
@@ -179,7 +179,7 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task AuthorizedRequest_PreservesBaseAddressPathForApiAndRefreshRequests()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.Unauthorized, "expired");
             handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "new-access", refreshToken = "new-refresh" });
             handler.EnqueueJson(HttpStatusCode.OK, new
@@ -188,9 +188,9 @@ namespace Cotton.Sdk.Tests
                 maxChunkSizeBytes = 4194304,
                 supportedHashAlgorithm = "SHA256",
             });
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old refresh" });
-            var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+            CottonCloudClient client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
             {
                 BaseAddress = new Uri("https://cotton.test/cloud"),
             });
@@ -208,10 +208,10 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task AuthorizedRequest_UsesSingleRefreshForConcurrentUnauthorizedRequests()
         {
-            var handler = new ConcurrentRefreshHttpMessageHandler();
-            var store = new InMemoryCottonTokenStore();
+            ConcurrentRefreshHttpMessageHandler handler = new ConcurrentRefreshHttpMessageHandler();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old-refresh" });
-            var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+            CottonCloudClient client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
             {
                 BaseAddress = new Uri("https://cotton.test"),
             });
@@ -239,12 +239,12 @@ namespace Cotton.Sdk.Tests
         [Test]
         public void SendJsonAsync_ReportsInvalidJsonResponseWithContentPreview()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(_ => new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent("<!doctype html><html>Not the API</html>", Encoding.UTF8, "text/html"),
             });
-            var client = new CottonCloudClient(new HttpClient(handler), new InMemoryCottonTokenStore(), new CottonSdkOptions
+            CottonCloudClient client = new CottonCloudClient(new HttpClient(handler), new InMemoryCottonTokenStore(), new CottonSdkOptions
             {
                 BaseAddress = new Uri("https://cotton.test"),
             });
@@ -327,9 +327,9 @@ namespace Cotton.Sdk.Tests
         [Test]
         public void SendNoContentAsync_IncludesFailureResponsePreview()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.BadRequest, "Validation failed for remote folder.");
-            var client = new CottonCloudClient(new HttpClient(handler), new InMemoryCottonTokenStore(), new CottonSdkOptions
+            CottonCloudClient client = new CottonCloudClient(new HttpClient(handler), new InMemoryCottonTokenStore(), new CottonSdkOptions
             {
                 BaseAddress = new Uri("https://cotton.test"),
             });
@@ -350,9 +350,9 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task DisposeAsync_DoesNotDisposeCallerOwnedHttpClient()
         {
-            var handler = new DisposalTrackingHttpMessageHandler();
-            using var httpClient = new HttpClient(handler);
-            var client = new CottonCloudClient(httpClient, new InMemoryCottonTokenStore(), new CottonSdkOptions
+            DisposalTrackingHttpMessageHandler handler = new DisposalTrackingHttpMessageHandler();
+            using HttpClient httpClient = new HttpClient(handler);
+            CottonCloudClient client = new CottonCloudClient(httpClient, new InMemoryCottonTokenStore(), new CottonSdkOptions
             {
                 BaseAddress = new Uri("https://cotton.test"),
             });

@@ -14,6 +14,7 @@ using NUnit.Framework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Cotton.Server.IntegrationTests
 {
@@ -23,7 +24,7 @@ namespace Cotton.Server.IntegrationTests
         public void IntegrityModel_UsesMacAsConcurrencyTokenForEveryProtectedEntity()
         {
             using CottonDbContext dbContext = CreateDbContext();
-            var protectedEntityTypes = dbContext.Model
+            List<IEntityType> protectedEntityTypes = dbContext.Model
                 .GetEntityTypes()
                 .Where(entityType => entityType.FindProperty(DatabaseIntegrityColumns.MacProperty) is not null)
                 .ToList();
@@ -39,7 +40,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void CanonicalWriter_SortsDictionaryKeys()
         {
-            var first = new IntegrityTestEntity
+            IntegrityTestEntity first = new IntegrityTestEntity
             {
                 Name = "file.txt",
                 Metadata = new Dictionary<string, string>
@@ -56,7 +57,7 @@ namespace Cotton.Server.IntegrationTests
                     ["z"] = "last"
                 }
             };
-            var descriptor = new IntegrityTestEntityDescriptor();
+            IntegrityTestEntityDescriptor descriptor = new IntegrityTestEntityDescriptor();
 
             byte[] firstPayload = descriptor.BuildCanonicalPayload(first);
             byte[] secondPayload = descriptor.BuildCanonicalPayload(second);
@@ -67,8 +68,8 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void CanonicalWriter_PreservesArrayOrder()
         {
-            var descriptor = new IntegrityTestEntityDescriptor();
-            var first = new IntegrityTestEntity
+            IntegrityTestEntityDescriptor descriptor = new IntegrityTestEntityDescriptor();
+            IntegrityTestEntity first = new IntegrityTestEntity
             {
                 Name = "file.txt",
                 Transports = ["usb", "nfc"]
@@ -87,7 +88,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void CanonicalWriter_NormalizesDateTimeToDatabasePrecision()
         {
-            var descriptor = new IntegrityTestEntityDescriptor();
+            IntegrityTestEntityDescriptor descriptor = new IntegrityTestEntityDescriptor();
             IntegrityTestEntity first = CreateEntity() with
             {
                 SeenAt = new DateTime(2026, 5, 22, 12, 0, 0, DateTimeKind.Utc).AddTicks(1)
@@ -107,7 +108,7 @@ namespace Cotton.Server.IntegrationTests
         public void Protector_VerifiesSignedEntity()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new IntegrityTestEntityDescriptor();
+            IntegrityTestEntityDescriptor descriptor = new IntegrityTestEntityDescriptor();
             IntegrityTestEntity entity = CreateEntity();
 
             byte[] mac = protector.Sign(entity, descriptor);
@@ -123,7 +124,7 @@ namespace Cotton.Server.IntegrationTests
         public void Protector_DetectsTamperedEntity()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new IntegrityTestEntityDescriptor();
+            IntegrityTestEntityDescriptor descriptor = new IntegrityTestEntityDescriptor();
             IntegrityTestEntity entity = CreateEntity();
             byte[] mac = protector.Sign(entity, descriptor);
 
@@ -139,7 +140,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void Protector_UsesPurposeSeparatedMasterDerivedKey()
         {
-            var descriptor = new IntegrityTestEntityDescriptor();
+            IntegrityTestEntityDescriptor descriptor = new IntegrityTestEntityDescriptor();
             IntegrityTestEntity entity = CreateEntity();
             DatabaseIntegrityProtector firstProtector = CreateProtector("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
             DatabaseIntegrityProtector secondProtector = CreateProtector("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
@@ -154,12 +155,12 @@ namespace Cotton.Server.IntegrationTests
         public void Verifier_AcceptsSignedProtectedEntity()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new UserIntegrityDescriptor();
+            UserIntegrityDescriptor descriptor = new UserIntegrityDescriptor();
             User user = CreateUser();
 
             using CottonDbContext dbContext = CreateDbContext();
             dbContext.Users.Add(user);
-            var signer = new DatabaseIntegrityChangeSigner(
+            DatabaseIntegrityChangeSigner signer = new DatabaseIntegrityChangeSigner(
                 protector,
                 new DatabaseIntegrityDescriptorRegistry([descriptor]),
                 NullDatabaseIntegrityFailureReporter.Instance);
@@ -173,7 +174,7 @@ namespace Cotton.Server.IntegrationTests
         public void Verifier_ReportsRequiredTransitionVersionForUnsignedProtectedEntity()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new UserIntegrityDescriptor();
+            UserIntegrityDescriptor descriptor = new UserIntegrityDescriptor();
             User user = CreateUser();
 
             using CottonDbContext dbContext = CreateDbContext();
@@ -192,12 +193,12 @@ namespace Cotton.Server.IntegrationTests
         public void Verifier_RejectsInvalidSignatureAsIntegrityFailure()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new UserIntegrityDescriptor();
+            UserIntegrityDescriptor descriptor = new UserIntegrityDescriptor();
             User user = CreateUser();
 
             using CottonDbContext dbContext = CreateDbContext();
             dbContext.Users.Add(user);
-            var signer = new DatabaseIntegrityChangeSigner(
+            DatabaseIntegrityChangeSigner signer = new DatabaseIntegrityChangeSigner(
                 protector,
                 new DatabaseIntegrityDescriptorRegistry([descriptor]),
                 NullDatabaseIntegrityFailureReporter.Instance);
@@ -213,7 +214,7 @@ namespace Cotton.Server.IntegrationTests
         public void ChangeSigner_RejectsModifiedEntityWhenOriginalMacDoesNotMatch()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new UserIntegrityDescriptor();
+            UserIntegrityDescriptor descriptor = new UserIntegrityDescriptor();
             User tamperedUser = CreateUser();
 
             using CottonDbContext dbContext = CreateDbContext();
@@ -238,7 +239,7 @@ namespace Cotton.Server.IntegrationTests
                     protector.Verify(entry.OriginalValues.ToObject(), descriptor, originalMac),
                     Is.False);
             }
-            var signer = new DatabaseIntegrityChangeSigner(
+            DatabaseIntegrityChangeSigner signer = new DatabaseIntegrityChangeSigner(
                 protector,
                 new DatabaseIntegrityDescriptorRegistry([descriptor]),
                 NullDatabaseIntegrityFailureReporter.Instance);
@@ -250,7 +251,7 @@ namespace Cotton.Server.IntegrationTests
         public void ChangeSigner_ReportsRequiredTransitionVersionWhenOriginalIntegrityMetadataIsMissing()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new UserIntegrityDescriptor();
+            UserIntegrityDescriptor descriptor = new UserIntegrityDescriptor();
             User user = CreateUser();
 
             using CottonDbContext dbContext = CreateDbContext();
@@ -259,7 +260,7 @@ namespace Cotton.Server.IntegrationTests
             user.Email = "alice.changed@example.test";
             dbContext.ChangeTracker.DetectChanges();
 
-            var signer = new DatabaseIntegrityChangeSigner(
+            DatabaseIntegrityChangeSigner signer = new DatabaseIntegrityChangeSigner(
                 protector,
                 new DatabaseIntegrityDescriptorRegistry([descriptor]),
                 NullDatabaseIntegrityFailureReporter.Instance);
@@ -276,7 +277,7 @@ namespace Cotton.Server.IntegrationTests
         public void ChangeSigner_AcceptsModifiedEntityWhenOriginalMacMatches()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new UserIntegrityDescriptor();
+            UserIntegrityDescriptor descriptor = new UserIntegrityDescriptor();
             User user = CreateUser();
 
             using CottonDbContext dbContext = CreateDbContext();
@@ -290,7 +291,7 @@ namespace Cotton.Server.IntegrationTests
 
             user.Email = "alice.changed@example.test";
             dbContext.ChangeTracker.DetectChanges();
-            var signer = new DatabaseIntegrityChangeSigner(
+            DatabaseIntegrityChangeSigner signer = new DatabaseIntegrityChangeSigner(
                 protector,
                 new DatabaseIntegrityDescriptorRegistry([descriptor]),
                 NullDatabaseIntegrityFailureReporter.Instance);
@@ -310,8 +311,8 @@ namespace Cotton.Server.IntegrationTests
         public void UserDescriptor_DetectsRoleTampering()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new UserIntegrityDescriptor();
-            var user = new User
+            UserIntegrityDescriptor descriptor = new UserIntegrityDescriptor();
+            User user = new User
             {
                 Username = "alice",
                 PasswordPhc = "password",
@@ -331,8 +332,8 @@ namespace Cotton.Server.IntegrationTests
         public void PasskeyDescriptor_DetectsPublicKeyTampering()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new UserPasskeyCredentialIntegrityDescriptor();
-            var credential = new UserPasskeyCredential
+            UserPasskeyCredentialIntegrityDescriptor descriptor = new UserPasskeyCredentialIntegrityDescriptor();
+            UserPasskeyCredential credential = new UserPasskeyCredential
             {
                 UserId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
                 CredentialId = [1, 2, 3],
@@ -353,8 +354,8 @@ namespace Cotton.Server.IntegrationTests
         public void DownloadTokenDescriptor_DetectsNodeFileTampering()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new DownloadTokenIntegrityDescriptor();
-            var token = new DownloadToken
+            DownloadTokenIntegrityDescriptor descriptor = new DownloadTokenIntegrityDescriptor();
+            DownloadToken token = new DownloadToken
             {
                 Token = "share-token",
                 NodeFileId = Guid.Parse("40000000-0000-0000-0000-000000000002"),
@@ -371,8 +372,8 @@ namespace Cotton.Server.IntegrationTests
         public void NodeShareTokenDescriptor_DetectsNodeTampering()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new NodeShareTokenIntegrityDescriptor();
-            var token = new NodeShareToken
+            NodeShareTokenIntegrityDescriptor descriptor = new NodeShareTokenIntegrityDescriptor();
+            NodeShareToken token = new NodeShareToken
             {
                 Token = "share-token",
                 NodeId = Guid.Parse("50000000-0000-0000-0000-000000000002"),
@@ -389,8 +390,8 @@ namespace Cotton.Server.IntegrationTests
         public void RefreshTokenDescriptor_DetectsSessionTampering()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new ExtendedRefreshTokenIntegrityDescriptor();
-            var token = new ExtendedRefreshToken
+            ExtendedRefreshTokenIntegrityDescriptor descriptor = new ExtendedRefreshTokenIntegrityDescriptor();
+            ExtendedRefreshToken token = new ExtendedRefreshToken
             {
                 UserId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
                 Token = "refresh-token-hash",
@@ -415,8 +416,8 @@ namespace Cotton.Server.IntegrationTests
         public void NodeDescriptor_DetectsParentTampering()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new NodeIntegrityDescriptor();
-            var node = new Node
+            NodeIntegrityDescriptor descriptor = new NodeIntegrityDescriptor();
+            Node node = new Node
             {
                 OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
                 LayoutId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
@@ -435,8 +436,8 @@ namespace Cotton.Server.IntegrationTests
         public void NodeFileDescriptor_DetectsManifestTampering()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new NodeFileIntegrityDescriptor();
-            var file = new NodeFile
+            NodeFileIntegrityDescriptor descriptor = new NodeFileIntegrityDescriptor();
+            NodeFile file = new NodeFile
             {
                 OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
                 NodeId = Guid.Parse("60000000-0000-0000-0000-000000000002"),
@@ -455,8 +456,8 @@ namespace Cotton.Server.IntegrationTests
         public void FileManifestDescriptor_DetectsContentHashTampering()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new FileManifestIntegrityDescriptor();
-            var manifest = new FileManifest
+            FileManifestIntegrityDescriptor descriptor = new FileManifestIntegrityDescriptor();
+            FileManifest manifest = new FileManifest
             {
                 ProposedContentHash = [1, 2, 3],
                 ComputedContentHash = [1, 2, 3],
@@ -481,8 +482,8 @@ namespace Cotton.Server.IntegrationTests
         public void FileManifestDescriptor_IgnoresExtractedMetadata()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new FileManifestIntegrityDescriptor();
-            var manifest = new FileManifest
+            FileManifestIntegrityDescriptor descriptor = new FileManifestIntegrityDescriptor();
+            FileManifest manifest = new FileManifest
             {
                 ProposedContentHash = [1, 2, 3],
                 ComputedContentHash = [1, 2, 3],
@@ -504,8 +505,8 @@ namespace Cotton.Server.IntegrationTests
         public void FileManifestDescriptor_IgnoresOperationalPreviewState()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new FileManifestIntegrityDescriptor();
-            var manifest = new FileManifest
+            FileManifestIntegrityDescriptor descriptor = new FileManifestIntegrityDescriptor();
+            FileManifest manifest = new FileManifest
             {
                 ProposedContentHash = [1, 2, 3],
                 ComputedContentHash = [1, 2, 3],
@@ -526,8 +527,8 @@ namespace Cotton.Server.IntegrationTests
         public void FileManifestChunkDescriptor_DetectsOrderTampering()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new FileManifestChunkIntegrityDescriptor();
-            var mapping = new FileManifestChunk
+            FileManifestChunkIntegrityDescriptor descriptor = new FileManifestChunkIntegrityDescriptor();
+            FileManifestChunk mapping = new FileManifestChunk
             {
                 FileManifestId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
                 ChunkOrder = 0,
@@ -544,8 +545,8 @@ namespace Cotton.Server.IntegrationTests
         public void ChunkDescriptor_DetectsSizeTampering()
         {
             DatabaseIntegrityProtector protector = CreateProtector();
-            var descriptor = new ChunkIntegrityDescriptor();
-            var chunk = new Chunk
+            ChunkIntegrityDescriptor descriptor = new ChunkIntegrityDescriptor();
+            Chunk chunk = new Chunk
             {
                 Hash = [1, 2, 3],
                 PlainSizeBytes = 3,
@@ -565,10 +566,10 @@ namespace Cotton.Server.IntegrationTests
             DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
                 .UseNpgsql("Host=localhost;Database=cotton_dev;Username=postgres;Password=postgres")
                 .Options;
-            using var dbContext = new CottonDbContext(options);
-            var verifier = new FileGraphIntegrityVerifier(new NoopDatabaseIntegrityVerifier(), NullDatabaseIntegrityFailureReporter.Instance);
+            using CottonDbContext dbContext = new CottonDbContext(options);
+            FileGraphIntegrityVerifier verifier = new FileGraphIntegrityVerifier(new NoopDatabaseIntegrityVerifier(), NullDatabaseIntegrityFailureReporter.Instance);
 
-            var node = new Node
+            Node node = new Node
             {
                 OwnerId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
                 LayoutId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
@@ -576,20 +577,20 @@ namespace Cotton.Server.IntegrationTests
             };
             node.SetName("Documents");
 
-            var manifest = new FileManifest
+            FileManifest manifest = new FileManifest
             {
                 ProposedContentHash = [1, 2, 3],
                 ContentType = "text/plain",
                 SizeBytes = 3
             };
-            var chunk = new Chunk
+            Chunk chunk = new Chunk
             {
                 Hash = [1, 2, 3],
                 PlainSizeBytes = 3,
                 StoredSizeBytes = 4,
                 CompressionAlgorithm = CompressionAlgorithm.Zstd
             };
-            var manifestChunk = new FileManifestChunk
+            FileManifestChunk manifestChunk = new FileManifestChunk
             {
                 FileManifestId = manifest.Id,
                 ChunkOrder = 1,
@@ -598,7 +599,7 @@ namespace Cotton.Server.IntegrationTests
             };
             manifest.FileManifestChunks.Add(manifestChunk);
 
-            var nodeFile = new NodeFile
+            NodeFile nodeFile = new NodeFile
             {
                 OwnerId = node.OwnerId,
                 NodeId = node.Id,

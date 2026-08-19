@@ -34,7 +34,7 @@ namespace Cotton.Benchmark.Benchmarks
         {
             (_testData, _dataType) = CreateTestData(configuration.DataSizeBytes, profile);
 
-            var key = new byte[configuration.EncryptionKeySize];
+            byte[] key = new byte[configuration.EncryptionKeySize];
             RandomNumberGenerator.Fill(key);
             _cipher = new AesGcmStreamCipher(
                 key,
@@ -60,7 +60,7 @@ namespace Cotton.Benchmark.Benchmarks
 
         protected override async Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
-            var stopwatch = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
             await ProcessChunkAsync(cancellationToken);
             stopwatch.Stop();
 
@@ -97,9 +97,9 @@ namespace Cotton.Benchmark.Benchmarks
 
         private async Task ProcessChunkAsync(CancellationToken cancellationToken)
         {
-            using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            await using var uploadStream = new MemoryStream(_testData, writable: false);
-            await using var bufferedStream = new MemoryStream(capacity: _testData.Length);
+            using IncrementalHash hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            await using MemoryStream uploadStream = new MemoryStream(_testData, writable: false);
+            await using MemoryStream bufferedStream = new MemoryStream(capacity: _testData.Length);
             byte[] rented = ArrayPool<byte>.Shared.Rent(128 * 1024);
 
             try
@@ -122,7 +122,7 @@ namespace Cotton.Benchmark.Benchmarks
             string storageKey = $"{Convert.ToHexString(storageHash).ToLowerInvariant()}{Interlocked.Increment(ref _uidCounter):x8}";
             try
             {
-                await using var chunkStream = new MemoryStream(buffer, 0, length, writable: false);
+                await using MemoryStream chunkStream = new MemoryStream(buffer, 0, length, writable: false);
                 await _pipeline.WriteAsync(storageKey, chunkStream, new PipelineContext());
             }
             finally

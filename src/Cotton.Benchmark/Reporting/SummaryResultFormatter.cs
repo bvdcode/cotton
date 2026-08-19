@@ -10,13 +10,13 @@ namespace Cotton.Benchmark.Reporting
     {
         public string Format(IBenchmarkResult result)
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
 
             if (result.IsSuccess)
             {
                 sb.Append($"[+] {result.BenchmarkName,-40} ");
 
-                if (result.Metrics.TryGetValue("AvgThroughputMBps", out var throughput))
+                if (result.Metrics.TryGetValue("AvgThroughputMBps", out object? throughput))
                 {
                     sb.Append($"{throughput,15}");
                 }
@@ -35,7 +35,7 @@ namespace Cotton.Benchmark.Reporting
 
         public string FormatCollection(IEnumerable<IBenchmarkResult> results)
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine("Summary:");
             sb.AppendLine(new string('-', 70));
@@ -47,9 +47,9 @@ namespace Cotton.Benchmark.Reporting
 
             sb.AppendLine(new string('-', 70));
 
-            var successCount = results.Count(r => r.IsSuccess);
-            var failureCount = results.Count(r => !r.IsSuccess);
-            var totalTime = TimeSpan.FromMilliseconds(results.Sum(r => r.TotalDuration.TotalMilliseconds));
+            int successCount = results.Count(r => r.IsSuccess);
+            int failureCount = results.Count(r => !r.IsSuccess);
+            TimeSpan totalTime = TimeSpan.FromMilliseconds(results.Sum(r => r.TotalDuration.TotalMilliseconds));
 
             sb.AppendLine($"Total: {results.Count()} | Success: {successCount} | Failed: {failureCount} | Time: {FormatDuration(totalTime)}");
             sb.AppendLine();

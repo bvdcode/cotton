@@ -16,9 +16,9 @@ namespace Cotton.Crypto.Tests
         public async Task Shared_Ctn2Vector_Decrypts()
         {
             SharedContainerVectors vectors = LoadSharedContainerVectors();
-            using var cipher = new AesGcmStreamCipher(vectors.MasterKey, keyId: 1, threads: 1);
-            using var input = new MemoryStream(vectors.Ctn2SingleChunk, writable: false);
-            using var output = new MemoryStream();
+            using AesGcmStreamCipher cipher = new AesGcmStreamCipher(vectors.MasterKey, keyId: 1, threads: 1);
+            using MemoryStream input = new MemoryStream(vectors.Ctn2SingleChunk, writable: false);
+            using MemoryStream output = new MemoryStream();
 
             await cipher.DecryptAsync(input, output);
 
@@ -29,9 +29,9 @@ namespace Cotton.Crypto.Tests
         public void Shared_Ctn1Vector_ReportsRequiredTransitionVersion()
         {
             SharedContainerVectors vectors = LoadSharedContainerVectors();
-            using var cipher = new AesGcmStreamCipher(vectors.MasterKey, keyId: 1, threads: 1);
-            using var input = new MemoryStream(vectors.Ctn1TwoChunk, writable: false);
-            using var output = new MemoryStream();
+            using AesGcmStreamCipher cipher = new AesGcmStreamCipher(vectors.MasterKey, keyId: 1, threads: 1);
+            using MemoryStream input = new MemoryStream(vectors.Ctn1TwoChunk, writable: false);
+            using MemoryStream output = new MemoryStream();
 
 #pragma warning disable CS0618 // OBSOLETE TRANSITION: pin the operator-facing CTN1 cutover error.
             Ctn1NotSupportedException? exception = Assert.ThrowsAsync<Ctn1NotSupportedException>(
@@ -45,17 +45,17 @@ namespace Cotton.Crypto.Tests
         public async Task Shared_Ctn2Vector_DeterministicWrite_MatchesFixture()
         {
             SharedContainerVectors vectors = LoadSharedContainerVectors();
-            using var rng = new SequenceRandomNumberGenerator(
+            using SequenceRandomNumberGenerator rng = new SequenceRandomNumberGenerator(
                 vectors.FileKey,
                 vectors.NoncePrefix,
                 vectors.FileKeyNonce);
-            using var cipher = new AesGcmStreamCipher(
+            using AesGcmStreamCipher cipher = new AesGcmStreamCipher(
                 vectors.MasterKey,
                 keyId: 1,
                 threads: 1,
                 rng: rng);
-            using var input = new MemoryStream(vectors.Plaintext, writable: false);
-            using var output = new MemoryStream();
+            using MemoryStream input = new MemoryStream(vectors.Plaintext, writable: false);
+            using MemoryStream output = new MemoryStream();
 
             await cipher.EncryptAsync(input, output, chunkSize: vectors.Ctn2ChunkSize);
 
@@ -69,14 +69,14 @@ namespace Cotton.Crypto.Tests
             byte[] masterKey = new byte[32];
             for (int i = 0; i < masterKey.Length; i++) masterKey[i] = (byte)(i + 1);
             // Deterministic RNG seeded via RNGCryptoServiceProvider replacement: use fixed bytes from Hash counter
-            var rng = new DeterministicRng(0xA5A5A5A5);
+            DeterministicRng rng = new DeterministicRng(0xA5A5A5A5);
 
-            var cipher = new AesGcmStreamCipher(masterKey, keyId: 77, threads: 1, rng: rng);
+            AesGcmStreamCipher cipher = new AesGcmStreamCipher(masterKey, keyId: 77, threads: 1, rng: rng);
             byte[] payload = new byte[128];
             for (int i = 0; i < payload.Length; i++) payload[i] = (byte)(i ^ 0x5A);
 
-            using var input = new MemoryStream(payload);
-            using var output = new MemoryStream();
+            using MemoryStream input = new MemoryStream(payload);
+            using MemoryStream output = new MemoryStream();
             cipher.EncryptAsync(input, output, chunkSize: 64 * 1024).GetAwaiter().GetResult();
             byte[] bytes = output.ToArray();
 
@@ -117,7 +117,7 @@ namespace Cotton.Crypto.Tests
                 TestContext.CurrentContext.TestDirectory,
                 "TestData",
                 SharedVectorsFileName);
-            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
             JsonElement root = document.RootElement;
             JsonElement ctn2 = root
                 .GetProperty("vectors")

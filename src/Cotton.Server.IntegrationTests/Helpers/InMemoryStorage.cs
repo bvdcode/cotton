@@ -20,7 +20,7 @@ namespace Cotton.Server.IntegrationTests.Helpers
         public Task<long> GetSizeAsync(string uid)
         {
             ArgumentNullException.ThrowIfNull(uid);
-            return Task.FromResult(_blobs.TryGetValue(uid, out var data) ? data.Length : 0L);
+            return Task.FromResult(_blobs.TryGetValue(uid, out byte[]? data) ? data.Length : 0L);
         }
 
         public Task<bool> ExistsAsync(string uid)
@@ -33,7 +33,7 @@ namespace Cotton.Server.IntegrationTests.Helpers
         {
             ArgumentNullException.ThrowIfNull(uid);
             MemoryStream ms = new();
-            if (_blobs.TryGetValue(uid, out var data))
+            if (_blobs.TryGetValue(uid, out byte[]? data))
             {
                 ms.Write(data, 0, data.Length);
                 ms.Seek(0, SeekOrigin.Begin);
@@ -53,7 +53,7 @@ namespace Cotton.Server.IntegrationTests.Helpers
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
             ArgumentNullException.ThrowIfNull(stream);
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             if (stream.CanSeek)
             {
                 stream.Seek(0, SeekOrigin.Begin);
@@ -66,7 +66,7 @@ namespace Cotton.Server.IntegrationTests.Helpers
 
         public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
-            foreach (var key in _blobs.Keys)
+            foreach (string key in _blobs.Keys)
             {
                 yield return key;
             }

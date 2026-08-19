@@ -33,7 +33,7 @@ namespace Cotton.Benchmark.Infrastructure
 
         private static string? FindRoot(string startPath)
         {
-            var directory = new DirectoryInfo(startPath);
+            DirectoryInfo? directory = new DirectoryInfo(startPath);
             while (directory is not null)
             {
                 if (Directory.Exists(Path.Combine(directory.FullName, "performance", "results"))

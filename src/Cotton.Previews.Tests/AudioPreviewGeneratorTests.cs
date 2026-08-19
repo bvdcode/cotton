@@ -15,7 +15,7 @@ namespace Cotton.Previews.Tests
         [Test]
         public void Version_ForcesReprocessingAfterWaveformTimeoutIncrease()
         {
-            var generator = new AudioPreviewGenerator();
+            AudioPreviewGenerator generator = new AudioPreviewGenerator();
 
             Assert.That(generator.Version, Is.EqualTo(4));
         }
@@ -23,14 +23,14 @@ namespace Cotton.Previews.Tests
         [Test]
         public async Task GeneratePreviewWebPAsync_WavWithoutCover_FallsBackToWaveform_AndWritesArtifact()
         {
-            var generator = new AudioPreviewGenerator();
+            AudioPreviewGenerator generator = new AudioPreviewGenerator();
             byte[] wavBytes = CreatePcm16MonoWavBytes(sampleRate: 8000, durationSeconds: 2);
-            using var stream = new MemoryStream(wavBytes);
+            using MemoryStream stream = new MemoryStream(wavBytes);
 
             byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 200);
 
             AssertWebpSignature(preview);
-            using var image = Image.Load<Rgba32>(preview);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
             Assert.That(Math.Max(image.Width, image.Height), Is.LessThanOrEqualTo(200));
 
             string artifactsDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts");
@@ -45,14 +45,14 @@ namespace Cotton.Previews.Tests
         [Test]
         public async Task GeneratePreviewWebPAsync_LargeWavWithoutCover_GeneratesWaveformPreview_AndWritesArtifact()
         {
-            var generator = new AudioPreviewGenerator();
+            AudioPreviewGenerator generator = new AudioPreviewGenerator();
             byte[] wavBytes = CreateLargePcm16MonoWavBytes(minimumSizeBytes: LargeAudioPreviewThresholdBytes + (1024 * 1024));
-            using var stream = new MemoryStream(wavBytes);
+            using MemoryStream stream = new MemoryStream(wavBytes);
 
             byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 200);
 
             AssertWebpSignature(preview);
-            using var image = Image.Load<Rgba32>(preview);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
             Assert.That(Math.Max(image.Width, image.Height), Is.LessThanOrEqualTo(200));
             Assert.That(CountNonTransparentPixels(image), Is.GreaterThan(0));
 
@@ -69,7 +69,7 @@ namespace Cotton.Previews.Tests
         [Test]
         public async Task GeneratePreviewWebPAsync_WavWithoutCover_SavesDebugFrames_ForVisualInspection()
         {
-            var generator = new AudioPreviewGenerator();
+            AudioPreviewGenerator generator = new AudioPreviewGenerator();
             string artifactsDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts");
             Directory.CreateDirectory(artifactsDirectory);
 
@@ -88,7 +88,7 @@ namespace Cotton.Previews.Tests
                     lowFreq: LowFreq,
                     highFreq: HighFreq);
 
-                using var stream = new MemoryStream(wavBytes);
+                using MemoryStream stream = new MemoryStream(wavBytes);
                 byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 200);
 
                 AssertWebpSignature(preview);
@@ -117,8 +117,8 @@ namespace Cotton.Previews.Tests
 
             int dataSize = samples.Length * sizeof(short);
 
-            using var ms = new MemoryStream(44 + dataSize);
-            using var writer = new BinaryWriter(ms, Encoding.ASCII, leaveOpen: true);
+            using MemoryStream ms = new MemoryStream(44 + dataSize);
+            using BinaryWriter writer = new BinaryWriter(ms, Encoding.ASCII, leaveOpen: true);
 
             writer.Write(Encoding.ASCII.GetBytes("RIFF"));
             writer.Write(36 + dataSize);
@@ -151,7 +151,7 @@ namespace Cotton.Previews.Tests
             int dataSize = AlignToEven(minimumSizeBytes - 44);
             int totalSamples = dataSize / sizeof(short);
 
-            using var ms = new MemoryStream(44 + dataSize);
+            using MemoryStream ms = new MemoryStream(44 + dataSize);
             WritePcm16MonoWavHeader(ms, sampleRate, dataSize);
 
             byte[] data = new byte[dataSize];
@@ -173,7 +173,7 @@ namespace Cotton.Previews.Tests
 
         private static void WritePcm16MonoWavHeader(Stream stream, int sampleRate, int dataSize)
         {
-            using var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true);
+            using BinaryWriter writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true);
 
             writer.Write(Encoding.ASCII.GetBytes("RIFF"));
             writer.Write(36 + dataSize);

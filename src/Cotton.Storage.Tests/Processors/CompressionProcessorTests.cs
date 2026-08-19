@@ -22,15 +22,15 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_RoundTrip_EmptyStream_ReturnsOriginal()
         {
             // Arrange
-            var originalData = Array.Empty<byte>();
-            var originalStream = new MemoryStream(originalData);
+            byte[] originalData = Array.Empty<byte>();
+            MemoryStream originalStream = new MemoryStream(originalData);
 
             // Act
             Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
             Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await decompressed.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
         }
@@ -39,15 +39,15 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_RoundTrip_OneByte_ReturnsOriginal()
         {
             // Arrange
-            var originalData = "*"u8.ToArray();
-            var originalStream = new MemoryStream(originalData);
+            byte[] originalData = "*"u8.ToArray();
+            MemoryStream originalStream = new MemoryStream(originalData);
 
             // Act
             Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
             Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await decompressed.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
         }
@@ -56,15 +56,15 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_RoundTrip_SmallData_ReturnsOriginal()
         {
             // Arrange
-            var originalData = Encoding.UTF8.GetBytes("Hello, World!");
-            var originalStream = new MemoryStream(originalData);
+            byte[] originalData = Encoding.UTF8.GetBytes("Hello, World!");
+            MemoryStream originalStream = new MemoryStream(originalData);
 
             // Act
             Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
             Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await decompressed.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
         }
@@ -73,19 +73,19 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_RoundTrip_1KB_ReturnsOriginal()
         {
             // Arrange
-            var originalData = new byte[1024];
+            byte[] originalData = new byte[1024];
             for (int i = 0; i < originalData.Length; i++)
             {
                 originalData[i] = (byte)(i % 256);
             }
-            var originalStream = new MemoryStream(originalData);
+            MemoryStream originalStream = new MemoryStream(originalData);
 
             // Act
             Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
             Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await decompressed.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
         }
@@ -94,16 +94,16 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_RoundTrip_1MB_ReturnsOriginal()
         {
             // Arrange
-            var originalData = new byte[1024 * 1024];
+            byte[] originalData = new byte[1024 * 1024];
             RandomNumberGenerator.Fill(originalData);
-            var originalStream = new MemoryStream(originalData);
+            MemoryStream originalStream = new MemoryStream(originalData);
 
             // Act
             Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
             Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await decompressed.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
         }
@@ -112,16 +112,16 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_RoundTrip_RandomData_ReturnsOriginal()
         {
             // Arrange
-            var originalData = new byte[4096];
+            byte[] originalData = new byte[4096];
             RandomNumberGenerator.Fill(originalData);
-            var originalStream = new MemoryStream(originalData);
+            MemoryStream originalStream = new MemoryStream(originalData);
 
             // Act
             Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
             Stream decompressed = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await decompressed.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
         }
@@ -130,8 +130,8 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_WriteAsync_ReturnsReadableStream()
         {
             // Arrange
-            var data = Encoding.UTF8.GetBytes("Test data");
-            var stream = new MemoryStream(data);
+            byte[] data = Encoding.UTF8.GetBytes("Test data");
+            MemoryStream stream = new MemoryStream(data);
 
             // Act
             Stream result = await _processor.WriteAsync("test-uid", stream);
@@ -146,8 +146,8 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_ReadAsync_ReturnsReadableStream()
         {
             // Arrange
-            var data = Encoding.UTF8.GetBytes("Test data");
-            var stream = new MemoryStream(data);
+            byte[] data = Encoding.UTF8.GetBytes("Test data");
+            MemoryStream stream = new MemoryStream(data);
             Stream compressed = await _processor.WriteAsync("test-uid", stream);
 
             // Act
@@ -163,8 +163,8 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_WriteAsync_StreamPositionZero()
         {
             // Arrange
-            var data = Encoding.UTF8.GetBytes("Test data");
-            var stream = new MemoryStream(data);
+            byte[] data = Encoding.UTF8.GetBytes("Test data");
+            MemoryStream stream = new MemoryStream(data);
 
             // Act
             Stream result = await _processor.WriteAsync("test-uid", stream);
@@ -185,8 +185,8 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_ReadAsync_StreamPositionZero()
         {
             // Arrange
-            var data = Encoding.UTF8.GetBytes("Test data");
-            var stream = new MemoryStream(data);
+            byte[] data = Encoding.UTF8.GetBytes("Test data");
+            MemoryStream stream = new MemoryStream(data);
             Stream compressed = await _processor.WriteAsync("test-uid", stream);
 
             // Act
@@ -204,20 +204,20 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_CompressibleData_ReducesSize()
         {
             // Arrange - highly compressible data (repeated pattern)
-            var originalData = new byte[10000];
+            byte[] originalData = new byte[10000];
             for (int i = 0; i < originalData.Length; i++)
             {
                 originalData[i] = (byte)(i % 10);
             }
-            var originalStream = new MemoryStream(originalData);
+            MemoryStream originalStream = new MemoryStream(originalData);
 
             // Act
             Stream compressed = await _processor.WriteAsync("test-uid", originalStream);
 
             // Read compressed stream to measure size
-            var compressedData = new MemoryStream();
+            MemoryStream compressedData = new MemoryStream();
             await compressed.CopyToAsync(compressedData);
-            var compressedLength = compressedData.Length;
+            long compressedLength = compressedData.Length;
 
             // Assert
             Assert.That(compressedLength, Is.LessThan(originalData.Length),
@@ -228,8 +228,8 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CompressionProcessor_UsesRuntimeCompressionLevelProvider_ForFutureWrites()
         {
             // Arrange
-            var provider = new TestCompressionLevelProvider();
-            var processor = new CompressionProcessor(provider);
+            TestCompressionLevelProvider provider = new TestCompressionLevelProvider();
+            CompressionProcessor processor = new CompressionProcessor(provider);
             byte[] originalData = CreateCompressionLevelSensitiveData();
 
             // Act
@@ -255,16 +255,16 @@ namespace Cotton.Storage.Tests.Processors
 
         private static async Task<long> CompressAndMeasureAsync(CompressionProcessor processor, byte[] originalData)
         {
-            await using var originalStream = new MemoryStream(originalData);
+            await using MemoryStream originalStream = new MemoryStream(originalData);
             await using Stream compressed = await processor.WriteAsync("test-uid", originalStream);
-            await using var compressedData = new MemoryStream();
+            await using MemoryStream compressedData = new MemoryStream();
             await compressed.CopyToAsync(compressedData);
             return compressedData.Length;
         }
 
         private static byte[] CreateCompressionLevelSensitiveData()
         {
-            var builder = new StringBuilder(capacity: 512 * 1024);
+            StringBuilder builder = new StringBuilder(capacity: 512 * 1024);
             for (int i = 0; i < 4096; i++)
             {
                 builder.Append("node=");

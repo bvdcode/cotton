@@ -40,7 +40,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void EnsureCanAcceptWriteAsync_WhenBackendDoesNotReportCapacity_DoesNotBlock()
         {
-            var notifications = new RecordingNotificationsProvider();
+            RecordingNotificationsProvider notifications = new RecordingNotificationsProvider();
             StoragePressureGuard guard = CreateGuard(
                 new NonReportingBackend(),
                 notifications,
@@ -61,8 +61,8 @@ namespace Cotton.Server.IntegrationTests
             DbContext.Users.Add(admin);
             await DbContext.SaveChangesAsync();
 
-            var notifications = new RecordingNotificationsProvider();
-            var backend = new ReportingBackend(new StorageCapacitySnapshot(
+            RecordingNotificationsProvider notifications = new RecordingNotificationsProvider();
+            ReportingBackend backend = new ReportingBackend(new StorageCapacitySnapshot(
                 Backend: "filesystem",
                 RootPath: "/storage",
                 TotalBytes: 1_000,
@@ -93,8 +93,8 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task EnsureCanAcceptWriteAsync_CachesCapacitySnapshotForHotPath()
         {
-            var notifications = new RecordingNotificationsProvider();
-            var backend = new ReportingBackend(new StorageCapacitySnapshot(
+            RecordingNotificationsProvider notifications = new RecordingNotificationsProvider();
+            ReportingBackend backend = new ReportingBackend(new StorageCapacitySnapshot(
                 Backend: "filesystem",
                 RootPath: "/storage",
                 TotalBytes: 1_000,
@@ -119,8 +119,8 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task EnsureCanAcceptWriteAsync_ReservesAcceptedWritesUntilCapacityRefresh()
         {
-            var notifications = new RecordingNotificationsProvider();
-            var backend = new ReportingBackend(new StorageCapacitySnapshot(
+            RecordingNotificationsProvider notifications = new RecordingNotificationsProvider();
+            ReportingBackend backend = new ReportingBackend(new StorageCapacitySnapshot(
                 Backend: "filesystem",
                 RootPath: "/storage",
                 TotalBytes: 1_000,

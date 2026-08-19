@@ -30,7 +30,7 @@ namespace Cotton.Storage.Tests.Integration
                 CleanupDirectory(_testBasePath);
             }
 
-            var key = new byte[32];
+            byte[] key = new byte[32];
             RandomNumberGenerator.Fill(key);
             _cipher = new AesGcmStreamCipher(key, keyId: 1, threads: null);
         }
@@ -50,7 +50,7 @@ namespace Cotton.Storage.Tests.Integration
         {
             try
             {
-                foreach (var file in Directory.GetFiles(path, "*.*", SearchOption.AllDirectories))
+                foreach (string file in Directory.GetFiles(path, "*.*", SearchOption.AllDirectories))
                 {
                     File.SetAttributes(file, FileAttributes.Normal);
                 }
@@ -71,20 +71,20 @@ namespace Cotton.Storage.Tests.Integration
         public async Task Integration_FileSystemBackend_WithCrypto_RoundTrip()
         {
             // Arrange
-            var backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
-            var backend = new FileSystemStorageBackend(backendLogger.Object);
-            var provider = new FakeBackendProvider(backend);
-            var pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
+            Mock<ILogger<FileSystemStorageBackend>> backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
+            FileSystemStorageBackend backend = new FileSystemStorageBackend(backendLogger.Object);
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
 
-            var cryptoProcessor = new CryptoProcessor(_cipher);
+            CryptoProcessor cryptoProcessor = new CryptoProcessor(_cipher);
 
-            var pipeline = new FileStoragePipeline(
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
                 [cryptoProcessor],
                 new StorageWriteAdmissionGate(1));
 
-            var originalData = Encoding.UTF8.GetBytes("Sensitive information that should be encrypted");
+            byte[] originalData = Encoding.UTF8.GetBytes("Sensitive information that should be encrypted");
             string uid = NewUid();
 
             // Act
@@ -92,14 +92,14 @@ namespace Cotton.Storage.Tests.Integration
 
             // Verify data on disk is encrypted (not plaintext)
             Stream diskStream = await backend.ReadAsync(uid);
-            var diskData = new MemoryStream();
+            MemoryStream diskData = new MemoryStream();
             await diskStream.CopyToAsync(diskData);
             Assert.That(diskData.ToArray(), Is.Not.EqualTo(originalData),
                 "Data on disk should be encrypted");
 
             // Read through pipeline should decrypt
             Stream readStream = await pipeline.ReadAsync(uid);
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
 
             // Assert
@@ -110,27 +110,27 @@ namespace Cotton.Storage.Tests.Integration
         public async Task Integration_FileSystemBackend_WithCompressionAndCrypto_RoundTrip()
         {
             // Arrange
-            var backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
-            var backend = new FileSystemStorageBackend(backendLogger.Object);
-            var provider = new FakeBackendProvider(backend);
-            var pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
+            Mock<ILogger<FileSystemStorageBackend>> backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
+            FileSystemStorageBackend backend = new FileSystemStorageBackend(backendLogger.Object);
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
 
-            var cryptoProcessor = new CryptoProcessor(_cipher);
-            var compressionProcessor = new CompressionProcessor();
+            CryptoProcessor cryptoProcessor = new CryptoProcessor(_cipher);
+            CompressionProcessor compressionProcessor = new CompressionProcessor();
 
-            var pipeline = new FileStoragePipeline(
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
                 [cryptoProcessor, compressionProcessor],
                 new StorageWriteAdmissionGate(1));
 
-            var originalData = Encoding.UTF8.GetBytes(new string('A', 10000)); // Highly compressible
+            byte[] originalData = Encoding.UTF8.GetBytes(new string('A', 10000)); // Highly compressible
             string uid = NewUid();
 
             // Act
             await pipeline.WriteAsync(uid, new MemoryStream(originalData));
             Stream readStream = await pipeline.ReadAsync(uid);
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
 
             // Assert
@@ -141,20 +141,20 @@ namespace Cotton.Storage.Tests.Integration
         public async Task Integration_MultipleFiles_IndependentOperations()
         {
             // Arrange
-            var backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
-            var backend = new FileSystemStorageBackend(backendLogger.Object);
-            var provider = new FakeBackendProvider(backend);
-            var pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
+            Mock<ILogger<FileSystemStorageBackend>> backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
+            FileSystemStorageBackend backend = new FileSystemStorageBackend(backendLogger.Object);
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
 
-            var cryptoProcessor = new CryptoProcessor(_cipher);
+            CryptoProcessor cryptoProcessor = new CryptoProcessor(_cipher);
 
-            var pipeline = new FileStoragePipeline(
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
                 [cryptoProcessor],
                 new StorageWriteAdmissionGate(1));
 
-            var testData = Enumerable.Range(0, 3)
+            List<(string uid, byte[] data)> testData = Enumerable.Range(0, 3)
                 .Select(i => (uid: NewUid(), data: Encoding.UTF8.GetBytes($"File {i + 1}")))
                 .ToList();
 
@@ -168,7 +168,7 @@ namespace Cotton.Storage.Tests.Integration
             foreach ((string? uid, byte[]? data) in testData)
             {
                 Stream readStream = await pipeline.ReadAsync(uid);
-                using var result = new MemoryStream();
+                using MemoryStream result = new MemoryStream();
                 await readStream.CopyToAsync(result);
 
                 // Assert
@@ -181,21 +181,21 @@ namespace Cotton.Storage.Tests.Integration
         public async Task Integration_LargeFile_5MB_NoMemoryExhaustion()
         {
             // Arrange
-            var backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
-            var backend = new FileSystemStorageBackend(backendLogger.Object);
-            var provider = new FakeBackendProvider(backend);
-            var pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
+            Mock<ILogger<FileSystemStorageBackend>> backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
+            FileSystemStorageBackend backend = new FileSystemStorageBackend(backendLogger.Object);
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
 
-            var compressionProcessor = new CompressionProcessor();
+            CompressionProcessor compressionProcessor = new CompressionProcessor();
 
-            var pipeline = new FileStoragePipeline(
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
                 [compressionProcessor],
                 new StorageWriteAdmissionGate(1));
 
             string uid = NewUid();
-            var originalData = new byte[5 * 1024 * 1024];
+            byte[] originalData = new byte[5 * 1024 * 1024];
             RandomNumberGenerator.Fill(originalData);
 
             // Act
@@ -203,7 +203,7 @@ namespace Cotton.Storage.Tests.Integration
             Stream readStream = await pipeline.ReadAsync(uid);
 
             // Assert - read in chunks to verify streaming works
-            var buffer = new byte[1024 * 1024]; // 1MB buffer
+            byte[] buffer = new byte[1024 * 1024]; // 1MB buffer
             int totalRead = 0;
             int bytesRead;
 
@@ -219,21 +219,21 @@ namespace Cotton.Storage.Tests.Integration
         public async Task Integration_ProcessorOrder_IsRespected()
         {
             // Arrange
-            var backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
-            var backend = new FileSystemStorageBackend(backendLogger.Object);
-            var provider = new FakeBackendProvider(backend);
-            var pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
+            Mock<ILogger<FileSystemStorageBackend>> backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
+            FileSystemStorageBackend backend = new FileSystemStorageBackend(backendLogger.Object);
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
 
-            var cryptoProcessor = new CryptoProcessor(_cipher);       // Priority: 1000
-            var compressionProcessor = new CompressionProcessor();    // Priority: 10000
+            CryptoProcessor cryptoProcessor = new CryptoProcessor(_cipher);       // Priority: 1000
+            CompressionProcessor compressionProcessor = new CompressionProcessor();    // Priority: 10000
 
-            var pipeline = new FileStoragePipeline(
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
                 [compressionProcessor, cryptoProcessor],
                 new StorageWriteAdmissionGate(1));
 
-            var originalData = Encoding.UTF8.GetBytes("Test data for order verification");
+            byte[] originalData = Encoding.UTF8.GetBytes("Test data for order verification");
             string uid = NewUid();
 
             // Act
@@ -241,7 +241,7 @@ namespace Cotton.Storage.Tests.Integration
 
             // Verify full round trip
             Stream readStream = await pipeline.ReadAsync(uid);
-            using var result = new MemoryStream();
+            using MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
 
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
@@ -251,20 +251,20 @@ namespace Cotton.Storage.Tests.Integration
         public async Task Integration_ParallelOperations_NoRaceConditions()
         {
             // Arrange
-            var backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
-            var backend = new FileSystemStorageBackend(backendLogger.Object);
-            var provider = new FakeBackendProvider(backend);
-            var pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
+            Mock<ILogger<FileSystemStorageBackend>> backendLogger = new Mock<ILogger<FileSystemStorageBackend>>();
+            FileSystemStorageBackend backend = new FileSystemStorageBackend(backendLogger.Object);
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
 
-            var cryptoProcessor = new CryptoProcessor(_cipher);
+            CryptoProcessor cryptoProcessor = new CryptoProcessor(_cipher);
 
-            var pipeline = new FileStoragePipeline(
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
                 [cryptoProcessor],
                 new StorageWriteAdmissionGate(1));
 
-            var testData = Enumerable.Range(0, 20)
+            List<(string uid, byte[] data)> testData = Enumerable.Range(0, 20)
                 .Select(i => (uid: $"abc{i:D3}def{i:D3}", data: Encoding.UTF8.GetBytes($"Data {i}")))
                 .ToList();
 
@@ -277,7 +277,7 @@ namespace Cotton.Storage.Tests.Integration
             IEnumerable<Task<(string uid, byte[] actual, byte[] expected)>> readTasks = testData.Select(async item =>
             {
                 Stream readStream = await pipeline.ReadAsync(item.uid);
-                using var result = new MemoryStream();
+                using MemoryStream result = new MemoryStream();
                 await readStream.CopyToAsync(result);
                 return (item.uid, actual: result.ToArray(), expected: item.data);
             });

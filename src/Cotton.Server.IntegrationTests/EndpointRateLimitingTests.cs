@@ -284,7 +284,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void ProxyServiceDetection_ReadsServerResponseAndPositionsLocalProbe()
         {
-            using var response = new HttpResponseMessage(HttpStatusCode.OK);
+            using HttpResponseMessage response = new HttpResponseMessage(HttpStatusCode.OK);
             response.Headers.Server.ParseAdd("nginx/1.27.4");
 
             IReadOnlyList<string> probed = ProxyServiceDetectionExtensions.DetectProxyServices(response);
@@ -306,12 +306,12 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task ProxyTopologyProbe_UsesHeadRequestAndReadsResponseServer()
         {
-            using var response = new HttpResponseMessage(HttpStatusCode.OK);
+            using HttpResponseMessage response = new HttpResponseMessage(HttpStatusCode.OK);
             response.Headers.Server.ParseAdd("Caddy");
             response.Headers.TryAddWithoutValidation("CF-Ray", "a2591eb86ff8cbaa-LAX");
-            using var handler = new StaticResponseHandler(response);
-            using var client = new HttpClient(handler);
-            var probe = new ProxyTopologyProbeService(
+            using StaticResponseHandler handler = new StaticResponseHandler(response);
+            using HttpClient client = new HttpClient(handler);
+            ProxyTopologyProbeService probe = new ProxyTopologyProbeService(
                 client,
                 NullLogger<ProxyTopologyProbeService>.Instance);
 

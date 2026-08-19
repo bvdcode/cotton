@@ -17,7 +17,7 @@ namespace Cotton.Sdk.Tests
         public async Task GetChangesAsync_MapsCursorRequestAndResponse()
         {
             Guid nodeFileId = Guid.NewGuid();
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new
             {
                 sinceCursor = 41,
@@ -61,7 +61,7 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task GetChangesAsync_RejectsNegativeCursor()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
             Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.Sync.GetChangesAsync(-1));
@@ -71,7 +71,7 @@ namespace Cotton.Sdk.Tests
         [TestCase(-1)]
         public async Task GetChangesAsync_RejectsNonPositiveLimit(int limit)
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
             Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.Sync.GetChangesAsync(0, limit));
@@ -80,7 +80,7 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task GetChangesAsync_ReportsHtmlSpaFallbackAsApiException()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(_ => new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent("<!doctype html><html>App</html>", Encoding.UTF8, "text/html"),
@@ -103,7 +103,7 @@ namespace Cotton.Sdk.Tests
 
         private static async Task<CottonCloudClient> CreateAuthorizedClientAsync(QueuedHttpMessageHandler handler)
         {
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "refresh" });
             return new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
             {

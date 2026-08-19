@@ -11,7 +11,7 @@ namespace Cotton.Benchmark.Reporting
 
         public Task ReportAsync(IEnumerable<IBenchmarkResult> results, CancellationToken cancellationToken = default)
         {
-            var formattedResults = _formatter.FormatCollection(results);
+            string formattedResults = _formatter.FormatCollection(results);
             Console.WriteLine(formattedResults);
             return Task.CompletedTask;
         }

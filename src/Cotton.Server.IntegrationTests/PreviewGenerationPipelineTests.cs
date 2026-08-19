@@ -74,7 +74,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(creator.HasTables(), Is.False);
             });
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = "localhost",
                 Port = 5432,
@@ -83,7 +83,7 @@ namespace Cotton.Server.IntegrationTests
                 Password = "postgres"
             };
 
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -860,7 +860,7 @@ namespace Cotton.Server.IntegrationTests
             IStoragePipeline storage = scope.ServiceProvider.GetRequiredService<IStoragePipeline>();
 
             await using Stream stream = await storage.ReadAsync(storageKey);
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             await stream.CopyToAsync(ms);
             return ms.ToArray();
         }
@@ -869,7 +869,7 @@ namespace Cotton.Server.IntegrationTests
         {
             string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
 
-            using var uploadForm = new MultipartFormDataContent
+            using MultipartFormDataContent uploadForm = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -891,7 +891,7 @@ namespace Cotton.Server.IntegrationTests
             HttpResponseMessage uploadResponse = await _client!.PostAsync("/api/v1/chunks", uploadForm);
             uploadResponse.EnsureSuccessStatusCode();
 
-            var createFileRequest = new CreateFileFromChunksRequestDto
+            CreateFileFromChunksRequestDto createFileRequest = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [chunkHashLower],
                 Name = fileName,
@@ -925,7 +925,7 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<string> LoginAsync()
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new LoginRequestDto
                 {
@@ -1052,7 +1052,7 @@ namespace Cotton.Server.IntegrationTests
 
         private static byte[] CreateGradientPngBytes(int width, int height)
         {
-            using var image = new Image<Rgba32>(width, height);
+            using Image<Rgba32> image = new Image<Rgba32>(width, height);
 
             for (int y = 0; y < height; y++)
             {
@@ -1065,7 +1065,7 @@ namespace Cotton.Server.IntegrationTests
                 }
             }
 
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             image.SaveAsPng(ms);
             return ms.ToArray();
         }
@@ -1160,8 +1160,8 @@ namespace Cotton.Server.IntegrationTests
                 "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
             ];
 
-            using var ms = new MemoryStream();
-            var offsets = new List<long> { 0 };
+            using MemoryStream ms = new MemoryStream();
+            List<long> offsets = new List<long> { 0 };
 
             static void WriteAscii(MemoryStream stream, string value)
             {

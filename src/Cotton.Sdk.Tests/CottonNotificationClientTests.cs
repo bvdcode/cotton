@@ -17,7 +17,7 @@ namespace Cotton.Sdk.Tests
             Guid notificationId = Guid.NewGuid();
             Guid userId = Guid.NewGuid();
             DateTime createdAt = DateTime.UtcNow.AddMinutes(-1);
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(
                 HttpStatusCode.OK,
                 new[]
@@ -63,7 +63,7 @@ namespace Cotton.Sdk.Tests
             Guid userId = Guid.NewGuid();
             DateTime cursorCreatedAt = new(2026, 8, 12, 20, 15, 30, DateTimeKind.Utc);
             DateTime notificationCreatedAt = cursorCreatedAt.AddMinutes(1);
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(
                 HttpStatusCode.OK,
                 new
@@ -122,7 +122,7 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task GetNotificationBatchAsync_WithoutCursor_RequestsCurrentUnreadBacklog()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(
                 HttpStatusCode.OK,
                 new
@@ -176,7 +176,7 @@ namespace Cotton.Sdk.Tests
 
         private static async Task<CottonCloudClient> CreateAuthorizedClientAsync(QueuedHttpMessageHandler handler)
         {
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "refresh" });
             return new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
             {

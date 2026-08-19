@@ -24,17 +24,17 @@ namespace Cotton.Storage.Tests.Processors
         [Test]
         public async Task EncryptAsync_WritesCottonSingleChunkGoldenVector()
         {
-            using var rng = new ScriptedRandomNumberGenerator(
+            using ScriptedRandomNumberGenerator rng = new ScriptedRandomNumberGenerator(
                 FileKeyBytes(),
                 [0x01, 0x02, 0x03, 0x04],
                 FileKeyNonceBytes());
-            using var cipher = new AesGcmStreamCipher(
+            using AesGcmStreamCipher cipher = new AesGcmStreamCipher(
                 MasterKeyBytes(),
                 keyId: 1,
                 threads: 1,
                 rng: rng);
-            await using var input = new MemoryStream(Plaintext);
-            await using var output = new MemoryStream();
+            await using MemoryStream input = new MemoryStream(Plaintext);
+            await using MemoryStream output = new MemoryStream();
 
             await cipher.EncryptAsync(
                 input,
@@ -49,9 +49,9 @@ namespace Cotton.Storage.Tests.Processors
         [Test]
         public async Task DecryptAsync_ReadsCottonSingleChunkGoldenVector()
         {
-            using var cipher = new AesGcmStreamCipher(MasterKeyBytes(), keyId: 1, threads: 1);
-            await using var input = new MemoryStream(Convert.FromHexString(CottonSingleChunkContainerHex));
-            await using var output = new MemoryStream();
+            using AesGcmStreamCipher cipher = new AesGcmStreamCipher(MasterKeyBytes(), keyId: 1, threads: 1);
+            await using MemoryStream input = new MemoryStream(Convert.FromHexString(CottonSingleChunkContainerHex));
+            await using MemoryStream output = new MemoryStream();
 
             await cipher.DecryptAsync(input, output);
 
@@ -87,7 +87,7 @@ namespace Cotton.Storage.Tests.Processors
                     throw new InvalidOperationException("No scripted random bytes remain.");
                 }
 
-                var chunk = _chunks.Dequeue();
+                byte[] chunk = _chunks.Dequeue();
                 if (chunk.Length != data.Length)
                 {
                     throw new InvalidOperationException(

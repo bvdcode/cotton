@@ -38,7 +38,7 @@ namespace Cotton.Storage.Tests.Helpers
         public void NormalizeUid_InvalidCharacters_ThrowsException()
         {
             // Arrange
-            var invalidInputs = new[]
+            string[] invalidInputs = new[]
             {
                 "abc def",
                 "abc/def",
@@ -50,7 +50,7 @@ namespace Cotton.Storage.Tests.Helpers
             };
 
             // Act & Assert
-            foreach (var input in invalidInputs)
+            foreach (string? input in invalidInputs)
             {
                 ArgumentException? ex = Assert.Throws<ArgumentException>(() => StorageKeyHelper.NormalizeUid(input),
                     $"Should throw for input: {input}");
@@ -77,7 +77,7 @@ namespace Cotton.Storage.Tests.Helpers
         public void NormalizeUid_ValidHexCharacters_Success()
         {
             // Arrange
-            var validInputs = new[]
+            string[] validInputs = new[]
             {
                 "abcdef",
                 "123456",
@@ -86,7 +86,7 @@ namespace Cotton.Storage.Tests.Helpers
             };
 
             // Act & Assert
-            foreach (var input in validInputs)
+            foreach (string? input in validInputs)
             {
                 Assert.DoesNotThrow(() => StorageKeyHelper.NormalizeUid(input),
                     $"Should not throw for valid input: {input}");

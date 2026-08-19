@@ -52,7 +52,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(creator.HasTables(), Is.False, "DB must have no user tables after Create()");
             });
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = TestPostgresHost,
                 Port = TestPostgresPort,
@@ -61,7 +61,7 @@ namespace Cotton.Server.IntegrationTests
                 Password = TestPostgresPassword
             };
 
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -138,7 +138,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(parameters[EmailTemplateParameterNames.SecurityContent], Does.Contain("8.8.8.8"));
             });
 
-            var parts = payload.AccessToken.Split('.');
+            string[] parts = payload.AccessToken.Split('.');
             Assert.That(parts.Length, Is.EqualTo(3), "JWT must have3 parts");
 
             TestContext.Progress.WriteLine($"Login OK. Token: {payload.AccessToken[..Math.Min(16, payload.AccessToken.Length)]}...");
@@ -212,7 +212,7 @@ namespace Cotton.Server.IntegrationTests
 
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+                using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
                 {
                     Content = JsonContent.Create(new CottonLoginRequestDto
                     {
@@ -332,7 +332,7 @@ namespace Cotton.Server.IntegrationTests
             string ipAddress,
             string? deviceName = null)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new CottonLoginRequestDto
                 {

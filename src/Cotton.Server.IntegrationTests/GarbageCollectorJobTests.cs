@@ -39,8 +39,8 @@ namespace Cotton.Server.IntegrationTests
         public async Task RunOnce_DeletesOnlyDueUnreferencedChunks_AndClearsLiveSchedules()
         {
             DateTime now = DateTime.UtcNow;
-            var storage = new InMemoryStorage();
-            var keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
+            InMemoryStorage storage = new InMemoryStorage();
+            DatabaseBackupKeyProvider keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
             {
                 MasterEncryptionKey = "test-master-key"
             });
@@ -131,7 +131,7 @@ namespace Cotton.Server.IntegrationTests
             using ServiceProvider services = new ServiceCollection()
                 .AddSingleton(settingsProvider)
                 .BuildServiceProvider();
-            var job = new GarbageCollectorJob(
+            GarbageCollectorJob job = new GarbageCollectorJob(
                 new PerfTracker(services.GetRequiredService<IServiceScopeFactory>()),
                 storage,
                 DbContext,
@@ -170,8 +170,8 @@ namespace Cotton.Server.IntegrationTests
         public async Task RunOnce_DeletesScheduledOrphansAcrossInnerBatches()
         {
             DateTime now = DateTime.UtcNow;
-            var storage = new InMemoryStorage();
-            var keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
+            InMemoryStorage storage = new InMemoryStorage();
+            DatabaseBackupKeyProvider keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
             {
                 MasterEncryptionKey = "test-master-key"
             });
@@ -190,7 +190,7 @@ namespace Cotton.Server.IntegrationTests
             using ServiceProvider services = new ServiceCollection()
                 .AddSingleton(settingsProvider)
                 .BuildServiceProvider();
-            var job = new GarbageCollectorJob(
+            GarbageCollectorJob job = new GarbageCollectorJob(
                 new PerfTracker(services.GetRequiredService<IServiceScopeFactory>()),
                 storage,
                 DbContext,
@@ -218,8 +218,8 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task StorageConsistency_DoesNotRegisterProtectedBackupStorageKeys()
         {
-            var storage = new InMemoryStorage();
-            var keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
+            InMemoryStorage storage = new InMemoryStorage();
+            DatabaseBackupKeyProvider keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
             {
                 MasterEncryptionKey = "test-master-key"
             });
@@ -235,7 +235,7 @@ namespace Cotton.Server.IntegrationTests
 
             ResolvedBackupManifest backup = CreateBackupManifest(Hasher.ToHexStringHash(backupHash), manifestStorageKey);
             ChunkUsageService usage = CreateChunkUsageService(DbContext, storage, keyProvider, backup);
-            var job = new StorageConsistencyJob(
+            StorageConsistencyJob job = new StorageConsistencyJob(
                 storage,
                 DbContext,
                 new NoopNotificationsProvider(),
@@ -264,8 +264,8 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task StorageConsistency_ClearsMissingPreviewAndAvatarReferences()
         {
-            var storage = new InMemoryStorage();
-            var keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
+            InMemoryStorage storage = new InMemoryStorage();
+            DatabaseBackupKeyProvider keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
             {
                 MasterEncryptionKey = "test-master-key"
             });
@@ -289,7 +289,7 @@ namespace Cotton.Server.IntegrationTests
             DbContext.ChangeTracker.Clear();
 
             ChunkUsageService usage = CreateChunkUsageService(DbContext, storage, keyProvider, latestBackup: null);
-            var job = new StorageConsistencyJob(
+            StorageConsistencyJob job = new StorageConsistencyJob(
                 storage,
                 DbContext,
                 new NoopNotificationsProvider(),
@@ -362,7 +362,7 @@ namespace Cotton.Server.IntegrationTests
         private static ResolvedBackupManifest CreateBackupManifest(string protectedChunkStorageKey, string? manifestStorageKey = null)
         {
             manifestStorageKey ??= Hasher.ToHexStringHash(Hash("backup-manifest-default"));
-            var manifest = new BackupManifest(
+            BackupManifest manifest = new BackupManifest(
                 SchemaVersion: 1,
                 BackupId: "test-backup",
                 CreatedAtUtc: DateTime.UtcNow,
@@ -379,7 +379,7 @@ namespace Cotton.Server.IntegrationTests
                 Elapsed: TimeSpan.FromSeconds(1),
                 Chunks: [new BackupChunkInfo(0, protectedChunkStorageKey, 4)]);
 
-            var pointer = new BackupManifestPointer(
+            BackupManifestPointer pointer = new BackupManifestPointer(
                 SchemaVersion: 1,
                 LogicalKey: DatabaseBackupKeyProvider.ManifestPointerLogicalKey,
                 UpdatedAtUtc: DateTime.UtcNow,

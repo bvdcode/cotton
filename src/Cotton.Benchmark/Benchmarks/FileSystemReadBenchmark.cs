@@ -44,7 +44,7 @@ namespace Cotton.Benchmark.Benchmarks
             cancellationToken.ThrowIfCancellationRequested();
 
             string uid = CreateUid();
-            await using (var writeStream = new MemoryStream(_testData, writable: false))
+            await using (MemoryStream writeStream = new MemoryStream(_testData, writable: false))
             {
                 await _backend.WriteAsync(uid, writeStream).ConfigureAwait(false);
             }
@@ -58,7 +58,7 @@ namespace Cotton.Benchmark.Benchmarks
                 }
 
                 await using Stream readStream = await _backend.ReadAsync(uid).ConfigureAwait(false);
-                await using var outputStream = new MemoryStream(capacity: _testData.Length);
+                await using MemoryStream outputStream = new MemoryStream(capacity: _testData.Length);
                 await readStream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
 
                 if (measure)

@@ -21,7 +21,7 @@ namespace Cotton.Crypto.Tests
             using MemoryStream encryptedStream = new();
             using MemoryStream decryptedStream = new();
 
-            var cipher = new AesGcmStreamCipher(MasterKey);
+            AesGcmStreamCipher cipher = new AesGcmStreamCipher(MasterKey);
 
             await cipher.EncryptAsync(inputStream, encryptedStream);
             encryptedStream.Position = 0;
@@ -37,14 +37,14 @@ namespace Cotton.Crypto.Tests
         [Test]
         public async Task EncryptDecrypt_Correctness_RoundTrip_ShouldMatch()
         {
-            var text = string.Join(',', Enumerable.Range(0, 2000));
-            var data = Encoding.UTF8.GetBytes(text);
+            string text = string.Join(',', Enumerable.Range(0, 2000));
+            byte[] data = Encoding.UTF8.GetBytes(text);
 
-            using var input = new MemoryStream(data);
-            using var encrypted = new MemoryStream();
-            using var decrypted = new MemoryStream();
+            using MemoryStream input = new MemoryStream(data);
+            using MemoryStream encrypted = new MemoryStream();
+            using MemoryStream decrypted = new MemoryStream();
 
-            var cipher = new AesGcmStreamCipher(MasterKey);
+            AesGcmStreamCipher cipher = new AesGcmStreamCipher(MasterKey);
             await cipher.EncryptAsync(input, encrypted);
             encrypted.Position = 0;
             await cipher.DecryptAsync(encrypted, decrypted);

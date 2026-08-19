@@ -24,7 +24,7 @@ namespace Cotton.Benchmark.Benchmarks
         {
             _testData = TestDataGenerator.GenerateMixedData(configuration.DataSizeBytes);
 
-            var key = new byte[configuration.EncryptionKeySize];
+            byte[] key = new byte[configuration.EncryptionKeySize];
             RandomNumberGenerator.Fill(key);
             _cipher = new AesGcmStreamCipher(
                 key,
@@ -76,7 +76,7 @@ namespace Cotton.Benchmark.Benchmarks
             cancellationToken.ThrowIfCancellationRequested();
 
             string storageKey = CreateStorageKey();
-            await using (var inputStream = new MemoryStream(_testData, writable: false))
+            await using (MemoryStream inputStream = new MemoryStream(_testData, writable: false))
             {
                 await _pipeline.WriteAsync(storageKey, inputStream, new PipelineContext()).ConfigureAwait(false);
             }
@@ -90,7 +90,7 @@ namespace Cotton.Benchmark.Benchmarks
                 }
 
                 await using Stream outputStream = await _pipeline.ReadAsync(storageKey, new PipelineContext()).ConfigureAwait(false);
-                await using var resultStream = new MemoryStream(capacity: _testData.Length);
+                await using MemoryStream resultStream = new MemoryStream(capacity: _testData.Length);
                 await outputStream.CopyToAsync(resultStream, cancellationToken).ConfigureAwait(false);
 
                 if (measure)

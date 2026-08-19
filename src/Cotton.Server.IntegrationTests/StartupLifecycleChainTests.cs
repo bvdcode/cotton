@@ -61,7 +61,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(creator.HasTables(), Is.False);
             });
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = "localhost",
                 Port = 5432,
@@ -70,7 +70,7 @@ namespace Cotton.Server.IntegrationTests
                 Password = "postgres"
             };
 
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -190,7 +190,7 @@ namespace Cotton.Server.IntegrationTests
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/custom-geoip-lookup-url", "https://geo.example/lookup/{ip}")).EnsureSuccessStatusCode();
             (await _client!.PatchAsync("/api/v1/server/settings/geoip-lookup-mode/CustomHttp", null)).EnsureSuccessStatusCode();
 
-            var emailConfig = new EmailConfig
+            EmailConfig emailConfig = new EmailConfig
             {
                 SmtpServer = "smtp.example.com",
                 Port = "587",
@@ -313,7 +313,7 @@ namespace Cotton.Server.IntegrationTests
         {
             EnsureClientCreated();
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new CottonLoginRequestDto
                 {

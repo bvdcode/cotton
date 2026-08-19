@@ -22,7 +22,7 @@ namespace Cotton.Server.IntegrationTests.Abstractions
         {
             CurrentDatabaseName = databaseName;
             DbContextOptionsBuilder<CottonDbContext> optionsBuilder = new();
-            var userBuilder = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder userBuilder = new NpgsqlConnectionStringBuilder
             {
                 Host = TestPostgresHost,
                 Port = TestPostgresPort,

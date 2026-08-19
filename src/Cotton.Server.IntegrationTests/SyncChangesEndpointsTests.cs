@@ -677,7 +677,7 @@ namespace Cotton.Server.IntegrationTests
 
         private Dictionary<string, string?> CreateOverrides()
         {
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = TestPostgresHost,
                 Port = TestPostgresPort,
@@ -704,7 +704,7 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<string> SignInAsync(string username = Username, string password = Password)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{Routes.V1.Auth}/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"{Routes.V1.Auth}/login")
             {
                 Content = JsonContent.Create(new LoginRequestDto
                 {
@@ -820,7 +820,7 @@ namespace Cotton.Server.IntegrationTests
         {
             byte[] content = Encoding.UTF8.GetBytes(body);
             string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var form = new MultipartFormDataContent
+            using MultipartFormDataContent form = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -854,8 +854,8 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<HttpResponseMessage> SendWebDavPutAsync(string path, string body)
         {
-            using var content = new StringContent(body, Encoding.UTF8, "text/plain");
-            using var request = new HttpRequestMessage(HttpMethod.Put, path)
+            using StringContent content = new StringContent(body, Encoding.UTF8, "text/plain");
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, path)
             {
                 Content = content,
             };
@@ -865,13 +865,13 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<HttpResponseMessage> SendWebDavMkColAsync(string path)
         {
-            using var request = new HttpRequestMessage(new HttpMethod("MKCOL"), path);
+            using HttpRequestMessage request = new HttpRequestMessage(new HttpMethod("MKCOL"), path);
             return await _client!.SendAsync(request);
         }
 
         private async Task<HttpResponseMessage> SendWebDavMoveAsync(string sourcePath, string destinationPath)
         {
-            using var request = new HttpRequestMessage(new HttpMethod("MOVE"), sourcePath);
+            using HttpRequestMessage request = new HttpRequestMessage(new HttpMethod("MOVE"), sourcePath);
             request.Headers.Add("Destination", destinationPath);
             request.Headers.Add("Overwrite", "F");
             return await _client!.SendAsync(request);
@@ -879,7 +879,7 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<HttpResponseMessage> SendWebDavCopyAsync(string sourcePath, string destinationPath)
         {
-            using var request = new HttpRequestMessage(new HttpMethod("COPY"), sourcePath);
+            using HttpRequestMessage request = new HttpRequestMessage(new HttpMethod("COPY"), sourcePath);
             request.Headers.Add("Destination", destinationPath);
             request.Headers.Add("Overwrite", "F");
             return await _client!.SendAsync(request);
@@ -890,7 +890,7 @@ namespace Cotton.Server.IntegrationTests
             using IServiceScope scope = _factory!.Services.CreateScope();
             CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
 
-            var change = new SyncChange
+            SyncChange change = new SyncChange
             {
                 OwnerId = ownerId,
                 Kind = SyncChangeKind.FileCreated,
@@ -931,7 +931,7 @@ namespace Cotton.Server.IntegrationTests
         {
             using IServiceScope scope = _factory!.Services.CreateScope();
             CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            var job = new SyncChangeRetentionJob(
+            SyncChangeRetentionJob job = new SyncChangeRetentionJob(
                 dbContext,
                 NullLogger<SyncChangeRetentionJob>.Instance);
 

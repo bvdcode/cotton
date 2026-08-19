@@ -44,19 +44,19 @@ namespace Cotton.Storage.Tests.Backends
                 return environmentConfig;
             }
 
-            var configPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "s3-test-config.json");
+            string configPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "s3-test-config.json");
             if (!File.Exists(configPath))
             {
                 return null;
             }
 
-            var configJson = File.ReadAllText(configPath);
+            string configJson = File.ReadAllText(configPath);
             return JsonSerializer.Deserialize<S3TestConfig>(configJson);
         }
 
         private static S3TestConfig? LoadEnvironmentConfig()
         {
-            var config = new S3TestConfig
+            S3TestConfig config = new S3TestConfig
             {
                 AccessKey = Environment.GetEnvironmentVariable("COTTON_TEST_S3_ACCESS_KEY") ?? string.Empty,
                 SecretKey = Environment.GetEnvironmentVariable("COTTON_TEST_S3_SECRET_KEY") ?? string.Empty,
@@ -96,7 +96,7 @@ namespace Cotton.Storage.Tests.Backends
                 _testConfig.SecretKey,
                 TimeSpan.FromMinutes(2));
 
-            var s3Provider = new TestS3Provider(_s3Client, _bucketName);
+            TestS3Provider s3Provider = new TestS3Provider(_s3Client, _bucketName);
             _backend = new S3StorageBackend(s3Provider);
             _createdKeys.Clear();
         }
@@ -124,7 +124,7 @@ namespace Cotton.Storage.Tests.Backends
             // Arrange
             string uid = NewUid();
             _createdKeys.Add(uid);
-            var originalData = Encoding.UTF8.GetBytes("Test content for S3 backend");
+            byte[] originalData = Encoding.UTF8.GetBytes("Test content for S3 backend");
 
             // Act
             long storedSizeBytes = await _backend.WriteAsync(
@@ -133,7 +133,7 @@ namespace Cotton.Storage.Tests.Backends
             await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
-            using var result = new MemoryStream();
+            using MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             using (Assert.EnterMultipleScope())
             {
@@ -187,25 +187,25 @@ namespace Cotton.Storage.Tests.Backends
             string uid = NewUid();
             _createdKeys.Add(uid);
 
-            var key = new byte[32];
+            byte[] key = new byte[32];
             RandomNumberGenerator.Fill(key);
-            var cipher = new AesGcmStreamCipher(key, keyId: 1, threads: 2);
+            AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 1, threads: 2);
 
-            var processors = new IStorageProcessor[]
+            IStorageProcessor[] processors = new IStorageProcessor[]
             {
                 new CryptoProcessor(cipher),
                 new CompressionProcessor()
             };
 
-            var backendProvider = new TestBackendProvider(_backend);
-            var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(
+            TestBackendProvider backendProvider = new TestBackendProvider(_backend);
+            Mock<ILogger<FileStoragePipeline>> logger = new Mock<ILogger<FileStoragePipeline>>();
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 logger.Object,
                 backendProvider,
                 processors,
                 new StorageWriteAdmissionGate(1));
 
-            var originalData = new byte[1024 * 1024]; // 1 MB
+            byte[] originalData = new byte[1024 * 1024]; // 1 MB
             RandomNumberGenerator.Fill(originalData);
 
             // Act
@@ -213,7 +213,7 @@ namespace Cotton.Storage.Tests.Backends
             await using Stream readStream = await pipeline.ReadAsync(uid);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
 
@@ -227,33 +227,33 @@ namespace Cotton.Storage.Tests.Backends
             string uid = NewUid();
             _createdKeys.Add(uid);
 
-            var key = new byte[32];
+            byte[] key = new byte[32];
             RandomNumberGenerator.Fill(key);
-            var cipher = new AesGcmStreamCipher(key, keyId: 1, threads: 2);
+            AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 1, threads: 2);
 
-            var processors = new IStorageProcessor[]
+            IStorageProcessor[] processors = new IStorageProcessor[]
             {
                 new CryptoProcessor(cipher),
                 new CompressionProcessor()
             };
 
-            var backendProvider = new TestBackendProvider(_backend);
-            var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(
+            TestBackendProvider backendProvider = new TestBackendProvider(_backend);
+            Mock<ILogger<FileStoragePipeline>> logger = new Mock<ILogger<FileStoragePipeline>>();
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 logger.Object,
                 backendProvider,
                 processors,
                 new StorageWriteAdmissionGate(1));
 
-            var originalData = Encoding.UTF8.GetBytes("Non-seekable stream test data");
-            var nonSeekableStream = new NonSeekableMemoryStream(originalData);
+            byte[] originalData = Encoding.UTF8.GetBytes("Non-seekable stream test data");
+            NonSeekableMemoryStream nonSeekableStream = new NonSeekableMemoryStream(originalData);
 
             // Act
             await pipeline.WriteAsync(uid, nonSeekableStream);
             await using Stream readStream = await pipeline.ReadAsync(uid);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
 
@@ -267,25 +267,25 @@ namespace Cotton.Storage.Tests.Backends
             string uid = NewUid();
             _createdKeys.Add(uid);
 
-            var key = new byte[32];
+            byte[] key = new byte[32];
             RandomNumberGenerator.Fill(key);
-            var cipher = new AesGcmStreamCipher(key, keyId: 1, threads: 2);
+            AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 1, threads: 2);
 
-            var processors = new IStorageProcessor[]
+            IStorageProcessor[] processors = new IStorageProcessor[]
             {
                 new CryptoProcessor(cipher),
                 new CompressionProcessor()
             };
 
-            var backendProvider = new TestBackendProvider(_backend);
-            var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(
+            TestBackendProvider backendProvider = new TestBackendProvider(_backend);
+            Mock<ILogger<FileStoragePipeline>> logger = new Mock<ILogger<FileStoragePipeline>>();
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 logger.Object,
                 backendProvider,
                 processors,
                 new StorageWriteAdmissionGate(1));
 
-            var originalData = new byte[3 * 1024 * 1024]; // 3 MB, stays above the S3 backend write buffer without burning test-bucket quota
+            byte[] originalData = new byte[3 * 1024 * 1024]; // 3 MB, stays above the S3 backend write buffer without burning test-bucket quota
             RandomNumberGenerator.Fill(originalData);
 
             // Act
@@ -293,7 +293,7 @@ namespace Cotton.Storage.Tests.Backends
             await using Stream readStream = await pipeline.ReadAsync(uid);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
 
@@ -306,7 +306,7 @@ namespace Cotton.Storage.Tests.Backends
             // Arrange
             string uid = NewUid();
             _createdKeys.Add(uid);
-            var data = Encoding.UTF8.GetBytes("Test content");
+            byte[] data = Encoding.UTF8.GetBytes("Test content");
             await _backend.WriteAsync(uid, new MemoryStream(data));
 
             // Act
@@ -335,7 +335,7 @@ namespace Cotton.Storage.Tests.Backends
             // Arrange
             string uid = NewUid();
             _createdKeys.Add(uid);
-            var data = new byte[3 * 1024 * 1024]; // 3 MB, stays above the S3 backend write buffer without burning test-bucket quota
+            byte[] data = new byte[3 * 1024 * 1024]; // 3 MB, stays above the S3 backend write buffer without burning test-bucket quota
             RandomNumberGenerator.Fill(data);
 
             // Act
@@ -343,7 +343,7 @@ namespace Cotton.Storage.Tests.Backends
             await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(data));
         }
@@ -354,15 +354,15 @@ namespace Cotton.Storage.Tests.Backends
             // Arrange
             string uid = NewUid();
             _createdKeys.Add(uid);
-            var data = Encoding.UTF8.GetBytes("Non-seekable stream content");
-            var nonSeekableStream = new NonSeekableMemoryStream(data);
+            byte[] data = Encoding.UTF8.GetBytes("Non-seekable stream content");
+            NonSeekableMemoryStream nonSeekableStream = new NonSeekableMemoryStream(data);
 
             // Act
             await _backend.WriteAsync(uid, nonSeekableStream);
             await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(data));
         }
@@ -373,15 +373,15 @@ namespace Cotton.Storage.Tests.Backends
             // Arrange
             string uid = NewUid();
             _createdKeys.Add(uid);
-            var data = Encoding.UTF8.GetBytes("0123456789");
-            var stream = new MemoryStream(data) { Position = 5 };
+            byte[] data = Encoding.UTF8.GetBytes("0123456789");
+            MemoryStream stream = new MemoryStream(data) { Position = 5 };
 
             // Act
             await _backend.WriteAsync(uid, stream);
             await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(data));
         }
@@ -390,22 +390,22 @@ namespace Cotton.Storage.Tests.Backends
         public async Task S3Backend_MultipleWrites_DifferentUids_Success()
         {
             // Arrange
-            var uids = new[] { NewUid(), NewUid(), NewUid() };
-            var dataMap = new Dictionary<string, byte[]>();
+            string[] uids = new[] { NewUid(), NewUid(), NewUid() };
+            Dictionary<string, byte[]> dataMap = new Dictionary<string, byte[]>();
 
-            foreach (var uid in uids)
+            foreach (string? uid in uids)
             {
                 _createdKeys.Add(uid);
-                var data = Encoding.UTF8.GetBytes($"Content for {uid}");
+                byte[] data = Encoding.UTF8.GetBytes($"Content for {uid}");
                 dataMap[uid] = data;
                 await _backend.WriteAsync(uid, new MemoryStream(data));
             }
 
             // Act & Assert
-            foreach (var uid in uids)
+            foreach (string? uid in uids)
             {
                 await using Stream readStream = await _backend.ReadAsync(uid);
-                var result = new MemoryStream();
+                MemoryStream result = new MemoryStream();
                 await readStream.CopyToAsync(result);
                 Assert.That(result.ToArray(), Is.EqualTo(dataMap[uid]));
             }
@@ -415,30 +415,30 @@ namespace Cotton.Storage.Tests.Backends
         public async Task S3Backend_ParallelWrites_DifferentUids_AllSucceed()
         {
             // Arrange
-            var tasks = new List<Task>();
-            var uids = Enumerable.Range(0, 5).Select(_ => NewUid()).ToArray();
+            List<Task> tasks = new List<Task>();
+            string[] uids = Enumerable.Range(0, 5).Select(_ => NewUid()).ToArray();
 
-            foreach (var uid in uids)
+            foreach (string? uid in uids)
             {
                 _createdKeys.Add(uid);
             }
 
             // Act
-            foreach (var uid in uids)
+            foreach (string? uid in uids)
             {
-                var data = Encoding.UTF8.GetBytes($"Parallel content {uid}");
+                byte[] data = Encoding.UTF8.GetBytes($"Parallel content {uid}");
                 tasks.Add(_backend.WriteAsync(uid, new MemoryStream(data)));
             }
 
             // Assert
             Assert.DoesNotThrowAsync(() => Task.WhenAll(tasks));
 
-            foreach (var uid in uids)
+            foreach (string? uid in uids)
             {
                 Assert.DoesNotThrowAsync(async () =>
                 {
                     await using Stream stream = await _backend.ReadAsync(uid);
-                    var result = new MemoryStream();
+                    MemoryStream result = new MemoryStream();
                     await stream.CopyToAsync(result);
                     Assert.That(result.Length, Is.GreaterThan(0));
                 });

@@ -82,7 +82,7 @@ namespace Cotton.Server.IntegrationTests.Common
 
             builder.ConfigureServices(services =>
             {
-                var quartzHosted = services
+                List<ServiceDescriptor> quartzHosted = services
                     .Where(d => d.ServiceType == typeof(IHostedService) &&
                         (d.ImplementationType == typeof(QuartzHostedService) ||
                             d.ImplementationFactory?.Method.ReturnType == typeof(QuartzHostedService)))

@@ -48,7 +48,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(creator.HasTables(), Is.False);
             });
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = "localhost",
                 Port = 5432,
@@ -56,7 +56,7 @@ namespace Cotton.Server.IntegrationTests
                 Username = "postgres",
                 Password = "postgres"
             };
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -85,7 +85,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Upload_Chunk_And_Create_File_From_It_Works()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             // resolve root node
@@ -93,9 +93,9 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(root, Is.Not.Null);
 
             // upload chunk
-            var content = Encoding.UTF8.GetBytes("hello world");
-            var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var form = new MultipartFormDataContent
+            byte[] content = Encoding.UTF8.GetBytes("hello world");
+            string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+            using MultipartFormDataContent form = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -111,7 +111,7 @@ namespace Cotton.Server.IntegrationTests
             upRes.EnsureSuccessStatusCode();
 
             // create file from chunk
-            var fileReq = new CreateFileFromChunksRequestDto
+            CreateFileFromChunksRequestDto fileReq = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [chunkHashLower],
                 Name = "hello.txt",
@@ -146,15 +146,15 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Upload_Raw_Chunk_And_Create_File_From_It_Works()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
             Assert.That(root, Is.Not.Null);
 
-            var content = Encoding.UTF8.GetBytes("hello raw world");
-            var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var body = new ByteArrayContent(content)
+            byte[] content = Encoding.UTF8.GetBytes("hello raw world");
+            string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+            using ByteArrayContent body = new ByteArrayContent(content)
             {
                 Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
             };
@@ -162,7 +162,7 @@ namespace Cotton.Server.IntegrationTests
             HttpResponseMessage upRes = await _client.PostAsync($"/api/v1/chunks/raw?hash={chunkHashLower}", body);
             upRes.EnsureSuccessStatusCode();
 
-            var fileReq = new CreateFileFromChunksRequestDto
+            CreateFileFromChunksRequestDto fileReq = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [chunkHashLower],
                 Name = "hello-raw.txt",
@@ -181,7 +181,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Upload_Empty_Raw_Chunk_And_Create_Empty_File_Works()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -189,7 +189,7 @@ namespace Cotton.Server.IntegrationTests
 
             byte[] content = [];
             string contentHash = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var body = new ByteArrayContent(content)
+            using ByteArrayContent body = new ByteArrayContent(content)
             {
                 Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
             };
@@ -249,7 +249,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Create_File_Returns_Sync_Metadata_In_Create_Response_And_Children_List()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -288,7 +288,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Create_File_With_Validation_Can_Reuse_Existing_Uncomputed_Manifest()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -324,7 +324,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Download_Owned_File_Content_Works_With_Range_And_ETag()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -338,7 +338,7 @@ namespace Cotton.Server.IntegrationTests
             byte[] bytes = await download.Content.ReadAsByteArrayAsync();
             Assert.That(Encoding.UTF8.GetString(bytes), Is.EqualTo("0123456789abcdef"));
 
-            using var rangeRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/files/{file.Id}/content");
+            using HttpRequestMessage rangeRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/files/{file.Id}/content");
             rangeRequest.Headers.Range = new RangeHeaderValue(4, 7);
             HttpResponseMessage range = await _client.SendAsync(rangeRequest);
             Assert.That(range.StatusCode, Is.EqualTo(HttpStatusCode.PartialContent));
@@ -356,7 +356,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Download_Owned_File_Content_Rejects_Stale_IfMatch()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -364,7 +364,7 @@ namespace Cotton.Server.IntegrationTests
 
             NodeFileManifestDto file = await UploadTextFileAsync(root!, "stale-range.txt", "0123456789abcdef");
 
-            using var rangeRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/files/{file.Id}/content");
+            using HttpRequestMessage rangeRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/files/{file.Id}/content");
             rangeRequest.Headers.Range = new RangeHeaderValue(4, 7);
             rangeRequest.Headers.IfMatch.Add(new EntityTagHeaderValue("\"sha256-stale\""));
             HttpResponseMessage response = await _client.SendAsync(rangeRequest);
@@ -375,7 +375,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Get_Content_Manifest_Returns_Ordered_Chunk_Verification_Metadata()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -403,7 +403,7 @@ namespace Cotton.Server.IntegrationTests
             NodeFileManifestDto? created = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
             Assert.That(created, Is.Not.Null);
 
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/files/{created!.Id}/content-manifest");
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/files/{created!.Id}/content-manifest");
             request.Headers.IfMatch.Add(new EntityTagHeaderValue($"\"{created.ETag}\""));
             HttpResponseMessage manifestResponse = await _client.SendAsync(request);
             manifestResponse.EnsureSuccessStatusCode();
@@ -429,7 +429,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task WebDav_File_ETag_Uses_Same_Content_ETag_As_File_Api()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -444,9 +444,9 @@ namespace Cotton.Server.IntegrationTests
                 Convert.ToBase64String(Encoding.UTF8.GetBytes($"testuser:{webDavToken}")));
 
             HttpResponseMessage getResponse = await _client.GetAsync("/api/v1/webdav/webdav-etag.txt");
-            using var headRequest = new HttpRequestMessage(HttpMethod.Head, "/api/v1/webdav/webdav-etag.txt");
+            using HttpRequestMessage headRequest = new HttpRequestMessage(HttpMethod.Head, "/api/v1/webdav/webdav-etag.txt");
             HttpResponseMessage headResponse = await _client.SendAsync(headRequest);
-            using var propFindRequest = new HttpRequestMessage(new HttpMethod("PROPFIND"), "/api/v1/webdav/webdav-etag.txt");
+            using HttpRequestMessage propFindRequest = new HttpRequestMessage(new HttpMethod("PROPFIND"), "/api/v1/webdav/webdav-etag.txt");
             propFindRequest.Headers.Add("Depth", "0");
             HttpResponseMessage propFindResponse = await _client.SendAsync(propFindRequest);
             string propFindXml = await propFindResponse.Content.ReadAsStringAsync();
@@ -540,7 +540,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Download_Owned_File_Content_Rejects_Another_User()
         {
-            var ownerToken = await LoginAsync();
+            string ownerToken = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -556,7 +556,7 @@ namespace Cotton.Server.IntegrationTests
             createUserResponse.EnsureSuccessStatusCode();
 
             _client.DefaultRequestHeaders.Authorization = null;
-            var otherToken = await LoginAsync("synccontentuser", "synccontentpass");
+            string otherToken = await LoginAsync("synccontentuser", "synccontentpass");
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
 
             HttpResponseMessage response = await _client.GetAsync($"/api/v1/files/{file.Id}/content");
@@ -566,7 +566,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Create_And_Update_From_Chunks_Reject_Foreign_Manifest_Hash()
         {
-            var ownerToken = await LoginAsync();
+            string ownerToken = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
 
             NodeDto? ownerRoot = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -582,7 +582,7 @@ namespace Cotton.Server.IntegrationTests
             createUserResponse.EnsureSuccessStatusCode();
 
             _client.DefaultRequestHeaders.Authorization = null;
-            var attackerToken = await LoginAsync("manifestattacker", "manifestpass");
+            string attackerToken = await LoginAsync("manifestattacker", "manifestpass");
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", attackerToken);
 
             NodeDto? attackerRoot = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -613,7 +613,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Upload_Same_Chunk_In_Parallel_Deduplicates_Metadata()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             byte[] content = new byte[2 * 1024 * 1024];
@@ -817,7 +817,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Create_And_Update_File_Reject_When_Default_User_Quota_Is_Exceeded()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             HttpResponseMessage quotaResponse = await _client.PatchAsJsonAsync(
@@ -866,7 +866,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task User_Storage_Quota_Snapshot_Tracks_Create_And_Permanent_Delete_From_Cache()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             HttpResponseMessage quotaResponse = await _client.PatchAsJsonAsync(
@@ -903,7 +903,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Update_File_Content_With_Stale_If_Match_Returns_Precondition_Failed()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -915,7 +915,7 @@ namespace Cotton.Server.IntegrationTests
             file = await UpdateTextFileAsync(file, rootNode, "second");
             string rejectedHash = await UploadChunkAndGetHashAsync("third");
 
-            using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/update-content")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/update-content")
             {
                 Content = JsonContent.Create(new CreateFileFromChunksRequestDto
                 {
@@ -936,7 +936,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Delete_File_With_Stale_If_Match_Returns_Precondition_Failed_And_Keeps_File()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -947,7 +947,7 @@ namespace Cotton.Server.IntegrationTests
             string staleETag = file.ETag;
             file = await UpdateTextFileAsync(file, rootNode, "second");
 
-            using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/files/{file.Id}");
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/files/{file.Id}");
             request.Headers.TryAddWithoutValidation("If-Match", staleETag);
 
             HttpResponseMessage response = await _client.SendAsync(request);
@@ -964,7 +964,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Rename_File_With_Stale_If_Match_Returns_Precondition_Failed_And_Keeps_Name()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -975,7 +975,7 @@ namespace Cotton.Server.IntegrationTests
             string staleETag = file.ETag;
             file = await UpdateTextFileAsync(file, rootNode, "second");
 
-            using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/rename")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/rename")
             {
                 Content = JsonContent.Create(new RenameFileRequestDto { Name = "renamed.txt" })
             };
@@ -995,7 +995,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Move_File_With_Stale_If_Match_Returns_Precondition_Failed_And_Keeps_Parent()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1007,7 +1007,7 @@ namespace Cotton.Server.IntegrationTests
             string staleETag = file.ETag;
             file = await UpdateTextFileAsync(file, rootNode, "second");
 
-            using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/move")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/files/{file.Id}/move")
             {
                 Content = JsonContent.Create(new MoveFileRequestDto { ParentId = destination.Id })
             };
@@ -1030,7 +1030,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Admin_Created_User_Gets_Default_Template_Files()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1051,7 +1051,7 @@ namespace Cotton.Server.IntegrationTests
             createUserResponse.EnsureSuccessStatusCode();
 
             _client.DefaultRequestHeaders.Authorization = null;
-            var seededToken = await LoginAsync("seededuser", "seededpass");
+            string seededToken = await LoginAsync("seededuser", "seededpass");
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", seededToken);
 
             NodeDto? seededRoot = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1067,7 +1067,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Default_Template_Node_Rejects_Another_Users_Node()
         {
-            var adminToken = await LoginAsync();
+            string adminToken = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
 
             HttpResponseMessage createUserResponse = await _client.PostAsJsonAsync("/api/v1/users", new
@@ -1079,7 +1079,7 @@ namespace Cotton.Server.IntegrationTests
             createUserResponse.EnsureSuccessStatusCode();
 
             _client.DefaultRequestHeaders.Authorization = null;
-            var otherToken = await LoginAsync("templateowner", "templatepass");
+            string otherToken = await LoginAsync("templateowner", "templatepass");
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
 
             NodeDto? otherRoot = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1096,7 +1096,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Download_File_Works()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             // resolve root node
@@ -1104,9 +1104,9 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(root, Is.Not.Null);
 
             // upload chunk
-            var content = Encoding.UTF8.GetBytes("download me");
-            var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var form = new MultipartFormDataContent
+            byte[] content = Encoding.UTF8.GetBytes("download me");
+            string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+            using MultipartFormDataContent form = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -1126,7 +1126,7 @@ namespace Cotton.Server.IntegrationTests
             upRes.EnsureSuccessStatusCode();
 
             // create file from chunk
-            var fileReq = new CreateFileFromChunksRequestDto
+            CreateFileFromChunksRequestDto fileReq = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [chunkHashLower],
                 Name = "download.txt",
@@ -1146,19 +1146,19 @@ namespace Cotton.Server.IntegrationTests
             // obtain tokenized download link and download file
             HttpResponseMessage linkResponse = await _client.GetAsync($"/api/v1/files/{nodeFile!.Id}/download-link");
             linkResponse.EnsureSuccessStatusCode();
-            var downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+            string downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
             Assert.That(downloadLink, Is.Not.Null.And.Not.Empty);
 
             HttpResponseMessage dl = await _client.GetAsync(downloadLink);
             dl.EnsureSuccessStatusCode();
-            var bytes = await dl.Content.ReadAsByteArrayAsync();
+            byte[] bytes = await dl.Content.ReadAsByteArrayAsync();
             Assert.That(Encoding.UTF8.GetString(bytes), Is.EqualTo("download me"));
         }
 
         [Test]
         public async Task Download_Archive_For_Selected_Files_Streams_Uncompressed_Zip_With_Utf8_Names()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1185,7 +1185,7 @@ namespace Cotton.Server.IntegrationTests
             byte[] bytes = await download.Content.ReadAsByteArrayAsync();
             Assert.That(bytes.Length, Is.EqualTo(archive.SizeBytes));
 
-            using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+            using ZipArchive zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
             AssertZipEntry(zip, "долги.txt", "рубли");
             AssertZipEntry(zip, "notes.txt", "plain notes");
             Assert.That(zip.GetEntry("долги.txt")!.CompressedLength, Is.EqualTo(zip.GetEntry("долги.txt")!.Length));
@@ -1194,7 +1194,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Download_Archive_For_Folder_Includes_Nested_Files_And_Empty_Folders()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1220,7 +1220,7 @@ namespace Cotton.Server.IntegrationTests
             download.EnsureSuccessStatusCode();
             byte[] bytes = await download.Content.ReadAsByteArrayAsync();
 
-            using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+            using ZipArchive zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
             Assert.That(zip.GetEntry("Папка/"), Is.Not.Null);
             Assert.That(zip.GetEntry("Папка/empty/"), Is.Not.Null);
             Assert.That(zip.GetEntry("Папка/nested/"), Is.Not.Null);
@@ -1231,7 +1231,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Download_Archive_Rejects_Another_Users_File()
         {
-            var adminToken = await LoginAsync();
+            string adminToken = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1247,7 +1247,7 @@ namespace Cotton.Server.IntegrationTests
             createUserResponse.EnsureSuccessStatusCode();
 
             _client.DefaultRequestHeaders.Authorization = null;
-            var otherToken = await LoginAsync("archiveuser", "archivepass");
+            string otherToken = await LoginAsync("archiveuser", "archivepass");
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
 
             HttpResponseMessage linkResponse = await _client.PostAsJsonAsync("/api/v1/archives/download-link", new Cotton.Server.Models.Requests.CreateArchiveDownloadLinkRequest
@@ -1262,7 +1262,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Update_File_Metadata_Merges_Metadata_For_Own_File()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1278,7 +1278,7 @@ namespace Cotton.Server.IntegrationTests
                     ["originalContentType"] = "text/plain"
                 });
 
-            var patch = new Dictionary<string, string>
+            Dictionary<string, string> patch = new Dictionary<string, string>
             {
                 ["en"] = "encrypted-display-name"
             };
@@ -1295,15 +1295,15 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Create_File_From_Chunks_Detects_ContentType_From_FileName_When_Missing()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
             Assert.That(root, Is.Not.Null);
 
-            var content = Encoding.UTF8.GetBytes("auto detect me");
-            var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var form = new MultipartFormDataContent
+            byte[] content = Encoding.UTF8.GetBytes("auto detect me");
+            string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+            using MultipartFormDataContent form = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -1318,7 +1318,7 @@ namespace Cotton.Server.IntegrationTests
             HttpResponseMessage upRes = await _client.PostAsync("/api/v1/chunks", form);
             upRes.EnsureSuccessStatusCode();
 
-            var fileReq = new CreateFileFromChunksRequestDto
+            CreateFileFromChunksRequestDto fileReq = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [chunkHashLower],
                 Name = "auto-detect.txt",
@@ -1339,7 +1339,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Share_RangeMetadataProbe_DoesNotConsume_DeleteAfterUse_Token()
         {
-            var authToken = await LoginAsync();
+            string authToken = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1352,7 +1352,7 @@ namespace Cotton.Server.IntegrationTests
             string shareToken = ExtractToken(downloadLink);
 
             _client.DefaultRequestHeaders.Authorization = null;
-            using var probeRequest = new HttpRequestMessage(HttpMethod.Get, $"/s/{shareToken}?view=inline");
+            using HttpRequestMessage probeRequest = new HttpRequestMessage(HttpMethod.Get, $"/s/{shareToken}?view=inline");
             probeRequest.Headers.Range = new RangeHeaderValue(0, 3);
             HttpResponseMessage probeResponse = await _client.SendAsync(probeRequest);
             Assert.That(probeResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.PartialContent));
@@ -1373,7 +1373,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Share_InlinePreview_ServesSmallPreview_WithoutConsuming_DeleteAfterUse_Token()
         {
-            var authToken = await LoginAsync();
+            string authToken = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1390,7 +1390,7 @@ namespace Cotton.Server.IntegrationTests
             string shareToken = ExtractToken(downloadLink);
 
             _client.DefaultRequestHeaders.Authorization = null;
-            using var previewHeadRequest = new HttpRequestMessage(HttpMethod.Head, $"/s/{shareToken}?view=inline&preview=true");
+            using HttpRequestMessage previewHeadRequest = new HttpRequestMessage(HttpMethod.Head, $"/s/{shareToken}?view=inline&preview=true");
             HttpResponseMessage previewHeadResponse = await _client.SendAsync(previewHeadRequest);
             previewHeadResponse.EnsureSuccessStatusCode();
 
@@ -1430,7 +1430,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Share_Inline_Dangerous_Svg_Is_Forced_To_Attachment()
         {
-            var authToken = await LoginAsync();
+            string authToken = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1475,7 +1475,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task File_Custom_Share_Token_Cannot_Collide_With_Folder_Share_Token()
         {
-            var authToken = await LoginAsync();
+            string authToken = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1682,7 +1682,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task File_Versions_List_Download_And_Restore_Previous_Content()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1745,7 +1745,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task File_Versions_Restore_Rejects_When_Restored_Copy_Would_Exceed_Quota()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             HttpResponseMessage quotaResponse = await _client.PatchAsJsonAsync(
@@ -1773,7 +1773,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task File_Versions_Retention_Keeps_Original_And_Prunes_Oldest_Middle()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1803,7 +1803,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task File_Versions_Delete_Allows_NonOriginal_Only()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1859,7 +1859,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Folder_Permanent_Delete_Removes_File_Version_Lineages()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -1916,7 +1916,7 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<HttpResponseMessage> UploadRawChunkAsync(byte[] content, string chunkHashLower)
         {
-            using var form = new MultipartFormDataContent
+            using MultipartFormDataContent form = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -1992,7 +1992,7 @@ namespace Cotton.Server.IntegrationTests
             ZipArchiveEntry? entry = zip.GetEntry(path);
             Assert.That(entry, Is.Not.Null, $"Archive entry '{path}' was not found.");
             using Stream stream = entry!.Open();
-            using var reader = new StreamReader(stream, Encoding.UTF8);
+            using StreamReader reader = new StreamReader(stream, Encoding.UTF8);
             Assert.That(reader.ReadToEnd(), Is.EqualTo(expectedText));
         }
 
@@ -2003,9 +2003,9 @@ namespace Cotton.Server.IntegrationTests
             Dictionary<string, string>? metadata = null,
             string contentType = "text/plain")
         {
-            var content = Encoding.UTF8.GetBytes(text);
-            var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var form = new MultipartFormDataContent
+            byte[] content = Encoding.UTF8.GetBytes(text);
+            string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+            using MultipartFormDataContent form = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -2020,7 +2020,7 @@ namespace Cotton.Server.IntegrationTests
             HttpResponseMessage upRes = await _client!.PostAsync("/api/v1/chunks", form);
             upRes.EnsureSuccessStatusCode();
 
-            var fileReq = new CreateFileFromChunksRequestDto
+            CreateFileFromChunksRequestDto fileReq = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [chunkHashLower],
                 Name = name,
@@ -2114,7 +2114,7 @@ namespace Cotton.Server.IntegrationTests
             string username = "testuser",
             string password = "testpassword")
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new LoginRequestDto()
                 {

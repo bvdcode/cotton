@@ -21,12 +21,12 @@ namespace Cotton.Previews.Tests
         public async Task GeneratePreviewWebPAsync_LargeImage_ResizesWithinBounds_AndKeepsAspectRatio()
         {
             byte[] source = CreateGradientPngBytes(width: 2400, height: 1200);
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
 
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
 
             AssertWebpSignature(preview);
-            using var image = Image.Load<Rgba32>(preview);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
 
             Assert.Multiple(() =>
             {
@@ -39,12 +39,12 @@ namespace Cotton.Previews.Tests
         public async Task GeneratePreviewWebPAsync_SmallImage_DoesNotUpscale()
         {
             byte[] source = CreateGradientPngBytes(width: 80, height: 60);
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
 
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
 
             AssertWebpSignature(preview);
-            using var image = Image.Load<Rgba32>(preview);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
 
             Assert.Multiple(() =>
             {
@@ -57,13 +57,13 @@ namespace Cotton.Previews.Tests
         public async Task GeneratePreviewWebPAsync_SeekableStream_NotAtStart_StillReadsFromBeginning()
         {
             byte[] source = CreateGradientPngBytes(width: 640, height: 360);
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
             stream.Position = source.Length / 2;
 
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
 
             AssertWebpSignature(preview);
-            using var image = Image.Load<Rgba32>(preview);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
 
             Assert.Multiple(() =>
             {
@@ -79,7 +79,7 @@ namespace Cotton.Previews.Tests
             // crawlers such as Telegram's link-preview bot cannot decode VP8L, which
             // leaves shared links showing text but no image.
             byte[] source = CreateGradientPngBytes(width: 640, height: 360);
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
 
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
 
@@ -90,7 +90,7 @@ namespace Cotton.Previews.Tests
 
         private static byte[] CreateGradientPngBytes(int width, int height)
         {
-            using var image = new Image<Rgba32>(width, height);
+            using Image<Rgba32> image = new Image<Rgba32>(width, height);
 
             for (int y = 0; y < height; y++)
             {
@@ -103,7 +103,7 @@ namespace Cotton.Previews.Tests
                 }
             }
 
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             image.SaveAsPng(ms);
             return ms.ToArray();
         }

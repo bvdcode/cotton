@@ -59,8 +59,8 @@ namespace Cotton.Benchmark.Regression
 
         public static BenchmarkResultSnapshot FromResult(IBenchmarkResult result)
         {
-            var numericMetrics = new Dictionary<string, double>(StringComparer.Ordinal);
-            var textMetrics = new Dictionary<string, string>(StringComparer.Ordinal);
+            Dictionary<string, double> numericMetrics = new Dictionary<string, double>(StringComparer.Ordinal);
+            Dictionary<string, string> textMetrics = new Dictionary<string, string>(StringComparer.Ordinal);
 
             foreach (KeyValuePair<string, object> metric in result.Metrics)
             {

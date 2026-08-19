@@ -23,7 +23,7 @@ namespace Cotton.Benchmark.Benchmarks
 
         protected override Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
-            var stopwatch = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
 
             _ = SHA256.HashData(_testData);
 

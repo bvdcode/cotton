@@ -44,7 +44,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(creator.HasTables(), Is.False);
             });
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = "localhost",
                 Port = 5432,
@@ -52,7 +52,7 @@ namespace Cotton.Server.IntegrationTests
                 Username = "postgres",
                 Password = "postgres"
             };
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -283,7 +283,7 @@ namespace Cotton.Server.IntegrationTests
             string token = await LoginAsync();
             SetBearer(token);
 
-            using var request = new HttpRequestMessage(HttpMethod.Patch, "/api/v1/users/me/preferences")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Patch, "/api/v1/users/me/preferences")
             {
                 Content = JsonContent.Create(new Dictionary<string, string>
                 {
@@ -423,7 +423,7 @@ namespace Cotton.Server.IntegrationTests
             string username = "testuser",
             string password = "testpassword")
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new CottonLoginRequestDto
                 {

@@ -36,9 +36,9 @@ namespace Cotton.Server.IntegrationTests
                 durationSeconds: 13.5,
                 segmentUrlFactory: i => $"/api/v1/files/abc/hls/seg-{i}.ts?token=T");
 
-            var lines = manifest.Split('\n');
-            var extinfDurations = new List<double>();
-            var urls = new List<string>();
+            string[] lines = manifest.Split('\n');
+            List<double> extinfDurations = new List<double>();
+            List<string> urls = new List<string>();
             for (int i = 0; i < lines.Length; i++)
             {
                 if (!lines[i].StartsWith("#EXTINF:", StringComparison.Ordinal))
@@ -114,9 +114,9 @@ namespace Cotton.Server.IntegrationTests
             };
 
             string master = HlsManifestBuilder.BuildMaster(variants);
-            var lines = master.Split('\n');
-            var streamInfos = lines.Where(l => l.StartsWith("#EXT-X-STREAM-INF", StringComparison.Ordinal)).ToList();
-            var urls = lines.Where(l => l.Contains("playlist.m3u8", StringComparison.Ordinal)).ToList();
+            string[] lines = master.Split('\n');
+            List<string> streamInfos = lines.Where(l => l.StartsWith("#EXT-X-STREAM-INF", StringComparison.Ordinal)).ToList();
+            List<string> urls = lines.Where(l => l.Contains("playlist.m3u8", StringComparison.Ordinal)).ToList();
 
             Assert.Multiple(() =>
             {

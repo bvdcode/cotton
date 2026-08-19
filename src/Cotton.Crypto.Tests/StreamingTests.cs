@@ -14,17 +14,17 @@ namespace Cotton.Crypto.Tests
         [Test]
         public async Task EncryptDecrypt_WithNonSeekable_Streams()
         {
-            var key = Key();
-            var cipher = new AesGcmStreamCipher(key, keyId: 7, threads: 2);
+            byte[] key = Key();
+            AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 7, threads: 2);
             byte[] data = [.. Enumerable.Range(0, 500_000).Select(i => (byte)(i & 0xFF))];
 
-            using var inner = new MemoryStream(data);
-            using var nonSeek = new NonSeekableReadStream(inner);
-            using var encrypted = new MemoryStream();
+            using MemoryStream inner = new MemoryStream(data);
+            using NonSeekableReadStream nonSeek = new NonSeekableReadStream(inner);
+            using MemoryStream encrypted = new MemoryStream();
             await cipher.EncryptAsync(nonSeek, encrypted, chunkSize: AesGcmStreamCipher.MinChunkSize);
 
             encrypted.Position = 0;
-            using var decrypted = new MemoryStream();
+            using MemoryStream decrypted = new MemoryStream();
             await cipher.DecryptAsync(encrypted, decrypted);
 
             Assert.That(decrypted.ToArray(), Is.EqualTo(data));
@@ -33,12 +33,12 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Encrypt_Cancellation_MidPipeline_NoLeaks()
         {
-            var key = Key();
-            var cipher = new AesGcmStreamCipher(key, keyId: 5, threads: 2);
+            byte[] key = Key();
+            AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 5, threads: 2);
             byte[] data = [.. Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize * 3).Select(i => (byte)(i & 0xFF))];
-            using var input = new MemoryStream(data);
-            using var slowOut = new SlowWriteStream(new MemoryStream(), delayMs: 10);
-            using var cts = new CancellationTokenSource();
+            using MemoryStream input = new MemoryStream(data);
+            using SlowWriteStream slowOut = new SlowWriteStream(new MemoryStream(), delayMs: 10);
+            using CancellationTokenSource cts = new CancellationTokenSource();
 
             long before = GC.GetAllocatedBytesForCurrentThread();
             Task task = cipher.EncryptAsync(input, slowOut, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
@@ -54,18 +54,18 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Decrypt_Cancellation_MidPipeline_NoLeaks()
         {
-            var key = Key();
-            var enc = new AesGcmStreamCipher(key, keyId: 6, threads: 2);
-            var dec = new AesGcmStreamCipher(key, keyId: 6, threads: 2);
+            byte[] key = Key();
+            AesGcmStreamCipher enc = new AesGcmStreamCipher(key, keyId: 6, threads: 2);
+            AesGcmStreamCipher dec = new AesGcmStreamCipher(key, keyId: 6, threads: 2);
             // Use more data to ensure decrypt runs long enough to observe cancellation reliably
             byte[] data = [.. Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize * 32).Select(i => (byte)(i & 0xFF))];
-            using var input = new MemoryStream(data);
-            using var ciphertext = new MemoryStream();
+            using MemoryStream input = new MemoryStream(data);
+            using MemoryStream ciphertext = new MemoryStream();
             enc.EncryptAsync(input, ciphertext, chunkSize: AesGcmStreamCipher.MinChunkSize).GetAwaiter().GetResult();
             ciphertext.Position = 0;
 
-            using var slowOut = new SlowWriteStream(new MemoryStream(), delayMs: 25);
-            using var cts = new CancellationTokenSource();
+            using SlowWriteStream slowOut = new SlowWriteStream(new MemoryStream(), delayMs: 25);
+            using CancellationTokenSource cts = new CancellationTokenSource();
 
             long before = GC.GetAllocatedBytesForCurrentThread();
             // Kick off decryption; request cancellation soon after to interrupt mid-pipeline
@@ -79,11 +79,11 @@ namespace Cotton.Crypto.Tests
         [Test]
         public async Task HugeFile_SyntheticStream_HeaderAndIndices_LongVsInt()
         {
-            var key = Key();
-            var cipher = new AesGcmStreamCipher(key, keyId: 8);
+            byte[] key = Key();
+            AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 8);
             long huge = 6L * 1024 * 1024 * 1024; // 6 GB
-            using var fake = new SeekableSyntheticReadStream(huge);
-            using var outEnc = new MemoryStream();
+            using SeekableSyntheticReadStream fake = new SeekableSyntheticReadStream(huge);
+            using MemoryStream outEnc = new MemoryStream();
             // Only header will be written (input immediately EOF), but code path uses long for lengths
             await cipher.EncryptAsync(fake, outEnc, chunkSize: AesGcmStreamCipher.DefaultChunkSize);
             outEnc.Position = 0;
@@ -95,11 +95,11 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void HotPaths_DoNotAllocate_Significantly()
         {
-            var key = Key();
-            var cipher = new AesGcmStreamCipher(key, keyId: 9, threads: 2);
+            byte[] key = Key();
+            AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 9, threads: 2);
             byte[] data = [.. Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
-            using var input = new MemoryStream(data);
-            using var output = new DevNullStream();
+            using MemoryStream input = new MemoryStream(data);
+            using DevNullStream output = new DevNullStream();
 
             // warm-up
             cipher.EncryptAsync(input, output, chunkSize: AesGcmStreamCipher.MinChunkSize).GetAwaiter().GetResult();

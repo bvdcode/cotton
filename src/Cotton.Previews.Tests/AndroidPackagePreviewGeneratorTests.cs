@@ -34,7 +34,7 @@ namespace Cotton.Previews.Tests
                 entries["res/mipmap-xxxhdpi/ic_launcher.png"] = CreateSolidPngBytes(192, 192, new Rgba32(220, 40, 180));
             });
 
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
 
             AssertWebpSignature(preview);
@@ -67,7 +67,7 @@ namespace Cotton.Previews.Tests
                 entries["res/declared-xxxhdpi.png"] = CreateSolidPngBytes(192, 192, new Rgba32(30, 220, 80));
             });
 
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
 
             AssertWebpSignature(preview);
@@ -96,7 +96,7 @@ namespace Cotton.Previews.Tests
                 entries["res/mipmap-xxxhdpi/ic_launcher.png"] = CreateSolidPngBytes(192, 192, new Rgba32(230, 30, 30));
             });
 
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
 
             AssertWebpSignature(preview);
@@ -125,7 +125,7 @@ namespace Cotton.Previews.Tests
                 entries["res/drawable/splash.png"] = CreateSolidPngBytes(192, 192, new Rgba32(230, 30, 30));
             });
 
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
 
             AssertWebpSignature(preview);
@@ -153,7 +153,7 @@ namespace Cotton.Previews.Tests
                 entries["base.apk"] = nestedApk;
             });
 
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
 
             AssertWebpSignature(preview);
@@ -178,7 +178,7 @@ namespace Cotton.Previews.Tests
                 entries["res/yG"] = CreateSolidPngBytes(128, 128, new Rgba32(230, 80, 30));
             });
 
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
 
             AssertWebpSignature(preview);
@@ -202,7 +202,7 @@ namespace Cotton.Previews.Tests
                 entries["res/mipmap-anydpi-v26/ic_launcher.xml"] = Encoding.UTF8.GetBytes("<adaptive-icon />");
             });
 
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
 
             AssertWebpSignature(preview);
@@ -219,7 +219,7 @@ namespace Cotton.Previews.Tests
         public async Task GeneratePreviewWebPAsync_MalformedPackage_ReturnsFallbackWebp()
         {
             byte[] source = Encoding.UTF8.GetBytes("this is not a zip archive");
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
 
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
 
@@ -241,7 +241,7 @@ namespace Cotton.Previews.Tests
                 entries["res/mipmap-hdpi/ic_launcher.png"] = CreateSolidPngBytes(72, 72, new Rgba32(240, 180, 20));
             });
 
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
             stream.Position = source.Length / 2;
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 96);
 
@@ -250,11 +250,11 @@ namespace Cotton.Previews.Tests
 
         private static byte[] CreateZipBytes(Action<Dictionary<string, byte[]>> configure)
         {
-            var entries = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+            Dictionary<string, byte[]> entries = new Dictionary<string, byte[]>(StringComparer.Ordinal);
             configure(entries);
 
-            using var output = new MemoryStream();
-            using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+            using MemoryStream output = new MemoryStream();
+            using (ZipArchive archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
             {
                 foreach ((string name, byte[] bytes) in entries)
                 {
@@ -269,8 +269,8 @@ namespace Cotton.Previews.Tests
 
         private static byte[] CreateSolidPngBytes(int width, int height, Rgba32 color)
         {
-            using var image = new Image<Rgba32>(width, height, color);
-            using var stream = new MemoryStream();
+            using Image<Rgba32> image = new Image<Rgba32>(width, height, color);
+            using MemoryStream stream = new MemoryStream();
             image.SaveAsPng(stream);
             return stream.ToArray();
         }
@@ -284,8 +284,8 @@ namespace Cotton.Previews.Tests
                 nameIndex: 1,
                 (NameIndex: 2, DataType: 0x01, Data: iconResourceId));
 
-            using var output = new MemoryStream();
-            using var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
+            using MemoryStream output = new MemoryStream();
+            using BinaryWriter writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
             uint size = (uint)(8 + stringPool.Length + resourceMap.Length + manifestElement.Length + applicationElement.Length);
             writer.Write((ushort)0x0003);
             writer.Write((ushort)8);
@@ -304,8 +304,8 @@ namespace Cotton.Previews.Tests
             byte[] globalStringPool = CreateStringPool(paths.Select(x => x.Path).ToArray());
             byte[] package = CreatePackageChunk(iconResourceId, paths);
 
-            using var output = new MemoryStream();
-            using var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
+            using MemoryStream output = new MemoryStream();
+            using BinaryWriter writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
             writer.Write((ushort)0x0002);
             writer.Write((ushort)12);
             writer.Write((uint)(12 + globalStringPool.Length + package.Length));
@@ -330,8 +330,8 @@ namespace Cotton.Previews.Tests
             uint keyStringsOffset = typeStringsOffset + (uint)typeStringPool.Length;
             uint size = keyStringsOffset + (uint)keyStringPool.Length + (uint)typeChunks.Sum(x => x.Length);
 
-            using var output = new MemoryStream();
-            using var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
+            using MemoryStream output = new MemoryStream();
+            using BinaryWriter writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
             writer.Write((ushort)0x0200);
             writer.Write(headerSize);
             writer.Write(size);
@@ -360,8 +360,8 @@ namespace Cotton.Previews.Tests
             const uint chunkSize = entriesStart + 16;
 
             byte typeId = (byte)((iconResourceId >> 16) & 0xFF);
-            using var output = new MemoryStream();
-            using var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
+            using MemoryStream output = new MemoryStream();
+            using BinaryWriter writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
             writer.Write((ushort)0x0201);
             writer.Write(headerSize);
             writer.Write(chunkSize);
@@ -391,8 +391,8 @@ namespace Cotton.Previews.Tests
             uint stringsStart = (uint)(28 + (strings.Count * sizeof(uint)));
             uint size = stringsStart + (uint)encodedStrings.Sum(x => x.Length);
 
-            using var output = new MemoryStream();
-            using var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
+            using MemoryStream output = new MemoryStream();
+            using BinaryWriter writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
             writer.Write((ushort)0x0001);
             writer.Write((ushort)28);
             writer.Write(size);
@@ -420,7 +420,7 @@ namespace Cotton.Previews.Tests
         private static byte[] EncodeStringPoolString(string value)
         {
             byte[] valueBytes = Encoding.UTF8.GetBytes(value);
-            using var output = new MemoryStream();
+            using MemoryStream output = new MemoryStream();
             output.WriteByte((byte)value.Length);
             output.WriteByte((byte)valueBytes.Length);
             output.Write(valueBytes);
@@ -430,8 +430,8 @@ namespace Cotton.Previews.Tests
 
         private static byte[] CreateResourceMap(IReadOnlyList<uint> resourceIds)
         {
-            using var output = new MemoryStream();
-            using var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
+            using MemoryStream output = new MemoryStream();
+            using BinaryWriter writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
             writer.Write((ushort)0x0180);
             writer.Write((ushort)8);
             writer.Write((uint)(8 + (resourceIds.Count * sizeof(uint))));
@@ -449,8 +449,8 @@ namespace Cotton.Previews.Tests
         {
             const ushort headerSize = 36;
             const ushort attributeSize = 20;
-            using var output = new MemoryStream();
-            using var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
+            using MemoryStream output = new MemoryStream();
+            using BinaryWriter writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
             writer.Write((ushort)0x0102);
             writer.Write(headerSize);
             writer.Write((uint)(headerSize + (attributes.Length * attributeSize)));

@@ -37,7 +37,7 @@ namespace Cotton.Server.IntegrationTests
             creator.EnsureDeleted();
             creator.Create();
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = TestPostgresHost,
                 Port = TestPostgresPort,
@@ -45,7 +45,7 @@ namespace Cotton.Server.IntegrationTests
                 Username = TestPostgresUsername,
                 Password = TestPostgresPassword
             };
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -93,7 +93,7 @@ namespace Cotton.Server.IntegrationTests
                 await UploadRawChunkAsync(payload);
             }
 
-            var stopwatch = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
             foreach (ChunkPayload payload in measured)
             {
                 await UploadRawChunkAsync(payload);
@@ -117,7 +117,7 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task UploadRawChunkAsync(ChunkPayload payload)
         {
-            using var body = new ByteArrayContent(payload.Bytes)
+            using ByteArrayContent body = new ByteArrayContent(payload.Bytes)
             {
                 Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
             };
@@ -132,7 +132,7 @@ namespace Cotton.Server.IntegrationTests
 
         private static IReadOnlyList<ChunkPayload> CreatePayloads(int count, int chunkSizeBytes, int seedOffset)
         {
-            var payloads = new ChunkPayload[count];
+            ChunkPayload[] payloads = new ChunkPayload[count];
             for (int i = 0; i < payloads.Length; i++)
             {
                 byte[] bytes = new byte[chunkSizeBytes];
@@ -153,7 +153,7 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<string> LoginAsync()
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new LoginRequestDto
                 {

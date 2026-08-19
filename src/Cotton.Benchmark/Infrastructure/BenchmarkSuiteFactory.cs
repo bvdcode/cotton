@@ -38,7 +38,7 @@ namespace Cotton.Benchmark.Infrastructure
 
         private static List<IBenchmark> ApplyScenarioFilters(IEnumerable<IBenchmark> benchmarks, IReadOnlyList<string> filters)
         {
-            var benchmarkList = benchmarks.ToList();
+            List<IBenchmark> benchmarkList = benchmarks.ToList();
             if (filters.Count == 0)
             {
                 return benchmarkList;

@@ -14,9 +14,9 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task LoginAsync_PostsCredentialsAndStoresTokenPair()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "access", refreshToken = "refresh" });
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             CottonCloudClient client = CreateClient(handler, store);
 
             TokenPairDto tokens = await client.Auth.LoginAsync(new LoginRequestDto
@@ -44,9 +44,9 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task LogoutAsync_PostsRefreshTokenAndClearsStore()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.OK);
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "refresh token" });
             CottonCloudClient client = CreateClient(handler, store);
 
@@ -64,10 +64,10 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task LoginAsync_SendsConfiguredUserAgentAndDeviceName()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "access", refreshToken = "refresh" });
-            var store = new InMemoryCottonTokenStore();
-            var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
+            CottonCloudClient client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
             {
                 BaseAddress = new Uri("https://cotton.test"),
                 UserAgent = "CottonSyncDesktop/1.2.3 (Linux; X64)",
@@ -92,11 +92,11 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task LoginAsync_TruncatesConfiguredDeviceName()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "access", refreshToken = "refresh" });
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             string longDeviceName = new('d', CottonClientHeaders.DeviceNameMaxLength + 1);
-            var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+            CottonCloudClient client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
             {
                 BaseAddress = new Uri("https://cotton.test"),
                 DeviceName = longDeviceName,
@@ -116,11 +116,11 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task RefreshAsync_SendsConfiguredUserAgentAndDeviceName()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "access", refreshToken = "refresh" });
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old-refresh" });
-            var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+            CottonCloudClient client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
             {
                 BaseAddress = new Uri("https://cotton.test"),
                 UserAgent = "CottonSyncDesktop/1.2.3 (Windows; X64)",
@@ -141,9 +141,9 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task LogoutAsync_ClearsStoreWhenServerLogoutFails()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.Unauthorized);
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "revoked" });
             CottonCloudClient client = CreateClient(handler, store);
 

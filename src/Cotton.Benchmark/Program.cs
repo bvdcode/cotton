@@ -87,7 +87,7 @@ namespace Cotton.Benchmark
 
         private static ServiceProvider CreateServiceProvider()
         {
-            var services = new ServiceCollection();
+            ServiceCollection services = new ServiceCollection();
             services.AddLogging(builder =>
             {
                 builder.AddConsole();
@@ -117,7 +117,7 @@ namespace Cotton.Benchmark
 
                 PrintMemoryStatistics();
 
-                var runDocument = BenchmarkRunDocument.Create(
+                BenchmarkRunDocument runDocument = BenchmarkRunDocument.Create(
                     FormatEnum(options.Mode),
                     FormatEnum(options.Profile),
                     hardwareFingerprint,
@@ -144,7 +144,7 @@ namespace Cotton.Benchmark
 
         private static async Task<int> SaveAndCompareAsync(BenchmarkOptions options, BenchmarkRunDocument runDocument)
         {
-            var artifactStore = new BenchmarkArtifactStore(options.BaselineDirectory, options.ResultsDirectory);
+            BenchmarkArtifactStore artifactStore = new BenchmarkArtifactStore(options.BaselineDirectory, options.ResultsDirectory);
             BenchmarkStoragePathSummaryDocument storagePathSummary = BenchmarkStoragePathSummaryDocument.Create(runDocument);
 
             if (options.UpdateBaseline)

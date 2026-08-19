@@ -70,7 +70,7 @@ namespace Cotton.Server.IntegrationTests
         {
             MapsterConfig.Register();
 
-            var nodeFile = new NodeFile
+            NodeFile nodeFile = new NodeFile
             {
                 FileManifest = new FileManifest
                 {

@@ -82,7 +82,7 @@ namespace Cotton.Benchmark.Regression
 
         private static string Sanitize(string value)
         {
-            var builder = new StringBuilder(value.Length);
+            StringBuilder builder = new StringBuilder(value.Length);
             bool previousWasSeparator = false;
 
             foreach (char character in value.ToLowerInvariant())

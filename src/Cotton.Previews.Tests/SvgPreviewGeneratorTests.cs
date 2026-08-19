@@ -29,12 +29,12 @@ namespace Cotton.Previews.Tests
             </svg>
             """);
 
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
 
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
 
             AssertWebpSignature(preview);
-            using var image = Image.Load<Rgba32>(preview);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
 
             using (Assert.EnterMultipleScope())
             {
@@ -54,12 +54,12 @@ namespace Cotton.Previews.Tests
             """;
 
             byte[] source = CreateSvgzBytes(svg);
-            using var stream = new MemoryStream(source);
+            using MemoryStream stream = new MemoryStream(source);
 
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
 
             AssertWebpSignature(preview);
-            using var image = Image.Load<Rgba32>(preview);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
 
             using (Assert.EnterMultipleScope())
             {
@@ -70,8 +70,8 @@ namespace Cotton.Previews.Tests
 
         private static byte[] CreateSvgzBytes(string svgContent)
         {
-            using var output = new MemoryStream();
-            using (var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))
+            using MemoryStream output = new MemoryStream();
+            using (GZipStream gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))
             {
                 byte[] inputBytes = Encoding.UTF8.GetBytes(svgContent);
                 gzip.Write(inputBytes, 0, inputBytes.Length);

@@ -40,7 +40,7 @@ namespace Cotton.Server.IntegrationTests
             creator.EnsureDeleted();
             creator.Create();
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = "localhost",
                 Port = 5432,
@@ -263,7 +263,7 @@ namespace Cotton.Server.IntegrationTests
 
                 for (int i = 0; i < 300; i++)
                 {
-                    var node = new Cotton.Database.Models.Node
+                    Node node = new Cotton.Database.Models.Node
                     {
                         LayoutId = rootEntity.LayoutId,
                         OwnerId = rootEntity.OwnerId,
@@ -364,7 +364,7 @@ namespace Cotton.Server.IntegrationTests
             await AuthenticateAsync();
             NodeDto root = await GetRootAsync();
             NodeDto target = await CreateFolderAsync(root.Id, "dst");
-            var hash = await UploadChunkViaClientAsync(_client!, "create-file-folder-race");
+            string hash = await UploadChunkViaClientAsync(_client!, "create-file-folder-race");
 
             Task<HttpResponseMessage> createFile = _client!.PostAsJsonAsync(
                 "/api/v1/files/from-chunks",
@@ -456,7 +456,7 @@ namespace Cotton.Server.IntegrationTests
 
         private static async Task<bool> ParentWalkReachesRoot(CottonDbContext db, Guid startId)
         {
-            var seen = new HashSet<Guid>();
+            HashSet<Guid> seen = new HashSet<Guid>();
             Guid? current = startId;
             while (current.HasValue)
             {
@@ -486,7 +486,7 @@ namespace Cotton.Server.IntegrationTests
                 CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
                 Guid ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
                 Node rootEntity = await db.Nodes.AsNoTracking().SingleAsync(n => n.Id == root.Id);
-                var trash = new Cotton.Database.Models.Node
+                Node trash = new Cotton.Database.Models.Node
                 {
                     LayoutId = rootEntity.LayoutId,
                     OwnerId = ownerId,
@@ -649,7 +649,7 @@ namespace Cotton.Server.IntegrationTests
             _client?.Dispose();
             _factory?.Dispose();
 
-            using var factory = new TestAppFactory(_overrides);
+            using TestAppFactory factory = new TestAppFactory(_overrides);
             using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureTestServices(services =>
@@ -661,7 +661,7 @@ namespace Cotton.Server.IntegrationTests
             using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
             // Provision the user + source/destination folders + a file via REST first.
-            var token = await LoginViaClientAsync(client);
+            string token = await LoginViaClientAsync(client);
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
             NodeDto src = await CreateFolderViaClientAsync(client, root!.Id, "src");
@@ -671,7 +671,7 @@ namespace Cotton.Server.IntegrationTests
             // Switch to WebDAV basic auth for the MOVE request.
             await UseWebDavBasicAuthAsync(client);
 
-            using var moveRequest = new HttpRequestMessage(new HttpMethod("MOVE"), "/api/v1/webdav/src/doc.txt");
+            using HttpRequestMessage moveRequest = new HttpRequestMessage(new HttpMethod("MOVE"), "/api/v1/webdav/src/doc.txt");
             moveRequest.Headers.Add("Destination", "/api/v1/webdav/dst/doc.txt");
             moveRequest.Headers.Add("Overwrite", "F");
             HttpResponseMessage res = await client.SendAsync(moveRequest);
@@ -696,7 +696,7 @@ namespace Cotton.Server.IntegrationTests
             _client?.Dispose();
             _factory?.Dispose();
 
-            using var factory = new TestAppFactory(_overrides);
+            using TestAppFactory factory = new TestAppFactory(_overrides);
             using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureTestServices(services =>
@@ -708,7 +708,7 @@ namespace Cotton.Server.IntegrationTests
             });
             using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-            var token = await LoginViaClientAsync(client);
+            string token = await LoginViaClientAsync(client);
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
             NodeDto fileParent = await CreateFolderViaClientAsync(client, root!.Id, "delete-file-parent");
@@ -717,11 +717,11 @@ namespace Cotton.Server.IntegrationTests
 
             await UseWebDavBasicAuthAsync(client);
 
-            using var deleteFileRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-file-parent/doc.txt");
+            using HttpRequestMessage deleteFileRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-file-parent/doc.txt");
             HttpResponseMessage deleteFileResponse = await client.SendAsync(deleteFileRequest);
             Assert.That(deleteFileResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
 
-            using var deleteFolderRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-folder-parent");
+            using HttpRequestMessage deleteFolderRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-folder-parent");
             HttpResponseMessage deleteFolderResponse = await client.SendAsync(deleteFolderRequest);
             Assert.That(deleteFolderResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
 
@@ -744,7 +744,7 @@ namespace Cotton.Server.IntegrationTests
             _client?.Dispose();
             _factory?.Dispose();
 
-            using var factory = new TestAppFactory(_overrides);
+            using TestAppFactory factory = new TestAppFactory(_overrides);
             using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureTestServices(services =>
@@ -756,7 +756,7 @@ namespace Cotton.Server.IntegrationTests
             using HttpClient client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
             // Authenticate via this client.
-            var token = await LoginViaClientAsync(client);
+            string token = await LoginViaClientAsync(client);
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -785,8 +785,8 @@ namespace Cotton.Server.IntegrationTests
 
         private CottonDbContext NewReadOnlyDbContext()
         {
-            var optionsBuilder = new DbContextOptionsBuilder<CottonDbContext>();
-            var csb = new NpgsqlConnectionStringBuilder
+            DbContextOptionsBuilder<CottonDbContext> optionsBuilder = new DbContextOptionsBuilder<CottonDbContext>();
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = "localhost",
                 Port = 5432,
@@ -804,13 +804,13 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task AuthenticateAsync()
         {
-            var token = await LoginViaClientAsync(_client!);
+            string token = await LoginViaClientAsync(_client!);
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
         private static async Task<string> LoginViaClientAsync(HttpClient client)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new LoginRequestDto()
                 {
@@ -950,9 +950,9 @@ namespace Cotton.Server.IntegrationTests
 
         private static async Task<string> UploadChunkViaClientAsync(HttpClient client, string body)
         {
-            var content = Encoding.UTF8.GetBytes(body);
-            var hash = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var form = new MultipartFormDataContent
+            byte[] content = Encoding.UTF8.GetBytes(body);
+            string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
+            using MultipartFormDataContent form = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -971,8 +971,8 @@ namespace Cotton.Server.IntegrationTests
 
         private static async Task<HttpResponseMessage> SendWebDavPutAsync(HttpClient client, string path, string body)
         {
-            using var content = new StringContent(body, Encoding.UTF8, "text/plain");
-            using var request = new HttpRequestMessage(HttpMethod.Put, path)
+            using StringContent content = new StringContent(body, Encoding.UTF8, "text/plain");
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, path)
             {
                 Content = content
             };
@@ -981,7 +981,7 @@ namespace Cotton.Server.IntegrationTests
 
         private static async Task<HttpResponseMessage> SendWebDavMkColAsync(HttpClient client, string path)
         {
-            using var request = new HttpRequestMessage(new HttpMethod("MKCOL"), path);
+            using HttpRequestMessage request = new HttpRequestMessage(new HttpMethod("MKCOL"), path);
             return await client.SendAsync(request);
         }
 

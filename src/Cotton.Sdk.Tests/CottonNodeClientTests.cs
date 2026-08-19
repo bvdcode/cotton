@@ -16,7 +16,7 @@ namespace Cotton.Sdk.Tests
         public async Task ResolveAsync_EncodesPathAndDeserializesNode()
         {
             Guid nodeId = Guid.NewGuid();
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new
             {
                 id = nodeId,
@@ -79,7 +79,7 @@ namespace Cotton.Sdk.Tests
         {
             Guid parentId = Guid.NewGuid();
             Guid nodeId = Guid.NewGuid();
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new
             {
                 id = nodeId,
@@ -107,7 +107,7 @@ namespace Cotton.Sdk.Tests
         public async Task RestoreAsync_MapsNonSuccessRestoreOutcome()
         {
             Guid nodeId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new
             {
                 status = "ParentMissing",
@@ -131,7 +131,7 @@ namespace Cotton.Sdk.Tests
 
         private static async Task<CottonCloudClient> CreateAuthorizedClientAsync(QueuedHttpMessageHandler handler)
         {
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "refresh" });
             return new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
             {

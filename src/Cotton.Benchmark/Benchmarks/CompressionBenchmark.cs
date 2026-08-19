@@ -19,20 +19,20 @@ namespace Cotton.Benchmark.Benchmarks
 
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
-            await using var inputStream = new MemoryStream(_testData);
+            await using MemoryStream inputStream = new MemoryStream(_testData);
             Stream outputStream = await _processor.WriteAsync("test-uid", inputStream);
             await outputStream.DisposeAsync();
         }
 
         protected override async Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
-            var stopwatch = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
 
-            await using var inputStream = new MemoryStream(_testData);
+            await using MemoryStream inputStream = new MemoryStream(_testData);
             Stream outputStream = await _processor.WriteAsync("test-uid", inputStream);
 
             // Read all compressed data to ensure compression is complete
-            await using var resultStream = new MemoryStream();
+            await using MemoryStream resultStream = new MemoryStream();
             await outputStream.CopyToAsync(resultStream, cancellationToken);
 
             stopwatch.Stop();

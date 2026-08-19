@@ -36,7 +36,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(creator.HasTables(), Is.False);
             });
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = "localhost",
                 Port = 5432,
@@ -44,7 +44,7 @@ namespace Cotton.Server.IntegrationTests
                 Username = "postgres",
                 Password = "postgres"
             };
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -73,7 +73,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Resolve_And_Create_Node_Then_List_Ancestors_Children_Works()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -104,7 +104,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Update_Node_Metadata_Merges_And_Persists_String_Values()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -159,7 +159,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Search_ByNodeGuid_ReturnsOnlyExactNode()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -197,7 +197,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Search_ByText_ReturnsFoldersAndFilesWithPathsAndPagination()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -235,7 +235,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Search_DoesNotReturnTrashedNodesOrFiles()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -284,7 +284,7 @@ namespace Cotton.Server.IntegrationTests
         private async Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
         {
             string hash = await UploadChunkAsync(body);
-            var fileReq = new CreateFileFromChunksRequestDto
+            CreateFileFromChunksRequestDto fileReq = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [hash],
                 Name = name,
@@ -303,7 +303,7 @@ namespace Cotton.Server.IntegrationTests
         {
             byte[] content = Encoding.UTF8.GetBytes(body);
             string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var form = new MultipartFormDataContent
+            using MultipartFormDataContent form = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -323,7 +323,7 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<string> LoginAsync()
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new LoginRequestDto()
                 {

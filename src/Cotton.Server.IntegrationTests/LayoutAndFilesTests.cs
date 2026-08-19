@@ -43,7 +43,7 @@ namespace Cotton.Server.IntegrationTests
             });
 
             // Build connection overrides
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = "localhost",
                 Port = 5432,
@@ -51,7 +51,7 @@ namespace Cotton.Server.IntegrationTests
                 Username = "postgres",
                 Password = "postgres"
             };
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -83,7 +83,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Resolve_Root_Layout_Returns_RootNode()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             NodeDto? node = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
             Assert.That(node, Is.Not.Null);
@@ -97,14 +97,14 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Create_Node_And_10_Files()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
             Assert.That(root, Is.Not.Null);
 
             // Create a new child node under root
-            var nodeName = "test";
-            var createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = nodeName };
+            string nodeName = "test";
+            CreateNodeRequestDto createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = nodeName };
             HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
             createNodeRes.EnsureSuccessStatusCode();
             NodeDto? child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
@@ -114,10 +114,10 @@ namespace Cotton.Server.IntegrationTests
             // Upload 10 unique chunks and create files from them
             for (int i = 1; i <= 10; i++)
             {
-                var content = Encoding.UTF8.GetBytes($"hello {i}");
-                var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+                byte[] content = Encoding.UTF8.GetBytes($"hello {i}");
+                string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
                 // Upload chunk
-                using var form = new MultipartFormDataContent
+                using MultipartFormDataContent form = new MultipartFormDataContent
                 {
                     {
                         new ByteArrayContent(content)
@@ -134,8 +134,8 @@ namespace Cotton.Server.IntegrationTests
                 TestContext.Progress.WriteLine($"Uploaded chunk {i}: {chunkHashLower[..16]}...");
 
                 // Create file (server validates and maps hex → byte[] itself)
-                var fileName = $"file{i}.txt";
-                var fileReq = new CreateFileFromChunksRequestDto
+                string fileName = $"file{i}.txt";
+                CreateFileFromChunksRequestDto fileReq = new CreateFileFromChunksRequestDto
                 {
                     ChunkHashes = [chunkHashLower],
                     Name = fileName,
@@ -151,7 +151,7 @@ namespace Cotton.Server.IntegrationTests
             NodeContentDto? list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{child!.Id}/children");
             Assert.That(list, Is.Not.Null);
             Assert.That(list!.Files.Count, Is.EqualTo(10));
-            var names = list.Files
+            string[] names = list.Files
                 .OrderBy(x => x.CreatedAt)
                 .Select(f => f.Name)
                 .ToArray();
@@ -227,7 +227,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Shared_Children_Rejects_Tampered_Ancestor_Path_WithStrictIntegrity()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -256,7 +256,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Shared_Archive_Download_Link_Allows_Current_Shared_Folder_Only()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -286,7 +286,7 @@ namespace Cotton.Server.IntegrationTests
             download.EnsureSuccessStatusCode();
             byte[] bytes = await download.Content.ReadAsByteArrayAsync();
 
-            using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+            using ZipArchive zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
             AssertZipEntry(zip, "shared-root/root.txt", "root body");
             AssertZipEntry(zip, "shared-root/nested/deep.txt", "deep body");
 
@@ -299,7 +299,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Shared_Archive_Download_Link_Enforces_Public_Entry_Limit()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -344,7 +344,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Shared_Folder_Page_Contains_Social_Preview_Meta_Tags()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             HttpResponseMessage publicBaseUrlRes = await _client.PatchAsJsonAsync(
@@ -355,7 +355,7 @@ namespace Cotton.Server.IntegrationTests
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
             Assert.That(root, Is.Not.Null);
 
-            var createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = "shared-folder" };
+            CreateNodeRequestDto createNodeReq = new CreateNodeRequestDto { ParentId = root!.Id, Name = "shared-folder" };
             HttpResponseMessage createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
             createNodeRes.EnsureSuccessStatusCode();
 
@@ -364,7 +364,7 @@ namespace Cotton.Server.IntegrationTests
 
             HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{child!.Id}/share-link");
             shareLinkRes.EnsureSuccessStatusCode();
-            var shareLink = await shareLinkRes.Content.ReadAsStringAsync();
+            string shareLink = await shareLinkRes.Content.ReadAsStringAsync();
             Assert.That(shareLink, Is.Not.Null.And.Not.Empty);
 
             _client.DefaultRequestHeaders.Authorization = null;
@@ -374,7 +374,7 @@ namespace Cotton.Server.IntegrationTests
 
             Assert.That(sharedPageRes.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
 
-            var html = await sharedPageRes.Content.ReadAsStringAsync();
+            string html = await sharedPageRes.Content.ReadAsStringAsync();
             Assert.That(html, Does.Not.Contain("\\\""));
             Assert.That(html, Does.Contain("<html lang=\"en\">"));
             Assert.That(html, Does.Contain("<meta charset=\"utf-8\">"));
@@ -402,7 +402,7 @@ namespace Cotton.Server.IntegrationTests
         {
             byte[] content = Encoding.UTF8.GetBytes(body);
             string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var form = new MultipartFormDataContent
+            using MultipartFormDataContent form = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -418,7 +418,7 @@ namespace Cotton.Server.IntegrationTests
             HttpResponseMessage uploadResponse = await _client!.PostAsync("/api/v1/chunks", form);
             uploadResponse.EnsureSuccessStatusCode();
 
-            var fileReq = new CreateFileFromChunksRequestDto
+            CreateFileFromChunksRequestDto fileReq = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [hash],
                 Name = name,
@@ -437,13 +437,13 @@ namespace Cotton.Server.IntegrationTests
         {
             ZipArchiveEntry? entry = zip.GetEntry(path);
             Assert.That(entry, Is.Not.Null, $"Archive entry '{path}' was not found.");
-            using var reader = new StreamReader(entry!.Open(), Encoding.UTF8);
+            using StreamReader reader = new StreamReader(entry!.Open(), Encoding.UTF8);
             Assert.That(reader.ReadToEnd(), Is.EqualTo(expectedText));
         }
 
         private async Task<string> LoginAsync()
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new LoginRequestDto()
                 {
@@ -463,7 +463,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task GetChildren_NullMetadataInDb_IsSerializedAsEmptyObject()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
@@ -476,9 +476,9 @@ namespace Cotton.Server.IntegrationTests
             NodeDto? folder = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
             Assert.That(folder, Is.Not.Null);
 
-            var content = Encoding.UTF8.GetBytes("payload");
-            var hash = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var form = new MultipartFormDataContent
+            byte[] content = Encoding.UTF8.GetBytes("payload");
+            string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
+            using MultipartFormDataContent form = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -493,7 +493,7 @@ namespace Cotton.Server.IntegrationTests
             HttpResponseMessage uploadRes = await _client.PostAsync("/api/v1/chunks", form);
             uploadRes.EnsureSuccessStatusCode();
 
-            var fileReq = new CreateFileFromChunksRequestDto
+            CreateFileFromChunksRequestDto fileReq = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [hash],
                 Name = "legacy.txt",
@@ -513,7 +513,7 @@ namespace Cotton.Server.IntegrationTests
 
             HttpResponseMessage listRes = await _client.GetAsync($"/api/v1/layouts/nodes/{folder.Id}/children");
             listRes.EnsureSuccessStatusCode();
-            var rawJson = await listRes.Content.ReadAsStringAsync();
+            string rawJson = await listRes.Content.ReadAsStringAsync();
             Assert.That(rawJson, Does.Not.Contain("\"metadata\":null"));
 
             NodeContentDto? list = JsonSerializer.Deserialize<NodeContentDto>(
@@ -529,13 +529,13 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Cannot_Create_Duplicate_Node_Name_Within_Same_Parent()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
             Assert.That(root, Is.Not.Null);
 
-            var name = "dup";
-            var req = new CreateNodeRequestDto { ParentId = root!.Id, Name = name };
+            string name = "dup";
+            CreateNodeRequestDto req = new CreateNodeRequestDto { ParentId = root!.Id, Name = name };
             // First create should succeed
             HttpResponseMessage r1 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
             r1.EnsureSuccessStatusCode();
@@ -545,7 +545,7 @@ namespace Cotton.Server.IntegrationTests
             TestContext.Progress.WriteLine($"Duplicate create returned status: {(int)r2.StatusCode} {r2.StatusCode}");
 
             // Verify DB has only one such node
-            var duplicates = await DbContext.Nodes
+            int duplicates = await DbContext.Nodes
                 .AsNoTracking()
                 .Where(n => n.ParentId == root.Id && n.Name == name)
                 .CountAsync();

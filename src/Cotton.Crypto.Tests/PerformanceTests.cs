@@ -81,9 +81,9 @@ namespace Cotton.Crypto.Tests
                     List<double> throughputs = [];
                     for (int i = 0; i < Iterations; i++)
                     {
-                        var cipher = new AesGcmStreamCipher(masterKey, keyId: 1, threads: threads);
-                        using var inputStream = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
-                        using var encryptedStream = new DevNullStream();
+                        AesGcmStreamCipher cipher = new AesGcmStreamCipher(masterKey, keyId: 1, threads: threads);
+                        using MemoryStream inputStream = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
+                        using DevNullStream encryptedStream = new DevNullStream();
                         long t0 = Stopwatch.GetTimestamp();
                         await cipher.EncryptAsync(inputStream, encryptedStream, chunkSize: chunkSize);
                         long t1 = Stopwatch.GetTimestamp();
@@ -113,9 +113,9 @@ namespace Cotton.Crypto.Tests
             // Prepare one ciphertext for all decrypt sweeps
             byte[] encryptedPayload;
             {
-                var cipher = new AesGcmStreamCipher(masterKey, keyId: 1);
-                using var input = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
-                using var encrypted = new MemoryStream(capacity: totalBytes + 4096);
+                AesGcmStreamCipher cipher = new AesGcmStreamCipher(masterKey, keyId: 1);
+                using MemoryStream input = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
+                using MemoryStream encrypted = new MemoryStream(capacity: totalBytes + 4096);
                 await cipher.EncryptAsync(input, encrypted);
                 encryptedPayload = encrypted.ToArray();
             }
@@ -136,9 +136,9 @@ namespace Cotton.Crypto.Tests
                     List<double> throughputs = [];
                     for (int i = 0; i < Iterations; i++)
                     {
-                        var cipher = new AesGcmStreamCipher(masterKey, keyId: 1, threads: threads);
-                        using var encryptedStream = new MemoryStream(encryptedPayload, writable: false);
-                        var decryptedStream = new DevNullStream();
+                        AesGcmStreamCipher cipher = new AesGcmStreamCipher(masterKey, keyId: 1, threads: threads);
+                        using MemoryStream encryptedStream = new MemoryStream(encryptedPayload, writable: false);
+                        DevNullStream decryptedStream = new DevNullStream();
                         long t0 = Stopwatch.GetTimestamp();
                         await cipher.DecryptAsync(encryptedStream, decryptedStream);
                         long t1 = Stopwatch.GetTimestamp();

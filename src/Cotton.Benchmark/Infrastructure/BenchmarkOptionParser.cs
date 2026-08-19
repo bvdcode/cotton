@@ -17,7 +17,7 @@ namespace Cotton.Benchmark.Infrastructure
             string baselineDirectory = BenchmarkPathDefaults.BaselineDirectory;
             string resultsDirectory = BenchmarkPathDefaults.ResultsDirectory;
             int? compressionLevel = null;
-            var scenarioFilters = new List<string>();
+            List<string> scenarioFilters = new List<string>();
 
             for (int i = 0; i < args.Length; i++)
             {

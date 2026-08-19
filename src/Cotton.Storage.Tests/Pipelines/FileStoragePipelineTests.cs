@@ -33,12 +33,12 @@ namespace Cotton.Storage.Tests.Pipelines
 
             public Task<long> GetSizeAsync(string uid)
             {
-                return Task.FromResult(_storage.TryGetValue(uid, out var data) ? data.Length : 0L);
+                return Task.FromResult(_storage.TryGetValue(uid, out byte[]? data) ? data.Length : 0L);
             }
 
             public Task<Stream> ReadAsync(string uid)
             {
-                if (!_storage.TryGetValue(uid, out var data))
+                if (!_storage.TryGetValue(uid, out byte[]? data))
                 {
                     throw new FileNotFoundException($"UID not found: {uid}");
                 }
@@ -49,7 +49,7 @@ namespace Cotton.Storage.Tests.Pipelines
                 string uid,
                 Stream stream)
             {
-                var ms = new MemoryStream();
+                MemoryStream ms = new MemoryStream();
                 stream.CopyTo(ms);
                 byte[] stored = ms.ToArray();
                 _storage[uid] = stored;
@@ -58,7 +58,7 @@ namespace Cotton.Storage.Tests.Pipelines
 
             public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
             {
-                foreach (var key in _storage.Keys)
+                foreach (string key in _storage.Keys)
                 {
                     yield return key;
                 }
@@ -77,9 +77,9 @@ namespace Cotton.Storage.Tests.Pipelines
 
             public async Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
             {
-                var ms = new MemoryStream();
+                MemoryStream ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
-                var data = ms.ToArray();
+                byte[] data = ms.ToArray();
 
                 // Remove marker from end
                 if (data.Length > 0 && data[^1] == marker)
@@ -92,7 +92,7 @@ namespace Cotton.Storage.Tests.Pipelines
 
             public async Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
             {
-                var ms = new MemoryStream();
+                MemoryStream ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
                 _ = ms.ToArray();
 
@@ -124,23 +124,23 @@ namespace Cotton.Storage.Tests.Pipelines
         public async Task Pipeline_NoProcessors_ReadReturnsBackendData()
         {
             // Arrange
-            var backend = new FakeStorageBackend();
-            var provider = new FakeBackendProvider(backend);
-            var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(
+            FakeStorageBackend backend = new FakeStorageBackend();
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> logger = new Mock<ILogger<FileStoragePipeline>>();
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 logger.Object,
                 provider,
                 [],
                 new StorageWriteAdmissionGate(1));
 
-            var originalData = Encoding.UTF8.GetBytes("Test data");
+            byte[] originalData = Encoding.UTF8.GetBytes("Test data");
             await backend.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
             Stream stream = await pipeline.ReadAsync("test-uid");
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await stream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
         }
@@ -149,16 +149,16 @@ namespace Cotton.Storage.Tests.Pipelines
         public async Task Pipeline_NoProcessors_WriteStoresInBackend()
         {
             // Arrange
-            var backend = new FakeStorageBackend();
-            var provider = new FakeBackendProvider(backend);
-            var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(
+            FakeStorageBackend backend = new FakeStorageBackend();
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> logger = new Mock<ILogger<FileStoragePipeline>>();
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 logger.Object,
                 provider,
                 [],
                 new StorageWriteAdmissionGate(1));
 
-            var originalData = Encoding.UTF8.GetBytes("Test data");
+            byte[] originalData = Encoding.UTF8.GetBytes("Test data");
 
             // Act
             long storedSizeBytes = await pipeline.WriteAsync(
@@ -167,7 +167,7 @@ namespace Cotton.Storage.Tests.Pipelines
 
             // Assert
             Stream stream = await backend.ReadAsync("test-uid");
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await stream.CopyToAsync(result);
             using (Assert.EnterMultipleScope())
             {
@@ -180,18 +180,18 @@ namespace Cotton.Storage.Tests.Pipelines
         public async Task Pipeline_ProcessorsOrdered_ReadAppliesInCorrectOrder()
         {
             // Arrange
-            var backend = new FakeStorageBackend();
-            var provider = new FakeBackendProvider(backend);
-            var logger = new Mock<ILogger<FileStoragePipeline>>();
+            FakeStorageBackend backend = new FakeStorageBackend();
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> logger = new Mock<ILogger<FileStoragePipeline>>();
 
-            var processors = new IStorageProcessor[]
+            IStorageProcessor[] processors = new IStorageProcessor[]
             {
                 new MarkerProcessor(100, 0xAA),
                 new MarkerProcessor(200, 0xBB),
                 new MarkerProcessor(50, 0xCC)   // Highest priority (lowest number)
             };
 
-            var pipeline = new FileStoragePipeline(
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 logger.Object,
                 provider,
                 processors,
@@ -199,14 +199,14 @@ namespace Cotton.Storage.Tests.Pipelines
 
             // Arrange markers so that each processor actually sees its marker at the end
             // Order: CC (50), AA (100), BB (200) on read
-            var backendData = new byte[] { 0x01, 0xBB, 0xAA, 0xCC };
+            byte[] backendData = new byte[] { 0x01, 0xBB, 0xAA, 0xCC };
             await backend.WriteAsync("test-uid", new MemoryStream(backendData));
 
             // Act
             Stream stream = await pipeline.ReadAsync("test-uid");
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await stream.CopyToAsync(result);
             // Processors remove markers in order: CC (50), AA (100), BB (200)
             Assert.That(result.ToArray(), Is.EqualTo(new byte[] { 0x01 }));
@@ -216,31 +216,31 @@ namespace Cotton.Storage.Tests.Pipelines
         public async Task Pipeline_ProcessorsOrdered_WriteAppliesInReverseOrder()
         {
             // Arrange
-            var backend = new FakeStorageBackend();
-            var provider = new FakeBackendProvider(backend);
-            var logger = new Mock<ILogger<FileStoragePipeline>>();
+            FakeStorageBackend backend = new FakeStorageBackend();
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> logger = new Mock<ILogger<FileStoragePipeline>>();
 
-            var processors = new IStorageProcessor[]
+            IStorageProcessor[] processors = new IStorageProcessor[]
             {
                 new MarkerProcessor(100, 0xAA),
                 new MarkerProcessor(200, 0xBB),
                 new MarkerProcessor(50, 0xCC)
             };
 
-            var pipeline = new FileStoragePipeline(
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 logger.Object,
                 provider,
                 processors,
                 new StorageWriteAdmissionGate(1));
 
-            var originalData = new byte[] { 0x01 };
+            byte[] originalData = new byte[] { 0x01 };
 
             // Act
             await pipeline.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Assert
             Stream backendStream = await backend.ReadAsync("test-uid");
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await backendStream.CopyToAsync(result);
             // Processors add markers in reverse order: BB (200), AA (100), CC (50)
             Assert.That(result.ToArray(), Is.EqualTo(new byte[] { 0x01, 0xBB, 0xAA, 0xCC }));
@@ -250,11 +250,11 @@ namespace Cotton.Storage.Tests.Pipelines
         public async Task Pipeline_DuplicateWrite_SkipsProcessors()
         {
             // Arrange
-            var backend = new FakeStorageBackend();
-            var provider = new FakeBackendProvider(backend);
-            var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var processor = new CountingProcessor();
-            var pipeline = new FileStoragePipeline(
+            FakeStorageBackend backend = new FakeStorageBackend();
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> logger = new Mock<ILogger<FileStoragePipeline>>();
+            CountingProcessor processor = new CountingProcessor();
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 logger.Object,
                 provider,
                 [processor],
@@ -271,7 +271,7 @@ namespace Cotton.Storage.Tests.Pipelines
 
             // Assert
             Stream stream = await backend.ReadAsync("test-uid");
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await stream.CopyToAsync(result);
             using (Assert.EnterMultipleScope())
             {
@@ -285,22 +285,22 @@ namespace Cotton.Storage.Tests.Pipelines
         public void Pipeline_ProcessorReturnsStreamNull_ThrowsInvalidOperationException()
         {
             // Arrange
-            var backend = new FakeStorageBackend();
-            var provider = new FakeBackendProvider(backend);
-            var logger = new Mock<ILogger<FileStoragePipeline>>();
+            FakeStorageBackend backend = new FakeStorageBackend();
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> logger = new Mock<ILogger<FileStoragePipeline>>();
 
-            var mockProcessor = new Mock<IStorageProcessor>();
+            Mock<IStorageProcessor> mockProcessor = new Mock<IStorageProcessor>();
             mockProcessor.Setup(p => p.Priority).Returns(100);
             mockProcessor.Setup(p => p.ReadAsync(It.IsAny<string>(), It.IsAny<Stream>()))
                 .ReturnsAsync(Stream.Null);
 
-            var pipeline = new FileStoragePipeline(
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 logger.Object,
                 provider,
                 [mockProcessor.Object],
                 new StorageWriteAdmissionGate(1));
 
-            var data = Encoding.UTF8.GetBytes("Test");
+            byte[] data = Encoding.UTF8.GetBytes("Test");
             backend.WriteAsync("test-uid", new MemoryStream(data)).Wait();
 
             // Act & Assert
@@ -313,22 +313,22 @@ namespace Cotton.Storage.Tests.Pipelines
         public void Pipeline_ProcessorReturnsStreamNullOnWrite_ThrowsInvalidOperationException()
         {
             // Arrange
-            var backend = new FakeStorageBackend();
-            var provider = new FakeBackendProvider(backend);
-            var logger = new Mock<ILogger<FileStoragePipeline>>();
+            FakeStorageBackend backend = new FakeStorageBackend();
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> logger = new Mock<ILogger<FileStoragePipeline>>();
 
-            var mockProcessor = new Mock<IStorageProcessor>();
+            Mock<IStorageProcessor> mockProcessor = new Mock<IStorageProcessor>();
             mockProcessor.Setup(p => p.Priority).Returns(100);
             mockProcessor.Setup(p => p.WriteAsync(It.IsAny<string>(), It.IsAny<Stream>()))
                 .ReturnsAsync(Stream.Null);
 
-            var pipeline = new FileStoragePipeline(
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 logger.Object,
                 provider,
                 [mockProcessor.Object],
                 new StorageWriteAdmissionGate(1));
 
-            var data = Encoding.UTF8.GetBytes("Test");
+            byte[] data = Encoding.UTF8.GetBytes("Test");
 
             // Act & Assert
             InvalidOperationException? ex = Assert.ThrowsAsync<InvalidOperationException>(
@@ -340,30 +340,30 @@ namespace Cotton.Storage.Tests.Pipelines
         public async Task Pipeline_RoundTrip_WithProcessors_ReturnsOriginalData()
         {
             // Arrange
-            var backend = new FakeStorageBackend();
-            var provider = new FakeBackendProvider(backend);
-            var logger = new Mock<ILogger<FileStoragePipeline>>();
+            FakeStorageBackend backend = new FakeStorageBackend();
+            FakeBackendProvider provider = new FakeBackendProvider(backend);
+            Mock<ILogger<FileStoragePipeline>> logger = new Mock<ILogger<FileStoragePipeline>>();
 
-            var processors = new IStorageProcessor[]
+            IStorageProcessor[] processors = new IStorageProcessor[]
             {
                 new MarkerProcessor(100, 0xAA),
                 new MarkerProcessor(200, 0xBB)
             };
 
-            var pipeline = new FileStoragePipeline(
+            FileStoragePipeline pipeline = new FileStoragePipeline(
                 logger.Object,
                 provider,
                 processors,
                 new StorageWriteAdmissionGate(1));
 
-            var originalData = Encoding.UTF8.GetBytes("Hello, World!");
+            byte[] originalData = Encoding.UTF8.GetBytes("Hello, World!");
 
             // Act
             await pipeline.WriteAsync("test-uid", new MemoryStream(originalData));
             Stream readStream = await pipeline.ReadAsync("test-uid");
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
         }

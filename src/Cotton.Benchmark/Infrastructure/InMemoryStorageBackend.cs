@@ -44,7 +44,7 @@ namespace Cotton.Benchmark.Infrastructure
             string uid,
             Stream stream)
         {
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             stream.CopyTo(ms);
             byte[] stored = ms.ToArray();
             _storage[uid] = stored;

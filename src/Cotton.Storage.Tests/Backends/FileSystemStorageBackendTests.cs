@@ -20,7 +20,7 @@ namespace Cotton.Storage.Tests.Backends
         [SetUp]
         public void Setup()
         {
-            var logger = new Mock<ILogger<FileSystemStorageBackend>>();
+            Mock<ILogger<FileSystemStorageBackend>> logger = new Mock<ILogger<FileSystemStorageBackend>>();
             _backend = new FileSystemStorageBackend(logger.Object);
 
             _testBasePath = Path.Combine(AppContext.BaseDirectory, "files");
@@ -28,7 +28,7 @@ namespace Cotton.Storage.Tests.Backends
             {
                 try
                 {
-                    foreach (var file in Directory.GetFiles(_testBasePath, "*.*", SearchOption.AllDirectories))
+                    foreach (string file in Directory.GetFiles(_testBasePath, "*.*", SearchOption.AllDirectories))
                     {
                         File.SetAttributes(file, FileAttributes.Normal);
                     }
@@ -48,7 +48,7 @@ namespace Cotton.Storage.Tests.Backends
             {
                 try
                 {
-                    foreach (var file in Directory.GetFiles(_testBasePath, "*.*", SearchOption.AllDirectories))
+                    foreach (string file in Directory.GetFiles(_testBasePath, "*.*", SearchOption.AllDirectories))
                     {
                         File.SetAttributes(file, FileAttributes.Normal);
                     }
@@ -81,7 +81,7 @@ namespace Cotton.Storage.Tests.Backends
         {
             // Arrange
             string uid = NewUid();
-            var originalData = Encoding.UTF8.GetBytes("Test content");
+            byte[] originalData = Encoding.UTF8.GetBytes("Test content");
 
             // Act
             long storedSizeBytes = await _backend.WriteAsync(
@@ -90,7 +90,7 @@ namespace Cotton.Storage.Tests.Backends
             await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
-            using var result = new MemoryStream();
+            using MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             using (Assert.EnterMultipleScope())
             {
@@ -104,7 +104,7 @@ namespace Cotton.Storage.Tests.Backends
         {
             // Arrange
             string uid = NewUid();
-            var data = Encoding.UTF8.GetBytes("Test content");
+            byte[] data = Encoding.UTF8.GetBytes("Test content");
             await _backend.WriteAsync(uid, new MemoryStream(data));
 
             // Act
@@ -119,7 +119,7 @@ namespace Cotton.Storage.Tests.Backends
         {
             // Arrange
             string uid = NewUid();
-            var data = Encoding.UTF8.GetBytes("Test content");
+            byte[] data = Encoding.UTF8.GetBytes("Test content");
             await _backend.WriteAsync(uid, new MemoryStream(data));
             await _backend.DeleteAsync(uid);
 
@@ -145,7 +145,7 @@ namespace Cotton.Storage.Tests.Backends
         {
             // Arrange
             string uid = "abcdef123456"; // keep deterministic for path assertion
-            var data = Encoding.UTF8.GetBytes("Test content");
+            byte[] data = Encoding.UTF8.GetBytes("Test content");
 
             // Act
             await _backend.WriteAsync(uid, new MemoryStream(data));
@@ -160,7 +160,7 @@ namespace Cotton.Storage.Tests.Backends
         {
             // Arrange
             string uid = NewUid();
-            var data = Encoding.UTF8.GetBytes("Test content");
+            byte[] data = Encoding.UTF8.GetBytes("Test content");
 
             // Act
             await _backend.WriteAsync(uid, new MemoryStream(data));
@@ -176,8 +176,8 @@ namespace Cotton.Storage.Tests.Backends
         {
             // Arrange
             string uid = NewUid();
-            var data1 = Encoding.UTF8.GetBytes("First");
-            var data2 = Encoding.UTF8.GetBytes("Second");
+            byte[] data1 = Encoding.UTF8.GetBytes("First");
+            byte[] data2 = Encoding.UTF8.GetBytes("Second");
 
             long firstSizeBytes = await _backend.WriteAsync(uid, new MemoryStream(data1));
             long duplicateSizeBytes = await _backend.WriteAsync(uid, new MemoryStream(data2));
@@ -198,7 +198,7 @@ namespace Cotton.Storage.Tests.Backends
         {
             // Arrange
             string uid = NewUid();
-            var data = new byte[10 * 1024 * 1024]; // 10 MB
+            byte[] data = new byte[10 * 1024 * 1024]; // 10 MB
             RandomNumberGenerator.Fill(data);
 
             // Act
@@ -206,7 +206,7 @@ namespace Cotton.Storage.Tests.Backends
             await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(data));
         }
@@ -226,7 +226,7 @@ namespace Cotton.Storage.Tests.Backends
         {
             // Arrange
             string uid = "ab/cd";
-            var data = Encoding.UTF8.GetBytes("Test");
+            byte[] data = Encoding.UTF8.GetBytes("Test");
 
             // Act & Assert
             Assert.ThrowsAsync<ArgumentException>(() => _backend.WriteAsync(uid, new MemoryStream(data)));
@@ -236,21 +236,21 @@ namespace Cotton.Storage.Tests.Backends
         public async Task FileSystemBackend_MultipleWrites_DifferentUids_Success()
         {
             // Arrange
-            var uids = new[] { NewUid(), NewUid(), NewUid() };
-            var dataMap = new Dictionary<string, byte[]>();
+            string[] uids = new[] { NewUid(), NewUid(), NewUid() };
+            Dictionary<string, byte[]> dataMap = new Dictionary<string, byte[]>();
 
-            foreach (var uid in uids)
+            foreach (string? uid in uids)
             {
-                var data = Encoding.UTF8.GetBytes($"Content for {uid}");
+                byte[] data = Encoding.UTF8.GetBytes($"Content for {uid}");
                 dataMap[uid] = data;
                 await _backend.WriteAsync(uid, new MemoryStream(data));
             }
 
             // Act & Assert
-            foreach (var uid in uids)
+            foreach (string? uid in uids)
             {
                 await using Stream readStream = await _backend.ReadAsync(uid);
-                var result = new MemoryStream();
+                MemoryStream result = new MemoryStream();
                 await readStream.CopyToAsync(result);
                 Assert.That(result.ToArray(), Is.EqualTo(dataMap[uid]));
             }
@@ -261,15 +261,15 @@ namespace Cotton.Storage.Tests.Backends
         {
             // Arrange
             string uid = NewUid();
-            var data = Encoding.UTF8.GetBytes("0123456789");
-            var stream = new MemoryStream(data) { Position = 5 };
+            byte[] data = Encoding.UTF8.GetBytes("0123456789");
+            MemoryStream stream = new MemoryStream(data) { Position = 5 };
 
             // Act
             await _backend.WriteAsync(uid, stream);
             await using Stream readStream = await _backend.ReadAsync(uid);
 
             // Assert
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(data));
         }
@@ -278,20 +278,20 @@ namespace Cotton.Storage.Tests.Backends
         public async Task FileSystemBackend_ParallelWrites_DifferentUids_AllSucceed()
         {
             // Arrange
-            var tasks = new List<Task>();
-            var uids = Enumerable.Range(0, 10).Select(_ => NewUid()).ToArray();
+            List<Task> tasks = new List<Task>();
+            string[] uids = Enumerable.Range(0, 10).Select(_ => NewUid()).ToArray();
 
             // Act
-            foreach (var uid in uids)
+            foreach (string? uid in uids)
             {
-                var data = Encoding.UTF8.GetBytes($"Content {uid}");
+                byte[] data = Encoding.UTF8.GetBytes($"Content {uid}");
                 tasks.Add(_backend.WriteAsync(uid, new MemoryStream(data)));
             }
 
             // Assert
             Assert.DoesNotThrowAsync(() => Task.WhenAll(tasks));
 
-            foreach (var uid in uids)
+            foreach (string? uid in uids)
             {
                 Assert.DoesNotThrowAsync(async () => await _backend.ReadAsync(uid));
             }
@@ -302,7 +302,7 @@ namespace Cotton.Storage.Tests.Backends
         {
             // Arrange
             string uid = NewUid();
-            var data = new byte[2 * 1024 * 1024];
+            byte[] data = new byte[2 * 1024 * 1024];
             RandomNumberGenerator.Fill(data);
             MemoryStream[] streams = Enumerable.Range(0, 16)
                 .Select(_ => new MemoryStream(data))
@@ -316,7 +316,7 @@ namespace Cotton.Storage.Tests.Backends
             Assert.DoesNotThrowAsync(() => Task.WhenAll(tasks));
 
             await using Stream readStream = await _backend.ReadAsync(uid);
-            var result = new MemoryStream();
+            MemoryStream result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.Multiple(() =>
             {
