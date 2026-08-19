@@ -62,7 +62,7 @@ namespace Cotton.Sdk
             _ownedHttpClient = ownsHttpClient ? httpClient : null;
             CottonSdkOptions resolvedOptions = options ?? new CottonSdkOptions();
             ILoggerFactory resolvedLoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
-            var transport = new CottonHttpTransport(
+            CottonHttpTransport transport = new(
                 httpClient,
                 tokenStore,
                 resolvedOptions,

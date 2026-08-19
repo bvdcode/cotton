@@ -104,7 +104,7 @@ namespace Cotton.Validators
             }
 
             // 9) Windows reserved: check base name without extension and trailing dots/spaces
-            var baseName = GetBaseNameForWindows(name);
+            string baseName = GetBaseNameForWindows(name);
             if (IsReservedBaseName(baseName))
             {
                 errorMessage = $"Name base part '{baseName}' is reserved on Windows.";
@@ -127,7 +127,7 @@ namespace Cotton.Validators
             {
                 return false;
             }
-            var last = s[^1];
+            char last = s[^1];
             return last == '.' || char.IsWhiteSpace(last);
         }
 
@@ -163,9 +163,9 @@ namespace Cotton.Validators
         private static string GetBaseNameForWindows(string name)
         {
             // Windows reserves the base name up to the first '.', without trailing spaces/dots
-            var trimmed = name.TrimEnd(' ', '.');
+            string trimmed = name.TrimEnd(' ', '.');
             int dot = trimmed.IndexOf('.');
-            var basePart = dot >= 0 ? trimmed[..dot] : trimmed;
+            string basePart = dot >= 0 ? trimmed[..dot] : trimmed;
             return basePart;
         }
 
@@ -175,7 +175,7 @@ namespace Cotton.Validators
             {
                 return false;
             }
-            var up = baseName.ToUpperInvariant();
+            string up = baseName.ToUpperInvariant();
             return ReservedBaseNamesCI.Contains(up);
         }
 
@@ -191,13 +191,13 @@ namespace Cotton.Validators
 
         public static string GetNameKey(string normalized)
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             TextElementEnumerator enumr = StringInfo.GetTextElementEnumerator(normalized);
             while (enumr.MoveNext())
             {
-                var element = enumr.GetTextElement();
-                var folded = element.Normalize(NormalizationForm.FormD);
-                var sbFolded = new StringBuilder();
+                string element = enumr.GetTextElement();
+                string folded = element.Normalize(NormalizationForm.FormD);
+                StringBuilder sbFolded = new();
                 foreach (Rune ch in folded.EnumerateRunes())
                 {
                     UnicodeCategory category = CharUnicodeInfo.GetUnicodeCategory(ch.Value);
@@ -209,7 +209,7 @@ namespace Cotton.Validators
                     }
                     sbFolded.Append(ch.ToString().ToLowerInvariant());
                 }
-                var final = sbFolded.ToString().Normalize(NormalizationForm.FormC);
+                string final = sbFolded.ToString().Normalize(NormalizationForm.FormC);
                 sb.Append(final);
             }
             return sb.ToString();

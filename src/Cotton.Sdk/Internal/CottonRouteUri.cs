@@ -28,7 +28,7 @@ namespace Cotton.Sdk.Internal
                 ? "/" + relativePath
                 : basePath + "/" + relativePath;
 
-            var builder = new UriBuilder(baseAddress)
+            UriBuilder builder = new(baseAddress)
             {
                 Path = combinedPath,
                 Query = query,

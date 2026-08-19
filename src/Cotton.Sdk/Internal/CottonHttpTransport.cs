@@ -377,7 +377,7 @@ namespace Cotton.Sdk.Internal
             IReadOnlyDictionary<string, string>? headers,
             CancellationToken cancellationToken)
         {
-            var request = new HttpRequestMessage(method, CottonRouteUri.Create(_options.BaseAddress, path));
+            HttpRequestMessage request = new(method, CottonRouteUri.Create(_options.BaseAddress, path));
             ApplyDefaultHeaders(request);
             if (body is not null)
             {
