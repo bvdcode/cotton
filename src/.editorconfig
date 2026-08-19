@@ -1,5 +1,22 @@
 ﻿[*.cs]
 
+# EasyExtensions analyzers
+dotnet_code_quality.EEX0001.max_lines = 400
+dotnet_diagnostic.EEX0001.severity = error
+dotnet_diagnostic.EEX0002.severity = error
+dotnet_diagnostic.EEX0003.severity = error
+dotnet_diagnostic.EEX0004.severity = error
+dotnet_diagnostic.EEX0005.severity = error
+dotnet_diagnostic.EEX0006.severity = error
+dotnet_diagnostic.EEX0007.severity = error
+dotnet_diagnostic.EEX0008.severity = error
+dotnet_diagnostic.EEX0009.severity = error
+dotnet_diagnostic.EEX0010.severity = error
+dotnet_diagnostic.EEX0011.severity = error
+dotnet_diagnostic.EEX0012.severity = error
+dotnet_diagnostic.EEX0013.severity = error
+dotnet_diagnostic.EEX0014.severity = error
+
 # CA1873: Avoid potentially expensive logging
 dotnet_diagnostic.CA1873.severity = none
 
