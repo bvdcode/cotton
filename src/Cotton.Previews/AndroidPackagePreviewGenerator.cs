@@ -10,10 +10,7 @@ namespace Cotton.Previews
 {
     public class AndroidPackagePreviewGenerator : IPreviewGenerator
     {
-        private const int MaxEntriesToInspect = 20_000;
-        private const long MaxIconBytes = 12L * 1024 * 1024;
         private const long MaxManifestBytes = 8L * 1024 * 1024;
-        private const long MaxNestedPackageBytes = 192L * 1024 * 1024;
         private const long MaxNonSeekablePackageBytes = 192L * 1024 * 1024;
         private const long MaxResourceTableBytes = 32L * 1024 * 1024;
         private const int MaxNestedDepth = 1;
@@ -48,7 +45,9 @@ namespace Cotton.Previews
             }
 
             MemoryStream copy = new MemoryStream();
-            await CopyBoundedAsync(stream, copy, MaxNonSeekablePackageBytes).ConfigureAwait(false);
+            await AndroidPackageArchiveReader
+                .CopyBoundedAsync(stream, copy, MaxNonSeekablePackageBytes)
+                .ConfigureAwait(false);
             copy.Position = 0;
             return copy;
         }
@@ -96,9 +95,10 @@ namespace Cotton.Previews
             int depth,
             int previewSize)
         {
-            foreach (ZipArchiveEntry nestedPackageEntry in SelectNestedPackageEntries(archive))
+            foreach (ZipArchiveEntry nestedPackageEntry in AndroidPackageIconSelector.SelectNestedPackageEntries(archive))
             {
-                byte[]? nestedBytes = await TryReadEntryBytesAsync(nestedPackageEntry, MaxNestedPackageBytes)
+                byte[]? nestedBytes = await AndroidPackageArchiveReader
+                    .TryReadEntryBytesAsync(nestedPackageEntry, AndroidPackageIconSelector.MaxNestedPackageBytes)
                     .ConfigureAwait(false);
                 if (nestedBytes is null)
                 {
@@ -127,7 +127,9 @@ namespace Cotton.Previews
                 return (false, null);
             }
 
-            byte[]? manifestBytes = await TryReadEntryBytesAsync(manifestEntry, MaxManifestBytes).ConfigureAwait(false);
+            byte[]? manifestBytes = await AndroidPackageArchiveReader
+                .TryReadEntryBytesAsync(manifestEntry, MaxManifestBytes)
+                .ConfigureAwait(false);
             if (manifestBytes is null
                 || !AndroidBinaryXmlApplicationIconReader.TryReadApplicationIconResourceId(
                     manifestBytes,
@@ -142,7 +144,8 @@ namespace Cotton.Previews
                 return (true, null);
             }
 
-            byte[]? resourceTableBytes = await TryReadEntryBytesAsync(resourceTableEntry, MaxResourceTableBytes)
+            byte[]? resourceTableBytes = await AndroidPackageArchiveReader
+                .TryReadEntryBytesAsync(resourceTableEntry, MaxResourceTableBytes)
                 .ConfigureAwait(false);
             if (resourceTableBytes is null)
             {
@@ -151,7 +154,8 @@ namespace Cotton.Previews
 
             IReadOnlyList<AndroidResourcePathCandidate> iconPaths =
                 AndroidResourceTableIconReader.ReadIconResourcePaths(resourceTableBytes, iconResourceId);
-            byte[]? iconBytes = await TryReadBestResourceImageBytesAsync(archive, iconPaths, previewSize)
+            byte[]? iconBytes = await AndroidPackageArchiveReader
+                .TryReadBestResourceImageBytesAsync(archive, iconPaths, previewSize)
                 .ConfigureAwait(false);
             if (iconBytes is not null)
             {
@@ -182,7 +186,9 @@ namespace Cotton.Previews
                     continue;
                 }
 
-                byte[]? xmlBytes = await TryReadEntryBytesAsync(xmlEntry, MaxManifestBytes).ConfigureAwait(false);
+                byte[]? xmlBytes = await AndroidPackageArchiveReader
+                    .TryReadEntryBytesAsync(xmlEntry, MaxManifestBytes)
+                    .ConfigureAwait(false);
                 if (xmlBytes is null
                     || !AndroidAdaptiveIconXmlReader.TryReadLayerResourceIds(
                         xmlBytes,
@@ -197,7 +203,8 @@ namespace Cotton.Previews
                     AndroidResourceTableIconReader.ReadIconResourcePaths(
                         resourceTableBytes,
                         foregroundResourceId.Value);
-                byte[]? foregroundBytes = await TryReadBestResourceImageBytesAsync(archive, foregroundPaths, previewSize)
+                byte[]? foregroundBytes = await AndroidPackageArchiveReader
+                    .TryReadBestResourceImageBytesAsync(archive, foregroundPaths, previewSize)
                     .ConfigureAwait(false);
                 if (foregroundBytes is null)
                 {
@@ -211,7 +218,8 @@ namespace Cotton.Previews
                         AndroidResourceTableIconReader.ReadIconResourcePaths(
                             resourceTableBytes,
                             backgroundResourceId.Value);
-                    backgroundBytes = await TryReadBestResourceImageBytesAsync(archive, backgroundPaths, previewSize)
+                    backgroundBytes = await AndroidPackageArchiveReader
+                        .TryReadBestResourceImageBytesAsync(archive, backgroundPaths, previewSize)
                         .ConfigureAwait(false);
                 }
 
@@ -220,49 +228,6 @@ namespace Cotton.Previews
             }
 
             return null;
-        }
-
-        private static async Task<byte[]?> TryReadBestResourceImageBytesAsync(
-            ZipArchive archive,
-            IReadOnlyList<AndroidResourcePathCandidate> iconPaths,
-            int previewSize)
-        {
-            IconBytesCandidate? bestIcon = null;
-            foreach (AndroidResourcePathCandidate iconPath in iconPaths)
-            {
-                ZipArchiveEntry? iconEntry = archive.GetEntry(iconPath.Path);
-                if (iconEntry is null)
-                {
-                    continue;
-                }
-
-                byte[]? iconBytes = await TryReadEntryBytesAsync(iconEntry, MaxIconBytes).ConfigureAwait(false);
-                if (iconBytes is null)
-                {
-                    continue;
-                }
-
-                (int Width, int Height)? dimensions = TryIdentifyImageDimensions(iconBytes);
-                if (dimensions is null)
-                {
-                    continue;
-                }
-
-                int score = iconPath.Score
-                    + ScoreImageDimensions(dimensions.Value.Width, dimensions.Value.Height)
-                    + ScorePreviewFit(dimensions.Value.Width, dimensions.Value.Height, previewSize);
-                if (score <= 0)
-                {
-                    continue;
-                }
-
-                if (bestIcon is null || score > bestIcon.Score)
-                {
-                    bestIcon = new IconBytesCandidate(iconBytes, score);
-                }
-            }
-
-            return bestIcon?.Bytes;
         }
 
         private static async Task<byte[]> RenderAdaptiveIconPngBytesAsync(
@@ -309,396 +274,9 @@ namespace Cotton.Previews
             ZipArchive archive,
             bool requireExplicitIconName)
         {
-            IconBytesCandidate? bestIcon = null;
-            foreach (IconEntryCandidate iconEntry in SelectIconEntries(archive, requireExplicitIconName))
-            {
-                byte[]? iconBytes = await TryReadEntryBytesAsync(iconEntry.Entry, MaxIconBytes).ConfigureAwait(false);
-                if (iconBytes is null)
-                {
-                    continue;
-                }
-
-                (int Width, int Height)? dimensions = TryIdentifyImageDimensions(iconBytes);
-                if (dimensions is null)
-                {
-                    continue;
-                }
-
-                int score = iconEntry.Score + ScoreImageDimensions(dimensions.Value.Width, dimensions.Value.Height);
-                if (score <= 0)
-                {
-                    continue;
-                }
-
-                if (bestIcon is null || score > bestIcon.Score)
-                {
-                    bestIcon = new IconBytesCandidate(iconBytes, score);
-                }
-            }
-
-            return bestIcon?.Bytes;
-        }
-
-        private static IEnumerable<IconEntryCandidate> SelectIconEntries(
-            ZipArchive archive,
-            bool requireExplicitIconName)
-        {
-            return archive.Entries
-                .Take(MaxEntriesToInspect)
-                .Select(entry => new { Entry = entry, Score = ScoreIconEntry(entry, requireExplicitIconName) })
-                .Where(candidate => candidate.Score > 0)
-                .OrderByDescending(candidate => candidate.Score)
-                .Select(candidate => new IconEntryCandidate(candidate.Entry, candidate.Score));
-        }
-
-        private static IEnumerable<ZipArchiveEntry> SelectNestedPackageEntries(ZipArchive archive)
-        {
-            return archive.Entries
-                .Take(MaxEntriesToInspect)
-                .Where(entry => entry.Length > 0 && entry.Length <= MaxNestedPackageBytes)
-                .Select(entry => new { Entry = entry, Score = ScoreNestedPackageEntry(entry.FullName) })
-                .Where(candidate => candidate.Score > 0)
-                .OrderByDescending(candidate => candidate.Score)
-                .Select(candidate => candidate.Entry);
-        }
-
-        private static int ScoreIconEntry(
-            ZipArchiveEntry entry,
-            bool requireExplicitIconName)
-        {
-            if (entry.Length <= 0 || entry.Length > MaxIconBytes)
-            {
-                return 0;
-            }
-
-            string path = NormalizeEntryPath(entry.FullName);
-            string extension = Path.GetExtension(path);
-            if (!IsSupportedIconPath(path, extension))
-            {
-                return 0;
-            }
-
-            string fileName = Path.GetFileNameWithoutExtension(path);
-            bool hasExplicitIconName = IsExplicitAppIconName(fileName);
-            if (requireExplicitIconName && !hasExplicitIconName)
-            {
-                return 0;
-            }
-
-            int? locationScore = ScoreIconLocation(path, hasExplicitIconName);
-            if (!locationScore.HasValue)
-            {
-                return 0;
-            }
-
-            int score = locationScore.Value;
-            score += ScoreIconName(fileName);
-            score += ScoreDensity(path);
-            score += ScoreIconExtension(extension);
-            score += (int)Math.Min(entry.Length / 1024, 512);
-            return score;
-        }
-
-        private static bool IsSupportedIconPath(string path, string extension)
-        {
-            if (path.EndsWith(".9.png", StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            bool isKnownRasterExtension = extension is ".png" or ".webp" or ".jpg" or ".jpeg";
-            bool isInResourceTree = IsInResourceTree(path);
-            return isKnownRasterExtension || (string.IsNullOrEmpty(extension) && isInResourceTree);
-        }
-
-        private static int? ScoreIconLocation(string path, bool hasExplicitIconName)
-        {
-            bool isInResourceTree = IsInResourceTree(path);
-            bool isInNamedResourceDirectory = IsInNamedResourceDirectory(path);
-            bool isRootManifestIcon = IsRootManifestIcon(path, hasExplicitIconName);
-            if (!isInNamedResourceDirectory && !isInResourceTree && !isRootManifestIcon)
-            {
-                return null;
-            }
-
-            int score = isRootManifestIcon ? 500 : 0;
-            score += ScoreResourceDirectory(isInNamedResourceDirectory, isInResourceTree);
-            score += ScoreResourceKind(path);
-            return score;
-        }
-
-        private static bool IsInResourceTree(string path) =>
-            path.StartsWith("res/", StringComparison.Ordinal)
-            || path.Contains("/res/", StringComparison.Ordinal);
-
-        private static bool IsInNamedResourceDirectory(string path) =>
-            path.StartsWith("res/mipmap", StringComparison.Ordinal)
-            || path.StartsWith("res/drawable", StringComparison.Ordinal)
-            || path.Contains("/res/mipmap", StringComparison.Ordinal)
-            || path.Contains("/res/drawable", StringComparison.Ordinal);
-
-        private static bool IsRootManifestIcon(string path, bool hasExplicitIconName) =>
-            !path.Contains('/', StringComparison.Ordinal) && hasExplicitIconName;
-
-        private static int ScoreResourceDirectory(bool isInNamedResourceDirectory, bool isInResourceTree)
-        {
-            if (isInNamedResourceDirectory)
-            {
-                return 1_000;
-            }
-
-            return isInResourceTree ? 2_000 : 0;
-        }
-
-        private static int ScoreResourceKind(string path)
-        {
-            if (path.Contains("/mipmap", StringComparison.Ordinal)
-                || path.StartsWith("res/mipmap", StringComparison.Ordinal))
-            {
-                return 8_000;
-            }
-
-            if (path.Contains("/drawable", StringComparison.Ordinal)
-                || path.StartsWith("res/drawable", StringComparison.Ordinal))
-            {
-                return 5_000;
-            }
-
-            return 0;
-        }
-
-        private static int ScoreIconExtension(string extension)
-        {
-            return extension switch
-            {
-                ".png" or ".webp" => 200,
-                "" => 100,
-                _ => 50,
-            };
-        }
-
-        private static int ScoreIconName(string fileName)
-        {
-            int score = 0;
-            if (fileName.Contains("ic_launcher", StringComparison.Ordinal))
-            {
-                score += 24_000;
-            }
-            else if (fileName.Contains("launcher", StringComparison.Ordinal))
-            {
-                score += 18_000;
-            }
-            else if (fileName is "icon" or "app_icon" || fileName.EndsWith("_icon", StringComparison.Ordinal))
-            {
-                score += 14_000;
-            }
-            else if (fileName.Contains("logo", StringComparison.Ordinal))
-            {
-                score += 7_000;
-            }
-
-            if (fileName.Contains("round", StringComparison.Ordinal))
-            {
-                score += 1_000;
-            }
-
-            if (fileName.Contains("foreground", StringComparison.Ordinal))
-            {
-                score += 600;
-            }
-
-            if (fileName.Contains("background", StringComparison.Ordinal))
-            {
-                score -= 2_500;
-            }
-
-            if (fileName.Contains("notification", StringComparison.Ordinal))
-            {
-                score -= 12_000;
-            }
-
-            if (fileName.Contains("splash", StringComparison.Ordinal))
-            {
-                score -= 8_000;
-            }
-
-            return score;
-        }
-
-        private static int ScoreDensity(string path)
-        {
-            if (path.Contains("xxxhdpi", StringComparison.Ordinal))
-            {
-                return 600;
-            }
-
-            if (path.Contains("xxhdpi", StringComparison.Ordinal))
-            {
-                return 500;
-            }
-
-            if (path.Contains("xhdpi", StringComparison.Ordinal))
-            {
-                return 400;
-            }
-
-            if (path.Contains("hdpi", StringComparison.Ordinal))
-            {
-                return 300;
-            }
-
-            if (path.Contains("mdpi", StringComparison.Ordinal))
-            {
-                return 200;
-            }
-
-            if (path.Contains("nodpi", StringComparison.Ordinal))
-            {
-                return 100;
-            }
-
-            return 0;
-        }
-
-        private static int ScoreNestedPackageEntry(string entryName)
-        {
-            string path = NormalizeEntryPath(entryName);
-            string extension = Path.GetExtension(path);
-            if (extension is not ".apk" and not ".aab")
-            {
-                return 0;
-            }
-
-            string fileName = Path.GetFileName(path);
-            int score = 100;
-            if (fileName.Contains("base", StringComparison.Ordinal))
-            {
-                score += 1_000;
-            }
-
-            if (fileName.Contains("master", StringComparison.Ordinal))
-            {
-                score += 800;
-            }
-
-            return score;
-        }
-
-        private static async Task<byte[]?> TryReadEntryBytesAsync(ZipArchiveEntry entry, long maxBytes)
-        {
-            if (entry.Length <= 0 || entry.Length > maxBytes)
-            {
-                return null;
-            }
-
-            await using Stream entryStream = entry.Open();
-            MemoryStream output = new MemoryStream((int)Math.Min(entry.Length, int.MaxValue));
-            await CopyBoundedAsync(entryStream, output, maxBytes).ConfigureAwait(false);
-            return output.ToArray();
-        }
-
-        private static async Task CopyBoundedAsync(Stream source, Stream destination, long maxBytes)
-        {
-            byte[] buffer = new byte[81920];
-            long total = 0;
-            while (true)
-            {
-                int read = await source.ReadAsync(buffer).ConfigureAwait(false);
-                if (read == 0)
-                {
-                    break;
-                }
-
-                total += read;
-                if (total > maxBytes)
-                {
-                    throw new InvalidDataException("Android package preview source exceeds the supported preview scan limit.");
-                }
-
-                await destination.WriteAsync(buffer.AsMemory(0, read)).ConfigureAwait(false);
-            }
-
-            if (destination.CanSeek)
-            {
-                destination.Position = 0;
-            }
-        }
-
-        private static (int Width, int Height)? TryIdentifyImageDimensions(byte[] imageBytes)
-        {
-            try
-            {
-                ImageInfo? info = Image.Identify(imageBytes);
-                return info is null ? null : (info.Width, info.Height);
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static int ScoreImageDimensions(int width, int height)
-        {
-            if (width <= 0 || height <= 0)
-            {
-                return -20_000;
-            }
-
-            int minSide = Math.Min(width, height);
-            int maxSide = Math.Max(width, height);
-            double aspectRatio = maxSide / (double)minSide;
-
-            int score = 0;
-            if (aspectRatio <= 1.15)
-            {
-                score += 10_000;
-            }
-            else if (aspectRatio <= 1.33)
-            {
-                score += 4_000;
-            }
-            else
-            {
-                score -= 12_000;
-            }
-
-            if (maxSide >= 192)
-            {
-                score += 1_500;
-            }
-            else if (maxSide >= 96)
-            {
-                score += 1_000;
-            }
-            else if (maxSide >= 48)
-            {
-                score += 500;
-            }
-            else
-            {
-                score -= 500;
-            }
-
-            if (maxSide > 2048)
-            {
-                score -= 4_000;
-            }
-
-            return score;
-        }
-
-        private static bool IsExplicitAppIconName(string fileName) =>
-            fileName.Contains("ic_launcher", StringComparison.Ordinal)
-            || fileName.Contains("launcher", StringComparison.Ordinal)
-            || fileName is "icon" or "app_icon" or "logo"
-            || fileName.EndsWith("_icon", StringComparison.Ordinal)
-            || fileName.Contains("logo", StringComparison.Ordinal);
-
-        private static int ScorePreviewFit(int width, int height, int previewSize)
-        {
-            int maxSide = Math.Max(width, height);
-            int delta = Math.Abs(maxSide - previewSize);
-            return Math.Max(0, 6_000 - (delta * 80));
+            return await AndroidPackageArchiveReader
+                .TryScanIconEntriesAsync(archive, requireExplicitIconName)
+                .ConfigureAwait(false);
         }
 
         private static async Task<byte[]> RenderIconPreviewAsync(byte[] iconBytes, int size)
@@ -783,11 +361,5 @@ namespace Cotton.Previews
             });
         }
 
-        private static string NormalizeEntryPath(string path) =>
-            path.Replace('\\', '/').TrimStart('/').ToLowerInvariant();
-
-        private record IconEntryCandidate(ZipArchiveEntry Entry, int Score);
-
-        private record IconBytesCandidate(byte[] Bytes, int Score);
     }
 }
