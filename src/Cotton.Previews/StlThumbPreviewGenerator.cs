@@ -499,7 +499,7 @@ namespace Cotton.Previews
             }
             catch (Exception ex)
             {
-                return new F3dRenderResult(false, $"f3d render failed (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose={includeVerboseArgument}): {ex.GetType().Name}: {ex.Message}");
+                return new F3dRenderResult(false, $"f3d render failed (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose={includeVerboseArgument}): {ex.GetType()}: {ex.Message}");
             }
         }
 
