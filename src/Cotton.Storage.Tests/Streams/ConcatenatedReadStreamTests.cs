@@ -1,7 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using System.Text;
@@ -11,64 +10,11 @@ namespace Cotton.Storage.Tests.Streams
     [TestFixture]
     public class ConcatenatedReadStreamTests
     {
-        private class FakeStoragePipeline : IStoragePipeline
-        {
-            private readonly Dictionary<string, byte[]> _data = [];
-
-            public void AddData(string uid, byte[] data)
-            {
-                _data[uid] = data;
-            }
-
-            public Task<bool> DeleteAsync(string uid)
-            {
-                bool removed = _data.Remove(uid);
-                return Task.FromResult(removed);
-            }
-
-            public Task<bool> ExistsAsync(string uid)
-            {
-                return Task.FromResult(_data.ContainsKey(uid));
-            }
-
-            public Task<long> GetSizeAsync(string uid)
-            {
-                return Task.FromResult(_data.TryGetValue(uid, out byte[]? data) ? data.Length : 0L);
-            }
-
-            public Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
-            {
-                if (!_data.TryGetValue(uid, out byte[]? data))
-                {
-                    throw new FileNotFoundException($"UID not found: {uid}");
-                }
-                return Task.FromResult<Stream>(new MemoryStream(data));
-            }
-
-            public Task<long> WriteAsync(
-                string uid,
-                Stream stream,
-                PipelineContext? context = null,
-                CancellationToken cancellationToken = default)
-            {
-                throw new NotImplementedException();
-            }
-
-            public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
-            {
-                foreach (string key in _data.Keys)
-                {
-                    yield return key;
-                }
-                await Task.CompletedTask;
-            }
-        }
-
         [Test]
         public async Task ConcatenatedReadStream_MultipleStreams_ConcatenatesCorrectly()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello "));
             storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
             storage.AddData("uid3", Encoding.UTF8.GetBytes("!"));
@@ -87,7 +33,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_EmptyStream_SkipsCorrectly()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
             storage.AddData("uid2", []);
             storage.AddData("uid3", Encoding.UTF8.GetBytes("World"));
@@ -106,7 +52,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_SmallBufferReads_ProducesCorrectResult()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("ABCD"));
             storage.AddData("uid2", Encoding.UTF8.GetBytes("EFGH"));
 
@@ -129,7 +75,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_LargeBufferReads_ProducesCorrectResult()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             byte[] data1 = new byte[1024];
             byte[] data2 = new byte[1024];
             for (int i = 0; i < 1024; i++)
@@ -159,7 +105,7 @@ namespace Cotton.Storage.Tests.Streams
         [Test]
         public void ConcatenatedReadStream_StorageThrowsException_PropagatesException()
         {
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Test"));
 
             Stream stream = storage.GetBlobStream(["uid1", "nonexistent"]);
@@ -176,7 +122,7 @@ namespace Cotton.Storage.Tests.Streams
         [Test]
         public async Task ConcatenatedReadStream_Dispose_DisablesFurtherReads()
         {
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("T"));
 
             Stream stream = storage.GetBlobStream(["uid1"]);
@@ -196,7 +142,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_DoubleDispose_DoesNotThrow()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Test"));
 
             Stream stream = storage.GetBlobStream(["uid1"]);
@@ -210,7 +156,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_ReadAcrossBoundaries_NoGapsOrDuplicates()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", [1, 2, 3]);
             storage.AddData("uid2", [4, 5, 6]);
             storage.AddData("uid3", [7, 8, 9]);
@@ -234,7 +180,7 @@ namespace Cotton.Storage.Tests.Streams
         public void ConcatenatedReadStream_WithoutChunkLengths_CanSeekIsFalse()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Test"));
 
             Stream stream = storage.GetBlobStream(["uid1"]);
@@ -248,7 +194,7 @@ namespace Cotton.Storage.Tests.Streams
         public void ConcatenatedReadStream_WithChunkLengths_CanSeekIsTrue()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
             storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
 
@@ -276,7 +222,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_SeekBegin_ReadsFromCorrectPosition()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
             storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
 
@@ -305,7 +251,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_SeekCurrent_ReadsFromCorrectPosition()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
             storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
 
@@ -337,7 +283,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_SeekEnd_ReadsFromCorrectPosition()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
             storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
 
@@ -366,7 +312,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_SeekWithinChunk_ReadsCorrectly()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
             storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
 
@@ -399,7 +345,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_SeekBackward_ReadsCorrectly()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
             storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
 
@@ -432,7 +378,7 @@ namespace Cotton.Storage.Tests.Streams
         public void ConcatenatedReadStream_SeekBeforeStart_ThrowsException()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
 
             PipelineContext context = new PipelineContext
@@ -454,7 +400,7 @@ namespace Cotton.Storage.Tests.Streams
         public void ConcatenatedReadStream_SeekAfterEnd_ThrowsException()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
 
             PipelineContext context = new PipelineContext
@@ -476,7 +422,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_PositionProperty_WorksCorrectly()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
             storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
 
@@ -510,7 +456,7 @@ namespace Cotton.Storage.Tests.Streams
         public async Task ConcatenatedReadStream_MultipleChunks_SeekAndRead()
         {
             // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
+            ConcatenatedReadStreamTestStorage storage = new();
             storage.AddData("uid1", [1, 2, 3]);
             storage.AddData("uid2", [4, 5, 6]);
             storage.AddData("uid3", [7, 8, 9]);
@@ -545,90 +491,5 @@ namespace Cotton.Storage.Tests.Streams
             Assert.That(buffer3[0], Is.EqualTo(9));
         }
 
-        [Test]
-        public async Task ConcatenatedReadStream_ReadAcrossChunkBoundariesWithSeek_NoGaps()
-        {
-            // Arrange
-            FakeStoragePipeline storage = new FakeStoragePipeline();
-            storage.AddData("uid1", Encoding.UTF8.GetBytes("ABC"));
-            storage.AddData("uid2", Encoding.UTF8.GetBytes("DEF"));
-
-            PipelineContext context = new PipelineContext
-            {
-                FileSizeBytes = 6,
-                ChunkLengths = new Dictionary<string, long>
-                {
-                    ["uid1"] = 3,
-                    ["uid2"] = 3
-                }
-            };
-
-            Stream stream = storage.GetBlobStream(["uid1", "uid2"], context);
-
-            // Act - Seek to near boundary and read across
-            stream.Seek(2, SeekOrigin.Begin);
-            byte[] buffer = new byte[3];
-            int read = await stream.ReadAsync(buffer);
-
-            using (Assert.EnterMultipleScope())
-            {
-                // Assert
-                Assert.That(read, Is.EqualTo(3));
-                Assert.That(Encoding.UTF8.GetString(buffer), Is.EqualTo("CDE"));
-            }
-        }
-
-        [Test]
-        public async Task ConcatenatedReadStream_RandomRanges_MatchReferenceFile()
-        {
-            const int chunkSize = 8 * 1024 * 1024;
-            const int rangeOps = 10_000;
-
-            Random rng = new Random(12345);
-            int fileLength = (chunkSize * 2) + 123_456;
-
-            byte[] fileBytes = new byte[fileLength];
-            rng.NextBytes(fileBytes);
-
-            FakeStoragePipeline storage = new FakeStoragePipeline();
-            List<string> uids = new List<string>();
-            Dictionary<string, long> chunkLengths = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-            for (int offset = 0, index = 0; offset < fileBytes.Length; offset += chunkSize, index++)
-            {
-                int len = Math.Min(chunkSize, fileBytes.Length - offset);
-                byte[] chunk = new byte[len];
-                Buffer.BlockCopy(fileBytes, offset, chunk, 0, len);
-
-                string uid = $"uid{index}";
-                uids.Add(uid);
-                chunkLengths[uid] = len;
-                storage.AddData(uid, chunk);
-            }
-
-            PipelineContext context = new PipelineContext
-            {
-                FileSizeBytes = fileBytes.Length,
-                ChunkLengths = chunkLengths,
-            };
-
-            await using Stream stream = storage.GetBlobStream([.. uids], context);
-
-            for (int i = 0; i < rangeOps; i++)
-            {
-                int start = rng.Next(0, fileBytes.Length);
-                int remaining = fileBytes.Length - start;
-                int len = rng.Next(0, remaining + 1);
-
-                stream.Seek(start, SeekOrigin.Begin);
-                byte[] buffer = new byte[len];
-                await stream.ReadExactlyAsync(buffer);
-
-                Span<byte> expected = fileBytes.AsSpan(start, len);
-                if (!buffer.AsSpan().SequenceEqual(expected))
-                {
-                    Assert.Fail($"Mismatch at op={i}, start={start}, len={len}.");
-                }
-            }
-        }
     }
 }
