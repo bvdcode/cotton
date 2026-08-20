@@ -13,13 +13,6 @@ using System.Security.Cryptography;
 
 namespace Cotton.Benchmark.Benchmarks
 {
-    public enum ChunkUploadDataProfile
-    {
-        CompressibleText,
-        MixedContent,
-        RandomBinary
-    }
-
     public class ChunkUploadProcessingBenchmark : BenchmarkBase, IDisposable
     {
         private readonly byte[] _testData;

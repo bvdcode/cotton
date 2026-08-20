@@ -5,13 +5,6 @@ using System.Globalization;
 
 namespace Cotton.Benchmark.Regression
 {
-    internal class BenchmarkComparisonResult
-    {
-        public bool Passed { get; init; }
-
-        public IReadOnlyList<string> Messages { get; init; } = [];
-    }
-
     internal class BenchmarkRegressionComparer
     {
         private const double DurationRegressionRatio = 1.20;
