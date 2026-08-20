@@ -1,7 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using System.Diagnostics;
 using System.IO.Compression;
 using System.Xml;
 using System.Xml.Linq;
@@ -108,7 +107,7 @@ namespace Cotton.Previews
 
         private async Task<string?> RenderPreviewPngAsync(string modelFilePath, string renderedPngPath, int size)
         {
-            F3dRenderResult renderResult = await TryRenderWithF3dAsync(modelFilePath, renderedPngPath, size).ConfigureAwait(false);
+            F3dRenderResult renderResult = await F3dModelRenderer.RenderAsync(modelFilePath, renderedPngPath, size).ConfigureAwait(false);
             if (renderResult.Success)
             {
                 return null;
@@ -142,7 +141,7 @@ namespace Cotton.Previews
                 return (new F3dRenderResult(false, primaryDiagnostics), null);
             }
 
-            F3dRenderResult normalizedResult = await TryRenderWithF3dAsync(normalizedPath, renderedPngPath, size).ConfigureAwait(false);
+            F3dRenderResult normalizedResult = await F3dModelRenderer.RenderAsync(normalizedPath, renderedPngPath, size).ConfigureAwait(false);
             return (MergeRenderDiagnostics(primaryDiagnostics, normalizedResult), normalizedPath);
         }
 
@@ -170,12 +169,12 @@ namespace Cotton.Previews
 
         private static void CleanupTempFiles(string modelFilePath, string renderedPngPath, string? normalizedThreeMfPath)
         {
-            TryDeleteFile(modelFilePath);
-            TryDeleteFile(renderedPngPath);
+            PreviewTemporaryFile.TryDelete(modelFilePath);
+            PreviewTemporaryFile.TryDelete(renderedPngPath);
 
             if (!string.IsNullOrWhiteSpace(normalizedThreeMfPath))
             {
-                TryDeleteFile(normalizedThreeMfPath);
+                PreviewTemporaryFile.TryDelete(normalizedThreeMfPath);
             }
         }
 
@@ -379,177 +378,6 @@ namespace Cotton.Previews
             return score;
         }
 
-        private static async Task<F3dRenderResult> TryRenderWithF3dAsync(string modelFilePath, string outputPngPath, int size)
-        {
-            F3dRenderResult primaryResult = await RunF3dAsync(
-                modelFilePath,
-                outputPngPath,
-                size,
-                includeMaxSizeArgument: true,
-                includeNoBackgroundArgument: true,
-                includeVerboseArgument: true).ConfigureAwait(false);
-
-            if (primaryResult.Success)
-            {
-                return primaryResult;
-            }
-
-            F3dRenderResult fallbackResult = await RunF3dAsync(
-                modelFilePath,
-                outputPngPath,
-                size,
-                includeMaxSizeArgument: false,
-                includeNoBackgroundArgument: false,
-                includeVerboseArgument: false).ConfigureAwait(false);
-
-            if (fallbackResult.Success)
-            {
-                return new F3dRenderResult(
-                    true,
-                    $"f3d fallback rendering succeeded after primary failure. Primary diagnostics: {primaryResult.Diagnostics}");
-            }
-
-            return new F3dRenderResult(
-                false,
-                $"Primary f3d render failed. {primaryResult.Diagnostics} | Fallback f3d render failed. {fallbackResult.Diagnostics}");
-        }
-
-        private static async Task<F3dRenderResult> RunF3dAsync(
-            string modelFilePath,
-            string outputPngPath,
-            int size,
-            bool includeMaxSizeArgument,
-            bool includeNoBackgroundArgument,
-            bool includeVerboseArgument)
-        {
-            const int renderTimeoutSeconds = 20;
-
-            try
-            {
-                TryDeleteFile(outputPngPath);
-
-                bool useXvfb = ShouldUseXvfb();
-                using Process process = new();
-                process.StartInfo = new ProcessStartInfo
-                {
-                    FileName = useXvfb ? "xvfb-run" : "f3d",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                };
-
-                process.StartInfo.Environment["LIBGL_ALWAYS_SOFTWARE"] = "1";
-                process.StartInfo.Environment["MESA_LOADER_DRIVER_OVERRIDE"] = "llvmpipe";
-                process.StartInfo.Environment["GALLIUM_DRIVER"] = "llvmpipe";
-
-                if (useXvfb)
-                {
-                    process.StartInfo.ArgumentList.Add("-a");
-                    process.StartInfo.ArgumentList.Add("-s");
-                    process.StartInfo.ArgumentList.Add($"-screen 0 {size}x{size}x24");
-                    process.StartInfo.ArgumentList.Add("f3d");
-                }
-
-                // In f3d 2.x, --dry-run disables reading the configuration file.
-                process.StartInfo.ArgumentList.Add("--dry-run");
-                if (includeVerboseArgument)
-                {
-                    process.StartInfo.ArgumentList.Add("--verbose");
-                }
-                process.StartInfo.ArgumentList.Add($"--input={modelFilePath}");
-                process.StartInfo.ArgumentList.Add($"--output={outputPngPath}");
-                process.StartInfo.ArgumentList.Add($"--resolution={size},{size}");
-                process.StartInfo.ArgumentList.Add($"--color={PreviewColorPalette.AccentGreenF3dRgb}");
-                if (includeMaxSizeArgument)
-                {
-                    process.StartInfo.ArgumentList.Add($"--max-size={PreviewGeneratorProvider.DefaultSmallPreviewSize}");
-                }
-                if (includeNoBackgroundArgument)
-                {
-                    process.StartInfo.ArgumentList.Add("--no-background");
-                }
-
-                process.Start();
-
-                Task<string> stderrTask = process.StandardError.ReadToEndAsync();
-                Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
-
-                using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(renderTimeoutSeconds));
-                await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
-                await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
-
-                if (process.ExitCode != 0)
-                {
-                    return new F3dRenderResult(
-                        false,
-                        $"f3d exited with code {process.ExitCode} (xvfb={useXvfb}, max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose={includeVerboseArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
-                }
-
-                bool hasOutput = File.Exists(outputPngPath) && new FileInfo(outputPngPath).Length > 0;
-                return hasOutput
-                    ? new F3dRenderResult(true, null)
-                    : new F3dRenderResult(
-                        false,
-                        $"f3d finished successfully but did not produce output file (xvfb={useXvfb}, max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose={includeVerboseArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
-            }
-            catch (OperationCanceledException)
-            {
-                return new F3dRenderResult(false, $"f3d render timed out after {renderTimeoutSeconds} seconds (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose={includeVerboseArgument}).");
-            }
-            catch (Exception ex)
-            {
-                return new F3dRenderResult(false, $"f3d render failed (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose={includeVerboseArgument}): {ex.GetType()}: {ex.Message}");
-            }
-        }
-
-        private static bool ShouldUseXvfb()
-        {
-            if (!OperatingSystem.IsLinux())
-            {
-                return false;
-            }
-
-            return string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DISPLAY"))
-                && IsExecutableOnPath("xvfb-run");
-        }
-
-        private static bool IsExecutableOnPath(string fileName)
-        {
-            string? path = Environment.GetEnvironmentVariable("PATH");
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return false;
-            }
-
-            foreach (string directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-            {
-                string candidate = Path.Combine(directory, fileName);
-                if (File.Exists(candidate))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static string LimitDiagnostic(string? text)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return "<empty>";
-            }
-
-            const int maxLength = 1000;
-            string normalized = text.Trim();
-            return normalized.Length <= maxLength
-                ? normalized
-                : normalized[..maxLength] + "...";
-        }
-
-        private readonly record struct F3dRenderResult(bool Success, string? Diagnostics);
-
         private static async Task<string?> TryNormalizeThreeMfArchiveAsync(string sourcePath)
         {
             string normalizedPath = Path.Combine(Path.GetTempPath(), $"cotton-model-normalized-{Guid.NewGuid():N}{ThreeMfExtension}");
@@ -589,31 +417,20 @@ namespace Cotton.Previews
             }
             catch (InvalidDataException)
             {
-                TryDeleteFile(normalizedPath);
+                PreviewTemporaryFile.TryDelete(normalizedPath);
                 return null;
             }
             catch (NotSupportedException)
             {
-                TryDeleteFile(normalizedPath);
+                PreviewTemporaryFile.TryDelete(normalizedPath);
                 return null;
             }
             catch (IOException)
             {
-                TryDeleteFile(normalizedPath);
+                PreviewTemporaryFile.TryDelete(normalizedPath);
                 return null;
             }
         }
 
-        private static void TryDeleteFile(string filePath)
-        {
-            try
-            {
-                File.Delete(filePath);
-            }
-            catch
-            {
-                // Temporary-file cleanup failures must not hide the original render error.
-            }
-        }
     }
 }
