@@ -1,8 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using System.Diagnostics;
-using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -18,12 +16,12 @@ namespace Cotton.Sdk.Internal
     internal class CottonHttpTransport
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-        private const int ResponsePreviewLength = 180;
 
         private readonly HttpClient _httpClient;
         private readonly ICottonTokenStore _tokenStore;
         private readonly CottonSdkOptions _options;
         private readonly ILogger<CottonHttpTransport> _logger;
+        private readonly CottonHttpSender _sender;
         private readonly SemaphoreSlim _refreshGate = new(1, 1);
 
         public CottonHttpTransport(
@@ -36,6 +34,7 @@ namespace Cotton.Sdk.Internal
             _tokenStore = tokenStore;
             _options = options;
             _logger = logger ?? NullLogger<CottonHttpTransport>.Instance;
+            _sender = new CottonHttpSender(_httpClient, _logger);
             if (_httpClient.BaseAddress is null)
             {
                 _httpClient.BaseAddress = options.BaseAddress;
@@ -82,7 +81,7 @@ namespace Cotton.Sdk.Internal
                 headers,
                 cancellationToken).ConfigureAwait(false);
             await EnsureSuccessAsync(response, method, path, cancellationToken).ConfigureAwait(false);
-            int totalCount = ReadRequiredTotalCount(response, method, path);
+            int totalCount = CottonHttpResponseReader.ReadRequiredTotalCount(response, method, path);
             T payload = await ReadRequiredJsonAsync<T>(
                 response,
                 method,
@@ -126,7 +125,7 @@ namespace Cotton.Sdk.Internal
                 headers,
                 cancellationToken).ConfigureAwait(false);
             string? requestAccessToken = request.Headers.Authorization?.Parameter;
-            HttpResponseMessage response = await SendHttpAsync(request, method, path, cancellationToken).ConfigureAwait(false);
+            HttpResponseMessage response = await _sender.SendAsync(request, method, path, cancellationToken).ConfigureAwait(false);
             if (response.StatusCode != HttpStatusCode.Unauthorized || !authorize || !_options.RefreshOnUnauthorized)
             {
                 return response;
@@ -142,7 +141,7 @@ namespace Cotton.Sdk.Internal
                 authorize,
                 headers,
                 cancellationToken).ConfigureAwait(false);
-            return await SendHttpAsync(retry, method, path, cancellationToken).ConfigureAwait(false);
+            return await _sender.SendAsync(retry, method, path, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task UploadRawAsync(
@@ -202,7 +201,7 @@ namespace Cotton.Sdk.Internal
             {
                 request.Content = new StreamContent(content);
                 request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-                HttpResponseMessage response = await SendHttpAsync(
+                HttpResponseMessage response = await _sender.SendAsync(
                     request,
                     HttpMethod.Post,
                     path,
@@ -236,7 +235,7 @@ namespace Cotton.Sdk.Internal
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             if (expectedStatusCode.HasValue)
             {
-                await EnsureExpectedStatusAsync(
+                await CottonHttpResponseReader.EnsureExpectedStatusAsync(
                     response,
                     HttpMethod.Get,
                     path,
@@ -249,95 +248,20 @@ namespace Cotton.Sdk.Internal
             }
 
             long? expectedBodyLength = validateResponse?.Invoke(response);
-            await using Stream source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            byte[] buffer = new byte[64 * 1024];
-            long total = 0;
-            long? remaining = expectedBodyLength;
-            long validatedBodyLength = expectedBodyLength.GetValueOrDefault();
-            while (true)
-            {
-                int bufferLength = buffer.Length;
-                if (remaining.HasValue)
-                {
-                    if (remaining.Value == 0)
-                    {
-                        int extraRead = await source.ReadAsync(buffer.AsMemory(0, 1), cancellationToken).ConfigureAwait(false);
-                        if (extraRead != 0)
-                        {
-                            throw CreateInvalidBodyLengthException(response, path, validatedBodyLength, longer: true);
-                        }
-
-                        break;
-                    }
-
-                    bufferLength = (int)Math.Min(buffer.Length, remaining.Value);
-                }
-
-                int read = await source.ReadAsync(buffer.AsMemory(0, bufferLength), cancellationToken).ConfigureAwait(false);
-                if (read == 0)
-                {
-                    if (remaining.HasValue && remaining.Value > 0)
-                    {
-                        throw CreateInvalidBodyLengthException(response, path, validatedBodyLength, longer: false);
-                    }
-
-                    break;
-                }
-
-                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-                total += read;
-                if (remaining.HasValue)
-                {
-                    remaining -= read;
-                }
-
-                progress?.Report(total);
-            }
-        }
-
-        private static CottonApiException CreateInvalidBodyLengthException(
-            HttpResponseMessage response,
-            string path,
-            long expectedBodyLength,
-            bool longer)
-        {
-            string direction = longer ? "more" : "fewer";
-            return new CottonApiException(
-                response.StatusCode,
-                null,
-                $"Cotton API download GET {RedactPath(path)} returned {direction} bytes than expected; "
-                + $"expected {expectedBodyLength} bytes.");
-        }
-
-        private static async Task EnsureExpectedStatusAsync(
-            HttpResponseMessage response,
-            HttpMethod method,
-            string path,
-            HttpStatusCode expectedStatusCode,
-            CancellationToken cancellationToken)
-        {
-            if (response.StatusCode == expectedStatusCode)
-            {
-                return;
-            }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                await EnsureSuccessAsync(response, method, path, cancellationToken).ConfigureAwait(false);
-                return;
-            }
-
-            throw new CottonApiException(
-                response.StatusCode,
-                null,
-                $"Cotton API request {FormatRequestLabel(method, path)} returned unexpected status "
-                + $"{(int)response.StatusCode} ({response.StatusCode}); expected "
-                + $"{(int)expectedStatusCode} ({expectedStatusCode}).");
+            await CottonHttpDownloadWriter.CopyAsync(
+                response,
+                destination,
+                path,
+                progress,
+                expectedBodyLength,
+                cancellationToken).ConfigureAwait(false);
         }
 
         public static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
         {
-            await EnsureSuccessAsync(response, method: null, path: null, cancellationToken).ConfigureAwait(false);
+            await CottonHttpResponseReader
+                .EnsureSuccessAsync(response, method: null, path: null, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         public static async Task EnsureSuccessAsync(
@@ -346,27 +270,9 @@ namespace Cotton.Sdk.Internal
             string? path,
             CancellationToken cancellationToken)
         {
-            if (response.IsSuccessStatusCode)
-            {
-                return;
-            }
-
-            string? body = response.Content is null
-                ? null
-                : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            string requestLabel = FormatRequestLabel(method, path);
-            string message = requestLabel.Length == 0
-                ? $"Cotton API request failed with status {(int)response.StatusCode} ({response.StatusCode})."
-                : $"Cotton API request {requestLabel} failed with status {(int)response.StatusCode} ({response.StatusCode}).";
-            if (!string.IsNullOrWhiteSpace(body))
-            {
-                message += " Response: " + CreateResponsePreview(body);
-            }
-
-            throw new CottonApiException(
-                response.StatusCode,
-                body,
-                message);
+            await CottonHttpResponseReader
+                .EnsureSuccessAsync(response, method, path, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         private async Task<HttpRequestMessage> CreateRequestAsync(
@@ -411,80 +317,12 @@ namespace Cotton.Sdk.Internal
             CancellationToken cancellationToken,
             bool ensureSuccess = true)
         {
-            if (ensureSuccess)
-            {
-                await EnsureSuccessAsync(response, method, path, cancellationToken).ConfigureAwait(false);
-            }
-
-            string body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(body))
-            {
-                throw new CottonApiException(
-                    response.StatusCode,
-                    null,
-                    $"Cotton API request {FormatRequestLabel(method, path)} returned an empty JSON response.");
-            }
-
-            T? result;
-            try
-            {
-                result = JsonSerializer.Deserialize<T>(body, JsonOptions);
-            }
-            catch (JsonException exception)
-            {
-                string contentType = response.Content.Headers.ContentType?.MediaType ?? "unknown";
-                throw new CottonApiException(
-                    response.StatusCode,
-                    body,
-                    $"Cotton API request {FormatRequestLabel(method, path)} returned invalid JSON"
-                    + $" with content type '{contentType}' and status {(int)response.StatusCode} ({response.StatusCode})."
-                    + " Response: "
-                    + CreateResponsePreview(body),
-                    exception);
-            }
-
-            return result ?? throw new CottonApiException(
-                response.StatusCode,
-                null,
-                $"Cotton API request {FormatRequestLabel(method, path)} returned an empty JSON response.");
-        }
-
-        private static int ReadRequiredTotalCount(
-            HttpResponseMessage response,
-            HttpMethod method,
-            string path)
-        {
-            const string headerName = "X-Total-Count";
-            if (!response.Headers.TryGetValues(headerName, out IEnumerable<string>? headerValues))
-            {
-                throw new CottonApiException(
-                    response.StatusCode,
-                    null,
-                    $"Cotton API request {FormatRequestLabel(method, path)} did not include the required {headerName} response header.");
-            }
-
-            string[] values = [.. headerValues];
-            if (values.Length != 1
-                || !int.TryParse(values[0], NumberStyles.None, CultureInfo.InvariantCulture, out int totalCount))
-            {
-                throw new CottonApiException(
-                    response.StatusCode,
-                    null,
-                    $"Cotton API request {FormatRequestLabel(method, path)} returned an invalid {headerName} response header.");
-            }
-
-            return totalCount;
-        }
-
-        private static string CreateResponsePreview(string responseBody)
-        {
-            string preview = responseBody
-                .Replace("\r", " ", StringComparison.Ordinal)
-                .Replace("\n", " ", StringComparison.Ordinal)
-                .Trim();
-            return preview.Length <= ResponsePreviewLength
-                ? preview
-                : preview[..ResponsePreviewLength] + "...";
+            return await CottonHttpResponseReader.ReadRequiredJsonAsync<T>(
+                response,
+                method,
+                path,
+                cancellationToken,
+                ensureSuccess).ConfigureAwait(false);
         }
 
         private async Task<bool> TryRefreshAsync(string? failedAccessToken, CancellationToken cancellationToken)
@@ -508,7 +346,7 @@ namespace Cotton.Sdk.Internal
                     HttpMethod.Post,
                     CottonRouteUri.Create(_options.BaseAddress, path));
                 ApplyDefaultHeaders(request);
-                using HttpResponseMessage response = await SendHttpAsync(
+                using HttpResponseMessage response = await _sender.SendAsync(
                     request,
                     HttpMethod.Post,
                     path,
@@ -546,7 +384,7 @@ namespace Cotton.Sdk.Internal
             _logger.LogWarning(
                 "Cotton API request {Method} {Path} returned unauthorized; token refresh {RefreshResult}, retrying request.",
                 method.Method,
-                RedactPath(path),
+                CottonHttpResponseReader.RedactPath(path),
                 refreshed ? "succeeded" : "failed");
         }
 
@@ -554,61 +392,6 @@ namespace Cotton.Sdk.Internal
         {
             return !string.IsNullOrWhiteSpace(currentAccessToken)
                 && !string.Equals(currentAccessToken, failedAccessToken, StringComparison.Ordinal);
-        }
-
-        private async Task<HttpResponseMessage> SendHttpAsync(
-            HttpRequestMessage request,
-            HttpMethod method,
-            string path,
-            CancellationToken cancellationToken)
-        {
-            string redactedPath = RedactPath(path);
-            long started = Stopwatch.GetTimestamp();
-            _logger.LogDebug("Sending Cotton API request {Method} {Path}.", method.Method, redactedPath);
-            try
-            {
-                HttpResponseMessage response = await _httpClient.SendAsync(
-                    request,
-                    HttpCompletionOption.ResponseHeadersRead,
-                    cancellationToken).ConfigureAwait(false);
-                TimeSpan elapsed = Stopwatch.GetElapsedTime(started);
-                LogCompletedRequest(method, redactedPath, response.StatusCode, elapsed);
-                return response;
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                _logger.LogWarning(
-                    exception,
-                    "Cotton API request {Method} {Path} failed before receiving a response.",
-                    method.Method,
-                    redactedPath);
-                throw;
-            }
-        }
-
-        private void LogCompletedRequest(
-            HttpMethod method,
-            string redactedPath,
-            HttpStatusCode statusCode,
-            TimeSpan elapsed)
-        {
-            if ((int)statusCode >= 400)
-            {
-                _logger.LogWarning(
-                    "Cotton API request {Method} {Path} completed with status {StatusCode} in {ElapsedMilliseconds} ms.",
-                    method.Method,
-                    redactedPath,
-                    (int)statusCode,
-                    elapsed.TotalMilliseconds);
-                return;
-            }
-
-            _logger.LogDebug(
-                "Cotton API request {Method} {Path} completed with status {StatusCode} in {ElapsedMilliseconds} ms.",
-                method.Method,
-                redactedPath,
-                (int)statusCode,
-                elapsed.TotalMilliseconds);
         }
 
         private void ApplyDefaultHeaders(HttpRequestMessage request)
@@ -638,46 +421,5 @@ namespace Cotton.Sdk.Internal
                 : normalized[..CottonClientHeaders.DeviceNameMaxLength];
         }
 
-        private static string RedactPath(string path)
-        {
-            int queryIndex = path.IndexOf('?', StringComparison.Ordinal);
-            if (queryIndex < 0 || queryIndex == path.Length - 1)
-            {
-                return path;
-            }
-
-            string route = path[..queryIndex];
-            string query = path[(queryIndex + 1)..];
-            string[] parts = query.Split('&');
-            for (int index = 0; index < parts.Length; index++)
-            {
-                string part = parts[index];
-                int equalsIndex = part.IndexOf('=', StringComparison.Ordinal);
-                string key = equalsIndex < 0 ? part : part[..equalsIndex];
-                if (IsSensitiveQueryKey(key))
-                {
-                    parts[index] = key + "=***";
-                }
-            }
-
-            return route + "?" + string.Join("&", parts);
-        }
-
-        private static string FormatRequestLabel(HttpMethod? method, string? path)
-        {
-            if (method is null || string.IsNullOrWhiteSpace(path))
-            {
-                return string.Empty;
-            }
-
-            return method.Method + " " + RedactPath(path);
-        }
-
-        private static bool IsSensitiveQueryKey(string key)
-        {
-            return key.Contains("token", StringComparison.OrdinalIgnoreCase)
-                || key.Contains("secret", StringComparison.OrdinalIgnoreCase)
-                || key.Contains("password", StringComparison.OrdinalIgnoreCase);
-        }
     }
 }
