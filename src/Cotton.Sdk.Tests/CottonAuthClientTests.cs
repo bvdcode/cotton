@@ -139,6 +139,31 @@ namespace Cotton.Sdk.Tests
         }
 
         [Test]
+        public async Task RefreshAsync_CoordinatesRotationAcrossClientInstances()
+        {
+            var handler = new RotatingRefreshHttpMessageHandler();
+            var store = new InMemoryCottonTokenStore();
+            await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old-refresh" });
+            CottonSdkOptions options = new() { BaseAddress = new Uri("https://cotton.test") };
+            CottonCloudClient firstClient = new(new HttpClient(handler), store, options);
+            CottonCloudClient secondClient = new(new HttpClient(handler), store, options);
+
+            TokenPairDto[] results = await Task.WhenAll(
+                firstClient.Auth.RefreshAsync("old-refresh"),
+                secondClient.Auth.RefreshAsync("old-refresh"));
+            TokenPairDto? stored = await store.GetAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(results.Select(static tokens => tokens.AccessToken), Is.All.EqualTo("new-access"));
+                Assert.That(results.Select(static tokens => tokens.RefreshToken), Is.All.EqualTo("new-refresh"));
+                Assert.That(stored?.AccessToken, Is.EqualTo("new-access"));
+                Assert.That(stored?.RefreshToken, Is.EqualTo("new-refresh"));
+                Assert.That(handler.RefreshRequestCount, Is.EqualTo(1));
+            });
+        }
+
+        [Test]
         public async Task LogoutAsync_ClearsStoreWhenServerLogoutFails()
         {
             var handler = new QueuedHttpMessageHandler();

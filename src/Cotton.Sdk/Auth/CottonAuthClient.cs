@@ -34,7 +34,7 @@ namespace Cotton.Sdk.Auth
                 request,
                 authorize: false,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
-            await _tokenStore.SaveAsync(tokens, cancellationToken).ConfigureAwait(false);
+            await _transport.SaveTokenPairAsync(tokens, cancellationToken).ConfigureAwait(false);
             return tokens;
         }
 
@@ -89,7 +89,7 @@ namespace Cotton.Sdk.Auth
                     HttpMethod.Post,
                     path,
                     cancellationToken).ConfigureAwait(false);
-                await _tokenStore.SaveAsync(tokens, cancellationToken).ConfigureAwait(false);
+                await _transport.SaveTokenPairAsync(tokens, cancellationToken).ConfigureAwait(false);
                 return new AppCodePollResult
                 {
                     Status = AppCodePollStatus.Approved,
@@ -156,18 +156,7 @@ namespace Cotton.Sdk.Auth
                 refreshToken = stored?.RefreshToken;
             }
 
-            if (string.IsNullOrWhiteSpace(refreshToken))
-            {
-                throw new InvalidOperationException("A refresh token is required.");
-            }
-
-            TokenPairDto tokens = await _transport.SendJsonAsync<TokenPairDto>(
-                HttpMethod.Post,
-                Routes.V1.Auth + "/refresh?refreshToken=" + Uri.EscapeDataString(refreshToken),
-                authorize: false,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-            await _tokenStore.SaveAsync(tokens, cancellationToken).ConfigureAwait(false);
-            return tokens;
+            return await _transport.RefreshTokenAsync(refreshToken, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -194,7 +183,7 @@ namespace Cotton.Sdk.Auth
             }
             finally
             {
-                await _tokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
+                await _transport.ClearTokenPairAsync(cancellationToken).ConfigureAwait(false);
             }
         }
 

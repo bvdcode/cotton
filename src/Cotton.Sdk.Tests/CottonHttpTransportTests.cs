@@ -177,6 +177,30 @@ namespace Cotton.Sdk.Tests
         }
 
         [Test]
+        public async Task AuthorizedRequest_PreservesTokensWhenRefreshFailsTransiently()
+        {
+            var handler = new QueuedHttpMessageHandler();
+            handler.Enqueue(HttpStatusCode.Unauthorized, "expired");
+            handler.Enqueue(HttpStatusCode.ServiceUnavailable, "temporarily unavailable");
+            handler.Enqueue(HttpStatusCode.Unauthorized, "expired");
+            var store = new InMemoryCottonTokenStore();
+            await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old-refresh" });
+            CottonCloudClient client = new(new HttpClient(handler), store, new CottonSdkOptions
+            {
+                BaseAddress = new Uri("https://cotton.test"),
+            });
+
+            Assert.ThrowsAsync<CottonApiException>(async () => await client.Settings.GetAsync());
+            TokenPairDto? stored = await store.GetAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(stored?.AccessToken, Is.EqualTo("old-access"));
+                Assert.That(stored?.RefreshToken, Is.EqualTo("old-refresh"));
+            });
+        }
+
+        [Test]
         public async Task AuthorizedRequest_PreservesBaseAddressPathForApiAndRefreshRequests()
         {
             var handler = new QueuedHttpMessageHandler();
@@ -228,6 +252,32 @@ namespace Cotton.Sdk.Tests
                     4194304,
                     4194304,
                 }));
+                Assert.That(stored?.AccessToken, Is.EqualTo("new-access"));
+                Assert.That(stored?.RefreshToken, Is.EqualTo("new-refresh"));
+                Assert.That(handler.OldAccessSettingsRequestCount, Is.EqualTo(2));
+                Assert.That(handler.NewAccessSettingsRequestCount, Is.EqualTo(2));
+                Assert.That(handler.RefreshRequestCount, Is.EqualTo(1));
+            });
+        }
+
+        [Test]
+        public async Task AuthorizedRequest_CoordinatesRefreshAcrossClientInstances()
+        {
+            var handler = new RotatingRefreshHttpMessageHandler();
+            var store = new InMemoryCottonTokenStore();
+            await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old-refresh" });
+            CottonSdkOptions options = new() { BaseAddress = new Uri("https://cotton.test") };
+            CottonCloudClient firstClient = new(new HttpClient(handler), store, options);
+            CottonCloudClient secondClient = new(new HttpClient(handler), store, options);
+
+            ClientSettingsDto[] results = await Task.WhenAll(
+                firstClient.Settings.GetAsync(),
+                secondClient.Settings.GetAsync());
+            TokenPairDto? stored = await store.GetAsync();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(results.Select(static settings => settings.MaxChunkSizeBytes), Is.All.EqualTo(4194304));
                 Assert.That(stored?.AccessToken, Is.EqualTo("new-access"));
                 Assert.That(stored?.RefreshToken, Is.EqualTo("new-refresh"));
                 Assert.That(handler.OldAccessSettingsRequestCount, Is.EqualTo(2));
