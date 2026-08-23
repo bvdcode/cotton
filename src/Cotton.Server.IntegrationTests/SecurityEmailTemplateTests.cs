@@ -31,8 +31,9 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(body, Does.Contain("Password changed"));
                 Assert.That(body, Does.Contain("Your password was changed."));
                 Assert.That(body, Does.Contain("https://cottoncloud.dev/favicon-96x96.png"));
-                Assert.That(body, Does.Contain("background:#151A21"));
-                Assert.That(body, Does.Contain("background:#96be02"));
+                Assert.That(body, Does.Contain("background:#11140F"));
+                Assert.That(body, Does.Contain("background:#C6FF00"));
+                Assert.That(body, Does.Contain("color:#0A0C08;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif"));
                 Assert.That(body, Does.Not.Contain("cid:"));
                 Assert.That(body, Does.Not.Contain("linear-gradient"));
                 Assert.That(body, Does.Not.Contain("{{"));

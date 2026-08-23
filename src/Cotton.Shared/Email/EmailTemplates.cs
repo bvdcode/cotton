@@ -15,7 +15,7 @@ namespace Cotton.Email
         private const string CommonHeader =
             @"          <!-- Header -->
           <tr>
-            <td style=""background:#151A21;padding:36px 40px;text-align:center;"">
+            <td style=""background:#11140F;padding:36px 40px;text-align:center;"">
               <img src=""" + LogoUrl + @""" alt=""Cotton Cloud"" width=""56"" height=""56"" style=""display:block;width:56px;height:56px;margin:0 auto 12px;"" />
               <h1 style=""margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;"">Cotton Cloud</h1>
             </td>
@@ -73,8 +73,8 @@ namespace Cotton.Email
               </p>
               <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" style=""margin:0 auto 24px;"">
                 <tr>
-                  <td align=""center"" style=""border-radius:8px;background:#96be02;"">
-                    <a href=""{{confirmation_url}}"" target=""_blank"" style=""display:inline-block;padding:14px 32px;color:#151A21;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;"">
+                  <td align=""center"" style=""border-radius:8px;background:#C6FF00;"">
+                    <a href=""{{confirmation_url}}"" target=""_blank"" style=""display:inline-block;padding:14px 32px;color:#0A0C08;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;"">
                       Confirm Email
                     </a>
                   </td>
@@ -119,8 +119,8 @@ namespace Cotton.Email
               </p>
               <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" style=""margin:0 auto 24px;"">
                 <tr>
-                  <td align=""center"" style=""border-radius:8px;background:#96be02;"">
-                    <a href=""{{confirmation_url}}"" target=""_blank"" style=""display:inline-block;padding:14px 32px;color:#151A21;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;"">
+                  <td align=""center"" style=""border-radius:8px;background:#C6FF00;"">
+                    <a href=""{{confirmation_url}}"" target=""_blank"" style=""display:inline-block;padding:14px 32px;color:#0A0C08;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;"">
                       Подтвердить email
                     </a>
                   </td>
@@ -164,8 +164,8 @@ namespace Cotton.Email
               </p>
               <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" style=""margin:0 auto 24px;"">
                 <tr>
-                  <td align=""center"" style=""border-radius:8px;background:#96be02;"">
-                    <a href=""{{reset_url}}"" target=""_blank"" style=""display:inline-block;padding:14px 32px;color:#151A21;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;"">
+                  <td align=""center"" style=""border-radius:8px;background:#C6FF00;"">
+                    <a href=""{{reset_url}}"" target=""_blank"" style=""display:inline-block;padding:14px 32px;color:#0A0C08;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;"">
                       Reset Password
                     </a>
                   </td>
@@ -216,8 +216,8 @@ namespace Cotton.Email
               </p>
               <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" style=""margin:0 auto 24px;"">
                 <tr>
-                  <td align=""center"" style=""border-radius:8px;background:#96be02;"">
-                    <a href=""{{reset_url}}"" target=""_blank"" style=""display:inline-block;padding:14px 32px;color:#151A21;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;"">
+                  <td align=""center"" style=""border-radius:8px;background:#C6FF00;"">
+                    <a href=""{{reset_url}}"" target=""_blank"" style=""display:inline-block;padding:14px 32px;color:#0A0C08;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;"">
                       Сбросить пароль
                     </a>
                   </td>
@@ -270,8 +270,8 @@ namespace Cotton.Email
               </p>
               <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" style=""margin:0 auto 24px;"">
                 <tr>
-                  <td align=""center"" style=""border-radius:8px;background:#96be02;"">
-                    <a href=""{{server_url}}"" target=""_blank"" style=""display:inline-block;padding:14px 32px;color:#151A21;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;"">
+                  <td align=""center"" style=""border-radius:8px;background:#C6FF00;"">
+                    <a href=""{{server_url}}"" target=""_blank"" style=""display:inline-block;padding:14px 32px;color:#0A0C08;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;"">
                       Review Account
                     </a>
                   </td>
