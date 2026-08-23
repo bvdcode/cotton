@@ -22,7 +22,7 @@ namespace Cotton.Sdk.Internal
         private readonly CottonSdkOptions _options;
         private readonly ILogger<CottonHttpTransport> _logger;
         private readonly CottonHttpSender _sender;
-        private readonly SemaphoreSlim _refreshGate = new(1, 1);
+        private readonly CottonTokenRefreshManager _tokenRefreshManager;
 
         public CottonHttpTransport(
             HttpClient httpClient,
@@ -35,6 +35,7 @@ namespace Cotton.Sdk.Internal
             _options = options;
             _logger = logger ?? NullLogger<CottonHttpTransport>.Instance;
             _sender = new CottonHttpSender(_httpClient, _logger);
+            _tokenRefreshManager = new CottonTokenRefreshManager(tokenStore, SendRefreshRequestAsync, _logger);
             if (_httpClient.BaseAddress is null)
             {
                 _httpClient.BaseAddress = options.BaseAddress;
@@ -325,53 +326,42 @@ namespace Cotton.Sdk.Internal
                 ensureSuccess).ConfigureAwait(false);
         }
 
-        private async Task<bool> TryRefreshAsync(string? failedAccessToken, CancellationToken cancellationToken)
+        internal Task<TokenPairDto> RefreshTokenAsync(
+            string? refreshToken,
+            CancellationToken cancellationToken)
         {
-            await _refreshGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
-            {
-                TokenPairDto? tokens = await _tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
-                if (HasUsableAccessTokenChanged(failedAccessToken, tokens?.AccessToken))
-                {
-                    return true;
-                }
+            return _tokenRefreshManager.RefreshAsync(refreshToken, cancellationToken);
+        }
 
-                if (string.IsNullOrWhiteSpace(tokens?.RefreshToken))
-                {
-                    return false;
-                }
+        internal Task SaveTokenPairAsync(TokenPairDto tokens, CancellationToken cancellationToken)
+        {
+            return _tokenRefreshManager.SaveAsync(tokens, cancellationToken);
+        }
 
-                string path = Routes.V1.Auth + "/refresh?refreshToken=" + Uri.EscapeDataString(tokens.RefreshToken);
-                using HttpRequestMessage request = new(
-                    HttpMethod.Post,
-                    CottonRouteUri.Create(_options.BaseAddress, path));
-                ApplyDefaultHeaders(request);
-                using HttpResponseMessage response = await _sender.SendAsync(
-                    request,
-                    HttpMethod.Post,
-                    path,
-                    cancellationToken).ConfigureAwait(false);
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogWarning(
-                        "Cotton API token refresh failed with status {StatusCode}; clearing stored tokens.",
-                        (int)response.StatusCode);
-                    await _tokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
-                    return false;
-                }
+        internal Task ClearTokenPairAsync(CancellationToken cancellationToken)
+        {
+            return _tokenRefreshManager.ClearAsync(cancellationToken);
+        }
 
-                TokenPairDto refreshed = await ReadRequiredJsonAsync<TokenPairDto>(
-                    response,
-                    HttpMethod.Post,
-                    path,
-                    cancellationToken).ConfigureAwait(false);
-                await _tokenStore.SaveAsync(refreshed, cancellationToken).ConfigureAwait(false);
-                return true;
-            }
-            finally
-            {
-                _refreshGate.Release();
-            }
+        private async Task<TokenPairDto> SendRefreshRequestAsync(
+            string refreshToken,
+            CancellationToken cancellationToken)
+        {
+            string path = Routes.V1.Auth + "/refresh?refreshToken=" + Uri.EscapeDataString(refreshToken);
+            using HttpRequestMessage request = new(
+                HttpMethod.Post,
+                CottonRouteUri.Create(_options.BaseAddress, path));
+            ApplyDefaultHeaders(request);
+            using HttpResponseMessage response = await _sender.SendAsync(
+                request,
+                HttpMethod.Post,
+                path,
+                cancellationToken).ConfigureAwait(false);
+            return await ReadRequiredJsonAsync<TokenPairDto>(
+                response,
+                HttpMethod.Post,
+                path,
+                cancellationToken).ConfigureAwait(false);
         }
 
         private async Task RefreshAndLogRetryAsync(
@@ -380,18 +370,14 @@ namespace Cotton.Sdk.Internal
             string? failedAccessToken,
             CancellationToken cancellationToken)
         {
-            bool refreshed = await TryRefreshAsync(failedAccessToken, cancellationToken).ConfigureAwait(false);
+            bool refreshed = await _tokenRefreshManager
+                .TryRefreshAsync(failedAccessToken, cancellationToken)
+                .ConfigureAwait(false);
             _logger.LogWarning(
                 "Cotton API request {Method} {Path} returned unauthorized; token refresh {RefreshResult}, retrying request.",
                 method.Method,
                 CottonHttpResponseReader.RedactPath(path),
                 refreshed ? "succeeded" : "failed");
-        }
-
-        private static bool HasUsableAccessTokenChanged(string? failedAccessToken, string? currentAccessToken)
-        {
-            return !string.IsNullOrWhiteSpace(currentAccessToken)
-                && !string.Equals(currentAccessToken, failedAccessToken, StringComparison.Ordinal);
         }
 
         private void ApplyDefaultHeaders(HttpRequestMessage request)
