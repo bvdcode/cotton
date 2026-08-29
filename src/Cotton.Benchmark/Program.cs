@@ -24,7 +24,7 @@ namespace Cotton.Benchmark
             }
             catch (ArgumentException ex)
             {
-                Console.Error.WriteLine(ex.Message);
+                await Console.Error.WriteLineAsync(ex.Message);
                 PrintHelp();
                 return 2;
             }
@@ -55,7 +55,8 @@ namespace Cotton.Benchmark
 
             if (benchmarks.Count == 0)
             {
-                Console.Error.WriteLine("No benchmarks matched the requested mode and scenario filters.");
+                await Console.Error.WriteLineAsync(
+                    "No benchmarks matched the requested mode and scenario filters.");
                 return 2;
             }
 
@@ -173,8 +174,10 @@ namespace Cotton.Benchmark
             BenchmarkRunDocument? baseline = await artifactStore.LoadBaselineAsync(runDocument, CancellationToken.None);
             if (baseline is null)
             {
-                Console.Error.WriteLine($"No reviewed result found: {artifactStore.GetBaselinePath(runDocument)}");
-                Console.Error.WriteLine("Run again with --update-baseline after reviewing the result.");
+                await Console.Error.WriteLineAsync(
+                    $"No reviewed result found: {artifactStore.GetBaselinePath(runDocument)}");
+                await Console.Error.WriteLineAsync(
+                    "Run again with --update-baseline after reviewing the result.");
                 return 2;
             }
 

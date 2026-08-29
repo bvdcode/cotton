@@ -40,15 +40,15 @@ namespace Cotton.Benchmark.Infrastructure
             return Task.FromResult<Stream>(new MemoryStream(data, writable: false));
         }
 
-        public Task<long> WriteAsync(
+        public async Task<long> WriteAsync(
             string uid,
             Stream stream)
         {
             using MemoryStream ms = new MemoryStream();
-            stream.CopyTo(ms);
+            await stream.CopyToAsync(ms);
             byte[] stored = ms.ToArray();
             _storage[uid] = stored;
-            return Task.FromResult(stored.LongLength);
+            return stored.LongLength;
         }
 
         public async IAsyncEnumerable<string> ListAllKeysAsync([EnumeratorCancellation] CancellationToken ct = default)
