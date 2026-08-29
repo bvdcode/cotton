@@ -207,7 +207,7 @@ namespace Cotton.Previews
                         continue;
                     }
 
-                    using Stream entryStream = entry.Open();
+                    await using Stream entryStream = await entry.OpenAsync().ConfigureAwait(false);
                     using MemoryStream imageBytes = new MemoryStream();
                     await entryStream.CopyToAsync(imageBytes).ConfigureAwait(false);
                     if (imageBytes.Length == 0)
@@ -408,8 +408,8 @@ namespace Cotton.Previews
                     ZipArchiveEntry normalizedEntry = normalizedArchive.CreateEntry(sourceEntry.FullName, CompressionLevel.Optimal);
                     normalizedEntry.LastWriteTime = sourceEntry.LastWriteTime;
 
-                    await using Stream sourceEntryStream = sourceEntry.Open();
-                    await using Stream normalizedEntryStream = normalizedEntry.Open();
+                    await using Stream sourceEntryStream = await sourceEntry.OpenAsync().ConfigureAwait(false);
+                    await using Stream normalizedEntryStream = await normalizedEntry.OpenAsync().ConfigureAwait(false);
                     await sourceEntryStream.CopyToAsync(normalizedEntryStream).ConfigureAwait(false);
                 }
 

@@ -76,7 +76,7 @@ namespace Cotton.Previews
                 return null;
             }
 
-            await using Stream entryStream = entry.Open();
+            await using Stream entryStream = await entry.OpenAsync().ConfigureAwait(false);
             MemoryStream output = new MemoryStream((int)Math.Min(entry.Length, int.MaxValue));
             await CopyBoundedAsync(entryStream, output, maxBytes).ConfigureAwait(false);
             return output.ToArray();

@@ -373,7 +373,7 @@ namespace Cotton.Previews.Http
         {
             _logger?.LogDebug("[RangeServer {ServerId}] Disposing...", _serverId);
             MarkDisposing();
-            _cts.Cancel();
+            await _cts.CancelAsync().ConfigureAwait(false);
             try { _listener.Stop(); } catch { }
             try { _listener.Close(); } catch { }
             try

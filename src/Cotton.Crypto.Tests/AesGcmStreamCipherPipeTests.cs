@@ -101,12 +101,12 @@ namespace Cotton.Crypto.Tests
             byte[] data = [.. Enumerable.Range(0, 2 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
             using MemoryStream input = new MemoryStream(data);
             using CancellationTokenSource cts = new CancellationTokenSource();
-            cts.Cancel();
+            await cts.CancelAsync();
 
             Stream stream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
             using MemoryStream sink = new MemoryStream();
 
-            Assert.That(
+            await Assert.ThatAsync(
                 async () => await stream.CopyToAsync(sink).WaitAsync(TimeSpan.FromSeconds(3)),
                 Throws.InstanceOf<OperationCanceledException>());
         }
@@ -160,11 +160,11 @@ namespace Cotton.Crypto.Tests
             encrypted.Position = 0;
 
             using CancellationTokenSource cts = new CancellationTokenSource();
-            cts.Cancel();
+            await cts.CancelAsync();
             Stream stream = await decCipher.DecryptAsync(encrypted, ct: cts.Token);
             using MemoryStream sink = new MemoryStream();
 
-            Assert.That(
+            await Assert.ThatAsync(
                 async () => await stream.CopyToAsync(sink).WaitAsync(TimeSpan.FromSeconds(3)),
                 Throws.InstanceOf<OperationCanceledException>());
         }
@@ -207,7 +207,7 @@ namespace Cotton.Crypto.Tests
             using MemoryStream tampered = new MemoryStream(bytes);
             Stream decStream = await cipher.DecryptAsync(tampered);
             using MemoryStream sink = new MemoryStream();
-            Assert.That(async () => await decStream.CopyToAsync(sink),
+            await Assert.ThatAsync(async () => await decStream.CopyToAsync(sink),
                 Throws.TypeOf<InvalidDataException>().Or.TypeOf<CryptographicException>());
         }
 
@@ -224,7 +224,7 @@ namespace Cotton.Crypto.Tests
                 AesGcmStreamCipher.KeySize);
             using ThrowingWriteStream output = new ThrowingWriteStream(fileHeaderLen + 8);
 
-            Assert.That(
+            await Assert.ThatAsync(
                 async () => await cipher.EncryptAsync(input, output, chunkSize: AesGcmStreamCipher.MinChunkSize).WaitAsync(TimeSpan.FromSeconds(5)),
                 Throws.InstanceOf<IOException>());
         }
@@ -241,7 +241,7 @@ namespace Cotton.Crypto.Tests
             encrypted.Position = 0;
             using ThrowingWriteStream output = new ThrowingWriteStream(AesGcmStreamCipher.MinChunkSize / 2);
 
-            Assert.That(
+            await Assert.ThatAsync(
                 async () => await cipher.DecryptAsync(encrypted, output).WaitAsync(TimeSpan.FromSeconds(5)),
                 Throws.InstanceOf<IOException>());
         }
@@ -267,7 +267,7 @@ namespace Cotton.Crypto.Tests
             using NonSeekableReadStream tampered = new NonSeekableReadStream(tamperedInner);
             using MemoryStream output = new MemoryStream();
 
-            Assert.That(
+            await Assert.ThatAsync(
                 async () => await cipher.DecryptAsync(tampered, output).WaitAsync(TimeSpan.FromSeconds(5)),
                 Throws.InstanceOf<EndOfStreamException>());
         }

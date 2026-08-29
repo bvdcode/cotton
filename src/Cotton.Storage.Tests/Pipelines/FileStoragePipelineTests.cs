@@ -45,15 +45,15 @@ namespace Cotton.Storage.Tests.Pipelines
                 return Task.FromResult<Stream>(new MemoryStream(data));
             }
 
-            public Task<long> WriteAsync(
+            public async Task<long> WriteAsync(
                 string uid,
                 Stream stream)
             {
                 MemoryStream ms = new MemoryStream();
-                stream.CopyTo(ms);
+                await stream.CopyToAsync(ms);
                 byte[] stored = ms.ToArray();
                 _storage[uid] = stored;
-                return Task.FromResult(stored.LongLength);
+                return stored.LongLength;
             }
 
             public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)

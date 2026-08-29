@@ -21,7 +21,9 @@ namespace Cotton.Previews
                 stream.Position = 0;
             }
 
-            using Image<Rgba32> image = Image.Load<Rgba32>(stream);
+            using Image<Rgba32> image = await Image
+                .LoadAsync<Rgba32>(stream)
+                .ConfigureAwait(false);
             image.Mutate(x => x.AutoOrient());
             return await EncodeMaxResizedWebpAsync(image, size);
         }

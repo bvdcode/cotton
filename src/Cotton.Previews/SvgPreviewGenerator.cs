@@ -74,7 +74,7 @@ namespace Cotton.Previews
                 await gzip.CopyToAsync(decompressed).ConfigureAwait(false);
             }
 
-            source.Dispose();
+            await source.DisposeAsync().ConfigureAwait(false);
             decompressed.Position = 0;
             return decompressed;
         }

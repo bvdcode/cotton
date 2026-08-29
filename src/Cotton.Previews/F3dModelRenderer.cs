@@ -111,6 +111,8 @@ namespace Cotton.Previews
                 using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(renderTimeoutSeconds));
                 await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
                 await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+                string stdout = await stdoutTask.ConfigureAwait(false);
+                string stderr = await stderrTask.ConfigureAwait(false);
 
                 if (process.ExitCode != 0)
                 {
@@ -118,8 +120,8 @@ namespace Cotton.Previews
                         false,
                         $"f3d exited with code {process.ExitCode} (xvfb={useXvfb}, " +
                         $"max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, " +
-                        $"verbose={includeVerboseArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} " +
-                        $"stderr: {LimitDiagnostic(stderrTask.Result)}");
+                        $"verbose={includeVerboseArgument}). stdout: {LimitDiagnostic(stdout)} " +
+                        $"stderr: {LimitDiagnostic(stderr)}");
                 }
 
                 bool hasOutput = File.Exists(outputPngPath) && new FileInfo(outputPngPath).Length > 0;
@@ -129,8 +131,8 @@ namespace Cotton.Previews
                         false,
                         $"f3d finished successfully but did not produce output file (xvfb={useXvfb}, " +
                         $"max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, " +
-                        $"verbose={includeVerboseArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} " +
-                        $"stderr: {LimitDiagnostic(stderrTask.Result)}");
+                        $"verbose={includeVerboseArgument}). stdout: {LimitDiagnostic(stdout)} " +
+                        $"stderr: {LimitDiagnostic(stderr)}");
             }
             catch (OperationCanceledException)
             {

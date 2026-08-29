@@ -39,7 +39,7 @@ namespace Cotton.Previews.Tests
             string artifactPath = Path.Combine(artifactsDirectory, "audio-waveform-preview.webp");
             await File.WriteAllBytesAsync(artifactPath, preview);
 
-            TestContext.Progress.WriteLine($"Audio waveform preview artifact: {artifactPath}");
+            await TestContext.Progress.WriteLineAsync($"Audio waveform preview artifact: {artifactPath}");
         }
 
         [Test]
@@ -62,8 +62,8 @@ namespace Cotton.Previews.Tests
             string artifactPath = Path.Combine(artifactsDirectory, "audio-waveform-preview-large.webp");
             await File.WriteAllBytesAsync(artifactPath, preview);
 
-            TestContext.Progress.WriteLine($"Large audio bytes: {wavBytes.Length:N0}");
-            TestContext.Progress.WriteLine($"Large audio waveform preview artifact: {artifactPath}");
+            await TestContext.Progress.WriteLineAsync($"Large audio bytes: {wavBytes.Length:N0}");
+            await TestContext.Progress.WriteLineAsync($"Large audio waveform preview artifact: {artifactPath}");
         }
 
         [Test]
@@ -94,7 +94,7 @@ namespace Cotton.Previews.Tests
                 AssertWebpSignature(preview);
                 string artifactPath = Path.Combine(artifactsDirectory, $"audio-waveform-preview-{Name}.webp");
                 await File.WriteAllBytesAsync(artifactPath, preview);
-                TestContext.Progress.WriteLine($"Audio waveform preview debug artifact: {artifactPath}");
+                await TestContext.Progress.WriteLineAsync($"Audio waveform preview debug artifact: {artifactPath}");
             }
         }
 

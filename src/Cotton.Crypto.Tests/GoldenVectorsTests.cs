@@ -153,15 +153,12 @@ namespace Cotton.Crypto.Tests
             byte[] Ctn2SingleChunk,
             byte[] Ctn1TwoChunk);
 
-        private class SequenceRandomNumberGenerator : RandomNumberGenerator
+        private class SequenceRandomNumberGenerator(params byte[][] sequences) : RandomNumberGenerator
         {
-            private readonly byte[] _bytes;
+            private readonly byte[] _bytes = sequences
+                .SelectMany(static sequence => sequence)
+                .ToArray();
             private int _offset;
-
-            public SequenceRandomNumberGenerator(params byte[][] sequences)
-            {
-                _bytes = sequences.SelectMany(static sequence => sequence).ToArray();
-            }
 
             public override void GetBytes(byte[] data)
             {

@@ -80,7 +80,7 @@ namespace Cotton.Crypto.Internals.Pipelines
 
             async Task CleanupAfterFailureAsync()
             {
-                pipelineCts.Cancel();
+                await pipelineCts.CancelAsync().ConfigureAwait(false);
                 jobCh.Writer.TryComplete();
                 resCh.Writer.TryComplete();
                 await PipelineTaskHelpers.ObserveAllAsync(producer, workersDone, resultsDone, consumerTask).ConfigureAwait(false);

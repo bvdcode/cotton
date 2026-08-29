@@ -5,21 +5,14 @@ using System.Runtime.CompilerServices;
 
 namespace Cotton.Database.Configuration
 {
-    internal class CottonModelCacheKey : IEquatable<CottonModelCacheKey>
+    internal class CottonModelCacheKey(
+        Type contextType,
+        IDatabaseFieldProtector? databaseFieldProtector,
+        bool designTime) : IEquatable<CottonModelCacheKey>
     {
-        private readonly Type _contextType;
-        private readonly IDatabaseFieldProtector? _databaseFieldProtector;
-        private readonly bool _designTime;
-
-        public CottonModelCacheKey(
-            Type contextType,
-            IDatabaseFieldProtector? databaseFieldProtector,
-            bool designTime)
-        {
-            _contextType = contextType;
-            _databaseFieldProtector = databaseFieldProtector;
-            _designTime = designTime;
-        }
+        private readonly Type _contextType = contextType;
+        private readonly IDatabaseFieldProtector? _databaseFieldProtector = databaseFieldProtector;
+        private readonly bool _designTime = designTime;
 
         public bool Equals(CottonModelCacheKey? other)
         {

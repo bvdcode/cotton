@@ -326,7 +326,7 @@ namespace Cotton.Storage.Tests.Backends
 
             foreach (MemoryStream stream in streams)
             {
-                stream.Dispose();
+                await stream.DisposeAsync();
             }
         }
     }

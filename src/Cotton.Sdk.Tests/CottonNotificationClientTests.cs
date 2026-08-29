@@ -168,7 +168,7 @@ namespace Cotton.Sdk.Tests
         {
             CottonCloudClient client = await CreateAuthorizedClientAsync(new QueuedHttpMessageHandler());
             using CancellationTokenSource cancellation = new();
-            cancellation.Cancel();
+            await cancellation.CancelAsync();
 
             Assert.CatchAsync<OperationCanceledException>(
                 () => client.Notifications.GetNotificationBatchAsync(cancellationToken: cancellation.Token));

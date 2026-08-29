@@ -198,11 +198,11 @@ namespace Cotton.Crypto
                 BufferPool.Return(fileKey, clearArray: false);
                 if (!leaveInputOpen)
                 {
-                    input.Dispose();
+                    await input.DisposeAsync().ConfigureAwait(false);
                 }
                 if (!leaveOutputOpen)
                 {
-                    output.Dispose();
+                    await output.DisposeAsync().ConfigureAwait(false);
                 }
             }
         }
@@ -226,11 +226,11 @@ namespace Cotton.Crypto
             {
                 if (!leaveInputOpen)
                 {
-                    input.Dispose();
+                    await input.DisposeAsync().ConfigureAwait(false);
                 }
                 if (!leaveOutputOpen)
                 {
-                    output.Dispose();
+                    await output.DisposeAsync().ConfigureAwait(false);
                 }
                 throw new InvalidDataException($"Key ID mismatch. Expected {_keyId}, but file has {header.KeyId}.");
             }
@@ -256,11 +256,11 @@ namespace Cotton.Crypto
                 BufferPool.Return(fileKey, clearArray: false);
                 if (!leaveInputOpen)
                 {
-                    input.Dispose();
+                    await input.DisposeAsync().ConfigureAwait(false);
                 }
                 if (!leaveOutputOpen)
                 {
-                    output.Dispose();
+                    await output.DisposeAsync().ConfigureAwait(false);
                 }
             }
         }
@@ -311,7 +311,7 @@ namespace Cotton.Crypto
                 {
                     if (!leaveOpen)
                     {
-                        input.Dispose();
+                        await input.DisposeAsync().ConfigureAwait(false);
                     }
                 }
             });
@@ -361,7 +361,7 @@ namespace Cotton.Crypto
                 {
                     if (!leaveOpen)
                     {
-                        input.Dispose();
+                        await input.DisposeAsync().ConfigureAwait(false);
                     }
                 }
             });

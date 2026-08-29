@@ -10,10 +10,9 @@ using ZstdSharp;
 
 namespace Cotton.Storage.Processors
 {
-    public class CompressionProcessor : IStorageProcessor
+    public class CompressionProcessor(
+        ICompressionLevelProvider _compressionLevelProvider) : IStorageProcessor
     {
-        private readonly ICompressionLevelProvider _compressionLevelProvider;
-
         public const int DefaultCompressionLevel = 1;
 
         public static readonly int MinCompressionLevel = Compressor.MinCompressionLevel;
@@ -28,11 +27,6 @@ namespace Cotton.Storage.Processors
         public CompressionProcessor()
             : this(new StaticCompressionLevelProvider(DefaultCompressionLevel))
         {
-        }
-
-        public CompressionProcessor(ICompressionLevelProvider compressionLevelProvider)
-        {
-            _compressionLevelProvider = compressionLevelProvider;
         }
 
         public static void ThrowIfInvalidLevel(int level)
@@ -92,7 +86,7 @@ namespace Cotton.Storage.Processors
                 }
                 finally
                 {
-                    stream.Dispose();
+                    await stream.DisposeAsync().ConfigureAwait(false);
                 }
             });
 

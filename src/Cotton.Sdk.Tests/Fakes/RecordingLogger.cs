@@ -5,17 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Sdk.Tests.Fakes
 {
-    internal class RecordingLogger : ILogger
+    internal class RecordingLogger(
+        string _categoryName,
+        List<RecordingLogEntry> _entries) : ILogger
     {
-        private readonly string _categoryName;
-        private readonly List<RecordingLogEntry> _entries;
-
-        public RecordingLogger(string categoryName, List<RecordingLogEntry> entries)
-        {
-            _categoryName = categoryName;
-            _entries = entries;
-        }
-
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull
         {
