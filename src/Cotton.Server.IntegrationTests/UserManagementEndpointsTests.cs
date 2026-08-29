@@ -583,6 +583,7 @@ namespace Cotton.Server.IntegrationTests
                 StateHash = Guid.NewGuid().ToString("N"),
                 CodeVerifierEncrypted = "verifier",
                 NonceEncrypted = "nonce",
+                ReturnUrl = "/",
                 LinkUserId = userId,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(5),
             });

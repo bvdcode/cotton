@@ -34,7 +34,7 @@ namespace Cotton.Database.Models
 
         [Column("return_url")]
         [MaxLength(1024)]
-        public string ReturnUrl { get; set; } = "/";
+        public string ReturnUrl { get; set; } = null!;
 
         [Column("link_user_id")]
         public Guid? LinkUserId { get; set; }

@@ -26,7 +26,7 @@ namespace Cotton.Database.Models
         public int MaxChunkSizeBytes { get; set; }
 
         [Column("session_timeout_hours")]
-        public int SessionTimeoutHours { get; set; } = 30 * 24;
+        public int SessionTimeoutHours { get; set; }
 
         [Column("allow_cross_user_deduplication")]
         public bool AllowCrossUserDeduplication { get; set; }
