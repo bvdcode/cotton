@@ -10,6 +10,7 @@ using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Services
@@ -115,11 +116,22 @@ namespace Cotton.Server.Services
 
         public async Task DeleteAsync(Guid providerId, CancellationToken ct)
         {
+            await using IDbContextTransaction transaction = await _dbContext.Database
+                .BeginTransactionAsync(ct);
             OidcProvider provider = await _dbContext.OidcProviders.FindAsync([providerId], ct)
                 ?? throw new EntityNotFoundException<OidcProvider>();
             _integrity.RequireValid(_dbContext, provider, "oidc.admin-delete");
+
+            await _dbContext.OidcLoginStates
+                .Where(state => state.ProviderId == providerId)
+                .ExecuteDeleteAsync(ct);
+            await _dbContext.UserExternalIdentities
+                .Where(identity => identity.ProviderId == providerId)
+                .ExecuteDeleteAsync(ct);
+
             _dbContext.OidcProviders.Remove(provider);
             await _dbContext.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
         }
 
         internal static OidcProviderDto ToDto(OidcProvider provider)

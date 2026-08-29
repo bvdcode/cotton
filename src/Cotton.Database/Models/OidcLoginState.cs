@@ -46,6 +46,7 @@ namespace Cotton.Database.Models
         public DateTime ExpiresAt { get; set; }
 
         [ForeignKey(nameof(ProviderId))]
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual OidcProvider Provider { get; set; } = null!;
     }
 }
