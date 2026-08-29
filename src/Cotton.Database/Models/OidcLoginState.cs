@@ -1,7 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Database.Models.Attributes;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
@@ -24,11 +23,9 @@ namespace Cotton.Database.Models
         [MaxLength(64)]
         public string StateHash { get; set; } = null!;
 
-        [Encrypted]
         [Column("code_verifier_encrypted")]
         public string CodeVerifierEncrypted { get; set; } = null!;
 
-        [Encrypted]
         [Column("nonce_encrypted")]
         public string NonceEncrypted { get; set; } = null!;
 

@@ -1,7 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Database.Models.Attributes;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +29,6 @@ namespace Cotton.Database.Models
         [MaxLength(256)]
         public string ClientId { get; set; } = null!;
 
-        [Encrypted]
         [Column("client_secret_encrypted")]
         public string? ClientSecretEncrypted { get; set; }
 

@@ -2,7 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Crypto;
-using Cotton.Database.Models.Attributes;
 using Cotton.Database.Models.Enums;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -115,19 +114,15 @@ namespace Cotton.Database.Models
         [Column("oidc_issuer")]
         public string? OidcIssuer { get; set; }
 
-        [Encrypted]
         [Column("cloud_services_token_encrypted")]
         public string? CloudServicesTokenEncrypted { get; set; }
 
-        [Encrypted]
         [Column("oidc_client_secret_encrypted")]
         public string? OidcClientSecretEncrypted { get; set; }
 
-        [Encrypted]
         [Column("s3_secret_access_key_encrypted")]
         public string? S3SecretAccessKeyEncrypted { get; set; }
 
-        [Encrypted]
         [Column("smtp_password_encrypted")]
         public string? SmtpPasswordEncrypted { get; set; }
 
