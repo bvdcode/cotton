@@ -19,8 +19,10 @@ export const queryKeys = {
     all: () => layoutsRoot,
     root: () => [...layoutsRoot, "root"] as const,
     stats: (layoutId: string) => [...layoutsRoot, "stats", layoutId] as const,
+    recentAll: (layoutId: string) =>
+      [...layoutsRoot, "recent", layoutId] as const,
     recent: (layoutId: string, count: number) =>
-      [...layoutsRoot, "recent", layoutId, count] as const,
+      [...queryKeys.layouts.recentAll(layoutId), count] as const,
   },
   admin: {
     all: () => adminRoot,

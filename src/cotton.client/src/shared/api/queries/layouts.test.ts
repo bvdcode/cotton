@@ -1,6 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import { clearLayoutsCaches } from "./layouts";
+import { clearLayoutsCaches, invalidateLayoutOverview } from "./layouts";
 import { queryKeys } from "./queryKeys";
 
 const createQueryClient = () =>
@@ -44,5 +44,37 @@ describe("layout query cache helpers", () => {
     expect(
       queryClient.getQueryData(queryKeys.notifications.unreadCount()),
     ).toBe(3);
+  });
+
+  it("invalidates stats and every recent-file count for one layout", async () => {
+    const queryClient = createQueryClient();
+
+    queryClient.setQueryData(queryKeys.layouts.stats("layout-1"), {
+      fileCount: 1,
+    });
+    queryClient.setQueryData(queryKeys.layouts.recent("layout-1", 5), []);
+    queryClient.setQueryData(queryKeys.layouts.recent("layout-1", 15), []);
+    queryClient.setQueryData(queryKeys.layouts.stats("layout-2"), {
+      fileCount: 2,
+    });
+
+    await invalidateLayoutOverview(queryClient, "layout-1");
+
+    expect(
+      queryClient.getQueryState(queryKeys.layouts.stats("layout-1"))
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(queryKeys.layouts.recent("layout-1", 5))
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(queryKeys.layouts.recent("layout-1", 15))
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(queryKeys.layouts.stats("layout-2"))
+        ?.isInvalidated,
+    ).toBe(false);
   });
 });

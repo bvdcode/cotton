@@ -11,6 +11,7 @@ import {
   useTrashRootQuery,
 } from "../../shared/api/queries/trash";
 import { useFileSelection } from "../../shared/hooks/useFileSelection";
+import { useAuth } from "../../features/auth";
 import { useTrashFileList } from "../../shared/hooks/useFileListSource";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 import {
@@ -23,6 +24,11 @@ import {
   cycleFileBrowserViewMode,
   getFileBrowserViewMode,
 } from "../../shared/utils/viewMode";
+import {
+  HUB_METHODS,
+  useFileTreeRealtimeInvalidation,
+  type HubMethodOrLower,
+} from "../../shared/signalr";
 import { useFileListSourceLogic } from "../files/hooks/useFileListPageLogic";
 import { TrashPageContent } from "./components/TrashPageContent";
 import { TrashPageHeader } from "./components/TrashPageHeader";
@@ -40,8 +46,21 @@ import {
   isCurrentTrashWrapper,
 } from "./utils/trashBreadcrumbs";
 
+const TRASH_MUTATION_METHODS = new Set<string>(
+  [
+    HUB_METHODS.FileDeleted,
+    HUB_METHODS.FileRestored,
+    HUB_METHODS.NodeDeleted,
+    HUB_METHODS.NodeRestored,
+  ].map((method) => method.toLowerCase()),
+);
+
+const shouldInvalidateTrash = (method: HubMethodOrLower): boolean =>
+  TRASH_MUTATION_METHODS.has(method.toLowerCase());
+
 export const TrashPage: React.FC = () => {
   const { t } = useTranslation(["trash", "common", "files", "tasks"]);
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { nodeId: routeNodeId } = useParams<{ nodeId?: string }>();
   const confirm = useConfirm();
@@ -107,6 +126,14 @@ export const TrashPage: React.FC = () => {
 
     await invalidateTrashChildren(queryClient, nodeId);
   }, [layoutType, nodeId, queryClient, reloadListPage]);
+  const handleRealtimeInvalidate = useCallback((): void => {
+    void refreshContent();
+  }, [refreshContent]);
+  useFileTreeRealtimeInvalidation({
+    enabled: isAuthenticated && Boolean(nodeId),
+    onInvalidate: handleRealtimeInvalidate,
+    shouldInvalidate: shouldInvalidateTrash,
+  });
 
   const pageTitle =
     !routeNodeId || ancestors.length === 0

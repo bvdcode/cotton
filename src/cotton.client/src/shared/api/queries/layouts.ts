@@ -47,3 +47,17 @@ export const useRecentFilesQuery = (
 export const clearLayoutsCaches = (queryClient: QueryClient): void => {
   queryClient.removeQueries({ queryKey: queryKeys.layouts.all() });
 };
+
+export const invalidateLayoutOverview = async (
+  queryClient: QueryClient,
+  layoutId: string,
+): Promise<void> => {
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.layouts.stats(layoutId),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.layouts.recentAll(layoutId),
+    }),
+  ]);
+};

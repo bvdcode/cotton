@@ -1,16 +1,45 @@
 import { Box, Card, CardContent, Typography, Alert } from "@mui/material";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import {
+  invalidateLayoutOverview,
   useLayoutStatsQuery,
   useRecentFilesQuery,
   useRootNodeQuery,
 } from "../../shared/api/queries/layouts";
+import {
+  HUB_METHODS,
+  useFileTreeRealtimeInvalidation,
+  type HubMethodOrLower,
+} from "../../shared/signalr";
 import { formatBytes } from "../../shared/utils/formatBytes";
+import { useAuth } from "../../features/auth";
 import { RecentFilesCard } from "./components/RecentFilesCard";
+
+const HOME_OVERVIEW_METHODS = new Set<string>(
+  [
+    HUB_METHODS.FileCreated,
+    HUB_METHODS.FileUpdated,
+    HUB_METHODS.FileDeleted,
+    HUB_METHODS.FileMoved,
+    HUB_METHODS.FileRenamed,
+    HUB_METHODS.FileRestored,
+    HUB_METHODS.NodeCreated,
+    HUB_METHODS.NodeDeleted,
+    HUB_METHODS.NodeMoved,
+    HUB_METHODS.NodeRestored,
+  ].map((method) => method.toLowerCase()),
+);
+
+const shouldInvalidateHomeOverview = (method: HubMethodOrLower): boolean =>
+  HOME_OVERVIEW_METHODS.has(method.toLowerCase());
 
 export const HomePage: React.FC = () => {
   const { t } = useTranslation(["home", "common"]);
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const rootQuery = useRootNodeQuery();
   const rootNode = rootQuery.data ?? null;
   const layoutId = rootNode?.layoutId;
@@ -22,6 +51,16 @@ export const HomePage: React.FC = () => {
   const loadingRoot = rootQuery.isPending;
   const loadingStats = statsQuery.isPending && !!layoutId;
   const loadingRecent = recentQuery.isPending && !!layoutId;
+  const handleRealtimeInvalidate = useCallback((): void => {
+    if (layoutId) {
+      void invalidateLayoutOverview(queryClient, layoutId);
+    }
+  }, [layoutId, queryClient]);
+  useFileTreeRealtimeInvalidation({
+    enabled: isAuthenticated && Boolean(layoutId),
+    onInvalidate: handleRealtimeInvalidate,
+    shouldInvalidate: shouldInvalidateHomeOverview,
+  });
   const error = rootQuery.error
     ? "Failed to resolve root layout"
     : statsQuery.error
