@@ -9,11 +9,9 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Auth;
-using Cotton.Server.Handlers.Users;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
@@ -55,7 +53,6 @@ namespace Cotton.Server.Controllers
         WebDavAuthCache _webDavAuthCache,
         INotificationsProvider _notifications,
         IGeoLookupService _geoLookup,
-        PasskeyService _passkeys,
         DefaultUserContentSeeder _defaultUserContentSeeder,
         ApplicationStartupClock _startupClock,
         RefreshTokenRevocationService _refreshTokenRevocations,
@@ -130,114 +127,6 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpDelete("totp/disable")]
-        public async Task<IActionResult> DisableTotp([FromBody] DisableTotpRequestDto request)
-        {
-            if (string.IsNullOrWhiteSpace(request.Password))
-            {
-                return this.ApiBadRequest("Password is required");
-            }
-            Guid userId = User.GetUserId();
-            User? user = await _dbContext.Users.FindAsync(userId);
-            if (user is null)
-            {
-                return this.ApiUnauthorized("User not found");
-            }
-            _integrity.RequireValid(_dbContext, user, "auth.disable-totp");
-            if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
-            {
-                return this.ApiForbidden("Invalid password");
-            }
-            if (!user.IsTotpEnabled)
-            {
-                return this.ApiConflict("TOTP is not enabled for this user");
-            }
-            user.IsTotpEnabled = false;
-            user.TotpSecretEncrypted = null;
-            user.TotpEnabledAt = null;
-            await _dbContext.SaveChangesAsync();
-            await _notifications.SendOtpDisabledAsync(
-                _geoLookup,
-                _settings,
-                _logger,
-                userId,
-                GetRequestIpAddress(),
-                Request.Headers.UserAgent);
-            return Ok();
-        }
-
-        [Authorize]
-        [HttpPost("totp/confirm")]
-        public async Task<IActionResult> ConfirmTotp([FromBody] ConfirmTotpRequestDto request)
-        {
-            if (string.IsNullOrWhiteSpace(request.TwoFactorCode))
-            {
-                return this.ApiBadRequest("Two-factor authentication code is required");
-            }
-            Guid userId = User.GetUserId();
-            User? user = await _dbContext.Users.FindAsync(userId);
-            if (user is null)
-            {
-                return this.ApiUnauthorized("User not found");
-            }
-            _integrity.RequireValid(_dbContext, user, "auth.confirm-totp");
-            if (user.IsTotpEnabled)
-            {
-                return this.ApiConflict("TOTP is already enabled for this user");
-            }
-            if (user.TotpSecretEncrypted is null)
-            {
-                return this.ApiBadRequest("TOTP setup has not been initiated for this user");
-            }
-            string secret = await _crypto.DecryptStringAsync(
-                user.TotpSecretEncrypted,
-                HttpContext.RequestAborted);
-            bool isValid = TotpHelpers.VerifyCode(secret, request.TwoFactorCode);
-            if (!isValid)
-            {
-                return this.ApiForbidden("Invalid two-factor authentication code");
-            }
-            user.IsTotpEnabled = true;
-            user.TotpEnabledAt = DateTime.UtcNow;
-            await _dbContext.SaveChangesAsync();
-            await _notifications.SendOtpEnabledAsync(
-                _geoLookup,
-                _settings,
-                _logger,
-                userId,
-                GetRequestIpAddress(),
-                Request.Headers.UserAgent);
-            return Ok();
-        }
-
-        [Authorize]
-        [HttpPost("totp/setup")]
-        public async Task<IActionResult> SetupTotp()
-        {
-            Guid userId = User.GetUserId();
-            User? user = await _dbContext.Users.FindAsync(userId);
-            if (user is null)
-            {
-                return this.ApiUnauthorized("User not found");
-            }
-            _integrity.RequireValid(_dbContext, user, "auth.setup-totp");
-            if (user.IsTotpEnabled)
-            {
-                return this.ApiConflict("TOTP is already enabled for this user");
-            }
-            string issuer = Constants.ShortProductName;
-            string account = string.IsNullOrWhiteSpace(Request.Host.Host)
-                ? user.Username
-                : $"{user.Username}@{Request.Host.Host}";
-            TotpSetup setup = TotpHelpers.CreateSetup(issuer, account);
-            user.TotpSecretEncrypted = await _crypto.EncryptStringAsync(
-                setup.SecretBase32,
-                cancellationToken: HttpContext.RequestAborted);
-            await _dbContext.SaveChangesAsync();
-            return Ok(setup);
-        }
-
-        [Authorize]
         [HttpGet("me")]
         public async Task<IActionResult> Me()
         {
@@ -249,93 +138,6 @@ namespace Cotton.Server.Controllers
             }
             _integrity.RequireValid(_dbContext, user, "auth.me");
             return Ok(user.Adapt<UserDto>());
-        }
-
-        [Authorize]
-        [HttpGet("passkeys")]
-        public async Task<IActionResult> GetPasskeys(CancellationToken cancellationToken)
-        {
-            Guid userId = User.GetUserId();
-            IReadOnlyList<PasskeyCredentialDto> credentials = await _passkeys.GetCredentialsAsync(userId, cancellationToken);
-            return Ok(credentials);
-        }
-
-        [Authorize]
-        [HttpPost("passkeys/registration/options")]
-        public async Task<IActionResult> BeginPasskeyRegistration(
-            [FromBody] BeginPasskeyRegistrationRequestDto request,
-            CancellationToken cancellationToken)
-        {
-            PasskeyRegistrationOptionsResponseDto response = await _passkeys.BeginRegistrationAsync(
-                User.GetUserId(),
-                request.Label,
-                cancellationToken);
-            return Ok(response);
-        }
-
-        [Authorize]
-        [HttpPost("passkeys/registration/verify")]
-        public async Task<IActionResult> FinishPasskeyRegistration(
-            [FromBody] FinishPasskeyRegistrationRequestDto request,
-            CancellationToken cancellationToken)
-        {
-            PasskeyCredentialDto response = await _passkeys.FinishRegistrationAsync(
-                User.GetUserId(),
-                request,
-                cancellationToken);
-            return Ok(response);
-        }
-
-        [Authorize]
-        [HttpPut("passkeys/{credentialId:guid}")]
-        public async Task<IActionResult> RenamePasskey(
-            [FromRoute] Guid credentialId,
-            [FromBody] RenamePasskeyRequestDto request,
-            CancellationToken cancellationToken)
-        {
-            PasskeyCredentialDto response = await _passkeys.SetCredentialLabelAsync(
-                User.GetUserId(),
-                credentialId,
-                request.Label,
-                cancellationToken);
-            return Ok(response);
-        }
-
-        [Authorize]
-        [HttpDelete("passkeys/{credentialId:guid}")]
-        public async Task<IActionResult> DeletePasskey(
-            [FromRoute] Guid credentialId,
-            CancellationToken cancellationToken)
-        {
-            await _passkeys.DeleteCredentialAsync(User.GetUserId(), credentialId, cancellationToken);
-            return Ok();
-        }
-
-        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
-        [HttpPost("passkeys/assertion/options")]
-        public async Task<IActionResult> BeginPasskeyAssertion(
-            [FromBody] BeginPasskeyAssertionRequestDto request,
-            CancellationToken cancellationToken)
-        {
-            PasskeyAssertionOptionsResponseDto response = await _passkeys.BeginAssertionAsync(request.Username, cancellationToken);
-            return Ok(response);
-        }
-
-        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
-        [HttpPost("passkeys/assertion/verify")]
-        public async Task<IActionResult> FinishPasskeyAssertion(
-            [FromBody] FinishPasskeyAssertionRequestDto request,
-            CancellationToken cancellationToken)
-        {
-            try
-            {
-                User user = await _passkeys.FinishAssertionAsync(request, cancellationToken);
-                return Ok(await CreateSignedInResponseAsync(user, request.TrustDevice, AuthType.Passkey));
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return this.ApiUnauthorized("Invalid passkey");
-            }
         }
 
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
@@ -524,28 +326,6 @@ namespace Cotton.Server.Controllers
             }
             Response.Cookies.Delete(CookieRefreshTokenKey);
             Response.Cookies.Delete(CookieAccessTokenKey);
-            return Ok();
-        }
-
-        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
-        [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword(
-            [FromBody] ForgotPasswordRequestDto request,
-            CancellationToken cancellationToken)
-        {
-            SendPasswordResetRequest command = new SendPasswordResetRequest(request.UsernameOrEmail, Request);
-            await _mediator.Send(command, cancellationToken);
-            return Ok();
-        }
-
-        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
-        [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword(
-            [FromBody] ResetPasswordRequestDto request,
-            CancellationToken cancellationToken)
-        {
-            ConfirmPasswordResetRequest command = new ConfirmPasswordResetRequest(request.Token, request.NewPassword);
-            await _mediator.Send(command, cancellationToken);
             return Ok();
         }
 

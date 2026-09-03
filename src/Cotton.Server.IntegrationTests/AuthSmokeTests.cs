@@ -11,6 +11,7 @@ using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;
@@ -24,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NUnit.Framework;
+using OtpNet;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -268,6 +270,38 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(
                 sessions?.Single(session => session.IsCurrentSession).Device,
                 Is.EqualTo("Cotton Sync Desktop (CI workstation)"));
+        }
+
+        [Test]
+        public async Task Totp_Setup_Confirm_And_Disable_Works()
+        {
+            Assert.That(_client, Is.Not.Null);
+
+            TokenPairResponseDto login = await LoginAsync("totpuser", "testpassword");
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
+
+            using HttpResponseMessage setupResponse = await _client.PostAsync(
+                "/api/v1/auth/totp/setup",
+                content: null);
+            TotpSetup? setup = await setupResponse.Content.ReadFromJsonAsync<TotpSetup>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(setupResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(setup, Is.Not.Null);
+            });
+
+            Totp totp = new(Base32Encoding.ToBytes(setup!.SecretBase32));
+            using HttpResponseMessage confirmResponse = await _client.PostAsJsonAsync(
+                "/api/v1/auth/totp/confirm",
+                new ConfirmTotpRequestDto { TwoFactorCode = totp.ComputeTotp() });
+            Assert.That(confirmResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+            using HttpRequestMessage disableRequest = new(HttpMethod.Delete, "/api/v1/auth/totp/disable")
+            {
+                Content = JsonContent.Create(new DisableTotpRequestDto { Password = "testpassword" }),
+            };
+            using HttpResponseMessage disableResponse = await _client.SendAsync(disableRequest);
+            Assert.That(disableResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         [Test]
