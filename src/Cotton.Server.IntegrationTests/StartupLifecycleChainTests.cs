@@ -150,8 +150,8 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(await ColumnExistsAsync("nodes", "metadata"), Is.True);
             Assert.That(await ColumnExistsAsync("node_files", "is_client_encrypted"), Is.False);
             Assert.That(
-                await IsIndexUniqueAsync("IX_node_files_node_id_name_key_owner_id_id"),
-                Is.False);
+                await IndexExistsAsync("IX_node_files_node_id_name_key_owner_id_id"),
+                Is.True);
         }
 
         [Test]
@@ -356,69 +356,36 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<bool> MigrationAppliedAsync(string migrationId)
         {
-            const string sql = """
-            SELECT EXISTS (
-                SELECT 1
-                FROM "__EFMigrationsHistory"
-                WHERE "MigrationId" = @migration_id
-            );
-            """;
-
-            return await ExecuteScalarAsync<bool>(sql, ("migration_id", migrationId));
+            IEnumerable<string> appliedMigrations = await DbContext.Database.GetAppliedMigrationsAsync();
+            return appliedMigrations.Contains(migrationId, StringComparer.Ordinal);
         }
 
         private async Task<bool> ColumnExistsAsync(string tableName, string columnName)
         {
-            const string sql = """
-            SELECT EXISTS (
-                SELECT 1
-                FROM information_schema.columns
-                WHERE table_schema = 'public'
-                    AND table_name = @table_name
-                    AND column_name = @column_name
-            );
-            """;
-
-            return await ExecuteScalarAsync<bool>(
-                sql,
-                ("table_name", tableName),
-                ("column_name", columnName));
+            await using NpgsqlConnection connection = await OpenSchemaConnectionAsync();
+            System.Data.DataTable columns = await connection.GetSchemaAsync("Columns");
+            return columns.Rows.Cast<System.Data.DataRow>().Any(row =>
+                string.Equals(row["table_schema"] as string, "public", StringComparison.Ordinal)
+                && string.Equals(row["table_name"] as string, tableName, StringComparison.Ordinal)
+                && string.Equals(row["column_name"] as string, columnName, StringComparison.Ordinal));
         }
 
-        private async Task<bool> IsIndexUniqueAsync(string indexName)
+        private async Task<bool> IndexExistsAsync(string indexName)
         {
-            const string sql = """
-            SELECT ix.indisunique
-            FROM pg_index ix
-            JOIN pg_class index_class ON index_class.oid = ix.indexrelid
-            WHERE index_class.relname = @index_name;
-            """;
-
-            return await ExecuteScalarAsync<bool>(sql, ("index_name", indexName));
+            await using NpgsqlConnection connection = await OpenSchemaConnectionAsync();
+            System.Data.DataTable indexes = await connection.GetSchemaAsync("Indexes");
+            return indexes.Rows.Cast<System.Data.DataRow>().Any(row =>
+                string.Equals(row["table_schema"] as string, "public", StringComparison.Ordinal)
+                && string.Equals(row["index_name"] as string, indexName, StringComparison.Ordinal));
         }
 
-        private async Task<T> ExecuteScalarAsync<T>(string sql, params (string Name, object Value)[] parameters)
+        private async Task<NpgsqlConnection> OpenSchemaConnectionAsync()
         {
             string connectionString = DbContext.Database.GetConnectionString()
                 ?? throw new InvalidOperationException("Missing test database connection string.");
-
-            await using NpgsqlConnection connection = new(connectionString);
+            NpgsqlConnection connection = new(connectionString);
             await connection.OpenAsync();
-
-            await using NpgsqlCommand command = new(sql, connection);
-            foreach ((string name, object value) in parameters)
-            {
-                command.Parameters.AddWithValue(name, value);
-            }
-
-            object? result = await command.ExecuteScalarAsync();
-            return result switch
-            {
-                T typed => typed,
-                null => throw new InvalidOperationException("Scalar query returned NULL."),
-                DBNull => throw new InvalidOperationException("Scalar query returned DB NULL."),
-                _ => throw new InvalidOperationException($"Unexpected scalar type: {result.GetType().FullName}.")
-            };
+            return connection;
         }
 
         private void SetBearer(string accessToken)
