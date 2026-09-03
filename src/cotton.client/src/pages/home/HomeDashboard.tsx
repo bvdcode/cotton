@@ -4,7 +4,6 @@ import type { LayoutStatsDto } from "../../shared/api/layoutsApi";
 import type { DashboardWidgetId } from "./dashboardModel";
 import {
   getDashboardWidgetTitle,
-  isCompactDashboardWidget,
   isRecentFilesWidget,
 } from "./dashboardWidgetMetadata";
 import type { useDashboardLayout } from "./useDashboardLayout";
@@ -53,6 +52,7 @@ export const HomeDashboard = ({
         <DashboardRecentFilesWidget
           enabled
           layoutId={layoutId}
+          size={dashboard.layout.sizes[widgetId]}
           widgetId={widgetId}
         />
       );
@@ -72,7 +72,7 @@ export const HomeDashboard = ({
           key={widgetId}
           widgetId={widgetId}
           title={getDashboardWidgetTitle(translate, widgetId)}
-          compact={isCompactDashboardWidget(widgetId)}
+          size={dashboard.layout.sizes[widgetId]}
           customizing={customizing}
           first={index === 0}
           last={index === dashboard.layout.order.length - 1}
@@ -81,6 +81,7 @@ export const HomeDashboard = ({
           onDrop={dashboard.drop}
           onHide={dashboard.hide}
           onMove={dashboard.move}
+          onResize={dashboard.resize}
         >
           {renderWidget(widgetId)}
         </DashboardWidgetFrame>

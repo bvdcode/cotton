@@ -2328,6 +2328,7 @@
       "actions": {
         "customize": "Personalizar",
         "done": "Listo",
+        "size": "Tamaño {{size}}",
         "moveUp": "Subir",
         "moveDown": "Bajar",
         "hide": "Ocultar widget",

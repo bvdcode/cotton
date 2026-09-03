@@ -1,8 +1,5 @@
 import type { TFunction } from "i18next";
-import type {
-  DashboardWidgetId,
-  RecentFilesWidgetId,
-} from "./dashboardModel";
+import type { DashboardWidgetId, RecentFilesWidgetId } from "./dashboardModel";
 
 export const RECENT_WIDGET_IDS = new Set<DashboardWidgetId>([
   "recentFiles",
@@ -16,26 +13,6 @@ export const RECENT_WIDGET_IDS = new Set<DashboardWidgetId>([
 export const isRecentFilesWidget = (
   widgetId: DashboardWidgetId,
 ): widgetId is RecentFilesWidgetId => RECENT_WIDGET_IDS.has(widgetId);
-
-export const isCompactDashboardWidget = (
-  widgetId: DashboardWidgetId,
-): boolean => {
-  switch (widgetId) {
-    case "overview":
-    case "quickAccess":
-    case "recentVideos":
-    case "recentDocuments":
-    case "recentAudio":
-    case "recentOther":
-      return true;
-    case "pinnedFolders":
-    case "recentFiles":
-    case "recentImages":
-      return false;
-    default:
-      throw new Error(`Unsupported dashboard widget: ${widgetId}`);
-  }
-};
 
 export const getDashboardWidgetTitle = (
   t: TFunction,

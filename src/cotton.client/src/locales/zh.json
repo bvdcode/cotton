@@ -2338,6 +2338,7 @@
       "actions": {
         "customize": "自定义",
         "done": "完成",
+        "size": "尺寸 {{size}}",
         "moveUp": "上移",
         "moveDown": "下移",
         "hide": "隐藏小组件",

@@ -5,29 +5,35 @@ import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
 import { useRecentFilesQuery } from "../../../shared/api/queries/layouts";
 import {
   RECENT_FILES_FILTERS,
+  type DashboardWidgetSize,
   type RecentFilesWidgetId,
 } from "../dashboardModel";
 import { RecentFileCard } from "./RecentFileCard";
 import { DashboardQueryError } from "./DashboardQueryError";
 
-const RECENT_FILE_COUNT = 8;
+const RECENT_FILE_ROWS = 3;
+const RECENT_FILE_COLUMNS_PER_SIZE = 2;
 const SKELETON_COUNT = 3;
 
 interface DashboardRecentFilesWidgetProps {
   enabled: boolean;
   layoutId: string | undefined;
+  size: DashboardWidgetSize;
   widgetId: RecentFilesWidgetId;
 }
 
 export const DashboardRecentFilesWidget = ({
   enabled,
   layoutId,
+  size,
   widgetId,
 }: DashboardRecentFilesWidgetProps) => {
   const { t } = useTranslation(["home", "common"]);
   const navigate = useNavigate();
   const filter = RECENT_FILES_FILTERS[widgetId];
-  const query = useRecentFilesQuery(layoutId, RECENT_FILE_COUNT, {
+  const recentFileCount =
+    size * RECENT_FILE_COLUMNS_PER_SIZE * RECENT_FILE_ROWS;
+  const query = useRecentFilesQuery(layoutId, recentFileCount, {
     ...filter,
     excludeClientEncrypted: true,
     enabled,

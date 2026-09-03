@@ -7,10 +7,12 @@ import {
   hideDashboardWidget,
   moveDashboardWidget,
   parseDashboardLayout,
+  resizeDashboardWidget,
   restoreDashboardWidget,
   serializeDashboardLayout,
   type DashboardLayout,
   type DashboardWidgetId,
+  type DashboardWidgetSize,
 } from "./dashboardModel";
 
 export const useDashboardLayout = () => {
@@ -26,8 +28,7 @@ export const useDashboardLayout = () => {
   const save = useCallback(
     (next: DashboardLayout): void => {
       void updatePreferences({
-        [USER_PREFERENCE_KEYS.dashboardLayout]:
-          serializeDashboardLayout(next),
+        [USER_PREFERENCE_KEYS.dashboardLayout]: serializeDashboardLayout(next),
       });
     },
     [updatePreferences],
@@ -59,6 +60,13 @@ export const useDashboardLayout = () => {
     [layout, save],
   );
 
+  const resize = useCallback(
+    (widgetId: DashboardWidgetId, size: DashboardWidgetSize): void => {
+      save(resizeDashboardWidget(layout, widgetId, size));
+    },
+    [layout, save],
+  );
+
   const startDrag = useCallback((widgetId: DashboardWidgetId): void => {
     draggedWidgetRef.current = widgetId;
   }, []);
@@ -84,6 +92,7 @@ export const useDashboardLayout = () => {
     hide,
     restore,
     move,
+    resize,
     startDrag,
     endDrag,
     drop,

@@ -2330,6 +2330,7 @@
       "actions": {
         "customize": "Přizpůsobit",
         "done": "Hotovo",
+        "size": "Velikost {{size}}",
         "moveUp": "Posunout nahoru",
         "moveDown": "Posunout dolů",
         "hide": "Skrýt widget",

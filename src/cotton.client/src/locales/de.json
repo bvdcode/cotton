@@ -2325,6 +2325,7 @@
       "actions": {
         "customize": "Anpassen",
         "done": "Fertig",
+        "size": "Größe {{size}}",
         "moveUp": "Nach oben",
         "moveDown": "Nach unten",
         "hide": "Widget ausblenden",

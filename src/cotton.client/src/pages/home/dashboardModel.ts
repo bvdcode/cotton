@@ -14,6 +14,14 @@ export const DASHBOARD_WIDGET_IDS = [
 
 export type DashboardWidgetId = (typeof DASHBOARD_WIDGET_IDS)[number];
 
+export const DASHBOARD_WIDGET_SIZES = [1, 2, 3] as const;
+
+export type DashboardWidgetSize = (typeof DASHBOARD_WIDGET_SIZES)[number];
+export type DashboardWidgetSizes = Record<
+  DashboardWidgetId,
+  DashboardWidgetSize
+>;
+
 export type RecentFilesWidgetId = Extract<
   DashboardWidgetId,
   | "recentFiles"
@@ -70,17 +78,33 @@ export const RECENT_FILES_FILTERS: Record<
 export interface DashboardLayout {
   order: DashboardWidgetId[];
   hidden: DashboardWidgetId[];
+  sizes: DashboardWidgetSizes;
 }
 
 const widgetIdSchema = z.enum(DASHBOARD_WIDGET_IDS);
+const widgetSizeSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
 const dashboardLayoutSchema = z.object({
   order: z.array(widgetIdSchema),
   hidden: z.array(widgetIdSchema),
+  sizes: z.record(z.string(), z.unknown()).optional(),
 });
+
+export const DEFAULT_DASHBOARD_WIDGET_SIZES: DashboardWidgetSizes = {
+  overview: 1,
+  pinnedFolders: 2,
+  quickAccess: 1,
+  recentFiles: 2,
+  recentImages: 2,
+  recentVideos: 1,
+  recentDocuments: 1,
+  recentAudio: 1,
+  recentOther: 1,
+};
 
 export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayout = {
   order: [...DASHBOARD_WIDGET_IDS],
   hidden: [],
+  sizes: { ...DEFAULT_DASHBOARD_WIDGET_SIZES },
 };
 
 const unique = (ids: readonly DashboardWidgetId[]): DashboardWidgetId[] => [
@@ -109,10 +133,24 @@ export const parseDashboardLayout = (
     const newWidgets = DASHBOARD_WIDGET_IDS.filter(
       (widgetId) => !represented.has(widgetId),
     );
+    const sizes = Object.fromEntries(
+      DASHBOARD_WIDGET_IDS.map((widgetId) => {
+        const parsedSize = widgetSizeSchema.safeParse(
+          parsed.data.sizes?.[widgetId],
+        );
+        return [
+          widgetId,
+          parsedSize.success
+            ? parsedSize.data
+            : DEFAULT_DASHBOARD_WIDGET_SIZES[widgetId],
+        ];
+      }),
+    ) as DashboardWidgetSizes;
 
     return {
       order: [...savedOrder, ...newWidgets],
       hidden,
+      sizes,
     };
   } catch {
     return DEFAULT_DASHBOARD_LAYOUT;
@@ -121,6 +159,24 @@ export const parseDashboardLayout = (
 
 export const serializeDashboardLayout = (layout: DashboardLayout): string =>
   JSON.stringify(layout);
+
+export const resizeDashboardWidget = (
+  layout: DashboardLayout,
+  widgetId: DashboardWidgetId,
+  size: DashboardWidgetSize,
+): DashboardLayout => {
+  if (layout.sizes[widgetId] === size) {
+    return layout;
+  }
+
+  return {
+    ...layout,
+    sizes: {
+      ...layout.sizes,
+      [widgetId]: size,
+    },
+  };
+};
 
 export const moveDashboardWidget = (
   layout: DashboardLayout,
@@ -148,6 +204,7 @@ export const hideDashboardWidget = (
   }
 
   return {
+    ...layout,
     order: layout.order.filter((candidate) => candidate !== widgetId),
     hidden: [...layout.hidden, widgetId],
   };
@@ -162,6 +219,7 @@ export const restoreDashboardWidget = (
   }
 
   return {
+    ...layout,
     order: [...layout.order, widgetId],
     hidden: layout.hidden.filter((candidate) => candidate !== widgetId),
   };

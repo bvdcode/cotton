@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   DASHBOARD_WIDGET_IDS,
   DEFAULT_DASHBOARD_LAYOUT,
+  DEFAULT_DASHBOARD_WIDGET_SIZES,
   RECENT_FILES_FILTERS,
   hideDashboardWidget,
   moveDashboardWidget,
   parseDashboardLayout,
+  resizeDashboardWidget,
   restoreDashboardWidget,
   serializeDashboardLayout,
 } from "./dashboardModel";
@@ -15,6 +17,7 @@ describe("dashboard layout", () => {
     expect(DEFAULT_DASHBOARD_LAYOUT).toEqual({
       order: DASHBOARD_WIDGET_IDS,
       hidden: [],
+      sizes: DEFAULT_DASHBOARD_WIDGET_SIZES,
     });
   });
 
@@ -28,8 +31,30 @@ describe("dashboard layout", () => {
 
     expect(layout.order.slice(0, 2)).toEqual(["recentVideos", "overview"]);
     expect(layout.hidden).toEqual(["recentFiles"]);
+    expect(layout.sizes).toEqual(DEFAULT_DASHBOARD_WIDGET_SIZES);
     expect([...layout.order, ...layout.hidden].sort()).toEqual(
       [...DASHBOARD_WIDGET_IDS].sort(),
+    );
+  });
+
+  it("restores valid widget sizes and defaults missing or invalid sizes", () => {
+    const stored = JSON.stringify({
+      order: ["overview", "recentFiles"],
+      hidden: [],
+      sizes: {
+        overview: 3,
+        recentFiles: 4,
+      },
+    });
+
+    const layout = parseDashboardLayout(stored);
+
+    expect(layout.sizes.overview).toBe(3);
+    expect(layout.sizes.recentFiles).toBe(
+      DEFAULT_DASHBOARD_WIDGET_SIZES.recentFiles,
+    );
+    expect(layout.sizes.quickAccess).toBe(
+      DEFAULT_DASHBOARD_WIDGET_SIZES.quickAccess,
     );
   });
 
@@ -55,8 +80,13 @@ describe("dashboard layout", () => {
     const restored = restoreDashboardWidget(hidden, "recentVideos");
     expect(restored.hidden).not.toContain("recentVideos");
     expect(restored.order.at(-1)).toBe("recentVideos");
-    expect(parseDashboardLayout(serializeDashboardLayout(restored))).toEqual(
-      restored,
+    const resized = resizeDashboardWidget(restored, "recentVideos", 3);
+    expect(resized.sizes.recentVideos).toBe(3);
+    expect(resized.sizes.overview).toBe(
+      DEFAULT_DASHBOARD_WIDGET_SIZES.overview,
+    );
+    expect(parseDashboardLayout(serializeDashboardLayout(resized))).toEqual(
+      resized,
     );
   });
 });

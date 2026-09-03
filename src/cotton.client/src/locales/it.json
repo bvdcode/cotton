@@ -2331,6 +2331,7 @@
       "actions": {
         "customize": "Personalizza",
         "done": "Fatto",
+        "size": "Dimensione {{size}}",
         "moveUp": "Sposta su",
         "moveDown": "Sposta giù",
         "hide": "Nascondi widget",

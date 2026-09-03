@@ -9,15 +9,20 @@ import {
   CardContent,
   IconButton,
   Stack,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { DashboardWidgetId } from "../dashboardModel";
+import {
+  DASHBOARD_WIDGET_SIZES,
+  type DashboardWidgetId,
+  type DashboardWidgetSize,
+} from "../dashboardModel";
 
 interface DashboardWidgetFrameProps {
   children: ReactNode;
-  compact?: boolean;
   customizing: boolean;
   first: boolean;
   last: boolean;
@@ -26,13 +31,14 @@ interface DashboardWidgetFrameProps {
   onDrop: (widgetId: DashboardWidgetId) => void;
   onHide: (widgetId: DashboardWidgetId) => void;
   onMove: (widgetId: DashboardWidgetId, offset: -1 | 1) => void;
+  onResize: (widgetId: DashboardWidgetId, size: DashboardWidgetSize) => void;
+  size: DashboardWidgetSize;
   title: string;
   widgetId: DashboardWidgetId;
 }
 
 export const DashboardWidgetFrame = ({
   children,
-  compact = false,
   customizing,
   first,
   last,
@@ -41,6 +47,8 @@ export const DashboardWidgetFrame = ({
   onDrop,
   onHide,
   onMove,
+  onResize,
+  size,
   title,
   widgetId,
 }: DashboardWidgetFrameProps) => {
@@ -64,18 +72,64 @@ export const DashboardWidgetFrame = ({
         minWidth: 0,
         gridColumn: {
           xs: "1 / -1",
-          md: compact ? "span 4" : "span 8",
+          md: `span ${size * 4}`,
         },
         cursor: customizing ? "grab" : "default",
       }}
     >
       <CardContent>
-        <Stack direction="row" alignItems="center" mb={1} gap={0.5}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          flexWrap="wrap"
+          mb={1}
+          gap={0.5}
+        >
           <Typography variant="overline" color="text.secondary" flex={1}>
             {title}
           </Typography>
           {customizing && (
-            <>
+            <Stack
+              direction="row"
+              alignItems="center"
+              gap={0.25}
+              flexShrink={0}
+              ml="auto"
+            >
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                value={size}
+                aria-label={title}
+                onChange={(_event, nextSize: DashboardWidgetSize | null) => {
+                  if (nextSize !== null) {
+                    onResize(widgetId, nextSize);
+                  }
+                }}
+                sx={{
+                  height: 28,
+                  "& .MuiToggleButton-root": {
+                    minWidth: 28,
+                    px: 0.75,
+                    py: 0,
+                  },
+                }}
+              >
+                {DASHBOARD_WIDGET_SIZES.map((candidateSize) => (
+                  <ToggleButton
+                    key={candidateSize}
+                    value={candidateSize}
+                    aria-label={t("dashboard.actions.size", {
+                      size: candidateSize,
+                    })}
+                    title={t("dashboard.actions.size", {
+                      size: candidateSize,
+                    })}
+                  >
+                    {candidateSize}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
               <DragIndicator color="action" fontSize="small" />
               <IconButton
                 size="small"
@@ -100,7 +154,7 @@ export const DashboardWidgetFrame = ({
               >
                 <Close fontSize="small" />
               </IconButton>
-            </>
+            </Stack>
           )}
         </Stack>
         {children}

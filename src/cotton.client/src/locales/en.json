@@ -2126,6 +2126,7 @@
       "actions": {
         "customize": "Customize",
         "done": "Done",
+        "size": "Size {{size}}",
         "moveUp": "Move up",
         "moveDown": "Move down",
         "hide": "Hide widget",

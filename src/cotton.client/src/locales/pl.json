@@ -2333,6 +2333,7 @@
       "actions": {
         "customize": "Dostosuj",
         "done": "Gotowe",
+        "size": "Rozmiar {{size}}",
         "moveUp": "Przenieś wyżej",
         "moveDown": "Przenieś niżej",
         "hide": "Ukryj widżet",

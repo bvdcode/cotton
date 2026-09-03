@@ -2332,6 +2332,7 @@
       "actions": {
         "customize": "Personalizar",
         "done": "Concluído",
+        "size": "Tamanho {{size}}",
         "moveUp": "Mover para cima",
         "moveDown": "Mover para baixo",
         "hide": "Ocultar widget",

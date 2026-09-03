@@ -2329,6 +2329,7 @@
       "actions": {
         "customize": "Personnaliser",
         "done": "Terminé",
+        "size": "Taille {{size}}",
         "moveUp": "Monter",
         "moveDown": "Descendre",
         "hide": "Masquer le widget",

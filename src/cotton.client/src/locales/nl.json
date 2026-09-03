@@ -2330,6 +2330,7 @@
       "actions": {
         "customize": "Aanpassen",
         "done": "Gereed",
+        "size": "Grootte {{size}}",
         "moveUp": "Omhoog",
         "moveDown": "Omlaag",
         "hide": "Widget verbergen",
