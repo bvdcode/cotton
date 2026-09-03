@@ -1,4 +1,4 @@
-import { useEffect, useCallback, createContext, type ReactNode } from "react";
+import { useEffect, useCallback, type ReactNode } from "react";
 import { authApi } from "../../shared/api/authApi";
 import type { AuthContextValue, User } from "./types";
 import { useAuthStore } from "../../shared/store";
@@ -6,8 +6,8 @@ import { useUserPreferencesStore } from "../../shared/store/userPreferencesStore
 import { resetUserScopedStores } from "../../shared/store/resetUserScopedStores";
 import { JUST_UNLOCKED_STORAGE_KEY } from "./authStorageKeys";
 import { consumeOidcSignInPending } from "./oidcSignInSession";
+import { AuthContext } from "./AuthContext";
 
-const AuthContext = createContext<AuthContextValue | null>(null);
 const AUTH_RETRY_AFTER_UNLOCK_TIMEOUT_MS = 10000;
 const AUTH_RETRY_AFTER_UNLOCK_INTERVAL_MS = 350;
 
@@ -218,5 +218,3 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-export { AuthContext };
