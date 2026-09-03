@@ -83,10 +83,10 @@ namespace Cotton.Server.Services
                 {
                     Id = CreateUserHandle(user.Id),
                     Name = user.Username,
-                    DisplayName = BuildDisplayName(user)
+                    DisplayName = PasskeyProtocolMapper.GetDisplayName(user)
                 },
                 ExcludeCredentials = existingCredentials
-                    .Select(x => CreateCredentialDescriptor(x.CredentialId, x.Transports))
+                    .Select(x => PasskeyProtocolMapper.CreateCredentialDescriptor(x.CredentialId, x.Transports))
                     .ToArray(),
                 AuthenticatorSelection = new AuthenticatorSelection
                 {
@@ -121,7 +121,7 @@ namespace Cotton.Server.Services
             }
 
             _cache.Remove(RegistrationCacheKey(request.RequestId));
-            AuthenticatorAttestationRawResponse attestation = ToAttestationResponse(request.Credential);
+            AuthenticatorAttestationRawResponse attestation = PasskeyProtocolMapper.ToAttestationResponse(request.Credential);
             Fido2 fido = await CreateFido2Async(ct);
             RegisteredPublicKeyCredential result;
             try
@@ -144,7 +144,7 @@ namespace Cotton.Server.Services
                 throw new BadRequestException<UserPasskeyCredential>("Passkey registration could not be verified");
             }
 
-            string[] transports = NormalizeTransports(result.Transports);
+            string[] transports = PasskeyProtocolMapper.NormalizeTransports(result.Transports);
             UserPasskeyCredential credential = new UserPasskeyCredential
             {
                 UserId = userId,
@@ -167,10 +167,10 @@ namespace Cotton.Server.Services
                 _logger,
                 userId,
                 NotificationTemplates.PasskeyAddedTitle,
-                NotificationTemplates.PasskeyAddedContent(ResolvePasskeyAuditName(credential)),
+                NotificationTemplates.PasskeyAddedContent(PasskeyProtocolMapper.GetAuditName(credential)),
                 DateTime.UtcNow);
 
-            return ToDto(credential);
+            return PasskeyProtocolMapper.ToDto(credential);
         }
 
         public async Task<PasskeyAssertionOptionsResponseDto> BeginAssertionAsync(
@@ -196,7 +196,7 @@ namespace Cotton.Server.Services
                         .Select(x => new { x.CredentialId, x.Transports })
                         .ToListAsync(ct);
                     allowedCredentials = userCredentials
-                        .Select(x => CreateCredentialDescriptor(x.CredentialId, x.Transports))
+                        .Select(x => PasskeyProtocolMapper.CreateCredentialDescriptor(x.CredentialId, x.Transports))
                         .ToArray();
                 }
             }
@@ -229,10 +229,10 @@ namespace Cotton.Server.Services
             }
 
             _cache.Remove(AssertionCacheKey(request.RequestId));
-            AuthenticatorAssertionRawResponse assertion = ToAssertionResponse(request.Credential);
+            AuthenticatorAssertionRawResponse assertion = PasskeyProtocolMapper.ToAssertionResponse(request.Credential);
             byte[] credentialId = assertion.RawId.Length > 0
                 ? assertion.RawId
-                : DecodeBrowserBuffer(request.Credential.Id);
+                : PasskeyProtocolMapper.DecodeBrowserBuffer(request.Credential.Id);
 
             UserPasskeyCredential credential = await _dbContext.UserPasskeyCredentials
                 .Include(x => x.User)
@@ -256,7 +256,7 @@ namespace Cotton.Server.Services
                         AssertionResponse = assertion,
                         OriginalOptions = state.Options,
                         StoredPublicKey = credential.PublicKey,
-                        StoredSignatureCounter = ToSignatureCounter(credential.SignatureCounter),
+                        StoredSignatureCounter = PasskeyProtocolMapper.ToSignatureCounter(credential.SignatureCounter),
                         IsUserHandleOwnerOfCredentialIdCallback = async (args, token) =>
                         {
                             return await _dbContext.UserPasskeyCredentials.AnyAsync(
@@ -294,7 +294,7 @@ namespace Cotton.Server.Services
 
             credential.Label = PasskeyLabelNormalizer.Normalize(label);
             await _dbContext.SaveChangesAsync(ct);
-            return ToDto(credential);
+            return PasskeyProtocolMapper.ToDto(credential);
         }
 
         public async Task DeleteCredentialAsync(Guid userId, Guid credentialId, CancellationToken ct)
@@ -311,26 +311,8 @@ namespace Cotton.Server.Services
                 _logger,
                 userId,
                 NotificationTemplates.PasskeyRemovedTitle,
-                NotificationTemplates.PasskeyRemovedContent(ResolvePasskeyAuditName(credential)),
+                NotificationTemplates.PasskeyRemovedContent(PasskeyProtocolMapper.GetAuditName(credential)),
                 DateTime.UtcNow);
-        }
-
-        private static PasskeyCredentialDto ToDto(UserPasskeyCredential credential)
-        {
-            return new()
-            {
-                Id = credential.Id,
-                Label = credential.Label,
-                CredentialId = WebEncoders.Base64UrlEncode(credential.CredentialId),
-                Transports = credential.Transports,
-                AaGuid = credential.AaGuid,
-                AuthenticatorName = PasskeyAuthenticatorResolver.ResolveName(credential.AaGuid),
-                AuthenticatorKind = PasskeyAuthenticatorResolver.ResolveKind(credential.Transports),
-                IsBackupEligible = credential.IsBackupEligible,
-                IsBackedUp = credential.IsBackedUp,
-                CreatedAt = credential.CreatedAt,
-                LastUsedAt = credential.LastUsedAt
-            };
         }
 
         private async Task<Fido2> CreateFido2Async(CancellationToken ct)
@@ -366,109 +348,6 @@ namespace Cotton.Server.Services
         private static string AssertionCacheKey(string requestId)
         {
             return $"passkey:assertion:{requestId}";
-        }
-
-        private static string BuildDisplayName(User user)
-        {
-            string displayName = $"{user.FirstName} {user.LastName}".Trim();
-            return string.IsNullOrWhiteSpace(displayName) ? user.Username : displayName;
-        }
-
-        private static string ResolvePasskeyAuditName(UserPasskeyCredential credential)
-        {
-            return credential.Label
-                ?? PasskeyAuthenticatorResolver.ResolveDisplayName(credential.AaGuid, credential.Transports);
-        }
-
-        private static AuthenticatorAttestationRawResponse ToAttestationResponse(
-            PasskeyAttestationCredentialDto credential)
-        {
-            return new()
-            {
-                Id = credential.Id,
-                RawId = DecodeBrowserBuffer(credential.RawId),
-                Type = PublicKeyCredentialType.PublicKey,
-                Response = new()
-                {
-                    AttestationObject = DecodeBrowserBuffer(credential.Response.AttestationObject),
-                    ClientDataJson = DecodeBrowserBuffer(credential.Response.ClientDataJson),
-                    Transports = ParseTransports(credential.Transports)
-                }
-            };
-        }
-
-        private static AuthenticatorAssertionRawResponse ToAssertionResponse(
-            PasskeyAssertionCredentialDto credential)
-        {
-            return new()
-            {
-                Id = credential.Id,
-                RawId = DecodeBrowserBuffer(credential.RawId),
-                Type = PublicKeyCredentialType.PublicKey,
-                Response = new()
-                {
-                    AuthenticatorData = DecodeBrowserBuffer(credential.Response.AuthenticatorData),
-                    ClientDataJson = DecodeBrowserBuffer(credential.Response.ClientDataJson),
-                    Signature = DecodeBrowserBuffer(credential.Response.Signature),
-                    UserHandle = string.IsNullOrEmpty(credential.Response.UserHandle)
-                        ? []
-                        : DecodeBrowserBuffer(credential.Response.UserHandle)
-                }
-            };
-        }
-
-        private static byte[] DecodeBrowserBuffer(string value)
-        {
-            return WebEncoders.Base64UrlDecode(value);
-        }
-
-        private static PublicKeyCredentialDescriptor CreateCredentialDescriptor(
-            byte[] credentialId,
-            string[] transports)
-        {
-            AuthenticatorTransport[] parsedTransports = ParseTransports(transports);
-            return parsedTransports.Length == 0
-                ? new PublicKeyCredentialDescriptor(credentialId)
-                : new PublicKeyCredentialDescriptor(
-                    PublicKeyCredentialType.PublicKey,
-                    credentialId,
-                    parsedTransports);
-        }
-
-        private static AuthenticatorTransport[] ParseTransports(IEnumerable<string>? transports)
-        {
-            if (transports is null)
-            {
-                return [];
-            }
-
-            return transports
-                .Select(x => Enum.TryParse(x, ignoreCase: true, out AuthenticatorTransport transport)
-                    ? transport
-                    : (AuthenticatorTransport?)null)
-                .Where(x => x.HasValue)
-                .Select(x => x!.Value)
-                .Distinct()
-                .ToArray();
-        }
-
-        private static string[] NormalizeTransports(IEnumerable<AuthenticatorTransport>? transports)
-        {
-            return transports?
-                .Select(x => x.ToString().ToLowerInvariant())
-                .Distinct()
-                .Order()
-                .ToArray() ?? [];
-        }
-
-        private static uint ToSignatureCounter(long value)
-        {
-            if (value <= 0)
-            {
-                return 0;
-            }
-
-            return value >= uint.MaxValue ? uint.MaxValue : (uint)value;
         }
 
         private record RegistrationState(
