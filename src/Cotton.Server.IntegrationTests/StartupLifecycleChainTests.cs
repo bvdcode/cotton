@@ -105,12 +105,18 @@ namespace Cotton.Server.IntegrationTests
         public async Task Startup_OnCleanDatabase_AppliesMigrations_AndCreatesInitialAdminWithinWindow()
         {
             IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
-            Assert.That(creator.HasTables(), Is.False, "DB should start with no user tables in this test setup.");
+            Assert.That(
+                await creator.HasTablesAsync(),
+                Is.False,
+                "DB should start with no user tables in this test setup.");
 
             TokenPairResponseDto login = await LoginAsync();
             Assert.That(login.AccessToken, Is.Not.Null.And.Not.Empty);
 
-            Assert.That(creator.HasTables(), Is.True, "Server startup should apply migrations automatically.");
+            Assert.That(
+                await creator.HasTablesAsync(),
+                Is.True,
+                "Server startup should apply migrations automatically.");
 
             SetBearer(login.AccessToken);
             UserDto? me = await _client!.GetFromJsonAsync<UserDto>("/api/v1/users/me");
@@ -123,9 +129,12 @@ namespace Cotton.Server.IntegrationTests
         public async Task Startup_FromPreRestoreDatabase_AppliesRestoredMigrationTrail()
         {
             IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
-            Assert.That(creator.HasTables(), Is.False, "DB should start with no user tables in this test setup.");
+            Assert.That(
+                await creator.HasTablesAsync(),
+                Is.False,
+                "DB should start with no user tables in this test setup.");
 
-            DbContext.GetService<IMigrator>().Migrate(PreRestoredMigrationId);
+            await DbContext.GetService<IMigrator>().MigrateAsync(PreRestoredMigrationId);
             NpgsqlConnection.ClearAllPools();
 
             Assert.That(await MigrationAppliedAsync(PreRestoredMigrationId), Is.True);

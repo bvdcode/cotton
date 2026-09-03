@@ -144,7 +144,8 @@ namespace Cotton.Server.IntegrationTests
             string[] parts = payload.AccessToken.Split('.');
             Assert.That(parts.Length, Is.EqualTo(3), "JWT must have3 parts");
 
-            TestContext.Progress.WriteLine($"Login OK. Token: {payload.AccessToken[..Math.Min(16, payload.AccessToken.Length)]}...");
+            await TestContext.Progress.WriteLineAsync(
+                $"Login OK. Token: {payload.AccessToken[..Math.Min(16, payload.AccessToken.Length)]}...");
         }
 
         [Test]

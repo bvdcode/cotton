@@ -555,7 +555,11 @@ namespace Cotton.Server.IntegrationTests
         public async Task ConcurrentFileUpdates_AcrossLayouts_DoNotExceedUserStorageQuota()
         {
             _client?.Dispose();
-            _factory?.Dispose();
+            if (_factory is not null)
+            {
+                await _factory.DisposeAsync();
+                _factory = null;
+            }
 
             QuotaMutationBarrier barrier = new();
             using TestAppFactory factory = new(_overrides);
@@ -647,7 +651,11 @@ namespace Cotton.Server.IntegrationTests
         {
             // Reset the standard factory so we can wire a throwing notifier.
             _client?.Dispose();
-            _factory?.Dispose();
+            if (_factory is not null)
+            {
+                await _factory.DisposeAsync();
+                _factory = null;
+            }
 
             using TestAppFactory factory = new TestAppFactory(_overrides);
             using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
@@ -694,7 +702,11 @@ namespace Cotton.Server.IntegrationTests
         public async Task WebDavDelete_NotificationsUseOriginalParents()
         {
             _client?.Dispose();
-            _factory?.Dispose();
+            if (_factory is not null)
+            {
+                await _factory.DisposeAsync();
+                _factory = null;
+            }
 
             using TestAppFactory factory = new TestAppFactory(_overrides);
             using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
@@ -742,7 +754,11 @@ namespace Cotton.Server.IntegrationTests
         {
             // Reset the standard factory so we can wire a throwing notifier.
             _client?.Dispose();
-            _factory?.Dispose();
+            if (_factory is not null)
+            {
+                await _factory.DisposeAsync();
+                _factory = null;
+            }
 
             using TestAppFactory factory = new TestAppFactory(_overrides);
             using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>

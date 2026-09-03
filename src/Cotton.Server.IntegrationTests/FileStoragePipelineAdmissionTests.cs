@@ -41,7 +41,7 @@ namespace Cotton.Server.IntegrationTests
                     "cancelled",
                     new MemoryStream([2]),
                     cancellationToken: cancellation.Token);
-                cancellation.Cancel();
+                await cancellation.CancelAsync();
 
                 Assert.CatchAsync<OperationCanceledException>(
                     async () => await cancelledWrite.WaitAsync(TimeSpan.FromSeconds(1)));

@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Primitives;
 using Quartz;
 using System.Net;
 using System.Security.Cryptography;
@@ -139,7 +140,7 @@ namespace Cotton.Server.IntegrationTests.Common
                 {
                     app.Use(async (context, nextMiddleware) =>
                     {
-                        if (context.Request.Headers.TryGetValue(RemoteIpAddressHeader, out var values)
+                        if (context.Request.Headers.TryGetValue(RemoteIpAddressHeader, out StringValues values)
                             && IPAddress.TryParse(values.ToString(), out IPAddress? remoteIpAddress))
                         {
                             context.Connection.RemoteIpAddress = remoteIpAddress;

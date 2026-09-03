@@ -105,12 +105,15 @@ namespace Cotton.Server.IntegrationTests
             double mib = bytes / 1024d / 1024d;
             double mibPerSecond = mib / stopwatch.Elapsed.TotalSeconds;
 
-            TestContext.Progress.WriteLine($"Raw endpoint backend path: {mibPerSecond:F2} MiB/s");
-            TestContext.Progress.WriteLine($"Uploaded: {mib:F2} MiB in {stopwatch.Elapsed.TotalSeconds:F2} sec");
-            TestContext.Progress.WriteLine($"Chunk size: {chunkSizeMiB} MiB");
-            TestContext.Progress.WriteLine($"Chunks: {measuredChunks}");
-            TestContext.Progress.WriteLine($"Compression level: {CompressionProcessor.DefaultCompressionLevel}");
-            TestContext.Progress.WriteLine("Path: TestServer -> auth -> ChunkController.UploadRawChunk -> ChunkIngestService -> storage pipeline -> filesystem backend");
+            await TestContext.Progress.WriteLineAsync($"Raw endpoint backend path: {mibPerSecond:F2} MiB/s");
+            await TestContext.Progress.WriteLineAsync(
+                $"Uploaded: {mib:F2} MiB in {stopwatch.Elapsed.TotalSeconds:F2} sec");
+            await TestContext.Progress.WriteLineAsync($"Chunk size: {chunkSizeMiB} MiB");
+            await TestContext.Progress.WriteLineAsync($"Chunks: {measuredChunks}");
+            await TestContext.Progress.WriteLineAsync(
+                $"Compression level: {CompressionProcessor.DefaultCompressionLevel}");
+            await TestContext.Progress.WriteLineAsync(
+                "Path: TestServer -> auth -> ChunkController.UploadRawChunk -> ChunkIngestService -> storage pipeline -> filesystem backend");
 
             Assert.That(mibPerSecond, Is.GreaterThan(1));
         }

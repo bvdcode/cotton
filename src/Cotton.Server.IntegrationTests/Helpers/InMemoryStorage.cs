@@ -32,17 +32,12 @@ namespace Cotton.Server.IntegrationTests.Helpers
         public Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             ArgumentNullException.ThrowIfNull(uid);
-            MemoryStream ms = new();
-            if (_blobs.TryGetValue(uid, out byte[]? data))
-            {
-                ms.Write(data, 0, data.Length);
-                ms.Seek(0, SeekOrigin.Begin);
-            }
-            else
+            if (!_blobs.TryGetValue(uid, out byte[]? data))
             {
                 throw new FileNotFoundException("Blob not found in in-memory storage", uid);
             }
-            return Task.FromResult(result: (Stream)ms);
+
+            return Task.FromResult<Stream>(new MemoryStream(data, writable: false));
         }
 
         public async Task<long> WriteAsync(

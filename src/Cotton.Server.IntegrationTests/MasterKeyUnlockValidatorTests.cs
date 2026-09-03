@@ -165,7 +165,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task ValidateAsync_AllowsACompletelyUninitializedLocalInstance()
         {
-            DbContext.Database.EnsureDeleted();
+            await DbContext.Database.EnsureDeletedAsync();
             MasterKeyUnlockValidator validator = CreateValidator();
 
             MasterKeySentinelResult result = await validator.ValidateAsync(

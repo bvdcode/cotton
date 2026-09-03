@@ -26,7 +26,7 @@ namespace Cotton.Server.IntegrationTests
         {
             string tempDirectory = CreateTestDirectory();
             string filePath = Path.Combine(tempDirectory, "not-a-directory");
-            File.WriteAllText(filePath, string.Empty);
+            await File.WriteAllTextAsync(filePath, string.Empty);
 
             StartupBlocker? blocker = await CreateCheck(filePath)
                 .ValidateAsync(CancellationToken.None);

@@ -91,7 +91,8 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(node.ParentId, Is.Null);
             Assert.That(node.LayoutId, Is.Not.EqualTo(Guid.Empty));
             Assert.That(node.Id, Is.Not.EqualTo(Guid.Empty));
-            TestContext.Progress.WriteLine($"Resolved root layout. LayoutId={node.LayoutId}, RootId={node.Id}");
+            await TestContext.Progress.WriteLineAsync(
+                $"Resolved root layout. LayoutId={node.LayoutId}, RootId={node.Id}");
         }
 
         [Test]
@@ -109,7 +110,7 @@ namespace Cotton.Server.IntegrationTests
             createNodeRes.EnsureSuccessStatusCode();
             NodeDto? child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
             Assert.That(child, Is.Not.Null);
-            TestContext.Progress.WriteLine($"Created node '{nodeName}' with Id={child!.Id}");
+            await TestContext.Progress.WriteLineAsync($"Created node '{nodeName}' with Id={child!.Id}");
 
             // Upload 10 unique chunks and create files from them
             for (int i = 1; i <= 10; i++)
@@ -131,7 +132,7 @@ namespace Cotton.Server.IntegrationTests
                 };
                 HttpResponseMessage upRes = await _client.PostAsync("/api/v1/chunks", form);
                 upRes.EnsureSuccessStatusCode();
-                TestContext.Progress.WriteLine($"Uploaded chunk {i}: {chunkHashLower[..16]}...");
+                await TestContext.Progress.WriteLineAsync($"Uploaded chunk {i}: {chunkHashLower[..16]}...");
 
                 // Create file (server validates and maps hex → byte[] itself)
                 string fileName = $"file{i}.txt";
@@ -489,7 +490,8 @@ namespace Cotton.Server.IntegrationTests
             res.EnsureSuccessStatusCode();
             TokenPairResponseDto? login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
             Assert.That(login, Is.Not.Null);
-            TestContext.Progress.WriteLine($"Login OK. Token: {login!.AccessToken[..Math.Min(16, login.AccessToken.Length)]}...");
+            await TestContext.Progress.WriteLineAsync(
+                $"Login OK. Token: {login!.AccessToken[..Math.Min(16, login.AccessToken.Length)]}...");
             return login.AccessToken;
         }
 
@@ -575,7 +577,8 @@ namespace Cotton.Server.IntegrationTests
             // Second create with same name under same parent should return conflict (409)
             HttpResponseMessage r2 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
             Assert.That(r2.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
-            TestContext.Progress.WriteLine($"Duplicate create returned status: {(int)r2.StatusCode} {r2.StatusCode}");
+            await TestContext.Progress.WriteLineAsync(
+                $"Duplicate create returned status: {(int)r2.StatusCode} {r2.StatusCode}");
 
             // Verify DB has only one such node
             int duplicates = await DbContext.Nodes
