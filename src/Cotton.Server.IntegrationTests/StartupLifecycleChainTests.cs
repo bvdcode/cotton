@@ -149,7 +149,9 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(await MigrationAppliedAsync(RestoredMigrationTailId), Is.True);
             Assert.That(await ColumnExistsAsync("nodes", "metadata"), Is.True);
             Assert.That(await ColumnExistsAsync("node_files", "is_client_encrypted"), Is.False);
-            Assert.That(await IsIndexUniqueAsync("IX_node_files_node_id_name_key"), Is.False);
+            Assert.That(
+                await IsIndexUniqueAsync("IX_node_files_node_id_name_key_owner_id_id"),
+                Is.False);
         }
 
         [Test]
