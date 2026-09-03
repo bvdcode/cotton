@@ -3,7 +3,6 @@
 
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Text;
 using Cotton.Server.Models.Configuration;
 using Microsoft.Extensions.Options;
 
@@ -34,7 +33,7 @@ namespace Cotton.Server.Services
         public static long CalculateLength<TEntry>(IReadOnlyList<TEntry> entries)
             where TEntry : IStoredZipEntry
         {
-            return BuildPlan(entries).TotalLength;
+            return StoredZipArchivePlanBuilder.Build(entries).TotalLength;
         }
 
         internal static bool RequiresZip64CentralDirectoryMetadata(long sizeBytes, long localHeaderOffset)
@@ -53,7 +52,7 @@ namespace Cotton.Server.Services
             await _streamGate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                ZipPlan plan = BuildPlan(entries);
+                ZipPlan plan = StoredZipArchivePlanBuilder.Build(entries);
                 List<WrittenZipEntry> writtenEntries = new(entries.Count);
 
                 for (int i = 0; i < entries.Count; i++)
@@ -70,66 +69,6 @@ namespace Cotton.Server.Services
             {
                 _streamGate.Release();
             }
-        }
-
-        // Planning is separate from writing so the API can set Content-Length before sending bytes.
-        // We deliberately use the STORED method: no compression means predictable size, lower CPU,
-        // and UTF-8 filenames via the ZIP language-encoding flag instead of platform code pages.
-        private static ZipPlan BuildPlan<TEntry>(IReadOnlyList<TEntry> entries)
-            where TEntry : IStoredZipEntry
-        {
-            long offset = 0;
-            ZipEntryPlan[] plans = new ZipEntryPlan[entries.Count];
-
-            for (int i = 0; i < entries.Count; i++)
-            {
-                TEntry entry = entries[i];
-                if (entry.SizeBytes < 0)
-                {
-                    throw new InvalidOperationException($"Archive entry '{entry.Path}' has a negative size.");
-                }
-
-                byte[] pathBytes = Encoding.UTF8.GetBytes(entry.Path);
-                if (pathBytes.Length == 0 || pathBytes.Length > UInt16Max)
-                {
-                    throw new InvalidOperationException($"Archive entry path has invalid UTF-8 length: '{entry.Path}'.");
-                }
-
-                bool zip64DataDescriptor = !entry.IsDirectory && RequiresZip64UInt32(entry.SizeBytes);
-                long localHeaderLength = 30 + pathBytes.Length;
-                long dataDescriptorLength = entry.IsDirectory ? 0 : zip64DataDescriptor ? 24 : 16;
-
-                plans[i] = new ZipEntryPlan(
-                    entry.Path,
-                    pathBytes,
-                    entry.SizeBytes,
-                    entry.IsDirectory,
-                    zip64DataDescriptor,
-                    offset);
-
-                offset += localHeaderLength + entry.SizeBytes + dataDescriptorLength;
-            }
-
-            long centralDirectoryOffset = offset;
-            long centralDirectoryLength = 0;
-            for (int i = 0; i < plans.Length; i++)
-            {
-                ZipEntryPlan entry = plans[i];
-                long centralExtraLength = GetCentralZip64ExtraLength(entry.SizeBytes, entry.LocalHeaderOffset);
-                plans[i] = entry with { CentralExtraLength = centralExtraLength };
-                centralDirectoryLength += 46 + entry.PathBytes.Length + centralExtraLength;
-            }
-
-            bool needsZip64End = RequiresZip64UInt16(entries.Count) ||
-                RequiresZip64UInt32(centralDirectoryOffset) ||
-                RequiresZip64UInt32(centralDirectoryLength);
-            long endLength = (needsZip64End ? 56 + 20 : 0) + 22;
-            return new ZipPlan(
-                plans,
-                centralDirectoryOffset,
-                centralDirectoryLength,
-                needsZip64End,
-                centralDirectoryOffset + centralDirectoryLength + endLength);
         }
 
         private static async Task<uint> WriteLocalEntryAsync(
@@ -444,7 +383,7 @@ namespace Cotton.Server.Services
             }
         }
 
-        private static long GetCentralZip64ExtraLength(long sizeBytes, long localHeaderOffset)
+        internal static long GetCentralZip64ExtraLength(long sizeBytes, long localHeaderOffset)
         {
             int payloadLength = 0;
             if (RequiresZip64UInt32(sizeBytes))
@@ -460,17 +399,17 @@ namespace Cotton.Server.Services
             return payloadLength == 0 ? 0 : 4 + payloadLength;
         }
 
-        private static bool RequiresZip64UInt16(int value)
+        internal static bool RequiresZip64UInt16(int value)
         {
             return value >= UInt16Max;
         }
 
-        private static bool RequiresZip64UInt32(long value)
+        internal static bool RequiresZip64UInt32(long value)
         {
             return value >= UInt32Max;
         }
 
-        private record ZipPlan(
+        internal record ZipPlan(
             ZipEntryPlan[] Entries,
             long CentralDirectoryOffset,
             long CentralDirectoryLength,
