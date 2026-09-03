@@ -37,7 +37,7 @@ namespace Cotton.Server.Services
         public static string ResolveContentTypeForResponse(string? contentType, bool requestedInline)
         {
             string resolvedContentType = string.IsNullOrWhiteSpace(contentType)
-                ? FileManifestService.DefaultContentType
+                ? FileContentTypeResolver.DefaultContentType
                 : contentType;
 
             return requestedInline && IsDangerousInlineContentType(resolvedContentType)

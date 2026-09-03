@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
@@ -6,7 +6,6 @@ using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Npgsql;
@@ -18,290 +17,22 @@ namespace Cotton.Server.Services
         IChunkIngestService _chunkIngest,
         ILogger<FileManifestService> _logger)
     {
-        public const string DefaultContentType = "application/octet-stream";
         private const string ProposedContentHashConstraintName = "IX_file_manifests_proposed_content_hash";
-        private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
-        private static readonly IReadOnlyDictionary<string, (string ContentType, bool ForceContentType)> extensionContentTypeOverrides =
-            new Dictionary<string, (string ContentType, bool ForceContentType)>(StringComparer.OrdinalIgnoreCase)
-            {
-                [".heic"] = Override("image/heic"),
-                [".heif"] = Override("image/heif"),
-                [".heics"] = Override("image/heic-sequence"),
-                [".heifs"] = Override("image/heif-sequence"),
-                [".hif"] = Override("image/heif"),
-                [".hifc"] = Override("image/heif-sequence"),
-                [".avifs"] = Override("image/avif-sequence"),
 
-                [".mov"] = Override("video/quicktime"),
-                [".qt"] = Override("video/quicktime"),
-                [".mkv"] = Override("video/x-matroska"),
-                [".avi"] = Override("video/x-msvideo"),
-                [".mka"] = Override("audio/x-matroska"),
-
-                [".opus"] = Override("audio/opus"),
-                [".flac"] = Override("audio/flac"),
-                [".oga"] = Override("audio/ogg"),
-                [".weba"] = Override("audio/webm"),
-                [".aac"] = Override("audio/aac"),
-                [".m4b"] = Override("audio/mp4"),
-                [".m4p"] = Override("audio/mp4"),
-                [".m4r"] = Override("audio/mp4"),
-
-                [".md"] = Override("text/markdown"),
-                [".markdown"] = Override("text/markdown"),
-                [".cs"] = Override("text/plain"),
-                [".csx"] = Override("text/plain"),
-                [".lrc"] = Override("text/plain"),
-                [".srt"] = Override("text/plain"),
-
-                [".svg"] = Override("image/svg+xml"),
-                [".svgz"] = Override("image/svg+xml"),
-
-                [".stl"] = Override("model/stl", forceContentType: true),
-                [".obj"] = Override("model/obj", forceContentType: true),
-                [".3mf"] = Override("model/3mf", forceContentType: true),
-
-                [".apk"] = Override(AndroidPackageContentTypes.Apk, forceContentType: true),
-                [".aab"] = Override(AndroidPackageContentTypes.AndroidAppBundle, forceContentType: true),
-                [".apks"] = Override(AndroidPackageContentTypes.Apks, forceContentType: true),
-                [".xapk"] = Override(AndroidPackageContentTypes.Xapk, forceContentType: true),
-                [".apkm"] = Override(AndroidPackageContentTypes.Apkm, forceContentType: true),
-            };
-
-        private static readonly IReadOnlySet<string> sourceTextExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".ts",
-            ".tsx",
-            ".js",
-            ".jsx",
-            ".mjs",
-            ".cjs",
-            ".json",
-            ".jsonc",
-            ".html",
-            ".htm",
-            ".css",
-            ".less",
-            ".scss",
-            ".sass",
-            ".xml",
-            ".php",
-            ".phtml",
-            ".cs",
-            ".csx",
-            ".lrc",
-            ".srt",
-            ".cpp",
-            ".cc",
-            ".cxx",
-            ".c",
-            ".h",
-            ".hpp",
-            ".razor",
-            ".cshtml",
-            ".md",
-            ".markdown",
-            ".diff",
-            ".patch",
-            ".java",
-            ".vb",
-            ".coffee",
-            ".hbs",
-            ".handlebars",
-            ".bat",
-            ".cmd",
-            ".pug",
-            ".jade",
-            ".fs",
-            ".fsi",
-            ".fsx",
-            ".fsscript",
-            ".lua",
-            ".ps1",
-            ".psm1",
-            ".psd1",
-            ".py",
-            ".pyw",
-            ".pyi",
-            ".rb",
-            ".rbw",
-            ".r",
-            ".m",
-            ".mm",
-            ".go",
-            ".rs",
-            ".swift",
-            ".kt",
-            ".kts",
-            ".sh",
-            ".bash",
-            ".zsh",
-            ".yaml",
-            ".yml",
-            ".toml",
-            ".ini",
-            ".conf",
-            ".cfg",
-            ".sql",
-            ".vue",
-            ".svelte",
-        };
-
-        public static string ResolveContentType(string? fileName, string? contentType)
-        {
-            string normalizedContentType = NormalizeContentType(contentType);
-            return ResolveOverriddenContentType(fileName, normalizedContentType)
-                ?? ResolveProvidedContentType(fileName, normalizedContentType)
-                ?? ResolveDetectedContentType(fileName)
-                ?? ResolveSourceTextFallback(fileName)
-                ?? ResolveDefaultContentType(normalizedContentType);
-        }
-
-        private static string? ResolveOverriddenContentType(string? fileName, string normalizedContentType)
-        {
-            string extension = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
-            if (!string.IsNullOrWhiteSpace(extension)
-                && extensionContentTypeOverrides.TryGetValue(extension, out (string ContentType, bool ForceContentType) overrideMetadata)
-                && (overrideMetadata.ForceContentType
-                    || string.IsNullOrWhiteSpace(normalizedContentType)
-                    || string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase)))
-            {
-                return overrideMetadata.ContentType;
-            }
-
-            return null;
-        }
-
-        private static (string ContentType, bool ForceContentType) Override(
-            string contentType,
-            bool forceContentType = false) =>
-            (contentType, forceContentType);
-
-        private static string? ResolveProvidedContentType(string? fileName, string normalizedContentType)
-        {
-            if (!string.IsNullOrWhiteSpace(normalizedContentType)
-                && !string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase))
-            {
-                return IsSourceTextFileName(fileName) && ShouldUseSourceTextContentType(normalizedContentType)
-                    ? "text/plain"
-                    : normalizedContentType;
-            }
-
-            return null;
-        }
-
-        private static string? ResolveDetectedContentType(string? fileName)
-        {
-            if (!string.IsNullOrWhiteSpace(fileName)
-                && fileExtensionContentTypeProvider.TryGetContentType(fileName, out string? detectedContentType)
-                && !string.IsNullOrWhiteSpace(detectedContentType))
-            {
-                string normalizedDetectedContentType = NormalizeContentType(detectedContentType);
-                return IsSourceTextFileName(fileName) && ShouldUseSourceTextContentType(normalizedDetectedContentType)
-                    ? "text/plain"
-                    : normalizedDetectedContentType;
-            }
-
-            return null;
-        }
-
-        private static string? ResolveSourceTextFallback(string? fileName) =>
-            IsSourceTextFileName(fileName) ? "text/plain" : null;
-
-        private static string ResolveDefaultContentType(string normalizedContentType) =>
-            string.IsNullOrWhiteSpace(normalizedContentType)
-                ? DefaultContentType
-                : normalizedContentType;
-
-        public static bool IsSourceTextFileName(string? fileName)
-        {
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                return false;
-            }
-
-            string name = Path.GetFileName(fileName);
-            if (IsDockerfileName(name))
-            {
-                return true;
-            }
-
-            string extension = Path.GetExtension(name);
-            return !string.IsNullOrWhiteSpace(extension) && sourceTextExtensions.Contains(extension);
-        }
-
-        private static bool IsDockerfileName(string fileName)
-        {
-            return fileName.Equals("Dockerfile", StringComparison.OrdinalIgnoreCase)
-                || fileName.StartsWith("Dockerfile.", StringComparison.OrdinalIgnoreCase)
-                || fileName.Equals(".dockerignore", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool ShouldUseSourceTextContentType(string normalizedContentType)
-        {
-            if (string.IsNullOrWhiteSpace(normalizedContentType)
-                || string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            if (PreviewGeneratorProvider.GetGeneratorByContentType(normalizedContentType) is not null)
-            {
-                return false;
-            }
-
-            return normalizedContentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
-                || normalizedContentType.StartsWith("application/x-", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string NormalizeContentType(string? contentType)
-        {
-            if (string.IsNullOrWhiteSpace(contentType))
-            {
-                return string.Empty;
-            }
-
-            string normalized = contentType.Split(';', 2)[0].Trim().ToLowerInvariant();
-            return normalized switch
-            {
-                "video/mov" => "video/quicktime",
-                "video/x-quicktime" => "video/quicktime",
-                "video/vnd.avi" => "video/x-msvideo",
-                "video/avi" => "video/x-msvideo",
-                "video/msvideo" => "video/x-msvideo",
-                "video/matroska" => "video/x-matroska",
-                "image/x-heic" => "image/heic",
-                "image/x-heif" => "image/heif",
-                "audio/x-flac" => "audio/flac",
-                "audio/x-wav" => "audio/wav",
-                "audio/matroska" => "audio/x-matroska",
-                "application/vnd.ms-pki.stl" => "model/stl",
-                "application/apk" => AndroidPackageContentTypes.Apk,
-                "application/x-apk" => AndroidPackageContentTypes.Apk,
-                "application/vnd.android.package" => AndroidPackageContentTypes.Apk,
-                AndroidPackageContentTypes.ApkLegacy => AndroidPackageContentTypes.Apk,
-                AndroidPackageContentTypes.AndroidAppBundleLegacy => AndroidPackageContentTypes.AndroidAppBundle,
-                AndroidPackageContentTypes.ApksLegacy => AndroidPackageContentTypes.Apks,
-                "application/x-apks" => AndroidPackageContentTypes.Apks,
-                AndroidPackageContentTypes.XapkLegacy => AndroidPackageContentTypes.Xapk,
-                "application/x-xapk" => AndroidPackageContentTypes.Xapk,
-                AndroidPackageContentTypes.ApkmLegacy => AndroidPackageContentTypes.Apkm,
-                "application/vnd.apkm" => AndroidPackageContentTypes.Apkm,
-                "application/apkm" => AndroidPackageContentTypes.Apkm,
-                _ => normalized,
-            };
-        }
-
-        public async Task<List<Chunk>> GetChunksAsync(string[] chunkHashes, Guid userId, CancellationToken cancellationToken = default)
+        public async Task<List<Chunk>> GetChunksAsync(
+            string[] chunkHashes,
+            Guid userId,
+            CancellationToken cancellationToken = default)
         {
             List<byte[]> normalizedHashes = [.. chunkHashes.Select(Hasher.FromHexStringHash)];
             List<Chunk> ownedChunks = await _dbContext.Chunks
-                .Where(c => normalizedHashes.Contains(c.Hash))
-                .Where(c => _dbContext.ChunkOwnerships.Any(co => co.ChunkHash == c.Hash && co.OwnerId == userId))
+                .Where(chunk => normalizedHashes.Contains(chunk.Hash))
+                .Where(chunk => _dbContext.ChunkOwnerships.Any(ownership =>
+                    ownership.ChunkHash == chunk.Hash && ownership.OwnerId == userId))
                 .ToListAsync(cancellationToken);
 
             Dictionary<string, Chunk> chunkMap = ownedChunks.ToDictionary(
-                c => Hasher.ToHexStringHash(c.Hash),
+                chunk => Hasher.ToHexStringHash(chunk.Hash),
                 StringComparer.OrdinalIgnoreCase);
 
             List<Chunk> result = [];
@@ -328,12 +59,13 @@ namespace Cotton.Server.Services
             IQueryable<FileManifest> query = _dbContext.FileManifests.AsQueryable();
             if (includeChunks)
             {
-                query = query.Include(x => x.FileManifestChunks);
+                query = query.Include(fileManifest => fileManifest.FileManifestChunks);
             }
 
             FileManifest? fileManifest = await query
                 .FirstOrDefaultAsync(
-                    x => x.ComputedContentHash == proposedContentHash || x.ProposedContentHash == proposedContentHash,
+                    candidate => candidate.ComputedContentHash == proposedContentHash
+                        || candidate.ProposedContentHash == proposedContentHash,
                     cancellationToken);
             if (fileManifest is null)
             {
@@ -349,19 +81,6 @@ namespace Cotton.Server.Services
             return fileManifest;
         }
 
-        private async Task<bool> UserOwnsManifestChunksAsync(
-            Guid fileManifestId,
-            Guid userId,
-            CancellationToken cancellationToken)
-        {
-            bool hasForeignChunk = await _dbContext.FileManifestChunks
-                .Where(fmc => fmc.FileManifestId == fileManifestId)
-                .AnyAsync(fmc => !_dbContext.ChunkOwnerships
-                    .Any(co => co.OwnerId == userId && co.ChunkHash == fmc.ChunkHash), cancellationToken);
-
-            return !hasForeignChunk;
-        }
-
         public async Task<FileManifest> CreateNewFileManifestAsync(
             List<Chunk> chunks,
             string fileName,
@@ -371,10 +90,10 @@ namespace Cotton.Server.Services
             bool includeChunks = false,
             CancellationToken cancellationToken = default)
         {
-            FileManifest newFileManifest = new FileManifest()
+            FileManifest newFileManifest = new()
             {
-                ContentType = ResolveContentType(fileName, contentType),
-                SizeBytes = chunks.Sum(x => x.PlainSizeBytes),
+                ContentType = FileContentTypeResolver.Resolve(fileName, contentType),
+                SizeBytes = chunks.Sum(chunk => chunk.PlainSizeBytes),
                 ProposedContentHash = proposedContentHash,
                 PreviewGeneratorVersion = PreviewGeneratorProvider.DefaultGeneratorVersion,
             };
@@ -387,7 +106,7 @@ namespace Cotton.Server.Services
                     chunks[i].GCScheduledAfter = null;
                 }
 
-                FileManifestChunk fileChunk = new FileManifestChunk
+                FileManifestChunk fileChunk = new()
                 {
                     ChunkOrder = i,
                     ChunkHash = chunks[i].Hash,
@@ -415,12 +134,43 @@ namespace Cotton.Server.Services
                     "A file manifest was inserted concurrently but could not be reloaded.");
         }
 
+        public async Task<int> ClearGcSchedulesForManifestReferencesAsync(
+            Guid fileManifestId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Chunks
+                .Where(chunk => chunk.GCScheduledAfter != null
+                    && (_dbContext.FileManifestChunks.Any(manifestChunk =>
+                            manifestChunk.FileManifestId == fileManifestId
+                            && manifestChunk.ChunkHash == chunk.Hash)
+                        || _dbContext.FileManifests.Any(fileManifest =>
+                            fileManifest.Id == fileManifestId
+                            && (fileManifest.SmallFilePreviewHash == chunk.Hash
+                                || fileManifest.LargeFilePreviewHash == chunk.Hash))))
+                .ExecuteUpdateAsync(
+                    update => update.SetProperty(chunk => chunk.GCScheduledAfter, (DateTime?)null),
+                    cancellationToken);
+        }
+
+        private async Task<bool> UserOwnsManifestChunksAsync(
+            Guid fileManifestId,
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            bool hasForeignChunk = await _dbContext.FileManifestChunks
+                .Where(manifestChunk => manifestChunk.FileManifestId == fileManifestId)
+                .AnyAsync(manifestChunk => !_dbContext.ChunkOwnerships.Any(ownership =>
+                    ownership.OwnerId == userId && ownership.ChunkHash == manifestChunk.ChunkHash), cancellationToken);
+
+            return !hasForeignChunk;
+        }
+
         private void DetachPendingManifest(FileManifest manifest)
         {
             foreach (EntityEntry<FileManifestChunk> entry in _dbContext.ChangeTracker
                 .Entries<FileManifestChunk>()
-                .Where(x => x.State == EntityState.Added
-                    && ReferenceEquals(x.Entity.FileManifest, manifest))
+                .Where(candidate => candidate.State == EntityState.Added
+                    && ReferenceEquals(candidate.Entity.FileManifest, manifest))
                 .ToArray())
             {
                 entry.State = EntityState.Detached;
@@ -440,18 +190,6 @@ namespace Cotton.Server.Services
                 SqlState: PostgresErrorCodes.UniqueViolation,
                 ConstraintName: ProposedContentHashConstraintName,
             };
-        }
-
-        public async Task<int> ClearGcSchedulesForManifestReferencesAsync(
-            Guid fileManifestId,
-            CancellationToken cancellationToken = default)
-        {
-            return await _dbContext.Chunks
-                .Where(c => c.GCScheduledAfter != null
-                    && (_dbContext.FileManifestChunks.Any(fmc => fmc.FileManifestId == fileManifestId && fmc.ChunkHash == c.Hash)
-                        || _dbContext.FileManifests.Any(fm => fm.Id == fileManifestId
-                            && (fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash))))
-                .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), cancellationToken);
         }
     }
 }
