@@ -18,16 +18,9 @@ export const DashboardWidgetLibrary = ({
   return (
     <Stack mt={3} gap={1}>
       <Divider />
-      <Stack direction="row" justifyContent="space-between" gap={2} mt={1}>
-        <div>
-          <Typography variant="subtitle1">
-            {t("dashboard.library.title")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("dashboard.library.description")}
-          </Typography>
-        </div>
-      </Stack>
+      <Typography variant="subtitle1" mt={1}>
+        {t("dashboard.library.title")}
+      </Typography>
       {hiddenWidgetIds.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
           {t("dashboard.library.empty")}
