@@ -22,14 +22,16 @@ namespace Cotton.Server.Services
         public IQueryable<Chunk> WhereUnreferencedByDatabase(IQueryable<Chunk> query)
         {
             return query.Where(c => !c.FileManifestChunks.Any()
-                && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash)
+                && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash)
+                && !_dbContext.FileManifests.Any(fm => fm.LargeFilePreviewHash == c.Hash)
                 && !_dbContext.Users.Any(u => u.AvatarHash == c.Hash));
         }
 
         public IQueryable<Chunk> WhereReferencedByDatabase(IQueryable<Chunk> query)
         {
             return query.Where(c => c.FileManifestChunks.Any()
-                || _dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash)
+                || _dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash)
+                || _dbContext.FileManifests.Any(fm => fm.LargeFilePreviewHash == c.Hash)
                 || _dbContext.Users.Any(u => u.AvatarHash == c.Hash));
         }
 

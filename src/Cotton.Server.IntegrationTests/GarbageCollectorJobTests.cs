@@ -49,7 +49,8 @@ namespace Cotton.Server.IntegrationTests
             byte[] futureOrphanHash = Hash("future-orphan");
             byte[] unscheduledOrphanHash = Hash("unscheduled-orphan");
             byte[] fileHash = Hash("file");
-            byte[] previewHash = Hash("preview");
+            byte[] smallPreviewHash = Hash("small-preview");
+            byte[] largePreviewHash = Hash("large-preview");
             byte[] avatarHash = Hash("avatar");
             byte[] backupHash = Hash("backup");
 
@@ -59,7 +60,8 @@ namespace Cotton.Server.IntegrationTests
                 futureOrphanHash,
                 unscheduledOrphanHash,
                 fileHash,
-                previewHash,
+                smallPreviewHash,
+                largePreviewHash,
                 avatarHash,
                 backupHash);
             await storage.WriteAsync(keyProvider.GetScopedPointerStorageKey(), new MemoryStream([1, 2, 3]));
@@ -86,8 +88,9 @@ namespace Cotton.Server.IntegrationTests
                 ProposedContentHash = Hash("manifest"),
                 ContentType = "text/plain",
                 SizeBytes = 4,
-                SmallFilePreviewHash = previewHash,
+                SmallFilePreviewHash = smallPreviewHash,
                 SmallFilePreviewHashEncrypted = Hash("preview-encrypted"),
+                LargeFilePreviewHash = largePreviewHash,
             };
 
             NodeFile nodeFile = new()
@@ -106,7 +109,8 @@ namespace Cotton.Server.IntegrationTests
                 CreateChunk(futureOrphanHash, now.AddDays(1)),
                 CreateChunk(unscheduledOrphanHash, null),
                 CreateChunk(fileHash, now.AddDays(-1)),
-                CreateChunk(previewHash, now.AddDays(-1)),
+                CreateChunk(smallPreviewHash, now.AddDays(-1)),
+                CreateChunk(largePreviewHash, now.AddDays(-1)),
                 CreateChunk(avatarHash, now.AddDays(-1)),
                 CreateChunk(backupHash, now.AddDays(1)));
             DbContext.FileManifests.Add(manifest);
@@ -148,7 +152,8 @@ namespace Cotton.Server.IntegrationTests
             Chunk futureOrphanChunk = (await DbContext.Chunks.FindAsync(futureOrphanHash))!;
             Chunk unscheduledOrphanChunk = (await DbContext.Chunks.FindAsync(unscheduledOrphanHash))!;
             Chunk fileChunk = (await DbContext.Chunks.FindAsync(fileHash))!;
-            Chunk previewChunk = (await DbContext.Chunks.FindAsync(previewHash))!;
+            Chunk smallPreviewChunk = (await DbContext.Chunks.FindAsync(smallPreviewHash))!;
+            Chunk largePreviewChunk = (await DbContext.Chunks.FindAsync(largePreviewHash))!;
             Chunk avatarChunk = (await DbContext.Chunks.FindAsync(avatarHash))!;
             Chunk backupChunk = (await DbContext.Chunks.FindAsync(backupHash))!;
 
@@ -160,7 +165,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(futureOrphanChunk.GCScheduledAfter, Is.EqualTo(now.AddDays(1)).Within(TimeSpan.FromSeconds(1)));
                 Assert.That(unscheduledOrphanChunk.GCScheduledAfter, Is.EqualTo(now.AddDays(7)).Within(TimeSpan.FromSeconds(1)));
                 Assert.That(fileChunk.GCScheduledAfter, Is.Null);
-                Assert.That(previewChunk.GCScheduledAfter, Is.Null);
+                Assert.That(smallPreviewChunk.GCScheduledAfter, Is.Null);
+                Assert.That(largePreviewChunk.GCScheduledAfter, Is.Null);
                 Assert.That(avatarChunk.GCScheduledAfter, Is.Null);
                 Assert.That(backupChunk.GCScheduledAfter, Is.Null);
             });
