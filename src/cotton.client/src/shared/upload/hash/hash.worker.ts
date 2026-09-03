@@ -34,10 +34,7 @@ type UpdateFileHashMessage = {
 type DigestFileMessage = { type: "digestFile"; requestId: string };
 
 type InMessage =
-  | InitMessage
-  | HashChunkMessage
-  | UpdateFileHashMessage
-  | DigestFileMessage;
+  InitMessage | HashChunkMessage | UpdateFileHashMessage | DigestFileMessage;
 
 type InitResult = { type: "initResult"; requestId: string };
 

@@ -3,6 +3,7 @@ import {
   MAX_PINNED_FOLDERS,
   addPinnedFolder,
   parsePinnedFolderIds,
+  removeMissingPinnedFolders,
   removePinnedFolder,
   serializePinnedFolderIds,
 } from "./pinnedFolders";
@@ -15,10 +16,9 @@ describe("pinned folders", () => {
     const first = folderId(1);
     const second = folderId(2);
 
-    expect(parsePinnedFolderIds(JSON.stringify([first, second, first]))).toEqual([
-      first,
-      second,
-    ]);
+    expect(
+      parsePinnedFolderIds(JSON.stringify([first, second, first])),
+    ).toEqual([first, second]);
   });
 
   it("rejects malformed preferences", () => {
@@ -52,5 +52,15 @@ describe("pinned folders", () => {
     expect(parsePinnedFolderIds(serializePinnedFolderIds(added))).toEqual(
       added,
     );
+  });
+
+  it("removes folder ids that could not be resolved", () => {
+    const first = folderId(1);
+    const missing = folderId(2);
+    const third = folderId(3);
+
+    expect(
+      removeMissingPinnedFolders([first, missing, third], [third, first]),
+    ).toEqual([first, third]);
   });
 });

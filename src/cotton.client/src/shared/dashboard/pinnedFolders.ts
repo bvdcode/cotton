@@ -21,8 +21,9 @@ export const parsePinnedFolderIds = (value: string | undefined): string[] => {
   }
 };
 
-export const serializePinnedFolderIds = (folderIds: readonly string[]): string =>
-  JSON.stringify(folderIds.slice(0, MAX_PINNED_FOLDERS));
+export const serializePinnedFolderIds = (
+  folderIds: readonly string[],
+): string => JSON.stringify(folderIds.slice(0, MAX_PINNED_FOLDERS));
 
 export const addPinnedFolder = (
   folderIds: readonly string[],
@@ -39,3 +40,11 @@ export const removePinnedFolder = (
   folderIds: readonly string[],
   folderId: string,
 ): string[] => folderIds.filter((candidate) => candidate !== folderId);
+
+export const removeMissingPinnedFolders = (
+  folderIds: readonly string[],
+  resolvedFolderIds: readonly string[],
+): string[] => {
+  const resolvedFolderIdSet = new Set(resolvedFolderIds);
+  return folderIds.filter((folderId) => resolvedFolderIdSet.has(folderId));
+};

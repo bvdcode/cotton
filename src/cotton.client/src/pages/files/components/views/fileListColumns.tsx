@@ -479,7 +479,11 @@ const buildFolderActionButtons = (
     const pinned = operations.isPinned?.(row.id) ?? false;
     actions.push({
       key: "pin",
-      icon: pinned ? <Star fontSize="small" /> : <StarBorder fontSize="small" />,
+      icon: pinned ? (
+        <Star fontSize="small" />
+      ) : (
+        <StarBorder fontSize="small" />
+      ),
       title: pinned ? options.labels.unpin : options.labels.pin,
       onClick: () => operations.onTogglePin?.(row.id),
     });

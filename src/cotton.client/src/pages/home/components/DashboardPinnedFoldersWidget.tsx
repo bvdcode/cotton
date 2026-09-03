@@ -9,26 +9,30 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { usePinnedFoldersQuery } from "../../../shared/api/queries/layouts";
+import type { NodeDto } from "../../../shared/api/layoutsApi";
 import { DashboardQueryError } from "./DashboardQueryError";
 
 const PINNED_FOLDERS_STATE_HEIGHT = 72;
 
 interface DashboardPinnedFoldersWidgetProps {
-  enabled: boolean;
   folderIds: readonly string[];
+  folders: readonly NodeDto[];
+  isError: boolean;
+  isPending: boolean;
+  onRetry: () => void;
   onUnpin: (folderId: string) => void;
 }
 
 export const DashboardPinnedFoldersWidget = ({
-  enabled,
   folderIds,
+  folders,
+  isError,
+  isPending,
+  onRetry,
   onUnpin,
 }: DashboardPinnedFoldersWidgetProps) => {
   const { t } = useTranslation("home");
   const navigate = useNavigate();
-  const query = usePinnedFoldersQuery(folderIds, enabled);
-  const folders = query.data ?? [];
 
   if (folderIds.length === 0) {
     return (
@@ -50,11 +54,11 @@ export const DashboardPinnedFoldersWidget = ({
     );
   }
 
-  if (query.isPending && folders.length === 0) {
+  if (isPending && folders.length === 0) {
     return <Skeleton variant="rounded" height={PINNED_FOLDERS_STATE_HEIGHT} />;
   }
 
-  if (query.isError && folders.length === 0) {
+  if (isError && folders.length === 0) {
     return (
       <Box
         height={PINNED_FOLDERS_STATE_HEIGHT}
@@ -64,7 +68,7 @@ export const DashboardPinnedFoldersWidget = ({
         <Box width="100%">
           <DashboardQueryError
             message={t("dashboard.pinnedFolders.loadFailed")}
-            onRetry={() => void query.refetch()}
+            onRetry={onRetry}
           />
         </Box>
       </Box>

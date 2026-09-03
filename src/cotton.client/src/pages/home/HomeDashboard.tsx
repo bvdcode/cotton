@@ -38,8 +38,11 @@ export const HomeDashboard = ({
     if (widgetId === "pinnedFolders") {
       return (
         <DashboardPinnedFoldersWidget
-          enabled
           folderIds={pinnedFolders.folderIds}
+          folders={pinnedFolders.folders}
+          isError={pinnedFolders.foldersError}
+          isPending={pinnedFolders.foldersPending}
+          onRetry={() => void pinnedFolders.refetchFolders()}
           onUnpin={(folderId) => pinnedFolders.setPinned(folderId, false)}
         />
       );
