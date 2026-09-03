@@ -14,22 +14,12 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     /// The signer lives in the database layer boundary rather than in individual handlers so every normal write path is
     /// covered consistently.
     /// </remarks>
-    public class DatabaseIntegrityChangeSigner : IDatabaseIntegrityChangeSigner
+    public class DatabaseIntegrityChangeSigner(
+        IDatabaseIntegrityProtector protector,
+        IDatabaseIntegrityDescriptorRegistry descriptors,
+        IDatabaseIntegrityFailureReporter failures)
+        : IDatabaseIntegrityChangeSigner
     {
-        private readonly IDatabaseIntegrityProtector _protector;
-        private readonly IDatabaseIntegrityDescriptorRegistry _descriptors;
-        private readonly IDatabaseIntegrityFailureReporter _failures;
-
-        public DatabaseIntegrityChangeSigner(
-            IDatabaseIntegrityProtector protector,
-            IDatabaseIntegrityDescriptorRegistry descriptors,
-            IDatabaseIntegrityFailureReporter failures)
-        {
-            _protector = protector;
-            _descriptors = descriptors;
-            _failures = failures;
-        }
-
         public void SignPendingChanges(DbContext dbContext)
         {
             ArgumentNullException.ThrowIfNull(dbContext);
@@ -46,7 +36,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
                     continue;
                 }
 
-                if (!_descriptors.TryGet(entry.Entity.GetType(), out IDatabaseIntegrityDescriptor? descriptor))
+                if (!descriptors.TryGet(entry.Entity.GetType(), out IDatabaseIntegrityDescriptor? descriptor))
                 {
                     continue;
                 }
@@ -64,7 +54,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
                     RequireOriginalStateValid(entry, descriptor);
                 }
 
-                byte[] mac = _protector.Sign(entry.Entity, descriptor);
+                byte[] mac = protector.Sign(entry.Entity, descriptor);
                 entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = descriptor.SchemaVersion;
                 entry.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue = mac;
             }
@@ -100,13 +90,13 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             if (versionValue is int version
                 && version == descriptor.SchemaVersion
                 && macValue is byte[] mac
-                && _protector.Verify(originalEntity, descriptor, mac))
+                && protector.Verify(originalEntity, descriptor, mac))
             {
                 return;
             }
 
             string entityKey = descriptor.GetEntityKey(originalEntity);
-            _failures.Report(new DatabaseIntegrityFailure(
+            failures.Report(new DatabaseIntegrityFailure(
                 descriptor.EntityName,
                 entityKey,
                 "save.original-state",

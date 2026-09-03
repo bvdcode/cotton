@@ -15,20 +15,16 @@ using System.Globalization;
 
 namespace Cotton.Server.Services
 {
-    internal class StoragePressureReservation : IDisposable
+    internal class StoragePressureReservation(
+        StoragePressureGuard? owner,
+        long bytes) : IDisposable
     {
         public static StoragePressureReservation None => new(null, 0);
 
-        private readonly StoragePressureGuard? _owner;
-        private readonly long _bytes;
+        private readonly StoragePressureGuard? _owner = owner;
+        private readonly long _bytes = Math.Max(0, bytes);
         private bool _committed;
         private bool _disposed;
-
-        public StoragePressureReservation(StoragePressureGuard? owner, long bytes)
-        {
-            _owner = owner;
-            _bytes = Math.Max(0, bytes);
-        }
 
         public void Commit()
         {
