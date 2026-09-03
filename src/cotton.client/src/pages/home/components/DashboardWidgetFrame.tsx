@@ -5,6 +5,7 @@ import {
   KeyboardArrowUp,
 } from "@mui/icons-material";
 import {
+  Box,
   Card,
   CardContent,
   IconButton,
@@ -77,7 +78,9 @@ export const DashboardWidgetFrame = ({
         cursor: customizing ? "grab" : "default",
       }}
     >
-      <CardContent>
+      <CardContent
+        sx={{ height: "100%", display: "flex", flexDirection: "column" }}
+      >
         <Stack
           direction="row"
           alignItems="center"
@@ -157,7 +160,9 @@ export const DashboardWidgetFrame = ({
             </Stack>
           )}
         </Stack>
-        {children}
+        <Box flex={1} minHeight={0}>
+          {children}
+        </Box>
       </CardContent>
     </Card>
   );

@@ -24,7 +24,7 @@ export const DashboardOverviewWidget = ({
     : null;
 
   return (
-    <Stack gap={1.25}>
+    <Stack height="100%" justifyContent="space-between" gap={1.25}>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         alignItems={{ xs: "stretch", sm: "center" }}
