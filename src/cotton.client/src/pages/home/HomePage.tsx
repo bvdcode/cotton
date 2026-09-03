@@ -3,7 +3,6 @@ import { Alert, Box, Button } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import Loader from "../../shared/ui/Loader";
 import {
   invalidateLayoutOverview,
   useLayoutStatsQuery,
@@ -29,8 +28,6 @@ export const HomePage: React.FC = () => {
   const statsQuery = useLayoutStatsQuery(layoutId);
 
   const stats = statsQuery.data;
-  const loadingRoot = rootQuery.isPending;
-  const loadingStats = statsQuery.isPending && !!layoutId;
   const handleRealtimeInvalidate = useCallback((): void => {
     if (layoutId) {
       void invalidateLayoutOverview(queryClient, layoutId);
@@ -45,12 +42,6 @@ export const HomePage: React.FC = () => {
     : statsQuery.error
       ? "Failed to load layout stats"
       : null;
-  const isLoading = loadingRoot || loadingStats;
-
-  if (isLoading && !rootNode && !stats) {
-    return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
-  }
-
   return (
     <Box
       pt={{

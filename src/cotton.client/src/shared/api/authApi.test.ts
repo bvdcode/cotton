@@ -15,7 +15,6 @@ vi.mock("../store/authStore", () => ({
   getRefreshEnabled: () => refreshEnabledMock(),
   useAuthStore: {
     getState: () => ({
-      hydrated: true,
       refreshEnabled: refreshEnabledMock(),
       logoutLocal: logoutLocalMock,
     }),
@@ -146,16 +145,16 @@ describe("authApi.me", () => {
   });
 });
 
-describe("authApi.refresh", () => {
-  it("can explicitly refresh after an interactive redirect when local refresh is disabled", async () => {
+describe("authApi.restoreSession", () => {
+  it("restores the access token and user in one request", async () => {
     refreshEnabledMock.mockReturnValue(false);
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
-      data: { accessToken: "oidc-token" },
+      data: { accessToken: "oidc-token", user: baseUserResponse },
     });
 
     await expect(
-      authApi.refresh({ allowWhenRefreshDisabled: true }),
-    ).resolves.toBe("oidc-token");
+      authApi.restoreSession({ allowWhenRefreshDisabled: true }),
+    ).resolves.toMatchObject({ id: "user-1", username: "alice" });
 
     expect(post).toHaveBeenCalledWith(
       "auth/refresh",
@@ -163,6 +162,15 @@ describe("authApi.refresh", () => {
       { withCredentials: true },
     );
     expect(getAccessToken()).toBe("oidc-token");
+  });
+
+  it("rejects an incomplete restore response without leaving a token behind", async () => {
+    vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: { accessToken: "incomplete-token" },
+    });
+
+    await expect(authApi.restoreSession()).resolves.toBeNull();
+    expect(getAccessToken()).toBeNull();
   });
 });
 

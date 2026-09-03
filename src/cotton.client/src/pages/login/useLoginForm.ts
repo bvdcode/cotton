@@ -34,6 +34,7 @@ import {
 } from "./demoCredentials";
 
 interface UseLoginFormResult {
+  disabled: boolean;
   username: string;
   setUsername: (value: string) => void;
   password: string;
@@ -54,7 +55,13 @@ interface UseLoginFormResult {
   handleForgotPassword: () => Promise<void>;
 }
 
-export const useLoginForm = (): UseLoginFormResult => {
+interface UseLoginFormOptions {
+  disabled?: boolean;
+}
+
+export const useLoginForm = ({
+  disabled = false,
+}: UseLoginFormOptions = {}): UseLoginFormResult => {
   const navigate = useNavigate();
   const { t } = useTranslation("login");
   const { setAuthenticated } = useAuth();
@@ -93,6 +100,7 @@ export const useLoginForm = (): UseLoginFormResult => {
   }, []);
 
   const submitLogin = useCallback(async () => {
+    if (disabled) return;
     setLoading(true);
 
     try {
@@ -173,6 +181,7 @@ export const useLoginForm = (): UseLoginFormResult => {
     showToast,
     setAuthenticated,
     navigate,
+    disabled,
   ]);
 
   const handleSubmit = useCallback(
@@ -184,6 +193,7 @@ export const useLoginForm = (): UseLoginFormResult => {
   );
 
   const handlePasskeyLogin = useCallback(async () => {
+    if (disabled) return;
     if (!isPasskeySupported()) {
       showToast(t("passkey.errors.notSupported"), "error");
       return;
@@ -221,9 +231,18 @@ export const useLoginForm = (): UseLoginFormResult => {
     } finally {
       setPasskeyLoading(false);
     }
-  }, [username, trustDevice, t, showToast, setAuthenticated, navigate]);
+  }, [
+    username,
+    trustDevice,
+    t,
+    showToast,
+    setAuthenticated,
+    navigate,
+    disabled,
+  ]);
 
   const handleForgotPassword = useCallback(async () => {
+    if (disabled) return;
     const trimmed = username.trim();
     if (!trimmed || !isEmail(trimmed)) {
       showToast(t("forgotPassword.enterEmail"), "error");
@@ -239,10 +258,10 @@ export const useLoginForm = (): UseLoginFormResult => {
     } finally {
       setForgotPasswordSending(false);
     }
-  }, [username, t, showToast]);
+  }, [username, t, showToast, disabled]);
 
   useEffect(() => {
-    if (!initialDemoCredentials || demoSubmitRef.current) return;
+    if (disabled || !initialDemoCredentials || demoSubmitRef.current) return;
 
     demoSubmitRef.current = true;
     const handle = window.setTimeout(() => {
@@ -252,7 +271,7 @@ export const useLoginForm = (): UseLoginFormResult => {
     return () => {
       window.clearTimeout(handle);
     };
-  }, [initialDemoCredentials, submitLogin]);
+  }, [disabled, initialDemoCredentials, submitLogin]);
 
   useEffect(() => {
     if (!requiresTwoFactor) {
@@ -261,7 +280,12 @@ export const useLoginForm = (): UseLoginFormResult => {
     }
 
     const cleanCode = normalizeTwoFactorCode(twoFactorCode);
-    if (cleanCode.length === 6 && !loading && !autoSubmitTriggeredRef.current) {
+    if (
+      cleanCode.length === 6 &&
+      !disabled &&
+      !loading &&
+      !autoSubmitTriggeredRef.current
+    ) {
       autoSubmitTriggeredRef.current = true;
 
       const timer = setTimeout(() => {
@@ -274,7 +298,7 @@ export const useLoginForm = (): UseLoginFormResult => {
     if (cleanCode.length < 6) {
       autoSubmitTriggeredRef.current = false;
     }
-  }, [twoFactorCode, requiresTwoFactor, loading, submitLogin]);
+  }, [twoFactorCode, requiresTwoFactor, disabled, loading, submitLogin]);
 
   const usernameErrorText = (() => {
     if (requiresTwoFactor) {
@@ -300,6 +324,7 @@ export const useLoginForm = (): UseLoginFormResult => {
   }, []);
 
   return {
+    disabled,
     username,
     setUsername,
     password,

@@ -234,13 +234,14 @@ export interface RefreshAccessTokenOptions {
   allowWhenRefreshDisabled?: boolean;
 }
 
-/**
- * Refreshes access token using refresh cookie.
- * Returns new token or null if refresh failed.
- */
-export const refreshAccessToken = async (
+interface TokenRefreshPayload<TUser = never> {
+  accessToken: string;
+  user?: TUser;
+}
+
+const requestTokenRefresh = async <TUser = never>(
   options: RefreshAccessTokenOptions = {},
-): Promise<string | null> => {
+): Promise<TokenRefreshPayload<TUser> | null> => {
   try {
     const refreshAllowed =
       options.allowWhenRefreshDisabled || getRefreshEnabled();
@@ -250,7 +251,7 @@ export const refreshAccessToken = async (
       clearAccessToken();
       return null;
     }
-    const response = await httpClient.post(
+    const response = await httpClient.post<TokenRefreshPayload<TUser>>(
       "auth/refresh",
       {},
       { withCredentials: true },
@@ -258,7 +259,10 @@ export const refreshAccessToken = async (
     const token = response.data?.accessToken;
     if (token && typeof token === "string" && token.length > 0) {
       setAccessToken(token);
-      return token;
+      return {
+        accessToken: token,
+        user: response.data?.user,
+      };
     }
     clearAccessToken();
     return null;
@@ -272,6 +276,37 @@ export const refreshAccessToken = async (
     clearAccessToken();
     return null;
   }
+};
+
+/**
+ * Refreshes access token using refresh cookie.
+ * Returns new token or null if refresh failed.
+ */
+export const refreshAccessToken = async (
+  options: RefreshAccessTokenOptions = {},
+): Promise<string | null> => {
+  const payload = await requestTokenRefresh(options);
+  return payload?.accessToken ?? null;
+};
+
+export interface RestoredAccessToken<TUser> {
+  accessToken: string;
+  user: TUser;
+}
+
+export const restoreAccessToken = async <TUser>(
+  options: RefreshAccessTokenOptions = {},
+): Promise<RestoredAccessToken<TUser> | null> => {
+  const payload = await requestTokenRefresh<TUser>(options);
+  if (payload?.user === undefined) {
+    clearAccessToken();
+    return null;
+  }
+
+  return {
+    accessToken: payload.accessToken,
+    user: payload.user,
+  };
 };
 
 export const httpClient = axios.create({
@@ -354,6 +389,7 @@ httpClient.interceptors.response.use(
       tryDispatchApiErrorToast(error);
       return Promise.reject(error);
     }
+    const url = originalRequest.url || "";
 
     if (isServerLockedResponse(error)) {
       redirectToUnlockOnce();
@@ -365,8 +401,10 @@ httpClient.interceptors.response.use(
       !retriedRequests.has(originalRequest)
     ) {
       // Don't retry on auth endpoints themselves
-      const url = originalRequest.url || "";
-      if (url.includes("auth/login") || url.includes("auth/refresh")) {
+      if (url.includes("auth/refresh")) {
+        return Promise.reject(error);
+      }
+      if (url.includes("auth/login")) {
         tryDispatchApiErrorToast(error);
         return Promise.reject(error);
       }
@@ -428,6 +466,10 @@ httpClient.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    if (url.includes("auth/refresh")) {
+      return Promise.reject(error);
     }
 
     tryDispatchApiErrorToast(error);

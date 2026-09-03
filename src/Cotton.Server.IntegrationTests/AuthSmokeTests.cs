@@ -149,6 +149,42 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task Refresh_ReturnsCurrentUserWithTokenPair()
+        {
+            Assert.That(_client, Is.Not.Null);
+
+            using HttpResponseMessage login = await PostLoginAsync(
+                "testuser",
+                "testpassword",
+                "8.8.8.8");
+            login.EnsureSuccessStatusCode();
+            string refreshCookie = login.Headers
+                .GetValues("Set-Cookie")
+                .Select(value => value.Split(';', 2)[0])
+                .Single(value => value.StartsWith("refresh_token=", StringComparison.Ordinal));
+
+            using HttpRequestMessage request = new(
+                HttpMethod.Post,
+                "/api/v1/auth/refresh");
+            request.Headers.Add("Cookie", refreshCookie);
+            request.Content = JsonContent.Create(new { });
+
+            using HttpResponseMessage response = await _client!.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            SessionRestoreResponseDto? payload = await response.Content
+                .ReadFromJsonAsync<SessionRestoreResponseDto>();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(payload, Is.Not.Null);
+                Assert.That(payload!.AccessToken, Is.Not.Empty);
+                Assert.That(payload.RefreshToken, Is.Not.Empty);
+                Assert.That(payload.User.Username, Is.EqualTo("testuser"));
+                Assert.That(payload.User.Id, Is.Not.EqualTo(Guid.Empty));
+            });
+        }
+
+        [Test]
         public async Task Login_Succeeds_WhenSecurityEmailFails()
         {
             RecordingNotificationsProvider notifications = _notifications

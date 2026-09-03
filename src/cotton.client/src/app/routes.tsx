@@ -10,7 +10,6 @@ import {
   matchPath,
 } from "react-router-dom";
 import Loader from "../shared/ui/Loader";
-import { useTranslation } from "react-i18next";
 import { AppLayout, PublicLayout } from "./layouts";
 import { Folder, Home, Delete } from "@mui/icons-material";
 import { SetupGate } from "../features/settings/SetupGate";
@@ -78,21 +77,13 @@ const publicRoutes: RouteConfig[] = [
 ];
 
 export function AppRoutes() {
-  const { t } = useTranslation(["login", "startup"]);
   const location = useLocation();
   const [startupStatus, setStartupStatus] =
     useState<StartupStatusResponse | null>(null);
   const [startupCheckState, setStartupCheckState] = useState<
     "checking" | "ready" | "blocked"
   >("checking");
-  const {
-    hydrated,
-    isInitializing,
-    isAuthenticated,
-    refreshEnabled,
-    hasChecked,
-    ensureAuth,
-  } = useAuth();
+  const { phase, restoreSession } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
@@ -118,21 +109,19 @@ export function AppRoutes() {
   const isPublicRoute = publicRoutes.some((route) =>
     Boolean(matchPath({ path: route.path, end: true }, location.pathname)),
   );
+  const shouldRestoreSession = !isPublicRoute || location.pathname === "/login";
 
   useEffect(() => {
-    if (startupCheckState !== "ready") return;
-    if (isPublicRoute) return;
-    ensureAuth();
-  }, [ensureAuth, isPublicRoute, startupCheckState]);
+    if (!shouldRestoreSession || phase !== "booting") return;
+    void restoreSession();
+  }, [phase, restoreSession, shouldRestoreSession]);
 
-  if (startupCheckState === "checking") {
-    return (
-      <Loader
-        overlay={true}
-        title={t("checking.title", { ns: "startup" })}
-        caption={t("checking.caption", { ns: "startup" })}
-      />
-    );
+  const isAuthBootstrapPending = !isPublicRoute && phase === "booting";
+  if (
+    startupCheckState === "checking" ||
+    (startupCheckState === "ready" && isAuthBootstrapPending)
+  ) {
+    return <Loader overlay={true} />;
   }
 
   if (startupCheckState === "blocked") {
@@ -147,22 +136,6 @@ export function AppRoutes() {
           />
         </Route>
       </Routes>
-    );
-  }
-
-  const isAuthBootstrapPending =
-    !isPublicRoute &&
-    (!hydrated ||
-      isInitializing ||
-      (!isAuthenticated && refreshEnabled && !hasChecked));
-
-  if (isAuthBootstrapPending) {
-    return (
-      <Loader
-        overlay={true}
-        title={t("restoring.title", { ns: "login" })}
-        caption={t("restoring.caption", { ns: "login" })}
-      />
     );
   }
 

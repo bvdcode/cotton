@@ -46,8 +46,7 @@ import { useAuth } from "./useAuth";
 import { UserRole, type User } from "./types";
 
 const authApiMocks = vi.hoisted(() => ({
-  refresh: vi.fn(),
-  me: vi.fn(),
+  restoreSession: vi.fn(),
   logout: vi.fn(),
 }));
 
@@ -73,26 +72,38 @@ const user: User = {
 const resetAuthStore = () => {
   useAuthStore.setState({
     user: null,
-    isAuthenticated: false,
-    isInitializing: false,
+    phase: "booting",
     refreshEnabled: false,
-    hydrated: true,
-    hasChecked: false,
   });
 };
 
 const AuthProbe = () => {
-  const { ensureAuth, isAuthenticated, user: currentUser } = useAuth();
+  const {
+    restoreSession,
+    isAuthenticated,
+    phase,
+    user: currentUser,
+  } = useAuth();
 
   useEffect(() => {
-    void ensureAuth();
-  }, [ensureAuth]);
+    void restoreSession();
+  }, [restoreSession]);
 
   return (
     <div data-testid="auth-state">
-      {isAuthenticated ? currentUser?.username : "anonymous"}
+      {phase}:{isAuthenticated ? currentUser?.username : "anonymous"}
     </div>
   );
+};
+
+const DoubleRestoreProbe = () => {
+  const { restoreSession } = useAuth();
+
+  useEffect(() => {
+    void Promise.all([restoreSession(), restoreSession()]);
+  }, [restoreSession]);
+
+  return null;
 };
 
 describe("AuthProvider OIDC restore", () => {
@@ -100,8 +111,7 @@ describe("AuthProvider OIDC restore", () => {
     storageMocks.localStorage.clear();
     storageMocks.sessionStorage.clear();
     resetAuthStore();
-    authApiMocks.refresh.mockReset();
-    authApiMocks.me.mockReset();
+    authApiMocks.restoreSession.mockReset();
     authApiMocks.logout.mockReset();
   });
 
@@ -113,8 +123,7 @@ describe("AuthProvider OIDC restore", () => {
 
   it("allows refresh after an OIDC redirect even when silent refresh was disabled", async () => {
     markOidcSignInPending();
-    authApiMocks.refresh.mockResolvedValue("access-token");
-    authApiMocks.me.mockResolvedValue(user);
+    authApiMocks.restoreSession.mockResolvedValue(user);
 
     render(
       <AuthProvider>
@@ -123,13 +132,66 @@ describe("AuthProvider OIDC restore", () => {
     );
 
     await waitFor(() => {
-      expect(authApiMocks.refresh).toHaveBeenCalledWith({
+      expect(authApiMocks.restoreSession).toHaveBeenCalledWith({
         allowWhenRefreshDisabled: true,
       });
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId("auth-state")).toHaveTextContent("alice");
+      expect(screen.getByTestId("auth-state")).toHaveTextContent(
+        "authenticated:alice",
+      );
+    });
+  });
+
+  it("restores a regular browser session with one request", async () => {
+    useAuthStore.setState({ refreshEnabled: true });
+    authApiMocks.restoreSession.mockResolvedValue(user);
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(authApiMocks.restoreSession).toHaveBeenCalledTimes(1);
+      expect(authApiMocks.restoreSession).toHaveBeenCalledWith({
+        allowWhenRefreshDisabled: false,
+      });
+      expect(screen.getByTestId("auth-state")).toHaveTextContent(
+        "authenticated:alice",
+      );
+    });
+  });
+
+  it("does not restore a session after explicit logout", async () => {
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auth-state")).toHaveTextContent(
+        "anonymous:anonymous",
+      );
+    });
+    expect(authApiMocks.restoreSession).not.toHaveBeenCalled();
+  });
+
+  it("deduplicates concurrent restore requests", async () => {
+    useAuthStore.setState({ refreshEnabled: true });
+    authApiMocks.restoreSession.mockResolvedValue(user);
+
+    render(
+      <AuthProvider>
+        <DoubleRestoreProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(authApiMocks.restoreSession).toHaveBeenCalledTimes(1);
     });
   });
 });

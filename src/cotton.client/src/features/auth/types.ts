@@ -20,17 +20,17 @@ export interface User {
   totpFailedAttempts?: number;
 }
 
+export type AuthPhase = "booting" | "anonymous" | "authenticated";
+
 export interface AuthState {
   user: User | null; // optional snapshot for UI
+  phase: AuthPhase;
   isAuthenticated: boolean; // gate-only flag
-  isInitializing: boolean; // boot spinner
   refreshEnabled: boolean; // blocks refresh after explicit logout
-  hydrated: boolean; // store hydration complete
-  hasChecked: boolean; // at least one auth-check attempted this session
 }
 
 export interface AuthContextValue extends AuthState {
-  ensureAuth: () => Promise<void>;
+  restoreSession: () => Promise<void>;
   setAuthenticated: (value: boolean, user?: User | null) => void;
   logout: () => Promise<void>;
 }

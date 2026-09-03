@@ -1,7 +1,8 @@
-import { useEffect, useCallback, type ReactNode } from "react";
+import { useEffect, useCallback, useRef, type ReactNode } from "react";
 import { authApi } from "../../shared/api/authApi";
 import type { AuthContextValue, User } from "./types";
 import { useAuthStore } from "../../shared/store";
+import { waitForAuthStoreHydration } from "../../shared/store/authStore";
 import { useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
 import { resetUserScopedStores } from "../../shared/store/resetUserScopedStores";
 import { JUST_UNLOCKED_STORAGE_KEY } from "./authStorageKeys";
@@ -35,14 +36,9 @@ interface RestoreAuthSessionOptions {
 const restoreAuthSession = async (
   options: RestoreAuthSessionOptions = {},
 ): Promise<User | null> => {
-  const token = await authApi.refresh({
+  return await authApi.restoreSession({
     allowWhenRefreshDisabled: options.allowWhenRefreshDisabled,
   });
-  if (!token) {
-    return null;
-  }
-
-  return await authApi.me();
 };
 
 const waitForAuthSessionAfterUnlock = async (
@@ -79,42 +75,42 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const user = useAuthStore((s) => s.user);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const isInitializing = useAuthStore((s) => s.isInitializing);
+  const phase = useAuthStore((s) => s.phase);
   const refreshEnabled = useAuthStore((s) => s.refreshEnabled);
-  const hydrated = useAuthStore((s) => s.hydrated);
-  const hasChecked = useAuthStore((s) => s.hasChecked);
-  const setInitializing = useAuthStore((s) => s.setInitializing);
   const setAuthenticatedInStore = useAuthStore((s) => s.setAuthenticated);
   const setUnauthenticated = useAuthStore((s) => s.setUnauthenticated);
   const logoutLocal = useAuthStore((s) => s.logoutLocal);
-  const setHasChecked = useAuthStore((s) => s.setHasChecked);
+  const restorePromiseRef = useRef<Promise<void> | null>(null);
+  const lastResetUserIdRef = useRef<string | null | undefined>(undefined);
 
   const userId = user?.id ?? null;
+  const isAuthenticated = phase === "authenticated";
+  const resetForIdentity = useCallback((nextUserId: string | null): void => {
+    resetUserScopedStores(nextUserId);
+    lastResetUserIdRef.current = nextUserId;
+  }, []);
 
   useEffect(() => {
     // Listen for logout event from httpClient interceptor
     const handleLogout = () => {
       logoutLocal();
-      resetUserScopedStores(null);
+      resetForIdentity(null);
     };
     window.addEventListener("auth:logout", handleLogout);
 
     return () => {
       window.removeEventListener("auth:logout", handleLogout);
     };
-  }, [logoutLocal]);
+  }, [logoutLocal, resetForIdentity]);
 
   useEffect(() => {
     // Security: prevent cross-user cached data reuse.
     // When auth identity changes, clear all user-scoped caches.
-    // During initial auth bootstrap user can be temporarily null,
-    // so defer reset until the first auth check is completed.
-    if (!hydrated) return;
-    if (!hasChecked && refreshEnabled) return;
+    if (phase === "booting") return;
+    if (lastResetUserIdRef.current === userId) return;
 
-    resetUserScopedStores(userId);
-  }, [userId, hydrated, hasChecked, refreshEnabled]);
+    resetForIdentity(userId);
+  }, [phase, resetForIdentity, userId]);
 
   useEffect(() => {
     if (!user) {
@@ -124,17 +120,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
     useUserPreferencesStore.getState().hydrateFromUser(user);
   }, [user]);
 
-  const ensureAuth = useCallback(async () => {
-    if (isAuthenticated || isInitializing) return;
-    if (!hydrated) return;
-    const hasPendingOidcSignIn = consumeOidcSignInPending();
-    if (!refreshEnabled && !hasPendingOidcSignIn) {
-      setHasChecked(true);
-      return;
+  const restoreSession = useCallback((): Promise<void> => {
+    if (restorePromiseRef.current) {
+      return restorePromiseRef.current;
     }
 
-    setInitializing(true);
-    try {
+    const promise = (async () => {
+      await waitForAuthStoreHydration();
+      const authState = useAuthStore.getState();
+      if (authState.phase === "authenticated") {
+        return;
+      }
+
+      const hasPendingOidcSignIn = consumeOidcSignInPending();
+      if (!authState.refreshEnabled && !hasPendingOidcSignIn) {
+        authState.setUnauthenticated();
+        return;
+      }
+
       const restoreOptions: RestoreAuthSessionOptions = {
         allowWhenRefreshDisabled: hasPendingOidcSignIn,
       };
@@ -144,30 +147,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         : await restoreAuthSession(restoreOptions);
 
       if (userData) {
-        // Ensure stale persisted data from another identity is cleared
-        // before protected routes can render for this user.
-        resetUserScopedStores(userData.id);
-        setAuthenticatedInStore(userData);
+        resetForIdentity(userData.id);
+        useAuthStore.getState().setAuthenticated(userData);
       } else {
-        setUnauthenticated();
+        useAuthStore.getState().setUnauthenticated();
       }
-    } catch (error) {
-      console.error("Failed to fetch user data:", error);
-      setUnauthenticated();
-    } finally {
-      setHasChecked(true);
-      setInitializing(false);
-    }
-  }, [
-    isAuthenticated,
-    isInitializing,
-    hydrated,
-    refreshEnabled,
-    setInitializing,
-    setAuthenticatedInStore,
-    setUnauthenticated,
-    setHasChecked,
-  ]);
+    })().catch((error: unknown) => {
+      console.error("Failed to restore user session:", error);
+      useAuthStore.getState().setUnauthenticated();
+    });
+
+    restorePromiseRef.current = promise;
+    const clearRestorePromise = () => {
+      if (restorePromiseRef.current === promise) {
+        restorePromiseRef.current = null;
+      }
+    };
+    void promise.then(clearRestorePromise, clearRestorePromise);
+    return promise;
+  }, [resetForIdentity]);
 
   const setAuthenticated = useCallback(
     (value: boolean, u?: User | null) => {
@@ -175,11 +173,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const authState = useAuthStore.getState();
         const currentUserId = authState.user?.id ?? null;
         const shouldResetUserScopedStores =
-          !authState.isAuthenticated || currentUserId !== u.id;
+          authState.phase !== "authenticated" || currentUserId !== u.id;
 
         // Keep user-scoped caches when only profile fields are updated for the same identity.
         if (shouldResetUserScopedStores) {
-          resetUserScopedStores(u.id);
+          resetForIdentity(u.id);
         }
 
         setAuthenticatedInStore(u);
@@ -187,10 +185,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       if (!value) {
         setUnauthenticated();
-        resetUserScopedStores(null);
+        resetForIdentity(null);
       }
     },
-    [setAuthenticatedInStore, setUnauthenticated],
+    [resetForIdentity, setAuthenticatedInStore, setUnauthenticated],
   );
 
   const logout = useCallback(async () => {
@@ -201,17 +199,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error("Logout error:", error);
     }
     logoutLocal();
-    resetUserScopedStores(null);
-  }, [logoutLocal]);
+    resetForIdentity(null);
+  }, [logoutLocal, resetForIdentity]);
 
   const value: AuthContextValue = {
     user,
+    phase,
     isAuthenticated,
-    isInitializing,
     refreshEnabled,
-    hydrated,
-    hasChecked,
-    ensureAuth,
+    restoreSession,
     setAuthenticated,
     logout,
   };

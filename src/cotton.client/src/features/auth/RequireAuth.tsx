@@ -1,6 +1,5 @@
 import { useAuth } from "./useAuth";
-import { useEffect, type ReactNode } from "react";
-import Loader from "../../shared/ui/Loader";
+import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { getSafeAuthReturnPath } from "../../shared/utils/authReturnPath";
 
@@ -9,41 +8,14 @@ type Props = {
 };
 
 export function RequireAuth({ children }: Props) {
-  const { isAuthenticated, isInitializing, hydrated, hasChecked, ensureAuth } =
-    useAuth();
+  const { phase } = useAuth();
   const location = useLocation();
 
-  useEffect(() => {
-    ensureAuth();
-  }, [ensureAuth]);
-
-  // Wait for store rehydration before deciding to redirect.
-  if (!hydrated) {
-    return <Loader overlay={true} title="Loading..." caption="Please, wait" />;
+  if (phase === "booting") {
+    return null;
   }
 
-  if (isInitializing) {
-    return (
-      <Loader
-        overlay={true}
-        title="Checking authorization..."
-        caption="Please, wait"
-      />
-    );
-  }
-
-  // Wait for the first auth check to finish to avoid transient login flashes.
-  if (!isAuthenticated && !hasChecked) {
-    return (
-      <Loader
-        overlay={true}
-        title="Checking authorization..."
-        caption="Please, wait"
-      />
-    );
-  }
-
-  if (!isAuthenticated) {
+  if (phase === "anonymous") {
     return (
       <Navigate
         to="/login"

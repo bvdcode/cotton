@@ -29,10 +29,7 @@ vi.mock("../store/authStore", () => ({
   useAuthStore: {
     getState: () => ({
       user: null,
-      isAuthenticated: false,
       refreshEnabled: refreshEnabledMock(),
-      hasChecked: true,
-      hydrated: true,
       logoutLocal: logoutLocalMock,
     }),
   },

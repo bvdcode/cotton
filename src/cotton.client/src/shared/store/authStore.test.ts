@@ -34,11 +34,8 @@ describe("authStore", () => {
     localStorageMock.clear();
     useAuthStore.setState({
       user: null,
-      isAuthenticated: false,
-      isInitializing: false,
+      phase: "booting",
       refreshEnabled: true,
-      hydrated: true,
-      hasChecked: false,
     });
   });
 
@@ -46,6 +43,21 @@ describe("authStore", () => {
     useAuthStore.getState().logoutLocal();
 
     expect(getRefreshEnabled()).toBe(false);
+    expect(useAuthStore.getState().phase).toBe("anonymous");
+  });
+
+  it("uses one phase value for authenticated and anonymous transitions", () => {
+    useAuthStore.getState().setAuthenticated({
+      id: "user-1",
+      role: 1,
+      username: "alice",
+      createdAt: "2026-09-03T00:00:00Z",
+      updatedAt: "2026-09-03T00:00:00Z",
+    });
+    expect(useAuthStore.getState().phase).toBe("authenticated");
+
+    useAuthStore.getState().setUnauthenticated();
+    expect(useAuthStore.getState().phase).toBe("anonymous");
   });
 
   it("updates auth state when localStorage is unavailable", () => {

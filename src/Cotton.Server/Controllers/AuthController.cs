@@ -289,10 +289,11 @@ namespace Cotton.Server.Controllers
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
             _sessionIssuer.AddRefreshTokenToCookies(newRefreshToken, dbToken.IsTrusted);
-            return Ok(new TokenPairResponseDto()
+            return Ok(new SessionRestoreResponseDto
             {
                 AccessToken = accessToken,
-                RefreshToken = newRefreshToken
+                RefreshToken = newRefreshToken,
+                User = user.Adapt<UserDto>()
             });
         }
 

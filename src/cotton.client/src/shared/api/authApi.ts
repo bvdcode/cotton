@@ -2,7 +2,7 @@ import {
   httpClient,
   setAccessToken,
   clearAccessToken,
-  refreshAccessToken,
+  restoreAccessToken,
 } from "./httpClient";
 import { UserRole, type User } from "../../features/auth/types";
 import type { BaseDto } from "./types";
@@ -21,7 +21,7 @@ interface LoginResponse {
   accessToken: string;
 }
 
-interface RefreshOptions {
+interface RestoreSessionOptions {
   allowWhenRefreshDisabled?: boolean;
 }
 
@@ -124,15 +124,17 @@ export const authApi = {
     await httpClient.post("auth/logout");
   },
 
-  /**
-   * Tries to refresh access token using backend refresh cookie.
-   * Safe to call on app startup; errors are swallowed.
-   * Returns token if successful, null otherwise.
-   */
-  refresh: async (options: RefreshOptions = {}): Promise<string | null> => {
-    return await refreshAccessToken({
+  restoreSession: async (
+    options: RestoreSessionOptions = {},
+  ): Promise<User | null> => {
+    const restored = await restoreAccessToken<UserInfoResponse>({
       allowWhenRefreshDisabled: options.allowWhenRefreshDisabled,
     });
+    if (!restored) {
+      return null;
+    }
+
+    return mapUserResponse(restored.user);
   },
 
   getWebDavToken: async (): Promise<string> => {

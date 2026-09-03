@@ -5,18 +5,12 @@ import {
   type StateStorage,
 } from "zustand/middleware";
 import { AUTH_STORAGE_KEY } from "../config/storageKeys";
-import type { User } from "../../features/auth/types";
+import type { AuthPhase, User } from "../../features/auth/types";
 
 type AuthStoreState = {
   user: User | null;
-  isAuthenticated: boolean;
-  isInitializing: boolean;
+  phase: AuthPhase;
   refreshEnabled: boolean;
-  hydrated: boolean;
-  hasChecked: boolean;
-  setInitializing: (value: boolean) => void;
-  setHydrated: (value: boolean) => void;
-  setHasChecked: (value: boolean) => void;
   setAuthenticated: (user: User) => void;
   setUnauthenticated: () => void;
   logoutLocal: () => void;
@@ -62,51 +56,60 @@ export const useAuthStore = create<AuthStoreState>()(
   persist(
     (set) => ({
       user: null,
-      isAuthenticated: false,
-      isInitializing: false,
+      phase: "booting",
       refreshEnabled: true,
-      hydrated: false,
-      hasChecked: false,
-
-      setInitializing: (value) => set({ isInitializing: value }),
-      setHydrated: (value) => set({ hydrated: value }),
-      setHasChecked: (value) => set({ hasChecked: value }),
 
       setAuthenticated: (user) =>
         set({
           user,
-          isAuthenticated: true,
+          phase: "authenticated",
           refreshEnabled: true,
-          hasChecked: true,
         }),
 
       setUnauthenticated: () =>
         set({
           user: null,
-          isAuthenticated: false,
-          hasChecked: true,
+          phase: "anonymous",
         }),
 
       logoutLocal: () =>
         set({
           user: null,
-          isAuthenticated: false,
+          phase: "anonymous",
           refreshEnabled: false,
-          hasChecked: true,
         }),
     }),
     {
       name: AUTH_STORAGE_KEY,
       storage: createJSONStorage(() => safeLocalStorage),
       partialize: (state) => ({ refreshEnabled: state.refreshEnabled }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHydrated(true);
-      },
     },
   ),
 );
 
 export const getRefreshEnabled = () => {
   const state = useAuthStore.getState();
-  return state.hydrated && state.refreshEnabled;
+  return useAuthStore.persist.hasHydrated() && state.refreshEnabled;
+};
+
+export const waitForAuthStoreHydration = async (): Promise<void> => {
+  if (useAuthStore.persist.hasHydrated()) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    let unsubscribe: () => void = () => undefined;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      unsubscribe();
+      resolve();
+    };
+
+    unsubscribe = useAuthStore.persist.onFinishHydration(finish);
+    if (useAuthStore.persist.hasHydrated()) {
+      finish();
+    }
+  });
 };
