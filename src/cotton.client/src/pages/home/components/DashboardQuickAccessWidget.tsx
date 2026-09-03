@@ -24,8 +24,7 @@ export const DashboardQuickAccessWidget = () => {
       display="grid"
       gridTemplateColumns="repeat(3, minmax(0, 1fr))"
       gap={1}
-      maxWidth={420}
-      mx="auto"
+      width="100%"
     >
       <Button
         variant="contained"

@@ -25,18 +25,61 @@ export const DashboardOverviewWidget = ({
 
   return (
     <Stack gap={1.25}>
-      <Stack direction="row" alignItems="baseline" gap={1} flexWrap="wrap">
-        <Typography variant="h4">
-          {stats ? formatBytes(stats.sizeBytes) : t("common:placeholder")}
-        </Typography>
-        {quota?.quotaBytes && (
-          <Typography variant="body2" color="text.secondary">
-            {t("dashboard.overview.ofQuota", {
-              quota: formatBytes(quota.quotaBytes),
-            })}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        alignItems={{ xs: "stretch", sm: "center" }}
+        justifyContent="space-between"
+        gap={{ xs: 1.5, sm: 3 }}
+      >
+        <Stack direction="row" alignItems="baseline" gap={1} flexWrap="wrap">
+          <Typography variant="h4">
+            {stats ? formatBytes(stats.sizeBytes) : t("common:placeholder")}
           </Typography>
-        )}
+          {quota?.quotaBytes && (
+            <Typography variant="body2" color="text.secondary">
+              {t("dashboard.overview.ofQuota", {
+                quota: formatBytes(quota.quotaBytes),
+              })}
+            </Typography>
+          )}
+        </Stack>
+
+        <Stack
+          direction="row"
+          justifyContent={{ xs: "flex-start", sm: "flex-end" }}
+          gap={{ xs: 2, sm: 4 }}
+          flexWrap="wrap"
+        >
+          <Stack>
+            <Typography variant="subtitle1">
+              {stats?.fileCount.toLocaleString() ?? t("common:placeholder")}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {t("cards.files.title")}
+            </Typography>
+          </Stack>
+          <Stack>
+            <Typography variant="subtitle1">
+              {stats?.nodeCount.toLocaleString() ?? t("common:placeholder")}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {t("cards.folders.title")}
+            </Typography>
+          </Stack>
+          {quota?.availableBytes !== null &&
+            quota?.availableBytes !== undefined && (
+              <Stack>
+                <Typography variant="subtitle1">
+                  {formatBytes(quota.availableBytes)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {t("dashboard.overview.available")}
+                </Typography>
+              </Stack>
+            )}
+        </Stack>
       </Stack>
+
       {quotaPercent !== null && (
         <LinearProgress
           variant="determinate"
@@ -44,34 +87,6 @@ export const DashboardOverviewWidget = ({
           aria-label={t("dashboard.overview.storageUsage")}
         />
       )}
-      <Stack direction="row" gap={{ xs: 2, sm: 4 }} flexWrap="wrap">
-        <Stack>
-          <Typography variant="subtitle1">
-            {stats?.fileCount.toLocaleString() ?? t("common:placeholder")}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t("cards.files.title")}
-          </Typography>
-        </Stack>
-        <Stack>
-          <Typography variant="subtitle1">
-            {stats?.nodeCount.toLocaleString() ?? t("common:placeholder")}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t("cards.folders.title")}
-          </Typography>
-        </Stack>
-        {quota?.availableBytes !== null && quota?.availableBytes !== undefined && (
-          <Stack>
-            <Typography variant="subtitle1">
-              {formatBytes(quota.availableBytes)}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {t("dashboard.overview.available")}
-            </Typography>
-          </Stack>
-        )}
-      </Stack>
     </Stack>
   );
 };
