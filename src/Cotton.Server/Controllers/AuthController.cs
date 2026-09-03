@@ -189,7 +189,9 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiBadRequest("TOTP setup has not been initiated for this user");
             }
-            string secret = _crypto.DecryptString(user.TotpSecretEncrypted);
+            string secret = await _crypto.DecryptStringAsync(
+                user.TotpSecretEncrypted,
+                HttpContext.RequestAborted);
             bool isValid = TotpHelpers.VerifyCode(secret, request.TwoFactorCode);
             if (!isValid)
             {
@@ -228,7 +230,9 @@ namespace Cotton.Server.Controllers
                 ? user.Username
                 : $"{user.Username}@{Request.Host.Host}";
             TotpSetup setup = TotpHelpers.CreateSetup(issuer, account);
-            user.TotpSecretEncrypted = _crypto.EncryptString(setup.SecretBase32);
+            user.TotpSecretEncrypted = await _crypto.EncryptStringAsync(
+                setup.SecretBase32,
+                cancellationToken: HttpContext.RequestAborted);
             await _dbContext.SaveChangesAsync();
             return Ok(setup);
         }
@@ -423,7 +427,9 @@ namespace Cotton.Server.Controllers
                 return this.ApiForbidden("Maximum number of TOTP verification attempts exceeded");
             }
 
-            string secret = _crypto.DecryptString(user.TotpSecretEncrypted);
+            string secret = await _crypto.DecryptStringAsync(
+                user.TotpSecretEncrypted,
+                HttpContext.RequestAborted);
             bool isValid = TotpHelpers.VerifyCode(secret, request.TwoFactorCode);
             if (!isValid)
             {

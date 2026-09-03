@@ -52,7 +52,10 @@ namespace Cotton.Server.Controllers
                 string decryptedPreviewHash;
                 try
                 {
-                    decryptedPreviewHash = Hasher.ToHexStringHash(_crypto.Decrypt(token.EncryptedHash));
+                    byte[] decryptedHash = await _crypto.DecryptAsync(
+                        token.EncryptedHash,
+                        HttpContext.RequestAborted);
+                    decryptedPreviewHash = Hasher.ToHexStringHash(decryptedHash);
                 }
                 catch (Exception ex)
                 {

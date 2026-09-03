@@ -3,13 +3,12 @@
 
 using Fido2NetLib;
 using Cotton.Server.Models.Enums;
+using EasyExtensions.Models.Dto;
 
 namespace Cotton.Server.Models.Dto
 {
-    public class PasskeyCredentialDto
+    public class PasskeyCredentialDto : BaseDto<Guid>
     {
-        public Guid Id { get; set; }
-
         public string? Label { get; set; }
 
         public string CredentialId { get; set; } = null!;
@@ -25,8 +24,6 @@ namespace Cotton.Server.Models.Dto
         public bool IsBackupEligible { get; set; }
 
         public bool IsBackedUp { get; set; }
-
-        public DateTime CreatedAt { get; set; }
 
         public DateTime? LastUsedAt { get; set; }
     }
