@@ -26,12 +26,20 @@ export const DashboardOverviewWidget = ({
   return (
     <Stack height="100%" justifyContent="space-between" gap={1.25}>
       <Stack
-        direction={{ xs: "column", sm: "row" }}
-        alignItems={{ xs: "stretch", sm: "center" }}
+        direction="row"
+        alignItems="flex-start"
         justifyContent="space-between"
-        gap={{ xs: 1.5, sm: 3 }}
+        columnGap={1.5}
+        rowGap={1}
+        flexWrap="wrap"
       >
-        <Stack direction="row" alignItems="baseline" gap={1} flexWrap="wrap">
+        <Stack
+          direction="row"
+          alignItems="baseline"
+          gap={1}
+          flexWrap="wrap"
+          flexShrink={0}
+        >
           <Typography variant="h4">
             {stats ? formatBytes(stats.sizeBytes) : t("common:placeholder")}
           </Typography>
@@ -46,9 +54,11 @@ export const DashboardOverviewWidget = ({
 
         <Stack
           direction="row"
-          justifyContent={{ xs: "flex-start", sm: "flex-end" }}
-          gap={{ xs: 2, sm: 4 }}
-          flexWrap="wrap"
+          justifyContent="flex-end"
+          gap={2}
+          flexWrap="nowrap"
+          flexShrink={0}
+          ml="auto"
         >
           <Stack>
             <Typography variant="subtitle1">
