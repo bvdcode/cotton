@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
 using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Storage.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -56,8 +57,7 @@ namespace Cotton.Server.Services
         public async Task<int> ClearGcSchedulesForReferencedChunksAsync(CancellationToken ct)
         {
             return await WhereReferencedByDatabase(_dbContext.Chunks)
-                .Where(c => c.GCScheduledAfter != null)
-                .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
+                .CancelGarbageCollectionAsync(ct);
         }
 
         public async Task<int> ClearGcSchedulesForProtectedChunksAsync(
@@ -69,8 +69,8 @@ namespace Cotton.Server.Services
             foreach (byte[][] batch in protectedChunkHashes.Chunk(ProtectedHashBatchSize))
             {
                 cleared += await _dbContext.Chunks
-                    .Where(c => c.GCScheduledAfter != null && batch.Contains(c.Hash))
-                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
+                    .Where(chunk => batch.Contains(chunk.Hash))
+                    .CancelGarbageCollectionAsync(ct);
             }
 
             return cleared;
@@ -79,8 +79,8 @@ namespace Cotton.Server.Services
         public async Task<int> ClearGcScheduleAsync(byte[] chunkHash, CancellationToken ct)
         {
             return await _dbContext.Chunks
-                .Where(c => c.Hash == chunkHash && c.GCScheduledAfter != null)
-                .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
+                .Where(chunk => chunk.Hash == chunkHash)
+                .CancelGarbageCollectionAsync(ct);
         }
 
         public async Task<HashSet<string>> GetProtectedStorageKeysAsync(CancellationToken ct)

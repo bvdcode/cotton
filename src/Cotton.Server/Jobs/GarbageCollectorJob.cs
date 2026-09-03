@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Extensions;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
@@ -173,8 +174,8 @@ namespace Cotton.Server.Jobs
                 }
 
                 int updated = await _dbContext.Chunks
-                    .Where(c => candidateHashes.Contains(c.Hash) && c.GCScheduledAfter == null)
-                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
+                    .Where(chunk => candidateHashes.Contains(chunk.Hash))
+                    .ScheduleGarbageCollectionAsync(deleteAfter, ct);
 
                 totalScheduled += updated;
 
@@ -242,8 +243,8 @@ namespace Cotton.Server.Jobs
             if (protectedHashesToClear.Count > 0)
             {
                 await _dbContext.Chunks
-                    .Where(c => protectedHashesToClear.Contains(c.Hash) && c.GCScheduledAfter != null)
-                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
+                    .Where(chunk => protectedHashesToClear.Contains(chunk.Hash))
+                    .CancelGarbageCollectionAsync(ct);
             }
 
             if (reservedHashes.Count == 0)
@@ -333,8 +334,8 @@ namespace Cotton.Server.Jobs
             if (nowReferencedHashes.Count > 0)
             {
                 await _dbContext.Chunks
-                    .Where(c => nowReferencedHashes.Contains(c.Hash) && c.GCScheduledAfter != null)
-                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
+                    .Where(chunk => nowReferencedHashes.Contains(chunk.Hash))
+                    .CancelGarbageCollectionAsync(ct);
             }
 
             HashSet<string> referencedUids = nowReferencedHashes

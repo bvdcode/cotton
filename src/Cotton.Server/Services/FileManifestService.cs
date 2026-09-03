@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -139,17 +140,14 @@ namespace Cotton.Server.Services
             CancellationToken cancellationToken = default)
         {
             return await _dbContext.Chunks
-                .Where(chunk => chunk.GCScheduledAfter != null
-                    && (_dbContext.FileManifestChunks.Any(manifestChunk =>
+                .Where(chunk => _dbContext.FileManifestChunks.Any(manifestChunk =>
                             manifestChunk.FileManifestId == fileManifestId
                             && manifestChunk.ChunkHash == chunk.Hash)
                         || _dbContext.FileManifests.Any(fileManifest =>
                             fileManifest.Id == fileManifestId
                             && (fileManifest.SmallFilePreviewHash == chunk.Hash
-                                || fileManifest.LargeFilePreviewHash == chunk.Hash))))
-                .ExecuteUpdateAsync(
-                    update => update.SetProperty(chunk => chunk.GCScheduledAfter, (DateTime?)null),
-                    cancellationToken);
+                                || fileManifest.LargeFilePreviewHash == chunk.Hash)))
+                .CancelGarbageCollectionAsync(cancellationToken);
         }
 
         private async Task<bool> UserOwnsManifestChunksAsync(
