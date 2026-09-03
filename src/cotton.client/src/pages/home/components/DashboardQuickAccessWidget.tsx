@@ -1,5 +1,5 @@
 import { DeleteOutline, FolderOpen, Search } from "@mui/icons-material";
-import { Button, Stack } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -7,12 +7,31 @@ export const DashboardQuickAccessWidget = () => {
   const { t } = useTranslation("home");
   const navigate = useNavigate();
 
+  const buttonSx = {
+    aspectRatio: "1 / 1",
+    flexDirection: "column",
+    gap: 1,
+    minWidth: 0,
+    p: 1,
+    "& .MuiButton-startIcon": {
+      m: 0,
+      "& > svg": { fontSize: 28 },
+    },
+  } as const;
+
   return (
-    <Stack gap={1}>
+    <Box
+      display="grid"
+      gridTemplateColumns="repeat(3, minmax(0, 1fr))"
+      gap={1}
+      maxWidth={420}
+      mx="auto"
+    >
       <Button
         variant="contained"
         startIcon={<FolderOpen />}
         onClick={() => navigate("/files")}
+        sx={buttonSx}
       >
         {t("dashboard.quickAccess.files")}
       </Button>
@@ -20,6 +39,7 @@ export const DashboardQuickAccessWidget = () => {
         variant="outlined"
         startIcon={<Search />}
         onClick={() => navigate("/search")}
+        sx={buttonSx}
       >
         {t("dashboard.quickAccess.search")}
       </Button>
@@ -27,9 +47,10 @@ export const DashboardQuickAccessWidget = () => {
         variant="outlined"
         startIcon={<DeleteOutline />}
         onClick={() => navigate("/trash")}
+        sx={buttonSx}
       >
         {t("dashboard.quickAccess.trash")}
       </Button>
-    </Stack>
+    </Box>
   );
 };

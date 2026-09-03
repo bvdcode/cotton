@@ -1,5 +1,5 @@
 import { DashboardCustomize, Done } from "@mui/icons-material";
-import { Alert, Box, Button, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -65,19 +65,16 @@ export const HomePage: React.FC = () => {
         </Box>
       )}
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        alignItems={{ xs: "stretch", sm: "flex-end" }}
-        justifyContent="space-between"
-        gap={1}
-        mb={2}
-      >
-        <div>
-          <Typography variant="overline" color="text.secondary">
-            {t("title")}
-          </Typography>
-          <Typography variant="h4">{t("dashboard.title")}</Typography>
-        </div>
+      <HomeDashboard
+        customizing={customizing}
+        dashboard={dashboard}
+        layoutId={layoutId}
+        pinnedFolders={pinnedFolders}
+        stats={stats}
+        translate={t}
+      />
+
+      <Box display="flex" justifyContent="center" mt={2}>
         <Button
           variant={customizing ? "contained" : "outlined"}
           startIcon={customizing ? <Done /> : <DashboardCustomize />}
@@ -87,16 +84,7 @@ export const HomePage: React.FC = () => {
             ? t("dashboard.actions.done")
             : t("dashboard.actions.customize")}
         </Button>
-      </Stack>
-
-      <HomeDashboard
-        customizing={customizing}
-        dashboard={dashboard}
-        layoutId={layoutId}
-        pinnedFolders={pinnedFolders}
-        stats={stats}
-        translate={t}
-      />
+      </Box>
 
       {customizing && (
         <DashboardWidgetLibrary

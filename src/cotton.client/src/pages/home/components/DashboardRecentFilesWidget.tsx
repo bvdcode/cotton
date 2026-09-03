@@ -1,4 +1,4 @@
-import { Box, CardActionArea, Skeleton, Typography } from "@mui/material";
+import { Box, Skeleton, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
@@ -7,7 +7,7 @@ import {
   RECENT_FILES_FILTERS,
   type RecentFilesWidgetId,
 } from "../dashboardModel";
-import { RecentFileItem } from "./RecentFileItem";
+import { RecentFileCard } from "./RecentFileCard";
 import { DashboardQueryError } from "./DashboardQueryError";
 
 const RECENT_FILE_COUNT = 8;
@@ -72,15 +72,17 @@ export const DashboardRecentFilesWidget = ({
   }
 
   return (
-    <Box display="grid" gap={0.25}>
+    <Box
+      display="grid"
+      gridTemplateColumns="repeat(auto-fit, minmax(min(100%, 240px), 1fr))"
+      gap={1}
+    >
       {files.map((file) => (
-        <CardActionArea
+        <RecentFileCard
           key={file.id}
+          file={file}
           onClick={() => handleFileClick(file)}
-          sx={{ borderRadius: 1, minWidth: 0, width: "100%" }}
-        >
-          <RecentFileItem file={file} t={t} />
-        </CardActionArea>
+        />
       ))}
     </Box>
   );
