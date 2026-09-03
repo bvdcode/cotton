@@ -37,16 +37,12 @@ import {
   selectGalleryPreferPreview,
   useUserPreferencesStore,
 } from "../../store/userPreferencesStore";
+import { HlsVideoSlide } from "./HlsVideoSlide";
 
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
 const TOUCH_CONTROLS_AUTOHIDE_MS = 2500;
 const LIGHTBOX_TITLE_SEPARATOR = "\u2022";
-const HlsVideoSlide = React.lazy(async () => {
-  const module = await import("./HlsVideoSlide");
-  return { default: module.HlsVideoSlide };
-});
-
 type LightboxIndexState = {
   key: string;
   index: number;
@@ -114,20 +110,18 @@ const HlsVideoLightboxSlide = ({
 
   const hlsSlide = slide as SlideHlsVideo & SlideWithTitle;
   return (
-    <React.Suspense fallback={null}>
-      <HlsVideoSlide
-        src={hlsSlide.src}
-        poster={hlsSlide.poster}
-        width={hlsSlide.width}
-        height={hlsSlide.height}
-        active={offset === 0 && hlsSlide.fileId === currentItemId}
-        onVideoElementChange={(element) =>
-          setActiveVideoElementForFile(hlsSlide.fileId, element)
-        }
-        noticeText={noticeText}
-        errorText={errorText}
-      />
-    </React.Suspense>
+    <HlsVideoSlide
+      src={hlsSlide.src}
+      poster={hlsSlide.poster}
+      width={hlsSlide.width}
+      height={hlsSlide.height}
+      active={offset === 0 && hlsSlide.fileId === currentItemId}
+      onVideoElementChange={(element) =>
+        setActiveVideoElementForFile(hlsSlide.fileId, element)
+      }
+      noticeText={noticeText}
+      errorText={errorText}
+    />
   );
 };
 

@@ -3,17 +3,6 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { fileURLToPath, URL } from "node:url";
 
-const NODE_MODULES_MARKER = "/node_modules/";
-
-function getNodeModulePath(id: string): string | undefined {
-  const normalizedId = id.replaceAll("\\", "/");
-  const markerIndex = normalizedId.lastIndexOf(NODE_MODULES_MARKER);
-
-  return markerIndex === -1
-    ? undefined
-    : normalizedId.slice(markerIndex + NODE_MODULES_MARKER.length);
-}
-
 // https://vite.dev/config/
 export default defineConfig(() => {
   const apiTarget = "https://app.cottoncloud.dev";
@@ -50,85 +39,7 @@ export default defineConfig(() => {
       },
     },
     build: {
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            const modulePath = getNodeModulePath(id);
-            if (!modulePath) {
-              return undefined;
-            }
-
-            if (
-              modulePath.startsWith("react/") ||
-              modulePath.startsWith("react-dom/") ||
-              modulePath.startsWith("scheduler/")
-            ) {
-              return "vendor-react";
-            }
-
-            if (
-              modulePath.startsWith("three/") ||
-              modulePath.startsWith("@react-three/") ||
-              modulePath.startsWith("three-stdlib/")
-            ) {
-              return "vendor-three";
-            }
-
-            if (
-              modulePath.startsWith("monaco-editor/") ||
-              modulePath.startsWith("@monaco-editor/")
-            ) {
-              return "vendor-monaco";
-            }
-
-            if (modulePath.startsWith("pdfjs-dist/")) {
-              return "vendor-pdfjs";
-            }
-
-            if (modulePath.startsWith("@mui/x-data-grid")) {
-              return "vendor-mui-datagrid";
-            }
-
-            if (modulePath.startsWith("@mui/icons-material/")) {
-              return "vendor-mui-icons";
-            }
-
-            if (
-              modulePath.startsWith("@mui/material/") ||
-              modulePath.startsWith("@mui/system/") ||
-              modulePath.startsWith("@mui/styled-engine/") ||
-              modulePath.startsWith("@emotion/")
-            ) {
-              return "vendor-mui";
-            }
-
-            if (modulePath.startsWith("@microsoft/signalr/")) {
-              return "vendor-signalr";
-            }
-
-            if (
-              modulePath.startsWith("@uiw/react-md-editor/") ||
-              modulePath.startsWith("@uiw/react-markdown-preview/") ||
-              modulePath.startsWith("rehype-") ||
-              modulePath.startsWith("remark-") ||
-              modulePath.startsWith("refractor/") ||
-              modulePath.startsWith("unified/") ||
-              modulePath.startsWith("mdast-") ||
-              modulePath.startsWith("micromark") ||
-              modulePath.startsWith("parse5") ||
-              modulePath.startsWith("hast-") ||
-              modulePath.startsWith("property-information") ||
-              modulePath.startsWith("character-entities") ||
-              modulePath.startsWith("decode-named-character-reference") ||
-              modulePath.startsWith("entities/")
-            ) {
-              return "vendor-markdown";
-            }
-
-            return undefined;
-          },
-        },
-      },
+      chunkSizeWarningLimit: 10 * 1024,
     },
     plugins: [
       react(),
@@ -151,7 +62,7 @@ export default defineConfig(() => {
             /^\/chunks\//,
             /^\/preview\//,
           ],
-          maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+          maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         },
         manifest: {
           id: "/",

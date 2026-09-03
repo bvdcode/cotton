@@ -7,10 +7,9 @@ import PolicyIcon from "@mui/icons-material/Policy";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import SettingsIcon from "@mui/icons-material/Settings";
 import StorageIcon from "@mui/icons-material/Storage";
-import { Box, Skeleton, Stack, useMediaQuery } from "@mui/material";
+import { Box, useMediaQuery } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
 import type { SelectChangeEvent } from "@mui/material/Select";
-import { Suspense } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -26,21 +25,6 @@ import {
   ADMIN_NAV_WIDTH,
   type AdminMenuSection,
 } from "./components/adminNavigationModel";
-
-const AdminContentSkeleton = () => (
-  <Box width="100%">
-    <Skeleton variant="text" width={240} height={40} sx={{ mb: 3 }} />
-    <Stack spacing={3}>
-      {[0, 1, 2].map((index) => (
-        <Box key={index}>
-          <Skeleton variant="text" width={180} height={24} />
-          <Skeleton variant="text" width={320} height={18} sx={{ mb: 1 }} />
-          <Skeleton variant="rounded" height={48} />
-        </Box>
-      ))}
-    </Stack>
-  </Box>
-);
 
 export const AdminLayoutPage = () => {
   const { t } = useTranslation("admin");
@@ -202,9 +186,7 @@ export const AdminLayoutPage = () => {
           flexDirection="column"
           alignSelf="stretch"
         >
-          <Suspense fallback={<AdminContentSkeleton />}>
-            <Outlet />
-          </Suspense>
+          <Outlet />
         </Box>
       </Box>
     </Box>

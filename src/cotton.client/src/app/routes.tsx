@@ -1,6 +1,6 @@
 import type { RouteConfig } from "./types";
 import { RequireAdmin, RequireAuth, useAuth } from "../features/auth";
-import { lazy, Suspense, useEffect, useState, type JSX } from "react";
+import { useEffect, useState } from "react";
 import {
   Routes,
   Route,
@@ -19,142 +19,31 @@ import {
   type StartupStatusResponse,
 } from "../shared/api/startupApi";
 import { HomePage } from "../pages/home";
-
-const FilesPage = lazy(() =>
-  import("../pages/files").then((module) => ({ default: module.FilesPage })),
-);
-const LoginPage = lazy(() =>
-  import("../pages/login/LoginPage").then((module) => ({
-    default: module.LoginPage,
-  })),
-);
-const NotFoundPage = lazy(() =>
-  import("../pages/not-found/NotFoundPage").then((module) => ({
-    default: module.NotFoundPage,
-  })),
-);
-const OnboardingPage = lazy(() =>
-  import("../pages/onboarding/OnboardingPage").then((module) => ({
-    default: module.OnboardingPage,
-  })),
-);
-const SettingsPage = lazy(() =>
-  import("../pages/profile").then((module) => ({
-    default: module.SettingsPage,
-  })),
-);
-const TrashPage = lazy(() =>
-  import("../pages/trash").then((module) => ({ default: module.TrashPage })),
-);
-const SearchPage = lazy(() =>
-  import("../pages/search/SearchPage").then((module) => ({
-    default: module.SearchPage,
-  })),
-);
-const SharePage = lazy(() =>
-  import("../pages/share/SharePage").then((module) => ({
-    default: module.SharePage,
-  })),
-);
-const AdminLayoutPage = lazy(() =>
-  import("../pages/admin/AdminLayoutPage").then((module) => ({
-    default: module.AdminLayoutPage,
-  })),
-);
-const AdminUsersPage = lazy(() =>
-  import("../pages/admin/users/AdminUsersPage").then((module) => ({
-    default: module.AdminUsersPage,
-  })),
-);
-const AdminGroupsPage = lazy(() =>
-  import("../pages/admin/groups/AdminGroupsPage").then((module) => ({
-    default: module.AdminGroupsPage,
-  })),
-);
-const AdminDatabaseBackupPage = lazy(() =>
-  import("../pages/admin/database-backup/AdminDatabaseBackupPage").then(
-    (module) => ({
-      default: module.AdminDatabaseBackupPage,
-    }),
-  ),
-);
-const AdminStorageStatisticsPage = lazy(() =>
-  import("../pages/admin/storage-statistics/AdminStorageStatisticsPage").then(
-    (module) => ({
-      default: module.AdminStorageStatisticsPage,
-    }),
-  ),
-);
-const AdminStorageSettingsPage = lazy(() =>
-  import("../pages/admin/settings/AdminStorageSettingsPage").then((module) => ({
-    default: module.AdminStorageSettingsPage,
-  })),
-);
-const AdminGeneralSettingsPage = lazy(() =>
-  import("../pages/admin/settings/AdminGeneralSettingsPage").then((module) => ({
-    default: module.AdminGeneralSettingsPage,
-  })),
-);
-const AdminPrivacySettingsPage = lazy(() =>
-  import("../pages/admin/settings/AdminPrivacySettingsPage").then((module) => ({
-    default: module.AdminPrivacySettingsPage,
-  })),
-);
-const AdminSecurityDiagnosticsPage = lazy(() =>
-  import("../pages/admin/security/AdminSecurityDiagnosticsPage").then(
-    (module) => ({
-      default: module.AdminSecurityDiagnosticsPage,
-    }),
-  ),
-);
-const AdminIdentityProvidersPage = lazy(() =>
-  import("../pages/admin/identity-providers/AdminIdentityProvidersPage").then(
-    (module) => ({
-      default: module.AdminIdentityProvidersPage,
-    }),
-  ),
-);
-const AdminNotificationsSettingsPage = lazy(() =>
-  import("../pages/admin/settings/AdminNotificationsSettingsPage").then(
-    (module) => ({
-      default: module.AdminNotificationsSettingsPage,
-    }),
-  ),
-);
-const ResetPasswordPage = lazy(() =>
-  import("../pages/reset-password/ResetPasswordPage").then((module) => ({
-    default: module.ResetPasswordPage,
-  })),
-);
-const VerifyEmailPage = lazy(() =>
-  import("../pages/verify-email/VerifyEmailPage").then((module) => ({
-    default: module.VerifyEmailPage,
-  })),
-);
-const AppCodeApprovalPage = lazy(() =>
-  import("../pages/oauth/AppCodeApprovalPage").then((module) => ({
-    default: module.AppCodeApprovalPage,
-  })),
-);
-const UnlockPage = lazy(() =>
-  import("../pages/unlock/UnlockPage").then((module) => ({
-    default: module.UnlockPage,
-  })),
-);
-const SetupWizardPage = lazy(() =>
-  import("../pages/setup/SetupWizardPage").then((module) => ({
-    default: module.SetupWizardPage,
-  })),
-);
-const StartupBlockedPage = lazy(() =>
-  import("../pages/startup/StartupBlockedPage").then((module) => ({
-    default: module.StartupBlockedPage,
-  })),
-);
-
-const withRouteSuspense = (element: JSX.Element) => (
-  <Suspense fallback={<Loader />}>{element}</Suspense>
-);
+import { FilesPage } from "../pages/files";
+import { LoginPage } from "../pages/login/LoginPage";
+import { NotFoundPage } from "../pages/not-found/NotFoundPage";
+import { OnboardingPage } from "../pages/onboarding/OnboardingPage";
+import { SettingsPage } from "../pages/profile";
+import { TrashPage } from "../pages/trash";
+import { SearchPage } from "../pages/search/SearchPage";
+import { SharePage } from "../pages/share/SharePage";
+import { AdminLayoutPage } from "../pages/admin/AdminLayoutPage";
+import { AdminUsersPage } from "../pages/admin/users/AdminUsersPage";
+import { AdminGroupsPage } from "../pages/admin/groups/AdminGroupsPage";
+import { AdminDatabaseBackupPage } from "../pages/admin/database-backup/AdminDatabaseBackupPage";
+import { AdminStorageStatisticsPage } from "../pages/admin/storage-statistics/AdminStorageStatisticsPage";
+import { AdminStorageSettingsPage } from "../pages/admin/settings/AdminStorageSettingsPage";
+import { AdminGeneralSettingsPage } from "../pages/admin/settings/AdminGeneralSettingsPage";
+import { AdminPrivacySettingsPage } from "../pages/admin/settings/AdminPrivacySettingsPage";
+import { AdminSecurityDiagnosticsPage } from "../pages/admin/security/AdminSecurityDiagnosticsPage";
+import { AdminIdentityProvidersPage } from "../pages/admin/identity-providers/AdminIdentityProvidersPage";
+import { AdminNotificationsSettingsPage } from "../pages/admin/settings/AdminNotificationsSettingsPage";
+import { ResetPasswordPage } from "../pages/reset-password/ResetPasswordPage";
+import { VerifyEmailPage } from "../pages/verify-email/VerifyEmailPage";
+import { AppCodeApprovalPage } from "../pages/oauth/AppCodeApprovalPage";
+import { UnlockPage } from "../pages/unlock/UnlockPage";
+import { SetupWizardPage } from "../pages/setup/SetupWizardPage";
+import { StartupBlockedPage } from "../pages/startup/StartupBlockedPage";
 
 const RedirectSToShare = () => {
   const { token } = useParams<{ token: string }>();
@@ -164,11 +53,11 @@ const RedirectSToShare = () => {
 const publicRoutes: RouteConfig[] = [
   {
     path: "/unlock",
-    element: withRouteSuspense(<UnlockPage />),
+    element: <UnlockPage />,
   },
   {
     path: "/login",
-    element: withRouteSuspense(<LoginPage />),
+    element: <LoginPage />,
   },
   {
     path: "/s/:token",
@@ -176,15 +65,15 @@ const publicRoutes: RouteConfig[] = [
   },
   {
     path: "/share/:token",
-    element: withRouteSuspense(<SharePage />),
+    element: <SharePage />,
   },
   {
     path: "/reset-password",
-    element: withRouteSuspense(<ResetPasswordPage />),
+    element: <ResetPasswordPage />,
   },
   {
     path: "/verify-email",
-    element: withRouteSuspense(<VerifyEmailPage />),
+    element: <VerifyEmailPage />,
   },
 ];
 
@@ -252,9 +141,9 @@ export function AppRoutes() {
         <Route element={<PublicLayout />}>
           <Route
             path="*"
-            element={withRouteSuspense(
-              <StartupBlockedPage blocker={startupStatus?.blocker ?? null} />,
-            )}
+            element={
+              <StartupBlockedPage blocker={startupStatus?.blocker ?? null} />
+            }
           />
         </Route>
       </Routes>
@@ -290,14 +179,14 @@ export function AppRoutes() {
       icon: <Folder />,
       protected: true,
       translationKey: "files",
-      element: withRouteSuspense(<FilesPage />),
+      element: <FilesPage />,
     },
     {
       path: "/trash",
       icon: <Delete />,
       protected: true,
       translationKey: "trash",
-      element: withRouteSuspense(<TrashPage />),
+      element: <TrashPage />,
     },
   ];
 
@@ -326,13 +215,13 @@ export function AppRoutes() {
           />
         ))}
 
-        <Route path="/search" element={withRouteSuspense(<SearchPage />)} />
+        <Route path="/search" element={<SearchPage />} />
 
         <Route
           path="/admin"
           element={
             <RequireAdmin>
-              {withRouteSuspense(<AdminLayoutPage />)}
+              <AdminLayoutPage />
             </RequireAdmin>
           }
         >
@@ -372,25 +261,21 @@ export function AppRoutes() {
         </Route>
 
         {/* Settings page (accessible from avatar menu) */}
-        <Route path="/settings" element={withRouteSuspense(<SettingsPage />)} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/profile" element={<Navigate to="/settings" replace />} />
 
         {/* Deep link into a specific folder by node id */}
-        <Route
-          path="/files/:nodeId"
-          element={withRouteSuspense(<FilesPage />)}
-        />
-        <Route
-          path="/trash/:nodeId"
-          element={withRouteSuspense(<TrashPage />)}
-        />
+        <Route path="/files/:nodeId" element={<FilesPage />} />
+        <Route path="/trash/:nodeId" element={<TrashPage />} />
       </Route>
 
       <Route
         path="/setup"
         element={
           <RequireAuth>
-            <SetupGate>{withRouteSuspense(<SetupWizardPage />)}</SetupGate>
+            <SetupGate>
+              <SetupWizardPage />
+            </SetupGate>
           </RequireAuth>
         }
       />
@@ -398,7 +283,9 @@ export function AppRoutes() {
       <Route
         path="/onboarding"
         element={
-          <RequireAuth>{withRouteSuspense(<OnboardingPage />)}</RequireAuth>
+          <RequireAuth>
+            <OnboardingPage />
+          </RequireAuth>
         }
       />
 
@@ -406,12 +293,12 @@ export function AppRoutes() {
         path="/oauth/app-code/:id"
         element={
           <RequireAuth>
-            {withRouteSuspense(<AppCodeApprovalPage />)}
+            <AppCodeApprovalPage />
           </RequireAuth>
         }
       />
 
-      <Route path="*" element={withRouteSuspense(<NotFoundPage />)} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
