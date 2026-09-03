@@ -300,6 +300,24 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(preferences!["cryptoEnvelope"], Is.EqualTo("opaque-envelope"));
         }
 
+        [Test]
+        public async Task UpdatePreferences_RejectsMoreThan128PinnedFolders()
+        {
+            string token = await LoginAsync();
+            SetBearer(token);
+            string pinnedFolderIds = System.Text.Json.JsonSerializer.Serialize(
+                Enumerable.Range(0, 129).Select(_ => Guid.NewGuid()));
+
+            HttpResponseMessage response = await _client!.PatchAsJsonAsync(
+                "/api/v1/users/me/preferences",
+                new Dictionary<string, string>
+                {
+                    ["dashboardPinnedFolderIds"] = pinnedFolderIds,
+                });
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
         [TestCase("1bad")]
         [TestCase("a")]
         [TestCase("ab__cd")]

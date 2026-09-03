@@ -5,7 +5,6 @@ using Cotton.Auth;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Handlers.Users;
-using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
@@ -16,7 +15,6 @@ using EasyExtensions.Models.Enums;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
@@ -26,7 +24,6 @@ namespace Cotton.Server.Controllers
     public class UserController(
         IMediator _mediator,
         CottonDbContext _dbContext,
-        IHubContext<EventHub> _hubContext,
         UserStorageQuotaService _quota) : ControllerBase
     {
         [HttpPost("verify-email")]
@@ -57,19 +54,13 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            User foundUser = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken)
-                ?? throw new EntityNotFoundException<User>();
-            foreach (KeyValuePair<string, string> kvp in request)
-            {
-                foundUser.Preferences[kvp.Key] = kvp.Value;
-            }
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            await _hubContext.Clients.User(userId.ToString()).SendAsync(
-                "PreferencesUpdated",
-                token ?? string.Empty,
-                foundUser.Preferences,
+            IReadOnlyDictionary<string, string> preferences = await _mediator.Send(
+                new UpdateUserPreferencesRequest(
+                    userId,
+                    request,
+                    token ?? string.Empty),
                 cancellationToken);
-            return Ok(foundUser.Preferences);
+            return Ok(preferences);
         }
 
         [Authorize]
