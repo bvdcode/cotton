@@ -2334,7 +2334,8 @@
         "done": "Concluído",
         "moveUp": "Mover para cima",
         "moveDown": "Mover para baixo",
-        "hide": "Ocultar widget"
+        "hide": "Ocultar widget",
+        "retry": "Tentar novamente"
       },
       "widgets": {
         "overview": "Resumo do armazenamento",
@@ -2358,7 +2359,8 @@
         "trash": "Lixeira"
       },
       "recent": {
-        "empty": "Nenhum arquivo recente correspondente"
+        "empty": "Nenhum arquivo recente correspondente",
+        "loadFailed": "Não foi possível carregar os arquivos recentes."
       },
       "pinnedFolders": {
         "folder": "Pasta",
@@ -2366,7 +2368,8 @@
         "unpin": "Desafixar do painel",
         "empty": "Nenhuma pasta fixada ainda",
         "emptyHint": "Fixe uma pasta pelas ações em Arquivos.",
-        "limitReached": "Você pode fixar até {{count}} pastas."
+        "limitReached": "Você pode fixar até {{count}} pastas.",
+        "loadFailed": "Não foi possível carregar as pastas fixadas."
       },
       "library": {
         "title": "Mais widgets",

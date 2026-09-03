@@ -2330,7 +2330,8 @@
         "done": "Listo",
         "moveUp": "Subir",
         "moveDown": "Bajar",
-        "hide": "Ocultar widget"
+        "hide": "Ocultar widget",
+        "retry": "Reintentar"
       },
       "widgets": {
         "overview": "Resumen de almacenamiento",
@@ -2354,7 +2355,8 @@
         "trash": "Papelera"
       },
       "recent": {
-        "empty": "No hay archivos recientes que coincidan"
+        "empty": "No hay archivos recientes que coincidan",
+        "loadFailed": "No se pudieron cargar los archivos recientes."
       },
       "pinnedFolders": {
         "folder": "Carpeta",
@@ -2362,7 +2364,8 @@
         "unpin": "Quitar del panel",
         "empty": "Aún no hay carpetas fijadas",
         "emptyHint": "Fija una carpeta desde sus acciones en Archivos.",
-        "limitReached": "Puedes fijar hasta {{count}} carpetas."
+        "limitReached": "Puedes fijar hasta {{count}} carpetas.",
+        "loadFailed": "No se pudieron cargar las carpetas fijadas."
       },
       "library": {
         "title": "Más widgets",

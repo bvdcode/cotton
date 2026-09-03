@@ -36,6 +36,7 @@ export const useRecentFilesQuery = (
   filters?: {
     contentTypes?: readonly string[];
     excludedContentTypes?: readonly string[];
+    excludeClientEncrypted?: boolean;
     enabled?: boolean;
   },
 ) =>
@@ -45,6 +46,7 @@ export const useRecentFilesQuery = (
       count,
       filters?.contentTypes ?? [],
       filters?.excludedContentTypes ?? [],
+      filters?.excludeClientEncrypted ?? false,
     ),
     queryFn: () =>
       layoutsApi.getRecentFiles(
@@ -53,6 +55,7 @@ export const useRecentFilesQuery = (
         {
           contentTypes: filters?.contentTypes,
           excludedContentTypes: filters?.excludedContentTypes,
+          excludeClientEncrypted: filters?.excludeClientEncrypted,
         },
       ),
     enabled: Boolean(layoutId) && filters?.enabled !== false,
@@ -82,6 +85,12 @@ export const invalidateLayoutOverview = async (
     }),
     queryClient.invalidateQueries({
       queryKey: queryKeys.layouts.recentAll(layoutId),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.layouts.pinnedFoldersAll(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.storageQuota.all(),
     }),
   ]);
 };

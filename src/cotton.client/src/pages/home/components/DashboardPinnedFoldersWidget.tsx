@@ -10,6 +10,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { usePinnedFoldersQuery } from "../../../shared/api/queries/layouts";
+import { DashboardQueryError } from "./DashboardQueryError";
 
 interface DashboardPinnedFoldersWidgetProps {
   enabled: boolean;
@@ -43,6 +44,15 @@ export const DashboardPinnedFoldersWidget = ({
 
   if (query.isPending && folders.length === 0) {
     return <Skeleton variant="rounded" height={72} />;
+  }
+
+  if (query.isError && folders.length === 0) {
+    return (
+      <DashboardQueryError
+        message={t("dashboard.pinnedFolders.loadFailed")}
+        onRetry={() => void query.refetch()}
+      />
+    );
   }
 
   return (

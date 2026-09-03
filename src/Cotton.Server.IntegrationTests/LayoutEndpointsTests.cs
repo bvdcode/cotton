@@ -280,6 +280,30 @@ namespace Cotton.Server.IntegrationTests
                 "sheet.xlsx",
                 "sheet body",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            NodeFileManifestDto encrypted = await CreateFileAsync(
+                root.Id,
+                "opaque-file",
+                "encrypted body",
+                "application/octet-stream");
+            NodeFileManifestDto binary = await CreateFileAsync(
+                root.Id,
+                "disk.iso",
+                "binary body",
+                "application/octet-stream");
+            HttpResponseMessage encryptedMetadataResponse = await _client.PatchAsJsonAsync(
+                $"/api/v1/files/{encrypted.Id}/metadata",
+                new Dictionary<string, string>
+                {
+                    ["isClientEncrypted"] = "true",
+                });
+            encryptedMetadataResponse.EnsureSuccessStatusCode();
+            HttpResponseMessage binaryMetadataResponse = await _client.PatchAsJsonAsync(
+                $"/api/v1/files/{binary.Id}/metadata",
+                new Dictionary<string, string>
+                {
+                    ["category"] = "disk-image",
+                });
+            binaryMetadataResponse.EnsureSuccessStatusCode();
 
             NodeFileManifestDto[]? media = await _client.GetFromJsonAsync<NodeFileManifestDto[]>(
                 $"/api/v1/layouts/{root.LayoutId}/recent?count=10&contentType=image/*&contentType=video/*");
@@ -287,12 +311,17 @@ namespace Cotton.Server.IntegrationTests
                 $"/api/v1/layouts/{root.LayoutId}/recent?count=10&excludeContentType=image/*&excludeContentType=video/*");
             NodeFileManifestDto[]? documents = await _client.GetFromJsonAsync<NodeFileManifestDto[]>(
                 $"/api/v1/layouts/{root.LayoutId}/recent?count=10&contentType=text/*&contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            NodeFileManifestDto[]? other = await _client.GetFromJsonAsync<NodeFileManifestDto[]>(
+                $"/api/v1/layouts/{root.LayoutId}/recent?count=10&excludeClientEncrypted=true&excludeContentType=image/*&excludeContentType=video/*&excludeContentType=audio/*&excludeContentType=text/*&excludeContentType=application/pdf&excludeContentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
             Assert.Multiple(() =>
             {
                 Assert.That(media?.Select(file => file.Name), Is.EquivalentTo(new[] { "photo.jpg", "clip.mp4" }));
-                Assert.That(nonMedia?.Select(file => file.Name), Is.EquivalentTo(new[] { "notes.txt", "sheet.xlsx" }));
+                Assert.That(
+                    nonMedia?.Select(file => file.Name),
+                    Is.EquivalentTo(new[] { "notes.txt", "sheet.xlsx", "opaque-file", "disk.iso" }));
                 Assert.That(documents?.Select(file => file.Name), Is.EquivalentTo(new[] { "notes.txt", "sheet.xlsx" }));
+                Assert.That(other?.Select(file => file.Id), Is.EquivalentTo(new[] { binary.Id }));
             });
         }
 

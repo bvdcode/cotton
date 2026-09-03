@@ -1,6 +1,4 @@
 import { z } from "zod";
-import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
-import { getFileTypeInfo, type FileType } from "../../shared/utils/fileTypes";
 
 export const DASHBOARD_WIDGET_IDS = [
   "overview",
@@ -31,48 +29,41 @@ export interface RecentFilesFilter {
   excludedContentTypes?: readonly string[];
 }
 
+const IMAGE_CONTENT_TYPES = ["image/*"] as const;
+const VIDEO_CONTENT_TYPES = ["video/*"] as const;
+const DOCUMENT_CONTENT_TYPES = [
+  "application/pdf",
+  "text/*",
+  "application/msword",
+  "application/rtf",
+  "application/vnd.ms-excel",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.oasis.opendocument.text",
+  "application/vnd.oasis.opendocument.spreadsheet",
+  "application/vnd.oasis.opendocument.presentation",
+] as const;
+const AUDIO_CONTENT_TYPES = ["audio/*"] as const;
+const CATEGORIZED_CONTENT_TYPES = [
+  ...IMAGE_CONTENT_TYPES,
+  ...VIDEO_CONTENT_TYPES,
+  ...DOCUMENT_CONTENT_TYPES,
+  ...AUDIO_CONTENT_TYPES,
+] as const;
+
 export const RECENT_FILES_FILTERS: Record<
   RecentFilesWidgetId,
   RecentFilesFilter
 > = {
   recentFiles: {},
-  recentImages: { contentTypes: ["image/*"] },
-  recentVideos: { contentTypes: ["video/*"] },
-  recentDocuments: {
-    contentTypes: [
-      "application/pdf",
-      "text/*",
-      "application/msword",
-      "application/rtf",
-      "application/vnd.ms-excel",
-      "application/vnd.ms-powerpoint",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "application/vnd.oasis.opendocument.text",
-      "application/vnd.oasis.opendocument.spreadsheet",
-      "application/vnd.oasis.opendocument.presentation",
-    ],
-  },
-  recentAudio: { contentTypes: ["audio/*"] },
+  recentImages: { contentTypes: IMAGE_CONTENT_TYPES },
+  recentVideos: { contentTypes: VIDEO_CONTENT_TYPES },
+  recentDocuments: { contentTypes: DOCUMENT_CONTENT_TYPES },
+  recentAudio: { contentTypes: AUDIO_CONTENT_TYPES },
   recentOther: {
-    excludedContentTypes: [
-      "image/*",
-      "video/*",
-      "audio/*",
-      "application/pdf",
-      "text/*",
-      "application/msword",
-      "application/rtf",
-      "application/vnd.ms-excel",
-      "application/vnd.ms-powerpoint",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "application/vnd.oasis.opendocument.text",
-      "application/vnd.oasis.opendocument.spreadsheet",
-      "application/vnd.oasis.opendocument.presentation",
-    ],
+    excludedContentTypes: CATEGORIZED_CONTENT_TYPES,
   },
 };
 
@@ -96,7 +87,9 @@ const unique = (ids: readonly DashboardWidgetId[]): DashboardWidgetId[] => [
   ...new Set(ids),
 ];
 
-export const parseDashboardLayout = (value: string | undefined): DashboardLayout => {
+export const parseDashboardLayout = (
+  value: string | undefined,
+): DashboardLayout => {
   if (!value) {
     return DEFAULT_DASHBOARD_LAYOUT;
   }
@@ -172,37 +165,4 @@ export const restoreDashboardWidget = (
     order: [...layout.order, widgetId],
     hidden: layout.hidden.filter((candidate) => candidate !== widgetId),
   };
-};
-
-const DOCUMENT_TYPES = new Set<FileType>(["pdf", "text", "document"]);
-const OTHER_TYPES = new Set<FileType>(["model", "archive", "other"]);
-
-export const filterRecentFiles = (
-  files: readonly NodeFileManifestDto[],
-  widgetId: RecentFilesWidgetId,
-): NodeFileManifestDto[] => {
-  if (widgetId === "recentFiles") {
-    return [...files];
-  }
-
-  return files.filter((file) => {
-    const type = getFileTypeInfo(file.name, file.contentType, {
-      requiresVideoTranscoding: file.requiresVideoTranscoding,
-    }).type;
-
-    switch (widgetId) {
-      case "recentImages":
-        return type === "image";
-      case "recentVideos":
-        return type === "video";
-      case "recentDocuments":
-        return DOCUMENT_TYPES.has(type);
-      case "recentAudio":
-        return type === "audio";
-      case "recentOther":
-        return OTHER_TYPES.has(type);
-      default:
-        throw new Error(`Unsupported recent files widget: ${widgetId}`);
-    }
-  });
 };

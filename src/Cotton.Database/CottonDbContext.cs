@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cotton.Database
 {
-    public class CottonDbContext : AuditedDbContext
+    public partial class CottonDbContext : AuditedDbContext
     {
         private readonly IDatabaseFieldProtector? _databaseFieldProtector;
 

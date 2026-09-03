@@ -2333,7 +2333,8 @@
         "done": "Fatto",
         "moveUp": "Sposta su",
         "moveDown": "Sposta giù",
-        "hide": "Nascondi widget"
+        "hide": "Nascondi widget",
+        "retry": "Riprova"
       },
       "widgets": {
         "overview": "Riepilogo spazio",
@@ -2357,7 +2358,8 @@
         "trash": "Cestino"
       },
       "recent": {
-        "empty": "Nessun file recente corrispondente"
+        "empty": "Nessun file recente corrispondente",
+        "loadFailed": "Impossibile caricare i file recenti."
       },
       "pinnedFolders": {
         "folder": "Cartella",
@@ -2365,7 +2367,8 @@
         "unpin": "Rimuovi dalla dashboard",
         "empty": "Nessuna cartella fissata",
         "emptyHint": "Fissi una cartella dalle sue azioni in File.",
-        "limitReached": "Può fissare fino a {{count}} cartelle."
+        "limitReached": "Può fissare fino a {{count}} cartelle.",
+        "loadFailed": "Impossibile caricare le cartelle fissate."
       },
       "library": {
         "title": "Altri widget",

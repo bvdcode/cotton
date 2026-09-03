@@ -2128,7 +2128,8 @@
         "done": "Done",
         "moveUp": "Move up",
         "moveDown": "Move down",
-        "hide": "Hide widget"
+        "hide": "Hide widget",
+        "retry": "Retry"
       },
       "widgets": {
         "overview": "Storage overview",
@@ -2152,7 +2153,8 @@
         "trash": "Trash"
       },
       "recent": {
-        "empty": "No matching recent files"
+        "empty": "No matching recent files",
+        "loadFailed": "Failed to load recent files."
       },
       "pinnedFolders": {
         "folder": "Folder",
@@ -2160,7 +2162,8 @@
         "unpin": "Unpin from dashboard",
         "empty": "No pinned folders yet",
         "emptyHint": "Pin a folder from its actions in Files.",
-        "limitReached": "You can pin up to {{count}} folders."
+        "limitReached": "You can pin up to {{count}} folders.",
+        "loadFailed": "Failed to load pinned folders."
       },
       "library": {
         "title": "More widgets",

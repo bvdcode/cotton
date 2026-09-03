@@ -20,7 +20,8 @@ namespace Cotton.Server.Handlers.Layouts
         Guid layoutId,
         int count,
         IReadOnlyCollection<string>? contentTypes = null,
-        IReadOnlyCollection<string>? excludedContentTypes = null)
+        IReadOnlyCollection<string>? excludedContentTypes = null,
+        bool excludeClientEncrypted = false)
         : IRequest<IEnumerable<NodeFileManifestDto>>
     {
         public int Count { get; } = count;
@@ -32,6 +33,8 @@ namespace Cotton.Server.Handlers.Layouts
         public IReadOnlyCollection<string> ContentTypes { get; } = contentTypes ?? [];
 
         public IReadOnlyCollection<string> ExcludedContentTypes { get; } = excludedContentTypes ?? [];
+
+        public bool ExcludeClientEncrypted { get; } = excludeClientEncrypted;
     }
 
     public class GetRecentNodesQueryHandler(CottonDbContext _dbContext)
@@ -69,6 +72,12 @@ namespace Cotton.Server.Handlers.Layouts
                     x.FileManifest.ContentType,
                     excludedPattern,
                     RegexOptions.IgnoreCase));
+            }
+
+            if (request.ExcludeClientEncrypted)
+            {
+                query = query.Where(x =>
+                    (CottonDbContext.GetHstoreValue(x.Metadata, "isClientEncrypted") ?? "false") != "true");
             }
 
             return await query

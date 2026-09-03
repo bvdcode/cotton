@@ -8,6 +8,7 @@ import {
   type RecentFilesWidgetId,
 } from "../dashboardModel";
 import { RecentFileItem } from "./RecentFileItem";
+import { DashboardQueryError } from "./DashboardQueryError";
 
 const RECENT_FILE_COUNT = 8;
 const SKELETON_COUNT = 3;
@@ -28,6 +29,7 @@ export const DashboardRecentFilesWidget = ({
   const filter = RECENT_FILES_FILTERS[widgetId];
   const query = useRecentFilesQuery(layoutId, RECENT_FILE_COUNT, {
     ...filter,
+    excludeClientEncrypted: true,
     enabled,
   });
   const files = query.data ?? [];
@@ -49,6 +51,15 @@ export const DashboardRecentFilesWidget = ({
           <Skeleton key={index} variant="rounded" height={52} />
         ))}
       </Box>
+    );
+  }
+
+  if (query.isError && files.length === 0) {
+    return (
+      <DashboardQueryError
+        message={t("dashboard.recent.loadFailed")}
+        onRetry={() => void query.refetch()}
+      />
     );
   }
 

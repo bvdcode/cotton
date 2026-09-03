@@ -2331,7 +2331,8 @@
         "done": "Terminé",
         "moveUp": "Monter",
         "moveDown": "Descendre",
-        "hide": "Masquer le widget"
+        "hide": "Masquer le widget",
+        "retry": "Réessayer"
       },
       "widgets": {
         "overview": "Aperçu du stockage",
@@ -2355,7 +2356,8 @@
         "trash": "Corbeille"
       },
       "recent": {
-        "empty": "Aucun fichier récent correspondant"
+        "empty": "Aucun fichier récent correspondant",
+        "loadFailed": "Impossible de charger les fichiers récents."
       },
       "pinnedFolders": {
         "folder": "Dossier",
@@ -2363,7 +2365,8 @@
         "unpin": "Détacher du tableau de bord",
         "empty": "Aucun dossier épinglé",
         "emptyHint": "Épinglez un dossier depuis ses actions dans Fichiers.",
-        "limitReached": "Vous pouvez épingler jusqu’à {{count}} dossiers."
+        "limitReached": "Vous pouvez épingler jusqu’à {{count}} dossiers.",
+        "loadFailed": "Impossible de charger les dossiers épinglés."
       },
       "library": {
         "title": "Autres widgets",

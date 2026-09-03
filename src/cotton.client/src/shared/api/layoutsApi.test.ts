@@ -184,6 +184,7 @@ describe("layoutsApi reads", () => {
         count: 3,
         contentType: undefined,
         excludeContentType: undefined,
+        excludeClientEncrypted: undefined,
       },
     });
   });
@@ -205,6 +206,7 @@ describe("layoutsApi reads", () => {
         count: 10,
         contentType: undefined,
         excludeContentType: undefined,
+        excludeClientEncrypted: undefined,
       },
     });
   });
@@ -218,12 +220,14 @@ describe("layoutsApi reads", () => {
     await layoutsApi.getRecentFiles(layoutId, 8, {
       contentTypes: ["image/*", "video/*"],
       excludedContentTypes: ["video/x-msvideo"],
+      excludeClientEncrypted: true,
     });
     expect(get).toHaveBeenCalledWith(`/layouts/${layoutId}/recent`, {
       params: {
         count: 8,
         contentType: ["image/*", "video/*"],
         excludeContentType: ["video/x-msvideo"],
+        excludeClientEncrypted: true,
       },
     });
 

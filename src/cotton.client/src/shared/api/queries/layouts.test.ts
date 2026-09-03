@@ -20,7 +20,7 @@ describe("layout query cache helpers", () => {
       fileCount: 1,
     });
     queryClient.setQueryData(
-      queryKeys.layouts.recentFiltered("layout-id", 15, ["image/*"], []),
+      queryKeys.layouts.recentFiltered("layout-id", 15, ["image/*"], [], false),
       [],
     );
 
@@ -32,7 +32,13 @@ describe("layout query cache helpers", () => {
     ).toBeUndefined();
     expect(
       queryClient.getQueryData(
-        queryKeys.layouts.recentFiltered("layout-id", 15, ["image/*"], []),
+        queryKeys.layouts.recentFiltered(
+          "layout-id",
+          15,
+          ["image/*"],
+          [],
+          false,
+        ),
       ),
     ).toBeUndefined();
   });
@@ -58,11 +64,11 @@ describe("layout query cache helpers", () => {
       fileCount: 1,
     });
     queryClient.setQueryData(
-      queryKeys.layouts.recentFiltered("layout-1", 5, ["image/*"], []),
+      queryKeys.layouts.recentFiltered("layout-1", 5, ["image/*"], [], false),
       [],
     );
     queryClient.setQueryData(
-      queryKeys.layouts.recentFiltered("layout-1", 15, [], ["image/*"]),
+      queryKeys.layouts.recentFiltered("layout-1", 15, [], ["image/*"], false),
       [],
     );
     queryClient.setQueryData(queryKeys.layouts.stats("layout-2"), {
@@ -77,19 +83,47 @@ describe("layout query cache helpers", () => {
     ).toBe(true);
     expect(
       queryClient.getQueryState(
-        queryKeys.layouts.recentFiltered("layout-1", 5, ["image/*"], []),
-      )
-        ?.isInvalidated,
+        queryKeys.layouts.recentFiltered("layout-1", 5, ["image/*"], [], false),
+      )?.isInvalidated,
     ).toBe(true);
     expect(
       queryClient.getQueryState(
-        queryKeys.layouts.recentFiltered("layout-1", 15, [], ["image/*"]),
-      )
-        ?.isInvalidated,
+        queryKeys.layouts.recentFiltered(
+          "layout-1",
+          15,
+          [],
+          ["image/*"],
+          false,
+        ),
+      )?.isInvalidated,
     ).toBe(true);
     expect(
       queryClient.getQueryState(queryKeys.layouts.stats("layout-2"))
         ?.isInvalidated,
     ).toBe(false);
+  });
+
+  it("invalidates quota and every pinned-folder selection with the overview", async () => {
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(queryKeys.storageQuota.current(), {
+      usedBytes: 10,
+    });
+    queryClient.setQueryData(queryKeys.layouts.pinnedFolders(["node-a"]), []);
+    queryClient.setQueryData(queryKeys.layouts.pinnedFolders(["node-b"]), []);
+
+    await invalidateLayoutOverview(queryClient, "layout-1");
+
+    expect(
+      queryClient.getQueryState(queryKeys.storageQuota.current())
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(queryKeys.layouts.pinnedFolders(["node-a"]))
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(queryKeys.layouts.pinnedFolders(["node-b"]))
+        ?.isInvalidated,
+    ).toBe(true);
   });
 });

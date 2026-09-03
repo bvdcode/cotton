@@ -2340,7 +2340,8 @@
         "done": "完成",
         "moveUp": "上移",
         "moveDown": "下移",
-        "hide": "隐藏小组件"
+        "hide": "隐藏小组件",
+        "retry": "重试"
       },
       "widgets": {
         "overview": "存储概览",
@@ -2364,7 +2365,8 @@
         "trash": "回收站"
       },
       "recent": {
-        "empty": "没有匹配的最近文件"
+        "empty": "没有匹配的最近文件",
+        "loadFailed": "无法加载最近文件。"
       },
       "pinnedFolders": {
         "folder": "文件夹",
@@ -2372,7 +2374,8 @@
         "unpin": "从主页取消固定",
         "empty": "尚无固定文件夹",
         "emptyHint": "可在“文件”中通过文件夹操作进行固定。",
-        "limitReached": "最多可以固定 {{count}} 个文件夹。"
+        "limitReached": "最多可以固定 {{count}} 个文件夹。",
+        "loadFailed": "无法加载固定文件夹。"
       },
       "library": {
         "title": "更多小组件",

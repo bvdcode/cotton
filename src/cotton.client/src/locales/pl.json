@@ -2335,7 +2335,8 @@
         "done": "Gotowe",
         "moveUp": "Przenieś wyżej",
         "moveDown": "Przenieś niżej",
-        "hide": "Ukryj widżet"
+        "hide": "Ukryj widżet",
+        "retry": "Ponów"
       },
       "widgets": {
         "overview": "Przegląd miejsca",
@@ -2359,7 +2360,8 @@
         "trash": "Kosz"
       },
       "recent": {
-        "empty": "Brak pasujących ostatnich plików"
+        "empty": "Brak pasujących ostatnich plików",
+        "loadFailed": "Nie udało się wczytać ostatnich plików."
       },
       "pinnedFolders": {
         "folder": "Folder",
@@ -2367,7 +2369,8 @@
         "unpin": "Odepnij od pulpitu",
         "empty": "Brak przypiętych folderów",
         "emptyHint": "Przypnij folder przez jego akcje w sekcji Pliki.",
-        "limitReached": "Możesz przypiąć maksymalnie {{count}} folderów."
+        "limitReached": "Możesz przypiąć maksymalnie {{count}} folderów.",
+        "loadFailed": "Nie udało się wczytać przypiętych folderów."
       },
       "library": {
         "title": "Więcej widżetów",

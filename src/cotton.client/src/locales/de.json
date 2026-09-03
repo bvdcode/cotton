@@ -2327,7 +2327,8 @@
         "done": "Fertig",
         "moveUp": "Nach oben",
         "moveDown": "Nach unten",
-        "hide": "Widget ausblenden"
+        "hide": "Widget ausblenden",
+        "retry": "Erneut versuchen"
       },
       "widgets": {
         "overview": "Speicherübersicht",
@@ -2351,7 +2352,8 @@
         "trash": "Papierkorb"
       },
       "recent": {
-        "empty": "Keine passenden letzten Dateien"
+        "empty": "Keine passenden letzten Dateien",
+        "loadFailed": "Letzte Dateien konnten nicht geladen werden."
       },
       "pinnedFolders": {
         "folder": "Ordner",
@@ -2359,7 +2361,8 @@
         "unpin": "Von Startseite lösen",
         "empty": "Noch keine angehefteten Ordner",
         "emptyHint": "Hefte einen Ordner über seine Aktionen unter Dateien an.",
-        "limitReached": "Du kannst bis zu {{count}} Ordner anheften."
+        "limitReached": "Du kannst bis zu {{count}} Ordner anheften.",
+        "loadFailed": "Angeheftete Ordner konnten nicht geladen werden."
       },
       "library": {
         "title": "Weitere Widgets",

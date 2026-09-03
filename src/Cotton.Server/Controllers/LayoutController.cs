@@ -27,7 +27,8 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetRecentNodes([FromRoute] Guid layoutId,
             [FromQuery] int count = 10,
             [FromQuery] string[]? contentType = null,
-            [FromQuery] string[]? excludeContentType = null)
+            [FromQuery] string[]? excludeContentType = null,
+            [FromQuery] bool excludeClientEncrypted = false)
         {
             Guid userId = User.GetUserId();
             GetRecentNodesQuery request = new(
@@ -35,7 +36,8 @@ namespace Cotton.Server.Controllers
                 layoutId,
                 count,
                 contentType,
-                excludeContentType);
+                excludeContentType,
+                excludeClientEncrypted);
             IEnumerable<NodeFileManifestDto> result = await _mediator.Send(request);
             return Ok(result);
         }

@@ -2332,7 +2332,8 @@
         "done": "Gereed",
         "moveUp": "Omhoog",
         "moveDown": "Omlaag",
-        "hide": "Widget verbergen"
+        "hide": "Widget verbergen",
+        "retry": "Opnieuw proberen"
       },
       "widgets": {
         "overview": "Opslagoverzicht",
@@ -2356,7 +2357,8 @@
         "trash": "Prullenbak"
       },
       "recent": {
-        "empty": "Geen overeenkomende recente bestanden"
+        "empty": "Geen overeenkomende recente bestanden",
+        "loadFailed": "Recente bestanden konden niet worden geladen."
       },
       "pinnedFolders": {
         "folder": "Map",
@@ -2364,7 +2366,8 @@
         "unpin": "Losmaken van dashboard",
         "empty": "Nog geen vastgezette mappen",
         "emptyHint": "Zet een map vast via de acties in Bestanden.",
-        "limitReached": "U kunt maximaal {{count}} mappen vastzetten."
+        "limitReached": "U kunt maximaal {{count}} mappen vastzetten.",
+        "loadFailed": "Vastgezette mappen konden niet worden geladen."
       },
       "library": {
         "title": "Meer widgets",

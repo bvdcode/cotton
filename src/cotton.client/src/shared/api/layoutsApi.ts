@@ -125,6 +125,7 @@ export const layoutsApi = {
     filters?: {
       contentTypes?: readonly string[];
       excludedContentTypes?: readonly string[];
+      excludeClientEncrypted?: boolean;
     },
   ): Promise<NodeFileManifestDto[]> => {
     const response = await httpClient.get<NodeFileManifestDto[]>(
@@ -134,6 +135,7 @@ export const layoutsApi = {
           count,
           contentType: filters?.contentTypes,
           excludeContentType: filters?.excludedContentTypes,
+          excludeClientEncrypted: filters?.excludeClientEncrypted,
         },
       },
     );

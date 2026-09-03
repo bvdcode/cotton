@@ -9,34 +9,12 @@ import {
   useLayoutStatsQuery,
   useRootNodeQuery,
 } from "../../shared/api/queries/layouts";
-import {
-  HUB_METHODS,
-  useFileTreeRealtimeInvalidation,
-  type HubMethodOrLower,
-} from "../../shared/signalr";
+import { useFileTreeRealtimeInvalidation } from "../../shared/signalr";
 import { useAuth } from "../../features/auth";
 import { usePinnedFolders } from "../../shared/dashboard/usePinnedFolders";
 import { useDashboardLayout } from "./useDashboardLayout";
 import { DashboardWidgetLibrary } from "./components/DashboardWidgetLibrary";
 import { HomeDashboard } from "./HomeDashboard";
-
-const HOME_OVERVIEW_METHODS = new Set<string>(
-  [
-    HUB_METHODS.FileCreated,
-    HUB_METHODS.FileUpdated,
-    HUB_METHODS.FileDeleted,
-    HUB_METHODS.FileMoved,
-    HUB_METHODS.FileRenamed,
-    HUB_METHODS.FileRestored,
-    HUB_METHODS.NodeCreated,
-    HUB_METHODS.NodeDeleted,
-    HUB_METHODS.NodeMoved,
-    HUB_METHODS.NodeRestored,
-  ].map((method) => method.toLowerCase()),
-);
-
-const shouldInvalidateHomeOverview = (method: HubMethodOrLower): boolean =>
-  HOME_OVERVIEW_METHODS.has(method.toLowerCase());
 
 export const HomePage: React.FC = () => {
   const { t } = useTranslation(["home", "common"]);
@@ -61,7 +39,6 @@ export const HomePage: React.FC = () => {
   useFileTreeRealtimeInvalidation({
     enabled: isAuthenticated && Boolean(layoutId),
     onInvalidate: handleRealtimeInvalidate,
-    shouldInvalidate: shouldInvalidateHomeOverview,
   });
   const error = rootQuery.error
     ? "Failed to resolve root layout"

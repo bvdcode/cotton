@@ -2332,7 +2332,8 @@
         "done": "Hotovo",
         "moveUp": "Posunout nahoru",
         "moveDown": "Posunout dolů",
-        "hide": "Skrýt widget"
+        "hide": "Skrýt widget",
+        "retry": "Opakovat"
       },
       "widgets": {
         "overview": "Přehled úložiště",
@@ -2356,7 +2357,8 @@
         "trash": "Koš"
       },
       "recent": {
-        "empty": "Žádné odpovídající nedávné soubory"
+        "empty": "Žádné odpovídající nedávné soubory",
+        "loadFailed": "Nepodařilo se načíst nedávné soubory."
       },
       "pinnedFolders": {
         "folder": "Složka",
@@ -2364,7 +2366,8 @@
         "unpin": "Odepnout z nástěnky",
         "empty": "Zatím žádné připnuté složky",
         "emptyHint": "Připněte složku pomocí jejích akcí v Souborech.",
-        "limitReached": "Můžete připnout až {{count}} složek."
+        "limitReached": "Můžete připnout až {{count}} složek.",
+        "loadFailed": "Nepodařilo se načíst připnuté složky."
       },
       "library": {
         "title": "Další widgety",

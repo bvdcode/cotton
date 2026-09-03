@@ -26,15 +26,18 @@ export const queryKeys = {
       count: number,
       contentTypes: readonly string[],
       excludedContentTypes: readonly string[],
+      excludeClientEncrypted: boolean,
     ) =>
       [
         ...queryKeys.layouts.recentAll(layoutId),
         count,
         contentTypes,
         excludedContentTypes,
+        excludeClientEncrypted,
       ] as const,
+    pinnedFoldersAll: () => [...layoutsRoot, "pinned-folders"] as const,
     pinnedFolders: (nodeIds: readonly string[]) =>
-      [...layoutsRoot, "pinned-folders", nodeIds] as const,
+      [...queryKeys.layouts.pinnedFoldersAll(), nodeIds] as const,
   },
   admin: {
     all: () => adminRoot,
