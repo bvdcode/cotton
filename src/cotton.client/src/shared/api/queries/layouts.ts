@@ -33,15 +33,39 @@ export const useLayoutStatsQuery = (layoutId: string | null | undefined) =>
 export const useRecentFilesQuery = (
   layoutId: string | null | undefined,
   count = DEFAULT_RECENT_COUNT,
+  filters?: {
+    contentTypes?: readonly string[];
+    excludedContentTypes?: readonly string[];
+    enabled?: boolean;
+  },
 ) =>
   useQuery<NodeFileManifestDto[]>({
-    queryKey: queryKeys.layouts.recent(layoutId ?? "", count),
+    queryKey: queryKeys.layouts.recentFiltered(
+      layoutId ?? "",
+      count,
+      filters?.contentTypes ?? [],
+      filters?.excludedContentTypes ?? [],
+    ),
     queryFn: () =>
       layoutsApi.getRecentFiles(
         requireLayoutId(layoutId, "useRecentFilesQuery"),
         count,
+        {
+          contentTypes: filters?.contentTypes,
+          excludedContentTypes: filters?.excludedContentTypes,
+        },
       ),
-    enabled: !!layoutId,
+    enabled: Boolean(layoutId) && filters?.enabled !== false,
+  });
+
+export const usePinnedFoldersQuery = (
+  nodeIds: readonly string[],
+  enabled = true,
+) =>
+  useQuery<NodeDto[]>({
+    queryKey: queryKeys.layouts.pinnedFolders(nodeIds),
+    queryFn: () => layoutsApi.resolveOwnedNodes(nodeIds),
+    enabled: enabled && nodeIds.length > 0,
   });
 
 export const clearLayoutsCaches = (queryClient: QueryClient): void => {

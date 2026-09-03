@@ -180,7 +180,11 @@ describe("layoutsApi reads", () => {
 
     await expect(layoutsApi.getRecentFiles(layoutId)).resolves.toEqual([]);
     expect(get).toHaveBeenLastCalledWith(`/layouts/${layoutId}/recent`, {
-      params: { count: 3 },
+      params: {
+        count: 3,
+        contentType: undefined,
+        excludeContentType: undefined,
+      },
     });
   });
 
@@ -197,7 +201,35 @@ describe("layoutsApi reads", () => {
 
     await layoutsApi.getRecentFiles(layoutId, 10);
     expect(get).toHaveBeenLastCalledWith(`/layouts/${layoutId}/recent`, {
-      params: { count: 10 },
+      params: {
+        count: 10,
+        contentType: undefined,
+        excludeContentType: undefined,
+      },
     });
+  });
+
+  it("threads recent content-type filters and resolves owned folders", async () => {
+    const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: [] });
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: [{ id: nodeId }],
+    });
+
+    await layoutsApi.getRecentFiles(layoutId, 8, {
+      contentTypes: ["image/*", "video/*"],
+      excludedContentTypes: ["video/x-msvideo"],
+    });
+    expect(get).toHaveBeenCalledWith(`/layouts/${layoutId}/recent`, {
+      params: {
+        count: 8,
+        contentType: ["image/*", "video/*"],
+        excludeContentType: ["video/x-msvideo"],
+      },
+    });
+
+    await expect(layoutsApi.resolveOwnedNodes([nodeId])).resolves.toEqual([
+      { id: nodeId },
+    ]);
+    expect(post).toHaveBeenCalledWith("/layouts/nodes/resolve", [nodeId]);
   });
 });

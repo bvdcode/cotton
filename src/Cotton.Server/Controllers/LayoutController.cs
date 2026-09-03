@@ -25,12 +25,40 @@ namespace Cotton.Server.Controllers
         [Authorize]
         [HttpGet("{layoutId:guid}/recent")]
         public async Task<IActionResult> GetRecentNodes([FromRoute] Guid layoutId,
-            [FromQuery] int count = 10)
+            [FromQuery] int count = 10,
+            [FromQuery] string[]? contentType = null,
+            [FromQuery] string[]? excludeContentType = null)
         {
             Guid userId = User.GetUserId();
-            GetRecentNodesQuery request = new(userId, layoutId, count);
+            GetRecentNodesQuery request = new(
+                userId,
+                layoutId,
+                count,
+                contentType,
+                excludeContentType);
             IEnumerable<NodeFileManifestDto> result = await _mediator.Send(request);
             return Ok(result);
+        }
+
+        [Authorize]
+        [HttpPost("nodes/resolve")]
+        public async Task<IActionResult> ResolveOwnedNodes([FromBody] Guid[]? nodeIds)
+        {
+            if (nodeIds is null)
+            {
+                return CottonResult.BadRequest("Node ids are required.");
+            }
+            if (nodeIds.Length > ResolveOwnedNodesQuery.MaximumNodeIds)
+            {
+                return CottonResult.BadRequest(
+                    $"A maximum of {ResolveOwnedNodesQuery.MaximumNodeIds} node ids is allowed.");
+            }
+
+            Guid userId = User.GetUserId();
+            IReadOnlyList<NodeDto> nodes = await _mediator.Send(
+                new ResolveOwnedNodesQuery(userId, nodeIds),
+                HttpContext.RequestAborted);
+            return Ok(nodes);
         }
 
         [Authorize]

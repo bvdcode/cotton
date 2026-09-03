@@ -23,6 +23,20 @@ export const queryKeys = {
       [...layoutsRoot, "recent", layoutId] as const,
     recent: (layoutId: string, count: number) =>
       [...queryKeys.layouts.recentAll(layoutId), count] as const,
+    recentFiltered: (
+      layoutId: string,
+      count: number,
+      contentTypes: readonly string[],
+      excludedContentTypes: readonly string[],
+    ) =>
+      [
+        ...queryKeys.layouts.recentAll(layoutId),
+        count,
+        contentTypes,
+        excludedContentTypes,
+      ] as const,
+    pinnedFolders: (nodeIds: readonly string[]) =>
+      [...layoutsRoot, "pinned-folders", nodeIds] as const,
   },
   admin: {
     all: () => adminRoot,

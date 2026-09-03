@@ -264,6 +264,88 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task RecentFiles_FiltersByExactAndWildcardContentTypes()
+        {
+            string token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
+
+            await CreateFileAsync(root!.Id, "photo.jpg", "image body", "image/jpeg");
+            await CreateFileAsync(root.Id, "clip.mp4", "video body", "video/mp4");
+            await CreateFileAsync(root.Id, "notes.txt", "text body", "text/plain");
+            await CreateFileAsync(
+                root.Id,
+                "sheet.xlsx",
+                "sheet body",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+            NodeFileManifestDto[]? media = await _client.GetFromJsonAsync<NodeFileManifestDto[]>(
+                $"/api/v1/layouts/{root.LayoutId}/recent?count=10&contentType=image/*&contentType=video/*");
+            NodeFileManifestDto[]? nonMedia = await _client.GetFromJsonAsync<NodeFileManifestDto[]>(
+                $"/api/v1/layouts/{root.LayoutId}/recent?count=10&excludeContentType=image/*&excludeContentType=video/*");
+            NodeFileManifestDto[]? documents = await _client.GetFromJsonAsync<NodeFileManifestDto[]>(
+                $"/api/v1/layouts/{root.LayoutId}/recent?count=10&contentType=text/*&contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(media?.Select(file => file.Name), Is.EquivalentTo(new[] { "photo.jpg", "clip.mp4" }));
+                Assert.That(nonMedia?.Select(file => file.Name), Is.EquivalentTo(new[] { "notes.txt", "sheet.xlsx" }));
+                Assert.That(documents?.Select(file => file.Name), Is.EquivalentTo(new[] { "notes.txt", "sheet.xlsx" }));
+            });
+        }
+
+        [Test]
+        public async Task RecentFiles_RejectsInvalidContentTypePattern()
+        {
+            string token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
+
+            HttpResponseMessage response = await _client.GetAsync(
+                $"/api/v1/layouts/{root!.LayoutId}/recent?contentType=video/mp*");
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        [Test]
+        public async Task ResolveOwnedNodes_ReturnsOwnedDefaultNodesInRequestedOrder()
+        {
+            string token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
+            NodeDto first = await CreateNodeAsync(root!.Id, "first-pinned");
+            NodeDto second = await CreateNodeAsync(root.Id, "second-pinned");
+
+            HttpResponseMessage response = await _client.PostAsJsonAsync(
+                "/api/v1/layouts/nodes/resolve",
+                new[] { second.Id, Guid.NewGuid(), first.Id, second.Id });
+            response.EnsureSuccessStatusCode();
+            NodeDto[]? nodes = await response.Content.ReadFromJsonAsync<NodeDto[]>();
+
+            Assert.That(nodes?.Select(node => node.Id), Is.EqualTo(new[] { second.Id, first.Id }));
+        }
+
+        [Test]
+        public async Task ResolveOwnedNodes_RejectsMoreThan128Ids()
+        {
+            string token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            Guid[] ids = Enumerable.Range(0, 129).Select(_ => Guid.NewGuid()).ToArray();
+
+            HttpResponseMessage response = await _client.PostAsJsonAsync(
+                "/api/v1/layouts/nodes/resolve",
+                ids);
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        [Test]
         public async Task DeleteNodePermanently_RemovesRestrictedShareToken()
         {
             string accessToken = await LoginAsync();
@@ -309,14 +391,18 @@ namespace Cotton.Server.IntegrationTests
             return (await response.Content.ReadFromJsonAsync<NodeDto>())!;
         }
 
-        private async Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
+        private async Task<NodeFileManifestDto> CreateFileAsync(
+            Guid nodeId,
+            string name,
+            string body,
+            string contentType = "application/octet-stream")
         {
             string hash = await UploadChunkAsync(body);
             CreateFileFromChunksRequestDto fileReq = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [hash],
                 Name = name,
-                ContentType = "application/octet-stream",
+                ContentType = contentType,
                 Hash = hash,
                 NodeId = nodeId,
             };

@@ -122,11 +122,29 @@ export const layoutsApi = {
   getRecentFiles: async (
     layoutId: Guid,
     count = 3,
+    filters?: {
+      contentTypes?: readonly string[];
+      excludedContentTypes?: readonly string[];
+    },
   ): Promise<NodeFileManifestDto[]> => {
     const response = await httpClient.get<NodeFileManifestDto[]>(
       `/layouts/${layoutId}/recent`,
-      { params: { count } },
+      {
+        params: {
+          count,
+          contentType: filters?.contentTypes,
+          excludeContentType: filters?.excludedContentTypes,
+        },
+      },
     );
     return await applyDisplayMetaToFiles(response.data);
+  },
+
+  resolveOwnedNodes: async (nodeIds: readonly Guid[]): Promise<NodeDto[]> => {
+    const response = await httpClient.post<NodeDto[]>(
+      "/layouts/nodes/resolve",
+      nodeIds,
+    );
+    return response.data;
   },
 };

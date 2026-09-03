@@ -19,7 +19,10 @@ describe("layout query cache helpers", () => {
     queryClient.setQueryData(queryKeys.layouts.stats("layout-id"), {
       fileCount: 1,
     });
-    queryClient.setQueryData(queryKeys.layouts.recent("layout-id", 15), []);
+    queryClient.setQueryData(
+      queryKeys.layouts.recentFiltered("layout-id", 15, ["image/*"], []),
+      [],
+    );
 
     clearLayoutsCaches(queryClient);
 
@@ -28,7 +31,9 @@ describe("layout query cache helpers", () => {
       queryClient.getQueryData(queryKeys.layouts.stats("layout-id")),
     ).toBeUndefined();
     expect(
-      queryClient.getQueryData(queryKeys.layouts.recent("layout-id", 15)),
+      queryClient.getQueryData(
+        queryKeys.layouts.recentFiltered("layout-id", 15, ["image/*"], []),
+      ),
     ).toBeUndefined();
   });
 
@@ -52,8 +57,14 @@ describe("layout query cache helpers", () => {
     queryClient.setQueryData(queryKeys.layouts.stats("layout-1"), {
       fileCount: 1,
     });
-    queryClient.setQueryData(queryKeys.layouts.recent("layout-1", 5), []);
-    queryClient.setQueryData(queryKeys.layouts.recent("layout-1", 15), []);
+    queryClient.setQueryData(
+      queryKeys.layouts.recentFiltered("layout-1", 5, ["image/*"], []),
+      [],
+    );
+    queryClient.setQueryData(
+      queryKeys.layouts.recentFiltered("layout-1", 15, [], ["image/*"]),
+      [],
+    );
     queryClient.setQueryData(queryKeys.layouts.stats("layout-2"), {
       fileCount: 2,
     });
@@ -65,11 +76,15 @@ describe("layout query cache helpers", () => {
         ?.isInvalidated,
     ).toBe(true);
     expect(
-      queryClient.getQueryState(queryKeys.layouts.recent("layout-1", 5))
+      queryClient.getQueryState(
+        queryKeys.layouts.recentFiltered("layout-1", 5, ["image/*"], []),
+      )
         ?.isInvalidated,
     ).toBe(true);
     expect(
-      queryClient.getQueryState(queryKeys.layouts.recent("layout-1", 15))
+      queryClient.getQueryState(
+        queryKeys.layouts.recentFiltered("layout-1", 15, [], ["image/*"]),
+      )
         ?.isInvalidated,
     ).toBe(true);
     expect(
