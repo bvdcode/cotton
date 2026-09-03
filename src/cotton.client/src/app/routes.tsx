@@ -14,17 +14,14 @@ import { useTranslation } from "react-i18next";
 import { AppLayout, PublicLayout } from "./layouts";
 import { Folder, Home, Delete } from "@mui/icons-material";
 import { SetupGate } from "../features/settings/SetupGate";
-import { unlockApi, type UnlockStatusResponse } from "../shared/api/unlockApi";
 import {
   startupApi,
   type StartupStatusResponse,
 } from "../shared/api/startupApi";
+import { HomePage } from "../pages/home";
 
 const FilesPage = lazy(() =>
   import("../pages/files").then((module) => ({ default: module.FilesPage })),
-);
-const HomePage = lazy(() =>
-  import("../pages/home").then((module) => ({ default: module.HomePage })),
 );
 const LoginPage = lazy(() =>
   import("../pages/login/LoginPage").then((module) => ({
@@ -192,18 +189,12 @@ const publicRoutes: RouteConfig[] = [
 ];
 
 export function AppRoutes() {
-  const { t } = useTranslation(["login", "unlock", "startup"]);
+  const { t } = useTranslation(["login", "startup"]);
   const location = useLocation();
   const [startupStatus, setStartupStatus] =
     useState<StartupStatusResponse | null>(null);
   const [startupCheckState, setStartupCheckState] = useState<
     "checking" | "ready" | "blocked"
-  >("checking");
-  const [lockStatus, setLockStatus] = useState<UnlockStatusResponse | null>(
-    null,
-  );
-  const [lockCheckState, setLockCheckState] = useState<
-    "checking" | "locked" | "unlocked"
   >("checking");
   const {
     hydrated,
@@ -235,40 +226,15 @@ export function AppRoutes() {
     };
   }, []);
 
-  useEffect(() => {
-    if (startupCheckState !== "ready") {
-      return;
-    }
-
-    let cancelled = false;
-
-    unlockApi
-      .getStatus()
-      .then((status) => {
-        if (cancelled) return;
-        setLockStatus(status);
-        setLockCheckState(status ? "locked" : "unlocked");
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLockStatus(null);
-        setLockCheckState("unlocked");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [startupCheckState]);
-
   const isPublicRoute = publicRoutes.some((route) =>
     Boolean(matchPath({ path: route.path, end: true }, location.pathname)),
   );
 
   useEffect(() => {
-    if (lockCheckState !== "unlocked") return;
+    if (startupCheckState !== "ready") return;
     if (isPublicRoute) return;
     ensureAuth();
-  }, [ensureAuth, isPublicRoute, lockCheckState]);
+  }, [ensureAuth, isPublicRoute, startupCheckState]);
 
   if (startupCheckState === "checking") {
     return (
@@ -289,41 +255,6 @@ export function AppRoutes() {
             element={withRouteSuspense(
               <StartupBlockedPage blocker={startupStatus?.blocker ?? null} />,
             )}
-          />
-        </Route>
-      </Routes>
-    );
-  }
-
-  if (lockCheckState === "checking") {
-    return (
-      <Loader
-        overlay={true}
-        title={t("checking.title", { ns: "unlock" })}
-        caption={t("checking.caption", { ns: "unlock" })}
-      />
-    );
-  }
-
-  if (lockCheckState === "locked") {
-    return (
-      <Routes>
-        <Route element={<PublicLayout />}>
-          <Route
-            path="/unlock"
-            element={withRouteSuspense(
-              <UnlockPage initialStatus={lockStatus ?? undefined} />,
-            )}
-          />
-          <Route
-            path="*"
-            element={
-              <Navigate
-                to="/unlock"
-                replace
-                state={{ from: location.pathname, status: lockStatus }}
-              />
-            }
           />
         </Route>
       </Routes>
@@ -352,7 +283,7 @@ export function AppRoutes() {
       icon: <Home />,
       protected: true,
       translationKey: "home",
-      element: withRouteSuspense(<HomePage />),
+      element: <HomePage />,
     },
     {
       path: "/files",
