@@ -2325,6 +2325,53 @@
         "title": "File recenti",
         "empty": "Nessun file recente"
       }
+    },
+    "dashboard": {
+      "title": "Il Suo spazio",
+      "actions": {
+        "customize": "Personalizza",
+        "done": "Fatto",
+        "moveUp": "Sposta su",
+        "moveDown": "Sposta giù",
+        "hide": "Nascondi widget"
+      },
+      "widgets": {
+        "overview": "Riepilogo spazio",
+        "pinnedFolders": "Cartelle fissate",
+        "quickAccess": "Accesso rapido",
+        "recentFiles": "File recenti",
+        "recentImages": "Foto recenti",
+        "recentVideos": "Video recenti",
+        "recentDocuments": "Documenti recenti",
+        "recentAudio": "Audio recente",
+        "recentOther": "Altri file recenti"
+      },
+      "overview": {
+        "ofQuota": "di {{quota}}",
+        "storageUsage": "Utilizzo spazio",
+        "available": "Disponibile"
+      },
+      "quickAccess": {
+        "files": "File",
+        "search": "Cerca",
+        "trash": "Cestino"
+      },
+      "recent": {
+        "empty": "Nessun file recente corrispondente"
+      },
+      "pinnedFolders": {
+        "folder": "Cartella",
+        "pin": "Fissa alla dashboard",
+        "unpin": "Rimuovi dalla dashboard",
+        "empty": "Nessuna cartella fissata",
+        "emptyHint": "Fissi una cartella dalle sue azioni in File.",
+        "limitReached": "Può fissare fino a {{count}} cartelle."
+      },
+      "library": {
+        "title": "Altri widget",
+        "description": "I widget nascosti restano qui finché non vengono aggiunti di nuovo.",
+        "empty": "Tutti i widget disponibili sono nella dashboard."
+      }
     }
   },
   "files": {

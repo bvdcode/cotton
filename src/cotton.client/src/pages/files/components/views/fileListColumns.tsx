@@ -16,6 +16,8 @@ import {
   VideoFile,
   Share,
   Restore,
+  Star,
+  StarBorder,
 } from "@mui/icons-material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { formatBytes } from "../../../../shared/utils/formatBytes";
@@ -75,6 +77,8 @@ interface ColumnOptions {
     encryptedFolder: string;
     enableEncryptionPolicy: string;
     disableEncryptionPolicy: string;
+    pin: string;
+    unpin: string;
   };
   newFolderName: string;
   onNewFolderNameChange: (value: string) => void;
@@ -103,6 +107,8 @@ interface ColumnOptions {
     onShare?: (id: string, name: string) => void;
     onCut?: (id: string) => void;
     onToggleEncryptionPolicy?: (id: string, currentlyEnabled: boolean) => void;
+    onTogglePin?: (id: string) => void;
+    isPinned?: (id: string) => boolean;
   };
   fileOperations: {
     isRenaming: (id: string) => boolean;
@@ -467,6 +473,16 @@ const buildFolderActionButtons = (
 
   if (options.readOnly) {
     return actions;
+  }
+
+  if (operations.onTogglePin) {
+    const pinned = operations.isPinned?.(row.id) ?? false;
+    actions.push({
+      key: "pin",
+      icon: pinned ? <Star fontSize="small" /> : <StarBorder fontSize="small" />,
+      title: pinned ? options.labels.unpin : options.labels.pin,
+      onClick: () => operations.onTogglePin?.(row.id),
+    });
   }
 
   if (operations.onStartRename) {

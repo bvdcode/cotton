@@ -2327,6 +2327,53 @@
         "title": "Ostatnie pliki",
         "empty": "Brak ostatnich plików"
       }
+    },
+    "dashboard": {
+      "title": "Twoja przestrzeń",
+      "actions": {
+        "customize": "Dostosuj",
+        "done": "Gotowe",
+        "moveUp": "Przenieś wyżej",
+        "moveDown": "Przenieś niżej",
+        "hide": "Ukryj widżet"
+      },
+      "widgets": {
+        "overview": "Przegląd miejsca",
+        "pinnedFolders": "Przypięte foldery",
+        "quickAccess": "Szybki dostęp",
+        "recentFiles": "Ostatnie pliki",
+        "recentImages": "Ostatnie zdjęcia",
+        "recentVideos": "Ostatnie filmy",
+        "recentDocuments": "Ostatnie dokumenty",
+        "recentAudio": "Ostatnie audio",
+        "recentOther": "Inne ostatnie pliki"
+      },
+      "overview": {
+        "ofQuota": "z {{quota}}",
+        "storageUsage": "Użycie miejsca",
+        "available": "Dostępne"
+      },
+      "quickAccess": {
+        "files": "Pliki",
+        "search": "Szukaj",
+        "trash": "Kosz"
+      },
+      "recent": {
+        "empty": "Brak pasujących ostatnich plików"
+      },
+      "pinnedFolders": {
+        "folder": "Folder",
+        "pin": "Przypnij do pulpitu",
+        "unpin": "Odepnij od pulpitu",
+        "empty": "Brak przypiętych folderów",
+        "emptyHint": "Przypnij folder przez jego akcje w sekcji Pliki.",
+        "limitReached": "Możesz przypiąć maksymalnie {{count}} folderów."
+      },
+      "library": {
+        "title": "Więcej widżetów",
+        "description": "Ukryte widżety pozostają tutaj, dopóki ich nie przywrócisz.",
+        "empty": "Wszystkie dostępne widżety są na pulpicie."
+      }
     }
   },
   "files": {

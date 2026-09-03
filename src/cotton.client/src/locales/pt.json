@@ -2326,6 +2326,53 @@
         "title": "Arquivos recentes",
         "empty": "Sem arquivos recentes"
       }
+    },
+    "dashboard": {
+      "title": "Seu espaço",
+      "actions": {
+        "customize": "Personalizar",
+        "done": "Concluído",
+        "moveUp": "Mover para cima",
+        "moveDown": "Mover para baixo",
+        "hide": "Ocultar widget"
+      },
+      "widgets": {
+        "overview": "Resumo do armazenamento",
+        "pinnedFolders": "Pastas fixadas",
+        "quickAccess": "Acesso rápido",
+        "recentFiles": "Arquivos recentes",
+        "recentImages": "Fotos recentes",
+        "recentVideos": "Vídeos recentes",
+        "recentDocuments": "Documentos recentes",
+        "recentAudio": "Áudio recente",
+        "recentOther": "Outros arquivos recentes"
+      },
+      "overview": {
+        "ofQuota": "de {{quota}}",
+        "storageUsage": "Uso do armazenamento",
+        "available": "Disponível"
+      },
+      "quickAccess": {
+        "files": "Arquivos",
+        "search": "Pesquisar",
+        "trash": "Lixeira"
+      },
+      "recent": {
+        "empty": "Nenhum arquivo recente correspondente"
+      },
+      "pinnedFolders": {
+        "folder": "Pasta",
+        "pin": "Fixar no painel",
+        "unpin": "Desafixar do painel",
+        "empty": "Nenhuma pasta fixada ainda",
+        "emptyHint": "Fixe uma pasta pelas ações em Arquivos.",
+        "limitReached": "Você pode fixar até {{count}} pastas."
+      },
+      "library": {
+        "title": "Mais widgets",
+        "description": "Widgets ocultos ficam aqui até serem adicionados novamente.",
+        "empty": "Todos os widgets disponíveis estão no seu painel."
+      }
     }
   },
   "files": {

@@ -319,6 +319,12 @@ const FolderTileItem = ({
             ? () => folderOperations.onCut?.(tile.node.id)
             : undefined
         }
+        onTogglePin={
+          folderOperations.onTogglePin
+            ? () => folderOperations.onTogglePin?.(tile.node.id)
+            : undefined
+        }
+        isPinned={folderOperations.isPinned?.(tile.node.id) ?? false}
         onToggleEncryptionPolicy={
           folderOperations.onToggleEncryptionPolicy
             ? () =>

@@ -2332,6 +2332,53 @@
         "title": "最近的文件",
         "empty": "暂无最近文件"
       }
+    },
+    "dashboard": {
+      "title": "您的空间",
+      "actions": {
+        "customize": "自定义",
+        "done": "完成",
+        "moveUp": "上移",
+        "moveDown": "下移",
+        "hide": "隐藏小组件"
+      },
+      "widgets": {
+        "overview": "存储概览",
+        "pinnedFolders": "固定文件夹",
+        "quickAccess": "快速访问",
+        "recentFiles": "最近文件",
+        "recentImages": "最近照片",
+        "recentVideos": "最近视频",
+        "recentDocuments": "最近文档",
+        "recentAudio": "最近音频",
+        "recentOther": "其他最近文件"
+      },
+      "overview": {
+        "ofQuota": "共 {{quota}}",
+        "storageUsage": "存储使用情况",
+        "available": "可用"
+      },
+      "quickAccess": {
+        "files": "文件",
+        "search": "搜索",
+        "trash": "回收站"
+      },
+      "recent": {
+        "empty": "没有匹配的最近文件"
+      },
+      "pinnedFolders": {
+        "folder": "文件夹",
+        "pin": "固定到主页",
+        "unpin": "从主页取消固定",
+        "empty": "尚无固定文件夹",
+        "emptyHint": "可在“文件”中通过文件夹操作进行固定。",
+        "limitReached": "最多可以固定 {{count}} 个文件夹。"
+      },
+      "library": {
+        "title": "更多小组件",
+        "description": "隐藏的小组件会保留在这里，直到您重新添加。",
+        "empty": "所有可用小组件都已显示在主页。"
+      }
     }
   },
   "files": {

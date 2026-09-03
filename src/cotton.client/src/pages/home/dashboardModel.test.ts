@@ -3,6 +3,7 @@ import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
 import {
   DASHBOARD_WIDGET_IDS,
   DEFAULT_DASHBOARD_LAYOUT,
+  RECENT_FILES_FILTERS,
   filterRecentFiles,
   hideDashboardWidget,
   moveDashboardWidget,
@@ -115,5 +116,20 @@ describe("recent file categories", () => {
       "archive",
       "other",
     ]);
+  });
+
+  it("uses server filters for every category card", () => {
+    expect(RECENT_FILES_FILTERS.recentImages).toEqual({
+      contentTypes: ["image/*"],
+    });
+    expect(RECENT_FILES_FILTERS.recentVideos).toEqual({
+      contentTypes: ["video/*"],
+    });
+    expect(RECENT_FILES_FILTERS.recentDocuments.contentTypes).toContain(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    expect(RECENT_FILES_FILTERS.recentOther.excludedContentTypes).toEqual(
+      expect.arrayContaining(["image/*", "video/*", "audio/*"]),
+    );
   });
 });

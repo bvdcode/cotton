@@ -2120,6 +2120,53 @@
         "title": "Recent Files",
         "empty": "No recent files"
       }
+    },
+    "dashboard": {
+      "title": "Your space",
+      "actions": {
+        "customize": "Customize",
+        "done": "Done",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "hide": "Hide widget"
+      },
+      "widgets": {
+        "overview": "Storage overview",
+        "pinnedFolders": "Pinned folders",
+        "quickAccess": "Quick access",
+        "recentFiles": "Recent files",
+        "recentImages": "Recent photos",
+        "recentVideos": "Recent videos",
+        "recentDocuments": "Recent documents",
+        "recentAudio": "Recent audio",
+        "recentOther": "Other recent files"
+      },
+      "overview": {
+        "ofQuota": "of {{quota}}",
+        "storageUsage": "Storage usage",
+        "available": "Available"
+      },
+      "quickAccess": {
+        "files": "Files",
+        "search": "Search",
+        "trash": "Trash"
+      },
+      "recent": {
+        "empty": "No matching recent files"
+      },
+      "pinnedFolders": {
+        "folder": "Folder",
+        "pin": "Pin to dashboard",
+        "unpin": "Unpin from dashboard",
+        "empty": "No pinned folders yet",
+        "emptyHint": "Pin a folder from its actions in Files.",
+        "limitReached": "You can pin up to {{count}} folders."
+      },
+      "library": {
+        "title": "More widgets",
+        "description": "Hidden widgets stay here until you add them back.",
+        "empty": "All available widgets are on your dashboard."
+      }
     }
   },
   "files": {

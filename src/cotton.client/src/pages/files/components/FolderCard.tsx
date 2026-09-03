@@ -7,6 +7,8 @@ import {
   LockOutlined,
   Restore,
   Share,
+  Star,
+  StarBorder,
 } from "@mui/icons-material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -31,6 +33,8 @@ interface FolderCardProps {
   onDownload?: () => void;
   onShare?: () => void;
   onCut?: () => void;
+  onTogglePin?: () => void;
+  isPinned?: boolean;
   onToggleEncryptionPolicy?: () => void;
   encryptionPolicy?: FolderEncryptionPolicyState;
   onClick: (event?: React.SyntheticEvent) => void;
@@ -50,11 +54,13 @@ type FolderActionOptions = Pick<
   | "onRestore"
   | "onShare"
   | "onStartRename"
+  | "onTogglePin"
   | "onToggleEncryptionPolicy"
   | "readOnly"
 > & {
   encryptionPolicyInherited: boolean;
   explicitEncryptionPolicyEnabled: boolean;
+  isPinned: boolean;
   t: ReturnType<typeof useTranslation>["t"];
 };
 
@@ -65,6 +71,7 @@ const buildFolderActions = (options: FolderActionOptions): FolderAction[] => {
     return actions;
   }
 
+  addPinAction(actions, options);
   addShareAction(actions, options);
   addRenameAction(actions, options);
   addCutAction(actions, options);
@@ -72,6 +79,21 @@ const buildFolderActions = (options: FolderActionOptions): FolderAction[] => {
   addRestoreAction(actions, options);
   addDeleteAction(actions, options);
   return actions;
+};
+
+const addPinAction = (
+  actions: FolderAction[],
+  options: FolderActionOptions,
+) => {
+  if (options.onTogglePin) {
+    actions.push({
+      icon: options.isPinned ? <Star /> : <StarBorder />,
+      onClick: options.onTogglePin,
+      tooltip: options.isPinned
+        ? options.t("home:dashboard.pinnedFolders.unpin")
+        : options.t("home:dashboard.pinnedFolders.pin"),
+    });
+  }
 };
 
 const addDownloadAction = (
@@ -186,6 +208,8 @@ export const FolderCard = ({
   onDownload,
   onShare,
   onCut,
+  onTogglePin,
+  isPinned = false,
   onToggleEncryptionPolicy,
   encryptionPolicy,
   onClick,
@@ -211,9 +235,11 @@ export const FolderCard = ({
         onRestore,
         onShare,
         onStartRename,
+        onTogglePin,
         onToggleEncryptionPolicy,
         readOnly,
         t,
+        isPinned,
       }),
     [
       encryptionPolicyInherited,
@@ -224,9 +250,11 @@ export const FolderCard = ({
       onRestore,
       onShare,
       onStartRename,
+      onTogglePin,
       onToggleEncryptionPolicy,
       readOnly,
       t,
+      isPinned,
     ],
   );
 

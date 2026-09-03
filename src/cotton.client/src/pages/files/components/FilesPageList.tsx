@@ -18,6 +18,7 @@ import type { useFilesEncryptionController } from "../hooks/useFilesEncryptionCo
 import type { useFilesSelectionActions } from "../hooks/useFilesSelectionActions";
 import { FileListViewFactory } from "./views";
 import { FileVersionsDialog } from "./FileVersionsDialog";
+import { usePinnedFolders } from "@shared/dashboard/usePinnedFolders";
 
 interface FilesPageListProps {
   content: NodeContentDto | undefined;
@@ -57,6 +58,7 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
     id: string;
     name: string;
   } | null>(null);
+  const pinnedFolders = usePinnedFolders();
 
   const handleOpenVersions = useCallback((fileId: string, fileName: string) => {
     setVersionDialogFile({ id: fileId, name: fileName });
@@ -90,6 +92,8 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
     encryption.handleToggleFolderEncryption,
     encryption.getChildFolderEncryptionPolicyState,
     selectionActions.handleDownloadFolder,
+    pinnedFolders.togglePinned,
+    pinnedFolders.isPinned,
   );
   const fileOperations = buildFileOperations(contentOperations.fileOps, {
     onDownload: fileListLogic.interaction.handleDownloadFile,

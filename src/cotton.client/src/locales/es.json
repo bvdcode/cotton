@@ -2322,6 +2322,53 @@
         "title": "Archivos recientes",
         "empty": "Sin archivos recientes"
       }
+    },
+    "dashboard": {
+      "title": "Tu espacio",
+      "actions": {
+        "customize": "Personalizar",
+        "done": "Listo",
+        "moveUp": "Subir",
+        "moveDown": "Bajar",
+        "hide": "Ocultar widget"
+      },
+      "widgets": {
+        "overview": "Resumen de almacenamiento",
+        "pinnedFolders": "Carpetas fijadas",
+        "quickAccess": "Acceso rápido",
+        "recentFiles": "Archivos recientes",
+        "recentImages": "Fotos recientes",
+        "recentVideos": "Vídeos recientes",
+        "recentDocuments": "Documentos recientes",
+        "recentAudio": "Audio reciente",
+        "recentOther": "Otros archivos recientes"
+      },
+      "overview": {
+        "ofQuota": "de {{quota}}",
+        "storageUsage": "Uso del almacenamiento",
+        "available": "Disponible"
+      },
+      "quickAccess": {
+        "files": "Archivos",
+        "search": "Buscar",
+        "trash": "Papelera"
+      },
+      "recent": {
+        "empty": "No hay archivos recientes que coincidan"
+      },
+      "pinnedFolders": {
+        "folder": "Carpeta",
+        "pin": "Fijar al panel",
+        "unpin": "Quitar del panel",
+        "empty": "Aún no hay carpetas fijadas",
+        "emptyHint": "Fija una carpeta desde sus acciones en Archivos.",
+        "limitReached": "Puedes fijar hasta {{count}} carpetas."
+      },
+      "library": {
+        "title": "Más widgets",
+        "description": "Los widgets ocultos permanecen aquí hasta que los vuelvas a añadir.",
+        "empty": "Todos los widgets disponibles están en tu panel."
+      }
     }
   },
   "files": {

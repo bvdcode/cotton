@@ -26,6 +26,56 @@ export type RecentFilesWidgetId = Extract<
   | "recentOther"
 >;
 
+export interface RecentFilesFilter {
+  contentTypes?: readonly string[];
+  excludedContentTypes?: readonly string[];
+}
+
+export const RECENT_FILES_FILTERS: Record<
+  RecentFilesWidgetId,
+  RecentFilesFilter
+> = {
+  recentFiles: {},
+  recentImages: { contentTypes: ["image/*"] },
+  recentVideos: { contentTypes: ["video/*"] },
+  recentDocuments: {
+    contentTypes: [
+      "application/pdf",
+      "text/*",
+      "application/msword",
+      "application/rtf",
+      "application/vnd.ms-excel",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.oasis.opendocument.text",
+      "application/vnd.oasis.opendocument.spreadsheet",
+      "application/vnd.oasis.opendocument.presentation",
+    ],
+  },
+  recentAudio: { contentTypes: ["audio/*"] },
+  recentOther: {
+    excludedContentTypes: [
+      "image/*",
+      "video/*",
+      "audio/*",
+      "application/pdf",
+      "text/*",
+      "application/msword",
+      "application/rtf",
+      "application/vnd.ms-excel",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.oasis.opendocument.text",
+      "application/vnd.oasis.opendocument.spreadsheet",
+      "application/vnd.oasis.opendocument.presentation",
+    ],
+  },
+};
+
 export interface DashboardLayout {
   order: DashboardWidgetId[];
   hidden: DashboardWidgetId[];

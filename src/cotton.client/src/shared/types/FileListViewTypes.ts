@@ -59,6 +59,8 @@ export interface FolderOperations {
   onDownload?: (folderId: string, name: string) => void;
   onShare?: (folderId: string, name: string) => void;
   onCut?: (folderId: string) => void;
+  onTogglePin?: (folderId: string) => void;
+  isPinned?: (folderId: string) => boolean;
   onToggleEncryptionPolicy?: (
     folderId: string,
     currentlyEnabled: boolean,

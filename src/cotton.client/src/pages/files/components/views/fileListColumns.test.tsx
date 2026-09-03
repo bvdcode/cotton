@@ -22,6 +22,8 @@ const labels = {
   encryptedFolder: "Encrypted folder",
   enableEncryptionPolicy: "Enable E2E",
   disableEncryptionPolicy: "Disable E2E",
+  pin: "Pin",
+  unpin: "Unpin",
 };
 
 const fileOperations = {

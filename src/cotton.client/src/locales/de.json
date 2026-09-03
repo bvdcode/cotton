@@ -2319,6 +2319,53 @@
         "title": "Letzte Dateien",
         "empty": "Keine letzten Dateien"
       }
+    },
+    "dashboard": {
+      "title": "Dein Bereich",
+      "actions": {
+        "customize": "Anpassen",
+        "done": "Fertig",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten",
+        "hide": "Widget ausblenden"
+      },
+      "widgets": {
+        "overview": "Speicherübersicht",
+        "pinnedFolders": "Angeheftete Ordner",
+        "quickAccess": "Schnellzugriff",
+        "recentFiles": "Letzte Dateien",
+        "recentImages": "Letzte Fotos",
+        "recentVideos": "Letzte Videos",
+        "recentDocuments": "Letzte Dokumente",
+        "recentAudio": "Letzte Audiodateien",
+        "recentOther": "Andere letzte Dateien"
+      },
+      "overview": {
+        "ofQuota": "von {{quota}}",
+        "storageUsage": "Speichernutzung",
+        "available": "Verfügbar"
+      },
+      "quickAccess": {
+        "files": "Dateien",
+        "search": "Suchen",
+        "trash": "Papierkorb"
+      },
+      "recent": {
+        "empty": "Keine passenden letzten Dateien"
+      },
+      "pinnedFolders": {
+        "folder": "Ordner",
+        "pin": "An Startseite anheften",
+        "unpin": "Von Startseite lösen",
+        "empty": "Noch keine angehefteten Ordner",
+        "emptyHint": "Hefte einen Ordner über seine Aktionen unter Dateien an.",
+        "limitReached": "Du kannst bis zu {{count}} Ordner anheften."
+      },
+      "library": {
+        "title": "Weitere Widgets",
+        "description": "Ausgeblendete Widgets bleiben hier, bis du sie wieder hinzufügst.",
+        "empty": "Alle verfügbaren Widgets sind auf deiner Startseite."
+      }
     }
   },
   "files": {

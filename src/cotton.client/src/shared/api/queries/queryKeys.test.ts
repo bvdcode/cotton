@@ -132,11 +132,13 @@ describe("queryKeys prefix matching", () => {
 
 describe("queryKeys shape stability", () => {
   it("keeps layout and server settings key shapes stable", () => {
-    expect(queryKeys.layouts.recent("layout-1", 5)).toEqual([
+    expect(queryKeys.layouts.recentFiltered("layout-1", 5, [], [])).toEqual([
       "layouts",
       "recent",
       "layout-1",
       5,
+      [],
+      [],
     ]);
     expect(queryKeys.serverSettings.all()).toEqual(["serverSettings"]);
     expect(queryKeys.storageQuota.current()).toEqual([

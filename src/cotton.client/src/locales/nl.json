@@ -2324,6 +2324,53 @@
         "title": "Recente bestanden",
         "empty": "Geen recente bestanden"
       }
+    },
+    "dashboard": {
+      "title": "Uw ruimte",
+      "actions": {
+        "customize": "Aanpassen",
+        "done": "Gereed",
+        "moveUp": "Omhoog",
+        "moveDown": "Omlaag",
+        "hide": "Widget verbergen"
+      },
+      "widgets": {
+        "overview": "Opslagoverzicht",
+        "pinnedFolders": "Vastgezette mappen",
+        "quickAccess": "Snelle toegang",
+        "recentFiles": "Recente bestanden",
+        "recentImages": "Recente foto's",
+        "recentVideos": "Recente video's",
+        "recentDocuments": "Recente documenten",
+        "recentAudio": "Recente audio",
+        "recentOther": "Andere recente bestanden"
+      },
+      "overview": {
+        "ofQuota": "van {{quota}}",
+        "storageUsage": "Opslaggebruik",
+        "available": "Beschikbaar"
+      },
+      "quickAccess": {
+        "files": "Bestanden",
+        "search": "Zoeken",
+        "trash": "Prullenbak"
+      },
+      "recent": {
+        "empty": "Geen overeenkomende recente bestanden"
+      },
+      "pinnedFolders": {
+        "folder": "Map",
+        "pin": "Vastzetten op dashboard",
+        "unpin": "Losmaken van dashboard",
+        "empty": "Nog geen vastgezette mappen",
+        "emptyHint": "Zet een map vast via de acties in Bestanden.",
+        "limitReached": "U kunt maximaal {{count}} mappen vastzetten."
+      },
+      "library": {
+        "title": "Meer widgets",
+        "description": "Verborgen widgets blijven hier totdat u ze terugplaatst.",
+        "empty": "Alle beschikbare widgets staan op uw dashboard."
+      }
     }
   },
   "files": {

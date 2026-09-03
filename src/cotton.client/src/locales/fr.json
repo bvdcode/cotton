@@ -2323,6 +2323,53 @@
         "title": "Fichiers récents",
         "empty": "Aucun fichier récent"
       }
+    },
+    "dashboard": {
+      "title": "Votre espace",
+      "actions": {
+        "customize": "Personnaliser",
+        "done": "Terminé",
+        "moveUp": "Monter",
+        "moveDown": "Descendre",
+        "hide": "Masquer le widget"
+      },
+      "widgets": {
+        "overview": "Aperçu du stockage",
+        "pinnedFolders": "Dossiers épinglés",
+        "quickAccess": "Accès rapide",
+        "recentFiles": "Fichiers récents",
+        "recentImages": "Photos récentes",
+        "recentVideos": "Vidéos récentes",
+        "recentDocuments": "Documents récents",
+        "recentAudio": "Audio récent",
+        "recentOther": "Autres fichiers récents"
+      },
+      "overview": {
+        "ofQuota": "sur {{quota}}",
+        "storageUsage": "Utilisation du stockage",
+        "available": "Disponible"
+      },
+      "quickAccess": {
+        "files": "Fichiers",
+        "search": "Rechercher",
+        "trash": "Corbeille"
+      },
+      "recent": {
+        "empty": "Aucun fichier récent correspondant"
+      },
+      "pinnedFolders": {
+        "folder": "Dossier",
+        "pin": "Épingler au tableau de bord",
+        "unpin": "Détacher du tableau de bord",
+        "empty": "Aucun dossier épinglé",
+        "emptyHint": "Épinglez un dossier depuis ses actions dans Fichiers.",
+        "limitReached": "Vous pouvez épingler jusqu’à {{count}} dossiers."
+      },
+      "library": {
+        "title": "Autres widgets",
+        "description": "Les widgets masqués restent ici jusqu’à ce que vous les ajoutiez à nouveau.",
+        "empty": "Tous les widgets disponibles sont sur votre tableau de bord."
+      }
     }
   },
   "files": {

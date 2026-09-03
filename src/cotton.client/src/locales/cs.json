@@ -2324,6 +2324,53 @@
         "title": "Nedávné soubory",
         "empty": "Žádné nedávné soubory"
       }
+    },
+    "dashboard": {
+      "title": "Váš prostor",
+      "actions": {
+        "customize": "Přizpůsobit",
+        "done": "Hotovo",
+        "moveUp": "Posunout nahoru",
+        "moveDown": "Posunout dolů",
+        "hide": "Skrýt widget"
+      },
+      "widgets": {
+        "overview": "Přehled úložiště",
+        "pinnedFolders": "Připnuté složky",
+        "quickAccess": "Rychlý přístup",
+        "recentFiles": "Nedávné soubory",
+        "recentImages": "Nedávné fotografie",
+        "recentVideos": "Nedávná videa",
+        "recentDocuments": "Nedávné dokumenty",
+        "recentAudio": "Nedávný zvuk",
+        "recentOther": "Ostatní nedávné soubory"
+      },
+      "overview": {
+        "ofQuota": "z {{quota}}",
+        "storageUsage": "Využití úložiště",
+        "available": "K dispozici"
+      },
+      "quickAccess": {
+        "files": "Soubory",
+        "search": "Hledat",
+        "trash": "Koš"
+      },
+      "recent": {
+        "empty": "Žádné odpovídající nedávné soubory"
+      },
+      "pinnedFolders": {
+        "folder": "Složka",
+        "pin": "Připnout na nástěnku",
+        "unpin": "Odepnout z nástěnky",
+        "empty": "Zatím žádné připnuté složky",
+        "emptyHint": "Připněte složku pomocí jejích akcí v Souborech.",
+        "limitReached": "Můžete připnout až {{count}} složek."
+      },
+      "library": {
+        "title": "Další widgety",
+        "description": "Skryté widgety zde zůstanou, dokud je nepřidáte zpět.",
+        "empty": "Všechny dostupné widgety jsou na nástěnce."
+      }
     }
   },
   "files": {

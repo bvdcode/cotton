@@ -21,8 +21,6 @@ export const queryKeys = {
     stats: (layoutId: string) => [...layoutsRoot, "stats", layoutId] as const,
     recentAll: (layoutId: string) =>
       [...layoutsRoot, "recent", layoutId] as const,
-    recent: (layoutId: string, count: number) =>
-      [...queryKeys.layouts.recentAll(layoutId), count] as const,
     recentFiltered: (
       layoutId: string,
       count: number,
