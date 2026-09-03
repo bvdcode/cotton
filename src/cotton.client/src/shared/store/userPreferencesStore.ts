@@ -92,8 +92,83 @@ interface UserPreferencesState {
   reset: () => void;
 }
 
-export const useUserPreferencesStore = create<UserPreferencesState>()(
-  (set, get) => ({
+interface ActivePreferencesSync {
+  generation: number;
+  promise: Promise<void>;
+}
+
+const hasPreferenceEntries = (preferences: UserPreferences): boolean =>
+  Object.keys(preferences).length > 0;
+
+export const useUserPreferencesStore = create<UserPreferencesState>()((
+  set,
+  get,
+) => {
+  let confirmedPreferences: UserPreferences = {};
+  let pendingPatch: UserPreferences = {};
+  let activeSync: ActivePreferencesSync | null = null;
+  let syncGeneration = 0;
+
+  const flushPendingPatches = async (generation: number): Promise<void> => {
+    while (
+      generation === syncGeneration &&
+      hasPreferenceEntries(pendingPatch)
+    ) {
+      const patch = pendingPatch;
+      pendingPatch = {};
+
+      try {
+        const next = await userPreferencesApi.update(patch);
+        if (generation !== syncGeneration) {
+          return;
+        }
+
+        confirmedPreferences = next;
+      } catch {
+        if (generation !== syncGeneration) {
+          return;
+        }
+      }
+
+      set({
+        preferences: { ...confirmedPreferences, ...pendingPatch },
+        loaded: true,
+        syncing: true,
+      });
+    }
+  };
+
+  const ensurePreferencesSync = (): Promise<void> => {
+    if (activeSync?.generation === syncGeneration) {
+      return activeSync.promise;
+    }
+
+    const generation = syncGeneration;
+    const promise = flushPendingPatches(generation);
+    activeSync = { generation, promise };
+
+    const finish = (): void => {
+      if (activeSync?.promise !== promise) {
+        return;
+      }
+
+      activeSync = null;
+      if (generation !== syncGeneration) {
+        return;
+      }
+
+      if (hasPreferenceEntries(pendingPatch)) {
+        void ensurePreferencesSync();
+        return;
+      }
+
+      set({ syncing: false });
+    };
+    void promise.then(finish, finish);
+    return promise;
+  };
+
+  return {
     preferences: {},
     loaded: false,
     syncing: false,
@@ -101,26 +176,27 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
     hydrateFromUser: (user) => {
       if (!user?.preferences) return;
       if (get().syncing) return;
-      set({ preferences: user.preferences, loaded: true });
+      confirmedPreferences = { ...user.preferences };
+      set({ preferences: confirmedPreferences, loaded: true });
     },
 
     hydrateFromRemote: (preferences) => {
       if (get().syncing) return;
-      set({ preferences, loaded: true });
+      confirmedPreferences = { ...preferences };
+      set({ preferences: confirmedPreferences, loaded: true });
     },
 
-    updatePreferences: async (patch) => {
-      const previous = get().preferences;
-      const optimistic: UserPreferences = { ...previous, ...patch };
-
-      set({ preferences: optimistic, syncing: true });
-
-      try {
-        const next = await userPreferencesApi.update(patch);
-        set({ preferences: next, loaded: true, syncing: false });
-      } catch {
-        set({ preferences: previous, syncing: false });
+    updatePreferences: (patch) => {
+      if (!hasPreferenceEntries(patch)) {
+        return Promise.resolve();
       }
+
+      pendingPatch = { ...pendingPatch, ...patch };
+      set((state) => ({
+        preferences: { ...state.preferences, ...patch },
+        syncing: true,
+      }));
+      return ensurePreferencesSync();
     },
 
     setThemeMode: (mode) => {
@@ -179,9 +255,15 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       });
     },
 
-    reset: () => set({ preferences: {}, loaded: false, syncing: false }),
-  }),
-);
+    reset: () => {
+      syncGeneration += 1;
+      confirmedPreferences = {};
+      pendingPatch = {};
+      activeSync = null;
+      set({ preferences: {}, loaded: false, syncing: false });
+    },
+  };
+});
 
 export const selectThemeMode = (state: UserPreferencesState): ThemeMode => {
   return parseThemeModePreference(
