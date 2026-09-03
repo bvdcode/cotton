@@ -3,6 +3,8 @@
 
 using Cotton.Files;
 using Cotton.Nodes;
+using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
@@ -13,6 +15,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using NUnit.Framework;
 using System.IO.Compression;
@@ -276,8 +279,12 @@ namespace Cotton.Server.IntegrationTests
             string shareLink = (await shareLinkRes.Content.ReadAsStringAsync()).Trim('"');
             string shareToken = shareLink.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
 
-            await DbContext.Database.ExecuteSqlInterpolatedAsync(
-                $"UPDATE nodes SET parent_id = {sharedRoot.Id} WHERE id = {outsideParent.Id}");
+            int updatedRows = await DbContext.Nodes
+                .Where(node => node.Id == outsideParent.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(
+                    node => node.ParentId,
+                    sharedRoot.Id));
+            Assert.That(updatedRows, Is.EqualTo(1));
 
             _client.DefaultRequestHeaders.Authorization = null;
 
@@ -345,20 +352,25 @@ namespace Cotton.Server.IntegrationTests
                 .Select(x => new { x.Id, x.LayoutId, x.OwnerId })
                 .SingleAsync(x => x.Id == sharedRoot.Id);
 
-            await DbContext.Database.ExecuteSqlInterpolatedAsync($@"
-            INSERT INTO nodes (id, created_at, updated_at, owner_id, layout_id, parent_id, type, name, name_key, metadata)
-            SELECT
-                md5(i::text || {sharedRoot.Id.ToString()})::uuid,
-                NOW(),
-                NOW(),
-                {sharedRootEntity.OwnerId},
-                {sharedRootEntity.LayoutId},
-                {sharedRoot.Id},
-                {(int)NodeType.Default},
-                'child-' || lpad(i::text, 4, '0'),
-                'child-' || lpad(i::text, 4, '0'),
-                NULL
-            FROM generate_series(0, 4999) AS s(i)");
+            const int publicShareEntryLimit = 5_000;
+            List<Node> children = new(publicShareEntryLimit);
+            for (int i = 0; i < publicShareEntryLimit; i++)
+            {
+                Node child = new()
+                {
+                    OwnerId = sharedRootEntity.OwnerId,
+                    LayoutId = sharedRootEntity.LayoutId,
+                    ParentId = sharedRoot.Id,
+                    Type = NodeType.Default,
+                };
+                child.SetName($"child-{i:D4}");
+                children.Add(child);
+            }
+
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            await dbContext.Nodes.AddRangeAsync(children);
+            await dbContext.SaveChangesAsync();
 
             HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
             shareLinkRes.EnsureSuccessStatusCode();

@@ -32,11 +32,15 @@ namespace Cotton.Server.IntegrationTests.Common
             "cotton-server-integration-storage",
             Guid.NewGuid().ToString("N"));
         private readonly Dictionary<string, string?> _overrides;
+        private readonly Action<IServiceCollection>? _configureServices;
         private readonly Dictionary<string, string?> _previousEnvironmentVariables = [];
 
-        public TestAppFactory(Dictionary<string, string?> overrides)
+        public TestAppFactory(
+            Dictionary<string, string?> overrides,
+            Action<IServiceCollection>? configureServices = null)
         {
             _overrides = overrides;
+            _configureServices = configureServices;
             SetEnvironmentVariable(ConfigurationBuilderExtensions.MasterKeyEnvironmentVariable, TestRootMasterKey);
             SetDatabaseEnvironmentVariable("COTTON_PG_HOST", "DatabaseSettings:Host");
             SetDatabaseEnvironmentVariable("COTTON_PG_PORT", "DatabaseSettings:Port");
@@ -85,8 +89,7 @@ namespace Cotton.Server.IntegrationTests.Common
             {
                 List<ServiceDescriptor> quartzHosted = services
                     .Where(d => d.ServiceType == typeof(IHostedService) &&
-                        (d.ImplementationType == typeof(QuartzHostedService) ||
-                            d.ImplementationFactory?.Method.ReturnType == typeof(QuartzHostedService)))
+                        d.ImplementationType == typeof(QuartzHostedService))
                     .ToList();
                 foreach (ServiceDescriptor? d in quartzHosted)
                 {
@@ -108,6 +111,8 @@ namespace Cotton.Server.IntegrationTests.Common
                         ActivatorUtilities.CreateInstance<FileSystemStorageBackend>(
                             serviceProvider,
                             storagePath)));
+
+                _configureServices?.Invoke(services);
 
                 services.AddSingleton(new CottonServerSettings
                 {

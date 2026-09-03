@@ -43,6 +43,7 @@ namespace Cotton.Server.IntegrationTests
 
         private TestAppFactory? _factory;
         private HttpClient? _client;
+        private MetadataPersistenceFailureInterceptor _metadataFailure = null!;
 
         private record FixtureUpload(
             Guid NodeFileId,
@@ -98,7 +99,14 @@ namespace Cotton.Server.IntegrationTests
                 ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
             };
 
-            _factory = new TestAppFactory(overrides);
+            _metadataFailure = new MetadataPersistenceFailureInterceptor();
+            _factory = new TestAppFactory(overrides, services =>
+            {
+                services.AddSingleton(_metadataFailure);
+                services.AddDbContext<CottonDbContext>((serviceProvider, options) =>
+                    options.AddInterceptors(
+                        serviceProvider.GetRequiredService<MetadataPersistenceFailureInterceptor>()));
+            });
             _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false
@@ -360,7 +368,7 @@ namespace Cotton.Server.IntegrationTests
                 "image/png",
                 CreateGradientPngBytes(width: 32, height: 24));
 
-            await AddMetadataPersistenceFailureConstraintAsync();
+            _metadataFailure.Enabled = true;
             try
             {
                 HttpResponseMessage response = await _client!.PostAsync(
@@ -376,7 +384,7 @@ namespace Cotton.Server.IntegrationTests
             }
             finally
             {
-                await RemoveMetadataPersistenceFailureConstraintAsync();
+                _metadataFailure.Enabled = false;
             }
         }
 
@@ -825,22 +833,6 @@ namespace Cotton.Server.IntegrationTests
                 .Select(x => new FileManifestMetadataState(
                     x.FileManifest.Metadata))
                 .SingleAsync();
-        }
-
-        private async Task AddMetadataPersistenceFailureConstraintAsync()
-        {
-            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
-            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            await dbContext.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE file_manifests ADD CONSTRAINT ck_file_manifests_metadata_persistence_test CHECK (metadata IS NULL)");
-        }
-
-        private async Task RemoveMetadataPersistenceFailureConstraintAsync()
-        {
-            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
-            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            await dbContext.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE file_manifests DROP CONSTRAINT IF EXISTS ck_file_manifests_metadata_persistence_test");
         }
 
         private async Task<Chunk> GetChunkByHashAsync(byte[] hash)
