@@ -3,14 +3,10 @@ import { Box, Breadcrumbs, Link as MuiLink, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 import type React from "react";
-
-interface Breadcrumb {
-  id: string;
-  name: string;
-}
+import type { FileBreadcrumb } from "../../../shared/types/FileListViewTypes";
 
 interface FileBreadcrumbsProps {
-  breadcrumbs: Breadcrumb[];
+  breadcrumbs: FileBreadcrumb[];
   onNavigateBreadcrumb?: (breadcrumbIndex: number) => void;
   /** Optional drop handlers for move operations. */
   dropHandlers?: {
@@ -47,7 +43,8 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
         }
       },
       onDragLeave: (event: React.DragEvent<HTMLElement>) => {
-        const related = event.relatedTarget as Node | null;
+        const related = event.relatedTarget;
+        if (related !== null && !(related instanceof Node)) return;
         if (related && event.currentTarget.contains(related)) return;
         setDropTargetId((prev) => (prev === crumbId ? null : prev));
       },

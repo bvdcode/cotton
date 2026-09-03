@@ -26,6 +26,7 @@ import {
 import { showActionToast } from "../ui/ActionToast";
 import { collectPlainFilesInFoldersForClientEncryption } from "../utils/clientEncryptionFolderScan";
 import type { ExistingFileEncryptionTaskFile } from "../tasks";
+import { isRecord } from "../utils/typeGuards";
 
 /**
  * Non-authoritative drag hint type. Used so synchronous drag-over handlers can
@@ -50,6 +51,34 @@ export const MOVE_DRAG_DATA_MIME = "application/x-cotton-move-items";
 export interface MoveDragPayload {
   items: ReadonlyArray<MoveClipboardItem>;
 }
+
+const isMoveClipboardItem = (value: unknown): value is MoveClipboardItem => {
+  if (!isRecord(value)) return false;
+  if (
+    typeof value.id !== "string" ||
+    (value.kind !== "folder" && value.kind !== "file") ||
+    typeof value.sourceParentId !== "string"
+  ) {
+    return false;
+  }
+
+  if (value.file === undefined) return true;
+  return (
+    isRecord(value.file) &&
+    typeof value.file.name === "string" &&
+    typeof value.file.contentType === "string" &&
+    typeof value.file.sizeBytes === "number" &&
+    isRecord(value.file.metadata) &&
+    Object.values(value.file.metadata).every(
+      (entry) => typeof entry === "string",
+    )
+  );
+};
+
+const isMoveDragPayload = (value: unknown): value is MoveDragPayload =>
+  isRecord(value) &&
+  Array.isArray(value.items) &&
+  value.items.every(isMoveClipboardItem);
 
 /**
  * Normalize an id for drag-marker comparisons. Browsers lowercase the MIME
@@ -177,9 +206,8 @@ export const readMoveDragPayload = (
   const raw = dataTransfer.getData(MOVE_DRAG_DATA_MIME);
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as MoveDragPayload;
-    if (!parsed || !Array.isArray(parsed.items)) return null;
-    return parsed;
+    const parsed: unknown = JSON.parse(raw);
+    return isMoveDragPayload(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -188,10 +216,9 @@ export const readMoveDragPayload = (
 const extractErrorMessage = (error: unknown): string | null => {
   if (!isAxiosError(error)) return null;
   const data = error.response?.data;
-  if (data && typeof data === "object") {
-    const maybe = data as { message?: unknown };
-    if (typeof maybe.message === "string" && maybe.message.length > 0) {
-      return maybe.message;
+  if (isRecord(data)) {
+    if (typeof data.message === "string" && data.message.length > 0) {
+      return data.message;
     }
   }
   return null;

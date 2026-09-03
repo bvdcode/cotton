@@ -290,7 +290,8 @@ export const ListView: React.FC<IFileListView> = ({
       if (!moveSupport) return;
       const host = containerRef.current;
       if (!host) return;
-      const related = event.relatedTarget as Node | null;
+      const related = event.relatedTarget;
+      if (related !== null && !(related instanceof Node)) return;
       if (related && host.contains(related)) return;
       setDropTargetId(null);
     },

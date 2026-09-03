@@ -131,7 +131,9 @@ export const useTrackLyricsQuery = (options: {
       trackName,
     }),
     queryFn: () =>
-      fetchTrackLyrics(folderNodeId as string, audioFileName as string),
+      folderNodeId && audioFileName
+        ? fetchTrackLyrics(folderNodeId, audioFileName)
+        : Promise.resolve(null),
     enabled,
     staleTime: Infinity,
   });

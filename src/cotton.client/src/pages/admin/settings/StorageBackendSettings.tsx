@@ -25,6 +25,9 @@ interface StorageBackendSettingsProps {
   storageTypeStatus: SaveStatus;
 }
 
+const isStorageType = (value: string): value is StorageType =>
+  value === "Local" || value === "S3";
+
 export const StorageBackendSettings = ({
   onS3Change,
   onSaveS3,
@@ -55,18 +58,18 @@ export const StorageBackendSettings = ({
         <TextField
           select
           value={storageType}
-          onChange={(event) =>
-            onStorageTypeChange(event.target.value as StorageType)
-          }
+          onChange={(event) => {
+            if (isStorageType(event.target.value)) {
+              onStorageTypeChange(event.target.value);
+            }
+          }}
           disabled={storageTypeDisabled}
           fullWidth
         >
           <MenuItem value="Local">
             {t("storageSettings.storageType.Local")}
           </MenuItem>
-          <MenuItem value="S3">
-            {t("storageSettings.storageType.S3")}
-          </MenuItem>
+          <MenuItem value="S3">{t("storageSettings.storageType.S3")}</MenuItem>
         </TextField>
       </SettingsSection>
 

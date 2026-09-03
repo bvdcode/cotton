@@ -15,8 +15,6 @@ type ModelPreviewControlsState = {
   shadowsEnabled: boolean;
 };
 
-type ValueOrUpdater<T> = T | ((current: T) => T);
-
 const LIGHTING_PRESET_ORDER: ReadonlyArray<LightingPreset> = [
   "balanced",
   "studio",
@@ -43,10 +41,6 @@ const createModelPreviewControlsState = (
   surfacePreset: "metal",
   shadowsEnabled: true,
 });
-
-const resolveValue = <T>(current: T, next: ValueOrUpdater<T>): T => {
-  return typeof next === "function" ? (next as (value: T) => T)(current) : next;
-};
 
 const nextInOrder = <T>(order: ReadonlyArray<T>, value: T): T => {
   const index = order.indexOf(value);
@@ -93,9 +87,8 @@ export const useModelPreviewControls = ({
   );
 
   const setPaletteAnchorEl = React.useCallback(
-    (next: ValueOrUpdater<HTMLElement | null>) => {
+    (nextValue: HTMLElement | null) => {
       update((current) => {
-        const nextValue = resolveValue(current.paletteAnchorEl, next);
         return nextValue === current.paletteAnchorEl
           ? current
           : { ...current, paletteAnchorEl: nextValue };
@@ -110,9 +103,12 @@ export const useModelPreviewControls = ({
 
   const togglePaletteAnchor = React.useCallback(
     (anchorEl: HTMLElement) => {
-      setPaletteAnchorEl((current) => (current ? null : anchorEl));
+      update((current) => ({
+        ...current,
+        paletteAnchorEl: current.paletteAnchorEl ? null : anchorEl,
+      }));
     },
-    [setPaletteAnchorEl],
+    [update],
   );
 
   const setMaterialColor = React.useCallback(

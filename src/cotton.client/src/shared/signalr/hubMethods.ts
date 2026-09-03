@@ -26,12 +26,29 @@ export const HUB_METHODS = {
 export type HubMethod = (typeof HUB_METHODS)[keyof typeof HUB_METHODS];
 export type HubMethodOrLower = HubMethod | Lowercase<HubMethod>;
 
+const LOWERCASE_HUB_METHODS: Record<HubMethod, Lowercase<HubMethod>> = {
+  [HUB_METHODS.NotificationReceived]: "onnotificationreceived",
+  [HUB_METHODS.SessionRevoked]: "sessionrevoked",
+  [HUB_METHODS.PreferencesUpdated]: "preferencesupdated",
+  [HUB_METHODS.PreviewGenerated]: "previewgenerated",
+  [HUB_METHODS.FileCreated]: "filecreated",
+  [HUB_METHODS.FileUpdated]: "fileupdated",
+  [HUB_METHODS.FileDeleted]: "filedeleted",
+  [HUB_METHODS.FileMoved]: "filemoved",
+  [HUB_METHODS.FileRenamed]: "filerenamed",
+  [HUB_METHODS.FileRestored]: "filerestored",
+  [HUB_METHODS.NodeCreated]: "nodecreated",
+  [HUB_METHODS.NodeDeleted]: "nodedeleted",
+  [HUB_METHODS.NodeMetadataUpdated]: "nodemetadataupdated",
+  [HUB_METHODS.NodeMoved]: "nodemoved",
+  [HUB_METHODS.NodeRenamed]: "noderenamed",
+  [HUB_METHODS.NodeRestored]: "noderestored",
+};
+
 export const getHubMethodVariants = (
   methods: ReadonlyArray<HubMethod>,
 ): ReadonlyArray<HubMethodOrLower> =>
-  methods.flatMap(
-    (method) => [method, method.toLowerCase() as Lowercase<HubMethod>] as const,
-  );
+  methods.flatMap((method) => [method, LOWERCASE_HUB_METHODS[method]]);
 
 export const FILE_AND_NODE_MUTATION_HUB_METHODS = [
   HUB_METHODS.FileCreated,

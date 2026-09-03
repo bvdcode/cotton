@@ -1,33 +1,36 @@
+import { isRecord } from "../../utils/typeGuards";
+
 type HeaderPrimitive = string | number | boolean | string[] | null | undefined;
 
-export type HeaderMap = Record<string, HeaderPrimitive> & {
-  get?: (name: string) => HeaderPrimitive;
-};
-
-const tryReadHeader = (headers: HeaderMap, name: string): HeaderPrimitive => {
+const tryReadHeader = (headers: unknown, name: string): HeaderPrimitive => {
+  if (!isRecord(headers)) return undefined;
   const direct = headers[name];
-  if (direct !== undefined && direct !== null) {
+  if (
+    typeof direct === "string" ||
+    typeof direct === "number" ||
+    typeof direct === "boolean" ||
+    Array.isArray(direct) ||
+    direct === null
+  ) {
     return direct;
   }
 
   const lower = headers[name.toLowerCase()];
-  if (lower !== undefined && lower !== null) {
+  if (
+    typeof lower === "string" ||
+    typeof lower === "number" ||
+    typeof lower === "boolean" ||
+    Array.isArray(lower) ||
+    lower === null
+  ) {
     return lower;
-  }
-
-  const getter = headers.get;
-  if (typeof getter === "function") {
-    const fromGet = getter(name) ?? getter(name.toLowerCase());
-    if (fromGet !== undefined && fromGet !== null) {
-      return fromGet;
-    }
   }
 
   return undefined;
 };
 
 export const readRequiredIntHeader = (
-  headers: HeaderMap,
+  headers: unknown,
   headerName: string,
 ): number => {
   const value = tryReadHeader(headers, headerName);

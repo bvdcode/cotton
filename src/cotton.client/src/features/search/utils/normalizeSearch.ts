@@ -1,5 +1,6 @@
 import type { LayoutSearchResultDto } from "../../../shared/api/layoutsApi";
 import type { SearchDictionaryEntry } from "../types";
+import { isRecord } from "../../../shared/utils/typeGuards";
 
 export const normalizeSearchText = (value: string): string =>
   value.toLocaleLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -10,22 +11,20 @@ export const normalizeCompactSearchText = (value: string): string =>
 export const isDictionaryEntry = (
   value: unknown,
 ): value is SearchDictionaryEntry => {
-  if (!value || typeof value !== "object") return false;
-
-  const record = value as Record<string, unknown>;
-  const keywords = record.keywords;
+  if (!isRecord(value)) return false;
+  const keywords = value.keywords;
 
   return (
-    typeof record.id === "string" &&
-    typeof record.title === "string" &&
-    typeof record.path === "string" &&
+    typeof value.id === "string" &&
+    typeof value.title === "string" &&
+    typeof value.path === "string" &&
     Array.isArray(keywords) &&
     keywords.every((keyword) => typeof keyword === "string") &&
-    (record.description === undefined ||
-      typeof record.description === "string") &&
-    (record.highlightSettingId === undefined ||
-      typeof record.highlightSettingId === "string") &&
-    (record.adminOnly === undefined || typeof record.adminOnly === "boolean")
+    (value.description === undefined ||
+      typeof value.description === "string") &&
+    (value.highlightSettingId === undefined ||
+      typeof value.highlightSettingId === "string") &&
+    (value.adminOnly === undefined || typeof value.adminOnly === "boolean")
   );
 };
 

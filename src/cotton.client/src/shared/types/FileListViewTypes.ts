@@ -6,6 +6,21 @@ import type { MoveClipboardItem } from "../store/moveClipboardStore";
 
 export type FileListFileDto = NodeFileManifestDto | SharedNodeFileDto;
 
+export interface FileBreadcrumb {
+  id: string;
+  name: string;
+}
+
+export interface FileListStats {
+  folders: number;
+  files: number;
+  sizeBytes: number;
+}
+
+export interface FileSizeEntry {
+  sizeBytes?: number;
+}
+
 /**
  * Represents a folder tile in the file list view
  */

@@ -3,7 +3,11 @@ import type { Slide } from "yet-another-react-lightbox";
 import { convertHeicToJpeg, isHeicFile } from "../../utils/heicConverter";
 import { buildSlidesFromItems } from "./mediaLightboxSlides";
 import { HLS_VIDEO_SLIDE_TYPE } from "@shared/types/mediaLightbox";
-import type { MediaItem, SlideWithTitle } from "@shared/types/mediaLightbox";
+import {
+  isSlideWithTitle,
+  type MediaItem,
+  type SlideWithTitle,
+} from "@shared/types/mediaLightbox";
 
 const PREVIEW_QUERY_PARAM = "preview";
 const PREVIEW_QUERY_VALUE = "true";
@@ -188,8 +192,8 @@ export const useMediaLightboxUrls = ({
 
   const handleSlideImageError = React.useCallback(
     async (slide: Slide): Promise<void> => {
-      const lightboxSlide = slide as SlideWithTitle;
-      const item = items.find((entry) => entry.id === lightboxSlide.fileId);
+      if (!isSlideWithTitle(slide)) return;
+      const item = items.find((entry) => entry.id === slide.fileId);
       if (!item || item.kind !== "image" || !isHeicFile(item.name)) {
         return;
       }
@@ -276,30 +280,26 @@ export const useMediaLightboxUrls = ({
   const getSlideSourceUrl = React.useCallback(
     (slide: SlideWithTitle): string | null => {
       if (slide.type === "video") {
-        const videoSlide = slide as SlideWithTitle & {
-          sources?: Array<{ src?: string }>;
-        };
-        return videoSlide.sources?.[0]?.src ?? null;
+        return slide.sources?.[0]?.src ?? null;
       }
 
       if (slide.type === HLS_VIDEO_SLIDE_TYPE) {
-        return (slide as SlideWithTitle & { src?: string }).src ?? null;
+        return slide.src;
       }
 
-      const imageSlide = slide as SlideWithTitle & { src?: string };
-      return imageSlide.src ?? null;
+      return slide.src;
     },
     [],
   );
 
   const resolveSlideDownloadUrl = React.useCallback(
     async (slide: Slide): Promise<string | null> => {
-      const lightboxSlide = slide as SlideWithTitle;
-      const resolved = await ensureDownloadUrl(lightboxSlide.fileId);
+      if (!isSlideWithTitle(slide)) return null;
+      const resolved = await ensureDownloadUrl(slide.fileId);
       if (resolved) {
         return resolved;
       }
-      return getSlideSourceUrl(lightboxSlide);
+      return getSlideSourceUrl(slide);
     },
     [ensureDownloadUrl, getSlideSourceUrl],
   );

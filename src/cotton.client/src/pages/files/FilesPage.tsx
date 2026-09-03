@@ -47,6 +47,7 @@ import {
   resolveFilesNodeId,
   shouldRenderFilesList,
 } from "./filesPageModel";
+import { readStringProperty } from "../../shared/utils/typeGuards";
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -56,8 +57,7 @@ export const FilesPage: React.FC = () => {
   const location = useLocation();
   const params = useParams<{ nodeId?: string }>();
   const pendingSelectedFileIdRef = React.useRef<string | null>(
-    (location.state as { selectedFileId?: string } | null)?.selectedFileId ??
-      null,
+    readStringProperty(location.state, "selectedFileId"),
   );
 
   const {

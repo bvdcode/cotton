@@ -7,18 +7,14 @@ import {
   TextField,
 } from "@mui/material";
 import { QuestionHeader } from "./QuestionHeader";
+import type { SetupRenderedFormField } from "../setupModels";
 
 type QuestionFormProps = {
   title: string;
   subtitle: string;
   linkUrl?: string;
   linkAriaLabel?: string;
-  fields: Array<{
-    key: string;
-    label: string;
-    placeholder?: string;
-    type?: "text" | "password" | "url" | "boolean";
-  }>;
+  fields: SetupRenderedFormField[];
   values: Record<string, string | boolean>;
   onChange: (key: string, value: string | boolean) => void;
 };

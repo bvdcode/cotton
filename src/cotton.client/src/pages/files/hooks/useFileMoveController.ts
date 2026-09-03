@@ -245,7 +245,8 @@ export const useFileMoveController = ({
         if (!goUpDropActive) setGoUpDropActive(true);
       },
       onDragLeave: (event) => {
-        const related = event.relatedTarget as Node | null;
+        const related = event.relatedTarget;
+        if (related !== null && !(related instanceof Node)) return;
         if (related && event.currentTarget.contains(related)) return;
         setGoUpDropActive(false);
       },

@@ -1,7 +1,8 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { setupStepDefinitions } from "./setupQuestions.tsx";
-import type { JsonValue } from "../../shared/types/json";
+import { isJsonObject, type JsonValue } from "../../shared/types/json";
+import type { SetupFormValues } from "./setupModels";
 import {
   QuestionBlock,
   QuestionBlockMulti,
@@ -14,6 +15,16 @@ type BuiltStep = {
   key: string;
   render: () => ReactNode;
   isValid: () => boolean;
+};
+
+const getSetupFormValues = (value: JsonValue | undefined): SetupFormValues => {
+  if (value === undefined || !isJsonObject(value)) return {};
+
+  const entries = Object.entries(value).filter(
+    (entry): entry is [string, string | boolean] =>
+      typeof entry[1] === "string" || typeof entry[1] === "boolean",
+  );
+  return Object.fromEntries(entries);
 };
 
 const answerMatchesCondition = (
@@ -295,10 +306,7 @@ export function useSetupSteps(
         steps.push({
           key: def.key,
           render: () => {
-            const formValues =
-              answers[def.key] && typeof answers[def.key] === "object"
-                ? (answers[def.key] as Record<string, string | boolean>)
-                : {};
+            const formValues = getSetupFormValues(answers[def.key]);
 
             return (
               <QuestionForm
@@ -314,12 +322,10 @@ export function useSetupSteps(
           },
           isValid: (): boolean => {
             const formData = answers[def.key];
-            if (!formData || typeof formData !== "object") return false;
+            if (!formData || !isJsonObject(formData)) return false;
             // All fields must be filled (except boolean which are optional)
             return def.fields.every((field) => {
-              const value = (formData as Record<string, string | boolean>)[
-                field.key
-              ];
+              const value = formData[field.key];
               // Boolean fields are always valid
               if (field.type === "boolean") return true;
               // For text fields, check if value exists and is not empty

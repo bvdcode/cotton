@@ -55,6 +55,9 @@ type GeoIpLookupSettingProps = {
   highlightKey?: string;
 };
 
+const isGeoIpLookupMode = (value: string): value is GeoIpLookupMode =>
+  geoIpOptions.some((option) => option === value);
+
 export const GeoIpLookupSetting = ({
   telemetryEnabled,
   highlight = false,
@@ -287,9 +290,11 @@ export const GeoIpLookupSetting = ({
         <TextField
           select
           value={mode}
-          onChange={(event) =>
-            handleModeChange(event.target.value as GeoIpLookupMode)
-          }
+          onChange={(event) => {
+            if (isGeoIpLookupMode(event.target.value)) {
+              handleModeChange(event.target.value);
+            }
+          }}
           disabled={disabled}
           fullWidth
           SelectProps={{
@@ -297,9 +302,9 @@ export const GeoIpLookupSetting = ({
               "aria-label": t("settings.general.fields.geoIpLookupMode"),
             },
             renderValue: (selected) =>
-              t(
-                `settings.general.geoIpLookupMode.${selected as GeoIpLookupMode}`,
-              ),
+              typeof selected === "string" && isGeoIpLookupMode(selected)
+                ? t(`settings.general.geoIpLookupMode.${selected}`)
+                : "",
           }}
         >
           {geoIpOptions.map((option) => (

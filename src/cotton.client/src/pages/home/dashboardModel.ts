@@ -133,19 +133,17 @@ export const parseDashboardLayout = (
     const newWidgets = DASHBOARD_WIDGET_IDS.filter(
       (widgetId) => !represented.has(widgetId),
     );
-    const sizes = Object.fromEntries(
-      DASHBOARD_WIDGET_IDS.map((widgetId) => {
-        const parsedSize = widgetSizeSchema.safeParse(
-          parsed.data.sizes?.[widgetId],
-        );
-        return [
-          widgetId,
-          parsedSize.success
-            ? parsedSize.data
-            : DEFAULT_DASHBOARD_WIDGET_SIZES[widgetId],
-        ];
-      }),
-    ) as DashboardWidgetSizes;
+    const sizes: DashboardWidgetSizes = {
+      ...DEFAULT_DASHBOARD_WIDGET_SIZES,
+    };
+    for (const widgetId of DASHBOARD_WIDGET_IDS) {
+      const parsedSize = widgetSizeSchema.safeParse(
+        parsed.data.sizes?.[widgetId],
+      );
+      if (parsedSize.success) {
+        sizes[widgetId] = parsedSize.data;
+      }
+    }
 
     return {
       order: [...savedOrder, ...newWidgets],

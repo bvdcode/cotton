@@ -18,6 +18,35 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unsafe-type-assertion": "error",
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            'TSTypeReference[typeName.name="Array"] > TSTypeParameterInstantiation > TSTypeLiteral',
+          message:
+            "Anonymous array item models are not allowed. Define a named model in a dedicated file.",
+        },
+        {
+          selector: "TSArrayType > TSTypeLiteral",
+          message:
+            "Anonymous array item models are not allowed. Define a named model in a dedicated file.",
+        },
+      ],
+    },
+  },
+  {
+    files: ["**/*.test.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-unsafe-type-assertion": "off",
+      "no-restricted-syntax": "off",
     },
   },
   {

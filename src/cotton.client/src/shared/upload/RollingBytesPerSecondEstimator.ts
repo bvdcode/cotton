@@ -27,7 +27,8 @@ export class RollingBytesPerSecondEstimator {
   private readonly minDurationMs: number;
 
   private startMs: number | null = null;
-  private samples: Array<{ t: number; bytes: number }> = [];
+  private samples: Array<readonly [timestampMs: number, totalBytes: number]> =
+    [];
   private last: BytesPerSecondSnapshot = {
     rollingBytesPerSec: 0,
     averageBytesPerSec: 0,
@@ -56,10 +57,10 @@ export class RollingBytesPerSecondEstimator {
       this.startMs = nowMs;
     }
 
-    this.samples.push({ t: nowMs, bytes: totalBytes });
+    this.samples.push([nowMs, totalBytes]);
 
     const windowStart = nowMs - this.windowMs;
-    while (this.samples.length > 2 && this.samples[0].t < windowStart) {
+    while (this.samples.length > 2 && this.samples[0][0] < windowStart) {
       this.samples.shift();
     }
 
@@ -71,8 +72,8 @@ export class RollingBytesPerSecondEstimator {
     if (this.samples.length >= 2) {
       const oldest = this.samples[0];
       const newest = this.samples[this.samples.length - 1];
-      const dBytes = newest.bytes - oldest.bytes;
-      const dtMs = Math.max(newest.t - oldest.t, this.minDurationMs);
+      const dBytes = newest[1] - oldest[1];
+      const dtMs = Math.max(newest[0] - oldest[0], this.minDurationMs);
       if (dBytes > 0) {
         rollingBytesPerSec = dBytes / (dtMs / 1000);
       }

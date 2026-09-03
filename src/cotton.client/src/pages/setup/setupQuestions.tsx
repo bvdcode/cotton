@@ -1,4 +1,3 @@
-import { type ReactNode } from "react";
 import { t } from "i18next";
 import PhotoLibraryIcon from "@mui/icons-material/PhotoLibrary";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -24,66 +23,7 @@ import {
   TravelExplore,
 } from "@mui/icons-material";
 import { TelemetryHelpButton } from "../../shared/ui/TelemetryHelpButton";
-
-export type SetupSingleOption<T> = {
-  key: string;
-  label: () => string;
-  description?: () => string;
-  value: T;
-  icon?: ReactNode;
-  disabledIfAny?: string[];
-  requires?: string;
-};
-
-export type SetupMultiOption = {
-  key: string;
-  label: () => string;
-  description?: () => string;
-  icon?: ReactNode;
-  disabledIfAny?: string[];
-  requires?: string;
-};
-
-export type SetupTextFieldOption = {
-  key: string;
-  label: () => string;
-  placeholder?: () => string;
-  type?: "text" | "password" | "url" | "boolean";
-};
-
-export type SetupStepDefinition =
-  | {
-      key: string;
-      type: "single";
-      title: () => string;
-      subtitle: () => string;
-      linkUrl?: string;
-      linkAria?: () => string;
-      extraHeader?: () => ReactNode;
-      options: SetupSingleOption<unknown>[];
-      getOptions?: () => SetupSingleOption<unknown>[];
-      getDefaultValue?: () => unknown;
-      renderAs?: "cards" | "dropdown" | "autocomplete";
-      requires?: string;
-    }
-  | {
-      key: string;
-      type: "multi";
-      title: () => string;
-      subtitle: () => string;
-      linkUrl?: string;
-      linkAria?: () => string;
-      options: SetupMultiOption[];
-      requires?: string;
-    }
-  | {
-      key: string;
-      type: "form";
-      title: () => string;
-      subtitle: () => string;
-      fields: SetupTextFieldOption[];
-      requires?: string;
-    };
+import type { SetupStepDefinition } from "./setupModels";
 
 export const setupStepDefinitions: SetupStepDefinition[] = [
   {

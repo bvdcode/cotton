@@ -77,27 +77,24 @@ class EventHubService {
       },
     };
 
-    const attemptSpecs: Array<{
-      transport: HttpTransportType;
-      skipNegotiation?: boolean;
-    }> = [
+    const attemptSpecs: Array<
+      readonly [transport: HttpTransportType, skipNegotiation?: boolean]
+    > = [
       // Some servers/proxies reject /negotiate; WebSockets + skipNegotiation avoids it.
-      { transport: HttpTransportType.WebSockets, skipNegotiation: true },
+      [HttpTransportType.WebSockets, true],
       // Fallback to normal negotiation (allows LongPolling when WS isn't available).
-      {
-        transport: HttpTransportType.WebSockets | HttpTransportType.LongPolling,
-      },
+      [HttpTransportType.WebSockets | HttpTransportType.LongPolling],
     ];
 
     let lastError: Error | null = null;
 
-    for (const spec of attemptSpecs) {
+    for (const [transport, skipNegotiation] of attemptSpecs) {
       try {
         this.connection = new HubConnectionBuilder()
           .withUrl("/api/v1/hub/events", {
             accessTokenFactory,
-            transport: spec.transport,
-            skipNegotiation: spec.skipNegotiation,
+            transport,
+            skipNegotiation,
           })
           .withAutomaticReconnect(reconnectPolicy)
           .configureLogging(LogLevel.Warning)

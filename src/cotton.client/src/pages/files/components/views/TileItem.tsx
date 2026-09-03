@@ -156,8 +156,11 @@ const SelectionCheckbox = ({
   <Checkbox
     checked={selected}
     onChange={(event) => {
-      const nativeEvent = event.nativeEvent as MouseEvent;
-      onToggle?.(!!nativeEvent.shiftKey);
+      const shiftKey =
+        event.nativeEvent instanceof MouseEvent
+          ? event.nativeEvent.shiftKey
+          : false;
+      onToggle?.(shiftKey);
     }}
     sx={{
       position: "absolute",
@@ -169,6 +172,14 @@ const SelectionCheckbox = ({
     size="small"
   />
 );
+
+const getShiftKey = (event?: React.SyntheticEvent): boolean => {
+  const nativeEvent = event?.nativeEvent;
+  return nativeEvent instanceof MouseEvent ||
+    nativeEvent instanceof KeyboardEvent
+    ? nativeEvent.shiftKey
+    : false;
+};
 
 const TileFrame = ({
   children,
@@ -340,7 +351,7 @@ const FolderTileItem = ({
             : undefined
         }
         onClick={(event) => {
-          const shiftKey = !!(event as React.MouseEvent).shiftKey;
+          const shiftKey = getShiftKey(event);
 
           if (shiftKey && onToggle) {
             onToggle(true);
@@ -530,7 +541,7 @@ const FileTileItem = ({
   const iconContainerSx = useFileIconContainerSx(tile.file);
 
   const fileClick = (event?: React.SyntheticEvent) => {
-    const shiftKey = !!(event as React.MouseEvent | undefined)?.shiftKey;
+    const shiftKey = getShiftKey(event);
 
     if (shiftKey && onToggle) {
       onToggle(true);

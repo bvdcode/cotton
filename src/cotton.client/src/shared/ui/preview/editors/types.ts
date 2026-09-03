@@ -16,6 +16,11 @@ export const EditorMode = {
 
 export type EditorMode = (typeof EditorMode)[keyof typeof EditorMode];
 
+export const isEditorMode = (value: unknown): value is EditorMode =>
+  value === EditorMode.Text ||
+  value === EditorMode.Markdown ||
+  value === EditorMode.Code;
+
 /**
  * Common interface for all editor components
  * Dependency Inversion: Components depend on abstraction, not concrete implementations

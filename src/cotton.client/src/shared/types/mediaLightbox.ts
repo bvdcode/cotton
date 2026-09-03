@@ -14,6 +14,21 @@ export interface MediaItem {
   requiresTranscoding?: boolean;
 }
 
+export interface MediaLightboxSourceFile {
+  id: string;
+  name: string;
+  sizeBytes?: number;
+  previewHashEncryptedHex?: string | null;
+  largeFilePreviewPresignedToken?: string | null;
+  contentType?: string | null;
+  requiresVideoTranscoding?: boolean;
+}
+
+export interface MediaVideoSource {
+  src: string;
+  type: string;
+}
+
 export interface MediaLightboxProps {
   items: MediaItem[];
   open: boolean;
@@ -50,3 +65,9 @@ export type SlideWithTitle = Slide & {
   fileName: string;
   title?: string;
 };
+
+export const isSlideWithTitle = (slide: Slide): slide is SlideWithTitle =>
+  "fileId" in slide &&
+  typeof slide.fileId === "string" &&
+  "fileName" in slide &&
+  typeof slide.fileName === "string";

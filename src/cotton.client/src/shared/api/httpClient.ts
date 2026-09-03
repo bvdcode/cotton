@@ -322,6 +322,7 @@ export const getValidated = async <TSchema extends z.ZodTypeAny>(
 // Refresh state
 let isRefreshing = false;
 let refreshQueue: Array<(token: string | null) => void> = [];
+const retriedRequests = new WeakSet<InternalAxiosRequestConfig>();
 
 const processQueue = (token: string | null) => {
   refreshQueue.forEach((resolve) => resolve(token));
@@ -348,16 +349,21 @@ httpClient.interceptors.request.use(
 httpClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean;
-    };
+    const originalRequest = error.config;
+    if (!originalRequest) {
+      tryDispatchApiErrorToast(error);
+      return Promise.reject(error);
+    }
 
     if (isServerLockedResponse(error)) {
       redirectToUnlockOnce();
       return Promise.reject(error);
     }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !retriedRequests.has(originalRequest)
+    ) {
       // Don't retry on auth endpoints themselves
       const url = originalRequest.url || "";
       if (url.includes("auth/login") || url.includes("auth/refresh")) {
@@ -378,7 +384,7 @@ httpClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      originalRequest._retry = true;
+      retriedRequests.add(originalRequest);
 
       if (isRefreshing) {
         // Queue request until refresh completes

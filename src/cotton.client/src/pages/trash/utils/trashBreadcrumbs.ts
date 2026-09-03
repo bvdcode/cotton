@@ -1,9 +1,6 @@
 import type { NodeDto } from "../../../shared/api/layoutsApi";
-
-type TrashWrapperContent = {
-  nodes?: ReadonlyArray<Pick<NodeDto, "id" | "parentId">>;
-  files?: ReadonlyArray<{ id: string; nodeId?: string | null }>;
-};
+import type { FileBreadcrumb } from "../../../shared/types/FileListViewTypes";
+import type { TrashWrapperContent } from "./trashBreadcrumbModels";
 
 const trashWrapperNamePrefix = "trash-item-";
 const originalParentPathMetadataKey = "originalParentPath";
@@ -30,7 +27,7 @@ export const isTrashWrapperNode = (
 export const buildVisibleTrashBreadcrumbs = (
   ancestors: NodeDto[],
   currentNode: NodeDto | null,
-): Array<{ id: string; name: string }> => {
+): FileBreadcrumb[] => {
   if (!currentNode) {
     return [];
   }

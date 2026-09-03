@@ -38,15 +38,12 @@ const isMainAppReady = async (): Promise<boolean> => {
 const isUnlockStatusResponse = (
   value: unknown,
 ): value is UnlockStatusResponse =>
-  typeof value === "object" &&
-  value !== null &&
-  typeof (value as UnlockStatusResponse).requiresBootstrapToken === "boolean";
+  isRecord(value) && typeof value.requiresBootstrapToken === "boolean";
 
 const isUnlockResponse = (value: unknown): value is UnlockResponse =>
-  typeof value === "object" &&
-  value !== null &&
-  typeof (value as UnlockResponse).ok === "boolean" &&
-  typeof (value as UnlockResponse).message === "string";
+  isRecord(value) &&
+  typeof value.ok === "boolean" &&
+  typeof value.message === "string";
 
 const readUnlockResponse = async (
   response: Response,
@@ -132,3 +129,4 @@ export const unlockApi = {
     return body;
   },
 };
+import { isRecord } from "../utils/typeGuards";

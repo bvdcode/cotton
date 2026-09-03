@@ -21,6 +21,7 @@ import {
 import { showActionToast } from "../../../shared/ui/ActionToast";
 import { toast } from "../../../shared/ui/notifications";
 import { useFileConflictDialog } from "./useFileConflictDialog";
+import { readStringProperty } from "../../../shared/utils/typeGuards";
 
 interface UseBreadcrumb {
   id: string;
@@ -35,12 +36,7 @@ type DroppedFile = {
 type DropPreparationPhase = "idle" | "scanning" | "preparing";
 
 type DropPreparationStep =
-  | "idle"
-  | "scanning"
-  | "mapping"
-  | "folders"
-  | "conflicts"
-  | "enqueue";
+  "idle" | "scanning" | "mapping" | "folders" | "conflicts" | "enqueue";
 
 type DropPreparationState = {
   active: boolean;
@@ -491,7 +487,8 @@ export const useFileUpload = (
     input.type = "file";
     input.multiple = true;
     input.onchange = (e) => {
-      const files = (e.target as HTMLInputElement).files;
+      if (!(e.target instanceof HTMLInputElement)) return;
+      const files = e.target.files;
       if (files && files.length > 0) {
         void handleUploadFiles(Array.from(files));
       }
@@ -505,19 +502,18 @@ export const useFileUpload = (
     skippedItems: string[];
   };
 
-  type NamedErrorLike = { name?: string };
-
-  const isNotFoundError = (
-    error: DOMException | Error | NamedErrorLike | null | undefined,
-  ): boolean => {
+  const isNotFoundError = (error: unknown): boolean => {
     if (error instanceof DOMException) return error.name === "NotFoundError";
     if (error instanceof Error) return error.name === "NotFoundError";
-    if (typeof error === "object" && error !== null) {
-      const maybe = error as NamedErrorLike;
-      return maybe.name === "NotFoundError";
-    }
-    return false;
+    return readStringProperty(error, "name") === "NotFoundError";
   };
+
+  const isFileEntry = (entry: FileSystemEntry): entry is FileSystemFileEntry =>
+    entry.isFile;
+
+  const isDirectoryEntry = (
+    entry: FileSystemEntry,
+  ): entry is FileSystemDirectoryEntry => entry.isDirectory;
 
   const getAllFilesFromItems = async (
     items: DataTransferItemList,
@@ -529,7 +525,7 @@ export const useFileUpload = (
 
     const rememberSkippedItem = (entry: FileSystemEntry) => {
       if (skippedItems.length >= maxSkippedItemsToKeep) return;
-      const fullPath = (entry as { fullPath?: string }).fullPath;
+      const fullPath = readStringProperty(entry, "fullPath");
       const display = (fullPath ?? entry.name).replace(/^\/+/, "").trim();
       if (display.length === 0) return;
       skippedItems.push(display);
@@ -548,15 +544,14 @@ export const useFileUpload = (
     };
 
     const traverseEntry = async (entry: FileSystemEntry): Promise<void> => {
-      if (entry.isFile) {
-        const fileEntry = entry as FileSystemFileEntry;
+      if (isFileEntry(entry)) {
         let file: File;
         try {
           file = await new Promise<File>((resolve, reject) => {
-            fileEntry.file(resolve, reject);
+            entry.file(resolve, reject);
           });
         } catch (e) {
-          if (isNotFoundError(e as Error)) {
+          if (isNotFoundError(e)) {
             skippedNotFound += 1;
             rememberSkippedItem(entry);
             return;
@@ -568,13 +563,12 @@ export const useFileUpload = (
           lastModified: file.lastModified,
         });
 
-        const fullPath = (entry as { fullPath?: string }).fullPath;
+        const fullPath = readStringProperty(entry, "fullPath");
         const relativePath = (fullPath ?? file.name).replace(/^\/+/, "");
         files.push({ file: clonedFile, relativePath });
         notify();
-      } else if (entry.isDirectory) {
-        const dirEntry = entry as FileSystemDirectoryEntry;
-        const reader = dirEntry.createReader();
+      } else if (isDirectoryEntry(entry)) {
+        const reader = entry.createReader();
 
         const readAllEntries = async (): Promise<FileSystemEntry[]> => {
           const allEntries: FileSystemEntry[] = [];
@@ -594,7 +588,7 @@ export const useFileUpload = (
         try {
           entries = await readAllEntries();
         } catch (e) {
-          if (isNotFoundError(e as Error)) {
+          if (isNotFoundError(e)) {
             skippedNotFound += 1;
             rememberSkippedItem(entry);
             return;

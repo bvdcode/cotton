@@ -224,27 +224,32 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     rootNodeName: rootNode?.name,
   });
 
-  const contentRows = useMemo<SearchRow[]>(
-    () =>
-      fileListSource.tiles.map((tile) => {
-        if (tile.kind === "folder") {
-          return {
-            id: `folder-${tile.node.id}`,
-            kind: "folder",
-            node: tile.node,
-            path: tile.path,
-          };
-        }
-
-        return {
-          id: `file-${tile.file.id}`,
-          kind: "file",
-          file: tile.file as NodeFileManifestDto,
+  const contentRows = useMemo<SearchRow[]>(() => {
+    const searchRows: SearchRow[] = [];
+    for (const tile of fileListSource.tiles) {
+      if (tile.kind === "folder") {
+        searchRows.push({
+          id: `folder-${tile.node.id}`,
+          kind: "folder",
+          node: tile.node,
           path: tile.path,
-        };
-      }),
-    [fileListSource.tiles],
-  );
+        });
+        continue;
+      }
+
+      if (!("ownerId" in tile.file) || !("metadata" in tile.file)) {
+        continue;
+      }
+
+      searchRows.push({
+        id: `file-${tile.file.id}`,
+        kind: "file",
+        file: tile.file,
+        path: tile.path,
+      });
+    }
+    return searchRows;
+  }, [fileListSource.tiles]);
 
   const rows = useMemo(
     () => (hasSearchQuery ? [...matchedDictionaryRows, ...contentRows] : []),

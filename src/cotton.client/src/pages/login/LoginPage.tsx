@@ -26,13 +26,14 @@ import { TrustDeviceToggle } from "./components/TrustDeviceToggle";
 import { TwoFactorFields } from "./components/TwoFactorFields";
 import { OidcProviderButtons } from "./components/OidcProviderButtons";
 import { useLoginForm } from "./useLoginForm";
+import { readStringProperty } from "../../shared/utils/typeGuards";
 
 type LoginFormState = ReturnType<typeof useLoginForm>;
 
 export const LoginPage = () => {
   const location = useLocation();
   const returnUrl = getSafeAuthReturnPath(
-    (location.state as { from?: string })?.from || "/",
+    readStringProperty(location.state, "from") ?? "/",
   );
   const auth = useAuth();
   const form = useLoginForm();

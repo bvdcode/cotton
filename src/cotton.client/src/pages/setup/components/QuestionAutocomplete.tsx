@@ -1,16 +1,13 @@
 import { Stack, Autocomplete, TextField } from "@mui/material";
 import { QuestionHeader } from "./QuestionHeader";
+import type { SetupRenderedOption } from "../setupModels";
 
 type QuestionAutocompleteProps = {
   title: string;
   subtitle: string;
   linkUrl?: string;
   linkAriaLabel?: string;
-  options: Array<{
-    key: string;
-    label: string;
-    value: unknown;
-  }>;
+  options: SetupRenderedOption[];
   selectedKey: string | null;
   onSelect: (key: string) => void;
 };

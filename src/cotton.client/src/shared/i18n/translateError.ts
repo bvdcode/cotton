@@ -1,5 +1,6 @@
 import i18next from "i18next";
 import en from "../../locales/en.json";
+import { isRecord } from "../utils/typeGuards";
 
 type LocaleNamespace = keyof typeof en;
 
@@ -7,11 +8,11 @@ const resolveEnglish = (namespace: LocaleNamespace, key: string): string => {
   let cursor: unknown = en[namespace];
 
   for (const segment of key.split(".")) {
-    if (cursor === null || typeof cursor !== "object") {
+    if (!isRecord(cursor)) {
       return key;
     }
 
-    cursor = (cursor as Record<string, unknown>)[segment];
+    cursor = cursor[segment];
   }
 
   return typeof cursor === "string" ? cursor : key;

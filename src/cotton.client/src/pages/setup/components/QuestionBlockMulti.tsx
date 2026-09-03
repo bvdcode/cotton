@@ -1,7 +1,15 @@
 import { Box, Stack } from "@mui/material";
-import { type ReactNode } from "react";
 import { QuestionHeader } from "./QuestionHeader";
 import { OptionCard } from "./OptionCard";
+import type { SetupRenderedMultiOption } from "../setupModels";
+
+interface QuestionBlockMultiProps {
+  title: string;
+  subtitle: string;
+  options: SetupRenderedMultiOption[];
+  selectedKeys: string[];
+  onToggle: (key: string) => void;
+}
 
 export function QuestionBlockMulti({
   title,
@@ -9,20 +17,7 @@ export function QuestionBlockMulti({
   options,
   selectedKeys,
   onToggle,
-}: {
-  title: string;
-  subtitle: string;
-  options: Array<{
-    key: string;
-    label: string;
-    description?: string;
-    icon?: ReactNode;
-    disabled?: boolean;
-    disabledTooltip?: string;
-  }>;
-  selectedKeys: string[];
-  onToggle: (key: string) => void;
-}) {
+}: QuestionBlockMultiProps) {
   return (
     <Stack spacing={1.5}>
       <QuestionHeader title={title} subtitle={subtitle} />
