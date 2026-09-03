@@ -8,7 +8,6 @@ using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
-using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
@@ -19,7 +18,6 @@ using EasyExtensions.Quartz.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Quartz;
-using System.Security.Cryptography;
 
 namespace Cotton.Server.Handlers.WebDav
 {
@@ -33,10 +31,9 @@ namespace Cotton.Server.Handlers.WebDav
 
     public class WebDavPutFileRequestHandler(
         CottonDbContext _dbContext,
-        SettingsProvider _settings,
         ISchedulerFactory _scheduler,
         FileVersionService _versions,
-        IChunkIngestService _chunkIngest,
+        WebDavPutContentReader _contentReader,
         IWebDavPathResolver _pathResolver,
         FileManifestService _fileManifestService,
         UserStorageQuotaService _quota,
@@ -52,8 +49,6 @@ namespace Cotton.Server.Handlers.WebDav
             string ResourceName,
             string NameKey,
             bool Created);
-
-        private record PutContent(List<Chunk> Chunks, byte[] FileHash, long TotalBytes);
 
         private static WebDavPutFileResult Fail(WebDavPutFileError error) => new(false, false, error);
 
@@ -71,7 +66,7 @@ namespace Cotton.Server.Handlers.WebDav
                 return quotaPreflightError;
             }
 
-            var (content, contentError) = await TryReadAndValidateContentAsync(request, ct);
+            var (content, contentError) = await _contentReader.ReadAsync(request, ct);
             if (contentError is not null)
             {
                 return contentError;
@@ -258,64 +253,6 @@ namespace Cotton.Server.Handlers.WebDav
             return null;
         }
 
-        private async Task<(PutContent? Content, WebDavPutFileResult? Error)> TryReadAndValidateContentAsync(WebDavPutFileRequest request, CancellationToken ct)
-        {
-            List<Chunk> chunks;
-            byte[] fileHash;
-            try
-            {
-                (chunks, fileHash) = await ProcessStreamInChunksAndHashAsync(request.Content, request.UserId, ct);
-            }
-            catch (StoragePressureException ex)
-            {
-                _logger.LogWarning(ex, "WebDAV PUT rejected because storage free space is below the configured reserve. Path: {Path}, User: {UserId}", request.Path, request.UserId);
-                return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.StoragePressure));
-            }
-
-            long totalBytes = 0;
-            for (int i = 0; i < chunks.Count; i++)
-            {
-                totalBytes += chunks[i].PlainSizeBytes;
-            }
-
-            if (request.ContentLength.HasValue && request.ContentLength.Value > 0)
-            {
-                if (totalBytes == 0 || totalBytes != request.ContentLength.Value)
-                {
-                    _logger.LogWarning(
-                        "WebDAV PUT aborted/truncated: expected length {Expected}, got {Actual} bytes. Path: {Path}, User: {UserId}",
-                        request.ContentLength.Value,
-                        totalBytes,
-                        request.Path,
-                        request.UserId);
-
-                    return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted));
-                }
-            }
-
-            if (totalBytes == 0)
-            {
-                if (request.ContentLength.HasValue && request.ContentLength.Value == 0)
-                {
-                    chunks = await CreateEmptyChunkAsync(request.UserId, ct);
-                    fileHash = Hasher.HashData([]);
-                    totalBytes = 0;
-                }
-                else
-                {
-                    _logger.LogWarning(
-                        "WebDAV PUT got 0 bytes but Content-Length was {CL}. Treating as aborted. Path: {Path}, User: {UserId}",
-                        request.ContentLength,
-                        request.Path,
-                        request.UserId);
-
-                    return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted));
-                }
-            }
-
-            return (new PutContent(chunks, fileHash, totalBytes), null);
-        }
-
         private async Task<FileManifest> GetOrCreateFileManifestAsync(
             List<Chunk> chunks,
             byte[] fileHash,
@@ -457,62 +394,5 @@ namespace Cotton.Server.Handlers.WebDav
             }
         }
 
-        private async Task<(List<Chunk> Chunks, byte[] FileHash)> ProcessStreamInChunksAndHashAsync(
-            Stream inputStream,
-            Guid userId,
-            CancellationToken ct)
-        {
-            ServerSettingsSnapshot settings = _settings.GetServerSettings();
-            int chunkSize = settings.MaxChunkSizeBytes;
-            List<Chunk> chunks = new List<Chunk>();
-
-            using IncrementalHash fileHasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
-
-            // Rent a buffer from the array pool to avoid allocations
-            byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(chunkSize);
-            try
-            {
-                int bytesRead;
-                while ((bytesRead = await ReadExactlyAsync(inputStream, buffer, chunkSize, ct)) > 0)
-                {
-                    fileHasher.AppendData(buffer, 0, bytesRead);
-                    Chunk chunk = await ProcessSingleChunkAsync(buffer, bytesRead, userId, ct);
-                    chunks.Add(chunk);
-                }
-            }
-            finally
-            {
-                System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
-            }
-
-            return (chunks, fileHasher.GetHashAndReset());
-        }
-
-        private static async Task<int> ReadExactlyAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)
-        {
-            int totalRead = 0;
-            while (totalRead < count)
-            {
-                int read = await stream.ReadAsync(buffer.AsMemory(totalRead, count - totalRead), ct);
-                if (read == 0)
-                    break;
-                totalRead += read;
-            }
-            return totalRead;
-        }
-
-        /// <summary>
-        /// Processes a single chunk: computes hash, stores if new, creates ownership.
-        /// </summary>
-        private async Task<Chunk> ProcessSingleChunkAsync(byte[] buffer, int length, Guid userId, CancellationToken ct)
-        {
-            return await _chunkIngest.UpsertChunkAsync(userId, buffer, length, ct);
-        }
-
-        private async Task<List<Chunk>> CreateEmptyChunkAsync(Guid userId, CancellationToken ct)
-        {
-            Chunk chunk = await _chunkIngest.UpsertChunkAsync(userId, [], 0, ct);
-            return [chunk];
-        }
     }
 }

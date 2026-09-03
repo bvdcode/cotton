@@ -6,6 +6,7 @@ using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Database.Integrity;
 using Cotton.Server.Auth;
+using Cotton.Server.Handlers.WebDav;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
@@ -41,6 +42,7 @@ namespace Cotton.Server.Extensions
         {
             services.AddScoped<IWebDavPathResolver, WebDavPathResolver>();
             services.AddSingleton<WebDavLockManager>();
+            services.AddScoped<WebDavPutContentReader>();
             return services;
         }
 
