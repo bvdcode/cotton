@@ -137,6 +137,7 @@ export const layoutsApi = {
           excludeContentType: filters?.excludedContentTypes,
           excludeClientEncrypted: filters?.excludeClientEncrypted,
         },
+        paramsSerializer: { indexes: null },
       },
     );
     return await applyDisplayMetaToFiles(response.data);

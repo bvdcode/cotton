@@ -186,6 +186,7 @@ describe("layoutsApi reads", () => {
         excludeContentType: undefined,
         excludeClientEncrypted: undefined,
       },
+      paramsSerializer: { indexes: null },
     });
   });
 
@@ -208,6 +209,7 @@ describe("layoutsApi reads", () => {
         excludeContentType: undefined,
         excludeClientEncrypted: undefined,
       },
+      paramsSerializer: { indexes: null },
     });
   });
 
@@ -229,7 +231,16 @@ describe("layoutsApi reads", () => {
         excludeContentType: ["video/x-msvideo"],
         excludeClientEncrypted: true,
       },
+      paramsSerializer: { indexes: null },
     });
+
+    const [url, config] = get.mock.calls[0];
+    const serializedUrl = httpClient.getUri({ url, ...config });
+    expect(serializedUrl).toContain(
+      "contentType=image%2F*&contentType=video%2F*",
+    );
+    expect(serializedUrl).toContain("excludeContentType=video%2Fx-msvideo");
+    expect(serializedUrl).not.toContain("%5B%5D");
 
     await expect(layoutsApi.resolveOwnedNodes([nodeId])).resolves.toEqual([
       { id: nodeId },
