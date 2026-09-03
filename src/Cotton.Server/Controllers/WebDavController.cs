@@ -19,30 +19,16 @@ namespace Cotton.Server.Controllers
     [Route("api/v1/webdav/{**path}")]
     public class WebDavController(
         IMediator _mediator,
-        ILogger<WebDavController> _logger) : ControllerBase
+        ILogger<WebDavController> _logger,
+        WebDavLockManager _locks) : ControllerBase
     {
-        private const string WebDavRoute = "/api/v1/webdav/";
-        private static readonly string WebDavPrefix = WebDavRoute.TrimEnd(WebDavPathResolver.PathSeparator);
-
-        private record WebDavLock(
-            Guid UserId,
-            string Path,
-            string Token,
-            DateTimeOffset ExpiresAt);
-
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, WebDavLock> _locks = new();
-
-        private static long _lastLocksCleanupTicks;
-        private static readonly long LocksCleanupIntervalTicks = TimeSpan.FromSeconds(30).Ticks;
-        private static string GetLockKey(Guid userId, string path) => $"{userId:N}:{path}";
-
         [HttpOptions]
         [AllowAnonymous]
         public IActionResult HandleOptions()
         {
             AddDavHeaders();
 
-            CleanupExpiredLocksIfNeeded(force: true);
+            _locks.CleanupExpiredLocks();
             Response.Headers["Public"] = "OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY, LOCK, UNLOCK";
             return Ok();
         }
@@ -52,8 +38,9 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> HandlePropFindAsync(string? path)
         {
             Guid userId = User.GetUserId();
-            int depth = GetDepthHeader();
-            string hrefBase = Url.Content("~" + WebDavRoute) ?? WebDavRoute;
+            int depth = WebDavRequestHeaders.GetDepth(Request.Headers);
+            string hrefBase = Url.Content("~" + WebDavRequestHeaders.WebDavRoute)
+                ?? WebDavRequestHeaders.WebDavRoute;
 
             _logger.LogDebug("WebDAV PROPFIND: {Path}, depth: {Depth}, user: {UserId}, ip: {Ip}",
                 path ?? "/", depth, userId, Request.GetRemoteAddress());
@@ -182,7 +169,7 @@ namespace Cotton.Server.Controllers
                 AddDavHeaders();
                 return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
             }
-            bool overwrite = GetOverwriteHeader();
+            bool overwrite = WebDavRequestHeaders.GetOverwrite(Request.Headers);
             string? contentType = Request.ContentType;
 
             WebDavPutFileRequest command = new WebDavPutFileRequest(
@@ -234,7 +221,8 @@ namespace Cotton.Server.Controllers
 
             AddDavHeaders();
 
-            string hrefBase = Url.Content("~" + WebDavRoute) ?? WebDavRoute;
+            string hrefBase = Url.Content("~" + WebDavRequestHeaders.WebDavRoute)
+                ?? WebDavRequestHeaders.WebDavRoute;
             string href = hrefBase.TrimEnd(WebDavPathResolver.PathSeparator)
                 + WebDavPathResolver.PathSeparator
                 + path.TrimStart(WebDavPathResolver.PathSeparator);
@@ -261,28 +249,12 @@ namespace Cotton.Server.Controllers
 
             AddDavHeaders();
 
-            string timeoutHeader = Request.Headers["Timeout"].ToString();
-            TimeSpan timeout = TimeSpan.FromHours(1);
-            if (!string.IsNullOrWhiteSpace(timeoutHeader)
-                && timeoutHeader.StartsWith("Second-", StringComparison.OrdinalIgnoreCase)
-                && int.TryParse(timeoutHeader["Second-".Length..], out int seconds)
-                && seconds > 0)
-            {
-                timeout = TimeSpan.FromSeconds(seconds);
-            }
-
-            string token = $"opaquelocktoken:{Guid.NewGuid():D}";
-            WebDavLock lockInfo = new WebDavLock(
-                userId,
-                path.Trim(WebDavPathResolver.PathSeparator),
-                token,
-                DateTimeOffset.UtcNow.Add(timeout));
-
-            _locks[GetLockKey(userId, lockInfo.Path)] = lockInfo;
-            Response.Headers["Lock-Token"] = $"<{token}>";
+            TimeSpan timeout = WebDavRequestHeaders.GetLockTimeout(Request.Headers);
+            WebDavLockInfo lockInfo = _locks.Create(userId, path, timeout);
+            Response.Headers["Lock-Token"] = $"<{lockInfo.Token}>";
             Response.Headers["Timeout"] = $"Second-{(int)timeout.TotalSeconds}";
 
-            string xml = WebDavXmlBuilder.BuildLockDiscoveryResponse(token, timeout);
+            string xml = WebDavXmlBuilder.BuildLockDiscoveryResponse(lockInfo.Token, timeout);
             if (!result.Found)
             {
                 return new ContentResult
@@ -305,17 +277,10 @@ namespace Cotton.Server.Controllers
 
             AddDavHeaders();
 
-            string tokenHeader = Request.Headers["Lock-Token"].ToString();
-            if (!string.IsNullOrWhiteSpace(tokenHeader))
+            string? lockToken = WebDavRequestHeaders.GetLockToken(Request.Headers);
+            if (lockToken is not null)
             {
-                string token = tokenHeader.Trim().Trim('<', '>');
-                string key = GetLockKey(userId, path.Trim(WebDavPathResolver.PathSeparator));
-
-                if (_locks.TryGetValue(key, out WebDavLock? info)
-                    && string.Equals(info.Token, token, StringComparison.Ordinal))
-                {
-                    _locks.TryRemove(key, out _);
-                }
+                _locks.Unlock(userId, path, lockToken);
             }
 
             return NoContent();
@@ -386,8 +351,8 @@ namespace Cotton.Server.Controllers
                 AddDavHeaders();
                 return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
             }
-            string? destination = GetDestinationPath();
-            bool overwrite = GetOverwriteHeader();
+            string? destination = WebDavRequestHeaders.GetDestinationPath(Request.Headers);
+            bool overwrite = WebDavRequestHeaders.GetOverwrite(Request.Headers);
 
             if (string.IsNullOrEmpty(destination))
             {
@@ -423,8 +388,8 @@ namespace Cotton.Server.Controllers
                 AddDavHeaders();
                 return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
             }
-            string? destination = GetDestinationPath();
-            bool overwrite = GetOverwriteHeader();
+            string? destination = WebDavRequestHeaders.GetDestinationPath(Request.Headers);
+            bool overwrite = WebDavRequestHeaders.GetOverwrite(Request.Headers);
 
             if (string.IsNullOrEmpty(destination))
             {
@@ -466,146 +431,10 @@ namespace Cotton.Server.Controllers
 
         private bool IsLockSatisfied(Guid userId, string path)
         {
-            path = (path ?? string.Empty).Trim(WebDavPathResolver.PathSeparator);
-
-            CleanupExpiredLocksIfNeeded(force: false);
-
-            // Check exact and all parents: "a/b/c" -> "a/b/c", "a/b", "a", ""
-            for (string p = path; ; p = ParentPath(p))
-            {
-                string key = GetLockKey(userId, p);
-                if (_locks.TryGetValue(key, out WebDavLock? lockInfo))
-                {
-                    string? lockToken = ExtractLockToken();
-                    return lockToken is not null
-                           && string.Equals(lockToken, lockInfo.Token, StringComparison.Ordinal);
-                }
-
-                if (string.IsNullOrEmpty(p))
-                {
-                    break;
-                }
-            }
-
-            return true;
-        }
-
-        private static string ParentPath(string path)
-        {
-            int i = path.LastIndexOf(WebDavPathResolver.PathSeparator);
-            return i < 0 ? string.Empty : path[..i];
-        }
-
-        private static void CleanupExpiredLocksIfNeeded(bool force)
-        {
-            long nowTicks = DateTimeOffset.UtcNow.UtcTicks;
-            long last = System.Threading.Interlocked.Read(ref _lastLocksCleanupTicks);
-            if (!force && nowTicks - last < LocksCleanupIntervalTicks)
-            {
-                return;
-            }
-
-            if (System.Threading.Interlocked.Exchange(ref _lastLocksCleanupTicks, nowTicks) == last || force)
-            {
-                DateTimeOffset now = DateTimeOffset.UtcNow;
-                foreach ((string? key, WebDavLock? value) in _locks)
-                {
-                    if (value.ExpiresAt <= now)
-                    {
-                        _locks.TryRemove(key, out _);
-                    }
-                }
-            }
-        }
-
-        private string? ExtractLockToken()
-        {
-            string lockTokenHeader = Request.Headers["Lock-Token"].ToString();
-            if (!string.IsNullOrWhiteSpace(lockTokenHeader))
-            {
-                return lockTokenHeader.Trim().Trim('<', '>');
-            }
-
-            string ifHeader = Request.Headers["If"].ToString();
-            if (string.IsNullOrWhiteSpace(ifHeader))
-            {
-                return null;
-            }
-
-            // Very small parser: just find first <opaquelocktoken:...>
-            int start = ifHeader.IndexOf("<opaquelocktoken:", StringComparison.OrdinalIgnoreCase);
-            if (start < 0)
-            {
-                return null;
-            }
-
-            int end = ifHeader.IndexOf('>', start);
-            if (end < 0)
-            {
-                return null;
-            }
-
-            return ifHeader[(start + 1)..end];
-        }
-
-        private int GetDepthHeader()
-        {
-            string? depthHeader = Request.Headers["Depth"].FirstOrDefault();
-            if (string.IsNullOrWhiteSpace(depthHeader))
-            {
-                return 1;
-            }
-
-            depthHeader = depthHeader.Split(',')[0].Trim();
-            if (depthHeader == "0")
-            {
-                return 0;
-            }
-
-            if (depthHeader == "1")
-            {
-                return 1;
-            }
-
-            if (string.Equals(depthHeader, "infinity", StringComparison.OrdinalIgnoreCase))
-            {
-                return 25;
-            }
-
-            return 1;
-        }
-
-        private string? GetDestinationPath()
-        {
-            string? destination = Request.Headers["Destination"].FirstOrDefault();
-            if (string.IsNullOrEmpty(destination))
-            {
-                return null;
-            }
-
-            // Parse the destination URL and extract the path
-            if (Uri.TryCreate(destination, UriKind.RelativeOrAbsolute, out Uri? uri))
-            {
-                destination = uri.IsAbsoluteUri ? uri.AbsolutePath : uri.OriginalString;
-            }
-
-            destination = Uri.UnescapeDataString(destination);
-
-            // Remove the WebDAV route prefix (with or without trailing slash)
-            int idx = destination.IndexOf(WebDavPrefix, StringComparison.OrdinalIgnoreCase);
-            if (idx >= 0)
-            {
-                destination = destination[(idx + WebDavPrefix.Length)..];
-                destination = destination.TrimStart(WebDavPathResolver.PathSeparator);
-            }
-
-            return destination.Trim(WebDavPathResolver.PathSeparator);
-        }
-
-        private bool GetOverwriteHeader()
-        {
-            string? overwrite = Request.Headers["Overwrite"].FirstOrDefault();
-            return !string.Equals(overwrite, "F", StringComparison.OrdinalIgnoreCase);
+            return _locks.IsSatisfied(
+                userId,
+                path,
+                WebDavRequestHeaders.GetLockToken(Request.Headers));
         }
     }
 }
