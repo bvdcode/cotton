@@ -12,6 +12,8 @@ import { useTranslation } from "react-i18next";
 import { usePinnedFoldersQuery } from "../../../shared/api/queries/layouts";
 import { DashboardQueryError } from "./DashboardQueryError";
 
+const PINNED_FOLDERS_STATE_HEIGHT = 72;
+
 interface DashboardPinnedFoldersWidgetProps {
   enabled: boolean;
   folderIds: readonly string[];
@@ -30,7 +32,13 @@ export const DashboardPinnedFoldersWidget = ({
 
   if (folderIds.length === 0) {
     return (
-      <Stack alignItems="center" textAlign="center" py={2} gap={0.5}>
+      <Stack
+        alignItems="center"
+        justifyContent="center"
+        textAlign="center"
+        height={PINNED_FOLDERS_STATE_HEIGHT}
+        gap={0.25}
+      >
         <PushPin color="action" />
         <Typography variant="body2" color="text.secondary">
           {t("dashboard.pinnedFolders.empty")}
@@ -43,15 +51,23 @@ export const DashboardPinnedFoldersWidget = ({
   }
 
   if (query.isPending && folders.length === 0) {
-    return <Skeleton variant="rounded" height={72} />;
+    return <Skeleton variant="rounded" height={PINNED_FOLDERS_STATE_HEIGHT} />;
   }
 
   if (query.isError && folders.length === 0) {
     return (
-      <DashboardQueryError
-        message={t("dashboard.pinnedFolders.loadFailed")}
-        onRetry={() => void query.refetch()}
-      />
+      <Box
+        height={PINNED_FOLDERS_STATE_HEIGHT}
+        display="flex"
+        alignItems="center"
+      >
+        <Box width="100%">
+          <DashboardQueryError
+            message={t("dashboard.pinnedFolders.loadFailed")}
+            onRetry={() => void query.refetch()}
+          />
+        </Box>
+      </Box>
     );
   }
 
