@@ -266,7 +266,7 @@ namespace Cotton.Email
                 {{security_content}}
               </p>
               <p style=""margin:0 0 24px;color:#9ca3af;font-size:13px;line-height:1.5;"">
-                Recorded at {{occurred_at}} UTC
+                Recorded at {{occurred_at}}
               </p>
               <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" style=""margin:0 auto 24px;"">
                 <tr>

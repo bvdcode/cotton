@@ -136,6 +136,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(template, Is.EqualTo(EmailTemplate.SecurityAlert));
                 Assert.That(parameters[EmailTemplateParameterNames.SecurityTitle], Is.EqualTo("New login to your account"));
                 Assert.That(parameters[EmailTemplateParameterNames.SecurityContent], Does.Contain("8.8.8.8"));
+                Assert.That(parameters[EmailTemplateParameterNames.OccurredAt], Does.EndWith("+00:00 (UTC)"));
             });
 
             string[] parts = payload.AccessToken.Split('.');

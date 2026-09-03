@@ -144,11 +144,13 @@ namespace Cotton.Server.Extensions
             try
             {
                 string serverBaseUrl = (await settings.GetPublicBaseUrlAsync(CancellationToken.None)).TrimEnd('/');
+                TimeZoneInfo timeZone = settings.GetServerSettings().GetTimezoneInfo();
                 Dictionary<string, string> parameters = new()
                 {
                     [EmailTemplateParameterNames.SecurityTitle] = EncodeText(title),
                     [EmailTemplateParameterNames.SecurityContent] = EncodeMultilineText(content),
-                    [EmailTemplateParameterNames.OccurredAt] = occurredAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                    [EmailTemplateParameterNames.OccurredAt] = EncodeText(
+                        SecurityEmailTimestampFormatter.Format(occurredAt, timeZone)),
                     [EmailTemplateParameterNames.ServerUrl] = WebUtility.HtmlEncode(serverBaseUrl),
                 };
 

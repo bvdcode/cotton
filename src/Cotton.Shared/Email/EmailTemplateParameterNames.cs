@@ -44,7 +44,7 @@ namespace Cotton.Email
         public const string SecurityContent = "security_content";
 
         /// <summary>
-        /// UTC timestamp when the security event occurred.
+        /// Timestamp and time-zone information for the security event.
         /// </summary>
         public const string OccurredAt = "occurred_at";
 

@@ -16,7 +16,7 @@ namespace Cotton.Server.IntegrationTests
             {
                 [EmailTemplateParameterNames.SecurityTitle] = "Password changed",
                 [EmailTemplateParameterNames.SecurityContent] = "Your password was changed.",
-                [EmailTemplateParameterNames.OccurredAt] = "2026-07-11 09:00:00",
+                [EmailTemplateParameterNames.OccurredAt] = "2026-07-11 02:00:00 -07:00 (America/Los_Angeles)",
                 [EmailTemplateParameterNames.ServerUrl] = "https://cloud.example.test",
                 [EmailTemplateParameterNames.Year] = "2026"
             };
@@ -30,6 +30,8 @@ namespace Cotton.Server.IntegrationTests
                     Is.EqualTo("Security alert \u2014 Cotton Cloud"));
                 Assert.That(body, Does.Contain("Password changed"));
                 Assert.That(body, Does.Contain("Your password was changed."));
+                Assert.That(body, Does.Contain("Recorded at 2026-07-11 02:00:00 -07:00 (America/Los_Angeles)"));
+                Assert.That(body, Does.Not.Contain("America/Los_Angeles) UTC"));
                 Assert.That(body, Does.Contain("https://cottoncloud.dev/favicon-96x96.png"));
                 Assert.That(body, Does.Contain("background:#11140F"));
                 Assert.That(body, Does.Contain("background:#C6FF00"));
