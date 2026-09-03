@@ -328,7 +328,13 @@ const LoginSubmitButton = ({
           }),
       }}
     >
-      <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
+      <Box
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: form.loading ? 0 : 1,
+        }}
+      >
         <SubmitLabel loading={form.loading} label={submitButtonLabel} />
         <SubmitIcon loading={form.loading} />
       </Box>
