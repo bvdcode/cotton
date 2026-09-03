@@ -151,7 +151,6 @@ export default defineConfig(() => {
             /^\/chunks\//,
             /^\/preview\//,
           ],
-          // Allow larger bundles to be precached in CI (default is 2 MiB)
           maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         },
         manifest: {
