@@ -130,13 +130,7 @@ namespace Cotton.Server.Handlers.Nodes
                 : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync(cancellationToken: ct);
 
             List<NodeFileManifestDto> files = filesToTake == 0 ? []
-                : await filesBaseQuery
-                    .OrderBy(x => x.NameKey)
-                    .Include(x => x.FileManifest)
-                    .Skip(filesSkip)
-                    .Take(filesToTake)
-                    .ProjectToType<NodeFileManifestDto>()
-                    .ToListAsync(cancellationToken: ct);
+                : await LoadFilePageAsync(filesBaseQuery, filesSkip, filesToTake, ct);
 
             return new(new NodeContentDto
             {
@@ -146,6 +140,36 @@ namespace Cotton.Server.Handlers.Nodes
                 CreatedAt = parentNode.CreatedAt,
                 UpdatedAt = parentNode.UpdatedAt,
             }, nodesCount + filesCount);
+        }
+
+        private static async Task<List<NodeFileManifestDto>> LoadFilePageAsync(
+            IQueryable<NodeFile> filesQuery,
+            int skip,
+            int take,
+            CancellationToken cancellationToken)
+        {
+            Guid[] fileIds = await filesQuery
+                .OrderBy(file => file.NameKey)
+                .ThenBy(file => file.Id)
+                .Skip(skip)
+                .Take(take)
+                .Select(file => file.Id)
+                .ToArrayAsync(cancellationToken);
+            if (fileIds.Length == 0)
+            {
+                return [];
+            }
+
+            List<NodeFileManifestDto> files = await filesQuery
+                .Where(file => fileIds.Contains(file.Id))
+                .Include(file => file.FileManifest)
+                .ProjectToType<NodeFileManifestDto>()
+                .ToListAsync(cancellationToken);
+            Dictionary<Guid, int> order = fileIds
+                .Select((id, index) => new { id, index })
+                .ToDictionary(item => item.id, item => item.index);
+            files.Sort((left, right) => order[left.Id].CompareTo(order[right.Id]));
+            return files;
         }
 
         private async Task<PagedResult<NodeContentDto>> LoadTrashChildrenAsync(

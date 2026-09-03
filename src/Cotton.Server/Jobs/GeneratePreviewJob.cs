@@ -41,7 +41,8 @@ namespace Cotton.Server.Jobs
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
 
             HashSet<Guid> queuedOrProcessedItemIds = [];
-            List<FileManifest> itemsToProcess = await LoadNextPreviewItemsAsync(
+            List<FileManifest> itemsToProcess = await PreviewQueueLoader.LoadNextAsync(
+                _dbContext,
                 allSupportedMimeTypes,
                 generatorVersionsByContentType,
                 MaxItemsPerRun,
@@ -188,7 +189,7 @@ namespace Cotton.Server.Jobs
             byte[] previewImage = await generator.GeneratePreviewWebPAsync(source, PreviewGeneratorProvider.DefaultSmallPreviewSize);
             byte[] hash = await WritePreviewImageAsync(item.Id, "preview", previewImage, cancellationToken);
             item.SmallFilePreviewHash = hash;
-            item.SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash);
+            item.SmallFilePreviewHashEncrypted = await _crypto.EncryptAsync(hash, cancellationToken: cancellationToken);
         }
 
         private async Task StoreLargePreviewIfSupportedAsync(
@@ -308,74 +309,6 @@ namespace Cotton.Server.Jobs
             }
         }
 
-        private IQueryable<FileManifest> CreateItemsToProcessQuery(
-            IReadOnlyCollection<string> allSupportedMimeTypes,
-            IReadOnlyDictionary<string, int> generatorVersionsByContentType)
-        {
-            IQueryable<FileManifest> processableItemsQuery = _dbContext.FileManifests
-                .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType));
-
-            IQueryable<FileManifest> itemsToProcessQuery = processableItemsQuery
-                .Where(fm => fm.SmallFilePreviewHash == null || fm.SmallFilePreviewHashEncrypted == null)
-                .Where(fm => fm.PreviewGenerationError == null);
-
-            foreach (IGrouping<int, KeyValuePair<string, int>> versionGroup in generatorVersionsByContentType.GroupBy(x => x.Value))
-            {
-                int generatorVersion = versionGroup.Key;
-                string[] contentTypes = [.. versionGroup.Select(x => x.Key)];
-
-                itemsToProcessQuery = itemsToProcessQuery
-                    .Union(processableItemsQuery
-                        .Where(fm => contentTypes.Contains(fm.ContentType))
-                        .Where(fm => fm.PreviewGeneratorVersion != generatorVersion));
-            }
-
-            return itemsToProcessQuery;
-        }
-
-        private async Task<List<FileManifest>> LoadNextPreviewItemsAsync(
-            IReadOnlyCollection<string> allSupportedMimeTypes,
-            IReadOnlyDictionary<string, int> generatorVersionsByContentType,
-            int limit,
-            HashSet<Guid> knownItemIds,
-            CancellationToken cancellationToken)
-        {
-            if (limit <= 0)
-            {
-                return [];
-            }
-
-            List<Guid> itemIds = await CreateItemsToProcessQuery(allSupportedMimeTypes, generatorVersionsByContentType)
-                .OrderByDescending(fm => fm.CreatedAt)
-                .Select(fm => fm.Id)
-                .Take(limit)
-                .ToListAsync(cancellationToken);
-
-            List<Guid> newItemIds = [.. itemIds.Where(id => knownItemIds.Add(id))];
-            return await LoadPreviewItemsByIdsAsync(newItemIds, cancellationToken);
-        }
-
-        private async Task<List<FileManifest>> LoadPreviewItemsByIdsAsync(
-            IReadOnlyCollection<Guid> itemIds,
-            CancellationToken cancellationToken)
-        {
-            if (itemIds.Count == 0)
-            {
-                return [];
-            }
-
-            List<FileManifest> itemsToProcess = await _dbContext.FileManifests
-                .Where(fm => itemIds.Contains(fm.Id))
-                .Include(fm => fm.NodeFiles)
-                .Include(fm => fm.FileManifestChunks)
-                .ThenInclude(fmc => fmc.Chunk)
-                .AsSplitQuery()
-                .ToListAsync(cancellationToken);
-
-            Dictionary<Guid, FileManifest> itemsToProcessById = itemsToProcess.ToDictionary(x => x.Id);
-            return [.. itemIds.Where(itemsToProcessById.ContainsKey).Select(id => itemsToProcessById[id])];
-        }
-
         private async Task<int> RefreshPreviewQueueAsync(
             List<FileManifest> itemsToProcess,
             int insertIndex,
@@ -390,7 +323,8 @@ namespace Cotton.Server.Jobs
                 return 0;
             }
 
-            List<FileManifest> refreshedItems = await LoadNextPreviewItemsAsync(
+            List<FileManifest> refreshedItems = await PreviewQueueLoader.LoadNextAsync(
+                _dbContext,
                 allSupportedMimeTypes,
                 generatorVersionsByContentType,
                 Math.Min(RefreshItemsPerUploadPause, remainingSlots),

@@ -181,6 +181,41 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task PreviewPipeline_StaleGeneratorVersion_RegeneratesPreview()
+        {
+            string token = await LoginAsync();
+            SetBearer(token);
+
+            NodeDto root = await GetRootNodeAsync();
+            NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(
+                root.Id,
+                "stale-preview.txt",
+                "text/plain",
+                Encoding.UTF8.GetBytes("stale preview"));
+            await ExecuteGeneratePreviewJobAsync();
+
+            await using (AsyncServiceScope scope = _factory!.Services.CreateAsyncScope())
+            {
+                CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                FileManifest manifest = await LoadFileManifestAsync(dbContext, createdFile.Id);
+                manifest.PreviewGeneratorVersion = -1;
+                await dbContext.SaveChangesAsync();
+            }
+
+            await ExecuteGeneratePreviewJobAsync();
+
+            await using AsyncServiceScope verificationScope = _factory.Services.CreateAsyncScope();
+            CottonDbContext verificationContext = verificationScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            int actualVersion = await verificationContext.NodeFiles
+                .Where(nodeFile => nodeFile.Id == createdFile.Id)
+                .Select(nodeFile => nodeFile.FileManifest.PreviewGeneratorVersion)
+                .SingleAsync();
+            int expectedVersion = PreviewGeneratorProvider
+                .GetGeneratorVersionsByContentType()["text/plain"];
+            Assert.That(actualVersion, Is.EqualTo(expectedVersion));
+        }
+
+        [Test]
         public async Task PreviewPipeline_LargeImage_GeneratesSmallAndLarge_WithExpectedDimensions_AndCompression()
         {
             string token = await LoginAsync();

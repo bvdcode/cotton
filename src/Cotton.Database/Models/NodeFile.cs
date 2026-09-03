@@ -9,7 +9,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Cotton.Database.Models
 {
     [Table("node_files")]
-    [Index(nameof(NodeId), nameof(NameKey))]
+    [Index(nameof(NodeId), nameof(NameKey), nameof(OwnerId), nameof(Id))]
+    [Index(nameof(OwnerId), nameof(CreatedAt))]
     [Index(nameof(FileManifestId), nameof(NodeId))]
     public class NodeFile : BaseOwnedEntity<Guid>
     {

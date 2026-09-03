@@ -162,6 +162,39 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task GetChildren_PaginatesFilesInNameOrderAndPreservesTotalCount()
+        {
+            string token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
+
+            NodeDto folder = await CreateNodeAsync(root!.Id, "paged-files");
+            await UploadTextFileAsync(folder.Id, "delta.txt", "delta");
+            await UploadTextFileAsync(folder.Id, "alpha.txt", "alpha");
+            await UploadTextFileAsync(folder.Id, "echo.txt", "echo");
+            await UploadTextFileAsync(folder.Id, "charlie.txt", "charlie");
+            await UploadTextFileAsync(folder.Id, "bravo.txt", "bravo");
+
+            using HttpResponseMessage response = await _client.GetAsync(
+                $"/api/v1/layouts/nodes/{folder.Id}/children?page=2&pageSize=2");
+            response.EnsureSuccessStatusCode();
+            NodeContentDto? page = await response.Content.ReadFromJsonAsync<NodeContentDto>();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.Headers.GetValues("X-Total-Count").Single(), Is.EqualTo("5"));
+                Assert.That(page, Is.Not.Null);
+                Assert.That(page!.Files.Select(file => file.Name), Is.EqualTo(new[]
+                {
+                    "charlie.txt",
+                    "delta.txt",
+                }));
+                Assert.That(page.Files.All(file => file.ContentType == "text/plain"), Is.True);
+            });
+        }
+
+        [Test]
         public async Task Shared_Folder_Api_Exposes_Info_Navigation_And_File_Content()
         {
             string accessToken = await LoginAsync();
