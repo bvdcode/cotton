@@ -178,7 +178,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
           flexDirection: "column",
         })}
       >
-        <ErrorBoundary>
+        <ErrorBoundary resetKey={location.key}>
           <Outlet />
         </ErrorBoundary>
       </Container>

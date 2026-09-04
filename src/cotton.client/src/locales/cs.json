@@ -1515,13 +1515,12 @@
       "pause": "Pozastavit",
       "copied": "Zkopírováno!",
       "reload": "Obnovit",
+      "retry": "Zkusit znovu",
       "versions": "Versions"
     },
     "errors": {
-      "unexpectedTitle": "Něco se pokazilo",
-      "unexpectedDescription": "Došlo k neočekávané chybě. Obnovte prosím stránku.",
-      "showDetails": "Zobrazit podrobnosti",
-      "hideDetails": "Skrýt podrobnosti",
+      "unexpectedTitle": "Stránku se nepodařilo zobrazit",
+      "unexpectedDescription": "Při zobrazování stránky došlo k chybě. Zkuste to znovu nebo stránku obnovte, pokud problém přetrvává.",
       "schemaValidationFailed": "Server vrátil neočekávaná data"
     },
     "userMenu": {

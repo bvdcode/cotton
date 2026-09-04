@@ -1509,14 +1509,13 @@
       "play": "Abspielen",
       "pause": "Pause",
       "copied": "Kopiert!",
-      "reload": "Aktualisieren",
+      "reload": "Neu laden",
+      "retry": "Erneut versuchen",
       "versions": "Versions"
     },
     "errors": {
-      "unexpectedTitle": "Etwas ist schiefgelaufen",
-      "unexpectedDescription": "Ein unerwarteter Fehler ist aufgetreten. Bitte lade die Seite neu.",
-      "showDetails": "Details anzeigen",
-      "hideDetails": "Details ausblenden",
+      "unexpectedTitle": "Seite konnte nicht angezeigt werden",
+      "unexpectedDescription": "Beim Anzeigen der Seite ist ein unerwarteter Fehler aufgetreten. Versuche es erneut oder lade die Seite neu, falls das Problem weiterhin besteht.",
       "schemaValidationFailed": "Der Server hat unerwartete Daten zurückgegeben"
     },
     "userMenu": {

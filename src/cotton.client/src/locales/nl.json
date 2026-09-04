@@ -1514,14 +1514,13 @@
       "play": "Afspelen",
       "pause": "Pauzeren",
       "copied": "Gekopieerd!",
-      "reload": "Vernieuwen",
+      "reload": "Opnieuw laden",
+      "retry": "Opnieuw proberen",
       "versions": "Versions"
     },
     "errors": {
-      "unexpectedTitle": "Er is iets misgegaan",
-      "unexpectedDescription": "Er is een onverwachte fout opgetreden. Laad de pagina opnieuw.",
-      "showDetails": "Details tonen",
-      "hideDetails": "Details verbergen",
+      "unexpectedTitle": "Deze pagina kan niet worden weergegeven",
+      "unexpectedDescription": "Er is een onverwachte fout opgetreden bij het weergeven van de pagina. Probeer het opnieuw of laad de pagina opnieuw als het probleem aanhoudt.",
       "schemaValidationFailed": "De server heeft onverwachte gegevens geretourneerd"
     },
     "userMenu": {

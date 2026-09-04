@@ -1513,14 +1513,13 @@
       "play": "Lire",
       "pause": "Pause",
       "copied": "Copié !",
-      "reload": "Actualiser",
+      "reload": "Recharger",
+      "retry": "Réessayer",
       "versions": "Versions"
     },
     "errors": {
-      "unexpectedTitle": "Une erreur est survenue",
-      "unexpectedDescription": "Une erreur inattendue s'est produite. Veuillez recharger la page.",
-      "showDetails": "Afficher les détails",
-      "hideDetails": "Masquer les détails",
+      "unexpectedTitle": "Impossible d’afficher cette page",
+      "unexpectedDescription": "Une erreur inattendue s’est produite lors de l’affichage de la page. Réessayez ou rechargez-la si le problème persiste.",
       "schemaValidationFailed": "Le serveur a renvoyé des données inattendues"
     },
     "userMenu": {

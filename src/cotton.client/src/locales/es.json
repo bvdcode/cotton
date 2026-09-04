@@ -1513,13 +1513,12 @@
       "pause": "Pausar",
       "copied": "¡Copiado!",
       "reload": "Recargar",
+      "retry": "Reintentar",
       "versions": "Versions"
     },
     "errors": {
-      "unexpectedTitle": "Algo salió mal",
-      "unexpectedDescription": "Ocurrió un error inesperado. Vuelve a cargar la página.",
-      "showDetails": "Mostrar detalles",
-      "hideDetails": "Ocultar detalles",
+      "unexpectedTitle": "No se pudo mostrar la página",
+      "unexpectedDescription": "Se produjo un error inesperado al mostrar la página. Inténtalo de nuevo o recárgala si el problema continúa.",
       "schemaValidationFailed": "El servidor devolvió datos inesperados"
     },
     "userMenu": {

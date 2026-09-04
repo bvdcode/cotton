@@ -1311,13 +1311,12 @@
       "play": "Play",
       "pause": "Pause",
       "copied": "Copied!",
-      "reload": "Refresh"
+      "reload": "Reload",
+      "retry": "Retry"
     },
     "errors": {
-      "unexpectedTitle": "Something went wrong",
-      "unexpectedDescription": "An unexpected error occurred. Please reload the page.",
-      "showDetails": "Show details",
-      "hideDetails": "Hide details",
+      "unexpectedTitle": "Unable to display this page",
+      "unexpectedDescription": "The page encountered an unexpected error. Try again, or reload if the problem continues.",
       "schemaValidationFailed": "Server returned unexpected data"
     },
     "userMenu": {

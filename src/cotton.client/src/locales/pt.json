@@ -1516,14 +1516,13 @@
       "play": "Reproduzir",
       "pause": "Pausar",
       "copied": "Copiado!",
-      "reload": "Atualizar",
+      "reload": "Recarregar",
+      "retry": "Tentar novamente",
       "versions": "Versions"
     },
     "errors": {
-      "unexpectedTitle": "Algo deu errado",
-      "unexpectedDescription": "Ocorreu um erro inesperado. Recarregue a página.",
-      "showDetails": "Mostrar detalhes",
-      "hideDetails": "Ocultar detalhes",
+      "unexpectedTitle": "Não foi possível exibir esta página",
+      "unexpectedDescription": "Ocorreu um erro inesperado ao exibir a página. Tente novamente ou recarregue-a se o problema persistir.",
       "schemaValidationFailed": "O servidor retornou dados inesperados"
     },
     "userMenu": {

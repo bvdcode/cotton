@@ -1518,13 +1518,12 @@
       "pause": "Wstrzymaj",
       "copied": "Skopiowano!",
       "reload": "Odśwież",
+      "retry": "Spróbuj ponownie",
       "versions": "Versions"
     },
     "errors": {
-      "unexpectedTitle": "Coś poszło nie tak",
-      "unexpectedDescription": "Wystąpił nieoczekiwany błąd. Proszę odświeżyć stronę.",
-      "showDetails": "Pokaż szczegóły",
-      "hideDetails": "Ukryj szczegóły",
+      "unexpectedTitle": "Nie udało się wyświetlić strony",
+      "unexpectedDescription": "Podczas wyświetlania strony wystąpił nieoczekiwany błąd. Spróbuj ponownie lub odśwież stronę, jeśli problem będzie się powtarzał.",
       "schemaValidationFailed": "Serwer zwrócił nieoczekiwane dane"
     },
     "userMenu": {
