@@ -1527,7 +1527,9 @@
     "errors": {
       "unexpectedTitle": "Не вдалося відобразити сторінку",
       "unexpectedDescription": "Під час відображення сторінки сталася неочікувана помилка. Спробуйте ще раз або перезавантажте сторінку, якщо помилка повториться.",
-      "schemaValidationFailed": "Сервер повернув неочікувані дані"
+      "schemaValidationFailed": "Сервер повернув неочікувані дані",
+      "serverUnavailableTitle": "Сервер недоступний",
+      "serverUnavailableDescription": "Cotton не вдалося з’єднатися із сервером. Перевірте підключення та повторіть спробу."
     },
     "userMenu": {
       "profile": "Профіль",

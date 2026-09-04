@@ -1521,7 +1521,9 @@
     "errors": {
       "unexpectedTitle": "Deze pagina kan niet worden weergegeven",
       "unexpectedDescription": "Er is een onverwachte fout opgetreden bij het weergeven van de pagina. Probeer het opnieuw of laad de pagina opnieuw als het probleem aanhoudt.",
-      "schemaValidationFailed": "De server heeft onverwachte gegevens geretourneerd"
+      "schemaValidationFailed": "De server heeft onverwachte gegevens geretourneerd",
+      "serverUnavailableTitle": "Server niet beschikbaar",
+      "serverUnavailableDescription": "Cotton kon de server niet bereiken. Controleer de verbinding en probeer het opnieuw."
     },
     "userMenu": {
       "profile": "Profiel",

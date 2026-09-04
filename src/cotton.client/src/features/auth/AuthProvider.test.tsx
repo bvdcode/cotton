@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -90,9 +90,14 @@ const AuthProbe = () => {
   }, [restoreSession]);
 
   return (
-    <div data-testid="auth-state">
-      {phase}:{isAuthenticated ? currentUser?.username : "anonymous"}
-    </div>
+    <>
+      <div data-testid="auth-state">
+        {phase}:{isAuthenticated ? currentUser?.username : "anonymous"}
+      </div>
+      <button type="button" onClick={() => void restoreSession()}>
+        retry auth
+      </button>
+    </>
   );
 };
 
@@ -123,7 +128,10 @@ describe("AuthProvider OIDC restore", () => {
 
   it("allows refresh after an OIDC redirect even when silent refresh was disabled", async () => {
     markOidcSignInPending();
-    authApiMocks.restoreSession.mockResolvedValue(user);
+    authApiMocks.restoreSession.mockResolvedValue({
+      kind: "authenticated",
+      user,
+    });
 
     render(
       <AuthProvider>
@@ -146,7 +154,10 @@ describe("AuthProvider OIDC restore", () => {
 
   it("restores a regular browser session with one request", async () => {
     useAuthStore.setState({ refreshEnabled: true });
-    authApiMocks.restoreSession.mockResolvedValue(user);
+    authApiMocks.restoreSession.mockResolvedValue({
+      kind: "authenticated",
+      user,
+    });
 
     render(
       <AuthProvider>
@@ -180,9 +191,29 @@ describe("AuthProvider OIDC restore", () => {
     expect(authApiMocks.restoreSession).not.toHaveBeenCalled();
   });
 
-  it("deduplicates concurrent restore requests", async () => {
+  it("becomes anonymous when no refresh session exists", async () => {
     useAuthStore.setState({ refreshEnabled: true });
-    authApiMocks.restoreSession.mockResolvedValue(user);
+    authApiMocks.restoreSession.mockResolvedValue({ kind: "anonymous" });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auth-state")).toHaveTextContent(
+        "anonymous:anonymous",
+      );
+    });
+  });
+
+  it("deduplicates concurrent restore workflows", async () => {
+    useAuthStore.setState({ refreshEnabled: true });
+    authApiMocks.restoreSession.mockResolvedValue({
+      kind: "authenticated",
+      user,
+    });
 
     render(
       <AuthProvider>
@@ -193,5 +224,50 @@ describe("AuthProvider OIDC restore", () => {
     await waitFor(() => {
       expect(authApiMocks.restoreSession).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("keeps the requested route recoverable when the server is unavailable", async () => {
+    useAuthStore.setState({ refreshEnabled: true });
+    authApiMocks.restoreSession.mockRejectedValue(new Error("offline"));
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auth-state")).toHaveTextContent(
+        "unavailable:anonymous",
+      );
+    });
+  });
+
+  it("restores the session when the user retries after recovery", async () => {
+    useAuthStore.setState({ refreshEnabled: true });
+    authApiMocks.restoreSession
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce({ kind: "authenticated", user });
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auth-state")).toHaveTextContent(
+        "unavailable:anonymous",
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "retry auth" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auth-state")).toHaveTextContent(
+        "authenticated:alice",
+      );
+    });
+    expect(authApiMocks.restoreSession).toHaveBeenCalledTimes(2);
   });
 });

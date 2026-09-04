@@ -1606,7 +1606,9 @@
     "errors": {
       "unexpectedTitle": "Не удалось отобразить страницу",
       "unexpectedDescription": "При отображении страницы произошла ошибка. Попробуйте ещё раз или перезагрузите страницу, если ошибка повторится.",
-      "schemaValidationFailed": "Сервер вернул неожиданные данные"
+      "schemaValidationFailed": "Сервер вернул неожиданные данные",
+      "serverUnavailableTitle": "Сервер недоступен",
+      "serverUnavailableDescription": "Cotton не удалось связаться с сервером. Проверьте подключение и повторите попытку."
     },
     "userMenu": {
       "profile": "Профиль",

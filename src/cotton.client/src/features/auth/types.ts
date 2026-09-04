@@ -20,7 +20,11 @@ export interface User {
   totpFailedAttempts?: number;
 }
 
-export type AuthPhase = "booting" | "anonymous" | "authenticated";
+export type AuthPhase =
+  "booting" | "anonymous" | "authenticated" | "unavailable";
+
+export type RestoreResult =
+  { kind: "authenticated"; user: User } | { kind: "anonymous" };
 
 export interface AuthState {
   user: User | null; // optional snapshot for UI

@@ -1317,7 +1317,9 @@
     "errors": {
       "unexpectedTitle": "Unable to display this page",
       "unexpectedDescription": "The page encountered an unexpected error. Try again, or reload if the problem continues.",
-      "schemaValidationFailed": "Server returned unexpected data"
+      "schemaValidationFailed": "Server returned unexpected data",
+      "serverUnavailableTitle": "Server unavailable",
+      "serverUnavailableDescription": "Cotton could not reach the server. Check the connection and try again."
     },
     "userMenu": {
       "profile": "Profile",

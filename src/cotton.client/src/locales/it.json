@@ -1522,7 +1522,9 @@
     "errors": {
       "unexpectedTitle": "Impossibile visualizzare questa pagina",
       "unexpectedDescription": "Si è verificato un errore imprevisto durante la visualizzazione della pagina. Riprova o ricaricala se il problema persiste.",
-      "schemaValidationFailed": "Il server ha restituito dati imprevisti"
+      "schemaValidationFailed": "Il server ha restituito dati imprevisti",
+      "serverUnavailableTitle": "Server non disponibile",
+      "serverUnavailableDescription": "Cotton non è riuscito a raggiungere il server. Controlla la connessione e riprova."
     },
     "userMenu": {
       "profile": "Profilo",

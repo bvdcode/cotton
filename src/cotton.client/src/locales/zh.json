@@ -1529,7 +1529,9 @@
     "errors": {
       "unexpectedTitle": "无法显示此页面",
       "unexpectedDescription": "显示页面时发生意外错误。如果问题仍然存在，请重试或刷新页面。",
-      "schemaValidationFailed": "服务器返回了意外的数据"
+      "schemaValidationFailed": "服务器返回了意外的数据",
+      "serverUnavailableTitle": "服务器不可用",
+      "serverUnavailableDescription": "Cotton 无法连接到服务器。请检查连接后重试。"
     },
     "userMenu": {
       "profile": "个人资料",

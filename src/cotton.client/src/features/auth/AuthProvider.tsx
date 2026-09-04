@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef, type ReactNode } from "react";
 import { authApi } from "../../shared/api/authApi";
-import type { AuthContextValue, User } from "./types";
+import type { AuthContextValue, RestoreResult, User } from "./types";
 import { useAuthStore } from "../../shared/store";
 import { waitForAuthStoreHydration } from "../../shared/store/authStore";
 import { useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
@@ -35,7 +35,7 @@ interface RestoreAuthSessionOptions {
 
 const restoreAuthSession = async (
   options: RestoreAuthSessionOptions = {},
-): Promise<User | null> => {
+): Promise<RestoreResult> => {
   return await authApi.restoreSession({
     allowWhenRefreshDisabled: options.allowWhenRefreshDisabled,
   });
@@ -43,30 +43,27 @@ const restoreAuthSession = async (
 
 const waitForAuthSessionAfterUnlock = async (
   options: RestoreAuthSessionOptions = {},
-): Promise<User | null> => {
+): Promise<RestoreResult> => {
   const deadline = Date.now() + AUTH_RETRY_AFTER_UNLOCK_TIMEOUT_MS;
 
-  do {
+  while (Date.now() < deadline) {
     try {
-      const userData = await restoreAuthSession(options);
-      if (userData) {
-        return userData;
-      }
+      return await restoreAuthSession(options);
     } catch {
-      // The backend can finish unlocking before auth endpoints are fully ready.
+      // Unlock completion and auth availability are not atomic.
     }
 
     if (
       !options.allowWhenRefreshDisabled &&
       !useAuthStore.getState().refreshEnabled
     ) {
-      return null;
+      return { kind: "anonymous" };
     }
 
     await delay(AUTH_RETRY_AFTER_UNLOCK_INTERVAL_MS);
-  } while (Date.now() < deadline);
+  }
 
-  return null;
+  return await restoreAuthSession(options);
 };
 
 interface AuthProviderProps {
@@ -78,7 +75,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const phase = useAuthStore((s) => s.phase);
   const refreshEnabled = useAuthStore((s) => s.refreshEnabled);
   const setAuthenticatedInStore = useAuthStore((s) => s.setAuthenticated);
+  const setBooting = useAuthStore((s) => s.setBooting);
   const setUnauthenticated = useAuthStore((s) => s.setUnauthenticated);
+  const setUnavailable = useAuthStore((s) => s.setUnavailable);
   const logoutLocal = useAuthStore((s) => s.logoutLocal);
   const restorePromiseRef = useRef<Promise<void> | null>(null);
   const lastResetUserIdRef = useRef<string | null | undefined>(undefined);
@@ -138,34 +137,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
+      setBooting();
+
       const restoreOptions: RestoreAuthSessionOptions = {
         allowWhenRefreshDisabled: hasPendingOidcSignIn,
       };
       const shouldRetryAfterUnlock = consumeJustUnlockedMarker();
-      const userData = shouldRetryAfterUnlock
+      const result = shouldRetryAfterUnlock
         ? await waitForAuthSessionAfterUnlock(restoreOptions)
         : await restoreAuthSession(restoreOptions);
 
-      if (userData) {
-        resetForIdentity(userData.id);
-        useAuthStore.getState().setAuthenticated(userData);
-      } else {
-        useAuthStore.getState().setUnauthenticated();
+      switch (result.kind) {
+        case "authenticated":
+          resetForIdentity(result.user.id);
+          useAuthStore.getState().setAuthenticated(result.user);
+          return;
+        case "anonymous":
+          useAuthStore.getState().setUnauthenticated();
+          return;
       }
-    })().catch((error: unknown) => {
-      console.error("Failed to restore user session:", error);
-      useAuthStore.getState().setUnauthenticated();
+    })().catch(() => {
+      setUnavailable();
     });
 
     restorePromiseRef.current = promise;
-    const clearRestorePromise = () => {
+    const clearPromise = (): void => {
       if (restorePromiseRef.current === promise) {
         restorePromiseRef.current = null;
       }
     };
-    void promise.then(clearRestorePromise, clearRestorePromise);
+    void promise.then(clearPromise, clearPromise);
     return promise;
-  }, [resetForIdentity]);
+  }, [resetForIdentity, setBooting, setUnavailable]);
 
   const setAuthenticated = useCallback(
     (value: boolean, u?: User | null) => {
@@ -192,14 +195,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const logout = useCallback(async () => {
+    logoutLocal();
+    resetForIdentity(null);
     try {
       await authApi.logout();
     } catch (error) {
       // Ignore logout errors - still clear local state
       console.error("Logout error:", error);
     }
-    logoutLocal();
-    resetForIdentity(null);
   }, [logoutLocal, resetForIdentity]);
 
   const value: AuthContextValue = {

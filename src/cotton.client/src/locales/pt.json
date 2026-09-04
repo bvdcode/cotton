@@ -1523,7 +1523,9 @@
     "errors": {
       "unexpectedTitle": "Não foi possível exibir esta página",
       "unexpectedDescription": "Ocorreu um erro inesperado ao exibir a página. Tente novamente ou recarregue-a se o problema persistir.",
-      "schemaValidationFailed": "O servidor retornou dados inesperados"
+      "schemaValidationFailed": "O servidor retornou dados inesperados",
+      "serverUnavailableTitle": "Servidor indisponível",
+      "serverUnavailableDescription": "O Cotton não conseguiu ligar ao servidor. Verifique a ligação e tente novamente."
     },
     "userMenu": {
       "profile": "Perfil",

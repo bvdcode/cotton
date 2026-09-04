@@ -36,16 +36,12 @@ vi.mock("../store/authStore", () => ({
 }));
 
 const {
-  clearAccessToken,
   extractApiErrorMessage,
-  getAccessToken,
   getApiErrorMessage,
   getValidated,
   hasApiErrorToastBeenDispatched,
   httpClient,
   parseValidated,
-  refreshAccessToken,
-  setAccessToken,
   showApiErrorToast,
 } = await import("./httpClient");
 
@@ -71,8 +67,6 @@ beforeEach(() => {
   toastErrorMock.mockClear();
   logoutLocalMock.mockClear();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
-  setAccessToken("reset");
-  clearAccessToken();
 });
 
 afterEach(() => {
@@ -239,102 +233,5 @@ describe("getValidated", () => {
       z.ZodError,
     );
     expect(toastErrorMock).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("access token helpers", () => {
-  it("round-trips token values through set, get, and clear", () => {
-    expect(getAccessToken()).toBeNull();
-
-    setAccessToken("abc");
-    expect(getAccessToken()).toBe("abc");
-
-    clearAccessToken();
-    expect(getAccessToken()).toBeNull();
-  });
-
-  it("accepts null to clear the stored token", () => {
-    setAccessToken("abc");
-    setAccessToken(null);
-
-    expect(getAccessToken()).toBeNull();
-  });
-});
-
-describe("refreshAccessToken", () => {
-  it("returns null and clears the token when refresh is disabled", async () => {
-    refreshEnabledMock.mockReturnValue(false);
-    setAccessToken("stale");
-
-    await expect(refreshAccessToken()).resolves.toBeNull();
-    expect(getAccessToken()).toBeNull();
-  });
-
-  it("allows one explicit refresh when local refresh is disabled", async () => {
-    refreshEnabledMock.mockReturnValue(false);
-    vi.spyOn(httpClient, "post").mockResolvedValue({
-      data: { accessToken: "fresh" },
-    });
-
-    await expect(
-      refreshAccessToken({ allowWhenRefreshDisabled: true }),
-    ).resolves.toBe("fresh");
-    expect(getAccessToken()).toBe("fresh");
-  });
-
-  it("allows explicit refresh after a terminal failure blocks silent refresh", async () => {
-    const post = vi
-      .spyOn(httpClient, "post")
-      .mockRejectedValueOnce(buildAxiosError(401, {}))
-      .mockResolvedValueOnce({ data: { accessToken: "oidc-fresh" } });
-    setAccessToken("stale");
-
-    await expect(refreshAccessToken()).resolves.toBeNull();
-
-    refreshEnabledMock.mockReturnValue(false);
-    await expect(
-      refreshAccessToken({ allowWhenRefreshDisabled: true }),
-    ).resolves.toBe("oidc-fresh");
-
-    expect(post).toHaveBeenCalledTimes(2);
-    expect(getAccessToken()).toBe("oidc-fresh");
-    expect(logoutLocalMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("returns and stores the new token on success", async () => {
-    vi.spyOn(httpClient, "post").mockResolvedValue({
-      data: { accessToken: "fresh" },
-    });
-
-    await expect(refreshAccessToken()).resolves.toBe("fresh");
-    expect(getAccessToken()).toBe("fresh");
-  });
-
-  it("returns null when the server responds without a token", async () => {
-    vi.spyOn(httpClient, "post").mockResolvedValue({ data: {} });
-    setAccessToken("stale");
-
-    await expect(refreshAccessToken()).resolves.toBeNull();
-    expect(getAccessToken()).toBeNull();
-  });
-
-  it("logs out on a terminal refresh failure", async () => {
-    vi.spyOn(httpClient, "post").mockRejectedValue(buildAxiosError(401, {}));
-    setAccessToken("stale");
-
-    await expect(refreshAccessToken()).resolves.toBeNull();
-
-    expect(getAccessToken()).toBeNull();
-    expect(logoutLocalMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps the local session when refresh fails transiently", async () => {
-    vi.spyOn(httpClient, "post").mockRejectedValue(buildAxiosError(500, {}));
-    setAccessToken("stale");
-
-    await expect(refreshAccessToken()).resolves.toBeNull();
-
-    expect(getAccessToken()).toBeNull();
-    expect(logoutLocalMock).not.toHaveBeenCalled();
   });
 });

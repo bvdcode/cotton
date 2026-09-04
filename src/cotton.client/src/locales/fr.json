@@ -1520,7 +1520,9 @@
     "errors": {
       "unexpectedTitle": "Impossible d’afficher cette page",
       "unexpectedDescription": "Une erreur inattendue s’est produite lors de l’affichage de la page. Réessayez ou rechargez-la si le problème persiste.",
-      "schemaValidationFailed": "Le serveur a renvoyé des données inattendues"
+      "schemaValidationFailed": "Le serveur a renvoyé des données inattendues",
+      "serverUnavailableTitle": "Serveur indisponible",
+      "serverUnavailableDescription": "Cotton n’a pas pu joindre le serveur. Vérifiez la connexion et réessayez."
     },
     "userMenu": {
       "profile": "Profil",

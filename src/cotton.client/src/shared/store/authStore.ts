@@ -12,7 +12,9 @@ type AuthStoreState = {
   phase: AuthPhase;
   refreshEnabled: boolean;
   setAuthenticated: (user: User) => void;
+  setBooting: () => void;
   setUnauthenticated: () => void;
+  setUnavailable: () => void;
   logoutLocal: () => void;
 };
 
@@ -66,10 +68,20 @@ export const useAuthStore = create<AuthStoreState>()(
           refreshEnabled: true,
         }),
 
+      setBooting: () =>
+        set({
+          phase: "booting",
+        }),
+
       setUnauthenticated: () =>
         set({
           user: null,
           phase: "anonymous",
+        }),
+
+      setUnavailable: () =>
+        set({
+          phase: "unavailable",
         }),
 
       logoutLocal: () =>

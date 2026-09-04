@@ -1516,7 +1516,9 @@
     "errors": {
       "unexpectedTitle": "Seite konnte nicht angezeigt werden",
       "unexpectedDescription": "Beim Anzeigen der Seite ist ein unerwarteter Fehler aufgetreten. Versuche es erneut oder lade die Seite neu, falls das Problem weiterhin besteht.",
-      "schemaValidationFailed": "Der Server hat unerwartete Daten zurückgegeben"
+      "schemaValidationFailed": "Der Server hat unerwartete Daten zurückgegeben",
+      "serverUnavailableTitle": "Server nicht erreichbar",
+      "serverUnavailableDescription": "Cotton konnte den Server nicht erreichen. Prüfe die Verbindung und versuche es erneut."
     },
     "userMenu": {
       "profile": "Profil",

@@ -1519,7 +1519,9 @@
     "errors": {
       "unexpectedTitle": "No se pudo mostrar la página",
       "unexpectedDescription": "Se produjo un error inesperado al mostrar la página. Inténtalo de nuevo o recárgala si el problema continúa.",
-      "schemaValidationFailed": "El servidor devolvió datos inesperados"
+      "schemaValidationFailed": "El servidor devolvió datos inesperados",
+      "serverUnavailableTitle": "Servidor no disponible",
+      "serverUnavailableDescription": "Cotton no pudo conectar con el servidor. Comprueba la conexión e inténtalo de nuevo."
     },
     "userMenu": {
       "profile": "Perfil",

@@ -1521,7 +1521,9 @@
     "errors": {
       "unexpectedTitle": "Stránku se nepodařilo zobrazit",
       "unexpectedDescription": "Při zobrazování stránky došlo k chybě. Zkuste to znovu nebo stránku obnovte, pokud problém přetrvává.",
-      "schemaValidationFailed": "Server vrátil neočekávaná data"
+      "schemaValidationFailed": "Server vrátil neočekávaná data",
+      "serverUnavailableTitle": "Server není dostupný",
+      "serverUnavailableDescription": "Cotton se nemohl připojit k serveru. Zkontrolujte připojení a zkuste to znovu."
     },
     "userMenu": {
       "profile": "Profil",

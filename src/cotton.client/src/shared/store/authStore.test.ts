@@ -60,6 +60,13 @@ describe("authStore", () => {
     expect(useAuthStore.getState().phase).toBe("anonymous");
   });
 
+  it("represents temporary server unavailability without disabling refresh", () => {
+    useAuthStore.getState().setUnavailable();
+
+    expect(useAuthStore.getState().phase).toBe("unavailable");
+    expect(getRefreshEnabled()).toBe(true);
+  });
+
   it("updates auth state when localStorage is unavailable", () => {
     const availableStorage = globalThis.localStorage;
     Object.defineProperty(globalThis, "localStorage", {
