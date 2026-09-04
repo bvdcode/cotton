@@ -123,7 +123,7 @@ export const useLoginForm = ({
         return;
       }
 
-      await authApi.login({
+      const user = await authApi.login({
         username: trimmedUsername,
         password,
         firstName: initialDemoCredentials?.firstName,
@@ -134,7 +134,6 @@ export const useLoginForm = ({
         trustDevice,
       });
 
-      const user = await authApi.me();
       setAuthenticated(true, user);
       navigate("/");
     } catch (e) {
@@ -213,13 +212,12 @@ export const useLoginForm = ({
         return;
       }
 
-      await passkeysApi.finishAssertion(
+      const user = await passkeysApi.finishAssertion(
         optionsResponse.requestId,
         trustDevice,
         serializeAssertionCredential(credential),
       );
 
-      const user = await authApi.me();
       setAuthenticated(true, user);
       navigate("/");
     } catch (e) {
