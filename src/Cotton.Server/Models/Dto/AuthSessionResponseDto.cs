@@ -6,7 +6,7 @@ using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 
 namespace Cotton.Server.Models.Dto
 {
-    public class SessionRestoreResponseDto : TokenPairResponseDto
+    public class AuthSessionResponseDto : TokenPairResponseDto
     {
         public UserDto User { get; set; } = null!;
     }

@@ -289,7 +289,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
             _sessionIssuer.AddRefreshTokenToCookies(newRefreshToken, dbToken.IsTrusted);
-            return Ok(new SessionRestoreResponseDto
+            return Ok(new AuthSessionResponseDto
             {
                 AccessToken = accessToken,
                 RefreshToken = newRefreshToken,
@@ -342,7 +342,10 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        private async Task<TokenPairResponseDto> CreateSignedInResponseAsync(User user, bool trustDevice, AuthType authType)
+        private async Task<AuthSessionResponseDto> CreateSignedInResponseAsync(
+            User user,
+            bool trustDevice,
+            AuthType authType)
         {
             return await _sessionIssuer.SignInAsync(user, trustDevice, authType, HttpContext.RequestAborted);
         }

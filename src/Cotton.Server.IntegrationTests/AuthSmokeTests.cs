@@ -120,15 +120,18 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task Login_Returns_Token()
+        public async Task Login_Returns_Auth_Session()
         {
             Assert.That(_client, Is.Not.Null);
             Assert.That(_notifications, Is.Not.Null);
 
-            TokenPairResponseDto payload = await LoginAsync("testuser", "testpassword");
+            AuthSessionResponseDto payload = await LoginAsync("testuser", "testpassword");
             Assert.Multiple(() =>
             {
                 Assert.That(string.IsNullOrWhiteSpace(payload.AccessToken), Is.False, "Token must be present");
+                Assert.That(string.IsNullOrWhiteSpace(payload.RefreshToken), Is.False, "Refresh token must be present");
+                Assert.That(payload.User.Username, Is.EqualTo("testuser"));
+                Assert.That(payload.User.Id, Is.Not.EqualTo(Guid.Empty));
                 Assert.That(_notifications!.Emails, Has.Count.EqualTo(1));
             });
 
@@ -149,7 +152,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task Refresh_ReturnsCurrentUserWithTokenPair()
+        public async Task Refresh_Returns_Auth_Session()
         {
             Assert.That(_client, Is.Not.Null);
 
@@ -171,8 +174,8 @@ namespace Cotton.Server.IntegrationTests
 
             using HttpResponseMessage response = await _client!.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            SessionRestoreResponseDto? payload = await response.Content
-                .ReadFromJsonAsync<SessionRestoreResponseDto>();
+            AuthSessionResponseDto? payload = await response.Content
+                .ReadFromJsonAsync<AuthSessionResponseDto>();
 
             Assert.Multiple(() =>
             {
@@ -388,12 +391,12 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(afterChange.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        private async Task<TokenPairResponseDto> LoginAsync(string username, string password)
+        private async Task<AuthSessionResponseDto> LoginAsync(string username, string password)
         {
             using HttpResponseMessage response = await PostLoginAsync(username, password, "8.8.8.8");
             response.EnsureSuccessStatusCode();
 
-            TokenPairResponseDto? payload = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+            AuthSessionResponseDto? payload = await response.Content.ReadFromJsonAsync<AuthSessionResponseDto>();
             Assert.That(payload, Is.Not.Null);
             return payload!;
         }

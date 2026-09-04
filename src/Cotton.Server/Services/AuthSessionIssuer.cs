@@ -1,23 +1,25 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton;
+using Cotton.Auth;
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Controllers;
 using Cotton.Server.Extensions;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using EasyExtensions;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Helpers;
 using EasyExtensions.Models.Enums;
+using Mapster;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
@@ -37,7 +39,7 @@ namespace Cotton.Server.Services
         private const string UnknownGeoLabel = "Unknown";
         private const string DemoGeoLabel = "Demo";
 
-        public async Task<TokenPairResponseDto> SignInAsync(
+        public async Task<AuthSessionResponseDto> SignInAsync(
             User user,
             bool trustDevice,
             AuthType authType,
@@ -61,7 +63,8 @@ namespace Cotton.Server.Services
             return new()
             {
                 AccessToken = accessToken,
-                RefreshToken = refreshToken
+                RefreshToken = refreshToken,
+                User = user.Adapt<UserDto>()
             };
         }
 
