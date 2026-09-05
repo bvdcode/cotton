@@ -70,6 +70,7 @@ namespace Cotton.Server.Handlers.Auth
 
             user.IsTotpEnabled = true;
             user.TotpEnabledAt = DateTime.UtcNow;
+            user.TotpFailedAttempts = 0;
             await _dbContext.SaveChangesAsync(cancellationToken);
             await _notifications.SendOtpEnabledAsync(
                 _geoLookup,
