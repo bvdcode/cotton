@@ -328,6 +328,12 @@ namespace Cotton.Server.IntegrationTests
             {
                 Assert.That(setupResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
                 Assert.That(setup, Is.Not.Null);
+                Assert.That(
+                    setup?.OtpAuthUri,
+                    Does.StartWith("otpauth://totp/cotton:totpuser%40localhost?"));
+                Assert.That(
+                    setup?.OtpAuthUri,
+                    Does.Contain("&imagelink=http%3A%2F%2Flocalhost%2Fassets%2Ficons%2Ficon-192.png"));
             });
 
             Totp totp = new(Base32Encoding.ToBytes(setup!.SecretBase32));

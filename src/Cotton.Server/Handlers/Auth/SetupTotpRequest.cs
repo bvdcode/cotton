@@ -6,6 +6,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models;
+using Cotton.Server.Providers;
 using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -17,7 +18,8 @@ namespace Cotton.Server.Handlers.Auth
     public class SetupTotpRequestHandler(
         CottonDbContext _dbContext,
         IStreamCipher _crypto,
-        IDatabaseIntegrityVerifier _integrity) : IRequestHandler<SetupTotpRequest, TotpOperationResult>
+        IDatabaseIntegrityVerifier _integrity,
+        SettingsProvider _settings) : IRequestHandler<SetupTotpRequest, TotpOperationResult>
     {
         public async Task<TotpOperationResult> Handle(
             SetupTotpRequest request,
@@ -38,7 +40,14 @@ namespace Cotton.Server.Handlers.Auth
             string account = string.IsNullOrWhiteSpace(request.Host)
                 ? user.Username
                 : $"{user.Username}@{request.Host}";
-            TotpSetup setup = TotpHelpers.CreateSetup(Constants.ShortProductName, account);
+            string publicBaseUrl = await _settings.GetPublicBaseUrlAsync(cancellationToken);
+            Uri imageUri = new(
+                new Uri(publicBaseUrl + '/', UriKind.Absolute),
+                "assets/icons/icon-192.png");
+            TotpSetup setup = TotpHelpers.CreateSetup(
+                Constants.ShortProductName,
+                account,
+                imageUri);
             user.TotpSecretEncrypted = await _crypto.EncryptStringAsync(
                 setup.SecretBase32,
                 cancellationToken: cancellationToken);

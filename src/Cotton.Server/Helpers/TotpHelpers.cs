@@ -8,13 +8,22 @@ namespace Cotton.Server.Helpers
 {
     public class TotpHelpers
     {
-        public static TotpSetup CreateSetup(string issuer, string accountName)
+        public static TotpSetup CreateSetup(
+            string issuer,
+            string accountName,
+            Uri imageUri)
         {
+            ArgumentNullException.ThrowIfNull(imageUri);
+
             byte[] secretBytes = KeyGeneration.GenerateRandomKey(20); // 160-bit
             string secretBase32 = Base32Encoding.ToString(secretBytes);
-            string label = Uri.EscapeDataString(accountName);
             string issuerEsc = Uri.EscapeDataString(issuer);
-            string uri = $"otpauth://totp/{label}?secret={secretBase32}&issuer={issuerEsc}&digits=6&period=30";
+            string accountEsc = Uri.EscapeDataString(accountName);
+            string imageUriEsc = Uri.EscapeDataString(imageUri.AbsoluteUri);
+            string uri =
+                $"otpauth://totp/{issuerEsc}:{accountEsc}" +
+                $"?secret={secretBase32}&issuer={issuerEsc}" +
+                $"&digits=6&period=30&imagelink={imageUriEsc}";
             return new TotpSetup
             {
                 SecretBase32 = secretBase32,
