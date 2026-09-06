@@ -3020,19 +3020,19 @@
         "storageType": "Бекенд сховища"
       },
       "chunkSize": {
-        "title": "Upload chunk size",
-        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
-        "ariaLabel": "Upload chunk size"
+        "title": "Розмір частини завантаження",
+        "description": "Визначає обсяг даних, які браузер надсилає в одному запиті. Більші частини зменшують кількість запитів у швидких локальних мережах.",
+        "ariaLabel": "Розмір частини завантаження"
       },
       "pipeline": {
-        "title": "Storage pipeline",
-        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "title": "Обробка даних сховища",
+        "description": "Налаштовує стискання та шифрування нових частин перед їх записом до сховища.",
         "fields": {
-          "compressionLevel": "Compression level",
-          "cipherChunkSize": "Encryption block size",
-          "encryptionThreads": "Encryption threads"
+          "compressionLevel": "Рівень стискання",
+          "cipherChunkSize": "Розмір блоку шифрування",
+          "encryptionThreads": "Потоки шифрування"
         },
-        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+        "compressionHelp": "Допустимий діапазон: від {{min}} до {{max}}. Типове значення — 1."
       },
       "quota": {
         "title": "Квота користувача за замовчуванням",
@@ -3081,8 +3081,8 @@
         "templateNodeIdInvalid": "Введіть коректний ID вузла папки.",
         "quotaSaveFailed": "Не вдалося зберегти квоту користувача за замовчуванням.",
         "templateSaveFailed": "Не вдалося зберегти шаблон файлів за замовчуванням.",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
-        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
+        "chunkSizeSaveFailed": "Не вдалося зберегти розмір частини завантаження.",
+        "storagePipelineSaveFailed": "Не вдалося зберегти налаштування обробки даних сховища."
       }
     },
     "notificationsSettings": {
@@ -3383,73 +3383,73 @@
       "inDevelopment": "Керування групами в розробці."
     },
     "identityProviders": {
-      "title": "Identity providers",
-      "description": "Configure OpenID Connect providers for sign-in and account linking.",
-      "empty": "Немає налаштованих постачальників ідентифікації.",
+      "title": "Постачальники ідентифікації",
+      "description": "Налаштуйте постачальників OpenID Connect для входу та пов’язування облікових записів.",
+      "empty": "Постачальників ідентифікації не налаштовано.",
       "actions": {
-        "create": "Add provider",
-        "edit": "Edit provider",
-        "delete": "Delete provider",
-        "refresh": "Refresh",
-        "openDocs": "Open OIDC setup guide",
-        "save": "Save provider",
-        "saving": "Saving..."
+        "create": "Додати постачальника",
+        "edit": "Редагувати постачальника",
+        "delete": "Видалити постачальника",
+        "refresh": "Оновити",
+        "openDocs": "Відкрити посібник із налаштування OIDC",
+        "save": "Зберегти постачальника",
+        "saving": "Збереження..."
       },
       "columns": {
-        "name": "Provider",
-        "issuer": "Issuer",
-        "status": "Status",
-        "accountCreation": "Account creation",
-        "scopes": "Scopes",
-        "domains": "Domains",
-        "actions": "Actions"
+        "name": "Постачальник",
+        "issuer": "Емітент",
+        "status": "Стан",
+        "accountCreation": "Створення облікових записів",
+        "scopes": "Області доступу",
+        "domains": "Домени",
+        "actions": "Дії"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled",
-        "allowed": "Allowed",
-        "blocked": "Blocked"
+        "enabled": "Увімкнено",
+        "disabled": "Вимкнено",
+        "allowed": "Дозволено",
+        "blocked": "Заблоковано"
       },
       "fields": {
-        "name": "Name",
-        "slug": "Slug",
-        "redirectUrl": "Redirect URL",
-        "issuer": "Issuer URL",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "scopes": "Scopes",
-        "allowedEmailDomains": "Allowed email domains",
-        "defaultRole": "Default role",
-        "isEnabled": "Enable sign-in with this provider",
-        "allowAccountCreation": "Allow this provider to create new accounts",
-        "requireVerifiedEmail": "Require verified email for account creation",
-        "syncProfile": "Sync profile names on sign-in",
-        "syncAvatar": "Import provider avatar when the user has no avatar",
-        "clearClientSecret": "Clear saved client secret"
+        "name": "Назва",
+        "slug": "Ідентифікатор",
+        "redirectUrl": "URL-адреса переспрямування",
+        "issuer": "URL-адреса емітента",
+        "clientId": "Ідентифікатор клієнта",
+        "clientSecret": "Секрет клієнта",
+        "scopes": "Області доступу",
+        "allowedEmailDomains": "Дозволені домени електронної пошти",
+        "defaultRole": "Типова роль",
+        "isEnabled": "Увімкнути вхід через цього постачальника",
+        "allowAccountCreation": "Дозволити цьому постачальнику створювати нові облікові записи",
+        "requireVerifiedEmail": "Вимагати підтверджену електронну адресу для створення облікового запису",
+        "syncProfile": "Синхронізувати імена профілів під час входу",
+        "syncAvatar": "Імпортувати аватар постачальника, якщо користувач не має аватара",
+        "clearClientSecret": "Видалити збережений секрет клієнта"
       },
       "help": {
-        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
-        "redirectUrl": "Register this exact callback URL in the provider application.",
-        "clientSecret": "Leave empty if this provider uses a public client.",
-        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
-        "scopes": "Separate scopes with spaces or commas. openid is always required.",
-        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+        "slug": "Залиште порожнім, щоб створити ідентифікатор із назви постачальника. Наявні ідентифікатори не зміняться.",
+        "redirectUrl": "Зареєструйте цю точну URL-адресу зворотного виклику в застосунку постачальника.",
+        "clientSecret": "Залиште порожнім, якщо цей постачальник використовує публічний клієнт.",
+        "clientSecretConfigured": "Секрет уже збережено. Введіть новий, щоб замінити його.",
+        "scopes": "Розділяйте області доступу пробілами або комами. Область openid завжди обов’язкова.",
+        "allowedEmailDomains": "Необов’язкові домени, розділені комами, для автоматичного створення облікових записів."
       },
       "create": {
-        "title": "Add identity provider"
+        "title": "Додати постачальника ідентифікації"
       },
       "edit": {
-        "title": "Edit identity provider"
+        "title": "Редагувати постачальника ідентифікації"
       },
       "delete": {
-        "title": "Delete {{name}}?",
-        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
-        "confirm": "Delete provider"
+        "title": "Видалити {{name}}?",
+        "description": "Наявні зв’язки з цим постачальником перестануть працювати. Користувачі зможуть і надалі входити іншими способами.",
+        "confirm": "Видалити постачальника"
       },
       "errors": {
-        "loadFailed": "Failed to load identity providers.",
-        "saveFailed": "Failed to save identity provider.",
-        "deleteFailed": "Failed to delete identity provider."
+        "loadFailed": "Не вдалося завантажити постачальників ідентифікації.",
+        "saveFailed": "Не вдалося зберегти постачальника ідентифікації.",
+        "deleteFailed": "Не вдалося видалити постачальника ідентифікації."
       }
     }
   },

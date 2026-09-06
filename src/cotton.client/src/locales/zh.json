@@ -3014,19 +3014,19 @@
         "storageType": "存储后端"
       },
       "chunkSize": {
-        "title": "Upload chunk size",
-        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
-        "ariaLabel": "Upload chunk size"
+        "title": "上传分块大小",
+        "description": "控制浏览器在每次上传请求中发送的数据量。较大的分块可减少高速局域网中的请求开销。",
+        "ariaLabel": "上传分块大小"
       },
       "pipeline": {
-        "title": "Storage pipeline",
-        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "title": "存储处理流程",
+        "description": "调整新分块写入存储前的压缩和加密方式。",
         "fields": {
-          "compressionLevel": "Compression level",
-          "cipherChunkSize": "Encryption block size",
-          "encryptionThreads": "Encryption threads"
+          "compressionLevel": "压缩级别",
+          "cipherChunkSize": "加密块大小",
+          "encryptionThreads": "加密线程"
         },
-        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+        "compressionHelp": "允许范围：{{min}} 到 {{max}}。默认值为 1。"
       },
       "quota": {
         "title": "默认用户配额",
@@ -3075,8 +3075,8 @@
         "templateNodeIdInvalid": "请输入有效的文件夹节点 ID。",
         "quotaSaveFailed": "保存默认用户配额失败。",
         "templateSaveFailed": "保存默认文件模板失败。",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
-        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
+        "chunkSizeSaveFailed": "无法保存上传分块大小。",
+        "storagePipelineSaveFailed": "无法保存存储处理流程设置。"
       }
     },
     "notificationsSettings": {
@@ -3377,73 +3377,73 @@
       "inDevelopment": "用户组管理功能正在开发中。"
     },
     "identityProviders": {
-      "title": "Identity providers",
-      "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "title": "身份提供商",
+      "description": "配置用于登录和关联账号的 OpenID Connect 提供商。",
       "empty": "尚未配置身份提供商。",
       "actions": {
-        "create": "Add provider",
-        "edit": "Edit provider",
-        "delete": "Delete provider",
-        "refresh": "Refresh",
-        "openDocs": "Open OIDC setup guide",
-        "save": "Save provider",
-        "saving": "Saving..."
+        "create": "添加提供商",
+        "edit": "编辑提供商",
+        "delete": "删除提供商",
+        "refresh": "刷新",
+        "openDocs": "打开 OIDC 设置指南",
+        "save": "保存提供商",
+        "saving": "正在保存..."
       },
       "columns": {
-        "name": "Provider",
-        "issuer": "Issuer",
-        "status": "Status",
-        "accountCreation": "Account creation",
-        "scopes": "Scopes",
-        "domains": "Domains",
-        "actions": "Actions"
+        "name": "提供商",
+        "issuer": "颁发者",
+        "status": "状态",
+        "accountCreation": "账号创建",
+        "scopes": "范围",
+        "domains": "域名",
+        "actions": "操作"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled",
-        "allowed": "Allowed",
-        "blocked": "Blocked"
+        "enabled": "已启用",
+        "disabled": "已禁用",
+        "allowed": "允许",
+        "blocked": "已阻止"
       },
       "fields": {
-        "name": "Name",
-        "slug": "Slug",
-        "redirectUrl": "Redirect URL",
-        "issuer": "Issuer URL",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "scopes": "Scopes",
-        "allowedEmailDomains": "Allowed email domains",
-        "defaultRole": "Default role",
-        "isEnabled": "Enable sign-in with this provider",
-        "allowAccountCreation": "Allow this provider to create new accounts",
-        "requireVerifiedEmail": "Require verified email for account creation",
-        "syncProfile": "Sync profile names on sign-in",
-        "syncAvatar": "Import provider avatar when the user has no avatar",
-        "clearClientSecret": "Clear saved client secret"
+        "name": "名称",
+        "slug": "标识符",
+        "redirectUrl": "重定向 URL",
+        "issuer": "颁发者 URL",
+        "clientId": "客户端 ID",
+        "clientSecret": "客户端密钥",
+        "scopes": "范围",
+        "allowedEmailDomains": "允许的电子邮件域名",
+        "defaultRole": "默认角色",
+        "isEnabled": "启用通过此提供商登录",
+        "allowAccountCreation": "允许此提供商创建新账号",
+        "requireVerifiedEmail": "创建账号时要求已验证的电子邮件",
+        "syncProfile": "登录时同步个人资料名称",
+        "syncAvatar": "用户没有头像时导入提供商头像",
+        "clearClientSecret": "清除已保存的客户端密钥"
       },
       "help": {
-        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
-        "redirectUrl": "Register this exact callback URL in the provider application.",
-        "clientSecret": "Leave empty if this provider uses a public client.",
-        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
-        "scopes": "Separate scopes with spaces or commas. openid is always required.",
-        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+        "slug": "留空即可根据提供商名称生成标识符。现有标识符不会更改。",
+        "redirectUrl": "在提供商应用中注册此精确的回调 URL。",
+        "clientSecret": "如果此提供商使用公共客户端，请留空。",
+        "clientSecretConfigured": "已保存密钥。输入新密钥即可替换。",
+        "scopes": "使用空格或逗号分隔范围。始终需要 openid。",
+        "allowedEmailDomains": "用于自动创建账号的可选域名，以逗号分隔。"
       },
       "create": {
-        "title": "Add identity provider"
+        "title": "添加身份提供商"
       },
       "edit": {
-        "title": "Edit identity provider"
+        "title": "编辑身份提供商"
       },
       "delete": {
-        "title": "Delete {{name}}?",
-        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
-        "confirm": "Delete provider"
+        "title": "删除 {{name}}？",
+        "description": "此提供商的现有关联将停止工作。用户仍可使用其他方式登录。",
+        "confirm": "删除提供商"
       },
       "errors": {
-        "loadFailed": "Failed to load identity providers.",
-        "saveFailed": "Failed to save identity provider.",
-        "deleteFailed": "Failed to delete identity provider."
+        "loadFailed": "无法加载身份提供商。",
+        "saveFailed": "无法保存身份提供商。",
+        "deleteFailed": "无法删除身份提供商。"
       }
     }
   },

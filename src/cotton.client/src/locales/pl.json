@@ -3049,19 +3049,19 @@
         "storageType": "Backend magazynu"
       },
       "chunkSize": {
-        "title": "Upload chunk size",
-        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
-        "ariaLabel": "Upload chunk size"
+        "title": "Rozmiar części przesyłania",
+        "description": "Określa ilość danych wysyłanych przez przeglądarkę w jednym żądaniu. Większe części zmniejszają narzut żądań w szybkich sieciach lokalnych.",
+        "ariaLabel": "Rozmiar części przesyłania"
       },
       "pipeline": {
-        "title": "Storage pipeline",
-        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "title": "Przetwarzanie danych magazynu",
+        "description": "Określa sposób kompresji i szyfrowania nowych części przed zapisaniem ich w magazynie.",
         "fields": {
-          "compressionLevel": "Compression level",
-          "cipherChunkSize": "Encryption block size",
-          "encryptionThreads": "Encryption threads"
+          "compressionLevel": "Poziom kompresji",
+          "cipherChunkSize": "Rozmiar bloku szyfrowania",
+          "encryptionThreads": "Wątki szyfrowania"
         },
-        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+        "compressionHelp": "Dozwolony zakres: od {{min}} do {{max}}. Wartość domyślna to 1."
       },
       "quota": {
         "title": "Domyślny limit użytkownika",
@@ -3110,8 +3110,8 @@
         "templateNodeIdInvalid": "Wprowadź prawidłowy identyfikator węzła folderu.",
         "quotaSaveFailed": "Nie udało się zapisać domyślnego limitu użytkownika.",
         "templateSaveFailed": "Nie udało się zapisać szablonu plików domyślnych.",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
-        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
+        "chunkSizeSaveFailed": "Nie udało się zapisać rozmiaru części przesyłania.",
+        "storagePipelineSaveFailed": "Nie udało się zapisać ustawień przetwarzania danych magazynu."
       }
     },
     "notificationsSettings": {
@@ -3412,73 +3412,73 @@
       "inDevelopment": "Zarządzanie grupami jest w fazie rozwoju."
     },
     "identityProviders": {
-      "title": "Identity providers",
-      "description": "Configure OpenID Connect providers for sign-in and account linking.",
-      "empty": "Nie skonfigurowano dostawców tożsamości.",
+      "title": "Dostawcy tożsamości",
+      "description": "Skonfiguruj dostawców OpenID Connect do logowania i łączenia kont.",
+      "empty": "Nie skonfigurowano żadnych dostawców tożsamości.",
       "actions": {
-        "create": "Add provider",
-        "edit": "Edit provider",
-        "delete": "Delete provider",
-        "refresh": "Refresh",
-        "openDocs": "Open OIDC setup guide",
-        "save": "Save provider",
-        "saving": "Saving..."
+        "create": "Dodaj dostawcę",
+        "edit": "Edytuj dostawcę",
+        "delete": "Usuń dostawcę",
+        "refresh": "Odśwież",
+        "openDocs": "Otwórz przewodnik konfiguracji OIDC",
+        "save": "Zapisz dostawcę",
+        "saving": "Zapisywanie..."
       },
       "columns": {
-        "name": "Provider",
-        "issuer": "Issuer",
-        "status": "Status",
-        "accountCreation": "Account creation",
-        "scopes": "Scopes",
-        "domains": "Domains",
-        "actions": "Actions"
+        "name": "Dostawca",
+        "issuer": "Wystawca",
+        "status": "Stan",
+        "accountCreation": "Tworzenie kont",
+        "scopes": "Zakresy",
+        "domains": "Domeny",
+        "actions": "Działania"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled",
-        "allowed": "Allowed",
-        "blocked": "Blocked"
+        "enabled": "Włączony",
+        "disabled": "Wyłączony",
+        "allowed": "Dozwolone",
+        "blocked": "Zablokowane"
       },
       "fields": {
-        "name": "Name",
-        "slug": "Slug",
-        "redirectUrl": "Redirect URL",
-        "issuer": "Issuer URL",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "scopes": "Scopes",
-        "allowedEmailDomains": "Allowed email domains",
-        "defaultRole": "Default role",
-        "isEnabled": "Enable sign-in with this provider",
-        "allowAccountCreation": "Allow this provider to create new accounts",
-        "requireVerifiedEmail": "Require verified email for account creation",
-        "syncProfile": "Sync profile names on sign-in",
-        "syncAvatar": "Import provider avatar when the user has no avatar",
-        "clearClientSecret": "Clear saved client secret"
+        "name": "Nazwa",
+        "slug": "Identyfikator",
+        "redirectUrl": "Adres URL przekierowania",
+        "issuer": "Adres URL wystawcy",
+        "clientId": "Identyfikator klienta",
+        "clientSecret": "Sekret klienta",
+        "scopes": "Zakresy",
+        "allowedEmailDomains": "Dozwolone domeny e-mail",
+        "defaultRole": "Rola domyślna",
+        "isEnabled": "Włącz logowanie za pomocą tego dostawcy",
+        "allowAccountCreation": "Zezwól temu dostawcy na tworzenie nowych kont",
+        "requireVerifiedEmail": "Wymagaj zweryfikowanego adresu e-mail przy tworzeniu konta",
+        "syncProfile": "Synchronizuj nazwy profili podczas logowania",
+        "syncAvatar": "Importuj awatar dostawcy, jeśli użytkownik nie ma awatara",
+        "clearClientSecret": "Usuń zapisany sekret klienta"
       },
       "help": {
-        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
-        "redirectUrl": "Register this exact callback URL in the provider application.",
-        "clientSecret": "Leave empty if this provider uses a public client.",
-        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
-        "scopes": "Separate scopes with spaces or commas. openid is always required.",
-        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+        "slug": "Pozostaw puste, aby utworzyć identyfikator z nazwy dostawcy. Istniejące identyfikatory pozostaną bez zmian.",
+        "redirectUrl": "Zarejestruj dokładnie ten adres URL wywołania zwrotnego w aplikacji dostawcy.",
+        "clientSecret": "Pozostaw puste, jeśli dostawca korzysta z klienta publicznego.",
+        "clientSecretConfigured": "Sekret jest już zapisany. Wprowadź nowy, aby go zastąpić.",
+        "scopes": "Oddziel zakresy spacjami lub przecinkami. Zakres openid jest zawsze wymagany.",
+        "allowedEmailDomains": "Opcjonalne domeny rozdzielone przecinkami do automatycznego tworzenia kont."
       },
       "create": {
-        "title": "Add identity provider"
+        "title": "Dodaj dostawcę tożsamości"
       },
       "edit": {
-        "title": "Edit identity provider"
+        "title": "Edytuj dostawcę tożsamości"
       },
       "delete": {
-        "title": "Delete {{name}}?",
-        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
-        "confirm": "Delete provider"
+        "title": "Usunąć {{name}}?",
+        "description": "Istniejące połączenia z tym dostawcą przestaną działać. Użytkownicy nadal będą mogli logować się innymi metodami.",
+        "confirm": "Usuń dostawcę"
       },
       "errors": {
-        "loadFailed": "Failed to load identity providers.",
-        "saveFailed": "Failed to save identity provider.",
-        "deleteFailed": "Failed to delete identity provider."
+        "loadFailed": "Nie udało się wczytać dostawców tożsamości.",
+        "saveFailed": "Nie udało się zapisać dostawcy tożsamości.",
+        "deleteFailed": "Nie udało się usunąć dostawcy tożsamości."
       }
     }
   },

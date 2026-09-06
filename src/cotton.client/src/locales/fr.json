@@ -3005,19 +3005,19 @@
         "storageType": "Backend de stockage"
       },
       "chunkSize": {
-        "title": "Upload chunk size",
-        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
-        "ariaLabel": "Upload chunk size"
+        "title": "Taille des blocs d’envoi",
+        "description": "Définit la quantité de données envoyée par le navigateur à chaque requête. Des blocs plus grands réduisent le nombre de requêtes sur les réseaux locaux rapides.",
+        "ariaLabel": "Taille des blocs d’envoi"
       },
       "pipeline": {
-        "title": "Storage pipeline",
-        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "title": "Traitement du stockage",
+        "description": "Définit la compression et le chiffrement des nouveaux blocs avant leur écriture dans le stockage.",
         "fields": {
-          "compressionLevel": "Compression level",
-          "cipherChunkSize": "Encryption block size",
-          "encryptionThreads": "Encryption threads"
+          "compressionLevel": "Niveau de compression",
+          "cipherChunkSize": "Taille du bloc de chiffrement",
+          "encryptionThreads": "Threads de chiffrement"
         },
-        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+        "compressionHelp": "Plage autorisée : de {{min}} à {{max}}. La valeur par défaut est 1."
       },
       "quota": {
         "title": "Quota utilisateur par défaut",
@@ -3066,8 +3066,8 @@
         "templateNodeIdInvalid": "Saisissez un ID de nœud de dossier valide.",
         "quotaSaveFailed": "Échec de l'enregistrement du quota utilisateur par défaut.",
         "templateSaveFailed": "Échec de l'enregistrement du modèle de fichiers par défaut.",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
-        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
+        "chunkSizeSaveFailed": "Impossible d’enregistrer la taille des blocs d’envoi.",
+        "storagePipelineSaveFailed": "Impossible d’enregistrer les paramètres de traitement du stockage."
       }
     },
     "notificationsSettings": {
@@ -3368,73 +3368,73 @@
       "inDevelopment": "La gestion des groupes est en développement."
     },
     "identityProviders": {
-      "title": "Identity providers",
-      "description": "Configure OpenID Connect providers for sign-in and account linking.",
-      "empty": "Aucun fournisseur d’identité configuré.",
+      "title": "Fournisseurs d’identité",
+      "description": "Configurez les fournisseurs OpenID Connect pour la connexion et l’association de comptes.",
+      "empty": "Aucun fournisseur d’identité n’est configuré.",
       "actions": {
-        "create": "Add provider",
-        "edit": "Edit provider",
-        "delete": "Delete provider",
-        "refresh": "Refresh",
-        "openDocs": "Open OIDC setup guide",
-        "save": "Save provider",
-        "saving": "Saving..."
+        "create": "Ajouter un fournisseur",
+        "edit": "Modifier le fournisseur",
+        "delete": "Supprimer le fournisseur",
+        "refresh": "Actualiser",
+        "openDocs": "Ouvrir le guide de configuration OIDC",
+        "save": "Enregistrer le fournisseur",
+        "saving": "Enregistrement..."
       },
       "columns": {
-        "name": "Provider",
-        "issuer": "Issuer",
-        "status": "Status",
-        "accountCreation": "Account creation",
-        "scopes": "Scopes",
-        "domains": "Domains",
+        "name": "Fournisseur",
+        "issuer": "Émetteur",
+        "status": "État",
+        "accountCreation": "Création de comptes",
+        "scopes": "Portées",
+        "domains": "Domaines",
         "actions": "Actions"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled",
-        "allowed": "Allowed",
-        "blocked": "Blocked"
+        "enabled": "Activé",
+        "disabled": "Désactivé",
+        "allowed": "Autorisé",
+        "blocked": "Bloqué"
       },
       "fields": {
-        "name": "Name",
-        "slug": "Slug",
-        "redirectUrl": "Redirect URL",
-        "issuer": "Issuer URL",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "scopes": "Scopes",
-        "allowedEmailDomains": "Allowed email domains",
-        "defaultRole": "Default role",
-        "isEnabled": "Enable sign-in with this provider",
-        "allowAccountCreation": "Allow this provider to create new accounts",
-        "requireVerifiedEmail": "Require verified email for account creation",
-        "syncProfile": "Sync profile names on sign-in",
-        "syncAvatar": "Import provider avatar when the user has no avatar",
-        "clearClientSecret": "Clear saved client secret"
+        "name": "Nom",
+        "slug": "Identifiant",
+        "redirectUrl": "URL de redirection",
+        "issuer": "URL de l’émetteur",
+        "clientId": "ID client",
+        "clientSecret": "Secret client",
+        "scopes": "Portées",
+        "allowedEmailDomains": "Domaines de messagerie autorisés",
+        "defaultRole": "Rôle par défaut",
+        "isEnabled": "Autoriser la connexion avec ce fournisseur",
+        "allowAccountCreation": "Autoriser ce fournisseur à créer de nouveaux comptes",
+        "requireVerifiedEmail": "Exiger une adresse e-mail vérifiée pour créer un compte",
+        "syncProfile": "Synchroniser les noms de profil à la connexion",
+        "syncAvatar": "Importer l’avatar du fournisseur si l’utilisateur n’en a pas",
+        "clearClientSecret": "Effacer le secret client enregistré"
       },
       "help": {
-        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
-        "redirectUrl": "Register this exact callback URL in the provider application.",
-        "clientSecret": "Leave empty if this provider uses a public client.",
-        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
-        "scopes": "Separate scopes with spaces or commas. openid is always required.",
-        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+        "slug": "Laissez vide pour le générer à partir du nom du fournisseur. Les identifiants existants restent inchangés.",
+        "redirectUrl": "Enregistrez cette URL de rappel exacte dans l’application du fournisseur.",
+        "clientSecret": "Laissez vide si ce fournisseur utilise un client public.",
+        "clientSecretConfigured": "Un secret est déjà enregistré. Saisissez-en un nouveau pour le remplacer.",
+        "scopes": "Séparez les portées par des espaces ou des virgules. openid est toujours requis.",
+        "allowedEmailDomains": "Domaines facultatifs séparés par des virgules pour la création automatique de comptes."
       },
       "create": {
-        "title": "Add identity provider"
+        "title": "Ajouter un fournisseur d’identité"
       },
       "edit": {
-        "title": "Edit identity provider"
+        "title": "Modifier le fournisseur d’identité"
       },
       "delete": {
-        "title": "Delete {{name}}?",
-        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
-        "confirm": "Delete provider"
+        "title": "Supprimer {{name}} ?",
+        "description": "Les associations existantes avec ce fournisseur cesseront de fonctionner. Les utilisateurs pourront continuer à se connecter par d’autres méthodes.",
+        "confirm": "Supprimer le fournisseur"
       },
       "errors": {
-        "loadFailed": "Failed to load identity providers.",
-        "saveFailed": "Failed to save identity provider.",
-        "deleteFailed": "Failed to delete identity provider."
+        "loadFailed": "Impossible de charger les fournisseurs d’identité.",
+        "saveFailed": "Impossible d’enregistrer le fournisseur d’identité.",
+        "deleteFailed": "Impossible de supprimer le fournisseur d’identité."
       }
     }
   },

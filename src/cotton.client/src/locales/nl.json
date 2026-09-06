@@ -3006,19 +3006,19 @@
         "storageType": "Opslagback-end"
       },
       "chunkSize": {
-        "title": "Upload chunk size",
-        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
-        "ariaLabel": "Upload chunk size"
+        "title": "Blokgrootte voor uploads",
+        "description": "Bepaalt hoeveel gegevens de browser per uploadverzoek verzendt. Grotere blokken verminderen het aantal verzoeken op snelle lokale netwerken.",
+        "ariaLabel": "Blokgrootte voor uploads"
       },
       "pipeline": {
-        "title": "Storage pipeline",
-        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "title": "Opslagverwerking",
+        "description": "Stelt in hoe nieuwe blokken worden gecomprimeerd en versleuteld voordat ze naar de opslag worden geschreven.",
         "fields": {
-          "compressionLevel": "Compression level",
-          "cipherChunkSize": "Encryption block size",
-          "encryptionThreads": "Encryption threads"
+          "compressionLevel": "Compressieniveau",
+          "cipherChunkSize": "Grootte van versleutelingsblok",
+          "encryptionThreads": "Versleutelings-threads"
         },
-        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+        "compressionHelp": "Toegestaan bereik: {{min}} tot {{max}}. De standaardwaarde is 1."
       },
       "quota": {
         "title": "Standaardquota per gebruiker",
@@ -3067,8 +3067,8 @@
         "templateNodeIdInvalid": "Voer een geldige mapknooppunt-ID in.",
         "quotaSaveFailed": "Opslaan van het standaardquotum per gebruiker mislukt.",
         "templateSaveFailed": "Opslaan van het standaardbestandensjabloon mislukt.",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
-        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
+        "chunkSizeSaveFailed": "De blokgrootte voor uploads kon niet worden opgeslagen.",
+        "storagePipelineSaveFailed": "De instellingen voor opslagverwerking konden niet worden opgeslagen."
       }
     },
     "notificationsSettings": {
@@ -3369,73 +3369,73 @@
       "inDevelopment": "Groepsbeheer is in ontwikkeling."
     },
     "identityProviders": {
-      "title": "Identity providers",
-      "description": "Configure OpenID Connect providers for sign-in and account linking.",
-      "empty": "Geen identiteitsproviders ingesteld.",
+      "title": "Identiteitsproviders",
+      "description": "Configureer OpenID Connect-providers voor aanmelden en het koppelen van accounts.",
+      "empty": "Er zijn geen identiteitsproviders geconfigureerd.",
       "actions": {
-        "create": "Add provider",
-        "edit": "Edit provider",
-        "delete": "Delete provider",
-        "refresh": "Refresh",
-        "openDocs": "Open OIDC setup guide",
-        "save": "Save provider",
-        "saving": "Saving..."
+        "create": "Provider toevoegen",
+        "edit": "Provider bewerken",
+        "delete": "Provider verwijderen",
+        "refresh": "Vernieuwen",
+        "openDocs": "OIDC-installatiehandleiding openen",
+        "save": "Provider opslaan",
+        "saving": "Opslaan..."
       },
       "columns": {
         "name": "Provider",
-        "issuer": "Issuer",
+        "issuer": "Uitgever",
         "status": "Status",
-        "accountCreation": "Account creation",
-        "scopes": "Scopes",
-        "domains": "Domains",
-        "actions": "Actions"
+        "accountCreation": "Accounts aanmaken",
+        "scopes": "Bereiken",
+        "domains": "Domeinen",
+        "actions": "Acties"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled",
-        "allowed": "Allowed",
-        "blocked": "Blocked"
+        "enabled": "Ingeschakeld",
+        "disabled": "Uitgeschakeld",
+        "allowed": "Toegestaan",
+        "blocked": "Geblokkeerd"
       },
       "fields": {
-        "name": "Name",
-        "slug": "Slug",
-        "redirectUrl": "Redirect URL",
-        "issuer": "Issuer URL",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "scopes": "Scopes",
-        "allowedEmailDomains": "Allowed email domains",
-        "defaultRole": "Default role",
-        "isEnabled": "Enable sign-in with this provider",
-        "allowAccountCreation": "Allow this provider to create new accounts",
-        "requireVerifiedEmail": "Require verified email for account creation",
-        "syncProfile": "Sync profile names on sign-in",
-        "syncAvatar": "Import provider avatar when the user has no avatar",
-        "clearClientSecret": "Clear saved client secret"
+        "name": "Naam",
+        "slug": "Korte naam",
+        "redirectUrl": "Omleidings-URL",
+        "issuer": "URL van uitgever",
+        "clientId": "Client-ID",
+        "clientSecret": "Clientgeheim",
+        "scopes": "Bereiken",
+        "allowedEmailDomains": "Toegestane e-maildomeinen",
+        "defaultRole": "Standaardrol",
+        "isEnabled": "Aanmelden met deze provider inschakelen",
+        "allowAccountCreation": "Deze provider toestaan nieuwe accounts aan te maken",
+        "requireVerifiedEmail": "Een geverifieerd e-mailadres vereisen om accounts aan te maken",
+        "syncProfile": "Profielnamen synchroniseren bij het aanmelden",
+        "syncAvatar": "Avatar van provider importeren als de gebruiker geen avatar heeft",
+        "clearClientSecret": "Opgeslagen clientgeheim wissen"
       },
       "help": {
-        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
-        "redirectUrl": "Register this exact callback URL in the provider application.",
-        "clientSecret": "Leave empty if this provider uses a public client.",
-        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
-        "scopes": "Separate scopes with spaces or commas. openid is always required.",
-        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+        "slug": "Laat leeg om de korte naam uit de providernaam te genereren. Bestaande korte namen blijven ongewijzigd.",
+        "redirectUrl": "Registreer deze exacte callback-URL in de toepassing van de provider.",
+        "clientSecret": "Laat leeg als deze provider een openbare client gebruikt.",
+        "clientSecretConfigured": "Er is al een geheim opgeslagen. Voer een nieuw geheim in om het te vervangen.",
+        "scopes": "Scheid bereiken met spaties of komma’s. openid is altijd verplicht.",
+        "allowedEmailDomains": "Optionele, door komma’s gescheiden domeinen voor het automatisch aanmaken van accounts."
       },
       "create": {
-        "title": "Add identity provider"
+        "title": "Identiteitsprovider toevoegen"
       },
       "edit": {
-        "title": "Edit identity provider"
+        "title": "Identiteitsprovider bewerken"
       },
       "delete": {
-        "title": "Delete {{name}}?",
-        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
-        "confirm": "Delete provider"
+        "title": "{{name}} verwijderen?",
+        "description": "Bestaande koppelingen met deze provider werken daarna niet meer. Gebruikers kunnen zich met andere methoden blijven aanmelden.",
+        "confirm": "Provider verwijderen"
       },
       "errors": {
-        "loadFailed": "Failed to load identity providers.",
-        "saveFailed": "Failed to save identity provider.",
-        "deleteFailed": "Failed to delete identity provider."
+        "loadFailed": "De identiteitsproviders konden niet worden geladen.",
+        "saveFailed": "De identiteitsprovider kon niet worden opgeslagen.",
+        "deleteFailed": "De identiteitsprovider kon niet worden verwijderd."
       }
     }
   },

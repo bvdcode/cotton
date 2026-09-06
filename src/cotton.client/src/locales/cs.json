@@ -3046,19 +3046,19 @@
         "storageType": "Backend úložiště"
       },
       "chunkSize": {
-        "title": "Upload chunk size",
-        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
-        "ariaLabel": "Upload chunk size"
+        "title": "Velikost části pro nahrávání",
+        "description": "Určuje, kolik dat prohlížeč odešle v jednom požadavku na nahrání. Větší části snižují režii požadavků v rychlých místních sítích.",
+        "ariaLabel": "Velikost části pro nahrávání"
       },
       "pipeline": {
-        "title": "Storage pipeline",
-        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "title": "Zpracování dat úložiště",
+        "description": "Nastavuje kompresi a šifrování nových částí před jejich zápisem do úložiště.",
         "fields": {
-          "compressionLevel": "Compression level",
-          "cipherChunkSize": "Encryption block size",
-          "encryptionThreads": "Encryption threads"
+          "compressionLevel": "Úroveň komprese",
+          "cipherChunkSize": "Velikost šifrovacího bloku",
+          "encryptionThreads": "Vlákna šifrování"
         },
-        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+        "compressionHelp": "Povolený rozsah: {{min}} až {{max}}. Výchozí hodnota je 1."
       },
       "quota": {
         "title": "Výchozí kvóta uživatele",
@@ -3107,8 +3107,8 @@
         "templateNodeIdInvalid": "Zadejte platné ID uzlu složky.",
         "quotaSaveFailed": "Uložení výchozí kvóty uživatele se nezdařilo.",
         "templateSaveFailed": "Uložení šablony výchozích souborů se nezdařilo.",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
-        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
+        "chunkSizeSaveFailed": "Velikost části pro nahrávání se nepodařilo uložit.",
+        "storagePipelineSaveFailed": "Nastavení zpracování dat úložiště se nepodařilo uložit."
       }
     },
     "notificationsSettings": {
@@ -3409,73 +3409,73 @@
       "inDevelopment": "Správa skupin je ve vývoji."
     },
     "identityProviders": {
-      "title": "Identity providers",
-      "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "title": "Poskytovatelé identity",
+      "description": "Nastavte poskytovatele OpenID Connect pro přihlašování a propojování účtů.",
       "empty": "Nejsou nastaveni žádní poskytovatelé identity.",
       "actions": {
-        "create": "Add provider",
-        "edit": "Edit provider",
-        "delete": "Delete provider",
-        "refresh": "Refresh",
-        "openDocs": "Open OIDC setup guide",
-        "save": "Save provider",
-        "saving": "Saving..."
+        "create": "Přidat poskytovatele",
+        "edit": "Upravit poskytovatele",
+        "delete": "Odstranit poskytovatele",
+        "refresh": "Obnovit",
+        "openDocs": "Otevřít průvodce nastavením OIDC",
+        "save": "Uložit poskytovatele",
+        "saving": "Ukládání..."
       },
       "columns": {
-        "name": "Provider",
-        "issuer": "Issuer",
-        "status": "Status",
-        "accountCreation": "Account creation",
-        "scopes": "Scopes",
-        "domains": "Domains",
-        "actions": "Actions"
+        "name": "Poskytovatel",
+        "issuer": "Vydavatel",
+        "status": "Stav",
+        "accountCreation": "Vytváření účtů",
+        "scopes": "Rozsahy",
+        "domains": "Domény",
+        "actions": "Akce"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled",
-        "allowed": "Allowed",
-        "blocked": "Blocked"
+        "enabled": "Aktivní",
+        "disabled": "Neaktivní",
+        "allowed": "Povoleno",
+        "blocked": "Blokováno"
       },
       "fields": {
-        "name": "Name",
-        "slug": "Slug",
-        "redirectUrl": "Redirect URL",
-        "issuer": "Issuer URL",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "scopes": "Scopes",
-        "allowedEmailDomains": "Allowed email domains",
-        "defaultRole": "Default role",
-        "isEnabled": "Enable sign-in with this provider",
-        "allowAccountCreation": "Allow this provider to create new accounts",
-        "requireVerifiedEmail": "Require verified email for account creation",
-        "syncProfile": "Sync profile names on sign-in",
-        "syncAvatar": "Import provider avatar when the user has no avatar",
-        "clearClientSecret": "Clear saved client secret"
+        "name": "Název",
+        "slug": "Identifikátor",
+        "redirectUrl": "URL pro přesměrování",
+        "issuer": "URL vydavatele",
+        "clientId": "ID klienta",
+        "clientSecret": "Tajný klíč klienta",
+        "scopes": "Rozsahy",
+        "allowedEmailDomains": "Povolené e-mailové domény",
+        "defaultRole": "Výchozí role",
+        "isEnabled": "Povolit přihlašování přes tohoto poskytovatele",
+        "allowAccountCreation": "Povolit tomuto poskytovateli vytvářet nové účty",
+        "requireVerifiedEmail": "Vyžadovat ověřený e-mail při vytváření účtu",
+        "syncProfile": "Synchronizovat jména profilů při přihlášení",
+        "syncAvatar": "Importovat avatar poskytovatele, pokud uživatel žádný nemá",
+        "clearClientSecret": "Odstranit uložený tajný klíč klienta"
       },
       "help": {
-        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
-        "redirectUrl": "Register this exact callback URL in the provider application.",
-        "clientSecret": "Leave empty if this provider uses a public client.",
-        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
-        "scopes": "Separate scopes with spaces or commas. openid is always required.",
-        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+        "slug": "Ponechte prázdné, aby se identifikátor vytvořil z názvu poskytovatele. Existující identifikátory se nemění.",
+        "redirectUrl": "Zaregistrujte tuto přesnou adresu zpětného volání v aplikaci poskytovatele.",
+        "clientSecret": "Ponechte prázdné, pokud poskytovatel používá veřejného klienta.",
+        "clientSecretConfigured": "Tajný klíč je již uložen. Zadáním nového jej nahradíte.",
+        "scopes": "Rozsahy oddělte mezerami nebo čárkami. Rozsah openid je vždy povinný.",
+        "allowedEmailDomains": "Volitelné domény oddělené čárkami pro automatické vytváření účtů."
       },
       "create": {
-        "title": "Add identity provider"
+        "title": "Přidat poskytovatele identity"
       },
       "edit": {
-        "title": "Edit identity provider"
+        "title": "Upravit poskytovatele identity"
       },
       "delete": {
-        "title": "Delete {{name}}?",
-        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
-        "confirm": "Delete provider"
+        "title": "Odstranit {{name}}?",
+        "description": "Existující propojení s tímto poskytovatelem přestanou fungovat. Uživatelé se budou moci dál přihlašovat jinými způsoby.",
+        "confirm": "Odstranit poskytovatele"
       },
       "errors": {
-        "loadFailed": "Failed to load identity providers.",
-        "saveFailed": "Failed to save identity provider.",
-        "deleteFailed": "Failed to delete identity provider."
+        "loadFailed": "Poskytovatele identity se nepodařilo načíst.",
+        "saveFailed": "Poskytovatele identity se nepodařilo uložit.",
+        "deleteFailed": "Poskytovatele identity se nepodařilo odstranit."
       }
     }
   },
