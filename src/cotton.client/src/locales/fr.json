@@ -1667,9 +1667,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "Chargement des fournisseurs de connexion...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Continuer avec {{provider}}",
       "errors": {
         "startFailed": "Impossible de démarrer la connexion."
       }
@@ -2662,8 +2662,8 @@
         "decryptExistingComplete_other": "{{count}} fichiers déchiffrés.",
         "decryptExistingFailed_one": "Impossible de déchiffrer {{count}} fichier. Consultez le panneau des tâches.",
         "decryptExistingFailed_other": "Impossible de déchiffrer {{count}} fichiers. Consultez le panneau des tâches.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "Seule une partie de l’arborescence a été analysée. Certains fichiers sont peut-être encore non chiffrés. Relancez le chiffrement depuis le dossier à la fin de ce lot.",
+        "decryptExistingScanIncomplete": "Seule une partie de l’arborescence a été analysée. Certains fichiers chiffrés sont peut-être encore présents. Relancez le déchiffrement depuis le dossier à la fin de ce lot."
       }
     },
     "fileVersions": {
@@ -2815,7 +2815,7 @@
       "databaseBackup": "Sauvegarde de la base de données",
       "storageStatistics": "Statistiques de stockage",
       "securityDiagnostics": "Audit de sécurité",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Fournisseurs d’identité"
     },
     "roles": {
       "user": "Utilisateur",
@@ -3537,17 +3537,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Vérification des conditions de démarrage",
+      "caption": "Cotton vérifie ce serveur avant d’ouvrir l’application."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton ne peut pas terminer le démarrage tant que cette condition n’est pas remplie.",
+    "fallbackTitle": "Démarrage bloqué",
+    "fallbackMessage": "Cotton ne peut pas démarrer tant que l’étape de maintenance requise n’est pas terminée.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Version actuelle",
+      "requiredVersion": "Version requise",
+      "requiredVersionRange": "Version précédente requise",
+      "lastRecordedVersion": "Dernière version enregistrée"
     }
   }
 }

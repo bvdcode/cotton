@@ -1484,24 +1484,24 @@
       "durationDays_one": "{{count}} dia",
       "durationDays_other": "{{count}} dias",
       "lessThanMinute": "menos de um minuto",
-      "secondsAgo_few": "{{count}} seconds ago",
-      "secondsAgo_many": "{{count}} seconds ago",
-      "minutesAgo_few": "{{count}} minutes ago",
-      "minutesAgo_many": "{{count}} minutes ago",
-      "hoursAgo_few": "{{count}} hours ago",
-      "hoursAgo_many": "{{count}} hours ago",
-      "daysAgo_few": "{{count}} days ago",
-      "daysAgo_many": "{{count}} days ago",
-      "monthsAgo_few": "{{count}} months ago",
-      "monthsAgo_many": "{{count}} months ago",
-      "yearsAgo_few": "{{count}} years ago",
-      "yearsAgo_many": "{{count}} years ago",
+      "secondsAgo_few": "há {{count}} segundos",
+      "secondsAgo_many": "há {{count}} segundos",
+      "minutesAgo_few": "há {{count}} minutos",
+      "minutesAgo_many": "há {{count}} minutos",
+      "hoursAgo_few": "há {{count}} horas",
+      "hoursAgo_many": "há {{count}} horas",
+      "daysAgo_few": "há {{count}} dias",
+      "daysAgo_many": "há {{count}} dias",
+      "monthsAgo_few": "há {{count}} meses",
+      "monthsAgo_many": "há {{count}} meses",
+      "yearsAgo_few": "há {{count}} anos",
+      "yearsAgo_many": "há {{count}} anos",
       "durationMinutes_few": "{{count}} min",
       "durationMinutes_many": "{{count}} min",
-      "durationHours_few": "{{count}} hours",
-      "durationHours_many": "{{count}} hours",
-      "durationDays_few": "{{count}} days",
-      "durationDays_many": "{{count}} days"
+      "durationHours_few": "{{count}} horas",
+      "durationHours_many": "{{count}} horas",
+      "durationDays_few": "{{count}} dias",
+      "durationDays_many": "{{count}} dias"
     },
     "actions": {
       "confirm": "Confirmar",
@@ -1519,7 +1519,7 @@
       "copied": "Copiado!",
       "reload": "Recarregar",
       "retry": "Tentar novamente",
-      "versions": "Versions"
+      "versions": "Versões"
     },
     "errors": {
       "unexpectedTitle": "Não foi possível exibir esta página",
@@ -1670,9 +1670,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "A carregar fornecedores de início de sessão...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Continuar com {{provider}}",
       "errors": {
         "startFailed": "Não foi possível iniciar o login."
       }
@@ -2019,8 +2019,8 @@
         "cancel": "Agora não"
       }
     },
-    "ageYears_few": "{{count}} years",
-    "ageYears_many": "{{count}} years",
+    "ageYears_few": "{{count}} anos",
+    "ageYears_many": "{{count}} anos",
     "connectedAccounts": {
       "title": "Contas vinculadas",
       "description": "Vincule provedores de identidade externos a esta conta.",
@@ -2437,8 +2437,8 @@
         "someItemsSkipped_other": "Ignorados {{count}} itens que não puderam ser lidos.",
         "vaultLocked": "Envios criptografados exigem que você desbloqueie seu cofre de criptografia primeiro.",
         "details": "Detalhes",
-        "someItemsSkipped_few": "Skipped {{count}} items that could not be read.",
-        "someItemsSkipped_many": "Skipped {{count}} items that could not be read."
+        "someItemsSkipped_few": "Ignorados {{count}} itens que não puderam ser lidos.",
+        "someItemsSkipped_many": "Ignorados {{count}} itens que não puderam ser lidos."
       },
       "errors": {
         "dropFailed": "Falha ao processar os itens arrastados. Tente novamente.",
@@ -2665,8 +2665,8 @@
         "decryptExistingComplete_other": "{{count}} arquivos descriptografados.",
         "decryptExistingFailed_one": "Não foi possível descriptografar {{count}} arquivo. Verifique o painel de tarefas.",
         "decryptExistingFailed_other": "Não foi possível descriptografar {{count}} arquivos. Verifique o painel de tarefas.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "Apenas parte da árvore de pastas foi analisada. Alguns ficheiros podem continuar sem encriptação. Quando este lote terminar, execute novamente a encriptação a partir da pasta.",
+        "decryptExistingScanIncomplete": "Apenas parte da árvore de pastas foi analisada. Alguns ficheiros encriptados podem ter permanecido. Quando este lote terminar, execute novamente a desencriptação a partir da pasta."
       }
     },
     "fileVersions": {
@@ -2818,7 +2818,7 @@
       "databaseBackup": "Backup do banco de dados",
       "storageStatistics": "Estatísticas de armazenamento",
       "securityDiagnostics": "Verificação de segurança",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Fornecedores de identidade"
     },
     "roles": {
       "user": "Usuário",
@@ -3540,17 +3540,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "A verificar os requisitos de arranque",
+      "caption": "O Cotton está a validar este servidor antes de abrir a aplicação."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "O Cotton não pode concluir o arranque até este requisito ser resolvido.",
+    "fallbackTitle": "Arranque bloqueado",
+    "fallbackMessage": "O Cotton não pode iniciar até o passo de manutenção necessário ser concluído.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Versão atual",
+      "requiredVersion": "Versão necessária",
+      "requiredVersionRange": "Versão anterior necessária",
+      "lastRecordedVersion": "Última versão registada"
     }
   }
 }

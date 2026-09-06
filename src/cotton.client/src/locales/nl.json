@@ -1482,24 +1482,24 @@
       "durationDays_one": "{{count}} dag",
       "durationDays_other": "{{count}} dagen",
       "lessThanMinute": "minder dan een minuut",
-      "secondsAgo_few": "{{count}} seconds ago",
-      "secondsAgo_many": "{{count}} seconds ago",
-      "minutesAgo_few": "{{count}} minutes ago",
-      "minutesAgo_many": "{{count}} minutes ago",
-      "hoursAgo_few": "{{count}} hours ago",
-      "hoursAgo_many": "{{count}} hours ago",
-      "daysAgo_few": "{{count}} days ago",
-      "daysAgo_many": "{{count}} days ago",
-      "monthsAgo_few": "{{count}} months ago",
-      "monthsAgo_many": "{{count}} months ago",
-      "yearsAgo_few": "{{count}} years ago",
-      "yearsAgo_many": "{{count}} years ago",
+      "secondsAgo_few": "{{count}} seconden geleden",
+      "secondsAgo_many": "{{count}} seconden geleden",
+      "minutesAgo_few": "{{count}} minuten geleden",
+      "minutesAgo_many": "{{count}} minuten geleden",
+      "hoursAgo_few": "{{count}} uur geleden",
+      "hoursAgo_many": "{{count}} uur geleden",
+      "daysAgo_few": "{{count}} dagen geleden",
+      "daysAgo_many": "{{count}} dagen geleden",
+      "monthsAgo_few": "{{count}} maanden geleden",
+      "monthsAgo_many": "{{count}} maanden geleden",
+      "yearsAgo_few": "{{count}} jaar geleden",
+      "yearsAgo_many": "{{count}} jaar geleden",
       "durationMinutes_few": "{{count}} min",
       "durationMinutes_many": "{{count}} min",
-      "durationHours_few": "{{count}} hours",
-      "durationHours_many": "{{count}} hours",
-      "durationDays_few": "{{count}} days",
-      "durationDays_many": "{{count}} days"
+      "durationHours_few": "{{count}} uur",
+      "durationHours_many": "{{count}} uur",
+      "durationDays_few": "{{count}} dagen",
+      "durationDays_many": "{{count}} dagen"
     },
     "actions": {
       "confirm": "Bevestigen",
@@ -1517,7 +1517,7 @@
       "copied": "Gekopieerd!",
       "reload": "Opnieuw laden",
       "retry": "Opnieuw proberen",
-      "versions": "Versions"
+      "versions": "Versies"
     },
     "errors": {
       "unexpectedTitle": "Deze pagina kan niet worden weergegeven",
@@ -1668,9 +1668,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "Aanmeldproviders laden...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Doorgaan met {{provider}}",
       "errors": {
         "startFailed": "Kan het aanmelden niet starten."
       }
@@ -2017,8 +2017,8 @@
         "cancel": "Niet nu"
       }
     },
-    "ageYears_few": "{{count}} years",
-    "ageYears_many": "{{count}} years",
+    "ageYears_few": "{{count}} jaar",
+    "ageYears_many": "{{count}} jaar",
     "connectedAccounts": {
       "title": "Gekoppelde accounts",
       "description": "Koppel externe identiteitsproviders aan dit account.",
@@ -2435,8 +2435,8 @@
         "someItemsSkipped_other": "{{count}} items overgeslagen die niet konden worden gelezen.",
         "vaultLocked": "Voor versleutelde uploads moet u eerst uw versleutelingskluis ontgrendelen.",
         "details": "Details",
-        "someItemsSkipped_few": "Skipped {{count}} items that could not be read.",
-        "someItemsSkipped_many": "Skipped {{count}} items that could not be read."
+        "someItemsSkipped_few": "{{count}} items overgeslagen die niet konden worden gelezen.",
+        "someItemsSkipped_many": "{{count}} items overgeslagen die niet konden worden gelezen."
       },
       "errors": {
         "dropFailed": "Verwerken van de gesleepte items is mislukt. Probeer het opnieuw.",
@@ -2663,8 +2663,8 @@
         "decryptExistingComplete_other": "{{count}} bestanden ontsleuteld.",
         "decryptExistingFailed_one": "Kon {{count}} bestand niet ontsleutelen. Controleer het taakpaneel.",
         "decryptExistingFailed_other": "Kon {{count}} bestanden niet ontsleutelen. Controleer het taakpaneel.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "Slechts een deel van de mappenstructuur is gescand. Sommige bestanden zijn mogelijk nog niet versleuteld. Start de versleuteling na deze batch opnieuw vanuit de map.",
+        "decryptExistingScanIncomplete": "Slechts een deel van de mappenstructuur is gescand. Sommige versleutelde bestanden zijn mogelijk achtergebleven. Start de ontsleuteling na deze batch opnieuw vanuit de map."
       }
     },
     "fileVersions": {
@@ -2816,7 +2816,7 @@
       "databaseBackup": "Databaseback-up",
       "storageStatistics": "Opslagstatistieken",
       "securityDiagnostics": "Beveiligingscontrole",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Identiteitsproviders"
     },
     "roles": {
       "user": "Gebruiker",
@@ -3538,17 +3538,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Opstartvereisten controleren",
+      "caption": "Cotton controleert deze server voordat de toepassing wordt geopend."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton kan het opstarten niet voltooien totdat aan deze vereiste is voldaan.",
+    "fallbackTitle": "Opstarten geblokkeerd",
+    "fallbackMessage": "Cotton kan niet starten totdat de vereiste onderhoudsstap is voltooid.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Huidige versie",
+      "requiredVersion": "Vereiste versie",
+      "requiredVersionRange": "Vereiste vorige versie",
+      "lastRecordedVersion": "Laatst geregistreerde versie"
     }
   }
 }

@@ -1520,7 +1520,7 @@
       "copied": "Skopiowano!",
       "reload": "Odśwież",
       "retry": "Spróbuj ponownie",
-      "versions": "Versions"
+      "versions": "Wersje"
     },
     "errors": {
       "unexpectedTitle": "Nie udało się wyświetlić strony",
@@ -1671,9 +1671,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "Ładowanie dostawców logowania...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Kontynuuj przez {{provider}}",
       "errors": {
         "startFailed": "Nie udało się rozpocząć logowania."
       }
@@ -2700,8 +2700,8 @@
         "decryptExistingFailed_few": "Nie udało się odszyfrować {{count}} plików. Sprawdź panel zadań.",
         "decryptExistingFailed_many": "Nie udało się odszyfrować {{count}} plików. Sprawdź panel zadań.",
         "decryptExistingFailed_other": "Nie udało się odszyfrować {{count}} pliku. Sprawdź panel zadań.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "Przeskanowano tylko część drzewa folderów. Niektóre pliki mogą nadal być niezaszyfrowane. Po zakończeniu tej partii ponownie uruchom szyfrowanie z poziomu folderu.",
+        "decryptExistingScanIncomplete": "Przeskanowano tylko część drzewa folderów. Niektóre zaszyfrowane pliki mogły pozostać. Po zakończeniu tej partii ponownie uruchom odszyfrowywanie z poziomu folderu."
       }
     },
     "fileVersions": {
@@ -2859,7 +2859,7 @@
       "databaseBackup": "Kopia zapasowa bazy danych",
       "storageStatistics": "Statystyki magazynu",
       "securityDiagnostics": "Przegląd bezpieczeństwa",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Dostawcy tożsamości"
     },
     "roles": {
       "user": "Użytkownik",
@@ -3581,17 +3581,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Sprawdzanie wymagań uruchomienia",
+      "caption": "Cotton sprawdza ten serwer przed otwarciem aplikacji."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton nie może dokończyć uruchamiania, dopóki to wymaganie nie zostanie spełnione.",
+    "fallbackTitle": "Uruchomienie zablokowane",
+    "fallbackMessage": "Cotton nie może się uruchomić, dopóki wymagany krok konserwacji nie zostanie wykonany.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Bieżąca wersja",
+      "requiredVersion": "Wymagana wersja",
+      "requiredVersionRange": "Wymagana poprzednia wersja",
+      "lastRecordedVersion": "Ostatnia zarejestrowana wersja"
     }
   }
 }

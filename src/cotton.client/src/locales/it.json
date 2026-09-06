@@ -1518,7 +1518,7 @@
       "copied": "Copiato!",
       "reload": "Ricarica",
       "retry": "Riprova",
-      "versions": "Versions"
+      "versions": "Versioni"
     },
     "errors": {
       "unexpectedTitle": "Impossibile visualizzare questa pagina",
@@ -1669,9 +1669,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "Caricamento dei provider di accesso...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Continua con {{provider}}",
       "errors": {
         "startFailed": "Impossibile avviare l’accesso."
       }
@@ -2664,8 +2664,8 @@
         "decryptExistingComplete_other": "Decifrati {{count}} file.",
         "decryptExistingFailed_one": "Impossibile decifrare {{count}} file. Controlli il pannello delle attività.",
         "decryptExistingFailed_other": "Impossibile decifrare {{count}} file. Controlli il pannello delle attività.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "È stata analizzata solo una parte dell’albero delle cartelle. Alcuni file potrebbero essere ancora non crittografati. Al termine del gruppo, esegui nuovamente la crittografia dalla cartella.",
+        "decryptExistingScanIncomplete": "È stata analizzata solo una parte dell’albero delle cartelle. Potrebbero essere rimasti alcuni file crittografati. Al termine del gruppo, esegui nuovamente la decrittografia dalla cartella."
       }
     },
     "fileVersions": {
@@ -2817,7 +2817,7 @@
       "databaseBackup": "Backup del database",
       "storageStatistics": "Statistiche di archiviazione",
       "securityDiagnostics": "Controllo della sicurezza",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Provider di identità"
     },
     "roles": {
       "user": "Utente",
@@ -3539,17 +3539,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Verifica dei requisiti di avvio",
+      "caption": "Cotton sta convalidando il server prima di aprire l’applicazione."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton non può completare l’avvio finché questo requisito non viene risolto.",
+    "fallbackTitle": "Avvio bloccato",
+    "fallbackMessage": "Cotton non può avviarsi finché non viene completato il passaggio di manutenzione richiesto.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Versione attuale",
+      "requiredVersion": "Versione richiesta",
+      "requiredVersionRange": "Versione precedente richiesta",
+      "lastRecordedVersion": "Ultima versione registrata"
     }
   }
 }

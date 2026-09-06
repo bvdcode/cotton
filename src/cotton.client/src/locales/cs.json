@@ -1517,7 +1517,7 @@
       "copied": "Zkopírováno!",
       "reload": "Obnovit",
       "retry": "Zkusit znovu",
-      "versions": "Versions"
+      "versions": "Verze"
     },
     "errors": {
       "unexpectedTitle": "Stránku se nepodařilo zobrazit",
@@ -1668,9 +1668,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "Načítání poskytovatelů přihlášení...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Pokračovat přes {{provider}}",
       "errors": {
         "startFailed": "Nepodařilo se spustit přihlášení."
       }
@@ -2697,8 +2697,8 @@
         "decryptExistingFailed_few": "Nepodařilo se dešifrovat {{count}} soubory. Zkontrolujte panel úloh.",
         "decryptExistingFailed_many": "Nepodařilo se dešifrovat {{count}} souboru. Zkontrolujte panel úloh.",
         "decryptExistingFailed_other": "Nepodařilo se dešifrovat {{count}} souborů. Zkontrolujte panel úloh.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "Byla prohledána pouze část stromu složek. Některé soubory mohou zůstat nezašifrované. Po dokončení této dávky spusťte šifrování složky znovu.",
+        "decryptExistingScanIncomplete": "Byla prohledána pouze část stromu složek. Některé zašifrované soubory mohou zůstat. Po dokončení této dávky spusťte dešifrování složky znovu."
       }
     },
     "fileVersions": {
@@ -2856,7 +2856,7 @@
       "databaseBackup": "Záloha databáze",
       "storageStatistics": "Statistiky úložiště",
       "securityDiagnostics": "Kontrola zabezpečení",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Poskytovatelé identity"
     },
     "roles": {
       "user": "Uživatel",
@@ -3578,17 +3578,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Kontrola požadavků spuštění",
+      "caption": "Cotton před otevřením aplikace ověřuje tento server."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton nemůže dokončit spuštění, dokud nebude tento požadavek vyřešen.",
+    "fallbackTitle": "Spuštění je zablokováno",
+    "fallbackMessage": "Cotton nelze spustit, dokud nebude dokončen požadovaný krok údržby.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Aktuální verze",
+      "requiredVersion": "Požadovaná verze",
+      "requiredVersionRange": "Požadovaná předchozí verze",
+      "lastRecordedVersion": "Poslední zaznamenaná verze"
     }
   }
 }

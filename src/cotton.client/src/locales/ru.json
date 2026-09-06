@@ -1753,7 +1753,7 @@
       }
     },
     "oidc": {
-      "loading": "Загружаем провайдеров входа...",
+      "loading": "Загрузка поставщиков входа...",
       "divider": "или",
       "signInWith": "Продолжить через {{provider}}",
       "errors": {
@@ -2789,7 +2789,7 @@
         "encryptExistingFailed_few": "Не удалось зашифровать {{count}} файла. Проверьте панель задач.",
         "encryptExistingFailed_many": "Не удалось зашифровать {{count}} файлов. Проверьте панель задач.",
         "encryptExistingFailed_other": "Не удалось зашифровать {{count}} файлов. Проверьте панель задач.",
-        "encryptExistingScanIncomplete": "Просканирована только часть дерева папок. Некоторые файлы могут оставаться незашифрованными; запустите шифрование из папки ещё раз после завершения этой пачки.",
+        "encryptExistingScanIncomplete": "Просканирована только часть дерева папок. Некоторые файлы могли остаться незашифрованными. После завершения этой пачки снова запустите шифрование из папки.",
         "decryptExistingComplete_one": "Расшифрован {{count}} файл.",
         "decryptExistingComplete_few": "Расшифровано {{count}} файла.",
         "decryptExistingComplete_many": "Расшифровано {{count}} файлов.",
@@ -2798,7 +2798,7 @@
         "decryptExistingFailed_few": "Не удалось расшифровать {{count}} файла. Проверьте панель задач.",
         "decryptExistingFailed_many": "Не удалось расшифровать {{count}} файлов. Проверьте панель задач.",
         "decryptExistingFailed_other": "Не удалось расшифровать {{count}} файлов. Проверьте панель задач.",
-        "decryptExistingScanIncomplete": "Просканирована только часть дерева папок. Некоторые зашифрованные файлы могут остаться; запустите расшифровку из папки ещё раз после завершения этой пачки."
+        "decryptExistingScanIncomplete": "Просканирована только часть дерева папок. Некоторые зашифрованные файлы могли остаться. После завершения этой пачки снова запустите расшифровку из папки."
       }
     }
   },
@@ -2941,7 +2941,7 @@
       "privacySettings": "Приватность",
       "storageSettings": "Хранилище",
       "notificationsSettings": "Уведомления",
-      "identityProviders": "Провайдеры входа"
+      "identityProviders": "Поставщики идентификации"
     },
     "roles": {
       "user": "Пользователь",
@@ -3767,17 +3767,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Проверка требований запуска",
+      "caption": "Cotton проверяет этот сервер перед открытием приложения."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton не может завершить запуск, пока это требование не будет выполнено.",
+    "fallbackTitle": "Запуск заблокирован",
+    "fallbackMessage": "Cotton не может запуститься, пока не будет выполнен требуемый шаг обслуживания.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Текущая версия",
+      "requiredVersion": "Требуемая версия",
+      "requiredVersionRange": "Требуемая предыдущая версия",
+      "lastRecordedVersion": "Последняя зафиксированная версия"
     }
   }
 }

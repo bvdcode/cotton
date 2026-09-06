@@ -1515,7 +1515,7 @@
       "copied": "¡Copiado!",
       "reload": "Recargar",
       "retry": "Reintentar",
-      "versions": "Versions"
+      "versions": "Versiones"
     },
     "errors": {
       "unexpectedTitle": "No se pudo mostrar la página",
@@ -1666,9 +1666,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "Cargando proveedores de inicio de sesión...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Continuar con {{provider}}",
       "errors": {
         "startFailed": "No se pudo iniciar sesión."
       }
@@ -2661,8 +2661,8 @@
         "decryptExistingComplete_other": "Se descifraron {{count}} archivos.",
         "decryptExistingFailed_one": "No se pudo descifrar {{count}} archivo. Revisa el panel de tareas.",
         "decryptExistingFailed_other": "No se pudieron descifrar {{count}} archivos. Revisa el panel de tareas.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "Solo se exploró una parte del árbol de carpetas. Es posible que algunos archivos sigan sin cifrar; vuelve a ejecutar el cifrado desde la carpeta cuando termine este lote.",
+        "decryptExistingScanIncomplete": "Solo se exploró una parte del árbol de carpetas. Es posible que queden archivos cifrados; vuelve a ejecutar el descifrado desde la carpeta cuando termine este lote."
       }
     },
     "fileVersions": {
@@ -2814,7 +2814,7 @@
       "privacySettings": "Privacidad",
       "storageSettings": "Almacenamiento",
       "notificationsSettings": "Notificaciones",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Proveedores de identidad"
     },
     "roles": {
       "user": "Usuario",
@@ -3536,17 +3536,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Comprobando los requisitos de inicio",
+      "caption": "Cotton está validando este servidor antes de abrir la aplicación."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton no puede completar el inicio hasta que se resuelva este requisito.",
+    "fallbackTitle": "Inicio bloqueado",
+    "fallbackMessage": "Cotton no puede iniciarse hasta que se complete el paso de mantenimiento requerido.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Versión actual",
+      "requiredVersion": "Versión requerida",
+      "requiredVersionRange": "Versión anterior requerida",
+      "lastRecordedVersion": "Última versión registrada"
     }
   }
 }

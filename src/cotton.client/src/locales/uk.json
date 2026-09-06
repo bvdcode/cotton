@@ -1523,7 +1523,7 @@
       "copied": "Скопійовано!",
       "reload": "Перезавантажити",
       "retry": "Повторити",
-      "versions": "Versions"
+      "versions": "Версії"
     },
     "errors": {
       "unexpectedTitle": "Не вдалося відобразити сторінку",
@@ -1674,9 +1674,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "Завантаження постачальників входу...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Продовжити через {{provider}}",
       "errors": {
         "startFailed": "Не вдалося почати вхід."
       }
@@ -2673,8 +2673,8 @@
         "decryptExistingComplete_other": "Розшифровано {{count}} файлів.",
         "decryptExistingFailed_one": "Не вдалося розшифрувати {{count}} файл. Перевірте панель завдань.",
         "decryptExistingFailed_other": "Не вдалося розшифрувати {{count}} файлів. Перевірте панель завдань.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "Проскановано лише частину дерева папок. Деякі файли могли залишитися незашифрованими. Після завершення цієї групи знову запустіть шифрування з папки.",
+        "decryptExistingScanIncomplete": "Проскановано лише частину дерева папок. Деякі зашифровані файли могли залишитися. Після завершення цієї групи знову запустіть розшифрування з папки."
       }
     },
     "fileVersions": {
@@ -2830,7 +2830,7 @@
       "databaseBackup": "Резервне копіювання бази даних",
       "storageStatistics": "Статистика сховища",
       "securityDiagnostics": "Перевірка безпеки",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Постачальники ідентифікації"
     },
     "roles": {
       "user": "Користувач",
@@ -3552,17 +3552,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Перевірка вимог запуску",
+      "caption": "Cotton перевіряє цей сервер перед відкриттям застосунку."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton не може завершити запуск, доки цю вимогу не буде виконано.",
+    "fallbackTitle": "Запуск заблоковано",
+    "fallbackMessage": "Cotton не може запуститися, доки не буде виконано потрібний крок обслуговування.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Поточна версія",
+      "requiredVersion": "Потрібна версія",
+      "requiredVersionRange": "Потрібна попередня версія",
+      "lastRecordedVersion": "Остання зафіксована версія"
     }
   }
 }
