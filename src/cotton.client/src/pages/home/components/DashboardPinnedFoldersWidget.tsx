@@ -76,13 +76,14 @@ export const DashboardPinnedFoldersWidget = ({
   }
 
   return (
-    <Box
-      display="grid"
-      gridTemplateColumns={{ xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" }}
-      gap={1}
-    >
+    <Stack direction="row" flexWrap="wrap" gap={1}>
       {folders.map((folder) => (
-        <Box key={folder.id} position="relative" minWidth={0}>
+        <Box
+          key={folder.id}
+          position="relative"
+          minWidth={0}
+          width={{ xs: "100%", sm: 280 }}
+        >
           <CardActionArea
             onClick={() => navigate(`/files/${folder.id}`)}
             sx={{ borderRadius: 1, minWidth: 0, width: "100%" }}
@@ -109,6 +110,6 @@ export const DashboardPinnedFoldersWidget = ({
           </IconButton>
         </Box>
       ))}
-    </Box>
+    </Stack>
   );
 };
