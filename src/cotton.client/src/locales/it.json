@@ -1458,6 +1458,7 @@
   "common": {
     "languageName": "Italiano",
     "switchToThisLanguage": "Passa all'italiano",
+    "language": "Lingua",
     "placeholder": "—",
     "yes": "Sì",
     "no": "No",
@@ -2020,21 +2021,21 @@
       }
     },
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "Account collegati",
+      "description": "Collega provider di identità esterni a questo account.",
+      "loading": "Caricamento degli account collegati...",
+      "empty": "Non è ancora collegato alcun account esterno.",
+      "link": "Collega {{provider}}",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "Scollega",
+        "title": "Scollegare {{provider}}?",
+        "description": "Non potrai più accedere con questo provider finché non lo collegherai di nuovo.",
+        "confirm": "Scollega",
+        "cancel": "Annulla"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
+        "loadFailed": "Impossibile caricare gli account collegati.",
+        "unlinkFailed": "Impossibile scollegare questo account.",
         "linkFailed": "Impossibile avviare il collegamento dell’account."
       }
     }
@@ -2668,19 +2669,19 @@
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
-      "versionLabel": "Version {{version}}",
-      "current": "Current",
-      "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "title": "Versioni di {{name}}",
+      "empty": "Non sono ancora disponibili versioni precedenti.",
+      "loadFailed": "Impossibile caricare le versioni.",
+      "restoreFailed": "Impossibile ripristinare la versione.",
+      "deleteFailed": "Impossibile eliminare la versione.",
+      "downloadFailed": "Impossibile preparare il download della versione.",
+      "versionLabel": "Versione {{version}}",
+      "current": "Attuale",
+      "original": "Originale",
+      "restoreConfirmTitle": "Ripristinare questa versione?",
+      "restoreConfirmDescription": "Il contenuto attuale del file verrà salvato come nuova versione, quindi la versione {{version}} diventerà quella attuale.",
+      "deleteConfirmTitle": "Eliminare questa versione?",
+      "deleteConfirmDescription": "La versione {{version}} verrà eliminata. Il file attuale non verrà modificato."
     }
   },
   "tasks": {

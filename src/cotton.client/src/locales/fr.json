@@ -1456,6 +1456,7 @@
   "common": {
     "languageName": "Français",
     "switchToThisLanguage": "Passer au français",
+    "language": "Langue",
     "placeholder": "—",
     "yes": "Oui",
     "no": "Non",
@@ -2018,21 +2019,21 @@
       }
     },
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "Comptes associés",
+      "description": "Associez des fournisseurs d’identité externes à ce compte.",
+      "loading": "Chargement des comptes associés...",
+      "empty": "Aucun compte externe n’est encore associé.",
+      "link": "Associer {{provider}}",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "Dissocier",
+        "title": "Dissocier {{provider}} ?",
+        "description": "Vous ne pourrez plus vous connecter avec ce fournisseur tant que vous ne l’aurez pas associé de nouveau.",
+        "confirm": "Dissocier",
+        "cancel": "Annuler"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
+        "loadFailed": "Impossible de charger les comptes associés.",
+        "unlinkFailed": "Impossible de dissocier ce compte.",
         "linkFailed": "Impossible de démarrer l’association du compte."
       }
     }
@@ -2666,19 +2667,19 @@
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
+      "title": "Versions de {{name}}",
+      "empty": "Aucune version antérieure pour le moment.",
+      "loadFailed": "Impossible de charger les versions.",
+      "restoreFailed": "Impossible de restaurer la version.",
+      "deleteFailed": "Impossible de supprimer la version.",
+      "downloadFailed": "Impossible de préparer le téléchargement de la version.",
       "versionLabel": "Version {{version}}",
-      "current": "Current",
-      "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "current": "Actuelle",
+      "original": "Originale",
+      "restoreConfirmTitle": "Restaurer cette version ?",
+      "restoreConfirmDescription": "Le contenu actuel du fichier sera enregistré comme une nouvelle version, puis la version {{version}} deviendra la version actuelle.",
+      "deleteConfirmTitle": "Supprimer cette version ?",
+      "deleteConfirmDescription": "La version {{version}} sera supprimée. Le fichier actuel ne sera pas modifié."
     }
   },
   "tasks": {

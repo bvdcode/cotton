@@ -1465,6 +1465,7 @@
   "common": {
     "languageName": "中文",
     "switchToThisLanguage": "切换到中文",
+    "language": "语言",
     "placeholder": "—",
     "yes": "是",
     "no": "否",
@@ -2027,21 +2028,21 @@
     "ageYears_few": "{{count}} years",
     "ageYears_many": "{{count}} years",
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "已关联账号",
+      "description": "将外部身份提供商关联到此账号。",
+      "loading": "正在加载已关联账号...",
+      "empty": "尚未关联任何外部账号。",
+      "link": "关联 {{provider}}",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "取消关联",
+        "title": "取消关联 {{provider}}？",
+        "description": "重新关联前，你将无法再使用此提供商登录。",
+        "confirm": "取消关联",
+        "cancel": "取消"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
+        "loadFailed": "无法加载已关联账号。",
+        "unlinkFailed": "无法取消关联此账号。",
         "linkFailed": "无法开始关联账号。"
       }
     }
@@ -2675,19 +2676,19 @@
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
-      "versionLabel": "Version {{version}}",
-      "current": "Current",
-      "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "title": "{{name}} 的版本",
+      "empty": "暂无历史版本。",
+      "loadFailed": "无法加载版本。",
+      "restoreFailed": "无法恢复版本。",
+      "deleteFailed": "无法删除版本。",
+      "downloadFailed": "无法准备版本下载。",
+      "versionLabel": "版本 {{version}}",
+      "current": "当前",
+      "original": "原始",
+      "restoreConfirmTitle": "恢复此版本？",
+      "restoreConfirmDescription": "当前文件内容将保存为新版本，然后版本 {{version}} 将成为当前版本。",
+      "deleteConfirmTitle": "删除此版本？",
+      "deleteConfirmDescription": "版本 {{version}} 将被删除。当前文件不会更改。"
     }
   },
   "tasks": {

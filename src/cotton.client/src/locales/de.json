@@ -1452,6 +1452,7 @@
   "common": {
     "languageName": "Deutsch",
     "switchToThisLanguage": "Zu Deutsch wechseln",
+    "language": "Sprache",
     "placeholder": "—",
     "yes": "Ja",
     "no": "Nein",
@@ -2014,22 +2015,22 @@
       }
     },
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "Verknüpfte Konten",
+      "description": "Externe Identitätsanbieter mit diesem Konto verknüpfen.",
+      "loading": "Verknüpfte Konten werden geladen...",
+      "empty": "Noch keine externen Konten verknüpft.",
+      "link": "{{provider}} verknüpfen",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "Verknüpfung aufheben",
+        "title": "Verknüpfung mit {{provider}} aufheben?",
+        "description": "Sie können sich mit diesem Anbieter erst wieder anmelden, nachdem Sie ihn erneut verknüpft haben.",
+        "confirm": "Verknüpfung aufheben",
+        "cancel": "Abbrechen"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
-        "linkFailed": "Kontoverknüpfung konnte nicht gestartet werden."
+        "loadFailed": "Verknüpfte Konten konnten nicht geladen werden.",
+        "unlinkFailed": "Die Verknüpfung mit diesem Konto konnte nicht aufgehoben werden.",
+        "linkFailed": "Die Kontoverknüpfung konnte nicht gestartet werden."
       }
     }
   },
@@ -2662,19 +2663,19 @@
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
+      "title": "Versionen von {{name}}",
+      "empty": "Noch keine früheren Versionen vorhanden.",
+      "loadFailed": "Versionen konnten nicht geladen werden.",
+      "restoreFailed": "Die Version konnte nicht wiederhergestellt werden.",
+      "deleteFailed": "Die Version konnte nicht gelöscht werden.",
+      "downloadFailed": "Der Download der Version konnte nicht vorbereitet werden.",
       "versionLabel": "Version {{version}}",
-      "current": "Current",
+      "current": "Aktuell",
       "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "restoreConfirmTitle": "Diese Version wiederherstellen?",
+      "restoreConfirmDescription": "Der aktuelle Dateiinhalt wird als neue Version gespeichert. Anschließend wird Version {{version}} zur aktuellen Version.",
+      "deleteConfirmTitle": "Diese Version löschen?",
+      "deleteConfirmDescription": "Version {{version}} wird gelöscht. Die aktuelle Datei bleibt unverändert."
     }
   },
   "tasks": {

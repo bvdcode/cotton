@@ -1459,6 +1459,7 @@
   "common": {
     "languageName": "Português",
     "switchToThisLanguage": "Mudar para português",
+    "language": "Idioma",
     "placeholder": "—",
     "yes": "Sim",
     "no": "Não",
@@ -2021,21 +2022,21 @@
     "ageYears_few": "{{count}} years",
     "ageYears_many": "{{count}} years",
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "Contas vinculadas",
+      "description": "Vincule provedores de identidade externos a esta conta.",
+      "loading": "A carregar contas vinculadas...",
+      "empty": "Ainda não há contas externas vinculadas.",
+      "link": "Vincular {{provider}}",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "Desvincular",
+        "title": "Desvincular {{provider}}?",
+        "description": "Deixará de poder iniciar sessão com este provedor até o vincular novamente.",
+        "confirm": "Desvincular",
+        "cancel": "Cancelar"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
+        "loadFailed": "Não foi possível carregar as contas vinculadas.",
+        "unlinkFailed": "Não foi possível desvincular esta conta.",
         "linkFailed": "Não foi possível iniciar a vinculação da conta."
       }
     }
@@ -2669,19 +2670,19 @@
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
-      "versionLabel": "Version {{version}}",
-      "current": "Current",
+      "title": "Versões de {{name}}",
+      "empty": "Ainda não existem versões anteriores.",
+      "loadFailed": "Não foi possível carregar as versões.",
+      "restoreFailed": "Não foi possível restaurar a versão.",
+      "deleteFailed": "Não foi possível eliminar a versão.",
+      "downloadFailed": "Não foi possível preparar a transferência da versão.",
+      "versionLabel": "Versão {{version}}",
+      "current": "Atual",
       "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "restoreConfirmTitle": "Restaurar esta versão?",
+      "restoreConfirmDescription": "O conteúdo atual do ficheiro será guardado como uma nova versão e, em seguida, a versão {{version}} passará a ser a atual.",
+      "deleteConfirmTitle": "Eliminar esta versão?",
+      "deleteConfirmDescription": "A versão {{version}} será eliminada. O ficheiro atual não será alterado."
     }
   },
   "tasks": {

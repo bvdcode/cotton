@@ -1542,6 +1542,7 @@
   "common": {
     "languageName": "Русский",
     "switchToThisLanguage": "Переключить на русский",
+    "language": "Язык",
     "placeholder": "—",
     "yes": "Да",
     "no": "Нет",

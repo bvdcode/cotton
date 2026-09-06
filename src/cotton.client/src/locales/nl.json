@@ -1457,6 +1457,7 @@
   "common": {
     "languageName": "Nederlands",
     "switchToThisLanguage": "Wissel naar Nederlands",
+    "language": "Taal",
     "placeholder": "—",
     "yes": "Ja",
     "no": "Nee",
@@ -2019,21 +2020,21 @@
     "ageYears_few": "{{count}} years",
     "ageYears_many": "{{count}} years",
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "Gekoppelde accounts",
+      "description": "Koppel externe identiteitsproviders aan dit account.",
+      "loading": "Gekoppelde accounts laden...",
+      "empty": "Er zijn nog geen externe accounts gekoppeld.",
+      "link": "{{provider}} koppelen",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "Ontkoppelen",
+        "title": "{{provider}} ontkoppelen?",
+        "description": "Je kunt je niet meer aanmelden met deze provider totdat je deze opnieuw koppelt.",
+        "confirm": "Ontkoppelen",
+        "cancel": "Annuleren"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
+        "loadFailed": "De gekoppelde accounts konden niet worden geladen.",
+        "unlinkFailed": "Dit account kon niet worden ontkoppeld.",
         "linkFailed": "Kan het koppelen van het account niet starten."
       }
     }
@@ -2667,19 +2668,19 @@
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
-      "versionLabel": "Version {{version}}",
-      "current": "Current",
-      "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "title": "Versies van {{name}}",
+      "empty": "Er zijn nog geen eerdere versies.",
+      "loadFailed": "De versies konden niet worden geladen.",
+      "restoreFailed": "De versie kon niet worden hersteld.",
+      "deleteFailed": "De versie kon niet worden verwijderd.",
+      "downloadFailed": "De download van de versie kon niet worden voorbereid.",
+      "versionLabel": "Versie {{version}}",
+      "current": "Huidig",
+      "original": "Origineel",
+      "restoreConfirmTitle": "Deze versie herstellen?",
+      "restoreConfirmDescription": "De huidige bestandsinhoud wordt als nieuwe versie opgeslagen. Daarna wordt versie {{version}} de huidige versie.",
+      "deleteConfirmTitle": "Deze versie verwijderen?",
+      "deleteConfirmDescription": "Versie {{version}} wordt verwijderd. Het huidige bestand blijft ongewijzigd."
     }
   },
   "tasks": {

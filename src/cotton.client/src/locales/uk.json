@@ -1463,6 +1463,7 @@
   "common": {
     "languageName": "Українська",
     "switchToThisLanguage": "Перемкнути на українську",
+    "language": "Мова",
     "placeholder": "—",
     "yes": "Так",
     "no": "Ні",
@@ -2025,21 +2026,21 @@
       }
     },
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "Пов’язані облікові записи",
+      "description": "Пов’яжіть зовнішніх постачальників ідентифікації з цим обліковим записом.",
+      "loading": "Завантаження пов’язаних облікових записів...",
+      "empty": "Зовнішніх облікових записів ще не пов’язано.",
+      "link": "Пов’язати {{provider}}",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "Відв’язати",
+        "title": "Відв’язати {{provider}}?",
+        "description": "Ви не зможете входити через цього постачальника, доки не пов’яжете його знову.",
+        "confirm": "Відв’язати",
+        "cancel": "Скасувати"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
+        "loadFailed": "Не вдалося завантажити пов’язані облікові записи.",
+        "unlinkFailed": "Не вдалося відв’язати цей обліковий запис.",
         "linkFailed": "Не вдалося почати прив’язування облікового запису."
       }
     }
@@ -2677,19 +2678,19 @@
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
-      "versionLabel": "Version {{version}}",
-      "current": "Current",
-      "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "title": "Версії файлу {{name}}",
+      "empty": "Попередніх версій ще немає.",
+      "loadFailed": "Не вдалося завантажити версії.",
+      "restoreFailed": "Не вдалося відновити версію.",
+      "deleteFailed": "Не вдалося видалити версію.",
+      "downloadFailed": "Не вдалося підготувати завантаження версії.",
+      "versionLabel": "Версія {{version}}",
+      "current": "Поточна",
+      "original": "Оригінальна",
+      "restoreConfirmTitle": "Відновити цю версію?",
+      "restoreConfirmDescription": "Поточний вміст файлу буде збережено як нову версію, після чого версія {{version}} стане поточною.",
+      "deleteConfirmTitle": "Видалити цю версію?",
+      "deleteConfirmDescription": "Версію {{version}} буде видалено. Поточний файл не зміниться."
     }
   },
   "tasks": {

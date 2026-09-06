@@ -1253,6 +1253,7 @@
   "common": {
     "languageName": "English",
     "switchToThisLanguage": "Switch to English",
+    "language": "Language",
     "placeholder": "—",
     "yes": "Yes",
     "no": "No",
