@@ -60,6 +60,61 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task MoveFile_NameCollisionWithSiblingFile_RenamesDuringMove()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeFileManifestDto moving = await CreateFileAsync(src.Id, "doc.txt", "moving-content");
+            NodeFileManifestDto existing = await CreateFileAsync(dst.Id, "doc.txt", "existing-content");
+
+            using HttpResponseMessage res = await MoveFileAsync(
+                moving.Id,
+                new MoveFileRequestDto
+                {
+                    ParentId = dst.Id,
+                    Name = "doc (1).txt"
+                });
+
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            NodeContentDto children = await GetChildrenAsync(dst.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(children.Files.Any(file => file.Id == existing.Id && file.Name == "doc.txt"), Is.True);
+                Assert.That(children.Files.Any(file => file.Id == moving.Id && file.Name == "doc (1).txt"), Is.True);
+            });
+        }
+
+        [Test]
+        public async Task MoveFile_NameCollisionWithSiblingFile_ReplacesDuringMove()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeFileManifestDto moving = await CreateFileAsync(src.Id, "doc.txt", "moving-content");
+            NodeFileManifestDto existing = await CreateFileAsync(dst.Id, "doc.txt", "existing-content");
+
+            using HttpResponseMessage res = await MoveFileAsync(
+                moving.Id,
+                new MoveFileRequestDto
+                {
+                    ParentId = dst.Id,
+                    Overwrite = true
+                });
+
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            NodeContentDto children = await GetChildrenAsync(dst.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(children.Files.Any(file => file.Id == moving.Id && file.Name == "doc.txt"), Is.True);
+                Assert.That(children.Files.Any(file => file.Id == existing.Id), Is.False);
+                Assert.That(children.Files.Count(file => file.Name == "doc.txt"), Is.EqualTo(1));
+            });
+        }
+
+        [Test]
         public async Task MoveFile_NameCollisionWithSiblingFolder_Returns409()
         {
             await AuthenticateAsync();
@@ -70,6 +125,27 @@ namespace Cotton.Server.IntegrationTests
             await CreateFolderAsync(dst.Id, "thing");
 
             HttpResponseMessage res = await MoveFileAsync(moving.Id, dst.Id);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        }
+
+        [Test]
+        public async Task MoveFile_NameCollisionWithSiblingFolder_CannotReplaceFolder()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeFileManifestDto moving = await CreateFileAsync(src.Id, "thing", "moving-content");
+            await CreateFolderAsync(dst.Id, "thing");
+
+            using HttpResponseMessage res = await MoveFileAsync(
+                moving.Id,
+                new MoveFileRequestDto
+                {
+                    ParentId = dst.Id,
+                    Overwrite = true
+                });
+
             Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
         }
 

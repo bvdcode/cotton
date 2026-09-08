@@ -9,6 +9,7 @@ using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -24,6 +25,8 @@ namespace Cotton.Server.Handlers.Nodes
         public Guid NodeId { get; set; }
 
         public Guid ParentId { get; set; }
+
+        public string? Name { get; set; }
 
         public Guid UserId { get; set; }
     }
@@ -52,14 +55,40 @@ namespace Cotton.Server.Handlers.Nodes
             }
 
             Node targetParent = await LoadTargetParentOrThrowAsync(request, cancellationToken);
-            await ValidateTargetParentAsync(request, node, targetParent, cancellationToken);
+            string destinationName = GetDestinationName(request, node);
+            string destinationNameKey = NameValidator.GetNameKey(destinationName);
+            await ValidateTargetParentAsync(
+                request,
+                node,
+                targetParent,
+                destinationNameKey,
+                cancellationToken);
 
             Guid oldParentId = node.ParentId!.Value;
-            await MoveNodeAsync(node, targetParent, oldParentId, cancellationToken);
+            await MoveNodeAsync(node, targetParent, destinationName, oldParentId, cancellationToken);
             await tx.CommitAsync(cancellationToken);
 
             await NotifyMoveAsync(node.Id, oldParentId, cancellationToken);
             return node.Adapt<NodeDto>();
+        }
+
+        private static string GetDestinationName(MoveNodeCommand request, Node node)
+        {
+            if (request.Name is null)
+            {
+                return node.Name;
+            }
+
+            bool valid = NameValidator.TryNormalizeAndValidate(
+                request.Name,
+                out string normalized,
+                out string errorMessage);
+            if (!valid)
+            {
+                throw new BadRequestException<Node>(errorMessage);
+            }
+
+            return normalized;
         }
 
         private static void ValidateRequest(MoveNodeCommand request)
@@ -118,6 +147,7 @@ namespace Cotton.Server.Handlers.Nodes
             MoveNodeCommand request,
             Node node,
             Node targetParent,
+            string destinationNameKey,
             CancellationToken ct)
         {
             EnsureCompatibleTargetParent(node, targetParent);
@@ -126,7 +156,13 @@ namespace Cotton.Server.Handlers.Nodes
                 throw new BadRequestException<Node>("Cannot move a folder into its descendant.");
             }
 
-            await EnsureNoSiblingCollisionAsync(targetParent.Id, request.UserId, node.NameKey, node.Type, node.Id, ct);
+            await EnsureNoSiblingCollisionAsync(
+                targetParent.Id,
+                request.UserId,
+                destinationNameKey,
+                node.Type,
+                node.Id,
+                ct);
         }
 
         private static void EnsureCompatibleTargetParent(Node node, Node targetParent)
@@ -142,9 +178,15 @@ namespace Cotton.Server.Handlers.Nodes
             }
         }
 
-        private async Task MoveNodeAsync(Node node, Node targetParent, Guid oldParentId, CancellationToken ct)
+        private async Task MoveNodeAsync(
+            Node node,
+            Node targetParent,
+            string destinationName,
+            Guid oldParentId,
+            CancellationToken ct)
         {
             node.SetParent(targetParent);
+            node.SetName(destinationName);
             _syncChanges.StageFolderChange(SyncChangeKind.FolderMoved, node, targetParent.Id, oldParentId);
             try
             {

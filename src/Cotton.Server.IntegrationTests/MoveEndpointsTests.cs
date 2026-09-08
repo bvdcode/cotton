@@ -305,10 +305,16 @@ namespace Cotton.Server.IntegrationTests
         }
 
         private Task<HttpResponseMessage> MoveFileAsync(Guid fileId, Guid parentId)
-            => _client!.PatchAsJsonAsync($"/api/v1/files/{fileId}/move", new MoveFileRequestDto { ParentId = parentId });
+            => MoveFileAsync(fileId, new MoveFileRequestDto { ParentId = parentId });
+
+        private Task<HttpResponseMessage> MoveFileAsync(Guid fileId, MoveFileRequestDto request)
+            => _client!.PatchAsJsonAsync($"/api/v1/files/{fileId}/move", request);
 
         private Task<HttpResponseMessage> MoveNodeAsync(Guid nodeId, Guid parentId)
-            => _client!.PatchAsJsonAsync($"/api/v1/layouts/nodes/{nodeId}/move", new MoveNodeRequestDto { ParentId = parentId });
+            => MoveNodeAsync(nodeId, new MoveNodeRequestDto { ParentId = parentId });
+
+        private Task<HttpResponseMessage> MoveNodeAsync(Guid nodeId, MoveNodeRequestDto request)
+            => _client!.PatchAsJsonAsync($"/api/v1/layouts/nodes/{nodeId}/move", request);
     }
 
 }

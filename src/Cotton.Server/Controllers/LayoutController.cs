@@ -104,6 +104,7 @@ namespace Cotton.Server.Controllers
             {
                 NodeId = nodeId,
                 ParentId = request.ParentId,
+                Name = request.Name,
                 UserId = User.GetUserId(),
             };
             NodeDto dto = await _mediator.Send(command);

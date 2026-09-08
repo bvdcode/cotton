@@ -130,6 +130,33 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task MoveNode_NameCollisionWithSiblingFolder_RenamesDuringMove()
+        {
+            await AuthenticateAsync();
+            NodeDto root = await GetRootAsync();
+            NodeDto src = await CreateFolderAsync(root.Id, "src");
+            NodeDto dst = await CreateFolderAsync(root.Id, "dst");
+            NodeDto moving = await CreateFolderAsync(src.Id, "thing");
+            NodeDto existing = await CreateFolderAsync(dst.Id, "thing");
+
+            using HttpResponseMessage res = await MoveNodeAsync(
+                moving.Id,
+                new MoveNodeRequestDto
+                {
+                    ParentId = dst.Id,
+                    Name = "thing (1)"
+                });
+
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            NodeContentDto children = await GetChildrenAsync(dst.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(children.Nodes.Any(node => node.Id == existing.Id && node.Name == "thing"), Is.True);
+                Assert.That(children.Nodes.Any(node => node.Id == moving.Id && node.Name == "thing (1)"), Is.True);
+            });
+        }
+
+        [Test]
         public async Task MoveNode_NameCollisionWithSiblingFile_Returns409()
         {
             await AuthenticateAsync();
