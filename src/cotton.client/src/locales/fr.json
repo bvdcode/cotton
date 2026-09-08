@@ -2489,10 +2489,10 @@
       "confirmDescription": "Les éléments sélectionnés seront déplacés vers la corbeille et pourront être restaurés ultérieurement."
     },
     "conflicts": {
-      "title": "Le fichier existe déjà",
-      "description": "Un fichier portant ce nom existe déjà dans ce dossier. Téléverser sous {{newName}} ?",
-      "overwriteDescription": "Un fichier portant ce nom existe déjà dans ce dossier. Le remplacer ou téléverser sous {{newName}} ?",
-      "rename": "Téléverser sous {{newName}}",
+      "title": "Conflit de noms",
+      "description": "Un élément portant ce nom existe déjà dans ce dossier. Utiliser plutôt {{newName}} ?",
+      "overwriteDescription": "Un élément portant ce nom existe déjà dans ce dossier. Le remplacer ou utiliser plutôt {{newName}} ?",
+      "rename": "Utiliser {{newName}}",
       "overwrite": "Remplacer",
       "skip": "Ignorer",
       "skipAll": "Tout ignorer"

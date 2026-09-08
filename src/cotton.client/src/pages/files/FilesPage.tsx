@@ -321,6 +321,7 @@ export const FilesPage: React.FC = () => {
         fileUpload={contentOperations.fileUpload}
         handleLightboxDelete={contentOperations.handleLightboxDelete}
         interaction={fileListLogic.interaction}
+        move={move}
         nodeId={nodeId}
         smoothGalleryTransitions={smoothGalleryTransitions}
       />

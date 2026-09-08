@@ -1,8 +1,6 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
-import { filesApi } from "../api/filesApi";
-import { nodesApi } from "../api/nodesApi";
 import type { NodeDto } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import { isAxiosError } from "../api/httpClient";
@@ -26,6 +24,11 @@ import {
 import { showActionToast } from "../ui/ActionToast";
 import { collectPlainFilesInFoldersForClientEncryption } from "../utils/clientEncryptionFolderScan";
 import type { ExistingFileEncryptionTaskFile } from "../tasks";
+import {
+  moveItemWithConflictResolution,
+  type MoveConflictResolver,
+  type MoveSingleItemResult,
+} from "../move/moveConflictResolution";
 import { isRecord } from "../utils/typeGuards";
 
 /**
@@ -267,6 +270,7 @@ const needsDecryptionAfterMove = (item: MoveClipboardItem): boolean =>
 interface MoveOutcome {
   succeeded: ReadonlyArray<MoveClipboardItem>;
   failed: ReadonlyArray<MoveClipboardItem>;
+  notMoved: ReadonlyArray<MoveClipboardItem>;
   lastErrorMessage: string | null;
 }
 
@@ -276,9 +280,9 @@ interface MoveExecutionResult extends MoveOutcome {
   sourceParents: ReadonlySet<string>;
 }
 
-type MoveSingleItemResult =
-  | { kind: "folder"; folder: NodeDto }
-  | { kind: "file"; file: NodeFileManifestDto };
+interface UseMoveOperationsOptions {
+  confirmConflict: MoveConflictResolver;
+}
 
 interface EncryptionCandidate {
   file: ExistingFileEncryptionTaskFile;
@@ -332,35 +336,61 @@ const loadEncryptionServerSettings = async (
 
 const moveCandidatesToTarget = async (options: {
   candidates: ReadonlyArray<MoveClipboardItem>;
+  confirmConflict: UseMoveOperationsOptions["confirmConflict"];
   targetEncryptsNewFiles: boolean;
   targetParentId: string;
 }): Promise<MoveExecutionResult> => {
   const sourceParents = new Set<string>();
   const succeeded: MoveClipboardItem[] = [];
   const failed: MoveClipboardItem[] = [];
+  const notMoved: MoveClipboardItem[] = [];
   const movedFilesToEncrypt: MoveClipboardItem[] = [];
   const movedFilesToOfferDecrypt: MoveClipboardItem[] = [];
   let lastErrorMessage: string | null = null;
+  let skipAllConflicts = false;
 
   // Serial loop: the server's collision/cycle checks are pre-update reads,
   // so concurrent moves can still race in the small window before the unique
   // index throws. Serial keeps the multi-item UX deterministic.
-  for (const item of options.candidates) {
-    try {
-      const moved = await moveSingleItem(item, options.targetParentId);
-      applyMovedItemToCache(item, moved, options.targetParentId);
-      sourceParents.add(item.sourceParentId);
-      succeeded.push(item);
-      collectMovedEncryptionFollowups({
-        item,
-        movedFilesToEncrypt,
-        movedFilesToOfferDecrypt,
-        targetEncryptsNewFiles: options.targetEncryptsNewFiles,
-      });
-    } catch (error) {
-      failed.push(item);
-      lastErrorMessage = extractErrorMessage(error) ?? lastErrorMessage;
-      console.error("Failed to move " + item.kind + " " + item.id, error);
+  for (let index = 0; index < options.candidates.length; index += 1) {
+    const item = options.candidates[index];
+    const outcome = await moveItemWithConflictResolution({
+      confirmConflict: options.confirmConflict,
+      item,
+      skipAllConflicts,
+      targetParentId: options.targetParentId,
+    });
+
+    switch (outcome.kind) {
+      case "moved":
+        applyMovedItemToCache(item, outcome.moved, options.targetParentId);
+        sourceParents.add(item.sourceParentId);
+        succeeded.push(item);
+        collectMovedEncryptionFollowups({
+          item,
+          movedFilesToEncrypt,
+          movedFilesToOfferDecrypt,
+          targetEncryptsNewFiles: options.targetEncryptsNewFiles,
+        });
+        break;
+      case "failed":
+        failed.push(item);
+        notMoved.push(item);
+        lastErrorMessage =
+          extractErrorMessage(outcome.error) ?? lastErrorMessage;
+        console.error(
+          "Failed to move " + item.kind + " " + item.id,
+          outcome.error,
+        );
+        break;
+      case "skipped":
+        notMoved.push(item);
+        skipAllConflicts ||= outcome.skipAll;
+        break;
+      case "cancelled":
+        notMoved.push(...options.candidates.slice(index));
+        index = options.candidates.length;
+        break;
     }
   }
 
@@ -369,24 +399,10 @@ const moveCandidatesToTarget = async (options: {
     lastErrorMessage,
     movedFilesToEncrypt,
     movedFilesToOfferDecrypt,
+    notMoved,
     sourceParents,
     succeeded,
   };
-};
-
-const moveSingleItem = async (
-  item: MoveClipboardItem,
-  targetParentId: string,
-): Promise<MoveSingleItemResult> => {
-  if (item.kind === "folder") {
-    const folder = await nodesApi.moveNode(item.id, {
-      parentId: targetParentId,
-    });
-    return { kind: "folder", folder };
-  }
-
-  const file = await filesApi.moveFile(item.id, { parentId: targetParentId });
-  return { kind: "file", file };
 };
 
 const applyMovedItemToCache = (
@@ -623,7 +639,9 @@ const showMoveOutcomeToasts = (options: {
   }
 };
 
-export const useMoveOperations = (): UseMoveOperationsResult => {
+export const useMoveOperations = ({
+  confirmConflict,
+}: UseMoveOperationsOptions): UseMoveOperationsResult => {
   const { t } = useTranslation(["files", "common", "tasks"]);
   const setItems = useMoveClipboardStore((s) => s.setItems);
   const clear = useMoveClipboardStore((s) => s.clear);
@@ -646,7 +664,12 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
     ): Promise<MoveOutcome> => {
       const candidates = getMoveCandidates(items, targetParentId);
       if (candidates.length === 0) {
-        return { succeeded: [], failed: [], lastErrorMessage: null };
+        return {
+          succeeded: [],
+          failed: [],
+          notMoved: [],
+          lastErrorMessage: null,
+        };
       }
 
       const targetNode = findCachedNode(targetParentId);
@@ -662,6 +685,7 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       );
       const result = await moveCandidatesToTarget({
         candidates,
+        confirmConflict,
         targetEncryptsNewFiles,
         targetParentId,
       });
@@ -705,10 +729,11 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       return {
         succeeded: result.succeeded,
         failed: result.failed,
+        notMoved: result.notMoved,
         lastErrorMessage: result.lastErrorMessage,
       };
     },
-    [t],
+    [confirmConflict, t],
   );
 
   const moveItemsVoid = useCallback(
@@ -728,13 +753,11 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
 
       const outcome = await moveItems(items, targetParentId);
 
-      // Only clear the clipboard after settle. If some items failed (most likely
-      // a name collision in the target), keep the failed items in the clipboard
-      // so the user can retry into a different target without re-selecting.
-      if (outcome.failed.length === 0) {
+      // Keep failed, skipped, and cancelled items available for another paste.
+      if (outcome.notMoved.length === 0) {
         clear();
       } else {
-        useMoveClipboardStore.getState().setItems(outcome.failed);
+        useMoveClipboardStore.getState().setItems(outcome.notMoved);
       }
     },
     [clear, moveItems],

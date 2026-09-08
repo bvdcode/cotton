@@ -2492,10 +2492,10 @@
       "confirmDescription": "Os itens selecionados serão movidos para a Lixeira e poderão ser restaurados depois."
     },
     "conflicts": {
-      "title": "O arquivo já existe",
-      "description": "Já existe um arquivo com este nome nesta pasta. Enviar como {{newName}}?",
-      "overwriteDescription": "Já existe um arquivo com este nome nesta pasta. Substituir ou enviar como {{newName}}?",
-      "rename": "Enviar como {{newName}}",
+      "title": "Conflito de nomes",
+      "description": "Já existe um item com este nome nesta pasta. Usar {{newName}} em vez disso?",
+      "overwriteDescription": "Já existe um item com este nome nesta pasta. Substituí-lo ou usar {{newName}} em vez disso?",
+      "rename": "Usar {{newName}}",
       "overwrite": "Substituir",
       "skip": "Ignorar",
       "skipAll": "Ignorar tudo"

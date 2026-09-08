@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { ConflictAction } from "../utils/uploadConflicts";
+import { ConflictAction } from "../../../shared/types/nameConflict";
 
 interface FileConflictDialogProps {
   open: boolean;

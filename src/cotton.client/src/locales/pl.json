@@ -2505,10 +2505,10 @@
       "confirmDescription": "Zaznaczone elementy zostaną przeniesione do Kosza i będzie można je przywrócić później."
     },
     "conflicts": {
-      "title": "Plik już istnieje",
-      "description": "Plik o tej nazwie już istnieje w tym folderze. Przesłać jako {{newName}}?",
-      "overwriteDescription": "Plik o tej nazwie już istnieje w tym folderze. Zastąpić go czy przesłać jako {{newName}}?",
-      "rename": "Prześlij jako {{newName}}",
+      "title": "Konflikt nazw",
+      "description": "Element o tej nazwie już istnieje w tym folderze. Użyć zamiast niej nazwy {{newName}}?",
+      "overwriteDescription": "Element o tej nazwie już istnieje w tym folderze. Zastąpić go czy użyć nazwy {{newName}}?",
+      "rename": "Użyj {{newName}}",
       "overwrite": "Zastąp",
       "skip": "Pomiń",
       "skipAll": "Pomiń wszystko"

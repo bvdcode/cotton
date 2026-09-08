@@ -2502,10 +2502,10 @@
       "confirmDescription": "Vybrané položky budou přesunuty do koše a lze je později obnovit."
     },
     "conflicts": {
-      "title": "Soubor již existuje",
-      "description": "V této složce již existuje soubor s tímto názvem. Nahrát jako {{newName}}?",
-      "overwriteDescription": "V této složce již existuje soubor s tímto názvem. Nahradit ho, nebo nahrát jako {{newName}}?",
-      "rename": "Nahrát jako {{newName}}",
+      "title": "Konflikt názvů",
+      "description": "V této složce již existuje položka s tímto názvem. Použít místo něj {{newName}}?",
+      "overwriteDescription": "V této složce již existuje položka s tímto názvem. Nahradit ji, nebo místo ní použít {{newName}}?",
+      "rename": "Použít {{newName}}",
       "overwrite": "Nahradit",
       "skip": "Přeskočit",
       "skipAll": "Přeskočit vše"

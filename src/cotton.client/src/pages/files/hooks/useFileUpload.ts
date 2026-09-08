@@ -14,10 +14,8 @@ import {
 } from "../../../shared/crypto";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 import { uploadManager } from "../../../shared/upload/UploadManager";
-import {
-  resolveUploadConflicts,
-  ConflictAction,
-} from "../utils/uploadConflicts";
+import { ConflictAction } from "../../../shared/types/nameConflict";
+import { resolveUploadConflicts } from "../utils/uploadConflicts";
 import { showActionToast } from "../../../shared/ui/ActionToast";
 import { toast } from "../../../shared/ui/notifications";
 import { useFileConflictDialog } from "./useFileConflictDialog";

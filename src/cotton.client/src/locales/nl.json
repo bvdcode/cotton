@@ -2490,10 +2490,10 @@
       "confirmDescription": "Geselecteerde items worden naar de prullenbak verplaatst en kunnen later worden hersteld."
     },
     "conflicts": {
-      "title": "Bestand bestaat al",
-      "description": "Een bestand met deze naam bestaat al in deze map. Uploaden als {{newName}}?",
-      "overwriteDescription": "Een bestand met deze naam bestaat al in deze map. Vervangen of uploaden als {{newName}}?",
-      "rename": "Uploaden als {{newName}}",
+      "title": "Naamconflict",
+      "description": "Er bestaat al een item met deze naam in deze map. In plaats daarvan {{newName}} gebruiken?",
+      "overwriteDescription": "Er bestaat al een item met deze naam in deze map. Vervangen of in plaats daarvan {{newName}} gebruiken?",
+      "rename": "{{newName}} gebruiken",
       "overwrite": "Vervangen",
       "skip": "Overslaan",
       "skipAll": "Alles overslaan"

@@ -47,6 +47,7 @@ export interface RenameNodeRequest {
 
 export interface MoveNodeRequest {
   parentId: Guid;
+  name?: string;
 }
 
 export type RestoreStatus =

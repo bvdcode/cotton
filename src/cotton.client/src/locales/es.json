@@ -2488,10 +2488,10 @@
       "confirmDescription": "Los elementos seleccionados se moverán a la papelera y podrán restaurarse más tarde."
     },
     "conflicts": {
-      "title": "El archivo ya existe",
-      "description": "Ya existe un archivo con este nombre en esta carpeta. ¿Subirlo como {{newName}}?",
-      "overwriteDescription": "Ya existe un archivo con este nombre en esta carpeta. ¿Reemplazarlo o subirlo como {{newName}}?",
-      "rename": "Subir como {{newName}}",
+      "title": "Conflicto de nombres",
+      "description": "Ya existe un elemento con este nombre en esta carpeta. ¿Usar {{newName}} en su lugar?",
+      "overwriteDescription": "Ya existe un elemento con este nombre en esta carpeta. ¿Reemplazarlo o usar {{newName}} en su lugar?",
+      "rename": "Usar {{newName}}",
       "overwrite": "Reemplazar",
       "skip": "Omitir",
       "skipAll": "Omitir todo"

@@ -2498,10 +2498,10 @@
       "confirmDescription": "所选项目将被移到回收站，可在之后还原。"
     },
     "conflicts": {
-      "title": "文件已存在",
-      "description": "此文件夹中已存在同名文件。改为以 {{newName}} 上传？",
-      "overwriteDescription": "此文件夹中已存在同名文件。替换它，还是改为以 {{newName}} 上传？",
-      "rename": "以 {{newName}} 上传",
+      "title": "名称冲突",
+      "description": "此文件夹中已存在同名项目。是否改用 {{newName}}？",
+      "overwriteDescription": "此文件夹中已存在同名项目。替换它，还是改用 {{newName}}？",
+      "rename": "使用 {{newName}}",
       "overwrite": "替换",
       "skip": "跳过",
       "skipAll": "全部跳过"
