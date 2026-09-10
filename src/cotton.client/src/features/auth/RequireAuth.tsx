@@ -23,7 +23,9 @@ export function RequireAuth({ children }: Props) {
     return (
       <Navigate
         to="/login"
-        state={{ from: getSafeAuthReturnPath(location.pathname) }}
+        state={{
+          from: getSafeAuthReturnPath(location.pathname + location.search),
+        }}
         replace
       />
     );

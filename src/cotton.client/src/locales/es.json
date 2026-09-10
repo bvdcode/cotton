@@ -3476,9 +3476,7 @@
     "loading": "Espera, cargando los detalles de inicio de sesión...",
     "request": {
       "version": "Versión {{version}}",
-      "versionWithDevice": "Versión {{version}} en {{deviceName}}",
-      "origin": "Solicitud desde {{origin}}",
-      "localOrigin": "este dispositivo"
+      "versionWithDevice": "Versión {{version}} en {{deviceName}}"
     },
     "access": {
       "title": "Esta aplicación podrá:",

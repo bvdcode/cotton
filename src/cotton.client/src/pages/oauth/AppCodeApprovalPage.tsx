@@ -20,11 +20,11 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { appCodeApi, type AppCodeDetails } from "../../shared/api/appCodeApi";
 import { getApiErrorMessage } from "../../shared/api/httpClient";
 import { AuthActionShell } from "../../shared/ui/AuthActionShell";
-import { formatAppCodeOrigin } from "./appCodeOrigin";
+import { returnToAppCodeCaller } from "./appCodeReturnTarget";
 
 type ViewState =
   | { kind: "loading" }
@@ -39,6 +39,7 @@ export const AppCodeApprovalPage = () => {
   const { t } = useTranslation("appCodeApproval");
   const { t: tCommon } = useTranslation("common");
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const [state, setState] = useState<ViewState>({ kind: "loading" });
   const [submitting, setSubmitting] = useState(false);
 
@@ -79,38 +80,45 @@ export const AppCodeApprovalPage = () => {
     setSubmitting(true);
     try {
       await appCodeApi.approve(id);
-      setState({ kind: "approved", details: state.details });
     } catch (error) {
       setState({
         kind: "error",
         message: getApiErrorMessage(error) ?? t("errors.approveFailed"),
       });
+      return;
     } finally {
       setSubmitting(false);
     }
-  }, [id, state, t]);
+
+    setState({ kind: "approved", details: state.details });
+    returnToAppCodeCaller(searchParams.get("returnTo"));
+  }, [id, searchParams, state, t]);
 
   const deny = useCallback(async () => {
     if (!id || state.kind !== "ready") return;
     setSubmitting(true);
     try {
       await appCodeApi.deny(id);
-      setState({ kind: "denied", details: state.details });
     } catch (error) {
       setState({
         kind: "error",
         message: getApiErrorMessage(error) ?? t("errors.denyFailed"),
       });
+      return;
     } finally {
       setSubmitting(false);
     }
-  }, [id, state, t]);
+
+    setState({ kind: "denied", details: state.details });
+    returnToAppCodeCaller(searchParams.get("returnTo"));
+  }, [id, searchParams, state, t]);
 
   return (
     <AuthActionShell
       title={t("title")}
       logoAlt={tCommon("app.logoAlt")}
       maxWidth="sm"
+      fullScreenOnMobile
     >
       {state.kind === "loading" && <LoadingState />}
       {state.kind === "error" && <ErrorState message={state.message} />}
@@ -189,10 +197,15 @@ const ApprovalState = ({
   onDeny,
 }: ApprovalStateProps) => {
   const { t } = useTranslation("appCodeApproval");
-  const origin = formatAppCodeOrigin(details.origin, t("request.localOrigin"));
+  const version = details.deviceName
+    ? t("request.versionWithDevice", {
+        version: details.applicationVersion,
+        deviceName: details.deviceName,
+      })
+    : t("request.version", { version: details.applicationVersion });
 
   return (
-    <Stack spacing={3} sx={{ mt: 3 }}>
+    <Stack spacing={{ xs: 2, sm: 3 }} sx={{ mt: { xs: 2, sm: 3 } }}>
       <Stack spacing={0.75}>
         <Box display="flex" alignItems="center" gap={1}>
           <LoginOutlined color="primary" />
@@ -200,17 +213,7 @@ const ApprovalState = ({
             {details.applicationName}
           </Typography>
         </Box>
-        <Typography color="text.secondary">
-          {details.deviceName
-            ? t("request.versionWithDevice", {
-                version: details.applicationVersion,
-                deviceName: details.deviceName,
-              })
-            : t("request.version", { version: details.applicationVersion })}
-        </Typography>
-        <Typography color="text.secondary">
-          {t("request.origin", { origin })}
-        </Typography>
+        <Typography color="text.secondary">{version}</Typography>
       </Stack>
 
       <Divider />
@@ -232,16 +235,7 @@ const ApprovalState = ({
         </List>
       </Box>
 
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-        <Button
-          variant="contained"
-          startIcon={<CheckCircleOutline />}
-          onClick={onApprove}
-          disabled={submitting}
-          fullWidth
-        >
-          {t("actions.allow")}
-        </Button>
+      <Stack direction="row" spacing={1.5}>
         <Button
           variant="outlined"
           color="inherit"
@@ -251,6 +245,15 @@ const ApprovalState = ({
           fullWidth
         >
           {t("actions.deny")}
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<CheckCircleOutline />}
+          onClick={onApprove}
+          disabled={submitting}
+          fullWidth
+        >
+          {t("actions.allow")}
         </Button>
       </Stack>
     </Stack>

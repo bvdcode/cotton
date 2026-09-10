@@ -3274,9 +3274,7 @@
     "loading": "Please wait, loading sign-in details...",
     "request": {
       "version": "Version {{version}}",
-      "versionWithDevice": "Version {{version}} on {{deviceName}}",
-      "origin": "Request from {{origin}}",
-      "localOrigin": "this device"
+      "versionWithDevice": "Version {{version}} on {{deviceName}}"
     },
     "access": {
       "title": "If you allow, this application can:",

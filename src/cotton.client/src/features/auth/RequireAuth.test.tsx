@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthPhase } from "./types";
 import { RequireAuth } from "./RequireAuth";
+import { readStringProperty } from "../../shared/utils/typeGuards";
 
 const testState = vi.hoisted(() => ({
   phase: "booting" as AuthPhase,
@@ -16,9 +17,15 @@ vi.mock("./useAuth", () => ({
   }),
 }));
 
-const renderGuard = () =>
+const LoginLocation = () => {
+  const location = useLocation();
+  const from = readStringProperty(location.state, "from");
+  return <div>login page {from}</div>;
+};
+
+const renderGuard = (initialEntry = "/private") =>
   render(
-    <MemoryRouter initialEntries={["/private"]}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route
           path="/private"
@@ -28,7 +35,7 @@ const renderGuard = () =>
             </RequireAuth>
           }
         />
-        <Route path="/login" element={<div>login page</div>} />
+        <Route path="/login" element={<LoginLocation />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -51,7 +58,17 @@ describe("RequireAuth", () => {
 
     renderGuard();
 
-    expect(screen.getByText("login page")).toBeInTheDocument();
+    expect(screen.getByText("login page /private")).toBeInTheDocument();
+  });
+
+  it("preserves the query when redirecting to login", () => {
+    testState.phase = "anonymous";
+
+    renderGuard("/private?returnTo=mobile");
+
+    expect(
+      screen.getByText("login page /private?returnTo=mobile"),
+    ).toBeInTheDocument();
   });
 
   it("renders protected content for authenticated users", () => {
@@ -68,7 +85,7 @@ describe("RequireAuth", () => {
     renderGuard();
     fireEvent.click(screen.getByRole("button", { name: "actions.retry" }));
 
-    expect(screen.queryByText("login page")).not.toBeInTheDocument();
+    expect(screen.queryByText(/login page/)).not.toBeInTheDocument();
     expect(testState.restoreSession).toHaveBeenCalledTimes(1);
   });
 });

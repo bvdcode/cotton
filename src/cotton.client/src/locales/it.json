@@ -3479,9 +3479,7 @@
     "loading": "Attendere, caricamento dei dettagli di accesso...",
     "request": {
       "version": "Versione {{version}}",
-      "versionWithDevice": "Versione {{version}} su {{deviceName}}",
-      "origin": "Richiesta da {{origin}}",
-      "localOrigin": "questo dispositivo"
+      "versionWithDevice": "Versione {{version}} su {{deviceName}}"
     },
     "access": {
       "title": "Questa applicazione potrà:",

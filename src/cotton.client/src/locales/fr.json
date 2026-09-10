@@ -3477,9 +3477,7 @@
     "loading": "Veuillez patienter, chargement des détails de connexion...",
     "request": {
       "version": "Version {{version}}",
-      "versionWithDevice": "Version {{version}} sur {{deviceName}}",
-      "origin": "Demande depuis {{origin}}",
-      "localOrigin": "cet appareil"
+      "versionWithDevice": "Version {{version}} sur {{deviceName}}"
     },
     "access": {
       "title": "Cette application pourra :",

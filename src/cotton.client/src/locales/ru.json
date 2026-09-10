@@ -3707,9 +3707,7 @@
     "loading": "Подождите, загружаем данные входа...",
     "request": {
       "version": "Версия {{version}}",
-      "versionWithDevice": "Версия {{version}} на {{deviceName}}",
-      "origin": "Запрос от {{origin}}",
-      "localOrigin": "этого устройства"
+      "versionWithDevice": "Версия {{version}} на {{deviceName}}"
     },
     "access": {
       "title": "Это приложение сможет:",

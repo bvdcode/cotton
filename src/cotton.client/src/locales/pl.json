@@ -3521,9 +3521,7 @@
     "loading": "Proszę czekać, trwa ładowanie szczegółów logowania...",
     "request": {
       "version": "Wersja {{version}}",
-      "versionWithDevice": "Wersja {{version}} na {{deviceName}}",
-      "origin": "Żądanie z {{origin}}",
-      "localOrigin": "tego urządzenia"
+      "versionWithDevice": "Wersja {{version}} na {{deviceName}}"
     },
     "access": {
       "title": "Ta aplikacja będzie mogła:",

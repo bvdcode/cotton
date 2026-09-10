@@ -3480,9 +3480,7 @@
     "loading": "Aguarde, carregando detalhes do login...",
     "request": {
       "version": "Versão {{version}}",
-      "versionWithDevice": "Versão {{version}} em {{deviceName}}",
-      "origin": "Solicitação de {{origin}}",
-      "localOrigin": "este dispositivo"
+      "versionWithDevice": "Versão {{version}} em {{deviceName}}"
     },
     "access": {
       "title": "Este aplicativo poderá:",

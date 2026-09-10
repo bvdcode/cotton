@@ -3492,9 +3492,7 @@
     "loading": "Зачекайте, завантажуємо дані входу...",
     "request": {
       "version": "Версія {{version}}",
-      "versionWithDevice": "Версія {{version}} на {{deviceName}}",
-      "origin": "Запит від {{origin}}",
-      "localOrigin": "цього пристрою"
+      "versionWithDevice": "Версія {{version}} на {{deviceName}}"
     },
     "access": {
       "title": "Цей застосунок зможе:",

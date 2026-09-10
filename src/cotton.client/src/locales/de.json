@@ -3473,9 +3473,7 @@
     "loading": "Bitte warten, die Anmeldedetails werden geladen...",
     "request": {
       "version": "Version {{version}}",
-      "versionWithDevice": "Version {{version}} auf {{deviceName}}",
-      "origin": "Anfrage von {{origin}}",
-      "localOrigin": "diesem Gerät"
+      "versionWithDevice": "Version {{version}} auf {{deviceName}}"
     },
     "access": {
       "title": "Diese Anwendung kann:",

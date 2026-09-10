@@ -3518,9 +3518,7 @@
     "loading": "Počkejte prosím, načítají se podrobnosti přihlášení...",
     "request": {
       "version": "Verze {{version}}",
-      "versionWithDevice": "Verze {{version}} na zařízení {{deviceName}}",
-      "origin": "Požadavek z {{origin}}",
-      "localOrigin": "tohoto zařízení"
+      "versionWithDevice": "Verze {{version}} na zařízení {{deviceName}}"
     },
     "access": {
       "title": "Tato aplikace bude moci:",
