@@ -126,7 +126,7 @@ namespace Cotton.Server.IntegrationTests
             await CreateFolderAsync(dst.Id, "thing");
 
             HttpResponseMessage res = await MoveNodeAsync(moving.Id, dst.Id);
-            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            await AssertConflictKindAsync(res, RestoreConflictKind.Folder);
         }
 
         [Test]
@@ -167,7 +167,7 @@ namespace Cotton.Server.IntegrationTests
             await CreateFileAsync(dst.Id, "thing", "blocker");
 
             HttpResponseMessage res = await MoveNodeAsync(moving.Id, dst.Id);
-            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            await AssertConflictKindAsync(res, RestoreConflictKind.File);
         }
 
         [Test]

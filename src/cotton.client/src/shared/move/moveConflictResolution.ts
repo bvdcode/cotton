@@ -5,11 +5,13 @@ import {
   nodesApi,
   type MoveNodeRequest,
   type NodeFileManifestDto,
+  type RestoreConflictKind,
 } from "../api/nodesApi";
 import type { MoveClipboardItem } from "../store/moveClipboardStore";
 import { useNodesStore } from "../store/nodesStore";
 import { ConflictAction, type NameConflictPrompt } from "../types/nameConflict";
 import { getFileNameKey, nextAvailableName } from "../utils/fileNameUtils";
+import { readStringProperty } from "../utils/typeGuards";
 
 export type MoveConflictResolver = (
   prompt: NameConflictPrompt,
@@ -37,12 +39,9 @@ const getMoveItemName = async (item: MoveClipboardItem): Promise<string> => {
   return node.name;
 };
 
-const getCachedTargetNames = (
-  targetParentId: string,
-): { taken: Set<string>; files: Set<string> } => {
+const getCachedTargetNames = (targetParentId: string): Set<string> => {
   const content = useNodesStore.getState().contentByNodeId[targetParentId];
   const taken = new Set<string>();
-  const files = new Set<string>();
 
   for (const node of content?.nodes ?? []) {
     taken.add(getFileNameKey(node.name));
@@ -50,10 +49,24 @@ const getCachedTargetNames = (
   for (const file of content?.files ?? []) {
     const nameKey = getFileNameKey(file.name);
     taken.add(nameKey);
-    files.add(nameKey);
   }
 
-  return { taken, files };
+  return taken;
+};
+
+const getMoveConflictKind = (error: unknown): RestoreConflictKind | null => {
+  if (!isAxiosError(error) || error.response?.status !== 409) {
+    return null;
+  }
+
+  const conflictKind = readStringProperty(error.response.data, "conflictKind");
+  switch (conflictKind) {
+    case "File":
+    case "Folder":
+      return conflictKind;
+    default:
+      return null;
+  }
 };
 
 const moveSingleItem = async (
@@ -126,20 +139,19 @@ export const moveItemWithConflictResolution = async (options: {
         };
       }
 
+      const conflictKind = getMoveConflictKind(error);
       const targetNames = getCachedTargetNames(options.targetParentId);
       const conflictingName = name ?? originalName;
       const conflictingNameKey = getFileNameKey(conflictingName);
       rejectedNames.add(conflictingNameKey);
       for (const rejectedName of rejectedNames) {
-        targetNames.taken.add(rejectedName);
+        targetNames.add(rejectedName);
       }
 
-      const newName = nextAvailableName(originalName, targetNames.taken);
+      const newName = nextAvailableName(originalName, targetNames);
       const action = await options.confirmConflict({
         newName,
-        canOverwrite:
-          options.item.kind === "file" &&
-          targetNames.files.has(conflictingNameKey),
+        canOverwrite: options.item.kind === "file" && conflictKind === "File",
       });
 
       switch (action) {

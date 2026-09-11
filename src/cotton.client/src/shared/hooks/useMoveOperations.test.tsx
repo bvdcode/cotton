@@ -115,37 +115,12 @@ const makeEmptyChildrenResponse = (id = "empty") => ({
   totalCount: 0,
 });
 
-const setCachedTargetFile = (): void => {
-  useNodesStore.setState((state) => ({
-    contentByNodeId: {
-      ...state.contentByNodeId,
-      [targetParentId]: {
-        id: targetParentId,
-        createdAt: "2026-05-17T00:00:00Z",
-        updatedAt: "2026-05-17T00:00:00Z",
-        nodes: [],
-        files: [
-          {
-            id: "88888888-8888-4888-8888-888888888888",
-            createdAt: "2026-05-17T00:00:00Z",
-            updatedAt: "2026-05-17T00:00:00Z",
-            nodeId: targetParentId,
-            ownerId: "user-1",
-            name: plainFileItem.file?.name ?? "plain.txt",
-            contentType: "text/plain",
-            sizeBytes: 200,
-            metadata: {},
-          },
-        ],
-      },
-    },
-  }));
-};
-
-const createNameConflictError = (): Error & { isAxiosError: boolean } =>
+const createNameConflictError = (
+  conflictKind: "File" | "Folder" = "File",
+): Error & { isAxiosError: boolean } =>
   Object.assign(new Error("Name conflict"), {
     isAxiosError: true,
-    response: { status: 409 },
+    response: { status: 409, data: { conflictKind } },
   });
 
 describe("useMoveOperations", () => {
@@ -234,7 +209,6 @@ describe("useMoveOperations", () => {
   });
 
   it("moves a conflicting file with the suggested name after confirmation", async () => {
-    setCachedTargetFile();
     useMoveClipboardStore.getState().setItems([plainFileItem]);
     mocks.moveFile.mockRejectedValueOnce(createNameConflictError());
     mocks.confirmConflict.mockResolvedValueOnce(ConflictAction.Rename);
@@ -263,7 +237,6 @@ describe("useMoveOperations", () => {
   });
 
   it("replaces a conflicting file after confirmation", async () => {
-    setCachedTargetFile();
     useMoveClipboardStore.getState().setItems([plainFileItem]);
     mocks.moveFile.mockRejectedValueOnce(createNameConflictError());
     mocks.confirmConflict.mockResolvedValueOnce(ConflictAction.Overwrite);
@@ -286,7 +259,6 @@ describe("useMoveOperations", () => {
   });
 
   it("keeps a skipped conflicting file in the cut clipboard", async () => {
-    setCachedTargetFile();
     useMoveClipboardStore.getState().setItems([plainFileItem]);
     mocks.moveFile.mockRejectedValueOnce(createNameConflictError());
     mocks.confirmConflict.mockResolvedValueOnce(ConflictAction.Skip);
@@ -302,6 +274,25 @@ describe("useMoveOperations", () => {
     expect(mocks.moveFile).toHaveBeenCalledOnce();
     expect(useMoveClipboardStore.getState().items).toEqual([plainFileItem]);
     expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("does not offer replacement when the server reports a folder conflict", async () => {
+    useMoveClipboardStore.getState().setItems([plainFileItem]);
+    mocks.moveFile.mockRejectedValueOnce(createNameConflictError("Folder"));
+    mocks.confirmConflict.mockResolvedValueOnce(ConflictAction.Skip);
+
+    const { result } = renderHook(() =>
+      useMoveOperations({ confirmConflict: mocks.confirmConflict }),
+    );
+
+    await act(async () => {
+      await result.current.pasteInto(targetParentId);
+    });
+
+    expect(mocks.confirmConflict).toHaveBeenCalledWith({
+      newName: "plain (1).txt",
+      canOverwrite: false,
+    });
   });
 
   it("encrypts plain files nested inside a moved folder when the target encrypts new files", async () => {

@@ -207,7 +207,9 @@ namespace Cotton.Server.Handlers.Files
                 return;
             }
 
-            throw new DuplicateException(nameKey);
+            throw new DuplicateException(
+                nameKey,
+                extra: new { conflictKind = conflict.Value.Kind });
         }
 
         private async Task NotifyMoveIfNeededAsync(Guid nodeFileId, Guid? oldParentId, CancellationToken ct)

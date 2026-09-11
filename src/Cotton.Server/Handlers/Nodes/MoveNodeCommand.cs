@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Nodes;
+using Cotton.Files;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
@@ -246,7 +247,9 @@ namespace Cotton.Server.Handlers.Nodes
                     ct);
             if (nodeExists)
             {
-                throw new DuplicateException(nameKey);
+                throw new DuplicateException(
+                    nameKey,
+                    extra: new { conflictKind = RestoreConflictKind.Folder });
             }
 
             bool fileExists = await _dbContext.NodeFiles
@@ -257,7 +260,9 @@ namespace Cotton.Server.Handlers.Nodes
                     ct);
             if (fileExists)
             {
-                throw new DuplicateException(nameKey);
+                throw new DuplicateException(
+                    nameKey,
+                    extra: new { conflictKind = RestoreConflictKind.File });
             }
         }
 

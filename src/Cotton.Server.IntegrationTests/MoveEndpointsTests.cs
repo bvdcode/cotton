@@ -147,6 +147,17 @@ namespace Cotton.Server.IntegrationTests
                 Convert.ToBase64String(Encoding.UTF8.GetBytes($"testuser:{webDavToken}")));
         }
 
+        private static async Task AssertConflictKindAsync(
+            HttpResponseMessage response,
+            RestoreConflictKind expectedKind)
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            JsonElement payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.That(
+                payload.GetProperty("conflictKind").GetString(),
+                Is.EqualTo(expectedKind.ToString()));
+        }
+
         private async Task<NodeDto> GetRootAsync()
         {
             NodeDto? root = await _client!.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
