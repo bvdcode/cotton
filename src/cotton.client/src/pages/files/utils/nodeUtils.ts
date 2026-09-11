@@ -1,18 +1,23 @@
 import type { NodeDto } from "../../../shared/api/layoutsApi";
+import type {
+  FileBreadcrumb,
+  FileSizeEntry,
+  FileListStats,
+} from "../../../shared/types/FileListViewTypes";
 
 export const buildBreadcrumbs = (
   ancestors: NodeDto[],
   currentNode: NodeDto | null,
-): Array<{ id: string; name: string }> => {
+): FileBreadcrumb[] => {
   if (!currentNode) return [];
   const chain = [...ancestors, currentNode];
   return chain.map((n) => ({ id: n.id, name: n.name }));
 };
 
 export const calculateFolderStats = (
-  nodes: Array<{ id: string }> | undefined,
-  files: Array<{ sizeBytes?: number }> | undefined,
-): { folders: number; files: number; sizeBytes: number } => {
+  nodes: ReadonlyArray<Pick<NodeDto, "id">> | undefined,
+  files: ReadonlyArray<FileSizeEntry> | undefined,
+): FileListStats => {
   const folders = nodes?.length ?? 0;
   const filesCount = files?.length ?? 0;
   const sizeBytes = (files ?? []).reduce(

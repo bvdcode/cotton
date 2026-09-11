@@ -17,7 +17,7 @@ namespace Cotton.Benchmark.Benchmarks
 
         public async Task<IBenchmarkResult> RunAsync(CancellationToken cancellationToken = default)
         {
-            var stopwatch = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
             try
             {
                 // Warmup
@@ -28,14 +28,14 @@ namespace Cotton.Benchmark.Benchmarks
                 }
 
                 // Actual measurement
-                var metrics = new List<PerformanceMetrics>();
+                List<PerformanceMetrics> metrics = new List<PerformanceMetrics>();
                 for (int i = 0; i < _configuration.MeasuredIterations; i++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     long allocatedBefore = GC.GetTotalAllocatedBytes(precise: false);
                     PerformanceMetrics iterationMetrics = await MeasureIterationAsync(cancellationToken);
                     long managedAllocatedBytes = Math.Max(0, GC.GetTotalAllocatedBytes(precise: false) - allocatedBefore);
-                    using var process = Process.GetCurrentProcess();
+                    using Process process = Process.GetCurrentProcess();
                     process.Refresh();
                     metrics.Add(iterationMetrics.WithMemory(
                         managedAllocatedBytes,
@@ -61,16 +61,16 @@ namespace Cotton.Benchmark.Benchmarks
 
         protected virtual Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
-            var avgThroughput = metrics.Average(m => m.MegabytesPerSecond);
-            var minThroughput = metrics.Min(m => m.MegabytesPerSecond);
-            var maxThroughput = metrics.Max(m => m.MegabytesPerSecond);
-            var avgDuration = TimeSpan.FromMilliseconds(metrics.Average(m => m.Duration.TotalMilliseconds));
-            var durationsMs = metrics
+            double avgThroughput = metrics.Average(m => m.MegabytesPerSecond);
+            double minThroughput = metrics.Min(m => m.MegabytesPerSecond);
+            double maxThroughput = metrics.Max(m => m.MegabytesPerSecond);
+            TimeSpan avgDuration = TimeSpan.FromMilliseconds(metrics.Average(m => m.Duration.TotalMilliseconds));
+            double[] durationsMs = metrics
                 .Select(m => m.Duration.TotalMilliseconds)
                 .OrderBy(x => x)
                 .ToArray();
 
-            var aggregated = new Dictionary<string, object>
+            Dictionary<string, object> aggregated = new Dictionary<string, object>
             {
                 ["AvgThroughputMBps"] = avgThroughput,
                 ["MinThroughputMBps"] = minThroughput,
@@ -136,7 +136,7 @@ namespace Cotton.Benchmark.Benchmarks
 
         protected static byte[] GenerateTestData(int size)
         {
-            var data = new byte[size];
+            byte[] data = new byte[size];
             Random.Shared.NextBytes(data);
             return data;
         }

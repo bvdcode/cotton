@@ -35,8 +35,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.Ignore("S3 test configuration is not available.");
             }
 
-            DbContext.Database.EnsureDeleted();
-            DbContext.Database.Migrate();
+            await DbContext.Database.EnsureDeletedAsync();
+            await DbContext.Database.MigrateAsync();
             _s3Provider = new S3Provider(_configuration);
             StorageBackendFactory factory = new(
                 NullLogger<FileSystemStorageBackend>.Instance,

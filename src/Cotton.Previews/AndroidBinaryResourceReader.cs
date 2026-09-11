@@ -47,7 +47,7 @@ namespace Cotton.Previews
                 return [];
             }
 
-            var strings = new string[stringCount];
+            string[] strings = new string[stringCount];
             bool isUtf8 = (flags & StringPoolUtf8Flag) != 0;
             int stringsBase = chunkOffset + stringsStart;
             int chunkEnd = chunkOffset + chunkSize;

@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { filesApi } from "../api/filesApi";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { getFileIcon } from "@shared/utils/icons";
-import type { MediaItem } from "../types/mediaLightbox";
+import type {
+  MediaItem,
+  MediaLightboxSourceFile,
+} from "../types/mediaLightbox";
+import { readStringProperty } from "../utils/typeGuards";
 
 export interface MediaHandlers {
   lightboxOpen: boolean;
@@ -28,15 +32,7 @@ const rewriteToHlsManifestUrl = (downloadUrl: string): string =>
  * closes the viewer instead of navigating away.
  */
 export const useMediaLightbox = (
-  sortedFiles: Array<{
-    id: string;
-    name: string;
-    sizeBytes?: number;
-    previewHashEncryptedHex?: string | null;
-    largeFilePreviewPresignedToken?: string | null;
-    contentType?: string | null;
-    requiresVideoTranscoding?: boolean;
-  }>,
+  sortedFiles: MediaLightboxSourceFile[],
 ): MediaHandlers => {
   const [lightboxOpen, setLightboxOpenRaw] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -60,10 +56,7 @@ export const useMediaLightbox = (
     const handlePopState = (e: PopStateEvent) => {
       if (
         historyPushedRef.current &&
-        !(
-          e.state &&
-          (e.state as { overlay?: string }).overlay === LIGHTBOX_HISTORY_STATE
-        )
+        !(readStringProperty(e.state, "overlay") === LIGHTBOX_HISTORY_STATE)
       ) {
         historyPushedRef.current = false;
         setLightboxOpenRaw(false);

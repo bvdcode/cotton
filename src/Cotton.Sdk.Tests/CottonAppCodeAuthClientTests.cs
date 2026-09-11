@@ -13,7 +13,7 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task StartAppCodeAsync_PostsMetadataAndReturnsAbsoluteApprovalUri()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             Guid approvalId = Guid.Parse("0190a000-0000-7000-8000-000000000001");
             DateTime expiresAt = new(2026, 06, 07, 12, 30, 00, DateTimeKind.Utc);
             handler.EnqueueJson(HttpStatusCode.OK, new
@@ -53,7 +53,7 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task StartAppCodeAsync_PreservesBaseAddressPathForApprovalUri()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             Guid approvalId = Guid.Parse("0190a000-0000-7000-8000-000000000001");
             handler.EnqueueJson(HttpStatusCode.OK, new
             {
@@ -63,7 +63,7 @@ namespace Cotton.Sdk.Tests
                 expiresAt = DateTime.UtcNow,
                 pollIntervalSeconds = 2,
             });
-            var client = new CottonCloudClient(
+            CottonCloudClient client = new CottonCloudClient(
                 new HttpClient(handler),
                 new InMemoryCottonTokenStore(),
                 new CottonSdkOptions
@@ -86,8 +86,8 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task PollAppCodeAsync_StoresTokensWhenApproved()
         {
-            var handler = new QueuedHttpMessageHandler();
-            var store = new InMemoryCottonTokenStore();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "access", refreshToken = "refresh" });
             CottonCloudClient client = CreateClient(handler, store);
 
@@ -110,8 +110,8 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task PollAppCodeAsync_ReturnsPendingRetryDelay()
         {
-            var handler = new QueuedHttpMessageHandler();
-            var store = new InMemoryCottonTokenStore();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             handler.EnqueueJson(HttpStatusCode.Accepted, new { error = "pending", retryAfterSeconds = 2 });
             CottonCloudClient client = CreateClient(handler, store);
 
@@ -137,7 +137,7 @@ namespace Cotton.Sdk.Tests
             string error,
             AppCodePollStatus expectedStatus)
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(statusCode, new { error, retryAfterSeconds = 3 });
             CottonCloudClient client = CreateClient(handler, new InMemoryCottonTokenStore());
 
@@ -155,7 +155,7 @@ namespace Cotton.Sdk.Tests
         [Test]
         public void PollAppCodeAsync_RejectsBlankPollToken()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             CottonCloudClient client = CreateClient(handler, new InMemoryCottonTokenStore());
 
             Assert.ThrowsAsync<ArgumentException>(async () => await client.Auth.PollAppCodeAsync(" "));

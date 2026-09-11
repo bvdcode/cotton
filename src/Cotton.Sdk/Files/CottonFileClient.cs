@@ -232,7 +232,7 @@ namespace Cotton.Sdk.Files
             long length,
             string? expectedETag)
         {
-            var headers = new Dictionary<string, string>(StringComparer.Ordinal)
+            Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["Range"] = $"bytes={offset}-{offset + length - 1}",
             };

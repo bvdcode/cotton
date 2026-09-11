@@ -39,8 +39,8 @@ namespace Cotton.Server.IntegrationTests
         public async Task RunOnce_DeletesOnlyDueUnreferencedChunks_AndClearsLiveSchedules()
         {
             DateTime now = DateTime.UtcNow;
-            var storage = new InMemoryStorage();
-            var keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
+            InMemoryStorage storage = new InMemoryStorage();
+            DatabaseBackupKeyProvider keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
             {
                 MasterEncryptionKey = "test-master-key"
             });
@@ -49,7 +49,8 @@ namespace Cotton.Server.IntegrationTests
             byte[] futureOrphanHash = Hash("future-orphan");
             byte[] unscheduledOrphanHash = Hash("unscheduled-orphan");
             byte[] fileHash = Hash("file");
-            byte[] previewHash = Hash("preview");
+            byte[] smallPreviewHash = Hash("small-preview");
+            byte[] largePreviewHash = Hash("large-preview");
             byte[] avatarHash = Hash("avatar");
             byte[] backupHash = Hash("backup");
 
@@ -59,7 +60,8 @@ namespace Cotton.Server.IntegrationTests
                 futureOrphanHash,
                 unscheduledOrphanHash,
                 fileHash,
-                previewHash,
+                smallPreviewHash,
+                largePreviewHash,
                 avatarHash,
                 backupHash);
             await storage.WriteAsync(keyProvider.GetScopedPointerStorageKey(), new MemoryStream([1, 2, 3]));
@@ -86,8 +88,9 @@ namespace Cotton.Server.IntegrationTests
                 ProposedContentHash = Hash("manifest"),
                 ContentType = "text/plain",
                 SizeBytes = 4,
-                SmallFilePreviewHash = previewHash,
+                SmallFilePreviewHash = smallPreviewHash,
                 SmallFilePreviewHashEncrypted = Hash("preview-encrypted"),
+                LargeFilePreviewHash = largePreviewHash,
             };
 
             NodeFile nodeFile = new()
@@ -106,7 +109,8 @@ namespace Cotton.Server.IntegrationTests
                 CreateChunk(futureOrphanHash, now.AddDays(1)),
                 CreateChunk(unscheduledOrphanHash, null),
                 CreateChunk(fileHash, now.AddDays(-1)),
-                CreateChunk(previewHash, now.AddDays(-1)),
+                CreateChunk(smallPreviewHash, now.AddDays(-1)),
+                CreateChunk(largePreviewHash, now.AddDays(-1)),
                 CreateChunk(avatarHash, now.AddDays(-1)),
                 CreateChunk(backupHash, now.AddDays(1)));
             DbContext.FileManifests.Add(manifest);
@@ -131,7 +135,7 @@ namespace Cotton.Server.IntegrationTests
             using ServiceProvider services = new ServiceCollection()
                 .AddSingleton(settingsProvider)
                 .BuildServiceProvider();
-            var job = new GarbageCollectorJob(
+            GarbageCollectorJob job = new GarbageCollectorJob(
                 new PerfTracker(services.GetRequiredService<IServiceScopeFactory>()),
                 storage,
                 DbContext,
@@ -148,7 +152,8 @@ namespace Cotton.Server.IntegrationTests
             Chunk futureOrphanChunk = (await DbContext.Chunks.FindAsync(futureOrphanHash))!;
             Chunk unscheduledOrphanChunk = (await DbContext.Chunks.FindAsync(unscheduledOrphanHash))!;
             Chunk fileChunk = (await DbContext.Chunks.FindAsync(fileHash))!;
-            Chunk previewChunk = (await DbContext.Chunks.FindAsync(previewHash))!;
+            Chunk smallPreviewChunk = (await DbContext.Chunks.FindAsync(smallPreviewHash))!;
+            Chunk largePreviewChunk = (await DbContext.Chunks.FindAsync(largePreviewHash))!;
             Chunk avatarChunk = (await DbContext.Chunks.FindAsync(avatarHash))!;
             Chunk backupChunk = (await DbContext.Chunks.FindAsync(backupHash))!;
 
@@ -160,7 +165,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(futureOrphanChunk.GCScheduledAfter, Is.EqualTo(now.AddDays(1)).Within(TimeSpan.FromSeconds(1)));
                 Assert.That(unscheduledOrphanChunk.GCScheduledAfter, Is.EqualTo(now.AddDays(7)).Within(TimeSpan.FromSeconds(1)));
                 Assert.That(fileChunk.GCScheduledAfter, Is.Null);
-                Assert.That(previewChunk.GCScheduledAfter, Is.Null);
+                Assert.That(smallPreviewChunk.GCScheduledAfter, Is.Null);
+                Assert.That(largePreviewChunk.GCScheduledAfter, Is.Null);
                 Assert.That(avatarChunk.GCScheduledAfter, Is.Null);
                 Assert.That(backupChunk.GCScheduledAfter, Is.Null);
             });
@@ -170,8 +176,8 @@ namespace Cotton.Server.IntegrationTests
         public async Task RunOnce_DeletesScheduledOrphansAcrossInnerBatches()
         {
             DateTime now = DateTime.UtcNow;
-            var storage = new InMemoryStorage();
-            var keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
+            InMemoryStorage storage = new InMemoryStorage();
+            DatabaseBackupKeyProvider keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
             {
                 MasterEncryptionKey = "test-master-key"
             });
@@ -190,7 +196,7 @@ namespace Cotton.Server.IntegrationTests
             using ServiceProvider services = new ServiceCollection()
                 .AddSingleton(settingsProvider)
                 .BuildServiceProvider();
-            var job = new GarbageCollectorJob(
+            GarbageCollectorJob job = new GarbageCollectorJob(
                 new PerfTracker(services.GetRequiredService<IServiceScopeFactory>()),
                 storage,
                 DbContext,
@@ -218,8 +224,8 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task StorageConsistency_DoesNotRegisterProtectedBackupStorageKeys()
         {
-            var storage = new InMemoryStorage();
-            var keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
+            InMemoryStorage storage = new InMemoryStorage();
+            DatabaseBackupKeyProvider keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
             {
                 MasterEncryptionKey = "test-master-key"
             });
@@ -235,7 +241,7 @@ namespace Cotton.Server.IntegrationTests
 
             ResolvedBackupManifest backup = CreateBackupManifest(Hasher.ToHexStringHash(backupHash), manifestStorageKey);
             ChunkUsageService usage = CreateChunkUsageService(DbContext, storage, keyProvider, backup);
-            var job = new StorageConsistencyJob(
+            StorageConsistencyJob job = new StorageConsistencyJob(
                 storage,
                 DbContext,
                 new NoopNotificationsProvider(),
@@ -264,8 +270,8 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task StorageConsistency_ClearsMissingPreviewAndAvatarReferences()
         {
-            var storage = new InMemoryStorage();
-            var keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
+            InMemoryStorage storage = new InMemoryStorage();
+            DatabaseBackupKeyProvider keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
             {
                 MasterEncryptionKey = "test-master-key"
             });
@@ -289,7 +295,7 @@ namespace Cotton.Server.IntegrationTests
             DbContext.ChangeTracker.Clear();
 
             ChunkUsageService usage = CreateChunkUsageService(DbContext, storage, keyProvider, latestBackup: null);
-            var job = new StorageConsistencyJob(
+            StorageConsistencyJob job = new StorageConsistencyJob(
                 storage,
                 DbContext,
                 new NoopNotificationsProvider(),
@@ -362,7 +368,7 @@ namespace Cotton.Server.IntegrationTests
         private static ResolvedBackupManifest CreateBackupManifest(string protectedChunkStorageKey, string? manifestStorageKey = null)
         {
             manifestStorageKey ??= Hasher.ToHexStringHash(Hash("backup-manifest-default"));
-            var manifest = new BackupManifest(
+            BackupManifest manifest = new BackupManifest(
                 SchemaVersion: 1,
                 BackupId: "test-backup",
                 CreatedAtUtc: DateTime.UtcNow,
@@ -379,7 +385,7 @@ namespace Cotton.Server.IntegrationTests
                 Elapsed: TimeSpan.FromSeconds(1),
                 Chunks: [new BackupChunkInfo(0, protectedChunkStorageKey, 4)]);
 
-            var pointer = new BackupManifestPointer(
+            BackupManifestPointer pointer = new BackupManifestPointer(
                 SchemaVersion: 1,
                 LogicalKey: DatabaseBackupKeyProvider.ManifestPointerLogicalKey,
                 UpdatedAtUtc: DateTime.UtcNow,

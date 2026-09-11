@@ -1,8 +1,8 @@
 import { useRef, useState, useCallback } from "react";
 import {
   ConflictAction,
-  type UploadConflictPrompt,
-} from "../utils/uploadConflicts";
+  type NameConflictPrompt,
+} from "../../../shared/types/nameConflict";
 
 interface ConflictDialogState {
   open: boolean;
@@ -21,7 +21,7 @@ export const useFileConflictDialog = () => {
   const pendingActionRef = useRef<ConflictAction | null>(null);
 
   const showConflictDialog = useCallback(
-    (prompt: UploadConflictPrompt): Promise<ConflictAction> => {
+    (prompt: NameConflictPrompt): Promise<ConflictAction> => {
       return new Promise<ConflictAction>((resolve) => {
         resolveRef.current = resolve;
         setDialogState({

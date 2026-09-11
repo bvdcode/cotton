@@ -23,7 +23,7 @@ namespace Cotton.Server.Services
 
         private static uint[] BuildTable()
         {
-            var table = new uint[256];
+            uint[] table = new uint[256];
             for (uint i = 0; i < table.Length; i++)
             {
                 uint crc = i;

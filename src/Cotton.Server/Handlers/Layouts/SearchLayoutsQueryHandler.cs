@@ -201,7 +201,7 @@ namespace Cotton.Server.Handlers.Layouts
                 return nodes;
             }
 
-            var order = orderedIds
+            Dictionary<Guid, int> order = orderedIds
                 .Select((id, index) => new { id, index })
                 .ToDictionary(item => item.id, item => item.index);
 
@@ -219,7 +219,7 @@ namespace Cotton.Server.Handlers.Layouts
                 return files;
             }
 
-            var order = orderedIds
+            Dictionary<Guid, int> order = orderedIds
                 .Select((id, index) => new { id, index })
                 .ToDictionary(item => item.id, item => item.index);
 
@@ -234,17 +234,17 @@ namespace Cotton.Server.Handlers.Layouts
             IReadOnlyList<LayoutSearchHit> hits,
             CancellationToken cancellationToken)
         {
-            var resultNodeIds = hits
+            HashSet<Guid> resultNodeIds = hits
                 .Where(hit => hit.Kind == LayoutSearchHitKind.Node)
                 .Select(hit => hit.Id)
                 .ToHashSet();
 
-            var fileParentNodeIds = hits
+            HashSet<Guid> fileParentNodeIds = hits
                 .Where(hit => hit.Kind == LayoutSearchHitKind.File)
                 .Select(hit => hit.NodeIdForPath)
                 .ToHashSet();
 
-            var allNodeIdsNeededForPaths = resultNodeIds
+            HashSet<Guid> allNodeIdsNeededForPaths = resultNodeIds
                 .Concat(fileParentNodeIds)
                 .ToHashSet();
 

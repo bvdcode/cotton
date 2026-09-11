@@ -160,7 +160,7 @@ function normalizeDisplayMeta(meta: DisplayMeta): DisplayMeta {
 }
 
 function parseDisplayMeta(value: string): DisplayMeta {
-  const parsed = JSON.parse(value) as unknown;
+  const parsed: unknown = JSON.parse(value);
 
   if (!parsed || typeof parsed !== "object") {
     throw new InvalidCryptoInputError("Display metadata must be an object.");

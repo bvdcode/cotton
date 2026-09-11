@@ -8,53 +8,15 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
+import { ContentCopy } from "@mui/icons-material";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import QRCodeModule, { type QRCodeProps } from "react-qr-code";
-import type { ElementType } from "react";
+import qrcode from "qrcode-generator";
 import { OneTimeCodeInput } from "../../../shared/ui/OneTimeCodeInput";
 import type { TotpSetup } from "../../../shared/api/totpApi";
-import { ContentCopy } from "@mui/icons-material";
 
-const QR_CODE_FORWARD_REF_TYPE = Symbol.for("react.forward_ref");
-
-const isQrCodeComponent = (
-  value: unknown,
-): value is ElementType<QRCodeProps> => {
-  if (typeof value === "function") {
-    return true;
-  }
-
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    (value as { $$typeof?: symbol }).$$typeof === QR_CODE_FORWARD_REF_TYPE
-  );
-};
-
-const resolveQrCodeComponent = (module: unknown): ElementType<QRCodeProps> => {
-  if (isQrCodeComponent(module)) {
-    return module;
-  }
-
-  if (typeof module === "object" && module !== null) {
-    const candidate = module as {
-      default?: unknown;
-      QRCode?: unknown;
-    };
-
-    if (isQrCodeComponent(candidate.default)) {
-      return candidate.default;
-    }
-
-    if (isQrCodeComponent(candidate.QRCode)) {
-      return candidate.QRCode;
-    }
-  }
-
-  throw new TypeError("react-qr-code exported an unsupported module shape.");
-};
-
-const QRCode = resolveQrCodeComponent(QRCodeModule);
+const QR_CODE_CELL_SIZE = 8;
+const QR_CODE_MARGIN = QR_CODE_CELL_SIZE * 4;
 
 interface TotpSetupFormProps {
   totpSetup: TotpSetup;
@@ -75,6 +37,13 @@ export const TotpSetupForm = ({
 }: TotpSetupFormProps) => {
   const { t } = useTranslation("profile");
   const theme = useTheme();
+  const qrCodeImageUrl: string = useMemo(() => {
+    const qrCode: ReturnType<typeof qrcode> = qrcode(0, "M");
+    qrCode.addData(totpSetup.otpAuthUri);
+    qrCode.make();
+
+    return qrCode.createDataURL(QR_CODE_CELL_SIZE, QR_CODE_MARGIN);
+  }, [totpSetup.otpAuthUri]);
 
   return (
     <Box mt={3}>
@@ -107,23 +76,16 @@ export const TotpSetupForm = ({
                 sx={{ justifyContent: "center" }}
               >
                 <Box
+                  component="img"
+                  src={qrCodeImageUrl}
+                  alt={t("totp.setup.qrTitle")}
                   width="100%"
                   sx={{
-                    "& > svg": {
-                      width: "100%",
-                      height: "auto",
-                      display: "block",
-                    },
+                    height: "auto",
+                    display: "block",
+                    imageRendering: "pixelated",
                   }}
-                >
-                  <QRCode
-                    value={totpSetup.otpAuthUri}
-                    size={200}
-                    level="M"
-                    fgColor={theme.palette.common.black}
-                    bgColor={theme.palette.common.white}
-                  />
-                </Box>
+                />
               </Box>
             </Box>
 

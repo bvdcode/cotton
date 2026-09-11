@@ -60,7 +60,7 @@ namespace Cotton.Autoconfig.Extensions
 
             string jwtKey = StringHelpers.CreateRandomString(DefaultKeyLength);
 
-            var dict = new Dictionary<string, string?>
+            Dictionary<string, string?> dict = new Dictionary<string, string?>
             {
                 ["JwtSettings:Key"] = jwtKey,
                 ["DatabaseSettings:Host"] = postgres.Host,

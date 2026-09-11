@@ -17,13 +17,13 @@ namespace Cotton.Database.Models
         public Guid UserId { get; set; }
 
         [Column("credential_id")]
-        public byte[] CredentialId { get; set; } = [];
+        public byte[] CredentialId { get; set; } = null!;
 
         [Column("public_key")]
-        public byte[] PublicKey { get; set; } = [];
+        public byte[] PublicKey { get; set; } = null!;
 
         [Column("user_handle")]
-        public byte[] UserHandle { get; set; } = [];
+        public byte[] UserHandle { get; set; } = null!;
 
         [Column("signature_counter")]
         public long SignatureCounter { get; set; }
@@ -52,6 +52,7 @@ namespace Cotton.Database.Models
         public DateTime? LastUsedAt { get; set; }
 
         [ForeignKey(nameof(UserId))]
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual User User { get; set; } = null!;
     }
 }

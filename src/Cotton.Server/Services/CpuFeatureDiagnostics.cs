@@ -72,7 +72,7 @@ namespace Cotton.Server.Services
 
             string? vendorId = null;
             string? modelName = null;
-            var flags = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            SortedSet<string> flags = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (string line in File.ReadLines(ProcCpuInfoPath))
             {

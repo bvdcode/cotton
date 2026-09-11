@@ -10,8 +10,8 @@ namespace Cotton.Benchmark.Infrastructure
     {
         public static byte[] GenerateCompressibleText(int sizeBytes)
         {
-            var sb = new StringBuilder();
-            var random = new Random(42); // Fixed seed for reproducibility
+            StringBuilder sb = new StringBuilder();
+            Random random = new Random(42); // Fixed seed for reproducibility
 
             string[] patterns =
             [
@@ -24,28 +24,28 @@ namespace Cotton.Benchmark.Infrastructure
 
             while (sb.Length < sizeBytes)
             {
-                var pattern = patterns[random.Next(patterns.Length)];
-                var message = string.Format(pattern,
+                string pattern = patterns[random.Next(patterns.Length)];
+                string message = string.Format(pattern,
                     random.Next(1000),
                     DateTime.Now.AddSeconds(-random.Next(3600)));
                 sb.Append(message);
             }
 
-            var text = sb.ToString();
+            string text = sb.ToString();
             return Encoding.UTF8.GetBytes(text[..Math.Min(text.Length, sizeBytes)]);
         }
 
         public static byte[] GenerateRandomBinary(int sizeBytes)
         {
-            var data = new byte[sizeBytes];
+            byte[] data = new byte[sizeBytes];
             RandomNumberGenerator.Fill(data);
             return data;
         }
 
         public static byte[] GenerateMixedData(int sizeBytes)
         {
-            var data = new byte[sizeBytes];
-            var random = new Random(42);
+            byte[] data = new byte[sizeBytes];
+            Random random = new Random(42);
 
             // Fill with patterns that have some repetition
             for (int i = 0; i < sizeBytes; i++)
@@ -67,8 +67,8 @@ namespace Cotton.Benchmark.Infrastructure
 
         public static byte[] GenerateJsonData(int sizeBytes)
         {
-            var sb = new StringBuilder();
-            var random = new Random(42);
+            StringBuilder sb = new StringBuilder();
+            Random random = new Random(42);
 
             sb.Append("[\n");
 
@@ -85,7 +85,7 @@ namespace Cotton.Benchmark.Infrastructure
 
             sb.Append("]\n");
 
-            var text = sb.ToString();
+            string text = sb.ToString();
             return Encoding.UTF8.GetBytes(text[..Math.Min(text.Length, sizeBytes)]);
         }
     }

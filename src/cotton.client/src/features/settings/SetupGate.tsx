@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import Loader from "../../shared/ui/Loader";
 import { useAuth } from "../auth";
 import { UserRole } from "../auth/types";
 import { useSetupStatusStore } from "../../shared/store/setupStatusStore";
@@ -30,17 +29,7 @@ export function SetupGate({ children }: Props) {
     void fetchSetupStatus();
   }, [isAuthenticated, isAdmin, loaded, loading, fetchSetupStatus]);
 
-  if (isAdmin && (!loaded || loading)) {
-    return (
-      <Loader
-        overlay={true}
-        title="Loading settings..."
-        caption="Please, wait"
-      />
-    );
-  }
-
-  const setupCompleted = isAdmin ? (isInitialized ?? true) : true;
+  const setupCompleted = isAdmin && loaded ? (isInitialized ?? true) : true;
   const onSetupPage = location.pathname === "/setup";
   const previewSetup =
     onSetupPage && new URLSearchParams(location.search).get("preview") === "1";

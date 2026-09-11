@@ -115,9 +115,10 @@ export const toCredentialRequestOptions = (
 export const serializeAttestationCredential = (
   credential: PublicKeyCredential,
 ): SerializedAttestationCredential => {
-  const response = credential.response as AuthenticatorAttestationResponse & {
-    getTransports?: () => string[];
-  };
+  const response = credential.response;
+  if (!(response instanceof AuthenticatorAttestationResponse)) {
+    throw new TypeError("Expected an authenticator attestation response");
+  }
 
   return {
     id: credential.id,
@@ -134,7 +135,10 @@ export const serializeAttestationCredential = (
 export const serializeAssertionCredential = (
   credential: PublicKeyCredential,
 ): SerializedAssertionCredential => {
-  const response = credential.response as AuthenticatorAssertionResponse;
+  const response = credential.response;
+  if (!(response instanceof AuthenticatorAssertionResponse)) {
+    throw new TypeError("Expected an authenticator assertion response");
+  }
 
   return {
     id: credential.id,

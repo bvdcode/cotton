@@ -38,12 +38,18 @@ describe("userPreferencesApi.update", () => {
 
     await expect(userPreferencesApi.update(patch)).resolves.toEqual(patch);
 
-    const config = httpPatch.mock.calls[0]?.[2];
+    const config = httpPatch.mock.calls[0]?.[2] as
+      { params?: { token?: string } } | undefined;
     const token = config?.params?.token;
     expect(httpPatch).toHaveBeenCalledWith("users/me/preferences", patch, {
       params: { token },
     });
     expect(typeof token).toBe("string");
+    if (typeof token !== "string") {
+      throw new TypeError(
+        "Expected the preference update token to be a string.",
+      );
+    }
     expect(token.length).toBeGreaterThan(0);
     expect(isSelfPreferenceUpdateToken(token)).toBe(true);
   });

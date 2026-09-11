@@ -16,7 +16,6 @@ import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../features/auth";
 import { clearOidcSignInPending } from "../../features/auth/oidcSignInSession";
-import Loader from "../../shared/ui/Loader";
 import { useServerInfoStore } from "../../shared/store/serverInfoStore";
 import { getSafeAuthReturnPath } from "../../shared/utils/authReturnPath";
 import { CredentialsFields } from "./components/CredentialsFields";
@@ -26,16 +25,17 @@ import { TrustDeviceToggle } from "./components/TrustDeviceToggle";
 import { TwoFactorFields } from "./components/TwoFactorFields";
 import { OidcProviderButtons } from "./components/OidcProviderButtons";
 import { useLoginForm } from "./useLoginForm";
+import { readStringProperty } from "../../shared/utils/typeGuards";
 
 type LoginFormState = ReturnType<typeof useLoginForm>;
 
 export const LoginPage = () => {
   const location = useLocation();
   const returnUrl = getSafeAuthReturnPath(
-    (location.state as { from?: string })?.from || "/",
+    readStringProperty(location.state, "from") ?? "/",
   );
   const auth = useAuth();
-  const form = useLoginForm();
+  const form = useLoginForm({ disabled: auth.phase === "booting" });
   const serverInfo = useServerInfoStore((s) => s.data);
   const fetchServerInfo = useServerInfoStore((s) => s.fetchServerInfo);
 
@@ -47,21 +47,10 @@ export const LoginPage = () => {
     clearOidcSignInPending();
   }, []);
 
-  useEffect(() => {
-    if (shouldRestoreSession(auth)) {
-      auth.ensureAuth();
-    }
-  }, [auth]);
-
-  if (!auth.isInitializing && auth.isAuthenticated) {
+  if (auth.phase === "authenticated") {
     return <Navigate to={returnUrl} replace />;
   }
 
-  const showRestoreOverlay =
-    auth.hydrated &&
-    auth.refreshEnabled &&
-    !auth.isAuthenticated &&
-    !auth.hasChecked;
   const showFirstRunAlert =
     serverInfo !== null && serverInfo.canCreateInitialAdmin;
   const showDemoAlert =
@@ -69,64 +58,36 @@ export const LoginPage = () => {
   const isFirstRunMode = showFirstRunAlert && !form.requiresTwoFactor;
 
   return (
-    <>
-      <LoginRestoreLoader visible={auth.isInitializing || showRestoreOverlay} />
-      <LoginShell
-        footer={
-          <LoginForgotPasswordLink
-            form={form}
-            show={!form.requiresTwoFactor && !showFirstRunAlert}
-          />
-        }
+    <LoginShell
+      footer={
+        <LoginForgotPasswordLink
+          form={form}
+          show={!form.requiresTwoFactor && !showFirstRunAlert}
+        />
+      }
+    >
+      <LoginHeader form={form} />
+      <Box
+        component="form"
+        onSubmit={form.handleSubmit}
+        noValidate
+        autoComplete="off"
       >
-        <LoginHeader form={form} />
-        <Box
-          component="form"
-          onSubmit={form.handleSubmit}
-          noValidate
-          autoComplete="off"
-        >
-          <Stack spacing={2.5}>
-            <LoginFormFields form={form} />
-            {showDemoAlert && <DemoInstanceNotice />}
-            {showFirstRunAlert && <FirstRunNotice />}
-            <LoginActions form={form} isFirstRunMode={isFirstRunMode} />
-            <OidcProviderButtons
-              disabled={form.loading}
-              returnUrl={returnUrl}
-              trustDevice={form.trustDevice}
-              visible={!form.requiresTwoFactor && !showFirstRunAlert}
-            />
-          </Stack>
-        </Box>
-      </LoginShell>
-    </>
+        <Stack spacing={2.5}>
+          <LoginFormFields form={form} />
+          {showDemoAlert && <DemoInstanceNotice />}
+          {showFirstRunAlert && <FirstRunNotice />}
+          <LoginActions form={form} isFirstRunMode={isFirstRunMode} />
+          <OidcProviderButtons
+            disabled={form.loading || form.disabled}
+            returnUrl={returnUrl}
+            trustDevice={form.trustDevice}
+            visible={!form.requiresTwoFactor && !showFirstRunAlert}
+          />
+        </Stack>
+      </Box>
+    </LoginShell>
   );
-};
-
-type AuthState = ReturnType<typeof useAuth>;
-
-const shouldRestoreSession = ({
-  hydrated,
-  refreshEnabled,
-  isAuthenticated,
-  hasChecked,
-}: AuthState) => hydrated && refreshEnabled && !isAuthenticated && !hasChecked;
-
-type LoginRestoreLoaderProps = {
-  visible: boolean;
-};
-
-const LoginRestoreLoader = ({ visible }: LoginRestoreLoaderProps) => {
-  const { t } = useTranslation("login");
-
-  return visible ? (
-    <Loader
-      overlay={true}
-      title={t("restoring.title")}
-      caption={t("restoring.caption")}
-    />
-  ) : null;
 };
 
 type LoginShellProps = {
@@ -193,7 +154,7 @@ const LoginFormFields = ({ form }: LoginFormFieldsProps) => {
       digitAriaLabel={t("twoFactor.digit")}
       value={form.twoFactorCode}
       onChange={form.setTwoFactorCode}
-      disabled={form.loading}
+      disabled={form.loading || form.disabled}
     />
   ) : (
     <CredentialsFields
@@ -202,7 +163,7 @@ const LoginFormFields = ({ form }: LoginFormFieldsProps) => {
       onUsernameChange={form.setUsername}
       onUsernameBlur={form.markUsernameBlurred}
       onPasswordChange={form.setPassword}
-      disabled={form.loading}
+      disabled={form.loading || form.disabled}
       usernameLabel={t("usernameLabel")}
       passwordLabel={t("passwordLabel")}
       usernameHasError={form.usernameHasError}
@@ -263,7 +224,7 @@ const TrustDeviceButton = ({ form }: LoginActionFormProps) => {
     <TrustDeviceToggle
       active={form.trustDevice}
       onToggle={form.toggleTrustDevice}
-      disabled={form.loading}
+      disabled={form.loading || form.disabled}
       tooltip={t("rememberMe")}
     />
   );
@@ -279,7 +240,7 @@ const PasskeyLoginButton = ({ form }: LoginActionFormProps) => {
           type="button"
           color="primary"
           onClick={form.handlePasskeyLogin}
-          disabled={form.loading || form.passkeyLoading}
+          disabled={form.loading || form.passkeyLoading || form.disabled}
           aria-label={t("passkey.loginButton")}
           sx={{
             border: "1px solid",
@@ -318,7 +279,7 @@ const LoginSubmitButton = ({
       type="submit"
       variant="contained"
       color="primary"
-      disabled={form.loading}
+      disabled={form.loading || form.disabled}
       sx={{
         minWidth: form.loading ? 44 : 0,
         px: form.loading ? 0.75 : 2.25,
@@ -328,7 +289,13 @@ const LoginSubmitButton = ({
           }),
       }}
     >
-      <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
+      <Box
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: form.loading ? 0 : 1,
+        }}
+      >
         <SubmitLabel loading={form.loading} label={submitButtonLabel} />
         <SubmitIcon loading={form.loading} />
       </Box>
@@ -395,7 +362,7 @@ const LoginForgotPasswordLink = ({
   return show ? (
     <ForgotPasswordLink
       onClick={form.handleForgotPassword}
-      disabled={form.loading || form.forgotPasswordSending}
+      disabled={form.loading || form.forgotPasswordSending || form.disabled}
       label={
         form.forgotPasswordSending
           ? t("forgotPassword.sending")

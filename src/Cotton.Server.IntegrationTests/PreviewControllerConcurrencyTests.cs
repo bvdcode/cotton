@@ -78,10 +78,10 @@ namespace Cotton.Server.IntegrationTests
             CreatePreviewController()
         {
             DefaultHttpContext context = new();
-            var capturingFeature = new CapturingResponseFeature();
+            CapturingResponseFeature capturingFeature = new CapturingResponseFeature();
             context.Features.Set<IHttpResponseFeature>(capturingFeature);
 
-            var controller = new PreviewController(
+            PreviewController controller = new PreviewController(
                 null!,
                 NullLogger<PreviewController>.Instance,
                 null!)

@@ -14,7 +14,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { TextFields, Code, Article } from "@mui/icons-material";
-import { EditorMode, type IEditorModeConfig } from "./types";
+import { EditorMode, isEditorMode, type IEditorModeConfig } from "./types";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 
@@ -63,8 +63,9 @@ export const EditorModeSelector: React.FC<EditorModeSelectorProps> = ({
       value={currentMode}
       exclusive
       onChange={(_, newMode) => {
-        if (newMode !== null) {
-          onModeChange(newMode as EditorMode);
+        const candidate: unknown = newMode;
+        if (isEditorMode(candidate)) {
+          onModeChange(candidate);
         }
       }}
       size="small"

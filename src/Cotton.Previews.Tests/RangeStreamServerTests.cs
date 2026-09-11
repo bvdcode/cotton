@@ -174,10 +174,9 @@ namespace Cotton.Previews.Tests
         private static bool IsSemaphoreDisposedEntry((LogLevel Level, Exception? Exception, string Message) entry)
         {
             return entry.Exception is ObjectDisposedException objectDisposedException
-                   && string.Equals(
-                       objectDisposedException.ObjectName,
-                       typeof(SemaphoreSlim).FullName,
-                       StringComparison.Ordinal);
+                   && objectDisposedException.ObjectName?.EndsWith(
+                       nameof(SemaphoreSlim),
+                       StringComparison.Ordinal) == true;
         }
     }
 }

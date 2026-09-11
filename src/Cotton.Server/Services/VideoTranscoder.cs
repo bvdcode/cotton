@@ -44,7 +44,7 @@ namespace Cotton.Server.Services
                 // The source already reported CanSeek; ffmpeg range reads will fail if this is untrue.
             }
 
-            await using var rangeServer = new RangeStreamServer(source, logger);
+            await using RangeStreamServer rangeServer = new RangeStreamServer(source, logger);
             string arguments = BuildSegmentArguments(rangeServer.Url, startSeconds, durationSeconds, encoder);
             await RunFfmpegAsync(arguments, destination, cancellationToken).ConfigureAwait(false);
         }
@@ -74,7 +74,7 @@ namespace Cotton.Server.Services
             Stream destination,
             CancellationToken cancellationToken)
         {
-            var startInfo = new ProcessStartInfo
+            ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = FfmpegBinary.GetFfmpegPath(),
                 Arguments = arguments,
@@ -85,7 +85,7 @@ namespace Cotton.Server.Services
                 CreateNoWindow = true,
             };
 
-            using var process = new Process { StartInfo = startInfo };
+            using Process process = new Process { StartInfo = startInfo };
             if (!process.Start())
             {
                 throw new InvalidOperationException("Failed to start ffmpeg for video transcoding.");

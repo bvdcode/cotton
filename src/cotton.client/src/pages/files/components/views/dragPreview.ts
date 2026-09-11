@@ -34,7 +34,8 @@ export const setClippedDragImage = (
   wrapper.style.pointerEvents = "none";
   wrapper.style.contain = "paint";
 
-  const clone = sourceElement.cloneNode(true) as HTMLElement;
+  const clone = sourceElement.cloneNode(true);
+  if (!(clone instanceof HTMLElement)) return;
   clone.style.width = "100%";
   clone.style.height = "100%";
   clone.style.maxWidth = "100%";

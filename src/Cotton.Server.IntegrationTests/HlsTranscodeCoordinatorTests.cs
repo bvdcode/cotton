@@ -53,7 +53,7 @@ namespace Cotton.Server.IntegrationTests
                 Task<IAsyncDisposable> cancelled = coordinator
                     .EnterTranscodeAsync(cancellation.Token)
                     .AsTask();
-                cancellation.Cancel();
+                await cancellation.CancelAsync();
 
                 Assert.CatchAsync<OperationCanceledException>(
                     async () => await cancelled.WaitAsync(TimeSpan.FromSeconds(1)));
@@ -106,7 +106,7 @@ namespace Cotton.Server.IntegrationTests
                 Task<IAsyncDisposable> cancelled = coordinator
                     .EnterSegmentAsync("segment-a", cancellation.Token)
                     .AsTask();
-                cancellation.Cancel();
+                await cancellation.CancelAsync();
 
                 Assert.CatchAsync<OperationCanceledException>(
                     async () => await cancelled.WaitAsync(TimeSpan.FromSeconds(1)));
@@ -153,7 +153,7 @@ namespace Cotton.Server.IntegrationTests
                 Task<IAsyncDisposable> cancelled = coordinator
                     .EnterProbeAsync(cancellation.Token)
                     .AsTask();
-                cancellation.Cancel();
+                await cancellation.CancelAsync();
 
                 Assert.CatchAsync<OperationCanceledException>(
                     async () => await cancelled.WaitAsync(TimeSpan.FromSeconds(1)));
@@ -210,7 +210,7 @@ namespace Cotton.Server.IntegrationTests
                 Task<IAsyncDisposable> cancelled = coordinator
                     .EnterProbeManifestAsync(manifestId, cancellation.Token)
                     .AsTask();
-                cancellation.Cancel();
+                await cancellation.CancelAsync();
 
                 Assert.CatchAsync<OperationCanceledException>(
                     async () => await cancelled.WaitAsync(TimeSpan.FromSeconds(1)));

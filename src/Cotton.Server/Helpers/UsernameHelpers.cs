@@ -15,7 +15,7 @@ namespace Cotton.Server.Helpers
             CancellationToken cancellationToken = default)
         {
             string localPart = email.Split('@', 2)[0].Trim().ToLowerInvariant();
-            var raw = localPart.Where(static c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')).ToArray();
+            char[] raw = localPart.Where(static c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')).ToArray();
             string candidate = raw.Length == 0 ? "user" : new string(raw);
 
             if (candidate[0] >= '0' && candidate[0] <= '9')
@@ -33,7 +33,7 @@ namespace Cotton.Server.Helpers
                 candidate = candidate[..UsernameValidator.MaxLength];
             }
 
-            if (!UsernameValidator.TryNormalizeAndValidate(candidate, out var normalized, out _))
+            if (!UsernameValidator.TryNormalizeAndValidate(candidate, out string? normalized, out _))
             {
                 normalized = "user";
             }

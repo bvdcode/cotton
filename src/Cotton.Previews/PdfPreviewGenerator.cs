@@ -43,7 +43,7 @@ namespace Cotton.Previews
 
         private static async Task<byte[]> ReadAllBytesAsync(Stream stream)
         {
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             await stream.CopyToAsync(ms).ConfigureAwait(false);
             return ms.ToArray();
         }

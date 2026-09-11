@@ -167,7 +167,7 @@ namespace Cotton.Crypto
                 Tag128 fileKeyTag;
                 _rng.GetBytes(fileKeyNonce);
                 byte[] encryptedFileKey = new byte[KeySize];
-                using (var gcm = new AesGcm(_masterKeyBytes, TagSize))
+                using (AesGcm gcm = new AesGcm(_masterKeyBytes, TagSize))
                 {
                     Span<byte> tagSpan = stackalloc byte[TagSize];
                     long totalPlaintextLength = input.CanSeek ? Math.Max(0, input.Length - input.Position) : 0;
@@ -189,7 +189,7 @@ namespace Cotton.Crypto
                     BufferPool.Return(headerBuf, clearArray: false);
                 }
 
-                var enc = new EncryptionPipeline(input, output, fileKey, fileNoncePrefix, chunkSize, _concurrencyLevel, _keyId, NonceSize, TagSize, effectiveWindowCap, BufferPool);
+                EncryptionPipeline enc = new EncryptionPipeline(input, output, fileKey, fileNoncePrefix, chunkSize, _concurrencyLevel, _keyId, NonceSize, TagSize, effectiveWindowCap, BufferPool);
                 await enc.RunAsync(ct).ConfigureAwait(false);
             }
             finally
@@ -198,11 +198,11 @@ namespace Cotton.Crypto
                 BufferPool.Return(fileKey, clearArray: false);
                 if (!leaveInputOpen)
                 {
-                    input.Dispose();
+                    await input.DisposeAsync().ConfigureAwait(false);
                 }
                 if (!leaveOutputOpen)
                 {
-                    output.Dispose();
+                    await output.DisposeAsync().ConfigureAwait(false);
                 }
             }
         }
@@ -226,11 +226,11 @@ namespace Cotton.Crypto
             {
                 if (!leaveInputOpen)
                 {
-                    input.Dispose();
+                    await input.DisposeAsync().ConfigureAwait(false);
                 }
                 if (!leaveOutputOpen)
                 {
-                    output.Dispose();
+                    await output.DisposeAsync().ConfigureAwait(false);
                 }
                 throw new InvalidDataException($"Key ID mismatch. Expected {_keyId}, but file has {header.KeyId}.");
             }
@@ -240,14 +240,14 @@ namespace Cotton.Crypto
             byte[] fileKey = BufferPool.Rent(KeySize);
             try
             {
-                using (var gcm = new AesGcm(_masterKeyBytes, TagSize))
+                using (AesGcm gcm = new AesGcm(_masterKeyBytes, TagSize))
                 {
                     Span<byte> tagSpan = stackalloc byte[TagSize];
                     header.Tag.CopyTo(tagSpan);
                     byte[] aad = AesGcmStreamFormat.BuildKeyAad(header.KeyId, header.NoncePrefix, header.Nonce, header.TotalPlaintextLength, NonceSize, TagSize, KeySize);
                     gcm.Decrypt(header.Nonce, header.EncryptedKey, tagSpan, fileKey.AsSpan(0, KeySize), associatedData: aad);
                 }
-                var dec = new DecryptionPipeline(input, output, fileKey, header.NoncePrefix, _concurrencyLevel, _keyId, NonceSize, TagSize, MaxChunkSize, effectiveWindowCap, header.TotalPlaintextLength, _strictLengthCheck, BufferPool);
+                DecryptionPipeline dec = new DecryptionPipeline(input, output, fileKey, header.NoncePrefix, _concurrencyLevel, _keyId, NonceSize, TagSize, MaxChunkSize, effectiveWindowCap, header.TotalPlaintextLength, _strictLengthCheck, BufferPool);
                 await dec.RunAsync(ct).ConfigureAwait(false);
             }
             finally
@@ -256,11 +256,11 @@ namespace Cotton.Crypto
                 BufferPool.Return(fileKey, clearArray: false);
                 if (!leaveInputOpen)
                 {
-                    input.Dispose();
+                    await input.DisposeAsync().ConfigureAwait(false);
                 }
                 if (!leaveOutputOpen)
                 {
-                    output.Dispose();
+                    await output.DisposeAsync().ConfigureAwait(false);
                 }
             }
         }
@@ -280,7 +280,7 @@ namespace Cotton.Crypto
 
             long pauseThreshold = _pipePauseWriterThresholdBytes;
             long resumeThreshold = _pipeResumeWriterThresholdBytes;
-            var pipe = new Pipe(new PipeOptions(
+            Pipe pipe = new Pipe(new PipeOptions(
                 pool: MemoryPool<byte>.Shared,
                 readerScheduler: null,
                 writerScheduler: null,
@@ -311,7 +311,7 @@ namespace Cotton.Crypto
                 {
                     if (!leaveOpen)
                     {
-                        input.Dispose();
+                        await input.DisposeAsync().ConfigureAwait(false);
                     }
                 }
             });
@@ -330,7 +330,7 @@ namespace Cotton.Crypto
 
             long pauseThreshold = _pipePauseWriterThresholdBytes;
             long resumeThreshold = _pipeResumeWriterThresholdBytes;
-            var pipe = new Pipe(new PipeOptions(
+            Pipe pipe = new Pipe(new PipeOptions(
                 pool: MemoryPool<byte>.Shared,
                 readerScheduler: null,
                 writerScheduler: null,
@@ -361,7 +361,7 @@ namespace Cotton.Crypto
                 {
                     if (!leaveOpen)
                     {
-                        input.Dispose();
+                        await input.DisposeAsync().ConfigureAwait(false);
                     }
                 }
             });

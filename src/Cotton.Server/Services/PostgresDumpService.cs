@@ -28,7 +28,7 @@ namespace Cotton.Server.Services
             DbSettings settings = ReadDbSettings();
             ProcessStartInfo processStartInfo = CreateProcessStartInfo(settings, outputFilePath);
 
-            using var process = new Process { StartInfo = processStartInfo };
+            using Process process = new Process { StartInfo = processStartInfo };
             _logger.LogInformation("Creating PostgreSQL dump to {OutputFilePath}.", outputFilePath);
 
             if (!process.Start())
@@ -73,7 +73,7 @@ namespace Cotton.Server.Services
             DbSettings settings = ReadDbSettings();
             ProcessStartInfo processStartInfo = CreateRestoreProcessStartInfo(settings, inputFilePath);
 
-            using var process = new Process { StartInfo = processStartInfo };
+            using Process process = new Process { StartInfo = processStartInfo };
             _logger.LogInformation("Restoring PostgreSQL database from {InputFilePath}.", inputFilePath);
 
             if (!process.Start())
@@ -108,7 +108,7 @@ namespace Cotton.Server.Services
 
         private static ProcessStartInfo CreateProcessStartInfo(DbSettings settings, string outputFilePath)
         {
-            var processStartInfo = new ProcessStartInfo
+            ProcessStartInfo processStartInfo = new ProcessStartInfo
             {
                 FileName = "pg_dump",
                 RedirectStandardError = true,
@@ -136,7 +136,7 @@ namespace Cotton.Server.Services
 
         private static ProcessStartInfo CreateRestoreProcessStartInfo(DbSettings settings, string inputFilePath)
         {
-            var processStartInfo = new ProcessStartInfo
+            ProcessStartInfo processStartInfo = new ProcessStartInfo
             {
                 FileName = "pg_restore",
                 RedirectStandardError = true,

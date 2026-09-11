@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Primitives;
 using Quartz;
 using System.Net;
 using System.Security.Cryptography;
@@ -31,11 +32,15 @@ namespace Cotton.Server.IntegrationTests.Common
             "cotton-server-integration-storage",
             Guid.NewGuid().ToString("N"));
         private readonly Dictionary<string, string?> _overrides;
+        private readonly Action<IServiceCollection>? _configureServices;
         private readonly Dictionary<string, string?> _previousEnvironmentVariables = [];
 
-        public TestAppFactory(Dictionary<string, string?> overrides)
+        public TestAppFactory(
+            Dictionary<string, string?> overrides,
+            Action<IServiceCollection>? configureServices = null)
         {
             _overrides = overrides;
+            _configureServices = configureServices;
             SetEnvironmentVariable(ConfigurationBuilderExtensions.MasterKeyEnvironmentVariable, TestRootMasterKey);
             SetDatabaseEnvironmentVariable("COTTON_PG_HOST", "DatabaseSettings:Host");
             SetDatabaseEnvironmentVariable("COTTON_PG_PORT", "DatabaseSettings:Port");
@@ -82,10 +87,9 @@ namespace Cotton.Server.IntegrationTests.Common
 
             builder.ConfigureServices(services =>
             {
-                var quartzHosted = services
+                List<ServiceDescriptor> quartzHosted = services
                     .Where(d => d.ServiceType == typeof(IHostedService) &&
-                        (d.ImplementationType == typeof(QuartzHostedService) ||
-                            d.ImplementationFactory?.Method.ReturnType == typeof(QuartzHostedService)))
+                        d.ImplementationType == typeof(QuartzHostedService))
                     .ToList();
                 foreach (ServiceDescriptor? d in quartzHosted)
                 {
@@ -107,6 +111,8 @@ namespace Cotton.Server.IntegrationTests.Common
                         ActivatorUtilities.CreateInstance<FileSystemStorageBackend>(
                             serviceProvider,
                             storagePath)));
+
+                _configureServices?.Invoke(services);
 
                 services.AddSingleton(new CottonServerSettings
                 {
@@ -139,7 +145,7 @@ namespace Cotton.Server.IntegrationTests.Common
                 {
                     app.Use(async (context, nextMiddleware) =>
                     {
-                        if (context.Request.Headers.TryGetValue(RemoteIpAddressHeader, out var values)
+                        if (context.Request.Headers.TryGetValue(RemoteIpAddressHeader, out StringValues values)
                             && IPAddress.TryParse(values.ToString(), out IPAddress? remoteIpAddress))
                         {
                             context.Connection.RemoteIpAddress = remoteIpAddress;

@@ -21,7 +21,7 @@ namespace Cotton.Server.Services
             CancellationToken ct)
         {
             string metadataAddress = $"{provider.Issuer.TrimEnd('/')}/.well-known/openid-configuration";
-            var retriever = new HttpDocumentRetriever(_httpClient)
+            HttpDocumentRetriever retriever = new HttpDocumentRetriever(_httpClient)
             {
                 RequireHttps = true
             };
@@ -88,7 +88,7 @@ namespace Cotton.Server.Services
                 throw new BadRequestException<OidcProvider>("OIDC provider does not publish a token endpoint.");
             }
 
-            var formValues = new List<KeyValuePair<string, string>>
+            List<KeyValuePair<string, string>> formValues = new List<KeyValuePair<string, string>>
             {
                 new("grant_type", "authorization_code"),
                 new("code", code),
@@ -101,7 +101,7 @@ namespace Cotton.Server.Services
                 formValues.Add(new("client_secret", provider.ClientSecretEncrypted));
             }
 
-            using var content = new FormUrlEncodedContent(formValues);
+            using FormUrlEncodedContent content = new FormUrlEncodedContent(formValues);
             using HttpResponseMessage response = await _httpClient.PostAsync(configuration.TokenEndpoint, content, ct);
             if (!response.IsSuccessStatusCode)
             {
@@ -132,7 +132,7 @@ namespace Cotton.Server.Services
                 return null;
             }
 
-            using var request = new HttpRequestMessage(HttpMethod.Get, configuration.UserInfoEndpoint);
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, configuration.UserInfoEndpoint);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             using HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
             if (!response.IsSuccessStatusCode)

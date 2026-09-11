@@ -5,13 +5,6 @@ using System.Globalization;
 
 namespace Cotton.Benchmark.Regression
 {
-    internal class BenchmarkComparisonResult
-    {
-        public bool Passed { get; init; }
-
-        public IReadOnlyList<string> Messages { get; init; } = [];
-    }
-
     internal class BenchmarkRegressionComparer
     {
         private const double DurationRegressionRatio = 1.20;
@@ -74,10 +67,10 @@ namespace Cotton.Benchmark.Regression
 
         public BenchmarkComparisonResult Compare(BenchmarkRunDocument baseline, BenchmarkRunDocument current)
         {
-            var baselineByName = baseline.Results.ToDictionary(x => x.Name, StringComparer.Ordinal);
-            var messages = new List<string>();
+            Dictionary<string, BenchmarkResultSnapshot> baselineByName = baseline.Results.ToDictionary(x => x.Name, StringComparer.Ordinal);
+            List<string> messages = new List<string>();
             bool passed = true;
-            var tolerance = RegressionTolerance.ForProfile(current.Profile);
+            RegressionTolerance tolerance = RegressionTolerance.ForProfile(current.Profile);
 
             foreach (BenchmarkResultSnapshot currentResult in current.Results)
             {

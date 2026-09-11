@@ -82,6 +82,11 @@ namespace Cotton.Server.IntegrationTests
                 throw new NotSupportedException();
             }
 
+            public void RotateKey()
+            {
+                throw new NotSupportedException();
+            }
+
             public bool ValidateToken(string token)
             {
                 throw new NotSupportedException();

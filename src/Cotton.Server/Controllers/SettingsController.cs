@@ -276,7 +276,7 @@ namespace Cotton.Server.Controllers
                 throw new BadRequestException<CottonServerSettings>("Server usage must be an array.");
             }
 
-            var result = new List<ServerUsage>();
+            List<ServerUsage> result = new List<ServerUsage>();
             foreach (JsonElement item in value.EnumerateArray())
             {
                 ServerUsage usage;

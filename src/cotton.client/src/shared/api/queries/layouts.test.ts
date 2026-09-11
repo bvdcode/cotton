@@ -1,6 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import { clearLayoutsCaches } from "./layouts";
+import { clearLayoutsCaches, invalidateLayoutOverview } from "./layouts";
 import { queryKeys } from "./queryKeys";
 
 const createQueryClient = () =>
@@ -19,7 +19,10 @@ describe("layout query cache helpers", () => {
     queryClient.setQueryData(queryKeys.layouts.stats("layout-id"), {
       fileCount: 1,
     });
-    queryClient.setQueryData(queryKeys.layouts.recent("layout-id", 15), []);
+    queryClient.setQueryData(
+      queryKeys.layouts.recentFiltered("layout-id", 15, ["image/*"], [], false),
+      [],
+    );
 
     clearLayoutsCaches(queryClient);
 
@@ -28,7 +31,15 @@ describe("layout query cache helpers", () => {
       queryClient.getQueryData(queryKeys.layouts.stats("layout-id")),
     ).toBeUndefined();
     expect(
-      queryClient.getQueryData(queryKeys.layouts.recent("layout-id", 15)),
+      queryClient.getQueryData(
+        queryKeys.layouts.recentFiltered(
+          "layout-id",
+          15,
+          ["image/*"],
+          [],
+          false,
+        ),
+      ),
     ).toBeUndefined();
   });
 
@@ -44,5 +55,75 @@ describe("layout query cache helpers", () => {
     expect(
       queryClient.getQueryData(queryKeys.notifications.unreadCount()),
     ).toBe(3);
+  });
+
+  it("invalidates stats and every recent-file count for one layout", async () => {
+    const queryClient = createQueryClient();
+
+    queryClient.setQueryData(queryKeys.layouts.stats("layout-1"), {
+      fileCount: 1,
+    });
+    queryClient.setQueryData(
+      queryKeys.layouts.recentFiltered("layout-1", 5, ["image/*"], [], false),
+      [],
+    );
+    queryClient.setQueryData(
+      queryKeys.layouts.recentFiltered("layout-1", 15, [], ["image/*"], false),
+      [],
+    );
+    queryClient.setQueryData(queryKeys.layouts.stats("layout-2"), {
+      fileCount: 2,
+    });
+
+    await invalidateLayoutOverview(queryClient, "layout-1");
+
+    expect(
+      queryClient.getQueryState(queryKeys.layouts.stats("layout-1"))
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(
+        queryKeys.layouts.recentFiltered("layout-1", 5, ["image/*"], [], false),
+      )?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(
+        queryKeys.layouts.recentFiltered(
+          "layout-1",
+          15,
+          [],
+          ["image/*"],
+          false,
+        ),
+      )?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(queryKeys.layouts.stats("layout-2"))
+        ?.isInvalidated,
+    ).toBe(false);
+  });
+
+  it("invalidates quota and every pinned-folder selection with the overview", async () => {
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(queryKeys.storageQuota.current(), {
+      usedBytes: 10,
+    });
+    queryClient.setQueryData(queryKeys.layouts.pinnedFolders(["node-a"]), []);
+    queryClient.setQueryData(queryKeys.layouts.pinnedFolders(["node-b"]), []);
+
+    await invalidateLayoutOverview(queryClient, "layout-1");
+
+    expect(
+      queryClient.getQueryState(queryKeys.storageQuota.current())
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(queryKeys.layouts.pinnedFolders(["node-a"]))
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(queryKeys.layouts.pinnedFolders(["node-b"]))
+        ?.isInvalidated,
+    ).toBe(true);
   });
 });

@@ -11,14 +11,14 @@ namespace Cotton.Database
     {
         public CottonDbContext CreateDbContext(string[] args)
         {
-            var optionsBuilder = new DbContextOptionsBuilder<CottonDbContext>();
+            DbContextOptionsBuilder<CottonDbContext> optionsBuilder = new DbContextOptionsBuilder<CottonDbContext>();
             optionsBuilder.UseNpgsql(BuildConnectionString(), x => x.UseAdminDatabase("postgres"));
             return new CottonDbContext(optionsBuilder.Options);
         }
 
         private static string BuildConnectionString()
         {
-            var builder = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder builder = new NpgsqlConnectionStringBuilder
             {
                 Host = GetEnvironment("COTTON_PG_HOST", "localhost"),
                 Port = int.Parse(GetEnvironment("COTTON_PG_PORT", "5432")),

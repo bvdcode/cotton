@@ -74,7 +74,7 @@ namespace Cotton.Storage.Backends
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
 
-            var req = new GetObjectMetadataRequest
+            GetObjectMetadataRequest req = new GetObjectMetadataRequest
             {
                 Key = key,
                 BucketName = bucket,
@@ -99,7 +99,7 @@ namespace Cotton.Storage.Backends
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
 
-            var req = new GetObjectMetadataRequest
+            GetObjectMetadataRequest req = new GetObjectMetadataRequest
             {
                 Key = key,
                 BucketName = bucket,
@@ -116,7 +116,7 @@ namespace Cotton.Storage.Backends
             }
         }
 
-        public async Task WriteAsync(string uid, Stream source)
+        public async Task<long> WriteAsync(string uid, Stream source)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
             ArgumentNullException.ThrowIfNull(source);
@@ -126,13 +126,13 @@ namespace Cotton.Storage.Backends
             string key = GetS3Key(uid);
             if (await ExistsAsync(uid).ConfigureAwait(false))
             {
-                return;
+                return await GetSizeAsync(uid).ConfigureAwait(false);
             }
 
             string tmpPath = Path.GetTempFileName();
             try
             {
-                await using (var fs = new FileStream(
+                await using (FileStream fs = new FileStream(
                     tmpPath,
                     FileMode.Create,
                     FileAccess.Write,
@@ -148,6 +148,7 @@ namespace Cotton.Storage.Backends
                     await source.CopyToAsync(fs).ConfigureAwait(false);
                     await fs.FlushAsync().ConfigureAwait(false);
                 }
+                long storedSizeBytes = new FileInfo(tmpPath).Length;
                 PutObjectRequest req = new PutObjectRequest
                 {
                     BucketName = bucket,
@@ -156,6 +157,7 @@ namespace Cotton.Storage.Backends
                     ContentType = MediaTypeNames.Application.Octet,
                 }.WithFileBodyCompatibility();
                 await s3.PutObjectAsync(req).ConfigureAwait(false);
+                return storedSizeBytes;
             }
             finally
             {
@@ -183,7 +185,7 @@ namespace Cotton.Storage.Backends
 
             do
             {
-                var request = new ListObjectsV2Request
+                ListObjectsV2Request request = new ListObjectsV2Request
                 {
                     BucketName = bucket,
                     MaxKeys = 1000,

@@ -26,6 +26,9 @@ export const USER_PREFERENCE_KEYS = {
   clientEncryptionLockOnRefresh: "clientEncryptionLockOnRefresh",
 
   searchHistory: "searchHistory",
+
+  dashboardLayout: "dashboardLayout",
+  dashboardPinnedFolderIds: "dashboardPinnedFolderIds",
 } as const;
 
 const DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES = 60 * 24 * 30;

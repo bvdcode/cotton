@@ -83,7 +83,7 @@ namespace Cotton.Server.IntegrationTests
                 currentSettings.MasterEncryptionKeyId,
                 threads: 1);
             string lateLegacyValue = Convert.ToBase64String(
-                zeroKeyCipher.EncryptString("late-legacy-value"));
+                await zeroKeyCipher.EncryptStringAsync("late-legacy-value"));
             IDatabaseFieldProtector activeProtector = currentServices
                 .GetRequiredService<IDatabaseFieldProtector>();
 

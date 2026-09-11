@@ -47,7 +47,7 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("Username is required");
             }
 
-            if (!UsernameValidator.TryNormalizeAndValidate(request.Username, out var username, out var usernameError))
+            if (!UsernameValidator.TryNormalizeAndValidate(request.Username, out string? username, out string? usernameError))
             {
                 throw new BadRequestException<User>(usernameError);
             }
@@ -62,7 +62,7 @@ namespace Cotton.Server.Handlers.Users
                 ? StringHelpers.CreateRandomString(32)
                 : request.Password);
 
-            var user = new User
+            User user = new User
             {
                 Username = username,
                 Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),

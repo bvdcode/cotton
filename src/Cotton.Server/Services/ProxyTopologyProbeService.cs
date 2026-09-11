@@ -23,7 +23,7 @@ namespace Cotton.Server.Services
 
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Head, uri);
+                using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Head, uri);
                 using HttpResponseMessage response = await _httpClient.SendAsync(
                     request,
                     HttpCompletionOption.ResponseHeadersRead,

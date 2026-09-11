@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Extensions;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
@@ -12,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Quartz;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace Cotton.Server.Jobs
 {
@@ -148,7 +150,7 @@ namespace Cotton.Server.Jobs
             };
 
             int totalScheduled = 0;
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
             TimeSpan lastProgressLogAt = TimeSpan.Zero;
 
             while (totalScheduled < batchSize)
@@ -172,8 +174,8 @@ namespace Cotton.Server.Jobs
                 }
 
                 int updated = await _dbContext.Chunks
-                    .Where(c => candidateHashes.Contains(c.Hash) && c.GCScheduledAfter == null)
-                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
+                    .Where(chunk => candidateHashes.Contains(chunk.Hash))
+                    .ScheduleGarbageCollectionAsync(deleteAfter, ct);
 
                 totalScheduled += updated;
 
@@ -241,8 +243,8 @@ namespace Cotton.Server.Jobs
             if (protectedHashesToClear.Count > 0)
             {
                 await _dbContext.Chunks
-                    .Where(c => protectedHashesToClear.Contains(c.Hash) && c.GCScheduledAfter != null)
-                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
+                    .Where(chunk => protectedHashesToClear.Contains(chunk.Hash))
+                    .CancelGarbageCollectionAsync(ct);
             }
 
             if (reservedHashes.Count == 0)
@@ -252,7 +254,7 @@ namespace Cotton.Server.Jobs
 
             int deletedChunksCounter = 0;
             int processedCounter = 0;
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
             TimeSpan lastProgressLogAt = TimeSpan.Zero;
 
             try
@@ -332,8 +334,8 @@ namespace Cotton.Server.Jobs
             if (nowReferencedHashes.Count > 0)
             {
                 await _dbContext.Chunks
-                    .Where(c => nowReferencedHashes.Contains(c.Hash) && c.GCScheduledAfter != null)
-                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
+                    .Where(chunk => nowReferencedHashes.Contains(chunk.Hash))
+                    .CancelGarbageCollectionAsync(ct);
             }
 
             HashSet<string> referencedUids = nowReferencedHashes

@@ -98,7 +98,7 @@ namespace Cotton.Server.Services
             }
 
             StorageCapacitySnapshot? snapshot = ReadCapacitySnapshot();
-            var entry = new CapacityCacheEntry(snapshot);
+            CapacityCacheEntry entry = new CapacityCacheEntry(snapshot);
             _cache.Set(CapacityCacheKey, entry, options.CheckInterval);
             return entry;
         }
@@ -180,7 +180,7 @@ namespace Cotton.Server.Services
 
                 string availableSpace = FormatBytes(pressure.Capacity.AvailableBytes);
                 string requiredReserve = FormatBytes(pressure.RequiredFreeBytes);
-                var metadata = new Dictionary<string, string>
+                Dictionary<string, string> metadata = new Dictionary<string, string>
                 {
                     ["kind"] = "storage-pressure",
                     ["backend"] = pressure.Capacity.Backend,

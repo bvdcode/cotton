@@ -5,12 +5,17 @@ import {
   IconButton,
   Tooltip,
   Avatar,
+  Menu,
+  MenuItem,
 } from "@mui/material";
+import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../app/providers";
 import { supportedLanguages } from "../../../locales";
+import { nativeLanguageNames } from "../../../locales/languageDisplayNames";
 import { useUserPreferencesStore } from "../../../shared/store/userPreferencesStore";
 import {
+  ArrowDropDown as ArrowDropDownIcon,
   Brightness4 as DarkIcon,
   Brightness7 as LightIcon,
   Translate as TranslateIcon,
@@ -21,27 +26,22 @@ export function WizardHeader() {
   const { t } = useTranslation("setup");
   const { mode, setTheme } = useTheme();
   const setUiLanguage = useUserPreferencesStore((s) => s.setUiLanguage);
+  const [languageMenuAnchor, setLanguageMenuAnchor] =
+    useState<HTMLElement | null>(null);
 
-  const toggleLanguage = () => {
-    const currentLang = i18n.language;
-    const currentIndex = supportedLanguages.indexOf(currentLang);
-    const nextIndex = (currentIndex + 1) % supportedLanguages.length;
-    setUiLanguage(supportedLanguages[nextIndex]);
+  const openLanguageMenu = (event: MouseEvent<HTMLElement>) => {
+    setLanguageMenuAnchor(event.currentTarget);
+  };
+
+  const closeLanguageMenu = () => {
+    setLanguageMenuAnchor(null);
   };
 
   const toggleTheme = () => {
     setTheme(mode === "light" ? "dark" : "light");
   };
 
-  // Get next language for tooltip
-  const currentLang = i18n.language;
-  const currentIndex = supportedLanguages.indexOf(currentLang);
-  const nextIndex = (currentIndex + 1) % supportedLanguages.length;
-  const nextLanguage = supportedLanguages[nextIndex];
-  const nextLanguageLabel = i18n.getFixedT(
-    nextLanguage,
-    "common",
-  )("switchToThisLanguage");
+  const currentLanguage = i18n.resolvedLanguage ?? i18n.language;
 
   return (
     <Stack spacing={{ xs: 1, sm: 1.5 }}>
@@ -93,11 +93,43 @@ export function WizardHeader() {
           spacing={{ xs: 0, sm: 0.5 }}
           sx={{ flexShrink: 0 }}
         >
-          <Tooltip title={nextLanguageLabel}>
-            <IconButton onClick={toggleLanguage} size="small">
+          <Tooltip title={tCommon("language")}>
+            <IconButton
+              onClick={openLanguageMenu}
+              size="small"
+              aria-label={tCommon("language")}
+              aria-controls={
+                languageMenuAnchor ? "setup-language-menu" : undefined
+              }
+              aria-expanded={languageMenuAnchor ? true : undefined}
+              aria-haspopup="menu"
+            >
               <TranslateIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+              <ArrowDropDownIcon sx={{ fontSize: { xs: 14, sm: 16 } }} />
             </IconButton>
           </Tooltip>
+          <Menu
+            id="setup-language-menu"
+            anchorEl={languageMenuAnchor}
+            open={languageMenuAnchor !== null}
+            onClose={closeLanguageMenu}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+          >
+            {supportedLanguages.map((language) => (
+              <MenuItem
+                key={language}
+                selected={language === currentLanguage}
+                aria-current={language === currentLanguage ? "true" : undefined}
+                onClick={() => {
+                  setUiLanguage(language);
+                  closeLanguageMenu();
+                }}
+              >
+                {nativeLanguageNames[language]}
+              </MenuItem>
+            ))}
+          </Menu>
           <Tooltip
             title={
               mode === "light"

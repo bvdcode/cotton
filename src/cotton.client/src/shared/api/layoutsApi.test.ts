@@ -180,7 +180,13 @@ describe("layoutsApi reads", () => {
 
     await expect(layoutsApi.getRecentFiles(layoutId)).resolves.toEqual([]);
     expect(get).toHaveBeenLastCalledWith(`/layouts/${layoutId}/recent`, {
-      params: { count: 3 },
+      params: {
+        count: 3,
+        contentType: undefined,
+        excludeContentType: undefined,
+        excludeClientEncrypted: undefined,
+      },
+      paramsSerializer: { indexes: null },
     });
   });
 
@@ -197,7 +203,48 @@ describe("layoutsApi reads", () => {
 
     await layoutsApi.getRecentFiles(layoutId, 10);
     expect(get).toHaveBeenLastCalledWith(`/layouts/${layoutId}/recent`, {
-      params: { count: 10 },
+      params: {
+        count: 10,
+        contentType: undefined,
+        excludeContentType: undefined,
+        excludeClientEncrypted: undefined,
+      },
+      paramsSerializer: { indexes: null },
     });
+  });
+
+  it("threads recent content-type filters and resolves owned folders", async () => {
+    const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: [] });
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: [{ id: nodeId }],
+    });
+
+    await layoutsApi.getRecentFiles(layoutId, 8, {
+      contentTypes: ["image/*", "video/*"],
+      excludedContentTypes: ["video/x-msvideo"],
+      excludeClientEncrypted: true,
+    });
+    expect(get).toHaveBeenCalledWith(`/layouts/${layoutId}/recent`, {
+      params: {
+        count: 8,
+        contentType: ["image/*", "video/*"],
+        excludeContentType: ["video/x-msvideo"],
+        excludeClientEncrypted: true,
+      },
+      paramsSerializer: { indexes: null },
+    });
+
+    const [url, config] = get.mock.calls[0];
+    const serializedUrl = httpClient.getUri({ url, ...config });
+    expect(serializedUrl).toContain(
+      "contentType=image%2F*&contentType=video%2F*",
+    );
+    expect(serializedUrl).toContain("excludeContentType=video%2Fx-msvideo");
+    expect(serializedUrl).not.toContain("%5B%5D");
+
+    await expect(layoutsApi.resolveOwnedNodes([nodeId])).resolves.toEqual([
+      { id: nodeId },
+    ]);
+    expect(post).toHaveBeenCalledWith("/layouts/nodes/resolve", [nodeId]);
   });
 });

@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   eventHub,
-  FILE_AND_NODE_MUTATION_HUB_METHODS,
   HUB_METHODS,
   getHubMethodVariants,
   type HubMethod,
   type HubMethodOrLower,
+  useFileTreeRealtimeInvalidation,
 } from "../../../shared/signalr";
 import { useAuth } from "../../../features/auth";
 import { isJsonObject, type JsonValue } from "../../../shared/types/json";
@@ -134,11 +134,6 @@ export function useFilesRealtimeEvents({
 }: UseFilesRealtimeEventsOptions): void {
   const { isAuthenticated } = useAuth();
 
-  const onInvalidateRef = useRef(onInvalidate);
-  useEffect(() => {
-    onInvalidateRef.current = onInvalidate;
-  }, [onInvalidate]);
-
   const nodeIdRef = useRef<string | null>(nodeId);
   useEffect(() => {
     nodeIdRef.current = nodeId;
@@ -149,43 +144,17 @@ export function useFilesRealtimeEvents({
     onPreviewGeneratedRef.current = onPreviewGenerated;
   }, [onPreviewGenerated]);
 
-  const scheduledRef = useRef<number | null>(null);
-
-  const scheduleInvalidate = useMemo(() => {
-    return (): void => {
-      if (scheduledRef.current !== null) {
-        return;
-      }
-
-      // Coalesce bursts (uploads/renames) into a single refresh.
-      scheduledRef.current = window.setTimeout(() => {
-        scheduledRef.current = null;
-        onInvalidateRef.current();
-      }, 250);
-    };
-  }, []);
+  const scheduleInvalidate = useFileTreeRealtimeInvalidation({
+    enabled: isAuthenticated,
+    onInvalidate,
+    shouldInvalidate: (method, args) =>
+      shouldInvalidateCurrentNode(method, args, nodeIdRef.current),
+  });
 
   useEffect(() => {
     if (!isAuthenticated) {
       return;
     }
-
-    eventHub.start().catch(() => {
-      // connection will retry automatically
-    });
-
-    const invalidationMethods = getHubMethodVariants(
-      FILE_AND_NODE_MUTATION_HUB_METHODS,
-    );
-    const unsubscribes = invalidationMethods.map((method) =>
-      eventHub.on(method, (...args: JsonValue[]) => {
-        if (!shouldInvalidateCurrentNode(method, args, nodeIdRef.current)) {
-          return;
-        }
-
-        scheduleInvalidate();
-      }),
-    );
 
     const handlePreviewGenerated = (...args: JsonValue[]) => {
       if (!isPreviewGeneratedArgs(args)) {
@@ -213,15 +182,6 @@ export function useFilesRealtimeEvents({
     );
 
     return () => {
-      if (scheduledRef.current !== null) {
-        window.clearTimeout(scheduledRef.current);
-        scheduledRef.current = null;
-      }
-
-      for (const unsubscribe of unsubscribes) {
-        unsubscribe();
-      }
-
       for (const unsubscribe of unsubscribePreviewGenerated) {
         unsubscribe();
       }

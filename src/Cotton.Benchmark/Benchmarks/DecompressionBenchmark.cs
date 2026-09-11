@@ -21,12 +21,12 @@ namespace Cotton.Benchmark.Benchmarks
             _processor = new CompressionProcessor(new FixedCompressionLevelProvider(configuration.CompressionLevel));
 
             // Pre-compress compressible data
-            var testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
+            byte[] testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
             _originalSize = testData.Length;
 
-            using var inputStream = new MemoryStream(testData);
+            using MemoryStream inputStream = new MemoryStream(testData);
             Stream compressedStream = _processor.WriteAsync("test-uid", inputStream).Result;
-            using var outputStream = new MemoryStream();
+            using MemoryStream outputStream = new MemoryStream();
             compressedStream.CopyTo(outputStream);
             _compressedData = outputStream.ToArray();
         }
@@ -37,20 +37,20 @@ namespace Cotton.Benchmark.Benchmarks
 
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
-            await using var inputStream = new MemoryStream(_compressedData);
+            await using MemoryStream inputStream = new MemoryStream(_compressedData);
             Stream outputStream = await _processor.ReadAsync("test-uid", inputStream);
             await outputStream.DisposeAsync();
         }
 
         protected override async Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
-            var stopwatch = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
 
-            await using var inputStream = new MemoryStream(_compressedData);
+            await using MemoryStream inputStream = new MemoryStream(_compressedData);
             Stream outputStream = await _processor.ReadAsync("test-uid", inputStream);
 
             // Read all decompressed data
-            await using var resultStream = new MemoryStream();
+            await using MemoryStream resultStream = new MemoryStream();
             await outputStream.CopyToAsync(resultStream, cancellationToken);
 
             stopwatch.Stop();

@@ -130,7 +130,8 @@ export const useTileDragAndDrop = ({
   const handleMoveDragLeave = useCallback(
     (tileId: string, event: DragEvent<HTMLDivElement>) => {
       if (!moveSupport) return;
-      const related = event.relatedTarget as Node | null;
+      const related = event.relatedTarget;
+      if (related !== null && !(related instanceof Node)) return;
       if (related && event.currentTarget.contains(related)) return;
       if (dropTargetId === tileId) {
         setDropTargetId(null);

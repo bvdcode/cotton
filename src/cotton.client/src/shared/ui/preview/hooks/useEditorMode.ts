@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useMemo } from "react";
-import { EditorMode } from "../editors/types";
+import { EditorMode, isEditorMode } from "../editors/types";
 import { useLocalPreferencesStore } from "../../../store/localPreferencesStore";
 import { previewConfig } from "../../../config/previewConfig";
 import {
@@ -125,11 +125,8 @@ export function useEditorMode({
   );
 
   const mode = useMemo<EditorMode>(() => {
-    if (
-      storedMode &&
-      Object.values(EditorMode).includes(storedMode as EditorMode)
-    ) {
-      return storedMode as EditorMode;
+    if (isEditorMode(storedMode)) {
+      return storedMode;
     }
     return detectInitialMode(content, fileName, fileSize);
   }, [content, fileName, fileSize, storedMode]);

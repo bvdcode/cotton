@@ -94,6 +94,7 @@ namespace Cotton.Server
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddCottonOptions(encryptionSettings);
+            builder.ConfigureHttp2Transport();
             if (OperatingSystem.IsWindows() && !builder.Environment.IsProduction())
             {
                 builder.Logging.ClearProviders();

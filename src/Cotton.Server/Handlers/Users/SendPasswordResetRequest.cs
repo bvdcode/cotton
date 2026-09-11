@@ -60,7 +60,7 @@ namespace Cotton.Server.Handlers.Users
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             string baseUrl = _settingsProvider.GetServerSettings().PublicBaseUrl;
-            var parameters = new Dictionary<string, string>
+            Dictionary<string, string> parameters = new Dictionary<string, string>
             {
                 [EmailTemplateParameterNames.Token] = token,
             };

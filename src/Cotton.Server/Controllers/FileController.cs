@@ -71,6 +71,8 @@ namespace Cotton.Server.Controllers
             {
                 NodeFileId = nodeFileId,
                 ParentId = request.ParentId,
+                Name = request.Name,
+                Overwrite = request.Overwrite,
                 UserId = User.GetUserId(),
                 ExpectedETag = FileETags.ReadIfMatch(Request),
             };

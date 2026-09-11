@@ -80,6 +80,27 @@ describe("buildFolderOperations", () => {
     expect(ops.onCut).toBeUndefined();
     expect(ops.onToggleEncryptionPolicy).toBeUndefined();
   });
+
+  it("wires dashboard pin state without changing other folder actions", () => {
+    const togglePin = vi.fn();
+    const isPinned = vi.fn(() => true);
+    const ops = buildFolderOperations(
+      makeFolderHook(),
+      vi.fn(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      togglePin,
+      isPinned,
+    );
+
+    ops.onTogglePin?.("folder-1");
+
+    expect(togglePin).toHaveBeenCalledWith("folder-1");
+    expect(ops.isPinned?.("folder-1")).toBe(true);
+  });
 });
 
 describe("buildFileOperations", () => {

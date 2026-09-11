@@ -1,6 +1,6 @@
 import type { Resource, ResourceLanguage } from "i18next";
 
-type LocaleModule = { default: Record<string, unknown> };
+type LocaleModule = { default: ResourceLanguage };
 const localeModules = import.meta.glob<LocaleModule>("./*.json", {
   eager: true,
 });
@@ -15,7 +15,7 @@ for (const [path, mod] of Object.entries(localeModules)) {
   }
 
   const lng = match[1];
-  const data = mod.default as ResourceLanguage;
+  const data = mod.default;
   resources[lng] = data;
   Object.keys(data).forEach((ns) => namespaces.add(ns));
 }

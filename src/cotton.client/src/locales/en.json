@@ -1253,6 +1253,7 @@
   "common": {
     "languageName": "English",
     "switchToThisLanguage": "Switch to English",
+    "language": "Language",
     "placeholder": "—",
     "yes": "Yes",
     "no": "No",
@@ -1311,14 +1312,15 @@
       "play": "Play",
       "pause": "Pause",
       "copied": "Copied!",
-      "reload": "Refresh"
+      "reload": "Reload",
+      "retry": "Retry"
     },
     "errors": {
-      "unexpectedTitle": "Something went wrong",
-      "unexpectedDescription": "An unexpected error occurred. Please reload the page.",
-      "showDetails": "Show details",
-      "hideDetails": "Hide details",
-      "schemaValidationFailed": "Server returned unexpected data"
+      "unexpectedTitle": "Unable to display this page",
+      "unexpectedDescription": "The page encountered an unexpected error. Try again, or reload if the problem continues.",
+      "schemaValidationFailed": "Server returned unexpected data",
+      "serverUnavailableTitle": "Server unavailable",
+      "serverUnavailableDescription": "Cotton could not reach the server. Check the connection and try again."
     },
     "userMenu": {
       "profile": "Profile",
@@ -2120,6 +2122,57 @@
         "title": "Recent Files",
         "empty": "No recent files"
       }
+    },
+    "dashboard": {
+      "title": "Your space",
+      "actions": {
+        "customize": "Customize",
+        "done": "Done",
+        "size": "Size {{size}}",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "hide": "Hide widget",
+        "retry": "Retry"
+      },
+      "widgets": {
+        "overview": "Storage overview",
+        "pinnedFolders": "Pinned folders",
+        "quickAccess": "Quick access",
+        "recentFiles": "Recent files",
+        "recentImages": "Recent photos",
+        "recentVideos": "Recent videos",
+        "recentDocuments": "Recent documents",
+        "recentAudio": "Recent audio",
+        "recentOther": "Other recent files"
+      },
+      "overview": {
+        "ofQuota": "of {{quota}}",
+        "storageUsage": "Storage usage",
+        "available": "Available"
+      },
+      "quickAccess": {
+        "files": "Files",
+        "search": "Search",
+        "trash": "Trash"
+      },
+      "recent": {
+        "empty": "No matching recent files",
+        "loadFailed": "Failed to load recent files."
+      },
+      "pinnedFolders": {
+        "folder": "Folder",
+        "pin": "Pin to dashboard",
+        "unpin": "Unpin from dashboard",
+        "empty": "No pinned folders yet",
+        "emptyHint": "Pin a folder from its actions in Files.",
+        "limitReached": "You can pin up to {{count}} folders.",
+        "loadFailed": "Failed to load pinned folders."
+      },
+      "library": {
+        "title": "More widgets",
+        "description": "Hidden widgets stay here until you add them back.",
+        "empty": "All available widgets are on your dashboard."
+      }
     }
   },
   "files": {
@@ -2233,10 +2286,10 @@
       "confirmDescription": "Selected items will be moved to Trash and can be restored later."
     },
     "conflicts": {
-      "title": "File already exists",
-      "description": "A file with this name already exists in this folder. Upload as {{newName}}?",
-      "overwriteDescription": "A file with this name already exists in this folder. Replace it, or upload as {{newName}}?",
-      "rename": "Upload as {{newName}}",
+      "title": "Name conflict",
+      "description": "An item with this name already exists in this folder. Use {{newName}} instead?",
+      "overwriteDescription": "An item with this name already exists in this folder. Replace it, or use {{newName}} instead?",
+      "rename": "Use {{newName}}",
       "overwrite": "Replace",
       "skip": "Skip",
       "skipAll": "Skip all"
@@ -3221,9 +3274,7 @@
     "loading": "Please wait, loading sign-in details...",
     "request": {
       "version": "Version {{version}}",
-      "versionWithDevice": "Version {{version}} on {{deviceName}}",
-      "origin": "Request from {{origin}}",
-      "localOrigin": "this device"
+      "versionWithDevice": "Version {{version}} on {{deviceName}}"
     },
     "access": {
       "title": "If you allow, this application can:",

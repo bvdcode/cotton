@@ -33,7 +33,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetFilePreview([FromRoute] string previewHashEncryptedHex)
         {
             await _previewGate.WaitAsync(HttpContext.RequestAborted);
-            var gateLease = new PreviewGateLease(_previewGate);
+            PreviewGateLease gateLease = new PreviewGateLease(_previewGate);
             try
             {
                 Response.RegisterForDispose(gateLease);
@@ -52,7 +52,10 @@ namespace Cotton.Server.Controllers
                 string decryptedPreviewHash;
                 try
                 {
-                    decryptedPreviewHash = Hasher.ToHexStringHash(_crypto.Decrypt(token.EncryptedHash));
+                    byte[] decryptedHash = await _crypto.DecryptAsync(
+                        token.EncryptedHash,
+                        HttpContext.RequestAborted);
+                    decryptedPreviewHash = Hasher.ToHexStringHash(decryptedHash);
                 }
                 catch (Exception ex)
                 {

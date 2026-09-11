@@ -18,7 +18,7 @@ import {
   Person,
 } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState, type MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { UserRole, useAuth } from "../../../features/auth";
@@ -27,10 +27,7 @@ import { storageQuotaApi } from "../../../shared/api/storageQuotaApi";
 import { useLocalPreferencesStore } from "../../../shared/store/localPreferencesStore";
 import { useServerSettings } from "../../../shared/store/useServerSettings";
 import { formatBytes } from "../../../shared/utils/formatBytes";
-import {
-  buildBugReportUrl,
-  initializeBugReportConsoleCapture,
-} from "./bugReportPrefill";
+import { buildBugReportUrl } from "./bugReportPrefill";
 import { UserMenuAppDownloads } from "./UserMenuAppDownloads";
 
 const STORAGE_QUOTA_STALE_TIME_MS = 60_000;
@@ -85,10 +82,6 @@ export const UserMenu = () => {
     enabled: Boolean(user),
     staleTime: STORAGE_QUOTA_STALE_TIME_MS,
   });
-
-  useEffect(() => {
-    initializeBugReportConsoleCapture();
-  }, []);
 
   const getAvatarInitials = (args: {
     firstName?: string | null;

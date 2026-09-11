@@ -15,7 +15,6 @@ vi.mock("../store/authStore", () => ({
   getRefreshEnabled: () => refreshEnabledMock(),
   useAuthStore: {
     getState: () => ({
-      hydrated: true,
       refreshEnabled: refreshEnabledMock(),
       logoutLocal: logoutLocalMock,
     }),
@@ -47,9 +46,13 @@ afterEach(() => {
 });
 
 describe("authApi.login", () => {
-  it("posts credentials and stores the returned access token", async () => {
+  it("returns the authenticated user without a follow-up request", async () => {
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
-      data: { accessToken: "access-token" },
+      data: {
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+        user: baseUserResponse,
+      },
     });
     const credentials = {
       username: "alice",
@@ -58,10 +61,10 @@ describe("authApi.login", () => {
       trustDevice: true,
     };
 
-    const token = await authApi.login(credentials);
+    const user = await authApi.login(credentials);
 
     expect(post).toHaveBeenCalledWith("auth/login", credentials);
-    expect(token).toBe("access-token");
+    expect(user).toMatchObject({ id: "user-1", username: "alice" });
     expect(getAccessToken()).toBe("access-token");
   });
 });
@@ -146,16 +149,23 @@ describe("authApi.me", () => {
   });
 });
 
-describe("authApi.refresh", () => {
-  it("can explicitly refresh after an interactive redirect when local refresh is disabled", async () => {
+describe("authApi.restoreSession", () => {
+  it("restores the access token and user in one request", async () => {
     refreshEnabledMock.mockReturnValue(false);
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
-      data: { accessToken: "oidc-token" },
+      data: {
+        accessToken: "oidc-token",
+        refreshToken: "refresh-token",
+        user: baseUserResponse,
+      },
     });
 
     await expect(
-      authApi.refresh({ allowWhenRefreshDisabled: true }),
-    ).resolves.toBe("oidc-token");
+      authApi.restoreSession({ allowWhenRefreshDisabled: true }),
+    ).resolves.toEqual({
+      kind: "authenticated",
+      user: expect.objectContaining({ id: "user-1", username: "alice" }),
+    });
 
     expect(post).toHaveBeenCalledWith(
       "auth/refresh",
@@ -163,6 +173,46 @@ describe("authApi.refresh", () => {
       { withCredentials: true },
     );
     expect(getAccessToken()).toBe("oidc-token");
+  });
+
+  it("rejects an incomplete successful response as a contract error", async () => {
+    vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: { accessToken: "incomplete-token" },
+    });
+
+    await expect(authApi.restoreSession()).rejects.toThrow();
+    expect(getAccessToken()).toBeNull();
+  });
+
+  it("returns anonymous only when the refresh session is absent", async () => {
+    vi.spyOn(httpClient, "post").mockRejectedValue({
+      config: { url: "auth/refresh" },
+      response: { status: 404, data: {} },
+      isAxiosError: true,
+      message: "Request failed",
+      name: "AxiosError",
+      toJSON: () => ({}),
+    });
+
+    await expect(authApi.restoreSession()).resolves.toEqual({
+      kind: "anonymous",
+    });
+  });
+
+  it("propagates temporary refresh failures", async () => {
+    vi.spyOn(httpClient, "post").mockRejectedValue({
+      config: { url: "auth/refresh" },
+      response: { status: 500, data: {} },
+      isAxiosError: true,
+      message: "Request failed",
+      name: "AxiosError",
+      toJSON: () => ({}),
+    });
+
+    await expect(authApi.restoreSession()).rejects.toMatchObject({
+      response: { status: 500 },
+    });
+    expect(logoutLocalMock).not.toHaveBeenCalled();
   });
 });
 

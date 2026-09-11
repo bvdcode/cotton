@@ -13,7 +13,7 @@ namespace Cotton.Benchmark.Reporting
 
         public string Format(IBenchmarkResult result)
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine(new string('-', NameWidth + ValueWidth + 7));
             sb.AppendLine($"| {result.BenchmarkName.PadRight(NameWidth)} | {"Status".PadRight(ValueWidth)} |");
@@ -43,7 +43,7 @@ namespace Cotton.Benchmark.Reporting
 
         public string FormatCollection(IEnumerable<IBenchmarkResult> results)
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine(new string('=', 70));
             sb.AppendLine("                    BENCHMARK RESULTS SUMMARY                   ");
@@ -55,9 +55,9 @@ namespace Cotton.Benchmark.Reporting
             }
 
             // Summary statistics
-            var successCount = results.Count(r => r.IsSuccess);
-            var failureCount = results.Count(r => !r.IsSuccess);
-            var totalTime = TimeSpan.FromMilliseconds(results.Sum(r => r.TotalDuration.TotalMilliseconds));
+            int successCount = results.Count(r => r.IsSuccess);
+            int failureCount = results.Count(r => !r.IsSuccess);
+            TimeSpan totalTime = TimeSpan.FromMilliseconds(results.Sum(r => r.TotalDuration.TotalMilliseconds));
 
             sb.AppendLine();
             sb.AppendLine(new string('=', 70));

@@ -76,7 +76,7 @@ namespace Cotton.Server.Services
                 new CustomLookupTestInput(string.Empty, "empty IP"),
             };
 
-            var failureDetails = new List<string>(attempts.Length);
+            List<string> failureDetails = new List<string>(attempts.Length);
             foreach (CustomLookupTestInput? attemptInput in attempts)
             {
                 CustomLookupAttemptResult attempt = await TryLookupWithCustomHttpAsync(
@@ -128,9 +128,9 @@ namespace Cotton.Server.Services
                 }
 
                 GeoFieldMatch match = FindGeoFields(json);
-                var country = match.Country;
-                var region = match.Region;
-                var city = match.City;
+                string? country = match.Country;
+                string? region = match.Region;
+                string? city = match.City;
 
                 if (country is null && region is null && city is null)
                 {
@@ -174,7 +174,7 @@ namespace Cotton.Server.Services
 
         private static GeoFieldMatch FindGeoFields(JsonElement element)
         {
-            var match = new GeoFieldMatch();
+            GeoFieldMatch match = new GeoFieldMatch();
             FillGeoFields(element, match);
             return match;
         }
@@ -209,28 +209,28 @@ namespace Cotton.Server.Services
                 return;
             }
 
-            var name = propertyName.Replace("_", string.Empty, StringComparison.OrdinalIgnoreCase)
+            string name = propertyName.Replace("_", string.Empty, StringComparison.OrdinalIgnoreCase)
                 .Replace("-", string.Empty, StringComparison.OrdinalIgnoreCase);
 
-            var text = value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
+            string? text = value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
             if (string.IsNullOrWhiteSpace(text))
             {
                 return;
             }
 
-            var countryPriority = GetCountryPriority(name);
+            int countryPriority = GetCountryPriority(name);
             if (countryPriority > 0 && match.TrySetCountry(text, countryPriority))
             {
                 return;
             }
 
-            var regionPriority = GetRegionPriority(name);
+            int regionPriority = GetRegionPriority(name);
             if (regionPriority > 0 && match.TrySetRegion(text, regionPriority))
             {
                 return;
             }
 
-            var cityPriority = GetCityPriority(name);
+            int cityPriority = GetCityPriority(name);
             if (cityPriority > 0)
             {
                 match.TrySetCity(text, cityPriority);
@@ -239,7 +239,7 @@ namespace Cotton.Server.Services
 
         private static bool ContainsAny(string source, params string[] candidates)
         {
-            foreach (var candidate in candidates)
+            foreach (string candidate in candidates)
             {
                 if (source.Contains(candidate, StringComparison.OrdinalIgnoreCase))
                 {

@@ -2,11 +2,15 @@ import {
   httpClient,
   setAccessToken,
   clearAccessToken,
-  refreshAccessToken,
+  restoreAuthSession,
+  parseValidated,
 } from "./httpClient";
-import { UserRole, type User } from "../../features/auth/types";
-import type { BaseDto } from "./types";
-import { buildPreviewUrl } from "./previewUrl";
+import type { RestoreResult, User } from "../../features/auth/types";
+import {
+  authSessionResponseSchema,
+  mapUserResponse,
+  type UserInfoResponse,
+} from "./authSession";
 
 interface LoginRequest {
   username: string;
@@ -17,11 +21,7 @@ interface LoginRequest {
   trustDevice?: boolean;
 }
 
-interface LoginResponse {
-  accessToken: string;
-}
-
-interface RefreshOptions {
+interface RestoreSessionOptions {
   allowWhenRefreshDisabled?: boolean;
 }
 
@@ -39,67 +39,17 @@ interface UpdateProfileRequest {
   birthDate?: string | null;
 }
 
-/**
- * User info response matching backend UserDto : BaseDto<Guid>
- */
-interface UserInfoResponse extends BaseDto<string> {
-  username: string;
-  email?: string | null;
-  isEmailVerified?: boolean;
-  role: UserRole;
-  displayName?: string;
-  avatarHashEncryptedHex?: string | null;
-
-  preferences?: Record<string, string>;
-
-  firstName?: string | null;
-  lastName?: string | null;
-  birthDate?: string | null;
-
-  // 2FA (TOTP)
-  isTotpEnabled?: boolean;
-  totpEnabledAt?: string | null;
-  totpFailedAttempts?: number;
-}
-
-const buildAvatarUrl = (response: UserInfoResponse): string | undefined => {
-  const avatarHashEncryptedHex = response.avatarHashEncryptedHex?.trim();
-  return avatarHashEncryptedHex
-    ? buildPreviewUrl(avatarHashEncryptedHex)
-    : undefined;
-};
-
-const mapUserResponse = (response: UserInfoResponse): User => {
-  return {
-    id: response.id,
-    role: response.role,
-    username: response.username,
-    email: response.email ?? null,
-    isEmailVerified: response.isEmailVerified ?? false,
-    displayName: response.displayName ?? response.username,
-    pictureUrl: buildAvatarUrl(response),
-    avatarHashEncryptedHex: response.avatarHashEncryptedHex ?? null,
-    preferences: response.preferences,
-    firstName: response.firstName ?? null,
-    lastName: response.lastName ?? null,
-    birthDate: response.birthDate ?? null,
-    createdAt: response.createdAt,
-    updatedAt: response.updatedAt,
-    isTotpEnabled: response.isTotpEnabled,
-    totpEnabledAt: response.totpEnabledAt ?? null,
-    totpFailedAttempts: response.totpFailedAttempts ?? 0,
-  };
-};
-
 export const authApi = {
-  login: async (credentials: LoginRequest): Promise<string> => {
-    const response = await httpClient.post<LoginResponse>(
-      "auth/login",
-      credentials,
+  login: async (credentials: LoginRequest): Promise<User> => {
+    const url = "auth/login";
+    const response = await httpClient.post<object>(url, credentials);
+    const session = parseValidated(
+      url,
+      response.data,
+      authSessionResponseSchema,
     );
-    const token = response.data.accessToken;
-    setAccessToken(token);
-    return token;
+    setAccessToken(session.accessToken);
+    return mapUserResponse(session.user);
   },
 
   /**
@@ -124,15 +74,20 @@ export const authApi = {
     await httpClient.post("auth/logout");
   },
 
-  /**
-   * Tries to refresh access token using backend refresh cookie.
-   * Safe to call on app startup; errors are swallowed.
-   * Returns token if successful, null otherwise.
-   */
-  refresh: async (options: RefreshOptions = {}): Promise<string | null> => {
-    return await refreshAccessToken({
+  restoreSession: async (
+    options: RestoreSessionOptions = {},
+  ): Promise<RestoreResult> => {
+    const restored = await restoreAuthSession({
       allowWhenRefreshDisabled: options.allowWhenRefreshDisabled,
     });
+    if (!restored) {
+      return { kind: "anonymous" };
+    }
+
+    return {
+      kind: "authenticated",
+      user: mapUserResponse(restored.user),
+    };
   },
 
   getWebDavToken: async (): Promise<string> => {

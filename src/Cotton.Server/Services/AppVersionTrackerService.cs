@@ -116,7 +116,7 @@ namespace Cotton.Server.Services
                     latestVersion.Version);
             }
 
-            var currentVersionRecord = new AppVersion
+            AppVersion currentVersionRecord = new AppVersion
             {
                 Version = currentVersion,
             };
@@ -181,7 +181,7 @@ namespace Cotton.Server.Services
 
             INotificationsProvider notifications = serviceProvider.GetRequiredService<INotificationsProvider>();
             string releaseNotes = NotificationTemplates.FormatReleaseNotes(latestRelease.Notes);
-            var metadata = new Dictionary<string, string>
+            Dictionary<string, string> metadata = new Dictionary<string, string>
             {
                 ["kind"] = "app-update-available",
                 ["currentVersion"] = currentVersion,

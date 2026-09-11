@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using EasyExtensions.Models.Dto;
 using System;
 
 namespace Cotton.Auth
@@ -8,13 +9,8 @@ namespace Cotton.Auth
     /// <summary>
     /// Browser-facing details for an app-code authorization request.
     /// </summary>
-    public class AppCodeDetailsDto
+    public class AppCodeDetailsDto : BaseDto<Guid>
     {
-        /// <summary>
-        /// Gets or sets the authorization request id.
-        /// </summary>
-        public Guid Id { get; set; }
-
         /// <summary>
         /// Gets or sets the name of the requesting application.
         /// </summary>

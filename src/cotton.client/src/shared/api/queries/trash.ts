@@ -27,12 +27,14 @@ export const useTrashNodeMetaQuery = (
   return useQuery<TrashNodeMeta>({
     queryKey: queryKeys.trash.meta(nodeId ?? ""),
     queryFn: async () => {
-      const id = nodeId as string;
+      if (!nodeId) {
+        throw new Error("Trash node metadata requires a node id");
+      }
       const [node, ancestors] = await Promise.all([
-        nodesApi.getNode(id),
+        nodesApi.getNode(nodeId),
         isRoot
           ? Promise.resolve<NodeDto[]>([])
-          : nodesApi.getAncestors(id, { nodeType: "trash" }),
+          : nodesApi.getAncestors(nodeId, { nodeType: "trash" }),
       ]);
 
       return { node, ancestors };
@@ -63,13 +65,17 @@ export const useTrashChildrenQuery = (options: {
       pageSize,
       depth,
     }),
-    queryFn: () =>
-      nodesApi.getChildren(nodeId as string, {
+    queryFn: () => {
+      if (!nodeId) {
+        throw new Error("Trash children query requires a node id");
+      }
+      return nodesApi.getChildren(nodeId, {
         nodeType: "trash",
         page,
         pageSize,
         depth,
-      }),
+      });
+    },
     enabled: enabled && !!nodeId,
   });
 };

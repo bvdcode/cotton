@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { Guid } from "../../../api/layoutsApi";
-import { filesApi } from "../../../api/filesApi";
-import { uploadBlobToChunks } from "../../../upload";
+import type { NodeFileManifestDto } from "../../../api/nodesApi";
+import { isFileEncrypted } from "../../../crypto";
+import { uploadFileToNode } from "../../../upload/uploadFileToNode";
 import { useServerSettings } from "../../../store/useServerSettings";
 import { useTranslation } from "react-i18next";
 
@@ -11,6 +12,7 @@ export const useTextFileSave = (
   originalContent: string,
   setOriginalContent: (content: string) => void,
   onSaved?: () => void,
+  sourceFile?: NodeFileManifestDto | null,
 ) => {
   const { t } = useTranslation(["files"]);
   const { data: serverSettings } = useServerSettings();
@@ -18,28 +20,24 @@ export const useTextFileSave = (
   const [error, setError] = useState<string | null>(null);
 
   const handleSave = async (content: string) => {
-    if (!content || content === originalContent || !serverSettings) return;
+    if (content === originalContent || !serverSettings) return;
 
     try {
       setSaving(true);
       setError(null);
 
-      const blob = new Blob([content], { type: "text/plain" });
-      const { chunkHashes, fileHash } = await uploadBlobToChunks({
-        blob,
-        fileName,
+      const file = new File([content], fileName, {
+        type: sourceFile?.contentType || "text/plain",
+      });
+      await uploadFileToNode({
+        file,
+        nodeId: sourceFile?.nodeId ?? nodeFileId,
+        replaceNodeFileId: nodeFileId,
         server: {
           maxChunkSizeBytes: serverSettings.maxChunkSizeBytes,
           supportedHashAlgorithm: serverSettings.supportedHashAlgorithm,
         },
-      });
-
-      await filesApi.updateFileContent(nodeFileId, {
-        chunkHashes,
-        hash: fileHash,
-        contentType: "text/plain",
-        name: fileName,
-        nodeId: nodeFileId,
+        encrypt: isFileEncrypted(sourceFile?.metadata),
       });
 
       setOriginalContent(content);

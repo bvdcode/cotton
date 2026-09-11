@@ -1465,6 +1465,7 @@
   "common": {
     "languageName": "中文",
     "switchToThisLanguage": "切换到中文",
+    "language": "语言",
     "placeholder": "—",
     "yes": "是",
     "no": "否",
@@ -1489,24 +1490,24 @@
       "durationDays_one": "{{count}} 天",
       "durationDays_other": "{{count}} 天",
       "lessThanMinute": "不到一分钟",
-      "secondsAgo_few": "{{count}} seconds ago",
-      "secondsAgo_many": "{{count}} seconds ago",
-      "minutesAgo_few": "{{count}} minutes ago",
-      "minutesAgo_many": "{{count}} minutes ago",
-      "hoursAgo_few": "{{count}} hours ago",
-      "hoursAgo_many": "{{count}} hours ago",
-      "daysAgo_few": "{{count}} days ago",
-      "daysAgo_many": "{{count}} days ago",
-      "monthsAgo_few": "{{count}} months ago",
-      "monthsAgo_many": "{{count}} months ago",
-      "yearsAgo_few": "{{count}} years ago",
-      "yearsAgo_many": "{{count}} years ago",
+      "secondsAgo_few": "{{count}} 秒前",
+      "secondsAgo_many": "{{count}} 秒前",
+      "minutesAgo_few": "{{count}} 分钟前",
+      "minutesAgo_many": "{{count}} 分钟前",
+      "hoursAgo_few": "{{count}} 小时前",
+      "hoursAgo_many": "{{count}} 小时前",
+      "daysAgo_few": "{{count}} 天前",
+      "daysAgo_many": "{{count}} 天前",
+      "monthsAgo_few": "{{count}} 个月前",
+      "monthsAgo_many": "{{count}} 个月前",
+      "yearsAgo_few": "{{count}} 年前",
+      "yearsAgo_many": "{{count}} 年前",
       "durationMinutes_few": "{{count}} min",
       "durationMinutes_many": "{{count}} min",
-      "durationHours_few": "{{count}} hours",
-      "durationHours_many": "{{count}} hours",
-      "durationDays_few": "{{count}} days",
-      "durationDays_many": "{{count}} days"
+      "durationHours_few": "{{count}} 小时",
+      "durationHours_many": "{{count}} 小时",
+      "durationDays_few": "{{count}} 天",
+      "durationDays_many": "{{count}} 天"
     },
     "actions": {
       "confirm": "确认",
@@ -1523,14 +1524,15 @@
       "pause": "暂停",
       "copied": "已复制！",
       "reload": "刷新",
-      "versions": "Versions"
+      "retry": "重试",
+      "versions": "版本"
     },
     "errors": {
-      "unexpectedTitle": "出错了",
-      "unexpectedDescription": "发生了意外错误，请刷新页面。",
-      "showDetails": "显示详情",
-      "hideDetails": "隐藏详情",
-      "schemaValidationFailed": "服务器返回了意外的数据"
+      "unexpectedTitle": "无法显示此页面",
+      "unexpectedDescription": "显示页面时发生意外错误。如果问题仍然存在，请重试或刷新页面。",
+      "schemaValidationFailed": "服务器返回了意外的数据",
+      "serverUnavailableTitle": "服务器不可用",
+      "serverUnavailableDescription": "Cotton 无法连接到服务器。请检查连接后重试。"
     },
     "userMenu": {
       "profile": "个人资料",
@@ -1674,9 +1676,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "正在加载登录提供商...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "使用 {{provider}} 继续",
       "errors": {
         "startFailed": "无法开始登录。"
       }
@@ -2023,24 +2025,24 @@
         "cancel": "暂不"
       }
     },
-    "ageYears_few": "{{count}} years",
-    "ageYears_many": "{{count}} years",
+    "ageYears_few": "{{count}} 岁",
+    "ageYears_many": "{{count}} 岁",
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "已关联账号",
+      "description": "将外部身份提供商关联到此账号。",
+      "loading": "正在加载已关联账号...",
+      "empty": "尚未关联任何外部账号。",
+      "link": "关联 {{provider}}",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "取消关联",
+        "title": "取消关联 {{provider}}？",
+        "description": "重新关联前，你将无法再使用此提供商登录。",
+        "confirm": "取消关联",
+        "cancel": "取消"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
+        "loadFailed": "无法加载已关联账号。",
+        "unlinkFailed": "无法取消关联此账号。",
         "linkFailed": "无法开始关联账号。"
       }
     }
@@ -2332,6 +2334,57 @@
         "title": "最近的文件",
         "empty": "暂无最近文件"
       }
+    },
+    "dashboard": {
+      "title": "您的空间",
+      "actions": {
+        "customize": "自定义",
+        "done": "完成",
+        "size": "尺寸 {{size}}",
+        "moveUp": "上移",
+        "moveDown": "下移",
+        "hide": "隐藏小组件",
+        "retry": "重试"
+      },
+      "widgets": {
+        "overview": "存储概览",
+        "pinnedFolders": "固定文件夹",
+        "quickAccess": "快速访问",
+        "recentFiles": "最近文件",
+        "recentImages": "最近照片",
+        "recentVideos": "最近视频",
+        "recentDocuments": "最近文档",
+        "recentAudio": "最近音频",
+        "recentOther": "其他最近文件"
+      },
+      "overview": {
+        "ofQuota": "共 {{quota}}",
+        "storageUsage": "存储使用情况",
+        "available": "可用"
+      },
+      "quickAccess": {
+        "files": "文件",
+        "search": "搜索",
+        "trash": "回收站"
+      },
+      "recent": {
+        "empty": "没有匹配的最近文件",
+        "loadFailed": "无法加载最近文件。"
+      },
+      "pinnedFolders": {
+        "folder": "文件夹",
+        "pin": "固定到主页",
+        "unpin": "从主页取消固定",
+        "empty": "尚无固定文件夹",
+        "emptyHint": "可在“文件”中通过文件夹操作进行固定。",
+        "limitReached": "最多可以固定 {{count}} 个文件夹。",
+        "loadFailed": "无法加载固定文件夹。"
+      },
+      "library": {
+        "title": "更多小组件",
+        "description": "隐藏的小组件会保留在这里，直到您重新添加。",
+        "empty": "所有可用小组件都已显示在主页。"
+      }
     }
   },
   "files": {
@@ -2390,8 +2443,8 @@
         "someItemsSkipped_other": "已跳过 {{count}} 项无法读取的内容。",
         "vaultLocked": "加密上传需要先解锁加密保险库。",
         "details": "详情",
-        "someItemsSkipped_few": "Skipped {{count}} items that could not be read.",
-        "someItemsSkipped_many": "Skipped {{count}} items that could not be read."
+        "someItemsSkipped_few": "已跳过 {{count}} 项无法读取的内容。",
+        "someItemsSkipped_many": "已跳过 {{count}} 项无法读取的内容。"
       },
       "errors": {
         "dropFailed": "处理拖放项目失败，请重试。",
@@ -2445,10 +2498,10 @@
       "confirmDescription": "所选项目将被移到回收站，可在之后还原。"
     },
     "conflicts": {
-      "title": "文件已存在",
-      "description": "此文件夹中已存在同名文件。改为以 {{newName}} 上传？",
-      "overwriteDescription": "此文件夹中已存在同名文件。替换它，还是改为以 {{newName}} 上传？",
-      "rename": "以 {{newName}} 上传",
+      "title": "名称冲突",
+      "description": "此文件夹中已存在同名项目。是否改用 {{newName}}？",
+      "overwriteDescription": "此文件夹中已存在同名项目。替换它，还是改用 {{newName}}？",
+      "rename": "使用 {{newName}}",
       "overwrite": "替换",
       "skip": "跳过",
       "skipAll": "全部跳过"
@@ -2618,24 +2671,24 @@
         "decryptExistingComplete_other": "已解密 {{count}} 个文件。",
         "decryptExistingFailed_one": "无法解密 {{count}} 个文件。请查看任务面板。",
         "decryptExistingFailed_other": "无法解密 {{count}} 个文件。请查看任务面板。",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "仅扫描了部分文件夹树。某些文件可能仍未加密；此批次完成后，请从该文件夹重新运行加密。",
+        "decryptExistingScanIncomplete": "仅扫描了部分文件夹树。某些加密文件可能仍然存在；此批次完成后，请从该文件夹重新运行解密。"
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
-      "versionLabel": "Version {{version}}",
-      "current": "Current",
-      "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "title": "{{name}} 的版本",
+      "empty": "暂无历史版本。",
+      "loadFailed": "无法加载版本。",
+      "restoreFailed": "无法恢复版本。",
+      "deleteFailed": "无法删除版本。",
+      "downloadFailed": "无法准备版本下载。",
+      "versionLabel": "版本 {{version}}",
+      "current": "当前",
+      "original": "原始",
+      "restoreConfirmTitle": "恢复此版本？",
+      "restoreConfirmDescription": "当前文件内容将保存为新版本，然后版本 {{version}} 将成为当前版本。",
+      "deleteConfirmTitle": "删除此版本？",
+      "deleteConfirmDescription": "版本 {{version}} 将被删除。当前文件不会更改。"
     }
   },
   "tasks": {
@@ -2771,7 +2824,7 @@
       "databaseBackup": "数据库备份",
       "storageStatistics": "存储统计",
       "securityDiagnostics": "安全检查",
-      "identityProviders": "Identity providers"
+      "identityProviders": "身份提供商"
     },
     "roles": {
       "user": "用户",
@@ -2961,19 +3014,19 @@
         "storageType": "存储后端"
       },
       "chunkSize": {
-        "title": "Upload chunk size",
-        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
-        "ariaLabel": "Upload chunk size"
+        "title": "上传分块大小",
+        "description": "控制浏览器在每次上传请求中发送的数据量。较大的分块可减少高速局域网中的请求开销。",
+        "ariaLabel": "上传分块大小"
       },
       "pipeline": {
-        "title": "Storage pipeline",
-        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "title": "存储处理流程",
+        "description": "调整新分块写入存储前的压缩和加密方式。",
         "fields": {
-          "compressionLevel": "Compression level",
-          "cipherChunkSize": "Encryption block size",
-          "encryptionThreads": "Encryption threads"
+          "compressionLevel": "压缩级别",
+          "cipherChunkSize": "加密块大小",
+          "encryptionThreads": "加密线程"
         },
-        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+        "compressionHelp": "允许范围：{{min}} 到 {{max}}。默认值为 1。"
       },
       "quota": {
         "title": "默认用户配额",
@@ -3022,8 +3075,8 @@
         "templateNodeIdInvalid": "请输入有效的文件夹节点 ID。",
         "quotaSaveFailed": "保存默认用户配额失败。",
         "templateSaveFailed": "保存默认文件模板失败。",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
-        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
+        "chunkSizeSaveFailed": "无法保存上传分块大小。",
+        "storagePipelineSaveFailed": "无法保存存储处理流程设置。"
       }
     },
     "notificationsSettings": {
@@ -3204,9 +3257,9 @@
         "masterKey": "主密钥",
         "memory": "进程内存暴露",
         "runtime": "运行时信息",
-        "containerBoundary": "Container boundary",
-        "passed": "Protections in place",
-        "capabilities": "Hardware"
+        "containerBoundary": "容器边界",
+        "passed": "已启用的保护措施",
+        "capabilities": "硬件"
       },
       "risks": {
         "empty": "当前服务端检查未发现任何警告。"
@@ -3224,22 +3277,22 @@
         "sysPtrace": "CAP_SYS_PTRACE",
         "os": "操作系统",
         "container": "检测到容器",
-        "tempDirectoryPath": "Temp directory",
-        "tempDirectoryWritable": "Temp directory writable",
-        "tempDirectoryError": "Temp directory error",
+        "tempDirectoryPath": "临时目录",
+        "tempDirectoryWritable": "临时目录可写",
+        "tempDirectoryError": "临时目录错误",
         "euid": "有效 UID",
         "noNewPrivileges": "禁止获取新特权",
         "seccomp": "Seccomp 模式",
         "capabilities": "有效能力",
-        "rootFilesystemReadOnly": "Read-only root filesystem",
-        "dockerSocketMounted": "Docker socket mounted",
-        "hostPidNamespace": "Host PID namespace",
-        "procOneCommandLine": "PID 1 command",
-        "coreDumpLimit": "Core dump limit",
-        "corePattern": "Core pattern",
-        "appArmorProfile": "AppArmor profile",
-        "selinuxContext": "SELinux context",
-        "selinuxEnforcing": "SELinux enforcing"
+        "rootFilesystemReadOnly": "只读根文件系统",
+        "dockerSocketMounted": "已挂载 Docker 套接字",
+        "hostPidNamespace": "主机 PID 命名空间",
+        "procOneCommandLine": "PID 1 命令",
+        "coreDumpLimit": "内存转储限制",
+        "corePattern": "内存转储模式",
+        "appArmorProfile": "AppArmor 配置文件",
+        "selinuxContext": "SELinux 上下文",
+        "selinuxEnforcing": "SELinux 强制模式"
       },
       "values": {
         "unknown": "未知",
@@ -3259,62 +3312,62 @@
         "seccomp-disabled": "内核系统调用面比 Docker 常规生产基线更宽，容器逃逸漏洞将拥有更大的活动空间。",
         "running-as-root": "远程代码执行将在容器内以 root 身份运行，从而对挂载卷和辅助进程造成更大破坏。",
         "process-hardening-failed": "Cotton 已请求进程加固，但进程仍未启用预期的转储或 ptrace 防护。",
-        "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
-        "temp-directory-not-writable": "Cotton cannot write temporary files. Database dump/restore, S3 upload spooling, and preview tooling can fail even when the persistent storage volume is healthy.",
-        "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
-        "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
-        "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
-        "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
-        "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
+        "db-integrity-unsigned-rows": "未签名的受保护行可直接在 PostgreSQL 中修改，而 Cotton 无法在读取时检测到篡改。",
+        "temp-directory-not-writable": "Cotton 无法写入临时文件。即使持久存储正常，数据库导出与恢复、S3 上传暂存和预览工具也可能失败。",
+        "root-filesystem-writable": "可写的容器根文件系统为受攻击代码提供了更多位置来存放工具、修改运行时文件或持续存在到容器重建。",
+        "docker-socket-mounted": "Docker 套接字允许 Web 容器内的代码创建特权容器、挂载主机路径并接管主机。",
+        "host-pid-namespace": "共享主机 PID 命名空间会通过 procfs 暴露主机进程，使针对进程内存的攻击更容易。",
+        "mandatory-access-control-unconfined": "如果没有强制执行的 AppArmor 或 SELinux 配置文件，容器逃逸或内核相关漏洞需要跨越的策略边界会更少。",
+        "core-dumps-enabled": "内存转储是进程内存的快照。如果 Cotton 在密钥仍驻留内存时崩溃，转储可能保留主密钥或已解密的配置。"
       },
       "labels": {
-        "whatItMeans": "What it means",
-        "impact": "Impact",
-        "howToFix": "How to fix",
-        "guardsAgainst": "What this guards against",
-        "note": "Note"
+        "whatItMeans": "这意味着什么",
+        "impact": "影响",
+        "howToFix": "如何修复",
+        "guardsAgainst": "可防范的风险",
+        "note": "说明"
       },
       "fixes": {
-        "public-instance": "If this instance is not meant to be public, disable public/demo mode (unset COTTON_PUBLIC_INSTANCE) and restart.",
-        "master-key-from-environment": "Prefer unlocking via the /unlock page instead of COTTON_MASTER_KEY, or make sure the variable is not retained in deployment metadata or exposed to exec sessions.",
-        "admins-without-2fa": "Enable two-factor authentication (TOTP) for every admin account from Profile → Security.",
-        "dotnet-diagnostics-enabled": "Set DOTNET_EnableDiagnostics=0 (and COMPlus_EnableDiagnostics=0) in the container environment and restart.",
-        "process-dumpable": "Set COTTON_PROCESS_HARDENING=true (or use the official image defaults) so the process requests PR_SET_DUMPABLE=0 at startup.",
-        "sys-ptrace-capability": "Drop the CAP_SYS_PTRACE capability from the container (for example cap_drop: [ALL]).",
-        "new-privileges-allowed": "Run the container with no-new-privileges:true so the process cannot gain privileges through setuid binaries.",
-        "seccomp-disabled": "Run with a seccomp profile enabled (avoid seccomp=unconfined) to restrict the syscalls available to the process.",
-        "running-as-root": "Run the container as a non-root user; the official image runs as the unprivileged app user by default.",
-        "process-hardening-failed": "Process hardening was requested but could not be applied — check the container capabilities/permissions and the startup logs.",
-        "db-integrity-unsigned-rows": "Restore the affected rows from a trusted backup or run the required transition version before upgrading.",
-        "temp-directory-not-writable": "Mount writable scratch storage at /tmp. With read_only: true, add tmpfs: [\"/tmp\"] or bind-mount a fast writable disk at /tmp, then restart.",
-        "root-filesystem-writable": "Run the container with a read-only root filesystem (read_only: true), keep /app/files as the persistent writable volume, and mount writable scratch storage at /tmp.",
-        "docker-socket-mounted": "Do not mount the Docker socket (/var/run/docker.sock) into the container.",
-        "host-pid-namespace": "Do not share the host PID namespace (avoid pid: host) so the process cannot observe other host processes.",
-        "mandatory-access-control-unconfined": "Apply an AppArmor or SELinux profile to confine the process instead of running unconfined.",
-        "core-dumps-enabled": "Disable core dumps for the container (ulimits: core: 0) so secrets cannot leak into dump files."
+        "public-instance": "如果此实例不应公开，请禁用公开或演示模式（移除 COTTON_PUBLIC_INSTANCE）并重启。",
+        "master-key-from-environment": "建议通过 /unlock 解锁，而不是使用 COTTON_MASTER_KEY。否则，请确保该变量不会保留在部署元数据中，也不会暴露给 exec 会话。",
+        "admins-without-2fa": "在“个人资料 → 安全”中为每个管理员账号启用双重身份验证（TOTP）。",
+        "dotnet-diagnostics-enabled": "在容器环境中设置 DOTNET_EnableDiagnostics=0 和 COMPlus_EnableDiagnostics=0，然后重启。",
+        "process-dumpable": "设置 COTTON_PROCESS_HARDENING=true 或使用官方镜像默认值，使进程在启动时请求 PR_SET_DUMPABLE=0。",
+        "sys-ptrace-capability": "从容器中移除 CAP_SYS_PTRACE capability，例如使用 cap_drop: [ALL]。",
+        "new-privileges-allowed": "使用 no-new-privileges:true 运行容器，防止进程通过 setuid 二进制文件获得权限。",
+        "seccomp-disabled": "使用已启用的 seccomp 配置文件运行容器，并避免 seccomp=unconfined，以限制进程可用的系统调用。",
+        "running-as-root": "以非 root 用户运行容器。官方镜像默认使用无特权的 app 用户。",
+        "process-hardening-failed": "无法应用请求的进程加固。请检查容器的 capabilities、权限和启动日志。",
+        "db-integrity-unsigned-rows": "从可信备份恢复受影响的行，或在升级前运行所需的过渡版本。",
+        "temp-directory-not-writable": "在 /tmp 挂载可写的临时存储。使用 read_only: true 时，添加 tmpfs: [\"/tmp\"]，或在 /tmp 挂载快速可写磁盘，然后重启。",
+        "root-filesystem-writable": "使用只读根文件系统运行容器（read_only: true），保留 /app/files 作为持久可写卷，并在 /tmp 挂载临时存储。",
+        "docker-socket-mounted": "不要将 Docker 套接字（/var/run/docker.sock）挂载到容器中。",
+        "host-pid-namespace": "不要共享主机 PID 命名空间（避免 pid: host），以防进程观察主机上的其他进程。",
+        "mandatory-access-control-unconfined": "应用 AppArmor 或 SELinux 配置文件来限制进程，不要在无限制状态下运行。",
+        "core-dumps-enabled": "禁用容器的内存转储（ulimits: core: 0），防止密钥泄漏到转储文件中。"
       },
       "passed": {
-        "public-instance": "Public account creation disabled",
-        "master-key-from-environment": "Master key not exposed via the environment",
-        "admins-without-2fa": "All admins have two-factor enabled",
-        "dotnet-diagnostics-enabled": ".NET diagnostics disabled",
-        "process-hardening-failed": "Process hardening applied",
-        "process-dumpable": "Process is not dumpable",
-        "sys-ptrace-capability": "CAP_SYS_PTRACE not held",
-        "new-privileges-allowed": "no-new-privileges enforced",
-        "seccomp-disabled": "seccomp filtering enabled",
-        "running-as-root": "Running as a non-root user",
-        "temp-directory-not-writable": "OS temp directory writable",
-        "root-filesystem-writable": "Read-only root filesystem",
-        "docker-socket-mounted": "Docker socket not mounted",
-        "host-pid-namespace": "Isolated PID namespace",
-        "core-dumps-enabled": "Core dumps disabled",
-        "mandatory-access-control-unconfined": "AppArmor/SELinux confinement active"
+        "public-instance": "已禁用公开账号创建",
+        "master-key-from-environment": "主密钥未通过环境变量暴露",
+        "admins-without-2fa": "所有管理员均已启用双重身份验证",
+        "dotnet-diagnostics-enabled": "已禁用 .NET 诊断",
+        "process-hardening-failed": "已应用进程加固",
+        "process-dumpable": "无法转储进程",
+        "sys-ptrace-capability": "未持有 CAP_SYS_PTRACE",
+        "new-privileges-allowed": "已强制执行 no-new-privileges",
+        "seccomp-disabled": "已启用 seccomp 过滤",
+        "running-as-root": "以非 root 用户运行",
+        "temp-directory-not-writable": "操作系统临时目录可写",
+        "root-filesystem-writable": "根文件系统只读",
+        "docker-socket-mounted": "未挂载 Docker 套接字",
+        "host-pid-namespace": "PID 命名空间已隔离",
+        "core-dumps-enabled": "已禁用内存转储",
+        "mandatory-access-control-unconfined": "AppArmor 或 SELinux 限制已启用"
       },
       "capabilities": {
         "aesAcceleration": {
-          "title": "Hardware-accelerated encryption",
-          "body": "This processor exposes AES-NI / PCLMULQDQ instructions, so AES-GCM runs on dedicated hardware paths — encryption stays fast and adds little CPU overhead."
+          "title": "硬件加速加密",
+          "body": "此处理器支持 AES-NI 和 PCLMULQDQ 指令，因此 AES-GCM 使用专用硬件路径运行：加密速度快，且几乎不增加 CPU 开销。"
         }
       }
     },
@@ -3324,73 +3377,73 @@
       "inDevelopment": "用户组管理功能正在开发中。"
     },
     "identityProviders": {
-      "title": "Identity providers",
-      "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "title": "身份提供商",
+      "description": "配置用于登录和关联账号的 OpenID Connect 提供商。",
       "empty": "尚未配置身份提供商。",
       "actions": {
-        "create": "Add provider",
-        "edit": "Edit provider",
-        "delete": "Delete provider",
-        "refresh": "Refresh",
-        "openDocs": "Open OIDC setup guide",
-        "save": "Save provider",
-        "saving": "Saving..."
+        "create": "添加提供商",
+        "edit": "编辑提供商",
+        "delete": "删除提供商",
+        "refresh": "刷新",
+        "openDocs": "打开 OIDC 设置指南",
+        "save": "保存提供商",
+        "saving": "正在保存..."
       },
       "columns": {
-        "name": "Provider",
-        "issuer": "Issuer",
-        "status": "Status",
-        "accountCreation": "Account creation",
-        "scopes": "Scopes",
-        "domains": "Domains",
-        "actions": "Actions"
+        "name": "提供商",
+        "issuer": "颁发者",
+        "status": "状态",
+        "accountCreation": "账号创建",
+        "scopes": "范围",
+        "domains": "域名",
+        "actions": "操作"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled",
-        "allowed": "Allowed",
-        "blocked": "Blocked"
+        "enabled": "已启用",
+        "disabled": "已禁用",
+        "allowed": "允许",
+        "blocked": "已阻止"
       },
       "fields": {
-        "name": "Name",
-        "slug": "Slug",
-        "redirectUrl": "Redirect URL",
-        "issuer": "Issuer URL",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "scopes": "Scopes",
-        "allowedEmailDomains": "Allowed email domains",
-        "defaultRole": "Default role",
-        "isEnabled": "Enable sign-in with this provider",
-        "allowAccountCreation": "Allow this provider to create new accounts",
-        "requireVerifiedEmail": "Require verified email for account creation",
-        "syncProfile": "Sync profile names on sign-in",
-        "syncAvatar": "Import provider avatar when the user has no avatar",
-        "clearClientSecret": "Clear saved client secret"
+        "name": "名称",
+        "slug": "标识符",
+        "redirectUrl": "重定向 URL",
+        "issuer": "颁发者 URL",
+        "clientId": "客户端 ID",
+        "clientSecret": "客户端密钥",
+        "scopes": "范围",
+        "allowedEmailDomains": "允许的电子邮件域名",
+        "defaultRole": "默认角色",
+        "isEnabled": "启用通过此提供商登录",
+        "allowAccountCreation": "允许此提供商创建新账号",
+        "requireVerifiedEmail": "创建账号时要求已验证的电子邮件",
+        "syncProfile": "登录时同步个人资料名称",
+        "syncAvatar": "用户没有头像时导入提供商头像",
+        "clearClientSecret": "清除已保存的客户端密钥"
       },
       "help": {
-        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
-        "redirectUrl": "Register this exact callback URL in the provider application.",
-        "clientSecret": "Leave empty if this provider uses a public client.",
-        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
-        "scopes": "Separate scopes with spaces or commas. openid is always required.",
-        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+        "slug": "留空即可根据提供商名称生成标识符。现有标识符不会更改。",
+        "redirectUrl": "在提供商应用中注册此精确的回调 URL。",
+        "clientSecret": "如果此提供商使用公共客户端，请留空。",
+        "clientSecretConfigured": "已保存密钥。输入新密钥即可替换。",
+        "scopes": "使用空格或逗号分隔范围。始终需要 openid。",
+        "allowedEmailDomains": "用于自动创建账号的可选域名，以逗号分隔。"
       },
       "create": {
-        "title": "Add identity provider"
+        "title": "添加身份提供商"
       },
       "edit": {
-        "title": "Edit identity provider"
+        "title": "编辑身份提供商"
       },
       "delete": {
-        "title": "Delete {{name}}?",
-        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
-        "confirm": "Delete provider"
+        "title": "删除 {{name}}？",
+        "description": "此提供商的现有关联将停止工作。用户仍可使用其他方式登录。",
+        "confirm": "删除提供商"
       },
       "errors": {
-        "loadFailed": "Failed to load identity providers.",
-        "saveFailed": "Failed to save identity provider.",
-        "deleteFailed": "Failed to delete identity provider."
+        "loadFailed": "无法加载身份提供商。",
+        "saveFailed": "无法保存身份提供商。",
+        "deleteFailed": "无法删除身份提供商。"
       }
     }
   },
@@ -3433,9 +3486,7 @@
     "loading": "请稍候，正在加载登录详情……",
     "request": {
       "version": "版本 {{version}}",
-      "versionWithDevice": "版本 {{version}}，设备 {{deviceName}}",
-      "origin": "请求来源 {{origin}}",
-      "localOrigin": "此设备"
+      "versionWithDevice": "版本 {{version}}，设备 {{deviceName}}"
     },
     "access": {
       "title": "此应用将能够：",
@@ -3493,17 +3544,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "正在检查启动要求",
+      "caption": "Cotton 正在打开应用前验证此服务器。"
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "解决此要求后，Cotton 才能完成启动。",
+    "fallbackTitle": "启动已阻止",
+    "fallbackMessage": "完成所需的维护步骤后，Cotton 才能启动。",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "当前版本",
+      "requiredVersion": "所需版本",
+      "requiredVersionRange": "所需的上一版本",
+      "lastRecordedVersion": "最后记录的版本"
     }
   }
 }

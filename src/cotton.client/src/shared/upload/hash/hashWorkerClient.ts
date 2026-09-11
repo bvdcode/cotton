@@ -8,11 +8,6 @@ type HashChunkResult = {
   buffer: ArrayBuffer;
 };
 type UpdateFileHashResult = { type: "updateFileHashResult"; requestId: string };
-type HashBlobResult = {
-  type: "hashBlobResult";
-  requestId: string;
-  fileHash: string;
-};
 type DigestFileResult = {
   type: "digestFileResult";
   requestId: string;
@@ -23,7 +18,6 @@ type ErrorResult = { type: "error"; requestId?: string; message: string };
 type OutMessage =
   | InitResult
   | HashChunkResult
-  | HashBlobResult
   | UpdateFileHashResult
   | DigestFileResult
   | ErrorResult;
@@ -69,9 +63,6 @@ export class HashWorkerClient {
           this.resolveChunkRequest(msg);
           return;
         case "digestFileResult":
-          this.resolveStringRequest(msg.requestId, msg.fileHash);
-          return;
-        case "hashBlobResult":
           this.resolveStringRequest(msg.requestId, msg.fileHash);
           return;
       }
@@ -120,34 +111,21 @@ export class HashWorkerClient {
     return promise;
   }
 
-  async updateFileHash(buffer: ArrayBuffer): Promise<void> {
+  async updateFileHash(buffers: ArrayBuffer[]): Promise<void> {
     await this.ensureInitialized();
     const requestId = makeRequestId();
     const promise = new Promise<void>((resolve, reject) => {
       this.pendingVoid.set(requestId, { resolve, reject });
     });
 
-    this.worker.postMessage({
-      type: "updateFileHash",
-      requestId,
-      buffer,
-    });
-    return promise;
-  }
-
-  async hashBlob(blob: Blob, readSizeBytes: number): Promise<string> {
-    await this.ensureInitialized();
-    const requestId = makeRequestId();
-    const promise = new Promise<string>((resolve, reject) => {
-      this.pendingStrings.set(requestId, { resolve, reject });
-    });
-
-    this.worker.postMessage({
-      type: "hashBlob",
-      requestId,
-      blob,
-      readSizeBytes,
-    });
+    this.worker.postMessage(
+      {
+        type: "updateFileHash",
+        requestId,
+        buffers,
+      },
+      buffers,
+    );
     return promise;
   }
 

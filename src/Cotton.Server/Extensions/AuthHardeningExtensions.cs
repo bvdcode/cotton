@@ -34,7 +34,7 @@ namespace Cotton.Server.Extensions
             {
                 context.Response.OnStarting(static state =>
                 {
-                    var response = (HttpResponse)state;
+                    HttpResponse response = (HttpResponse)state;
                     response.Headers[RobotsTagHeader] = RobotsNoIndexValue;
                     return Task.CompletedTask;
                 }, context.Response);

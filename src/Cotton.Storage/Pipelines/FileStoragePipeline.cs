@@ -47,7 +47,7 @@ namespace Cotton.Storage.Pipelines
             return currentStream;
         }
 
-        public async Task WriteAsync(
+        public async Task<long> WriteAsync(
             string uid,
             Stream stream,
             PipelineContext? context = null,
@@ -66,7 +66,7 @@ namespace Cotton.Storage.Pipelines
                     && await backend.ExistsAsync(uid).ConfigureAwait(false))
                 {
                     _logger.LogDebug("File {Uid} deduplicated, skipping processor pipeline", uid);
-                    return;
+                    return await backend.GetSizeAsync(uid).ConfigureAwait(false);
                 }
                 Stream currentStream = stream;
                 foreach (IStorageProcessor? processor in orderedProcessors)
@@ -81,7 +81,7 @@ namespace Cotton.Storage.Pipelines
                 {
                     throw new InvalidOperationException($"No registered processor produced a valid stream to write for UID {uid}");
                 }
-                await backend.WriteAsync(uid, currentStream);
+                return await backend.WriteAsync(uid, currentStream);
             }
             finally
             {

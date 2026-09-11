@@ -14,11 +14,11 @@ namespace Cotton.Server.IntegrationTests
         {
             byte[] content = RandomNumberGenerator.GetBytes(1024 * 1024);
             using MemoryStream inner = new(content);
-            using HashValidatingReadStream stream = new(inner, content.Length, SHA256.HashData(content));
+            await using HashValidatingReadStream stream = new(inner, content.Length, SHA256.HashData(content));
             using MemoryStream destination = new();
 
             await stream.CopyToAsync(destination);
-            stream.Dispose();
+            await stream.DisposeAsync();
 
             Assert.Multiple(() =>
             {

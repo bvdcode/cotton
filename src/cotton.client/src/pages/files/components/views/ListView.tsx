@@ -290,7 +290,8 @@ export const ListView: React.FC<IFileListView> = ({
       if (!moveSupport) return;
       const host = containerRef.current;
       if (!host) return;
-      const related = event.relatedTarget as Node | null;
+      const related = event.relatedTarget;
+      if (related !== null && !(related instanceof Node)) return;
       if (related && host.contains(related)) return;
       setDropTargetId(null);
     },
@@ -356,6 +357,8 @@ export const ListView: React.FC<IFileListView> = ({
           encryptedFolder: t("common:clientEncryption.folderPolicyEnabledHint"),
           enableEncryptionPolicy: t("clientEncryption.enablePolicy"),
           disableEncryptionPolicy: t("clientEncryption.disablePolicy"),
+          pin: t("home:dashboard.pinnedFolders.pin"),
+          unpin: t("home:dashboard.pinnedFolders.unpin"),
         },
         newFolderName,
         onNewFolderNameChange,

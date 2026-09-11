@@ -6,6 +6,9 @@ import type { SaveStatus } from "./useAutoSavedSetting";
 
 const emailModes: EmailMode[] = ["None", "Cloud", "Custom"];
 
+const isEmailMode = (value: string): value is EmailMode =>
+  emailModes.some((mode) => mode === value);
+
 type EmailModeSelectorProps = {
   value: EmailMode;
   onChange: (mode: EmailMode) => void;
@@ -30,7 +33,11 @@ export const EmailModeSelector = ({
       <TextField
         select
         value={value}
-        onChange={(event) => onChange(event.target.value as EmailMode)}
+        onChange={(event) => {
+          if (isEmailMode(event.target.value)) {
+            onChange(event.target.value);
+          }
+        }}
         disabled={disabled}
         fullWidth
       >

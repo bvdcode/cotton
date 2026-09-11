@@ -9,6 +9,7 @@ using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -25,6 +26,10 @@ namespace Cotton.Server.Handlers.Files
 
         public Guid ParentId { get; set; }
 
+        public string? Name { get; set; }
+
+        public bool Overwrite { get; set; }
+
         public Guid UserId { get; set; }
 
         public string? ExpectedETag { get; set; }
@@ -35,6 +40,7 @@ namespace Cotton.Server.Handlers.Files
         ISyncChangeRecorder _syncChanges,
         IEventNotificationService _eventNotification,
         ILayoutMutationGate _layoutGate,
+        TrashRestoreCoordinator _conflicts,
         ILogger<MoveFileCommandHandler> _logger)
         : IRequestHandler<MoveFileCommand, NodeFileManifestDto>
     {
@@ -113,13 +119,39 @@ namespace Cotton.Server.Handlers.Files
             Node targetParent = await GetTargetParentAsync(request, cancellationToken);
             ValidateTargetParent(nodeFile, targetParent);
 
-            await EnsureNoSiblingCollisionAsync(targetParent.Id, request.UserId, nodeFile.NameKey, nodeFile.Id, cancellationToken);
+            string destinationName = GetDestinationName(request, nodeFile);
+            string destinationNameKey = NameValidator.GetNameKey(destinationName);
+            await ResolveSiblingCollisionAsync(
+                request,
+                targetParent.Id,
+                destinationNameKey,
+                cancellationToken);
 
             Guid oldParentId = nodeFile.NodeId;
             nodeFile.NodeId = targetParent.Id;
+            nodeFile.SetName(destinationName);
             _syncChanges.StageFileChange(SyncChangeKind.FileMoved, nodeFile, sourceLayoutId, oldParentId);
             await SaveMovedFileAsync(nodeFile, cancellationToken);
             return oldParentId;
+        }
+
+        private static string GetDestinationName(MoveFileCommand request, NodeFile nodeFile)
+        {
+            if (request.Name is null)
+            {
+                return nodeFile.Name;
+            }
+
+            bool valid = NameValidator.TryNormalizeAndValidate(
+                request.Name,
+                out string normalized,
+                out string errorMessage);
+            if (!valid)
+            {
+                throw new BadRequestException<NodeFile>(errorMessage);
+            }
+
+            return normalized;
         }
 
         private async Task<Node> GetTargetParentAsync(MoveFileCommand request, CancellationToken cancellationToken)
@@ -153,36 +185,31 @@ namespace Cotton.Server.Handlers.Files
             }
         }
 
-        private async Task EnsureNoSiblingCollisionAsync(
+        private async Task ResolveSiblingCollisionAsync(
+            MoveFileCommand request,
             Guid targetParentId,
-            Guid userId,
             string nameKey,
-            Guid movingFileId,
             CancellationToken ct)
         {
-            bool fileExists = await _dbContext.NodeFiles
-                .AnyAsync(x =>
-                    x.NodeId == targetParentId &&
-                    x.OwnerId == userId &&
-                    x.NameKey == nameKey &&
-                    x.Id != movingFileId,
-                    ct);
-            if (fileExists)
+            TrashRestoreCoordinator.ConflictInfo? conflict = await _conflicts.FindConflictAsync(
+                request.UserId,
+                targetParentId,
+                nameKey,
+                ct);
+            if (!conflict.HasValue)
             {
-                throw new DuplicateException(nameKey);
+                return;
             }
 
-            bool nodeExists = await _dbContext.Nodes
-                .AnyAsync(x =>
-                    x.ParentId == targetParentId &&
-                    x.OwnerId == userId &&
-                    x.Type == NodeType.Default &&
-                    x.NameKey == nameKey,
-                    ct);
-            if (nodeExists)
+            if (request.Overwrite && conflict.Value.Kind == RestoreConflictKind.File)
             {
-                throw new DuplicateException(nameKey);
+                await _conflicts.SendConflictToTrashAsync(request.UserId, conflict.Value, ct);
+                return;
             }
+
+            throw new DuplicateException(
+                nameKey,
+                extra: new { conflictKind = conflict.Value.Kind });
         }
 
         private async Task NotifyMoveIfNeededAsync(Guid nodeFileId, Guid? oldParentId, CancellationToken ct)

@@ -1457,6 +1457,7 @@
   "common": {
     "languageName": "Čeština",
     "switchToThisLanguage": "Přepnout na češtinu",
+    "language": "Jazyk",
     "placeholder": "—",
     "yes": "Ano",
     "no": "Ne",
@@ -1515,14 +1516,15 @@
       "pause": "Pozastavit",
       "copied": "Zkopírováno!",
       "reload": "Obnovit",
-      "versions": "Versions"
+      "retry": "Zkusit znovu",
+      "versions": "Verze"
     },
     "errors": {
-      "unexpectedTitle": "Něco se pokazilo",
-      "unexpectedDescription": "Došlo k neočekávané chybě. Obnovte prosím stránku.",
-      "showDetails": "Zobrazit podrobnosti",
-      "hideDetails": "Skrýt podrobnosti",
-      "schemaValidationFailed": "Server vrátil neočekávaná data"
+      "unexpectedTitle": "Stránku se nepodařilo zobrazit",
+      "unexpectedDescription": "Při zobrazování stránky došlo k chybě. Zkuste to znovu nebo stránku obnovte, pokud problém přetrvává.",
+      "schemaValidationFailed": "Server vrátil neočekávaná data",
+      "serverUnavailableTitle": "Server není dostupný",
+      "serverUnavailableDescription": "Cotton se nemohl připojit k serveru. Zkontrolujte připojení a zkuste to znovu."
     },
     "userMenu": {
       "profile": "Profil",
@@ -1666,9 +1668,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "Načítání poskytovatelů přihlášení...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Pokračovat přes {{provider}}",
       "errors": {
         "startFailed": "Nepodařilo se spustit přihlášení."
       }
@@ -2018,22 +2020,22 @@
       }
     },
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "Propojené účty",
+      "description": "Propojte s tímto účtem externí poskytovatele identity.",
+      "loading": "Načítání propojených účtů...",
+      "empty": "Dosud nejsou propojeny žádné externí účty.",
+      "link": "Propojit {{provider}}",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "Odpojit",
+        "title": "Odpojit účet {{provider}}?",
+        "description": "Pomocí tohoto poskytovatele se nebudete moci přihlásit, dokud jej znovu nepropojíte.",
+        "confirm": "Odpojit",
+        "cancel": "Zrušit"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
-        "linkFailed": "Nepodařilo se spustit propojení účtu."
+        "loadFailed": "Propojené účty se nepodařilo načíst.",
+        "unlinkFailed": "Tento účet se nepodařilo odpojit.",
+        "linkFailed": "Propojení účtu se nepodařilo zahájit."
       }
     }
   },
@@ -2324,6 +2326,57 @@
         "title": "Nedávné soubory",
         "empty": "Žádné nedávné soubory"
       }
+    },
+    "dashboard": {
+      "title": "Váš prostor",
+      "actions": {
+        "customize": "Přizpůsobit",
+        "done": "Hotovo",
+        "size": "Velikost {{size}}",
+        "moveUp": "Posunout nahoru",
+        "moveDown": "Posunout dolů",
+        "hide": "Skrýt widget",
+        "retry": "Opakovat"
+      },
+      "widgets": {
+        "overview": "Přehled úložiště",
+        "pinnedFolders": "Připnuté složky",
+        "quickAccess": "Rychlý přístup",
+        "recentFiles": "Nedávné soubory",
+        "recentImages": "Nedávné fotografie",
+        "recentVideos": "Nedávná videa",
+        "recentDocuments": "Nedávné dokumenty",
+        "recentAudio": "Nedávný zvuk",
+        "recentOther": "Ostatní nedávné soubory"
+      },
+      "overview": {
+        "ofQuota": "z {{quota}}",
+        "storageUsage": "Využití úložiště",
+        "available": "K dispozici"
+      },
+      "quickAccess": {
+        "files": "Soubory",
+        "search": "Hledat",
+        "trash": "Koš"
+      },
+      "recent": {
+        "empty": "Žádné odpovídající nedávné soubory",
+        "loadFailed": "Nepodařilo se načíst nedávné soubory."
+      },
+      "pinnedFolders": {
+        "folder": "Složka",
+        "pin": "Připnout na nástěnku",
+        "unpin": "Odepnout z nástěnky",
+        "empty": "Zatím žádné připnuté složky",
+        "emptyHint": "Připněte složku pomocí jejích akcí v Souborech.",
+        "limitReached": "Můžete připnout až {{count}} složek.",
+        "loadFailed": "Nepodařilo se načíst připnuté složky."
+      },
+      "library": {
+        "title": "Další widgety",
+        "description": "Skryté widgety zde zůstanou, dokud je nepřidáte zpět.",
+        "empty": "Všechny dostupné widgety jsou na nástěnce."
+      }
     }
   },
   "files": {
@@ -2449,10 +2502,10 @@
       "confirmDescription": "Vybrané položky budou přesunuty do koše a lze je později obnovit."
     },
     "conflicts": {
-      "title": "Soubor již existuje",
-      "description": "V této složce již existuje soubor s tímto názvem. Nahrát jako {{newName}}?",
-      "overwriteDescription": "V této složce již existuje soubor s tímto názvem. Nahradit ho, nebo nahrát jako {{newName}}?",
-      "rename": "Nahrát jako {{newName}}",
+      "title": "Konflikt názvů",
+      "description": "V této složce již existuje položka s tímto názvem. Použít místo něj {{newName}}?",
+      "overwriteDescription": "V této složce již existuje položka s tímto názvem. Nahradit ji, nebo místo ní použít {{newName}}?",
+      "rename": "Použít {{newName}}",
       "overwrite": "Nahradit",
       "skip": "Přeskočit",
       "skipAll": "Přeskočit vše"
@@ -2644,24 +2697,24 @@
         "decryptExistingFailed_few": "Nepodařilo se dešifrovat {{count}} soubory. Zkontrolujte panel úloh.",
         "decryptExistingFailed_many": "Nepodařilo se dešifrovat {{count}} souboru. Zkontrolujte panel úloh.",
         "decryptExistingFailed_other": "Nepodařilo se dešifrovat {{count}} souborů. Zkontrolujte panel úloh.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "Byla prohledána pouze část stromu složek. Některé soubory mohou zůstat nezašifrované. Po dokončení této dávky spusťte šifrování složky znovu.",
+        "decryptExistingScanIncomplete": "Byla prohledána pouze část stromu složek. Některé zašifrované soubory mohou zůstat. Po dokončení této dávky spusťte dešifrování složky znovu."
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
-      "versionLabel": "Version {{version}}",
-      "current": "Current",
-      "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "title": "Verze souboru {{name}}",
+      "empty": "Zatím nejsou k dispozici žádné předchozí verze.",
+      "loadFailed": "Verze se nepodařilo načíst.",
+      "restoreFailed": "Verzi se nepodařilo obnovit.",
+      "deleteFailed": "Verzi se nepodařilo odstranit.",
+      "downloadFailed": "Stažení verze se nepodařilo připravit.",
+      "versionLabel": "Verze {{version}}",
+      "current": "Aktuální",
+      "original": "Původní",
+      "restoreConfirmTitle": "Obnovit tuto verzi?",
+      "restoreConfirmDescription": "Aktuální obsah souboru bude uložen jako nová verze a poté se verze {{version}} stane aktuální.",
+      "deleteConfirmTitle": "Odstranit tuto verzi?",
+      "deleteConfirmDescription": "Verze {{version}} bude odstraněna. Aktuální soubor se nezmění."
     }
   },
   "tasks": {
@@ -2803,7 +2856,7 @@
       "databaseBackup": "Záloha databáze",
       "storageStatistics": "Statistiky úložiště",
       "securityDiagnostics": "Kontrola zabezpečení",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Poskytovatelé identity"
     },
     "roles": {
       "user": "Uživatel",
@@ -2993,19 +3046,19 @@
         "storageType": "Backend úložiště"
       },
       "chunkSize": {
-        "title": "Upload chunk size",
-        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
-        "ariaLabel": "Upload chunk size"
+        "title": "Velikost části pro nahrávání",
+        "description": "Určuje, kolik dat prohlížeč odešle v jednom požadavku na nahrání. Větší části snižují režii požadavků v rychlých místních sítích.",
+        "ariaLabel": "Velikost části pro nahrávání"
       },
       "pipeline": {
-        "title": "Storage pipeline",
-        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "title": "Zpracování dat úložiště",
+        "description": "Nastavuje kompresi a šifrování nových částí před jejich zápisem do úložiště.",
         "fields": {
-          "compressionLevel": "Compression level",
-          "cipherChunkSize": "Encryption block size",
-          "encryptionThreads": "Encryption threads"
+          "compressionLevel": "Úroveň komprese",
+          "cipherChunkSize": "Velikost šifrovacího bloku",
+          "encryptionThreads": "Vlákna šifrování"
         },
-        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+        "compressionHelp": "Povolený rozsah: {{min}} až {{max}}. Výchozí hodnota je 1."
       },
       "quota": {
         "title": "Výchozí kvóta uživatele",
@@ -3054,8 +3107,8 @@
         "templateNodeIdInvalid": "Zadejte platné ID uzlu složky.",
         "quotaSaveFailed": "Uložení výchozí kvóty uživatele se nezdařilo.",
         "templateSaveFailed": "Uložení šablony výchozích souborů se nezdařilo.",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
-        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
+        "chunkSizeSaveFailed": "Velikost části pro nahrávání se nepodařilo uložit.",
+        "storagePipelineSaveFailed": "Nastavení zpracování dat úložiště se nepodařilo uložit."
       }
     },
     "notificationsSettings": {
@@ -3236,8 +3289,8 @@
         "masterKey": "Hlavní klíč",
         "memory": "Expozice paměti procesu",
         "runtime": "Fakta o běhovém prostředí",
-        "containerBoundary": "Container boundary",
-        "passed": "Protections in place",
+        "containerBoundary": "Hranice kontejneru",
+        "passed": "Aktivní ochranná opatření",
         "capabilities": "Hardware"
       },
       "risks": {
@@ -3256,22 +3309,22 @@
         "sysPtrace": "CAP_SYS_PTRACE",
         "os": "Operační systém",
         "container": "Detekován kontejner",
-        "tempDirectoryPath": "Temp directory",
-        "tempDirectoryWritable": "Temp directory writable",
-        "tempDirectoryError": "Temp directory error",
+        "tempDirectoryPath": "Dočasný adresář",
+        "tempDirectoryWritable": "Do dočasného adresáře lze zapisovat",
+        "tempDirectoryError": "Chyba dočasného adresáře",
         "euid": "Efektivní UID",
         "noNewPrivileges": "Žádná nová oprávnění",
         "seccomp": "Režim Seccomp",
         "capabilities": "Efektivní schopnosti",
-        "rootFilesystemReadOnly": "Read-only root filesystem",
-        "dockerSocketMounted": "Docker socket mounted",
-        "hostPidNamespace": "Host PID namespace",
-        "procOneCommandLine": "PID 1 command",
-        "coreDumpLimit": "Core dump limit",
-        "corePattern": "Core pattern",
-        "appArmorProfile": "AppArmor profile",
-        "selinuxContext": "SELinux context",
-        "selinuxEnforcing": "SELinux enforcing"
+        "rootFilesystemReadOnly": "Kořenový souborový systém jen pro čtení",
+        "dockerSocketMounted": "Připojený socket Dockeru",
+        "hostPidNamespace": "PID namespace hostitele",
+        "procOneCommandLine": "Příkaz procesu PID 1",
+        "coreDumpLimit": "Limit výpisu paměti",
+        "corePattern": "Vzor výpisu paměti",
+        "appArmorProfile": "Profil AppArmor",
+        "selinuxContext": "Kontext SELinux",
+        "selinuxEnforcing": "Vynucování SELinux"
       },
       "values": {
         "unknown": "Neznámé",
@@ -3291,62 +3344,62 @@
         "seccomp-disabled": "Plocha jaderných systémových volání je širší než běžná produkční úroveň Dockeru, takže chyba úniku z kontejneru má více prostoru k dýchání.",
         "running-as-root": "Vzdálené spuštění kódu by uvnitř kontejneru běželo jako root, což zvyšuje škody na připojených svazcích a pomocných procesech.",
         "process-hardening-failed": "Cotton si vyžádal zpevnění procesu, ale proces se přesto spustil bez očekávané ochrany proti dumpu nebo ptrace.",
-        "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
-        "temp-directory-not-writable": "Cotton cannot write temporary files. Database dump/restore, S3 upload spooling, and preview tooling can fail even when the persistent storage volume is healthy.",
-        "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
-        "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
-        "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
-        "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
-        "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
+        "db-integrity-unsigned-rows": "Nepodepsané chráněné řádky lze upravit přímo v PostgreSQL, aniž by Cotton při čtení odhalil manipulaci.",
+        "temp-directory-not-writable": "Cotton nemůže zapisovat dočasné soubory. Výpis a obnova databáze, ukládání nahrávaných dat pro S3 a nástroje náhledů mohou selhat, i když je trvalé úložiště v pořádku.",
+        "root-filesystem-writable": "Zapisovatelný kořenový souborový systém dává napadenému kódu více míst pro uložení nástrojů, změnu souborů běhového prostředí nebo přetrvání do nového vytvoření kontejneru.",
+        "docker-socket-mounted": "Socket Dockeru umožňuje kódu ve webovém kontejneru vytvářet privilegované kontejnery, připojovat cesty hostitele a převzít nad ním kontrolu.",
+        "host-pid-namespace": "Sdílení PID namespace hostitele odhaluje jeho procesy přes procfs a usnadňuje cílené útoky na paměť procesů.",
+        "mandatory-access-control-unconfined": "Bez vynucovaného profilu AppArmor nebo SELinux musí únik z kontejneru či chyba na rozhraní jádra překonat méně bezpečnostních hranic.",
+        "core-dumps-enabled": "Výpisy paměti zachycují paměť procesu. Pokud Cotton selže s načtenými tajnými údaji, výpis může zachovat hlavní klíč nebo dešifrovanou konfiguraci."
       },
       "labels": {
-        "whatItMeans": "What it means",
-        "impact": "Impact",
-        "howToFix": "How to fix",
-        "guardsAgainst": "What this guards against",
-        "note": "Note"
+        "whatItMeans": "Co to znamená",
+        "impact": "Dopad",
+        "howToFix": "Jak to opravit",
+        "guardsAgainst": "Před čím toto chrání",
+        "note": "Poznámka"
       },
       "fixes": {
-        "public-instance": "If this instance is not meant to be public, disable public/demo mode (unset COTTON_PUBLIC_INSTANCE) and restart.",
-        "master-key-from-environment": "Prefer unlocking via the /unlock page instead of COTTON_MASTER_KEY, or make sure the variable is not retained in deployment metadata or exposed to exec sessions.",
-        "admins-without-2fa": "Enable two-factor authentication (TOTP) for every admin account from Profile → Security.",
-        "dotnet-diagnostics-enabled": "Set DOTNET_EnableDiagnostics=0 (and COMPlus_EnableDiagnostics=0) in the container environment and restart.",
-        "process-dumpable": "Set COTTON_PROCESS_HARDENING=true (or use the official image defaults) so the process requests PR_SET_DUMPABLE=0 at startup.",
-        "sys-ptrace-capability": "Drop the CAP_SYS_PTRACE capability from the container (for example cap_drop: [ALL]).",
-        "new-privileges-allowed": "Run the container with no-new-privileges:true so the process cannot gain privileges through setuid binaries.",
-        "seccomp-disabled": "Run with a seccomp profile enabled (avoid seccomp=unconfined) to restrict the syscalls available to the process.",
-        "running-as-root": "Run the container as a non-root user; the official image runs as the unprivileged app user by default.",
-        "process-hardening-failed": "Process hardening was requested but could not be applied — check the container capabilities/permissions and the startup logs.",
-        "db-integrity-unsigned-rows": "Restore the affected rows from a trusted backup or run the required transition version before upgrading.",
-        "temp-directory-not-writable": "Mount writable scratch storage at /tmp. With read_only: true, add tmpfs: [\"/tmp\"] or bind-mount a fast writable disk at /tmp, then restart.",
-        "root-filesystem-writable": "Run the container with a read-only root filesystem (read_only: true), keep /app/files as the persistent writable volume, and mount writable scratch storage at /tmp.",
-        "docker-socket-mounted": "Do not mount the Docker socket (/var/run/docker.sock) into the container.",
-        "host-pid-namespace": "Do not share the host PID namespace (avoid pid: host) so the process cannot observe other host processes.",
-        "mandatory-access-control-unconfined": "Apply an AppArmor or SELinux profile to confine the process instead of running unconfined.",
-        "core-dumps-enabled": "Disable core dumps for the container (ulimits: core: 0) so secrets cannot leak into dump files."
+        "public-instance": "Pokud tato instance nemá být veřejná, vypněte veřejný nebo ukázkový režim (odeberte COTTON_PUBLIC_INSTANCE) a restartujte ji.",
+        "master-key-from-environment": "Upřednostněte odemknutí přes /unlock před COTTON_MASTER_KEY. Jinak zajistěte, aby proměnná nezůstávala v metadatech nasazení ani nebyla přístupná v relacích exec.",
+        "admins-without-2fa": "Zapněte dvoufaktorové ověřování (TOTP) pro každý účet správce v části Profil → Zabezpečení.",
+        "dotnet-diagnostics-enabled": "Nastavte DOTNET_EnableDiagnostics=0 a COMPlus_EnableDiagnostics=0 v prostředí kontejneru a restartujte jej.",
+        "process-dumpable": "Nastavte COTTON_PROCESS_HARDENING=true nebo použijte výchozí nastavení oficiálního obrazu, aby proces při spuštění požádal o PR_SET_DUMPABLE=0.",
+        "sys-ptrace-capability": "Odeberte z kontejneru capability CAP_SYS_PTRACE, například pomocí cap_drop: [ALL].",
+        "new-privileges-allowed": "Spouštějte kontejner s no-new-privileges:true, aby proces nemohl získat oprávnění prostřednictvím binárních souborů setuid.",
+        "seccomp-disabled": "Spouštějte kontejner se zapnutým profilem seccomp a nepoužívejte seccomp=unconfined, aby byly omezeny dostupné systémové volání.",
+        "running-as-root": "Spouštějte kontejner jako uživatel bez oprávnění root. Oficiální obraz standardně používá neprivilegovaného uživatele app.",
+        "process-hardening-failed": "Požadované zabezpečení procesu se nepodařilo použít. Zkontrolujte capabilities, oprávnění kontejneru a protokoly spuštění.",
+        "db-integrity-unsigned-rows": "Obnovte dotčené řádky z důvěryhodné zálohy nebo před upgradem spusťte požadovanou přechodovou verzi.",
+        "temp-directory-not-writable": "Připojte zapisovatelné dočasné úložiště do /tmp. Při read_only: true přidejte tmpfs: [\"/tmp\"] nebo do /tmp připojte rychlý zapisovatelný disk a restartujte.",
+        "root-filesystem-writable": "Spouštějte kontejner s kořenovým souborovým systémem jen pro čtení (read_only: true), ponechte /app/files jako trvalý zapisovatelný svazek a připojte dočasné úložiště do /tmp.",
+        "docker-socket-mounted": "Nepřipojujte socket Dockeru (/var/run/docker.sock) do kontejneru.",
+        "host-pid-namespace": "Nesdílejte PID namespace hostitele (nepoužívejte pid: host), aby proces nemohl sledovat ostatní procesy hostitele.",
+        "mandatory-access-control-unconfined": "Použijte profil AppArmor nebo SELinux a omezte jím proces namísto neomezeného spuštění.",
+        "core-dumps-enabled": "Vypněte výpisy paměti kontejneru (ulimits: core: 0), aby se tajné údaje nemohly dostat do souborů výpisu."
       },
       "passed": {
-        "public-instance": "Public account creation disabled",
-        "master-key-from-environment": "Master key not exposed via the environment",
-        "admins-without-2fa": "All admins have two-factor enabled",
-        "dotnet-diagnostics-enabled": ".NET diagnostics disabled",
-        "process-hardening-failed": "Process hardening applied",
-        "process-dumpable": "Process is not dumpable",
-        "sys-ptrace-capability": "CAP_SYS_PTRACE not held",
-        "new-privileges-allowed": "no-new-privileges enforced",
-        "seccomp-disabled": "seccomp filtering enabled",
-        "running-as-root": "Running as a non-root user",
-        "temp-directory-not-writable": "OS temp directory writable",
-        "root-filesystem-writable": "Read-only root filesystem",
-        "docker-socket-mounted": "Docker socket not mounted",
-        "host-pid-namespace": "Isolated PID namespace",
-        "core-dumps-enabled": "Core dumps disabled",
-        "mandatory-access-control-unconfined": "AppArmor/SELinux confinement active"
+        "public-instance": "Veřejné vytváření účtů je vypnuto",
+        "master-key-from-environment": "Hlavní klíč není vystaven prostřednictvím prostředí",
+        "admins-without-2fa": "Všichni správci mají zapnuté dvoufaktorové ověřování",
+        "dotnet-diagnostics-enabled": "Diagnostika .NET je vypnuta",
+        "process-hardening-failed": "Zabezpečení procesu je aktivní",
+        "process-dumpable": "Proces nelze vypsat z paměti",
+        "sys-ptrace-capability": "CAP_SYS_PTRACE není přítomna",
+        "new-privileges-allowed": "no-new-privileges je vynuceno",
+        "seccomp-disabled": "Filtrování seccomp je zapnuto",
+        "running-as-root": "Proces běží jako uživatel bez oprávnění root",
+        "temp-directory-not-writable": "Do dočasného adresáře systému lze zapisovat",
+        "root-filesystem-writable": "Kořenový souborový systém je jen pro čtení",
+        "docker-socket-mounted": "Socket Dockeru není připojen",
+        "host-pid-namespace": "PID namespace je izolovaný",
+        "core-dumps-enabled": "Výpisy paměti jsou vypnuty",
+        "mandatory-access-control-unconfined": "Omezení AppArmor nebo SELinux je aktivní"
       },
       "capabilities": {
         "aesAcceleration": {
-          "title": "Hardware-accelerated encryption",
-          "body": "This processor exposes AES-NI / PCLMULQDQ instructions, so AES-GCM runs on dedicated hardware paths — encryption stays fast and adds little CPU overhead."
+          "title": "Hardwarově akcelerované šifrování",
+          "body": "Procesor podporuje instrukce AES-NI a PCLMULQDQ, takže AES-GCM používá vyhrazené hardwarové cesty. Šifrování zůstává rychlé a procesor zatěžuje jen minimálně."
         }
       }
     },
@@ -3356,73 +3409,73 @@
       "inDevelopment": "Správa skupin je ve vývoji."
     },
     "identityProviders": {
-      "title": "Identity providers",
-      "description": "Configure OpenID Connect providers for sign-in and account linking.",
+      "title": "Poskytovatelé identity",
+      "description": "Nastavte poskytovatele OpenID Connect pro přihlašování a propojování účtů.",
       "empty": "Nejsou nastaveni žádní poskytovatelé identity.",
       "actions": {
-        "create": "Add provider",
-        "edit": "Edit provider",
-        "delete": "Delete provider",
-        "refresh": "Refresh",
-        "openDocs": "Open OIDC setup guide",
-        "save": "Save provider",
-        "saving": "Saving..."
+        "create": "Přidat poskytovatele",
+        "edit": "Upravit poskytovatele",
+        "delete": "Odstranit poskytovatele",
+        "refresh": "Obnovit",
+        "openDocs": "Otevřít průvodce nastavením OIDC",
+        "save": "Uložit poskytovatele",
+        "saving": "Ukládání..."
       },
       "columns": {
-        "name": "Provider",
-        "issuer": "Issuer",
-        "status": "Status",
-        "accountCreation": "Account creation",
-        "scopes": "Scopes",
-        "domains": "Domains",
-        "actions": "Actions"
+        "name": "Poskytovatel",
+        "issuer": "Vydavatel",
+        "status": "Stav",
+        "accountCreation": "Vytváření účtů",
+        "scopes": "Rozsahy",
+        "domains": "Domény",
+        "actions": "Akce"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled",
-        "allowed": "Allowed",
-        "blocked": "Blocked"
+        "enabled": "Aktivní",
+        "disabled": "Neaktivní",
+        "allowed": "Povoleno",
+        "blocked": "Blokováno"
       },
       "fields": {
-        "name": "Name",
-        "slug": "Slug",
-        "redirectUrl": "Redirect URL",
-        "issuer": "Issuer URL",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "scopes": "Scopes",
-        "allowedEmailDomains": "Allowed email domains",
-        "defaultRole": "Default role",
-        "isEnabled": "Enable sign-in with this provider",
-        "allowAccountCreation": "Allow this provider to create new accounts",
-        "requireVerifiedEmail": "Require verified email for account creation",
-        "syncProfile": "Sync profile names on sign-in",
-        "syncAvatar": "Import provider avatar when the user has no avatar",
-        "clearClientSecret": "Clear saved client secret"
+        "name": "Název",
+        "slug": "Identifikátor",
+        "redirectUrl": "URL pro přesměrování",
+        "issuer": "URL vydavatele",
+        "clientId": "ID klienta",
+        "clientSecret": "Tajný klíč klienta",
+        "scopes": "Rozsahy",
+        "allowedEmailDomains": "Povolené e-mailové domény",
+        "defaultRole": "Výchozí role",
+        "isEnabled": "Povolit přihlašování přes tohoto poskytovatele",
+        "allowAccountCreation": "Povolit tomuto poskytovateli vytvářet nové účty",
+        "requireVerifiedEmail": "Vyžadovat ověřený e-mail při vytváření účtu",
+        "syncProfile": "Synchronizovat jména profilů při přihlášení",
+        "syncAvatar": "Importovat avatar poskytovatele, pokud uživatel žádný nemá",
+        "clearClientSecret": "Odstranit uložený tajný klíč klienta"
       },
       "help": {
-        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
-        "redirectUrl": "Register this exact callback URL in the provider application.",
-        "clientSecret": "Leave empty if this provider uses a public client.",
-        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
-        "scopes": "Separate scopes with spaces or commas. openid is always required.",
-        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+        "slug": "Ponechte prázdné, aby se identifikátor vytvořil z názvu poskytovatele. Existující identifikátory se nemění.",
+        "redirectUrl": "Zaregistrujte tuto přesnou adresu zpětného volání v aplikaci poskytovatele.",
+        "clientSecret": "Ponechte prázdné, pokud poskytovatel používá veřejného klienta.",
+        "clientSecretConfigured": "Tajný klíč je již uložen. Zadáním nového jej nahradíte.",
+        "scopes": "Rozsahy oddělte mezerami nebo čárkami. Rozsah openid je vždy povinný.",
+        "allowedEmailDomains": "Volitelné domény oddělené čárkami pro automatické vytváření účtů."
       },
       "create": {
-        "title": "Add identity provider"
+        "title": "Přidat poskytovatele identity"
       },
       "edit": {
-        "title": "Edit identity provider"
+        "title": "Upravit poskytovatele identity"
       },
       "delete": {
-        "title": "Delete {{name}}?",
-        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
-        "confirm": "Delete provider"
+        "title": "Odstranit {{name}}?",
+        "description": "Existující propojení s tímto poskytovatelem přestanou fungovat. Uživatelé se budou moci dál přihlašovat jinými způsoby.",
+        "confirm": "Odstranit poskytovatele"
       },
       "errors": {
-        "loadFailed": "Failed to load identity providers.",
-        "saveFailed": "Failed to save identity provider.",
-        "deleteFailed": "Failed to delete identity provider."
+        "loadFailed": "Poskytovatele identity se nepodařilo načíst.",
+        "saveFailed": "Poskytovatele identity se nepodařilo uložit.",
+        "deleteFailed": "Poskytovatele identity se nepodařilo odstranit."
       }
     }
   },
@@ -3465,9 +3518,7 @@
     "loading": "Počkejte prosím, načítají se podrobnosti přihlášení...",
     "request": {
       "version": "Verze {{version}}",
-      "versionWithDevice": "Verze {{version}} na zařízení {{deviceName}}",
-      "origin": "Požadavek z {{origin}}",
-      "localOrigin": "tohoto zařízení"
+      "versionWithDevice": "Verze {{version}} na zařízení {{deviceName}}"
     },
     "access": {
       "title": "Tato aplikace bude moci:",
@@ -3525,17 +3576,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Kontrola požadavků spuštění",
+      "caption": "Cotton před otevřením aplikace ověřuje tento server."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton nemůže dokončit spuštění, dokud nebude tento požadavek vyřešen.",
+    "fallbackTitle": "Spuštění je zablokováno",
+    "fallbackMessage": "Cotton nelze spustit, dokud nebude dokončen požadovaný krok údržby.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Aktuální verze",
+      "requiredVersion": "Požadovaná verze",
+      "requiredVersionRange": "Požadovaná předchozí verze",
+      "lastRecordedVersion": "Poslední zaznamenaná verze"
     }
   }
 }

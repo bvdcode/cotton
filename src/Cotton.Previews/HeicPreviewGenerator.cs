@@ -41,7 +41,7 @@ namespace Cotton.Previews
             using MemoryStream buffer = new();
             await stream.CopyToAsync(buffer).ConfigureAwait(false);
 
-            using var context = new HeifContext(buffer.ToArray());
+            using HeifContext context = new HeifContext(buffer.ToArray());
             using HeifImageHandle handle = context.GetPrimaryImageHandle();
             using HeifImage decoded = handle.Decode(HeifColorspace.Rgb, HeifChroma.InterleavedRgba32);
 

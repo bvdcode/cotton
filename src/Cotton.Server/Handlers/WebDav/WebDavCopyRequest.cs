@@ -299,7 +299,7 @@ namespace Cotton.Server.Handlers.WebDav
                 return destParentResult;
             }
 
-            if (!NameValidator.TryNormalizeAndValidate(destParentResult.ResourceName, out _, out var errorMessage))
+            if (!NameValidator.TryNormalizeAndValidate(destParentResult.ResourceName, out _, out string? errorMessage))
             {
                 _logger.LogDebug("WebDAV COPY: Invalid name: {Name}, Error: {Error}", destParentResult.ResourceName, errorMessage);
                 return destParentResult with { Found = false };
@@ -363,7 +363,7 @@ namespace Cotton.Server.Handlers.WebDav
             {
                 long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, sourceResult.NodeFile.FileManifestId, ct);
 
-                var newNodeFile = new NodeFile
+                NodeFile newNodeFile = new NodeFile
                 {
                     OwnerId = request.UserId,
                     NodeId = destParentResult.ParentNode!.Id,
@@ -397,7 +397,7 @@ namespace Cotton.Server.Handlers.WebDav
                 .FirstAsync(n => n.Id == sourceNodeId, ct);
 
             // Create new node
-            var newNode = new Node
+            Node newNode = new Node
             {
                 OwnerId = userId,
                 Type = sourceNode.Type,
@@ -437,7 +437,7 @@ namespace Cotton.Server.Handlers.WebDav
             {
                 addedBytes += await _quota.EnsureCanAddFileReferenceAsync(userId, file.FileManifestId, ct);
 
-                var newFile = new NodeFile
+                NodeFile newFile = new NodeFile
                 {
                     OwnerId = userId,
                     NodeId = newNode.Id,

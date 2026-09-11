@@ -35,7 +35,7 @@ namespace Cotton.Server.Services.WebDav
             bool includeFileContentGraph,
             CancellationToken ct)
         {
-            var cleanPath = NormalizePath(path);
+            string cleanPath = NormalizePath(path);
 
             // Root path
             if (string.IsNullOrEmpty(cleanPath))
@@ -49,10 +49,10 @@ namespace Cotton.Server.Services.WebDav
                 };
             }
 
-            var parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            string[] parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries)
                 .Select(SafeUnescapePathSegment)
                 .ToArray();
-            var parentPath = string.Join(PathSeparator, parts.Take(parts.Length - 1));
+            string parentPath = string.Join(PathSeparator, parts.Take(parts.Length - 1));
             Node? currentNode = await _navigator.ResolveNodeByPathAsync(userId, parentPath, DefaultNodeType, ct);
             if (currentNode is null)
             {
@@ -60,8 +60,8 @@ namespace Cotton.Server.Services.WebDav
             }
 
             // Now check the last part - it can be a node or a file
-            var lastName = parts[^1];
-            var lastNameKey = NameValidator.NormalizeAndGetNameKey(lastName);
+            string lastName = parts[^1];
+            string lastNameKey = NameValidator.NormalizeAndGetNameKey(lastName);
 
             Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
 
@@ -125,7 +125,7 @@ namespace Cotton.Server.Services.WebDav
         {
             // Decode percent-encoded sequences so Windows WebDAV clients can upload names containing
             // reserved URL characters like '#' and '%' (sent as %23, %25).
-            var decodedPath = Uri.UnescapeDataString(path ?? string.Empty);
+            string decodedPath = Uri.UnescapeDataString(path ?? string.Empty);
             (Node Parent, string ResourceName)? resolved = await _navigator.ResolveParentAndNameAsync(userId, decodedPath, DefaultNodeType, ct);
             if (resolved is null)
             {
@@ -142,7 +142,7 @@ namespace Cotton.Server.Services.WebDav
 
         private static string NormalizePath(string? path)
         {
-            var p = (path ?? string.Empty).Replace('\\', PathSeparator);
+            string p = (path ?? string.Empty).Replace('\\', PathSeparator);
             return p.Trim(PathSeparator);
         }
 

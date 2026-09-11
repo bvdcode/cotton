@@ -32,6 +32,10 @@ import {
   type FileBrowserViewMode,
 } from "@shared/utils/viewMode";
 import { useOverflowActionKeys } from "../hooks/useOverflowActionKeys";
+import type {
+  FileBreadcrumb,
+  FileListStats,
+} from "../../../shared/types/FileListViewTypes";
 
 export interface PageHeaderActionItem {
   key: string;
@@ -50,9 +54,9 @@ export interface PageHeaderActionItem {
 
 export interface PageHeaderProps {
   loading: boolean;
-  breadcrumbs: Array<{ id: string; name: string }>;
+  breadcrumbs: FileBreadcrumb[];
   onNavigateBreadcrumb?: (breadcrumbIndex: number) => void;
-  stats: { folders: number; files: number; sizeBytes: number };
+  stats: FileListStats;
   viewMode: FileBrowserViewMode;
   canGoUp: boolean;
   onGoUp: () => void;

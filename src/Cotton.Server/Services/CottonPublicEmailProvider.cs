@@ -47,7 +47,7 @@ namespace Cotton.Server.Services
         {
             try
             {
-                var request = new CottonBridgeEmailRequest
+                CottonBridgeEmailRequest request = new CottonBridgeEmailRequest
                 {
                     Template = template.ToString(),
                     InstanceId = instanceId,

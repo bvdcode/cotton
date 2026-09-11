@@ -50,7 +50,7 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("Username is required");
             }
 
-            if (!UsernameValidator.TryNormalizeAndValidate(request.Username, out var newUsername, out var usernameError))
+            if (!UsernameValidator.TryNormalizeAndValidate(request.Username, out string? newUsername, out string? usernameError))
             {
                 throw new BadRequestException<User>(usernameError);
             }

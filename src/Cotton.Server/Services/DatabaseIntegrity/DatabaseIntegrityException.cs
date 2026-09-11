@@ -3,17 +3,13 @@
 
 namespace Cotton.Server.Services.DatabaseIntegrity
 {
-    public class DatabaseIntegrityException : Exception
+    public class DatabaseIntegrityException(
+        string entityName,
+        string entityKey)
+        : Exception($"Database integrity verification failed for {entityName} '{entityKey}'.")
     {
-        public DatabaseIntegrityException(string entityName, string entityKey)
-            : base($"Database integrity verification failed for {entityName} '{entityKey}'.")
-        {
-            EntityName = entityName;
-            EntityKey = entityKey;
-        }
+        public string EntityName { get; } = entityName;
 
-        public string EntityName { get; }
-
-        public string EntityKey { get; }
+        public string EntityKey { get; } = entityKey;
     }
 }

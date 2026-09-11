@@ -1,26 +1,14 @@
 import type { NodeContentDto } from "../../../shared/api/nodesApi";
 import type { UploadFileQueueItem } from "../../../shared/upload/types";
 import {
+  ConflictAction,
+  type NameConflictPrompt,
+} from "../../../shared/types/nameConflict";
+import {
   getFileNameKey,
   nextAvailableName,
   normalizeFileName,
-} from "./fileNameUtils";
-
-export const ConflictAction = {
-  Overwrite: "overwrite",
-  Rename: "rename",
-  Skip: "skip",
-  SkipAll: "skipAll",
-  Cancel: "cancel",
-} as const;
-
-export type ConflictAction =
-  (typeof ConflictAction)[keyof typeof ConflictAction];
-
-export interface UploadConflictPrompt {
-  newName: string;
-  canOverwrite: boolean;
-}
+} from "../../../shared/utils/fileNameUtils";
 
 export interface ConflictResult {
   files: UploadFileQueueItem[];
@@ -39,7 +27,7 @@ export interface ConflictResult {
 export async function resolveUploadConflicts(
   files: File[],
   content: NodeContentDto,
-  confirmConflict: (prompt: UploadConflictPrompt) => Promise<ConflictAction>,
+  confirmConflict: (prompt: NameConflictPrompt) => Promise<ConflictAction>,
 ): Promise<ConflictResult> {
   const filesByNameKey = new Map(
     content.files.map((file) => [getFileNameKey(file.name), file]),

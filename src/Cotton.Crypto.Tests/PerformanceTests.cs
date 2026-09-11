@@ -68,11 +68,11 @@ namespace Cotton.Crypto.Tests
             int[] threadCounts = [.. GetThreadSweep()];
             int[] chunkSizes = GetChunkSweep();
 
-            TestContext.Out.WriteLine("=== ENCRYPTION THREAD/CHUNK SWEEP ===");
-            TestContext.Out.WriteLine($"Data size: {TestDataSizeMb} MB");
-            TestContext.Out.WriteLine($"Threads: {string.Join(", ", threadCounts)}");
-            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / (double)OneMb:F1}MB"))}");
-            TestContext.Out.WriteLine("Threads | ChunkMB | Avg MB/s");
+            await TestContext.Out.WriteLineAsync("=== ENCRYPTION THREAD/CHUNK SWEEP ===");
+            await TestContext.Out.WriteLineAsync($"Data size: {TestDataSizeMb} MB");
+            await TestContext.Out.WriteLineAsync($"Threads: {string.Join(", ", threadCounts)}");
+            await TestContext.Out.WriteLineAsync($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / (double)OneMb:F1}MB"))}");
+            await TestContext.Out.WriteLineAsync("Threads | ChunkMB | Avg MB/s");
 
             foreach (int threads in threadCounts)
             {
@@ -81,9 +81,9 @@ namespace Cotton.Crypto.Tests
                     List<double> throughputs = [];
                     for (int i = 0; i < Iterations; i++)
                     {
-                        var cipher = new AesGcmStreamCipher(masterKey, keyId: 1, threads: threads);
-                        using var inputStream = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
-                        using var encryptedStream = new DevNullStream();
+                        AesGcmStreamCipher cipher = new AesGcmStreamCipher(masterKey, keyId: 1, threads: threads);
+                        using MemoryStream inputStream = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
+                        using DevNullStream encryptedStream = new DevNullStream();
                         long t0 = Stopwatch.GetTimestamp();
                         await cipher.EncryptAsync(inputStream, encryptedStream, chunkSize: chunkSize);
                         long t1 = Stopwatch.GetTimestamp();
@@ -92,7 +92,7 @@ namespace Cotton.Crypto.Tests
                         throughputs.Add(throughputMBps);
                     }
                     double avg = throughputs.Average();
-                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / (double)OneMb,7:F3} | {avg,9:F1}");
+                    await TestContext.Out.WriteLineAsync($"{threads,7} | {chunkSize / (double)OneMb,7:F3} | {avg,9:F1}");
                 }
             }
         }
@@ -113,9 +113,9 @@ namespace Cotton.Crypto.Tests
             // Prepare one ciphertext for all decrypt sweeps
             byte[] encryptedPayload;
             {
-                var cipher = new AesGcmStreamCipher(masterKey, keyId: 1);
-                using var input = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
-                using var encrypted = new MemoryStream(capacity: totalBytes + 4096);
+                AesGcmStreamCipher cipher = new AesGcmStreamCipher(masterKey, keyId: 1);
+                using MemoryStream input = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
+                using MemoryStream encrypted = new MemoryStream(capacity: totalBytes + 4096);
                 await cipher.EncryptAsync(input, encrypted);
                 encryptedPayload = encrypted.ToArray();
             }
@@ -123,11 +123,11 @@ namespace Cotton.Crypto.Tests
             int[] threadCounts = [.. GetThreadSweep()];
             int[] chunkSizes = GetChunkSweep();
 
-            TestContext.Out.WriteLine("=== DECRYPTION THREAD/CHUNK SWEEP ===");
-            TestContext.Out.WriteLine($"Data size: {TestDataSizeMb} MB");
-            TestContext.Out.WriteLine($"Threads: {string.Join(", ", threadCounts)}");
-            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / (double)OneMb:F1}MB"))}");
-            TestContext.Out.WriteLine("Threads | ChunkMB | Avg MB/s");
+            await TestContext.Out.WriteLineAsync("=== DECRYPTION THREAD/CHUNK SWEEP ===");
+            await TestContext.Out.WriteLineAsync($"Data size: {TestDataSizeMb} MB");
+            await TestContext.Out.WriteLineAsync($"Threads: {string.Join(", ", threadCounts)}");
+            await TestContext.Out.WriteLineAsync($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / (double)OneMb:F1}MB"))}");
+            await TestContext.Out.WriteLineAsync("Threads | ChunkMB | Avg MB/s");
 
             foreach (int threads in threadCounts)
             {
@@ -136,9 +136,9 @@ namespace Cotton.Crypto.Tests
                     List<double> throughputs = [];
                     for (int i = 0; i < Iterations; i++)
                     {
-                        var cipher = new AesGcmStreamCipher(masterKey, keyId: 1, threads: threads);
-                        using var encryptedStream = new MemoryStream(encryptedPayload, writable: false);
-                        var decryptedStream = new DevNullStream();
+                        AesGcmStreamCipher cipher = new AesGcmStreamCipher(masterKey, keyId: 1, threads: threads);
+                        using MemoryStream encryptedStream = new MemoryStream(encryptedPayload, writable: false);
+                        DevNullStream decryptedStream = new DevNullStream();
                         long t0 = Stopwatch.GetTimestamp();
                         await cipher.DecryptAsync(encryptedStream, decryptedStream);
                         long t1 = Stopwatch.GetTimestamp();
@@ -147,7 +147,7 @@ namespace Cotton.Crypto.Tests
                         throughputs.Add(throughputMBps);
                     }
                     double avg = throughputs.Average();
-                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / (double)OneMb,7:F3} | {avg,9:F1}");
+                    await TestContext.Out.WriteLineAsync($"{threads,7} | {chunkSize / (double)OneMb,7:F3} | {avg,9:F1}");
                 }
             }
         }

@@ -24,7 +24,6 @@ export async function uploadBlobToChunks(options: {
     options.blob,
     algorithm,
     uploadConfig.chunkHashConcurrency,
-    uploadConfig.wholeFileHashReadSizeBytes,
   );
 
   try {
@@ -52,6 +51,6 @@ export async function uploadBlobToChunks(options: {
 
     return await pipeline.run();
   } finally {
-    hashSession.release();
+    await hashSession.release();
   }
 }

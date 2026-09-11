@@ -1,4 +1,8 @@
-import type { SlideWithTitle, MediaItem } from "@shared/types/mediaLightbox";
+import type {
+  SlideWithTitle,
+  MediaItem,
+  MediaVideoSource,
+} from "@shared/types/mediaLightbox";
 import { HLS_VIDEO_SLIDE_TYPE } from "@shared/types/mediaLightbox";
 import { formatBytes } from "../../utils/formatBytes";
 
@@ -18,7 +22,7 @@ const normalizeMimeType = (mimeType: string): string => {
 const buildVideoSources = (
   signedUrl: string,
   mimeType: string,
-): Array<{ src: string; type?: string }> => {
+): MediaVideoSource[] => {
   const normalizedMimeType = normalizeMimeType(mimeType);
 
   if (EXPLICIT_VIDEO_SOURCE_MIME_TYPES.has(normalizedMimeType)) {
@@ -27,7 +31,7 @@ const buildVideoSources = (
 
   // Some browsers reject strict QuickTime/MOV MIME types before probing the media stream.
   // Omitting `type` lets the browser sniff the container and attempt playback.
-  return [{ src: signedUrl }];
+  return [{ src: signedUrl, type: "" }];
 };
 
 export function buildSlidesFromItems(
@@ -111,7 +115,7 @@ export function buildSlidesFromItems(
         title,
         download: true,
         share: true,
-      } as SlideWithTitle;
+      };
     }
 
     return {
@@ -125,6 +129,6 @@ export function buildSlidesFromItems(
       download: true,
       share: true,
       sources: buildVideoSources(signedUrl, item.mimeType),
-    } as SlideWithTitle;
+    };
   });
 }

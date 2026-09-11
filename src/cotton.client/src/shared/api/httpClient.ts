@@ -7,6 +7,10 @@ import { z } from "zod";
 import { getRefreshEnabled, useAuthStore } from "../store/authStore";
 import { toast } from "@shared/ui/notifications";
 import { translateError } from "../i18n/translateError";
+import {
+  authSessionResponseSchema,
+  type AuthSessionResponse,
+} from "./authSession";
 
 export { isAxiosError } from "axios";
 
@@ -168,12 +172,12 @@ const resolveBrowserTimeZone = (): string | null => {
 const browserTimeZone = resolveBrowserTimeZone();
 
 let accessToken: string | null = null;
-let refreshBlocked = false;
+let accessTokenRevision = 0;
 let logoutEventDispatched = false;
 let unlockRedirectDispatched = false;
+let refreshPromise: Promise<AuthSessionResponse | null> | null = null;
 
 const resetAuthTransportState = (): void => {
-  refreshBlocked = false;
   logoutEventDispatched = false;
 };
 
@@ -186,13 +190,12 @@ const dispatchLogoutEventOnce = (): void => {
   window.dispatchEvent(new CustomEvent("auth:logout"));
 };
 
-const isTerminalRefreshFailure = (error: unknown): boolean => {
+const isMissingRefreshSession = (error: unknown): boolean => {
   if (!axios.isAxiosError(error)) {
     return false;
   }
 
-  const status = error.response?.status;
-  return status === 400 || status === 401 || status === 403 || status === 404;
+  return error.response?.status === 404;
 };
 
 const disableRefreshAndLogout = (): void => {
@@ -222,56 +225,93 @@ const redirectToUnlockOnce = (): void => {
 export const getAccessToken = () => accessToken;
 export const setAccessToken = (token: string | null) => {
   accessToken = token;
+  accessTokenRevision += 1;
+  refreshPromise = null;
   if (token) {
     resetAuthTransportState();
   }
 };
 export const clearAccessToken = () => {
   accessToken = null;
+  accessTokenRevision += 1;
+  refreshPromise = null;
 };
 
 export interface RefreshAccessTokenOptions {
   allowWhenRefreshDisabled?: boolean;
 }
 
-/**
- * Refreshes access token using refresh cookie.
- * Returns new token or null if refresh failed.
- */
-export const refreshAccessToken = async (
-  options: RefreshAccessTokenOptions = {},
-): Promise<string | null> => {
+const performTokenRefresh = async (): Promise<AuthSessionResponse | null> => {
+  const revision = accessTokenRevision;
   try {
-    const refreshAllowed =
-      options.allowWhenRefreshDisabled || getRefreshEnabled();
-    const blockedByTerminalFailure =
-      refreshBlocked && !options.allowWhenRefreshDisabled;
-    if (!refreshAllowed || blockedByTerminalFailure) {
-      clearAccessToken();
-      return null;
-    }
-    const response = await httpClient.post(
+    const response = await httpClient.post<object>(
       "auth/refresh",
       {},
       { withCredentials: true },
     );
-    const token = response.data?.accessToken;
-    if (token && typeof token === "string" && token.length > 0) {
-      setAccessToken(token);
-      return token;
-    }
-    clearAccessToken();
-    return null;
-  } catch (error) {
-    if (isTerminalRefreshFailure(error)) {
-      refreshBlocked = true;
-      disableRefreshAndLogout();
+    const session = parseValidated(
+      "auth/refresh",
+      response.data,
+      authSessionResponseSchema,
+    );
+    if (revision !== accessTokenRevision) {
       return null;
     }
 
-    clearAccessToken();
-    return null;
+    setAccessToken(session.accessToken);
+    return session;
+  } catch (error) {
+    if (isMissingRefreshSession(error)) {
+      if (revision === accessTokenRevision) {
+        disableRefreshAndLogout();
+      }
+      return null;
+    }
+
+    if (error instanceof z.ZodError && revision === accessTokenRevision) {
+      clearAccessToken();
+    }
+
+    throw error;
   }
+};
+
+const requestTokenRefresh = (
+  options: RefreshAccessTokenOptions = {},
+): Promise<AuthSessionResponse | null> => {
+  const refreshAllowed =
+    options.allowWhenRefreshDisabled || getRefreshEnabled();
+  if (!refreshAllowed) {
+    clearAccessToken();
+    return Promise.resolve(null);
+  }
+
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  const promise = performTokenRefresh();
+  refreshPromise = promise;
+  const clearPromise = (): void => {
+    if (refreshPromise === promise) {
+      refreshPromise = null;
+    }
+  };
+  void promise.then(clearPromise, clearPromise);
+  return promise;
+};
+
+export const refreshAccessToken = async (
+  options: RefreshAccessTokenOptions = {},
+): Promise<string | null> => {
+  const payload = await requestTokenRefresh(options);
+  return payload?.accessToken ?? null;
+};
+
+export const restoreAuthSession = async (
+  options: RefreshAccessTokenOptions = {},
+): Promise<AuthSessionResponse | null> => {
+  return await requestTokenRefresh(options);
 };
 
 export const httpClient = axios.create({
@@ -319,14 +359,7 @@ export const getValidated = async <TSchema extends z.ZodTypeAny>(
   return parseValidated(url, response.data, schema);
 };
 
-// Refresh state
-let isRefreshing = false;
-let refreshQueue: Array<(token: string | null) => void> = [];
-
-const processQueue = (token: string | null) => {
-  refreshQueue.forEach((resolve) => resolve(token));
-  refreshQueue = [];
-};
+const retriedRequests = new WeakSet<InternalAxiosRequestConfig>();
 
 // Request interceptor - attach token
 httpClient.interceptors.request.use(
@@ -348,19 +381,27 @@ httpClient.interceptors.request.use(
 httpClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean;
-    };
+    const originalRequest = error.config;
+    if (!originalRequest) {
+      tryDispatchApiErrorToast(error);
+      return Promise.reject(error);
+    }
+    const url = originalRequest.url || "";
 
     if (isServerLockedResponse(error)) {
       redirectToUnlockOnce();
       return Promise.reject(error);
     }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !retriedRequests.has(originalRequest)
+    ) {
       // Don't retry on auth endpoints themselves
-      const url = originalRequest.url || "";
-      if (url.includes("auth/login") || url.includes("auth/refresh")) {
+      if (url.includes("auth/refresh")) {
+        return Promise.reject(error);
+      }
+      if (url.includes("auth/login")) {
         tryDispatchApiErrorToast(error);
         return Promise.reject(error);
       }
@@ -372,56 +413,32 @@ httpClient.interceptors.response.use(
       }
 
       // If refresh is disabled (explicit logout), never attempt refresh.
-      if (!getRefreshEnabled() || refreshBlocked) {
+      if (!getRefreshEnabled()) {
         disableRefreshAndLogout();
         tryDispatchApiErrorToast(error);
         return Promise.reject(error);
       }
 
-      originalRequest._retry = true;
-
-      if (isRefreshing) {
-        // Queue request until refresh completes
-        return new Promise((resolve, reject) => {
-          refreshQueue.push((token: string | null) => {
-            if (token) {
-              if (originalRequest.headers) {
-                originalRequest.headers.Authorization = `Bearer ${token}`;
-              }
-              resolve(httpClient(originalRequest));
-            } else {
-              reject(error);
-            }
-          });
-        });
-      }
-
-      isRefreshing = true;
+      retriedRequests.add(originalRequest);
 
       try {
         const newToken = await refreshAccessToken();
 
         if (newToken) {
-          processQueue(newToken);
-
-          // Retry original request with new token
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
           }
           return httpClient(originalRequest);
-        } else {
-          throw new Error("Refresh token failed");
         }
-      } catch (refreshError) {
-        // Refresh failed - clear token and queue
-        processQueue(null);
-
-        disableRefreshAndLogout();
-
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
+      } catch {
+        return Promise.reject(error);
       }
+
+      return Promise.reject(error);
+    }
+
+    if (url.includes("auth/refresh")) {
+      return Promise.reject(error);
     }
 
     tryDispatchApiErrorToast(error);

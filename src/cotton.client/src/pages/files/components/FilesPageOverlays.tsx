@@ -7,6 +7,7 @@ import Loader from "@shared/ui/Loader";
 import { blurredDialogBackdropSlotProps } from "@shared/ui/dialogBackdrop";
 import { ClientEncryptionUnlockForm } from "../../profile/components/ClientEncryptionUnlockForm";
 import type { useFilesEncryptionController } from "../hooks/useFilesEncryptionController";
+import type { UseFileMoveControllerResult } from "../hooks/useFileMoveController";
 import type { FileListPageLogic } from "../hooks/useFileListPageLogic";
 import type { useFileUpload } from "../hooks/useFileUpload";
 import {
@@ -42,6 +43,7 @@ interface FilesPageOverlaysProps {
     item: FileListPageLogic["interaction"]["mediaItems"][number],
   ) => Promise<void>;
   interaction: FileListPageLogic["interaction"];
+  move: UseFileMoveControllerResult;
   nodeId: string | null;
   smoothGalleryTransitions: boolean;
 }
@@ -51,6 +53,7 @@ export const FilesPageOverlays: React.FC<FilesPageOverlaysProps> = ({
   fileUpload,
   handleLightboxDelete,
   interaction,
+  move,
   nodeId,
   smoothGalleryTransitions,
 }) => {
@@ -93,6 +96,14 @@ export const FilesPageOverlays: React.FC<FilesPageOverlaysProps> = ({
         canOverwrite={fileUpload.conflictDialog.state.canOverwrite}
         onResolve={fileUpload.conflictDialog.onResolve}
         onExited={fileUpload.conflictDialog.onExited}
+      />
+
+      <FileConflictDialog
+        open={move.conflictDialog.state.open}
+        newName={move.conflictDialog.state.newName}
+        canOverwrite={move.conflictDialog.state.canOverwrite}
+        onResolve={move.conflictDialog.onResolve}
+        onExited={move.conflictDialog.onExited}
       />
 
       <SkippedUploadItemsDialog

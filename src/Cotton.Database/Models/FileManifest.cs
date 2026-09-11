@@ -12,6 +12,7 @@ namespace Cotton.Database.Models
     [Index(nameof(ComputedContentHash), IsUnique = true)]
     [Index(nameof(SmallFilePreviewHash))]
     [Index(nameof(LargeFilePreviewHash))]
+    [Index(nameof(ContentType), nameof(PreviewGeneratorVersion))]
     public class FileManifest : BaseEntity<Guid>
     {
         public const char PreviewTokenPrefix = 'f';

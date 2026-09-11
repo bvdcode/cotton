@@ -3,17 +3,12 @@
 
 using Microsoft.Extensions.Logging;
 using System.Net;
-using System.Net.Http.Headers;
+using System.Net.Sockets;
 
 namespace Cotton.Previews.Http
 {
     public class RangeStreamServer : IAsyncDisposable
     {
-        private readonly record struct ByteRange(long Start, long EndInclusive)
-        {
-            public long ContentLength => (EndInclusive - Start) + 1;
-        }
-
         private readonly HttpListener _listener;
         private readonly Stream _stream;
         private readonly long _length;
@@ -63,7 +58,7 @@ namespace Cotton.Previews.Http
 
         private static int GetFreeTcpPort()
         {
-            var l = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+            TcpListener l = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
             l.Start();
             int port = ((IPEndPoint)l.LocalEndpoint).Port;
             l.Stop();
@@ -188,7 +183,7 @@ namespace Cotton.Previews.Http
 
         private async Task HandleAsync(HttpListenerContext ctx, CancellationToken ct)
         {
-            var reqId = Guid.NewGuid().ToString("N")[..6];
+            string reqId = Guid.NewGuid().ToString("N")[..6];
             try
             {
                 if (!TryAuthorize(ctx, reqId))
@@ -198,8 +193,13 @@ namespace Cotton.Previews.Http
 
                 ConfigureResponseBase(ctx);
 
-                var rangeHeader = ctx.Request.Headers["Range"];
-                if (!TryParseRange(rangeHeader, out ByteRange? range, out var statusCode, out var contentRangeHeaderValue))
+                string? rangeHeader = ctx.Request.Headers["Range"];
+                if (!HttpByteRangeParser.TryParse(
+                    rangeHeader,
+                    _length,
+                    out HttpByteRange? range,
+                    out int statusCode,
+                    out string? contentRangeHeaderValue))
                 {
                     ctx.Response.StatusCode = statusCode;
                     if (!string.IsNullOrEmpty(contentRangeHeaderValue))
@@ -278,7 +278,7 @@ namespace Cotton.Previews.Http
                 return false;
             }
 
-            var token = ctx.Request.QueryString["token"];
+            string? token = ctx.Request.QueryString["token"];
             if (!string.Equals(token, _token, StringComparison.Ordinal))
             {
                 _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Invalid token", _serverId, reqId);
@@ -299,75 +299,11 @@ namespace Cotton.Previews.Http
             ctx.Response.ContentType = "application/octet-stream";
         }
 
-        private bool TryParseRange(
-            string? range,
-            out ByteRange? parsedRange,
-            out int errorStatusCode,
-            out string? contentRangeHeaderValue)
-        {
-            parsedRange = null;
-            errorStatusCode = (int)HttpStatusCode.OK;
-            contentRangeHeaderValue = null;
-
-            if (string.IsNullOrWhiteSpace(range))
-            {
-                return true;
-            }
-
-            if (!RangeHeaderValue.TryParse(range, out RangeHeaderValue? rangeHeader)
-                || !string.Equals(rangeHeader.Unit, "bytes", StringComparison.OrdinalIgnoreCase)
-                || rangeHeader.Ranges.Count != 1)
-            {
-                errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                return false;
-            }
-
-            RangeItemHeaderValue requestedRange = rangeHeader.Ranges.Single();
-            if (!TryResolveRange(requestedRange, out long start, out long end))
-            {
-                errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                return false;
-            }
-
-            if (start >= _length)
-            {
-                errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                contentRangeHeaderValue = $"bytes */{_length}";
-                return false;
-            }
-
-            end = Math.Clamp(end, start, _length - 1);
-            parsedRange = new ByteRange(start, end);
-            return true;
-        }
-
-        private bool TryResolveRange(RangeItemHeaderValue range, out long start, out long end)
-        {
-            start = 0;
-            end = 0;
-
-            if (range.From is null)
-            {
-                if (range.To is not long suffixLength || suffixLength <= 0)
-                {
-                    return false;
-                }
-
-                start = Math.Max(0, _length - suffixLength);
-                end = _length - 1;
-                return true;
-            }
-
-            start = range.From.Value;
-            end = range.To ?? _length - 1;
-            return true;
-        }
-
         private async Task ServeFullAsync(HttpListenerContext ctx, string reqId, CancellationToken ct)
         {
             ctx.Response.StatusCode = (int)HttpStatusCode.OK;
             ctx.Response.ContentLength64 = _length;
-            var ok = await CopyRangeAsync(reqId, start: 0, endInclusive: _length - 1, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+            bool ok = await CopyRangeAsync(reqId, start: 0, endInclusive: _length - 1, ctx.Response.OutputStream, ct).ConfigureAwait(false);
             if (!ok)
             {
                 _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Full copy failed", _serverId, reqId);
@@ -376,13 +312,13 @@ namespace Cotton.Previews.Http
             ctx.Response.Close();
         }
 
-        private async Task ServeRangeAsync(HttpListenerContext ctx, string reqId, ByteRange range, CancellationToken ct)
+        private async Task ServeRangeAsync(HttpListenerContext ctx, string reqId, HttpByteRange range, CancellationToken ct)
         {
             ctx.Response.StatusCode = (int)HttpStatusCode.PartialContent;
             ctx.Response.ContentLength64 = range.ContentLength;
             ctx.Response.Headers["Content-Range"] = $"bytes {range.Start}-{range.EndInclusive}/{_length}";
 
-            var ok = await CopyRangeAsync(reqId, range.Start, range.EndInclusive, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+            bool ok = await CopyRangeAsync(reqId, range.Start, range.EndInclusive, ctx.Response.OutputStream, ct).ConfigureAwait(false);
             if (!ok)
             {
                 _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Range copy failed", _serverId, reqId);
@@ -437,7 +373,7 @@ namespace Cotton.Previews.Http
         {
             _logger?.LogDebug("[RangeServer {ServerId}] Disposing...", _serverId);
             MarkDisposing();
-            _cts.Cancel();
+            await _cts.CancelAsync().ConfigureAwait(false);
             try { _listener.Stop(); } catch { }
             try { _listener.Close(); } catch { }
             try

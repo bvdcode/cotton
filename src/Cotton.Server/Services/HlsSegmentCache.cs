@@ -30,7 +30,7 @@ namespace Cotton.Server.Services
 
         public bool TryGet(string key, [NotNullWhen(true)] out byte[]? bytes)
         {
-            if (_cache.TryGetValue<byte[]>(key, out var value) && value is { Length: > 0 })
+            if (_cache.TryGetValue<byte[]>(key, out byte[]? value) && value is { Length: > 0 })
             {
                 bytes = value;
                 return true;

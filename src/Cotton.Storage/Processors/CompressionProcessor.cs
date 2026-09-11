@@ -10,10 +10,9 @@ using ZstdSharp;
 
 namespace Cotton.Storage.Processors
 {
-    public class CompressionProcessor : IStorageProcessor
+    public class CompressionProcessor(
+        ICompressionLevelProvider _compressionLevelProvider) : IStorageProcessor
     {
-        private readonly ICompressionLevelProvider _compressionLevelProvider;
-
         public const int DefaultCompressionLevel = 1;
 
         public static readonly int MinCompressionLevel = Compressor.MinCompressionLevel;
@@ -30,11 +29,6 @@ namespace Cotton.Storage.Processors
         {
         }
 
-        public CompressionProcessor(ICompressionLevelProvider compressionLevelProvider)
-        {
-            _compressionLevelProvider = compressionLevelProvider;
-        }
-
         public static void ThrowIfInvalidLevel(int level)
         {
             if (level < MinCompressionLevel || level > MaxCompressionLevel)
@@ -48,7 +42,7 @@ namespace Cotton.Storage.Processors
 
         public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
         {
-            var decompressor = new DecompressionStream(stream);
+            DecompressionStream decompressor = new DecompressionStream(stream);
             return Task.FromResult<Stream>(decompressor);
         }
 
@@ -56,7 +50,7 @@ namespace Cotton.Storage.Processors
         {
             ArgumentNullException.ThrowIfNull(stream);
 
-            var pipe = new Pipe(new PipeOptions(
+            Pipe pipe = new Pipe(new PipeOptions(
                 pool: MemoryPool<byte>.Shared,
                 readerScheduler: null,
                 writerScheduler: null,
@@ -71,7 +65,7 @@ namespace Cotton.Storage.Processors
                 try
                 {
                     await using Stream writerStream = pipe.Writer.AsStream(leaveOpen: true);
-                    await using (var compressor = new CompressionStream(
+                    await using (CompressionStream compressor = new CompressionStream(
                         writerStream,
                         level: _compressionLevelProvider.Level,
                         leaveOpen: true))
@@ -92,7 +86,7 @@ namespace Cotton.Storage.Processors
                 }
                 finally
                 {
-                    stream.Dispose();
+                    await stream.DisposeAsync().ConfigureAwait(false);
                 }
             });
 

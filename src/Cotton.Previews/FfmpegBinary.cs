@@ -258,7 +258,7 @@ namespace Cotton.Previews
 
         private static async Task ChmodExecutableAsync(string path, CancellationToken cancellationToken)
         {
-            var startInfo = new ProcessStartInfo
+            ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = "chmod",
                 ArgumentList = { "+x", path },
@@ -268,7 +268,7 @@ namespace Cotton.Previews
                 CreateNoWindow = true,
             };
 
-            using var process = new Process { StartInfo = startInfo };
+            using Process process = new Process { StartInfo = startInfo };
             if (process.Start())
             {
                 await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);

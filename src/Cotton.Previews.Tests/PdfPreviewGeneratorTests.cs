@@ -21,12 +21,12 @@ namespace Cotton.Previews.Tests
         public async Task GeneratePreviewWebPAsync_ValidSinglePagePdf_ProducesWebpWithinRequestedBounds()
         {
             byte[] pdfBytes = CreateSinglePagePdfBytes("PDF preview test");
-            using var stream = new MemoryStream(pdfBytes);
+            using MemoryStream stream = new MemoryStream(pdfBytes);
 
             byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
 
             AssertWebpSignature(preview);
-            using var image = Image.Load<Rgba32>(preview);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
 
             Assert.That(Math.Max(image.Width, image.Height), Is.LessThanOrEqualTo(200));
         }
@@ -35,7 +35,7 @@ namespace Cotton.Previews.Tests
         public void GeneratePreviewWebPAsync_InvalidSize_ThrowsArgumentOutOfRangeException()
         {
             byte[] pdfBytes = CreateSinglePagePdfBytes("PDF preview invalid size");
-            using var stream = new MemoryStream(pdfBytes);
+            using MemoryStream stream = new MemoryStream(pdfBytes);
 
             Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
                 await _generator.GeneratePreviewWebPAsync(stream, size: 0));
@@ -45,7 +45,7 @@ namespace Cotton.Previews.Tests
         public void GeneratePreviewWebPAsync_InvalidPdf_Throws()
         {
             byte[] invalidBytes = Encoding.UTF8.GetBytes("not a pdf");
-            using var stream = new MemoryStream(invalidBytes);
+            using MemoryStream stream = new MemoryStream(invalidBytes);
 
             Assert.That(async () => await _generator.GeneratePreviewWebPAsync(stream, size: 200), Throws.Exception);
         }
@@ -69,8 +69,8 @@ namespace Cotton.Previews.Tests
                 "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
             ];
 
-            using var ms = new MemoryStream();
-            var offsets = new List<long> { 0 };
+            using MemoryStream ms = new MemoryStream();
+            List<long> offsets = new List<long> { 0 };
 
             static void WriteAscii(MemoryStream stream, string value)
             {

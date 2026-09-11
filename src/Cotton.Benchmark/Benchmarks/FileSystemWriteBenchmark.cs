@@ -48,7 +48,7 @@ namespace Cotton.Benchmark.Benchmarks
 
             try
             {
-                await using var writeStream = new MemoryStream(_testData, writable: false);
+                await using MemoryStream writeStream = new MemoryStream(_testData, writable: false);
                 if (measure)
                 {
                     stopwatch.Start();

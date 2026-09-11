@@ -42,8 +42,8 @@ namespace Cotton.Server.Services
             CancellationToken cancellationToken)
         {
             int revoked = 0;
-            var sessionIds = new List<string>();
-            var seenSessionIds = new HashSet<string>(StringComparer.Ordinal);
+            List<string> sessionIds = new List<string>();
+            HashSet<string> seenSessionIds = new HashSet<string>(StringComparer.Ordinal);
             while (true)
             {
                 List<ExtendedRefreshToken> tokens = await query

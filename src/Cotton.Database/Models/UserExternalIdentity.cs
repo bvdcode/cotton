@@ -46,9 +46,11 @@ namespace Cotton.Database.Models
         public DateTime? LastUsedAt { get; set; }
 
         [ForeignKey(nameof(UserId))]
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual User User { get; set; } = null!;
 
         [ForeignKey(nameof(ProviderId))]
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual OidcProvider Provider { get; set; } = null!;
     }
 }

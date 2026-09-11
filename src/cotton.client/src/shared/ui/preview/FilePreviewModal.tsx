@@ -1,12 +1,5 @@
-import React, { lazy, Suspense } from "react";
-import {
-  Box,
-  CircularProgress,
-  IconButton,
-  Popover,
-  Stack,
-  Tooltip,
-} from "@mui/material";
+import React from "react";
+import { Box, IconButton, Popover, Stack, Tooltip } from "@mui/material";
 import {
   AutoFixHigh,
   ColorLens,
@@ -27,37 +20,9 @@ import {
 } from "./modelPalette";
 import type { FileType } from "@shared/utils/fileTypes";
 import type { NodeFileManifestDto } from "../../api/nodesApi";
-
-const PdfPreview = lazy(() =>
-  import("./PdfPreview").then((module) => ({
-    default: module.PdfPreview,
-  })),
-);
-
-const TextPreview = lazy(() =>
-  import("./TextPreview").then((module) => ({
-    default: module.TextPreview,
-  })),
-);
-
-const ModelPreview = lazy(() =>
-  import("./ModelPreview").then((module) => ({
-    default: module.ModelPreview,
-  })),
-);
-
-const PreviewFallback: React.FC = () => (
-  <Box
-    alignItems="center"
-    display="flex"
-    height="100%"
-    justifyContent="center"
-    minHeight={120}
-    width="100%"
-  >
-    <CircularProgress size={24} />
-  </Box>
-);
+import { PdfPreview } from "./PdfPreview";
+import { TextPreview } from "./TextPreview";
+import { ModelPreview } from "./ModelPreview";
 
 interface FilePreviewModalProps {
   isOpen: boolean;
@@ -251,24 +216,20 @@ const FilePreviewBody = ({
 }: FilePreviewBodyProps) => (
   <>
     {fileType === "pdf" && fileSource && (
-      <Suspense fallback={<PreviewFallback />}>
-        <PdfPreview
-          source={fileSource}
-          fileName={fileName}
-          fileSizeBytes={fileSizeBytes}
-        />
-      </Suspense>
+      <PdfPreview
+        source={fileSource}
+        fileName={fileName}
+        fileSizeBytes={fileSizeBytes}
+      />
     )}
     {fileType === "text" && (
-      <Suspense fallback={<PreviewFallback />}>
-        <TextPreview
-          nodeFileId={fileId}
-          fileName={fileName}
-          fileSizeBytes={fileSizeBytes}
-          sourceFile={sourceFile}
-          onSaved={onSaved}
-        />
-      </Suspense>
+      <TextPreview
+        nodeFileId={fileId}
+        fileName={fileName}
+        fileSizeBytes={fileSizeBytes}
+        sourceFile={sourceFile}
+        onSaved={onSaved}
+      />
     )}
     {fileType === "model" && fileSource && (
       <ModelPreviewBody
@@ -303,20 +264,18 @@ const ModelPreviewBody = ({
     }}
   >
     <Box sx={{ flex: 1, minHeight: 0 }}>
-      <Suspense fallback={<PreviewFallback />}>
-        <ModelPreview
-          source={fileSource}
-          fileName={fileName}
-          fileSizeBytes={fileSizeBytes}
-          materialColor={modelControls.materialColor}
-          autoAlignToken={modelControls.autoAlignToken}
-          autoOrientToken={modelControls.autoOrientToken}
-          flipToken={modelControls.flipToken}
-          lightingPreset={modelControls.lightingPreset}
-          shadowsEnabled={modelControls.shadowsEnabled}
-          surfacePreset={modelControls.surfacePreset}
-        />
-      </Suspense>
+      <ModelPreview
+        source={fileSource}
+        fileName={fileName}
+        fileSizeBytes={fileSizeBytes}
+        materialColor={modelControls.materialColor}
+        autoAlignToken={modelControls.autoAlignToken}
+        autoOrientToken={modelControls.autoOrientToken}
+        flipToken={modelControls.flipToken}
+        lightingPreset={modelControls.lightingPreset}
+        shadowsEnabled={modelControls.shadowsEnabled}
+        surfacePreset={modelControls.surfacePreset}
+      />
     </Box>
   </Box>
 );

@@ -6,10 +6,9 @@ export const uploadConfig = {
   // Fixed network consumer pool for prepared chunks inside one file.
   maxChunkUploadConcurrency: 8,
 
-  // Native WebCrypto digests run concurrently while the ordered whole-file
-  // hash stays isolated in its worker.
+  // Native WebCrypto chunk digests run concurrently. Ordered batch copies feed
+  // the whole-file hash worker while original buffers enter the network queue.
   chunkHashConcurrency: 4,
-  wholeFileHashReadSizeBytes: 8 * 1024 * 1024,
 
   // Backpressure for chunks waiting between hashing and network consumers.
   maxPreparedChunkCount: 8,

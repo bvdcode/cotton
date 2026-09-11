@@ -33,7 +33,7 @@ namespace Cotton.Autoconfig.Tests
         public void AddCottonOptions_Throws_When_MasterKey_Is_Missing()
         {
             Environment.SetEnvironmentVariable(EnvVar, null);
-            var builder = new ConfigurationBuilder();
+            ConfigurationBuilder builder = new();
             InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => builder.AddCottonOptions());
             Assert.That(ex!.Message, Does.Contain("COTTON_MASTER_KEY"));
         }
@@ -42,7 +42,7 @@ namespace Cotton.Autoconfig.Tests
         public void AddCottonOptions_Throws_When_MasterKey_Length_Is_Not_32()
         {
             Environment.SetEnvironmentVariable(EnvVar, "too-short");
-            var builder = new ConfigurationBuilder();
+            ConfigurationBuilder builder = new();
             InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => builder.AddCottonOptions());
             Assert.That(ex!.Message, Does.Contain(ConfigurationBuilderExtensions.DefaultKeyLength.ToString()));
         }
@@ -67,8 +67,8 @@ namespace Cotton.Autoconfig.Tests
             }
 
             // And base64 decodes to required length
-            var pepperBytes = Convert.FromBase64String(cfg[nameof(CottonEncryptionSettings.Pepper)]!);
-            var masterBytes = Convert.FromBase64String(cfg[nameof(CottonEncryptionSettings.MasterEncryptionKey)]!);
+            byte[] pepperBytes = Convert.FromBase64String(cfg[nameof(CottonEncryptionSettings.Pepper)]!);
+            byte[] masterBytes = Convert.FromBase64String(cfg[nameof(CottonEncryptionSettings.MasterEncryptionKey)]!);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(pepperBytes, Has.Length.EqualTo(ConfigurationBuilderExtensions.DefaultKeyLength));

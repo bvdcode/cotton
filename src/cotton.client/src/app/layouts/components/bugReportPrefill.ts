@@ -1,10 +1,7 @@
 import { UserRole } from "../../../features/auth";
 
 type ConsoleErrorSource =
-  | "console.error"
-  | "window.error"
-  | "unhandledrejection"
-  | "resource.error";
+  "console.error" | "window.error" | "unhandledrejection" | "resource.error";
 
 type BrowserDetails = {
   name: string;
@@ -23,6 +20,12 @@ type ConsoleCaptureState = {
   originalConsoleError?: typeof console.error;
 };
 
+declare global {
+  interface Window {
+    __cottonBugReportConsoleCaptureState?: ConsoleCaptureState;
+  }
+}
+
 export type BuildBugReportUrlArgs = {
   serverVersion?: string | null;
   userRole?: number | null;
@@ -33,11 +36,8 @@ const ISSUE_URL = "https://github.com/bvdcode/cotton/issues/new";
 const MAX_CAPTURED_CONSOLE_ERRORS = 30;
 const MAX_CONSOLE_BLOCK_LENGTH = 8000;
 const MAX_SINGLE_ERROR_LENGTH = 1200;
-const CAPTURE_STATE_KEY = "__cottonBugReportConsoleCaptureState";
-
 const getConsoleCaptureState = (): ConsoleCaptureState => {
-  const bag = window as unknown as Record<string, unknown>;
-  const existing = bag[CAPTURE_STATE_KEY] as ConsoleCaptureState | undefined;
+  const existing = window.__cottonBugReportConsoleCaptureState;
   if (
     existing &&
     typeof existing === "object" &&
@@ -50,7 +50,7 @@ const getConsoleCaptureState = (): ConsoleCaptureState => {
     installed: false,
     errors: [],
   };
-  bag[CAPTURE_STATE_KEY] = created;
+  window.__cottonBugReportConsoleCaptureState = created;
   return created;
 };
 

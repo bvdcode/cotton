@@ -18,8 +18,8 @@ namespace Cotton.Crypto.Tests
 
         private static byte[] CreateRandomBytes(int size, int seed = 12345)
         {
-            var rng = new Random(seed);
-            var data = new byte[size];
+            Random rng = new Random(seed);
+            byte[] data = new byte[size];
             rng.NextBytes(data);
             return data;
         }
@@ -29,7 +29,7 @@ namespace Cotton.Crypto.Tests
 
         private static async Task<MemoryStream> EncryptToMemoryAsync(AesGcmStreamCipher cipher, Stream input, int chunkSize)
         {
-            var output = new MemoryStream();
+            MemoryStream output = new MemoryStream();
             await cipher.EncryptAsync(input, output, chunkSize);
             output.Position = 0;
             return output;
@@ -37,7 +37,7 @@ namespace Cotton.Crypto.Tests
 
         private static async Task<MemoryStream> DecryptToMemoryAsync(AesGcmStreamCipher cipher, Stream input)
         {
-            var output = new MemoryStream();
+            MemoryStream output = new MemoryStream();
             await cipher.DecryptAsync(input, output);
             output.Position = 0;
             return output;
@@ -63,14 +63,14 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Constructor_InvalidMasterKey_Throws()
         {
-            var tooShort = new byte[16];
+            byte[] tooShort = new byte[16];
             Assert.Throws<ArgumentException>(() => CreateCipher(tooShort));
         }
 
         [Test]
         public void Constructor_InvalidKeyId_Throws()
         {
-            var mk = ValidMasterKey();
+            byte[] mk = ValidMasterKey();
             Assert.Throws<ArgumentOutOfRangeException>(() => new AesGcmStreamCipher(mk, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => new AesGcmStreamCipher(mk, -1));
         }
@@ -94,31 +94,31 @@ namespace Cotton.Crypto.Tests
         [Test]
         public void Encrypt_InvalidChunkSize_Throws_BelowMin()
         {
-            var mk = ValidMasterKey();
+            byte[] mk = ValidMasterKey();
             AesGcmStreamCipher cipher = CreateCipher(mk);
-            using var input = new MemoryStream(CreateRandomBytes(1024));
-            using var output = new MemoryStream();
+            using MemoryStream input = new MemoryStream(CreateRandomBytes(1024));
+            using MemoryStream output = new MemoryStream();
             Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await cipher.EncryptAsync(input, output, MinChunkSize - 1));
         }
 
         [Test]
         public void Encrypt_InvalidChunkSize_Throws_AboveMax()
         {
-            var mk = ValidMasterKey();
+            byte[] mk = ValidMasterKey();
             AesGcmStreamCipher cipher = CreateCipher(mk);
-            using var input = new MemoryStream(CreateRandomBytes(1024));
-            using var output = new MemoryStream();
+            using MemoryStream input = new MemoryStream(CreateRandomBytes(1024));
+            using MemoryStream output = new MemoryStream();
             Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await cipher.EncryptAsync(input, output, MaxChunkSize + 1));
         }
 
         [Test]
         public async Task RoundTrip_SmallData_DefaultChunk()
         {
-            var mk = ValidMasterKey();
+            byte[] mk = ValidMasterKey();
             AesGcmStreamCipher cipher = CreateCipher(mk, keyId: 7);
 
-            var plaintext = Encoding.UTF8.GetBytes("Hello AES-GCM streaming!");
-            using var input = new MemoryStream(plaintext);
+            byte[] plaintext = Encoding.UTF8.GetBytes("Hello AES-GCM streaming!");
+            using MemoryStream input = new MemoryStream(plaintext);
             MemoryStream encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize: 1_048_576);
 
             encrypted.Position = 0;
@@ -132,12 +132,12 @@ namespace Cotton.Crypto.Tests
         [TestCase(1_048_576)]
         public async Task RoundTrip_LargeData_CustomChunkSizes(int chunkSize)
         {
-            var mk = ValidMasterKey();
+            byte[] mk = ValidMasterKey();
             AesGcmStreamCipher cipher = CreateCipher(mk, keyId: 3);
 
             int dataLen = (int)((chunkSize * 2.5) + 123); // guarantee multiple chunks
-            var data = CreateRandomBytes(dataLen);
-            using var input = new MemoryStream(data);
+            byte[] data = CreateRandomBytes(dataLen);
+            using MemoryStream input = new MemoryStream(data);
 
             MemoryStream encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize);
 
@@ -150,15 +150,15 @@ namespace Cotton.Crypto.Tests
         [Test]
         public async Task Encrypt_WritesHeader_WithKeyId_AndDataLength()
         {
-            var mk = ValidMasterKey();
+            byte[] mk = ValidMasterKey();
             int keyId = 42;
             AesGcmStreamCipher cipher = CreateCipher(mk, keyId);
 
-            var data = CreateRandomBytes(200_000);
-            using var input = new MemoryStream(data);
+            byte[] data = CreateRandomBytes(200_000);
+            using MemoryStream input = new MemoryStream(data);
             MemoryStream encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize: 65_536);
 
-            var bytes = encrypted.ToArray();
+            byte[] bytes = encrypted.ToArray();
             var (fileHeader, firstChunkHeader, _) = await ParseHeadersAsync(bytes);
 
             using (Assert.EnterMultipleScope())
@@ -178,16 +178,16 @@ namespace Cotton.Crypto.Tests
         [Test]
         public async Task Encrypt_WritesHeader_NonSeekable_DataLengthZero()
         {
-            var mk = ValidMasterKey();
+            byte[] mk = ValidMasterKey();
             AesGcmStreamCipher cipher = CreateCipher(mk, keyId: 9);
 
-            var data = CreateRandomBytes(100_000);
-            using var inner = new MemoryStream(data);
-            using var nonSeek = new NonSeekableReadStream(inner);
+            byte[] data = CreateRandomBytes(100_000);
+            using MemoryStream inner = new MemoryStream(data);
+            using NonSeekableReadStream nonSeek = new NonSeekableReadStream(inner);
 
-            var encrypted = new MemoryStream();
+            MemoryStream encrypted = new MemoryStream();
             await cipher.EncryptAsync(nonSeek, encrypted, chunkSize: 65_536);
-            var bytes = encrypted.ToArray();
+            byte[] bytes = encrypted.ToArray();
 
             var (fileHeader, _, _) = await ParseHeadersAsync(bytes);
             Assert.That(fileHeader.TotalPlaintextLength, Is.Zero);
@@ -196,14 +196,14 @@ namespace Cotton.Crypto.Tests
         [Test]
         public async Task Decrypt_Fails_OnTamperedCiphertext()
         {
-            var mk = ValidMasterKey();
+            byte[] mk = ValidMasterKey();
             AesGcmStreamCipher cipher = CreateCipher(mk);
 
-            var data = CreateRandomBytes(120_000);
-            using var input = new MemoryStream(data);
+            byte[] data = CreateRandomBytes(120_000);
+            using MemoryStream input = new MemoryStream(data);
             MemoryStream encrypted = await EncryptToMemoryAsync(cipher, input, chunkSize: 65_536);
 
-            var bytes = encrypted.ToArray();
+            byte[] bytes = encrypted.ToArray();
             var (_, firstChunkHeader, firstCipherOffset) = await ParseHeadersAsync(bytes);
             Assert.That(firstChunkHeader, Is.Not.Null, "Expected at least one chunk.");
 
@@ -213,21 +213,21 @@ namespace Cotton.Crypto.Tests
                 bytes[firstCipherOffset] ^= 0xFF;
             }
 
-            using var tampered = new MemoryStream(bytes, writable: false);
-            using var output = new MemoryStream();
+            using MemoryStream tampered = new MemoryStream(bytes, writable: false);
+            using MemoryStream output = new MemoryStream();
             Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, output));
         }
 
         [Test]
         public void Encrypt_Cancellation_Throws()
         {
-            var mk = ValidMasterKey();
+            byte[] mk = ValidMasterKey();
             AesGcmStreamCipher cipher = CreateCipher(mk);
 
-            var data = CreateRandomBytes(1_000_000);
-            using var input = new MemoryStream(data);
-            using var output = new MemoryStream();
-            using var cts = new CancellationTokenSource();
+            byte[] data = CreateRandomBytes(1_000_000);
+            using MemoryStream input = new MemoryStream(data);
+            using MemoryStream output = new MemoryStream();
+            using CancellationTokenSource cts = new CancellationTokenSource();
             cts.Cancel();
 
             Assert.ThrowsAsync<TaskCanceledException>(async () => await cipher.EncryptAsync(input, output, chunkSize: 65_536, ct: cts.Token));

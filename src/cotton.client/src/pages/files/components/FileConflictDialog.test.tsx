@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ConflictAction } from "../utils/uploadConflicts";
+import { ConflictAction } from "../../../shared/types/nameConflict";
 import { FileConflictDialog } from "./FileConflictDialog";
 
 vi.mock("react-i18next", () => ({

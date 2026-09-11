@@ -7,11 +7,13 @@ import {
   type MoveClipboardItem,
 } from "../store/moveClipboardStore";
 import { useNodesStore } from "../store/nodesStore";
+import { ConflictAction } from "../types/nameConflict";
 import { useMoveOperations } from "./useMoveOperations";
 
 const mocks = vi.hoisted(() => ({
   moveFile: vi.fn(),
   moveNode: vi.fn(),
+  confirmConflict: vi.fn(),
   getChildren: vi.fn(),
   fetchServerSettings: vi.fn(),
   encryptExistingFileWithTask: vi.fn(),
@@ -113,6 +115,14 @@ const makeEmptyChildrenResponse = (id = "empty") => ({
   totalCount: 0,
 });
 
+const createNameConflictError = (
+  conflictKind: "File" | "Folder" = "File",
+): Error & { isAxiosError: boolean } =>
+  Object.assign(new Error("Name conflict"), {
+    isAxiosError: true,
+    response: { status: 409, data: { conflictKind } },
+  });
+
 describe("useMoveOperations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -166,6 +176,7 @@ describe("useMoveOperations", () => {
       supportedHashAlgorithm: "SHA-256",
     });
     mocks.encryptExistingFileWithTask.mockResolvedValue(undefined);
+    mocks.confirmConflict.mockResolvedValue(ConflictAction.Skip);
   });
 
   it("does not keep moved files in the clipboard when post-move encryption fails", async () => {
@@ -174,7 +185,9 @@ describe("useMoveOperations", () => {
     );
     useMoveClipboardStore.getState().setItems([plainFileItem]);
 
-    const { result } = renderHook(() => useMoveOperations());
+    const { result } = renderHook(() =>
+      useMoveOperations({ confirmConflict: mocks.confirmConflict }),
+    );
 
     await act(async () => {
       await result.current.pasteInto(targetParentId);
@@ -193,6 +206,93 @@ describe("useMoveOperations", () => {
       "clientEncryption.toasts.encryptExistingFailed",
       expect.any(Object),
     );
+  });
+
+  it("moves a conflicting file with the suggested name after confirmation", async () => {
+    useMoveClipboardStore.getState().setItems([plainFileItem]);
+    mocks.moveFile.mockRejectedValueOnce(createNameConflictError());
+    mocks.confirmConflict.mockResolvedValueOnce(ConflictAction.Rename);
+
+    const { result } = renderHook(() =>
+      useMoveOperations({ confirmConflict: mocks.confirmConflict }),
+    );
+
+    await act(async () => {
+      await result.current.pasteInto(targetParentId);
+    });
+
+    expect(mocks.confirmConflict).toHaveBeenCalledWith({
+      newName: "plain (1).txt",
+      canOverwrite: true,
+    });
+    expect(mocks.moveFile).toHaveBeenNthCalledWith(1, plainFileItem.id, {
+      parentId: targetParentId,
+    });
+    expect(mocks.moveFile).toHaveBeenNthCalledWith(2, plainFileItem.id, {
+      parentId: targetParentId,
+      name: "plain (1).txt",
+    });
+    expect(useMoveClipboardStore.getState().items).toEqual([]);
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("replaces a conflicting file after confirmation", async () => {
+    useMoveClipboardStore.getState().setItems([plainFileItem]);
+    mocks.moveFile.mockRejectedValueOnce(createNameConflictError());
+    mocks.confirmConflict.mockResolvedValueOnce(ConflictAction.Overwrite);
+
+    const { result } = renderHook(() =>
+      useMoveOperations({ confirmConflict: mocks.confirmConflict }),
+    );
+
+    await act(async () => {
+      await result.current.pasteInto(targetParentId);
+    });
+
+    expect(mocks.moveFile).toHaveBeenNthCalledWith(2, plainFileItem.id, {
+      parentId: targetParentId,
+      name: "plain.txt",
+      overwrite: true,
+    });
+    expect(useMoveClipboardStore.getState().items).toEqual([]);
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("keeps a skipped conflicting file in the cut clipboard", async () => {
+    useMoveClipboardStore.getState().setItems([plainFileItem]);
+    mocks.moveFile.mockRejectedValueOnce(createNameConflictError());
+    mocks.confirmConflict.mockResolvedValueOnce(ConflictAction.Skip);
+
+    const { result } = renderHook(() =>
+      useMoveOperations({ confirmConflict: mocks.confirmConflict }),
+    );
+
+    await act(async () => {
+      await result.current.pasteInto(targetParentId);
+    });
+
+    expect(mocks.moveFile).toHaveBeenCalledOnce();
+    expect(useMoveClipboardStore.getState().items).toEqual([plainFileItem]);
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("does not offer replacement when the server reports a folder conflict", async () => {
+    useMoveClipboardStore.getState().setItems([plainFileItem]);
+    mocks.moveFile.mockRejectedValueOnce(createNameConflictError("Folder"));
+    mocks.confirmConflict.mockResolvedValueOnce(ConflictAction.Skip);
+
+    const { result } = renderHook(() =>
+      useMoveOperations({ confirmConflict: mocks.confirmConflict }),
+    );
+
+    await act(async () => {
+      await result.current.pasteInto(targetParentId);
+    });
+
+    expect(mocks.confirmConflict).toHaveBeenCalledWith({
+      newName: "plain (1).txt",
+      canOverwrite: false,
+    });
   });
 
   it("encrypts plain files nested inside a moved folder when the target encrypts new files", async () => {
@@ -259,7 +359,9 @@ describe("useMoveOperations", () => {
       });
     useMoveClipboardStore.getState().setItems([folderItem]);
 
-    const { result } = renderHook(() => useMoveOperations());
+    const { result } = renderHook(() =>
+      useMoveOperations({ confirmConflict: mocks.confirmConflict }),
+    );
 
     await act(async () => {
       await result.current.pasteInto(targetParentId);
@@ -326,7 +428,9 @@ describe("useMoveOperations", () => {
     });
     useMoveClipboardStore.getState().setItems([folderItem]);
 
-    const { result } = renderHook(() => useMoveOperations());
+    const { result } = renderHook(() =>
+      useMoveOperations({ confirmConflict: mocks.confirmConflict }),
+    );
 
     await act(async () => {
       await result.current.pasteInto(targetParentId);

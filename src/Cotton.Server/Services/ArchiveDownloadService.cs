@@ -193,7 +193,7 @@ namespace Cotton.Server.Services
             Guid userId,
             CancellationToken cancellationToken)
         {
-            var currentLevel = new Dictionary<Guid, string>
+            Dictionary<Guid, string> currentLevel = new Dictionary<Guid, string>
             {
                 [rootFolderId] = rootPath,
             };
@@ -237,7 +237,7 @@ namespace Cotton.Server.Services
                 childFoldersQuery = ApplyLimitProbe(childFoldersQuery, limits);
                 List<Node> childFolders = await childFoldersQuery.ToListAsync(cancellationToken);
 
-                var nextLevel = new Dictionary<Guid, string>();
+                Dictionary<Guid, string> nextLevel = new Dictionary<Guid, string>();
                 foreach (Node child in childFolders)
                 {
                     string parentPath = currentLevel[child.ParentId!.Value];
@@ -321,7 +321,7 @@ namespace Cotton.Server.Services
             Guid[] requestedIds,
             Func<T, Guid> idSelector)
         {
-            var byId = items.ToDictionary(idSelector);
+            Dictionary<Guid, T> byId = items.ToDictionary(idSelector);
             foreach (Guid id in requestedIds)
             {
                 yield return byId[id];

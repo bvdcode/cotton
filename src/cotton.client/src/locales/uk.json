@@ -1463,6 +1463,7 @@
   "common": {
     "languageName": "Українська",
     "switchToThisLanguage": "Перемкнути на українську",
+    "language": "Мова",
     "placeholder": "—",
     "yes": "Так",
     "no": "Ні",
@@ -1520,15 +1521,16 @@
       "play": "Відтворити",
       "pause": "Призупинити",
       "copied": "Скопійовано!",
-      "reload": "Оновити",
-      "versions": "Versions"
+      "reload": "Перезавантажити",
+      "retry": "Повторити",
+      "versions": "Версії"
     },
     "errors": {
-      "unexpectedTitle": "Щось пішло не так",
-      "unexpectedDescription": "Сталася неочікувана помилка. Будь ласка, перезавантажте сторінку.",
-      "showDetails": "Показати деталі",
-      "hideDetails": "Сховати деталі",
-      "schemaValidationFailed": "Сервер повернув неочікувані дані"
+      "unexpectedTitle": "Не вдалося відобразити сторінку",
+      "unexpectedDescription": "Під час відображення сторінки сталася неочікувана помилка. Спробуйте ще раз або перезавантажте сторінку, якщо помилка повториться.",
+      "schemaValidationFailed": "Сервер повернув неочікувані дані",
+      "serverUnavailableTitle": "Сервер недоступний",
+      "serverUnavailableDescription": "Cotton не вдалося з’єднатися із сервером. Перевірте підключення та повторіть спробу."
     },
     "userMenu": {
       "profile": "Профіль",
@@ -1672,9 +1674,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "Завантаження постачальників входу...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Продовжити через {{provider}}",
       "errors": {
         "startFailed": "Не вдалося почати вхід."
       }
@@ -2024,21 +2026,21 @@
       }
     },
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "Пов’язані облікові записи",
+      "description": "Пов’яжіть зовнішніх постачальників ідентифікації з цим обліковим записом.",
+      "loading": "Завантаження пов’язаних облікових записів...",
+      "empty": "Зовнішніх облікових записів ще не пов’язано.",
+      "link": "Пов’язати {{provider}}",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "Відв’язати",
+        "title": "Відв’язати {{provider}}?",
+        "description": "Ви не зможете входити через цього постачальника, доки не пов’яжете його знову.",
+        "confirm": "Відв’язати",
+        "cancel": "Скасувати"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
+        "loadFailed": "Не вдалося завантажити пов’язані облікові записи.",
+        "unlinkFailed": "Не вдалося відв’язати цей обліковий запис.",
         "linkFailed": "Не вдалося почати прив’язування облікового запису."
       }
     }
@@ -2330,6 +2332,57 @@
         "title": "Нещодавні файли",
         "empty": "Немає нещодавніх файлів"
       }
+    },
+    "dashboard": {
+      "title": "Ваш простір",
+      "actions": {
+        "customize": "Налаштувати",
+        "done": "Готово",
+        "size": "Розмір {{size}}",
+        "moveUp": "Перемістити вище",
+        "moveDown": "Перемістити нижче",
+        "hide": "Сховати віджет",
+        "retry": "Повторити"
+      },
+      "widgets": {
+        "overview": "Огляд сховища",
+        "pinnedFolders": "Закріплені теки",
+        "quickAccess": "Швидкий доступ",
+        "recentFiles": "Нещодавні файли",
+        "recentImages": "Нещодавні фото",
+        "recentVideos": "Нещодавні відео",
+        "recentDocuments": "Нещодавні документи",
+        "recentAudio": "Нещодавнє аудіо",
+        "recentOther": "Інші нещодавні файли"
+      },
+      "overview": {
+        "ofQuota": "з {{quota}}",
+        "storageUsage": "Використання сховища",
+        "available": "Доступно"
+      },
+      "quickAccess": {
+        "files": "Файли",
+        "search": "Пошук",
+        "trash": "Кошик"
+      },
+      "recent": {
+        "empty": "Немає відповідних нещодавніх файлів",
+        "loadFailed": "Не вдалося завантажити нещодавні файли."
+      },
+      "pinnedFolders": {
+        "folder": "Тека",
+        "pin": "Закріпити на панелі",
+        "unpin": "Відкріпити від панелі",
+        "empty": "Закріплених тек поки немає",
+        "emptyHint": "Закріпіть теку через її дії у розділі «Файли».",
+        "limitReached": "Можна закріпити не більше {{count}} тек.",
+        "loadFailed": "Не вдалося завантажити закріплені теки."
+      },
+      "library": {
+        "title": "Інші віджети",
+        "description": "Сховані віджети залишаються тут, доки ви їх не повернете.",
+        "empty": "Усі доступні віджети вже на панелі."
+      }
     }
   },
   "files": {
@@ -2443,10 +2496,10 @@
       "confirmDescription": "Виділені елементи буде переміщено до кошика, їх можна буде відновити пізніше."
     },
     "conflicts": {
-      "title": "Файл уже існує",
-      "description": "Файл із такою назвою вже існує в цій теці. Вивантажити як {{newName}}?",
-      "overwriteDescription": "Файл із такою назвою вже існує в цій теці. Замінити його чи вивантажити як {{newName}}?",
-      "rename": "Вивантажити як {{newName}}",
+      "title": "Конфлікт назв",
+      "description": "У цій теці вже є об’єкт із такою назвою. Використати натомість {{newName}}?",
+      "overwriteDescription": "У цій теці вже є об’єкт із такою назвою. Замінити його чи використати натомість {{newName}}?",
+      "rename": "Використати {{newName}}",
       "overwrite": "Замінити",
       "skip": "Пропустити",
       "skipAll": "Пропустити всі"
@@ -2620,24 +2673,24 @@
         "decryptExistingComplete_other": "Розшифровано {{count}} файлів.",
         "decryptExistingFailed_one": "Не вдалося розшифрувати {{count}} файл. Перевірте панель завдань.",
         "decryptExistingFailed_other": "Не вдалося розшифрувати {{count}} файлів. Перевірте панель завдань.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "Проскановано лише частину дерева папок. Деякі файли могли залишитися незашифрованими. Після завершення цієї групи знову запустіть шифрування з папки.",
+        "decryptExistingScanIncomplete": "Проскановано лише частину дерева папок. Деякі зашифровані файли могли залишитися. Після завершення цієї групи знову запустіть розшифрування з папки."
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
-      "versionLabel": "Version {{version}}",
-      "current": "Current",
-      "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "title": "Версії файлу {{name}}",
+      "empty": "Попередніх версій ще немає.",
+      "loadFailed": "Не вдалося завантажити версії.",
+      "restoreFailed": "Не вдалося відновити версію.",
+      "deleteFailed": "Не вдалося видалити версію.",
+      "downloadFailed": "Не вдалося підготувати завантаження версії.",
+      "versionLabel": "Версія {{version}}",
+      "current": "Поточна",
+      "original": "Оригінальна",
+      "restoreConfirmTitle": "Відновити цю версію?",
+      "restoreConfirmDescription": "Поточний вміст файлу буде збережено як нову версію, після чого версія {{version}} стане поточною.",
+      "deleteConfirmTitle": "Видалити цю версію?",
+      "deleteConfirmDescription": "Версію {{version}} буде видалено. Поточний файл не зміниться."
     }
   },
   "tasks": {
@@ -2777,7 +2830,7 @@
       "databaseBackup": "Резервне копіювання бази даних",
       "storageStatistics": "Статистика сховища",
       "securityDiagnostics": "Перевірка безпеки",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Постачальники ідентифікації"
     },
     "roles": {
       "user": "Користувач",
@@ -2967,19 +3020,19 @@
         "storageType": "Бекенд сховища"
       },
       "chunkSize": {
-        "title": "Upload chunk size",
-        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
-        "ariaLabel": "Upload chunk size"
+        "title": "Розмір частини завантаження",
+        "description": "Визначає обсяг даних, які браузер надсилає в одному запиті. Більші частини зменшують кількість запитів у швидких локальних мережах.",
+        "ariaLabel": "Розмір частини завантаження"
       },
       "pipeline": {
-        "title": "Storage pipeline",
-        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "title": "Обробка даних сховища",
+        "description": "Налаштовує стискання та шифрування нових частин перед їх записом до сховища.",
         "fields": {
-          "compressionLevel": "Compression level",
-          "cipherChunkSize": "Encryption block size",
-          "encryptionThreads": "Encryption threads"
+          "compressionLevel": "Рівень стискання",
+          "cipherChunkSize": "Розмір блоку шифрування",
+          "encryptionThreads": "Потоки шифрування"
         },
-        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+        "compressionHelp": "Допустимий діапазон: від {{min}} до {{max}}. Типове значення — 1."
       },
       "quota": {
         "title": "Квота користувача за замовчуванням",
@@ -3028,8 +3081,8 @@
         "templateNodeIdInvalid": "Введіть коректний ID вузла папки.",
         "quotaSaveFailed": "Не вдалося зберегти квоту користувача за замовчуванням.",
         "templateSaveFailed": "Не вдалося зберегти шаблон файлів за замовчуванням.",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
-        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
+        "chunkSizeSaveFailed": "Не вдалося зберегти розмір частини завантаження.",
+        "storagePipelineSaveFailed": "Не вдалося зберегти налаштування обробки даних сховища."
       }
     },
     "notificationsSettings": {
@@ -3210,9 +3263,9 @@
         "masterKey": "Головний ключ",
         "memory": "Доступ до пам'яті процесу",
         "runtime": "Факти середовища виконання",
-        "containerBoundary": "Container boundary",
-        "passed": "Protections in place",
-        "capabilities": "Hardware"
+        "containerBoundary": "Межа контейнера",
+        "passed": "Діючі засоби захисту",
+        "capabilities": "Обладнання"
       },
       "risks": {
         "empty": "Поточні серверні перевірки не виявили попереджень."
@@ -3230,22 +3283,22 @@
         "sysPtrace": "CAP_SYS_PTRACE",
         "os": "Операційна система",
         "container": "Контейнер виявлено",
-        "tempDirectoryPath": "Temp directory",
-        "tempDirectoryWritable": "Temp directory writable",
-        "tempDirectoryError": "Temp directory error",
+        "tempDirectoryPath": "Тимчасовий каталог",
+        "tempDirectoryWritable": "Тимчасовий каталог доступний для запису",
+        "tempDirectoryError": "Помилка тимчасового каталогу",
         "euid": "Ефективний UID",
         "noNewPrivileges": "Без нових привілеїв",
         "seccomp": "Режим seccomp",
         "capabilities": "Ефективні можливості",
-        "rootFilesystemReadOnly": "Read-only root filesystem",
-        "dockerSocketMounted": "Docker socket mounted",
-        "hostPidNamespace": "Host PID namespace",
-        "procOneCommandLine": "PID 1 command",
-        "coreDumpLimit": "Core dump limit",
-        "corePattern": "Core pattern",
-        "appArmorProfile": "AppArmor profile",
-        "selinuxContext": "SELinux context",
-        "selinuxEnforcing": "SELinux enforcing"
+        "rootFilesystemReadOnly": "Коренева файлова система лише для читання",
+        "dockerSocketMounted": "Сокет Docker підключено",
+        "hostPidNamespace": "Простір імен PID хоста",
+        "procOneCommandLine": "Команда процесу PID 1",
+        "coreDumpLimit": "Ліміт дампа пам’яті",
+        "corePattern": "Шаблон дампа пам’яті",
+        "appArmorProfile": "Профіль AppArmor",
+        "selinuxContext": "Контекст SELinux",
+        "selinuxEnforcing": "Примусовий режим SELinux"
       },
       "values": {
         "unknown": "Невідомо",
@@ -3265,62 +3318,62 @@
         "seccomp-disabled": "Поверхня системних викликів ядра ширша за звичайну продакшн-базу Docker, тому помилка втечі з контейнера отримує більше простору.",
         "running-as-root": "Віддалене виконання коду відбуватиметься від імені root у контейнері, що збільшує шкоду для змонтованих томів і допоміжних процесів.",
         "process-hardening-failed": "Cotton запитав захищення процесу, але процес усе одно запустився без очікуваного захисту від дампів чи ptrace.",
-        "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
-        "temp-directory-not-writable": "Cotton cannot write temporary files. Database dump/restore, S3 upload spooling, and preview tooling can fail even when the persistent storage volume is healthy.",
-        "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
-        "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
-        "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
-        "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
-        "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
+        "db-integrity-unsigned-rows": "Непідписані захищені рядки можна змінити безпосередньо в PostgreSQL, і Cotton не виявить підміну під час читання.",
+        "temp-directory-not-writable": "Cotton не може записувати тимчасові файли. Дамп і відновлення бази даних, буферизація завантажень до S3 та створення попередніх переглядів можуть завершуватися помилкою, навіть якщо постійне сховище справне.",
+        "root-filesystem-writable": "Доступна для запису коренева файлова система дає зламаному коду більше місць для збереження інструментів, зміни файлів середовища виконання або існування до повторного створення контейнера.",
+        "docker-socket-mounted": "Сокет Docker дає коду у вебконтейнері змогу створювати привілейовані контейнери, підключати шляхи хоста та захопити керування хостом.",
+        "host-pid-namespace": "Спільний із хостом простір імен PID відкриває його процеси через procfs і спрощує цільові атаки на пам’ять процесів.",
+        "mandatory-access-control-unconfined": "Без примусового профілю AppArmor або SELinux під час виходу з контейнера чи помилки на межі ядра доводиться долати менше політик безпеки.",
+        "core-dumps-enabled": "Дампи пам’яті зберігають знімок пам’яті процесу. Якщо Cotton аварійно завершиться із завантаженими секретами, дамп може зберегти головний ключ або розшифровану конфігурацію."
       },
       "labels": {
-        "whatItMeans": "What it means",
-        "impact": "Impact",
-        "howToFix": "How to fix",
-        "guardsAgainst": "What this guards against",
-        "note": "Note"
+        "whatItMeans": "Що це означає",
+        "impact": "Вплив",
+        "howToFix": "Як виправити",
+        "guardsAgainst": "Від чого це захищає",
+        "note": "Примітка"
       },
       "fixes": {
-        "public-instance": "If this instance is not meant to be public, disable public/demo mode (unset COTTON_PUBLIC_INSTANCE) and restart.",
-        "master-key-from-environment": "Prefer unlocking via the /unlock page instead of COTTON_MASTER_KEY, or make sure the variable is not retained in deployment metadata or exposed to exec sessions.",
-        "admins-without-2fa": "Enable two-factor authentication (TOTP) for every admin account from Profile → Security.",
-        "dotnet-diagnostics-enabled": "Set DOTNET_EnableDiagnostics=0 (and COMPlus_EnableDiagnostics=0) in the container environment and restart.",
-        "process-dumpable": "Set COTTON_PROCESS_HARDENING=true (or use the official image defaults) so the process requests PR_SET_DUMPABLE=0 at startup.",
-        "sys-ptrace-capability": "Drop the CAP_SYS_PTRACE capability from the container (for example cap_drop: [ALL]).",
-        "new-privileges-allowed": "Run the container with no-new-privileges:true so the process cannot gain privileges through setuid binaries.",
-        "seccomp-disabled": "Run with a seccomp profile enabled (avoid seccomp=unconfined) to restrict the syscalls available to the process.",
-        "running-as-root": "Run the container as a non-root user; the official image runs as the unprivileged app user by default.",
-        "process-hardening-failed": "Process hardening was requested but could not be applied — check the container capabilities/permissions and the startup logs.",
-        "db-integrity-unsigned-rows": "Restore the affected rows from a trusted backup or run the required transition version before upgrading.",
-        "temp-directory-not-writable": "Mount writable scratch storage at /tmp. With read_only: true, add tmpfs: [\"/tmp\"] or bind-mount a fast writable disk at /tmp, then restart.",
-        "root-filesystem-writable": "Run the container with a read-only root filesystem (read_only: true), keep /app/files as the persistent writable volume, and mount writable scratch storage at /tmp.",
-        "docker-socket-mounted": "Do not mount the Docker socket (/var/run/docker.sock) into the container.",
-        "host-pid-namespace": "Do not share the host PID namespace (avoid pid: host) so the process cannot observe other host processes.",
-        "mandatory-access-control-unconfined": "Apply an AppArmor or SELinux profile to confine the process instead of running unconfined.",
-        "core-dumps-enabled": "Disable core dumps for the container (ulimits: core: 0) so secrets cannot leak into dump files."
+        "public-instance": "Якщо цей інстанс не має бути публічним, вимкніть публічний або демонстраційний режим (видаліть COTTON_PUBLIC_INSTANCE) і перезапустіть його.",
+        "master-key-from-environment": "Надавайте перевагу розблокуванню через /unlock замість COTTON_MASTER_KEY. Або переконайтеся, що змінна не зберігається в метаданих розгортання та недоступна в exec-сеансах.",
+        "admins-without-2fa": "Увімкніть двофакторну автентифікацію (TOTP) для кожного облікового запису адміністратора в розділі Профіль → Безпека.",
+        "dotnet-diagnostics-enabled": "Задайте DOTNET_EnableDiagnostics=0 та COMPlus_EnableDiagnostics=0 у середовищі контейнера й перезапустіть його.",
+        "process-dumpable": "Задайте COTTON_PROCESS_HARDENING=true або використовуйте типові налаштування офіційного образу, щоб процес під час запуску запитував PR_SET_DUMPABLE=0.",
+        "sys-ptrace-capability": "Видаліть capability CAP_SYS_PTRACE із контейнера, наприклад за допомогою cap_drop: [ALL].",
+        "new-privileges-allowed": "Запускайте контейнер із no-new-privileges:true, щоб процес не міг отримувати привілеї через setuid-файли.",
+        "seccomp-disabled": "Запускайте контейнер з увімкненим профілем seccomp і не використовуйте seccomp=unconfined, щоб обмежити доступні системні виклики.",
+        "running-as-root": "Запускайте контейнер від непривілейованого користувача. Офіційний образ типово використовує користувача app.",
+        "process-hardening-failed": "Не вдалося застосувати запитане посилення захисту процесу. Перевірте capabilities і дозволи контейнера, а також журнали запуску.",
+        "db-integrity-unsigned-rows": "Відновіть уражені рядки з надійної резервної копії або перед оновленням запустіть потрібну перехідну версію.",
+        "temp-directory-not-writable": "Підключіть доступне для запису тимчасове сховище до /tmp. З read_only: true додайте tmpfs: [\"/tmp\"] або підключіть до /tmp швидкий доступний для запису диск, а потім перезапустіть контейнер.",
+        "root-filesystem-writable": "Запускайте контейнер із кореневою файловою системою лише для читання (read_only: true), залиште /app/files постійним доступним для запису томом і підключіть тимчасове сховище до /tmp.",
+        "docker-socket-mounted": "Не підключайте сокет Docker (/var/run/docker.sock) до контейнера.",
+        "host-pid-namespace": "Не використовуйте простір імен PID хоста (уникайте pid: host), щоб процес не міг бачити інші процеси хоста.",
+        "mandatory-access-control-unconfined": "Застосуйте профіль AppArmor або SELinux, щоб обмежити процес замість запуску без обмежень.",
+        "core-dumps-enabled": "Вимкніть дампи пам’яті контейнера (ulimits: core: 0), щоб секрети не потрапляли до файлів дампів."
       },
       "passed": {
-        "public-instance": "Public account creation disabled",
-        "master-key-from-environment": "Master key not exposed via the environment",
-        "admins-without-2fa": "All admins have two-factor enabled",
-        "dotnet-diagnostics-enabled": ".NET diagnostics disabled",
-        "process-hardening-failed": "Process hardening applied",
-        "process-dumpable": "Process is not dumpable",
-        "sys-ptrace-capability": "CAP_SYS_PTRACE not held",
-        "new-privileges-allowed": "no-new-privileges enforced",
-        "seccomp-disabled": "seccomp filtering enabled",
-        "running-as-root": "Running as a non-root user",
-        "temp-directory-not-writable": "OS temp directory writable",
-        "root-filesystem-writable": "Read-only root filesystem",
-        "docker-socket-mounted": "Docker socket not mounted",
-        "host-pid-namespace": "Isolated PID namespace",
-        "core-dumps-enabled": "Core dumps disabled",
-        "mandatory-access-control-unconfined": "AppArmor/SELinux confinement active"
+        "public-instance": "Публічне створення облікових записів вимкнено",
+        "master-key-from-environment": "Головний ключ не розкривається через середовище",
+        "admins-without-2fa": "У всіх адміністраторів увімкнено двофакторну автентифікацію",
+        "dotnet-diagnostics-enabled": "Діагностику .NET вимкнено",
+        "process-hardening-failed": "Захист процесу посилено",
+        "process-dumpable": "Дамп пам’яті процесу заборонено",
+        "sys-ptrace-capability": "Capability CAP_SYS_PTRACE відсутня",
+        "new-privileges-allowed": "Заборона підвищення привілеїв діє",
+        "seccomp-disabled": "Фільтрацію seccomp увімкнено",
+        "running-as-root": "Процес запущено від непривілейованого користувача",
+        "temp-directory-not-writable": "Тимчасовий каталог ОС доступний для запису",
+        "root-filesystem-writable": "Коренева файлова система доступна лише для читання",
+        "docker-socket-mounted": "Сокет Docker не підключено",
+        "host-pid-namespace": "Простір імен PID ізольовано",
+        "core-dumps-enabled": "Дампи пам’яті вимкнено",
+        "mandatory-access-control-unconfined": "Обмеження AppArmor або SELinux активні"
       },
       "capabilities": {
         "aesAcceleration": {
-          "title": "Hardware-accelerated encryption",
-          "body": "This processor exposes AES-NI / PCLMULQDQ instructions, so AES-GCM runs on dedicated hardware paths — encryption stays fast and adds little CPU overhead."
+          "title": "Апаратне прискорення шифрування",
+          "body": "Процесор підтримує інструкції AES-NI та PCLMULQDQ, тому AES-GCM використовує спеціалізовані апаратні операції: шифрування залишається швидким і майже не навантажує процесор."
         }
       }
     },
@@ -3330,73 +3383,73 @@
       "inDevelopment": "Керування групами в розробці."
     },
     "identityProviders": {
-      "title": "Identity providers",
-      "description": "Configure OpenID Connect providers for sign-in and account linking.",
-      "empty": "Немає налаштованих постачальників ідентифікації.",
+      "title": "Постачальники ідентифікації",
+      "description": "Налаштуйте постачальників OpenID Connect для входу та пов’язування облікових записів.",
+      "empty": "Постачальників ідентифікації не налаштовано.",
       "actions": {
-        "create": "Add provider",
-        "edit": "Edit provider",
-        "delete": "Delete provider",
-        "refresh": "Refresh",
-        "openDocs": "Open OIDC setup guide",
-        "save": "Save provider",
-        "saving": "Saving..."
+        "create": "Додати постачальника",
+        "edit": "Редагувати постачальника",
+        "delete": "Видалити постачальника",
+        "refresh": "Оновити",
+        "openDocs": "Відкрити посібник із налаштування OIDC",
+        "save": "Зберегти постачальника",
+        "saving": "Збереження..."
       },
       "columns": {
-        "name": "Provider",
-        "issuer": "Issuer",
-        "status": "Status",
-        "accountCreation": "Account creation",
-        "scopes": "Scopes",
-        "domains": "Domains",
-        "actions": "Actions"
+        "name": "Постачальник",
+        "issuer": "Емітент",
+        "status": "Стан",
+        "accountCreation": "Створення облікових записів",
+        "scopes": "Області доступу",
+        "domains": "Домени",
+        "actions": "Дії"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled",
-        "allowed": "Allowed",
-        "blocked": "Blocked"
+        "enabled": "Увімкнено",
+        "disabled": "Вимкнено",
+        "allowed": "Дозволено",
+        "blocked": "Заблоковано"
       },
       "fields": {
-        "name": "Name",
-        "slug": "Slug",
-        "redirectUrl": "Redirect URL",
-        "issuer": "Issuer URL",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "scopes": "Scopes",
-        "allowedEmailDomains": "Allowed email domains",
-        "defaultRole": "Default role",
-        "isEnabled": "Enable sign-in with this provider",
-        "allowAccountCreation": "Allow this provider to create new accounts",
-        "requireVerifiedEmail": "Require verified email for account creation",
-        "syncProfile": "Sync profile names on sign-in",
-        "syncAvatar": "Import provider avatar when the user has no avatar",
-        "clearClientSecret": "Clear saved client secret"
+        "name": "Назва",
+        "slug": "Ідентифікатор",
+        "redirectUrl": "URL-адреса переспрямування",
+        "issuer": "URL-адреса емітента",
+        "clientId": "Ідентифікатор клієнта",
+        "clientSecret": "Секрет клієнта",
+        "scopes": "Області доступу",
+        "allowedEmailDomains": "Дозволені домени електронної пошти",
+        "defaultRole": "Типова роль",
+        "isEnabled": "Увімкнути вхід через цього постачальника",
+        "allowAccountCreation": "Дозволити цьому постачальнику створювати нові облікові записи",
+        "requireVerifiedEmail": "Вимагати підтверджену електронну адресу для створення облікового запису",
+        "syncProfile": "Синхронізувати імена профілів під час входу",
+        "syncAvatar": "Імпортувати аватар постачальника, якщо користувач не має аватара",
+        "clearClientSecret": "Видалити збережений секрет клієнта"
       },
       "help": {
-        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
-        "redirectUrl": "Register this exact callback URL in the provider application.",
-        "clientSecret": "Leave empty if this provider uses a public client.",
-        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
-        "scopes": "Separate scopes with spaces or commas. openid is always required.",
-        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+        "slug": "Залиште порожнім, щоб створити ідентифікатор із назви постачальника. Наявні ідентифікатори не зміняться.",
+        "redirectUrl": "Зареєструйте цю точну URL-адресу зворотного виклику в застосунку постачальника.",
+        "clientSecret": "Залиште порожнім, якщо цей постачальник використовує публічний клієнт.",
+        "clientSecretConfigured": "Секрет уже збережено. Введіть новий, щоб замінити його.",
+        "scopes": "Розділяйте області доступу пробілами або комами. Область openid завжди обов’язкова.",
+        "allowedEmailDomains": "Необов’язкові домени, розділені комами, для автоматичного створення облікових записів."
       },
       "create": {
-        "title": "Add identity provider"
+        "title": "Додати постачальника ідентифікації"
       },
       "edit": {
-        "title": "Edit identity provider"
+        "title": "Редагувати постачальника ідентифікації"
       },
       "delete": {
-        "title": "Delete {{name}}?",
-        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
-        "confirm": "Delete provider"
+        "title": "Видалити {{name}}?",
+        "description": "Наявні зв’язки з цим постачальником перестануть працювати. Користувачі зможуть і надалі входити іншими способами.",
+        "confirm": "Видалити постачальника"
       },
       "errors": {
-        "loadFailed": "Failed to load identity providers.",
-        "saveFailed": "Failed to save identity provider.",
-        "deleteFailed": "Failed to delete identity provider."
+        "loadFailed": "Не вдалося завантажити постачальників ідентифікації.",
+        "saveFailed": "Не вдалося зберегти постачальника ідентифікації.",
+        "deleteFailed": "Не вдалося видалити постачальника ідентифікації."
       }
     }
   },
@@ -3439,9 +3492,7 @@
     "loading": "Зачекайте, завантажуємо дані входу...",
     "request": {
       "version": "Версія {{version}}",
-      "versionWithDevice": "Версія {{version}} на {{deviceName}}",
-      "origin": "Запит від {{origin}}",
-      "localOrigin": "цього пристрою"
+      "versionWithDevice": "Версія {{version}} на {{deviceName}}"
     },
     "access": {
       "title": "Цей застосунок зможе:",
@@ -3499,17 +3550,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Перевірка вимог запуску",
+      "caption": "Cotton перевіряє цей сервер перед відкриттям застосунку."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton не може завершити запуск, доки цю вимогу не буде виконано.",
+    "fallbackTitle": "Запуск заблоковано",
+    "fallbackMessage": "Cotton не може запуститися, доки не буде виконано потрібний крок обслуговування.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Поточна версія",
+      "requiredVersion": "Потрібна версія",
+      "requiredVersionRange": "Потрібна попередня версія",
+      "lastRecordedVersion": "Остання зафіксована версія"
     }
   }
 }

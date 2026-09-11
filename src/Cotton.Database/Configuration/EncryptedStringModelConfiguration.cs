@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Database.Models.Attributes;
+using Cotton.Database.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using System.Reflection;
+using System.Linq.Expressions;
 
 namespace Cotton.Database.Configuration
 {
@@ -19,32 +18,45 @@ namespace Cotton.Database.Configuration
                 value => Protect(value, databaseFieldProtector),
                 value => Unprotect(value, databaseFieldProtector));
 
-            foreach (IMutableEntityType entityType in modelBuilder.Model.GetEntityTypes())
-            {
-                ConfigureEntity(entityType, modelBuilder, converter);
-            }
+            ConfigureProperty<CottonServerSettings>(
+                modelBuilder,
+                settings => settings.CloudServicesTokenEncrypted,
+                converter);
+            ConfigureProperty<CottonServerSettings>(
+                modelBuilder,
+                settings => settings.OidcClientSecretEncrypted,
+                converter);
+            ConfigureProperty<CottonServerSettings>(
+                modelBuilder,
+                settings => settings.S3SecretAccessKeyEncrypted,
+                converter);
+            ConfigureProperty<CottonServerSettings>(
+                modelBuilder,
+                settings => settings.SmtpPasswordEncrypted,
+                converter);
+            ConfigureProperty<OidcProvider>(
+                modelBuilder,
+                provider => provider.ClientSecretEncrypted,
+                converter);
+            ConfigureProperty<OidcLoginState>(
+                modelBuilder,
+                state => state.CodeVerifierEncrypted,
+                converter);
+            ConfigureProperty<OidcLoginState>(
+                modelBuilder,
+                state => state.NonceEncrypted,
+                converter);
         }
 
-        private static void ConfigureEntity(
-            IMutableEntityType entityType,
+        private static void ConfigureProperty<TEntity>(
             ModelBuilder modelBuilder,
+            Expression<Func<TEntity, string?>> property,
             ValueConverter<string?, string?> converter)
+            where TEntity : class
         {
-            Type clrType = entityType.ClrType;
-            foreach (IMutableProperty property in entityType.GetProperties())
-            {
-                PropertyInfo? propertyInfo = property.PropertyInfo;
-                if (propertyInfo is null
-                    || property.ClrType != typeof(string)
-                    || !Attribute.IsDefined(propertyInfo, typeof(EncryptedAttribute)))
-                {
-                    continue;
-                }
-
-                modelBuilder.Entity(clrType)
-                    .Property(propertyInfo.Name)
-                    .HasConversion(converter);
-            }
+            modelBuilder.Entity<TEntity>()
+                .Property(property)
+                .HasConversion(converter);
         }
 
         private static string? Protect(

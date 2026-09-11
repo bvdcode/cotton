@@ -408,7 +408,7 @@ namespace Cotton.Server.Services
             NodeFile current,
             IReadOnlyList<NodeFile> historicalVersions)
         {
-            var versions = new List<FileVersionDto>(historicalVersions.Count + 1);
+            List<FileVersionDto> versions = new List<FileVersionDto>(historicalVersions.Count + 1);
 
             for (int index = 0; index < historicalVersions.Count; index++)
             {

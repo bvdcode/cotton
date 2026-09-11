@@ -24,7 +24,7 @@ namespace Cotton.Benchmark
             }
             catch (ArgumentException ex)
             {
-                Console.Error.WriteLine(ex.Message);
+                await Console.Error.WriteLineAsync(ex.Message);
                 PrintHelp();
                 return 2;
             }
@@ -55,7 +55,8 @@ namespace Cotton.Benchmark
 
             if (benchmarks.Count == 0)
             {
-                Console.Error.WriteLine("No benchmarks matched the requested mode and scenario filters.");
+                await Console.Error.WriteLineAsync(
+                    "No benchmarks matched the requested mode and scenario filters.");
                 return 2;
             }
 
@@ -87,7 +88,7 @@ namespace Cotton.Benchmark
 
         private static ServiceProvider CreateServiceProvider()
         {
-            var services = new ServiceCollection();
+            ServiceCollection services = new ServiceCollection();
             services.AddLogging(builder =>
             {
                 builder.AddConsole();
@@ -117,7 +118,7 @@ namespace Cotton.Benchmark
 
                 PrintMemoryStatistics();
 
-                var runDocument = BenchmarkRunDocument.Create(
+                BenchmarkRunDocument runDocument = BenchmarkRunDocument.Create(
                     FormatEnum(options.Mode),
                     FormatEnum(options.Profile),
                     hardwareFingerprint,
@@ -144,7 +145,7 @@ namespace Cotton.Benchmark
 
         private static async Task<int> SaveAndCompareAsync(BenchmarkOptions options, BenchmarkRunDocument runDocument)
         {
-            var artifactStore = new BenchmarkArtifactStore(options.BaselineDirectory, options.ResultsDirectory);
+            BenchmarkArtifactStore artifactStore = new BenchmarkArtifactStore(options.BaselineDirectory, options.ResultsDirectory);
             BenchmarkStoragePathSummaryDocument storagePathSummary = BenchmarkStoragePathSummaryDocument.Create(runDocument);
 
             if (options.UpdateBaseline)
@@ -173,8 +174,10 @@ namespace Cotton.Benchmark
             BenchmarkRunDocument? baseline = await artifactStore.LoadBaselineAsync(runDocument, CancellationToken.None);
             if (baseline is null)
             {
-                Console.Error.WriteLine($"No reviewed result found: {artifactStore.GetBaselinePath(runDocument)}");
-                Console.Error.WriteLine("Run again with --update-baseline after reviewing the result.");
+                await Console.Error.WriteLineAsync(
+                    $"No reviewed result found: {artifactStore.GetBaselinePath(runDocument)}");
+                await Console.Error.WriteLineAsync(
+                    "Run again with --update-baseline after reviewing the result.");
                 return 2;
             }
 

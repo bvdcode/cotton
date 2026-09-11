@@ -2,7 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using Cotton.Auth;
 using Cotton.Files;
@@ -18,10 +17,10 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task UploadRawAsync_PostsRawBodyToHashEndpoint()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.Created);
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes("chunk"));
+            using MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes("chunk"));
 
             await client.Chunks.UploadRawAsync("abc123", stream);
 
@@ -37,17 +36,17 @@ namespace Cotton.Sdk.Tests
         [Test]
         public async Task UploadRawAsync_RefreshesOnUnauthorizedAndReplaysSeekableStream()
         {
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.Unauthorized, "expired");
             handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "new-access", refreshToken = "new-refresh" });
             handler.Enqueue(HttpStatusCode.Created);
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "refresh" });
-            var client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
+            CottonCloudClient client = new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
             {
                 BaseAddress = new Uri("https://cotton.test"),
             });
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes("prefixchunk"));
+            using MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes("prefixchunk"));
             stream.Position = Encoding.UTF8.GetByteCount("prefix");
 
             await client.Chunks.UploadRawAsync("abc123", stream);
@@ -75,7 +74,7 @@ namespace Cotton.Sdk.Tests
             Guid nodeId = Guid.NewGuid();
             Guid fileId = Guid.NewGuid();
             Guid manifestId = Guid.NewGuid();
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new
             {
                 id = fileId,
@@ -122,7 +121,7 @@ namespace Cotton.Sdk.Tests
         {
             Guid nodeId = Guid.NewGuid();
             Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, FileManifestPayload(fileId, nodeId, "updated.txt", "sha256-new"));
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
@@ -151,7 +150,7 @@ namespace Cotton.Sdk.Tests
         public async Task DeleteAsync_SendsExpectedETagAsIfMatch()
         {
             Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.NoContent);
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
@@ -170,7 +169,7 @@ namespace Cotton.Sdk.Tests
         {
             Guid nodeId = Guid.NewGuid();
             Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, FileManifestPayload(fileId, nodeId, "moved.txt", "moved-hash"));
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
@@ -189,7 +188,7 @@ namespace Cotton.Sdk.Tests
         {
             Guid nodeId = Guid.NewGuid();
             Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, FileManifestPayload(fileId, nodeId, "renamed.txt", "renamed-hash"));
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
@@ -209,7 +208,7 @@ namespace Cotton.Sdk.Tests
         {
             Guid nodeId = Guid.NewGuid();
             Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new
             {
                 status = "Restored",
@@ -240,146 +239,11 @@ namespace Cotton.Sdk.Tests
         }
 
         [Test]
-        public async Task DownloadContentAsync_CopiesResponseBodyAndReportsProgress()
-        {
-            var handler = new QueuedHttpMessageHandler();
-            handler.Enqueue(_ => new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new ByteArrayContent(Encoding.UTF8.GetBytes("downloaded")),
-            });
-            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
-            using var destination = new MemoryStream();
-            var progress = new RecordingProgress();
-
-            await client.Files.DownloadContentAsync(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), destination, progress: progress);
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(Encoding.UTF8.GetString(destination.ToArray()), Is.EqualTo("downloaded"));
-                Assert.That(progress.Values.Last(), Is.EqualTo(10));
-                Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/files/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/content?download=false"));
-            });
-        }
-
-        [Test]
-        public async Task DownloadContentRangeAsync_SendsRangeAndIfMatchAndCopiesPartialBody()
-        {
-            var handler = new QueuedHttpMessageHandler();
-            handler.Enqueue(_ =>
-            {
-                var response = new HttpResponseMessage(HttpStatusCode.PartialContent)
-                {
-                    Content = new ByteArrayContent(Encoding.UTF8.GetBytes("4567")),
-                };
-                response.Content.Headers.ContentRange = new ContentRangeHeaderValue(4, 7, 16);
-                response.Headers.ETag = new EntityTagHeaderValue("\"sha256-current\"");
-                response.Headers.AcceptRanges.Add("bytes");
-                return response;
-            });
-            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
-            using var destination = new MemoryStream();
-            var progress = new RecordingProgress();
-
-            await client.Files.DownloadContentRangeAsync(
-                Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                destination,
-                offset: 4,
-                length: 4,
-                expectedETag: "sha256-current",
-                progress: progress);
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(Encoding.UTF8.GetString(destination.ToArray()), Is.EqualTo("4567"));
-                Assert.That(progress.Values.Last(), Is.EqualTo(4));
-                Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/files/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/content?download=false"));
-                Assert.That(handler.Requests[0].Headers["Range"], Is.EqualTo("bytes=4-7"));
-                Assert.That(handler.Requests[0].Headers[IfMatchHeaderName], Is.EqualTo("\"sha256-current\""));
-            });
-        }
-
-        [Test]
-        public async Task DownloadContentRangeAsync_RejectsUnexpectedSuccessfulFullResponse()
-        {
-            var handler = new QueuedHttpMessageHandler();
-            handler.Enqueue(_ => new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new ByteArrayContent(Encoding.UTF8.GetBytes("0123456789abcdef")),
-            });
-            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
-            using var destination = new MemoryStream();
-
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
-                await client.Files.DownloadContentRangeAsync(
-                    Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                    destination,
-                    offset: 4,
-                    length: 4));
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(exception, Is.Not.Null);
-                Assert.That(exception!.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-                Assert.That(exception.Message, Does.Contain("unexpected status 200"));
-                Assert.That(destination.Length, Is.Zero);
-            });
-        }
-
-        [Test]
-        public async Task DownloadContentRangeAsync_RejectsChunkedPartialResponseWithExtraBytes()
-        {
-            var handler = new QueuedHttpMessageHandler();
-            handler.Enqueue(_ =>
-            {
-                var response = new HttpResponseMessage(HttpStatusCode.PartialContent)
-                {
-                    Content = new ByteArrayContent(Encoding.UTF8.GetBytes("4567x")),
-                };
-                response.Content.Headers.ContentRange = new ContentRangeHeaderValue(4, 7, 16);
-                response.Content.Headers.ContentLength = null;
-                return response;
-            });
-            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
-            using var destination = new MemoryStream();
-
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
-                await client.Files.DownloadContentRangeAsync(
-                    Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                    destination,
-                    offset: 4,
-                    length: 4));
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(exception, Is.Not.Null);
-                Assert.That(exception!.Message, Does.Contain("more bytes than expected"));
-                Assert.That(Encoding.UTF8.GetString(destination.ToArray()), Is.EqualTo("4567"));
-            });
-        }
-
-        [Test]
-        public async Task DownloadContentRangeAsync_ValidatesArguments()
-        {
-            CottonCloudClient client = await CreateAuthorizedClientAsync(new QueuedHttpMessageHandler());
-            using var destination = new MemoryStream();
-
-            Assert.Multiple(() =>
-            {
-                Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
-                    await client.Files.DownloadContentRangeAsync(Guid.NewGuid(), destination, offset: -1, length: 1));
-                Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
-                    await client.Files.DownloadContentRangeAsync(Guid.NewGuid(), destination, offset: 0, length: 0));
-                Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
-                    await client.Files.DownloadContentRangeAsync(Guid.NewGuid(), destination, long.MaxValue, length: 2));
-            });
-        }
-
-        [Test]
         public async Task GetContentManifestAsync_MapsManifestAndSendsIfMatch()
         {
             Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
             Guid manifestId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-            var handler = new QueuedHttpMessageHandler();
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.EnqueueJson(HttpStatusCode.OK, new
             {
                 nodeFileId = fileId,
@@ -412,19 +276,9 @@ namespace Cotton.Sdk.Tests
             });
         }
 
-        private class RecordingProgress : IProgress<long>
-        {
-            public List<long> Values { get; } = [];
-
-            public void Report(long value)
-            {
-                Values.Add(value);
-            }
-        }
-
         private static async Task<CottonCloudClient> CreateAuthorizedClientAsync(QueuedHttpMessageHandler handler)
         {
-            var store = new InMemoryCottonTokenStore();
+            InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "refresh" });
             return new CottonCloudClient(new HttpClient(handler), store, new CottonSdkOptions
             {

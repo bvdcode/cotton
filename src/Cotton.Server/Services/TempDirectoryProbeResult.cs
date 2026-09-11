@@ -3,22 +3,15 @@
 
 namespace Cotton.Server.Services
 {
-    public class TempDirectoryProbeResult
+    public class TempDirectoryProbeResult(
+        string tempPath,
+        bool writable,
+        string? error)
     {
-        public TempDirectoryProbeResult(
-            string tempPath,
-            bool writable,
-            string? error)
-        {
-            TempPath = tempPath;
-            Writable = writable;
-            Error = error;
-        }
+        public string TempPath { get; } = tempPath;
 
-        public string TempPath { get; }
+        public bool Writable { get; } = writable;
 
-        public bool Writable { get; }
-
-        public string? Error { get; }
+        public string? Error { get; } = error;
     }
 }

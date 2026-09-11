@@ -7,13 +7,15 @@ import { AdminPageSurface } from "../components/AdminPageSurface";
 import { settingsApi } from "../../../shared/api/settingsApi";
 import { useAutoSavedSetting } from "./useAutoSavedSetting";
 import { AdminPageHeader } from "../components/AdminPageHeader";
+import { readStringProperty } from "../../../shared/utils/typeGuards";
 
 export const AdminPrivacySettingsPage = () => {
   const { t } = useTranslation("admin");
   const location = useLocation();
-  const highlightSettingId =
-    (location.state as { highlightSettingId?: string } | null)
-      ?.highlightSettingId ?? null;
+  const highlightSettingId = readStringProperty(
+    location.state,
+    "highlightSettingId",
+  );
   const telemetrySetting = useAutoSavedSetting<boolean>({
     initial: false,
     load: settingsApi.getTelemetry,

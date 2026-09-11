@@ -12,7 +12,7 @@ describe("TotpSetupForm", () => {
   });
 
   it("renders the QR code after setup data is generated", () => {
-    const { container } = render(
+    render(
       <TotpSetupForm
         totpSetup={{
           secretBase32: "JBSWY3DPEHPK3PXP",
@@ -28,6 +28,13 @@ describe("TotpSetupForm", () => {
     );
 
     expect(screen.getByText("JBSWY3DPEHPK3PXP")).toBeInTheDocument();
-    expect(container.querySelector("svg")).not.toBeNull();
+    const qrCodeImage = screen.getByRole("img", {
+      name: "totp.setup.qrTitle",
+    });
+    expect(qrCodeImage).toHaveAttribute(
+      "src",
+      expect.stringMatching(/^data:image\/gif;base64,/),
+    );
+    expect(qrCodeImage.tagName).toBe("IMG");
   });
 });

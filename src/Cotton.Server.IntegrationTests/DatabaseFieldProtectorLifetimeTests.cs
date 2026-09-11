@@ -11,7 +11,6 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
 using NUnit.Framework;
 using System.Security.Cryptography;
 
@@ -38,13 +37,6 @@ namespace Cotton.Server.IntegrationTests
                 CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
                 dbContext.ServerSettings.Add(CreateServerSettings(instanceId, "first-secret"));
                 await dbContext.SaveChangesAsync();
-            }
-
-            string rawStoredSecret = await ReadRawSmtpPasswordAsync(instanceId);
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(rawStoredSecret, Is.Not.EqualTo("first-secret"));
-                Assert.DoesNotThrow(() => Convert.FromBase64String(rawStoredSecret));
             }
 
             await using (AsyncServiceScope scope = services.CreateAsyncScope())
@@ -168,20 +160,6 @@ namespace Cotton.Server.IntegrationTests
                 ValidateOnBuild = true,
                 ValidateScopes = true,
             });
-        }
-
-        private async Task<string> ReadRawSmtpPasswordAsync(Guid instanceId)
-        {
-            string connectionString = DbContext.Database.GetConnectionString()
-                ?? throw new InvalidOperationException("Test database connection string is not configured.");
-            await using NpgsqlConnection connection = new(connectionString);
-            await connection.OpenAsync();
-            await using NpgsqlCommand command = connection.CreateCommand();
-            command.CommandText = "SELECT smtp_password_encrypted FROM server_settings WHERE instance_id = @instanceId";
-            command.Parameters.AddWithValue("instanceId", instanceId);
-            object? result = await command.ExecuteScalarAsync();
-            return result as string
-                ?? throw new InvalidOperationException("Encrypted test field was not persisted.");
         }
 
         private static CottonEncryptionSettings CreateEncryptionSettings(

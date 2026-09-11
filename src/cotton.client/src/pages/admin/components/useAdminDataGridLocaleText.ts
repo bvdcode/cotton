@@ -31,13 +31,17 @@ const gridLocales = {
   zh: zhCN,
 };
 
+const isGridLocale = (value: string): value is keyof typeof gridLocales =>
+  Object.hasOwn(gridLocales, value);
+
 export const getAdminDataGridLocaleText = (
   language: string,
   noRowsLabel: string,
 ): Partial<GridLocaleText> => {
   const languageCode = language.toLowerCase().split("-")[0];
-  const localization =
-    gridLocales[languageCode as keyof typeof gridLocales] ?? enUS;
+  const localization = isGridLocale(languageCode)
+    ? gridLocales[languageCode]
+    : enUS;
 
   return {
     ...localization.components.MuiDataGrid.defaultProps.localeText,

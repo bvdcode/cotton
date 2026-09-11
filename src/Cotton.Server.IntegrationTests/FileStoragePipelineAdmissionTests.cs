@@ -41,7 +41,7 @@ namespace Cotton.Server.IntegrationTests
                     "cancelled",
                     new MemoryStream([2]),
                     cancellationToken: cancellation.Token);
-                cancellation.Cancel();
+                await cancellation.CancelAsync();
 
                 Assert.CatchAsync<OperationCanceledException>(
                     async () => await cancelledWrite.WaitAsync(TimeSpan.FromSeconds(1)));
@@ -142,13 +142,15 @@ namespace Cotton.Server.IntegrationTests
                 return Task.FromResult<Stream>(new MemoryStream(data, writable: false));
             }
 
-            public async Task WriteAsync(
+            public async Task<long> WriteAsync(
                 string uid,
                 Stream stream)
             {
                 using MemoryStream destination = new();
                 await stream.CopyToAsync(destination);
-                _storage[uid] = destination.ToArray();
+                byte[] stored = destination.ToArray();
+                _storage[uid] = stored;
+                return stored.LongLength;
             }
 
             public async IAsyncEnumerable<string> ListAllKeysAsync(

@@ -49,8 +49,14 @@ namespace Cotton.Server.Services
                 {
                     if (!existsInStorage)
                     {
-                        await WriteChunkAsync(storageKey, buffer, length, cancellationToken);
+                        return await WriteChunkAsync(
+                            storageKey,
+                            buffer,
+                            length,
+                            cancellationToken);
                     }
+
+                    return null;
                 },
                 ct);
         }
@@ -59,7 +65,7 @@ namespace Cotton.Server.Services
             Guid userId,
             int length,
             byte[] chunkHash,
-            Func<string, bool, CancellationToken, Task> prepareContentAsync,
+            Func<string, bool, CancellationToken, Task<long?>> prepareContentAsync,
             CancellationToken ct)
         {
             string storageKey = Hasher.ToHexStringHash(chunkHash);
@@ -69,7 +75,10 @@ namespace Cotton.Server.Services
             Chunk? chunk = await _layouts.FindChunkAsync(chunkHash, ct);
             bool existsInStorage = await _storage.ExistsAsync(storageKey);
 
-            await prepareContentAsync(storageKey, existsInStorage, ct);
+            long? writtenSizeBytes = await prepareContentAsync(
+                storageKey,
+                existsInStorage,
+                ct);
 
             Chunk? reusedChunk = await TryReuseDeduplicatedChunkAsync(
                 chunk,
@@ -84,7 +93,8 @@ namespace Cotton.Server.Services
                 return reusedChunk;
             }
 
-            long storedSizeBytes = await _storage.GetSizeAsync(storageKey);
+            long storedSizeBytes = writtenSizeBytes
+                ?? await _storage.GetSizeAsync(storageKey);
             chunk = await UpsertChunkMetadataAsync(chunk, chunkHash, length, storedSizeBytes, ct);
 
             await EnsureOwnershipAsync(chunkHash, userId, ct);
@@ -259,21 +269,22 @@ namespace Cotton.Server.Services
             }
         }
 
-        private async Task WriteChunkAsync(string storageKey, byte[] buffer, int length, CancellationToken ct)
+        private async Task<long> WriteChunkAsync(string storageKey, byte[] buffer, int length, CancellationToken ct)
         {
             using MemoryStream chunkStream = new(buffer, 0, length, writable: false);
-            await WriteChunkAsync(storageKey, chunkStream, length, ct);
+            return await WriteChunkAsync(storageKey, chunkStream, length, ct);
         }
 
-        private async Task WriteChunkAsync(string storageKey, Stream stream, long length, CancellationToken ct)
+        private async Task<long> WriteChunkAsync(string storageKey, Stream stream, long length, CancellationToken ct)
         {
             using StoragePressureReservation writeReservation = await _storagePressure.ReserveWriteAsync(length, ct);
-            await _storage.WriteAsync(
+            long storedSizeBytes = await _storage.WriteAsync(
                 storageKey,
                 stream,
                 new PipelineContext(),
                 cancellationToken: ct);
             writeReservation.Commit();
+            return storedSizeBytes;
         }
 
         private async Task<Chunk> UpsertChunkMetadataAsync(
@@ -298,7 +309,7 @@ namespace Cotton.Server.Services
             long storedSizeBytes,
             CancellationToken ct)
         {
-            var chunk = new Chunk
+            Chunk chunk = new Chunk
             {
                 Hash = chunkHash,
                 PlainSizeBytes = plainSizeBytes,
@@ -377,9 +388,14 @@ namespace Cotton.Server.Services
                 expectedHash,
                 async (storageKey, existsInStorage, cancellationToken) =>
                 {
+                    long? writtenSizeBytes = null;
                     if (!existsInStorage)
                     {
-                        await WriteChunkAsync(storageKey, validatingStream, length, cancellationToken);
+                        writtenSizeBytes = await WriteChunkAsync(
+                            storageKey,
+                            validatingStream,
+                            length,
+                            cancellationToken);
                     }
 
                     if (!validatingStream.IsValidated)
@@ -388,6 +404,7 @@ namespace Cotton.Server.Services
                     }
 
                     validatingStream.EnsureValidated();
+                    return writtenSizeBytes;
                 },
                 ct);
         }
@@ -397,7 +414,7 @@ namespace Cotton.Server.Services
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegative(length);
 
-            using var ms = new MemoryStream(capacity: checked((int)Math.Min(length, int.MaxValue)));
+            using MemoryStream ms = new MemoryStream(capacity: checked((int)Math.Min(length, int.MaxValue)));
             await stream.CopyToAsync(ms, ct);
 
             if (ms.Length != length)
@@ -405,13 +422,13 @@ namespace Cotton.Server.Services
                 throw new InvalidOperationException("Unexpected stream length.");
             }
 
-            var buffer = ms.GetBuffer();
+            byte[] buffer = ms.GetBuffer();
             return await UpsertChunkAsync(userId, buffer, (int)ms.Length, ct);
         }
 
         private async Task EnsureOwnershipAsync(byte[] chunkHash, Guid userId, CancellationToken ct)
         {
-            var ownershipExists = await _dbContext.ChunkOwnerships
+            bool ownershipExists = await _dbContext.ChunkOwnerships
                 .AnyAsync(co => co.ChunkHash == chunkHash && co.OwnerId == userId, ct);
 
             if (!ownershipExists)

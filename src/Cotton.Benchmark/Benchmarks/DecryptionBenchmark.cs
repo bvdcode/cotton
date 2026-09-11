@@ -21,11 +21,11 @@ namespace Cotton.Benchmark.Benchmarks
             : base(configuration)
         {
             // Use mixed data
-            var testData = TestDataGenerator.GenerateMixedData(configuration.DataSizeBytes);
+            byte[] testData = TestDataGenerator.GenerateMixedData(configuration.DataSizeBytes);
             _originalSize = testData.Length;
 
             // Create AesGcmStreamCipher
-            var key = new byte[configuration.EncryptionKeySize];
+            byte[] key = new byte[configuration.EncryptionKeySize];
             RandomNumberGenerator.Fill(key);
             _cipher = new AesGcmStreamCipher(
                 key,
@@ -36,9 +36,9 @@ namespace Cotton.Benchmark.Benchmarks
             _processor = new CryptoProcessor(_cipher);
 
             // Pre-encrypt data using processor
-            using var inputStream = new MemoryStream(testData);
+            using MemoryStream inputStream = new MemoryStream(testData);
             Stream encryptedStream = _processor.WriteAsync("test-uid", inputStream).Result;
-            using var outputStream = new MemoryStream();
+            using MemoryStream outputStream = new MemoryStream();
             encryptedStream.CopyTo(outputStream);
             _encryptedData = outputStream.ToArray();
         }
@@ -49,20 +49,20 @@ namespace Cotton.Benchmark.Benchmarks
 
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
-            await using var inputStream = new MemoryStream(_encryptedData);
+            await using MemoryStream inputStream = new MemoryStream(_encryptedData);
             Stream outputStream = await _processor.ReadAsync("test-uid", inputStream);
             await outputStream.DisposeAsync();
         }
 
         protected override async Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
-            var stopwatch = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
 
-            await using var inputStream = new MemoryStream(_encryptedData);
+            await using MemoryStream inputStream = new MemoryStream(_encryptedData);
             Stream outputStream = await _processor.ReadAsync("test-uid", inputStream);
 
             // Read all decrypted data
-            await using var resultStream = new MemoryStream();
+            await using MemoryStream resultStream = new MemoryStream();
             await outputStream.CopyToAsync(resultStream, cancellationToken);
 
             stopwatch.Stop();

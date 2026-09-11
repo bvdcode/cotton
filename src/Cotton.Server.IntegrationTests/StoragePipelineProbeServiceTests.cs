@@ -14,14 +14,14 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task RunAsync_UsesWarmupThenMeasuredIteration_AndDeletesTemporaryBlobs()
         {
-            var storage = new InMemoryStorage();
-            var service = new StoragePipelineProbeService(
+            InMemoryStorage storage = new InMemoryStorage();
+            StoragePipelineProbeService service = new StoragePipelineProbeService(
                 storage,
                 NullLogger<StoragePipelineProbeService>.Instance);
 
             StoragePipelineProbeResult result = await service.RunAsync("local", CancellationToken.None);
 
-            var keys = new List<string>();
+            List<string> keys = new List<string>();
             await foreach (string key in storage.ListAllKeysAsync())
             {
                 keys.Add(key);

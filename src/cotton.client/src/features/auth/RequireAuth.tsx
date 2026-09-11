@@ -1,55 +1,52 @@
 import { useAuth } from "./useAuth";
-import { useEffect, type ReactNode } from "react";
-import Loader from "../../shared/ui/Loader";
+import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { getSafeAuthReturnPath } from "../../shared/utils/authReturnPath";
+import { Button, Stack, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
+import { AuthActionShell } from "../../shared/ui/AuthActionShell";
 
 type Props = {
   children: ReactNode;
 };
 
 export function RequireAuth({ children }: Props) {
-  const { isAuthenticated, isInitializing, hydrated, hasChecked, ensureAuth } =
-    useAuth();
+  const { phase, restoreSession } = useAuth();
   const location = useLocation();
+  const { t } = useTranslation("common");
 
-  useEffect(() => {
-    ensureAuth();
-  }, [ensureAuth]);
-
-  // Wait for store rehydration before deciding to redirect.
-  if (!hydrated) {
-    return <Loader overlay={true} title="Loading..." caption="Please, wait" />;
+  if (phase === "booting") {
+    return null;
   }
 
-  if (isInitializing) {
-    return (
-      <Loader
-        overlay={true}
-        title="Checking authorization..."
-        caption="Please, wait"
-      />
-    );
-  }
-
-  // Wait for the first auth check to finish to avoid transient login flashes.
-  if (!isAuthenticated && !hasChecked) {
-    return (
-      <Loader
-        overlay={true}
-        title="Checking authorization..."
-        caption="Please, wait"
-      />
-    );
-  }
-
-  if (!isAuthenticated) {
+  if (phase === "anonymous") {
     return (
       <Navigate
         to="/login"
-        state={{ from: getSafeAuthReturnPath(location.pathname) }}
+        state={{
+          from: getSafeAuthReturnPath(location.pathname + location.search),
+        }}
         replace
       />
+    );
+  }
+
+  if (phase === "unavailable") {
+    return (
+      <AuthActionShell
+        logoAlt="Cotton"
+        maxWidth="xs"
+        title={t("errors.serverUnavailableTitle")}
+      >
+        <Stack spacing={3} sx={{ mt: 2.5 }}>
+          <Typography color="text.secondary">
+            {t("errors.serverUnavailableDescription")}
+          </Typography>
+          <Button variant="contained" onClick={() => void restoreSession()}>
+            {t("actions.retry")}
+          </Button>
+        </Stack>
+      </AuthActionShell>
     );
   }
 

@@ -1458,6 +1458,7 @@
   "common": {
     "languageName": "Italiano",
     "switchToThisLanguage": "Passa all'italiano",
+    "language": "Lingua",
     "placeholder": "—",
     "yes": "Sì",
     "no": "No",
@@ -1515,15 +1516,16 @@
       "play": "Riproduci",
       "pause": "Pausa",
       "copied": "Copiato!",
-      "reload": "Aggiorna",
-      "versions": "Versions"
+      "reload": "Ricarica",
+      "retry": "Riprova",
+      "versions": "Versioni"
     },
     "errors": {
-      "unexpectedTitle": "Si è verificato un problema",
-      "unexpectedDescription": "Si è verificato un errore imprevisto. Ricarichi la pagina.",
-      "showDetails": "Mostra dettagli",
-      "hideDetails": "Nascondi dettagli",
-      "schemaValidationFailed": "Il server ha restituito dati imprevisti"
+      "unexpectedTitle": "Impossibile visualizzare questa pagina",
+      "unexpectedDescription": "Si è verificato un errore imprevisto durante la visualizzazione della pagina. Riprova o ricaricala se il problema persiste.",
+      "schemaValidationFailed": "Il server ha restituito dati imprevisti",
+      "serverUnavailableTitle": "Server non disponibile",
+      "serverUnavailableDescription": "Cotton non è riuscito a raggiungere il server. Controlla la connessione e riprova."
     },
     "userMenu": {
       "profile": "Profilo",
@@ -1667,9 +1669,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "Caricamento dei provider di accesso...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Continua con {{provider}}",
       "errors": {
         "startFailed": "Impossibile avviare l’accesso."
       }
@@ -2019,21 +2021,21 @@
       }
     },
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "Account collegati",
+      "description": "Collega provider di identità esterni a questo account.",
+      "loading": "Caricamento degli account collegati...",
+      "empty": "Non è ancora collegato alcun account esterno.",
+      "link": "Collega {{provider}}",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "Scollega",
+        "title": "Scollegare {{provider}}?",
+        "description": "Non potrai più accedere con questo provider finché non lo collegherai di nuovo.",
+        "confirm": "Scollega",
+        "cancel": "Annulla"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
+        "loadFailed": "Impossibile caricare gli account collegati.",
+        "unlinkFailed": "Impossibile scollegare questo account.",
         "linkFailed": "Impossibile avviare il collegamento dell’account."
       }
     }
@@ -2325,6 +2327,57 @@
         "title": "File recenti",
         "empty": "Nessun file recente"
       }
+    },
+    "dashboard": {
+      "title": "Il Suo spazio",
+      "actions": {
+        "customize": "Personalizza",
+        "done": "Fatto",
+        "size": "Dimensione {{size}}",
+        "moveUp": "Sposta su",
+        "moveDown": "Sposta giù",
+        "hide": "Nascondi widget",
+        "retry": "Riprova"
+      },
+      "widgets": {
+        "overview": "Riepilogo spazio",
+        "pinnedFolders": "Cartelle fissate",
+        "quickAccess": "Accesso rapido",
+        "recentFiles": "File recenti",
+        "recentImages": "Foto recenti",
+        "recentVideos": "Video recenti",
+        "recentDocuments": "Documenti recenti",
+        "recentAudio": "Audio recente",
+        "recentOther": "Altri file recenti"
+      },
+      "overview": {
+        "ofQuota": "di {{quota}}",
+        "storageUsage": "Utilizzo spazio",
+        "available": "Disponibile"
+      },
+      "quickAccess": {
+        "files": "File",
+        "search": "Cerca",
+        "trash": "Cestino"
+      },
+      "recent": {
+        "empty": "Nessun file recente corrispondente",
+        "loadFailed": "Impossibile caricare i file recenti."
+      },
+      "pinnedFolders": {
+        "folder": "Cartella",
+        "pin": "Fissa alla dashboard",
+        "unpin": "Rimuovi dalla dashboard",
+        "empty": "Nessuna cartella fissata",
+        "emptyHint": "Fissi una cartella dalle sue azioni in File.",
+        "limitReached": "Può fissare fino a {{count}} cartelle.",
+        "loadFailed": "Impossibile caricare le cartelle fissate."
+      },
+      "library": {
+        "title": "Altri widget",
+        "description": "I widget nascosti restano qui finché non vengono aggiunti di nuovo.",
+        "empty": "Tutti i widget disponibili sono nella dashboard."
+      }
     }
   },
   "files": {
@@ -2438,10 +2491,10 @@
       "confirmDescription": "Gli elementi selezionati verranno spostati nel Cestino e potranno essere ripristinati in seguito."
     },
     "conflicts": {
-      "title": "Il file esiste già",
-      "description": "In questa cartella esiste già un file con questo nome. Caricare come {{newName}}?",
-      "overwriteDescription": "In questa cartella esiste già un file con questo nome. Sostituirlo o caricare come {{newName}}?",
-      "rename": "Carica come {{newName}}",
+      "title": "Conflitto di nomi",
+      "description": "In questa cartella esiste già un elemento con questo nome. Usare invece {{newName}}?",
+      "overwriteDescription": "In questa cartella esiste già un elemento con questo nome. Sostituirlo o usare invece {{newName}}?",
+      "rename": "Usa {{newName}}",
       "overwrite": "Sostituisci",
       "skip": "Salta",
       "skipAll": "Salta tutto"
@@ -2611,24 +2664,24 @@
         "decryptExistingComplete_other": "Decifrati {{count}} file.",
         "decryptExistingFailed_one": "Impossibile decifrare {{count}} file. Controlli il pannello delle attività.",
         "decryptExistingFailed_other": "Impossibile decifrare {{count}} file. Controlli il pannello delle attività.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "È stata analizzata solo una parte dell’albero delle cartelle. Alcuni file potrebbero essere ancora non crittografati. Al termine del gruppo, esegui nuovamente la crittografia dalla cartella.",
+        "decryptExistingScanIncomplete": "È stata analizzata solo una parte dell’albero delle cartelle. Potrebbero essere rimasti alcuni file crittografati. Al termine del gruppo, esegui nuovamente la decrittografia dalla cartella."
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
-      "versionLabel": "Version {{version}}",
-      "current": "Current",
-      "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "title": "Versioni di {{name}}",
+      "empty": "Non sono ancora disponibili versioni precedenti.",
+      "loadFailed": "Impossibile caricare le versioni.",
+      "restoreFailed": "Impossibile ripristinare la versione.",
+      "deleteFailed": "Impossibile eliminare la versione.",
+      "downloadFailed": "Impossibile preparare il download della versione.",
+      "versionLabel": "Versione {{version}}",
+      "current": "Attuale",
+      "original": "Originale",
+      "restoreConfirmTitle": "Ripristinare questa versione?",
+      "restoreConfirmDescription": "Il contenuto attuale del file verrà salvato come nuova versione, quindi la versione {{version}} diventerà quella attuale.",
+      "deleteConfirmTitle": "Eliminare questa versione?",
+      "deleteConfirmDescription": "La versione {{version}} verrà eliminata. Il file attuale non verrà modificato."
     }
   },
   "tasks": {
@@ -2764,7 +2817,7 @@
       "databaseBackup": "Backup del database",
       "storageStatistics": "Statistiche di archiviazione",
       "securityDiagnostics": "Controllo della sicurezza",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Provider di identità"
     },
     "roles": {
       "user": "Utente",
@@ -2954,19 +3007,19 @@
         "storageType": "Backend di archiviazione"
       },
       "chunkSize": {
-        "title": "Upload chunk size",
-        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
-        "ariaLabel": "Upload chunk size"
+        "title": "Dimensione dei blocchi di caricamento",
+        "description": "Controlla la quantità di dati inviata dal browser per ogni richiesta di caricamento. Blocchi più grandi riducono il numero di richieste sulle reti locali veloci.",
+        "ariaLabel": "Dimensione dei blocchi di caricamento"
       },
       "pipeline": {
-        "title": "Storage pipeline",
-        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "title": "Pipeline di archiviazione",
+        "description": "Configura la compressione e la crittografia dei nuovi blocchi prima che vengano scritti nell’archivio.",
         "fields": {
-          "compressionLevel": "Compression level",
-          "cipherChunkSize": "Encryption block size",
-          "encryptionThreads": "Encryption threads"
+          "compressionLevel": "Livello di compressione",
+          "cipherChunkSize": "Dimensione del blocco di crittografia",
+          "encryptionThreads": "Thread di crittografia"
         },
-        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+        "compressionHelp": "Intervallo consentito: da {{min}} a {{max}}. Il valore predefinito è 1."
       },
       "quota": {
         "title": "Quota utente predefinita",
@@ -3015,8 +3068,8 @@
         "templateNodeIdInvalid": "Inserisci un ID nodo cartella valido.",
         "quotaSaveFailed": "Impossibile salvare la quota utente predefinita.",
         "templateSaveFailed": "Impossibile salvare il modello di file predefiniti.",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
-        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
+        "chunkSizeSaveFailed": "Impossibile salvare la dimensione dei blocchi di caricamento.",
+        "storagePipelineSaveFailed": "Impossibile salvare le impostazioni della pipeline di archiviazione."
       }
     },
     "notificationsSettings": {
@@ -3197,8 +3250,8 @@
         "masterKey": "Chiave master",
         "memory": "Esposizione della memoria del processo",
         "runtime": "Informazioni di runtime",
-        "containerBoundary": "Container boundary",
-        "passed": "Protections in place",
+        "containerBoundary": "Confine del contenitore",
+        "passed": "Protezioni attive",
         "capabilities": "Hardware"
       },
       "risks": {
@@ -3217,22 +3270,22 @@
         "sysPtrace": "CAP_SYS_PTRACE",
         "os": "Sistema operativo",
         "container": "Container rilevato",
-        "tempDirectoryPath": "Temp directory",
-        "tempDirectoryWritable": "Temp directory writable",
-        "tempDirectoryError": "Temp directory error",
+        "tempDirectoryPath": "Directory temporanea",
+        "tempDirectoryWritable": "Directory temporanea scrivibile",
+        "tempDirectoryError": "Errore della directory temporanea",
         "euid": "UID effettivo",
         "noNewPrivileges": "Nessun nuovo privilegio",
         "seccomp": "Modalità seccomp",
         "capabilities": "Capability effettive",
-        "rootFilesystemReadOnly": "Read-only root filesystem",
-        "dockerSocketMounted": "Docker socket mounted",
-        "hostPidNamespace": "Host PID namespace",
-        "procOneCommandLine": "PID 1 command",
-        "coreDumpLimit": "Core dump limit",
-        "corePattern": "Core pattern",
-        "appArmorProfile": "AppArmor profile",
-        "selinuxContext": "SELinux context",
-        "selinuxEnforcing": "SELinux enforcing"
+        "rootFilesystemReadOnly": "File system radice di sola lettura",
+        "dockerSocketMounted": "Socket Docker montato",
+        "hostPidNamespace": "Spazio dei nomi PID dell’host",
+        "procOneCommandLine": "Comando del PID 1",
+        "coreDumpLimit": "Limite dei dump di memoria",
+        "corePattern": "Schema dei dump di memoria",
+        "appArmorProfile": "Profilo AppArmor",
+        "selinuxContext": "Contesto SELinux",
+        "selinuxEnforcing": "Modalità enforcing di SELinux"
       },
       "values": {
         "unknown": "Sconosciuto",
@@ -3252,62 +3305,62 @@
         "seccomp-disabled": "La superficie di syscall del kernel è più ampia rispetto al baseline normale di produzione di Docker, quindi un bug di evasione del container ha più spazio di manovra.",
         "running-as-root": "L'esecuzione di codice remoto verrebbe eseguita come root all'interno del container, aumentando i danni contro i volumi montati e i processi helper.",
         "process-hardening-failed": "Cotton ha richiesto il rafforzamento del processo, ma il processo è comunque partito senza la protezione di dump o ptrace prevista.",
-        "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
-        "temp-directory-not-writable": "Cotton cannot write temporary files. Database dump/restore, S3 upload spooling, and preview tooling can fail even when the persistent storage volume is healthy.",
-        "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
-        "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
-        "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
-        "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
-        "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
+        "db-integrity-unsigned-rows": "Le righe protette non firmate possono essere modificate direttamente in PostgreSQL senza che Cotton rilevi la manomissione durante la lettura.",
+        "temp-directory-not-writable": "Cotton non può scrivere file temporanei. Il dump e il ripristino del database, lo staging dei caricamenti S3 e gli strumenti di anteprima possono non riuscire anche se l’archiviazione persistente è integra.",
+        "root-filesystem-writable": "Un file system radice scrivibile offre al codice compromesso più posizioni in cui salvare strumenti, modificare file di runtime o persistere fino alla ricreazione del contenitore.",
+        "docker-socket-mounted": "Il socket Docker consente al codice nel contenitore web di creare contenitori privilegiati, montare percorsi dell’host e assumerne il controllo.",
+        "host-pid-namespace": "Condividere lo spazio dei nomi PID dell’host espone i processi dell’host tramite procfs e facilita gli attacchi mirati alla memoria dei processi.",
+        "mandatory-access-control-unconfined": "Senza un profilo AppArmor o SELinux applicato, una fuga dal contenitore o un errore vicino al kernel incontra meno confini di sicurezza.",
+        "core-dumps-enabled": "I dump di memoria sono istantanee della memoria del processo. Se Cotton si arresta mentre sono presenti segreti, un dump può conservare la chiave principale o la configurazione decifrata."
       },
       "labels": {
-        "whatItMeans": "What it means",
-        "impact": "Impact",
-        "howToFix": "How to fix",
-        "guardsAgainst": "What this guards against",
-        "note": "Note"
+        "whatItMeans": "Cosa significa",
+        "impact": "Impatto",
+        "howToFix": "Come correggere",
+        "guardsAgainst": "Da cosa protegge",
+        "note": "Nota"
       },
       "fixes": {
-        "public-instance": "If this instance is not meant to be public, disable public/demo mode (unset COTTON_PUBLIC_INSTANCE) and restart.",
-        "master-key-from-environment": "Prefer unlocking via the /unlock page instead of COTTON_MASTER_KEY, or make sure the variable is not retained in deployment metadata or exposed to exec sessions.",
-        "admins-without-2fa": "Enable two-factor authentication (TOTP) for every admin account from Profile → Security.",
-        "dotnet-diagnostics-enabled": "Set DOTNET_EnableDiagnostics=0 (and COMPlus_EnableDiagnostics=0) in the container environment and restart.",
-        "process-dumpable": "Set COTTON_PROCESS_HARDENING=true (or use the official image defaults) so the process requests PR_SET_DUMPABLE=0 at startup.",
-        "sys-ptrace-capability": "Drop the CAP_SYS_PTRACE capability from the container (for example cap_drop: [ALL]).",
-        "new-privileges-allowed": "Run the container with no-new-privileges:true so the process cannot gain privileges through setuid binaries.",
-        "seccomp-disabled": "Run with a seccomp profile enabled (avoid seccomp=unconfined) to restrict the syscalls available to the process.",
-        "running-as-root": "Run the container as a non-root user; the official image runs as the unprivileged app user by default.",
-        "process-hardening-failed": "Process hardening was requested but could not be applied — check the container capabilities/permissions and the startup logs.",
-        "db-integrity-unsigned-rows": "Restore the affected rows from a trusted backup or run the required transition version before upgrading.",
-        "temp-directory-not-writable": "Mount writable scratch storage at /tmp. With read_only: true, add tmpfs: [\"/tmp\"] or bind-mount a fast writable disk at /tmp, then restart.",
-        "root-filesystem-writable": "Run the container with a read-only root filesystem (read_only: true), keep /app/files as the persistent writable volume, and mount writable scratch storage at /tmp.",
-        "docker-socket-mounted": "Do not mount the Docker socket (/var/run/docker.sock) into the container.",
-        "host-pid-namespace": "Do not share the host PID namespace (avoid pid: host) so the process cannot observe other host processes.",
-        "mandatory-access-control-unconfined": "Apply an AppArmor or SELinux profile to confine the process instead of running unconfined.",
-        "core-dumps-enabled": "Disable core dumps for the container (ulimits: core: 0) so secrets cannot leak into dump files."
+        "public-instance": "Se questa istanza non deve essere pubblica, disattiva la modalità pubblica o demo (rimuovi COTTON_PUBLIC_INSTANCE) e riavviala.",
+        "master-key-from-environment": "Preferisci lo sblocco tramite /unlock a COTTON_MASTER_KEY. In alternativa, assicurati che la variabile non rimanga nei metadati di distribuzione e non sia esposta alle sessioni exec.",
+        "admins-without-2fa": "Abilita l’autenticazione a due fattori (TOTP) per ogni account amministratore da Profilo → Sicurezza.",
+        "dotnet-diagnostics-enabled": "Imposta DOTNET_EnableDiagnostics=0 e COMPlus_EnableDiagnostics=0 nell’ambiente del contenitore e riavvialo.",
+        "process-dumpable": "Imposta COTTON_PROCESS_HARDENING=true o usa i valori predefiniti dell’immagine ufficiale, affinché il processo richieda PR_SET_DUMPABLE=0 all’avvio.",
+        "sys-ptrace-capability": "Rimuovi la capability CAP_SYS_PTRACE dal contenitore, ad esempio con cap_drop: [ALL].",
+        "new-privileges-allowed": "Esegui il contenitore con no-new-privileges:true affinché il processo non possa ottenere privilegi tramite file binari setuid.",
+        "seccomp-disabled": "Esegui il contenitore con un profilo seccomp attivo ed evita seccomp=unconfined per limitare le chiamate di sistema disponibili.",
+        "running-as-root": "Esegui il contenitore come utente non root. L’immagine ufficiale usa per impostazione predefinita l’utente non privilegiato app.",
+        "process-hardening-failed": "Non è stato possibile applicare la protezione richiesta al processo. Controlla le capability e le autorizzazioni del contenitore e i log di avvio.",
+        "db-integrity-unsigned-rows": "Ripristina le righe interessate da un backup attendibile o esegui la versione di transizione richiesta prima dell’aggiornamento.",
+        "temp-directory-not-writable": "Monta uno spazio temporaneo scrivibile in /tmp. Con read_only: true, aggiungi tmpfs: [\"/tmp\"] o monta un disco veloce e scrivibile in /tmp, quindi riavvia.",
+        "root-filesystem-writable": "Esegui il contenitore con il file system radice di sola lettura (read_only: true), mantieni /app/files come volume persistente scrivibile e monta uno spazio temporaneo in /tmp.",
+        "docker-socket-mounted": "Non montare il socket Docker (/var/run/docker.sock) nel contenitore.",
+        "host-pid-namespace": "Non condividere lo spazio dei nomi PID dell’host (evita pid: host), affinché il processo non possa osservare gli altri processi dell’host.",
+        "mandatory-access-control-unconfined": "Applica un profilo AppArmor o SELinux per limitare il processo invece di eseguirlo senza restrizioni.",
+        "core-dumps-enabled": "Disabilita i dump di memoria del contenitore (ulimits: core: 0), affinché i segreti non finiscano nei file di dump."
       },
       "passed": {
-        "public-instance": "Public account creation disabled",
-        "master-key-from-environment": "Master key not exposed via the environment",
-        "admins-without-2fa": "All admins have two-factor enabled",
-        "dotnet-diagnostics-enabled": ".NET diagnostics disabled",
-        "process-hardening-failed": "Process hardening applied",
-        "process-dumpable": "Process is not dumpable",
-        "sys-ptrace-capability": "CAP_SYS_PTRACE not held",
-        "new-privileges-allowed": "no-new-privileges enforced",
-        "seccomp-disabled": "seccomp filtering enabled",
-        "running-as-root": "Running as a non-root user",
-        "temp-directory-not-writable": "OS temp directory writable",
-        "root-filesystem-writable": "Read-only root filesystem",
-        "docker-socket-mounted": "Docker socket not mounted",
-        "host-pid-namespace": "Isolated PID namespace",
-        "core-dumps-enabled": "Core dumps disabled",
-        "mandatory-access-control-unconfined": "AppArmor/SELinux confinement active"
+        "public-instance": "Creazione pubblica degli account disabilitata",
+        "master-key-from-environment": "Chiave principale non esposta tramite l’ambiente",
+        "admins-without-2fa": "Autenticazione a due fattori attiva per tutti gli amministratori",
+        "dotnet-diagnostics-enabled": "Diagnostica .NET disabilitata",
+        "process-hardening-failed": "Protezione del processo applicata",
+        "process-dumpable": "Dump del processo non consentito",
+        "sys-ptrace-capability": "CAP_SYS_PTRACE non presente",
+        "new-privileges-allowed": "no-new-privileges applicato",
+        "seccomp-disabled": "Filtro seccomp attivo",
+        "running-as-root": "Esecuzione come utente non root",
+        "temp-directory-not-writable": "Directory temporanea del sistema scrivibile",
+        "root-filesystem-writable": "File system radice di sola lettura",
+        "docker-socket-mounted": "Socket Docker non montato",
+        "host-pid-namespace": "Spazio dei nomi PID isolato",
+        "core-dumps-enabled": "Dump di memoria disabilitati",
+        "mandatory-access-control-unconfined": "Confinamento AppArmor o SELinux attivo"
       },
       "capabilities": {
         "aesAcceleration": {
-          "title": "Hardware-accelerated encryption",
-          "body": "This processor exposes AES-NI / PCLMULQDQ instructions, so AES-GCM runs on dedicated hardware paths — encryption stays fast and adds little CPU overhead."
+          "title": "Crittografia accelerata dall’hardware",
+          "body": "Il processore supporta le istruzioni AES-NI e PCLMULQDQ, quindi AES-GCM utilizza percorsi hardware dedicati: la crittografia rimane veloce e aggiunge un carico minimo alla CPU."
         }
       }
     },
@@ -3317,73 +3370,73 @@
       "inDevelopment": "La gestione dei gruppi è in sviluppo."
     },
     "identityProviders": {
-      "title": "Identity providers",
-      "description": "Configure OpenID Connect providers for sign-in and account linking.",
-      "empty": "Nessun provider di identità configurato.",
+      "title": "Provider di identità",
+      "description": "Configura i provider OpenID Connect per l’accesso e il collegamento degli account.",
+      "empty": "Non è configurato alcun provider di identità.",
       "actions": {
-        "create": "Add provider",
-        "edit": "Edit provider",
-        "delete": "Delete provider",
-        "refresh": "Refresh",
-        "openDocs": "Open OIDC setup guide",
-        "save": "Save provider",
-        "saving": "Saving..."
+        "create": "Aggiungi provider",
+        "edit": "Modifica provider",
+        "delete": "Elimina provider",
+        "refresh": "Aggiorna",
+        "openDocs": "Apri la guida alla configurazione OIDC",
+        "save": "Salva provider",
+        "saving": "Salvataggio..."
       },
       "columns": {
         "name": "Provider",
-        "issuer": "Issuer",
-        "status": "Status",
-        "accountCreation": "Account creation",
-        "scopes": "Scopes",
-        "domains": "Domains",
-        "actions": "Actions"
+        "issuer": "Emittente",
+        "status": "Stato",
+        "accountCreation": "Creazione account",
+        "scopes": "Ambiti",
+        "domains": "Domini",
+        "actions": "Azioni"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled",
-        "allowed": "Allowed",
-        "blocked": "Blocked"
+        "enabled": "Attivo",
+        "disabled": "Disattivato",
+        "allowed": "Consentito",
+        "blocked": "Bloccato"
       },
       "fields": {
-        "name": "Name",
-        "slug": "Slug",
-        "redirectUrl": "Redirect URL",
-        "issuer": "Issuer URL",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "scopes": "Scopes",
-        "allowedEmailDomains": "Allowed email domains",
-        "defaultRole": "Default role",
-        "isEnabled": "Enable sign-in with this provider",
-        "allowAccountCreation": "Allow this provider to create new accounts",
-        "requireVerifiedEmail": "Require verified email for account creation",
-        "syncProfile": "Sync profile names on sign-in",
-        "syncAvatar": "Import provider avatar when the user has no avatar",
-        "clearClientSecret": "Clear saved client secret"
+        "name": "Nome",
+        "slug": "Identificatore",
+        "redirectUrl": "URL di reindirizzamento",
+        "issuer": "URL dell’emittente",
+        "clientId": "ID client",
+        "clientSecret": "Segreto client",
+        "scopes": "Ambiti",
+        "allowedEmailDomains": "Domini e-mail consentiti",
+        "defaultRole": "Ruolo predefinito",
+        "isEnabled": "Abilita l’accesso con questo provider",
+        "allowAccountCreation": "Consenti a questo provider di creare nuovi account",
+        "requireVerifiedEmail": "Richiedi un’e-mail verificata per creare l’account",
+        "syncProfile": "Sincronizza i nomi del profilo all’accesso",
+        "syncAvatar": "Importa l’avatar del provider se l’utente non ne ha uno",
+        "clearClientSecret": "Cancella il segreto client salvato"
       },
       "help": {
-        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
-        "redirectUrl": "Register this exact callback URL in the provider application.",
-        "clientSecret": "Leave empty if this provider uses a public client.",
-        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
-        "scopes": "Separate scopes with spaces or commas. openid is always required.",
-        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+        "slug": "Lascia vuoto per generarlo dal nome del provider. Gli identificatori esistenti non cambieranno.",
+        "redirectUrl": "Registra questo URL di callback esatto nell’applicazione del provider.",
+        "clientSecret": "Lascia vuoto se il provider utilizza un client pubblico.",
+        "clientSecretConfigured": "È già stato salvato un segreto. Inseriscine uno nuovo per sostituirlo.",
+        "scopes": "Separa gli ambiti con spazi o virgole. openid è sempre obbligatorio.",
+        "allowedEmailDomains": "Domini facoltativi separati da virgole per la creazione automatica degli account."
       },
       "create": {
-        "title": "Add identity provider"
+        "title": "Aggiungi provider di identità"
       },
       "edit": {
-        "title": "Edit identity provider"
+        "title": "Modifica provider di identità"
       },
       "delete": {
-        "title": "Delete {{name}}?",
-        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
-        "confirm": "Delete provider"
+        "title": "Eliminare {{name}}?",
+        "description": "I collegamenti esistenti con questo provider smetteranno di funzionare. Gli utenti potranno continuare ad accedere con altri metodi.",
+        "confirm": "Elimina provider"
       },
       "errors": {
-        "loadFailed": "Failed to load identity providers.",
-        "saveFailed": "Failed to save identity provider.",
-        "deleteFailed": "Failed to delete identity provider."
+        "loadFailed": "Impossibile caricare i provider di identità.",
+        "saveFailed": "Impossibile salvare il provider di identità.",
+        "deleteFailed": "Impossibile eliminare il provider di identità."
       }
     }
   },
@@ -3426,9 +3479,7 @@
     "loading": "Attendere, caricamento dei dettagli di accesso...",
     "request": {
       "version": "Versione {{version}}",
-      "versionWithDevice": "Versione {{version}} su {{deviceName}}",
-      "origin": "Richiesta da {{origin}}",
-      "localOrigin": "questo dispositivo"
+      "versionWithDevice": "Versione {{version}} su {{deviceName}}"
     },
     "access": {
       "title": "Questa applicazione potrà:",
@@ -3486,17 +3537,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Verifica dei requisiti di avvio",
+      "caption": "Cotton sta convalidando il server prima di aprire l’applicazione."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton non può completare l’avvio finché questo requisito non viene risolto.",
+    "fallbackTitle": "Avvio bloccato",
+    "fallbackMessage": "Cotton non può avviarsi finché non viene completato il passaggio di manutenzione richiesto.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Versione attuale",
+      "requiredVersion": "Versione richiesta",
+      "requiredVersionRange": "Versione precedente richiesta",
+      "lastRecordedVersion": "Ultima versione registrata"
     }
   }
 }

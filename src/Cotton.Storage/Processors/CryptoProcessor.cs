@@ -7,20 +7,13 @@ using Cotton.Storage.Pipelines;
 
 namespace Cotton.Storage.Processors
 {
-    public class CryptoProcessor : IStorageProcessor
+    public class CryptoProcessor(
+        IStreamCipher _cipher,
+        IEncryptionChunkSizeProvider _chunkSizeProvider) : IStorageProcessor
     {
-        private readonly IStreamCipher _cipher;
-        private readonly IEncryptionChunkSizeProvider _chunkSizeProvider;
-
         public CryptoProcessor(IStreamCipher cipher)
             : this(cipher, new StaticEncryptionChunkSizeProvider(AesGcmStreamCipher.DefaultChunkSize))
         {
-        }
-
-        public CryptoProcessor(IStreamCipher cipher, IEncryptionChunkSizeProvider chunkSizeProvider)
-        {
-            _cipher = cipher;
-            _chunkSizeProvider = chunkSizeProvider;
         }
 
         public int Priority => 1000;

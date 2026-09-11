@@ -32,7 +32,7 @@ namespace Cotton.Database.Models
         [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual User CreatedByUser { get; set; } = null!;
 
-        [DeleteBehavior(DeleteBehavior.Cascade)]
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual Node Node { get; set; } = null!;
     }
 }

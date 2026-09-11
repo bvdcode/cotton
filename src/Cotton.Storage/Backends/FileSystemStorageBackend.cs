@@ -76,11 +76,11 @@ namespace Cotton.Storage.Backends
                 string tmpDir = GetTempDirectory();
                 DateTimeOffset cutoff = DateTimeOffset.UtcNow - ttl;
 
-                foreach (var file in Directory.EnumerateFiles(tmpDir, "*.tmp", SearchOption.TopDirectoryOnly))
+                foreach (string file in Directory.EnumerateFiles(tmpDir, "*.tmp", SearchOption.TopDirectoryOnly))
                 {
                     try
                     {
-                        var info = new FileInfo(file);
+                        FileInfo info = new FileInfo(file);
                         DateTime lastWrite = info.LastWriteTimeUtc;
                         if (lastWrite <= cutoff.UtcDateTime)
                         {
@@ -158,7 +158,7 @@ namespace Cotton.Storage.Backends
             {
                 throw new FileNotFoundException("File not found", filePath);
             }
-            var fso = new FileStreamOptions
+            FileStreamOptions fso = new FileStreamOptions
             {
                 Mode = FileMode.Open,
                 Share = FileShare.Read,
@@ -168,7 +168,7 @@ namespace Cotton.Storage.Backends
             return Task.FromResult<Stream>(new FileStream(filePath, fso));
         }
 
-        public async Task WriteAsync(string uid, Stream stream)
+        public async Task<long> WriteAsync(string uid, Stream stream)
         {
             const int WriteBufferSize = 2 * 1024 * 1024;
 
@@ -179,7 +179,7 @@ namespace Cotton.Storage.Backends
             string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
 
             string tmpFilePath = CreateTempFilePath(fileName);
-            var fso = new FileStreamOptions
+            FileStreamOptions fso = new FileStreamOptions
             {
                 Share = FileShare.None,
                 Mode = FileMode.CreateNew,
@@ -188,6 +188,7 @@ namespace Cotton.Storage.Backends
                 Options = FileOptions.Asynchronous,
             };
 
+            long storedSizeBytes;
             try
             {
                 _logger.LogDebug("Storing new file {Uid}", uid);
@@ -198,6 +199,7 @@ namespace Cotton.Storage.Backends
                 }
                 await stream.CopyToAsync(tmp, WriteBufferSize).ConfigureAwait(false);
                 await tmp.FlushAsync().ConfigureAwait(false);
+                storedSizeBytes = tmp.Length;
             }
             catch (Exception)
             {
@@ -209,11 +211,13 @@ namespace Cotton.Storage.Backends
             {
                 File.Move(tmpFilePath, filePath);
                 File.SetAttributes(filePath, FileAttributes.ReadOnly | FileAttributes.NotContentIndexed);
+                return storedSizeBytes;
             }
             catch (IOException ex) when (File.Exists(filePath))
             {
                 _logger.LogDebug(ex, "File {Uid} was written concurrently, deduplicated temp write", uid);
                 TryDelete(tmpFilePath);
+                return await GetSizeAsync(uid).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -243,7 +247,7 @@ namespace Cotton.Storage.Backends
                 return Task.FromResult(0L);
             }
 
-            var info = new FileInfo(filePath);
+            FileInfo info = new FileInfo(filePath);
             return Task.FromResult(info.Length);
         }
 

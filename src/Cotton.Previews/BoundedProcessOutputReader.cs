@@ -55,7 +55,9 @@ namespace Cotton.Previews
                     int bytesToCapture = Math.Min(read, remainingCapacity);
                     if (bytesToCapture > 0)
                     {
-                        captured.Write(readBuffer, 0, bytesToCapture);
+                        await captured
+                            .WriteAsync(readBuffer.AsMemory(0, bytesToCapture), cancellationToken)
+                            .ConfigureAwait(false);
                     }
 
                     if (bytesToCapture < read)

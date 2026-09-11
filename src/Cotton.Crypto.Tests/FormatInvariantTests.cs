@@ -14,14 +14,14 @@ namespace Cotton.Crypto.Tests
         public void ComposeNonce_RoundTrip_NoCollisions_ForFirstMillion()
         {
             uint prefix = 0xA1B2C3D4;
-            var seen = new HashSet<ulong>(1_000_000);
+            HashSet<ulong> seen = new HashSet<ulong>(1_000_000);
             Span<byte> nonce = stackalloc byte[AesGcmStreamCipher.NonceSize];
 
             // We cannot capture stackalloc span in lambdas; run assertions inline
             for (long i = 0; i < 1_000_000; i++)
             {
                 AesGcmStreamFormat.ComposeNonce(nonce, prefix, i);
-                var pfx = BinaryPrimitives.ReadUInt32LittleEndian(nonce[..4]);
+                uint pfx = BinaryPrimitives.ReadUInt32LittleEndian(nonce[..4]);
                 ulong ctr = BinaryPrimitives.ReadUInt64LittleEndian(nonce[4..]);
                 Assert.Multiple(() =>
                 {
@@ -59,16 +59,16 @@ namespace Cotton.Crypto.Tests
 
             long[] indices = [0L, 1L, 123456789L];
             long[] lengths = [0L, 1L, 42L, 8_388_608L];
-            foreach (var idx in indices)
+            foreach (long idx in indices)
             {
-                foreach (var len in lengths)
+                foreach (long len in lengths)
                 {
                     AesGcmStreamFormat.FillAadMutable(aad, idx, len);
                     // Compute values without lambdas capturing span
-                    var prefixNow = aad[..12].ToArray();
-                    var idxNow = BinaryPrimitives.ReadInt64LittleEndian(aad.Slice(12, 8));
-                    var lenNow = BinaryPrimitives.ReadInt64LittleEndian(aad.Slice(20, 8));
-                    var zeroNow = BinaryPrimitives.ReadInt32LittleEndian(aad.Slice(28, 4));
+                    byte[] prefixNow = aad[..12].ToArray();
+                    long idxNow = BinaryPrimitives.ReadInt64LittleEndian(aad.Slice(12, 8));
+                    long lenNow = BinaryPrimitives.ReadInt64LittleEndian(aad.Slice(20, 8));
+                    int zeroNow = BinaryPrimitives.ReadInt32LittleEndian(aad.Slice(28, 4));
 
                     Assert.Multiple(() =>
                     {

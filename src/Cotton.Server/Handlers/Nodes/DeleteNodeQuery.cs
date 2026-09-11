@@ -141,6 +141,10 @@ namespace Cotton.Server.Handlers.Nodes
 
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
 
+            await _dbContext.NodeShareTokens
+                .Where(token => nodeIds.Contains(token.NodeId))
+                .ExecuteDeleteAsync(ct);
+
             await _dbContext.DownloadTokens
                 .Where(t => t.CreatedByUserId == command.UserId && nodeIds.Contains(t.NodeFile.NodeId))
                 .ExecuteDeleteAsync(ct);

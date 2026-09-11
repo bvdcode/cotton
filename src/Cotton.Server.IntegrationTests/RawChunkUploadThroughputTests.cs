@@ -37,7 +37,7 @@ namespace Cotton.Server.IntegrationTests
             creator.EnsureDeleted();
             creator.Create();
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = TestPostgresHost,
                 Port = TestPostgresPort,
@@ -45,7 +45,7 @@ namespace Cotton.Server.IntegrationTests
                 Username = TestPostgresUsername,
                 Password = TestPostgresPassword
             };
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -93,7 +93,7 @@ namespace Cotton.Server.IntegrationTests
                 await UploadRawChunkAsync(payload);
             }
 
-            var stopwatch = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
             foreach (ChunkPayload payload in measured)
             {
                 await UploadRawChunkAsync(payload);
@@ -105,19 +105,22 @@ namespace Cotton.Server.IntegrationTests
             double mib = bytes / 1024d / 1024d;
             double mibPerSecond = mib / stopwatch.Elapsed.TotalSeconds;
 
-            TestContext.Progress.WriteLine($"Raw endpoint backend path: {mibPerSecond:F2} MiB/s");
-            TestContext.Progress.WriteLine($"Uploaded: {mib:F2} MiB in {stopwatch.Elapsed.TotalSeconds:F2} sec");
-            TestContext.Progress.WriteLine($"Chunk size: {chunkSizeMiB} MiB");
-            TestContext.Progress.WriteLine($"Chunks: {measuredChunks}");
-            TestContext.Progress.WriteLine($"Compression level: {CompressionProcessor.DefaultCompressionLevel}");
-            TestContext.Progress.WriteLine("Path: TestServer -> auth -> ChunkController.UploadRawChunk -> ChunkIngestService -> storage pipeline -> filesystem backend");
+            await TestContext.Progress.WriteLineAsync($"Raw endpoint backend path: {mibPerSecond:F2} MiB/s");
+            await TestContext.Progress.WriteLineAsync(
+                $"Uploaded: {mib:F2} MiB in {stopwatch.Elapsed.TotalSeconds:F2} sec");
+            await TestContext.Progress.WriteLineAsync($"Chunk size: {chunkSizeMiB} MiB");
+            await TestContext.Progress.WriteLineAsync($"Chunks: {measuredChunks}");
+            await TestContext.Progress.WriteLineAsync(
+                $"Compression level: {CompressionProcessor.DefaultCompressionLevel}");
+            await TestContext.Progress.WriteLineAsync(
+                "Path: TestServer -> auth -> ChunkController.UploadRawChunk -> ChunkIngestService -> storage pipeline -> filesystem backend");
 
             Assert.That(mibPerSecond, Is.GreaterThan(1));
         }
 
         private async Task UploadRawChunkAsync(ChunkPayload payload)
         {
-            using var body = new ByteArrayContent(payload.Bytes)
+            using ByteArrayContent body = new ByteArrayContent(payload.Bytes)
             {
                 Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
             };
@@ -132,7 +135,7 @@ namespace Cotton.Server.IntegrationTests
 
         private static IReadOnlyList<ChunkPayload> CreatePayloads(int count, int chunkSizeBytes, int seedOffset)
         {
-            var payloads = new ChunkPayload[count];
+            ChunkPayload[] payloads = new ChunkPayload[count];
             for (int i = 0; i < payloads.Length; i++)
             {
                 byte[] bytes = new byte[chunkSizeBytes];
@@ -153,7 +156,7 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<string> LoginAsync()
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new LoginRequestDto
                 {

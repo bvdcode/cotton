@@ -23,7 +23,7 @@ namespace Cotton.Previews.Tests
         {
             // Arrange
             string testText = "Hello World!\nThis is a test.\nLine 3\nLine 4";
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(testText));
+            using MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(testText));
 
             // Act
             byte[] webpData = await _generator.GeneratePreviewWebPAsync(stream, size: 256);
@@ -32,7 +32,7 @@ namespace Cotton.Previews.Tests
             Assert.That(webpData, Is.Not.Null);
             Assert.That(webpData, Is.Not.Empty);
 
-            using var image = Image.Load<Rgba32>(webpData);
+            using Image<Rgba32> image = Image.Load<Rgba32>(webpData);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(image.Width, Is.EqualTo(256));
@@ -47,7 +47,7 @@ namespace Cotton.Previews.Tests
         public async Task GeneratePreviewWebPAsync_EmptyFile_GeneratesImageWithEmptyFileText()
         {
             // Arrange
-            using var stream = new MemoryStream([]);
+            using MemoryStream stream = new MemoryStream([]);
 
             // Act
             byte[] webpData = await _generator.GeneratePreviewWebPAsync(stream, size: 256);
@@ -56,7 +56,7 @@ namespace Cotton.Previews.Tests
             Assert.That(webpData, Is.Not.Null);
             Assert.That(webpData, Is.Not.Empty);
 
-            using var image = Image.Load<Rgba32>(webpData);
+            using Image<Rgba32> image = Image.Load<Rgba32>(webpData);
             bool hasNonWhitePixels = HasNonWhitePixels(image);
             Assert.That(hasNonWhitePixels, Is.True, "Empty file should render '(empty file)' text");
         }
@@ -65,12 +65,12 @@ namespace Cotton.Previews.Tests
         public async Task GeneratePreviewWebPAsync_LongText_TruncatesCorrectly()
         {
             // Arrange
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             for (int i = 0; i < 10000; i++)
             {
                 sb.AppendLine($"Line {i}: This is a very long line with lots of text to test truncation behavior.");
             }
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString()));
+            using MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString()));
 
             // Act
             byte[] webpData = await _generator.GeneratePreviewWebPAsync(stream, size: 256);
@@ -79,7 +79,7 @@ namespace Cotton.Previews.Tests
             Assert.That(webpData, Is.Not.Null);
             Assert.That(webpData, Is.Not.Empty);
 
-            using var image = Image.Load<Rgba32>(webpData);
+            using Image<Rgba32> image = Image.Load<Rgba32>(webpData);
             bool hasNonWhitePixels = HasNonWhitePixels(image);
             Assert.That(hasNonWhitePixels, Is.True, "Long text should render visible content");
         }
@@ -95,14 +95,14 @@ namespace Cotton.Previews.Tests
         Console.WriteLine(""Hello"");
     }
 }";
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(codeSnippet));
+            using MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(codeSnippet));
 
             // Act
             byte[] webpData = await _generator.GeneratePreviewWebPAsync(stream, size: 256);
 
             // Assert
             Assert.That(webpData, Is.Not.Null);
-            using var image = Image.Load<Rgba32>(webpData);
+            using Image<Rgba32> image = Image.Load<Rgba32>(webpData);
             bool hasNonWhitePixels = HasNonWhitePixels(image);
             Assert.That(hasNonWhitePixels, Is.True, "Code snippet should render visible text");
         }
@@ -112,14 +112,14 @@ namespace Cotton.Previews.Tests
         {
             // Arrange
             string whitespace = "   \n\n\t\t  \n   ";
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(whitespace));
+            using MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(whitespace));
 
             // Act
             byte[] webpData = await _generator.GeneratePreviewWebPAsync(stream, size: 256);
 
             // Assert
             Assert.That(webpData, Is.Not.Null);
-            using var image = Image.Load<Rgba32>(webpData);
+            using Image<Rgba32> image = Image.Load<Rgba32>(webpData);
             bool hasNonWhitePixels = HasNonWhitePixels(image);
             Assert.That(hasNonWhitePixels, Is.True, "Whitespace-only should render '(empty file)' text");
         }
@@ -130,11 +130,11 @@ namespace Cotton.Previews.Tests
             byte[] binaryLikeContent = Enumerable.Range(0, 4096)
                 .Select(index => index % 2 == 0 ? (byte)0 : (byte)1)
                 .ToArray();
-            using var stream = new MemoryStream(binaryLikeContent);
+            using MemoryStream stream = new MemoryStream(binaryLikeContent);
 
             byte[] webpData = await _generator.GeneratePreviewWebPAsync(stream, size: 256);
 
-            using var image = Image.Load<Rgba32>(webpData);
+            using Image<Rgba32> image = Image.Load<Rgba32>(webpData);
             bool hasNonWhitePixels = HasNonWhitePixels(image);
             Assert.That(hasNonWhitePixels, Is.False, "Binary-like text should not render control characters");
         }
@@ -143,14 +143,14 @@ namespace Cotton.Previews.Tests
         public async Task GeneratePreviewWebPAsync_SingleCharacter_RendersCorrectly()
         {
             // Arrange
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes("ABC"));
+            using MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes("ABC"));
 
             // Act
             byte[] webpData = await _generator.GeneratePreviewWebPAsync(stream, size: 256);
 
             // Assert
             Assert.That(webpData, Is.Not.Null);
-            using var image = Image.Load<Rgba32>(webpData);
+            using Image<Rgba32> image = Image.Load<Rgba32>(webpData);
             bool hasNonWhitePixels = HasNonWhitePixels(image);
             Assert.That(hasNonWhitePixels, Is.True, "Single character should render");
         }
@@ -164,13 +164,13 @@ namespace Cotton.Previews.Tests
 
             foreach (int size in sizes)
             {
-                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(testText));
+                using MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(testText));
 
                 // Act
                 byte[] webpData = await _generator.GeneratePreviewWebPAsync(stream, size);
 
                 // Assert
-                using var image = Image.Load<Rgba32>(webpData);
+                using Image<Rgba32> image = Image.Load<Rgba32>(webpData);
                 using (Assert.EnterMultipleScope())
                 {
                     Assert.That(image.Width, Is.EqualTo(size), $"Width should be {size}");
@@ -184,7 +184,7 @@ namespace Cotton.Previews.Tests
         {
             // Arrange
             string testText = "Hello World";
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(testText));
+            using MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(testText));
             stream.Position = 5; // Move position to middle
 
             // Act
@@ -192,7 +192,7 @@ namespace Cotton.Previews.Tests
 
             // Assert
             Assert.That(webpData, Is.Not.Null);
-            using var image = Image.Load<Rgba32>(webpData);
+            using Image<Rgba32> image = Image.Load<Rgba32>(webpData);
             bool hasNonWhitePixels = HasNonWhitePixels(image);
             Assert.That(hasNonWhitePixels, Is.True, "Should render full text after seeking to start");
         }

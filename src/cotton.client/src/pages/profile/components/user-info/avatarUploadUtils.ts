@@ -46,11 +46,6 @@ const buildAvatarFileNameWithExtension = (
   return `${safeBaseName}.${extension}`;
 };
 
-const loadHeic2Any = async () => {
-  const module = await import("heic2any");
-  return module.default;
-};
-
 const loadImageFromBlob = async (blob: Blob): Promise<HTMLImageElement> => {
   return await new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(blob);
@@ -71,7 +66,6 @@ const loadImageFromBlob = async (blob: Blob): Promise<HTMLImageElement> => {
 };
 
 const convertHeicBlobToJpeg = async (blob: Blob): Promise<Blob> => {
-  const heic2any = await loadHeic2Any();
   const convertedUnknown: unknown = await heic2any({
     blob,
     toType: "image/jpeg",
@@ -244,3 +238,4 @@ export const prepareAvatarForUpload = async (
 
   return null;
 };
+import heic2any from "heic2any";

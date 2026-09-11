@@ -1,4 +1,6 @@
-import { httpClient, setAccessToken } from "./httpClient";
+import { httpClient, parseValidated, setAccessToken } from "./httpClient";
+import type { User } from "../../features/auth/types";
+import { authSessionResponseSchema, mapUserResponse } from "./authSession";
 import type {
   PublicKeyCredentialCreationOptionsJson,
   PublicKeyCredentialRequestOptionsJson,
@@ -30,10 +32,6 @@ interface PasskeyRegistrationOptionsResponse {
 interface PasskeyAssertionOptionsResponse {
   requestId: string;
   options: PublicKeyCredentialRequestOptionsJson;
-}
-
-interface TokenPairResponse {
-  accessToken: string;
 }
 
 export const passkeysApi = {
@@ -95,13 +93,19 @@ export const passkeysApi = {
     requestId: string,
     trustDevice: boolean,
     credential: SerializedAssertionCredential,
-  ): Promise<string> => {
-    const response = await httpClient.post<TokenPairResponse>(
-      "auth/passkeys/assertion/verify",
-      { requestId, trustDevice, credential },
+  ): Promise<User> => {
+    const url = "auth/passkeys/assertion/verify";
+    const response = await httpClient.post<object>(url, {
+      requestId,
+      trustDevice,
+      credential,
+    });
+    const session = parseValidated(
+      url,
+      response.data,
+      authSessionResponseSchema,
     );
-    const token = response.data.accessToken;
-    setAccessToken(token);
-    return token;
+    setAccessToken(session.accessToken);
+    return mapUserResponse(session.user);
   },
 };

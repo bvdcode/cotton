@@ -7,6 +7,7 @@ import {
   CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES,
   isFileEncrypted,
 } from "../crypto";
+import { readStringProperty } from "../utils/typeGuards";
 
 interface PreviewState {
   isOpen: boolean;
@@ -93,10 +94,7 @@ export const useFilePreview = () => {
     const handlePopState = (e: PopStateEvent) => {
       if (
         historyPushedRef.current &&
-        !(
-          e.state &&
-          (e.state as { overlay?: string }).overlay === PREVIEW_HISTORY_STATE
-        )
+        !(readStringProperty(e.state, "overlay") === PREVIEW_HISTORY_STATE)
       ) {
         historyPushedRef.current = false;
         closePreviewInternal();

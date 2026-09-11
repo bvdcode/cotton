@@ -27,13 +27,13 @@ namespace Cotton.Crypto.Internals
             ThrowIfDisposed();
 
             // Try reuse first, but only if buffer is large enough
-            if (_free.TryTake(out var reused))
+            if (_free.TryTake(out byte[]? reused))
             {
                 if (reused.Length >= minimumLength)
                 {
                     _active[reused] = null;
-                    var newCountReuse = Interlocked.Increment(ref _count);
-                    var newBytesReuse = Interlocked.Add(ref _bytes, reused.Length);
+                    int newCountReuse = Interlocked.Increment(ref _count);
+                    long newBytesReuse = Interlocked.Add(ref _bytes, reused.Length);
                     if (newCountReuse > _maxCount || newBytesReuse > _maxBytes)
                     {
                         _active.TryRemove(reused, out _);
@@ -53,10 +53,10 @@ namespace Cotton.Crypto.Internals
                 }
             }
 
-            var arr = _pool.Rent(minimumLength);
+            byte[] arr = _pool.Rent(minimumLength);
             _active[arr] = null;
-            var newCount = Interlocked.Increment(ref _count);
-            var newBytes = Interlocked.Add(ref _bytes, arr.Length);
+            int newCount = Interlocked.Increment(ref _count);
+            long newBytes = Interlocked.Add(ref _bytes, arr.Length);
             if (newCount > _maxCount || newBytes > _maxBytes)
             {
                 _active.TryRemove(arr, out _);
@@ -88,14 +88,14 @@ namespace Cotton.Crypto.Internals
         {
             if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
             // Deduplicate tracked and free to avoid double return
-            var unique = new HashSet<byte[]>(ReferenceEqualityComparer.Instance);
-            while (_tracked.TryTake(out var arr1)) unique.Add(arr1);
-            while (_free.TryTake(out var arr2)) unique.Add(arr2);
-            foreach (var kv in _active.Keys)
+            HashSet<byte[]> unique = new HashSet<byte[]>(ReferenceEqualityComparer.Instance);
+            while (_tracked.TryTake(out byte[]? arr1)) unique.Add(arr1);
+            while (_free.TryTake(out byte[]? arr2)) unique.Add(arr2);
+            foreach (byte[] kv in _active.Keys)
             {
                 unique.Add(kv);
             }
-            foreach (var arr in unique)
+            foreach (byte[] arr in unique)
             {
                 Array.Clear(arr, 0, arr.Length);
                 _pool.Return(arr, clearArray: false);

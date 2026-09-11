@@ -1,7 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Database.Models.Attributes;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
@@ -24,17 +23,15 @@ namespace Cotton.Database.Models
         [MaxLength(64)]
         public string StateHash { get; set; } = null!;
 
-        [Encrypted]
         [Column("code_verifier_encrypted")]
         public string CodeVerifierEncrypted { get; set; } = null!;
 
-        [Encrypted]
         [Column("nonce_encrypted")]
         public string NonceEncrypted { get; set; } = null!;
 
         [Column("return_url")]
         [MaxLength(1024)]
-        public string ReturnUrl { get; set; } = "/";
+        public string ReturnUrl { get; set; } = null!;
 
         [Column("link_user_id")]
         public Guid? LinkUserId { get; set; }
@@ -46,6 +43,7 @@ namespace Cotton.Database.Models
         public DateTime ExpiresAt { get; set; }
 
         [ForeignKey(nameof(ProviderId))]
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual OidcProvider Provider { get; set; } = null!;
     }
 }

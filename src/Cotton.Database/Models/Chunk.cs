@@ -10,6 +10,7 @@ namespace Cotton.Database.Models
 {
     [Table("chunks")]
     [Index(nameof(GCScheduledAfter))]
+    [Index(nameof(Hash), nameof(GCScheduledAfter))]
     public class Chunk
     {
         [Key]

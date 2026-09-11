@@ -50,7 +50,7 @@ namespace Cotton.Server.Jobs
                 await _dumper.DumpToFileAsync(dumpPath, ct);
                 DumpUploadResult uploadResult = await UploadDumpWithChunkerAsync(dumpPath, ownerId, ct);
 
-                var manifest = new BackupManifest(
+                BackupManifest manifest = new BackupManifest(
                     SchemaVersion: 1,
                     BackupId: backupId,
                     Elapsed: sw.Elapsed,
@@ -71,7 +71,7 @@ namespace Cotton.Server.Jobs
                 string manifestStorageKey = Hasher.ToHexStringHash(Hasher.HashData(manifestBytes));
                 await WriteObjectAsync(manifestStorageKey, manifestBytes, ct);
 
-                var pointer = new BackupManifestPointer(
+                BackupManifestPointer pointer = new BackupManifestPointer(
                     SchemaVersion: 1,
                     LogicalKey: DatabaseBackupKeyProvider.ManifestPointerLogicalKey,
                     UpdatedAtUtc: DateTime.UtcNow,
@@ -119,10 +119,10 @@ namespace Cotton.Server.Jobs
                 throw new InvalidOperationException("MaxChunkSizeBytes must be positive.");
             }
 
-            await using var dumpStream = new FileStream(dumpPath, FileMode.Open, FileAccess.Read, FileShare.Read, chunkSize, useAsync: true);
-            using var fileHasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
+            await using FileStream dumpStream = new FileStream(dumpPath, FileMode.Open, FileAccess.Read, FileShare.Read, chunkSize, useAsync: true);
+            using IncrementalHash fileHasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
 
-            var chunks = new List<BackupChunkInfo>();
+            List<BackupChunkInfo> chunks = new List<BackupChunkInfo>();
             byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
             try
             {
@@ -158,7 +158,7 @@ namespace Cotton.Server.Jobs
             byte[] content,
             CancellationToken cancellationToken)
         {
-            using var stream = new MemoryStream(content, writable: false);
+            using MemoryStream stream = new MemoryStream(content, writable: false);
             await _storage.WriteAsync(storageKey, stream, new PipelineContext
             {
                 FileSizeBytes = content.Length

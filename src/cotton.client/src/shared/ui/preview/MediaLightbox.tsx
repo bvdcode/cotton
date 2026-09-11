@@ -26,7 +26,10 @@ import type {
   SlideHlsVideo,
   SlideWithTitle,
 } from "@shared/types/mediaLightbox";
-import { HLS_VIDEO_SLIDE_TYPE } from "@shared/types/mediaLightbox";
+import {
+  HLS_VIDEO_SLIDE_TYPE,
+  isSlideWithTitle,
+} from "@shared/types/mediaLightbox";
 import { useMediaLightboxUrls } from "./useMediaLightboxUrls";
 import { stopLightboxMediaPlayback } from "./mediaLightboxPlayback";
 import { useMediaSessionSource } from "../../hooks/useMediaSessionSource";
@@ -37,16 +40,12 @@ import {
   selectGalleryPreferPreview,
   useUserPreferencesStore,
 } from "../../store/userPreferencesStore";
+import { HlsVideoSlide } from "./HlsVideoSlide";
 
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
 const TOUCH_CONTROLS_AUTOHIDE_MS = 2500;
 const LIGHTBOX_TITLE_SEPARATOR = "\u2022";
-const HlsVideoSlide = React.lazy(async () => {
-  const module = await import("./HlsVideoSlide");
-  return { default: module.HlsVideoSlide };
-});
-
 type LightboxIndexState = {
   key: string;
   index: number;
@@ -108,31 +107,29 @@ const HlsVideoLightboxSlide = ({
   setActiveVideoElementForFile,
   slide,
 }: HlsVideoLightboxSlideProps) => {
-  if (slide.type !== HLS_VIDEO_SLIDE_TYPE) {
+  if (slide.type !== HLS_VIDEO_SLIDE_TYPE || !isSlideWithTitle(slide)) {
     return undefined;
   }
 
-  const hlsSlide = slide as SlideHlsVideo & SlideWithTitle;
+  const hlsSlide: SlideHlsVideo & SlideWithTitle = slide;
   return (
-    <React.Suspense fallback={null}>
-      <HlsVideoSlide
-        src={hlsSlide.src}
-        poster={hlsSlide.poster}
-        width={hlsSlide.width}
-        height={hlsSlide.height}
-        active={offset === 0 && hlsSlide.fileId === currentItemId}
-        onVideoElementChange={(element) =>
-          setActiveVideoElementForFile(hlsSlide.fileId, element)
-        }
-        noticeText={noticeText}
-        errorText={errorText}
-      />
-    </React.Suspense>
+    <HlsVideoSlide
+      src={hlsSlide.src}
+      poster={hlsSlide.poster}
+      width={hlsSlide.width}
+      height={hlsSlide.height}
+      active={offset === 0 && hlsSlide.fileId === currentItemId}
+      onVideoElementChange={(element) =>
+        setActiveVideoElementForFile(hlsSlide.fileId, element)
+      }
+      noticeText={noticeText}
+      errorText={errorText}
+    />
   );
 };
 
 const MediaLightboxSlideHeader = ({ slide }: { slide: Slide }) => {
-  const maybeTitle = (slide as { title?: string }).title;
+  const maybeTitle = isSlideWithTitle(slide) ? slide.title : undefined;
   const title = typeof maybeTitle === "string" ? maybeTitle : "";
   const parts = title
     .split(LIGHTBOX_TITLE_SEPARATOR)
@@ -588,17 +585,17 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       slide: Slide;
       saveAs: (source: string | Blob, name?: string) => void;
     }) => {
-      const lightboxSlide = slide as SlideWithTitle;
+      if (!isSlideWithTitle(slide)) return;
       const downloadUrl = await resolveSlideDownloadUrl(slide);
       if (!downloadUrl) return;
-      saveAs(downloadUrl, lightboxSlide.fileName);
+      saveAs(downloadUrl, slide.fileName);
     },
     [resolveSlideDownloadUrl],
   );
 
   const handleCustomShare = React.useCallback(
     async ({ slide }: { slide: Slide }) => {
-      const lightboxSlide = slide as SlideWithTitle;
+      if (!isSlideWithTitle(slide)) return;
       if (!navigator.canShare) return;
 
       const downloadUrl = await resolveSlideDownloadUrl(slide);
@@ -606,7 +603,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
       const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadUrl);
       const shareUrl = token ? shareLinks.buildShareUrl(token) : downloadUrl;
-      const sharePayload = { title: lightboxSlide.fileName, url: shareUrl };
+      const sharePayload = { title: slide.fileName, url: shareUrl };
 
       if (!navigator.canShare(sharePayload)) return;
 

@@ -20,7 +20,7 @@ namespace Cotton.Server.IntegrationTests.Helpers
         public Task<long> GetSizeAsync(string uid)
         {
             ArgumentNullException.ThrowIfNull(uid);
-            return Task.FromResult(_blobs.TryGetValue(uid, out var data) ? data.Length : 0L);
+            return Task.FromResult(_blobs.TryGetValue(uid, out byte[]? data) ? data.Length : 0L);
         }
 
         public Task<bool> ExistsAsync(string uid)
@@ -32,20 +32,15 @@ namespace Cotton.Server.IntegrationTests.Helpers
         public Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             ArgumentNullException.ThrowIfNull(uid);
-            MemoryStream ms = new();
-            if (_blobs.TryGetValue(uid, out var data))
-            {
-                ms.Write(data, 0, data.Length);
-                ms.Seek(0, SeekOrigin.Begin);
-            }
-            else
+            if (!_blobs.TryGetValue(uid, out byte[]? data))
             {
                 throw new FileNotFoundException("Blob not found in in-memory storage", uid);
             }
-            return Task.FromResult(result: (Stream)ms);
+
+            return Task.FromResult<Stream>(new MemoryStream(data, writable: false));
         }
 
-        public async Task WriteAsync(
+        public async Task<long> WriteAsync(
             string uid,
             Stream stream,
             PipelineContext? context = null,
@@ -53,18 +48,20 @@ namespace Cotton.Server.IntegrationTests.Helpers
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
             ArgumentNullException.ThrowIfNull(stream);
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             if (stream.CanSeek)
             {
                 stream.Seek(0, SeekOrigin.Begin);
             }
             await stream.CopyToAsync(ms).ConfigureAwait(false);
-            _blobs[uid] = ms.ToArray();
+            byte[] stored = ms.ToArray();
+            _blobs[uid] = stored;
+            return stored.LongLength;
         }
 
         public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
-            foreach (var key in _blobs.Keys)
+            foreach (string key in _blobs.Keys)
             {
                 yield return key;
             }

@@ -1,6 +1,6 @@
 import { getValidated, httpClient, parseValidated } from "./httpClient";
 import type { BaseDto, Guid, NodeDto } from "./layoutsApi";
-import { readRequiredIntHeader, type HeaderMap } from "./utils/headerUtils";
+import { readRequiredIntHeader } from "./utils/headerUtils";
 import {
   nodeContentSchema,
   nodeDtoSchema,
@@ -47,13 +47,11 @@ export interface RenameNodeRequest {
 
 export interface MoveNodeRequest {
   parentId: Guid;
+  name?: string;
 }
 
 export type RestoreStatus =
-  | "Restored"
-  | "ParentMissing"
-  | "Conflict"
-  | "NotRestorable";
+  "Restored" | "ParentMissing" | "Conflict" | "NotRestorable";
 
 export type RestoreConflictKind = "Folder" | "File";
 
@@ -108,10 +106,7 @@ export const nodesApi = {
       },
     });
     const content = parseValidated(url, response.data, nodeContentSchema);
-    const totalCount = readRequiredIntHeader(
-      response.headers as HeaderMap,
-      "x-total-count",
-    );
+    const totalCount = readRequiredIntHeader(response.headers, "x-total-count");
     const files = await applyDisplayMetaToFiles(content.files);
 
     return {

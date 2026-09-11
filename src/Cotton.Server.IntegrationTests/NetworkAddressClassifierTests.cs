@@ -80,8 +80,8 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task SharedFileDownloadedNotification_UsesLocalNetworkLocationForPrivateIp()
         {
-            var notifications = new RecordingNotificationsProvider();
-            var geoLookup = new RecordingGeoLookupService();
+            RecordingNotificationsProvider notifications = new RecordingNotificationsProvider();
+            RecordingGeoLookupService geoLookup = new RecordingGeoLookupService();
 
             await notifications.SendSharedFileDownloadedNotificationAsync(
                 geoLookup,
@@ -106,8 +106,8 @@ namespace Cotton.Server.IntegrationTests
         public async Task SharedFileDownloadedNotification_KeepsIpInDetailedMetadataOnly()
         {
             const string ipAddress = "2600:1700:6cf8:909f:146b:819e:793c:6937";
-            var notifications = new RecordingNotificationsProvider();
-            var geoLookup = new RecordingGeoLookupService();
+            RecordingNotificationsProvider notifications = new RecordingNotificationsProvider();
+            RecordingGeoLookupService geoLookup = new RecordingGeoLookupService();
 
             await notifications.SendSharedFileDownloadedNotificationAsync(
                 geoLookup,

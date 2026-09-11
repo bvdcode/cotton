@@ -1,4 +1,9 @@
-import { AxiosError } from "axios";
+import {
+  AxiosError,
+  AxiosHeaders,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UploadProgressSnapshot } from "./types";
 import { uploadBlobToChunks } from "./uploadBlobToChunks";
@@ -60,9 +65,31 @@ const createWorker = () => {
       hashIndex += 1;
       return { buffer, chunkHash };
     }),
-    hashBlob: vi.fn(async () => "file-hash"),
+    updateFileHash: vi.fn<(buffers: ArrayBuffer[]) => Promise<void>>(
+      async () => undefined,
+    ),
     digestFile: vi.fn(async () => "file-hash"),
   };
+};
+
+const createResponseError = (status: number): AxiosError => {
+  const config: InternalAxiosRequestConfig = {
+    headers: new AxiosHeaders(),
+  };
+  const response: AxiosResponse = {
+    data: null,
+    status,
+    statusText: "Transient gateway failure",
+    headers: new AxiosHeaders(),
+    config,
+  };
+  return new AxiosError(
+    response.statusText,
+    AxiosError.ERR_BAD_RESPONSE,
+    config,
+    undefined,
+    response,
+  );
 };
 
 describe("uploadBlobToChunks", () => {
@@ -107,10 +134,74 @@ describe("uploadBlobToChunks", () => {
       chunkHashes: ["chunk-0", "chunk-1", "chunk-2", "chunk-3"],
       fileHash: "file-hash",
     });
-    expect(worker.hashBlob).toHaveBeenCalledOnce();
+    expect(worker.updateFileHash).toHaveBeenCalledOnce();
     await vi.waitFor(() => {
       expect(mocks.release).toHaveBeenCalledWith(worker);
     });
+  });
+
+  it("updates the whole-file hash in source order before enqueueing", async () => {
+    const worker = createWorker();
+    const hashedBytes: number[][] = [];
+    mocks.acquire.mockResolvedValue(worker);
+    mocks.hashBuffer.mockImplementation(async (buffer: ArrayBuffer) => {
+      const byte = new Uint8Array(buffer)[0];
+      await new Promise((resolve) => {
+        globalThis.setTimeout(resolve, 5 - byte);
+      });
+      return `chunk-${byte}`;
+    });
+    worker.updateFileHash.mockImplementation(async (buffers: ArrayBuffer[]) => {
+      hashedBytes.push(buffers.map((buffer) => new Uint8Array(buffer)[0]));
+    });
+
+    await expect(
+      uploadBlobToChunks({
+        blob: new Blob([new Uint8Array([1, 4, 2, 3])]),
+        fileName: "ordered.bin",
+        server: {
+          maxChunkSizeBytes: 1,
+          supportedHashAlgorithm: "sha256",
+        },
+        client: { concurrency: 2 },
+      }),
+    ).resolves.toEqual({
+      chunkHashes: ["chunk-1", "chunk-4", "chunk-2", "chunk-3"],
+      fileHash: "file-hash",
+    });
+    expect(hashedBytes).toEqual([[1, 4, 2, 3]]);
+  });
+
+  it("keeps only one whole-file hash batch in flight", async () => {
+    const worker = createWorker();
+    const firstFileHashGate = createDeferred<void>();
+    let fileHashUpdateCount = 0;
+    mocks.acquire.mockResolvedValue(worker);
+    worker.updateFileHash.mockImplementation(async () => {
+      fileHashUpdateCount += 1;
+      if (fileHashUpdateCount === 1) {
+        await firstFileHashGate.promise;
+      }
+    });
+
+    const upload = uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(8)]),
+      fileName: "bounded-hash.bin",
+      server: {
+        maxChunkSizeBytes: 1,
+        supportedHashAlgorithm: "sha256",
+      },
+      client: { concurrency: 2 },
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.hashBuffer).toHaveBeenCalledTimes(8);
+    });
+    expect(worker.updateFileHash).toHaveBeenCalledOnce();
+
+    firstFileHashGate.resolve();
+    await expect(upload).resolves.toMatchObject({ fileHash: "file-hash" });
+    expect(worker.updateFileHash).toHaveBeenCalledTimes(2);
   });
 
   it("keeps a fixed number of network consumers active", async () => {
@@ -283,6 +374,129 @@ describe("uploadBlobToChunks", () => {
       expect.any(ArrayBuffer),
       "SHA-256",
     );
-    expect(worker.hashBlob).toHaveBeenCalledOnce();
+    expect(worker.updateFileHash).toHaveBeenCalledOnce();
+  });
+
+  it("reuses the prepared minimum-size chunk across transport retries", async () => {
+    const worker = createWorker();
+    const chunkBytes = 128 * 1024;
+    let uploadCalls = 0;
+    mocks.acquire.mockResolvedValue(worker);
+    mocks.chunkExists.mockResolvedValue(false);
+    mocks.uploadChunk.mockImplementation(async () => {
+      uploadCalls += 1;
+      if (uploadCalls < 3) {
+        throw new AxiosError("interrupted", "ERR_NETWORK");
+      }
+    });
+
+    const upload = uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(chunkBytes)]),
+      fileName: "minimum-retry.bin",
+      server: {
+        maxChunkSizeBytes: chunkBytes,
+        supportedHashAlgorithm: "sha256",
+      },
+      client: { concurrency: 1 },
+    });
+
+    await expect(upload).resolves.toEqual({
+      chunkHashes: ["chunk-0"],
+      fileHash: "file-hash",
+    });
+    expect(mocks.uploadChunk).toHaveBeenCalledTimes(3);
+    expect(mocks.chunkExists).toHaveBeenCalledTimes(3);
+    expect(mocks.hashBuffer).toHaveBeenCalledOnce();
+    expect(worker.updateFileHash).toHaveBeenCalledOnce();
+  });
+
+  it("overlaps whole-file hashing with network work and awaits it before digest", async () => {
+    const worker = createWorker();
+    const fileHashGate = createDeferred<void>();
+    worker.updateFileHash.mockImplementation(async () => {
+      await fileHashGate.promise;
+    });
+    mocks.acquire.mockResolvedValue(worker);
+    mocks.chunkExists.mockResolvedValue(false);
+
+    const upload = uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(256 * 1024)]),
+      fileName: "hash-gated.bin",
+      server: {
+        maxChunkSizeBytes: 256 * 1024,
+        supportedHashAlgorithm: "sha256",
+      },
+      client: { concurrency: 1 },
+    });
+
+    await vi.waitFor(() => {
+      expect(worker.updateFileHash).toHaveBeenCalledOnce();
+      expect(mocks.uploadChunk).toHaveBeenCalledOnce();
+    });
+    expect(worker.digestFile).not.toHaveBeenCalled();
+
+    fileHashGate.resolve();
+    await expect(upload).resolves.toEqual({
+      chunkHashes: ["chunk-0"],
+      fileHash: "file-hash",
+    });
+  });
+
+  it("releases the worker after an upload failure", async () => {
+    const worker = createWorker();
+    const fileHashGate = createDeferred<void>();
+    mocks.acquire.mockResolvedValue(worker);
+    mocks.chunkExists.mockResolvedValue(false);
+    mocks.uploadChunk.mockRejectedValue(new Error("upload failed"));
+    worker.updateFileHash.mockImplementation(async () => {
+      await fileHashGate.promise;
+    });
+
+    const upload = uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(256 * 1024)]),
+      fileName: "failed-after-hash.bin",
+      server: {
+        maxChunkSizeBytes: 256 * 1024,
+        supportedHashAlgorithm: "sha256",
+      },
+      client: { concurrency: 1 },
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.uploadChunk).toHaveBeenCalledOnce();
+    });
+    expect(mocks.release).not.toHaveBeenCalled();
+
+    fileHashGate.resolve();
+    await expect(upload).rejects.toThrow("upload failed");
+    expect(mocks.release).toHaveBeenCalledWith(worker);
+  });
+
+  it("retries a transient existence gateway failure without rehashing", async () => {
+    const worker = createWorker();
+    mocks.acquire.mockResolvedValue(worker);
+    mocks.chunkExists
+      .mockRejectedValueOnce(createResponseError(502))
+      .mockResolvedValueOnce(false);
+
+    const upload = uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(256 * 1024)]),
+      fileName: "gateway-retry.bin",
+      server: {
+        maxChunkSizeBytes: 256 * 1024,
+        supportedHashAlgorithm: "sha256",
+      },
+      client: { concurrency: 1 },
+    });
+
+    await expect(upload).resolves.toEqual({
+      chunkHashes: ["chunk-0"],
+      fileHash: "file-hash",
+    });
+    expect(mocks.chunkExists).toHaveBeenCalledTimes(2);
+    expect(mocks.uploadChunk).toHaveBeenCalledOnce();
+    expect(worker.hashChunk).not.toHaveBeenCalled();
+    expect(mocks.hashBuffer).toHaveBeenCalledOnce();
+    expect(worker.updateFileHash).toHaveBeenCalledOnce();
   });
 });

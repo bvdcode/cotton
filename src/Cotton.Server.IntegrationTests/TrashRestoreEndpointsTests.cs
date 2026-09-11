@@ -37,7 +37,7 @@ namespace Cotton.Server.IntegrationTests
             creator.EnsureDeleted();
             creator.Create();
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = "localhost",
                 Port = 5432,
@@ -46,7 +46,7 @@ namespace Cotton.Server.IntegrationTests
                 Password = "postgres",
             };
 
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -243,7 +243,7 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task AuthenticateAsync()
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new LoginRequestDto
                 {
@@ -290,7 +290,7 @@ namespace Cotton.Server.IntegrationTests
         private async Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
         {
             string hash = await UploadChunkAsync(body);
-            var fileReq = new CreateFileFromChunksRequestDto
+            CreateFileFromChunksRequestDto fileReq = new CreateFileFromChunksRequestDto
             {
                 ChunkHashes = [hash],
                 Name = name,
@@ -309,7 +309,7 @@ namespace Cotton.Server.IntegrationTests
         {
             byte[] content = Encoding.UTF8.GetBytes(body);
             string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
-            using var form = new MultipartFormDataContent
+            using MultipartFormDataContent form = new MultipartFormDataContent
             {
                 {
                     new ByteArrayContent(content)
@@ -383,64 +383,43 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<string?> GetMetadataValueAsync(string tableName, Guid id, string key)
         {
-            string table = ValidateMetadataTable(tableName);
-            string sql = $"""
-            SELECT metadata -> @key
-            FROM {table}
-            WHERE id = @id;
-            """;
-
-            object? value = await ExecuteScalarAsync(sql, ("id", id), ("key", key));
-            return value is DBNull ? null : (string?)value;
+            Dictionary<string, string>? metadata = await GetMetadataAsync(tableName, id);
+            return metadata?.GetValueOrDefault(key);
         }
 
         private async Task<bool> MetadataContainsKeyAsync(string tableName, Guid id, string key)
         {
-            string table = ValidateMetadataTable(tableName);
-            string sql = $"""
-            SELECT COALESCE(metadata ? @key, false)
-            FROM {table}
-            WHERE id = @id;
-            """;
-
-            object? value = await ExecuteScalarAsync(sql, ("id", id), ("key", key));
-            return value is bool contains && contains;
+            Dictionary<string, string>? metadata = await GetMetadataAsync(tableName, id);
+            return metadata?.ContainsKey(key) == true;
         }
 
-        private async Task<object?> ExecuteScalarAsync(string sql, params (string Name, object Value)[] parameters)
+        private async Task<Dictionary<string, string>?> GetMetadataAsync(string tableName, Guid id)
         {
-            var csb = new NpgsqlConnectionStringBuilder
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            return tableName switch
             {
-                Host = "localhost",
-                Port = 5432,
-                Database = DatabaseName,
-                Username = "postgres",
-                Password = "postgres",
-                Pooling = false,
+                "nodes" => await dbContext.Nodes
+                    .AsNoTracking()
+                    .Where(node => node.Id == id)
+                    .Select(node => node.Metadata)
+                    .SingleAsync(),
+                "node_files" => await dbContext.NodeFiles
+                    .AsNoTracking()
+                    .Where(nodeFile => nodeFile.Id == id)
+                    .Select(nodeFile => nodeFile.Metadata)
+                    .SingleAsync(),
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(tableName),
+                    tableName,
+                    "Unsupported metadata table."),
             };
-
-            await using var connection = new NpgsqlConnection(csb.ConnectionString);
-            await connection.OpenAsync();
-            await using var command = new NpgsqlCommand(sql, connection);
-            foreach ((string name, object value) in parameters)
-            {
-                command.Parameters.AddWithValue(name, value);
-            }
-
-            return await command.ExecuteScalarAsync();
         }
-
-        private static string ValidateMetadataTable(string tableName) => tableName switch
-        {
-            "nodes" => "nodes",
-            "node_files" => "node_files",
-            _ => throw new ArgumentOutOfRangeException(nameof(tableName), tableName, "Unsupported metadata table."),
-        };
 
         private CottonDbContext NewReadOnlyDbContext()
         {
-            var optionsBuilder = new DbContextOptionsBuilder<CottonDbContext>();
-            var csb = new NpgsqlConnectionStringBuilder
+            DbContextOptionsBuilder<CottonDbContext> optionsBuilder = new DbContextOptionsBuilder<CottonDbContext>();
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = "localhost",
                 Port = 5432,

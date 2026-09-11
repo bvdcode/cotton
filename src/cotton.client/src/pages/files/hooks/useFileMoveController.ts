@@ -12,6 +12,7 @@ import {
 } from "../../../shared/store/moveClipboardStore";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import { getSystemKeyboardShortcut } from "@shared/utils/keyboardShortcuts";
+import { useFileConflictDialog } from "./useFileConflictDialog";
 
 interface DropHandlersForGoUp {
   onDragOver: (event: React.DragEvent<HTMLElement>) => void;
@@ -58,6 +59,11 @@ export interface UseFileMoveControllerResult {
   handleCutFile: (fileId: string) => void;
   goUpDropHandlers: DropHandlersForGoUp | undefined;
   breadcrumbsDropHandlers: DropHandlersForBreadcrumbs;
+  conflictDialog: {
+    state: ReturnType<typeof useFileConflictDialog>["dialogState"];
+    onResolve: ReturnType<typeof useFileConflictDialog>["handleResolve"];
+    onExited: ReturnType<typeof useFileConflictDialog>["handleExited"];
+  };
 }
 
 /**
@@ -76,7 +82,10 @@ export const useFileMoveController = ({
   showToast,
   t,
 }: UseFileMoveControllerArgs): UseFileMoveControllerResult => {
-  const moveOps = useMoveOperations();
+  const conflictDialog = useFileConflictDialog();
+  const moveOps = useMoveOperations({
+    confirmConflict: conflictDialog.showConflictDialog,
+  });
   const clipboardItems = useMoveClipboardStore((s) => s.items);
   const cutItemIds = useMemo(
     () => new Set(clipboardItems.map((c) => c.id)),
@@ -245,7 +254,8 @@ export const useFileMoveController = ({
         if (!goUpDropActive) setGoUpDropActive(true);
       },
       onDragLeave: (event) => {
-        const related = event.relatedTarget as Node | null;
+        const related = event.relatedTarget;
+        if (related !== null && !(related instanceof Node)) return;
         if (related && event.currentTarget.contains(related)) return;
         setGoUpDropActive(false);
       },
@@ -338,5 +348,10 @@ export const useFileMoveController = ({
     handleCutFile,
     goUpDropHandlers,
     breadcrumbsDropHandlers,
+    conflictDialog: {
+      state: conflictDialog.dialogState,
+      onResolve: conflictDialog.handleResolve,
+      onExited: conflictDialog.handleExited,
+    },
   };
 };

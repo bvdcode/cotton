@@ -27,6 +27,8 @@ export type UpdateFileMetadataRequest = Record<string, string>;
 
 export interface MoveFileRequest {
   parentId: Guid;
+  name?: string;
+  overwrite?: boolean;
 }
 
 export interface FileVersionDto {

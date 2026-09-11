@@ -71,7 +71,7 @@ namespace Cotton.Database.Models
         }
 
         [Column("metadata")]
-        public Dictionary<string, string>? Metadata { get; set; } = [];
+        public Dictionary<string, string>? Metadata { get; set; }
 
         [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual Layout Layout { get; set; } = null!;

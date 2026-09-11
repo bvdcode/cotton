@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using System.Text;
 using EasyExtensions.Fonts.Resources;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
@@ -42,11 +43,11 @@ namespace Cotton.Previews
             }
 
             string text;
-            using (var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true, leaveOpen: true))
+            using (StreamReader reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true, leaveOpen: true))
             {
                 char[] buffer = new char[Math.Min(MaxCharsToRead, 8192)];
                 int total = 0;
-                var sb = new System.Text.StringBuilder();
+                StringBuilder sb = new System.Text.StringBuilder();
 
                 while (total < MaxCharsToRead)
                 {
@@ -71,7 +72,7 @@ namespace Cotton.Previews
             }
 
             int renderSize = Math.Max(size * 4, 512);
-            using var canvas = new Image<Rgba32>(renderSize, renderSize);
+            using Image<Rgba32> canvas = new Image<Rgba32>(renderSize, renderSize);
             float padding = renderSize * PaddingRatio;
             float paddingTop = padding * 1.3f;
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
@@ -99,7 +100,7 @@ namespace Cotton.Previews
                 Sampler = KnownResamplers.Lanczos3
             }));
 
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             await output.SaveAsWebpAsync(ms, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
             return ms.ToArray();
         }
@@ -130,8 +131,8 @@ namespace Cotton.Previews
         private static FontFamily LoadFontFamily()
         {
             byte[] bytes = StaticFonts.GetFontBytes(StaticFontName.Consola);
-            var collection = new FontCollection();
-            using var fontStream = new MemoryStream(bytes, writable: false);
+            FontCollection collection = new FontCollection();
+            using MemoryStream fontStream = new MemoryStream(bytes, writable: false);
             return collection.Add(fontStream);
         }
 
@@ -167,7 +168,7 @@ namespace Cotton.Previews
                 .Replace("\r\n", "\n", StringComparison.Ordinal)
                 .Replace('\r', '\n');
 
-            var sb = new System.Text.StringBuilder();
+            StringBuilder sb = new System.Text.StringBuilder();
             int producedRows = 0;
             int i = 0;
             while (i < rawLines.Length && producedRows < rows)
@@ -236,7 +237,7 @@ namespace Cotton.Previews
                 return text;
             }
 
-            var sb = new System.Text.StringBuilder(text.Length);
+            StringBuilder sb = new System.Text.StringBuilder(text.Length);
             int current = 0;
             for (int i = 0; i < text.Length; i++)
             {

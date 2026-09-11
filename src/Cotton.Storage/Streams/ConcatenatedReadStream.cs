@@ -40,14 +40,14 @@ namespace Cotton.Storage.Streams
             IEnumerable<string> hashes,
             PipelineContext? context)
         {
-            var list = new List<string>(hashes);
+            List<string> list = new List<string>(hashes);
 
             if (context?.ChunkLengths is null)
             {
                 return new(list, null, null);
             }
 
-            var index = new ChunkIndexEntry[list.Count];
+            ChunkIndexEntry[] index = new ChunkIndexEntry[list.Count];
             long start = 0;
             long total = 0;
 

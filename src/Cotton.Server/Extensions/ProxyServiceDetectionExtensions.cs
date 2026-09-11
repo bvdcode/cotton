@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Models.Dto;
+using Microsoft.Extensions.Primitives;
 
 namespace Cotton.Server.Extensions
 {
@@ -286,7 +287,7 @@ namespace Cotton.Server.Extensions
 
         private static string? GetFirstHeaderValue(HttpRequest request, string name)
         {
-            return request.Headers.TryGetValue(name, out var values)
+            return request.Headers.TryGetValue(name, out StringValues values)
                 ? values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
                 : null;
         }
@@ -300,7 +301,7 @@ namespace Cotton.Server.Extensions
 
         private static bool HasHeader(HttpRequest request, string name)
         {
-            return request.Headers.TryGetValue(name, out var values)
+            return request.Headers.TryGetValue(name, out StringValues values)
                 && values.Any(value => !string.IsNullOrWhiteSpace(value));
         }
     }

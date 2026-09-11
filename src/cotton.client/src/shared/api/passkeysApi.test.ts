@@ -116,12 +116,22 @@ describe("passkeysApi", () => {
     });
   });
 
-  it("stores the access token returned by passkey assertion verification", async () => {
+  it("returns the authenticated user without a follow-up request", async () => {
     vi.spyOn(httpClient, "post").mockResolvedValue({
-      data: { accessToken: "passkey-token" },
+      data: {
+        accessToken: "passkey-token",
+        refreshToken: "refresh-token",
+        user: {
+          id: "user-1",
+          createdAt: "2026-09-03T00:00:00Z",
+          updatedAt: "2026-09-03T00:00:01Z",
+          role: 1,
+          username: "alice",
+        },
+      },
     });
 
-    const token = await passkeysApi.finishAssertion("request-id", true, {
+    const user = await passkeysApi.finishAssertion("request-id", true, {
       id: "credential-id",
       rawId: "credential-id",
       type: "public-key",
@@ -133,7 +143,7 @@ describe("passkeysApi", () => {
       },
     });
 
-    expect(token).toBe("passkey-token");
+    expect(user).toMatchObject({ id: "user-1", username: "alice" });
     expect(getAccessToken()).toBe("passkey-token");
     expect(httpClient.post).toHaveBeenCalledWith(
       "auth/passkeys/assertion/verify",

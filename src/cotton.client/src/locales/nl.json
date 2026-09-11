@@ -1457,6 +1457,7 @@
   "common": {
     "languageName": "Nederlands",
     "switchToThisLanguage": "Wissel naar Nederlands",
+    "language": "Taal",
     "placeholder": "—",
     "yes": "Ja",
     "no": "Nee",
@@ -1481,24 +1482,24 @@
       "durationDays_one": "{{count}} dag",
       "durationDays_other": "{{count}} dagen",
       "lessThanMinute": "minder dan een minuut",
-      "secondsAgo_few": "{{count}} seconds ago",
-      "secondsAgo_many": "{{count}} seconds ago",
-      "minutesAgo_few": "{{count}} minutes ago",
-      "minutesAgo_many": "{{count}} minutes ago",
-      "hoursAgo_few": "{{count}} hours ago",
-      "hoursAgo_many": "{{count}} hours ago",
-      "daysAgo_few": "{{count}} days ago",
-      "daysAgo_many": "{{count}} days ago",
-      "monthsAgo_few": "{{count}} months ago",
-      "monthsAgo_many": "{{count}} months ago",
-      "yearsAgo_few": "{{count}} years ago",
-      "yearsAgo_many": "{{count}} years ago",
+      "secondsAgo_few": "{{count}} seconden geleden",
+      "secondsAgo_many": "{{count}} seconden geleden",
+      "minutesAgo_few": "{{count}} minuten geleden",
+      "minutesAgo_many": "{{count}} minuten geleden",
+      "hoursAgo_few": "{{count}} uur geleden",
+      "hoursAgo_many": "{{count}} uur geleden",
+      "daysAgo_few": "{{count}} dagen geleden",
+      "daysAgo_many": "{{count}} dagen geleden",
+      "monthsAgo_few": "{{count}} maanden geleden",
+      "monthsAgo_many": "{{count}} maanden geleden",
+      "yearsAgo_few": "{{count}} jaar geleden",
+      "yearsAgo_many": "{{count}} jaar geleden",
       "durationMinutes_few": "{{count}} min",
       "durationMinutes_many": "{{count}} min",
-      "durationHours_few": "{{count}} hours",
-      "durationHours_many": "{{count}} hours",
-      "durationDays_few": "{{count}} days",
-      "durationDays_many": "{{count}} days"
+      "durationHours_few": "{{count}} uur",
+      "durationHours_many": "{{count}} uur",
+      "durationDays_few": "{{count}} dagen",
+      "durationDays_many": "{{count}} dagen"
     },
     "actions": {
       "confirm": "Bevestigen",
@@ -1514,15 +1515,16 @@
       "play": "Afspelen",
       "pause": "Pauzeren",
       "copied": "Gekopieerd!",
-      "reload": "Vernieuwen",
-      "versions": "Versions"
+      "reload": "Opnieuw laden",
+      "retry": "Opnieuw proberen",
+      "versions": "Versies"
     },
     "errors": {
-      "unexpectedTitle": "Er is iets misgegaan",
-      "unexpectedDescription": "Er is een onverwachte fout opgetreden. Laad de pagina opnieuw.",
-      "showDetails": "Details tonen",
-      "hideDetails": "Details verbergen",
-      "schemaValidationFailed": "De server heeft onverwachte gegevens geretourneerd"
+      "unexpectedTitle": "Deze pagina kan niet worden weergegeven",
+      "unexpectedDescription": "Er is een onverwachte fout opgetreden bij het weergeven van de pagina. Probeer het opnieuw of laad de pagina opnieuw als het probleem aanhoudt.",
+      "schemaValidationFailed": "De server heeft onverwachte gegevens geretourneerd",
+      "serverUnavailableTitle": "Server niet beschikbaar",
+      "serverUnavailableDescription": "Cotton kon de server niet bereiken. Controleer de verbinding en probeer het opnieuw."
     },
     "userMenu": {
       "profile": "Profiel",
@@ -1666,9 +1668,9 @@
       }
     },
     "oidc": {
-      "loading": "Loading sign-in providers...",
+      "loading": "Aanmeldproviders laden...",
       "divider": "or",
-      "signInWith": "Continue with {{provider}}",
+      "signInWith": "Doorgaan met {{provider}}",
       "errors": {
         "startFailed": "Kan het aanmelden niet starten."
       }
@@ -2015,24 +2017,24 @@
         "cancel": "Niet nu"
       }
     },
-    "ageYears_few": "{{count}} years",
-    "ageYears_many": "{{count}} years",
+    "ageYears_few": "{{count}} jaar",
+    "ageYears_many": "{{count}} jaar",
     "connectedAccounts": {
-      "title": "Connected accounts",
-      "description": "Link external identity providers to this account.",
-      "loading": "Loading connected accounts...",
-      "empty": "No external accounts are linked yet.",
-      "link": "Link {{provider}}",
+      "title": "Gekoppelde accounts",
+      "description": "Koppel externe identiteitsproviders aan dit account.",
+      "loading": "Gekoppelde accounts laden...",
+      "empty": "Er zijn nog geen externe accounts gekoppeld.",
+      "link": "{{provider}} koppelen",
       "unlink": {
-        "button": "Unlink",
-        "title": "Unlink {{provider}}?",
-        "description": "You will no longer be able to sign in with this provider until you link it again.",
-        "confirm": "Unlink",
-        "cancel": "Cancel"
+        "button": "Ontkoppelen",
+        "title": "{{provider}} ontkoppelen?",
+        "description": "Je kunt je niet meer aanmelden met deze provider totdat je deze opnieuw koppelt.",
+        "confirm": "Ontkoppelen",
+        "cancel": "Annuleren"
       },
       "errors": {
-        "loadFailed": "Failed to load connected accounts.",
-        "unlinkFailed": "Failed to unlink this account.",
+        "loadFailed": "De gekoppelde accounts konden niet worden geladen.",
+        "unlinkFailed": "Dit account kon niet worden ontkoppeld.",
         "linkFailed": "Kan het koppelen van het account niet starten."
       }
     }
@@ -2324,6 +2326,57 @@
         "title": "Recente bestanden",
         "empty": "Geen recente bestanden"
       }
+    },
+    "dashboard": {
+      "title": "Uw ruimte",
+      "actions": {
+        "customize": "Aanpassen",
+        "done": "Gereed",
+        "size": "Grootte {{size}}",
+        "moveUp": "Omhoog",
+        "moveDown": "Omlaag",
+        "hide": "Widget verbergen",
+        "retry": "Opnieuw proberen"
+      },
+      "widgets": {
+        "overview": "Opslagoverzicht",
+        "pinnedFolders": "Vastgezette mappen",
+        "quickAccess": "Snelle toegang",
+        "recentFiles": "Recente bestanden",
+        "recentImages": "Recente foto's",
+        "recentVideos": "Recente video's",
+        "recentDocuments": "Recente documenten",
+        "recentAudio": "Recente audio",
+        "recentOther": "Andere recente bestanden"
+      },
+      "overview": {
+        "ofQuota": "van {{quota}}",
+        "storageUsage": "Opslaggebruik",
+        "available": "Beschikbaar"
+      },
+      "quickAccess": {
+        "files": "Bestanden",
+        "search": "Zoeken",
+        "trash": "Prullenbak"
+      },
+      "recent": {
+        "empty": "Geen overeenkomende recente bestanden",
+        "loadFailed": "Recente bestanden konden niet worden geladen."
+      },
+      "pinnedFolders": {
+        "folder": "Map",
+        "pin": "Vastzetten op dashboard",
+        "unpin": "Losmaken van dashboard",
+        "empty": "Nog geen vastgezette mappen",
+        "emptyHint": "Zet een map vast via de acties in Bestanden.",
+        "limitReached": "U kunt maximaal {{count}} mappen vastzetten.",
+        "loadFailed": "Vastgezette mappen konden niet worden geladen."
+      },
+      "library": {
+        "title": "Meer widgets",
+        "description": "Verborgen widgets blijven hier totdat u ze terugplaatst.",
+        "empty": "Alle beschikbare widgets staan op uw dashboard."
+      }
     }
   },
   "files": {
@@ -2382,8 +2435,8 @@
         "someItemsSkipped_other": "{{count}} items overgeslagen die niet konden worden gelezen.",
         "vaultLocked": "Voor versleutelde uploads moet u eerst uw versleutelingskluis ontgrendelen.",
         "details": "Details",
-        "someItemsSkipped_few": "Skipped {{count}} items that could not be read.",
-        "someItemsSkipped_many": "Skipped {{count}} items that could not be read."
+        "someItemsSkipped_few": "{{count}} items overgeslagen die niet konden worden gelezen.",
+        "someItemsSkipped_many": "{{count}} items overgeslagen die niet konden worden gelezen."
       },
       "errors": {
         "dropFailed": "Verwerken van de gesleepte items is mislukt. Probeer het opnieuw.",
@@ -2437,10 +2490,10 @@
       "confirmDescription": "Geselecteerde items worden naar de prullenbak verplaatst en kunnen later worden hersteld."
     },
     "conflicts": {
-      "title": "Bestand bestaat al",
-      "description": "Een bestand met deze naam bestaat al in deze map. Uploaden als {{newName}}?",
-      "overwriteDescription": "Een bestand met deze naam bestaat al in deze map. Vervangen of uploaden als {{newName}}?",
-      "rename": "Uploaden als {{newName}}",
+      "title": "Naamconflict",
+      "description": "Er bestaat al een item met deze naam in deze map. In plaats daarvan {{newName}} gebruiken?",
+      "overwriteDescription": "Er bestaat al een item met deze naam in deze map. Vervangen of in plaats daarvan {{newName}} gebruiken?",
+      "rename": "{{newName}} gebruiken",
       "overwrite": "Vervangen",
       "skip": "Overslaan",
       "skipAll": "Alles overslaan"
@@ -2610,24 +2663,24 @@
         "decryptExistingComplete_other": "{{count}} bestanden ontsleuteld.",
         "decryptExistingFailed_one": "Kon {{count}} bestand niet ontsleutelen. Controleer het taakpaneel.",
         "decryptExistingFailed_other": "Kon {{count}} bestanden niet ontsleutelen. Controleer het taakpaneel.",
-        "encryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some files may still be unencrypted; run encryption again from the folder after this batch finishes.",
-        "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+        "encryptExistingScanIncomplete": "Slechts een deel van de mappenstructuur is gescand. Sommige bestanden zijn mogelijk nog niet versleuteld. Start de versleuteling na deze batch opnieuw vanuit de map.",
+        "decryptExistingScanIncomplete": "Slechts een deel van de mappenstructuur is gescand. Sommige versleutelde bestanden zijn mogelijk achtergebleven. Start de ontsleuteling na deze batch opnieuw vanuit de map."
       }
     },
     "fileVersions": {
-      "title": "Versions of {{name}}",
-      "empty": "No previous versions yet.",
-      "loadFailed": "Failed to load versions.",
-      "restoreFailed": "Failed to restore version.",
-      "deleteFailed": "Failed to delete version.",
-      "downloadFailed": "Failed to prepare version download.",
-      "versionLabel": "Version {{version}}",
-      "current": "Current",
-      "original": "Original",
-      "restoreConfirmTitle": "Restore this version?",
-      "restoreConfirmDescription": "Current file content will be saved as a new version, then version {{version}} will become current.",
-      "deleteConfirmTitle": "Delete this version?",
-      "deleteConfirmDescription": "Version {{version}} will be deleted. The current file will not be changed."
+      "title": "Versies van {{name}}",
+      "empty": "Er zijn nog geen eerdere versies.",
+      "loadFailed": "De versies konden niet worden geladen.",
+      "restoreFailed": "De versie kon niet worden hersteld.",
+      "deleteFailed": "De versie kon niet worden verwijderd.",
+      "downloadFailed": "De download van de versie kon niet worden voorbereid.",
+      "versionLabel": "Versie {{version}}",
+      "current": "Huidig",
+      "original": "Origineel",
+      "restoreConfirmTitle": "Deze versie herstellen?",
+      "restoreConfirmDescription": "De huidige bestandsinhoud wordt als nieuwe versie opgeslagen. Daarna wordt versie {{version}} de huidige versie.",
+      "deleteConfirmTitle": "Deze versie verwijderen?",
+      "deleteConfirmDescription": "Versie {{version}} wordt verwijderd. Het huidige bestand blijft ongewijzigd."
     }
   },
   "tasks": {
@@ -2763,7 +2816,7 @@
       "databaseBackup": "Databaseback-up",
       "storageStatistics": "Opslagstatistieken",
       "securityDiagnostics": "Beveiligingscontrole",
-      "identityProviders": "Identity providers"
+      "identityProviders": "Identiteitsproviders"
     },
     "roles": {
       "user": "Gebruiker",
@@ -2953,19 +3006,19 @@
         "storageType": "Opslagback-end"
       },
       "chunkSize": {
-        "title": "Upload chunk size",
-        "description": "Controls how much data the browser sends per upload request. Larger chunks reduce request overhead on fast local networks.",
-        "ariaLabel": "Upload chunk size"
+        "title": "Blokgrootte voor uploads",
+        "description": "Bepaalt hoeveel gegevens de browser per uploadverzoek verzendt. Grotere blokken verminderen het aantal verzoeken op snelle lokale netwerken.",
+        "ariaLabel": "Blokgrootte voor uploads"
       },
       "pipeline": {
-        "title": "Storage pipeline",
-        "description": "Tunes how new chunks are compressed and encrypted before they are written to storage.",
+        "title": "Opslagverwerking",
+        "description": "Stelt in hoe nieuwe blokken worden gecomprimeerd en versleuteld voordat ze naar de opslag worden geschreven.",
         "fields": {
-          "compressionLevel": "Compression level",
-          "cipherChunkSize": "Encryption block size",
-          "encryptionThreads": "Encryption threads"
+          "compressionLevel": "Compressieniveau",
+          "cipherChunkSize": "Grootte van versleutelingsblok",
+          "encryptionThreads": "Versleutelings-threads"
         },
-        "compressionHelp": "Allowed range: {{min}} to {{max}}. Default is 1."
+        "compressionHelp": "Toegestaan bereik: {{min}} tot {{max}}. De standaardwaarde is 1."
       },
       "quota": {
         "title": "Standaardquota per gebruiker",
@@ -3014,8 +3067,8 @@
         "templateNodeIdInvalid": "Voer een geldige mapknooppunt-ID in.",
         "quotaSaveFailed": "Opslaan van het standaardquotum per gebruiker mislukt.",
         "templateSaveFailed": "Opslaan van het standaardbestandensjabloon mislukt.",
-        "chunkSizeSaveFailed": "Failed to save upload chunk size.",
-        "storagePipelineSaveFailed": "Failed to save storage pipeline settings."
+        "chunkSizeSaveFailed": "De blokgrootte voor uploads kon niet worden opgeslagen.",
+        "storagePipelineSaveFailed": "De instellingen voor opslagverwerking konden niet worden opgeslagen."
       }
     },
     "notificationsSettings": {
@@ -3196,8 +3249,8 @@
         "masterKey": "Hoofdsleutel",
         "memory": "Blootstelling van procesgeheugen",
         "runtime": "Runtime-feiten",
-        "containerBoundary": "Container boundary",
-        "passed": "Protections in place",
+        "containerBoundary": "Containergrens",
+        "passed": "Actieve beveiligingen",
         "capabilities": "Hardware"
       },
       "risks": {
@@ -3216,22 +3269,22 @@
         "sysPtrace": "CAP_SYS_PTRACE",
         "os": "Besturingssysteem",
         "container": "Container gedetecteerd",
-        "tempDirectoryPath": "Temp directory",
-        "tempDirectoryWritable": "Temp directory writable",
-        "tempDirectoryError": "Temp directory error",
+        "tempDirectoryPath": "Tijdelijke map",
+        "tempDirectoryWritable": "Tijdelijke map beschrijfbaar",
+        "tempDirectoryError": "Fout in tijdelijke map",
         "euid": "Effectieve UID",
         "noNewPrivileges": "Geen nieuwe privileges",
         "seccomp": "Seccomp-modus",
         "capabilities": "Effectieve capabilities",
-        "rootFilesystemReadOnly": "Read-only root filesystem",
-        "dockerSocketMounted": "Docker socket mounted",
-        "hostPidNamespace": "Host PID namespace",
-        "procOneCommandLine": "PID 1 command",
-        "coreDumpLimit": "Core dump limit",
-        "corePattern": "Core pattern",
-        "appArmorProfile": "AppArmor profile",
-        "selinuxContext": "SELinux context",
-        "selinuxEnforcing": "SELinux enforcing"
+        "rootFilesystemReadOnly": "Hoofdbestandssysteem alleen-lezen",
+        "dockerSocketMounted": "Docker-socket gekoppeld",
+        "hostPidNamespace": "PID-naamruimte van host",
+        "procOneCommandLine": "Opdracht van PID 1",
+        "coreDumpLimit": "Limiet voor geheugendumps",
+        "corePattern": "Patroon voor geheugendumps",
+        "appArmorProfile": "AppArmor-profiel",
+        "selinuxContext": "SELinux-context",
+        "selinuxEnforcing": "Afdwingmodus van SELinux"
       },
       "values": {
         "unknown": "Onbekend",
@@ -3251,62 +3304,62 @@
         "seccomp-disabled": "Het kerneloppervlak voor systeemaanroepen is groter dan Docker's normale productiebasis, dus een containerontsnappingsbug krijgt meer ruimte.",
         "running-as-root": "Externe code-uitvoering zou als root binnen de container worden uitgevoerd, wat de schade aan aangekoppelde volumes en helperprocessen vergroot.",
         "process-hardening-failed": "Cotton heeft procesharding aangevraagd, maar het proces is toch gestart zonder de verwachte dump- of ptrace-bescherming.",
-        "db-integrity-unsigned-rows": "Unsigned protected rows can be modified directly in PostgreSQL without Cotton detecting the tampering at read boundaries.",
-        "temp-directory-not-writable": "Cotton cannot write temporary files. Database dump/restore, S3 upload spooling, and preview tooling can fail even when the persistent storage volume is healthy.",
-        "root-filesystem-writable": "A writable container root filesystem gives exploited code more places to drop tools, alter runtime files, or persist until the container is recreated.",
-        "docker-socket-mounted": "The Docker socket lets code inside the web container create privileged containers, mount host paths, and take over the host.",
-        "host-pid-namespace": "Sharing the host PID namespace exposes host processes through procfs and makes process-memory attacks easier to aim.",
-        "mandatory-access-control-unconfined": "Without an enforcing AppArmor or SELinux profile, a container escape or kernel-facing bug has fewer policy boundaries to cross.",
-        "core-dumps-enabled": "Core dumps are memory snapshots. If Cotton crashes while secrets are resident, a dump can preserve the master key or decrypted configuration."
+        "db-integrity-unsigned-rows": "Niet-ondertekende beveiligde rijen kunnen rechtstreeks in PostgreSQL worden gewijzigd zonder dat Cotton de manipulatie bij het lezen detecteert.",
+        "temp-directory-not-writable": "Cotton kan geen tijdelijke bestanden schrijven. Database-export en -herstel, buffering van S3-uploads en hulpmiddelen voor voorbeelden kunnen mislukken terwijl de permanente opslag wel gezond is.",
+        "root-filesystem-writable": "Een beschrijfbaar hoofdbestandssysteem geeft misbruikte code meer plaatsen om hulpmiddelen op te slaan, runtimebestanden te wijzigen of actief te blijven totdat de container opnieuw wordt gemaakt.",
+        "docker-socket-mounted": "Via de Docker-socket kan code in de webcontainer containers met extra bevoegdheden maken, hostpaden koppelen en de host overnemen.",
+        "host-pid-namespace": "Het delen van de PID-naamruimte van de host maakt hostprocessen zichtbaar via procfs en vereenvoudigt gerichte aanvallen op procesgeheugen.",
+        "mandatory-access-control-unconfined": "Zonder afdwingend AppArmor- of SELinux-profiel hoeft een containeruitbraak of kernelgerelateerde fout minder beveiligingsgrenzen te passeren.",
+        "core-dumps-enabled": "Geheugendumps zijn momentopnamen van procesgeheugen. Als Cotton crasht terwijl geheimen geladen zijn, kan een dump de hoofdsleutel of ontsleutelde configuratie bewaren."
       },
       "labels": {
-        "whatItMeans": "What it means",
+        "whatItMeans": "Wat dit betekent",
         "impact": "Impact",
-        "howToFix": "How to fix",
-        "guardsAgainst": "What this guards against",
-        "note": "Note"
+        "howToFix": "Hoe dit te verhelpen",
+        "guardsAgainst": "Waartegen dit beschermt",
+        "note": "Opmerking"
       },
       "fixes": {
-        "public-instance": "If this instance is not meant to be public, disable public/demo mode (unset COTTON_PUBLIC_INSTANCE) and restart.",
-        "master-key-from-environment": "Prefer unlocking via the /unlock page instead of COTTON_MASTER_KEY, or make sure the variable is not retained in deployment metadata or exposed to exec sessions.",
-        "admins-without-2fa": "Enable two-factor authentication (TOTP) for every admin account from Profile → Security.",
-        "dotnet-diagnostics-enabled": "Set DOTNET_EnableDiagnostics=0 (and COMPlus_EnableDiagnostics=0) in the container environment and restart.",
-        "process-dumpable": "Set COTTON_PROCESS_HARDENING=true (or use the official image defaults) so the process requests PR_SET_DUMPABLE=0 at startup.",
-        "sys-ptrace-capability": "Drop the CAP_SYS_PTRACE capability from the container (for example cap_drop: [ALL]).",
-        "new-privileges-allowed": "Run the container with no-new-privileges:true so the process cannot gain privileges through setuid binaries.",
-        "seccomp-disabled": "Run with a seccomp profile enabled (avoid seccomp=unconfined) to restrict the syscalls available to the process.",
-        "running-as-root": "Run the container as a non-root user; the official image runs as the unprivileged app user by default.",
-        "process-hardening-failed": "Process hardening was requested but could not be applied — check the container capabilities/permissions and the startup logs.",
-        "db-integrity-unsigned-rows": "Restore the affected rows from a trusted backup or run the required transition version before upgrading.",
-        "temp-directory-not-writable": "Mount writable scratch storage at /tmp. With read_only: true, add tmpfs: [\"/tmp\"] or bind-mount a fast writable disk at /tmp, then restart.",
-        "root-filesystem-writable": "Run the container with a read-only root filesystem (read_only: true), keep /app/files as the persistent writable volume, and mount writable scratch storage at /tmp.",
-        "docker-socket-mounted": "Do not mount the Docker socket (/var/run/docker.sock) into the container.",
-        "host-pid-namespace": "Do not share the host PID namespace (avoid pid: host) so the process cannot observe other host processes.",
-        "mandatory-access-control-unconfined": "Apply an AppArmor or SELinux profile to confine the process instead of running unconfined.",
-        "core-dumps-enabled": "Disable core dumps for the container (ulimits: core: 0) so secrets cannot leak into dump files."
+        "public-instance": "Als deze instantie niet openbaar hoort te zijn, schakel dan de openbare of demomodus uit (verwijder COTTON_PUBLIC_INSTANCE) en start opnieuw.",
+        "master-key-from-environment": "Ontgrendel bij voorkeur via /unlock in plaats van COTTON_MASTER_KEY. Zorg anders dat de variabele niet in implementatiemetadata blijft staan of in exec-sessies zichtbaar is.",
+        "admins-without-2fa": "Schakel tweefactorauthenticatie (TOTP) in voor elk beheerdersaccount via Profiel → Beveiliging.",
+        "dotnet-diagnostics-enabled": "Stel DOTNET_EnableDiagnostics=0 en COMPlus_EnableDiagnostics=0 in voor de containeromgeving en start opnieuw.",
+        "process-dumpable": "Stel COTTON_PROCESS_HARDENING=true in of gebruik de standaardwaarden van de officiële image, zodat het proces bij het starten PR_SET_DUMPABLE=0 aanvraagt.",
+        "sys-ptrace-capability": "Verwijder de capability CAP_SYS_PTRACE uit de container, bijvoorbeeld met cap_drop: [ALL].",
+        "new-privileges-allowed": "Voer de container uit met no-new-privileges:true, zodat het proces geen bevoegdheden kan verkrijgen via setuid-bestanden.",
+        "seccomp-disabled": "Voer de container uit met een actief seccomp-profiel en vermijd seccomp=unconfined om de beschikbare systeemaanroepen te beperken.",
+        "running-as-root": "Voer de container uit als niet-rootgebruiker. De officiële image gebruikt standaard de gebruiker app zonder extra bevoegdheden.",
+        "process-hardening-failed": "De gevraagde procesbeveiliging kon niet worden toegepast. Controleer de capabilities en machtigingen van de container en de opstartlogboeken.",
+        "db-integrity-unsigned-rows": "Herstel de betrokken rijen vanuit een vertrouwde back-up of voer vóór de upgrade de vereiste overgangsversie uit.",
+        "temp-directory-not-writable": "Koppel beschrijfbare tijdelijke opslag aan /tmp. Voeg bij read_only: true tmpfs: [\"/tmp\"] toe of koppel een snelle beschrijfbare schijf aan /tmp en start opnieuw.",
+        "root-filesystem-writable": "Voer de container uit met een hoofdbestandssysteem dat alleen-lezen is (read_only: true), houd /app/files als permanent beschrijfbaar volume en koppel tijdelijke opslag aan /tmp.",
+        "docker-socket-mounted": "Koppel de Docker-socket (/var/run/docker.sock) niet aan de container.",
+        "host-pid-namespace": "Deel de PID-naamruimte van de host niet (vermijd pid: host), zodat het proces andere hostprocessen niet kan waarnemen.",
+        "mandatory-access-control-unconfined": "Pas een AppArmor- of SELinux-profiel toe om het proces te beperken in plaats van het onbeperkt uit te voeren.",
+        "core-dumps-enabled": "Schakel geheugendumps voor de container uit (ulimits: core: 0), zodat geheimen niet in dumpbestanden terechtkomen."
       },
       "passed": {
-        "public-instance": "Public account creation disabled",
-        "master-key-from-environment": "Master key not exposed via the environment",
-        "admins-without-2fa": "All admins have two-factor enabled",
-        "dotnet-diagnostics-enabled": ".NET diagnostics disabled",
-        "process-hardening-failed": "Process hardening applied",
-        "process-dumpable": "Process is not dumpable",
-        "sys-ptrace-capability": "CAP_SYS_PTRACE not held",
-        "new-privileges-allowed": "no-new-privileges enforced",
-        "seccomp-disabled": "seccomp filtering enabled",
-        "running-as-root": "Running as a non-root user",
-        "temp-directory-not-writable": "OS temp directory writable",
-        "root-filesystem-writable": "Read-only root filesystem",
-        "docker-socket-mounted": "Docker socket not mounted",
-        "host-pid-namespace": "Isolated PID namespace",
-        "core-dumps-enabled": "Core dumps disabled",
-        "mandatory-access-control-unconfined": "AppArmor/SELinux confinement active"
+        "public-instance": "Openbaar aanmaken van accounts uitgeschakeld",
+        "master-key-from-environment": "Hoofdsleutel niet via de omgeving blootgesteld",
+        "admins-without-2fa": "Tweefactorauthenticatie is voor alle beheerders ingeschakeld",
+        "dotnet-diagnostics-enabled": ".NET-diagnostiek uitgeschakeld",
+        "process-hardening-failed": "Procesbeveiliging toegepast",
+        "process-dumpable": "Proces kan niet worden gedumpt",
+        "sys-ptrace-capability": "CAP_SYS_PTRACE niet aanwezig",
+        "new-privileges-allowed": "no-new-privileges afgedwongen",
+        "seccomp-disabled": "seccomp-filtering ingeschakeld",
+        "running-as-root": "Uitvoering als niet-rootgebruiker",
+        "temp-directory-not-writable": "Tijdelijke systeemmap beschrijfbaar",
+        "root-filesystem-writable": "Hoofdbestandssysteem alleen-lezen",
+        "docker-socket-mounted": "Docker-socket niet gekoppeld",
+        "host-pid-namespace": "Geïsoleerde PID-naamruimte",
+        "core-dumps-enabled": "Geheugendumps uitgeschakeld",
+        "mandatory-access-control-unconfined": "AppArmor- of SELinux-beperking actief"
       },
       "capabilities": {
         "aesAcceleration": {
-          "title": "Hardware-accelerated encryption",
-          "body": "This processor exposes AES-NI / PCLMULQDQ instructions, so AES-GCM runs on dedicated hardware paths — encryption stays fast and adds little CPU overhead."
+          "title": "Hardwareversnelde versleuteling",
+          "body": "Deze processor ondersteunt AES-NI- en PCLMULQDQ-instructies. AES-GCM gebruikt daardoor speciale hardwarepaden, blijft snel en veroorzaakt weinig CPU-belasting."
         }
       }
     },
@@ -3316,73 +3369,73 @@
       "inDevelopment": "Groepsbeheer is in ontwikkeling."
     },
     "identityProviders": {
-      "title": "Identity providers",
-      "description": "Configure OpenID Connect providers for sign-in and account linking.",
-      "empty": "Geen identiteitsproviders ingesteld.",
+      "title": "Identiteitsproviders",
+      "description": "Configureer OpenID Connect-providers voor aanmelden en het koppelen van accounts.",
+      "empty": "Er zijn geen identiteitsproviders geconfigureerd.",
       "actions": {
-        "create": "Add provider",
-        "edit": "Edit provider",
-        "delete": "Delete provider",
-        "refresh": "Refresh",
-        "openDocs": "Open OIDC setup guide",
-        "save": "Save provider",
-        "saving": "Saving..."
+        "create": "Provider toevoegen",
+        "edit": "Provider bewerken",
+        "delete": "Provider verwijderen",
+        "refresh": "Vernieuwen",
+        "openDocs": "OIDC-installatiehandleiding openen",
+        "save": "Provider opslaan",
+        "saving": "Opslaan..."
       },
       "columns": {
         "name": "Provider",
-        "issuer": "Issuer",
+        "issuer": "Uitgever",
         "status": "Status",
-        "accountCreation": "Account creation",
-        "scopes": "Scopes",
-        "domains": "Domains",
-        "actions": "Actions"
+        "accountCreation": "Accounts aanmaken",
+        "scopes": "Bereiken",
+        "domains": "Domeinen",
+        "actions": "Acties"
       },
       "status": {
-        "enabled": "Enabled",
-        "disabled": "Disabled",
-        "allowed": "Allowed",
-        "blocked": "Blocked"
+        "enabled": "Ingeschakeld",
+        "disabled": "Uitgeschakeld",
+        "allowed": "Toegestaan",
+        "blocked": "Geblokkeerd"
       },
       "fields": {
-        "name": "Name",
-        "slug": "Slug",
-        "redirectUrl": "Redirect URL",
-        "issuer": "Issuer URL",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "scopes": "Scopes",
-        "allowedEmailDomains": "Allowed email domains",
-        "defaultRole": "Default role",
-        "isEnabled": "Enable sign-in with this provider",
-        "allowAccountCreation": "Allow this provider to create new accounts",
-        "requireVerifiedEmail": "Require verified email for account creation",
-        "syncProfile": "Sync profile names on sign-in",
-        "syncAvatar": "Import provider avatar when the user has no avatar",
-        "clearClientSecret": "Clear saved client secret"
+        "name": "Naam",
+        "slug": "Korte naam",
+        "redirectUrl": "Omleidings-URL",
+        "issuer": "URL van uitgever",
+        "clientId": "Client-ID",
+        "clientSecret": "Clientgeheim",
+        "scopes": "Bereiken",
+        "allowedEmailDomains": "Toegestane e-maildomeinen",
+        "defaultRole": "Standaardrol",
+        "isEnabled": "Aanmelden met deze provider inschakelen",
+        "allowAccountCreation": "Deze provider toestaan nieuwe accounts aan te maken",
+        "requireVerifiedEmail": "Een geverifieerd e-mailadres vereisen om accounts aan te maken",
+        "syncProfile": "Profielnamen synchroniseren bij het aanmelden",
+        "syncAvatar": "Avatar van provider importeren als de gebruiker geen avatar heeft",
+        "clearClientSecret": "Opgeslagen clientgeheim wissen"
       },
       "help": {
-        "slug": "Leave empty to generate it from the provider name. Existing slugs stay stable.",
-        "redirectUrl": "Register this exact callback URL in the provider application.",
-        "clientSecret": "Leave empty if this provider uses a public client.",
-        "clientSecretConfigured": "A secret is already saved. Enter a new one to replace it.",
-        "scopes": "Separate scopes with spaces or commas. openid is always required.",
-        "allowedEmailDomains": "Optional comma-separated domains for automatic account creation."
+        "slug": "Laat leeg om de korte naam uit de providernaam te genereren. Bestaande korte namen blijven ongewijzigd.",
+        "redirectUrl": "Registreer deze exacte callback-URL in de toepassing van de provider.",
+        "clientSecret": "Laat leeg als deze provider een openbare client gebruikt.",
+        "clientSecretConfigured": "Er is al een geheim opgeslagen. Voer een nieuw geheim in om het te vervangen.",
+        "scopes": "Scheid bereiken met spaties of komma’s. openid is altijd verplicht.",
+        "allowedEmailDomains": "Optionele, door komma’s gescheiden domeinen voor het automatisch aanmaken van accounts."
       },
       "create": {
-        "title": "Add identity provider"
+        "title": "Identiteitsprovider toevoegen"
       },
       "edit": {
-        "title": "Edit identity provider"
+        "title": "Identiteitsprovider bewerken"
       },
       "delete": {
-        "title": "Delete {{name}}?",
-        "description": "Existing links for this provider will stop working. Users can keep signing in with other methods.",
-        "confirm": "Delete provider"
+        "title": "{{name}} verwijderen?",
+        "description": "Bestaande koppelingen met deze provider werken daarna niet meer. Gebruikers kunnen zich met andere methoden blijven aanmelden.",
+        "confirm": "Provider verwijderen"
       },
       "errors": {
-        "loadFailed": "Failed to load identity providers.",
-        "saveFailed": "Failed to save identity provider.",
-        "deleteFailed": "Failed to delete identity provider."
+        "loadFailed": "De identiteitsproviders konden niet worden geladen.",
+        "saveFailed": "De identiteitsprovider kon niet worden opgeslagen.",
+        "deleteFailed": "De identiteitsprovider kon niet worden verwijderd."
       }
     }
   },
@@ -3425,9 +3478,7 @@
     "loading": "Even geduld, aanmeldgegevens worden geladen...",
     "request": {
       "version": "Versie {{version}}",
-      "versionWithDevice": "Versie {{version}} op {{deviceName}}",
-      "origin": "Verzoek vanaf {{origin}}",
-      "localOrigin": "dit apparaat"
+      "versionWithDevice": "Versie {{version}} op {{deviceName}}"
     },
     "access": {
       "title": "Deze toepassing kan:",
@@ -3485,17 +3536,17 @@
   },
   "startup": {
     "checking": {
-      "title": "Checking startup requirements",
-      "caption": "Cotton is validating this server before opening the app."
+      "title": "Opstartvereisten controleren",
+      "caption": "Cotton controleert deze server voordat de toepassing wordt geopend."
     },
-    "caption": "Cotton cannot finish startup until this requirement is resolved.",
-    "fallbackTitle": "Startup blocked",
-    "fallbackMessage": "Cotton cannot start until the required maintenance step is completed.",
+    "caption": "Cotton kan het opstarten niet voltooien totdat aan deze vereiste is voldaan.",
+    "fallbackTitle": "Opstarten geblokkeerd",
+    "fallbackMessage": "Cotton kan niet starten totdat de vereiste onderhoudsstap is voltooid.",
     "fields": {
-      "currentVersion": "Current version",
-      "requiredVersion": "Required version",
-      "requiredVersionRange": "Required previous version",
-      "lastRecordedVersion": "Last recorded version"
+      "currentVersion": "Huidige versie",
+      "requiredVersion": "Vereiste versie",
+      "requiredVersionRange": "Vereiste vorige versie",
+      "lastRecordedVersion": "Laatst geregistreerde versie"
     }
   }
 }

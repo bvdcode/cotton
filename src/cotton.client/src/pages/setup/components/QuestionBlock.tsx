@@ -2,8 +2,22 @@ import { Box, Stack } from "@mui/material";
 import { type ReactNode } from "react";
 import { QuestionHeader } from "./QuestionHeader";
 import { OptionCard } from "./OptionCard";
+import type { JsonValue } from "../../../shared/types/json";
+import type { SetupRenderedOption } from "../setupModels";
 
-export function QuestionBlock<T>({
+interface QuestionBlockProps<TValue extends JsonValue> {
+  title: string;
+  subtitle: string;
+  options: SetupRenderedOption<TValue>[];
+  selectedValue?: TValue | null;
+  selectedKey?: string | null;
+  onSelect: (key: string, value: TValue) => void;
+  linkUrl?: string;
+  linkAriaLabel?: string;
+  extraHeader?: ReactNode;
+}
+
+export function QuestionBlock<TValue extends JsonValue>({
   title,
   subtitle,
   options,
@@ -13,25 +27,7 @@ export function QuestionBlock<T>({
   linkUrl,
   linkAriaLabel,
   extraHeader,
-}: {
-  title: string;
-  subtitle: string;
-  options: Array<{
-    key: string;
-    label: string;
-    description?: string;
-    value: T;
-    icon?: ReactNode;
-    disabled?: boolean;
-    disabledTooltip?: string;
-  }>;
-  selectedValue?: T | null;
-  selectedKey?: string | null;
-  onSelect: (key: string, value: T) => void;
-  linkUrl?: string;
-  linkAriaLabel?: string;
-  extraHeader?: ReactNode;
-}) {
+}: QuestionBlockProps<TValue>) {
   return (
     <Stack spacing={1.5}>
       <QuestionHeader

@@ -24,6 +24,8 @@ export const buildFolderOperations = (
   ) => Promise<void> | void,
   getEncryptionPolicyState?: (folder: NodeDto) => FolderEncryptionPolicyState,
   onFolderDownload?: (folderId: string, folderName: string) => Promise<void>,
+  onTogglePin?: (folderId: string) => void,
+  isPinned?: (folderId: string) => boolean,
 ): FolderOperations => {
   return {
     isRenaming: (folderId: string) => folderOps.renamingFolderId === folderId,
@@ -48,6 +50,8 @@ export const buildFolderOperations = (
         }
       : undefined,
     onCut: onFolderCut,
+    onTogglePin,
+    isPinned,
     onToggleEncryptionPolicy: onToggleEncryptionPolicy
       ? (folderId, currentlyEnabled) => {
           void onToggleEncryptionPolicy(folderId, currentlyEnabled);

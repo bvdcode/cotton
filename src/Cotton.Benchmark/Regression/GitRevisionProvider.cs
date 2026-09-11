@@ -11,7 +11,7 @@ namespace Cotton.Benchmark.Regression
         {
             try
             {
-                using var process = new Process();
+                using Process process = new Process();
                 process.StartInfo = new ProcessStartInfo
                 {
                     FileName = "git",

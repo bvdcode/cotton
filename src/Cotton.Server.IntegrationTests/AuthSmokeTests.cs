@@ -11,6 +11,7 @@ using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;
@@ -33,7 +34,7 @@ using CottonLoginRequestDto = Cotton.Auth.LoginRequestDto;
 
 namespace Cotton.Server.IntegrationTests
 {
-    public class AuthSmokeTests : IntegrationTestBase
+    public partial class AuthSmokeTests : IntegrationTestBase
     {
         private TestAppFactory? _factory;
         private WebApplicationFactory<Program>? _customFactory;
@@ -52,7 +53,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(creator.HasTables(), Is.False, "DB must have no user tables after Create()");
             });
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = TestPostgresHost,
                 Port = TestPostgresPort,
@@ -61,7 +62,7 @@ namespace Cotton.Server.IntegrationTests
                 Password = TestPostgresPassword
             };
 
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -118,15 +119,18 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task Login_Returns_Token()
+        public async Task Login_Returns_Auth_Session()
         {
             Assert.That(_client, Is.Not.Null);
             Assert.That(_notifications, Is.Not.Null);
 
-            TokenPairResponseDto payload = await LoginAsync("testuser", "testpassword");
+            AuthSessionResponseDto payload = await LoginAsync("testuser", "testpassword");
             Assert.Multiple(() =>
             {
                 Assert.That(string.IsNullOrWhiteSpace(payload.AccessToken), Is.False, "Token must be present");
+                Assert.That(string.IsNullOrWhiteSpace(payload.RefreshToken), Is.False, "Refresh token must be present");
+                Assert.That(payload.User.Username, Is.EqualTo("testuser"));
+                Assert.That(payload.User.Id, Is.Not.EqualTo(Guid.Empty));
                 Assert.That(_notifications!.Emails, Has.Count.EqualTo(1));
             });
 
@@ -136,12 +140,50 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(template, Is.EqualTo(EmailTemplate.SecurityAlert));
                 Assert.That(parameters[EmailTemplateParameterNames.SecurityTitle], Is.EqualTo("New login to your account"));
                 Assert.That(parameters[EmailTemplateParameterNames.SecurityContent], Does.Contain("8.8.8.8"));
+                Assert.That(parameters[EmailTemplateParameterNames.OccurredAt], Does.EndWith("+00:00 (UTC)"));
             });
 
-            var parts = payload.AccessToken.Split('.');
+            string[] parts = payload.AccessToken.Split('.');
             Assert.That(parts.Length, Is.EqualTo(3), "JWT must have3 parts");
 
-            TestContext.Progress.WriteLine($"Login OK. Token: {payload.AccessToken[..Math.Min(16, payload.AccessToken.Length)]}...");
+            await TestContext.Progress.WriteLineAsync(
+                $"Login OK. Token: {payload.AccessToken[..Math.Min(16, payload.AccessToken.Length)]}...");
+        }
+
+        [Test]
+        public async Task Refresh_Returns_Auth_Session()
+        {
+            Assert.That(_client, Is.Not.Null);
+
+            using HttpResponseMessage login = await PostLoginAsync(
+                "testuser",
+                "testpassword",
+                "8.8.8.8");
+            login.EnsureSuccessStatusCode();
+            string refreshCookie = login.Headers
+                .GetValues("Set-Cookie")
+                .Select(value => value.Split(';', 2)[0])
+                .Single(value => value.StartsWith("refresh_token=", StringComparison.Ordinal));
+
+            using HttpRequestMessage request = new(
+                HttpMethod.Post,
+                "/api/v1/auth/refresh");
+            request.Headers.Add("Cookie", refreshCookie);
+            request.Content = JsonContent.Create(new { });
+
+            using HttpResponseMessage response = await _client!.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            AuthSessionResponseDto? payload = await response.Content
+                .ReadFromJsonAsync<AuthSessionResponseDto>();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(payload, Is.Not.Null);
+                Assert.That(payload!.AccessToken, Is.Not.Empty);
+                Assert.That(payload.RefreshToken, Is.Not.Empty);
+                Assert.That(payload.User.Username, Is.EqualTo("testuser"));
+                Assert.That(payload.User.Id, Is.Not.EqualTo(Guid.Empty));
+            });
         }
 
         [Test]
@@ -212,7 +254,7 @@ namespace Cotton.Server.IntegrationTests
 
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+                using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
                 {
                     Content = JsonContent.Create(new CottonLoginRequestDto
                     {
@@ -316,12 +358,12 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(afterChange.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        private async Task<TokenPairResponseDto> LoginAsync(string username, string password)
+        private async Task<AuthSessionResponseDto> LoginAsync(string username, string password)
         {
             using HttpResponseMessage response = await PostLoginAsync(username, password, "8.8.8.8");
             response.EnsureSuccessStatusCode();
 
-            TokenPairResponseDto? payload = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+            AuthSessionResponseDto? payload = await response.Content.ReadFromJsonAsync<AuthSessionResponseDto>();
             Assert.That(payload, Is.Not.Null);
             return payload!;
         }
@@ -332,7 +374,7 @@ namespace Cotton.Server.IntegrationTests
             string ipAddress,
             string? deviceName = null)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new CottonLoginRequestDto
                 {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { NodeContentDto } from "../../../shared/api/nodesApi";
-import { ConflictAction, resolveUploadConflicts } from "./uploadConflicts";
+import { ConflictAction } from "../../../shared/types/nameConflict";
+import { resolveUploadConflicts } from "./uploadConflicts";
 
 const createContent = (
   fileNames: Array<{ id: string; name: string }>,

@@ -43,7 +43,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(creator.HasTables(), Is.False);
             });
 
-            var csb = new NpgsqlConnectionStringBuilder
+            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
                 Host = "localhost",
                 Port = 5432,
@@ -51,7 +51,7 @@ namespace Cotton.Server.IntegrationTests
                 Username = "postgres",
                 Password = "postgres"
             };
-            var overrides = new Dictionary<string, string?>
+            Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,
                 ["DatabaseSettings:Port"] = csb.Port.ToString(),
@@ -80,7 +80,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Get_Settings_Works()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             HttpResponseMessage res = await _client!.GetAsync("/api/v1/server/settings");
             res.EnsureSuccessStatusCode();
@@ -251,7 +251,7 @@ namespace Cotton.Server.IntegrationTests
                 null);
             Assert.That(unauthenticatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             using HttpResponseMessage setResponse = await _client.PatchAsync(
@@ -279,7 +279,7 @@ namespace Cotton.Server.IntegrationTests
                 null);
             Assert.That(unauthenticatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             using HttpResponseMessage compressionResponse = await _client.PatchAsync(
@@ -316,7 +316,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Get_CurrentUser_Works()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             UserDto? me = await _client.GetFromJsonAsync<UserDto>("/api/v1/users/me");
             Assert.That(me, Is.Not.Null);
@@ -329,8 +329,8 @@ namespace Cotton.Server.IntegrationTests
             HttpResponseMessage unauthenticatedResponse = await _client!.GetAsync("/api/v1/server/security/status");
             Assert.That(unauthenticatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
 
-            var token = await LoginAsync();
-            using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/server/security/status");
+            string token = await LoginAsync();
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/server/security/status");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             HttpResponseMessage response = await _client!.SendAsync(request);
@@ -378,7 +378,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Get_LatestDatabaseBackup_ReturnsNotFound_WhenNoBackupExists()
         {
-            var token = await LoginAsync();
+            string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             HttpResponseMessage response = await _client.GetAsync("/api/v1/server/database-backup/latest");
@@ -437,7 +437,7 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<string> LoginAsync()
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
             {
                 Content = JsonContent.Create(new CottonLoginRequestDto()
                 {

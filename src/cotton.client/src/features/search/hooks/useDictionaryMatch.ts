@@ -18,7 +18,7 @@ export const useDictionaryMatch = (
 ): SearchSettingRow[] => {
   const { t } = useTranslation("search");
   const userRole = useAuthStore((s) => s.user?.role ?? null);
-  const rawDictionary = t("dictionary", { returnObjects: true }) as unknown;
+  const rawDictionary: unknown = t("dictionary", { returnObjects: true });
 
   const dictionaryEntries = useMemo<SearchDictionaryEntry[]>(() => {
     const entries = Array.isArray(rawDictionary)

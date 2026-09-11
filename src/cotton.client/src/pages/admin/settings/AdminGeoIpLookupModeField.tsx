@@ -33,9 +33,8 @@ export const AdminGeoIpLookupModeField = ({
 }: AdminGeoIpLookupModeFieldProps) => {
   const [menuWidth, setMenuWidth] = useState<number | undefined>(undefined);
 
-  const handleOpen = useCallback((event: SyntheticEvent) => {
-    const target = event.currentTarget as HTMLElement;
-    const width = Math.round(target.getBoundingClientRect().width);
+  const handleOpen = useCallback((event: SyntheticEvent<Element>) => {
+    const width = Math.round(event.currentTarget.getBoundingClientRect().width);
     if (width > 0) {
       setMenuWidth(width);
     }
@@ -74,9 +73,14 @@ export const AdminGeoIpLookupModeField = ({
         <Select
           value={value}
           onOpen={handleOpen}
-          onChange={(event) => onChange(event.target.value as GeoIpLookupMode)}
+          onChange={(event) => {
+            const next = event.target.value;
+            if (geoIpOptions.some((option) => option === next)) {
+              onChange(next);
+            }
+          }}
           disabled={disabled || loading}
-          renderValue={(selected) => getLabel(selected as GeoIpLookupMode)}
+          renderValue={getLabel}
           MenuProps={{
             PaperProps: {
               sx: {

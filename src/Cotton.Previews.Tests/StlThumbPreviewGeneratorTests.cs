@@ -25,7 +25,7 @@ namespace Cotton.Previews.Tests
         public void GeneratePreviewWebPAsync_StlInvalidContent_Throws()
         {
             StlThumbPreviewGenerator generator = new();
-            using var stream = new MemoryStream(Array.Empty<byte>());
+            using MemoryStream stream = new MemoryStream(Array.Empty<byte>());
 
             InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await generator.GeneratePreviewWebPAsync(stream, size: 128));
@@ -37,12 +37,12 @@ namespace Cotton.Previews.Tests
         public async Task GeneratePreviewWebPAsync_StlValidModel_RendersWebP()
         {
             StlThumbPreviewGenerator generator = new();
-            using var stream = new MemoryStream(CreateValidAsciiStlBytes());
+            using MemoryStream stream = new MemoryStream(CreateValidAsciiStlBytes());
 
             byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 128);
 
             AssertWebpSignature(preview);
-            using var image = Image.Load<Rgba32>(preview);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(image.Width, Is.EqualTo(128));
@@ -55,12 +55,12 @@ namespace Cotton.Previews.Tests
         {
             StlThumbPreviewGenerator generator = StlThumbPreviewGenerator.CreateThreeMfGenerator();
             byte[] threeMf = CreateThreeMfWithThumbnailBytes(width: 1200, height: 600);
-            using var stream = new MemoryStream(threeMf);
+            using MemoryStream stream = new MemoryStream(threeMf);
 
             byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 200);
 
             AssertWebpSignature(preview);
-            using var image = Image.Load<Rgba32>(preview);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(image.Width, Is.EqualTo(200));
@@ -73,7 +73,7 @@ namespace Cotton.Previews.Tests
         {
             StlThumbPreviewGenerator generator = StlThumbPreviewGenerator.CreateThreeMfGenerator();
             byte[] threeMf = CreateThreeMfWithoutThumbnailWithInvalidModelBytes();
-            using var stream = new MemoryStream(threeMf);
+            using MemoryStream stream = new MemoryStream(threeMf);
 
             InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await generator.GeneratePreviewWebPAsync(stream, size: 128));
@@ -123,8 +123,8 @@ namespace Cotton.Previews.Tests
         {
             byte[] thumbnailPng = CreateGradientPngBytes(width, height);
 
-            using var output = new MemoryStream();
-            using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+            using MemoryStream output = new MemoryStream();
+            using (ZipArchive archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
             {
                 WriteTextEntry(
                     archive,
@@ -168,8 +168,8 @@ namespace Cotton.Previews.Tests
 
         private static byte[] CreateThreeMfWithoutThumbnailWithInvalidModelBytes()
         {
-            using var output = new MemoryStream();
-            using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+            using MemoryStream output = new MemoryStream();
+            using (ZipArchive archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
             {
                 WriteTextEntry(
                     archive,
@@ -200,7 +200,7 @@ namespace Cotton.Previews.Tests
 
         private static byte[] CreateGradientPngBytes(int width, int height)
         {
-            using var image = new Image<Rgba32>(width, height);
+            using Image<Rgba32> image = new Image<Rgba32>(width, height);
 
             for (int y = 0; y < height; y++)
             {
@@ -213,7 +213,7 @@ namespace Cotton.Previews.Tests
                 }
             }
 
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             image.SaveAsPng(ms);
             return ms.ToArray();
         }

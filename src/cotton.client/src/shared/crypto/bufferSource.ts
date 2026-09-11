@@ -4,5 +4,12 @@
  * created with ArrayBuffer-backed constructors, slices, or getRandomValues.
  */
 export function asBufferSource(bytes: Uint8Array): BufferSource {
-  return bytes as BufferSource;
+  const buffer = bytes.buffer;
+  if (!(buffer instanceof ArrayBuffer)) {
+    return Uint8Array.from(bytes).buffer;
+  }
+
+  return bytes.byteOffset === 0 && bytes.byteLength === buffer.byteLength
+    ? buffer
+    : buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 }

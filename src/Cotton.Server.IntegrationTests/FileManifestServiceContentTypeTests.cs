@@ -57,7 +57,7 @@ namespace Cotton.Server.IntegrationTests
             string? contentType,
             string expectedContentType)
         {
-            string actual = FileManifestService.ResolveContentType(fileName, contentType);
+            string actual = FileContentTypeResolver.Resolve(fileName, contentType);
 
             Assert.That(actual, Is.EqualTo(expectedContentType));
         }
@@ -84,7 +84,7 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("APPLICATION/OCTET-STREAM", "application/octet-stream")]
         public void ResolveContentType_NormalizesAliases_AndParameters(string contentType, string expectedContentType)
         {
-            string actual = FileManifestService.ResolveContentType("sample.bin", contentType);
+            string actual = FileContentTypeResolver.Resolve("sample.bin", contentType);
 
             Assert.That(actual, Is.EqualTo(expectedContentType));
         }
@@ -101,7 +101,7 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("sample.apk", false)]
         public void IsSourceTextFileName_ClassifiesPreviewableSourceNames(string fileName, bool expected)
         {
-            bool actual = FileManifestService.IsSourceTextFileName(fileName);
+            bool actual = FileContentTypeResolver.IsSourceTextFileName(fileName);
 
             Assert.That(actual, Is.EqualTo(expected));
         }
@@ -109,9 +109,9 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void ResolveContentType_UnknownAndEmpty_FallsBackToOctetStream()
         {
-            string actual = FileManifestService.ResolveContentType("sample.unknownext", null);
+            string actual = FileContentTypeResolver.Resolve("sample.unknownext", null);
 
-            Assert.That(actual, Is.EqualTo(FileManifestService.DefaultContentType));
+            Assert.That(actual, Is.EqualTo(FileContentTypeResolver.DefaultContentType));
         }
     }
 }
