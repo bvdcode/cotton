@@ -155,6 +155,5 @@ namespace Cotton.Server.IntegrationTests
             NodeFile moved = await db.NodeFiles.AsNoTracking().SingleAsync(x => x.Id == file.Id);
             Assert.That(moved.NodeId, Is.EqualTo(dst.Id));
         }
-
     }
 }

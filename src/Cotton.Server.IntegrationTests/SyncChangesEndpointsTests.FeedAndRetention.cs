@@ -109,6 +109,5 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(response.Changes, Is.Empty);
             });
         }
-
     }
 }

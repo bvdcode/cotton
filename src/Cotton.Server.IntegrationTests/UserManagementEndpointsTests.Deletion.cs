@@ -57,6 +57,5 @@ namespace Cotton.Server.IntegrationTests
             HttpResponseMessage currentUserResponse = await _client.GetAsync("/api/v1/users/me");
             currentUserResponse.EnsureSuccessStatusCode();
         }
-
     }
 }

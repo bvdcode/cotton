@@ -299,6 +299,5 @@ namespace Cotton.Server.IntegrationTests
 
             Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         }
-
     }
 }

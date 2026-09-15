@@ -327,5 +327,4 @@ namespace Cotton.Server.IntegrationTests
         private Task<HttpResponseMessage> MoveNodeAsync(Guid nodeId, MoveNodeRequestDto request)
             => _client!.PatchAsJsonAsync($"/api/v1/layouts/nodes/{nodeId}/move", request);
     }
-
 }

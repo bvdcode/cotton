@@ -360,6 +360,5 @@ namespace Cotton.Previews
                 }
             });
         }
-
     }
 }

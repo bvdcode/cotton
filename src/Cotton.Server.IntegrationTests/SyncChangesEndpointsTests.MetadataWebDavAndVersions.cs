@@ -197,6 +197,5 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(change.Name, Is.EqualTo("versioned-file.txt"));
             });
         }
-
     }
 }

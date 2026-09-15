@@ -81,5 +81,4 @@ namespace Cotton.Sdk.Tests.Fakes
             return _responses.Dequeue()(request);
         }
     }
-
 }

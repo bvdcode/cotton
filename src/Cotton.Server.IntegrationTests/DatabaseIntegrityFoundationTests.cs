@@ -20,7 +20,6 @@ namespace Cotton.Server.IntegrationTests
 {
     public partial class DatabaseIntegrityFoundationTests
     {
-
         private static DatabaseIntegrityProtector CreateProtector(
             string rootMasterKey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
         {

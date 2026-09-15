@@ -295,6 +295,5 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(protector.Verify(user, descriptor, originalMac), Is.False);
             }
         }
-
     }
 }

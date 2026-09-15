@@ -200,6 +200,5 @@ namespace Cotton.Server.IntegrationTests
 
             Assert.That(templateResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));
         }
-
     }
 }

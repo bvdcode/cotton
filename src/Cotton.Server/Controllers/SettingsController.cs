@@ -23,7 +23,6 @@ namespace Cotton.Server.Controllers
         SettingsProvider settings,
         ServerSettingsValidator _validator) : SettingsControllerBase(settings)
     {
-
         [HttpGet]
         [Authorize]
         public IActionResult GetClientSettings()
@@ -46,14 +45,12 @@ namespace Cotton.Server.Controllers
             return Ok(new { IsServerInitialized = isServerInitialized });
         }
 
-
         [Authorize]
         [HttpGet("supported-hash-algorithms")]
         public IActionResult GetSupportedHashAlgorithms()
         {
             return Ok(new { supportedHashAlgorithms = new string[] { Hasher.SupportedHashAlgorithm } });
         }
-
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("server-usage")]

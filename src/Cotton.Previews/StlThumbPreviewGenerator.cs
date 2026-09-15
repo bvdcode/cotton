@@ -431,6 +431,5 @@ namespace Cotton.Previews
                 return null;
             }
         }
-
     }
 }

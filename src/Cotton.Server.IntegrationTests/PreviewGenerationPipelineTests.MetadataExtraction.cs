@@ -233,6 +233,5 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(persisted.Metadata, Does.ContainKey(FileContentMetadataKeys.MediaDurationSeconds));
             });
         }
-
     }
 }

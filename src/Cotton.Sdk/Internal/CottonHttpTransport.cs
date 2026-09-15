@@ -405,6 +405,5 @@ namespace Cotton.Sdk.Internal
                 ? normalized
                 : normalized[..CottonClientHeaders.DeviceNameMaxLength];
         }
-
     }
 }

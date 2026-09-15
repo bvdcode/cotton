@@ -316,6 +316,5 @@ namespace Cotton.Server.IntegrationTests
             Assert.Throws<DatabaseIntegrityException>(() =>
                 verifier.RequireValidContent(dbContext, nodeFile, "test.file-graph"));
         }
-
     }
 }

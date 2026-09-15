@@ -246,6 +246,5 @@ namespace Cotton.Server.IntegrationTests
             });
             secondCreateResponse.EnsureSuccessStatusCode();
         }
-
     }
 }

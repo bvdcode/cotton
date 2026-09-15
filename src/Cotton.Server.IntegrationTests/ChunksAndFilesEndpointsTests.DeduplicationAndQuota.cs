@@ -344,6 +344,5 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(afterDelete!.UsedBytes, Is.EqualTo(0));
             Assert.That(afterDelete.AvailableBytes, Is.EqualTo(100));
         }
-
     }
 }

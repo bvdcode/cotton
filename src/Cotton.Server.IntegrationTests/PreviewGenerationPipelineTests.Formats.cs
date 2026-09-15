@@ -151,6 +151,5 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("image/webp"));
             }
         }
-
     }
 }

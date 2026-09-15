@@ -9,5 +9,4 @@ namespace Cotton.Benchmark.Regression
 
         public IReadOnlyDictionary<string, string> Properties { get; init; } = new Dictionary<string, string>();
     }
-
 }

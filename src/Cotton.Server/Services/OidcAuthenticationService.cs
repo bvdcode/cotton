@@ -423,6 +423,5 @@ namespace Cotton.Server.Services
                 .Where(x => x.ExpiresAt < DateTime.UtcNow)
                 .ExecuteDeleteAsync(ct);
         }
-
     }
 }

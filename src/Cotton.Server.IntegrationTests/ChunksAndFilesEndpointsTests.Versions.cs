@@ -261,6 +261,5 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(wrapperExists, Is.False);
             });
         }
-
     }
 }

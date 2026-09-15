@@ -1,23 +1,13 @@
 import React from "react";
-import { Box, ButtonBase, IconButton, Typography } from "@mui/material";
+import { Box, ButtonBase, Typography } from "@mui/material";
 import {
   Article,
-  ContentCut,
-  Delete,
-  Download,
-  History,
-  Edit,
   Folder,
   Image as ImageIcon,
   InsertDriveFile,
-  LockOpenOutlined,
   LockOutlined,
   TextSnippet,
   VideoFile,
-  Share,
-  Restore,
-  Star,
-  StarBorder,
 } from "@mui/icons-material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { formatBytes } from "../../../../shared/utils/formatBytes";
@@ -31,109 +21,28 @@ import { InlineRenameField } from "../InlineRenameField";
 import {
   isFileEncrypted,
   isFolderEncryptionPolicyEnabled,
-  type FolderEncryptionPolicyState,
 } from "../../../../shared/crypto";
 import { buildPreviewUrl } from "@shared/api/previewUrl";
+import { createActionsColumn } from "./fileListActionColumn";
+import type { ColumnOptions, FileListRow } from "./fileListColumnTypes";
 
-export interface FileListRow {
-  id: string;
-  type: "folder" | "file" | "new-folder";
-  name: string;
-  location?: string | null;
-  containerPath?: string | null;
-  containerNodeId?: string | null;
-  sizeBytes: number | null;
-  contentType?: string | null;
-  metadata?: Record<string, string>;
-  encryptionPolicy?: FolderEncryptionPolicyState;
-  requiresVideoTranscoding?: boolean;
-  tile?: {
-    kind: "folder" | "file";
-    file?: {
-      id: string;
-      name: string;
-      previewHashEncryptedHex?: string | null;
-    };
-  };
-}
-
-interface ColumnOptions {
-  readOnly?: boolean;
-  labels: {
-    name: string;
-    size: string;
-    location: string;
-    actionsTitle: string;
-    placeholder: string;
-    goToFolder: string;
-    rename: string;
-    delete: string;
-    restore: string;
-    download: string;
-    versions: string;
-    share: string;
-    cut: string;
-    encryptedFile: string;
-    encryptedFolder: string;
-    enableEncryptionPolicy: string;
-    disableEncryptionPolicy: string;
-    pin: string;
-    unpin: string;
-  };
-  newFolderName: string;
-  onNewFolderNameChange: (value: string) => void;
-  onConfirmNewFolder: () => void;
-  onCancelNewFolder: () => void;
-  folderNamePlaceholder: string;
-  fileNamePlaceholder: string;
-  onGoToFileLocation?: (target: {
-    nodeId?: string;
-    containerPath?: string;
-  }) => void;
-  columnFlex?: {
-    name: number;
-    location: number;
-  };
-  folderOperations: {
-    isRenaming: (id: string) => boolean;
-    getRenamingName: () => string;
-    onRenamingNameChange: (value: string) => void;
-    onConfirmRename?: () => void;
-    onCancelRename?: () => void;
-    onStartRename?: (id: string, name: string) => void;
-    onRestore?: (id: string, name: string) => void;
-    onDelete?: (id: string, name: string) => void;
-    onDownload?: (id: string, name: string) => void;
-    onShare?: (id: string, name: string) => void;
-    onCut?: (id: string) => void;
-    onToggleEncryptionPolicy?: (id: string, currentlyEnabled: boolean) => void;
-    onTogglePin?: (id: string) => void;
-    isPinned?: (id: string) => boolean;
-  };
-  fileOperations: {
-    isRenaming: (id: string) => boolean;
-    getRenamingName: () => string;
-    onRenamingNameChange: (value: string) => void;
-    onConfirmRename?: () => Promise<void>;
-    onCancelRename?: () => void;
-    onStartRename?: (id: string, name: string) => void;
-    onRestore?: (id: string, name: string) => void;
-    onDownload?: (id: string, name: string) => void;
-    onVersions?: (id: string, name: string) => void;
-    onShare?: (id: string, name: string) => void;
-    onCut?: (id: string) => void;
-    onDelete?: (id: string, name: string) => void;
-  };
-  failedPreviews: Set<string>;
-  setFailedPreviews: React.Dispatch<React.SetStateAction<Set<string>>>;
-}
+export { createActionsColumn } from "./fileListActionColumn";
+export type { FileListRow } from "./fileListColumnTypes";
 
 const getSmallFileIcon = (fileName: string) => {
   const iconSx = { fontSize: 32 };
-  if (isTextFile(fileName)) return <Article color="action" sx={iconSx} />;
-  if (isImageFile(fileName)) return <ImageIcon color="action" sx={iconSx} />;
-  if (isVideoFile(fileName)) return <VideoFile color="action" sx={iconSx} />;
-  if (isPdfFile(fileName)) return <TextSnippet color="action" sx={iconSx} />;
+  if (isTextFile(fileName)) {
+    return <Article color="action" sx={iconSx} />;
+  }
+  if (isImageFile(fileName)) {
+    return <ImageIcon color="action" sx={iconSx} />;
+  }
+  if (isVideoFile(fileName)) {
+    return <VideoFile color="action" sx={iconSx} />;
+  }
+  if (isPdfFile(fileName)) {
+    return <TextSnippet color="action" sx={iconSx} />;
+  }
   return <InsertDriveFile color="action" sx={iconSx} />;
 };
 
@@ -409,241 +318,6 @@ export const createLocationColumn = (
         )}
       </Box>
     );
-  },
-});
-
-type RowActionButton = {
-  key: string;
-  icon: React.ReactNode;
-  title: string;
-  onClick: () => void;
-};
-
-const actionButton = (action: RowActionButton): React.ReactElement => (
-  <IconButton
-    key={action.key}
-    size="small"
-    onClick={(event) => {
-      event.stopPropagation();
-      action.onClick();
-    }}
-    title={action.title}
-  >
-    {action.icon}
-  </IconButton>
-);
-
-const actionsCell = (
-  actions: ReadonlyArray<RowActionButton>,
-): React.ReactElement => (
-  <Box
-    sx={{
-      display: "flex",
-      alignItems: "center",
-      height: "100%",
-      width: "100%",
-      gap: 0.5,
-      justifyContent: "flex-end",
-    }}
-  >
-    {actions.map(actionButton)}
-  </Box>
-);
-
-const buildFolderActionButtons = (
-  row: FileListRow,
-  options: Pick<ColumnOptions, "labels" | "folderOperations" | "readOnly">,
-): RowActionButton[] => {
-  const operations = options.folderOperations;
-  const actions: RowActionButton[] = [];
-  const folderEncryptionPolicyEnabled =
-    row.encryptionPolicy?.explicitEnabled ??
-    isFolderEncryptionPolicyEnabled(row.metadata);
-  const folderEncryptionPolicyInherited =
-    row.encryptionPolicy?.inheritedEnabled ?? false;
-
-  if (operations.onDownload) {
-    actions.push({
-      key: "download",
-      icon: <Download fontSize="small" />,
-      title: options.labels.download,
-      onClick: () => operations.onDownload?.(row.id, row.name),
-    });
-  }
-
-  if (options.readOnly) {
-    return actions;
-  }
-
-  if (operations.onTogglePin) {
-    const pinned = operations.isPinned?.(row.id) ?? false;
-    actions.push({
-      key: "pin",
-      icon: pinned ? (
-        <Star fontSize="small" />
-      ) : (
-        <StarBorder fontSize="small" />
-      ),
-      title: pinned ? options.labels.unpin : options.labels.pin,
-      onClick: () => operations.onTogglePin?.(row.id),
-    });
-  }
-
-  if (operations.onStartRename) {
-    actions.push({
-      key: "rename",
-      icon: <Edit fontSize="small" />,
-      title: options.labels.rename,
-      onClick: () => operations.onStartRename?.(row.id, row.name),
-    });
-  }
-  if (operations.onShare) {
-    actions.push({
-      key: "share",
-      icon: <Share fontSize="small" />,
-      title: options.labels.share,
-      onClick: () => operations.onShare?.(row.id, row.name),
-    });
-  }
-  if (operations.onCut) {
-    actions.push({
-      key: "cut",
-      icon: <ContentCut fontSize="small" />,
-      title: options.labels.cut,
-      onClick: () => operations.onCut?.(row.id),
-    });
-  }
-  if (operations.onToggleEncryptionPolicy && !folderEncryptionPolicyInherited) {
-    actions.push({
-      key: "toggle-encryption",
-      icon: folderEncryptionPolicyEnabled ? (
-        <LockOpenOutlined fontSize="small" />
-      ) : (
-        <LockOutlined fontSize="small" />
-      ),
-      title: folderEncryptionPolicyEnabled
-        ? options.labels.disableEncryptionPolicy
-        : options.labels.enableEncryptionPolicy,
-      onClick: () =>
-        operations.onToggleEncryptionPolicy?.(
-          row.id,
-          folderEncryptionPolicyEnabled,
-        ),
-    });
-  }
-  if (operations.onRestore) {
-    actions.push({
-      key: "restore",
-      icon: <Restore fontSize="small" />,
-      title: options.labels.restore,
-      onClick: () => operations.onRestore?.(row.id, row.name),
-    });
-  }
-  if (operations.onDelete) {
-    actions.push({
-      key: "delete",
-      icon: <Delete fontSize="small" />,
-      title: options.labels.delete,
-      onClick: () => operations.onDelete?.(row.id, row.name),
-    });
-  }
-
-  return actions;
-};
-
-const buildFileActionButtons = (
-  row: FileListRow,
-  options: Pick<ColumnOptions, "labels" | "fileOperations" | "readOnly">,
-): RowActionButton[] => {
-  const operations = options.fileOperations;
-  const actions: RowActionButton[] = [];
-  const fileEncrypted = isFileEncrypted(row.metadata);
-
-  if (operations.onDownload) {
-    actions.push({
-      key: "download",
-      icon: <Download fontSize="small" />,
-      title: options.labels.download,
-      onClick: () => operations.onDownload?.(row.id, row.name),
-    });
-  }
-
-  if (operations.onVersions) {
-    actions.push({
-      key: "versions",
-      icon: <History fontSize="small" />,
-      title: options.labels.versions,
-      onClick: () => operations.onVersions?.(row.id, row.name),
-    });
-  }
-
-  if (options.readOnly) {
-    return actions;
-  }
-
-  if (operations.onShare && !fileEncrypted) {
-    actions.push({
-      key: "share",
-      icon: <Share fontSize="small" />,
-      title: options.labels.share,
-      onClick: () => operations.onShare?.(row.id, row.name),
-    });
-  }
-  if (operations.onStartRename) {
-    actions.push({
-      key: "rename",
-      icon: <Edit fontSize="small" />,
-      title: options.labels.rename,
-      onClick: () => operations.onStartRename?.(row.id, row.name),
-    });
-  }
-  if (operations.onCut) {
-    actions.push({
-      key: "cut",
-      icon: <ContentCut fontSize="small" />,
-      title: options.labels.cut,
-      onClick: () => operations.onCut?.(row.id),
-    });
-  }
-  if (operations.onRestore) {
-    actions.push({
-      key: "restore",
-      icon: <Restore fontSize="small" />,
-      title: options.labels.restore,
-      onClick: () => operations.onRestore?.(row.id, row.name),
-    });
-  }
-  if (operations.onDelete) {
-    actions.push({
-      key: "delete",
-      icon: <Delete fontSize="small" />,
-      title: options.labels.delete,
-      onClick: () => operations.onDelete?.(row.id, row.name),
-    });
-  }
-
-  return actions;
-};
-
-export const createActionsColumn = (
-  options: Pick<
-    ColumnOptions,
-    "labels" | "folderOperations" | "fileOperations" | "readOnly"
-  >,
-): GridColDef<FileListRow> => ({
-  field: "actions",
-  headerName: options.labels.actionsTitle,
-  minWidth: 220,
-  sortable: false,
-  align: "right",
-  headerAlign: "right",
-  renderCell: (params) => {
-    const row = params.row;
-    if (row.type === "new-folder") return null;
-
-    return row.type === "folder"
-      ? actionsCell(buildFolderActionButtons(row, options))
-      : actionsCell(buildFileActionButtons(row, options));
   },
 });
 

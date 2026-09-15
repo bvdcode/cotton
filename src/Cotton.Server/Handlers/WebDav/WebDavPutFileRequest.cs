@@ -393,6 +393,5 @@ namespace Cotton.Server.Handlers.WebDav
                 await _eventNotification.NotifyFileUpdatedAsync(nodeFileId, ct);
             }
         }
-
     }
 }

@@ -188,6 +188,5 @@ namespace Cotton.Server.IntegrationTests
             HttpResponseMessage res = await MoveFileAsync(file.Id, Guid.Empty);
             Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         }
-
     }
 }

@@ -490,6 +490,5 @@ namespace Cotton.Storage.Tests.Streams
             await stream.ReadExactlyAsync(buffer3);
             Assert.That(buffer3[0], Is.EqualTo(9));
         }
-
     }
 }

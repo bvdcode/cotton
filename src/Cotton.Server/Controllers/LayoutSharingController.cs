@@ -262,6 +262,5 @@ namespace Cotton.Server.Controllers
             _mediator.Send(
                 new ResolveSharedNodeAccessQuery(token),
                 HttpContext.RequestAborted);
-
     }
 }
