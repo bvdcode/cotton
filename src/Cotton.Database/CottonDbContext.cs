@@ -48,6 +48,8 @@ namespace Cotton.Database
 
         public DbSet<FileManifest> FileManifests => Set<FileManifest>();
 
+        public DbSet<FileEmbedding> FileEmbeddings => Set<FileEmbedding>();
+
         public DbSet<DownloadToken> DownloadTokens => Set<DownloadToken>();
 
         public DbSet<NodeShareToken> NodeShareTokens => Set<NodeShareToken>();
