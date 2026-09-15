@@ -4,12 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
-import {
-  invalidateTrashChildren,
-  useTrashChildrenQuery,
-  useTrashNodeMetaQuery,
-  useTrashRootQuery,
-} from "../../shared/api/queries/trash";
+import { invalidateTrashChildren } from "../../shared/api/queries/trash";
 import { useFileSelection } from "../../shared/hooks/useFileSelection";
 import { useAuth } from "../../features/auth";
 import { useTrashFileList } from "../../shared/hooks/useFileListSource";
@@ -33,6 +28,7 @@ import { useFileListSourceLogic } from "../files/hooks/useFileListPageLogic";
 import { TrashPageContent } from "./components/TrashPageContent";
 import { TrashPageHeader } from "./components/TrashPageHeader";
 import { TrashPageList } from "./components/TrashPageList";
+import { useTrashPageData } from "./hooks/useTrashPageData";
 import {
   useTrashBulkActions,
   useTrashFileOperations,
@@ -78,34 +74,12 @@ export const TrashPage: React.FC = () => {
   );
   const viewMode = getFileBrowserViewMode(layoutType, tilesSize);
 
-  const rootQuery = useTrashRootQuery(isTrashRoot);
-  const nodeId = routeNodeId ?? rootQuery.data?.id ?? null;
-  const nodeMetaQuery = useTrashNodeMetaQuery(nodeId, {
-    isRoot: isTrashRoot,
-    enabled: Boolean(nodeId),
-  });
-  const currentNode =
-    nodeMetaQuery.data?.node ?? (isTrashRoot ? (rootQuery.data ?? null) : null);
-  const ancestors = useMemo(
-    () => (isTrashRoot ? [] : (nodeMetaQuery.data?.ancestors ?? [])),
-    [isTrashRoot, nodeMetaQuery.data?.ancestors],
-  );
-  const childrenQuery = useTrashChildrenQuery({
-    nodeId,
-    isRoot: isTrashRoot,
-    enabled: layoutType !== InterfaceLayoutType.List && Boolean(nodeId),
-  });
-  const content = childrenQuery.data?.content;
-  const loading =
-    (isTrashRoot && rootQuery.isPending) ||
-    (Boolean(nodeId) && nodeMetaQuery.isPending) ||
-    (layoutType !== InterfaceLayoutType.List &&
-      Boolean(nodeId) &&
-      childrenQuery.isPending);
-  const error =
-    rootQuery.isError || nodeMetaQuery.isError || childrenQuery.isError
-      ? t("error")
-      : null;
+  const { nodeId, currentNode, ancestors, content, loading, error } =
+    useTrashPageData({
+      routeNodeId,
+      layoutType,
+      loadErrorText: t("error"),
+    });
 
   const listData = useTrashListData({
     nodeId,
