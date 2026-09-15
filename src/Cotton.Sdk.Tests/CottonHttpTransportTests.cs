@@ -182,7 +182,6 @@ namespace Cotton.Sdk.Tests
             QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.Unauthorized, "expired");
             handler.Enqueue(HttpStatusCode.ServiceUnavailable, "temporarily unavailable");
-            handler.Enqueue(HttpStatusCode.Unauthorized, "expired");
             InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();
             await store.SaveAsync(new TokenPairDto { AccessToken = "old-access", RefreshToken = "old-refresh" });
             CottonCloudClient client = new(new HttpClient(handler), store, new CottonSdkOptions
@@ -190,7 +189,7 @@ namespace Cotton.Sdk.Tests
                 BaseAddress = new Uri("https://cotton.test"),
             });
 
-            Assert.ThrowsAsync<CottonApiException>(async () => await client.Settings.GetAsync());
+            Assert.ThrowsAsync<CottonTokenRefreshException>(async () => await client.Settings.GetAsync());
             TokenPairDto? stored = await store.GetAsync();
 
             Assert.Multiple(() =>

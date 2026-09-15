@@ -370,14 +370,13 @@ namespace Cotton.Sdk.Internal
             string? failedAccessToken,
             CancellationToken cancellationToken)
         {
-            bool refreshed = await _tokenRefreshManager
-                .TryRefreshAsync(failedAccessToken, cancellationToken)
+            await _tokenRefreshManager
+                .RefreshAfterUnauthorizedAsync(failedAccessToken, cancellationToken)
                 .ConfigureAwait(false);
-            _logger.LogWarning(
-                "Cotton API request {Method} {Path} returned unauthorized; token refresh {RefreshResult}, retrying request.",
+            _logger.LogDebug(
+                "Cotton API request {Method} {Path} returned unauthorized; token refresh succeeded, retrying request.",
                 method.Method,
-                CottonHttpResponseReader.RedactPath(path),
-                refreshed ? "succeeded" : "failed");
+                CottonHttpResponseReader.RedactPath(path));
         }
 
         private void ApplyDefaultHeaders(HttpRequestMessage request)
