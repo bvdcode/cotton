@@ -67,7 +67,7 @@ namespace Cotton.Server.Services
             CancellationToken ct)
         {
             User user = await _dbContext.Users.FindAsync([userId], ct)
-                ?? throw new EntityNotFoundException<User>();
+                ?? throw new EntityNotFoundException<User>("Current user not found.");
             _integrity.RequireValid(_dbContext, user, "passkey.registration-options");
 
             var existingCredentials = await _dbContext.UserPasskeyCredentials
@@ -289,7 +289,7 @@ namespace Cotton.Server.Services
         {
             UserPasskeyCredential credential = await _dbContext.UserPasskeyCredentials
                 .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == credentialId, ct)
-                ?? throw new EntityNotFoundException<UserPasskeyCredential>();
+                ?? throw new EntityNotFoundException<UserPasskeyCredential>("Passkey not found.");
             _integrity.RequireValid(_dbContext, credential, "passkey.rename");
 
             credential.Label = PasskeyLabelNormalizer.Normalize(label);
@@ -301,7 +301,7 @@ namespace Cotton.Server.Services
         {
             UserPasskeyCredential credential = await _dbContext.UserPasskeyCredentials
                 .FirstOrDefaultAsync(x => x.UserId == userId && x.Id == credentialId, ct)
-                ?? throw new EntityNotFoundException<UserPasskeyCredential>();
+                ?? throw new EntityNotFoundException<UserPasskeyCredential>("Passkey not found.");
             _integrity.RequireValid(_dbContext, credential, "passkey.delete");
 
             _dbContext.UserPasskeyCredentials.Remove(credential);

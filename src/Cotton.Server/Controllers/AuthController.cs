@@ -75,7 +75,7 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             User user = await _dbContext.Users.FindAsync(userId)
-                ?? throw new EntityNotFoundException<User>();
+                ?? throw new EntityNotFoundException<User>("Current user not found.");
             _integrity.RequireValid(_dbContext, user, "auth.webdav-token");
             string token = StringHelpers.CreateRandomString(WebDavTokenLength);
             user.WebDavTokenPhc = _hasher.Hash(token);
@@ -263,20 +263,20 @@ namespace Cotton.Server.Controllers
             }
             if (string.IsNullOrEmpty(refreshToken))
             {
-                return NotFound();
+                return this.ApiNotFound("Refresh token was not provided.");
             }
 
             string refreshTokenHash = AuthSessionIssuer.HashRefreshToken(refreshToken);
             ExtendedRefreshToken? dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshTokenHash);
             if (dbToken is null || dbToken.RevokedAt is not null)
             {
-                return NotFound();
+                return this.ApiNotFound("Refresh token not found or revoked.");
             }
             _integrity.RequireValid(_dbContext, dbToken, "auth.refresh-token");
             User? user = await _dbContext.Users.FindAsync(dbToken.UserId);
             if (user is null)
             {
-                return NotFound();
+                return this.ApiNotFound("Refresh token user not found.");
             }
             _integrity.RequireValid(_dbContext, user, "auth.refresh-user");
             string accessToken = _sessionIssuer.CreateAccessToken(user, dbToken.SessionId!);

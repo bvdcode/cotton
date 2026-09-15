@@ -10,6 +10,7 @@ using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
+using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
 using Mapster;
@@ -71,7 +72,7 @@ namespace Cotton.Server.Controllers
             User? user = _dbContext.Users.Find(userId);
             if (user is null)
             {
-                return NotFound();
+                return this.ApiNotFound("Current user not found.");
             }
             UserDto userDto = user.Adapt<UserDto>();
             return Ok(userDto);

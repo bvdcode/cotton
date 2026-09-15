@@ -160,7 +160,7 @@ namespace Cotton.Server.Services
             UserExternalIdentity identity = await _dbContext.UserExternalIdentities
                 .Include(x => x.Provider)
                 .FirstOrDefaultAsync(x => x.Id == identityId && x.UserId == userId, ct)
-                ?? throw new EntityNotFoundException<UserExternalIdentity>();
+                ?? throw new EntityNotFoundException<UserExternalIdentity>("Linked sign-in account not found.");
             _integrity.RequireValid(_dbContext, identity, "oidc.unlink");
             await EnsureCanUnlinkAsync(userId, identityId, ct);
             _dbContext.UserExternalIdentities.Remove(identity);
@@ -228,7 +228,7 @@ namespace Cotton.Server.Services
             string slug = providerSlug.Trim().ToLowerInvariant();
             OidcProvider provider = await _dbContext.OidcProviders
                 .FirstOrDefaultAsync(x => x.Slug == slug, ct)
-                ?? throw new EntityNotFoundException<OidcProvider>();
+                ?? throw new EntityNotFoundException<OidcProvider>("Sign-in provider not found.");
             _integrity.RequireValid(_dbContext, provider, "oidc.provider");
 
             if (!provider.IsEnabled)
@@ -303,7 +303,7 @@ namespace Cotton.Server.Services
             CancellationToken ct)
         {
             User user = await _dbContext.Users.FindAsync([userId], ct)
-                ?? throw new EntityNotFoundException<User>();
+                ?? throw new EntityNotFoundException<User>("Current user not found.");
             _integrity.RequireValid(_dbContext, user, "oidc.link-user");
             string? previousEmail = user.Email;
 
@@ -402,7 +402,7 @@ namespace Cotton.Server.Services
             }
 
             User user = await _dbContext.Users.FindAsync([userId], ct)
-                ?? throw new EntityNotFoundException<User>();
+                ?? throw new EntityNotFoundException<User>("Current user not found.");
             _integrity.RequireValid(_dbContext, user, "oidc.unlink-user");
 
             bool canResetPassword = user.IsEmailVerified

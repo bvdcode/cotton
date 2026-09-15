@@ -115,7 +115,7 @@ namespace Cotton.Server.Services
             ServerSettingsSnapshot settings = _settingsProvider.GetServerSettings();
             if (!settings.AllowCrossUserDeduplication)
             {
-                throw new EntityNotFoundException(nameof(Chunk));
+                throw new EntityNotFoundException(nameof(Chunk), "Chunk is not available for reuse.");
             }
 
             string storageKey = Hasher.ToHexStringHash(chunkHash);
@@ -124,7 +124,7 @@ namespace Cotton.Server.Services
             Chunk? chunk = await _layouts.FindChunkAsync(chunkHash, ct);
             if (chunk is null || !await _storage.ExistsAsync(storageKey))
             {
-                throw new EntityNotFoundException(nameof(Chunk));
+                throw new EntityNotFoundException(nameof(Chunk), "Chunk is not available for reuse.");
             }
 
             return await ReuseLoadedDeduplicatedChunkAsync(chunk, storageKey, chunkHash, userId, ct);

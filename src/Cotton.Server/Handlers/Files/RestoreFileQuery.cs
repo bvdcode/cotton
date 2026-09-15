@@ -97,7 +97,7 @@ namespace Cotton.Server.Handlers.Files
                 .Where(x => x.Id == request.NodeFileId && x.OwnerId == request.UserId)
                 .Select(x => x.Node.LayoutId)
                 .SingleOrDefaultAsync(ct);
-            return layoutId == Guid.Empty ? throw new EntityNotFoundException<NodeFile>() : layoutId;
+            return layoutId == Guid.Empty ? throw new EntityNotFoundException<NodeFile>("File to restore not found.") : layoutId;
         }
 
         private async Task<NodeFile> LoadFileOrThrowAsync(RestoreFileQuery request, CancellationToken ct)
@@ -107,7 +107,7 @@ namespace Cotton.Server.Handlers.Files
                 .Include(x => x.FileManifest)
                 .Where(x => x.Id == request.NodeFileId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(ct)
-                ?? throw new EntityNotFoundException<NodeFile>();
+                ?? throw new EntityNotFoundException<NodeFile>("File to restore not found.");
         }
 
         private async Task<RestoreOutcomeDto?> ValidateTopLevelTrashFileAsync(

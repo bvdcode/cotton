@@ -77,7 +77,7 @@ namespace Cotton.Server.Handlers.Files
                 .Where(x => x.Id == request.NodeFileId && x.OwnerId == request.UserId)
                 .Select(x => (Guid?)x.Node.LayoutId)
                 .SingleOrDefaultAsync(cancellationToken)
-                ?? throw new EntityNotFoundException<NodeFile>();
+                ?? throw new EntityNotFoundException<NodeFile>("Source file not found.");
         }
 
         private async Task<NodeFile> GetMovableFileAsync(MoveFileCommand request, CancellationToken cancellationToken)
@@ -87,7 +87,7 @@ namespace Cotton.Server.Handlers.Files
                 .Include(x => x.FileManifest)
                 .Where(x => x.Id == request.NodeFileId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(cancellationToken)
-                ?? throw new EntityNotFoundException<NodeFile>();
+                ?? throw new EntityNotFoundException<NodeFile>("Source file not found.");
 
             return nodeFile;
         }
@@ -96,7 +96,7 @@ namespace Cotton.Server.Handlers.Files
         {
             if (nodeFile.Node.Type != NodeType.Default)
             {
-                throw new EntityNotFoundException<NodeFile>();
+                throw new EntityNotFoundException<NodeFile>("Source file is not in the active layout.");
             }
 
             if (!FileETags.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
@@ -161,7 +161,7 @@ namespace Cotton.Server.Handlers.Files
                     && x.OwnerId == request.UserId
                     && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync(cancellationToken)
-                ?? throw new EntityNotFoundException<Node>();
+                ?? throw new EntityNotFoundException<Node>("Destination folder not found in the active layout.");
         }
 
         private static void ValidateTargetParent(NodeFile nodeFile, Node targetParent)

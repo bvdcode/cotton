@@ -35,7 +35,7 @@ namespace Cotton.Server.Handlers.Users
 
             User user = await _dbContext.Users
                 .FirstOrDefaultAsync(candidate => candidate.Id == request.UserId, ct)
-                ?? throw new EntityNotFoundException<User>();
+                ?? throw new EntityNotFoundException<User>("Current user not found.");
             foreach ((string key, string value) in request.Patch)
             {
                 user.Preferences[key] = value;

@@ -124,7 +124,7 @@ namespace Cotton.Server.Handlers.Nodes
 
             return layoutId != Guid.Empty
                 ? layoutId
-                : throw new EntityNotFoundException<Node>();
+                : throw new EntityNotFoundException<Node>("Folder to restore not found.");
         }
 
         private async Task<Node> LoadNodeOrThrowAsync(RestoreNodeQuery request, CancellationToken ct)
@@ -132,7 +132,7 @@ namespace Cotton.Server.Handlers.Nodes
             return await _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(ct)
-                ?? throw new EntityNotFoundException<Node>();
+                ?? throw new EntityNotFoundException<Node>("Folder to restore not found.");
         }
 
         private async Task<TopLevelTrashWrapperOutcome> ResolveTopLevelTrashWrapperAsync(

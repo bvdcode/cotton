@@ -84,7 +84,7 @@ namespace Cotton.Server.Services
         public async Task<OidcProviderDto> UpdateAsync(Guid providerId, OidcProviderRequestDto request, CancellationToken ct)
         {
             OidcProvider provider = await _dbContext.OidcProviders.FindAsync([providerId], ct)
-                ?? throw new EntityNotFoundException<OidcProvider>();
+                ?? throw new EntityNotFoundException<OidcProvider>("Sign-in provider not found.");
             _integrity.RequireValid(_dbContext, provider, "oidc.admin-update");
 
             NormalizedProviderInput input = Normalize(request, requireSecret: false);
@@ -119,7 +119,7 @@ namespace Cotton.Server.Services
             await using IDbContextTransaction transaction = await _dbContext.Database
                 .BeginTransactionAsync(ct);
             OidcProvider provider = await _dbContext.OidcProviders.FindAsync([providerId], ct)
-                ?? throw new EntityNotFoundException<OidcProvider>();
+                ?? throw new EntityNotFoundException<OidcProvider>("Sign-in provider not found.");
             _integrity.RequireValid(_dbContext, provider, "oidc.admin-delete");
 
             await _dbContext.OidcLoginStates

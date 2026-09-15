@@ -47,7 +47,7 @@ namespace Cotton.Server.Handlers.Users
             }
 
             User user = await _dbContext.Users.FindAsync([request.UserId], cancellationToken)
-                ?? throw new EntityNotFoundException<User>();
+                ?? throw new EntityNotFoundException<User>("Current user not found.");
 
             if (!_hasher.Verify(request.OldPassword, user.PasswordPhc))
             {

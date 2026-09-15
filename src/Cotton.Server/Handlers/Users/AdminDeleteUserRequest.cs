@@ -39,7 +39,7 @@ namespace Cotton.Server.Handlers.Users
             User admin = await _dbContext.Users
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.Id == request.AdminUserId, cancellationToken)
-                    ?? throw new EntityNotFoundException<User>();
+                    ?? throw new EntityNotFoundException<User>("Administrator account not found.");
             if (admin.Role != UserRole.Admin)
             {
                 throw new AccessDeniedException<User>("Only administrators can delete user accounts");
@@ -50,7 +50,7 @@ namespace Cotton.Server.Handlers.Users
                 .AnyAsync(x => x.Id == request.UserId, cancellationToken);
             if (!userExists)
             {
-                throw new EntityNotFoundException<User>();
+                throw new EntityNotFoundException<User>("User to delete not found.");
             }
 
             List<Guid> layoutIds = await _dbContext.UserLayouts

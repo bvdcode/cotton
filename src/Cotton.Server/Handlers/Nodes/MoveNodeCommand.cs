@@ -112,7 +112,7 @@ namespace Cotton.Server.Handlers.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .Select(x => (Guid?)x.LayoutId)
                 .SingleOrDefaultAsync(ct)
-                ?? throw new EntityNotFoundException<Node>();
+                ?? throw new EntityNotFoundException<Node>("Source folder not found.");
         }
 
         private async Task<Node> LoadSourceNodeOrThrowAsync(MoveNodeCommand request, CancellationToken ct)
@@ -120,14 +120,14 @@ namespace Cotton.Server.Handlers.Nodes
             return await _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(ct)
-                ?? throw new EntityNotFoundException<Node>();
+                ?? throw new EntityNotFoundException<Node>("Source folder not found.");
         }
 
         private static void ValidateSourceNode(Node node)
         {
             if (node.Type != NodeType.Default)
             {
-                throw new EntityNotFoundException<Node>();
+                throw new EntityNotFoundException<Node>("Source folder is not in the active layout.");
             }
 
             if (node.ParentId is null)
@@ -141,7 +141,7 @@ namespace Cotton.Server.Handlers.Nodes
             return await _dbContext.Nodes
                 .Where(x => x.Id == request.ParentId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(ct)
-                ?? throw new EntityNotFoundException<Node>();
+                ?? throw new EntityNotFoundException<Node>("Destination folder not found.");
         }
 
         private async Task ValidateTargetParentAsync(

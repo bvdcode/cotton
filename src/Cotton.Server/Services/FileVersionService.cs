@@ -145,7 +145,7 @@ namespace Cotton.Server.Services
             Guid lineageId = GetLineageId(current);
             List<NodeFile> historicalVersions = await LoadHistoricalVersionsAsync(userId, lineageId, tracking: true, ct);
             NodeFile version = historicalVersions.SingleOrDefault(x => x.Id == versionId)
-                ?? throw new EntityNotFoundException<NodeFile>();
+                ?? throw new EntityNotFoundException<NodeFile>("File version not found.");
 
             long removedBytes = await DeleteHistoricalVersionAsync(userId, historicalVersions, version, ct);
             await tx.CommitAsync(ct);
@@ -297,7 +297,7 @@ namespace Cotton.Server.Services
             }
 
             return await query.SingleOrDefaultAsync(ct)
-                ?? throw new EntityNotFoundException<NodeFile>();
+                ?? throw new EntityNotFoundException<NodeFile>("Current file not found.");
         }
 
         private async Task<NodeFile> LoadAnyOwnedFileOrThrowAsync(
@@ -317,7 +317,7 @@ namespace Cotton.Server.Services
             }
 
             return await query.SingleOrDefaultAsync(ct)
-                ?? throw new EntityNotFoundException<NodeFile>();
+                ?? throw new EntityNotFoundException<NodeFile>("File not found.");
         }
 
         private async Task<NodeFile> LoadHistoricalVersionOrThrowAsync(
@@ -341,7 +341,7 @@ namespace Cotton.Server.Services
             }
 
             return await query.SingleOrDefaultAsync(ct)
-                ?? throw new EntityNotFoundException<NodeFile>();
+                ?? throw new EntityNotFoundException<NodeFile>("File version not found.");
         }
 
         private async Task<NodeFile> LoadHistoricalVersionByIdOrThrowAsync(
@@ -364,7 +364,7 @@ namespace Cotton.Server.Services
             }
 
             return await query.SingleOrDefaultAsync(ct)
-                ?? throw new EntityNotFoundException<NodeFile>();
+                ?? throw new EntityNotFoundException<NodeFile>("File version not found.");
         }
 
         private async Task<List<NodeFile>> LoadHistoricalVersionsAsync(

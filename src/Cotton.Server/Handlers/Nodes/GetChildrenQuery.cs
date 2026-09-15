@@ -49,7 +49,7 @@ namespace Cotton.Server.Handlers.Nodes
                     && x.LayoutId == layout.Id
                     && x.Type == request.NodeType)
                 .SingleOrDefaultAsync(cancellationToken: ct)
-                    ?? throw new EntityNotFoundException(nameof(Node));
+                    ?? throw new EntityNotFoundException(nameof(Node), "Folder not found in the requested layout.");
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.Page);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.PageSize);
             ArgumentOutOfRangeException.ThrowIfNegative(request.Depth);

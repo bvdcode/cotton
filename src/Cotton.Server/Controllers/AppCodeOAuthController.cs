@@ -124,7 +124,7 @@ public class AppCodeOAuthController(
             EnsurePending(state);
             Guid userId = User.GetUserId();
             User user = await _dbContext.Users.FindAsync([userId], cancellationToken)
-                ?? throw new EntityNotFoundException<User>();
+                ?? throw new EntityNotFoundException<User>("Current user not found.");
             _integrity.RequireValid(_dbContext, user, "oauth.app-code.approve-user");
 
             var (dbToken, refreshToken) = await _sessionIssuer
@@ -307,13 +307,13 @@ public class AppCodeOAuthController(
     {
         if (!_requestStore.TryGet(id, out AppCodeRequestState? state) || state is null)
         {
-            throw new EntityNotFoundException<AppCodeDetailsDto>();
+            throw new EntityNotFoundException<AppCodeDetailsDto>("App sign-in request not found.");
         }
 
         if (IsExpired(state))
         {
             _requestStore.Remove(state);
-            throw new EntityNotFoundException<AppCodeDetailsDto>();
+            throw new EntityNotFoundException<AppCodeDetailsDto>("App sign-in request has expired.");
         }
 
         return state;

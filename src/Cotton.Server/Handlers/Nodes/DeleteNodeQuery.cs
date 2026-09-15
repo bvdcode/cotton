@@ -42,7 +42,7 @@ namespace Cotton.Server.Handlers.Nodes
             Node node = await _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(cancellationToken: ct)
-                    ?? throw new EntityNotFoundException(nameof(Node));
+                    ?? throw new EntityNotFoundException(nameof(Node), "Folder not found.");
             if (node.ParentId is null)
             {
                 throw new InvalidOperationException("Cannot delete root node.");
@@ -71,11 +71,11 @@ namespace Cotton.Server.Handlers.Nodes
             node = await _dbContext.Nodes
                     .Where(x => x.Id == command.NodeId && x.OwnerId == command.UserId)
                     .SingleOrDefaultAsync(ct)
-                ?? throw new EntityNotFoundException(nameof(Node));
+                ?? throw new EntityNotFoundException(nameof(Node), "Folder not found.");
 
             if (node.ParentId is null || node.Type != NodeType.Default)
             {
-                throw new EntityNotFoundException(nameof(Node));
+                throw new EntityNotFoundException(nameof(Node), "Folder is not available to move to trash.");
             }
 
             string? originalParentPath = await _navigator.GetNodePathFromRootAsync(

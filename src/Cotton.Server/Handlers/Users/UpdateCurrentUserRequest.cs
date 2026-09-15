@@ -94,7 +94,7 @@ namespace Cotton.Server.Handlers.Users
         {
             return await _dbContext.Users
                 .FirstOrDefaultAsync(x => x.Id == userId, cancellationToken)
-                    ?? throw new EntityNotFoundException<User>();
+                    ?? throw new EntityNotFoundException<User>("Current user not found.");
         }
 
         private static string? NormalizeEmail(string? email)

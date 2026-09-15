@@ -7,6 +7,7 @@ using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
 using EasyExtensions.Quartz.Extensions;
@@ -77,7 +78,7 @@ namespace Cotton.Server.Controllers
             LatestDatabaseBackupDto? result = await _mediator.Send(new GetLatestDatabaseBackupInfoQuery(), cancellationToken);
             if (result is null)
             {
-                return NotFound();
+                return this.ApiNotFound("Database backup not found.");
             }
 
             return Ok(result);

@@ -56,10 +56,10 @@ namespace Cotton.Server.Handlers.Users
             }
 
             User foundAdmin = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == request.AdminUserId, cancellationToken)
-                ?? throw new EntityNotFoundException<User>();
+                ?? throw new EntityNotFoundException<User>("Administrator account not found.");
 
             User user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken)
-                ?? throw new EntityNotFoundException<User>();
+                ?? throw new EntityNotFoundException<User>("User to update not found.");
 
             if (user.Role != request.Role && foundAdmin.Role < user.Role)
             {

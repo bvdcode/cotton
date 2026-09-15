@@ -46,7 +46,7 @@ namespace Cotton.Server.Handlers.Files
                 .Include(x => x.FileManifest)
                 .FirstOrDefaultAsync(x => x.Id == request.NodeFileId
                     && x.OwnerId == request.UserId, cancellationToken: ct)
-                    ?? throw new EntityNotFoundException(nameof(FileManifest));
+                    ?? throw new EntityNotFoundException(nameof(FileManifest), "File not found.");
             EnsureETagPrecondition(request, nodeFile);
             Guid parentNodeId = nodeFile.NodeId;
 
@@ -108,11 +108,11 @@ namespace Cotton.Server.Handlers.Files
                     .Include(x => x.DownloadTokens)
                     .Where(x => x.Id == command.NodeFileId && x.OwnerId == command.UserId)
                     .SingleOrDefaultAsync(ct)
-                ?? throw new EntityNotFoundException(nameof(FileManifest));
+                ?? throw new EntityNotFoundException(nameof(FileManifest), "File not found.");
 
             if (nodeFile.Node.Type != NodeType.Default)
             {
-                throw new EntityNotFoundException(nameof(FileManifest));
+                throw new EntityNotFoundException(nameof(FileManifest), "File is not in the active layout.");
             }
 
             EnsureETagPrecondition(command, nodeFile);
