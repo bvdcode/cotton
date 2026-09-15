@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using System.Net;
+using System.Text.Json;
 using Cotton.Auth;
 using Cotton.Sdk.Auth;
 using Microsoft.Extensions.Logging;
@@ -15,7 +15,7 @@ namespace Cotton.Sdk.Internal
     {
         private readonly CottonTokenRefreshCoordinator _coordinator = CottonTokenRefreshCoordinator.Get(tokenStore);
 
-        public async Task<bool> TryRefreshAsync(
+        public async Task RefreshAfterUnauthorizedAsync(
             string? failedAccessToken,
             CancellationToken cancellationToken)
         {
@@ -25,15 +25,15 @@ namespace Cotton.Sdk.Internal
                 TokenPairDto? tokens = await tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
                 if (HasUsableAccessTokenChanged(failedAccessToken, tokens?.AccessToken))
                 {
-                    return true;
+                    return;
                 }
 
                 if (string.IsNullOrWhiteSpace(tokens?.RefreshToken))
                 {
-                    return false;
+                    throw new CottonTokenRefreshException(new InvalidOperationException("A refresh token is required."));
                 }
 
-                return await TryRefreshCoreAsync(tokens.RefreshToken, cancellationToken).ConfigureAwait(false);
+                await RefreshAndSaveAsync(tokens.RefreshToken, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -100,38 +100,28 @@ namespace Cotton.Sdk.Internal
             }
         }
 
-        private async Task<bool> TryRefreshCoreAsync(
-            string currentRefreshToken,
-            CancellationToken cancellationToken)
-        {
-            try
-            {
-                await RefreshAndSaveAsync(currentRefreshToken, cancellationToken).ConfigureAwait(false);
-                return true;
-            }
-            catch (CottonApiException exception) when (InvalidatesRefreshToken(exception.StatusCode))
-            {
-                logger.LogWarning(
-                    "Cotton API token refresh was rejected with status {StatusCode}; clearing the rejected token pair.",
-                    (int?)exception.StatusCode);
-                await tokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
-                _coordinator.ResetRotation();
-                return false;
-            }
-            catch (CottonApiException exception)
-            {
-                logger.LogWarning(
-                    "Cotton API token refresh failed with transient status {StatusCode}; preserving stored tokens.",
-                    (int?)exception.StatusCode);
-                return false;
-            }
-        }
-
         private async Task<TokenPairDto> RefreshAndSaveAsync(
             string currentRefreshToken,
             CancellationToken cancellationToken)
         {
-            TokenPairDto refreshed = await refreshToken(currentRefreshToken, cancellationToken).ConfigureAwait(false);
+            TokenPairDto refreshed;
+            try
+            {
+                refreshed = await refreshToken(currentRefreshToken, cancellationToken).ConfigureAwait(false);
+                if (string.IsNullOrWhiteSpace(refreshed.AccessToken)
+                    || string.IsNullOrWhiteSpace(refreshed.RefreshToken))
+                {
+                    throw new InvalidDataException("Token renewal returned an incomplete token pair.");
+                }
+            }
+            catch (Exception exception) when (
+                exception is HttpRequestException or JsonException or InvalidDataException
+                || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+            {
+                logger.LogWarning(exception, "Token renewal could not be completed; preserving stored tokens.");
+                throw new CottonTokenRefreshException(exception);
+            }
+
             await tokenStore.SaveAsync(refreshed, cancellationToken).ConfigureAwait(false);
             _coordinator.RecordRotation(currentRefreshToken, refreshed.RefreshToken);
             return refreshed;
@@ -141,13 +131,6 @@ namespace Cotton.Sdk.Internal
         {
             return !string.IsNullOrWhiteSpace(currentAccessToken)
                 && !string.Equals(currentAccessToken, failedAccessToken, StringComparison.Ordinal);
-        }
-
-        private static bool InvalidatesRefreshToken(HttpStatusCode? statusCode)
-        {
-            return statusCode is HttpStatusCode.Unauthorized
-                or HttpStatusCode.Forbidden
-                or HttpStatusCode.NotFound;
         }
     }
 }
