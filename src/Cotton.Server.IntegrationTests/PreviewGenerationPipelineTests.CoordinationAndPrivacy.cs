@@ -151,6 +151,5 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageHeight], Is.EqualTo("48"));
             });
         }
-
     }
 }

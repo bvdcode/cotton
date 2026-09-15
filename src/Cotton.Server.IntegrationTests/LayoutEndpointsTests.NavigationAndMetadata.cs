@@ -92,6 +92,5 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(persisted.Metadata["color"], Is.EqualTo("blue"));
             });
         }
-
     }
 }

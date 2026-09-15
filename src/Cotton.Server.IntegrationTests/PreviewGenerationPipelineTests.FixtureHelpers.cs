@@ -229,6 +229,5 @@ namespace Cotton.Server.IntegrationTests
             WriteAscii(ms, $"trailer\n<< /Size {offsets.Count} /Root 1 0 R >>\nstartxref\n{xrefOffset}\n%%EOF");
             return ms.ToArray();
         }
-
     }
 }

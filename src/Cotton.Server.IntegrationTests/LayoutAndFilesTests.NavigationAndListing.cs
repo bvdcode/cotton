@@ -121,6 +121,5 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(page.Files.All(file => file.ContentType == "text/plain"), Is.True);
             });
         }
-
     }
 }

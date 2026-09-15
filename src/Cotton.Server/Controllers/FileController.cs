@@ -24,7 +24,6 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         IStoragePipeline _storage) : ControllerBase
     {
-
         [Authorize]
         [HttpDelete(Routes.V1.Files + "/{nodeFileId:guid}")]
         public async Task<IActionResult> DeleteFile(

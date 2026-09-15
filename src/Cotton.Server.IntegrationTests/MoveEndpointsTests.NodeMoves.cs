@@ -180,6 +180,5 @@ namespace Cotton.Server.IntegrationTests
             HttpResponseMessage res = await MoveNodeAsync(folder.Id, Guid.NewGuid());
             Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
-
     }
 }

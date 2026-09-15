@@ -249,6 +249,5 @@ namespace Cotton.Server.IntegrationTests
             HttpResponseMessage response = await _client.GetAsync($"/api/v1/files/{file.Id}/content");
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
-
     }
 }

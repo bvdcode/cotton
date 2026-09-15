@@ -308,6 +308,5 @@ namespace Cotton.Server.IntegrationTests
                 resetQuotaResponse.EnsureSuccessStatusCode();
             }
         }
-
     }
 }

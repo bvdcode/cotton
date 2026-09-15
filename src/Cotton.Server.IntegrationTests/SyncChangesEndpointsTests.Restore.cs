@@ -137,6 +137,5 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(fileRestored.Name, Is.EqualTo("sync-restored-with-parent.txt"));
             });
         }
-
     }
 }

@@ -41,5 +41,4 @@ namespace Cotton.Benchmark.Regression
             };
         }
     }
-
 }

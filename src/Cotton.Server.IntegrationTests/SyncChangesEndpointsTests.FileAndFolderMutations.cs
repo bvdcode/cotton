@@ -202,6 +202,5 @@ namespace Cotton.Server.IntegrationTests
 
             Assert.That(response.Changes.Select(x => x.ItemId), Does.Not.Contain(file.Id));
         }
-
     }
 }

@@ -241,6 +241,5 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(html, Does.Contain("https://public.example/assets/images/social-preview.jpg"));
             Assert.That(html, Does.Contain("https://public.example/share/"));
         }
-
     }
 }

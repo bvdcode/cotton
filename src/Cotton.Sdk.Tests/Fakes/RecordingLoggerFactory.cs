@@ -22,5 +22,4 @@ namespace Cotton.Sdk.Tests.Fakes
         {
         }
     }
-
 }

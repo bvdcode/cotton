@@ -99,6 +99,5 @@ namespace Cotton.Server.IntegrationTests
                 .CountAsync();
             Assert.That(duplicates, Is.EqualTo(1));
         }
-
     }
 }

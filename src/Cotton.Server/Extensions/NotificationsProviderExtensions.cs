@@ -323,6 +323,5 @@ namespace Cotton.Server.Extensions
                 NotificationPriority.Medium,
                 NotificationTemplateMetadata.Create(NotificationTemplateKeys.WebDavTokenResetTitle, contentKey, metadata));
         }
-
     }
 }

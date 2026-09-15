@@ -250,6 +250,5 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(file, Is.Not.Null);
             Assert.That(file!.ContentType, Is.EqualTo("text/plain"));
         }
-
     }
 }

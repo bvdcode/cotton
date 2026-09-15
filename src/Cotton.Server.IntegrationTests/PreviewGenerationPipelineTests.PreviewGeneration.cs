@@ -162,6 +162,5 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(largeChunk.StoredSizeBytes, Is.GreaterThan(0));
             });
         }
-
     }
 }

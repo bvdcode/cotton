@@ -67,6 +67,5 @@ namespace Cotton.Server.IntegrationTests
 
             Assert.That(sharedAfterDelete.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         }
-
     }
 }

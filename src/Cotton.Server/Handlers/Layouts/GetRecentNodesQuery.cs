@@ -120,6 +120,5 @@ namespace Cotton.Server.Handlers.Layouts
 
             return $"^(?:{string.Join('|', alternatives)})(?:[[:space:]]*;.*)?$";
         }
-
     }
 }

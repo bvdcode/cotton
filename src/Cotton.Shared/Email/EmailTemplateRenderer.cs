@@ -131,6 +131,5 @@ namespace Cotton.Email
         {
             return template.ToString() + "." + languageCode;
         }
-
     }
 }

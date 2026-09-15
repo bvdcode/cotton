@@ -206,6 +206,5 @@ namespace Cotton.Server.IntegrationTests
         {
             return contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
         }
-
     }
 }
