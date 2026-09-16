@@ -63,6 +63,14 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        [HttpGet("database/extensions/vector")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> GetVectorExtensionStatus(CancellationToken cancellationToken)
+        {
+            VectorExtensionStatusDto status = await _mediator.Send(new GetVectorExtensionStatusQuery(), cancellationToken);
+            return Ok(status);
+        }
+
         [HttpPatch("database/extensions/vector")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> EnsureVectorExtension(CancellationToken cancellationToken)
