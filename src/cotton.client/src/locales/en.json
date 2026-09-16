@@ -2602,7 +2602,7 @@
       "loading": "Checking database…",
       "actions": {
         "refresh": "Refresh",
-        "enable": "Enable pgvector",
+        "enable": "Prepare database",
         "copy": "Copy",
         "copied": "Copied",
         "checkInstallation": "Check installation",
@@ -2610,7 +2610,7 @@
       },
       "errors": {
         "loadFailed": "Could not check the database.",
-        "enableFailed": "Could not enable pgvector.",
+        "enableFailed": "Could not prepare the database.",
         "copyFailed": "Could not copy the command."
       },
       "steps": {
@@ -2644,6 +2644,16 @@
         "permissionDenied": "Cotton does not have permission to enable pgvector.",
         "sqlInstruction": "Open the SQL console for database “{{database}}” as a PostgreSQL administrator and run:",
         "privileges": "Installing pgvector requires SUPERUSER. GRANT CREATE alone is not sufficient."
+      },
+      "index": {
+        "title": "Index",
+        "ready": "Ready",
+        "missing": "Not ready",
+        "building": "Building",
+        "permissionDenied": "Run the command in database “{{database}}” as the owner of file_embeddings. This role also needs CREATE on schema public.",
+        "incompatible": "The search index name is used by a different index. Check its definition in PostgreSQL.",
+        "invalidData": "Version 1 vectors must contain 1024 finite numbers. Correct the data and retry.",
+        "failed": "Could not build the index. Check the server log and retry."
       }
     },
     "title": "Admin",

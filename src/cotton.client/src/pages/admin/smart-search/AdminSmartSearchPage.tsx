@@ -2,7 +2,6 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   Alert,
   Button,
-  Chip,
   IconButton,
   Skeleton,
   Stack,
@@ -22,10 +21,11 @@ import { AdminPageSurface } from "../components/AdminPageSurface";
 import { PgvectorDockerSetup } from "./PgvectorDockerSetup";
 import { PgvectorNativeSetup } from "./PgvectorNativeSetup";
 import { PgvectorActivation } from "./PgvectorActivation";
+import { PgvectorIndexSetup } from "./PgvectorIndexSetup";
 import { getVectorSetupFailure } from "./smartSearchSetup";
 
 export const AdminSmartSearchPage = () => {
-  const { t, i18n } = useTranslation("admin");
+  const { t } = useTranslation("admin");
   const statusQuery = useVectorExtensionStatusQuery();
   const enableMutation = useEnableVectorExtensionMutation();
   const [environment, setEnvironment] = useState<"docker" | "native">("docker");
@@ -147,29 +147,18 @@ export const AdminSmartSearchPage = () => {
         {status && (
           <>
             {status.extensionEnabled ? (
-              <Stack
-                direction="row"
-                flexWrap="wrap"
-                alignItems="center"
-                gap={3}
-              >
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography>{t("smartSearch.extension")}</Typography>
-                  <Chip
-                    size="small"
-                    color="success"
-                    label={t("smartSearch.enabled")}
-                  />
-                </Stack>
-                <Stack direction="row" spacing={1}>
-                  <Typography>{t("smartSearch.vectorCount")}</Typography>
-                  <Typography fontWeight={600}>
-                    {new Intl.NumberFormat(i18n.language).format(
-                      status.vectorCount,
-                    )}
-                  </Typography>
-                </Stack>
-              </Stack>
+              <PgvectorIndexSetup
+                status={status}
+                pending={enableMutation.isPending}
+                disabled={statusQuery.isFetching || statusQuery.isError}
+                error={
+                  failure === null && enableMutation.isError
+                    ? (getApiErrorMessage(enableMutation.error) ??
+                      t("smartSearch.errors.enableFailed"))
+                    : null
+                }
+                onPrepare={() => enableMutation.mutate()}
+              />
             ) : needsInstallation ? (
               <Stack spacing={1.5}>
                 <Typography variant="body2">

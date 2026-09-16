@@ -11,6 +11,11 @@ const availableStatus: VectorExtensionStatusDto = {
   databaseName: "cotton_test",
   postgresMajorVersion: 18,
   vectorCount: 0,
+  indexReady: false,
+  indexBuilding: false,
+  indexSizeBytes: 0,
+  indexErrorCode: null,
+  indexCreateSql: "CREATE INDEX CONCURRENTLY search_index ON file_embeddings (id)",
 };
 
 const setupError = (code: string) =>
@@ -77,6 +82,8 @@ describe("AdminSmartSearchPage", () => {
     vi.mocked(adminApi.getVectorExtensionStatus).mockResolvedValue({
       ...availableStatus,
       extensionEnabled: true,
+      indexReady: true,
+      indexSizeBytes: 1_048_576,
       vectorCount: 2_000_000,
     });
 
@@ -92,7 +99,7 @@ describe("AdminSmartSearchPage", () => {
   it("enables the extension and reads its new status before removing the button", async () => {
     vi.mocked(adminApi.getVectorExtensionStatus)
       .mockResolvedValueOnce(availableStatus)
-      .mockResolvedValue({ ...availableStatus, extensionEnabled: true });
+      .mockResolvedValue({ ...availableStatus, extensionEnabled: true, indexReady: true });
     let completeActivation: (() => void) | undefined;
     vi.mocked(adminApi.enableVectorExtension).mockReturnValue(
       new Promise<void>((resolve) => {
@@ -134,7 +141,7 @@ describe("AdminSmartSearchPage", () => {
     expect(
       screen.getByRole("button", { name: "smartSearch.actions.enable" }),
     ).toBeEnabled();
-    expect(adminApi.getVectorExtensionStatus).toHaveBeenCalledTimes(1);
+    expect(adminApi.getVectorExtensionStatus).toHaveBeenCalledTimes(2);
   });
 
   it("lets the administrator retry when loading the status fails", async () => {
@@ -222,7 +229,7 @@ describe("AdminSmartSearchPage", () => {
       screen.getByRole("button", { name: "smartSearch.actions.checkAgain" }),
     );
     await waitFor(() =>
-      expect(adminApi.getVectorExtensionStatus).toHaveBeenCalledTimes(2),
+      expect(adminApi.getVectorExtensionStatus).toHaveBeenCalledTimes(3),
     );
     expect(
       screen.getByText("smartSearch.activation.permissionDenied"),

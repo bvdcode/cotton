@@ -108,6 +108,8 @@ export const useVectorExtensionStatusQuery = () =>
     queryKey: queryKeys.admin.vectorExtensionStatus(),
     queryFn: ({ signal }) => adminApi.getVectorExtensionStatus(signal),
     refetchOnMount: "always",
+    refetchInterval: (query) =>
+      query.state.data?.indexBuilding ? 5_000 : false,
   });
 
 export const useEnableVectorExtensionMutation = () => {
@@ -115,7 +117,7 @@ export const useEnableVectorExtensionMutation = () => {
 
   return useMutation({
     mutationFn: () => adminApi.enableVectorExtension(),
-    onSuccess: () =>
+    onSettled: () =>
       queryClient.invalidateQueries({
         queryKey: queryKeys.admin.vectorExtensionStatus(),
       }),

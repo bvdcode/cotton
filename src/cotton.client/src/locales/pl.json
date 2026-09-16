@@ -2849,7 +2849,7 @@
       "loading": "Sprawdzanie bazy…",
       "actions": {
         "refresh": "Odśwież",
-        "enable": "Włącz pgvector",
+        "enable": "Przygotuj bazę",
         "copy": "Kopiuj",
         "copied": "Skopiowano",
         "checkInstallation": "Sprawdź instalację",
@@ -2857,7 +2857,7 @@
       },
       "errors": {
         "loadFailed": "Nie udało się sprawdzić bazy danych.",
-        "enableFailed": "Nie udało się włączyć pgvector.",
+        "enableFailed": "Nie udało się przygotować bazy danych.",
         "copyFailed": "Nie udało się skopiować polecenia."
       },
       "steps": {
@@ -2891,6 +2891,16 @@
         "permissionDenied": "Cotton nie ma uprawnień do włączenia pgvector.",
         "sqlInstruction": "Otwórz konsolę SQL bazy „{{database}}” jako administrator PostgreSQL i wykonaj:",
         "privileges": "Instalacja pgvector wymaga SUPERUSER. Samo GRANT CREATE nie wystarczy."
+      },
+      "index": {
+        "title": "Indeks",
+        "ready": "Gotowy",
+        "missing": "Niegotowy",
+        "building": "Tworzenie",
+        "permissionDenied": "Wykonaj polecenie w bazie „{{database}}” jako właściciel tabeli file_embeddings. Ta rola wymaga też uprawnienia CREATE w schemacie public.",
+        "incompatible": "Nazwa indeksu wyszukiwania jest używana przez inny indeks. Sprawdź jego definicję w PostgreSQL.",
+        "invalidData": "Wektory wersji 1 muszą zawierać 1024 skończone liczby. Popraw dane i spróbuj ponownie.",
+        "failed": "Nie udało się utworzyć indeksu. Sprawdź dziennik serwera i spróbuj ponownie."
       }
     },
     "title": "Administrator",

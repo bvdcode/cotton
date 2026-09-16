@@ -54,6 +54,11 @@ export interface VectorExtensionStatusDto {
   postgresMajorVersion: number;
   databaseName: string;
   vectorCount: number;
+  indexReady: boolean;
+  indexBuilding: boolean;
+  indexSizeBytes: number;
+  indexErrorCode: string | null;
+  indexCreateSql: string;
 }
 
 export type GcTimelineBucketKind = "hour" | "day";

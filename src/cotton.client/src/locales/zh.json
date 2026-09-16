@@ -2814,7 +2814,7 @@
       "loading": "正在检查数据库…",
       "actions": {
         "refresh": "刷新",
-        "enable": "启用 pgvector",
+        "enable": "准备数据库",
         "copy": "复制",
         "copied": "已复制",
         "checkInstallation": "检查安装",
@@ -2822,7 +2822,7 @@
       },
       "errors": {
         "loadFailed": "无法检查数据库。",
-        "enableFailed": "无法启用 pgvector。",
+        "enableFailed": "无法准备数据库。",
         "copyFailed": "无法复制命令。"
       },
       "steps": {
@@ -2856,6 +2856,16 @@
         "permissionDenied": "Cotton 没有启用 pgvector 的权限。",
         "sqlInstruction": "以 PostgreSQL 管理员身份打开数据库“{{database}}”的 SQL 控制台并执行：",
         "privileges": "安装 pgvector 需要 SUPERUSER 权限。仅 GRANT CREATE 并不足够。"
+      },
+      "index": {
+        "title": "索引",
+        "ready": "就绪",
+        "missing": "未就绪",
+        "building": "正在创建",
+        "permissionDenied": "请以 file_embeddings 表所有者的身份在数据库“{{database}}”中执行命令。此角色还需要 public 模式的 CREATE 权限。",
+        "incompatible": "搜索索引名称已被其他索引占用。请在 PostgreSQL 中检查其定义。",
+        "invalidData": "版本 1 的向量必须包含 1024 个有限数值。请修正数据后重试。",
+        "failed": "无法创建索引。请检查服务器日志后重试。"
       }
     },
     "title": "管理",

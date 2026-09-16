@@ -2846,7 +2846,7 @@
       "loading": "Kontrola databáze…",
       "actions": {
         "refresh": "Obnovit",
-        "enable": "Zapnout pgvector",
+        "enable": "Připravit databázi",
         "copy": "Kopírovat",
         "copied": "Zkopírováno",
         "checkInstallation": "Ověřit instalaci",
@@ -2854,7 +2854,7 @@
       },
       "errors": {
         "loadFailed": "Databázi se nepodařilo zkontrolovat.",
-        "enableFailed": "pgvector se nepodařilo zapnout.",
+        "enableFailed": "Databázi se nepodařilo připravit.",
         "copyFailed": "Příkaz se nepodařilo zkopírovat."
       },
       "steps": {
@@ -2888,6 +2888,16 @@
         "permissionDenied": "Cotton nemá oprávnění zapnout pgvector.",
         "sqlInstruction": "Otevřete SQL konzoli databáze „{{database}}“ jako správce PostgreSQL a spusťte:",
         "privileges": "Instalace pgvector vyžaduje SUPERUSER. Samotné GRANT CREATE nestačí."
+      },
+      "index": {
+        "title": "Index",
+        "ready": "Připraven",
+        "missing": "Nepřipraven",
+        "building": "Vytváří se",
+        "permissionDenied": "Spusťte příkaz v databázi „{{database}}“ jako vlastník tabulky file_embeddings. Tato role potřebuje také oprávnění CREATE ve schématu public.",
+        "incompatible": "Název vyhledávacího indexu používá jiný index. Zkontrolujte jeho definici v PostgreSQL.",
+        "invalidData": "Vektory verze 1 musí obsahovat 1024 konečných čísel. Opravte data a zkuste to znovu.",
+        "failed": "Index se nepodařilo vytvořit. Zkontrolujte protokol serveru a zkuste to znovu."
       }
     },
     "title": "Správa",
