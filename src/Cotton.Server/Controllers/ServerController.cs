@@ -63,6 +63,14 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        [HttpPatch("database/extensions/vector")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> EnsureVectorExtension(CancellationToken cancellationToken)
+        {
+            await _mediator.Send(new EnsureVectorExtensionRequest(), cancellationToken);
+            return Ok();
+        }
+
         [HttpPatch("gc/trigger")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> TriggerGarbageCollector()
