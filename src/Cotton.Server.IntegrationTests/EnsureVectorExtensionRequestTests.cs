@@ -33,10 +33,10 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(context.ChangeTracker.Entries(), Is.Empty);
         }
 
-        [TestCase(PostgresErrorCodes.InsufficientPrivilege, "database administrator")]
-        [TestCase(PostgresErrorCodes.FeatureNotSupported, "Install a compatible pgvector package")]
-        [TestCase(PostgresErrorCodes.UndefinedFile, "Install a compatible pgvector package")]
-        public void Handle_ReportsConfigurationFailures(string sqlState, string expectedMessage)
+        [TestCase(PostgresErrorCodes.InsufficientPrivilege, "pgvector_permission_denied")]
+        [TestCase(PostgresErrorCodes.FeatureNotSupported, "pgvector_package_missing")]
+        [TestCase(PostgresErrorCodes.UndefinedFile, "pgvector_package_missing")]
+        public void Handle_ReportsConfigurationFailures(string sqlState, string expectedCode)
         {
             using CottonDbContext context = CreateContext();
             GetExecutor(context).Failure = new PostgresException("test failure", "ERROR", "ERROR", sqlState);
@@ -45,7 +45,8 @@ namespace Cotton.Server.IntegrationTests
                 CreateHandler(context).Handle(new EnsureVectorExtensionRequest(), CancellationToken.None));
 
             Assert.That(exception!.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
-            Assert.That(exception.Message, Does.Contain(expectedMessage));
+            Assert.That(exception.GetErrorModel().Extensions["code"], Is.EqualTo(expectedCode));
+            Assert.That(exception.ObjectName, Is.Empty);
         }
 
         [Test]

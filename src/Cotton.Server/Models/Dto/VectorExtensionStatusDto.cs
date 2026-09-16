@@ -7,6 +7,12 @@ namespace Cotton.Server.Models.Dto
     {
         public bool ExtensionEnabled { get; init; }
 
+        public bool ExtensionAvailable { get; init; }
+
+        public int PostgresMajorVersion { get; init; }
+
+        public string DatabaseName { get; init; } = string.Empty;
+
         public long VectorCount { get; init; }
     }
 }

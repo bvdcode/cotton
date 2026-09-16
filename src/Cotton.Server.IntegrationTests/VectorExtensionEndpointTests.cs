@@ -89,6 +89,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(emptyStatus, Is.Not.Null);
                 Assert.That(emptyStatus!.ExtensionEnabled, Is.False);
                 Assert.That(emptyStatus.VectorCount, Is.Zero);
+                Assert.That(emptyStatus.DatabaseName, Is.EqualTo(CurrentDatabaseName));
+                Assert.That(emptyStatus.PostgresMajorVersion, Is.GreaterThanOrEqualTo(13));
 
                 FileManifest manifest = new()
                 {
@@ -118,6 +120,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(populatedStatus, Is.Not.Null);
                 Assert.That(populatedStatus!.ExtensionEnabled, Is.False);
                 Assert.That(populatedStatus.VectorCount, Is.EqualTo(2));
+                Assert.That(populatedStatus.ExtensionAvailable, Is.EqualTo(emptyStatus.ExtensionAvailable));
             }
             finally
             {

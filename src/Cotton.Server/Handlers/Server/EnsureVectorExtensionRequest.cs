@@ -32,8 +32,9 @@ namespace Cotton.Server.Handlers.Server
                 logger.LogWarning(ex, "The database role cannot enable the vector extension.");
                 throw new WebApiException(
                     HttpStatusCode.Conflict,
-                    ExtensionName,
-                    "The database role cannot enable pgvector. Ask the database administrator to enable the vector extension.");
+                    string.Empty,
+                    "Run CREATE EXTENSION IF NOT EXISTS vector; in this database as a PostgreSQL administrator.",
+                    new Dictionary<string, object?> { ["code"] = "pgvector_permission_denied" });
             }
             catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.FeatureNotSupported
                 or PostgresErrorCodes.UndefinedFile)
@@ -41,8 +42,9 @@ namespace Cotton.Server.Handlers.Server
                 logger.LogWarning(ex, "The vector extension is not available on the PostgreSQL server.");
                 throw new WebApiException(
                     HttpStatusCode.Conflict,
-                    ExtensionName,
-                    "pgvector is not available on the PostgreSQL server. Install a compatible pgvector package and retry.");
+                    string.Empty,
+                    "Install the pgvector package for this PostgreSQL server version, then retry.",
+                    new Dictionary<string, object?> { ["code"] = "pgvector_package_missing" });
             }
 
             logger.LogInformation("The vector extension is enabled in the current database.");

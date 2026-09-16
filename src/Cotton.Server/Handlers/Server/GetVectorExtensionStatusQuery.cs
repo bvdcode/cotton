@@ -3,9 +3,11 @@
 
 using Cotton.Database;
 using Cotton.Server.Models.Dto;
+using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Cotton.Server.Handlers.Server
 {
@@ -20,18 +22,27 @@ namespace Cotton.Server.Handlers.Server
             GetVectorExtensionStatusQuery request,
             CancellationToken cancellationToken)
         {
-            const string extensionStatusSql = """
-                SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_extension WHERE extname = 'vector') AS "Value"
-                """;
-            bool extensionEnabled = await dbContext.Database.SqlQueryRaw<bool>(extensionStatusSql)
-                .SingleAsync(cancellationToken);
-            long vectorCount = await dbContext.FileEmbeddings.LongCountAsync(cancellationToken);
-
-            return new VectorExtensionStatusDto
+            await dbContext.Database.OpenConnectionAsync(cancellationToken);
+            try
             {
-                ExtensionEnabled = extensionEnabled,
-                VectorCount = vectorCount
-            };
+                NpgsqlConnection connection = (NpgsqlConnection)dbContext.Database.GetDbConnection();
+                bool extensionEnabled = await dbContext.Database.IsExtensionInstalledAsync("vector", cancellationToken);
+                bool extensionAvailable = await dbContext.Database.IsExtensionAvailableAsync("vector", cancellationToken);
+                long vectorCount = await dbContext.FileEmbeddings.LongCountAsync(cancellationToken);
+
+                return new VectorExtensionStatusDto
+                {
+                    ExtensionEnabled = extensionEnabled,
+                    ExtensionAvailable = extensionAvailable,
+                    PostgresMajorVersion = connection.PostgreSqlVersion.Major,
+                    DatabaseName = connection.Database,
+                    VectorCount = vectorCount
+                };
+            }
+            finally
+            {
+                await dbContext.Database.CloseConnectionAsync();
+            }
         }
     }
 }
