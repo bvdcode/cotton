@@ -7,6 +7,7 @@ export const ADMIN_NAV_WIDTH = {
 } as const;
 
 type AdminMenuItemId =
+  | "smartSearch"
   | "generalSettings"
   | "users"
   | "privacySettings"

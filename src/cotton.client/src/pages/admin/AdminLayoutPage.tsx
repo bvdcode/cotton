@@ -1,6 +1,7 @@
 import BackupIcon from "@mui/icons-material/Backup";
 import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
 import LoginIcon from "@mui/icons-material/Login";
+import ManageSearchIcon from "@mui/icons-material/ManageSearch";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import PersonIcon from "@mui/icons-material/Person";
 import PolicyIcon from "@mui/icons-material/Policy";
@@ -78,6 +79,12 @@ export const AdminLayoutPage = () => {
           to: "/admin/storage-statistics",
           title: t("menu.storageStatistics"),
           icon: QueryStatsIcon,
+        },
+        {
+          id: "smartSearch",
+          to: "/admin/smart-search",
+          title: t("menu.smartSearch"),
+          icon: ManageSearchIcon,
         },
       ],
     },

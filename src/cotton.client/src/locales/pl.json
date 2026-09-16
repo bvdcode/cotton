@@ -2840,8 +2840,28 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "title": "Inteligentne wyszukiwanie",
+      "description": "Przygotuj bazę danych do inteligentnego wyszukiwania.",
+      "extension": "Rozszerzenie pgvector",
+      "enabled": "Włączone",
+      "disabled": "Niewłączone",
+      "vectorCount": "Zapisane wektory",
+      "vectorCountDescription": "Wektory fragmentów plików zapisane w bazie danych.",
+      "setupNote": "Inteligentne wyszukiwanie wymaga również indeksowania plików. Indeks wyszukiwania przyspiesza zapytania.",
+      "loading": "Ładowanie statusu…",
+      "actions": {
+        "refresh": "Odśwież",
+        "enable": "Włącz pgvector"
+      },
+      "errors": {
+        "loadFailed": "Nie udało się wczytać statusu pgvector.",
+        "enableFailed": "Nie udało się włączyć pgvector."
+      }
+    },
     "title": "Administrator",
     "menu": {
+      "smartSearch": "Inteligentne wyszukiwanie",
       "navigate": "Sekcja",
       "expand": "Rozwiń nawigację",
       "collapse": "Zwiń nawigację",

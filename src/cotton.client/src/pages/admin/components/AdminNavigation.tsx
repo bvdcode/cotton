@@ -44,7 +44,7 @@ const AdminNavigationItem = ({ item, expanded }: AdminNavigationItemProps) => {
           color: "text.secondary",
         },
         "&[aria-current='page']": {
-          color: "primary.main",
+          color: "text.primary",
           bgcolor: "action.selected",
           "& .MuiListItemIcon-root": {
             color: "primary.main",

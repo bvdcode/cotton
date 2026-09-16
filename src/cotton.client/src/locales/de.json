@@ -2792,8 +2792,28 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "title": "Intelligente Suche",
+      "description": "Datenbank für die intelligente Suche vorbereiten.",
+      "extension": "pgvector-Erweiterung",
+      "enabled": "Aktiviert",
+      "disabled": "Nicht aktiviert",
+      "vectorCount": "Gespeicherte Vektoren",
+      "vectorCountDescription": "In der Datenbank gespeicherte Vektoren für Dateifragmente.",
+      "setupNote": "Für die intelligente Suche müssen auch die Dateien indexiert werden. Ein Suchindex beschleunigt die Abfragen.",
+      "loading": "Status wird geladen…",
+      "actions": {
+        "refresh": "Aktualisieren",
+        "enable": "pgvector aktivieren"
+      },
+      "errors": {
+        "loadFailed": "Der pgvector-Status konnte nicht geladen werden.",
+        "enableFailed": "pgvector konnte nicht aktiviert werden."
+      }
+    },
     "title": "Admin",
     "menu": {
+      "smartSearch": "Intelligente Suche",
       "navigate": "Abschnitt",
       "expand": "Navigation erweitern",
       "collapse": "Navigation einklappen",

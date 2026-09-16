@@ -2799,8 +2799,28 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "title": "Pesquisa inteligente",
+      "description": "Prepare a base de dados para a pesquisa inteligente.",
+      "extension": "Extensão pgvector",
+      "enabled": "Ativada",
+      "disabled": "Não ativada",
+      "vectorCount": "Vetores armazenados",
+      "vectorCountDescription": "Vetores de fragmentos de ficheiros armazenados na base de dados.",
+      "setupNote": "A pesquisa inteligente também requer a indexação dos ficheiros. Um índice de pesquisa acelera as consultas.",
+      "loading": "A carregar o estado…",
+      "actions": {
+        "refresh": "Atualizar",
+        "enable": "Ativar pgvector"
+      },
+      "errors": {
+        "loadFailed": "Não foi possível carregar o estado do pgvector.",
+        "enableFailed": "Não foi possível ativar o pgvector."
+      }
+    },
     "title": "Administração",
     "menu": {
+      "smartSearch": "Pesquisa inteligente",
       "navigate": "Seção",
       "expand": "Expandir navegação",
       "collapse": "Recolher navegação",

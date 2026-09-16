@@ -2797,8 +2797,28 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "title": "Slim zoeken",
+      "description": "Bereid de database voor op slim zoeken.",
+      "extension": "pgvector-extensie",
+      "enabled": "Ingeschakeld",
+      "disabled": "Niet ingeschakeld",
+      "vectorCount": "Opgeslagen vectoren",
+      "vectorCountDescription": "Vectoren voor bestandsfragmenten die in de database zijn opgeslagen.",
+      "setupNote": "Slim zoeken vereist ook bestandsindexering. Een zoekindex versnelt zoekopdrachten.",
+      "loading": "Status laden…",
+      "actions": {
+        "refresh": "Vernieuwen",
+        "enable": "pgvector inschakelen"
+      },
+      "errors": {
+        "loadFailed": "De pgvector-status kon niet worden geladen.",
+        "enableFailed": "pgvector kon niet worden ingeschakeld."
+      }
+    },
     "title": "Beheer",
     "menu": {
+      "smartSearch": "Slim zoeken",
       "navigate": "Sectie",
       "expand": "Navigatie uitklappen",
       "collapse": "Navigatie inklappen",

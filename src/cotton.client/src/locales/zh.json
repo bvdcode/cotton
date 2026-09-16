@@ -2805,8 +2805,28 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "title": "智能搜索",
+      "description": "为智能搜索准备数据库。",
+      "extension": "pgvector 扩展",
+      "enabled": "已启用",
+      "disabled": "未启用",
+      "vectorCount": "已保存的向量",
+      "vectorCountDescription": "数据库中保存的文件片段向量。",
+      "setupNote": "智能搜索还需要为文件建立索引。搜索索引可加快查询速度。",
+      "loading": "正在加载状态…",
+      "actions": {
+        "refresh": "刷新",
+        "enable": "启用 pgvector"
+      },
+      "errors": {
+        "loadFailed": "无法加载 pgvector 状态。",
+        "enableFailed": "无法启用 pgvector。"
+      }
+    },
     "title": "管理",
     "menu": {
+      "smartSearch": "智能搜索",
       "navigate": "板块",
       "expand": "展开导航",
       "collapse": "收起导航",

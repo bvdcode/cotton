@@ -2796,8 +2796,28 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "title": "Recherche intelligente",
+      "description": "Préparer la base de données pour la recherche intelligente.",
+      "extension": "Extension pgvector",
+      "enabled": "Activée",
+      "disabled": "Non activée",
+      "vectorCount": "Vecteurs enregistrés",
+      "vectorCountDescription": "Vecteurs de fragments de fichiers enregistrés dans la base de données.",
+      "setupNote": "La recherche intelligente nécessite aussi l’indexation des fichiers. Un index de recherche accélère les requêtes.",
+      "loading": "Chargement du statut…",
+      "actions": {
+        "refresh": "Actualiser",
+        "enable": "Activer pgvector"
+      },
+      "errors": {
+        "loadFailed": "Impossible de charger le statut de pgvector.",
+        "enableFailed": "Impossible d’activer pgvector."
+      }
+    },
     "title": "Administration",
     "menu": {
+      "smartSearch": "Recherche intelligente",
       "navigate": "Section",
       "expand": "Développer la navigation",
       "collapse": "Réduire la navigation",

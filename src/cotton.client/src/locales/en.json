@@ -2593,8 +2593,28 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "title": "Smart search",
+      "description": "Prepare the database for smart search.",
+      "extension": "pgvector extension",
+      "enabled": "Enabled",
+      "disabled": "Not enabled",
+      "vectorCount": "Stored vectors",
+      "vectorCountDescription": "Vectors for file fragments stored in the database.",
+      "setupNote": "Smart search also needs file indexing. A search index speeds up queries.",
+      "loading": "Loading status…",
+      "actions": {
+        "refresh": "Refresh",
+        "enable": "Enable pgvector"
+      },
+      "errors": {
+        "loadFailed": "Could not load the pgvector status.",
+        "enableFailed": "Could not enable pgvector."
+      }
+    },
     "title": "Admin",
     "menu": {
+      "smartSearch": "Smart search",
       "navigate": "Section",
       "expand": "Expand navigation",
       "collapse": "Collapse navigation",

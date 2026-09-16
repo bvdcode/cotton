@@ -2837,8 +2837,28 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "title": "Chytré vyhledávání",
+      "description": "Připravte databázi pro chytré vyhledávání.",
+      "extension": "Rozšíření pgvector",
+      "enabled": "Zapnuto",
+      "disabled": "Nezapnuto",
+      "vectorCount": "Uložené vektory",
+      "vectorCountDescription": "Vektory fragmentů souborů uložené v databázi.",
+      "setupNote": "Chytré vyhledávání vyžaduje také indexování souborů. Vyhledávací index zrychluje dotazy.",
+      "loading": "Načítání stavu…",
+      "actions": {
+        "refresh": "Obnovit",
+        "enable": "Zapnout pgvector"
+      },
+      "errors": {
+        "loadFailed": "Nepodařilo se načíst stav pgvector.",
+        "enableFailed": "Nepodařilo se zapnout pgvector."
+      }
+    },
     "title": "Správa",
     "menu": {
+      "smartSearch": "Chytré vyhledávání",
       "navigate": "Sekce",
       "expand": "Rozbalit navigaci",
       "collapse": "Sbalit navigaci",

@@ -13,6 +13,7 @@ import {
   type GcTimelineBucketKind,
   type LatestDatabaseBackupDto,
   type SecurityDiagnosticsDto,
+  type VectorExtensionStatusDto,
 } from "../adminApi";
 import { queryKeys } from "./queryKeys";
 
@@ -101,6 +102,25 @@ export const useSecurityDiagnosticsQuery = () =>
     queryKey: queryKeys.admin.securityDiagnostics(),
     queryFn: ({ signal }) => adminApi.getSecurityDiagnostics(signal),
   });
+
+export const useVectorExtensionStatusQuery = () =>
+  useQuery<VectorExtensionStatusDto>({
+    queryKey: queryKeys.admin.vectorExtensionStatus(),
+    queryFn: ({ signal }) => adminApi.getVectorExtensionStatus(signal),
+    refetchOnMount: "always",
+  });
+
+export const useEnableVectorExtensionMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => adminApi.enableVectorExtension(),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.vectorExtensionStatus(),
+      }),
+  });
+};
 
 export const useCreateAdminUserMutation = () => {
   const queryClient = useQueryClient();

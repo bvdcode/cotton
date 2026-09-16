@@ -53,6 +53,8 @@ export const queryKeys = {
     },
     latestDbBackup: () => [...adminRoot, "latestDbBackup"] as const,
     securityDiagnostics: () => [...adminRoot, "securityDiagnostics"] as const,
+    vectorExtensionStatus: () =>
+      [...adminRoot, "vectorExtensionStatus"] as const,
   },
   audio: {
     all: () => audioRoot,
