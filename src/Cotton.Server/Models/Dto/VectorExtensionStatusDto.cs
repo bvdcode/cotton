@@ -14,5 +14,15 @@ namespace Cotton.Server.Models.Dto
         public string DatabaseName { get; init; } = string.Empty;
 
         public long VectorCount { get; init; }
+
+        public bool IndexReady { get; init; }
+
+        public bool IndexBuilding { get; init; }
+
+        public long IndexSizeBytes { get; init; }
+
+        public string? IndexErrorCode { get; init; }
+
+        public string IndexCreateSql { get; init; } = string.Empty;
     }
 }

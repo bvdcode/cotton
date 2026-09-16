@@ -4,19 +4,47 @@
 using Cotton.Database;
 using Cotton.Server.Handlers.Server;
 using Cotton.Server.IntegrationTests.Helpers;
+using Cotton.Server.Jobs;
+using Cotton.Server.Services.Search;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using NUnit.Framework;
+using Quartz;
 using System.Net;
 
 namespace Cotton.Server.IntegrationTests
 {
     public class EnsureVectorExtensionRequestTests
     {
+        private ServiceProvider _services = null!;
+
+        [SetUp]
+        public void SetUp()
+        {
+            ServiceCollection services = new();
+            services.AddLogging();
+            services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+            services.AddQuartz(options =>
+            {
+                options.SchedulerName = $"VectorSetupTests-{Guid.NewGuid():N}";
+                options.AddJob<BuildVectorIndexJob>(job => job.WithIdentity(nameof(BuildVectorIndexJob)).StoreDurably());
+            });
+            services.AddSingleton<VectorIndexBuildState>();
+            _services = services.BuildServiceProvider();
+        }
+
+        [TearDown]
+        public async Task TearDown()
+        {
+            await _services.DisposeAsync();
+        }
+
         [Test]
         public async Task Handle_GeneratesOnlyIdempotentVectorExtensionCommand()
         {
@@ -88,10 +116,13 @@ namespace Cotton.Server.IntegrationTests
             return (RecordingMigrationCommandExecutor)context.GetService<IMigrationCommandExecutor>();
         }
 
-        private static EnsureVectorExtensionRequestHandler CreateHandler(CottonDbContext context)
+        private EnsureVectorExtensionRequestHandler CreateHandler(CottonDbContext context)
         {
             return new EnsureVectorExtensionRequestHandler(
-                context, NullLogger<EnsureVectorExtensionRequestHandler>.Instance);
+                context,
+                _services.GetRequiredService<ISchedulerFactory>(),
+                _services.GetRequiredService<VectorIndexBuildState>(),
+                NullLogger<EnsureVectorExtensionRequestHandler>.Instance);
         }
     }
 }

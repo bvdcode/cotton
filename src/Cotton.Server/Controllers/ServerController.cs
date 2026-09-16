@@ -76,7 +76,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> EnsureVectorExtension(CancellationToken cancellationToken)
         {
             await _mediator.Send(new EnsureVectorExtensionRequest(), cancellationToken);
-            return Ok();
+            return Accepted();
         }
 
         [HttpPatch("gc/trigger")]

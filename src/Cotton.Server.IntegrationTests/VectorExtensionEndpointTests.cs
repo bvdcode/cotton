@@ -8,6 +8,9 @@ using Cotton.Server.Handlers.Server;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Server.Models.Dto;
+using EasyExtensions.EntityFrameworkCore.Npgsql.Models;
+using Cotton.Server.Jobs;
+using Cotton.Server.Services.Search;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authentication;
@@ -18,7 +21,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
+using Quartz;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -35,7 +41,7 @@ namespace Cotton.Server.IntegrationTests
 
         [TestCase(null, HttpStatusCode.Unauthorized, 0)]
         [TestCase(nameof(UserRole.User), HttpStatusCode.Forbidden, 0)]
-        [TestCase(nameof(UserRole.Admin), HttpStatusCode.OK, 1)]
+        [TestCase(nameof(UserRole.Admin), HttpStatusCode.Accepted, 1)]
         public async Task Patch_RequiresAdministrator(string? role, HttpStatusCode expectedStatus, int expectedCommands)
         {
             DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
@@ -89,6 +95,9 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(emptyStatus, Is.Not.Null);
                 Assert.That(emptyStatus!.ExtensionEnabled, Is.False);
                 Assert.That(emptyStatus.VectorCount, Is.Zero);
+                Assert.That(emptyStatus.IndexReady, Is.False);
+                Assert.That(emptyStatus.IndexBuilding, Is.False);
+                Assert.That(emptyStatus.IndexSizeBytes, Is.Zero);
                 Assert.That(emptyStatus.DatabaseName, Is.EqualTo(CurrentDatabaseName));
                 Assert.That(emptyStatus.PostgresMajorVersion, Is.GreaterThanOrEqualTo(13));
 
@@ -137,9 +146,17 @@ namespace Cotton.Server.IntegrationTests
             });
             builder.WebHost.UseTestServer();
             builder.Services.AddSingleton(context);
+            builder.Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
             builder.Services.AddMediator();
+            builder.Services.AddSingleton<VectorIndexBuildState>();
+            builder.Services.AddQuartz(options =>
+            {
+                options.SchedulerName = $"VectorEndpointTests-{Guid.NewGuid():N}";
+                options.AddJob<BuildVectorIndexJob>(job => job.WithIdentity(nameof(BuildVectorIndexJob)).StoreDurably());
+            });
             builder.Services.AddTransient<IRequestHandler<EnsureVectorExtensionRequest>, EnsureVectorExtensionRequestHandler>();
             builder.Services.AddTransient<IRequestHandler<GetVectorExtensionStatusQuery, VectorExtensionStatusDto>, GetVectorExtensionStatusQueryHandler>();
+            builder.Services.AddTransient<IRequestHandler<GetVectorIndexMetadataQuery, PostgresIndexStatus>, GetVectorIndexMetadataQueryHandler>();
             builder.Services.AddAuthentication(VectorEndpointTestAuthenticationHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, VectorEndpointTestAuthenticationHandler>(
                     VectorEndpointTestAuthenticationHandler.SchemeName, _ => { });

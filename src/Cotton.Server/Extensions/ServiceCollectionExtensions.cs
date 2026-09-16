@@ -101,6 +101,7 @@ namespace Cotton.Server.Extensions
 
         public static IServiceCollection AddLayoutSearchProviders(this IServiceCollection services)
         {
+            services.AddSingleton<VectorIndexBuildState>();
             services.AddScoped<ILayoutSearchProvider, NameLayoutSearchProvider>();
             services.AddScoped<ILayoutSearchProvider, NoOpVectorLayoutSearchProvider>();
             return services;
