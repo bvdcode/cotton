@@ -2812,22 +2812,56 @@
   },
   "admin": {
     "smartSearch": {
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Розумний пошук",
-      "description": "Підготовка бази даних для розумного пошуку.",
-      "extension": "Розширення pgvector",
       "enabled": "Увімкнено",
-      "disabled": "Не ввімкнено",
-      "vectorCount": "Збережені вектори",
-      "vectorCountDescription": "Вектори фрагментів файлів, збережені в базі даних.",
-      "setupNote": "Для розумного пошуку також потрібна індексація файлів. Пошуковий індекс прискорює запити.",
-      "loading": "Завантаження статусу…",
+      "vectorCount": "Вектори",
+      "loading": "Перевірка бази…",
       "actions": {
         "refresh": "Оновити",
-        "enable": "Увімкнути pgvector"
+        "enable": "Увімкнути pgvector",
+        "copy": "Копіювати",
+        "copied": "Скопійовано",
+        "checkInstallation": "Перевірити встановлення",
+        "checkAgain": "Перевірити знову"
       },
       "errors": {
-        "loadFailed": "Не вдалося завантажити статус pgvector.",
-        "enableFailed": "Не вдалося ввімкнути pgvector."
+        "loadFailed": "Не вдалося перевірити базу даних.",
+        "enableFailed": "Не вдалося увімкнути pgvector.",
+        "copyFailed": "Не вдалося скопіювати команду."
+      },
+      "steps": {
+        "install": "Встановити pgvector",
+        "enable": "Увімкнути в базі"
+      },
+      "installation": {
+        "missing": "На сервері PostgreSQL не встановлено pgvector.",
+        "where": "Де працює PostgreSQL?",
+        "docker": "Docker",
+        "native": "На сервері",
+        "image": "Поточний образ PostgreSQL",
+        "replace": "Замініть рядок image у docker-compose.yml:",
+        "imageAbout": "Образ від розробників pgvector на основі офіційного образу PostgreSQL.",
+        "dockerApply": "Спочатку створіть резервну копію бази. Перестворіть контейнер, зберігши том даних і налаштування.",
+        "imageMismatch": "База працює на PostgreSQL {{version}}. Збережіть ту саму основну версію.",
+        "imageUnsupported": "Для Alpine та нестандартних образів потрібен окремий план перенесення; не замінюйте їх напряму.",
+        "imageUnknown": "Вкажіть офіційний образ postgres із числовою версією, наприклад {{image}}.",
+        "variant": "Варіант Debian у поточному образі",
+        "os": "Операційна система",
+        "macVersion": "Пакети Homebrew підтримують PostgreSQL 17 і 18.",
+        "windowsNote": "Відкрийте x64 Native Tools Command Prompt із Visual Studio від імені адміністратора.",
+        "docs": "Інструкція зі встановлення pgvector",
+        "repository": "Підключити репозиторій пакетів PostgreSQL",
+        "versionUnsupported": "Для PostgreSQL {{version}} немає перевіреної інструкції встановлення. Перегляньте документацію pgvector.",
+        "variantHint": "Варіант Debian вказано в тезі образу або на його сторінці Docker Hub.",
+        "windowsPath": "Папка встановлення PostgreSQL"
+      },
+      "activation": {
+        "manual": "Увімкнути вручну",
+        "permissionDenied": "Cotton не має прав на увімкнення pgvector.",
+        "sqlInstruction": "Відкрийте SQL-консоль бази «{{database}}» як адміністратор PostgreSQL і виконайте:",
+        "privileges": "Для встановлення pgvector потрібен SUPERUSER. Одного GRANT CREATE недостатньо."
       }
     },
     "title": "Адміністрування",

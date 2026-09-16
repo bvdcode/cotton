@@ -2798,22 +2798,56 @@
   },
   "admin": {
     "smartSearch": {
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Slim zoeken",
-      "description": "Bereid de database voor op slim zoeken.",
-      "extension": "pgvector-extensie",
       "enabled": "Ingeschakeld",
-      "disabled": "Niet ingeschakeld",
-      "vectorCount": "Opgeslagen vectoren",
-      "vectorCountDescription": "Vectoren voor bestandsfragmenten die in de database zijn opgeslagen.",
-      "setupNote": "Slim zoeken vereist ook bestandsindexering. Een zoekindex versnelt zoekopdrachten.",
-      "loading": "Status laden…",
+      "vectorCount": "Vectoren",
+      "loading": "Database controleren…",
       "actions": {
         "refresh": "Vernieuwen",
-        "enable": "pgvector inschakelen"
+        "enable": "pgvector inschakelen",
+        "copy": "Kopiëren",
+        "copied": "Gekopieerd",
+        "checkInstallation": "Installatie controleren",
+        "checkAgain": "Opnieuw controleren"
       },
       "errors": {
-        "loadFailed": "De pgvector-status kon niet worden geladen.",
-        "enableFailed": "pgvector kon niet worden ingeschakeld."
+        "loadFailed": "De database kon niet worden gecontroleerd.",
+        "enableFailed": "pgvector kon niet worden ingeschakeld.",
+        "copyFailed": "De opdracht kon niet worden gekopieerd."
+      },
+      "steps": {
+        "install": "pgvector installeren",
+        "enable": "In database inschakelen"
+      },
+      "installation": {
+        "missing": "pgvector is niet geïnstalleerd op de PostgreSQL-server.",
+        "where": "Waar draait PostgreSQL?",
+        "docker": "Docker",
+        "native": "Op een server",
+        "image": "Huidige PostgreSQL-image",
+        "replace": "Vervang de image-regel in docker-compose.yml:",
+        "imageAbout": "Uitgegeven door de ontwikkelaars van pgvector, gebaseerd op de officiële PostgreSQL-image.",
+        "dockerApply": "Maak eerst een databaseback-up. Maak de container opnieuw aan en behoud het gegevensvolume en de instellingen.",
+        "imageMismatch": "Deze database gebruikt PostgreSQL {{version}}. Behoud dezelfde hoofdversie.",
+        "imageUnsupported": "Alpine en aangepaste images vereisen een afzonderlijk migratieplan; vervang ze niet rechtstreeks.",
+        "imageUnknown": "Voer een officiële postgres-image met een numerieke versie in, bijvoorbeeld {{image}}.",
+        "variant": "Debian-variant van de huidige image",
+        "os": "Besturingssysteem",
+        "macVersion": "Homebrew-pakketten ondersteunen PostgreSQL 17 en 18.",
+        "windowsNote": "Open de x64 Native Tools Command Prompt van Visual Studio als administrator.",
+        "docs": "Installatiehandleiding voor pgvector",
+        "repository": "PostgreSQL-pakketbron instellen",
+        "versionUnsupported": "Er is geen gecontroleerde installatieprocedure voor PostgreSQL {{version}}. Raadpleeg de pgvector-handleiding.",
+        "variantHint": "Gebruik de Debian-variant uit de image-tag of van de Docker Hub-pagina.",
+        "windowsPath": "PostgreSQL-installatiemap"
+      },
+      "activation": {
+        "manual": "Handmatig inschakelen",
+        "permissionDenied": "Cotton heeft geen toestemming om pgvector in te schakelen.",
+        "sqlInstruction": "Open de SQL-console van database ‘{{database}}’ als PostgreSQL-beheerder en voer uit:",
+        "privileges": "Voor de installatie van pgvector is SUPERUSER nodig. Alleen GRANT CREATE is niet voldoende."
       }
     },
     "title": "Beheer",

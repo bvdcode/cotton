@@ -2800,22 +2800,56 @@
   },
   "admin": {
     "smartSearch": {
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Pesquisa inteligente",
-      "description": "Prepare a base de dados para a pesquisa inteligente.",
-      "extension": "Extensão pgvector",
-      "enabled": "Ativada",
-      "disabled": "Não ativada",
-      "vectorCount": "Vetores armazenados",
-      "vectorCountDescription": "Vetores de fragmentos de ficheiros armazenados na base de dados.",
-      "setupNote": "A pesquisa inteligente também requer a indexação dos ficheiros. Um índice de pesquisa acelera as consultas.",
-      "loading": "A carregar o estado…",
+      "enabled": "Ativado",
+      "vectorCount": "Vetores",
+      "loading": "Verificando o banco…",
       "actions": {
         "refresh": "Atualizar",
-        "enable": "Ativar pgvector"
+        "enable": "Ativar pgvector",
+        "copy": "Copiar",
+        "copied": "Copiado",
+        "checkInstallation": "Verificar instalação",
+        "checkAgain": "Verificar novamente"
       },
       "errors": {
-        "loadFailed": "Não foi possível carregar o estado do pgvector.",
-        "enableFailed": "Não foi possível ativar o pgvector."
+        "loadFailed": "Não foi possível verificar o banco de dados.",
+        "enableFailed": "Não foi possível ativar pgvector.",
+        "copyFailed": "Não foi possível copiar o comando."
+      },
+      "steps": {
+        "install": "Instalar pgvector",
+        "enable": "Ativar no banco"
+      },
+      "installation": {
+        "missing": "pgvector não está instalado no servidor PostgreSQL.",
+        "where": "Onde o PostgreSQL está em execução?",
+        "docker": "Docker",
+        "native": "Em um servidor",
+        "image": "Imagem atual do PostgreSQL",
+        "replace": "Substitua a linha image em docker-compose.yml:",
+        "imageAbout": "Publicada pelos desenvolvedores do pgvector, baseada na imagem oficial do PostgreSQL.",
+        "dockerApply": "Primeiro faça um backup do banco. Recrie o contêiner mantendo o volume de dados e as configurações.",
+        "imageMismatch": "Este banco usa PostgreSQL {{version}}. Mantenha a mesma versão principal.",
+        "imageUnsupported": "Alpine e imagens personalizadas precisam de um plano de migração específico; não as substitua diretamente.",
+        "imageUnknown": "Informe uma imagem oficial postgres com versão numérica, como {{image}}.",
+        "variant": "Variante Debian da imagem atual",
+        "os": "Sistema operacional",
+        "macVersion": "Os pacotes Homebrew suportam PostgreSQL 17 e 18.",
+        "windowsNote": "Abra o x64 Native Tools Command Prompt do Visual Studio como administrador.",
+        "docs": "Guia de instalação do pgvector",
+        "repository": "Configurar o repositório de pacotes PostgreSQL",
+        "versionUnsupported": "Não há uma receita de instalação verificada para PostgreSQL {{version}}. Consulte o guia do pgvector.",
+        "variantHint": "Use a variante Debian indicada na tag da imagem ou na página do Docker Hub.",
+        "windowsPath": "Pasta de instalação do PostgreSQL"
+      },
+      "activation": {
+        "manual": "Ativar manualmente",
+        "permissionDenied": "O Cotton não tem permissão para ativar pgvector.",
+        "sqlInstruction": "Abra o console SQL do banco “{{database}}” como administrador do PostgreSQL e execute:",
+        "privileges": "A instalação do pgvector exige SUPERUSER. Apenas GRANT CREATE não é suficiente."
       }
     },
     "title": "Administração",

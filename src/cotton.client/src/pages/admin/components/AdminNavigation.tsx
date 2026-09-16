@@ -177,6 +177,11 @@ export const MobileAdminNavigation = ({
       label={label}
       value={selectedTo}
       onChange={onChange}
+      renderValue={(value) =>
+        sections
+          .flatMap((section) => section.items)
+          .find((item) => item.to === value)?.title
+      }
     >
       {sections.flatMap((section) => [
         <ListSubheader key={`${section.id}-header`}>

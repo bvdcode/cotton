@@ -50,6 +50,9 @@ export interface LatestDatabaseBackupDto {
 
 export interface VectorExtensionStatusDto {
   extensionEnabled: boolean;
+  extensionAvailable: boolean;
+  postgresMajorVersion: number;
+  databaseName: string;
   vectorCount: number;
 }
 

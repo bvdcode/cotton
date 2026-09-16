@@ -2841,22 +2841,56 @@
   },
   "admin": {
     "smartSearch": {
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Inteligentne wyszukiwanie",
-      "description": "Przygotuj bazę danych do inteligentnego wyszukiwania.",
-      "extension": "Rozszerzenie pgvector",
       "enabled": "Włączone",
-      "disabled": "Niewłączone",
-      "vectorCount": "Zapisane wektory",
-      "vectorCountDescription": "Wektory fragmentów plików zapisane w bazie danych.",
-      "setupNote": "Inteligentne wyszukiwanie wymaga również indeksowania plików. Indeks wyszukiwania przyspiesza zapytania.",
-      "loading": "Ładowanie statusu…",
+      "vectorCount": "Wektory",
+      "loading": "Sprawdzanie bazy…",
       "actions": {
         "refresh": "Odśwież",
-        "enable": "Włącz pgvector"
+        "enable": "Włącz pgvector",
+        "copy": "Kopiuj",
+        "copied": "Skopiowano",
+        "checkInstallation": "Sprawdź instalację",
+        "checkAgain": "Sprawdź ponownie"
       },
       "errors": {
-        "loadFailed": "Nie udało się wczytać statusu pgvector.",
-        "enableFailed": "Nie udało się włączyć pgvector."
+        "loadFailed": "Nie udało się sprawdzić bazy danych.",
+        "enableFailed": "Nie udało się włączyć pgvector.",
+        "copyFailed": "Nie udało się skopiować polecenia."
+      },
+      "steps": {
+        "install": "Zainstaluj pgvector",
+        "enable": "Włącz w bazie"
+      },
+      "installation": {
+        "missing": "pgvector nie jest zainstalowany na serwerze PostgreSQL.",
+        "where": "Gdzie działa PostgreSQL?",
+        "docker": "Docker",
+        "native": "Na serwerze",
+        "image": "Obecny obraz PostgreSQL",
+        "replace": "Zastąp wiersz image w docker-compose.yml:",
+        "imageAbout": "Opublikowany przez twórców pgvector, oparty na oficjalnym obrazie PostgreSQL.",
+        "dockerApply": "Najpierw wykonaj kopię zapasową bazy. Odtwórz kontener, zachowując wolumin danych i ustawienia.",
+        "imageMismatch": "Ta baza używa PostgreSQL {{version}}. Zachowaj tę samą wersję główną.",
+        "imageUnsupported": "Alpine i obrazy niestandardowe wymagają osobnego planu migracji; nie zastępuj ich bezpośrednio.",
+        "imageUnknown": "Podaj oficjalny obraz postgres z wersją liczbową, np. {{image}}.",
+        "variant": "Wariant Debian obecnego obrazu",
+        "os": "System operacyjny",
+        "macVersion": "Pakiety Homebrew obsługują PostgreSQL 17 i 18.",
+        "windowsNote": "Otwórz x64 Native Tools Command Prompt z Visual Studio jako administrator.",
+        "docs": "Instrukcja instalacji pgvector",
+        "repository": "Skonfiguruj repozytorium pakietów PostgreSQL",
+        "versionUnsupported": "Brak sprawdzonej procedury instalacji dla PostgreSQL {{version}}. Sprawdź instrukcję pgvector.",
+        "variantHint": "Wariant Debian znajdziesz w tagu obrazu lub na jego stronie Docker Hub.",
+        "windowsPath": "Folder instalacji PostgreSQL"
+      },
+      "activation": {
+        "manual": "Włącz ręcznie",
+        "permissionDenied": "Cotton nie ma uprawnień do włączenia pgvector.",
+        "sqlInstruction": "Otwórz konsolę SQL bazy „{{database}}” jako administrator PostgreSQL i wykonaj:",
+        "privileges": "Instalacja pgvector wymaga SUPERUSER. Samo GRANT CREATE nie wystarczy."
       }
     },
     "title": "Administrator",

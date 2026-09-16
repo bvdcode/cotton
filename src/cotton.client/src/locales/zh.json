@@ -2806,22 +2806,56 @@
   },
   "admin": {
     "smartSearch": {
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
       "title": "智能搜索",
-      "description": "为智能搜索准备数据库。",
-      "extension": "pgvector 扩展",
       "enabled": "已启用",
-      "disabled": "未启用",
-      "vectorCount": "已保存的向量",
-      "vectorCountDescription": "数据库中保存的文件片段向量。",
-      "setupNote": "智能搜索还需要为文件建立索引。搜索索引可加快查询速度。",
-      "loading": "正在加载状态…",
+      "vectorCount": "向量",
+      "loading": "正在检查数据库…",
       "actions": {
         "refresh": "刷新",
-        "enable": "启用 pgvector"
+        "enable": "启用 pgvector",
+        "copy": "复制",
+        "copied": "已复制",
+        "checkInstallation": "检查安装",
+        "checkAgain": "重新检查"
       },
       "errors": {
-        "loadFailed": "无法加载 pgvector 状态。",
-        "enableFailed": "无法启用 pgvector。"
+        "loadFailed": "无法检查数据库。",
+        "enableFailed": "无法启用 pgvector。",
+        "copyFailed": "无法复制命令。"
+      },
+      "steps": {
+        "install": "安装 pgvector",
+        "enable": "在数据库中启用"
+      },
+      "installation": {
+        "missing": "PostgreSQL 服务器尚未安装 pgvector。",
+        "where": "PostgreSQL 运行在哪里？",
+        "docker": "Docker",
+        "native": "服务器本机",
+        "image": "当前 PostgreSQL 镜像",
+        "replace": "替换 docker-compose.yml 中的 image 行：",
+        "imageAbout": "由 pgvector 开发者发布，基于 PostgreSQL 官方镜像。",
+        "dockerApply": "先备份数据库。重新创建容器，并保留数据卷和配置。",
+        "imageMismatch": "此数据库运行 PostgreSQL {{version}}。请保持相同的主版本。",
+        "imageUnsupported": "Alpine 和自定义镜像需要单独的迁移方案，请勿直接替换。",
+        "imageUnknown": "请输入带数字版本的 postgres 官方镜像，例如 {{image}}。",
+        "variant": "当前镜像的 Debian 版本",
+        "os": "操作系统",
+        "macVersion": "Homebrew 软件包支持 PostgreSQL 17 和 18。",
+        "windowsNote": "以管理员身份打开 Visual Studio 的 x64 Native Tools Command Prompt。",
+        "docs": "pgvector 安装指南",
+        "repository": "配置 PostgreSQL 软件包仓库",
+        "versionUnsupported": "尚无 PostgreSQL {{version}} 的已验证安装方案。请查看 pgvector 指南。",
+        "variantHint": "请使用镜像标签或其 Docker Hub 页面注明的 Debian 版本。",
+        "windowsPath": "PostgreSQL 安装目录"
+      },
+      "activation": {
+        "manual": "手动启用",
+        "permissionDenied": "Cotton 没有启用 pgvector 的权限。",
+        "sqlInstruction": "以 PostgreSQL 管理员身份打开数据库“{{database}}”的 SQL 控制台并执行：",
+        "privileges": "安装 pgvector 需要 SUPERUSER 权限。仅 GRANT CREATE 并不足够。"
       }
     },
     "title": "管理",

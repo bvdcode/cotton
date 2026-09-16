@@ -2594,22 +2594,56 @@
   },
   "admin": {
     "smartSearch": {
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Smart search",
-      "description": "Prepare the database for smart search.",
-      "extension": "pgvector extension",
       "enabled": "Enabled",
-      "disabled": "Not enabled",
-      "vectorCount": "Stored vectors",
-      "vectorCountDescription": "Vectors for file fragments stored in the database.",
-      "setupNote": "Smart search also needs file indexing. A search index speeds up queries.",
-      "loading": "Loading status…",
+      "vectorCount": "Vectors",
+      "loading": "Checking database…",
       "actions": {
         "refresh": "Refresh",
-        "enable": "Enable pgvector"
+        "enable": "Enable pgvector",
+        "copy": "Copy",
+        "copied": "Copied",
+        "checkInstallation": "Check installation",
+        "checkAgain": "Check again"
       },
       "errors": {
-        "loadFailed": "Could not load the pgvector status.",
-        "enableFailed": "Could not enable pgvector."
+        "loadFailed": "Could not check the database.",
+        "enableFailed": "Could not enable pgvector.",
+        "copyFailed": "Could not copy the command."
+      },
+      "steps": {
+        "install": "Install pgvector",
+        "enable": "Enable in database"
+      },
+      "installation": {
+        "missing": "The PostgreSQL server does not have pgvector installed.",
+        "where": "Where is PostgreSQL running?",
+        "docker": "Docker",
+        "native": "On a server",
+        "image": "Current PostgreSQL image",
+        "replace": "Replace the image line in docker-compose.yml:",
+        "imageAbout": "Published by the pgvector developers, based on the official PostgreSQL image.",
+        "dockerApply": "Back up the database first. Recreate the container, keeping its data volume and settings.",
+        "imageMismatch": "This database runs PostgreSQL {{version}}. Keep the same major version.",
+        "imageUnsupported": "Alpine and custom images need a separate migration plan; do not replace them directly.",
+        "imageUnknown": "Enter an official postgres image with a numeric version, such as {{image}}.",
+        "variant": "Debian variant of the current image",
+        "os": "Operating system",
+        "macVersion": "Homebrew packages support PostgreSQL 17 and 18.",
+        "windowsNote": "Open the Visual Studio x64 Native Tools Command Prompt as administrator.",
+        "docs": "pgvector installation guide",
+        "repository": "Set up the PostgreSQL package repository",
+        "versionUnsupported": "No verified installation recipe is available for PostgreSQL {{version}}. Check the pgvector guide.",
+        "variantHint": "Use the Debian variant from your image tag or its Docker Hub page.",
+        "windowsPath": "PostgreSQL installation folder"
+      },
+      "activation": {
+        "manual": "Enable manually",
+        "permissionDenied": "Cotton does not have permission to enable pgvector.",
+        "sqlInstruction": "Open the SQL console for database “{{database}}” as a PostgreSQL administrator and run:",
+        "privileges": "Installing pgvector requires SUPERUSER. GRANT CREATE alone is not sufficient."
       }
     },
     "title": "Admin",

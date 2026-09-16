@@ -2838,22 +2838,56 @@
   },
   "admin": {
     "smartSearch": {
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Chytré vyhledávání",
-      "description": "Připravte databázi pro chytré vyhledávání.",
-      "extension": "Rozšíření pgvector",
       "enabled": "Zapnuto",
-      "disabled": "Nezapnuto",
-      "vectorCount": "Uložené vektory",
-      "vectorCountDescription": "Vektory fragmentů souborů uložené v databázi.",
-      "setupNote": "Chytré vyhledávání vyžaduje také indexování souborů. Vyhledávací index zrychluje dotazy.",
-      "loading": "Načítání stavu…",
+      "vectorCount": "Vektory",
+      "loading": "Kontrola databáze…",
       "actions": {
         "refresh": "Obnovit",
-        "enable": "Zapnout pgvector"
+        "enable": "Zapnout pgvector",
+        "copy": "Kopírovat",
+        "copied": "Zkopírováno",
+        "checkInstallation": "Ověřit instalaci",
+        "checkAgain": "Ověřit znovu"
       },
       "errors": {
-        "loadFailed": "Nepodařilo se načíst stav pgvector.",
-        "enableFailed": "Nepodařilo se zapnout pgvector."
+        "loadFailed": "Databázi se nepodařilo zkontrolovat.",
+        "enableFailed": "pgvector se nepodařilo zapnout.",
+        "copyFailed": "Příkaz se nepodařilo zkopírovat."
+      },
+      "steps": {
+        "install": "Nainstalovat pgvector",
+        "enable": "Zapnout v databázi"
+      },
+      "installation": {
+        "missing": "Na serveru PostgreSQL není nainstalován pgvector.",
+        "where": "Kde běží PostgreSQL?",
+        "docker": "Docker",
+        "native": "Na serveru",
+        "image": "Aktuální obraz PostgreSQL",
+        "replace": "Nahraďte řádek image v docker-compose.yml:",
+        "imageAbout": "Vydáno vývojáři pgvector, založeno na oficiálním obrazu PostgreSQL.",
+        "dockerApply": "Nejprve zálohujte databázi. Znovu vytvořte kontejner a zachovejte datový svazek i nastavení.",
+        "imageMismatch": "Tato databáze používá PostgreSQL {{version}}. Zachovejte stejnou hlavní verzi.",
+        "imageUnsupported": "Alpine a vlastní obrazy vyžadují samostatný plán migrace; nenahrazujte je přímo.",
+        "imageUnknown": "Zadejte oficiální obraz postgres s číselnou verzí, například {{image}}.",
+        "variant": "Varianta Debian v aktuálním obrazu",
+        "os": "Operační systém",
+        "macVersion": "Balíčky Homebrew podporují PostgreSQL 17 a 18.",
+        "windowsNote": "Otevřete x64 Native Tools Command Prompt z Visual Studia jako správce.",
+        "docs": "Návod k instalaci pgvector",
+        "repository": "Nastavit repozitář balíčků PostgreSQL",
+        "versionUnsupported": "Pro PostgreSQL {{version}} není k dispozici ověřený postup. Podívejte se do návodu pgvector.",
+        "variantHint": "Použijte variantu Debian uvedenou v tagu obrazu nebo na jeho stránce Docker Hub.",
+        "windowsPath": "Instalační složka PostgreSQL"
+      },
+      "activation": {
+        "manual": "Zapnout ručně",
+        "permissionDenied": "Cotton nemá oprávnění zapnout pgvector.",
+        "sqlInstruction": "Otevřete SQL konzoli databáze „{{database}}“ jako správce PostgreSQL a spusťte:",
+        "privileges": "Instalace pgvector vyžaduje SUPERUSER. Samotné GRANT CREATE nestačí."
       }
     },
     "title": "Správa",
