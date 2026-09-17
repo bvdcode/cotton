@@ -2864,6 +2864,23 @@
           "title": "Open setup wizard",
           "description": "Walk through the first-run setup wizard again.",
           "button": "Open"
+        },
+        "remoteRunner": {
+          "validateAndSave": "Validate and save",
+          "connected": "Connected · {{model}} · {{dimensions}} dimensions · {{tokens}} tokens",
+          "errors": {
+            "NotConfigured": "Runner URL is not configured.",
+            "UnsupportedMode": "Text embeddings are not available in this computation mode yet.",
+            "InvalidUrl": "Enter an HTTP or HTTPS base URL without credentials, a query, or a fragment.",
+            "Unreachable": "Cannot connect to the runner. Check its address and availability.",
+            "Timeout": "The runner did not respond in time. Try again.",
+            "InvalidResponse": "The runner returned an invalid response.",
+            "NotEmbeddingModel": "This server does not provide text embeddings.",
+            "IncompatibleModel": "The model is incompatible with the current BGE-M3 search index.",
+            "InvalidDimensions": "The runner must return vectors with exactly 1024 dimensions.",
+            "InvalidVectors": "The runner returned invalid embedding vectors.",
+            "InvalidInput": "Provide non-empty text fragments."
+          }
         }
       },
       "privacy": {

@@ -20,6 +20,10 @@ import { useAuth } from "../../features/auth/useAuth";
 import { UserRole } from "../../features/auth/types";
 import { showApiErrorToast } from "../../shared/api/httpClient";
 import { settingsApi } from "../../shared/api/settingsApi";
+import {
+  getComputationError,
+  type ComputationError,
+} from "../../shared/api/computation";
 import { setupStepDefinitions } from "./setupQuestions.tsx";
 import { isJsonObject, type JsonValue } from "../../shared/types/json";
 import { useSetupStatusStore } from "../../shared/store/setupStatusStore";
@@ -178,6 +182,7 @@ export function SetupWizardPage() {
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [runnerError, setRunnerError] = useState<ComputationError | null>(null);
   const prefetchedStepKeysRef = useRef<Set<string>>(new Set());
 
   const [answers, setAnswers] = useState<Record<string, JsonValue>>({});
@@ -191,6 +196,9 @@ export function SetupWizardPage() {
 
   const updateFormField = useCallback(
     (stepKey: string, fieldKey: string, value: string | boolean) => {
+      if (stepKey === "remoteComputationRunnerUrl") {
+        setRunnerError(null);
+      }
       setAnswers((prev) => ({
         ...prev,
         [stepKey]: {
@@ -207,6 +215,12 @@ export function SetupWizardPage() {
   const currentStep = steps[stepIndex];
   const currentStepKey = currentStep?.key;
   const isLastStep = stepIndex === steps.length - 1;
+  const nextLabel =
+    currentStepKey === "remoteComputationRunnerUrl"
+      ? t("admin:settings.general.remoteRunner.validateAndSave")
+      : isLastStep
+        ? t("actions.finish")
+        : t("actions.next");
   const canProceed = currentStep?.isValid?.() ?? false;
 
   useEffect(() => {
@@ -258,6 +272,7 @@ export function SetupWizardPage() {
     }
 
     setLoading(true);
+    setRunnerError(null);
     try {
       const convertedAnswers = convertAnswersToValues(answers);
       await settingsApi.saveSetupStep(currentStep.key, convertedAnswers);
@@ -270,6 +285,13 @@ export function SetupWizardPage() {
 
       setStepIndex((i) => Math.min(i + 1, steps.length - 1));
     } catch (err) {
+      if (currentStep.key === "remoteComputationRunnerUrl") {
+        const failure = getComputationError(err instanceof Error ? err : null);
+        if (failure !== null) {
+          setRunnerError(failure);
+          return;
+        }
+      }
       console.error(`Failed to save setup step "${currentStep.key}":`, err);
       showApiErrorToast(
         err,
@@ -282,6 +304,7 @@ export function SetupWizardPage() {
   };
 
   const handleBack = () => {
+    setRunnerError(null);
     if (!started || stepIndex === 0) {
       setStarted(false);
       setStepIndex(0);
@@ -435,11 +458,17 @@ export function SetupWizardPage() {
             </Fade>
           </Box>
 
+          {currentStepKey === "remoteComputationRunnerUrl" && runnerError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {t(`admin:settings.general.remoteRunner.errors.${runnerError}`)}
+            </Alert>
+          )}
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
             {started ? (
               <>
                 <Button
                   variant="outlined"
+                  color="inherit"
                   size="large"
                   fullWidth
                   onClick={handleBack}
@@ -476,11 +505,11 @@ export function SetupWizardPage() {
                         }}
                       />
                       <Box component="span" sx={{ visibility: "hidden" }}>
-                        {isLastStep ? t("actions.finish") : t("actions.next")}
+                        {nextLabel}
                       </Box>
                     </>
                   ) : (
-                    <>{isLastStep ? t("actions.finish") : t("actions.next")}</>
+                    <>{nextLabel}</>
                   )}
                 </Button>
               </>

@@ -1,4 +1,5 @@
 import { getValidated, httpClient, parseValidated } from "./httpClient";
+import { computationStatusSchema, type ComputationStatus } from "./computation";
 import { isJsonObject, type JsonValue } from "../types/json";
 import {
   allowCrossUserDeduplicationSchema,
@@ -519,10 +520,20 @@ export const settingsApi = {
       remoteComputationRunnerUrlSchema,
     ),
 
-  setRemoteComputationRunnerUrl: async (url: string): Promise<void> => {
-    await httpClient.patch(
+  getComputationStatus: (): Promise<ComputationStatus> =>
+    getValidated("server/settings/computation-status", computationStatusSchema),
+
+  setRemoteComputationRunnerUrl: async (
+    url: string,
+  ): Promise<ComputationStatus> => {
+    const response = await httpClient.patch(
       "server/settings/remote-computation-runner-url",
-      url,
+      url.trim(),
+    );
+    return parseValidated(
+      "server/settings/remote-computation-runner-url",
+      response.data,
+      computationStatusSchema,
     );
   },
 
@@ -698,7 +709,6 @@ export const settingsApi = {
         await settingsApi.setRemoteComputationRunnerUrl(
           getFormString(remoteRunner, "url").trim(),
         );
-        await settingsApi.setComputionMode("Remote");
         return;
       }
 

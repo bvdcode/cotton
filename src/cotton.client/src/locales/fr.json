@@ -3067,6 +3067,23 @@
           "title": "Ouvrir l'assistant de configuration",
           "description": "Repassez par l'assistant de configuration de première utilisation.",
           "button": "Ouvrir"
+        },
+        "remoteRunner": {
+          "validateAndSave": "Vérifier et enregistrer",
+          "connected": "Connecté · {{model}} · {{dimensions}} dimensions · {{tokens}} tokens",
+          "errors": {
+            "NotConfigured": "L’URL du moteur distant n’est pas configurée.",
+            "UnsupportedMode": "Les embeddings de texte ne sont pas encore disponibles dans ce mode.",
+            "InvalidUrl": "Saisissez une URL de base HTTP ou HTTPS sans identifiants, paramètres ni fragment.",
+            "Unreachable": "Impossible de joindre le moteur distant. Vérifiez son adresse et sa disponibilité.",
+            "Timeout": "Le moteur distant n’a pas répondu à temps. Réessayez.",
+            "InvalidResponse": "Le moteur distant a renvoyé une réponse incorrecte.",
+            "NotEmbeddingModel": "Ce serveur ne fournit pas d’embeddings de texte.",
+            "IncompatibleModel": "Le modèle est incompatible avec l’index de recherche BGE-M3 actuel.",
+            "InvalidDimensions": "Le moteur distant doit renvoyer des vecteurs de 1024 dimensions exactement.",
+            "InvalidVectors": "Le moteur distant a renvoyé des vecteurs d’embeddings incorrects.",
+            "InvalidInput": "Fournissez des fragments de texte non vides."
+          }
         }
       },
       "privacy": {

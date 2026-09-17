@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readyComputationStatus } from "../../test/computationStatus";
 
 vi.mock("@shared/ui/notifications", () => ({
   toast: { error: vi.fn() },
@@ -451,7 +452,7 @@ describe("settingsApi setters", () => {
 
   it("patches object configs and calls test endpoints", async () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
-      data: undefined,
+      data: readyComputationStatus,
     });
     const geoIpTestResult = {
       inputLabel: "Google DNS IP",
@@ -665,7 +666,7 @@ describe("settingsApi.saveSetupStep", () => {
 
   it("saves config steps, enables their modes, and runs validation calls", async () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
-      data: undefined,
+      data: readyComputationStatus,
     });
     const post = vi
       .spyOn(httpClient, "post")
@@ -750,10 +751,7 @@ describe("settingsApi.saveSetupStep", () => {
       "server/settings/remote-computation-runner-url",
       "https://runner.example",
     );
-    expect(patch).toHaveBeenNthCalledWith(
-      8,
-      "server/settings/compution-mode/Remote",
-    );
+    expect(patch).toHaveBeenCalledTimes(7);
   });
 
   it("ignores unknown steps and empty timezone answers", async () => {
@@ -770,11 +768,10 @@ describe("settingsApi.saveSetupStep", () => {
 
 describe("settingsApi.saveSetupAnswers", () => {
   it("continues after a failed step and warns once", async () => {
-    const patch = vi
-      .spyOn(httpClient, "patch")
+    const saveStep = vi
+      .spyOn(settingsApi, "saveSetupStep")
       .mockRejectedValueOnce(new Error("failed"))
-      .mockRejectedValueOnce(new Error("failed"))
-      .mockResolvedValue({ data: undefined });
+      .mockResolvedValue(undefined);
     const warn = vi.spyOn(console, "warn");
 
     await settingsApi.saveSetupAnswers({
@@ -786,6 +783,9 @@ describe("settingsApi.saveSetupAnswers", () => {
       'Failed to save setup step "trustedMode"',
       expect.any(Error),
     );
-    expect(patch).toHaveBeenCalledWith("server/settings/telemetry", true);
+    expect(saveStep).toHaveBeenCalledWith("telemetry", {
+      trustedMode: "family",
+      telemetry: true,
+    });
   });
 });

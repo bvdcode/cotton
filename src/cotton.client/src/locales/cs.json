@@ -3108,6 +3108,23 @@
           "title": "Otevřít průvodce nastavením",
           "description": "Projděte si znovu úvodního průvodce nastavením.",
           "button": "Otevřít"
+        },
+        "remoteRunner": {
+          "validateAndSave": "Ověřit a uložit",
+          "connected": "Připojeno · {{model}} · {{dimensions}} rozměrů · {{tokens}} tokenů",
+          "errors": {
+            "NotConfigured": "Adresa runneru není nastavena.",
+            "UnsupportedMode": "Textové embeddingy zatím nejsou v tomto režimu dostupné.",
+            "InvalidUrl": "Zadejte základní adresu HTTP nebo HTTPS bez přihlašovacích údajů, parametrů a fragmentu.",
+            "Unreachable": "Nelze se připojit k runneru. Zkontrolujte adresu a dostupnost.",
+            "Timeout": "Runner neodpověděl včas. Zkuste to znovu.",
+            "InvalidResponse": "Runner vrátil neplatnou odpověď.",
+            "NotEmbeddingModel": "Tento server nepodporuje textové embeddingy.",
+            "IncompatibleModel": "Model není kompatibilní s aktuálním indexem vyhledávání BGE-M3.",
+            "InvalidDimensions": "Runner musí vracet vektory s přesně 1024 rozměry.",
+            "InvalidVectors": "Runner vrátil neplatné vektory embeddingů.",
+            "InvalidInput": "Zadejte neprázdné textové úseky."
+          }
         }
       },
       "privacy": {

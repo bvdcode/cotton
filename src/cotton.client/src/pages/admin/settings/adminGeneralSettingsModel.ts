@@ -214,7 +214,13 @@ export const validateRemoteComputationRunnerUrl = (
 
   try {
     const url = new URL(trimmed);
-    if (!isHttpUrl(url)) {
+    if (
+      !isHttpUrl(url) ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    ) {
       return {
         error: invalidMessage,
         normalized: null,

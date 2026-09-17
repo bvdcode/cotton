@@ -1,133 +1,149 @@
-import { MenuItem, Stack, TextField } from "@mui/material";
-import { useMemo } from "react";
+import {
+  Alert,
+  Button,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   settingsApi,
   type ComputionMode,
 } from "../../../shared/api/settingsApi";
+import {
+  getComputationError,
+  type ComputationStatus,
+} from "../../../shared/api/computation";
 import { SettingsSection } from "./SettingsSection";
 import {
   computionOptions,
   validateRemoteComputationRunnerUrl,
 } from "./adminGeneralSettingsModel";
-import { useAutoSavedSetting } from "./useAutoSavedSetting";
 
 type ComputationSettings = {
   mode: ComputionMode;
-  remoteRunnerUrl: string;
+  url: string;
+  service: ComputationStatus | null;
 };
 
-const loadComputationSettings = async (): Promise<ComputationSettings> => {
-  const [mode, remoteRunnerUrl] = await Promise.all([
+const queryKey = ["admin", "computation-settings"] as const;
+
+const loadSettings = async (): Promise<ComputationSettings> => {
+  const [mode, url] = await Promise.all([
     settingsApi.getComputionMode(),
     settingsApi.getRemoteComputationRunnerUrl(),
   ]);
-  return { mode, remoteRunnerUrl: remoteRunnerUrl.trim() };
+  const service =
+    mode === "Remote" ? await settingsApi.getComputationStatus() : null;
+  return { mode, url: url.trim(), service };
 };
 
-const saveComputationSettings = async (
-  settings: ComputationSettings,
-): Promise<void> => {
-  if (settings.mode === "Remote") {
-    await settingsApi.setRemoteComputationRunnerUrl(settings.remoteRunnerUrl);
+const saveSettings = async (value: {
+  mode: ComputionMode;
+  url: string;
+}): Promise<ComputationSettings> => {
+  switch (value.mode) {
+    case "Remote":
+      return {
+        ...value,
+        service: await settingsApi.setRemoteComputationRunnerUrl(value.url),
+      };
+    case "Local":
+    case "Cloud":
+      await settingsApi.setComputionMode(value.mode);
+      return { ...value, service: null };
   }
-  await settingsApi.setComputionMode(settings.mode);
 };
-
-const isSameComputationSettings = (
-  left: ComputationSettings,
-  right: ComputationSettings,
-): boolean =>
-  left.mode === right.mode && left.remoteRunnerUrl === right.remoteRunnerUrl;
 
 const isComputionMode = (value: string): value is ComputionMode =>
   computionOptions.some((option) => option === value);
 
 export const ComputationModeSetting = () => {
   const { t } = useTranslation("admin");
-  const requiredMessage = t("settings.general.validation.required");
-  const invalidUrlMessage = t(
-    "settings.general.validation.remoteComputationRunnerUrlInvalid",
-  );
-  const { value, savedValue, setValue, commitValue, status, loadFailed } =
-    useAutoSavedSetting<ComputationSettings>({
-      initial: { mode: "Local", remoteRunnerUrl: "" },
-      load: loadComputationSettings,
-      save: saveComputationSettings,
-      toastIdPrefix: "admin-general:computation",
-      loadErrorMessage: t("settings.errors.loadFailed"),
-      saveErrorMessage: t("settings.errors.saveFailed"),
-      isEqual: isSameComputationSettings,
-    });
-
-  const urlValidation = useMemo(
-    () =>
-      validateRemoteComputationRunnerUrl(
-        value.remoteRunnerUrl,
-        value.mode === "Remote",
-        requiredMessage,
-        invalidUrlMessage,
-      ),
-    [invalidUrlMessage, requiredMessage, value.mode, value.remoteRunnerUrl],
-  );
-  const disabled = loadFailed || status === "loading" || status === "saving";
-
-  const handleModeChange = (mode: ComputionMode) => {
-    const next = {
-      ...value,
-      mode,
-      remoteRunnerUrl:
-        mode === "Remote" ? value.remoteRunnerUrl : savedValue.remoteRunnerUrl,
-    };
-    if (mode === "Remote") {
-      const remoteValidation = validateRemoteComputationRunnerUrl(
-        value.remoteRunnerUrl,
-        true,
-        requiredMessage,
-        invalidUrlMessage,
-      );
-      if (remoteValidation.normalized === null) {
-        setValue(next);
-        return;
+  const queryClient = useQueryClient();
+  const settings = useQuery({
+    queryKey,
+    queryFn: loadSettings,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const [draftMode, setDraftMode] = useState<ComputionMode | null>(null);
+  const [draftUrl, setDraftUrl] = useState<string | null>(null);
+  const mode = draftMode ?? settings.data?.mode ?? "Local";
+  const url = draftUrl ?? settings.data?.url ?? "";
+  const save = useMutation({
+    mutationFn: saveSettings,
+    onError: (_error, value) => {
+      if (value.mode !== "Remote") {
+        setDraftMode(null);
+        setDraftUrl(null);
       }
-    }
-    commitValue(next);
-  };
-
-  const commitUrl = () => {
-    if (urlValidation.normalized === null) {
-      return;
-    }
-    commitValue({ ...value, remoteRunnerUrl: urlValidation.normalized });
-  };
-
-  const handleUrlKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      commitUrl();
-    }
-  };
+    },
+    onSuccess: (value) => {
+      queryClient.setQueryData(queryKey, value);
+      setDraftMode(null);
+      setDraftUrl(null);
+    },
+  });
+  const validation = validateRemoteComputationRunnerUrl(
+    url,
+    mode === "Remote",
+    t("settings.general.validation.required"),
+    t("settings.general.validation.remoteComputationRunnerUrlInvalid"),
+  );
+  const busy = settings.isPending || save.isPending;
+  const disabled = busy || settings.isError;
+  const failure = getComputationError(save.error);
+  const savedService =
+    mode === settings.data?.mode && validation.normalized === settings.data?.url
+      ? settings.data?.service
+      : null;
+  const serviceError = savedService?.error;
 
   return (
     <SettingsSection
       title={t("settings.general.fields.computionMode")}
-      status={status}
+      status={
+        settings.isPending ? "loading" : save.isPending ? "saving" : "idle"
+      }
     >
-      <Stack spacing={2}>
+      <Stack
+        spacing={1.5}
+        component="form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (
+            !disabled &&
+            mode === "Remote" &&
+            validation.normalized !== null
+          ) {
+            save.mutate({ mode, url: validation.normalized });
+          }
+        }}
+      >
         <TextField
           select
-          value={value.mode}
-          onChange={(event) => {
-            if (isComputionMode(event.target.value)) {
-              handleModeChange(event.target.value);
-            }
-          }}
+          value={mode}
           disabled={disabled}
           fullWidth
           SelectProps={{
             inputProps: {
               "aria-label": t("settings.general.fields.computionMode"),
             },
+          }}
+          onChange={(event) => {
+            const next = event.target.value;
+            if (!isComputionMode(next)) {
+              return;
+            }
+            save.reset();
+            setDraftMode(next);
+            if (next !== "Remote") {
+              save.mutate({ mode: next, url: settings.data?.url ?? "" });
+            }
           }}
         >
           {computionOptions.map((option) => (
@@ -136,20 +152,69 @@ export const ComputationModeSetting = () => {
             </MenuItem>
           ))}
         </TextField>
-        {value.mode === "Remote" && (
-          <TextField
-            label={t("settings.general.fields.remoteComputationRunnerUrl")}
-            value={value.remoteRunnerUrl}
-            onChange={(event) =>
-              setValue({ ...value, remoteRunnerUrl: event.target.value })
-            }
-            onBlur={commitUrl}
-            onKeyDown={handleUrlKeyDown}
-            disabled={disabled}
-            error={Boolean(urlValidation.error)}
-            helperText={urlValidation.error ?? " "}
-            fullWidth
-          />
+        {mode === "Remote" && (
+          <>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              alignItems="flex-start"
+              gap={1.5}
+            >
+              <TextField
+                label={t("settings.general.fields.remoteComputationRunnerUrl")}
+                slotProps={{
+                  inputLabel: {
+                    sx: {
+                      "&.Mui-focused:not(.Mui-error)": {
+                        color: "text.primary",
+                      },
+                    },
+                  },
+                }}
+                value={url}
+                disabled={disabled}
+                fullWidth
+                onChange={(event) => {
+                  setDraftUrl(event.target.value);
+                  save.reset();
+                }}
+                error={Boolean(validation.error)}
+                helperText={validation.error}
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                loading={save.isPending}
+                disabled={disabled || validation.normalized === null}
+                sx={{ flexShrink: 0, minHeight: 56 }}
+              >
+                {t("settings.general.remoteRunner.validateAndSave")}
+              </Button>
+            </Stack>
+            {!save.isError && savedService?.isReady && savedService.info && (
+              <Typography variant="body2" color="text.secondary" role="status">
+                {t("settings.general.remoteRunner.connected", {
+                  model: savedService.info.modelId,
+                  dimensions: savedService.dimensions,
+                  tokens: savedService.info.maxInputTokens,
+                })}
+              </Typography>
+            )}
+          </>
+        )}
+        {settings.isError && (
+          <Alert severity="error">{t("settings.errors.loadFailed")}</Alert>
+        )}
+        {save.isError && (
+          <Alert severity="error">
+            {failure
+              ? t(`settings.general.remoteRunner.errors.${failure}`)
+              : t("settings.errors.saveFailed")}
+          </Alert>
+        )}
+        {!save.isError && serviceError && (
+          <Alert severity="warning">
+            {t(`settings.general.remoteRunner.errors.${serviceError}`)}
+          </Alert>
         )}
       </Stack>
     </SettingsSection>

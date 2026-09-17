@@ -3351,6 +3351,23 @@
           "title": "Abrir asistente de configuración",
           "description": "Recorre de nuevo el asistente de primera ejecución.",
           "button": "Abrir"
+        },
+        "remoteRunner": {
+          "validateAndSave": "Validar y guardar",
+          "connected": "Conectado · {{model}} · {{dimensions}} dimensiones · {{tokens}} tokens",
+          "errors": {
+            "NotConfigured": "La URL del ejecutor no está configurada.",
+            "UnsupportedMode": "Los embeddings de texto aún no están disponibles en este modo.",
+            "InvalidUrl": "Introduce una URL base HTTP o HTTPS sin credenciales, parámetros ni fragmento.",
+            "Unreachable": "No se puede conectar con el ejecutor. Comprueba su dirección y disponibilidad.",
+            "Timeout": "El ejecutor no respondió a tiempo. Inténtalo de nuevo.",
+            "InvalidResponse": "El ejecutor devolvió una respuesta no válida.",
+            "NotEmbeddingModel": "Este servidor no ofrece embeddings de texto.",
+            "IncompatibleModel": "El modelo no es compatible con el índice de búsqueda BGE-M3 actual.",
+            "InvalidDimensions": "El ejecutor debe devolver vectores de exactamente 1024 dimensiones.",
+            "InvalidVectors": "El ejecutor devolvió vectores de embeddings no válidos.",
+            "InvalidInput": "Introduce fragmentos de texto que no estén vacíos."
+          }
         }
       },
       "actions": {

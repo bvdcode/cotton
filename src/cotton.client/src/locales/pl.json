@@ -3111,6 +3111,23 @@
           "title": "Otwórz kreator konfiguracji",
           "description": "Przejdź ponownie kreator konfiguracji pierwszego uruchomienia.",
           "button": "Otwórz"
+        },
+        "remoteRunner": {
+          "validateAndSave": "Sprawdź i zapisz",
+          "connected": "Połączono · {{model}} · {{dimensions}} wymiary · {{tokens}} tokenów",
+          "errors": {
+            "NotConfigured": "Adres runnera nie jest skonfigurowany.",
+            "UnsupportedMode": "Embeddingi tekstu nie są jeszcze dostępne w tym trybie.",
+            "InvalidUrl": "Podaj bazowy adres HTTP lub HTTPS bez danych logowania, parametrów i fragmentu.",
+            "Unreachable": "Nie można połączyć się z runnerem. Sprawdź adres i dostępność.",
+            "Timeout": "Runner nie odpowiedział na czas. Spróbuj ponownie.",
+            "InvalidResponse": "Runner zwrócił nieprawidłową odpowiedź.",
+            "NotEmbeddingModel": "Ten serwer nie obsługuje embeddingów tekstu.",
+            "IncompatibleModel": "Model jest niezgodny z bieżącym indeksem wyszukiwania BGE-M3.",
+            "InvalidDimensions": "Runner musi zwracać wektory o dokładnie 1024 wymiarach.",
+            "InvalidVectors": "Runner zwrócił nieprawidłowe wektory embeddingów.",
+            "InvalidInput": "Podaj niepuste fragmenty tekstu."
+          }
         }
       },
       "privacy": {

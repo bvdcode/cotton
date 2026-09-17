@@ -3069,6 +3069,23 @@
           "title": "Apri procedura guidata di configurazione",
           "description": "Riavvii la procedura guidata di configurazione iniziale.",
           "button": "Apri"
+        },
+        "remoteRunner": {
+          "validateAndSave": "Verifica e salva",
+          "connected": "Connesso · {{model}} · {{dimensions}} dimensioni · {{tokens}} token",
+          "errors": {
+            "NotConfigured": "L’URL del runner non è configurato.",
+            "UnsupportedMode": "Gli embedding di testo non sono ancora disponibili in questa modalità.",
+            "InvalidUrl": "Inserisci un URL di base HTTP o HTTPS senza credenziali, parametri o frammenti.",
+            "Unreachable": "Impossibile connettersi al runner. Verifica indirizzo e disponibilità.",
+            "Timeout": "Il runner non ha risposto in tempo. Riprova.",
+            "InvalidResponse": "Il runner ha restituito una risposta non valida.",
+            "NotEmbeddingModel": "Questo server non supporta gli embedding di testo.",
+            "IncompatibleModel": "Il modello non è compatibile con l’attuale indice di ricerca BGE-M3.",
+            "InvalidDimensions": "Il runner deve restituire vettori con esattamente 1024 dimensioni.",
+            "InvalidVectors": "Il runner ha restituito vettori di embedding non validi.",
+            "InvalidInput": "Fornisci frammenti di testo non vuoti."
+          }
         }
       },
       "privacy": {

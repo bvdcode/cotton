@@ -3076,6 +3076,23 @@
           "title": "打开安装向导",
           "description": "重新运行首次启动的安装向导。",
           "button": "打开"
+        },
+        "remoteRunner": {
+          "validateAndSave": "验证并保存",
+          "connected": "已连接 · {{model}} · {{dimensions}} 维 · {{tokens}} 个词元",
+          "errors": {
+            "NotConfigured": "尚未配置运行器地址。",
+            "UnsupportedMode": "此计算模式暂不支持文本嵌入。",
+            "InvalidUrl": "请输入不含凭据、查询参数或片段的 HTTP 或 HTTPS 基础地址。",
+            "Unreachable": "无法连接运行器。请检查地址和服务可用性。",
+            "Timeout": "运行器响应超时，请重试。",
+            "InvalidResponse": "运行器返回了无效响应。",
+            "NotEmbeddingModel": "此服务器不支持文本嵌入。",
+            "IncompatibleModel": "此模型与当前 BGE-M3 搜索索引不兼容。",
+            "InvalidDimensions": "运行器必须返回恰好 1024 维的向量。",
+            "InvalidVectors": "运行器返回了无效的嵌入向量。",
+            "InvalidInput": "请提供非空文本片段。"
+          }
         }
       },
       "privacy": {

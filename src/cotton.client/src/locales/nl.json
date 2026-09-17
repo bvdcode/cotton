@@ -3068,6 +3068,23 @@
           "title": "Installatiewizard openen",
           "description": "Doorloop de installatiewizard voor de eerste keer opnieuw.",
           "button": "Openen"
+        },
+        "remoteRunner": {
+          "validateAndSave": "Controleren en opslaan",
+          "connected": "Verbonden · {{model}} · {{dimensions}} dimensies · {{tokens}} tokens",
+          "errors": {
+            "NotConfigured": "De runner-URL is niet ingesteld.",
+            "UnsupportedMode": "Tekstembeddings zijn nog niet beschikbaar in deze rekenmodus.",
+            "InvalidUrl": "Voer een HTTP- of HTTPS-basis-URL in zonder inloggegevens, query of fragment.",
+            "Unreachable": "Kan geen verbinding maken met de runner. Controleer het adres en de beschikbaarheid.",
+            "Timeout": "De runner reageerde niet op tijd. Probeer het opnieuw.",
+            "InvalidResponse": "De runner gaf een ongeldig antwoord.",
+            "NotEmbeddingModel": "Deze server ondersteunt geen tekstembeddings.",
+            "IncompatibleModel": "Het model is niet compatibel met de huidige BGE-M3-zoekindex.",
+            "InvalidDimensions": "De runner moet vectoren met precies 1024 dimensies teruggeven.",
+            "InvalidVectors": "De runner gaf ongeldige embeddingvectoren terug.",
+            "InvalidInput": "Geef niet-lege tekstfragmenten op."
+          }
         }
       },
       "privacy": {

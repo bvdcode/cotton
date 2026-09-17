@@ -3063,6 +3063,23 @@
           "title": "Einrichtungsassistent öffnen",
           "description": "Den Erst-Einrichtungsassistenten erneut durchgehen.",
           "button": "Öffnen"
+        },
+        "remoteRunner": {
+          "validateAndSave": "Prüfen und speichern",
+          "connected": "Verbunden · {{model}} · {{dimensions}} Dimensionen · {{tokens}} Token",
+          "errors": {
+            "NotConfigured": "Die Runner-URL ist nicht konfiguriert.",
+            "UnsupportedMode": "Text-Embeddings sind in diesem Berechnungsmodus noch nicht verfügbar.",
+            "InvalidUrl": "Geben Sie eine HTTP- oder HTTPS-Basis-URL ohne Zugangsdaten, Abfrage oder Fragment ein.",
+            "Unreachable": "Der Runner ist nicht erreichbar. Prüfen Sie Adresse und Verfügbarkeit.",
+            "Timeout": "Der Runner hat nicht rechtzeitig geantwortet. Versuchen Sie es erneut.",
+            "InvalidResponse": "Der Runner hat eine ungültige Antwort geliefert.",
+            "NotEmbeddingModel": "Dieser Server unterstützt keine Text-Embeddings.",
+            "IncompatibleModel": "Das Modell ist mit dem aktuellen BGE-M3-Suchindex nicht kompatibel.",
+            "InvalidDimensions": "Der Runner muss Vektoren mit genau 1024 Dimensionen liefern.",
+            "InvalidVectors": "Der Runner hat ungültige Embedding-Vektoren geliefert.",
+            "InvalidInput": "Geben Sie nicht leere Textabschnitte an."
+          }
         }
       },
       "privacy": {
