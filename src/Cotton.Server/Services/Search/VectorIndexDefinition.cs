@@ -14,6 +14,8 @@ namespace Cotton.Server.Services.Search
         public const string VersionColumn = "index_version";
         public const int Version = 1;
         public const int Dimensions = 1024;
+        public const string ModelId = "BAAI/bge-m3";
+        public const string Pooling = "cls";
 
         public static string ManualCreateSql => FormattableString.Invariant($"""
             CREATE INDEX CONCURRENTLY IF NOT EXISTS {Name}

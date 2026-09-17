@@ -4,6 +4,8 @@
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Handlers.Settings;
+using Cotton.Server.Handlers.Computation;
+using Cotton.Server.Models.Computation;
 using Cotton.Server.Helpers;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -243,8 +245,16 @@ namespace Cotton.Server.Controllers
             CancellationToken cancellationToken)
         {
             SetRemoteComputationRunnerUrlRequest request = new(url, GetFallbackPublicBaseUrl());
-            await _mediator.Send(request, cancellationToken);
-            return NoContent();
+            ComputationStatus status = await _mediator.Send(request, cancellationToken);
+            return Ok(status);
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("computation-status")]
+        public async Task<IActionResult> GetComputationStatus(CancellationToken cancellationToken)
+        {
+            ComputationStatus status = await _mediator.Send(new GetComputationStatusQuery(), cancellationToken);
+            return Ok(status);
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]

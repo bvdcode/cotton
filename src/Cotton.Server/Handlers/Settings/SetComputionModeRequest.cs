@@ -21,7 +21,8 @@ namespace Cotton.Server.Handlers.Settings
 
     public class SetComputionModeRequestHandler(
         SettingsProvider _settings,
-        ServerSettingsValidator _validator) : IRequestHandler<SetComputionModeRequest>
+        ServerSettingsValidator _validator,
+        IMediator _mediator) : IRequestHandler<SetComputionModeRequest>
     {
         public async Task Handle(SetComputionModeRequest request, CancellationToken cancellationToken)
         {
@@ -36,6 +37,15 @@ namespace Cotton.Server.Handlers.Settings
             {
                 throw new BadRequestException<CottonServerSettings>(
                     "Remote computation runner URL must be configured before enabling Remote mode.");
+            }
+
+            if (request.Mode == ComputionMode.Remote)
+            {
+                await _mediator.Send(
+                    new SetRemoteComputationRunnerUrlRequest(
+                        settings.RemoteComputationRunnerUrl, request.FallbackPublicBaseUrl),
+                    cancellationToken);
+                return;
             }
 
             await _settings.SetPropertyAsync(

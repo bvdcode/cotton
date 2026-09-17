@@ -9,6 +9,7 @@ using Cotton.Server.Auth;
 using Cotton.Server.Handlers.WebDav;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Server.Services.Computation;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.Search;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
@@ -21,6 +22,19 @@ namespace Cotton.Server.Extensions
 {
     public static class ServiceCollectionExtensions
     {
+        public static IServiceCollection AddComputationServices(this IServiceCollection services)
+        {
+            services.AddSingleton<EmbeddingDimensionCache>();
+            services.AddScoped<ComputationService>();
+            services.AddHttpClient<TeiClient>(client => client.Timeout = TeiClient.RequestTimeout)
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    AllowAutoRedirect = false,
+                    UseCookies = false,
+                });
+            return services;
+        }
+
         public static IServiceCollection AddStreamCipher(this IServiceCollection services)
         {
             services.AddSingleton<ServerSettingsCache>();

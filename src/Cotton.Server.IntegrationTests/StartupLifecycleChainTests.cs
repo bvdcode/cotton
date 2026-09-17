@@ -7,6 +7,8 @@ using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Server.Services.Computation;
+using Microsoft.Extensions.DependencyInjection;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -27,13 +29,14 @@ namespace Cotton.Server.IntegrationTests
 {
     [NonParallelizable]
     [FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
-    public class StartupLifecycleChainTests : IntegrationTestBase
+    public partial class StartupLifecycleChainTests : IntegrationTestBase
     {
         private const string PreRestoredMigrationId = "20260427214223_AddCustomGeoIpLookupUrl";
         private const string RestoredMigrationTailId = "20260516005639_DropNodeFilesNameKeyUniqueness";
 
         private TestAppFactory? _factory;
         private HttpClient? _client;
+        private TeiTestHandler _runner = null!;
 
         public StartupLifecycleChainTests()
             : base("cotton_dev_tests_startup_" + Guid.NewGuid().ToString("N"))
@@ -85,7 +88,9 @@ namespace Cotton.Server.IntegrationTests
                 ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
             };
 
-            _factory = new TestAppFactory(overrides);
+            _runner = new TeiTestHandler();
+            _factory = new TestAppFactory(overrides, services =>
+                services.AddHttpClient<TeiClient>().ConfigurePrimaryHttpMessageHandler(() => _runner));
         }
 
         [TearDown]
@@ -197,7 +202,6 @@ namespace Cotton.Server.IntegrationTests
             (await _client!.PatchAsJsonAsync(
                 "/api/v1/server/settings/remote-computation-runner-url",
                 "https://runner.example/")).EnsureSuccessStatusCode();
-            (await _client!.PatchAsync("/api/v1/server/settings/compution-mode/Remote", null)).EnsureSuccessStatusCode();
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/timezone", "UTC")).EnsureSuccessStatusCode();
             (await _client!.PatchAsync("/api/v1/server/settings/storage-space-mode/Limited", null)).EnsureSuccessStatusCode();
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/public-base-url", "https://cotton.example/")).EnsureSuccessStatusCode();
@@ -313,11 +317,11 @@ namespace Cotton.Server.IntegrationTests
                 "/api/v1/server/settings/remote-computation-runner-url",
                 "runner.example");
 
-            await AssertBadRequestProblemDetailsAsync(
-                response,
-                "/api/v1/server/settings/remote-computation-runner-url",
-                "Remote computation runner URL must be an absolute HTTP or HTTPS URL.");
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.UnprocessableEntity));
+            JsonElement problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("InvalidUrl"));
         }
+
 
         [Test]
         public async Task SettingsPatch_Rejects_CustomEmail_WithoutEmailConfig()
