@@ -3353,6 +3353,7 @@
           "button": "Abrir"
         },
         "remoteRunner": {
+          "statusLoadFailed": "No se pudo comprobar el estado del servicio.",
           "validateAndSave": "Validar y guardar",
           "connected": "Conectado · {{model}} · {{dimensions}} dimensiones · {{tokens}} tokens",
           "errors": {

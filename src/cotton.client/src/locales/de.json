@@ -3065,6 +3065,7 @@
           "button": "Öffnen"
         },
         "remoteRunner": {
+          "statusLoadFailed": "Der Dienststatus konnte nicht abgerufen werden.",
           "validateAndSave": "Prüfen und speichern",
           "connected": "Verbunden · {{model}} · {{dimensions}} Dimensionen · {{tokens}} Token",
           "errors": {

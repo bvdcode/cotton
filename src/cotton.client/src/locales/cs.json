@@ -3110,6 +3110,7 @@
           "button": "Otevřít"
         },
         "remoteRunner": {
+          "statusLoadFailed": "Nepodařilo se zjistit stav služby.",
           "validateAndSave": "Ověřit a uložit",
           "connected": "Připojeno · {{model}} · {{dimensions}} rozměrů · {{tokens}} tokenů",
           "errors": {

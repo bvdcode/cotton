@@ -3084,6 +3084,7 @@
           "button": "Відкрити"
         },
         "remoteRunner": {
+          "statusLoadFailed": "Не вдалося перевірити стан сервісу.",
           "validateAndSave": "Перевірити й зберегти",
           "connected": "Підключено · {{model}} · {{dimensions}} виміри · {{tokens}} токенів",
           "errors": {

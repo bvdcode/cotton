@@ -3480,6 +3480,7 @@
           "button": "Открыть"
         },
         "remoteRunner": {
+          "statusLoadFailed": "Не удалось проверить состояние сервиса.",
           "validateAndSave": "Проверить и сохранить",
           "connected": "Подключено · {{model}} · {{dimensions}} измерения · {{tokens}} токенов",
           "errors": {

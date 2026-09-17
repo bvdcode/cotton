@@ -3072,6 +3072,7 @@
           "button": "Abrir"
         },
         "remoteRunner": {
+          "statusLoadFailed": "Não foi possível verificar o estado do serviço.",
           "validateAndSave": "Validar e guardar",
           "connected": "Ligado · {{model}} · {{dimensions}} dimensões · {{tokens}} tokens",
           "errors": {

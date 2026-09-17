@@ -3069,6 +3069,7 @@
           "button": "Ouvrir"
         },
         "remoteRunner": {
+          "statusLoadFailed": "Impossible de vérifier l’état du service.",
           "validateAndSave": "Vérifier et enregistrer",
           "connected": "Connecté · {{model}} · {{dimensions}} dimensions · {{tokens}} tokens",
           "errors": {

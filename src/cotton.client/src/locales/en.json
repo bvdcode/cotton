@@ -2866,6 +2866,7 @@
           "button": "Open"
         },
         "remoteRunner": {
+          "statusLoadFailed": "Could not check the service status.",
           "validateAndSave": "Validate and save",
           "connected": "Connected · {{model}} · {{dimensions}} dimensions · {{tokens}} tokens",
           "errors": {

@@ -3070,6 +3070,7 @@
           "button": "Openen"
         },
         "remoteRunner": {
+          "statusLoadFailed": "De servicestatus kon niet worden gecontroleerd.",
           "validateAndSave": "Controleren en opslaan",
           "connected": "Verbonden · {{model}} · {{dimensions}} dimensies · {{tokens}} tokens",
           "errors": {

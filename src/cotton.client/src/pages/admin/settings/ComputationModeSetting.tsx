@@ -26,25 +26,22 @@ import {
 type ComputationSettings = {
   mode: ComputionMode;
   url: string;
-  service: ComputationStatus | null;
 };
 
 const queryKey = ["admin", "computation-settings"] as const;
+const serviceQueryKey = ["admin", "computation-status"] as const;
 
 const loadSettings = async (): Promise<ComputationSettings> => {
   const [mode, url] = await Promise.all([
     settingsApi.getComputionMode(),
     settingsApi.getRemoteComputationRunnerUrl(),
   ]);
-  const service =
-    mode === "Remote" ? await settingsApi.getComputationStatus() : null;
-  return { mode, url: url.trim(), service };
+  return { mode, url: url.trim() };
 };
 
-const saveSettings = async (value: {
-  mode: ComputionMode;
-  url: string;
-}): Promise<ComputationSettings> => {
+const saveSettings = async (
+  value: ComputationSettings,
+): Promise<ComputationSettings & { service: ComputationStatus | null }> => {
   switch (value.mode) {
     case "Remote":
       return {
@@ -69,6 +66,14 @@ export const ComputationModeSetting = () => {
     queryFn: loadSettings,
     retry: false,
     refetchOnWindowFocus: false,
+    refetchOnMount: "always",
+  });
+  const service = useQuery({
+    queryKey: [...serviceQueryKey, settings.data?.url],
+    queryFn: () => settingsApi.getComputationStatus(),
+    enabled: settings.data?.mode === "Remote" && !settings.isFetching,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
   const [draftMode, setDraftMode] = useState<ComputionMode | null>(null);
   const [draftUrl, setDraftUrl] = useState<string | null>(null);
@@ -82,7 +87,11 @@ export const ComputationModeSetting = () => {
         setDraftUrl(null);
       }
     },
-    onSuccess: (value) => {
+    onSuccess: async ({ service, ...value }) => {
+      await queryClient.cancelQueries({ queryKey: serviceQueryKey });
+      if (service !== null) {
+        queryClient.setQueryData([...serviceQueryKey, value.url], service);
+      }
       queryClient.setQueryData(queryKey, value);
       setDraftMode(null);
       setDraftUrl(null);
@@ -94,13 +103,15 @@ export const ComputationModeSetting = () => {
     t("settings.general.validation.required"),
     t("settings.general.validation.remoteComputationRunnerUrlInvalid"),
   );
-  const busy = settings.isPending || save.isPending;
+  const busy = settings.isFetching || settings.isPending || save.isPending;
   const disabled = busy || settings.isError;
   const failure = getComputationError(save.error);
+  const showingSavedService =
+    mode === "Remote" &&
+    mode === settings.data?.mode &&
+    validation.normalized === settings.data?.url;
   const savedService =
-    mode === settings.data?.mode && validation.normalized === settings.data?.url
-      ? settings.data?.service
-      : null;
+    showingSavedService && !service.isError ? service.data : null;
   const serviceError = savedService?.error;
 
   return (
@@ -203,6 +214,11 @@ export const ComputationModeSetting = () => {
         )}
         {settings.isError && (
           <Alert severity="error">{t("settings.errors.loadFailed")}</Alert>
+        )}
+        {!save.isError && showingSavedService && service.isError && (
+          <Alert severity="warning">
+            {t("settings.general.remoteRunner.statusLoadFailed")}
+          </Alert>
         )}
         {save.isError && (
           <Alert severity="error">

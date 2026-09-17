@@ -3113,6 +3113,7 @@
           "button": "Otwórz"
         },
         "remoteRunner": {
+          "statusLoadFailed": "Nie udało się sprawdzić stanu usługi.",
           "validateAndSave": "Sprawdź i zapisz",
           "connected": "Połączono · {{model}} · {{dimensions}} wymiary · {{tokens}} tokenów",
           "errors": {

@@ -3078,6 +3078,7 @@
           "button": "打开"
         },
         "remoteRunner": {
+          "statusLoadFailed": "无法检查服务状态。",
           "validateAndSave": "验证并保存",
           "connected": "已连接 · {{model}} · {{dimensions}} 维 · {{tokens}} 个词元",
           "errors": {

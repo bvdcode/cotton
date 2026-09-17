@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -9,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ComputationModeSetting } from "./ComputationModeSetting";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { readyComputationStatus } from "../../../test/computationStatus";
+import type { ComputationStatus } from "../../../shared/api/computation";
 
 const settingsApi = vi.hoisted(() => ({
   getComputionMode: vi.fn(),
@@ -41,15 +43,13 @@ const chooseMode = async (mode: "Local" | "Remote" | "Cloud") => {
   );
 };
 
-const renderSetting = () =>
+const renderSetting = (
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 30_000 } },
+  }),
+) =>
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({
-          defaultOptions: { queries: { retry: false, gcTime: 0 } },
-        })
-      }
-    >
+    <QueryClientProvider client={client}>
       <ComputationModeSetting />
     </QueryClientProvider>,
   );
@@ -198,5 +198,86 @@ describe("ComputationModeSetting", () => {
         2,
       ),
     );
+  });
+
+  it("reloads current settings on reopening even while the cache is fresh", async () => {
+    settingsApi.getComputionMode.mockResolvedValue("Remote");
+    settingsApi.getRemoteComputationRunnerUrl.mockResolvedValue(
+      "https://first.example",
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
+    });
+    const initial = renderSetting(client);
+    expect(await screen.findByRole("textbox")).toHaveValue(
+      "https://first.example",
+    );
+    initial.unmount();
+    settingsApi.getRemoteComputationRunnerUrl.mockResolvedValue(
+      "https://second.example",
+    );
+
+    renderSetting(client);
+
+    await waitFor(() =>
+      expect(screen.getByRole("textbox")).toHaveValue("https://second.example"),
+    );
+    expect(settingsApi.getRemoteComputationRunnerUrl).toHaveBeenCalledTimes(2);
+    client.clear();
+  });
+
+  it("keeps the URL and mode editable when the status request fails", async () => {
+    settingsApi.getComputionMode.mockResolvedValue("Remote");
+    settingsApi.getRemoteComputationRunnerUrl.mockResolvedValue(
+      "https://runner.example",
+    );
+    settingsApi.getComputationStatus.mockRejectedValue(
+      new Error("Status unavailable"),
+    );
+    renderSetting();
+
+    await screen.findByText("settings.general.remoteRunner.statusLoadFailed");
+    expect(screen.getByRole("textbox")).toBeEnabled();
+    expect(screen.getByRole("textbox")).toHaveValue("https://runner.example");
+    expect(
+      screen.getByRole("button", {
+        name: "settings.general.remoteRunner.validateAndSave",
+      }),
+    ).toBeEnabled();
+    await chooseMode("Local");
+    await waitFor(() =>
+      expect(settingsApi.setComputionMode).toHaveBeenCalledWith("Local"),
+    );
+  });
+
+  it("can save while status is pending and ignores its late failure", async () => {
+    settingsApi.getComputionMode.mockResolvedValue("Remote");
+    settingsApi.getRemoteComputationRunnerUrl.mockResolvedValue(
+      "https://runner.example",
+    );
+    let rejectStatus!: (error: Error) => void;
+    settingsApi.getComputationStatus.mockReturnValue(
+      new Promise<ComputationStatus>((_resolve, reject) => {
+        rejectStatus = reject;
+      }),
+    );
+    renderSetting();
+    await waitFor(() =>
+      expect(settingsApi.getComputationStatus).toHaveBeenCalledTimes(1),
+    );
+    const button = screen.getByRole("button", {
+      name: "settings.general.remoteRunner.validateAndSave",
+    });
+    expect(screen.getByRole("textbox")).toBeEnabled();
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    await screen.findByText("settings.general.remoteRunner.connected");
+
+    await act(async () => rejectStatus(new Error("Late status failure")));
+
+    expect(
+      screen.getByText("settings.general.remoteRunner.connected"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
