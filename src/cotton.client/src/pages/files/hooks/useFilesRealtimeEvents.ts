@@ -1,8 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
-  eventHub,
   HUB_METHODS,
-  getHubMethodVariants,
+  subscribeToPreviewGenerated,
   type HubMethod,
   type HubMethodOrLower,
   useFileTreeRealtimeInvalidation,
@@ -19,10 +18,6 @@ interface UseFilesRealtimeEventsOptions {
     previewHashEncryptedHex: string,
   ) => boolean;
 }
-
-const PREVIEW_GENERATED_METHODS = getHubMethodVariants([
-  HUB_METHODS.PreviewGenerated,
-]);
 
 const HUB_METHOD_BY_WIRE_NAME = new Map<string, HubMethod>(
   Object.values(HUB_METHODS).map((method) => [method.toLowerCase(), method]),
@@ -114,19 +109,6 @@ const getAffectedNodeIds = (
   return affected;
 };
 
-const isPreviewGeneratedArgs = (
-  args: JsonValue[],
-): args is [string, string, string] => {
-  const nodeId = args[0];
-  const nodeFileId = args[1];
-  const hex = args[2];
-  return (
-    typeof nodeId === "string" &&
-    typeof nodeFileId === "string" &&
-    typeof hex === "string"
-  );
-};
-
 export function useFilesRealtimeEvents({
   nodeId,
   onInvalidate,
@@ -156,35 +138,19 @@ export function useFilesRealtimeEvents({
       return;
     }
 
-    const handlePreviewGenerated = (...args: JsonValue[]) => {
-      if (!isPreviewGeneratedArgs(args)) {
-        return;
-      }
-
-      const [eventNodeId, nodeFileId, previewHashHex] = args;
-      if (!nodeIdRef.current || nodeIdRef.current !== eventNodeId) {
-        return;
-      }
-
-      const handler = onPreviewGeneratedRef.current;
-      if (handler) {
-        const updated = handler(nodeFileId, previewHashHex);
-        if (updated) {
+    return subscribeToPreviewGenerated(
+      (eventNodeId, nodeFileId, previewHashHex) => {
+        if (!nodeIdRef.current || nodeIdRef.current !== eventNodeId) {
           return;
         }
-      }
 
-      scheduleInvalidate();
-    };
+        const handler = onPreviewGeneratedRef.current;
+        if (handler && handler(nodeFileId, previewHashHex)) {
+          return;
+        }
 
-    const unsubscribePreviewGenerated = PREVIEW_GENERATED_METHODS.map(
-      (method) => eventHub.on(method, handlePreviewGenerated),
+        scheduleInvalidate();
+      },
     );
-
-    return () => {
-      for (const unsubscribe of unsubscribePreviewGenerated) {
-        unsubscribe();
-      }
-    };
   }, [isAuthenticated, scheduleInvalidate]);
 }

@@ -1,24 +1,21 @@
 import { DashboardCustomize, Done } from "@mui/icons-material";
 import { Alert, Box, Button } from "@mui/material";
-import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  invalidateLayoutOverview,
   useLayoutStatsQuery,
   useRootNodeQuery,
 } from "../../shared/api/queries/layouts";
-import { useFileTreeRealtimeInvalidation } from "../../shared/signalr";
 import { useAuth } from "../../features/auth";
 import { usePinnedFolders } from "../../shared/dashboard/usePinnedFolders";
 import { useDashboardLayout } from "./useDashboardLayout";
+import { useHomeRealtimeEvents } from "./useHomeRealtimeEvents";
 import { DashboardWidgetLibrary } from "./components/DashboardWidgetLibrary";
 import { HomeDashboard } from "./HomeDashboard";
 
 export const HomePage: React.FC = () => {
   const { t } = useTranslation(["home", "common"]);
   const { isAuthenticated } = useAuth();
-  const queryClient = useQueryClient();
   const [customizing, setCustomizing] = useState(false);
   const dashboard = useDashboardLayout();
   const pinnedFolders = usePinnedFolders();
@@ -28,15 +25,7 @@ export const HomePage: React.FC = () => {
   const statsQuery = useLayoutStatsQuery(layoutId);
 
   const stats = statsQuery.data;
-  const handleRealtimeInvalidate = useCallback((): void => {
-    if (layoutId) {
-      void invalidateLayoutOverview(queryClient, layoutId);
-    }
-  }, [layoutId, queryClient]);
-  useFileTreeRealtimeInvalidation({
-    enabled: isAuthenticated && Boolean(layoutId),
-    onInvalidate: handleRealtimeInvalidate,
-  });
+  useHomeRealtimeEvents(isAuthenticated, layoutId);
   const error = rootQuery.error
     ? "Failed to resolve root layout"
     : statsQuery.error
