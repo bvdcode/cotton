@@ -20,9 +20,9 @@ namespace Cotton.Server.Handlers.Server
         public Task<PostgresIndexStatus> Handle(GetVectorIndexMetadataQuery request, CancellationToken cancellationToken)
         {
             return dbContext.Database.GetIndexStatusAsync(
-                VectorIndexDefinition.Schema,
-                VectorIndexDefinition.Table,
-                VectorIndexDefinition.Name,
+                VectorIndexDefinition.Expected.SchemaName,
+                VectorIndexDefinition.Expected.TableName,
+                VectorIndexDefinition.Expected.IndexName,
                 cancellationToken);
         }
     }

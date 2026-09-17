@@ -5,7 +5,6 @@ using Cotton.Database;
 using Cotton.Server.Handlers.Server;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Server.Jobs;
-using Cotton.Server.Services.Search;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -35,7 +34,6 @@ namespace Cotton.Server.IntegrationTests
                 options.SchedulerName = $"VectorSetupTests-{Guid.NewGuid():N}";
                 options.AddJob<BuildVectorIndexJob>(job => job.WithIdentity(nameof(BuildVectorIndexJob)).StoreDurably());
             });
-            services.AddSingleton<VectorIndexBuildState>();
             _services = services.BuildServiceProvider();
         }
 
@@ -121,7 +119,6 @@ namespace Cotton.Server.IntegrationTests
             return new EnsureVectorExtensionRequestHandler(
                 context,
                 _services.GetRequiredService<ISchedulerFactory>(),
-                _services.GetRequiredService<VectorIndexBuildState>(),
                 NullLogger<EnsureVectorExtensionRequestHandler>.Instance);
         }
     }

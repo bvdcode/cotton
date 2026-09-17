@@ -10,7 +10,6 @@ using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Server.Models.Dto;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Models;
 using Cotton.Server.Jobs;
-using Cotton.Server.Services.Search;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authentication;
@@ -137,6 +136,39 @@ namespace Cotton.Server.IntegrationTests
             }
         }
 
+        [Test]
+        public async Task Get_ReportsDueIndexBuildTriggersAndIgnoresFutureOrPausedTriggers()
+        {
+            try
+            {
+                await DbContext.Database.EnsureCreatedAsync();
+                await using WebApplication application = await CreateApplicationAsync(DbContext);
+                using HttpClient client = application.GetTestClient();
+                client.DefaultRequestHeaders.Add(VectorEndpointTestAuthenticationHandler.RoleHeader, nameof(UserRole.Admin));
+                IScheduler scheduler = await application.Services.GetRequiredService<ISchedulerFactory>().GetScheduler();
+                JobKey jobKey = new(nameof(BuildVectorIndexJob));
+                await scheduler.ScheduleJob(TriggerBuilder.Create()
+                    .ForJob(jobKey)
+                    .StartAt(DateTimeOffset.UtcNow.AddDays(1))
+                    .Build());
+
+                VectorExtensionStatusDto? future = await client.GetFromJsonAsync<VectorExtensionStatusDto>(Endpoint);
+                Assert.That(future!.IndexBuilding, Is.False);
+
+                await scheduler.TriggerJob(jobKey);
+                VectorExtensionStatusDto? queued = await client.GetFromJsonAsync<VectorExtensionStatusDto>(Endpoint);
+                Assert.That(queued!.IndexBuilding, Is.True);
+
+                await scheduler.PauseJob(jobKey);
+                VectorExtensionStatusDto? paused = await client.GetFromJsonAsync<VectorExtensionStatusDto>(Endpoint);
+                Assert.That(paused!.IndexBuilding, Is.False);
+            }
+            finally
+            {
+                await DbContext.Database.EnsureDeletedAsync();
+            }
+        }
+
         private static async Task<WebApplication> CreateApplicationAsync(CottonDbContext context)
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -148,7 +180,6 @@ namespace Cotton.Server.IntegrationTests
             builder.Services.AddSingleton(context);
             builder.Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
             builder.Services.AddMediator();
-            builder.Services.AddSingleton<VectorIndexBuildState>();
             builder.Services.AddQuartz(options =>
             {
                 options.SchedulerName = $"VectorEndpointTests-{Guid.NewGuid():N}";

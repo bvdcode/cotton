@@ -7,29 +7,27 @@ namespace Cotton.Server.Services.Search
 {
     public static class VectorIndexDefinition
     {
-        public const string Name = "ix_file_embeddings_bge_m3_v1";
-        public const string Schema = "public";
-        public const string Table = "file_embeddings";
-        public const string VectorColumn = "embedding";
-        public const string VersionColumn = "index_version";
         public const int Version = 1;
         public const int Dimensions = 1024;
         public const string ModelId = "BAAI/bge-m3";
         public const string Pooling = "cls";
 
+        public static PostgresVectorIndexDefinition Expected { get; } = new(
+            SchemaName: "public",
+            TableName: "file_embeddings",
+            IndexName: "ix_file_embeddings_bge_m3_v1",
+            VectorColumnName: "embedding",
+            Dimensions: Dimensions,
+            FilterColumnName: "index_version",
+            FilterValue: Version);
+
         public static string ManualCreateSql => FormattableString.Invariant($"""
-            CREATE INDEX CONCURRENTLY IF NOT EXISTS {Name}
-            ON {Schema}.{Table}
-            USING hnsw (({VectorColumn}::vector({Dimensions})) vector_cosine_ops)
-            WHERE {VersionColumn} = {Version}
+            CREATE INDEX CONCURRENTLY IF NOT EXISTS {Expected.IndexName}
+            ON {Expected.SchemaName}.{Expected.TableName}
+            USING hnsw (({Expected.VectorColumnName}::vector({Expected.Dimensions})) vector_cosine_ops)
+            WHERE {Expected.FilterColumnName} = {Expected.FilterValue}
             """);
 
-        public const string ExpectedDefinition =
-            "CREATE INDEX ix_file_embeddings_bge_m3_v1 ON public.file_embeddings USING hnsw " +
-            "(((embedding)::vector(1024)) vector_cosine_ops) WHERE (index_version = 1)";
-
-        public static bool IsCompatible(PostgresIndexStatus status) => status.Definition == ExpectedDefinition;
-
-        public static bool IsReady(PostgresIndexStatus status) => status.IsValid && IsCompatible(status);
+        public static bool IsReady(PostgresIndexStatus status) => status.IsValid && status.IsCompatibleWith(Expected);
     }
 }

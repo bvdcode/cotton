@@ -4,7 +4,6 @@
 using Cotton.Database;
 using Cotton.Server.Extensions;
 using Cotton.Server.Jobs;
-using Cotton.Server.Services.Search;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -21,7 +20,6 @@ namespace Cotton.Server.Handlers.Server
     public class EnsureVectorExtensionRequestHandler(
         CottonDbContext dbContext,
         ISchedulerFactory schedulerFactory,
-        VectorIndexBuildState indexBuildState,
         ILogger<EnsureVectorExtensionRequestHandler> logger) : IRequestHandler<EnsureVectorExtensionRequest>
     {
         private const string ExtensionName = "vector";
@@ -54,10 +52,6 @@ namespace Cotton.Server.Handlers.Server
 
             logger.LogInformation("The vector extension is enabled in the current database.");
 
-            if (!indexBuildState.TryStart())
-            {
-                return;
-            }
             try
             {
                 IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
@@ -65,7 +59,6 @@ namespace Cotton.Server.Handlers.Server
             }
             catch (Exception ex)
             {
-                indexBuildState.Complete("pgvector_index_build_failed");
                 logger.LogError(ex, "Failed to schedule vector index preparation.");
                 throw;
             }

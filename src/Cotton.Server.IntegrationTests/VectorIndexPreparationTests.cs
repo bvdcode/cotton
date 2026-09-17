@@ -48,6 +48,8 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task Status_WorksWithoutTheVectorExtension()
         {
+            Assert.That(await Send(new BuildVectorIndexRequest()), Is.Null);
+            Assert.That(await DbContext.Database.IsExtensionInstalledAsync("vector"), Is.False);
             PostgresIndexStatus status = await Send(new GetVectorIndexMetadataQuery());
             Assert.That(status.Exists, Is.False);
             Assert.That(VectorIndexDefinition.IsReady(status), Is.False);
@@ -55,9 +57,15 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(status.SizeBytes, Is.Zero);
         }
 
-        [Test]
-        public async Task Build_CreatesAValidPartialIndexAndCanBeRepeated()
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task Build_CreatesAValidPartialIndexAndCanBeRepeated(bool quoteAllIdentifiers)
         {
+            NpgsqlConnectionStringBuilder connection = new(DbContext.Database.GetConnectionString())
+            {
+                Options = $"-c quote_all_identifiers={quoteAllIdentifiers.ToString().ToLowerInvariant()}"
+            };
+            DbContext.Database.SetConnectionString(connection.ConnectionString);
             await EnableVectorAsync();
             FileManifest manifest = new()
             {
@@ -83,12 +91,28 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(VectorIndexDefinition.IsReady(first), Is.True);
             Assert.That(first.IsBuilding, Is.False);
             Assert.That(first.SizeBytes, Is.GreaterThan(0));
-            Assert.That(first.Definition, Is.EqualTo(VectorIndexDefinition.ExpectedDefinition));
+            Assert.That(first.VectorDefinition, Is.EqualTo(VectorIndexDefinition.Expected));
             Assert.That(await Send(new BuildVectorIndexRequest()), Is.Null);
             PostgresIndexStatus second = await Send(new GetVectorIndexMetadataQuery());
-            Assert.That(second.Definition, Is.EqualTo(first.Definition));
+            Assert.That(second.VectorDefinition, Is.EqualTo(first.VectorDefinition));
             Assert.That(second.SizeBytes, Is.EqualTo(first.SizeBytes));
             Assert.That(await DbContext.FileEmbeddings.CountAsync(), Is.EqualTo(2));
+        }
+
+        [Test]
+        public async Task Build_DoesNotReplaceAnIncompatibleIndex()
+        {
+            await EnableVectorAsync();
+            PostgresVectorIndexDefinition incompatible = VectorIndexDefinition.Expected with
+            {
+                Dimensions = VectorIndexDefinition.Dimensions / 2
+            };
+            await DbContext.Database.CreateVectorCosineHnswIndexConcurrentlyAsync(incompatible);
+
+            Assert.That(await Send(new BuildVectorIndexRequest()), Is.EqualTo("pgvector_index_incompatible"));
+            PostgresIndexStatus status = await Send(new GetVectorIndexMetadataQuery());
+            Assert.That(status.VectorDefinition, Is.EqualTo(incompatible));
+            Assert.That(VectorIndexDefinition.IsReady(status), Is.False);
         }
 
         [Test]

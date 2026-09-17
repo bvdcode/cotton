@@ -24,12 +24,17 @@ namespace Cotton.Server.Handlers.Server
     {
         public async Task<string?> Handle(BuildVectorIndexRequest request, CancellationToken cancellationToken)
         {
+            if (!await dbContext.Database.IsExtensionInstalledAsync("vector", cancellationToken))
+            {
+                return null;
+            }
+
             PostgresIndexStatus index = await mediator.Send(new GetVectorIndexMetadataQuery(), cancellationToken);
             if (index.IsBuilding || VectorIndexDefinition.IsReady(index))
             {
                 return null;
             }
-            if (index.Exists && !VectorIndexDefinition.IsCompatible(index))
+            if (index.Exists && !index.IsCompatibleWith(VectorIndexDefinition.Expected))
             {
                 return "pgvector_index_incompatible";
             }
@@ -42,8 +47,8 @@ namespace Cotton.Server.Handlers.Server
                     dbContext.Database.SetCommandTimeout(TimeSpan.FromSeconds(10));
                     DropIndexOperation operation = new()
                     {
-                        Name = VectorIndexDefinition.Name,
-                        Schema = VectorIndexDefinition.Schema
+                        Name = VectorIndexDefinition.Expected.IndexName,
+                        Schema = VectorIndexDefinition.Expected.SchemaName
                     };
                     IReadOnlyList<MigrationCommand> commands = dbContext.Database.GetService<IMigrationsSqlGenerator>()
                         .Generate([operation]);
@@ -54,13 +59,7 @@ namespace Cotton.Server.Handlers.Server
 
                 dbContext.Database.SetCommandTimeout(0);
                 await dbContext.Database.CreateVectorCosineHnswIndexConcurrentlyAsync(
-                    VectorIndexDefinition.Schema,
-                    VectorIndexDefinition.Table,
-                    VectorIndexDefinition.Name,
-                    VectorIndexDefinition.VectorColumn,
-                    VectorIndexDefinition.Dimensions,
-                    VectorIndexDefinition.VersionColumn,
-                    VectorIndexDefinition.Version,
+                    VectorIndexDefinition.Expected,
                     cancellationToken);
                 PostgresIndexStatus result = await mediator.Send(new GetVectorIndexMetadataQuery(), cancellationToken);
                 return VectorIndexDefinition.IsReady(result) || result.IsBuilding ? null : "pgvector_index_build_failed";
