@@ -252,6 +252,9 @@ describe("settingsApi getters", () => {
       })
       .mockResolvedValueOnce({
         data: { customGeoIpLookupUrl: null },
+      })
+      .mockResolvedValueOnce({
+        data: { remoteComputationRunnerUrl: "https://runner.example" },
       });
 
     await expect(settingsApi.getS3Config()).resolves.toEqual({
@@ -270,6 +273,9 @@ describe("settingsApi getters", () => {
       useSSL: false,
     });
     await expect(settingsApi.getCustomGeoIpLookupUrl()).resolves.toBe("");
+    await expect(settingsApi.getRemoteComputationRunnerUrl()).resolves.toBe(
+      "https://runner.example",
+    );
   });
 });
 
@@ -482,6 +488,7 @@ describe("settingsApi setters", () => {
     await settingsApi.setEmailConfig(emailConfig);
     await settingsApi.testEmailConfig();
     await settingsApi.setCustomGeoIpLookupUrl("https://geo.example");
+    await settingsApi.setRemoteComputationRunnerUrl("https://runner.example");
     await expect(settingsApi.testCustomGeoIpLookupUrl()).resolves.toEqual(
       geoIpTestResult,
     );
@@ -504,6 +511,11 @@ describe("settingsApi setters", () => {
       3,
       "server/settings/custom-geoip-lookup-url",
       "https://geo.example",
+    );
+    expect(patch).toHaveBeenNthCalledWith(
+      4,
+      "server/settings/remote-computation-runner-url",
+      "https://runner.example",
     );
     expect(post).toHaveBeenNthCalledWith(
       2,
@@ -593,13 +605,16 @@ describe("settingsApi.saveSetupStep", () => {
     ]);
   });
 
-  it("defers external storage and email modes until config steps", async () => {
+  it("defers external modes until their config steps", async () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
       data: undefined,
     });
 
     await settingsApi.saveSetupStep("storage", { storage: "S3" });
     await settingsApi.saveSetupStep("email", { email: "custom" });
+    await settingsApi.saveSetupStep("computionMode", {
+      computionMode: "remote",
+    });
 
     expect(patch).not.toHaveBeenCalled();
   });
@@ -615,7 +630,7 @@ describe("settingsApi.saveSetupStep", () => {
       geoIpLookupMode: "cottoncloud",
     });
     await settingsApi.saveSetupStep("computionMode", {
-      computionMode: "remote",
+      computionMode: "local",
     });
     await settingsApi.saveSetupStep("timezone", {
       timezone: "Europe/Amsterdam",
@@ -635,7 +650,7 @@ describe("settingsApi.saveSetupStep", () => {
     );
     expect(patch).toHaveBeenNthCalledWith(
       4,
-      "server/settings/compution-mode/Remote",
+      "server/settings/compution-mode/Local",
     );
     expect(patch).toHaveBeenNthCalledWith(
       5,
@@ -689,6 +704,9 @@ describe("settingsApi.saveSetupStep", () => {
     await settingsApi.saveSetupStep("customGeoIpLookupUrl", {
       customGeoIpLookupUrl: { url: "https://geo.example" },
     });
+    await settingsApi.saveSetupStep("remoteComputationRunnerUrl", {
+      remoteComputationRunnerUrl: { url: " https://runner.example " },
+    });
 
     expect(patch).toHaveBeenNthCalledWith(1, "server/settings/s3-config", {
       endpoint: "https://s3.example",
@@ -726,6 +744,15 @@ describe("settingsApi.saveSetupStep", () => {
     expect(post).toHaveBeenNthCalledWith(
       2,
       "server/settings/custom-geoip-lookup-url/test",
+    );
+    expect(patch).toHaveBeenNthCalledWith(
+      7,
+      "server/settings/remote-computation-runner-url",
+      "https://runner.example",
+    );
+    expect(patch).toHaveBeenNthCalledWith(
+      8,
+      "server/settings/compution-mode/Remote",
     );
   });
 

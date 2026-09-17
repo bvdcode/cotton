@@ -2220,6 +2220,16 @@
           "cloud": "Cotton Bridge może wykonywać obliczenia AI dla tej instancji. Wymaga połączenia z internetem i może mieć limity."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Zdalny runner",
+        "subtitle": "Wprowadź adres usługi obliczeniowej.",
+        "fields": {
+          "url": "URL runnera"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Strefa czasowa",
         "subtitle": "Wybierz strefę czasową, aby uniknąć powiadomień i hałasu dysków w nocy. Dotyczy tylko procedur serwerowych — interfejs WWW zawsze będzie pokazywać godziny w lokalnej strefie czasowej."
@@ -3036,14 +3046,16 @@
           "storageSpaceMode": "Tryb wykorzystania miejsca",
           "computionMode": "Tryb obliczeń",
           "geoIpLookupMode": "Tryb rozpoznawania IP",
-          "customGeoIpLookupUrl": "Własny URL rozpoznawania IP"
+          "customGeoIpLookupUrl": "Własny URL rozpoznawania IP",
+          "remoteComputationRunnerUrl": "URL zdalnego runnera"
         },
         "validation": {
           "required": "To pole jest wymagane.",
           "publicBaseUrlInvalid": "Wprowadź prawidłowy bazowy URL HTTP lub HTTPS bez danych logowania, parametrów zapytania ani fragmentu.",
           "publicBaseUrlMismatch": "Bieżący adres to {{current}}, ale generowane publiczne linki będą używać {{configured}}. Zachowaj ostrożność przed zapisaniem tej wartości.",
           "timezoneInvalid": "Wybierz prawidłową strefę czasową IANA z listy.",
-          "customGeoIpLookupUrlInvalid": "Wprowadź prawidłowy URL HTTP lub HTTPS."
+          "customGeoIpLookupUrlInvalid": "Wprowadź prawidłowy URL HTTP lub HTTPS.",
+          "remoteComputationRunnerUrlInvalid": "Wprowadź prawidłowy bezwzględny adres HTTP lub HTTPS."
         },
         "help": {
           "publicBaseUrl": "Mimo tego ustawienia Cotton niemal wszędzie automatycznie ustala publiczny URL. Ustaw to tylko wtedy, gdy automatyczne wykrywanie jest nieprawidłowe.",

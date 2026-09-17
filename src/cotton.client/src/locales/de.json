@@ -2212,6 +2212,16 @@
           "cloud": "Cotton Bridge kann AI-Berechnungen für diese Instanz ausführen. Erfordert eine Internetverbindung und kann Limits haben."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Remote-Runner",
+        "subtitle": "Gib die Adresse des Berechnungsdienstes ein.",
+        "fields": {
+          "url": "Runner-URL"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Zeitzone",
         "subtitle": "Wähle deine Zeitzone, damit Benachrichtigungen und Festplattengeräusche dich nachts nicht stören. Das gilt nur für Serverroutinen; die Weboberfläche zeigt Zeiten immer in deiner lokalen Zeitzone an."
@@ -2988,14 +2998,16 @@
           "storageSpaceMode": "Modus für Speicherplatz",
           "computionMode": "Rechenmodus",
           "geoIpLookupMode": "IP-Suchmodus",
-          "customGeoIpLookupUrl": "URL für eigene IP-Suche"
+          "customGeoIpLookupUrl": "URL für eigene IP-Suche",
+          "remoteComputationRunnerUrl": "URL des Remote-Runners"
         },
         "validation": {
           "required": "Dieses Feld ist erforderlich.",
           "publicBaseUrlInvalid": "Gib eine gültige HTTP- oder HTTPS-Basis-URL ohne Anmeldedaten, Query oder Hash ein.",
           "publicBaseUrlMismatch": "Die aktuelle Adresse ist {{current}}, aber erzeugte öffentliche Links verwenden {{configured}}. Sei vorsichtig vor dem Speichern.",
           "timezoneInvalid": "Wähle eine gültige IANA-Zeitzone aus der Liste.",
-          "customGeoIpLookupUrlInvalid": "Gib eine gültige HTTP- oder HTTPS-URL für die Suche ein."
+          "customGeoIpLookupUrlInvalid": "Gib eine gültige HTTP- oder HTTPS-URL für die Suche ein.",
+          "remoteComputationRunnerUrlInvalid": "Gib eine gültige absolute HTTP- oder HTTPS-URL ein."
         },
         "help": {
           "publicBaseUrl": "Trotz dieser Einstellung ermittelt Cotton die öffentliche URL fast überall automatisch. Setze sie nur, wenn die automatische Erkennung falsch ist.",

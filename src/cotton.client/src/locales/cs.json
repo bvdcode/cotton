@@ -2217,6 +2217,16 @@
           "cloud": "Cotton Bridge může spouštět AI výpočty pro tuto instanci. Vyžaduje připojení k internetu a může mít limity."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Vzdálený runner",
+        "subtitle": "Zadejte adresu výpočetní služby.",
+        "fields": {
+          "url": "URL runneru"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Časové pásmo",
         "subtitle": "Vyberte své časové pásmo, abyste nebyli v noci rušeni oznámeními a hlukem disků. Toto se týká pouze serverových úloh; webové rozhraní bude vždy zobrazovat časy ve vašem místním pásmu."
@@ -3033,14 +3043,16 @@
           "storageSpaceMode": "Režim prostoru úložiště",
           "computionMode": "Režim výpočtů",
           "geoIpLookupMode": "Režim překladu IP",
-          "customGeoIpLookupUrl": "URL vlastního překladu IP"
+          "customGeoIpLookupUrl": "URL vlastního překladu IP",
+          "remoteComputationRunnerUrl": "URL vzdáleného runneru"
         },
         "validation": {
           "required": "Toto pole je povinné.",
           "publicBaseUrlInvalid": "Zadejte platnou základní URL HTTP nebo HTTPS bez přihlašovacích údajů, dotazu nebo hashe.",
           "publicBaseUrlMismatch": "Aktuální adresa je {{current}}, ale generované veřejné odkazy budou používat {{configured}}. Před uložením této hodnoty buďte opatrní.",
           "timezoneInvalid": "Vyberte ze seznamu platné časové pásmo IANA.",
-          "customGeoIpLookupUrlInvalid": "Zadejte platnou URL HTTP nebo HTTPS pro vyhledávání."
+          "customGeoIpLookupUrlInvalid": "Zadejte platnou URL HTTP nebo HTTPS pro vyhledávání.",
+          "remoteComputationRunnerUrlInvalid": "Zadejte platnou absolutní adresu HTTP nebo HTTPS."
         },
         "help": {
           "publicBaseUrl": "I přes toto nastavení Cotton téměř všude určuje veřejnou URL automaticky. Nastavte ji jen tehdy, když je automatická detekce nesprávná.",

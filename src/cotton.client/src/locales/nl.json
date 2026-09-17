@@ -2217,6 +2217,16 @@
           "cloud": "Cotton Bridge kan AI-berekeningen uitvoeren voor deze instantie. Vereist internetverbinding en kan limieten hebben."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Externe runner",
+        "subtitle": "Voer het adres van de rekendienst in.",
+        "fields": {
+          "url": "Runner-URL"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Tijdzone",
         "subtitle": "Selecteer uw tijdzone om 's nachts niet gestoord te worden door meldingen of schijfgeluiden. Dit geldt alleen voor serverroutines; de webinterface toont tijden altijd in uw lokale tijdzone."
@@ -2993,14 +3003,16 @@
           "storageSpaceMode": "Opslagruimtemodus",
           "computionMode": "Rekenmodus",
           "geoIpLookupMode": "IP-opzoekmodus",
-          "customGeoIpLookupUrl": "Eigen IP-opzoek-URL"
+          "customGeoIpLookupUrl": "Eigen IP-opzoek-URL",
+          "remoteComputationRunnerUrl": "URL van externe runner"
         },
         "validation": {
           "required": "Dit veld is verplicht.",
           "publicBaseUrlInvalid": "Voer een geldige HTTP- of HTTPS-basis-URL in zonder inloggegevens, query of hash.",
           "publicBaseUrlMismatch": "Het huidige adres is {{current}}, maar gegenereerde openbare links gebruiken {{configured}}. Wees voorzichtig voordat u deze waarde opslaat.",
           "timezoneInvalid": "Kies een geldige IANA-tijdzone uit de lijst.",
-          "customGeoIpLookupUrlInvalid": "Voer een geldige HTTP- of HTTPS-opzoek-URL in."
+          "customGeoIpLookupUrlInvalid": "Voer een geldige HTTP- of HTTPS-opzoek-URL in.",
+          "remoteComputationRunnerUrlInvalid": "Voer een geldige absolute HTTP- of HTTPS-URL in."
         },
         "help": {
           "publicBaseUrl": "Ondanks deze instelling bepaalt Cotton de openbare URL bijna overal automatisch. Stel deze alleen in wanneer de automatische detectie onjuist is.",

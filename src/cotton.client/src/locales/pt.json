@@ -2219,6 +2219,16 @@
           "cloud": "O Cotton Bridge pode executar cálculos de IA para esta instância. Requer conexão com a internet e pode ter limites."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Executor remoto",
+        "subtitle": "Introduza o endereço do serviço de computação.",
+        "fields": {
+          "url": "URL do executor"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Fuso horário",
         "subtitle": "Selecione seu fuso horário para não ser incomodado por notificações e barulho de disco à noite. Isso é apenas para rotinas do servidor; a interface Web sempre mostrará os horários no seu fuso horário local."
@@ -2995,14 +3005,16 @@
           "storageSpaceMode": "Modo de espaço de armazenamento",
           "computionMode": "Modo de computação",
           "geoIpLookupMode": "Modo de consulta de IP",
-          "customGeoIpLookupUrl": "URL personalizada de consulta de IP"
+          "customGeoIpLookupUrl": "URL personalizada de consulta de IP",
+          "remoteComputationRunnerUrl": "URL do executor remoto"
         },
         "validation": {
           "required": "Este campo é obrigatório.",
           "publicBaseUrlInvalid": "Informe uma URL base HTTP ou HTTPS válida, sem credenciais, query ou hash.",
           "publicBaseUrlMismatch": "O endereço atual é {{current}}, mas os links públicos gerados usarão {{configured}}. Tenha cuidado antes de salvar este valor.",
           "timezoneInvalid": "Escolha um fuso horário IANA válido da lista.",
-          "customGeoIpLookupUrlInvalid": "Informe uma URL de consulta HTTP ou HTTPS válida."
+          "customGeoIpLookupUrlInvalid": "Informe uma URL de consulta HTTP ou HTTPS válida.",
+          "remoteComputationRunnerUrlInvalid": "Introduza um URL HTTP ou HTTPS absoluto válido."
         },
         "help": {
           "publicBaseUrl": "Apesar desta configuração, o Cotton determina a URL pública automaticamente em quase todos os lugares. Defina-a somente quando a detecção automática estiver errada.",

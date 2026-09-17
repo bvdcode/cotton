@@ -17,6 +17,7 @@ import {
   publicBaseUrlSchema,
   observedProxyInfoSchema,
   publicServerInfoSchema,
+  remoteComputationRunnerUrlSchema,
   serverSettingsResponseSchema,
   serverUsageListSchema,
   setupStatusSchema,
@@ -271,6 +272,7 @@ const setupStepOrder = [
   "email",
   "emailConfig",
   "computionMode",
+  "remoteComputationRunnerUrl",
   "timezone",
   "storageSpace",
 ] as const;
@@ -511,6 +513,19 @@ export const settingsApi = {
     await httpClient.patch(`server/settings/compution-mode/${mode}`);
   },
 
+  getRemoteComputationRunnerUrl: (): Promise<string> =>
+    getValidated(
+      "server/settings/remote-computation-runner-url",
+      remoteComputationRunnerUrlSchema,
+    ),
+
+  setRemoteComputationRunnerUrl: async (url: string): Promise<void> => {
+    await httpClient.patch(
+      "server/settings/remote-computation-runner-url",
+      url,
+    );
+  },
+
   getStorageType: (): Promise<StorageType> =>
     getValidated("server/settings/storage-type", storageTypeResponseSchema),
 
@@ -670,11 +685,22 @@ export const settingsApi = {
         return;
       }
 
-      case "computionMode":
-        await settingsApi.setComputionMode(
-          toComputionMode(answers.computionMode),
-        );
+      case "computionMode": {
+        const computionMode = toComputionMode(answers.computionMode);
+        if (computionMode !== "Remote") {
+          await settingsApi.setComputionMode(computionMode);
+        }
         return;
+      }
+
+      case "remoteComputationRunnerUrl": {
+        const remoteRunner = readFormObject(answers.remoteComputationRunnerUrl);
+        await settingsApi.setRemoteComputationRunnerUrl(
+          getFormString(remoteRunner, "url").trim(),
+        );
+        await settingsApi.setComputionMode("Remote");
+        return;
+      }
 
       case "timezone":
         if (typeof answers.timezone === "string" && answers.timezone) {

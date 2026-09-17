@@ -2216,6 +2216,16 @@
           "cloud": "Cotton Bridge peut exécuter les calculs IA pour cette instance. Une connexion Internet est requise et des limites peuvent s’appliquer."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Exécuteur distant",
+        "subtitle": "Saisissez l’adresse du service de calcul.",
+        "fields": {
+          "url": "URL de l’exécuteur"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Fuseau horaire",
         "subtitle": "Sélectionnez votre fuseau horaire pour éviter d'être dérangé par les notifications et le bruit du disque la nuit. Cela concerne uniquement les routines du serveur, l'interface web affichera toujours les heures dans votre fuseau horaire local."
@@ -2992,14 +3002,16 @@
           "storageSpaceMode": "Mode d'espace de stockage",
           "computionMode": "Mode de calcul",
           "geoIpLookupMode": "Mode de recherche IP",
-          "customGeoIpLookupUrl": "URL de recherche IP personnalisée"
+          "customGeoIpLookupUrl": "URL de recherche IP personnalisée",
+          "remoteComputationRunnerUrl": "URL de l’exécuteur distant"
         },
         "validation": {
           "required": "Ce champ est requis.",
           "publicBaseUrlInvalid": "Saisissez une URL de base HTTP ou HTTPS valide sans identifiants, requête ou ancre.",
           "publicBaseUrlMismatch": "L'adresse actuelle est {{current}}, mais les liens publics générés utiliseront {{configured}}. Soyez prudent avant d'enregistrer cette valeur.",
           "timezoneInvalid": "Choisissez un fuseau horaire IANA valide dans la liste.",
-          "customGeoIpLookupUrlInvalid": "Saisissez une URL de recherche HTTP ou HTTPS valide."
+          "customGeoIpLookupUrlInvalid": "Saisissez une URL de recherche HTTP ou HTTPS valide.",
+          "remoteComputationRunnerUrlInvalid": "Saisissez une URL HTTP ou HTTPS absolue valide."
         },
         "help": {
           "publicBaseUrl": "Malgré ce paramètre, Cotton détermine l'URL publique automatiquement presque partout. Ne le définissez que si la détection automatique est erronée.",

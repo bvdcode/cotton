@@ -2276,6 +2276,16 @@
           "cloud": "Cotton Bridge может выполнять AI-вычисления для этого инстанса. Требуется подключение к интернету и могут действовать лимиты."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Удалённый раннер",
+        "subtitle": "Укажите адрес сервиса вычислений.",
+        "fields": {
+          "url": "URL раннера"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Временная зона",
         "subtitle": "Выберите вашу временную зону, чтобы не будить вас ночью уведомлениями и шумом дисков. Это только для серверных рутин, веб-интерфейс всегда будет показывать время в вашей локальной временной зоне."
@@ -3410,14 +3420,16 @@
           "storageSpaceMode": "Режим использования места",
           "computionMode": "Режим вычислений",
           "geoIpLookupMode": "Режим определения IP",
-          "customGeoIpLookupUrl": "URL своего резолвера IP"
+          "customGeoIpLookupUrl": "URL своего резолвера IP",
+          "remoteComputationRunnerUrl": "URL удалённого раннера"
         },
         "validation": {
           "required": "Это поле обязательно.",
           "publicBaseUrlInvalid": "Введите корректный HTTP- или HTTPS-URL без авторизации, query и hash.",
           "publicBaseUrlMismatch": "Текущий адрес — {{current}}, но публичные ссылки будут использовать {{configured}}. Будьте внимательны при сохранении.",
           "timezoneInvalid": "Выберите корректный часовой пояс IANA из списка.",
-          "customGeoIpLookupUrlInvalid": "Введите корректный HTTP- или HTTPS-URL."
+          "customGeoIpLookupUrlInvalid": "Введите корректный HTTP- или HTTPS-URL.",
+          "remoteComputationRunnerUrlInvalid": "Введите корректный абсолютный HTTP- или HTTPS-адрес."
         },
         "help": {
           "publicBaseUrl": "Несмотря на эту настройку, Cotton почти везде определяет публичный URL автоматически. Задавайте его только когда автоматика ошибается.",

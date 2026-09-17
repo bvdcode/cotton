@@ -162,6 +162,11 @@ const loadSetupStepPrefill = async (
     return toEmailAnswerKey(await settingsApi.getEmailMode());
   }
 
+  if (stepKey === "remoteComputationRunnerUrl") {
+    const url = (await settingsApi.getRemoteComputationRunnerUrl()).trim();
+    return url ? { url } : undefined;
+  }
+
   return undefined;
 };
 

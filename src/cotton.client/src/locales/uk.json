@@ -2223,6 +2223,16 @@
           "cloud": "Cotton Bridge може виконувати AI-обчислення для цього інстанса. Потрібне підключення до інтернету і можуть діяти ліміти."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Віддалений раннер",
+        "subtitle": "Укажіть адресу сервісу обчислень.",
+        "fields": {
+          "url": "URL раннера"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Часовий пояс",
         "subtitle": "Виберіть свій часовий пояс, щоб уникнути сповіщень і шуму дисків уночі. Це лише для серверних процедур — веб-інтерфейс завжди показуватиме час у вашому локальному часовому поясі."
@@ -3007,14 +3017,16 @@
           "storageSpaceMode": "Режим використання місця",
           "computionMode": "Режим обчислень",
           "geoIpLookupMode": "Режим визначення IP",
-          "customGeoIpLookupUrl": "Власна URL для визначення IP"
+          "customGeoIpLookupUrl": "Власна URL для визначення IP",
+          "remoteComputationRunnerUrl": "URL віддаленого раннера"
         },
         "validation": {
           "required": "Це поле обов'язкове.",
           "publicBaseUrlInvalid": "Введіть дійсну базову URL-адресу HTTP або HTTPS без облікових даних, запиту чи хешу.",
           "publicBaseUrlMismatch": "Поточна адреса — {{current}}, але згенеровані публічні посилання використовуватимуть {{configured}}. Будьте обережні перед збереженням цього значення.",
           "timezoneInvalid": "Виберіть дійсний часовий пояс IANA зі списку.",
-          "customGeoIpLookupUrlInvalid": "Введіть дійсну URL-адресу HTTP або HTTPS для пошуку."
+          "customGeoIpLookupUrlInvalid": "Введіть дійсну URL-адресу HTTP або HTTPS для пошуку.",
+          "remoteComputationRunnerUrlInvalid": "Введіть коректну абсолютну HTTP- або HTTPS-адресу."
         },
         "help": {
           "publicBaseUrl": "Попри це налаштування, Cotton майже скрізь визначає публічну URL автоматично. Встановлюйте його лише тоді, коли автоматичне визначення помиляється.",

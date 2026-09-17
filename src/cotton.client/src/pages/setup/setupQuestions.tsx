@@ -343,6 +343,22 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     ],
   },
   {
+    key: "remoteComputationRunnerUrl",
+    type: "form",
+    requires: "computionMode:remote",
+    title: () => t("setup:questions.remoteComputationRunnerUrl.title"),
+    subtitle: () => t("setup:questions.remoteComputationRunnerUrl.subtitle"),
+    fields: [
+      {
+        key: "url",
+        label: () => t("setup:questions.remoteComputationRunnerUrl.fields.url"),
+        placeholder: () =>
+          t("setup:questions.remoteComputationRunnerUrl.placeholders.url"),
+        type: "url",
+      },
+    ],
+  },
+  {
     key: "timezone",
     type: "single",
     title: () => t("setup:questions.timezone.title"),

@@ -2225,6 +2225,16 @@
           "cloud": "Cotton Bridge 可以为此实例运行 AI 计算。需要互联网连接，并且可能存在限制。"
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "远程运行器",
+        "subtitle": "输入计算服务的地址。",
+        "fields": {
+          "url": "运行器 URL"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "时区",
         "subtitle": "请选择您的时区，以免夜间被通知和磁盘活动打扰。此设置仅用于服务器后台任务，Web 界面始终按您的本地时区显示时间。"
@@ -3001,14 +3011,16 @@
           "storageSpaceMode": "存储空间模式",
           "computionMode": "计算模式",
           "geoIpLookupMode": "IP 查询模式",
-          "customGeoIpLookupUrl": "自定义 IP 查询 URL"
+          "customGeoIpLookupUrl": "自定义 IP 查询 URL",
+          "remoteComputationRunnerUrl": "远程运行器 URL"
         },
         "validation": {
           "required": "此字段为必填项。",
           "publicBaseUrlInvalid": "请输入一个有效的 HTTP 或 HTTPS 基础 URL，且不得包含凭据、查询参数或片段。",
           "publicBaseUrlMismatch": "当前地址为 {{current}}，但生成的公共链接将使用 {{configured}}。保存此值前请谨慎确认。",
           "timezoneInvalid": "请从列表中选择有效的 IANA 时区。",
-          "customGeoIpLookupUrlInvalid": "请输入有效的 HTTP 或 HTTPS 查询 URL。"
+          "customGeoIpLookupUrlInvalid": "请输入有效的 HTTP 或 HTTPS 查询 URL。",
+          "remoteComputationRunnerUrlInvalid": "请输入有效的绝对 HTTP 或 HTTPS URL。"
         },
         "help": {
           "publicBaseUrl": "尽管有此设置，Cotton 在绝大多数情况下都会自动确定公共 URL。仅在自动检测出错时才需要设置。",

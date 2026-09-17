@@ -2218,6 +2218,16 @@
           "cloud": "Cotton Bridge può eseguire calcoli IA per questa istanza. Richiede una connessione a internet e può avere limiti."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Esecutore remoto",
+        "subtitle": "Inserisci l’indirizzo del servizio di calcolo.",
+        "fields": {
+          "url": "URL dell’esecutore"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Fuso orario",
         "subtitle": "Selezioni il Suo fuso orario per non essere disturbato da notifiche e rumore del disco di notte. Questo riguarda solo le attività del server: l'interfaccia web mostrerà sempre gli orari nel Suo fuso orario locale."
@@ -2994,14 +3004,16 @@
           "storageSpaceMode": "Modalità di spazio di archiviazione",
           "computionMode": "Modalità di calcolo",
           "geoIpLookupMode": "Modalità di lookup IP",
-          "customGeoIpLookupUrl": "URL di lookup IP personalizzato"
+          "customGeoIpLookupUrl": "URL di lookup IP personalizzato",
+          "remoteComputationRunnerUrl": "URL dell’esecutore remoto"
         },
         "validation": {
           "required": "Questo campo è obbligatorio.",
           "publicBaseUrlInvalid": "Inserisca un URL base HTTP o HTTPS valido senza credenziali, query o frammento.",
           "publicBaseUrlMismatch": "L'indirizzo attuale è {{current}}, ma i link pubblici generati useranno {{configured}}. Faccia attenzione prima di salvare questo valore.",
           "timezoneInvalid": "Scelga un fuso orario IANA valido dall'elenco.",
-          "customGeoIpLookupUrlInvalid": "Inserisca un URL di lookup HTTP o HTTPS valido."
+          "customGeoIpLookupUrlInvalid": "Inserisca un URL di lookup HTTP o HTTPS valido.",
+          "remoteComputationRunnerUrlInvalid": "Inserisci un URL HTTP o HTTPS assoluto valido."
         },
         "help": {
           "publicBaseUrl": "Nonostante questa impostazione, Cotton determina l'URL pubblico automaticamente quasi ovunque. La imposti solo quando il rilevamento automatico è errato.",
