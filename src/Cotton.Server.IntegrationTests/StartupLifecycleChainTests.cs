@@ -194,7 +194,10 @@ namespace Cotton.Server.IntegrationTests
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/allow-global-indexing", true)).EnsureSuccessStatusCode();
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/server-usage", new[] { "Photos", "Documents" })).EnsureSuccessStatusCode();
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/telemetry", true)).EnsureSuccessStatusCode();
-            (await _client!.PatchAsync("/api/v1/server/settings/compution-mode/Local", null)).EnsureSuccessStatusCode();
+            (await _client!.PatchAsJsonAsync(
+                "/api/v1/server/settings/remote-computation-runner-url",
+                "https://runner.example/")).EnsureSuccessStatusCode();
+            (await _client!.PatchAsync("/api/v1/server/settings/compution-mode/Remote", null)).EnsureSuccessStatusCode();
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/timezone", "UTC")).EnsureSuccessStatusCode();
             (await _client!.PatchAsync("/api/v1/server/settings/storage-space-mode/Limited", null)).EnsureSuccessStatusCode();
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/public-base-url", "https://cotton.example/")).EnsureSuccessStatusCode();
@@ -217,6 +220,8 @@ namespace Cotton.Server.IntegrationTests
 
             JsonElement publicBaseUrl = await GetJsonAsync("/api/v1/server/settings/public-base-url");
             JsonElement serverUsage = await GetJsonAsync("/api/v1/server/settings/server-usage");
+            JsonElement computionMode = await GetJsonAsync("/api/v1/server/settings/compution-mode");
+            JsonElement remoteRunnerUrl = await GetJsonAsync("/api/v1/server/settings/remote-computation-runner-url");
             JsonElement geoIpMode = await GetJsonAsync("/api/v1/server/settings/geoip-lookup-mode");
             JsonElement emailMode = await GetJsonAsync("/api/v1/server/settings/email-mode");
             JsonElement storedEmailConfig = await GetJsonAsync("/api/v1/server/settings/email-config");
@@ -225,6 +230,8 @@ namespace Cotton.Server.IntegrationTests
             {
                 Assert.That(publicBaseUrl.GetProperty("publicBaseUrl").GetString(), Is.EqualTo("https://cotton.example"));
                 Assert.That(serverUsage.GetProperty("serverUsage").EnumerateArray().Select(x => x.GetString()), Does.Contain("Photos"));
+                Assert.That(computionMode.GetProperty("computionMode").GetString(), Is.EqualTo("Remote"));
+                Assert.That(remoteRunnerUrl.GetProperty("remoteComputationRunnerUrl").GetString(), Is.EqualTo("https://runner.example"));
                 Assert.That(geoIpMode.GetProperty("geoIpLookupMode").GetString(), Is.EqualTo("CustomHttp"));
                 Assert.That(emailMode.GetProperty("emailMode").GetString(), Is.EqualTo("Custom"));
                 Assert.That(storedEmailConfig.GetProperty("smtpServer").GetString(), Is.EqualTo("smtp.example.com"));
@@ -278,6 +285,38 @@ namespace Cotton.Server.IntegrationTests
                 response,
                 "/api/v1/server/settings/compution-mode/Cloud",
                 "Telemetry must be enabled to use Cotton Bridge AI.");
+        }
+
+        [Test]
+        public async Task SettingsPatch_Rejects_RemoteComputation_WithoutRunnerUrl()
+        {
+            TokenPairResponseDto login = await LoginAsync();
+            SetBearer(login.AccessToken);
+
+            HttpResponseMessage response = await _client!.PatchAsync(
+                "/api/v1/server/settings/compution-mode/Remote",
+                null);
+
+            await AssertBadRequestProblemDetailsAsync(
+                response,
+                "/api/v1/server/settings/compution-mode/Remote",
+                "Remote computation runner URL must be configured before enabling Remote mode.");
+        }
+
+        [Test]
+        public async Task SettingsPatch_Rejects_InvalidRemoteComputationRunnerUrl()
+        {
+            TokenPairResponseDto login = await LoginAsync();
+            SetBearer(login.AccessToken);
+
+            HttpResponseMessage response = await _client!.PatchAsJsonAsync(
+                "/api/v1/server/settings/remote-computation-runner-url",
+                "runner.example");
+
+            await AssertBadRequestProblemDetailsAsync(
+                response,
+                "/api/v1/server/settings/remote-computation-runner-url",
+                "Remote computation runner URL must be an absolute HTTP or HTTPS URL.");
         }
 
         [Test]

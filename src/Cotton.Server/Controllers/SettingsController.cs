@@ -3,11 +3,13 @@
 
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Handlers.Settings;
 using Cotton.Server.Helpers;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
+using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +23,8 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Server + "/settings")]
     public class SettingsController(
         SettingsProvider settings,
-        ServerSettingsValidator _validator) : SettingsControllerBase(settings)
+        ServerSettingsValidator _validator,
+        IMediator _mediator) : SettingsControllerBase(settings)
     {
         [HttpGet]
         [Authorize]
@@ -220,9 +223,8 @@ namespace Cotton.Server.Controllers
         [HttpPatch("compution-mode/{mode}")]
         public async Task<IActionResult> SetComputionMode([FromRoute] ComputionMode mode, CancellationToken cancellationToken)
         {
-            await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_validator.ValidateComputionMode(mode));
-            await Settings.SetPropertyAsync(x => x.ComputionMode, mode, GetFallbackPublicBaseUrl(), cancellationToken);
+            SetComputionModeRequest request = new(mode, GetFallbackPublicBaseUrl());
+            await _mediator.Send(request, cancellationToken);
             return NoContent();
         }
 
@@ -232,6 +234,27 @@ namespace Cotton.Server.Controllers
         {
             ComputionMode computionMode = Settings.GetServerSettings().ComputionMode;
             return Ok(new { computionMode = computionMode.ToString() });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("remote-computation-runner-url")]
+        public async Task<IActionResult> SetRemoteComputationRunnerUrl(
+            [FromBody] string? url,
+            CancellationToken cancellationToken)
+        {
+            SetRemoteComputationRunnerUrlRequest request = new(url, GetFallbackPublicBaseUrl());
+            await _mediator.Send(request, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("remote-computation-runner-url")]
+        public async Task<IActionResult> GetRemoteComputationRunnerUrl(CancellationToken cancellationToken)
+        {
+            string? remoteComputationRunnerUrl = await _mediator.Send(
+                new GetRemoteComputationRunnerUrlQuery(),
+                cancellationToken);
+            return Ok(new { remoteComputationRunnerUrl });
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
