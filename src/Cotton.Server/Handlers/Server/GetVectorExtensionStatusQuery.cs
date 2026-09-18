@@ -49,12 +49,12 @@ namespace Cotton.Server.Handlers.Server
                     .SingleOrDefaultAsync(cancellationToken);
                 PostgresIndexStatus index = await mediator.Send(new GetVectorIndexMetadataQuery(), cancellationToken);
                 bool building = index.IsBuilding || await IsBuildScheduledAsync(cancellationToken);
-                string? errorCode = null;
+                string? errorCode = BuildVectorIndexJob.LastErrorCode;
                 if (index.Exists && !index.IsCompatibleWith(VectorIndexDefinition.Expected))
                 {
                     errorCode = "pgvector_index_incompatible";
                 }
-                else if (index.Exists && !index.IsValid && !building)
+                else if (index.Exists && !index.IsValid && !building && errorCode is null)
                 {
                     errorCode = "pgvector_index_build_failed";
                 }

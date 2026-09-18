@@ -31,7 +31,7 @@ using System.Net.Http.Json;
 
 namespace Cotton.Server.IntegrationTests
 {
-    public class VectorExtensionEndpointTests : IntegrationTestBase
+    public partial class VectorExtensionEndpointTests : IntegrationTestBase
     {
         private const string Endpoint = Routes.V1.Server + "/database/extensions/vector";
 
@@ -229,7 +229,8 @@ namespace Cotton.Server.IntegrationTests
             }
         }
 
-        private static async Task<WebApplication> CreateApplicationAsync(CottonDbContext context)
+        private static async Task<WebApplication> CreateApplicationAsync(CottonDbContext context,
+            IRequestHandler<BuildVectorIndexRequest, string?>? indexBuilder = null)
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions
             {
@@ -240,6 +241,10 @@ namespace Cotton.Server.IntegrationTests
             builder.Services.AddSingleton(context);
             builder.Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
             builder.Services.AddMediator();
+            if (indexBuilder is not null)
+            {
+                builder.Services.AddSingleton(indexBuilder);
+            }
             builder.Services.AddQuartz(options =>
             {
                 options.SchedulerName = $"VectorEndpointTests-{Guid.NewGuid():N}";
