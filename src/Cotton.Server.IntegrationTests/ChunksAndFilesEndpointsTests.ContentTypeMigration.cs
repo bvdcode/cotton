@@ -7,6 +7,7 @@ using EasyExtensions.Mediator;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Quartz;
 using Quartz.Impl.Matchers;
+using Quartz.Impl.Triggers;
 using System.Net.Http.Headers;
 
 namespace Cotton.Server.IntegrationTests
@@ -90,7 +91,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task ContentTypeBackfillJob_HasOneShotTrigger()
+        public async Task ContentTypeBackfillJob_RepeatsEveryTwelveHours()
         {
             ISchedulerFactory factory = _factory!.Services.GetRequiredService<ISchedulerFactory>();
             IScheduler scheduler = await factory.GetScheduler();
@@ -107,7 +108,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(triggers, Has.Count.EqualTo(1));
                 Assert.That(triggers.Single(), Is.InstanceOf<ISimpleTrigger>());
                 ISimpleTrigger trigger = (ISimpleTrigger)triggers.Single();
-                Assert.That(trigger.RepeatCount, Is.Zero);
+                Assert.That(trigger.RepeatCount, Is.EqualTo(SimpleTriggerImpl.RepeatIndefinitely));
+                Assert.That(trigger.RepeatInterval, Is.EqualTo(TimeSpan.FromHours(12)));
                 return;
             }
 

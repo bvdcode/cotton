@@ -8,7 +8,7 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
-    [JobTrigger(seconds: 1, startNow: true, repeatForever: false)]
+    [JobTrigger(hours: 12)]
     public class HotfixBackfillContentTypeJob(IMediator mediator, ILogger<HotfixBackfillContentTypeJob> logger) : IJob
     {
         public async Task Execute(IJobExecutionContext context)
