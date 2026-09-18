@@ -41,6 +41,7 @@
 		<ProjectReference Include="..\Cotton.Storage\Cotton.Storage.csproj" />
 		<ProjectReference Include="..\Cotton.Topology\Cotton.Topology.csproj" />
 		<ProjectReference Include="..\Cotton.Previews\Cotton.Previews.csproj" />
+		<ProjectReference Include="..\Cotton.TextExtraction\Cotton.TextExtraction.csproj" />
 		<ProjectReference Include="..\Cotton.Database\Cotton.Database.csproj" />
 		<ProjectReference Include="..\Cotton.Autoconfig\Cotton.Autoconfig.csproj" />
 		<ProjectReference Include="..\Cotton.Validators\Cotton.Validators.csproj" />

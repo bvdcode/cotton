@@ -41,6 +41,20 @@ namespace Cotton.Server.Services.Computation
                 ReadInt(root, "max_concurrent_requests"));
         }
 
+        public async Task<TeiToken[]> TokenizeAsync(Uri baseUri, string text, CancellationToken cancellationToken)
+        {
+            using HttpResponseMessage response = await httpClient.PostAsJsonAsync(
+                new Uri(baseUri, "tokenize"), new { inputs = text, add_special_tokens = true }, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            TeiToken[][]? tokens = await response.Content.ReadFromJsonAsync<TeiToken[][]>(cancellationToken);
+            if (tokens is null || tokens.Length != 1 || tokens[0] is null || tokens[0].Length == 0
+                || tokens[0].Any(token => token is null))
+            {
+                throw new ComputationException(ComputationError.InvalidResponse);
+            }
+            return tokens[0];
+        }
+
         public async Task<float[][]> GetTextEmbeddingsAsync(
             Uri baseUri, string[] texts, CancellationToken cancellationToken)
         {

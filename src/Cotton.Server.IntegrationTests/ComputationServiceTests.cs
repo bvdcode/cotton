@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using System.Net;
+using System.Text;
 
 namespace Cotton.Server.IntegrationTests
 {
@@ -41,12 +42,14 @@ namespace Cotton.Server.IntegrationTests
             services.AddSingleton<EmbeddingDimensionCache>();
             services.AddSingleton(_ => new HttpClient(_handler));
             services.AddSingleton<TeiClient>();
+            services.AddTransient<TextEmbeddingChunker>();
             services.AddDbContext<CottonDbContext>(options => options.UseNpgsql());
             services.AddScoped<SettingsProvider>();
             services.AddTransient<ComputationService>();
             services.AddTransient<IRequestHandler<GetComputationServiceInfoQuery, ComputationServiceInfo>, GetComputationServiceInfoQueryHandler>();
             services.AddTransient<IRequestHandler<GetComputationStatusQuery, ComputationStatus>, GetComputationStatusQueryHandler>();
             services.AddTransient<IRequestHandler<GetTextEmbeddingsRequest, float[][]>, GetTextEmbeddingsRequestHandler>();
+            services.AddTransient<IRequestHandler<GetTextEmbeddingFragmentsRequest, float[][]>, GetTextEmbeddingFragmentsRequestHandler>();
             _provider = services.BuildServiceProvider();
             _service = _provider.GetRequiredService<ComputationService>();
         }
@@ -154,6 +157,44 @@ namespace Cotton.Server.IntegrationTests
             ComputationException? exception = Assert.ThrowsAsync<ComputationException>(
                 async () => await _service.GetTextEmbeddingsAsync(["text"]));
             Assert.That(exception!.Error, Is.EqualTo(error));
+        }
+
+        [TestCase(20, 2)]
+        [TestCase(10, 32)]
+        public async Task Fragments_RespectInputAndBatchLimits_AndKeepDocumentOrder(int batchTokens, int batchInputs)
+        {
+            _handler.MaxInputTokens = 8;
+            _handler.MaxBatchTokens = batchTokens;
+            _handler.MaxBatchInputs = batchInputs;
+            const string text = "Привет 😀 мир! One two three four five six.";
+
+            float[][] vectors = await _service.GetTextEmbeddingFragmentsAsync(text);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(string.Concat(_handler.Batches.SelectMany(batch => batch)), Is.EqualTo(text));
+                Assert.That(vectors.Length, Is.EqualTo(_handler.Batches.Sum(batch => batch.Length)));
+                Assert.That(_handler.Batches.All(batch => batch.Length <= batchInputs), Is.True);
+                Assert.That(_handler.Batches.All(batch => batch.Max(input => input.EnumerateRunes().Count() + 2) * batch.Length <= batchTokens), Is.True);
+                Assert.That(_handler.Batches.SelectMany(batch => batch).All(input => input.EnumerateRunes().Count() + 2 <= 8), Is.True);
+                Assert.That(_handler.InfoCalls, Is.EqualTo(1));
+                Assert.That(_handler.Truncate, Is.False);
+            });
+        }
+
+        [Test]
+        public async Task Fragments_ShortDocument_UsesOneEmbeddingBatch()
+        {
+            float[][] vectors = await _service.GetTextEmbeddingFragmentsAsync("A short document.");
+            Assert.That(vectors, Has.Length.EqualTo(1));
+            Assert.That(_handler.EmbedCalls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Fragments_EmptyDocument_DoesNotContactWorker()
+        {
+            Assert.That(await _service.GetTextEmbeddingFragmentsAsync(" \n"), Is.Empty);
+            Assert.That(_handler.Addresses, Is.Empty);
         }
 
         [Test]

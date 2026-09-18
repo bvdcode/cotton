@@ -16,6 +16,7 @@ using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using Cotton.Server.Services.FileMetadata;
 using Cotton.Server.Services.Startup;
 using Cotton.Server.Services.WebDav;
+using Cotton.TextExtraction;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Cotton.Server.Extensions
@@ -26,6 +27,9 @@ namespace Cotton.Server.Extensions
         {
             services.AddSingleton<EmbeddingDimensionCache>();
             services.AddScoped<ComputationService>();
+            services.AddScoped<TextEmbeddingChunker>();
+            services.AddSingleton<IFileTextExtractor, PdfTextExtractor>();
+            services.AddSingleton<FileTextExtractorProvider>();
             services.AddHttpClient<TeiClient>(client => client.Timeout = TeiClient.RequestTimeout)
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
                 {

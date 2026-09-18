@@ -24,5 +24,10 @@ namespace Cotton.Server.Services.Computation
         {
             return mediator.Send(new GetTextEmbeddingsRequest(texts), cancellationToken);
         }
+
+        public Task<float[][]> GetTextEmbeddingFragmentsAsync(string text, CancellationToken cancellationToken = default)
+        {
+            return mediator.Send(new GetTextEmbeddingFragmentsRequest(text), cancellationToken);
+        }
     }
 }
