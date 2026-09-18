@@ -31,7 +31,7 @@ namespace Cotton.Server.Mappings
                 .Map(dest => dest.OriginalNodeFileId, src => src.OriginalNodeFileId)
                 .Map(dest => dest.OwnerId, src => src.OwnerId)
                 .Map(dest => dest.SizeBytes, src => src.FileManifest.SizeBytes)
-                .Map(dest => dest.ContentType, src => src.FileManifest.ContentType)
+                .Map(dest => dest.ContentType, src => FileContentTypeResolver.ResolveFromFileName(src.Name))
                 .Map(dest => dest.ContentHash, src => Hasher.ToHexStringHash(src.FileManifest.ProposedContentHash))
                 .Map(dest => dest.ETag, src => FileETags.GetContentETag(src.FileManifest))
                 .Map(dest => dest.Metadata, src => FileManifestMetadataProjection.Merge(src.Metadata, src.FileManifest.Metadata))

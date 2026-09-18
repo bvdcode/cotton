@@ -12,6 +12,7 @@ using Cotton.Server.Services;
 using Cotton.Server.Services.Computation;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.Search;
+using Cotton.Server.Services.Previews;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using Cotton.Server.Services.FileMetadata;
 using Cotton.Server.Services.Startup;
@@ -66,6 +67,7 @@ namespace Cotton.Server.Extensions
 
         public static IServiceCollection AddChunkServices(this IServiceCollection services)
         {
+            services.AddScoped<FilePreviewRenderer>();
             services.AddScoped<IChunkIngestService, ChunkIngestService>();
             services.AddScoped<NodeFileHistoryService>();
             services.AddScoped<FileVersionStorageService>();

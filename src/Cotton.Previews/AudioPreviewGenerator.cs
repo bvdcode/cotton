@@ -18,6 +18,8 @@ namespace Cotton.Previews
 
         public int Version => 4;
 
+        public int Priority => 0;
+
         public IEnumerable<string> SupportedContentTypes =>
         [
             "audio/mpeg",

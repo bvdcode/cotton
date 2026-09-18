@@ -5,6 +5,37 @@ namespace Cotton.Previews.Tests
 {
     public class PreviewGeneratorProviderTests
     {
+        [Test]
+        public void GetGeneratorsByContentTypes_DeduplicatesAndOrdersByPriority()
+        {
+            IReadOnlyList<IPreviewGenerator> generators = PreviewGeneratorProvider.GetGeneratorsByContentTypes(
+                ["text/plain", "image/png", "IMAGE/PNG", "image/jpeg", "text/css", "application/octet-stream"]);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(generators, Has.Count.EqualTo(2));
+                Assert.That(generators[0], Is.TypeOf<ImagePreviewGenerator>());
+                Assert.That(generators[1], Is.TypeOf<TextPreviewGenerator>());
+                Assert.That(generators[0].Priority, Is.LessThan(generators[1].Priority));
+            });
+        }
+
+        [Test]
+        public void GetGeneratorsByContentTypes_KeepsDistinctModelFormats()
+        {
+            IReadOnlyList<IPreviewGenerator> generators = PreviewGeneratorProvider.GetGeneratorsByContentTypes(
+                ["model/stl", "model/obj", "model/3mf", "application/sla"]);
+
+            Assert.That(generators, Has.Count.EqualTo(3));
+            Assert.That(generators, Is.Unique);
+        }
+
+        [Test]
+        public void GetGeneratorsByContentTypes_UnknownTypes_HasNoCandidates()
+        {
+            Assert.That(PreviewGeneratorProvider.GetGeneratorsByContentTypes(["application/octet-stream", ""]), Is.Empty);
+        }
+
         [TestCase("text/plain", typeof(TextPreviewGenerator))]
         [TestCase("text/x-csharp", typeof(TextPreviewGenerator))]
         [TestCase("application/pdf", typeof(PdfPreviewGenerator))]

@@ -11,6 +11,8 @@ namespace Cotton.Previews
     {
         public int Version => 9;
 
+        public int Priority => 0;
+
         public IEnumerable<string> SupportedContentTypes => _supportedContentTypes;
 
         private readonly string _modelExtension;

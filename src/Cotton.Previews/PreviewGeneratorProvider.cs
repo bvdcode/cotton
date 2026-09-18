@@ -1,6 +1,11 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using System.Buffers.Binary;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+
 namespace Cotton.Previews
 {
     public static class PreviewGeneratorProvider
@@ -28,6 +33,7 @@ namespace Cotton.Previews
 
         private static readonly Dictionary<string, IPreviewGenerator> GeneratorsByContentType =
             Generators
+                .OrderBy(generator => generator.Priority)
                 .SelectMany(
                     g => g.SupportedContentTypes,
                     (g, ct) => new { ContentType = ct, Generator = g })
@@ -39,12 +45,32 @@ namespace Cotton.Previews
                     x => x.First().Generator,
                     StringComparer.OrdinalIgnoreCase);
 
-        private static readonly Dictionary<string, int> GeneratorVersionsByContentType =
-            GeneratorsByContentType
-                .ToDictionary(
-                    x => x.Key,
-                    x => x.Value.Version,
-                    StringComparer.OrdinalIgnoreCase);
+        public static int GenerationVersion { get; } = CalculateGenerationVersion();
+
+        public static IReadOnlyList<IPreviewGenerator> GetGeneratorsByContentTypes(IEnumerable<string> contentTypes)
+        {
+            HashSet<IPreviewGenerator> candidates = [];
+            foreach (string contentType in contentTypes.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                IPreviewGenerator? generator = GetGeneratorByContentType(contentType);
+                if (generator is not null)
+                {
+                    candidates.Add(generator);
+                }
+            }
+
+            return [.. Generators.Where(candidates.Contains).OrderBy(generator => generator.Priority)];
+        }
+
+        private static int CalculateGenerationVersion()
+        {
+            string definition = string.Join("\n", Generators.OrderBy(generator => generator.Priority).Select(generator =>
+                string.Join(",", generator.SupportedContentTypes.Order(StringComparer.Ordinal))
+                + ":" + generator.Version.ToString(CultureInfo.InvariantCulture)
+                + ":" + generator.Priority.ToString(CultureInfo.InvariantCulture)));
+            byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(definition));
+            return BinaryPrimitives.ReadInt32LittleEndian(hash);
+        }
 
         public static string[] GetAllSupportedMimeTypes()
         {
@@ -59,11 +85,6 @@ namespace Cotton.Previews
             }
             return GeneratorsByContentType
                 .TryGetValue(contentType, out IPreviewGenerator? generator) ? generator : null;
-        }
-
-        public static IReadOnlyDictionary<string, int> GetGeneratorVersionsByContentType()
-        {
-            return GeneratorVersionsByContentType;
         }
     }
 }

@@ -17,6 +17,8 @@ namespace Cotton.Previews
 
         public int Version => 5;
 
+        public int Priority => 0;
+
         public IEnumerable<string> SupportedContentTypes => AndroidPackageContentTypes.All;
 
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)

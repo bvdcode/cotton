@@ -11,6 +11,8 @@ namespace Cotton.Previews
     {
         public int Version => 1;
 
+        public int Priority => 0;
+
         public IEnumerable<string> SupportedContentTypes =>
         [
             "image/svg+xml",

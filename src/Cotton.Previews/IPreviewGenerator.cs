@@ -7,6 +7,8 @@ namespace Cotton.Previews
     {
         int Version { get; }
 
+        int Priority { get; }
+
         IEnumerable<string> SupportedContentTypes { get; }
 
         Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size);

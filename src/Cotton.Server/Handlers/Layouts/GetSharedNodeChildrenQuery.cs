@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Nodes;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using Cotton.Storage.Extensions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -135,7 +136,7 @@ namespace Cotton.Server.Handlers.Layouts
                 UpdatedAt = x.UpdatedAt,
                 NodeId = x.NodeId,
                 Name = x.Name,
-                ContentType = x.FileManifest.ContentType,
+                ContentType = FileContentTypeResolver.ResolveFromFileName(x.Name),
                 SizeBytes = x.FileManifest.SizeBytes,
                 PreviewHashEncryptedHex = x.FileManifest.GetPreviewHashEncryptedHex(),
             })];

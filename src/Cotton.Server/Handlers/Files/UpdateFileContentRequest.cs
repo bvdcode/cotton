@@ -10,6 +10,7 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Services;
+using Cotton.Server.Extensions;
 using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
@@ -253,6 +254,7 @@ namespace Cotton.Server.Handlers.Files
             }
 
             nodeFile.SetName(normalizedName);
+            nodeFile.FileManifest.ResetFailedPreview();
             if (metadata is not null)
             {
                 nodeFile.Metadata = metadata.Count > 0

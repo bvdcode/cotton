@@ -260,6 +260,7 @@ namespace Cotton.Server.Handlers.Files
                 Metadata = CopyMetadata(request.Metadata),
             };
             newNodeFile.SetName(request.Name);
+            fileManifest.ResetFailedPreview();
 
             await _dbContext.NodeFiles.AddAsync(newNodeFile, ct);
             if (!request.OriginalNodeFileId.HasValue)

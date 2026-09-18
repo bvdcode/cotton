@@ -9,6 +9,7 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Services;
+using Cotton.Server.Extensions;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -266,6 +267,7 @@ namespace Cotton.Server.Handlers.WebDav
             if (fileManifest is not null)
             {
                 await _fileManifestService.ClearGcSchedulesForManifestReferencesAsync(fileManifest.Id, ct);
+                fileManifest.ResetFailedPreview();
             }
             else
             {

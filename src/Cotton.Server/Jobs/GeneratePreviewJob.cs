@@ -5,13 +5,11 @@ using Cotton.Crypto;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Previews;
-using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Server.Services.Previews;
 using Cotton.Storage.Abstractions;
-using Cotton.Storage.Extensions;
-using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.AspNetCore.SignalR;
@@ -25,6 +23,7 @@ namespace Cotton.Server.Jobs
         PerfTracker _perf,
         IStreamCipher _crypto,
         IStoragePipeline _storage,
+        FilePreviewRenderer _renderer,
         CottonDbContext _dbContext,
         IHubContext<EventHub> _hubContext,
         ILogger<GeneratePreviewJob> _logger) : IJob
@@ -36,15 +35,11 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
-            string[] allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
-            IReadOnlyDictionary<string, int> generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
 
             HashSet<Guid> queuedOrProcessedItemIds = [];
             List<FileManifest> itemsToProcess = await PreviewQueueLoader.LoadNextAsync(
                 _dbContext,
-                allSupportedMimeTypes,
-                generatorVersionsByContentType,
                 MaxItemsPerRun,
                 queuedOrProcessedItemIds,
                 cancellationToken);
@@ -53,8 +48,6 @@ namespace Cotton.Server.Jobs
             int processed = await ProcessPreviewQueueAsync(
                 itemsToProcess,
                 queuedOrProcessedItemIds,
-                allSupportedMimeTypes,
-                generatorVersionsByContentType,
                 cancellationToken);
 
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -80,8 +73,6 @@ namespace Cotton.Server.Jobs
         private async Task<int> ProcessPreviewQueueAsync(
             List<FileManifest> itemsToProcess,
             HashSet<Guid> queuedOrProcessedItemIds,
-            IReadOnlyCollection<string> allSupportedMimeTypes,
-            IReadOnlyDictionary<string, int> generatorVersionsByContentType,
             CancellationToken cancellationToken)
         {
             int processed = 0;
@@ -98,8 +89,6 @@ namespace Cotton.Server.Jobs
                         itemsToProcess,
                         nextIndex,
                         queuedOrProcessedItemIds,
-                        allSupportedMimeTypes,
-                        generatorVersionsByContentType,
                         cancellationToken);
                 }
                 finally
@@ -118,19 +107,19 @@ namespace Cotton.Server.Jobs
             CancellationToken cancellationToken)
         {
             _perf.OnPreviewGenerating();
-            _logger.LogInformation("Processing {Current}/{Total}: FileManifest {FileManifestId}, ContentType={ContentType}, Size={Size}",
-                processed, total, item.Id, item.ContentType, item.SizeBytes);
-
-            IPreviewGenerator? generator = PreviewGeneratorProvider.GetGeneratorByContentType(item.ContentType);
-            if (generator is null)
-            {
-                _logger.LogWarning("No preview generator found for content type {ContentType}", item.ContentType);
-                return;
-            }
+            _logger.LogInformation("Processing {Current}/{Total}: FileManifest {FileManifestId}, Size={Size}",
+                processed, total, item.Id, item.SizeBytes);
 
             try
             {
-                await GeneratePreviewAsync(item, generator, cancellationToken);
+                RenderedFilePreview? preview = await _renderer.RenderAsync(item, cancellationToken);
+                if (preview is null)
+                {
+                    await RecordPreviewGenerationFailureAsync(item, "No preview generator matches the file names.", cancellationToken);
+                    return;
+                }
+
+                await StorePreviewAsync(item, preview, cancellationToken);
                 await NotifyPreviewGeneratedAsync(item, cancellationToken);
                 await ThrottlePreviewProcessingAsync(processed, cancellationToken);
             }
@@ -145,72 +134,38 @@ namespace Cotton.Server.Jobs
                     "Skipped stale preview update for file manifest {FileManifestId}.",
                     item.Id);
             }
+            catch (AggregateException ex)
+            {
+                _logger.LogWarning(ex, "Failed to render preview for file manifest {FileManifestId}", item.Id);
+                await RecordPreviewGenerationFailureAsync(item, ex.Message, cancellationToken);
+            }
             catch (Exception ex)
             {
-                await RecordPreviewGenerationFailureAsync(item, generator, ex, cancellationToken);
+                _logger.LogError(ex, "Failed to store or notify preview for file manifest {FileManifestId}", item.Id);
             }
         }
 
-        private async Task GeneratePreviewAsync(
+        private async Task StorePreviewAsync(
             FileManifest item,
-            IPreviewGenerator generator,
+            RenderedFilePreview preview,
             CancellationToken cancellationToken)
         {
-            PipelineContext pipelineContext = CreatePreviewPipelineContext(item);
-            string[] uids = item.FileManifestChunks.GetChunkHashes();
+            byte[] smallHash = await WritePreviewImageAsync(item.Id, "preview", preview.Small, cancellationToken);
+            byte[] encryptedHash = await _crypto.EncryptAsync(smallHash, cancellationToken: cancellationToken);
+            byte[]? largeHash = null;
+            if (preview.Large is not null)
+            {
+                largeHash = await WritePreviewImageAsync(item.Id, "large preview", preview.Large, cancellationToken);
+            }
 
-            await StoreSmallPreviewAsync(item, generator, uids, pipelineContext, cancellationToken);
-            await StoreLargePreviewIfSupportedAsync(item, generator, uids, pipelineContext, cancellationToken);
-
+            item.SmallFilePreviewHash = smallHash;
+            item.SmallFilePreviewHashEncrypted = encryptedHash;
+            item.LargeFilePreviewHash = largeHash;
             item.PreviewGenerationError = null;
-            item.PreviewGeneratorVersion = generator.Version;
+            item.PreviewGeneratorVersion = PreviewGeneratorProvider.GenerationVersion;
             await _dbContext.SaveChangesAsync(cancellationToken);
             _logger.LogDebug("Generated preview for file manifest {FileManifestId}", item.Id);
         }
-
-        private static PipelineContext CreatePreviewPipelineContext(FileManifest item)
-        {
-            return new PipelineContext
-            {
-                FileSizeBytes = item.SizeBytes,
-                ChunkLengths = item.FileManifestChunks.GetChunkLengths()
-            };
-        }
-
-        private async Task StoreSmallPreviewAsync(
-            FileManifest item,
-            IPreviewGenerator generator,
-            string[] uids,
-            PipelineContext pipelineContext,
-            CancellationToken cancellationToken)
-        {
-            _logger.LogDebug("Getting blob stream for FileManifest {FileManifestId}...", item.Id);
-            await using Stream source = _storage.GetBlobStream(uids, pipelineContext);
-            byte[] previewImage = await generator.GeneratePreviewWebPAsync(source, PreviewGeneratorProvider.DefaultSmallPreviewSize);
-            byte[] hash = await WritePreviewImageAsync(item.Id, "preview", previewImage, cancellationToken);
-            item.SmallFilePreviewHash = hash;
-            item.SmallFilePreviewHashEncrypted = await _crypto.EncryptAsync(hash, cancellationToken: cancellationToken);
-        }
-
-        private async Task StoreLargePreviewIfSupportedAsync(
-            FileManifest item,
-            IPreviewGenerator generator,
-            string[] uids,
-            PipelineContext pipelineContext,
-            CancellationToken cancellationToken)
-        {
-            if (!ShouldGenerateLargePreview(generator))
-            {
-                return;
-            }
-
-            await using Stream source = _storage.GetBlobStream(uids, pipelineContext);
-            byte[] previewImage = await generator.GeneratePreviewWebPAsync(source, PreviewGeneratorProvider.DefaultLargePreviewSize);
-            item.LargeFilePreviewHash = await WritePreviewImageAsync(item.Id, "large preview", previewImage, cancellationToken);
-        }
-
-        private static bool ShouldGenerateLargePreview(IPreviewGenerator generator) =>
-            generator is ImagePreviewGenerator or HeicPreviewGenerator or SvgPreviewGenerator;
 
         private async Task<byte[]> WritePreviewImageAsync(
             Guid fileManifestId,
@@ -258,13 +213,19 @@ namespace Cotton.Server.Jobs
 
         private async Task RecordPreviewGenerationFailureAsync(
             FileManifest item,
-            IPreviewGenerator generator,
-            Exception ex,
+            string error,
             CancellationToken cancellationToken)
         {
-            _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
-            item.PreviewGenerationError = ex.Message;
-            item.PreviewGeneratorVersion = generator.Version;
+            HashSet<string> attemptedNames = item.NodeFiles.Select(file => file.Name).ToHashSet(StringComparer.Ordinal);
+            string[] currentNames = await PreviewFileQuery.AvailableFiles(_dbContext)
+                .Where(file => file.FileManifestId == item.Id).Select(file => file.Name).ToArrayAsync(cancellationToken);
+            if (!attemptedNames.SetEquals(currentNames))
+            {
+                return;
+            }
+
+            item.PreviewGenerationError = error;
+            item.PreviewGeneratorVersion = PreviewGeneratorProvider.GenerationVersion;
             try
             {
                 await _dbContext.SaveChangesAsync(cancellationToken);
@@ -282,8 +243,6 @@ namespace Cotton.Server.Jobs
             List<FileManifest> itemsToProcess,
             int nextIndex,
             HashSet<Guid> queuedOrProcessedItemIds,
-            IReadOnlyCollection<string> allSupportedMimeTypes,
-            IReadOnlyDictionary<string, int> generatorVersionsByContentType,
             CancellationToken cancellationToken)
         {
             if (!_perf.IsUploading())
@@ -296,8 +255,6 @@ namespace Cotton.Server.Jobs
                 itemsToProcess,
                 nextIndex,
                 queuedOrProcessedItemIds,
-                allSupportedMimeTypes,
-                generatorVersionsByContentType,
                 cancellationToken);
 
             if (refreshed > 0)
@@ -313,8 +270,6 @@ namespace Cotton.Server.Jobs
             List<FileManifest> itemsToProcess,
             int insertIndex,
             HashSet<Guid> queuedOrProcessedItemIds,
-            IReadOnlyCollection<string> allSupportedMimeTypes,
-            IReadOnlyDictionary<string, int> generatorVersionsByContentType,
             CancellationToken cancellationToken)
         {
             int remainingSlots = Math.Max(0, MaxItemsPerRun - insertIndex);
@@ -325,8 +280,6 @@ namespace Cotton.Server.Jobs
 
             List<FileManifest> refreshedItems = await PreviewQueueLoader.LoadNextAsync(
                 _dbContext,
-                allSupportedMimeTypes,
-                generatorVersionsByContentType,
                 Math.Min(RefreshItemsPerUploadPause, remainingSlots),
                 queuedOrProcessedItemIds,
                 cancellationToken);

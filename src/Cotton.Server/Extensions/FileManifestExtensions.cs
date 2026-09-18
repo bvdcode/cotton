@@ -8,6 +8,15 @@ namespace Cotton.Server.Extensions
 {
     public static class FileManifestExtensions
     {
+        public static void ResetFailedPreview(this FileManifest manifest)
+        {
+            if ((manifest.SmallFilePreviewHash is null || manifest.SmallFilePreviewHashEncrypted is null)
+                && manifest.PreviewGenerationError is not null)
+            {
+                manifest.PreviewGenerationError = null;
+            }
+        }
+
         public static Dictionary<string, long> GetChunkLengths(this IEnumerable<FileManifestChunk> fileManifestChunks)
         {
             ArgumentNullException.ThrowIfNull(fileManifestChunks);

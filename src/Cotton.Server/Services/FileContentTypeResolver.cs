@@ -29,6 +29,7 @@ namespace Cotton.Server.Services
                 [".opus"] = Override("audio/opus"),
                 [".flac"] = Override("audio/flac"),
                 [".oga"] = Override("audio/ogg"),
+                [".ogg"] = Override("audio/ogg"),
                 [".weba"] = Override("audio/webm"),
                 [".aac"] = Override("audio/aac"),
                 [".m4b"] = Override("audio/mp4"),
@@ -38,6 +39,8 @@ namespace Cotton.Server.Services
                 [".markdown"] = Override("text/markdown"),
                 [".cs"] = Override("text/plain"),
                 [".csx"] = Override("text/plain"),
+                [".ts"] = Override("text/plain"),
+                [".tsx"] = Override("text/plain"),
                 [".lrc"] = Override("text/plain"),
                 [".srt"] = Override("text/plain"),
                 [".svg"] = Override("image/svg+xml"),
@@ -64,6 +67,19 @@ namespace Cotton.Server.Services
             ".mm", ".go", ".rs", ".swift", ".kt", ".kts", ".sh", ".bash", ".zsh",
             ".yaml", ".yml", ".toml", ".ini", ".conf", ".cfg", ".sql", ".vue", ".svelte",
         };
+
+        public static string ResolveFromFileName(string? fileName)
+        {
+            string? contentType = ResolveOverride(fileName, string.Empty)
+                ?? ResolveExtension(fileName);
+            if ((contentType is null || contentType == DefaultContentType)
+                && IsSourceTextFileName(fileName))
+            {
+                return "text/plain";
+            }
+
+            return contentType ?? DefaultContentType;
+        }
 
         public static string Resolve(string? fileName, string? contentType)
         {
@@ -124,6 +140,19 @@ namespace Cotton.Server.Services
 
         private static string? ResolveDetected(string? fileName)
         {
+            string? contentType = ResolveExtension(fileName);
+            if (contentType is null)
+            {
+                return null;
+            }
+
+            return IsSourceTextFileName(fileName) && ShouldUseSourceTextContentType(contentType)
+                ? "text/plain"
+                : contentType;
+        }
+
+        private static string? ResolveExtension(string? fileName)
+        {
             if (string.IsNullOrWhiteSpace(fileName)
                 || !FileExtensionContentTypeProvider.TryGetContentType(fileName, out string? detectedContentType)
                 || string.IsNullOrWhiteSpace(detectedContentType))
@@ -131,10 +160,7 @@ namespace Cotton.Server.Services
                 return null;
             }
 
-            string normalizedContentType = Normalize(detectedContentType);
-            return IsSourceTextFileName(fileName) && ShouldUseSourceTextContentType(normalizedContentType)
-                ? "text/plain"
-                : normalizedContentType;
+            return Normalize(detectedContentType);
         }
 
         private static bool ShouldUseSourceTextContentType(string contentType)

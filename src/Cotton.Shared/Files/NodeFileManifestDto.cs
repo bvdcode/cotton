@@ -40,7 +40,7 @@ namespace Cotton.Files
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// Gets or sets the MIME content type.
+        /// Gets or sets the MIME content type inferred from the display name.
         /// </summary>
         public string ContentType { get; set; } = string.Empty;
 

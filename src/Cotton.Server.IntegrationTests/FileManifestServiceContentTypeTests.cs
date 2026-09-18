@@ -8,6 +8,50 @@ namespace Cotton.Server.IntegrationTests
 {
     public class FileManifestServiceContentTypeTests
     {
+        [TestCase("song.ogg", "audio/ogg")]
+        [TestCase("SONG.OGG", "audio/ogg")]
+        [TestCase("movie.ogv", "video/ogg")]
+        [TestCase("script.ts", "text/plain")]
+        [TestCase("component.tsx", "text/plain")]
+        [TestCase("styles.css", "text/css")]
+        [TestCase("index.html", "text/html")]
+        [TestCase("script.js", "text/javascript")]
+        [TestCase("module.mjs", "text/javascript")]
+        [TestCase("README.md", "text/markdown")]
+        [TestCase("data.json", "application/json")]
+        [TestCase("Program.cs", "text/plain")]
+        [TestCase("Program.java", "text/plain")]
+        [TestCase("app.py", "text/plain")]
+        [TestCase("Dockerfile", "text/plain")]
+        [TestCase("Dockerfile.prod", "text/plain")]
+        [TestCase(".dockerignore", "text/plain")]
+        [TestCase("photo.heif", "image/heif")]
+        [TestCase("song.opus", "audio/opus")]
+        [TestCase("model.stl", "model/stl")]
+        [TestCase("package.apk", "application/vnd.android.package-archive")]
+        [TestCase("file.unknownext", "application/octet-stream")]
+        [TestCase("opaque-file-name", "application/octet-stream")]
+        [TestCase(null, "application/octet-stream")]
+        public void ResolveFromFileName_PreservesMediaTypeIndependentlyOfPreviewSupport(
+            string? fileName,
+            string expectedContentType)
+        {
+            Assert.That(FileContentTypeResolver.ResolveFromFileName(fileName), Is.EqualTo(expectedContentType));
+        }
+
+        [TestCase("index.html")]
+        [TestCase("styles.css")]
+        [TestCase("script.js")]
+        [TestCase("component.jsx")]
+        [TestCase("script.sh")]
+        [TestCase("data.xml")]
+        public void SourceFilename_ResolvesToSupportedTextPreview(string fileName)
+        {
+            string contentType = FileContentTypeResolver.ResolveFromFileName(fileName);
+            Assert.That(Cotton.Previews.PreviewGeneratorProvider.GetGeneratorByContentType(contentType),
+                Is.TypeOf<Cotton.Previews.TextPreviewGenerator>());
+        }
+
         [TestCase("IMG_1.heic", null, "image/heic")]
         [TestCase("IMG_1.heif", "application/octet-stream", "image/heif")]
         [TestCase("IMG_1.heics", "application/octet-stream", "image/heic-sequence")]
@@ -28,7 +72,7 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("lyrics.lrc", "application/octet-stream", "text/plain")]
         [TestCase("captions.srt", "application/x-subrip", "text/plain")]
         [TestCase("app.py", "text/x-python", "text/plain")]
-        [TestCase("styles.css", "text/css", "text/plain")]
+        [TestCase("styles.css", "text/css", "text/css")]
         [TestCase("script.ts", "application/x-typescript", "text/plain")]
         [TestCase("Dockerfile", "application/octet-stream", "text/plain")]
         [TestCase(".dockerignore", "", "text/plain")]

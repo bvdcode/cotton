@@ -14,6 +14,8 @@ namespace Cotton.Previews
 
         public int Version => 2;
 
+        public int Priority => 0;
+
         public IEnumerable<string> SupportedContentTypes =>
         [
             "image/heic",

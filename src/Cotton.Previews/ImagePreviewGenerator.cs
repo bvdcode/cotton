@@ -11,6 +11,8 @@ namespace Cotton.Previews
     {
         public int Version => 3;
 
+        public int Priority => 0;
+
         public IEnumerable<string> SupportedContentTypes =>
             Configuration.Default.ImageFormats.SelectMany(x => x.MimeTypes);
 
