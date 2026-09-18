@@ -83,7 +83,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(versions.Single().ContentType, Is.EqualTo("text/css"));
                 Assert.That(shared.Files.Single(file => file.Id == text.Id).ContentType, Is.EqualTo("text/plain"));
                 Assert.That(shared.Files.Single(file => file.Id == markdown.Id).ContentType, Is.EqualTo("text/css"));
-                Assert.That(storedContentType, Is.EqualTo("text/plain"));
+                Assert.That(storedContentType, Is.Empty);
                 Assert.That(fileContentTypes[text.Id], Is.EqualTo("text/plain"));
                 Assert.That(fileContentTypes[markdown.Id], Is.EqualTo("text/css"));
                 Assert.That(cssFiles.Select(file => file.Id), Is.EqualTo(new[] { markdown.Id }));

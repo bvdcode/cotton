@@ -53,6 +53,11 @@ namespace Cotton.Server.IntegrationTests
 
             await dbContext.NodeFiles.Where(file => file.Id == original.Id)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(file => file.ContentType, "application/custom"));
+            FileManifest legacyManifest = await dbContext.FileManifests.SingleAsync(manifest => manifest.Id == original.FileManifestId);
+            legacyManifest.ContentType = "application/incorrect";
+            await dbContext.SaveChangesAsync();
+            await DatabaseIntegrityTestSignatures.SetVersionAsync(dbContext, legacyManifest, 1, scope.ServiceProvider);
+            dbContext.ChangeTracker.Clear();
             HotfixBackfillContentTypeJob job = ActivatorUtilities.CreateInstance<HotfixBackfillContentTypeJob>(scope.ServiceProvider);
             await job.Execute(null!);
 
@@ -77,8 +82,11 @@ namespace Cotton.Server.IntegrationTests
 
             IMediator mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
             Assert.That(await mediator.Send(new BackfillNodeFileContentTypesRequest(), CancellationToken.None), Is.Zero);
-            Assert.That(await dbContext.FileManifests.Where(manifest => manifest.Id == original.FileManifestId)
-                .Select(manifest => manifest.ContentType).SingleAsync(), Is.EqualTo("text/plain"));
+            FileManifest clearedManifest = await dbContext.FileManifests.SingleAsync(manifest => manifest.Id == original.FileManifestId);
+            Assert.That(clearedManifest.ContentType, Is.Empty);
+            Assert.That(dbContext.Entry(clearedManifest).Property<int?>(DatabaseIntegrityColumns.VersionProperty).CurrentValue,
+                Is.EqualTo(FileManifestIntegrityDescriptor.LatestVersion));
+            verifier.RequireValid(dbContext, clearedManifest, "test.cleared-manifest");
         }
 
         [Test]

@@ -180,8 +180,6 @@ namespace Cotton.Server.Handlers.Files
                 cancellationToken: ct)
                 ?? await _fileManifestService.CreateNewFileManifestAsync(
                     chunks,
-                    request.Name,
-                    request.ContentType,
                     proposedHash,
                     request.UserId,
                     cancellationToken: ct);

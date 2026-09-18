@@ -204,8 +204,6 @@ namespace Cotton.Server.Handlers.Files
 
             return await _fileManifestService.CreateNewFileManifestAsync(
                 chunks,
-                request.Name,
-                request.ContentType,
                 proposedHash,
                 request.UserId,
                 request.Validate,

@@ -21,7 +21,7 @@ namespace Cotton.Server.Handlers.Files
         IDatabaseIntegrityDescriptorRegistry descriptors)
         : IRequestHandler<BackfillNodeFileContentTypesRequest, int>
     {
-        private const int BatchSize = 1000;
+        private const int BatchSize = 500;
 
         public async Task<int> Handle(BackfillNodeFileContentTypesRequest request, CancellationToken cancellationToken)
         {
