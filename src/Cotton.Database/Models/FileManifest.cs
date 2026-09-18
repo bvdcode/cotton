@@ -25,6 +25,7 @@ namespace Cotton.Database.Models
         public byte[] ProposedContentHash { get; set; } = null!;
 
         [Column("content_type", TypeName = "citext")]
+        [Obsolete("Use NodeFile.ContentType. A shared manifest can have files with different names and content types.")]
         public string ContentType { get; set; } = null!;
 
         [Column("size_bytes")]

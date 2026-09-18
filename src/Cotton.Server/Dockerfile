@@ -49,6 +49,7 @@ COPY ["Cotton.Previews/Cotton.Previews.csproj", "Cotton.Previews/"]
 COPY ["Cotton.TextExtraction/Cotton.TextExtraction.csproj", "Cotton.TextExtraction/"]
 COPY ["Cotton.Autoconfig/Cotton.Autoconfig.csproj", "Cotton.Autoconfig/"]
 COPY ["Cotton.Database/Cotton.Database.csproj", "Cotton.Database/"]
+COPY ["Cotton.ContentTypes/Cotton.ContentTypes.csproj", "Cotton.ContentTypes/"]
 COPY ["Cotton.Validators/Cotton.Validators.csproj", "Cotton.Validators/"]
 COPY ["Cotton.Localization/Cotton.Localization.csproj", "Cotton.Localization/"]
 RUN dotnet restore "./Cotton.Server/Cotton.Server.csproj"

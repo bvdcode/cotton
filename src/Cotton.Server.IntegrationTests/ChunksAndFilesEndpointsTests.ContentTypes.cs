@@ -52,6 +52,13 @@ namespace Cotton.Server.IntegrationTests
                 .Where(manifest => manifest.Id == text.FileManifestId)
                 .Select(manifest => manifest.ContentType)
                 .SingleAsync();
+            Dictionary<Guid, string> fileContentTypes = await dbContext.NodeFiles
+                .Where(file => file.FileManifestId == text.FileManifestId)
+                .ToDictionaryAsync(file => file.Id, file => file.ContentType);
+            List<NodeFileManifestDto> cssFiles = (await _client.GetFromJsonAsync<List<NodeFileManifestDto>>(
+                $"/api/v1/layouts/{root.LayoutId}/recent?count=1&contentType=text/css"))!;
+            List<NodeFileManifestDto> otherFiles = (await _client.GetFromJsonAsync<List<NodeFileManifestDto>>(
+                $"/api/v1/layouts/{root.LayoutId}/recent?count=1&excludeContentType=text/css"))!;
 
             Assert.Multiple(() =>
             {
@@ -62,6 +69,10 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(shared.Files.Single(file => file.Id == text.Id).ContentType, Is.EqualTo("text/plain"));
                 Assert.That(shared.Files.Single(file => file.Id == markdown.Id).ContentType, Is.EqualTo("text/css"));
                 Assert.That(storedContentType, Is.EqualTo("text/plain"));
+                Assert.That(fileContentTypes[text.Id], Is.EqualTo("text/plain"));
+                Assert.That(fileContentTypes[markdown.Id], Is.EqualTo("text/css"));
+                Assert.That(cssFiles.Select(file => file.Id), Is.EqualTo(new[] { markdown.Id }));
+                Assert.That(otherFiles.Select(file => file.Id), Is.EqualTo(new[] { text.Id }));
             });
         }
     }

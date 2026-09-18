@@ -19,7 +19,7 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("song.ogg", "audio/ogg")]
         [TestCase("script.ts", "text/plain")]
         [TestCase("opaque-file-name", "application/octet-stream")]
-        public void Mapping_UsesFileNameInsteadOfSharedManifestType(string name, string expectedContentType)
+        public void Mapping_UsesNodeFileTypeInsteadOfSharedManifestType(string name, string expectedContentType)
         {
             MapsterConfig.Register();
             FileManifest manifest = new()
@@ -35,12 +35,13 @@ namespace Cotton.Server.IntegrationTests
             Assert.Multiple(() =>
             {
                 Assert.That(dto.ContentType, Is.EqualTo(expectedContentType));
+                Assert.That(file.ContentType, Is.EqualTo(expectedContentType));
                 Assert.That(manifest.ContentType, Is.EqualTo("image/png"));
             });
         }
 
         [Test]
-        public void DatabaseProjection_SupportsFileNameResolution()
+        public void DatabaseProjection_ReadsStoredNodeFileContentType()
         {
             MapsterConfig.Register();
             DbContextOptions<CottonDbContext> options = new DbContextOptionsBuilder<CottonDbContext>()
@@ -52,7 +53,21 @@ namespace Cotton.Server.IntegrationTests
                 .ProjectToType<NodeFileManifestDto>()
                 .ToQueryString();
 
-            Assert.That(query, Does.Contain("SELECT"));
+            Assert.That(query, Does.Contain("n.content_type"));
+        }
+
+        [Test]
+        public void SetName_UpdatesContentTypeAlongWithName()
+        {
+            NodeFile file = new();
+            file.SetName("opaque-name");
+            Assert.That(file.ContentType, Is.EqualTo("application/octet-stream"));
+
+            file.SetName("photo.JPG");
+            Assert.That(file.ContentType, Is.EqualTo("image/jpeg"));
+
+            file.SetName("script.ts");
+            Assert.That(file.ContentType, Is.EqualTo("text/plain"));
         }
     }
 }

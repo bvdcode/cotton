@@ -447,7 +447,7 @@ namespace Cotton.Server.Services
                 NodeFileId = currentNodeFileId,
                 FileManifestId = version.FileManifestId,
                 Name = version.Name,
-                ContentType = FileContentTypeResolver.ResolveFromFileName(version.Name),
+                ContentType = version.ContentType,
                 SizeBytes = version.FileManifest.SizeBytes,
                 CreatedAt = version.CreatedAt,
                 VersionNumber = versionNumber,

@@ -93,7 +93,7 @@ namespace Cotton.Server.Services
         {
             FileManifest newFileManifest = new()
             {
-                ContentType = FileContentTypeResolver.Resolve(fileName, contentType),
+                ContentType = UploadContentTypeResolver.Resolve(fileName, contentType),
                 SizeBytes = chunks.Sum(chunk => chunk.PlainSizeBytes),
                 ProposedContentHash = proposedContentHash,
                 PreviewGeneratorVersion = PreviewGeneratorProvider.DefaultGeneratorVersion,

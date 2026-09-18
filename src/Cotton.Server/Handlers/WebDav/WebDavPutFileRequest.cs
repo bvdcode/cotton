@@ -73,7 +73,7 @@ namespace Cotton.Server.Handlers.WebDav
                 return contentError;
             }
 
-            string contentType = FileContentTypeResolver.Resolve(target!.ResourceName, request.ContentType);
+            string contentType = UploadContentTypeResolver.Resolve(target!.ResourceName, request.ContentType);
             FileManifest fileManifest = await GetOrCreateFileManifestAsync(
                 chunks: content!.Chunks,
                 fileHash: content.FileHash,

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Services;
+using Cotton.ContentTypes;
 using NUnit.Framework;
 
 namespace Cotton.Server.IntegrationTests
@@ -101,7 +102,7 @@ namespace Cotton.Server.IntegrationTests
             string? contentType,
             string expectedContentType)
         {
-            string actual = FileContentTypeResolver.Resolve(fileName, contentType);
+            string actual = UploadContentTypeResolver.Resolve(fileName, contentType);
 
             Assert.That(actual, Is.EqualTo(expectedContentType));
         }
@@ -128,7 +129,7 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("APPLICATION/OCTET-STREAM", "application/octet-stream")]
         public void ResolveContentType_NormalizesAliases_AndParameters(string contentType, string expectedContentType)
         {
-            string actual = FileContentTypeResolver.Resolve("sample.bin", contentType);
+            string actual = UploadContentTypeResolver.Resolve("sample.bin", contentType);
 
             Assert.That(actual, Is.EqualTo(expectedContentType));
         }
@@ -153,7 +154,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void ResolveContentType_UnknownAndEmpty_FallsBackToOctetStream()
         {
-            string actual = FileContentTypeResolver.Resolve("sample.unknownext", null);
+            string actual = UploadContentTypeResolver.Resolve("sample.unknownext", null);
 
             Assert.That(actual, Is.EqualTo(FileContentTypeResolver.DefaultContentType));
         }

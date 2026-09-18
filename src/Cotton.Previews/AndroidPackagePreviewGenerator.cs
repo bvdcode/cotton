@@ -6,6 +6,8 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.IO.Compression;
 
+using Cotton.ContentTypes;
+
 namespace Cotton.Previews
 {
     public class AndroidPackagePreviewGenerator : IPreviewGenerator

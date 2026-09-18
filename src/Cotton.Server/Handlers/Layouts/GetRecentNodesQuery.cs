@@ -61,7 +61,7 @@ namespace Cotton.Server.Handlers.Layouts
             if (includedPattern is not null)
             {
                 query = query.Where(x => Regex.IsMatch(
-                    x.FileManifest.ContentType,
+                    x.ContentType,
                     includedPattern,
                     RegexOptions.IgnoreCase));
             }
@@ -69,7 +69,7 @@ namespace Cotton.Server.Handlers.Layouts
             if (excludedPattern is not null)
             {
                 query = query.Where(x => !Regex.IsMatch(
-                    x.FileManifest.ContentType,
+                    x.ContentType,
                     excludedPattern,
                     RegexOptions.IgnoreCase));
             }

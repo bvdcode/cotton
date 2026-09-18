@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
+using Cotton.ContentTypes;
 using Cotton.Previews;
 using Cotton.Server.Extensions;
 using Cotton.Storage.Abstractions;
@@ -14,8 +15,7 @@ namespace Cotton.Server.Services.Previews
     {
         public async Task<RenderedFilePreview?> RenderAsync(FileManifest manifest, CancellationToken cancellationToken)
         {
-            IEnumerable<string> contentTypes = manifest.NodeFiles.Select(file =>
-                FileContentTypeResolver.ResolveFromFileName(file.Name));
+            IEnumerable<string> contentTypes = manifest.NodeFiles.Select(file => FileContentTypeResolver.ResolveFromFileName(file.Name));
             IReadOnlyList<IPreviewGenerator> generators = PreviewGeneratorProvider.GetGeneratorsByContentTypes(contentTypes);
             List<Exception> failures = [];
             foreach (IPreviewGenerator generator in generators)
