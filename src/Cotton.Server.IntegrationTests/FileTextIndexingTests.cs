@@ -169,6 +169,7 @@ namespace Cotton.Server.IntegrationTests
             inactive.SetName("inactive");
             await AddFileAsync("inactive.pdf", PdfTextExtractor.ContentType, PdfTestDocument.Create("Inactive"), inactive);
             await AddFileAsync("unsupported.txt", "text/plain", Encoding.UTF8.GetBytes("plain text"));
+            await AddFileAsync("misleading.txt", PdfTextExtractor.ContentType, PdfTestDocument.Create("Not named as PDF"));
             List<Guid> candidates = await FileTextIndexQuery.Pending(_db, [PdfTextExtractor.ContentType]).Select(file => file.Id).ToListAsync();
             Assert.That(candidates, Is.EqualTo(new[] { current.Id }));
         }

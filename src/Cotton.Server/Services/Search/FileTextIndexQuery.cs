@@ -4,7 +4,6 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
-using Cotton.TextExtraction;
 
 namespace Cotton.Server.Services.Search
 {
@@ -17,8 +16,7 @@ namespace Cotton.Server.Services.Search
                 .Where(manifest => manifest.NodeFiles.Any(file =>
                     file.Node.Layout.IsActive && file.Node.Type == NodeType.Default
                     && (file.OriginalNodeFileId == Guid.Empty || file.Id == file.OriginalNodeFileId)
-                    && (contentTypes.Contains(manifest.ContentType)
-                        || file.NameKey.EndsWith(PdfTextExtractor.FileExtension))));
+                    && contentTypes.Contains(file.ContentType)));
         }
     }
 }

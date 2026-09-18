@@ -28,32 +28,52 @@ namespace Cotton.Server.Handlers.Files
         {
             FileManifest? manifest = await FileTextIndexQuery.Pending(dbContext, extractors.GetSupportedContentTypes())
                 .Include(file => file.FileManifestChunks).ThenInclude(chunk => chunk.Chunk)
+                .Include(file => file.NodeFiles)
+                .AsSplitQuery()
                 .SingleOrDefaultAsync(file => file.Id == request.FileManifestId, cancellationToken);
             if (manifest is null)
             {
                 return;
             }
-            IFileTextExtractor extractor = extractors.GetExtractor(manifest.ContentType)
-                ?? extractors.GetExtractor(PdfTextExtractor.ContentType)
-                ?? throw new InvalidOperationException("PDF text extraction is not registered.");
-            float[][] vectors = [];
+            IEnumerable<string> contentTypes = manifest.NodeFiles
+                .Select(file => file.ContentType)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+            string? text = null;
             string? error = null;
-            try
+            foreach (string contentType in contentTypes)
             {
-                PipelineContext context = new()
+                IFileTextExtractor? extractor = extractors.GetExtractor(contentType);
+                if (extractor is null)
                 {
-                    FileSizeBytes = manifest.SizeBytes,
-                    ChunkLengths = manifest.FileManifestChunks.GetChunkLengths(),
-                };
-                await using Stream source = storage.GetBlobStream(manifest.FileManifestChunks.GetChunkHashes(), context);
-                string text = await extractor.ExtractAsync(source, cancellationToken);
-                vectors = await computation.GetTextEmbeddingFragmentsAsync(text, cancellationToken);
+                    continue;
+                }
+                try
+                {
+                    PipelineContext context = new()
+                    {
+                        FileSizeBytes = manifest.SizeBytes,
+                        ChunkLengths = manifest.FileManifestChunks.GetChunkLengths(),
+                    };
+                    await using Stream source = storage.GetBlobStream(manifest.FileManifestChunks.GetChunkHashes(), context);
+                    text = await extractor.ExtractAsync(source, cancellationToken);
+                    error = null;
+                    break;
+                }
+                catch (FileTextExtractionException ex)
+                {
+                    logger.LogWarning(ex,
+                        "Unable to extract text for file manifest {FileManifestId} content type {ContentType}.",
+                        manifest.Id, contentType);
+                    error = ex.Message;
+                }
             }
-            catch (FileTextExtractionException ex)
+            if (text is null && error is null)
             {
-                logger.LogWarning(ex, "Unable to index text for file manifest {FileManifestId}.", manifest.Id);
-                error = ex.Message;
+                return;
             }
+            float[][] vectors = text is not null
+                ? await computation.GetTextEmbeddingFragmentsAsync(text, cancellationToken)
+                : [];
 
             await using IDbContextTransaction transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
             await dbContext.FileEmbeddings.Where(embedding => embedding.FileManifestId == manifest.Id)

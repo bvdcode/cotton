@@ -95,12 +95,11 @@ namespace Cotton.Server.Jobs
         private IQueryable<FileManifest> CreateItemsToProcessQuery()
         {
             return _dbContext.FileManifests
-                .Where(x => x.NodeFiles.Any())
                 .Where(x => x.Metadata == null)
-                .Where(x =>
-                    x.ContentType.StartsWith("audio/")
-                    || x.ContentType.StartsWith("video/")
-                    || ImageContentTypes.Contains(x.ContentType));
+                .Where(x => x.NodeFiles.Any(file =>
+                    file.ContentType.StartsWith("audio/")
+                    || file.ContentType.StartsWith("video/")
+                    || ImageContentTypes.Contains(file.ContentType)));
         }
 
         private async Task ThrottleAsync(int processed, CancellationToken cancellationToken)

@@ -113,52 +113,53 @@ namespace Cotton.Server.Handlers.Files
 
         private async Task<bool> ExtractAndStoreAsync(FileManifest manifest, CancellationToken cancellationToken)
         {
-            IFileContentMetadataExtractor? extractor = _extractorProvider.GetExtractor(manifest.ContentType);
-            Dictionary<string, string>? oldMetadata = manifest.Metadata is null
-                ? null
-                : new Dictionary<string, string>(manifest.Metadata, StringComparer.Ordinal);
+            IEnumerable<string> contentTypes = manifest.NodeFiles
+                .Select(file => file.ContentType)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+            foreach (string contentType in contentTypes)
+            {
+                IFileContentMetadataExtractor? extractor = _extractorProvider.GetExtractor(contentType);
+                if (extractor is null)
+                {
+                    continue;
+                }
 
-            if (extractor is null)
-            {
-                _logger.LogDebug(
-                    "No metadata extractor matched file manifest {FileManifestId} content type {ContentType}.",
-                    manifest.Id,
-                    manifest.ContentType);
-                await MarkMetadataProcessedAsync(manifest, cancellationToken);
-                return false;
+                IReadOnlyDictionary<string, string> extracted;
+                try
+                {
+                    extracted = await ExtractManifestMetadataAsync(manifest, extractor, contentType, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (FileMetadataUnavailableException ex)
+                {
+                    _logger.LogDebug(ex,
+                        "Metadata is unavailable for file manifest {FileManifestId} content type {ContentType}.",
+                        manifest.Id, contentType);
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to extract metadata for file manifest {FileManifestId}", manifest.Id);
+                    return false;
+                }
+                if (extracted.Count == 0)
+                {
+                    continue;
+                }
+
+                Dictionary<string, string>? oldMetadata = manifest.Metadata is null
+                    ? null
+                    : new Dictionary<string, string>(manifest.Metadata, StringComparer.Ordinal);
+                manifest.Metadata = FileContentMetadataDictionary.ReplaceManagedValues(manifest.Metadata, extracted);
+                await SaveManifestMetadataAsync(manifest, cancellationToken);
+                return !AreEquivalent(oldMetadata, manifest.Metadata);
             }
 
-            IReadOnlyDictionary<string, string> extracted;
-            try
-            {
-                extracted = await ExtractManifestMetadataAsync(
-                    manifest,
-                    extractor,
-                    cancellationToken);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (FileMetadataUnavailableException ex)
-            {
-                _logger.LogDebug(
-                    "Metadata is unavailable for file manifest {FileManifestId}: {Reason}",
-                    manifest.Id,
-                    ex.Message);
-                await MarkMetadataProcessedAsync(manifest, cancellationToken);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to extract metadata for file manifest {FileManifestId}", manifest.Id);
-                return false;
-            }
-
-            manifest.Metadata = FileContentMetadataDictionary.ReplaceManagedValues(manifest.Metadata, extracted);
-            await SaveManifestMetadataAsync(manifest, cancellationToken);
-
-            return !AreEquivalent(oldMetadata, manifest.Metadata);
+            await MarkMetadataProcessedAsync(manifest, cancellationToken);
+            return false;
         }
 
         private async Task MarkMetadataProcessedAsync(FileManifest manifest, CancellationToken cancellationToken)
@@ -191,6 +192,7 @@ namespace Cotton.Server.Handlers.Files
         private async Task<IReadOnlyDictionary<string, string>> ExtractManifestMetadataAsync(
             FileManifest manifest,
             IFileContentMetadataExtractor extractor,
+            string contentType,
             CancellationToken cancellationToken)
         {
             string[] uids = manifest.FileManifestChunks.GetChunkHashes();
@@ -201,7 +203,7 @@ namespace Cotton.Server.Handlers.Files
             };
 
             await using Stream stream = _storage.GetBlobStream(uids, pipelineContext);
-            return await extractor.ExtractAsync(stream, manifest.ContentType, cancellationToken);
+            return await extractor.ExtractAsync(stream, contentType, cancellationToken);
         }
 
         private async Task NotifyManifestFilesUpdatedAsync(FileManifest manifest, CancellationToken cancellationToken)
