@@ -16,6 +16,9 @@ import {
   type VectorExtensionStatusDto,
 } from "../adminApi";
 import { queryKeys } from "./queryKeys";
+import { settingsApi } from "../settingsApi";
+
+const SMART_SEARCH_REFRESH_INTERVAL = 10_000;
 
 export interface AdminUsersQueryOptions {
   withStorage: boolean;
@@ -108,8 +111,16 @@ export const useVectorExtensionStatusQuery = () =>
     queryKey: queryKeys.admin.vectorExtensionStatus(),
     queryFn: ({ signal }) => adminApi.getVectorExtensionStatus(signal),
     refetchOnMount: "always",
-    refetchInterval: (query) =>
-      query.state.data?.indexBuilding ? 5_000 : false,
+    refetchInterval: SMART_SEARCH_REFRESH_INTERVAL,
+  });
+
+export const useComputationStatusQuery = () =>
+  useQuery({
+    queryKey: queryKeys.admin.computationStatus(),
+    queryFn: ({ signal }) => settingsApi.getComputationStatus(signal),
+    refetchOnMount: "always",
+    refetchInterval: SMART_SEARCH_REFRESH_INTERVAL,
+    retry: false,
   });
 
 export const useEnableVectorExtensionMutation = () => {

@@ -2803,6 +2803,11 @@
   },
   "admin": {
     "smartSearch": {
+      "progress": "Dateien mit Vektoren: {{indexed}} von {{total}}",
+      "indexingProgress": "Fortschritt der Dateiindizierung",
+      "computation": {
+        "checkSettings": "Prüfen Sie die Verbindung zum Berechnungsdienst unter"
+      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Intelligente Suche",

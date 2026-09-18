@@ -2851,6 +2851,11 @@
   },
   "admin": {
     "smartSearch": {
+      "progress": "Pliki z wektorami: {{indexed}} z {{total}}",
+      "indexingProgress": "Postęp indeksowania plików",
+      "computation": {
+        "checkSettings": "Sprawdź połączenie z usługą obliczeniową w sekcji"
+      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Inteligentne wyszukiwanie",

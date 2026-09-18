@@ -2848,6 +2848,11 @@
   },
   "admin": {
     "smartSearch": {
+      "progress": "Soubory s vektory: {{indexed}} z {{total}}",
+      "indexingProgress": "Průběh indexování souborů",
+      "computation": {
+        "checkSettings": "Zkontrolujte připojení k výpočetní službě v sekci"
+      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Chytré vyhledávání",

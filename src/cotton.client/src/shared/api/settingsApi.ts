@@ -520,8 +520,12 @@ export const settingsApi = {
       remoteComputationRunnerUrlSchema,
     ),
 
-  getComputationStatus: (): Promise<ComputationStatus> =>
-    getValidated("server/settings/computation-status", computationStatusSchema),
+  getComputationStatus: (signal?: AbortSignal): Promise<ComputationStatus> =>
+    getValidated(
+      "server/settings/computation-status",
+      computationStatusSchema,
+      { signal },
+    ),
 
   setRemoteComputationRunnerUrl: async (
     url: string,

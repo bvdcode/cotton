@@ -1,9 +1,19 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { adminApi, type VectorExtensionStatusDto } from "@shared/api/adminApi";
 import { AdminSmartSearchPage } from "./AdminSmartSearchPage";
 import { ENABLE_VECTOR_SQL } from "./smartSearchSetup";
+import { settingsApi } from "@shared/api/settingsApi";
+import { readyComputationStatus } from "../../../test/computationStatus";
+import { ADMIN_GENERAL_SETTINGS_ROUTE } from "@shared/config/adminRoutes";
 
 const availableStatus: VectorExtensionStatusDto = {
   extensionEnabled: false,
@@ -11,11 +21,14 @@ const availableStatus: VectorExtensionStatusDto = {
   databaseName: "cotton_test",
   postgresMajorVersion: 18,
   vectorCount: 0,
+  fileCount: 0,
+  embeddedFileCount: 0,
   indexReady: false,
   indexBuilding: false,
   indexSizeBytes: 0,
   indexErrorCode: null,
-  indexCreateSql: "CREATE INDEX CONCURRENTLY search_index ON file_embeddings (id)",
+  indexCreateSql:
+    "CREATE INDEX CONCURRENTLY search_index ON file_embeddings (id)",
 };
 
 const setupError = (code: string) =>
@@ -26,7 +39,10 @@ const setupError = (code: string) =>
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, values?: Record<string, string>) =>
+      key === "smartSearch.progress"
+        ? `${key}: ${values?.indexed} / ${values?.total}`
+        : key,
     i18n: { language: "en" },
   }),
 }));
@@ -44,7 +60,9 @@ const renderPage = () => {
   });
   return render(
     <QueryClientProvider client={client}>
-      <AdminSmartSearchPage />
+      <MemoryRouter>
+        <AdminSmartSearchPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 };
@@ -54,14 +72,117 @@ beforeEach(() => {
     availableStatus,
   );
   vi.spyOn(adminApi, "enableVectorExtension").mockResolvedValue();
+  vi.spyOn(settingsApi, "getComputationStatus").mockResolvedValue(
+    readyComputationStatus,
+  );
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("AdminSmartSearchPage", () => {
+  it("shows zero progress for an empty library", async () => {
+    renderPage();
+    expect(
+      await screen.findByText("smartSearch.progress: 0 / 0"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "0",
+    );
+  });
+
+  it("loads progress independently of a slow computation service", async () => {
+    vi.mocked(settingsApi.getComputationStatus).mockReturnValue(
+      new Promise(() => {}),
+    );
+    vi.mocked(adminApi.getVectorExtensionStatus).mockResolvedValue({
+      ...availableStatus,
+      fileCount: 1_000,
+      embeddedFileCount: 250,
+    });
+    renderPage();
+    expect(
+      await screen.findByText("smartSearch.progress: 250 / 1,000"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "25",
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("refreshes file progress and recovers worker health every ten seconds", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    vi.mocked(adminApi.getVectorExtensionStatus)
+      .mockResolvedValueOnce({
+        ...availableStatus,
+        fileCount: 10,
+        embeddedFileCount: 2,
+      })
+      .mockResolvedValue({
+        ...availableStatus,
+        fileCount: 10,
+        embeddedFileCount: 8,
+      });
+    vi.mocked(settingsApi.getComputationStatus)
+      .mockResolvedValueOnce({
+        info: null,
+        dimensions: null,
+        isReady: false,
+        error: "Unreachable",
+      })
+      .mockResolvedValue(readyComputationStatus);
+    const view = renderPage();
+    expect(
+      await screen.findByText("smartSearch.progress: 2 / 10"),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole("link")).toHaveAttribute(
+      "href",
+      ADMIN_GENERAL_SETTINGS_ROUTE,
+    );
+    expect(
+      screen.getByText("smartSearch.computation.checkSettings", {
+        exact: false,
+      }),
+    ).toBeInTheDocument();
+
+    await act(() => vi.advanceTimersByTimeAsync(10_000));
+
+    expect(
+      await screen.findByText("smartSearch.progress: 8 / 10"),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    );
+    expect(adminApi.getVectorExtensionStatus).toHaveBeenCalledTimes(2);
+    expect(settingsApi.getComputationStatus).toHaveBeenCalledTimes(2);
+    view.unmount();
+    await act(() => vi.advanceTimersByTimeAsync(10_000));
+    expect(adminApi.getVectorExtensionStatus).toHaveBeenCalledTimes(2);
+    expect(settingsApi.getComputationStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows a settings link when the health endpoint cannot be reached", async () => {
+    vi.mocked(settingsApi.getComputationStatus).mockRejectedValue(
+      new Error("Unavailable"),
+    );
+    renderPage();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "settings.general.remoteRunner.statusLoadFailed",
+    );
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      ADMIN_GENERAL_SETTINGS_ROUTE,
+    );
+    expect(
+      await screen.findByText("smartSearch.progress: 0 / 0"),
+    ).toBeInTheDocument();
+  });
+
   it("does not offer activation until the status is loaded", () => {
     vi.mocked(adminApi.getVectorExtensionStatus).mockReturnValue(
       new Promise(() => {}),
@@ -99,7 +220,11 @@ describe("AdminSmartSearchPage", () => {
   it("enables the extension and reads its new status before removing the button", async () => {
     vi.mocked(adminApi.getVectorExtensionStatus)
       .mockResolvedValueOnce(availableStatus)
-      .mockResolvedValue({ ...availableStatus, extensionEnabled: true, indexReady: true });
+      .mockResolvedValue({
+        ...availableStatus,
+        extensionEnabled: true,
+        indexReady: true,
+      });
     let completeActivation: (() => void) | undefined;
     vi.mocked(adminApi.enableVectorExtension).mockReturnValue(
       new Promise<void>((resolve) => {

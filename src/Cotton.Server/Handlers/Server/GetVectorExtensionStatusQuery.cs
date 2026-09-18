@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services.Search;
@@ -34,6 +35,18 @@ namespace Cotton.Server.Handlers.Server
                 bool extensionEnabled = await dbContext.Database.IsExtensionInstalledAsync("vector", cancellationToken);
                 bool extensionAvailable = await dbContext.Database.IsExtensionAvailableAsync("vector", cancellationToken);
                 long vectorCount = await dbContext.FileEmbeddings.LongCountAsync(cancellationToken);
+                var files = await dbContext.NodeFiles
+                    .Where(file => file.Node.Layout.IsActive && file.Node.Type == NodeType.Default
+                        && (file.OriginalNodeFileId == Guid.Empty || file.Id == file.OriginalNodeFileId))
+                    .GroupBy(file => 1)
+                    .Select(group => new
+                    {
+                        Total = group.LongCount(),
+                        Embedded = group.LongCount(file => dbContext.FileEmbeddings.Any(embedding =>
+                            embedding.FileManifestId == file.FileManifestId
+                            && embedding.IndexVersion == VectorIndexDefinition.Version))
+                    })
+                    .SingleOrDefaultAsync(cancellationToken);
                 PostgresIndexStatus index = await mediator.Send(new GetVectorIndexMetadataQuery(), cancellationToken);
                 bool building = index.IsBuilding || await IsBuildScheduledAsync(cancellationToken);
                 string? errorCode = null;
@@ -53,6 +66,8 @@ namespace Cotton.Server.Handlers.Server
                     PostgresMajorVersion = connection.PostgreSqlVersion.Major,
                     DatabaseName = connection.Database,
                     VectorCount = vectorCount,
+                    FileCount = files?.Total ?? 0,
+                    EmbeddedFileCount = files?.Embedded ?? 0,
                     IndexReady = VectorIndexDefinition.IsReady(index),
                     IndexBuilding = building,
                     IndexSizeBytes = index.SizeBytes,

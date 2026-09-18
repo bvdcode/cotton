@@ -2822,6 +2822,11 @@
   },
   "admin": {
     "smartSearch": {
+      "progress": "Файли з векторами: {{indexed}} із {{total}}",
+      "indexingProgress": "Прогрес індексації файлів",
+      "computation": {
+        "checkSettings": "Перевірте підключення до обчислювальної служби в розділі"
+      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Розумний пошук",

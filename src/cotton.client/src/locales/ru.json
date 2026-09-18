@@ -2933,6 +2933,11 @@
   },
   "admin": {
     "smartSearch": {
+      "progress": "Файлы с векторами: {{indexed}} из {{total}}",
+      "indexingProgress": "Прогресс индексации файлов",
+      "computation": {
+        "checkSettings": "Проверьте подключение к службе вычислений в разделе"
+      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Умный поиск",

@@ -2810,6 +2810,11 @@
   },
   "admin": {
     "smartSearch": {
+      "progress": "Ficheiros com vetores: {{indexed}} de {{total}}",
+      "indexingProgress": "Progresso da indexação de ficheiros",
+      "computation": {
+        "checkSettings": "Verifique a ligação ao serviço de computação em"
+      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Pesquisa inteligente",

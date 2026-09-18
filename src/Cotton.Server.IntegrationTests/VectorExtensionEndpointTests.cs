@@ -3,11 +3,13 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Controllers;
 using Cotton.Server.Handlers.Server;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services.Search;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Models;
 using Cotton.Server.Jobs;
 using EasyExtensions.Mediator;
@@ -94,6 +96,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(emptyStatus, Is.Not.Null);
                 Assert.That(emptyStatus!.ExtensionEnabled, Is.False);
                 Assert.That(emptyStatus.VectorCount, Is.Zero);
+                Assert.That(emptyStatus.FileCount, Is.Zero);
+                Assert.That(emptyStatus.EmbeddedFileCount, Is.Zero);
                 Assert.That(emptyStatus.IndexReady, Is.False);
                 Assert.That(emptyStatus.IndexBuilding, Is.False);
                 Assert.That(emptyStatus.IndexSizeBytes, Is.Zero);
@@ -134,6 +138,62 @@ namespace Cotton.Server.IntegrationTests
             {
                 await DbContext.Database.EnsureDeletedAsync();
             }
+        }
+
+        [Test]
+        public async Task Get_CountsCurrentFilesWithCurrentEmbeddingsWithoutCountingFragmentsOrHistory()
+        {
+            try
+            {
+                await DbContext.Database.EnsureCreatedAsync();
+                User user = new() { Username = "vectorcounts", PasswordPhc = "phc", WebDavTokenPhc = "webdav" };
+                Layout layout = new() { Owner = user, IsActive = true };
+                Node folder = new() { Owner = user, Layout = layout, Type = NodeType.Default };
+                folder.SetName("files");
+                Node trash = new() { Owner = user, Layout = layout, Type = NodeType.Trash };
+                trash.SetName("trash");
+                Node inactive = new() { Owner = user, Layout = new Layout { Owner = user }, Type = NodeType.Default };
+                inactive.SetName("inactive");
+                FileManifest indexed = new() { ProposedContentHash = [1], ContentType = "text/plain" };
+                FileManifest outdated = new() { ProposedContentHash = [2], ContentType = "text/plain" };
+                FileManifest pending = new() { ProposedContentHash = [3], ContentType = "application/octet-stream" };
+                FileManifest orphaned = new() { ProposedContentHash = [4], ContentType = "text/plain" };
+                NodeFile current = AddFile("first.txt", folder, indexed, user);
+                current.OriginalNodeFileId = current.Id;
+                AddFile("copy.txt", folder, indexed, user);
+                AddFile("old-index.txt", folder, outdated, user);
+                AddFile("pending.bin", folder, pending, user);
+                AddFile("history.txt", folder, indexed, user).OriginalNodeFileId = current.Id;
+                AddFile("deleted.txt", trash, indexed, user);
+                AddFile("inactive.txt", inactive, indexed, user);
+                DbContext.FileEmbeddings.AddRange(
+                    new FileEmbedding { FileManifest = indexed, IndexVersion = VectorIndexDefinition.Version, FragmentIndex = 0, Embedding = [1] },
+                    new FileEmbedding { FileManifest = indexed, IndexVersion = VectorIndexDefinition.Version, FragmentIndex = 1, Embedding = [1] },
+                    new FileEmbedding { FileManifest = outdated, IndexVersion = VectorIndexDefinition.Version - 1, Embedding = [1] },
+                    new FileEmbedding { FileManifest = orphaned, IndexVersion = VectorIndexDefinition.Version, Embedding = [1] });
+                await DbContext.SaveChangesAsync();
+                await using WebApplication application = await CreateApplicationAsync(DbContext);
+                using HttpClient client = application.GetTestClient();
+                client.DefaultRequestHeaders.Add(VectorEndpointTestAuthenticationHandler.RoleHeader, nameof(UserRole.Admin));
+
+                VectorExtensionStatusDto? status = await client.GetFromJsonAsync<VectorExtensionStatusDto>(Endpoint);
+
+                Assert.That(status!.FileCount, Is.EqualTo(4));
+                Assert.That(status.EmbeddedFileCount, Is.EqualTo(2));
+                Assert.That(status.VectorCount, Is.EqualTo(4));
+            }
+            finally
+            {
+                await DbContext.Database.EnsureDeletedAsync();
+            }
+        }
+
+        private NodeFile AddFile(string name, Node folder, FileManifest manifest, User user)
+        {
+            NodeFile file = new() { Node = folder, FileManifest = manifest, Owner = user };
+            file.SetName(name);
+            DbContext.NodeFiles.Add(file);
+            return file;
         }
 
         [Test]

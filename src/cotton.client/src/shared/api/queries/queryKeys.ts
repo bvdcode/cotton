@@ -55,6 +55,7 @@ export const queryKeys = {
     securityDiagnostics: () => [...adminRoot, "securityDiagnostics"] as const,
     vectorExtensionStatus: () =>
       [...adminRoot, "vectorExtensionStatus"] as const,
+    computationStatus: () => [...adminRoot, "computation-status"] as const,
   },
   audio: {
     all: () => audioRoot,

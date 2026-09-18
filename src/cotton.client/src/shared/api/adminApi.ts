@@ -54,6 +54,8 @@ export interface VectorExtensionStatusDto {
   postgresMajorVersion: number;
   databaseName: string;
   vectorCount: number;
+  fileCount: number;
+  embeddedFileCount: number;
   indexReady: boolean;
   indexBuilding: boolean;
   indexSizeBytes: number;

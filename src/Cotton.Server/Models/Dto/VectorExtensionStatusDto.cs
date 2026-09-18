@@ -15,6 +15,10 @@ namespace Cotton.Server.Models.Dto
 
         public long VectorCount { get; init; }
 
+        public long FileCount { get; init; }
+
+        public long EmbeddedFileCount { get; init; }
+
         public bool IndexReady { get; init; }
 
         public bool IndexBuilding { get; init; }

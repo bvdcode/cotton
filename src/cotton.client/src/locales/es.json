@@ -2806,6 +2806,11 @@
   },
   "admin": {
     "smartSearch": {
+      "progress": "Archivos con vectores: {{indexed}} de {{total}}",
+      "indexingProgress": "Progreso de indexación de archivos",
+      "computation": {
+        "checkSettings": "Comprueba la conexión al servicio de cálculo en"
+      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Búsqueda inteligente",

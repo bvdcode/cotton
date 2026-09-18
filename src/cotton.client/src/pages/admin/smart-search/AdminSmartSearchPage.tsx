@@ -3,6 +3,7 @@ import {
   Alert,
   Button,
   IconButton,
+  LinearProgress,
   Skeleton,
   Stack,
   ToggleButton,
@@ -23,13 +24,19 @@ import { PgvectorNativeSetup } from "./PgvectorNativeSetup";
 import { PgvectorActivation } from "./PgvectorActivation";
 import { PgvectorIndexSetup } from "./PgvectorIndexSetup";
 import { getVectorSetupFailure } from "./smartSearchSetup";
+import { SmartSearchComputationStatus } from "./SmartSearchComputationStatus";
 
 export const AdminSmartSearchPage = () => {
-  const { t } = useTranslation("admin");
+  const { t, i18n } = useTranslation("admin");
   const statusQuery = useVectorExtensionStatusQuery();
   const enableMutation = useEnableVectorExtensionMutation();
   const [environment, setEnvironment] = useState<"docker" | "native">("docker");
   const status = statusQuery.data;
+  const progress =
+    status && status.fileCount > 0
+      ? status.embeddedFileCount / status.fileCount
+      : 0;
+  const numberFormat = new Intl.NumberFormat(i18n.language);
   const failure = getVectorSetupFailure(enableMutation.error);
   const needsInstallation =
     status &&
@@ -129,6 +136,8 @@ export const AdminSmartSearchPage = () => {
           </Tooltip>
         </Stack>
 
+        <SmartSearchComputationStatus />
+
         {statusQuery.isPending && (
           <Skeleton
             variant="rounded"
@@ -146,6 +155,20 @@ export const AdminSmartSearchPage = () => {
 
         {status && (
           <>
+            <Stack spacing={1}>
+              <Typography>
+                {t("smartSearch.progress", {
+                  indexed: numberFormat.format(status.embeddedFileCount),
+                  total: numberFormat.format(status.fileCount),
+                })}
+              </Typography>
+              <LinearProgress
+                color="inherit"
+                variant="determinate"
+                value={progress * 100}
+                aria-label={t("smartSearch.indexingProgress")}
+              />
+            </Stack>
             {status.extensionEnabled ? (
               <PgvectorIndexSetup
                 status={status}

@@ -18,6 +18,7 @@ import {
   type ComputationStatus,
 } from "../../../shared/api/computation";
 import { SettingsSection } from "./SettingsSection";
+import { queryKeys } from "@shared/api/queries/queryKeys";
 import {
   computionOptions,
   validateRemoteComputationRunnerUrl,
@@ -29,7 +30,7 @@ type ComputationSettings = {
 };
 
 const queryKey = ["admin", "computation-settings"] as const;
-const serviceQueryKey = ["admin", "computation-status"] as const;
+const serviceQueryKey = queryKeys.admin.computationStatus();
 
 const loadSettings = async (): Promise<ComputationSettings> => {
   const [mode, url] = await Promise.all([

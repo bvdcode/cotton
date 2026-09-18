@@ -16,6 +16,8 @@ const status: VectorExtensionStatusDto = {
   postgresMajorVersion: 18,
   databaseName: "cotton_test",
   vectorCount: 10,
+  fileCount: 0,
+  embeddedFileCount: 0,
   indexReady: false,
   indexBuilding: false,
   indexSizeBytes: 0,

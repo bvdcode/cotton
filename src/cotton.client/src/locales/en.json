@@ -2604,6 +2604,11 @@
   },
   "admin": {
     "smartSearch": {
+      "progress": "Files with vectors: {{indexed}} of {{total}}",
+      "indexingProgress": "File indexing progress",
+      "computation": {
+        "checkSettings": "Check the computation service connection in"
+      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Smart search",

@@ -1,4 +1,5 @@
 import type { RouteConfig } from "./types";
+import { ADMIN_GENERAL_SETTINGS_ROUTE } from "@shared/config/adminRoutes";
 import { RequireAdmin, RequireAuth, useAuth } from "../features/auth";
 import { useEffect, useState } from "react";
 import {
@@ -212,7 +213,7 @@ export function AppRoutes() {
             element={<AdminStorageSettingsPage />}
           />
           <Route
-            path="general-settings"
+            path={ADMIN_GENERAL_SETTINGS_ROUTE}
             element={<AdminGeneralSettingsPage />}
           />
           <Route

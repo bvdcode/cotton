@@ -2808,6 +2808,11 @@
   },
   "admin": {
     "smartSearch": {
+      "progress": "Bestanden met vectoren: {{indexed}} van {{total}}",
+      "indexingProgress": "Voortgang van bestandsindexering",
+      "computation": {
+        "checkSettings": "Controleer de verbinding met de rekenservice bij"
+      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Slim zoeken",
