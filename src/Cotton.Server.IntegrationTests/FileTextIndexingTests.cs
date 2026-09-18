@@ -10,6 +10,7 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models.Computation;
+using Cotton.Server.Providers;
 using Cotton.Server.Services.Search;
 using Cotton.TextExtraction;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
@@ -170,6 +171,32 @@ namespace Cotton.Server.IntegrationTests
             await AddFileAsync("unsupported.txt", "text/plain", Encoding.UTF8.GetBytes("plain text"));
             List<Guid> candidates = await FileTextIndexQuery.Pending(_db, [PdfTextExtractor.ContentType]).Select(file => file.Id).ToListAsync();
             Assert.That(candidates, Is.EqualTo(new[] { current.Id }));
+        }
+
+        [Test]
+        public async Task Job_WithIndexingDisabled_DoesNotAccessDatabaseOrWorker()
+        {
+            await AddFileAsync("pending.pdf", PdfTextExtractor.ContentType, PdfTestDocument.Create("Pending document"));
+            _settingsCache.InvalidateSettings(serverIsInitialized: true);
+            _settingsCache.GetOrAdd(() => ServerSettingsSnapshot.FromEntity(new CottonServerSettings
+            {
+                AllowGlobalIndexing = false,
+                ComputionMode = ComputionMode.Remote,
+                RemoteComputationRunnerUrl = "https://runner.example/",
+            }));
+            string? connectionString = _db.Database.GetConnectionString();
+            _db.Database.SetConnectionString("Host=localhost;Port=1;Database=unused;Username=unused;Timeout=1");
+            try
+            {
+                await _services.GetRequiredService<GenerateFileEmbeddingsJob>().Execute(null!);
+            }
+            finally
+            {
+                _db.Database.SetConnectionString(connectionString);
+            }
+            Assert.That(_worker.Addresses, Is.Empty);
+            Assert.That(await _db.FileEmbeddings.AnyAsync(), Is.False);
+            Assert.That((await _db.FileManifests.SingleAsync()).TextIndexVersion, Is.Zero);
         }
 
         [Test]

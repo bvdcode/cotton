@@ -2818,6 +2818,7 @@
     "smartSearch": {
       "progress": "已有向量的文件：{{indexed}} / {{total}}",
       "indexingProgress": "文件索引进度",
+      "indexingDisabled": "请启用文件内容索引，以使用智能搜索。",
       "computation": {
         "checkSettings": "请在以下设置中检查计算服务的连接："
       },

@@ -25,9 +25,20 @@ import { PgvectorActivation } from "./PgvectorActivation";
 import { PgvectorIndexSetup } from "./PgvectorIndexSetup";
 import { getVectorSetupFailure } from "./smartSearchSetup";
 import { SmartSearchComputationStatus } from "./SmartSearchComputationStatus";
+import { BooleanSwitchSettingControl } from "../settings/BooleanSwitchSetting";
+import { useAutoSavedSetting } from "../settings/useAutoSavedSetting";
+import { settingsApi } from "@shared/api/settingsApi";
 
 export const AdminSmartSearchPage = () => {
   const { t, i18n } = useTranslation("admin");
+  const indexing = useAutoSavedSetting<boolean>({
+    initial: false,
+    load: settingsApi.getAllowGlobalIndexing,
+    save: settingsApi.setAllowGlobalIndexing,
+    toastIdPrefix: "admin-smart-search:indexing",
+    loadErrorMessage: t("settings.errors.loadFailed"),
+    saveErrorMessage: t("settings.errors.saveFailed"),
+  });
   const statusQuery = useVectorExtensionStatusQuery();
   const enableMutation = useEnableVectorExtensionMutation();
   const [environment, setEnvironment] = useState<"docker" | "native">("docker");
@@ -136,6 +147,19 @@ export const AdminSmartSearchPage = () => {
           </Tooltip>
         </Stack>
 
+        <BooleanSwitchSettingControl
+          title={t("settings.general.fields.allowGlobalIndexing")}
+          description={t("settings.general.help.allowGlobalIndexing")}
+          value={indexing.value}
+          commitValue={indexing.commitValue}
+          status={indexing.status}
+          loadFailed={indexing.loadFailed}
+        />
+        {!indexing.loadFailed &&
+          indexing.status !== "loading" &&
+          !indexing.savedValue && (
+            <Alert severity="info">{t("smartSearch.indexingDisabled")}</Alert>
+          )}
         <SmartSearchComputationStatus />
 
         {statusQuery.isPending && (

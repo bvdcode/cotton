@@ -2808,6 +2808,7 @@
     "smartSearch": {
       "progress": "Archivos con vectores: {{indexed}} de {{total}}",
       "indexingProgress": "Progreso de indexación de archivos",
+      "indexingDisabled": "Activa la indexación del contenido de los archivos para usar la búsqueda inteligente.",
       "computation": {
         "checkSettings": "Comprueba la conexión al servicio de cálculo en"
       },

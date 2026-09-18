@@ -2606,6 +2606,7 @@
     "smartSearch": {
       "progress": "Files with vectors: {{indexed}} of {{total}}",
       "indexingProgress": "File indexing progress",
+      "indexingDisabled": "Enable file content indexing to use smart search.",
       "computation": {
         "checkSettings": "Check the computation service connection in"
       },

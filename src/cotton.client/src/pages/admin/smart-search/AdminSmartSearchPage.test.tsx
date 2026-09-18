@@ -68,6 +68,8 @@ const renderPage = () => {
 };
 
 beforeEach(() => {
+  vi.spyOn(settingsApi, "getAllowGlobalIndexing").mockResolvedValue(true);
+  vi.spyOn(settingsApi, "setAllowGlobalIndexing").mockResolvedValue();
   vi.spyOn(adminApi, "getVectorExtensionStatus").mockResolvedValue(
     availableStatus,
   );
@@ -84,6 +86,29 @@ afterEach(() => {
 });
 
 describe("AdminSmartSearchPage", () => {
+  it("explains disabled indexing and enables it without changing other settings", async () => {
+    vi.mocked(settingsApi.getAllowGlobalIndexing).mockResolvedValue(false);
+    renderPage();
+    expect(
+      await screen.findByText("smartSearch.indexingDisabled"),
+    ).toBeInTheDocument();
+    const toggle = screen.getByRole("switch", {
+      name: "settings.general.fields.allowGlobalIndexing",
+    });
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    await waitFor(() =>
+      expect(settingsApi.setAllowGlobalIndexing).toHaveBeenCalledWith(true),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByText("smartSearch.indexingDisabled"),
+      ).not.toBeInTheDocument(),
+    );
+    expect(toggle).toBeChecked();
+    expect(adminApi.enableVectorExtension).not.toHaveBeenCalled();
+  });
+
   it("shows zero progress for an empty library", async () => {
     renderPage();
     expect(

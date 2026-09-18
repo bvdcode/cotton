@@ -2853,6 +2853,7 @@
     "smartSearch": {
       "progress": "Pliki z wektorami: {{indexed}} z {{total}}",
       "indexingProgress": "Postęp indeksowania plików",
+      "indexingDisabled": "Włącz indeksowanie zawartości plików, aby korzystać z inteligentnego wyszukiwania.",
       "computation": {
         "checkSettings": "Sprawdź połączenie z usługą obliczeniową w sekcji"
       },

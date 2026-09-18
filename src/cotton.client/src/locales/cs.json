@@ -2850,6 +2850,7 @@
     "smartSearch": {
       "progress": "Soubory s vektory: {{indexed}} z {{total}}",
       "indexingProgress": "Průběh indexování souborů",
+      "indexingDisabled": "Aby chytré vyhledávání fungovalo, zapněte indexování obsahu souborů.",
       "computation": {
         "checkSettings": "Zkontrolujte připojení k výpočetní službě v sekci"
       },

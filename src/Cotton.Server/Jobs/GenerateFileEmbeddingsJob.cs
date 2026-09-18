@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Server;
 using Cotton.Server.Models.Computation;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.Computation;
 using Cotton.Server.Services.Search;
@@ -20,7 +21,7 @@ namespace Cotton.Server.Jobs
 {
     [JobTrigger(minutes: 1)]
     public class GenerateFileEmbeddingsJob(
-        CottonDbContext dbContext, IMediator mediator, ComputationService computation,
+        CottonDbContext dbContext, IMediator mediator, ComputationService computation, SettingsProvider settings,
         FileTextExtractorProvider extractors, PerfTracker perf, ILogger<GenerateFileEmbeddingsJob> logger) : IJob
     {
         private const int BatchSize = 32;
@@ -31,7 +32,8 @@ namespace Cotton.Server.Jobs
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
             try
             {
-                if (perf.IsUploading() || !await dbContext.Database.IsExtensionInstalledAsync("vector", cancellationToken))
+                if (!settings.GetServerSettings().AllowGlobalIndexing || perf.IsUploading()
+                    || !await dbContext.Database.IsExtensionInstalledAsync("vector", cancellationToken))
                 {
                     return;
                 }
@@ -62,7 +64,7 @@ namespace Cotton.Server.Jobs
                     }
                     foreach (Guid id in ids)
                     {
-                        if (perf.IsUploading())
+                        if (!settings.GetServerSettings().AllowGlobalIndexing || perf.IsUploading())
                         {
                             return;
                         }

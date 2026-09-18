@@ -2810,6 +2810,7 @@
     "smartSearch": {
       "progress": "Bestanden met vectoren: {{indexed}} van {{total}}",
       "indexingProgress": "Voortgang van bestandsindexering",
+      "indexingDisabled": "Schakel de indexering van bestandsinhoud in om slim zoeken te gebruiken.",
       "computation": {
         "checkSettings": "Controleer de verbinding met de rekenservice bij"
       },

@@ -33,6 +33,7 @@ namespace Cotton.Server.IntegrationTests
         private TextIndexPersistenceFailureInterceptor _failure = null!;
         private InMemoryStorage _storage = null!;
         private Node _folder = null!;
+        private ServerSettingsCache _settingsCache = null!;
 
         [SetUp]
         public async Task SetUp()
@@ -43,9 +44,10 @@ namespace Cotton.Server.IntegrationTests
             await _db.Database.EnsureCreatedAsync();
             _worker = new() { MaxInputTokens = 16, MaxBatchTokens = 32, MaxBatchInputs = 2 };
             _storage = new();
-            ServerSettingsCache cache = new();
-            cache.GetOrAdd(() => ServerSettingsSnapshot.FromEntity(new CottonServerSettings
+            _settingsCache = new();
+            _settingsCache.GetOrAdd(() => ServerSettingsSnapshot.FromEntity(new CottonServerSettings
             {
+                AllowGlobalIndexing = true,
                 ComputionMode = ComputionMode.Remote,
                 RemoteComputationRunnerUrl = "https://runner.example/",
             }));
@@ -53,7 +55,7 @@ namespace Cotton.Server.IntegrationTests
             services.AddLogging();
             services.AddMediator();
             services.AddSingleton(_db);
-            services.AddSingleton(cache);
+            services.AddSingleton(_settingsCache);
             services.AddScoped<SettingsProvider>();
             services.AddSingleton<IStoragePipeline>(_storage);
             services.AddComputationServices();

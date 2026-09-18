@@ -50,6 +50,11 @@ export const BooleanSwitchSettingControl = ({
       action={
         <Switch
           checked={value}
+          slotProps={{
+            input: {
+              "aria-label": typeof title === "string" ? title : undefined,
+            },
+          }}
           onChange={(event) => commitValue(event.target.checked)}
           disabled={disabled}
         />

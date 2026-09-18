@@ -2805,6 +2805,7 @@
     "smartSearch": {
       "progress": "Dateien mit Vektoren: {{indexed}} von {{total}}",
       "indexingProgress": "Fortschritt der Dateiindizierung",
+      "indexingDisabled": "Aktivieren Sie die Indexierung von Dateiinhalten, damit die intelligente Suche funktioniert.",
       "computation": {
         "checkSettings": "Prüfen Sie die Verbindung zum Berechnungsdienst unter"
       },

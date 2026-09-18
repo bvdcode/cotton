@@ -2812,6 +2812,7 @@
     "smartSearch": {
       "progress": "Ficheiros com vetores: {{indexed}} de {{total}}",
       "indexingProgress": "Progresso da indexação de ficheiros",
+      "indexingDisabled": "Ative a indexação do conteúdo dos arquivos para usar a pesquisa inteligente.",
       "computation": {
         "checkSettings": "Verifique a ligação ao serviço de computação em"
       },
