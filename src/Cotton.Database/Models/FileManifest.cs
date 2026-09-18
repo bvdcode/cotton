@@ -13,6 +13,7 @@ namespace Cotton.Database.Models
     [Index(nameof(SmallFilePreviewHash))]
     [Index(nameof(LargeFilePreviewHash))]
     [Index(nameof(ContentType), nameof(PreviewGeneratorVersion))]
+    [Index(nameof(TextIndexVersion), nameof(CreatedAt))]
     public class FileManifest : BaseEntity<Guid>
     {
         public const char PreviewTokenPrefix = 'f';
@@ -43,6 +44,12 @@ namespace Cotton.Database.Models
 
         [Column("preview_generator_version")]
         public int PreviewGeneratorVersion { get; set; }
+
+        [Column("text_index_version")]
+        public int TextIndexVersion { get; set; }
+
+        [Column("text_index_error")]
+        public string? TextIndexError { get; set; }
 
         [Column("metadata")]
         public Dictionary<string, string>? Metadata { get; set; }
