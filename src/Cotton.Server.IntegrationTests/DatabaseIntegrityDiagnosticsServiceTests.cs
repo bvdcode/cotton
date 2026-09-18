@@ -50,9 +50,29 @@ namespace Cotton.Server.IntegrationTests
             });
         }
 
-        private void SetIntegrityMetadata(User user, int? version, byte[]? mac)
+        [Test]
+        public async Task GetSnapshotAsync_AcceptsSupportedLegacyVersions_AndRejectsMissingOrUnknownVersions()
         {
-            EntityEntry<User> entry = DbContext.Entry(user);
+            FileManifestIntegrityDescriptor descriptor = new();
+            int?[] versions = [1, FileManifestIntegrityDescriptor.LatestVersion, null, 0, FileManifestIntegrityDescriptor.LatestVersion + 1, 1];
+            for (int index = 0; index < versions.Length; index++)
+            {
+                FileManifest manifest = new() { ProposedContentHash = [(byte)index], ContentType = "text/plain" };
+                DbContext.FileManifests.Add(manifest);
+                SetIntegrityMetadata(manifest, versions[index], index == versions.Length - 1 ? null : [1]);
+            }
+            await DbContext.SaveChangesAsync();
+            DatabaseIntegrityDiagnosticsService diagnostics = new(DbContext, new DatabaseIntegrityDescriptorRegistry([descriptor]));
+
+            DatabaseIntegrityDiagnosticsDto snapshot = await diagnostics.GetSnapshotAsync(CancellationToken.None);
+
+            Assert.That(snapshot.ProtectedEntityTypes, Is.EqualTo(1));
+            Assert.That(snapshot.UnsignedProtectedRows, Is.EqualTo(4));
+        }
+
+        private void SetIntegrityMetadata<T>(T entity, int? version, byte[]? mac) where T : class
+        {
+            EntityEntry<T> entry = DbContext.Entry(entity);
             entry.Property<int?>(DatabaseIntegrityColumns.VersionProperty).CurrentValue = version;
             entry.Property<byte[]?>(DatabaseIntegrityColumns.MacProperty).CurrentValue = mac;
         }

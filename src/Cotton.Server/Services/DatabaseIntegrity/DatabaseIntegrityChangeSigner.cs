@@ -88,9 +88,9 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             object? macValue = entry.Property(DatabaseIntegrityColumns.MacProperty).OriginalValue;
             object originalEntity = entry.OriginalValues.ToObject();
             if (versionValue is int version
-                && version == descriptor.SchemaVersion
+                && descriptors.TryGet(entry.Entity.GetType(), version, out IDatabaseIntegrityDescriptor storedDescriptor)
                 && macValue is byte[] mac
-                && protector.Verify(originalEntity, descriptor, mac))
+                && protector.Verify(originalEntity, storedDescriptor, mac))
             {
                 return;
             }

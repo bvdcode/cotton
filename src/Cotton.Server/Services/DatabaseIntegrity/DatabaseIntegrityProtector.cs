@@ -9,6 +9,12 @@ namespace Cotton.Server.Services.DatabaseIntegrity
     {
         public byte[] Sign(object entity, IDatabaseIntegrityDescriptor descriptor)
         {
+            ArgumentNullException.ThrowIfNull(descriptor);
+            return ComputeMac(entity, descriptor.Latest);
+        }
+
+        private byte[] ComputeMac(object entity, IDatabaseIntegrityDescriptor descriptor)
+        {
             ArgumentNullException.ThrowIfNull(entity);
             ArgumentNullException.ThrowIfNull(descriptor);
 
@@ -28,7 +34,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         {
             ArgumentNullException.ThrowIfNull(expectedMac);
 
-            byte[] actualMac = Sign(entity, descriptor);
+            byte[] actualMac = ComputeMac(entity, descriptor);
             try
             {
                 return CryptographicOperations.FixedTimeEquals(actualMac, expectedMac);

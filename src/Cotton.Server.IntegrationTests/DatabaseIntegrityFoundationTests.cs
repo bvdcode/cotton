@@ -109,7 +109,8 @@ namespace Cotton.Server.IntegrationTests
 
             public override void WriteCanonicalData(
                 DatabaseIntegrityCanonicalWriter writer,
-                IntegrityTestEntity entity)
+                IntegrityTestEntity entity,
+                int version)
             {
                 writer.WriteGuidField(nameof(entity.Id), entity.Id);
                 writer.WriteNullableGuidField(nameof(entity.OwnerId), entity.OwnerId);

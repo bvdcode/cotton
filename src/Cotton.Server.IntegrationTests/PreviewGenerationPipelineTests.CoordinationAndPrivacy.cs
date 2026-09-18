@@ -7,8 +7,9 @@ namespace Cotton.Server.IntegrationTests
 {
     public partial class PreviewGenerationPipelineTests
     {
-        [Test]
-        public async Task PreviewAndMetadataJobs_SameManifest_PersistBothResultsWithValidIntegrityMac()
+        [TestCase(1)]
+        [TestCase(2)]
+        public async Task PreviewAndMetadataJobs_SameManifest_PersistBothResultsWithValidIntegrityMac(int initialVersion)
         {
             string token = await LoginAsync();
             SetBearer(token);
@@ -18,6 +19,13 @@ namespace Cotton.Server.IntegrationTests
                 "combined.png",
                 "image/png",
                 CreateGradientPngBytes(width: 96, height: 64));
+
+            await using (AsyncServiceScope setupScope = _factory!.Services.CreateAsyncScope())
+            {
+                CottonDbContext setupContext = setupScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                FileManifest original = await LoadFileManifestAsync(setupContext, createdFile.Id);
+                await DatabaseIntegrityTestSignatures.SetVersionAsync(setupContext, original, initialVersion, setupScope.ServiceProvider);
+            }
 
             await ExecuteGeneratePreviewJobAsync();
             await ExecuteExtractFileMetadataJobAsync();
@@ -38,6 +46,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(manifest.Metadata?[FileContentMetadataKeys.ImageWidth], Is.EqualTo("96"));
                 Assert.That(manifest.Metadata?[FileContentMetadataKeys.ImageHeight], Is.EqualTo("64"));
                 Assert.That(integrityMac, Is.Not.Null);
+                Assert.That(dbContext.Entry(manifest).Property<int?>(DatabaseIntegrityColumns.VersionProperty).CurrentValue,
+                    Is.EqualTo(FileManifestIntegrityDescriptor.LatestVersion));
                 Assert.That(
                     protector.Verify(manifest, new FileManifestIntegrityDescriptor(), integrityMac!),
                     Is.True);

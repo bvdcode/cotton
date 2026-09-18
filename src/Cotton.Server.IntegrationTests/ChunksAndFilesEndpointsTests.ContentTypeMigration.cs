@@ -37,6 +37,10 @@ namespace Cotton.Server.IntegrationTests
                 dbContext.NodeFiles.Add(file);
             }
             await dbContext.SaveChangesAsync();
+            foreach (NodeFile file in await dbContext.NodeFiles.AsNoTracking().ToListAsync())
+            {
+                await DatabaseIntegrityTestSignatures.SetVersionAsync(dbContext, file, 1, scope.ServiceProvider);
+            }
             var originalDates = await dbContext.NodeFiles.AsNoTracking()
                 .Select(file => new { file.Id, file.CreatedAt, file.UpdatedAt }).ToArrayAsync();
             dbContext.ChangeTracker.Clear();
@@ -61,6 +65,11 @@ namespace Cotton.Server.IntegrationTests
                     : FileContentTypeResolver.ResolveFromFileName(file.Name);
                 Assert.That(file.ContentType, Is.EqualTo(expected), file.Name);
                 verifier.RequireValid(dbContext, file, "content-type-backfill");
+                if (file.Id != original.Id)
+                {
+                    Assert.That(dbContext.Entry(file).Property<int?>(DatabaseIntegrityColumns.VersionProperty).CurrentValue,
+                        Is.EqualTo(NodeFileIntegrityDescriptor.LatestVersion));
+                }
                 var dates = originalDates.Single(originalFile => originalFile.Id == file.Id);
                 Assert.That(file.CreatedAt, Is.EqualTo(dates.CreatedAt));
                 Assert.That(file.UpdatedAt, Is.EqualTo(dates.UpdatedAt));

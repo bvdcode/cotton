@@ -14,16 +14,18 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// </remarks>
     public class NodeShareTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<NodeShareToken>
     {
+        public const int LatestVersion = 1;
+
         public override string EntityName => "node_share_tokens";
 
-        public override int SchemaVersion => 1;
+        public override int SchemaVersion => LatestVersion;
 
         public override string GetEntityKey(NodeShareToken entity)
         {
             return entity.Id.ToString("D");
         }
 
-        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, NodeShareToken entity)
+        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, NodeShareToken entity, int version)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);
             writer.WriteStringField(nameof(entity.Token), entity.Token);

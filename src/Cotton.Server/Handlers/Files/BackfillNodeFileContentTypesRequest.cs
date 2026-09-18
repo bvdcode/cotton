@@ -3,7 +3,9 @@
 
 using Cotton.ContentTypes;
 using Cotton.Database;
+using Cotton.Database.Integrity;
 using Cotton.Database.Models;
+using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +14,11 @@ namespace Cotton.Server.Handlers.Files
 {
     public record BackfillNodeFileContentTypesRequest : IRequest<int>;
 
-    public class BackfillNodeFileContentTypesRequestHandler(CottonDbContext dbContext)
+    public class BackfillNodeFileContentTypesRequestHandler(
+        CottonDbContext dbContext,
+        IDatabaseIntegrityVerifier verifier,
+        IDatabaseIntegrityProtector protector,
+        IDatabaseIntegrityDescriptorRegistry descriptors)
         : IRequestHandler<BackfillNodeFileContentTypesRequest, int>
     {
         private const int BatchSize = 1000;
@@ -21,6 +27,7 @@ namespace Cotton.Server.Handlers.Files
         {
             Guid? afterId = null;
             int updated = 0;
+            IDatabaseIntegrityDescriptor<NodeFile> descriptor = descriptors.Get<NodeFile>();
             while (true)
             {
                 IQueryable<NodeFile> query = dbContext.NodeFiles.Where(file => file.ContentType == string.Empty);
@@ -29,22 +36,34 @@ namespace Cotton.Server.Handlers.Files
                     query = query.Where(file => file.Id.CompareTo(lastId) > 0);
                 }
 
-                var files = await query.OrderBy(file => file.Id)
-                    .Select(file => new { file.Id, file.Name })
+                List<NodeFile> files = await query.OrderBy(file => file.Id)
                     .Take(BatchSize).ToListAsync(cancellationToken);
                 if (files.Count == 0)
                 {
                     return updated;
                 }
 
-                foreach (IGrouping<string, Guid> group in files.GroupBy(
-                    file => FileContentTypeResolver.ResolveFromFileName(file.Name), file => file.Id))
+                foreach (NodeFile file in files)
                 {
-                    Guid[] ids = [.. group];
-                    string contentType = group.Key;
-                    updated += await dbContext.NodeFiles
-                        .Where(file => ids.Contains(file.Id) && file.ContentType == string.Empty)
-                        .ExecuteUpdateAsync(setters => setters.SetProperty(file => file.ContentType, contentType), cancellationToken);
+                    verifier.RequireValid(dbContext, file, "content-type.backfill");
+                    byte[] originalMac = dbContext.Entry(file)
+                        .Property<byte[]?>(DatabaseIntegrityColumns.MacProperty).CurrentValue!;
+                    string contentType = FileContentTypeResolver.ResolveFromFileName(file.Name);
+                    dbContext.Entry(file).Property(entity => entity.ContentType).CurrentValue = contentType;
+                    byte[] mac = protector.Sign(file, descriptor);
+                    int affected = await dbContext.NodeFiles
+                        .Where(entity => entity.Id == file.Id && entity.ContentType == string.Empty
+                            && EF.Property<byte[]?>(entity, DatabaseIntegrityColumns.MacProperty) == originalMac)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(entity => entity.ContentType, contentType)
+                            .SetProperty(entity => EF.Property<int?>(entity, DatabaseIntegrityColumns.VersionProperty), descriptor.SchemaVersion)
+                            .SetProperty(entity => EF.Property<byte[]?>(entity, DatabaseIntegrityColumns.MacProperty), mac), cancellationToken);
+                    if (affected != 1)
+                    {
+                        throw new DbUpdateConcurrencyException("The node file changed while its content type was being backfilled.");
+                    }
+                    updated += affected;
+                    dbContext.Entry(file).State = EntityState.Detached;
                 }
 
                 afterId = files[^1].Id;

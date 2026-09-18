@@ -21,6 +21,12 @@ namespace Cotton.Server.Services.DatabaseIntegrity
 
         int SchemaVersion { get; }
 
+        IReadOnlyCollection<int> SupportedVersions { get; }
+
+        IDatabaseIntegrityDescriptor Latest { get; }
+
+        IDatabaseIntegrityDescriptor ForVersion(int version);
+
         string GetEntityKey(object entity);
 
         byte[] BuildCanonicalPayload(object entity);
