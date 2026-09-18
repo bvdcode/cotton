@@ -36,11 +36,11 @@ namespace Cotton.Server.Mappings
                 .Map(dest => dest.Metadata, src => FileManifestMetadataProjection.Merge(src.Metadata, src.FileManifest.Metadata))
                 .Map(dest => dest.RequiresVideoTranscoding, src =>
                     src.FileManifest.SmallFilePreviewHash != null
-                    && src.FileManifest.ContentType.StartsWith("video/")
-                    && src.FileManifest.ContentType != "video/mp4"
-                    && src.FileManifest.ContentType != "video/webm"
-                    && src.FileManifest.ContentType != "video/ogg"
-                    && src.FileManifest.ContentType != "video/quicktime")
+                    && src.ContentType.StartsWith("video/")
+                    && src.ContentType != "video/mp4"
+                    && src.ContentType != "video/webm"
+                    && src.ContentType != "video/ogg"
+                    && src.ContentType != "video/quicktime")
                 .Map(d => d.PreviewHashEncryptedHex, s => s.FileManifest.GetPreviewHashEncryptedHex());
 
             TypeAdapterConfig<User, UserDto>

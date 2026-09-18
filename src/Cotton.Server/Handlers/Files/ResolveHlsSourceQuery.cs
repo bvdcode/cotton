@@ -58,7 +58,7 @@ namespace Cotton.Server.Handlers.Files
             }
 
             VideoPlaybackMode playbackMode = VideoPlaybackResolver.Resolve(
-                nodeFile.FileManifest.ContentType,
+                nodeFile.ContentType,
                 hasPreview: nodeFile.FileManifest.SmallFilePreviewHash is not null);
             if (playbackMode != VideoPlaybackMode.Transcode)
             {

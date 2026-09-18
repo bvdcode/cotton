@@ -59,6 +59,21 @@ namespace Cotton.Server.IntegrationTests
                 $"/api/v1/layouts/{root.LayoutId}/recent?count=1&contentType=text/css"))!;
             List<NodeFileManifestDto> otherFiles = (await _client.GetFromJsonAsync<List<NodeFileManifestDto>>(
                 $"/api/v1/layouts/{root.LayoutId}/recent?count=1&excludeContentType=text/css"))!;
+            using HttpResponseMessage textDownload = await _client.GetAsync($"/api/v1/files/{text.Id}/content");
+            using HttpResponseMessage renamedDownload = await _client.GetAsync($"/api/v1/files/{renamed.Id}/content");
+            textDownload.EnsureSuccessStatusCode();
+            renamedDownload.EnsureSuccessStatusCode();
+            using HttpResponseMessage linkResponse = await _client.GetAsync($"/api/v1/files/{renamed.Id}/download-link");
+            linkResponse.EnsureSuccessStatusCode();
+            string downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+            using HttpResponseMessage tokenDownload = await _client.GetAsync(downloadLink);
+            tokenDownload.EnsureSuccessStatusCode();
+            string sharedLink = $"/s/{ExtractToken(downloadLink)}?view=download";
+            using HttpResponseMessage sharedDownload = await _client.GetAsync(sharedLink);
+            using HttpRequestMessage headRequest = new(HttpMethod.Head, sharedLink);
+            using HttpResponseMessage sharedHead = await _client.SendAsync(headRequest);
+            sharedDownload.EnsureSuccessStatusCode();
+            sharedHead.EnsureSuccessStatusCode();
 
             Assert.Multiple(() =>
             {
@@ -73,6 +88,11 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(fileContentTypes[markdown.Id], Is.EqualTo("text/css"));
                 Assert.That(cssFiles.Select(file => file.Id), Is.EqualTo(new[] { markdown.Id }));
                 Assert.That(otherFiles.Select(file => file.Id), Is.EqualTo(new[] { text.Id }));
+                Assert.That(textDownload.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/plain"));
+                Assert.That(renamedDownload.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/css"));
+                Assert.That(tokenDownload.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/css"));
+                Assert.That(sharedDownload.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/css"));
+                Assert.That(sharedHead.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/css"));
             });
         }
     }

@@ -215,7 +215,7 @@ namespace Cotton.Server.Handlers.Files
             if (isHead)
             {
                 return ShareFileResult.AsHead(
-                    contentType: file.ContentType,
+                    contentType: downloadToken.NodeFile.ContentType,
                     contentLength: file.SizeBytes,
                     entityTag: entityTag.ToString(),
                     fileName: downloadToken.FileName,
@@ -402,7 +402,7 @@ namespace Cotton.Server.Handlers.Files
 
             return ShareFileResult.AsStream(
                 stream: stream,
-                contentType: file.ContentType,
+                contentType: downloadToken.NodeFile.ContentType,
                 fileName: downloadToken.FileName,
                 downloadName: downloadName,
                 lastModified: lastModified,
