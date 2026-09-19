@@ -106,8 +106,9 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(actualVersion, Is.EqualTo(expectedVersion));
         }
 
-        [Test]
-        public async Task PreviewPipeline_LargeImage_GeneratesSmallAndLarge_WithExpectedDimensions_AndCompression()
+        [TestCase("photo.png")]
+        [TestCase("photo.heic")]
+        public async Task PreviewPipeline_LargeImage_GeneratesSmallAndLarge_WithExpectedDimensions_AndCompression(string fileName)
         {
             string token = await LoginAsync();
             SetBearer(token);
@@ -115,7 +116,7 @@ namespace Cotton.Server.IntegrationTests
             NodeDto root = await GetRootNodeAsync();
             byte[] sourceImage = CreateGradientPngBytes(width: 2200, height: 1200);
 
-            NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, "photo.png", "image/png", sourceImage);
+            NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, fileName, "image/png", sourceImage);
 
             await ExecuteGeneratePreviewJobAsync();
 
