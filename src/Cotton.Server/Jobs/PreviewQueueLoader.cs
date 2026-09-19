@@ -51,6 +51,11 @@ namespace Cotton.Server.Jobs
 
         private static bool NeedsPreview(FileManifest manifest)
         {
+            if (manifest.SizeBytes == 0)
+            {
+                return false;
+            }
+
             if (manifest.PreviewGenerationError is not null)
             {
                 return manifest.PreviewGeneratorVersion != PreviewGeneratorProvider.FailedAttemptVersion;
@@ -85,7 +90,7 @@ namespace Cotton.Server.Jobs
                     .Union(generated.Where(manifest => manifest.PreviewGeneratorVersion > version).Select(manifest => manifest.Id));
             }
 
-            return manifests.Where(manifest => candidateIds.Contains(manifest.Id)
+            return manifests.Where(manifest => manifest.SizeBytes > 0 && candidateIds.Contains(manifest.Id)
                 && availableFiles.Any(file => file.FileManifestId == manifest.Id));
         }
     }
