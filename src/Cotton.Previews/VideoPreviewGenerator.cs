@@ -10,7 +10,9 @@ namespace Cotton.Previews
     {
         public string Id => "video";
 
-        public int Version => 2;
+        public int Version => 3;
+
+        private const double MinimumDurationForSeekingSeconds = 1;
 
         public int Priority => 0;
 
@@ -71,14 +73,12 @@ namespace Cotton.Previews
 
         private static double ComputeSeekSeconds(double? durationSeconds)
         {
-            if (durationSeconds is null || durationSeconds <= 0)
+            if (durationSeconds is null || durationSeconds <= MinimumDurationForSeekingSeconds)
             {
                 return 0;
             }
 
-            double t = durationSeconds.Value * 0.5;
-            t = Math.Clamp(t, 0.5, Math.Max(0.5, durationSeconds.Value - 0.5));
-            return t;
+            return durationSeconds.Value * 0.5;
         }
 
         private static async Task<byte[]?> TryExtractCoverArtAsync(Uri url)
