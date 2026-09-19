@@ -31,7 +31,7 @@ namespace Cotton.Server.Services.Previews
                     }
 
                     cancellationToken.ThrowIfCancellationRequested();
-                    return new RenderedFilePreview(small, large);
+                    return new RenderedFilePreview(small, large, generator.Id, generator.Version);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {

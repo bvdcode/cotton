@@ -45,7 +45,12 @@ namespace Cotton.Previews
                     x => x.First().Generator,
                     StringComparer.OrdinalIgnoreCase);
 
-        public static int GenerationVersion { get; } = CalculateGenerationVersion();
+        private static readonly IReadOnlyDictionary<string, int> GeneratorVersions = Generators
+            .ToDictionary(generator => generator.Id, generator => generator.Version, StringComparer.Ordinal);
+
+        public static int FailedAttemptVersion { get; } = CalculateFailedAttemptVersion();
+
+        public static IReadOnlyDictionary<string, int> GetGeneratorVersions() => GeneratorVersions;
 
         public static IReadOnlyList<IPreviewGenerator> GetGeneratorsByContentTypes(IEnumerable<string> contentTypes)
         {
@@ -62,7 +67,7 @@ namespace Cotton.Previews
             return [.. Generators.Where(candidates.Contains).OrderBy(generator => generator.Priority)];
         }
 
-        private static int CalculateGenerationVersion()
+        private static int CalculateFailedAttemptVersion()
         {
             string definition = string.Join("\n", Generators.OrderBy(generator => generator.Priority).Select(generator =>
                 string.Join(",", generator.SupportedContentTypes.Order(StringComparer.Ordinal))

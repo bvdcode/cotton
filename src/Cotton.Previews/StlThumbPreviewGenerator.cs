@@ -9,6 +9,8 @@ namespace Cotton.Previews
 {
     public class StlThumbPreviewGenerator : IPreviewGenerator
     {
+        public string Id { get; }
+
         public int Version => 9;
 
         public int Priority => 0;
@@ -20,12 +22,13 @@ namespace Cotton.Previews
         private const string ThreeMfExtension = ".3mf";
 
         public StlThumbPreviewGenerator()
-            : this(".stl", ["model/stl", "application/sla", "application/vnd.ms-pki.stl"])
+            : this("stl", ".stl", ["model/stl", "application/sla", "application/vnd.ms-pki.stl"])
         {
         }
 
-        private StlThumbPreviewGenerator(string modelExtension, string[] supportedContentTypes)
+        private StlThumbPreviewGenerator(string id, string modelExtension, string[] supportedContentTypes)
         {
+            Id = id;
             ArgumentException.ThrowIfNullOrWhiteSpace(modelExtension);
             _modelExtension = modelExtension.StartsWith('.')
                 ? modelExtension
@@ -35,12 +38,13 @@ namespace Cotton.Previews
 
         public static StlThumbPreviewGenerator CreateObjGenerator()
         {
-            return new StlThumbPreviewGenerator(".obj", ["model/obj"]);
+            return new StlThumbPreviewGenerator("obj", ".obj", ["model/obj"]);
         }
 
         public static StlThumbPreviewGenerator CreateThreeMfGenerator()
         {
             return new StlThumbPreviewGenerator(
+                "3mf",
                 ".3mf",
                 ["model/3mf", "application/vnd.ms-package.3dmanufacturing-3dmodel+xml"]);
         }

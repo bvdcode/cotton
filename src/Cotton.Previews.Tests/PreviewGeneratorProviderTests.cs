@@ -5,6 +5,24 @@ namespace Cotton.Previews.Tests
 {
     public class PreviewGeneratorProviderTests
     {
+        [TestCase("image/png", "image")]
+        [TestCase("image/heic", "heic")]
+        [TestCase("image/svg+xml", "svg")]
+        [TestCase("text/plain", "text")]
+        [TestCase("application/pdf", "pdf")]
+        [TestCase("audio/mpeg", "audio")]
+        [TestCase("video/mp4", "video")]
+        [TestCase("application/vnd.android.package-archive", "android-package")]
+        [TestCase("model/stl", "stl")]
+        [TestCase("model/obj", "obj")]
+        [TestCase("model/3mf", "3mf")]
+        public void GeneratorIds_AreStableAcrossContentTypes(string contentType, string expectedId)
+        {
+            IPreviewGenerator generator = PreviewGeneratorProvider.GetGeneratorByContentType(contentType)!;
+            Assert.That(generator.Id, Is.EqualTo(expectedId));
+            Assert.That(PreviewGeneratorProvider.GetGeneratorVersions()[expectedId], Is.EqualTo(generator.Version));
+        }
+
         [Test]
         public void GetGeneratorsByContentTypes_DeduplicatesAndOrdersByPriority()
         {

@@ -11,6 +11,8 @@ namespace Cotton.Previews
 {
     public class PdfPreviewGenerator : IPreviewGenerator
     {
+        public string Id => "pdf";
+
         public int Version => 0;
 
         public int Priority => 0;

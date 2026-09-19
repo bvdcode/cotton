@@ -12,6 +12,8 @@ namespace Cotton.Previews
 {
     public class AudioPreviewGenerator : IPreviewGenerator
     {
+        public string Id => "audio";
+
         private const int CoverArtExtractionTimeoutSeconds = 15;
         private const int WaveformExtractionTimeoutSeconds = 120;
         private const int WaveformSampleRateHz = 400;

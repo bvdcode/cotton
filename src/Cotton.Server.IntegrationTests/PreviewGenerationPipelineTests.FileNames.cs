@@ -46,6 +46,12 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(result.PreviewGenerationError, Is.Null);
             });
             AssertWebpSignature(await ReadPreviewBlobAsync(result.SmallFilePreviewHash!));
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            FileManifest manifest = await LoadFileManifestAsync(dbContext, image.Id);
+            Assert.That(manifest.PreviewGeneratorId, Is.EqualTo(new TextPreviewGenerator().Id));
+            Assert.That(manifest.PreviewGeneratorVersion, Is.EqualTo(new TextPreviewGenerator().Version));
+            Assert.That(await PreviewQueueLoader.LoadNextIdsAsync(dbContext, 100, new HashSet<Guid>(), CancellationToken.None), Is.Empty);
         }
 
         [Test]

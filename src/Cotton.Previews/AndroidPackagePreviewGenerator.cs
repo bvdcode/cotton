@@ -12,6 +12,8 @@ namespace Cotton.Previews
 {
     public class AndroidPackagePreviewGenerator : IPreviewGenerator
     {
+        public string Id => "android-package";
+
         private const long MaxManifestBytes = 8L * 1024 * 1024;
         private const long MaxNonSeekablePackageBytes = 192L * 1024 * 1024;
         private const long MaxResourceTableBytes = 32L * 1024 * 1024;

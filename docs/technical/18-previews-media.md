@@ -8,7 +8,9 @@ The recurring preview job selects eligible manifests that do not have a current 
 
 Supported generator families include images, HEIC, documents, text, audio, video, and selected 3D formats. Generator availability depends on the runtime libraries and external binaries present in the deployment.
 
-Preview metadata is written only after the derived object exists. Re-running generation is idempotent because identical output has the same storage hash. A generator-version change may make an older result eligible for regeneration without changing the source file.
+Preview metadata is written only after the derived object exists. Each new successful result records the stable identifier and version of the generator that produced it. Only changes to that generator's version make the result eligible for automatic regeneration. Existing cached previews without a recorded generator remain available and are excluded from version-based regeneration; their generator is not inferred from current filenames.
+
+Failed attempts use a fingerprint of the registered generators to retry after the available processing capabilities change. A failed refresh preserves the previous cached image and does not retry on every job run. Re-running generation is idempotent because identical output has the same storage hash.
 
 ## Failure classification
 

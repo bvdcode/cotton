@@ -3,6 +3,7 @@
 
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Models
@@ -14,6 +15,7 @@ namespace Cotton.Database.Models
     [Index(nameof(LargeFilePreviewHash))]
     [Index(nameof(ContentType), nameof(PreviewGeneratorVersion))]
     [Index(nameof(TextIndexVersion), nameof(CreatedAt))]
+    [Index(nameof(PreviewGeneratorId), nameof(PreviewGeneratorVersion))]
     public class FileManifest : BaseEntity<Guid>
     {
         public const char PreviewTokenPrefix = 'f';
@@ -45,6 +47,10 @@ namespace Cotton.Database.Models
 
         [Column("preview_generator_version")]
         public int PreviewGeneratorVersion { get; set; }
+
+        [Column("preview_generator_id")]
+        [MaxLength(32)]
+        public string? PreviewGeneratorId { get; set; }
 
         [Column("text_index_version")]
         public int TextIndexVersion { get; set; }

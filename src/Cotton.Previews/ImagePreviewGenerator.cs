@@ -9,6 +9,8 @@ namespace Cotton.Previews
 {
     public class ImagePreviewGenerator : IPreviewGenerator
     {
+        public string Id => "image";
+
         public int Version => 3;
 
         public int Priority => 0;

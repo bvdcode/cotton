@@ -3,5 +3,5 @@
 
 namespace Cotton.Server.Services.Previews
 {
-    public record RenderedFilePreview(byte[] Small, byte[]? Large);
+    public record RenderedFilePreview(byte[] Small, byte[]? Large, string GeneratorId, int GeneratorVersion);
 }

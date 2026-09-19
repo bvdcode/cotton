@@ -58,7 +58,7 @@ namespace Cotton.Server.IntegrationTests
 
             Assert.That(dbContext.ChangeTracker.Entries(), Is.Empty);
             Assert.That(await dbContext.FileManifests.CountAsync(manifest =>
-                manifest.PreviewGeneratorVersion == PreviewGeneratorProvider.GenerationVersion
+                manifest.PreviewGeneratorVersion == PreviewGeneratorProvider.FailedAttemptVersion
                     && manifest.PreviewGenerationError != null), Is.EqualTo(101));
         }
 

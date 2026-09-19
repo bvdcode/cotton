@@ -5,6 +5,8 @@ namespace Cotton.Previews
 {
     public interface IPreviewGenerator
     {
+        string Id { get; }
+
         int Version { get; }
 
         int Priority { get; }

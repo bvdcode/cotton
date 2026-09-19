@@ -102,7 +102,7 @@ namespace Cotton.Server.IntegrationTests
                 .Where(nodeFile => nodeFile.Id == createdFile.Id)
                 .Select(nodeFile => nodeFile.FileManifest.PreviewGeneratorVersion)
                 .SingleAsync();
-            int expectedVersion = PreviewGeneratorProvider.GenerationVersion;
+            int expectedVersion = new TextPreviewGenerator().Version;
             Assert.That(actualVersion, Is.EqualTo(expectedVersion));
         }
 

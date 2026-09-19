@@ -10,6 +10,8 @@ namespace Cotton.Previews
 {
     public class HeicPreviewGenerator : IPreviewGenerator
     {
+        public string Id => "heic";
+
         private const int Rgba32BytesPerPixel = 4;
 
         public int Version => 2;

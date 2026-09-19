@@ -9,6 +9,8 @@ namespace Cotton.Server.IntegrationTests.Helpers
     {
         public int ReadCount { get; private set; }
 
+        public int WriteCount { get; private set; }
+
         public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             ReadCount++;
@@ -23,7 +25,11 @@ namespace Cotton.Server.IntegrationTests.Helpers
         public Task<long> GetSizeAsync(string uid) => inner.GetSizeAsync(uid);
 
         public Task<long> WriteAsync(string uid, Stream stream, PipelineContext? context = null,
-            CancellationToken cancellationToken = default) => inner.WriteAsync(uid, stream, context, cancellationToken);
+            CancellationToken cancellationToken = default)
+        {
+            WriteCount++;
+            return inner.WriteAsync(uid, stream, context, cancellationToken);
+        }
 
         public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => inner.ListAllKeysAsync(ct);
     }

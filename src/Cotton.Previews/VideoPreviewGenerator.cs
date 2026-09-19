@@ -8,6 +8,8 @@ namespace Cotton.Previews
 {
     public class VideoPreviewGenerator : IPreviewGenerator
     {
+        public string Id => "video";
+
         public int Version => 2;
 
         public int Priority => 0;

@@ -13,6 +13,8 @@ namespace Cotton.Previews
 {
     public class TextPreviewGenerator : IPreviewGenerator
     {
+        public string Id => "text";
+
         public int Version => 0;
 
         public int Priority => 100;

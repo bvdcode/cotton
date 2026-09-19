@@ -167,7 +167,8 @@ namespace Cotton.Server.Jobs
             item.SmallFilePreviewHashEncrypted = encryptedHash;
             item.LargeFilePreviewHash = largeHash;
             item.PreviewGenerationError = null;
-            item.PreviewGeneratorVersion = PreviewGeneratorProvider.GenerationVersion;
+            item.PreviewGeneratorId = preview.GeneratorId;
+            item.PreviewGeneratorVersion = preview.GeneratorVersion;
             await _dbContext.SaveChangesAsync(cancellationToken);
             _logger.LogDebug("Generated preview for file manifest {FileManifestId}", item.Id);
         }
@@ -230,7 +231,8 @@ namespace Cotton.Server.Jobs
             }
 
             item.PreviewGenerationError = error;
-            item.PreviewGeneratorVersion = PreviewGeneratorProvider.GenerationVersion;
+            item.PreviewGeneratorId = null;
+            item.PreviewGeneratorVersion = PreviewGeneratorProvider.FailedAttemptVersion;
             try
             {
                 await _dbContext.SaveChangesAsync(cancellationToken);
