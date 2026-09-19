@@ -18,9 +18,48 @@ namespace Cotton.Server.IntegrationTests
             await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
             CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
             HashSet<Guid> known = [newer.FileManifestId];
-            List<FileManifest> result = await PreviewQueueLoader.LoadNextAsync(dbContext, 1, known, CancellationToken.None);
+            List<Guid> result = await PreviewQueueLoader.LoadNextIdsAsync(dbContext, 1, known, CancellationToken.None);
 
-            Assert.That(result.Select(manifest => manifest.Id), Is.EqualTo(new[] { older.FileManifestId }));
+            Assert.That(result, Is.EqualTo(new[] { older.FileManifestId }));
+            Assert.That(dbContext.ChangeTracker.Entries(), Is.Empty);
+        }
+
+        [Test]
+        public async Task PreviewQueue_ContinuesThroughMultipleBatches()
+        {
+            SetBearer(await LoginAsync());
+            NodeDto root = await GetRootNodeAsync();
+            NodeFileManifestDto original = await UploadAndCreateFileAsync(root.Id, "opaque", "application/octet-stream", "Original content"u8.ToArray());
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            NodeFile source = await dbContext.NodeFiles.SingleAsync(file => file.Id == original.Id);
+            for (int index = 0; index < 100; index++)
+            {
+                NodeFile file = new()
+                {
+                    NodeId = source.NodeId,
+                    OwnerId = source.OwnerId,
+                    FileManifest = new FileManifest
+                    {
+                        ProposedContentHash = Hasher.HashData(Encoding.UTF8.GetBytes($"Queued content {index}")),
+                        ContentType = string.Empty,
+                        SizeBytes = 1,
+                    },
+                };
+                file.SetName($"opaque-{index}");
+                dbContext.NodeFiles.Add(file);
+            }
+            await dbContext.SaveChangesAsync();
+            dbContext.ChangeTracker.Clear();
+            PerfTracker perf = ActivatorUtilities.CreateInstance<PerfTracker>(scope.ServiceProvider);
+            GeneratePreviewJob job = ActivatorUtilities.CreateInstance<GeneratePreviewJob>(scope.ServiceProvider, perf);
+
+            await job.Execute(null!);
+
+            Assert.That(dbContext.ChangeTracker.Entries(), Is.Empty);
+            Assert.That(await dbContext.FileManifests.CountAsync(manifest =>
+                manifest.PreviewGeneratorVersion == PreviewGeneratorProvider.GenerationVersion
+                    && manifest.PreviewGenerationError != null), Is.EqualTo(101));
         }
 
         [Test]
@@ -54,8 +93,7 @@ namespace Cotton.Server.IntegrationTests
             NodeFileManifestDto file = await UploadAndCreateFileAsync(root.Id, "cancel.txt", "text/plain", Encoding.UTF8.GetBytes("cancelled"));
             await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
             CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            List<FileManifest> pending = await PreviewQueueLoader.LoadNextAsync(dbContext, 100, new HashSet<Guid>(), CancellationToken.None);
-            FileManifest manifest = pending.Single(item => item.Id == file.FileManifestId);
+            FileManifest manifest = (await PreviewQueueLoader.LoadItemAsync(dbContext, file.FileManifestId, CancellationToken.None))!;
             FilePreviewRenderer renderer = scope.ServiceProvider.GetRequiredService<FilePreviewRenderer>();
             using CancellationTokenSource cancellation = new CancellationTokenSource();
             await cancellation.CancelAsync();

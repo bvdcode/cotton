@@ -149,8 +149,8 @@ namespace Cotton.Server.IntegrationTests
         {
             await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
             CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            List<FileManifest> items = await PreviewQueueLoader.LoadNextAsync(dbContext, 100, new HashSet<Guid>(), CancellationToken.None);
-            return [.. items.Select(item => item.Id)];
+            List<Guid> items = await PreviewQueueLoader.LoadNextIdsAsync(dbContext, 100, new HashSet<Guid>(), CancellationToken.None);
+            return [.. items];
         }
     }
 }

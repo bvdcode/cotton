@@ -29,28 +29,16 @@ namespace Cotton.Server.Jobs
         ILogger<GeneratePreviewJob> _logger) : IJob
     {
         private const int MaxItemsPerRun = 10000;
-        private const int RefreshItemsPerUploadPause = 250;
+        private const int BatchSize = 100;
         private const int UnthrottledItemsCount = 1000;
         private const int ThrottleDelayMs = 250;
+        private const int MaxPreviewAttempts = 2;
 
         public async Task Execute(IJobExecutionContext context)
         {
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
 
-            HashSet<Guid> queuedOrProcessedItemIds = [];
-            List<FileManifest> itemsToProcess = await PreviewQueueLoader.LoadNextAsync(
-                _dbContext,
-                MaxItemsPerRun,
-                queuedOrProcessedItemIds,
-                cancellationToken);
-
-            LogPreviewQueueLoaded(itemsToProcess.Count);
-            int processed = await ProcessPreviewQueueAsync(
-                itemsToProcess,
-                queuedOrProcessedItemIds,
-                cancellationToken);
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            int processed = await ProcessPreviewQueueAsync(cancellationToken);
             LogPreviewJobCompleted(processed);
         }
 
@@ -70,78 +58,95 @@ namespace Cotton.Server.Jobs
             }
         }
 
-        private async Task<int> ProcessPreviewQueueAsync(
-            List<FileManifest> itemsToProcess,
-            HashSet<Guid> queuedOrProcessedItemIds,
-            CancellationToken cancellationToken)
+        private async Task<int> ProcessPreviewQueueAsync(CancellationToken cancellationToken)
         {
-            int processed = 0;
-            int nextIndex = 0;
-            while (nextIndex < itemsToProcess.Count && processed < MaxItemsPerRun)
+            HashSet<Guid> processedItemIds = [];
+            while (processedItemIds.Count < MaxItemsPerRun)
             {
-                FileManifest item = itemsToProcess[nextIndex++];
-                processed++;
-
-                try
+                List<Guid> itemIds = await PreviewQueueLoader.LoadNextIdsAsync(
+                    _dbContext,
+                    Math.Min(BatchSize, MaxItemsPerRun - processedItemIds.Count),
+                    processedItemIds,
+                    cancellationToken);
+                if (itemIds.Count == 0)
                 {
-                    await ProcessPreviewItemAsync(item, processed, itemsToProcess.Count, cancellationToken);
-                    await RefreshQueueAfterUploadPauseAsync(
-                        itemsToProcess,
-                        nextIndex,
-                        queuedOrProcessedItemIds,
-                        cancellationToken);
+                    break;
                 }
-                finally
+                LogPreviewQueueLoaded(itemIds.Count);
+                foreach (Guid itemId in itemIds)
                 {
-                    DetachPreviewItem(item);
+                    processedItemIds.Add(itemId);
+                    await ProcessPreviewItemAsync(itemId, processedItemIds.Count, cancellationToken);
+                    if (_perf.IsUploading())
+                    {
+                        await WaitForUploadPauseAsync(cancellationToken);
+                        break;
+                    }
                 }
             }
 
-            return processed;
+            return processedItemIds.Count;
         }
 
         private async Task ProcessPreviewItemAsync(
-            FileManifest item,
+            Guid itemId,
             int processed,
-            int total,
             CancellationToken cancellationToken)
         {
-            _perf.OnPreviewGenerating();
-            _logger.LogInformation("Processing {Current}/{Total}: FileManifest {FileManifestId}, Size={Size}",
-                processed, total, item.Id, item.SizeBytes);
-
-            try
+            for (int attempt = 1; attempt <= MaxPreviewAttempts; attempt++)
             {
-                RenderedFilePreview? preview = await _renderer.RenderAsync(item, cancellationToken);
-                if (preview is null)
+                FileManifest? item = null;
+                try
                 {
-                    await RecordPreviewGenerationFailureAsync(item, "No preview generator matches the file names.", cancellationToken);
+                    item = await PreviewQueueLoader.LoadItemAsync(_dbContext, itemId, cancellationToken);
+                    if (item is null)
+                    {
+                        return;
+                    }
+                    _perf.OnPreviewGenerating();
+                    _logger.LogInformation("Processing preview {Current}: FileManifest {FileManifestId}, Size={Size}",
+                        processed, item.Id, item.SizeBytes);
+
+                    RenderedFilePreview? preview = await _renderer.RenderAsync(item, cancellationToken);
+                    if (preview is null)
+                    {
+                        await RecordPreviewGenerationFailureAsync(item, "No preview generator matches the file names.", cancellationToken);
+                        return;
+                    }
+
+                    await StorePreviewAsync(item, preview, cancellationToken);
+                    await NotifyPreviewGeneratedAsync(item, cancellationToken);
+                    await ThrottlePreviewProcessingAsync(processed, cancellationToken);
                     return;
                 }
-
-                await StorePreviewAsync(item, preview, cancellationToken);
-                await NotifyPreviewGeneratedAsync(item, cancellationToken);
-                await ThrottlePreviewProcessingAsync(processed, cancellationToken);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                _logger.LogInformation(
-                    ex,
-                    "Skipped stale preview update for file manifest {FileManifestId}.",
-                    item.Id);
-            }
-            catch (AggregateException ex)
-            {
-                _logger.LogWarning(ex, "Failed to render preview for file manifest {FileManifestId}", item.Id);
-                await RecordPreviewGenerationFailureAsync(item, ex.Message, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to store or notify preview for file manifest {FileManifestId}", item.Id);
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (DbUpdateConcurrencyException) when (attempt < MaxPreviewAttempts)
+                {
+                    _logger.LogInformation("Retrying preview with the current file manifest {FileManifestId} after a concurrent update.", itemId);
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    _logger.LogInformation(ex, "Skipped stale preview update for file manifest {FileManifestId}.", itemId);
+                    return;
+                }
+                catch (AggregateException ex) when (item is not null)
+                {
+                    _logger.LogWarning(ex, "Failed to render preview for file manifest {FileManifestId}", itemId);
+                    await RecordPreviewGenerationFailureAsync(item, ex.Message, cancellationToken);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to load, store or notify preview for file manifest {FileManifestId}", itemId);
+                    return;
+                }
+                finally
+                {
+                    _dbContext.ChangeTracker.Clear();
+                }
             }
         }
 
@@ -237,98 +242,6 @@ namespace Cotton.Server.Jobs
                     "Skipped stale preview failure update for file manifest {FileManifestId}.",
                     item.Id);
             }
-        }
-
-        private async Task RefreshQueueAfterUploadPauseAsync(
-            List<FileManifest> itemsToProcess,
-            int nextIndex,
-            HashSet<Guid> queuedOrProcessedItemIds,
-            CancellationToken cancellationToken)
-        {
-            if (!_perf.IsUploading())
-            {
-                return;
-            }
-
-            await WaitForUploadPauseAsync(cancellationToken);
-            int refreshed = await RefreshPreviewQueueAsync(
-                itemsToProcess,
-                nextIndex,
-                queuedOrProcessedItemIds,
-                cancellationToken);
-
-            if (refreshed > 0)
-            {
-                _logger.LogInformation(
-                    "Upload pause refreshed preview queue with {Count} newer file manifests. Queue now has {Total} items.",
-                    refreshed,
-                    itemsToProcess.Count);
-            }
-        }
-
-        private async Task<int> RefreshPreviewQueueAsync(
-            List<FileManifest> itemsToProcess,
-            int insertIndex,
-            HashSet<Guid> queuedOrProcessedItemIds,
-            CancellationToken cancellationToken)
-        {
-            int remainingSlots = Math.Max(0, MaxItemsPerRun - insertIndex);
-            if (remainingSlots == 0)
-            {
-                return 0;
-            }
-
-            List<FileManifest> refreshedItems = await PreviewQueueLoader.LoadNextAsync(
-                _dbContext,
-                Math.Min(RefreshItemsPerUploadPause, remainingSlots),
-                queuedOrProcessedItemIds,
-                cancellationToken);
-
-            if (refreshedItems.Count == 0)
-            {
-                return 0;
-            }
-
-            itemsToProcess.InsertRange(insertIndex, refreshedItems);
-            TrimPreviewQueueToRunLimit(itemsToProcess);
-            return refreshedItems.Count;
-        }
-
-        private void TrimPreviewQueueToRunLimit(List<FileManifest> itemsToProcess)
-        {
-            if (itemsToProcess.Count <= MaxItemsPerRun)
-            {
-                return;
-            }
-
-            int removeStart = MaxItemsPerRun;
-            int removeCount = itemsToProcess.Count - MaxItemsPerRun;
-            for (int i = removeStart; i < itemsToProcess.Count; i++)
-            {
-                DetachPreviewItem(itemsToProcess[i]);
-            }
-
-            itemsToProcess.RemoveRange(removeStart, removeCount);
-        }
-
-        private void DetachPreviewItem(FileManifest item)
-        {
-            foreach (FileManifestChunk manifestChunk in item.FileManifestChunks)
-            {
-                if (manifestChunk.Chunk is not null)
-                {
-                    _dbContext.Entry(manifestChunk.Chunk).State = EntityState.Detached;
-                }
-
-                _dbContext.Entry(manifestChunk).State = EntityState.Detached;
-            }
-
-            foreach (NodeFile nodeFile in item.NodeFiles)
-            {
-                _dbContext.Entry(nodeFile).State = EntityState.Detached;
-            }
-
-            _dbContext.Entry(item).State = EntityState.Detached;
         }
 
         private async Task WaitForUploadPauseAsync(CancellationToken cancellationToken)
