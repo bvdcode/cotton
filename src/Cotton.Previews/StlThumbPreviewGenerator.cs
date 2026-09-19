@@ -56,7 +56,6 @@ namespace Cotton.Previews
 
             string modelFilePath = Path.Combine(Path.GetTempPath(), $"cotton-model-{Guid.NewGuid():N}{_modelExtension}");
             string renderedPngPath = Path.Combine(Path.GetTempPath(), $"cotton-preview-{Guid.NewGuid():N}.png");
-            string? normalizedThreeMfPath = null;
 
             try
             {
@@ -69,12 +68,13 @@ namespace Cotton.Previews
                     return embeddedPreview;
                 }
 
-                normalizedThreeMfPath = await RenderPreviewPngAsync(modelFilePath, renderedPngPath, size).ConfigureAwait(false);
+                await RenderPreviewPngAsync(modelFilePath, renderedPngPath, size).ConfigureAwait(false);
                 return await ConvertRenderedPngToWebPAsync(renderedPngPath, size).ConfigureAwait(false);
             }
             finally
             {
-                CleanupTempFiles(modelFilePath, renderedPngPath, normalizedThreeMfPath);
+                PreviewTemporaryFile.TryDelete(modelFilePath);
+                PreviewTemporaryFile.TryDelete(renderedPngPath);
             }
         }
 
@@ -111,26 +111,26 @@ namespace Cotton.Previews
                 : null;
         }
 
-        private async Task<string?> RenderPreviewPngAsync(string modelFilePath, string renderedPngPath, int size)
+        private async Task RenderPreviewPngAsync(string modelFilePath, string renderedPngPath, int size)
         {
             F3dRenderResult renderResult = await F3dModelRenderer.RenderAsync(modelFilePath, renderedPngPath, size).ConfigureAwait(false);
             if (renderResult.Success)
             {
-                return null;
+                return;
             }
 
-            (F3dRenderResult Result, string? NormalizedPath) normalizedRender = await TryRenderNormalizedThreeMfAsync(modelFilePath, renderedPngPath, size, renderResult.Diagnostics)
+            F3dRenderResult normalizedRender = await TryRenderNormalizedThreeMfAsync(modelFilePath, renderedPngPath, size, renderResult.Diagnostics)
                 .ConfigureAwait(false);
-            if (normalizedRender.Result.Success)
+            if (normalizedRender.Success)
             {
-                return normalizedRender.NormalizedPath;
+                return;
             }
 
             throw new InvalidOperationException(
-                $"Failed to render {_modelExtension} preview with f3d. {normalizedRender.Result.Diagnostics}");
+                $"Failed to render {_modelExtension} preview with f3d. {normalizedRender.Diagnostics}");
         }
 
-        private async Task<(F3dRenderResult Result, string? NormalizedPath)> TryRenderNormalizedThreeMfAsync(
+        private async Task<F3dRenderResult> TryRenderNormalizedThreeMfAsync(
             string modelFilePath,
             string renderedPngPath,
             int size,
@@ -138,17 +138,24 @@ namespace Cotton.Previews
         {
             if (!string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
             {
-                return (new F3dRenderResult(false, primaryDiagnostics), null);
+                return new F3dRenderResult(false, primaryDiagnostics);
             }
 
-            string? normalizedPath = await TryNormalizeThreeMfArchiveAsync(modelFilePath).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(normalizedPath))
+            string normalizedPath = Path.Combine(Path.GetTempPath(), $"cotton-model-normalized-{Guid.NewGuid():N}{ThreeMfExtension}");
+            try
             {
-                return (new F3dRenderResult(false, primaryDiagnostics), null);
-            }
+                if (!await TryNormalizeThreeMfArchiveAsync(modelFilePath, normalizedPath).ConfigureAwait(false))
+                {
+                    return new F3dRenderResult(false, primaryDiagnostics);
+                }
 
-            F3dRenderResult normalizedResult = await F3dModelRenderer.RenderAsync(normalizedPath, renderedPngPath, size).ConfigureAwait(false);
-            return (MergeRenderDiagnostics(primaryDiagnostics, normalizedResult), normalizedPath);
+                F3dRenderResult normalizedResult = await F3dModelRenderer.RenderAsync(normalizedPath, renderedPngPath, size).ConfigureAwait(false);
+                return MergeRenderDiagnostics(primaryDiagnostics, normalizedResult);
+            }
+            finally
+            {
+                PreviewTemporaryFile.TryDelete(normalizedPath);
+            }
         }
 
         private static F3dRenderResult MergeRenderDiagnostics(string? primaryDiagnostics, F3dRenderResult normalizedResult)
@@ -171,17 +178,6 @@ namespace Cotton.Previews
 
             ImagePreviewGenerator imagePreviewGenerator = new();
             return await imagePreviewGenerator.GeneratePreviewWebPAsync(renderedPngStream, size).ConfigureAwait(false);
-        }
-
-        private static void CleanupTempFiles(string modelFilePath, string renderedPngPath, string? normalizedThreeMfPath)
-        {
-            PreviewTemporaryFile.TryDelete(modelFilePath);
-            PreviewTemporaryFile.TryDelete(renderedPngPath);
-
-            if (!string.IsNullOrWhiteSpace(normalizedThreeMfPath))
-            {
-                PreviewTemporaryFile.TryDelete(normalizedThreeMfPath);
-            }
         }
 
         private static async Task<byte[]?> TryExtractEmbeddedThreeMfThumbnailWebPAsync(string modelFilePath, int size)
@@ -384,10 +380,8 @@ namespace Cotton.Previews
             return score;
         }
 
-        private static async Task<string?> TryNormalizeThreeMfArchiveAsync(string sourcePath)
+        private static async Task<bool> TryNormalizeThreeMfArchiveAsync(string sourcePath, string normalizedPath)
         {
-            string normalizedPath = Path.Combine(Path.GetTempPath(), $"cotton-model-normalized-{Guid.NewGuid():N}{ThreeMfExtension}");
-
             try
             {
                 await using FileStream inputFileStream = new(
@@ -419,22 +413,19 @@ namespace Cotton.Previews
                     await sourceEntryStream.CopyToAsync(normalizedEntryStream).ConfigureAwait(false);
                 }
 
-                return normalizedPath;
+                return true;
             }
             catch (InvalidDataException)
             {
-                PreviewTemporaryFile.TryDelete(normalizedPath);
-                return null;
+                return false;
             }
             catch (NotSupportedException)
             {
-                PreviewTemporaryFile.TryDelete(normalizedPath);
-                return null;
+                return false;
             }
             catch (IOException)
             {
-                PreviewTemporaryFile.TryDelete(normalizedPath);
-                return null;
+                return false;
             }
         }
     }

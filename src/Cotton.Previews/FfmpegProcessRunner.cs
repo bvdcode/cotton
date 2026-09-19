@@ -40,7 +40,7 @@ namespace Cotton.Previews
                 standardOutput,
                 cancellationToken);
             Task<string> errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-            Task<bool> waitTask = FfmpegBinary.WaitForProcessAsync(
+            Task<bool> waitTask = PreviewProcess.WaitForExitAsync(
                 process,
                 timeout,
                 cancellationToken);

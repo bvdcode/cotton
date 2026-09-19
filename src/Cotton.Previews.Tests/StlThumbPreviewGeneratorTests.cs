@@ -71,6 +71,7 @@ namespace Cotton.Previews.Tests
         [Test]
         public void GeneratePreviewWebPAsync_ThreeMfWithoutThumbnailAndInvalidModel_Throws()
         {
+            string[] existingModels = Directory.GetFiles(Path.GetTempPath(), "cotton-model-*.3mf");
             StlThumbPreviewGenerator generator = StlThumbPreviewGenerator.CreateThreeMfGenerator();
             byte[] threeMf = CreateThreeMfWithoutThumbnailWithInvalidModelBytes();
             using MemoryStream stream = new MemoryStream(threeMf);
@@ -79,6 +80,7 @@ namespace Cotton.Previews.Tests
                 await generator.GeneratePreviewWebPAsync(stream, size: 128));
 
             Assert.That(exception?.Message, Does.Contain("Failed to render .3mf preview with f3d"));
+            Assert.That(Directory.GetFiles(Path.GetTempPath(), "cotton-model-*.3mf").Except(existingModels), Is.Empty);
         }
 
         private static byte[] CreateValidAsciiStlBytes()

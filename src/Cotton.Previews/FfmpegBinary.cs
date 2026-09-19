@@ -315,7 +315,7 @@ namespace Cotton.Previews
             Task<string> stderrTask = stderrReader.ReadAsync(
                 process.StandardError.BaseStream,
                 CancellationToken.None);
-            Task<bool> waitTask = WaitForProcessAsync(process, timeout, cancellationToken);
+            Task<bool> waitTask = PreviewProcess.WaitForExitAsync(process, timeout, cancellationToken);
 
             Task firstCompleted = await Task.WhenAny(
                 waitTask,
@@ -329,7 +329,7 @@ namespace Cotton.Previews
                     ? await stdoutReader.LimitExceeded.ConfigureAwait(false)
                     : await stderrReader.LimitExceeded.ConfigureAwait(false);
 
-                await TerminateProcessAsync(process).ConfigureAwait(false);
+                await PreviewProcess.TerminateAsync(process).ConfigureAwait(false);
                 await ((Task)waitTask).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
                 await ((Task)Task.WhenAll(stdoutTask, stderrTask))
                     .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
@@ -368,37 +368,6 @@ namespace Cotton.Previews
             }
 
             return stdout;
-        }
-
-        internal static async Task<bool> WaitForProcessAsync(
-            Process process,
-            TimeSpan? timeout,
-            CancellationToken cancellationToken)
-        {
-            TimeSpan effectiveTimeout = timeout ?? TimeSpan.FromSeconds(60);
-            Task exitTask = process.WaitForExitAsync(CancellationToken.None);
-            Task timeoutTask = Task.Delay(effectiveTimeout, cancellationToken);
-            Task completedTask = await Task.WhenAny(exitTask, timeoutTask).ConfigureAwait(false);
-            if (completedTask == exitTask)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                await exitTask.ConfigureAwait(false);
-                return true;
-            }
-
-            await TerminateProcessAsync(process).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-            return false;
-        }
-
-        internal static async Task TerminateProcessAsync(Process process)
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(entireProcessTree: true);
-            }
-
-            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
         }
 
         private static double? ParsePositiveDuration(string raw)

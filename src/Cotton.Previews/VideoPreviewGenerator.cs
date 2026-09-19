@@ -110,7 +110,7 @@ namespace Cotton.Previews
 
                 Task<string> stderrTask = process.StandardError.ReadToEndAsync();
 
-                bool completed = await FfmpegBinary.WaitForProcessAsync(
+                bool completed = await PreviewProcess.WaitForExitAsync(
                     process,
                     TimeSpan.FromSeconds(15),
                     CancellationToken.None).ConfigureAwait(false);
