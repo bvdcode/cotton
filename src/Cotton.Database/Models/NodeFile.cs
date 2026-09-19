@@ -13,6 +13,7 @@ namespace Cotton.Database.Models
     [Index(nameof(NodeId), nameof(NameKey), nameof(OwnerId), nameof(Id))]
     [Index(nameof(OwnerId), nameof(CreatedAt))]
     [Index(nameof(FileManifestId), nameof(NodeId))]
+    [Index(nameof(ContentType), nameof(FileManifestId))]
     public class NodeFile : BaseOwnedEntity<Guid>
     {
         [Column("file_manifest_id")]

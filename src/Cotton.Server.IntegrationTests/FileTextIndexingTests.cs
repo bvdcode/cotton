@@ -252,5 +252,22 @@ namespace Cotton.Server.IntegrationTests
             await _services.GetRequiredService<GenerateFileEmbeddingsJob>().Execute(null!);
             Assert.That(_worker.EmbedCalls, Is.EqualTo(calls));
         }
+
+        [Test]
+        public async Task Job_WithPreparedDatabaseAndEmptyQueue_DoesNotContactWorker()
+        {
+            if (!await _db.Database.IsExtensionAvailableAsync("vector"))
+            {
+                Assert.Ignore("The PostgreSQL test server does not have the pgvector package.");
+            }
+            await _db.Database.EnsurePostgresExtensionAsync("vector", CancellationToken.None);
+            await _services.GetRequiredService<IMediator>().Send(new BuildVectorIndexRequest(), CancellationToken.None);
+            await AddFileAsync("unsupported.txt", "text/plain", "Text content"u8.ToArray());
+
+            await _services.GetRequiredService<GenerateFileEmbeddingsJob>().Execute(null!);
+
+            Assert.That(_worker.Addresses, Is.Empty);
+            Assert.That(await _db.FileEmbeddings.AnyAsync(), Is.False);
+        }
     }
 }

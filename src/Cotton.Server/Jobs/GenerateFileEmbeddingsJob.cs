@@ -43,15 +43,6 @@ namespace Cotton.Server.Jobs
                     return;
                 }
                 string[] contentTypes = extractors.GetSupportedContentTypes();
-                if (!await FileTextIndexQuery.Pending(dbContext, contentTypes).AnyAsync(cancellationToken))
-                {
-                    return;
-                }
-                ComputationStatus status = await computation.GetStatusAsync(cancellationToken: cancellationToken);
-                if (!status.IsReady)
-                {
-                    return;
-                }
                 for (int processed = 0; processed < MaxItemsPerRun;)
                 {
                     List<Guid> ids = await FileTextIndexQuery.Pending(dbContext, contentTypes)
@@ -61,6 +52,14 @@ namespace Cotton.Server.Jobs
                     if (ids.Count == 0)
                     {
                         return;
+                    }
+                    if (processed == 0)
+                    {
+                        ComputationStatus status = await computation.GetStatusAsync(cancellationToken: cancellationToken);
+                        if (!status.IsReady)
+                        {
+                            return;
+                        }
                     }
                     foreach (Guid id in ids)
                     {
