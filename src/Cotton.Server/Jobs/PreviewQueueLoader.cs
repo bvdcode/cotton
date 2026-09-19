@@ -34,27 +34,38 @@ namespace Cotton.Server.Jobs
         public static async Task<FileManifest?> LoadItemAsync(
             CottonDbContext dbContext, Guid id, CancellationToken cancellationToken)
         {
-            FileManifest? item = await GetCandidates(dbContext, id)
-                .Include(fileManifest => fileManifest.FileManifestChunks)
-                .ThenInclude(manifestChunk => manifestChunk.Chunk)
-                .AsSplitQuery()
+            IQueryable<NodeFile> availableFiles = PreviewFileQuery.AvailableFiles(dbContext);
+            FileManifest? item = await dbContext.FileManifests
+                .Where(manifest => availableFiles.Any(file => file.FileManifestId == manifest.Id))
                 .SingleOrDefaultAsync(manifest => manifest.Id == id, cancellationToken);
-            if (item is not null)
+            if (item is null || !NeedsPreview(item))
             {
-                await PreviewFileQuery.AvailableFiles(dbContext)
-                    .Where(file => file.FileManifestId == id).LoadAsync(cancellationToken);
+                return null;
             }
+
+            await dbContext.Entry(item).Collection(manifest => manifest.FileManifestChunks)
+                .Query().Include(manifestChunk => manifestChunk.Chunk).LoadAsync(cancellationToken);
+            await availableFiles.Where(file => file.FileManifestId == id).LoadAsync(cancellationToken);
             return item;
         }
 
-        private static IQueryable<FileManifest> GetCandidates(CottonDbContext dbContext, Guid? id = null)
+        private static bool NeedsPreview(FileManifest manifest)
+        {
+            if (manifest.PreviewGenerationError is not null)
+            {
+                return manifest.PreviewGeneratorVersion != PreviewGeneratorProvider.FailedAttemptVersion;
+            }
+
+            return manifest.SmallFilePreviewHash is null || manifest.SmallFilePreviewHashEncrypted is null
+                || (manifest.PreviewGeneratorId is not null
+                    && PreviewGeneratorProvider.GetGeneratorVersions().TryGetValue(manifest.PreviewGeneratorId, out int version)
+                    && manifest.PreviewGeneratorVersion != version);
+        }
+
+        private static IQueryable<FileManifest> GetCandidates(CottonDbContext dbContext)
         {
             IQueryable<NodeFile> availableFiles = PreviewFileQuery.AvailableFiles(dbContext);
             IQueryable<FileManifest> manifests = dbContext.FileManifests;
-            if (id.HasValue)
-            {
-                manifests = manifests.Where(manifest => manifest.Id == id.Value);
-            }
             IQueryable<Guid> candidateIds = manifests
                 .Where(manifest => (manifest.PreviewGenerationError == null
                         && (manifest.SmallFilePreviewHash == null || manifest.SmallFilePreviewHashEncrypted == null))
