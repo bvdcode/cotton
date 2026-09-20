@@ -96,7 +96,7 @@ namespace Cotton.Server.Controllers
 
             return File(
                 result.Content ?? Stream.Null,
-                result.ContentType ?? "application/octet-stream",
+                FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline: false),
                 fileDownloadName: null,
                 lastModified: result.LastModified,
                 entityTag: entityTag,
@@ -124,7 +124,7 @@ namespace Cotton.Server.Controllers
 
             AddDavHeaders();
             ApplyFileResponseSecurity(result.ContentType, result.FileName);
-            Response.ContentType = result.ContentType ?? "application/octet-stream";
+            Response.ContentType = FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline: false);
             Response.ContentLength = result.ContentLength;
             Response.Headers.AcceptRanges = "bytes";
             Response.Headers.ContentEncoding = "identity";
