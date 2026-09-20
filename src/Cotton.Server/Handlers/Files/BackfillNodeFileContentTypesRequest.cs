@@ -9,6 +9,7 @@ using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace Cotton.Server.Handlers.Files
 {
@@ -18,13 +19,16 @@ namespace Cotton.Server.Handlers.Files
         CottonDbContext dbContext,
         IDatabaseIntegrityVerifier verifier,
         IDatabaseIntegrityProtector protector,
-        IDatabaseIntegrityDescriptorRegistry descriptors)
+        IDatabaseIntegrityDescriptorRegistry descriptors,
+        ILogger<BackfillNodeFileContentTypesRequestHandler> logger)
         : IRequestHandler<BackfillNodeFileContentTypesRequest, int>
     {
         private const int BatchSize = 500;
 
         public async Task<int> Handle(BackfillNodeFileContentTypesRequest request, CancellationToken cancellationToken)
         {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            logger.LogInformation("Preparing node file content types and signatures. Batch size: {BatchSize}", BatchSize);
             Guid? afterId = null;
             int updated = 0;
             IDatabaseIntegrityDescriptor<NodeFile> descriptor = descriptors.Get<NodeFile>();
@@ -41,6 +45,9 @@ namespace Cotton.Server.Handlers.Files
                     .Take(BatchSize).ToListAsync(cancellationToken);
                 if (files.Count == 0)
                 {
+                    logger.LogInformation(
+                        "Node file preparation completed. Updated {Count} files in {ElapsedSeconds:F1}s",
+                        updated, stopwatch.Elapsed.TotalSeconds);
                     return updated;
                 }
 
@@ -71,6 +78,9 @@ namespace Cotton.Server.Handlers.Files
                 }
 
                 afterId = files[^1].Id;
+                logger.LogInformation(
+                    "Node file preparation batch completed. Updated {BatchCount} files, {TotalCount} total in {ElapsedSeconds:F1}s",
+                    files.Count, updated, stopwatch.Elapsed.TotalSeconds);
             }
         }
     }

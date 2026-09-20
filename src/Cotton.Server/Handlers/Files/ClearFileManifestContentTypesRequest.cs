@@ -8,18 +8,23 @@ using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace Cotton.Server.Handlers.Files
 {
     public record ClearFileManifestContentTypesRequest : IRequest<int>;
 
-    public class ClearFileManifestContentTypesRequestHandler(CottonDbContext dbContext)
+    public class ClearFileManifestContentTypesRequestHandler(
+        CottonDbContext dbContext,
+        ILogger<ClearFileManifestContentTypesRequestHandler> logger)
         : IRequestHandler<ClearFileManifestContentTypesRequest, int>
     {
         private const int BatchSize = 5000;
 
         public async Task<int> Handle(ClearFileManifestContentTypesRequest request, CancellationToken cancellationToken)
         {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            logger.LogInformation("Clearing obsolete file manifest content types and upgrading signatures. Batch size: {BatchSize}", BatchSize);
             Guid? afterId = null;
             int updated = 0;
             while (true)
@@ -36,6 +41,9 @@ namespace Cotton.Server.Handlers.Files
                     .Take(BatchSize).ToListAsync(cancellationToken);
                 if (manifests.Count == 0)
                 {
+                    logger.LogInformation(
+                        "File manifest preparation completed. Updated {Count} manifests in {ElapsedSeconds:F1}s",
+                        updated, stopwatch.Elapsed.TotalSeconds);
                     return updated;
                 }
 
@@ -51,6 +59,9 @@ namespace Cotton.Server.Handlers.Files
                 {
                     dbContext.Entry(manifest).State = EntityState.Detached;
                 }
+                logger.LogInformation(
+                    "File manifest preparation batch completed. Updated {BatchCount} manifests, {TotalCount} total in {ElapsedSeconds:F1}s",
+                    manifests.Count, updated, stopwatch.Elapsed.TotalSeconds);
             }
         }
     }
