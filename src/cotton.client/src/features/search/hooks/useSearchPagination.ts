@@ -4,6 +4,7 @@ import {
   type LayoutSearchResultDto,
 } from "../../../shared/api/layoutsApi";
 import { mergeSearchResults } from "../utils/normalizeSearch";
+import { useDeepSearchMode } from "./useDeepSearchMode";
 
 const SEARCH_PAGE_SIZE = 80;
 const SEARCH_DEBOUNCE_MS = 260;
@@ -14,6 +15,8 @@ interface UseSearchPaginationOptions {
 }
 
 export interface SearchPaginationState {
+  deep: boolean;
+  toggleDeep: () => void;
   debouncedQuery: string;
   results: LayoutSearchResultDto | null;
   totalCount: number;
@@ -56,12 +59,20 @@ export const useSearchPagination = ({
 }: UseSearchPaginationOptions): SearchPaginationState => {
   const searchGenerationRef = useRef(0);
   const requestedPageRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const { deep, toggleDeep, enableDeep } = useDeepSearchMode(
+    buildSearchKey(layoutId, trimmedQuery),
+  );
 
   const [debouncedQueryValue, setDebouncedQueryValue] = useState(trimmedQuery);
-  const debouncedQuery = trimmedQuery.length > 0 ? debouncedQueryValue : "";
+  const debouncedQuery =
+    trimmedQuery === debouncedQueryValue ? debouncedQueryValue : "";
   const activeSearchKey = useMemo(
-    () => buildSearchKey(layoutId, debouncedQuery),
-    [debouncedQuery, layoutId],
+    () =>
+      debouncedQuery
+        ? buildSearchKey(layoutId, debouncedQuery) + "\u0000" + deep
+        : "",
+    [debouncedQuery, deep, layoutId],
   );
   const [searchDataState, setSearchDataState] = useState<SearchDataState>(() =>
     createEmptySearchDataState(activeSearchKey),
@@ -95,7 +106,10 @@ export const useSearchPagination = ({
       key = activeSearchKey,
       generation = searchGenerationRef.current,
     ) => {
-      if (!layoutId || !debouncedQuery || !key) return;
+      const signal = abortControllerRef.current?.signal;
+      if (!layoutId || !debouncedQuery || !key || !signal || signal.aborted) {
+        return;
+      }
 
       setSearchDataState((previous) => {
         const current =
@@ -114,9 +128,17 @@ export const useSearchPagination = ({
           query: debouncedQuery,
           page: pageToLoad,
           pageSize: SEARCH_PAGE_SIZE,
+          deep,
+          signal,
         });
 
-        if (generation !== searchGenerationRef.current) return;
+        if (signal.aborted || generation !== searchGenerationRef.current) {
+          return;
+        }
+
+        if (!deep && pageToLoad === 1 && response.totalCount === 0) {
+          enableDeep();
+        }
 
         setSearchDataState((previous) => {
           const current =
@@ -134,10 +156,11 @@ export const useSearchPagination = ({
             error: null,
           };
         });
-      } catch (err) {
-        if (generation !== searchGenerationRef.current) return;
+      } catch {
+        if (signal.aborted || generation !== searchGenerationRef.current) {
+          return;
+        }
         requestedPageRef.current = Math.max(0, pageToLoad - 1);
-        console.error("Failed to search layouts", err);
         setSearchDataState((previous) => {
           const current =
             previous.key === key ? previous : createEmptySearchDataState(key);
@@ -145,12 +168,12 @@ export const useSearchPagination = ({
             ...current,
             loadingInitial: false,
             loadingMore: false,
-            error: "searchFailed",
+            error: deep ? "smartSearch.error" : "error",
           };
         });
       }
     },
-    [activeSearchKey, debouncedQuery, layoutId],
+    [activeSearchKey, debouncedQuery, deep, enableDeep, layoutId],
   );
 
   useEffect(() => {
@@ -158,10 +181,15 @@ export const useSearchPagination = ({
     searchGenerationRef.current = generation;
     requestedPageRef.current = 0;
 
-    if (!activeSearchKey) return;
+    if (!activeSearchKey) {
+      return;
+    }
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     requestedPageRef.current = 1;
     void fetchSearchPage(1, "replace", activeSearchKey, generation);
+    return () => controller.abort();
   }, [activeSearchKey, fetchSearchPage]);
 
   const loadedContentCount =
@@ -196,6 +224,8 @@ export const useSearchPagination = ({
   ]);
 
   return {
+    deep,
+    toggleDeep,
     debouncedQuery,
     results: searchData.results,
     totalCount: searchData.totalCount,

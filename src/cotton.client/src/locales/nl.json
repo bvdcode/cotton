@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Slim zoeken",
+      "enable": "Slim zoeken inschakelen",
+      "disable": "Slim zoeken uitschakelen",
+      "error": "Slim zoeken is niet beschikbaar. Probeer het later opnieuw of schakel het uit om op naam te zoeken."
+    },
     "title": "Zoeken",
     "searchPlaceholder": "Zoek in bestanden en mappen...",
     "error": "Zoeken mislukt. Probeer het opnieuw.",

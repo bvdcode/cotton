@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "智能搜索",
+      "enable": "开启智能搜索",
+      "disable": "关闭智能搜索",
+      "error": "智能搜索不可用。请稍后重试，或将其关闭以按名称搜索。"
+    },
     "title": "搜索",
     "searchPlaceholder": "搜索文件和文件夹……",
     "error": "搜索失败，请重试。",

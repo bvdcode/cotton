@@ -1,5 +1,6 @@
-import { Box, TextField } from "@mui/material";
+import { Box, InputAdornment, TextField } from "@mui/material";
 import React, { useEffect, useRef } from "react";
+import { DeepSearchButton } from "../../../features/search/components/DeepSearchButton";
 
 export interface SearchBarProps {
   value: string;
@@ -7,6 +8,8 @@ export interface SearchBarProps {
   disabled?: boolean;
   placeholder?: string;
   ariaLabel?: string;
+  deep: boolean;
+  onToggleDeep: () => void;
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({
@@ -15,11 +18,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   disabled = false,
   placeholder,
   ariaLabel,
+  deep,
+  onToggleDeep,
 }) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (disabled) return;
+    if (disabled) {
+      return;
+    }
 
     const rafId = window.requestAnimationFrame(() => {
       inputRef.current?.focus();
@@ -41,6 +48,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         slotProps={{
           input: {
             "aria-label": ariaLabel ?? placeholder,
+            endAdornment: (
+              <InputAdornment position="end">
+                <DeepSearchButton
+                  enabled={deep}
+                  disabled={disabled || !value.trim()}
+                  onClick={onToggleDeep}
+                />
+              </InputAdornment>
+            ),
           },
         }}
       />

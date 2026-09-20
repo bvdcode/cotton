@@ -103,9 +103,28 @@ describe("layoutsApi reads", () => {
     });
 
     expect(get).toHaveBeenCalledWith(`/layouts/${layoutId}/search`, {
-      params: { query: "thing", page: 2, pageSize: 50 },
+      params: { query: "thing", page: 2, pageSize: 50, deep: false },
+      signal: undefined,
     });
     expect(result.totalCount).toBe(17);
+  });
+
+  it("forwards deep mode and cancellation while trimming the query", async () => {
+    const get = vi.spyOn(httpClient, "get").mockResolvedValue({
+      data: { nodes: [], files: [], nodePaths: {}, filePaths: {} },
+      headers: { "x-total-count": "0" },
+    });
+    const controller = new AbortController();
+    await layoutsApi.search({
+      layoutId,
+      query: "  report  ",
+      deep: true,
+      signal: controller.signal,
+    });
+    expect(get).toHaveBeenCalledWith(`/layouts/${layoutId}/search`, {
+      params: { query: "report", page: 1, pageSize: 20, deep: true },
+      signal: controller.signal,
+    });
   });
 
   it("decorates encrypted search result file names when the vault is unlocked", async () => {

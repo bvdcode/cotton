@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Chytré vyhledávání",
+      "enable": "Zapnout chytré vyhledávání",
+      "disable": "Vypnout chytré vyhledávání",
+      "error": "Chytré vyhledávání není dostupné. Zkuste to později nebo je vypněte a vyhledávejte podle názvu."
+    },
     "title": "Hledání",
     "searchPlaceholder": "Hledat soubory a složky...",
     "error": "Hledání selhalo. Zkuste to prosím znovu.",

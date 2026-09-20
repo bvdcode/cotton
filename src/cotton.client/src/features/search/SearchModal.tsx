@@ -1,27 +1,16 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
-  CircularProgress,
   Dialog,
   DialogContent,
-  IconButton,
   InputAdornment,
   TextField,
-  Typography,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import { Close, Search } from "@mui/icons-material";
+import { Search } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
-import { Virtuoso } from "react-virtuoso";
 import { useNavigate } from "react-router-dom";
 import { useRootNodeQuery } from "../../shared/api/queries/layouts";
 import { useSearchFileList } from "../../shared/hooks/useFileListSource";
@@ -35,137 +24,19 @@ import {
 } from "../../shared/store/userPreferencesStore";
 import { useDictionaryMatch } from "./hooks/useDictionaryMatch";
 import { useSearchPagination } from "./hooks/useSearchPagination";
+import { useSearchContentRows } from "./hooks/useSearchContentRows";
 import { useSearchHistory } from "./hooks/useSearchHistory";
 import { SearchHistoryPanel } from "./components/SearchHistoryPanel";
 import { SearchResultRow } from "./components/SearchResultRow";
-import { SearchResultsScroller } from "./components/SearchResultsScroller";
+import { SearchResultsContent } from "./components/SearchResultsContent";
+import { SearchEndAdornment } from "./components/SearchEndAdornment";
+import { DeepSearchButton } from "./components/DeepSearchButton";
 import type { SearchDictionaryEntry, SearchRow } from "./types";
 
 interface SearchModalProps {
   open: boolean;
   onClose: () => void;
 }
-
-interface SearchEndAdornmentProps {
-  isMobile: boolean;
-  onClose: () => void;
-  resultCount: number;
-  resultsCountText: string;
-  waitingForResults: boolean;
-  closeText: string;
-}
-
-const SearchEndAdornment = ({
-  isMobile,
-  onClose,
-  resultCount,
-  resultsCountText,
-  waitingForResults,
-  closeText,
-}: SearchEndAdornmentProps) => {
-  if (isMobile) {
-    return (
-      <IconButton
-        edge="end"
-        aria-label={closeText}
-        title={closeText}
-        onClick={onClose}
-      >
-        <Close />
-      </IconButton>
-    );
-  }
-
-  if (waitingForResults) {
-    return <CircularProgress size={24} />;
-  }
-
-  if (resultCount === 0) {
-    return null;
-  }
-
-  return (
-    <Typography
-      variant="caption"
-      color="text.secondary"
-      noWrap
-      sx={{ px: 0.5 }}
-    >
-      {resultsCountText}
-    </Typography>
-  );
-};
-
-interface SearchResultsContentProps {
-  emptyText: string;
-  loadNextPage: () => void;
-  loadingMore: boolean;
-  renderSearchRow: (index: number, row: SearchRow) => ReactNode;
-  rows: SearchRow[];
-  waitingForResults: boolean;
-}
-
-const SearchResultsContent = ({
-  emptyText,
-  loadNextPage,
-  loadingMore,
-  renderSearchRow,
-  rows,
-  waitingForResults,
-}: SearchResultsContentProps) => {
-  if (waitingForResults) {
-    return (
-      <Box
-        sx={{
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <CircularProgress size={24} />
-      </Box>
-    );
-  }
-
-  if (rows.length === 0) {
-    return (
-      <Box
-        sx={{
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          px: 3,
-          textAlign: "center",
-        }}
-      >
-        <Typography color="text.secondary">{emptyText}</Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <Virtuoso
-      style={{ height: "100%" }}
-      data={rows}
-      overscan={600}
-      defaultItemHeight={68}
-      components={{
-        Scroller: SearchResultsScroller,
-        Footer: () =>
-          loadingMore ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 1.5 }}>
-              <CircularProgress size={18} />
-            </Box>
-          ) : null,
-      }}
-      computeItemKey={(_, row) => row.id}
-      endReached={loadNextPage}
-      itemContent={renderSearchRow}
-    />
-  );
-};
 
 export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   const { t } = useTranslation("search");
@@ -190,6 +61,8 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     loadingMore,
     error,
     loadNextPage,
+    deep,
+    toggleDeep,
   } = useSearchPagination({ trimmedQuery, layoutId });
 
   const hasSearchQuery = debouncedQuery.length > 0;
@@ -224,32 +97,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     rootNodeName: rootNode?.name,
   });
 
-  const contentRows = useMemo<SearchRow[]>(() => {
-    const searchRows: SearchRow[] = [];
-    for (const tile of fileListSource.tiles) {
-      if (tile.kind === "folder") {
-        searchRows.push({
-          id: `folder-${tile.node.id}`,
-          kind: "folder",
-          node: tile.node,
-          path: tile.path,
-        });
-        continue;
-      }
-
-      if (!("ownerId" in tile.file) || !("metadata" in tile.file)) {
-        continue;
-      }
-
-      searchRows.push({
-        id: `file-${tile.file.id}`,
-        kind: "file",
-        file: tile.file,
-        path: tile.path,
-      });
-    }
-    return searchRows;
-  }, [fileListSource.tiles]);
+  const contentRows = useSearchContentRows(fileListSource.tiles);
 
   const rows = useMemo(
     () => (hasSearchQuery ? [...matchedDictionaryRows, ...contentRows] : []),
@@ -429,7 +277,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                 xs: "100%",
                 sm: hasExpandedSearchSurface ? 680 : 86,
               },
-              maxHeight: { xs: "100%", sm: "calc(100vh - 32px)" },
+              maxHeight: { xs: "100%", sm: "calc(100% - 32px)" },
               borderRadius: { xs: 0, sm: 1.5 },
               bgcolor: "background.default",
               transition: hasSearchHistoryEntries
@@ -476,6 +324,11 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
+                    <DeepSearchButton
+                      enabled={deep}
+                      disabled={!layoutId || !hasQuery}
+                      onClick={toggleDeep}
+                    />
                     <SearchEndAdornment
                       isMobile={isMobile}
                       onClose={onClose}
@@ -492,7 +345,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             }}
           />
 
-          {error && <Alert severity="error">{t("error")}</Alert>}
+          {error && <Alert severity="error">{t(error)}</Alert>}
 
           {showSearchHistory && (
             <Box

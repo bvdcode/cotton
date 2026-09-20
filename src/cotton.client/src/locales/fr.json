@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Recherche intelligente",
+      "enable": "Activer la recherche intelligente",
+      "disable": "Désactiver la recherche intelligente",
+      "error": "La recherche intelligente est indisponible. Réessayez plus tard ou désactivez-la pour rechercher par nom."
+    },
     "title": "Rechercher",
     "searchPlaceholder": "Rechercher fichiers et dossiers...",
     "error": "La recherche a échoué. Veuillez réessayer.",

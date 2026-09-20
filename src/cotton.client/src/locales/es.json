@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Búsqueda inteligente",
+      "enable": "Activar búsqueda inteligente",
+      "disable": "Desactivar búsqueda inteligente",
+      "error": "La búsqueda inteligente no está disponible. Inténtalo más tarde o desactívala para buscar por nombre."
+    },
     "title": "Búsqueda",
     "searchPlaceholder": "Buscar archivos y carpetas...",
     "error": "La búsqueda falló. Inténtalo de nuevo.",

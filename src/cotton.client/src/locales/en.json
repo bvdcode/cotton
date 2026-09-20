@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Smart search",
+      "enable": "Enable smart search",
+      "disable": "Disable smart search",
+      "error": "Smart search is unavailable. Try again later or turn it off to search by name."
+    },
     "title": "Search",
     "searchPlaceholder": "Search files and folders...",
     "error": "Search failed. Please try again.",
