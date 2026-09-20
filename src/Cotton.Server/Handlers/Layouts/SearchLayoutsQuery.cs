@@ -13,8 +13,11 @@ namespace Cotton.Server.Handlers.Layouts
         Guid layoutId,
         string query,
         int page,
-        int pageSize) : IRequest<PagedResult<SearchResultDto>>
+        int pageSize,
+        bool deep = false) : IRequest<PagedResult<SearchResultDto>>
     {
+        public bool Deep { get; } = deep;
+
         public Guid UserId { get; } = userId;
 
         public Guid LayoutId { get; } = layoutId;

@@ -8,6 +8,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
 		<ProjectReference Include="..\Cotton.ContentTypes\Cotton.ContentTypes.csproj" />
 		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
 		<ProjectReference Include="..\Cotton.Shared\Cotton.csproj" />

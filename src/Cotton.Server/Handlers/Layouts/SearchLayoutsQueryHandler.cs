@@ -8,16 +8,19 @@ using Cotton.Nodes;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services.Search;
+using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Layouts
 {
     public class SearchLayoutsQueryHandler(
         CottonDbContext _dbContext,
-        IEnumerable<ILayoutSearchProvider> _providers)
+        IEnumerable<ILayoutSearchProvider> _providers,
+        IMediator _mediator)
         : IRequestHandler<SearchLayoutsQuery, PagedResult<SearchResultDto>>
     {
         private const int MaxPageSize = 100;
@@ -40,7 +43,9 @@ namespace Cotton.Server.Handlers.Layouts
                 return CreateEmptySearchResult(0);
             }
 
-            IQueryable<LayoutSearchHit>? hitsQuery = BuildHitsQuery(searchRequest, criteria);
+            IQueryable<LayoutSearchHit>? hitsQuery = request.Deep
+                ? await _mediator.Send(new SearchVectorLayoutHitsQuery(searchRequest), cancellationToken)
+                : BuildHitsQuery(searchRequest, criteria);
             if (hitsQuery is null)
             {
                 return CreateEmptySearchResult(0);
@@ -48,18 +53,31 @@ namespace Cotton.Server.Handlers.Layouts
 
             hitsQuery = LayoutSearchHitMerger.MergeDuplicateHits(hitsQuery);
 
-            int totalCount = await hitsQuery.CountAsync(cancellationToken);
-            if (totalCount == 0)
+            int totalCount;
+            List<LayoutSearchHit> hits;
+            await using (IDbContextTransaction? transaction = request.Deep
+                ? await _dbContext.Database.BeginTransactionAsync(cancellationToken)
+                : null)
             {
-                return CreateEmptySearchResult(totalCount);
+                if (transaction is not null)
+                {
+                    await _dbContext.Database.EnableHnswStrictOrderScanAsync(cancellationToken);
+                }
+
+                totalCount = await hitsQuery.CountAsync(cancellationToken);
+                if (totalCount == 0)
+                {
+                    return CreateEmptySearchResult(totalCount);
+                }
+
+                int skip = checked((request.Page - 1) * request.PageSize);
+                hits = await LoadPagedHitsAsync(hitsQuery, skip, request.PageSize, cancellationToken);
+                if (transaction is not null)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
             }
 
-            int skip = checked((request.Page - 1) * request.PageSize);
-            List<LayoutSearchHit> hits = await LoadPagedHitsAsync(
-                hitsQuery,
-                skip,
-                request.PageSize,
-                cancellationToken);
             if (hits.Count == 0)
             {
                 return CreateEmptySearchResult(totalCount);

@@ -69,11 +69,12 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid layoutId,
             [FromQuery] string query,
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
+            [FromQuery] int pageSize = 20,
+            [FromQuery] bool deep = false)
         {
             Guid userId = User.GetUserId();
-            SearchLayoutsQuery request = new(userId, layoutId, query, page, pageSize);
-            PagedResult<SearchResultDto> result = await _mediator.Send(request);
+            SearchLayoutsQuery request = new(userId, layoutId, query, page, pageSize, deep);
+            PagedResult<SearchResultDto> result = await _mediator.Send(request, HttpContext.RequestAborted);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
             return Ok(result.Payload);
         }

@@ -121,21 +121,6 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void VectorProvider_CanSearchOnlyNaturalLanguageText()
-        {
-            NoOpVectorLayoutSearchProvider provider = new(null!);
-            Guid id = Guid.Parse("11111111-2222-3333-4444-555555555555");
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(provider.CanSearch(LayoutSearchCriteriaBuilder.Build(id.ToString())), Is.False);
-                Assert.That(provider.CanSearch(LayoutSearchCriteriaBuilder.Build("123456")), Is.False);
-                Assert.That(provider.CanSearch(LayoutSearchCriteriaBuilder.Build("report 123456")), Is.True);
-                Assert.That(provider.CanSearch(LayoutSearchCriteriaBuilder.Build("quarterly report")), Is.True);
-            });
-        }
-
-        [Test]
         public void ExactIdentifierScore_IsCertainMatch()
         {
             Assert.That(LayoutSearchScores.ExactIdentifier, Is.EqualTo(1.0));
@@ -234,9 +219,6 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(services.Any(x =>
                     x.ServiceType == typeof(ILayoutSearchProvider)
                     && x.ImplementationType == typeof(NameLayoutSearchProvider)), Is.True);
-                Assert.That(services.Any(x =>
-                    x.ServiceType == typeof(ILayoutSearchProvider)
-                    && x.ImplementationType == typeof(NoOpVectorLayoutSearchProvider)), Is.True);
             });
         }
     }
