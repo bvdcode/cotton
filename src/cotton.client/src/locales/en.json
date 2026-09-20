@@ -1234,6 +1234,10 @@
         "title": "File data missing from storage",
         "content": "A storage consistency check detected that data for your file '{{fileName}}' is missing from the underlying storage. Please verify your storage integrity and re-upload this file."
       },
+      "upgradePreparationCompleted": {
+        "title": "Upgrade preparation for Cotton {{targetVersion}} completed",
+        "content": "Background job {{jobName}} completed successfully. This preparation step for Cotton {{targetVersion}} is finished. Check the required upgrade path for any remaining steps before updating."
+      },
       "appUpdateAvailable": {
         "title": "Cotton server update available",
         "content": "Current server version: {{currentVersion}}\nAvailable server version: {{latestVersion}}\n\nRelease notes:\n{{releaseNotes}}\n\nFull release: {{releaseUrl}}"

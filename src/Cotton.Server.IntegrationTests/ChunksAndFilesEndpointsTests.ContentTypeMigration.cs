@@ -3,6 +3,7 @@
 
 using Cotton.ContentTypes;
 using Cotton.Server.Handlers.Files;
+using Cotton.Localization;
 using EasyExtensions.Mediator;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Quartz;
@@ -88,6 +89,12 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(dbContext.Entry(clearedManifest).Property<int?>(DatabaseIntegrityColumns.VersionProperty).CurrentValue,
                 Is.EqualTo(FileManifestIntegrityDescriptor.LatestVersion));
             verifier.RequireValid(dbContext, clearedManifest, "test.cleared-manifest");
+
+            string title = NotificationTemplates.UpgradePreparationCompletedTitle("0.6");
+            Notification notification = await dbContext.Notifications.SingleAsync(entry => entry.Title == title);
+            Assert.That(notification.Metadata!["targetVersion"], Is.EqualTo("0.6"));
+            Assert.That(notification.Metadata["jobName"], Is.EqualTo(nameof(HotfixBackfillContentTypeJob)));
+            Assert.That(notification.UserId, Is.EqualTo(source.OwnerId));
         }
 
         [Test]

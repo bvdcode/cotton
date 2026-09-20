@@ -1439,6 +1439,10 @@
         "title": "Dati del file mancanti nello storage",
         "content": "Un controllo di consistenza dello storage ha rilevato che mancano dati per il file '{{fileName}}' nello storage sottostante. Verifica l’integrità dello storage e carica di nuovo il file."
       },
+      "upgradePreparationCompleted": {
+        "title": "Preparazione all'aggiornamento a Cotton {{targetVersion}} completata",
+        "content": "L'attività in background {{jobName}} è stata completata correttamente. Questa fase di preparazione a Cotton {{targetVersion}} è conclusa. Prima dell'aggiornamento, verifichi i passaggi rimanenti nel percorso di aggiornamento richiesto."
+      },
       "appUpdateAvailable": {
         "title": "Aggiornamento del server Cotton disponibile",
         "content": "Versione server attuale: {{currentVersion}}\nVersione server disponibile: {{latestVersion}}\n\nNote di rilascio:\n{{releaseNotes}}\n\nRelease completa: {{releaseUrl}}"

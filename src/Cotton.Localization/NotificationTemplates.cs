@@ -5,6 +5,17 @@ namespace Cotton.Localization
 {
     public static class NotificationTemplates
     {
+        public static string UpgradePreparationCompletedTitle(string targetVersion)
+        {
+            return $"Upgrade preparation for Cotton {targetVersion} completed";
+        }
+
+        public static string UpgradePreparationCompletedContent(string jobName, string targetVersion)
+        {
+            return $"Background job {jobName} completed successfully. This preparation step for Cotton {targetVersion} is finished. "
+                + "Check the required upgrade path for any remaining steps before updating.";
+        }
+
         public static string FailedLoginAttemptTitle => "Failed login attempt";
 
         public static string FailedLoginAttemptContentNoDevice(

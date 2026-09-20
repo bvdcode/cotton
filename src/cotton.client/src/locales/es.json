@@ -1436,6 +1436,10 @@
         "title": "Faltan datos del archivo en el almacenamiento",
         "content": "Una comprobación de consistencia detectó que faltan datos de tu archivo '{{fileName}}' en el almacenamiento subyacente. Verifica la integridad del almacenamiento y vuelve a subir el archivo."
       },
+      "upgradePreparationCompleted": {
+        "title": "Preparación para actualizar a Cotton {{targetVersion}} completada",
+        "content": "La tarea en segundo plano {{jobName}} finalizó correctamente. Este paso de preparación para Cotton {{targetVersion}} está completo. Antes de actualizar, consulta los pasos pendientes en la ruta de actualización requerida."
+      },
       "appUpdateAvailable": {
         "title": "Actualización del servidor Cotton disponible",
         "content": "Versión actual del servidor: {{currentVersion}}\nVersión disponible del servidor: {{latestVersion}}\n\nNotas de la versión:\n{{releaseNotes}}\n\nVersión completa: {{releaseUrl}}"

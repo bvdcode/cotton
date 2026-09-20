@@ -1440,6 +1440,10 @@
         "title": "Dados do ficheiro em falta no armazenamento",
         "content": "Uma verificação de consistência detetou que faltam dados do ficheiro '{{fileName}}' no armazenamento subjacente. Verifique a integridade do armazenamento e carregue novamente este ficheiro."
       },
+      "upgradePreparationCompleted": {
+        "title": "Preparação para a atualização do Cotton {{targetVersion}} concluída",
+        "content": "A tarefa em segundo plano {{jobName}} foi concluída com sucesso. Esta etapa de preparação para o Cotton {{targetVersion}} está concluída. Antes de atualizar, verifique as etapas restantes no caminho de atualização obrigatório."
+      },
       "appUpdateAvailable": {
         "title": "Atualização do servidor Cotton disponível",
         "content": "Versão atual do servidor: {{currentVersion}}\nVersão disponível do servidor: {{latestVersion}}\n\nNotas de lançamento:\n{{releaseNotes}}\n\nLançamento completo: {{releaseUrl}}"

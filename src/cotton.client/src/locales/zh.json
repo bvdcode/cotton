@@ -1446,6 +1446,10 @@
         "title": "存储中缺少文件数据",
         "content": "存储一致性检查发现，底层存储中缺少文件 '{{fileName}}' 的数据。请验证存储完整性并重新上传该文件。"
       },
+      "upgradePreparationCompleted": {
+        "title": "Cotton {{targetVersion}} 升级准备已完成",
+        "content": "后台任务 {{jobName}} 已成功完成。Cotton {{targetVersion}} 的此项准备工作已完成。升级前，请在必需的升级路径表中查看其余步骤。"
+      },
       "appUpdateAvailable": {
         "title": "Cotton 服务器更新可用",
         "content": "当前服务器版本：{{currentVersion}}\n可用服务器版本：{{latestVersion}}\n\n发行说明：\n{{releaseNotes}}\n\n完整发行页：{{releaseUrl}}"

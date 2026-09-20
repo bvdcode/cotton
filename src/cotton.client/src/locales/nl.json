@@ -1438,6 +1438,10 @@
         "title": "Bestandsgegevens ontbreken in opslag",
         "content": "Een opslagconsistentiecontrole heeft gedetecteerd dat gegevens voor je bestand '{{fileName}}' ontbreken in de onderliggende opslag. Controleer de integriteit van de opslag en upload dit bestand opnieuw."
       },
+      "upgradePreparationCompleted": {
+        "title": "Voorbereiding voor de upgrade naar Cotton {{targetVersion}} voltooid",
+        "content": "De achtergrondtaak {{jobName}} is succesvol voltooid. Deze voorbereidingsstap voor Cotton {{targetVersion}} is afgerond. Controleer vóór de upgrade welke stappen nog nodig zijn in het vereiste upgradepad."
+      },
       "appUpdateAvailable": {
         "title": "Cotton-serverupdate beschikbaar",
         "content": "Huidige serverversie: {{currentVersion}}\nBeschikbare serverversie: {{latestVersion}}\n\nRelease-opmerkingen:\n{{releaseNotes}}\n\nVolledige release: {{releaseUrl}}"

@@ -16,10 +16,7 @@ namespace Cotton.Server.Jobs
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
             try
             {
-                int updated = await mediator.Send(new BackfillNodeFileContentTypesRequest(), cancellationToken);
-                logger.LogInformation("Backfilled content types for {Count} node files", updated);
-                int cleared = await mediator.Send(new ClearFileManifestContentTypesRequest(), cancellationToken);
-                logger.LogInformation("Cleared obsolete content types and upgraded signatures for {Count} file manifests", cleared);
+                await mediator.Send(new PrepareContentTypeUpgradeRequest(), cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {

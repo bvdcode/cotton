@@ -1438,6 +1438,10 @@
         "title": "Data souboru v úložišti chybí",
         "content": "Kontrola konzistence úložiště zjistila, že data souboru '{{fileName}}' v podkladovém úložišti chybí. Ověřte integritu úložiště a nahrajte soubor znovu."
       },
+      "upgradePreparationCompleted": {
+        "title": "Příprava na aktualizaci Cotton {{targetVersion}} dokončena",
+        "content": "Úloha na pozadí {{jobName}} byla úspěšně dokončena. Tento krok přípravy na Cotton {{targetVersion}} je hotový. Před aktualizací zkontrolujte zbývající požadavky v tabulce postupů aktualizace."
+      },
       "appUpdateAvailable": {
         "title": "Je dostupná aktualizace serveru Cotton",
         "content": "Aktuální verze serveru: {{currentVersion}}\nDostupná verze serveru: {{latestVersion}}\n\nPoznámky k vydání:\n{{releaseNotes}}\n\nCelé vydání: {{releaseUrl}}"

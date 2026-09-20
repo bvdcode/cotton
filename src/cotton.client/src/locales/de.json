@@ -1433,6 +1433,10 @@
         "title": "Dateidaten fehlen im Speicher",
         "content": "Eine Konsistenzprüfung hat festgestellt, dass Daten für deine Datei '{{fileName}}' im zugrunde liegenden Speicher fehlen. Prüfe die Integrität des Speichers und lade die Datei erneut hoch."
       },
+      "upgradePreparationCompleted": {
+        "title": "Vorbereitung für das Upgrade auf Cotton {{targetVersion}} abgeschlossen",
+        "content": "Die Hintergrundaufgabe {{jobName}} wurde erfolgreich abgeschlossen. Dieser Vorbereitungsschritt für Cotton {{targetVersion}} ist erledigt. Prüfen Sie vor dem Upgrade den erforderlichen Upgrade-Pfad auf weitere Schritte."
+      },
       "appUpdateAvailable": {
         "title": "Cotton-Serverupdate verfügbar",
         "content": "Aktuelle Serverversion: {{currentVersion}}\nVerfügbare Serverversion: {{latestVersion}}\n\nVersionshinweise:\n{{releaseNotes}}\n\nVollständiges Release: {{releaseUrl}}"

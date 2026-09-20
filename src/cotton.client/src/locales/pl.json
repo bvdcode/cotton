@@ -1441,6 +1441,10 @@
         "title": "Brakuje danych pliku w magazynie",
         "content": "Kontrola spójności magazynu wykryła, że brakuje danych dla pliku '{{fileName}}' w magazynie bazowym. Sprawdź integralność magazynu i prześlij plik ponownie."
       },
+      "upgradePreparationCompleted": {
+        "title": "Przygotowanie do aktualizacji Cotton {{targetVersion}} zakończone",
+        "content": "Zadanie w tle {{jobName}} zakończyło się pomyślnie. Ten etap przygotowania do Cotton {{targetVersion}} jest gotowy. Przed aktualizacją sprawdź pozostałe wymagania w tabeli ścieżek aktualizacji."
+      },
       "appUpdateAvailable": {
         "title": "Dostępna aktualizacja serwera Cotton",
         "content": "Bieżąca wersja serwera: {{currentVersion}}\nDostępna wersja serwera: {{latestVersion}}\n\nInformacje o wydaniu:\n{{releaseNotes}}\n\nPełne wydanie: {{releaseUrl}}"
