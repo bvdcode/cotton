@@ -68,13 +68,24 @@ namespace Cotton.Server.Extensions
 
                     SessionAccessTokenRevocationStore revocations = context.HttpContext.RequestServices
                         .GetRequiredService<SessionAccessTokenRevocationStore>();
-                    bool isRevoked = await revocations.IsRevokedAsync(
-                        userId,
-                        sessionId,
-                        context.HttpContext.RequestAborted);
-                    if (isRevoked)
+                    try
                     {
-                        context.Fail("Session has been revoked.");
+                        bool isRevoked = await revocations.IsRevokedAsync(
+                            userId,
+                            sessionId,
+                            context.HttpContext.RequestAborted);
+                        if (isRevoked)
+                        {
+                            context.Fail("Session has been revoked.");
+                        }
+                    }
+                    catch (OperationCanceledException ex) when (context.HttpContext.RequestAborted.IsCancellationRequested)
+                    {
+                        ILogger logger = context.HttpContext.RequestServices
+                            .GetRequiredService<ILoggerFactory>()
+                            .CreateLogger(nameof(AuthHardeningExtensions));
+                        logger.LogDebug(ex, "Session validation canceled because the HTTP request was aborted.");
+                        context.NoResult();
                     }
                 };
                 options.Events = events;
