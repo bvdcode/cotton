@@ -99,7 +99,17 @@ Common failure classes are:
 
 ## Upgrades
 
-Read release notes before changing major or storage-format versions. The version 0.5 cutover requires that the same database, storage, and master key have run successfully on Cotton 0.4.35 for the documented transition period before upgrading.
+Cotton follows semantic versioning: in `0.5.12`, `0` is the major version, `5` is the minor version, and `12` is the patch version. While the project remains on major version `0`, minor releases may contain storage or database transitions that cannot be skipped safely.
+
+### Required upgrade paths
+
+This table applies to existing installations. A new empty installation can start directly on the current release.
+
+| Target release | Required transition release | Completion requirement |
+| --- | --- | --- |
+| `0.5.x` from `0.4.x` or earlier | `0.4.35` | Run `0.4.35` with the same database, storage, and master key. Proceed after the server logs `CTN2 rewrite job finished.`, or after at least 24 hours of uninterrupted operation with no CTN2 rewrite errors. |
+
+Before upgrading to a new `0.x` minor line, install the transition release listed for that target and keep it running until its completion condition is satisfied. Patch upgrades within the same minor line do not require an additional transition unless the release notes explicitly say otherwise.
 
 Version 0.5 does not decrypt CTN1 or backfill unsigned protected rows. Encountering either produces a targeted compatibility error rather than silent repair.
 

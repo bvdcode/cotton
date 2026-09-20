@@ -186,6 +186,12 @@ For the build/CI details (multi-stage Dockerfile, GitHub Actions, SixLabors lice
 
 ---
 
+## Upgrading
+
+Cotton is still in the `0.x` release line, where a minor-version upgrade may require the final transition release from the previous minor line. Before changing the minor version, check the **[required upgrade paths](docs/technical/27-deployment-operations.md#required-upgrade-paths)**. Do not skip a listed transition release: it must run against the same database, storage, and master key before the target release starts.
+
+---
+
 ## Master Key & Deployment Security
 
 Cotton's server-side master key protects storage-level encrypted data and database backup artifacts. The recommended default for new instances is to start **without** `COTTON_MASTER_KEY`, open `/unlock`, generate or enter the key in the browser, and keep it outside the container. In that mode the key is held only by the running process after unlock.
