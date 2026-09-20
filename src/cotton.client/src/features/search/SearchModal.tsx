@@ -323,12 +323,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                   </InputAdornment>
                 ),
                 endAdornment: (
-                  <InputAdornment position="end">
-                    <DeepSearchButton
-                      enabled={deep}
-                      disabled={!layoutId || !hasQuery}
-                      onClick={toggleDeep}
-                    />
+                  <InputAdornment position="end" sx={{ gap: 1 }}>
                     <SearchEndAdornment
                       isMobile={isMobile}
                       onClose={onClose}
@@ -338,6 +333,11 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                       })}
                       waitingForResults={waitingForResults}
                       closeText={tCommon("actions.close")}
+                    />
+                    <DeepSearchButton
+                      enabled={deep}
+                      disabled={!layoutId}
+                      onClick={toggleDeep}
                     />
                   </InputAdornment>
                 ),

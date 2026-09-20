@@ -50,8 +50,23 @@ describe("useLayoutSearch", () => {
     expect(mocks.search).toHaveBeenCalledTimes(3);
     act(() => result.current.setQuery("invoice"));
     await flush();
+    expect(result.current.deep).toBe(false);
+    expect(mocks.search).toHaveBeenCalledTimes(4);
+  });
+
+  it("allows selecting deep search before entering a query", async () => {
+    mocks.search.mockResolvedValue(response(2));
+    const { result } = renderHook(() =>
+      useLayoutSearch({ layoutId: "layout-1", initialQuery: "" }),
+    );
+    act(() => result.current.toggleDeep());
     expect(result.current.deep).toBe(true);
-    expect(mocks.search).toHaveBeenCalledTimes(5);
+    expect(mocks.search).not.toHaveBeenCalled();
+    act(() => result.current.setQuery("report"));
+    await flush();
+    expect(mocks.search).toHaveBeenCalledWith(
+      expect.objectContaining({ query: "report", deep: true }),
+    );
   });
 
   it("resets pagination when switching modes", async () => {
@@ -86,7 +101,7 @@ describe("useLayoutSearch", () => {
     act(() => result.current.setQuery("invoice"));
     expect(signal.aborted).toBe(true);
     await act(async () => resolveDeep(response(20)));
-    expect(result.current.deep).toBe(false);
+    expect(result.current.deep).toBe(true);
     expect(result.current.results).toBeNull();
     await flush();
     expect(result.current.totalCount).toBe(2);

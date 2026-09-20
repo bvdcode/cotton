@@ -54,7 +54,7 @@ export function useLayoutSearch(
     deep,
     toggleDeep: toggleMode,
     enableDeep,
-  } = useDeepSearchMode((layoutId ?? "") + "\u0000" + trimmedQuery);
+  } = useDeepSearchMode();
   const canSearch = Boolean(layoutId && trimmedQuery);
   const requestKey = JSON.stringify([
     layoutId,

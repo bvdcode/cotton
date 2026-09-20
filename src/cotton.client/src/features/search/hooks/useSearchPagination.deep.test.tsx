@@ -73,7 +73,7 @@ describe("deep search pagination", () => {
     expect(result.current.error).toBe("error");
   });
 
-  it("keeps manual disabling for the current query and allows automatic search for a new query", async () => {
+  it("keeps manual disabling while the query changes", async () => {
     mocks.search.mockResolvedValue(response());
     const { result, rerender } = setup();
     await flush();
@@ -84,8 +84,25 @@ describe("deep search pagination", () => {
     expect(mocks.search).toHaveBeenCalledTimes(3);
     rerender({ query: "invoice", layoutId: "layout-1" });
     await flush();
+    expect(result.current.deep).toBe(false);
+    expect(mocks.search).toHaveBeenCalledTimes(4);
+  });
+
+  it("allows selecting deep search before entering a query", async () => {
+    mocks.search.mockResolvedValue(response(2));
+    const { result, rerender } = renderHook(
+      ({ query }) =>
+        useSearchPagination({ trimmedQuery: query, layoutId: "layout-1" }),
+      { initialProps: { query: "" } },
+    );
+    act(() => result.current.toggleDeep());
     expect(result.current.deep).toBe(true);
-    expect(mocks.search).toHaveBeenCalledTimes(5);
+    expect(mocks.search).not.toHaveBeenCalled();
+    rerender({ query: "report" });
+    await flush();
+    expect(mocks.search).toHaveBeenCalledWith(
+      expect.objectContaining({ query: "report", deep: true }),
+    );
   });
 
   it("discards a pending deep response after manual disabling", async () => {

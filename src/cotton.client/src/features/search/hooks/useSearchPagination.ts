@@ -60,9 +60,7 @@ export const useSearchPagination = ({
   const searchGenerationRef = useRef(0);
   const requestedPageRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const { deep, toggleDeep, enableDeep } = useDeepSearchMode(
-    buildSearchKey(layoutId, trimmedQuery),
-  );
+  const { deep, toggleDeep, enableDeep } = useDeepSearchMode();
 
   const [debouncedQueryValue, setDebouncedQueryValue] = useState(trimmedQuery);
   const debouncedQuery =

@@ -52,7 +52,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
               <InputAdornment position="end">
                 <DeepSearchButton
                   enabled={deep}
-                  disabled={disabled || !value.trim()}
+                  disabled={disabled}
                   onClick={onToggleDeep}
                 />
               </InputAdornment>
