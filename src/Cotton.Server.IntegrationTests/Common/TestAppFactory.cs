@@ -2,19 +2,23 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
+using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
+using EasyExtensions.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Primitives;
+using Npgsql;
 using Quartz;
 using System.Net;
 using System.Security.Cryptography;
@@ -87,6 +91,17 @@ namespace Cotton.Server.IntegrationTests.Common
 
             builder.ConfigureServices(services =>
             {
+                services.AddDbContext<CottonDbContext>((serviceProvider, options) =>
+                {
+                    IPostgresConnectionStringProvider connectionStringProvider = serviceProvider
+                        .GetRequiredService<IPostgresConnectionStringProvider>();
+                    NpgsqlConnectionStringBuilder connectionString = new(connectionStringProvider.GetConnectionString())
+                    {
+                        Pooling = false,
+                    };
+                    options.UseNpgsql(connectionString.ConnectionString);
+                });
+
                 List<ServiceDescriptor> quartzHosted = services
                     .Where(d => d.ServiceType == typeof(IHostedService) &&
                         d.ImplementationType == typeof(QuartzHostedService))
