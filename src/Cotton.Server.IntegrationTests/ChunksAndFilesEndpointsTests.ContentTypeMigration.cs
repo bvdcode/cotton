@@ -60,7 +60,7 @@ namespace Cotton.Server.IntegrationTests
             await dbContext.SaveChangesAsync();
             await DatabaseIntegrityTestSignatures.SetVersionAsync(dbContext, legacyManifest, 1, scope.ServiceProvider);
             dbContext.ChangeTracker.Clear();
-            HotfixBackfillContentTypeJob job = ActivatorUtilities.CreateInstance<HotfixBackfillContentTypeJob>(scope.ServiceProvider);
+            PrepareUpgradeTo06Job job = ActivatorUtilities.CreateInstance<PrepareUpgradeTo06Job>(scope.ServiceProvider);
             await job.Execute(null!);
 
             List<NodeFile> updated = await dbContext.NodeFiles.ToListAsync();
@@ -72,11 +72,8 @@ namespace Cotton.Server.IntegrationTests
                     : FileContentTypeResolver.ResolveFromFileName(file.Name);
                 Assert.That(file.ContentType, Is.EqualTo(expected), file.Name);
                 verifier.RequireValid(dbContext, file, "content-type-backfill");
-                if (file.Id != original.Id)
-                {
-                    Assert.That(dbContext.Entry(file).Property<int?>(DatabaseIntegrityColumns.VersionProperty).CurrentValue,
-                        Is.EqualTo(NodeFileIntegrityDescriptor.LatestVersion));
-                }
+                Assert.That(dbContext.Entry(file).Property<int?>(DatabaseIntegrityColumns.VersionProperty).CurrentValue,
+                    Is.EqualTo(NodeFileIntegrityDescriptor.LatestVersion));
                 var dates = originalDates.Single(originalFile => originalFile.Id == file.Id);
                 Assert.That(file.CreatedAt, Is.EqualTo(dates.CreatedAt));
                 Assert.That(file.UpdatedAt, Is.EqualTo(dates.UpdatedAt));
@@ -93,12 +90,12 @@ namespace Cotton.Server.IntegrationTests
             string title = NotificationTemplates.UpgradePreparationCompletedTitle("0.6");
             Notification notification = await dbContext.Notifications.SingleAsync(entry => entry.Title == title);
             Assert.That(notification.Metadata!["targetVersion"], Is.EqualTo("0.6"));
-            Assert.That(notification.Metadata["jobName"], Is.EqualTo(nameof(HotfixBackfillContentTypeJob)));
+            Assert.That(notification.Metadata["jobName"], Is.EqualTo(nameof(PrepareUpgradeTo06Job)));
             Assert.That(notification.UserId, Is.EqualTo(source.OwnerId));
         }
 
         [Test]
-        public async Task ContentTypeBackfillJob_RepeatsEveryTwelveHours()
+        public async Task UpgradePreparation_RepeatsEveryTwelveHours()
         {
             ISchedulerFactory factory = _factory!.Services.GetRequiredService<ISchedulerFactory>();
             IScheduler scheduler = await factory.GetScheduler();
@@ -106,7 +103,7 @@ namespace Cotton.Server.IntegrationTests
             foreach (JobKey key in keys)
             {
                 IJobDetail? detail = await scheduler.GetJobDetail(key);
-                if (detail?.JobType != typeof(HotfixBackfillContentTypeJob))
+                if (detail?.JobType != typeof(PrepareUpgradeTo06Job))
                 {
                     continue;
                 }
@@ -120,7 +117,7 @@ namespace Cotton.Server.IntegrationTests
                 return;
             }
 
-            Assert.Fail("Content type backfill job was not registered.");
+            Assert.Fail("Upgrade preparation job was not registered.");
         }
     }
 }

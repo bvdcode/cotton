@@ -30,7 +30,8 @@ namespace Cotton.Server.Handlers.Files
             IDatabaseIntegrityDescriptor<NodeFile> descriptor = descriptors.Get<NodeFile>();
             while (true)
             {
-                IQueryable<NodeFile> query = dbContext.NodeFiles.Where(file => file.ContentType == string.Empty);
+                IQueryable<NodeFile> query = dbContext.NodeFiles.Where(file => file.ContentType == string.Empty
+                    || EF.Property<int?>(file, DatabaseIntegrityColumns.VersionProperty) != descriptor.SchemaVersion);
                 if (afterId is Guid lastId)
                 {
                     query = query.Where(file => file.Id.CompareTo(lastId) > 0);
@@ -48,11 +49,14 @@ namespace Cotton.Server.Handlers.Files
                     verifier.RequireValid(dbContext, file, "content-type.backfill");
                     byte[] originalMac = dbContext.Entry(file)
                         .Property<byte[]?>(DatabaseIntegrityColumns.MacProperty).CurrentValue!;
-                    string contentType = FileContentTypeResolver.ResolveFromFileName(file.Name);
+                    string originalContentType = file.ContentType;
+                    string contentType = originalContentType == string.Empty
+                        ? FileContentTypeResolver.ResolveFromFileName(file.Name)
+                        : originalContentType;
                     dbContext.Entry(file).Property(entity => entity.ContentType).CurrentValue = contentType;
                     byte[] mac = protector.Sign(file, descriptor);
                     int affected = await dbContext.NodeFiles
-                        .Where(entity => entity.Id == file.Id && entity.ContentType == string.Empty
+                        .Where(entity => entity.Id == file.Id && entity.ContentType == originalContentType
                             && EF.Property<byte[]?>(entity, DatabaseIntegrityColumns.MacProperty) == originalMac)
                         .ExecuteUpdateAsync(setters => setters
                             .SetProperty(entity => entity.ContentType, contentType)

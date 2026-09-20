@@ -46,7 +46,7 @@ namespace Cotton.Server.IntegrationTests
 
             await ExecuteGeneratePreviewJobAsync();
 
-            HotfixClearEmptyFilePreviewJob hotfix = ActivatorUtilities.CreateInstance<HotfixClearEmptyFilePreviewJob>(scope.ServiceProvider);
+            PrepareUpgradeTo06Job hotfix = ActivatorUtilities.CreateInstance<PrepareUpgradeTo06Job>(scope.ServiceProvider);
             await hotfix.Execute(null!);
             dbContext.ChangeTracker.Clear();
             FileManifestPreviewState result = await GetFileManifestByNodeFileIdAsync(file.Id);

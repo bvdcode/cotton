@@ -9,14 +9,14 @@ using Quartz;
 namespace Cotton.Server.Jobs
 {
     [JobTrigger(hours: 12)]
-    public class HotfixBackfillContentTypeJob(IMediator mediator, ILogger<HotfixBackfillContentTypeJob> logger) : IJob
+    public class PrepareUpgradeTo06Job(IMediator mediator, ILogger<PrepareUpgradeTo06Job> logger) : IJob
     {
         public async Task Execute(IJobExecutionContext context)
         {
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
             try
             {
-                await mediator.Send(new PrepareContentTypeUpgradeRequest(), cancellationToken);
+                await mediator.Send(new PrepareUpgradeTo06Request(), cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -24,7 +24,7 @@ namespace Cotton.Server.Jobs
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Failed to migrate file content types");
+                logger.LogError(exception, "Failed to prepare the upgrade to Cotton {TargetVersion}", PrepareUpgradeTo06RequestHandler.TargetVersion);
                 throw;
             }
         }

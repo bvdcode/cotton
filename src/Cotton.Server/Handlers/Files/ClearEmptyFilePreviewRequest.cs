@@ -18,10 +18,7 @@ namespace Cotton.Server.Handlers.Files
     {
         public async Task<int> Handle(ClearEmptyFilePreviewRequest request, CancellationToken cancellationToken)
         {
-            byte[] emptyHash = Hasher.FromHexStringHash(Hasher.ZeroHashHexString);
-            FileManifest? manifest = await dbContext.FileManifests.SingleOrDefaultAsync(
-                file => file.ProposedContentHash == emptyHash && file.SizeBytes == 0,
-                cancellationToken);
+            FileManifest? manifest = await GetPendingManifests(dbContext).SingleOrDefaultAsync(cancellationToken);
             if (manifest is null)
             {
                 return 0;
@@ -34,6 +31,16 @@ namespace Cotton.Server.Handlers.Files
             manifest.PreviewGeneratorId = null;
             manifest.PreviewGeneratorVersion = PreviewGeneratorProvider.DefaultGeneratorVersion;
             return await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        internal static IQueryable<FileManifest> GetPendingManifests(CottonDbContext dbContext)
+        {
+            byte[] emptyHash = Hasher.FromHexStringHash(Hasher.ZeroHashHexString);
+            return dbContext.FileManifests.Where(file => file.ProposedContentHash == emptyHash && file.SizeBytes == 0
+                && (file.SmallFilePreviewHash != null || file.SmallFilePreviewHashEncrypted != null
+                    || file.LargeFilePreviewHash != null || file.PreviewGenerationError != null
+                    || file.PreviewGeneratorId != null
+                    || file.PreviewGeneratorVersion != PreviewGeneratorProvider.DefaultGeneratorVersion));
         }
     }
 }

@@ -53,9 +53,13 @@ namespace Cotton.Server.IntegrationTests
             verifier.RequireValid(dbContext, stored.FileManifest, "test.upgraded-manifest");
         }
 
-        [TestCase(false)]
-        [TestCase(true)]
-        public async Task ContentTypeMigration_BackfillChecksLatestSignatureBeforeUpdating(bool tampered)
+        [TestCase(false, 2, false)]
+        [TestCase(true, 2, false)]
+        [TestCase(false, 1, false)]
+        [TestCase(true, 1, false)]
+        [TestCase(false, 1, true)]
+        [TestCase(true, 1, true)]
+        public async Task ContentTypeMigration_BackfillChecksSignatureBeforeUpdating(bool tampered, int version, bool populated)
         {
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await LoginAsync());
             NodeDto root = (await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver"))!;
@@ -63,8 +67,10 @@ namespace Cotton.Server.IntegrationTests
             await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
             CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
             NodeFile file = await dbContext.NodeFiles.SingleAsync(entity => entity.Id == created.Id);
-            dbContext.Entry(file).Property(entity => entity.ContentType).CurrentValue = string.Empty;
+            string initialType = populated ? "application/custom" : string.Empty;
+            dbContext.Entry(file).Property(entity => entity.ContentType).CurrentValue = initialType;
             await dbContext.SaveChangesAsync();
+            await DatabaseIntegrityTestSignatures.SetVersionAsync(dbContext, file, version, scope.ServiceProvider);
             dbContext.ChangeTracker.Clear();
             if (tampered)
             {
@@ -77,13 +83,18 @@ namespace Cotton.Server.IntegrationTests
                 Assert.ThrowsAsync<DatabaseIntegrityException>(() =>
                     mediator.Send(new BackfillNodeFileContentTypesRequest(), CancellationToken.None));
                 Assert.That(await dbContext.NodeFiles.Where(entity => entity.Id == created.Id)
-                    .Select(entity => entity.ContentType).SingleAsync(), Is.Empty);
+                    .Select(entity => entity.ContentType).SingleAsync(), Is.EqualTo(initialType));
+                Assert.That(await dbContext.NodeFiles.Where(entity => entity.Id == created.Id)
+                    .Select(entity => EF.Property<int?>(entity, DatabaseIntegrityColumns.VersionProperty)).SingleAsync(),
+                    Is.EqualTo(version));
                 return;
             }
 
             Assert.That(await mediator.Send(new BackfillNodeFileContentTypesRequest(), CancellationToken.None), Is.EqualTo(1));
             NodeFile stored = await dbContext.NodeFiles.SingleAsync(entity => entity.Id == created.Id);
-            Assert.That(stored.ContentType, Is.EqualTo("text/plain"));
+            Assert.That(stored.ContentType, Is.EqualTo(populated ? initialType : "text/plain"));
+            Assert.That(dbContext.Entry(stored).Property<int?>(DatabaseIntegrityColumns.VersionProperty).CurrentValue,
+                Is.EqualTo(NodeFileIntegrityDescriptor.LatestVersion));
             scope.ServiceProvider.GetRequiredService<IDatabaseIntegrityVerifier>()
                 .RequireValid(dbContext, stored, "test.backfilled-current-signature");
         }
