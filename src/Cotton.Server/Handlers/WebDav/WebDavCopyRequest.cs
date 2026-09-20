@@ -9,6 +9,7 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Services;
+using Cotton.Server.Extensions;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -370,6 +371,9 @@ namespace Cotton.Server.Handlers.WebDav
                     FileManifestId = sourceResult.NodeFile.FileManifestId,
                 };
                 newNodeFile.SetName(destParentResult.ResourceName!);
+                FileManifest manifest = await _dbContext.FileManifests.SingleAsync(
+                    item => item.Id == newNodeFile.FileManifestId, ct);
+                manifest.ResetFailedPreview();
 
                 await _dbContext.NodeFiles.AddAsync(newNodeFile, ct);
                 await _dbContext.SaveChangesAsync(ct);

@@ -9,6 +9,7 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Services;
+using Cotton.Server.Extensions;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -72,17 +73,14 @@ namespace Cotton.Server.Handlers.WebDav
                 return contentError;
             }
 
-            string contentType = FileContentTypeResolver.Resolve(target!.ResourceName, request.ContentType);
             FileManifest fileManifest = await GetOrCreateFileManifestAsync(
                 chunks: content!.Chunks,
                 fileHash: content.FileHash,
                 userId: request.UserId,
-                resourceName: target.ResourceName,
-                contentType: contentType,
                 ct);
 
             // Re-resolve the target inside the transaction: the original path result can be stale after a long upload stream.
-            Guid expectedLayoutId = target.Parent.ParentNode!.LayoutId;
+            Guid expectedLayoutId = target!.Parent.ParentNode!.LayoutId;
             await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(expectedLayoutId, ct);
             (PutTarget? finalTarget, NodeFile? resultNodeFile, WebDavPutFileResult? commitError) =
                 await CommitPutAsync(request, fileManifest.Id, expectedLayoutId, ct);
@@ -257,8 +255,6 @@ namespace Cotton.Server.Handlers.WebDav
             List<Chunk> chunks,
             byte[] fileHash,
             Guid userId,
-            string resourceName,
-            string contentType,
             CancellationToken ct)
         {
             FileManifest? fileManifest = await _fileManifestService.GetReusableOwnedManifestAsync(fileHash, userId, cancellationToken: ct);
@@ -266,13 +262,12 @@ namespace Cotton.Server.Handlers.WebDav
             if (fileManifest is not null)
             {
                 await _fileManifestService.ClearGcSchedulesForManifestReferencesAsync(fileManifest.Id, ct);
+                fileManifest.ResetFailedPreview();
             }
             else
             {
                 fileManifest = await _fileManifestService.CreateNewFileManifestAsync(
                     chunks,
-                    resourceName,
-                    contentType,
                     fileHash,
                     userId,
                     cancellationToken: ct);

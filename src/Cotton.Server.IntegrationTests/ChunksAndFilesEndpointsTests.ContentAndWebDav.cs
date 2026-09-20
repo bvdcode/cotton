@@ -114,7 +114,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task WebDav_File_ETag_Uses_Same_Content_ETag_As_File_Api()
+        public async Task WebDav_UsesNodeFileContentType_AndSameContentETagAsFileApi()
         {
             string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -122,7 +122,9 @@ namespace Cotton.Server.IntegrationTests
             NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
             Assert.That(root, Is.Not.Null);
 
-            NodeFileManifestDto file = await UploadTextFileAsync(root!, "webdav-etag.txt", "webdav content");
+            NodeFileManifestDto text = await UploadTextFileAsync(root!, "webdav-etag.txt", "webdav content");
+            NodeFileManifestDto file = await UploadTextFileAsync(root!, "webdav-etag.md", "webdav content");
+            Assert.That(file.FileManifestId, Is.EqualTo(text.FileManifestId));
             string quotedETag = $"\"{file.ETag}\"";
 
             string webDavToken = await GetWebDavTokenAsync();
@@ -130,26 +132,34 @@ namespace Cotton.Server.IntegrationTests
                 "Basic",
                 Convert.ToBase64String(Encoding.UTF8.GetBytes($"testuser:{webDavToken}")));
 
-            HttpResponseMessage getResponse = await _client.GetAsync("/api/v1/webdav/webdav-etag.txt");
-            using HttpRequestMessage headRequest = new HttpRequestMessage(HttpMethod.Head, "/api/v1/webdav/webdav-etag.txt");
+            HttpResponseMessage getResponse = await _client.GetAsync("/api/v1/webdav/webdav-etag.md");
+            using HttpRequestMessage headRequest = new HttpRequestMessage(HttpMethod.Head, "/api/v1/webdav/webdav-etag.md");
             HttpResponseMessage headResponse = await _client.SendAsync(headRequest);
-            using HttpRequestMessage propFindRequest = new HttpRequestMessage(new HttpMethod("PROPFIND"), "/api/v1/webdav/webdav-etag.txt");
+            using HttpRequestMessage propFindRequest = new HttpRequestMessage(new HttpMethod("PROPFIND"), "/api/v1/webdav/webdav-etag.md");
             propFindRequest.Headers.Add("Depth", "0");
             HttpResponseMessage propFindResponse = await _client.SendAsync(propFindRequest);
             string propFindXml = await propFindResponse.Content.ReadAsStringAsync();
+            using HttpRequestMessage listRequest = new(new HttpMethod("PROPFIND"), "/api/v1/webdav/");
+            listRequest.Headers.Add("Depth", "1");
+            using HttpResponseMessage listResponse = await _client.SendAsync(listRequest);
+            string listXml = await listResponse.Content.ReadAsStringAsync();
 
             Assert.Multiple(() =>
             {
                 Assert.That(getResponse.Headers.ETag?.Tag, Is.EqualTo(quotedETag));
                 Assert.That(headResponse.Headers.ETag?.Tag, Is.EqualTo(quotedETag));
-                Assert.That(getResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/plain"));
-                Assert.That(headResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/plain"));
+                Assert.That(getResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/markdown"));
+                Assert.That(headResponse.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/markdown"));
                 Assert.That(getResponse.Content.Headers.ContentDisposition, Is.Null);
                 Assert.That(headResponse.Content.Headers.ContentDisposition, Is.Null);
                 Assert.That(getResponse.Headers.GetValues("X-Content-Type-Options"), Does.Contain("nosniff"));
                 Assert.That(headResponse.Headers.GetValues("X-Content-Type-Options"), Does.Contain("nosniff"));
                 Assert.That(propFindResponse.StatusCode, Is.EqualTo(HttpStatusCode.MultiStatus));
                 Assert.That(propFindXml, Does.Contain(quotedETag));
+                Assert.That(propFindXml, Does.Contain("<d:getcontenttype>text/markdown</d:getcontenttype>"));
+                Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.MultiStatus));
+                Assert.That(listXml, Does.Contain("<d:getcontenttype>text/markdown</d:getcontenttype>"));
+                Assert.That(listXml, Does.Contain("<d:getcontenttype>text/plain</d:getcontenttype>"));
             });
         }
 

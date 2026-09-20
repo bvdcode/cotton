@@ -65,6 +65,8 @@ namespace Cotton.Server.Providers
 
         public required ComputionMode ComputionMode { get; init; }
 
+        public required string? RemoteComputationRunnerUrl { get; init; }
+
         public required StorageType StorageType { get; init; }
 
         public required ImmutableArray<ServerUsage> ServerUsage { get; init; }
@@ -132,6 +134,7 @@ namespace Cotton.Server.Providers
                 S3EndpointUrl = settings.S3EndpointUrl,
                 EmailMode = settings.EmailMode,
                 ComputionMode = settings.ComputionMode,
+                RemoteComputationRunnerUrl = settings.RemoteComputationRunnerUrl,
                 StorageType = settings.StorageType,
                 ServerUsage = ImmutableArray.CreateRange(settings.ServerUsage),
                 StorageSpaceMode = settings.StorageSpaceMode,

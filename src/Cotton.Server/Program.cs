@@ -253,10 +253,11 @@ namespace Cotton.Server
                 .AddChunkServices()
                 .AddFileContentMetadataServices()
                 .AddLayoutSearchProviders()
+                .AddComputationServices()
                 .AddWebDavServices()
                 .AddWebDavAuth()
                 .AddJwt();
-            builder.Services.AddAuthHardening();
+            builder.Services.AddSessionAuthentication();
             builder.Services.AddEndpointRateLimiting();
             builder.Services.AddHostedService<AppVersionTrackerService>();
 
@@ -269,7 +270,7 @@ namespace Cotton.Server
                 return;
             }
 
-            app.UseAuthHardening();
+            app.UseSearchEngineExclusion();
             app.UseExceptionHandler();
             app.UseDefaultFiles();
             app.MapStaticAssets();

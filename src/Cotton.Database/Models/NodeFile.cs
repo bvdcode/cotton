@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Abstractions;
+using Cotton.ContentTypes;
 using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -12,6 +13,7 @@ namespace Cotton.Database.Models
     [Index(nameof(NodeId), nameof(NameKey), nameof(OwnerId), nameof(Id))]
     [Index(nameof(OwnerId), nameof(CreatedAt))]
     [Index(nameof(FileManifestId), nameof(NodeId))]
+    [Index(nameof(ContentType), nameof(FileManifestId))]
     public class NodeFile : BaseOwnedEntity<Guid>
     {
         [Column("file_manifest_id")]
@@ -29,6 +31,9 @@ namespace Cotton.Database.Models
         [Column("name_key", TypeName = "citext")]
         public string NameKey { get; private set; } = null!;
 
+        [Column("content_type", TypeName = "citext")]
+        public string ContentType { get; private set; } = null!;
+
         [Column("metadata")]
         public Dictionary<string, string>? Metadata { get; set; }
 
@@ -41,6 +46,7 @@ namespace Cotton.Database.Models
             }
             Name = normalized;
             NameKey = NameValidator.GetNameKey(normalized);
+            ContentType = FileContentTypeResolver.ResolveFromFileName(normalized);
         }
 
         [DeleteBehavior(DeleteBehavior.Restrict)]

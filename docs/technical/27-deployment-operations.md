@@ -99,7 +99,22 @@ Common failure classes are:
 
 ## Upgrades
 
-Read release notes before changing major or storage-format versions. The version 0.5 cutover requires that the same database, storage, and master key have run successfully on Cotton 0.4.35 for the documented transition period before upgrading.
+Some releases change storage formats or database contracts and require background preparation on an intermediate release. These requirements apply to any release line, including versions `1.x` and later.
+
+### Required upgrade paths
+
+This table applies to existing installations. A new empty installation can start directly on the current release.
+
+| Target release | Required transition release | Completion requirement |
+| --- | --- | --- |
+| `0.5.x` from `0.4.x` or earlier | `0.4.35` | **Completion signal:** the log contains `CTN2 rewrite job finished.` (this release does not send a completion notification). **Time-based alternative:** keep `0.4.35` running continuously for at least **7 days**. |
+| `0.6.x` from `0.5.x` (planned) | Final `0.5.x` transition release — to be announced | **Completion signal:** an administrator notification names `PrepareUpgradeTo06Job` and target `0.6`, or the log contains `Upgrade preparation job PrepareUpgradeTo06Job for Cotton 0.6 completed successfully.` **Time-based alternative:** keep the required release running continuously for at least **24 hours**. The required release and full set of steps must be confirmed before `0.6` is published. |
+
+Run each required release against the same database, storage, and master key. Follow the listed transitions in order when crossing multiple release lines. Completion signals allow proceeding without waiting for the full time allowance. The time-based alternative is for operators who cannot inspect logs; it assumes the server remains unlocked and background jobs can run normally. Elapsed time cannot guarantee completion if jobs fail, are interrupted, or take longer on a large installation.
+
+The `0.6` preparation job fills missing individual file content types, upgrades file and manifest signatures to version 2, clears obsolete manifest content types, and removes preview data from the empty-file manifest. Files with an existing content type also receive the current signature without replacing their content type. All stages must finish before the completion notification is sent. Regular preview generation runs independently and does not delay this notification. Notifications appear in Cotton for every administrator and are deduplicated by job and target version across repeated runs and server restarts. A notification confirms the named preparation job; follow every requirement listed for the target release before upgrading.
+
+Earlier notifications naming `HotfixBackfillContentTypeJob` confirm only the content-type preparation. Wait for `PrepareUpgradeTo06Job` to confirm all the stages listed above.
 
 Version 0.5 does not decrypt CTN1 or backfill unsigned protected rows. Encountering either produces a targeted compatibility error rather than silent repair.
 

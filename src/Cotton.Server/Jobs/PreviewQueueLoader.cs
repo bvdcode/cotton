@@ -3,18 +3,18 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Previews;
+using Cotton.Server.Services.Previews;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Jobs
 {
     internal static class PreviewQueueLoader
     {
-        public static async Task<List<FileManifest>> LoadNextAsync(
+        public static async Task<List<Guid>> LoadNextIdsAsync(
             CottonDbContext dbContext,
-            IReadOnlyCollection<string> supportedContentTypes,
-            IReadOnlyDictionary<string, int> generatorVersionsByContentType,
             int limit,
-            ISet<Guid> knownItemIds,
+            ISet<Guid> processedItemIds,
             CancellationToken cancellationToken)
         {
             if (limit <= 0)
@@ -22,52 +22,76 @@ namespace Cotton.Server.Jobs
                 return [];
             }
 
-            IQueryable<FileManifest> processableItemsQuery = dbContext.FileManifests
-                .Where(fileManifest => supportedContentTypes.Contains(fileManifest.ContentType));
-            var itemCandidates = processableItemsQuery
-                .Where(fileManifest => fileManifest.SmallFilePreviewHash == null
-                    || fileManifest.SmallFilePreviewHashEncrypted == null)
-                .Where(fileManifest => fileManifest.PreviewGenerationError == null)
-                .Select(fileManifest => new
-                {
-                    fileManifest.Id,
-                    fileManifest.CreatedAt,
-                });
-
-            foreach (IGrouping<int, KeyValuePair<string, int>> versionGroup in generatorVersionsByContentType.GroupBy(item => item.Value))
-            {
-                int generatorVersion = versionGroup.Key;
-                string[] contentTypes = [.. versionGroup.Select(item => item.Key)];
-                itemCandidates = itemCandidates.Union(dbContext.FileManifests
-                    .Where(fileManifest => contentTypes.Contains(fileManifest.ContentType))
-                    .Where(fileManifest => fileManifest.PreviewGeneratorVersion != generatorVersion)
-                    .Select(fileManifest => new
-                    {
-                        fileManifest.Id,
-                        fileManifest.CreatedAt,
-                    }));
-            }
-
-            List<Guid> itemIds = await itemCandidates
+            return await GetCandidates(dbContext)
+                .Where(manifest => !processedItemIds.Contains(manifest.Id))
                 .OrderByDescending(candidate => candidate.CreatedAt)
+                .ThenBy(candidate => candidate.Id)
                 .Select(candidate => candidate.Id)
                 .Take(limit)
                 .ToListAsync(cancellationToken);
-            List<Guid> newItemIds = [.. itemIds.Where(knownItemIds.Add)];
-            if (newItemIds.Count == 0)
+        }
+
+        public static async Task<FileManifest?> LoadItemAsync(
+            CottonDbContext dbContext, Guid id, CancellationToken cancellationToken)
+        {
+            IQueryable<NodeFile> availableFiles = PreviewFileQuery.AvailableFiles(dbContext);
+            FileManifest? item = await dbContext.FileManifests
+                .Where(manifest => availableFiles.Any(file => file.FileManifestId == manifest.Id))
+                .SingleOrDefaultAsync(manifest => manifest.Id == id, cancellationToken);
+            if (item is null || !NeedsPreview(item))
             {
-                return [];
+                return null;
             }
 
-            List<FileManifest> items = await dbContext.FileManifests
-                .Where(fileManifest => newItemIds.Contains(fileManifest.Id))
-                .Include(fileManifest => fileManifest.NodeFiles)
-                .Include(fileManifest => fileManifest.FileManifestChunks)
-                .ThenInclude(manifestChunk => manifestChunk.Chunk)
-                .AsSplitQuery()
-                .ToListAsync(cancellationToken);
-            Dictionary<Guid, FileManifest> itemsById = items.ToDictionary(item => item.Id);
-            return [.. newItemIds.Where(itemsById.ContainsKey).Select(id => itemsById[id])];
+            await dbContext.Entry(item).Collection(manifest => manifest.FileManifestChunks)
+                .Query().Include(manifestChunk => manifestChunk.Chunk).LoadAsync(cancellationToken);
+            await availableFiles.Where(file => file.FileManifestId == id).LoadAsync(cancellationToken);
+            return item;
+        }
+
+        private static bool NeedsPreview(FileManifest manifest)
+        {
+            if (manifest.SizeBytes == 0)
+            {
+                return false;
+            }
+
+            if (manifest.PreviewGenerationError is not null)
+            {
+                return manifest.PreviewGeneratorVersion != PreviewGeneratorProvider.FailedAttemptVersion;
+            }
+
+            return manifest.SmallFilePreviewHash is null || manifest.SmallFilePreviewHashEncrypted is null
+                || (manifest.PreviewGeneratorId is not null
+                    && PreviewGeneratorProvider.GetGeneratorVersions().TryGetValue(manifest.PreviewGeneratorId, out int version)
+                    && manifest.PreviewGeneratorVersion != version);
+        }
+
+        private static IQueryable<FileManifest> GetCandidates(CottonDbContext dbContext)
+        {
+            IQueryable<NodeFile> availableFiles = PreviewFileQuery.AvailableFiles(dbContext);
+            IQueryable<FileManifest> manifests = dbContext.FileManifests;
+            IQueryable<Guid> candidateIds = manifests
+                .Where(manifest => (manifest.PreviewGenerationError == null
+                        && (manifest.SmallFilePreviewHash == null || manifest.SmallFilePreviewHashEncrypted == null))
+                    || (manifest.PreviewGenerationError != null
+                        && manifest.PreviewGeneratorVersion != PreviewGeneratorProvider.FailedAttemptVersion))
+                .Select(manifest => manifest.Id);
+
+            foreach (IGrouping<int, KeyValuePair<string, int>> group in PreviewGeneratorProvider.GetGeneratorVersions().GroupBy(generator => generator.Value))
+            {
+                int version = group.Key;
+                string[] generatorIds = [.. group.Select(generator => generator.Key)];
+                IQueryable<FileManifest> generated = manifests
+                    .Where(manifest => manifest.PreviewGenerationError == null
+                        && manifest.PreviewGeneratorId != null && generatorIds.Contains(manifest.PreviewGeneratorId));
+                candidateIds = candidateIds
+                    .Union(generated.Where(manifest => manifest.PreviewGeneratorVersion < version).Select(manifest => manifest.Id))
+                    .Union(generated.Where(manifest => manifest.PreviewGeneratorVersion > version).Select(manifest => manifest.Id));
+            }
+
+            return manifests.Where(manifest => manifest.SizeBytes > 0 && candidateIds.Contains(manifest.Id)
+                && availableFiles.Any(file => file.FileManifestId == manifest.Id));
         }
     }
 }

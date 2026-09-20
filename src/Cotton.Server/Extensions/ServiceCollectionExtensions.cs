@@ -9,18 +9,37 @@ using Cotton.Server.Auth;
 using Cotton.Server.Handlers.WebDav;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Server.Services.Computation;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.Search;
+using Cotton.Server.Services.Previews;
 using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using Cotton.Server.Services.FileMetadata;
 using Cotton.Server.Services.Startup;
 using Cotton.Server.Services.WebDav;
+using Cotton.TextExtraction;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Cotton.Server.Extensions
 {
     public static class ServiceCollectionExtensions
     {
+        public static IServiceCollection AddComputationServices(this IServiceCollection services)
+        {
+            services.AddSingleton<EmbeddingDimensionCache>();
+            services.AddScoped<ComputationService>();
+            services.AddScoped<TextEmbeddingChunker>();
+            services.AddSingleton<IFileTextExtractor, PdfTextExtractor>();
+            services.AddSingleton<FileTextExtractorProvider>();
+            services.AddHttpClient<TeiClient>(client => client.Timeout = TeiClient.RequestTimeout)
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    AllowAutoRedirect = false,
+                    UseCookies = false,
+                });
+            return services;
+        }
+
         public static IServiceCollection AddStreamCipher(this IServiceCollection services)
         {
             services.AddSingleton<ServerSettingsCache>();
@@ -48,6 +67,7 @@ namespace Cotton.Server.Extensions
 
         public static IServiceCollection AddChunkServices(this IServiceCollection services)
         {
+            services.AddScoped<FilePreviewRenderer>();
             services.AddScoped<IChunkIngestService, ChunkIngestService>();
             services.AddScoped<NodeFileHistoryService>();
             services.AddScoped<FileVersionStorageService>();
@@ -102,7 +122,6 @@ namespace Cotton.Server.Extensions
         public static IServiceCollection AddLayoutSearchProviders(this IServiceCollection services)
         {
             services.AddScoped<ILayoutSearchProvider, NameLayoutSearchProvider>();
-            services.AddScoped<ILayoutSearchProvider, NoOpVectorLayoutSearchProvider>();
             return services;
         }
 

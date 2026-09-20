@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "智能搜索",
+      "enable": "开启智能搜索",
+      "disable": "关闭智能搜索",
+      "error": "智能搜索不可用。请稍后重试，或将其关闭以按名称搜索。"
+    },
     "title": "搜索",
     "searchPlaceholder": "搜索文件和文件夹……",
     "error": "搜索失败，请重试。",
@@ -1440,6 +1446,10 @@
         "title": "存储中缺少文件数据",
         "content": "存储一致性检查发现，底层存储中缺少文件 '{{fileName}}' 的数据。请验证存储完整性并重新上传该文件。"
       },
+      "upgradePreparationCompleted": {
+        "title": "Cotton {{targetVersion}} 升级准备已完成",
+        "content": "后台任务 {{jobName}} 已成功完成。Cotton {{targetVersion}} 的此项准备工作已完成。升级前，请在必需的升级路径表中查看其余步骤。"
+      },
       "appUpdateAvailable": {
         "title": "Cotton 服务器更新可用",
         "content": "当前服务器版本：{{currentVersion}}\n可用服务器版本：{{latestVersion}}\n\n发行说明：\n{{releaseNotes}}\n\n完整发行页：{{releaseUrl}}"
@@ -2225,6 +2235,16 @@
           "cloud": "Cotton Bridge 可以为此实例运行 AI 计算。需要互联网连接，并且可能存在限制。"
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "远程运行器",
+        "subtitle": "输入计算服务的地址。",
+        "fields": {
+          "url": "运行器 URL"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "时区",
         "subtitle": "请选择您的时区，以免夜间被通知和磁盘活动打扰。此设置仅用于服务器后台任务，Web 界面始终按您的本地时区显示时间。"
@@ -2805,8 +2825,78 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "progress": "已有向量的文件：{{indexed}} / {{total}}",
+      "indexingProgress": "文件索引进度",
+      "indexingDisabled": "请启用文件内容索引，以使用智能搜索。",
+      "computation": {
+        "checkSettings": "请在以下设置中检查计算服务的连接："
+      },
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
+      "title": "智能搜索",
+      "enabled": "已启用",
+      "vectorCount": "向量",
+      "loading": "正在检查数据库…",
+      "actions": {
+        "refresh": "刷新",
+        "enable": "准备数据库",
+        "copy": "复制",
+        "copied": "已复制",
+        "checkInstallation": "检查安装",
+        "checkAgain": "重新检查"
+      },
+      "errors": {
+        "loadFailed": "无法检查数据库。",
+        "enableFailed": "无法准备数据库。",
+        "copyFailed": "无法复制命令。"
+      },
+      "steps": {
+        "install": "安装 pgvector",
+        "enable": "在数据库中启用"
+      },
+      "installation": {
+        "missing": "PostgreSQL 服务器尚未安装 pgvector。",
+        "where": "PostgreSQL 运行在哪里？",
+        "docker": "Docker",
+        "native": "服务器本机",
+        "image": "当前 PostgreSQL 镜像",
+        "replace": "替换 docker-compose.yml 中的 image 行：",
+        "imageAbout": "由 pgvector 开发者发布，基于 PostgreSQL 官方镜像。",
+        "dockerApply": "先备份数据库。重新创建容器，并保留数据卷和配置。",
+        "imageMismatch": "此数据库运行 PostgreSQL {{version}}。请保持相同的主版本。",
+        "imageUnsupported": "Alpine 和自定义镜像需要单独的迁移方案，请勿直接替换。",
+        "imageUnknown": "请输入带数字版本的 postgres 官方镜像，例如 {{image}}。",
+        "variant": "当前镜像的 Debian 版本",
+        "os": "操作系统",
+        "macVersion": "Homebrew 软件包支持 PostgreSQL 17 和 18。",
+        "windowsNote": "以管理员身份打开 Visual Studio 的 x64 Native Tools Command Prompt。",
+        "docs": "pgvector 安装指南",
+        "repository": "配置 PostgreSQL 软件包仓库",
+        "versionUnsupported": "尚无 PostgreSQL {{version}} 的已验证安装方案。请查看 pgvector 指南。",
+        "variantHint": "请使用镜像标签或其 Docker Hub 页面注明的 Debian 版本。",
+        "windowsPath": "PostgreSQL 安装目录"
+      },
+      "activation": {
+        "manual": "手动启用",
+        "permissionDenied": "Cotton 没有启用 pgvector 的权限。",
+        "sqlInstruction": "以 PostgreSQL 管理员身份打开数据库“{{database}}”的 SQL 控制台并执行：",
+        "privileges": "安装 pgvector 需要 SUPERUSER 权限。仅 GRANT CREATE 并不足够。"
+      },
+      "index": {
+        "title": "索引",
+        "ready": "就绪",
+        "missing": "未就绪",
+        "building": "正在创建",
+        "permissionDenied": "请以 file_embeddings 表所有者的身份在数据库“{{database}}”中执行命令。此角色还需要 public 模式的 CREATE 权限。",
+        "incompatible": "搜索索引名称已被其他索引占用。请在 PostgreSQL 中检查其定义。",
+        "invalidData": "版本 1 的向量必须包含 1024 个有限数值。请修正数据后重试。",
+        "failed": "无法创建索引。请检查服务器日志后重试。"
+      }
+    },
     "title": "管理",
     "menu": {
+      "smartSearch": "智能搜索",
       "navigate": "板块",
       "expand": "展开导航",
       "collapse": "收起导航",
@@ -2937,14 +3027,16 @@
           "storageSpaceMode": "存储空间模式",
           "computionMode": "计算模式",
           "geoIpLookupMode": "IP 查询模式",
-          "customGeoIpLookupUrl": "自定义 IP 查询 URL"
+          "customGeoIpLookupUrl": "自定义 IP 查询 URL",
+          "remoteComputationRunnerUrl": "远程运行器 URL"
         },
         "validation": {
           "required": "此字段为必填项。",
           "publicBaseUrlInvalid": "请输入一个有效的 HTTP 或 HTTPS 基础 URL，且不得包含凭据、查询参数或片段。",
           "publicBaseUrlMismatch": "当前地址为 {{current}}，但生成的公共链接将使用 {{configured}}。保存此值前请谨慎确认。",
           "timezoneInvalid": "请从列表中选择有效的 IANA 时区。",
-          "customGeoIpLookupUrlInvalid": "请输入有效的 HTTP 或 HTTPS 查询 URL。"
+          "customGeoIpLookupUrlInvalid": "请输入有效的 HTTP 或 HTTPS 查询 URL。",
+          "remoteComputationRunnerUrlInvalid": "请输入有效的绝对 HTTP 或 HTTPS URL。"
         },
         "help": {
           "publicBaseUrl": "尽管有此设置，Cotton 在绝大多数情况下都会自动确定公共 URL。仅在自动检测出错时才需要设置。",
@@ -3000,6 +3092,24 @@
           "title": "打开安装向导",
           "description": "重新运行首次启动的安装向导。",
           "button": "打开"
+        },
+        "remoteRunner": {
+          "statusLoadFailed": "无法检查服务状态。",
+          "validateAndSave": "验证并保存",
+          "connected": "已连接 · {{model}} · {{dimensions}} 维 · {{tokens}} 个词元",
+          "errors": {
+            "NotConfigured": "尚未配置运行器地址。",
+            "UnsupportedMode": "此计算模式暂不支持文本嵌入。",
+            "InvalidUrl": "请输入不含凭据、查询参数或片段的 HTTP 或 HTTPS 基础地址。",
+            "Unreachable": "无法连接运行器。请检查地址和服务可用性。",
+            "Timeout": "运行器响应超时，请重试。",
+            "InvalidResponse": "运行器返回了无效响应。",
+            "NotEmbeddingModel": "此服务器不支持文本嵌入。",
+            "IncompatibleModel": "此模型与当前 BGE-M3 搜索索引不兼容。",
+            "InvalidDimensions": "运行器必须返回恰好 1024 维的向量。",
+            "InvalidVectors": "运行器返回了无效的嵌入向量。",
+            "InvalidInput": "请提供非空文本片段。"
+          }
         }
       },
       "privacy": {

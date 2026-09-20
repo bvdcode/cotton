@@ -85,7 +85,7 @@ namespace Cotton.Server.Handlers.WebDav
                     ContentLength: nodeFile.FileManifest.SizeBytes,
                     LastModified: nodeFile.UpdatedAt,
                     ETag: FileETags.GetQuotedContentETag(nodeFile.FileManifest),
-                    ContentType: nodeFile.FileManifest.ContentType,
+                    ContentType: nodeFile.ContentType,
                     Quota: quota));
             }
 
@@ -161,7 +161,7 @@ namespace Cotton.Server.Handlers.WebDav
                     ContentLength: childFile.FileManifest.SizeBytes,
                     LastModified: childFile.UpdatedAt,
                     ETag: FileETags.GetQuotedContentETag(childFile.FileManifest),
-                    ContentType: childFile.FileManifest.ContentType));
+                    ContentType: childFile.ContentType));
             }
         }
 

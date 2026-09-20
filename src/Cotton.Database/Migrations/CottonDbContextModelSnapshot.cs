@@ -19,7 +19,7 @@ namespace Cotton.Database.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
@@ -270,6 +270,10 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("public_base_url");
 
+                    b.Property<string>("RemoteComputationRunnerUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("remote_computation_runner_url");
+
                     b.Property<string>("S3AccessKeyId")
                         .HasColumnType("text")
                         .HasColumnName("s3_access_key_id");
@@ -423,6 +427,46 @@ namespace Cotton.Database.Migrations
                     b.ToTable("download_tokens");
                 });
 
+            modelBuilder.Entity("Cotton.Database.Models.FileEmbedding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.PrimitiveCollection<float[]>("Embedding")
+                        .IsRequired()
+                        .HasColumnType("real[]")
+                        .HasColumnName("embedding");
+
+                    b.Property<Guid>("FileManifestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_manifest_id");
+
+                    b.Property<int>("FragmentIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("fragment_index");
+
+                    b.Property<int>("IndexVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("index_version");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileManifestId", "IndexVersion", "FragmentIndex")
+                        .IsUnique();
+
+                    b.ToTable("file_embeddings");
+                });
+
             modelBuilder.Entity("Cotton.Database.Models.FileManifest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -464,6 +508,11 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("preview_generation_error");
 
+                    b.Property<string>("PreviewGeneratorId")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("preview_generator_id");
+
                     b.Property<int>("PreviewGeneratorVersion")
                         .HasColumnType("integer")
                         .HasColumnName("preview_generator_version");
@@ -485,6 +534,14 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("bytea")
                         .HasColumnName("small_file_preview_hash_encrypted");
 
+                    b.Property<string>("TextIndexError")
+                        .HasColumnType("text")
+                        .HasColumnName("text_index_error");
+
+                    b.Property<int>("TextIndexVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("text_index_version");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -502,6 +559,10 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("SmallFilePreviewHash");
 
                     b.HasIndex("ContentType", "PreviewGeneratorVersion");
+
+                    b.HasIndex("PreviewGeneratorId", "PreviewGeneratorVersion");
+
+                    b.HasIndex("TextIndexVersion", "CreatedAt");
 
                     b.ToTable("file_manifests");
                 });
@@ -656,6 +717,11 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("citext")
+                        .HasColumnName("content_type");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -704,6 +770,8 @@ namespace Cotton.Database.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ContentType", "FileManifestId");
 
                     b.HasIndex("FileManifestId", "NodeId");
 
@@ -1446,6 +1514,17 @@ namespace Cotton.Database.Migrations
                     b.Navigation("CreatedByUser");
 
                     b.Navigation("NodeFile");
+                });
+
+            modelBuilder.Entity("Cotton.Database.Models.FileEmbedding", b =>
+                {
+                    b.HasOne("Cotton.Database.Models.FileManifest", "FileManifest")
+                        .WithMany()
+                        .HasForeignKey("FileManifestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FileManifest");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.FileManifestChunk", b =>

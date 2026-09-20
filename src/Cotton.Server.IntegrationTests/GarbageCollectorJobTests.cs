@@ -4,17 +4,14 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
-using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models.DatabaseBackup;
-using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Processors;
-using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -126,6 +123,22 @@ namespace Cotton.Server.IntegrationTests
                 OwnerId = user.Id,
                 ChunkHash = dueOrphanHash,
             });
+            FileManifest orphanedManifest = new()
+            {
+                ProposedContentHash = Hash("orphaned-manifest"),
+                ContentType = "text/plain",
+                SizeBytes = 4,
+            };
+            DbContext.FileManifestChunks.Add(new FileManifestChunk
+            {
+                FileManifest = orphanedManifest,
+                ChunkHash = dueOrphanHash,
+                ChunkOrder = 0,
+            });
+            DbContext.FileEmbeddings.AddRange(
+                new FileEmbedding { FileManifest = orphanedManifest, FragmentIndex = 0, IndexVersion = 1, Embedding = [0.1f, 0.2f] },
+                new FileEmbedding { FileManifest = orphanedManifest, FragmentIndex = 1, IndexVersion = 2, Embedding = [0.3f, 0.4f] },
+                new FileEmbedding { FileManifest = manifest, IndexVersion = 1, Embedding = [0.5f, 0.6f] });
             await DbContext.SaveChangesAsync();
             DbContext.ChangeTracker.Clear();
 
@@ -156,6 +169,10 @@ namespace Cotton.Server.IntegrationTests
             Chunk largePreviewChunk = (await DbContext.Chunks.FindAsync(largePreviewHash))!;
             Chunk avatarChunk = (await DbContext.Chunks.FindAsync(avatarHash))!;
             Chunk backupChunk = (await DbContext.Chunks.FindAsync(backupHash))!;
+            bool orphanedManifestExists = await DbContext.FileManifests.AnyAsync(fm => fm.Id == orphanedManifest.Id);
+            List<Guid> remainingEmbeddingManifestIds = await DbContext.FileEmbeddings
+                .Select(embedding => embedding.FileManifestId)
+                .ToListAsync();
 
             Assert.Multiple(() =>
             {
@@ -169,6 +186,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(largePreviewChunk.GCScheduledAfter, Is.Null);
                 Assert.That(avatarChunk.GCScheduledAfter, Is.Null);
                 Assert.That(backupChunk.GCScheduledAfter, Is.Null);
+                Assert.That(orphanedManifestExists, Is.False);
+                Assert.That(remainingEmbeddingManifestIds, Is.EqualTo(new[] { manifest.Id }));
             });
         }
 
@@ -405,36 +424,6 @@ namespace Cotton.Server.IntegrationTests
             public Task<ResolvedBackupManifest?> TryGetLatestManifestAsync(CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(_latestBackup);
-            }
-        }
-
-        private class NoopNotificationsProvider : INotificationsProvider
-        {
-            public Task<bool> SendEmailAsync(
-                Guid userId,
-                EmailTemplate template,
-                Dictionary<string, string> parameters,
-                string serverBaseUrl,
-                string? recipientEmail = null)
-            {
-                return Task.FromResult(true);
-            }
-
-            public Task SendSmtpTestEmailAsync(
-                Guid userId,
-                string serverBaseUrl)
-            {
-                return Task.CompletedTask;
-            }
-
-            public Task SendNotificationAsync(
-                Guid userId,
-                string title,
-                string? content = null,
-                NotificationPriority priority = NotificationPriority.None,
-                Dictionary<string, string>? metadata = null)
-            {
-                return Task.CompletedTask;
             }
         }
     }

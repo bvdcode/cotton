@@ -7,6 +7,7 @@ using Cotton.Database.Models;
 using EasyExtensions.EntityFrameworkCore.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Pgvector.EntityFrameworkCore;
 
 namespace Cotton.Database
 {
@@ -48,6 +49,8 @@ namespace Cotton.Database
 
         public DbSet<FileManifest> FileManifests => Set<FileManifest>();
 
+        public DbSet<FileEmbedding> FileEmbeddings => Set<FileEmbedding>();
+
         public DbSet<DownloadToken> DownloadTokens => Set<DownloadToken>();
 
         public DbSet<NodeShareToken> NodeShareTokens => Set<NodeShareToken>();
@@ -76,6 +79,7 @@ namespace Cotton.Database
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             base.OnConfiguring(optionsBuilder);
+            optionsBuilder.UseNpgsql(options => options.UseVector());
             optionsBuilder.ReplaceService<IModelCacheKeyFactory, CottonModelCacheKeyFactory>();
         }
 

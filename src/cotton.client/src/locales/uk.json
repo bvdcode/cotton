@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Розумний пошук",
+      "enable": "Увімкнути розумний пошук",
+      "disable": "Вимкнути розумний пошук",
+      "error": "Розумний пошук недоступний. Спробуйте пізніше або вимкніть його для пошуку за назвою."
+    },
     "title": "Пошук",
     "searchPlaceholder": "Пошук файлів і тек...",
     "error": "Пошук не вдався. Спробуйте ще раз.",
@@ -1438,6 +1444,10 @@
         "title": "Дані файлу відсутні у сховищі",
         "content": "Перевірка узгодженості сховища виявила, що дані файлу '{{fileName}}' відсутні в базовому сховищі. Перевірте цілісність сховища й завантажте файл повторно."
       },
+      "upgradePreparationCompleted": {
+        "title": "Підготовку до оновлення Cotton {{targetVersion}} завершено",
+        "content": "Фонове завдання {{jobName}} виконано успішно. Цей етап підготовки до Cotton {{targetVersion}} завершено. Перед оновленням перевірте решту умов у таблиці переходів."
+      },
       "appUpdateAvailable": {
         "title": "Доступне оновлення сервера Cotton",
         "content": "Поточна версія сервера: {{currentVersion}}\nДоступна версія сервера: {{latestVersion}}\n\nНотатки до релізу:\n{{releaseNotes}}\n\nПовний реліз: {{releaseUrl}}"
@@ -2223,6 +2233,16 @@
           "cloud": "Cotton Bridge може виконувати AI-обчислення для цього інстанса. Потрібне підключення до інтернету і можуть діяти ліміти."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Віддалений раннер",
+        "subtitle": "Укажіть адресу сервісу обчислень.",
+        "fields": {
+          "url": "URL раннера"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Часовий пояс",
         "subtitle": "Виберіть свій часовий пояс, щоб уникнути сповіщень і шуму дисків уночі. Це лише для серверних процедур — веб-інтерфейс завжди показуватиме час у вашому локальному часовому поясі."
@@ -2811,8 +2831,78 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "progress": "Файли з векторами: {{indexed}} із {{total}}",
+      "indexingProgress": "Прогрес індексації файлів",
+      "indexingDisabled": "Щоб запрацював розумний пошук, увімкніть індексацію вмісту файлів.",
+      "computation": {
+        "checkSettings": "Перевірте підключення до обчислювальної служби в розділі"
+      },
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
+      "title": "Розумний пошук",
+      "enabled": "Увімкнено",
+      "vectorCount": "Вектори",
+      "loading": "Перевірка бази…",
+      "actions": {
+        "refresh": "Оновити",
+        "enable": "Підготувати базу",
+        "copy": "Копіювати",
+        "copied": "Скопійовано",
+        "checkInstallation": "Перевірити встановлення",
+        "checkAgain": "Перевірити знову"
+      },
+      "errors": {
+        "loadFailed": "Не вдалося перевірити базу даних.",
+        "enableFailed": "Не вдалося підготувати базу даних.",
+        "copyFailed": "Не вдалося скопіювати команду."
+      },
+      "steps": {
+        "install": "Встановити pgvector",
+        "enable": "Увімкнути в базі"
+      },
+      "installation": {
+        "missing": "На сервері PostgreSQL не встановлено pgvector.",
+        "where": "Де працює PostgreSQL?",
+        "docker": "Docker",
+        "native": "На сервері",
+        "image": "Поточний образ PostgreSQL",
+        "replace": "Замініть рядок image у docker-compose.yml:",
+        "imageAbout": "Образ від розробників pgvector на основі офіційного образу PostgreSQL.",
+        "dockerApply": "Спочатку створіть резервну копію бази. Перестворіть контейнер, зберігши том даних і налаштування.",
+        "imageMismatch": "База працює на PostgreSQL {{version}}. Збережіть ту саму основну версію.",
+        "imageUnsupported": "Для Alpine та нестандартних образів потрібен окремий план перенесення; не замінюйте їх напряму.",
+        "imageUnknown": "Вкажіть офіційний образ postgres із числовою версією, наприклад {{image}}.",
+        "variant": "Варіант Debian у поточному образі",
+        "os": "Операційна система",
+        "macVersion": "Пакети Homebrew підтримують PostgreSQL 17 і 18.",
+        "windowsNote": "Відкрийте x64 Native Tools Command Prompt із Visual Studio від імені адміністратора.",
+        "docs": "Інструкція зі встановлення pgvector",
+        "repository": "Підключити репозиторій пакетів PostgreSQL",
+        "versionUnsupported": "Для PostgreSQL {{version}} немає перевіреної інструкції встановлення. Перегляньте документацію pgvector.",
+        "variantHint": "Варіант Debian вказано в тезі образу або на його сторінці Docker Hub.",
+        "windowsPath": "Папка встановлення PostgreSQL"
+      },
+      "activation": {
+        "manual": "Увімкнути вручну",
+        "permissionDenied": "Cotton не має прав на увімкнення pgvector.",
+        "sqlInstruction": "Відкрийте SQL-консоль бази «{{database}}» як адміністратор PostgreSQL і виконайте:",
+        "privileges": "Для встановлення pgvector потрібен SUPERUSER. Одного GRANT CREATE недостатньо."
+      },
+      "index": {
+        "title": "Індекс",
+        "ready": "Готовий",
+        "missing": "Не готовий",
+        "building": "Створюється",
+        "permissionDenied": "У базі «{{database}}» виконайте команду від власника таблиці file_embeddings. Цій ролі також потрібне право CREATE у схемі public.",
+        "incompatible": "Назву пошукового індексу використовує інший індекс. Перевірте його визначення в PostgreSQL.",
+        "invalidData": "Вектори першої версії мають містити 1024 скінченні числа. Виправте дані та повторіть.",
+        "failed": "Не вдалося побудувати індекс. Перевірте журнал сервера та повторіть."
+      }
+    },
     "title": "Адміністрування",
     "menu": {
+      "smartSearch": "Розумний пошук",
       "navigate": "Розділ",
       "expand": "Розгорнути навігацію",
       "collapse": "Згорнути навігацію",
@@ -2943,14 +3033,16 @@
           "storageSpaceMode": "Режим використання місця",
           "computionMode": "Режим обчислень",
           "geoIpLookupMode": "Режим визначення IP",
-          "customGeoIpLookupUrl": "Власна URL для визначення IP"
+          "customGeoIpLookupUrl": "Власна URL для визначення IP",
+          "remoteComputationRunnerUrl": "URL віддаленого раннера"
         },
         "validation": {
           "required": "Це поле обов'язкове.",
           "publicBaseUrlInvalid": "Введіть дійсну базову URL-адресу HTTP або HTTPS без облікових даних, запиту чи хешу.",
           "publicBaseUrlMismatch": "Поточна адреса — {{current}}, але згенеровані публічні посилання використовуватимуть {{configured}}. Будьте обережні перед збереженням цього значення.",
           "timezoneInvalid": "Виберіть дійсний часовий пояс IANA зі списку.",
-          "customGeoIpLookupUrlInvalid": "Введіть дійсну URL-адресу HTTP або HTTPS для пошуку."
+          "customGeoIpLookupUrlInvalid": "Введіть дійсну URL-адресу HTTP або HTTPS для пошуку.",
+          "remoteComputationRunnerUrlInvalid": "Введіть коректну абсолютну HTTP- або HTTPS-адресу."
         },
         "help": {
           "publicBaseUrl": "Попри це налаштування, Cotton майже скрізь визначає публічну URL автоматично. Встановлюйте його лише тоді, коли автоматичне визначення помиляється.",
@@ -3006,6 +3098,24 @@
           "title": "Відкрити майстер налаштування",
           "description": "Пройдіть майстер початкового налаштування ще раз.",
           "button": "Відкрити"
+        },
+        "remoteRunner": {
+          "statusLoadFailed": "Не вдалося перевірити стан сервісу.",
+          "validateAndSave": "Перевірити й зберегти",
+          "connected": "Підключено · {{model}} · {{dimensions}} виміри · {{tokens}} токенів",
+          "errors": {
+            "NotConfigured": "Адресу раннера не задано.",
+            "UnsupportedMode": "У цьому режимі текстові ембеддинги поки недоступні.",
+            "InvalidUrl": "Введіть базову HTTP- або HTTPS-адресу без облікових даних, параметрів і фрагмента.",
+            "Unreachable": "Не вдалося підключитися до раннера. Перевірте адресу та доступність.",
+            "Timeout": "Раннер не відповів вчасно. Спробуйте ще раз.",
+            "InvalidResponse": "Раннер повернув некоректну відповідь.",
+            "NotEmbeddingModel": "Цей сервер не підтримує текстові ембеддинги.",
+            "IncompatibleModel": "Модель несумісна з поточним пошуковим індексом BGE-M3.",
+            "InvalidDimensions": "Раннер має повертати вектори довжиною рівно 1024.",
+            "InvalidVectors": "Раннер повернув некоректні вектори.",
+            "InvalidInput": "Передайте непорожні текстові фрагменти."
+          }
         }
       },
       "privacy": {

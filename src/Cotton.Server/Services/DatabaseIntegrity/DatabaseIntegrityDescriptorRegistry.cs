@@ -9,13 +9,35 @@ namespace Cotton.Server.Services.DatabaseIntegrity
 
         public DatabaseIntegrityDescriptorRegistry(IEnumerable<IDatabaseIntegrityDescriptor> descriptors)
         {
-            _descriptors = descriptors.ToDictionary(x => x.EntityType);
+            _descriptors = descriptors.ToDictionary(x => x.EntityType, x => x.Latest);
             All = _descriptors.Values
                 .OrderBy(x => x.EntityName, StringComparer.Ordinal)
                 .ToArray();
         }
 
         public IReadOnlyCollection<IDatabaseIntegrityDescriptor> All { get; }
+
+        public IDatabaseIntegrityDescriptor<T> Get<T>(int? version = null) where T : class
+        {
+            if (!TryGet(typeof(T), out IDatabaseIntegrityDescriptor descriptor))
+            {
+                throw new InvalidOperationException($"No database integrity descriptor is registered for {typeof(T).FullName}.");
+            }
+
+            return (IDatabaseIntegrityDescriptor<T>)(version.HasValue ? descriptor.ForVersion(version.Value) : descriptor);
+        }
+
+        public bool TryGet(Type entityType, int version, out IDatabaseIntegrityDescriptor descriptor)
+        {
+            if (TryGet(entityType, out descriptor) && descriptor.SupportedVersions.Contains(version))
+            {
+                descriptor = descriptor.ForVersion(version);
+                return true;
+            }
+
+            descriptor = null!;
+            return false;
+        }
 
         public bool TryGet(Type entityType, out IDatabaseIntegrityDescriptor descriptor)
         {

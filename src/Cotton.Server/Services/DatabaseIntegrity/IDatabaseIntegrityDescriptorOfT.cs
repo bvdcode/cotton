@@ -11,6 +11,6 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         /// <summary>
         /// Writes the security-sensitive domain fields for the entity in deterministic order.
         /// </summary>
-        void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, T entity);
+        void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, T entity, int version);
     }
 }

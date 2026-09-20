@@ -108,6 +108,7 @@ export interface FileOperations {
  * Pagination props for list views with server-side pagination
  */
 export interface PaginationProps {
+  model?: { page: number; pageSize: number };
   /**
    * Total number of items across all pages
    */

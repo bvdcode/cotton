@@ -7,16 +7,18 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
 {
     public class NodeIntegrityDescriptor : DatabaseIntegrityDescriptor<Node>
     {
+        public const int LatestVersion = 1;
+
         public override string EntityName => "nodes";
 
-        public override int SchemaVersion => 1;
+        public override int SchemaVersion => LatestVersion;
 
         public override string GetEntityKey(Node entity)
         {
             return entity.Id.ToString("D");
         }
 
-        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, Node entity)
+        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, Node entity, int version)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);
             writer.WriteGuidField(nameof(entity.OwnerId), entity.OwnerId);

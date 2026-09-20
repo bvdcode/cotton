@@ -6,16 +6,22 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.IO.Compression;
 
+using Cotton.ContentTypes;
+
 namespace Cotton.Previews
 {
     public class AndroidPackagePreviewGenerator : IPreviewGenerator
     {
+        public string Id => "android-package";
+
         private const long MaxManifestBytes = 8L * 1024 * 1024;
         private const long MaxNonSeekablePackageBytes = 192L * 1024 * 1024;
         private const long MaxResourceTableBytes = 32L * 1024 * 1024;
         private const int MaxNestedDepth = 1;
 
         public int Version => 5;
+
+        public int Priority => 0;
 
         public IEnumerable<string> SupportedContentTypes => AndroidPackageContentTypes.All;
 

@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Slim zoeken",
+      "enable": "Slim zoeken inschakelen",
+      "disable": "Slim zoeken uitschakelen",
+      "error": "Slim zoeken is niet beschikbaar. Probeer het later opnieuw of schakel het uit om op naam te zoeken."
+    },
     "title": "Zoeken",
     "searchPlaceholder": "Zoek in bestanden en mappen...",
     "error": "Zoeken mislukt. Probeer het opnieuw.",
@@ -1432,6 +1438,10 @@
         "title": "Bestandsgegevens ontbreken in opslag",
         "content": "Een opslagconsistentiecontrole heeft gedetecteerd dat gegevens voor je bestand '{{fileName}}' ontbreken in de onderliggende opslag. Controleer de integriteit van de opslag en upload dit bestand opnieuw."
       },
+      "upgradePreparationCompleted": {
+        "title": "Voorbereiding voor de upgrade naar Cotton {{targetVersion}} voltooid",
+        "content": "De achtergrondtaak {{jobName}} is succesvol voltooid. Deze voorbereidingsstap voor Cotton {{targetVersion}} is afgerond. Controleer vóór de upgrade welke stappen nog nodig zijn in het vereiste upgradepad."
+      },
       "appUpdateAvailable": {
         "title": "Cotton-serverupdate beschikbaar",
         "content": "Huidige serverversie: {{currentVersion}}\nBeschikbare serverversie: {{latestVersion}}\n\nRelease-opmerkingen:\n{{releaseNotes}}\n\nVolledige release: {{releaseUrl}}"
@@ -2217,6 +2227,16 @@
           "cloud": "Cotton Bridge kan AI-berekeningen uitvoeren voor deze instantie. Vereist internetverbinding en kan limieten hebben."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Externe runner",
+        "subtitle": "Voer het adres van de rekendienst in.",
+        "fields": {
+          "url": "Runner-URL"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Tijdzone",
         "subtitle": "Selecteer uw tijdzone om 's nachts niet gestoord te worden door meldingen of schijfgeluiden. Dit geldt alleen voor serverroutines; de webinterface toont tijden altijd in uw lokale tijdzone."
@@ -2797,8 +2817,78 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "progress": "Bestanden met vectoren: {{indexed}} van {{total}}",
+      "indexingProgress": "Voortgang van bestandsindexering",
+      "indexingDisabled": "Schakel de indexering van bestandsinhoud in om slim zoeken te gebruiken.",
+      "computation": {
+        "checkSettings": "Controleer de verbinding met de rekenservice bij"
+      },
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
+      "title": "Slim zoeken",
+      "enabled": "Ingeschakeld",
+      "vectorCount": "Vectoren",
+      "loading": "Database controleren…",
+      "actions": {
+        "refresh": "Vernieuwen",
+        "enable": "Database voorbereiden",
+        "copy": "Kopiëren",
+        "copied": "Gekopieerd",
+        "checkInstallation": "Installatie controleren",
+        "checkAgain": "Opnieuw controleren"
+      },
+      "errors": {
+        "loadFailed": "De database kon niet worden gecontroleerd.",
+        "enableFailed": "De database kon niet worden voorbereid.",
+        "copyFailed": "De opdracht kon niet worden gekopieerd."
+      },
+      "steps": {
+        "install": "pgvector installeren",
+        "enable": "In database inschakelen"
+      },
+      "installation": {
+        "missing": "pgvector is niet geïnstalleerd op de PostgreSQL-server.",
+        "where": "Waar draait PostgreSQL?",
+        "docker": "Docker",
+        "native": "Op een server",
+        "image": "Huidige PostgreSQL-image",
+        "replace": "Vervang de image-regel in docker-compose.yml:",
+        "imageAbout": "Uitgegeven door de ontwikkelaars van pgvector, gebaseerd op de officiële PostgreSQL-image.",
+        "dockerApply": "Maak eerst een databaseback-up. Maak de container opnieuw aan en behoud het gegevensvolume en de instellingen.",
+        "imageMismatch": "Deze database gebruikt PostgreSQL {{version}}. Behoud dezelfde hoofdversie.",
+        "imageUnsupported": "Alpine en aangepaste images vereisen een afzonderlijk migratieplan; vervang ze niet rechtstreeks.",
+        "imageUnknown": "Voer een officiële postgres-image met een numerieke versie in, bijvoorbeeld {{image}}.",
+        "variant": "Debian-variant van de huidige image",
+        "os": "Besturingssysteem",
+        "macVersion": "Homebrew-pakketten ondersteunen PostgreSQL 17 en 18.",
+        "windowsNote": "Open de x64 Native Tools Command Prompt van Visual Studio als administrator.",
+        "docs": "Installatiehandleiding voor pgvector",
+        "repository": "PostgreSQL-pakketbron instellen",
+        "versionUnsupported": "Er is geen gecontroleerde installatieprocedure voor PostgreSQL {{version}}. Raadpleeg de pgvector-handleiding.",
+        "variantHint": "Gebruik de Debian-variant uit de image-tag of van de Docker Hub-pagina.",
+        "windowsPath": "PostgreSQL-installatiemap"
+      },
+      "activation": {
+        "manual": "Handmatig inschakelen",
+        "permissionDenied": "Cotton heeft geen toestemming om pgvector in te schakelen.",
+        "sqlInstruction": "Open de SQL-console van database ‘{{database}}’ als PostgreSQL-beheerder en voer uit:",
+        "privileges": "Voor de installatie van pgvector is SUPERUSER nodig. Alleen GRANT CREATE is niet voldoende."
+      },
+      "index": {
+        "title": "Index",
+        "ready": "Gereed",
+        "missing": "Niet gereed",
+        "building": "Wordt aangemaakt",
+        "permissionDenied": "Voer de opdracht in database “{{database}}” uit als eigenaar van file_embeddings. Deze rol heeft ook CREATE op schema public nodig.",
+        "incompatible": "De naam van de zoekindex wordt door een andere index gebruikt. Controleer de definitie in PostgreSQL.",
+        "invalidData": "Vectoren van versie 1 moeten 1024 eindige getallen bevatten. Corrigeer de gegevens en probeer het opnieuw.",
+        "failed": "De index kon niet worden aangemaakt. Controleer het serverlogboek en probeer het opnieuw."
+      }
+    },
     "title": "Beheer",
     "menu": {
+      "smartSearch": "Slim zoeken",
       "navigate": "Sectie",
       "expand": "Navigatie uitklappen",
       "collapse": "Navigatie inklappen",
@@ -2929,14 +3019,16 @@
           "storageSpaceMode": "Opslagruimtemodus",
           "computionMode": "Rekenmodus",
           "geoIpLookupMode": "IP-opzoekmodus",
-          "customGeoIpLookupUrl": "Eigen IP-opzoek-URL"
+          "customGeoIpLookupUrl": "Eigen IP-opzoek-URL",
+          "remoteComputationRunnerUrl": "URL van externe runner"
         },
         "validation": {
           "required": "Dit veld is verplicht.",
           "publicBaseUrlInvalid": "Voer een geldige HTTP- of HTTPS-basis-URL in zonder inloggegevens, query of hash.",
           "publicBaseUrlMismatch": "Het huidige adres is {{current}}, maar gegenereerde openbare links gebruiken {{configured}}. Wees voorzichtig voordat u deze waarde opslaat.",
           "timezoneInvalid": "Kies een geldige IANA-tijdzone uit de lijst.",
-          "customGeoIpLookupUrlInvalid": "Voer een geldige HTTP- of HTTPS-opzoek-URL in."
+          "customGeoIpLookupUrlInvalid": "Voer een geldige HTTP- of HTTPS-opzoek-URL in.",
+          "remoteComputationRunnerUrlInvalid": "Voer een geldige absolute HTTP- of HTTPS-URL in."
         },
         "help": {
           "publicBaseUrl": "Ondanks deze instelling bepaalt Cotton de openbare URL bijna overal automatisch. Stel deze alleen in wanneer de automatische detectie onjuist is.",
@@ -2992,6 +3084,24 @@
           "title": "Installatiewizard openen",
           "description": "Doorloop de installatiewizard voor de eerste keer opnieuw.",
           "button": "Openen"
+        },
+        "remoteRunner": {
+          "statusLoadFailed": "De servicestatus kon niet worden gecontroleerd.",
+          "validateAndSave": "Controleren en opslaan",
+          "connected": "Verbonden · {{model}} · {{dimensions}} dimensies · {{tokens}} tokens",
+          "errors": {
+            "NotConfigured": "De runner-URL is niet ingesteld.",
+            "UnsupportedMode": "Tekstembeddings zijn nog niet beschikbaar in deze rekenmodus.",
+            "InvalidUrl": "Voer een HTTP- of HTTPS-basis-URL in zonder inloggegevens, query of fragment.",
+            "Unreachable": "Kan geen verbinding maken met de runner. Controleer het adres en de beschikbaarheid.",
+            "Timeout": "De runner reageerde niet op tijd. Probeer het opnieuw.",
+            "InvalidResponse": "De runner gaf een ongeldig antwoord.",
+            "NotEmbeddingModel": "Deze server ondersteunt geen tekstembeddings.",
+            "IncompatibleModel": "Het model is niet compatibel met de huidige BGE-M3-zoekindex.",
+            "InvalidDimensions": "De runner moet vectoren met precies 1024 dimensies teruggeven.",
+            "InvalidVectors": "De runner gaf ongeldige embeddingvectoren terug.",
+            "InvalidInput": "Geef niet-lege tekstfragmenten op."
+          }
         }
       },
       "privacy": {

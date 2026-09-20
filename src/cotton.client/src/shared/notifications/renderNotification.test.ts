@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import i18n from "../../i18n";
+import { supportedLanguages } from "../../locales";
 import type { NotificationDto } from "../api/notificationsApi";
 import { renderNotificationText } from "./renderNotification";
 
@@ -21,6 +22,35 @@ afterEach(async () => {
 });
 
 describe("renderNotificationText", () => {
+  it.each(supportedLanguages)(
+    "renders upgrade preparation details in %s",
+    async (language) => {
+      await i18n.changeLanguage(language);
+
+      const result = renderNotificationText(
+        createNotification({
+          "i18n.titleKey": "notifications:server.upgradePreparationCompleted.title",
+          "i18n.contentKey":
+            "notifications:server.upgradePreparationCompleted.content",
+          jobName: "HotfixBackfillContentTypeJob",
+          targetVersion: "0.6",
+        }),
+        i18n.t,
+      );
+
+      expect(
+        i18n.getResource(language, "notifications", "server.upgradePreparationCompleted.title"),
+      ).toBeTruthy();
+      expect(
+        i18n.getResource(language, "notifications", "server.upgradePreparationCompleted.content"),
+      ).toBeTruthy();
+      expect(result.title).toContain("0.6");
+      expect(result.content).toContain("HotfixBackfillContentTypeJob");
+      expect(result.content).toContain("0.6");
+      expect(result.title + result.content).not.toContain("{{");
+    },
+  );
+
   it("uses fallback title and content when metadata has no known template", () => {
     const result = renderNotificationText(createNotification(), i18n.t);
 

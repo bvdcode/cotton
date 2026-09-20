@@ -90,6 +90,9 @@ namespace Cotton.Database.Models
         [Column("compution_mode")]
         public ComputionMode ComputionMode { get; set; }
 
+        [Column("remote_computation_runner_url")]
+        public string? RemoteComputationRunnerUrl { get; set; }
+
         [Column("storage_type")]
         public StorageType StorageType { get; set; }
 

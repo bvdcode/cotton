@@ -89,6 +89,13 @@ export function QuestionForm({
             <TextField
               key={field.key}
               label={field.label}
+              slotProps={{
+                inputLabel: {
+                  sx: {
+                    "&.Mui-focused:not(.Mui-error)": { color: "text.primary" },
+                  },
+                },
+              }}
               placeholder={field.placeholder}
               type={field.type || "text"}
               value={typeof value === "string" ? value : ""}

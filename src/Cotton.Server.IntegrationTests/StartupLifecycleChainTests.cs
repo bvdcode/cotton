@@ -7,6 +7,8 @@ using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Server.Services.Computation;
+using Microsoft.Extensions.DependencyInjection;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -27,13 +29,14 @@ namespace Cotton.Server.IntegrationTests
 {
     [NonParallelizable]
     [FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
-    public class StartupLifecycleChainTests : IntegrationTestBase
+    public partial class StartupLifecycleChainTests : IntegrationTestBase
     {
         private const string PreRestoredMigrationId = "20260427214223_AddCustomGeoIpLookupUrl";
         private const string RestoredMigrationTailId = "20260516005639_DropNodeFilesNameKeyUniqueness";
 
         private TestAppFactory? _factory;
         private HttpClient? _client;
+        private TeiTestHandler _runner = null!;
 
         public StartupLifecycleChainTests()
             : base("cotton_dev_tests_startup_" + Guid.NewGuid().ToString("N"))
@@ -85,7 +88,9 @@ namespace Cotton.Server.IntegrationTests
                 ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
             };
 
-            _factory = new TestAppFactory(overrides);
+            _runner = new TeiTestHandler();
+            _factory = new TestAppFactory(overrides, services =>
+                services.AddHttpClient<TeiClient>().ConfigurePrimaryHttpMessageHandler(() => _runner));
         }
 
         [TearDown]
@@ -194,7 +199,9 @@ namespace Cotton.Server.IntegrationTests
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/allow-global-indexing", true)).EnsureSuccessStatusCode();
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/server-usage", new[] { "Photos", "Documents" })).EnsureSuccessStatusCode();
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/telemetry", true)).EnsureSuccessStatusCode();
-            (await _client!.PatchAsync("/api/v1/server/settings/compution-mode/Local", null)).EnsureSuccessStatusCode();
+            (await _client!.PatchAsJsonAsync(
+                "/api/v1/server/settings/remote-computation-runner-url",
+                "https://runner.example/")).EnsureSuccessStatusCode();
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/timezone", "UTC")).EnsureSuccessStatusCode();
             (await _client!.PatchAsync("/api/v1/server/settings/storage-space-mode/Limited", null)).EnsureSuccessStatusCode();
             (await _client!.PatchAsJsonAsync("/api/v1/server/settings/public-base-url", "https://cotton.example/")).EnsureSuccessStatusCode();
@@ -217,6 +224,8 @@ namespace Cotton.Server.IntegrationTests
 
             JsonElement publicBaseUrl = await GetJsonAsync("/api/v1/server/settings/public-base-url");
             JsonElement serverUsage = await GetJsonAsync("/api/v1/server/settings/server-usage");
+            JsonElement computionMode = await GetJsonAsync("/api/v1/server/settings/compution-mode");
+            JsonElement remoteRunnerUrl = await GetJsonAsync("/api/v1/server/settings/remote-computation-runner-url");
             JsonElement geoIpMode = await GetJsonAsync("/api/v1/server/settings/geoip-lookup-mode");
             JsonElement emailMode = await GetJsonAsync("/api/v1/server/settings/email-mode");
             JsonElement storedEmailConfig = await GetJsonAsync("/api/v1/server/settings/email-config");
@@ -225,6 +234,8 @@ namespace Cotton.Server.IntegrationTests
             {
                 Assert.That(publicBaseUrl.GetProperty("publicBaseUrl").GetString(), Is.EqualTo("https://cotton.example"));
                 Assert.That(serverUsage.GetProperty("serverUsage").EnumerateArray().Select(x => x.GetString()), Does.Contain("Photos"));
+                Assert.That(computionMode.GetProperty("computionMode").GetString(), Is.EqualTo("Remote"));
+                Assert.That(remoteRunnerUrl.GetProperty("remoteComputationRunnerUrl").GetString(), Is.EqualTo("https://runner.example"));
                 Assert.That(geoIpMode.GetProperty("geoIpLookupMode").GetString(), Is.EqualTo("CustomHttp"));
                 Assert.That(emailMode.GetProperty("emailMode").GetString(), Is.EqualTo("Custom"));
                 Assert.That(storedEmailConfig.GetProperty("smtpServer").GetString(), Is.EqualTo("smtp.example.com"));
@@ -279,6 +290,38 @@ namespace Cotton.Server.IntegrationTests
                 "/api/v1/server/settings/compution-mode/Cloud",
                 "Telemetry must be enabled to use Cotton Bridge AI.");
         }
+
+        [Test]
+        public async Task SettingsPatch_Rejects_RemoteComputation_WithoutRunnerUrl()
+        {
+            TokenPairResponseDto login = await LoginAsync();
+            SetBearer(login.AccessToken);
+
+            HttpResponseMessage response = await _client!.PatchAsync(
+                "/api/v1/server/settings/compution-mode/Remote",
+                null);
+
+            await AssertBadRequestProblemDetailsAsync(
+                response,
+                "/api/v1/server/settings/compution-mode/Remote",
+                "Remote computation runner URL must be configured before enabling Remote mode.");
+        }
+
+        [Test]
+        public async Task SettingsPatch_Rejects_InvalidRemoteComputationRunnerUrl()
+        {
+            TokenPairResponseDto login = await LoginAsync();
+            SetBearer(login.AccessToken);
+
+            HttpResponseMessage response = await _client!.PatchAsJsonAsync(
+                "/api/v1/server/settings/remote-computation-runner-url",
+                "runner.example");
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.UnprocessableEntity));
+            JsonElement problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("InvalidUrl"));
+        }
+
 
         [Test]
         public async Task SettingsPatch_Rejects_CustomEmail_WithoutEmailConfig()

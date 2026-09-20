@@ -204,8 +204,6 @@ namespace Cotton.Server.Handlers.Files
 
             return await _fileManifestService.CreateNewFileManifestAsync(
                 chunks,
-                request.Name,
-                request.ContentType,
                 proposedHash,
                 request.UserId,
                 request.Validate,
@@ -260,6 +258,7 @@ namespace Cotton.Server.Handlers.Files
                 Metadata = CopyMetadata(request.Metadata),
             };
             newNodeFile.SetName(request.Name);
+            fileManifest.ResetFailedPreview();
 
             await _dbContext.NodeFiles.AddAsync(newNodeFile, ct);
             if (!request.OriginalNodeFileId.HasValue)

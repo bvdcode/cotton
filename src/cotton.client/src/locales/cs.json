@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Chytré vyhledávání",
+      "enable": "Zapnout chytré vyhledávání",
+      "disable": "Vypnout chytré vyhledávání",
+      "error": "Chytré vyhledávání není dostupné. Zkuste to později nebo je vypněte a vyhledávejte podle názvu."
+    },
     "title": "Hledání",
     "searchPlaceholder": "Hledat soubory a složky...",
     "error": "Hledání selhalo. Zkuste to prosím znovu.",
@@ -1432,6 +1438,10 @@
         "title": "Data souboru v úložišti chybí",
         "content": "Kontrola konzistence úložiště zjistila, že data souboru '{{fileName}}' v podkladovém úložišti chybí. Ověřte integritu úložiště a nahrajte soubor znovu."
       },
+      "upgradePreparationCompleted": {
+        "title": "Příprava na aktualizaci Cotton {{targetVersion}} dokončena",
+        "content": "Úloha na pozadí {{jobName}} byla úspěšně dokončena. Tento krok přípravy na Cotton {{targetVersion}} je hotový. Před aktualizací zkontrolujte zbývající požadavky v tabulce postupů aktualizace."
+      },
       "appUpdateAvailable": {
         "title": "Je dostupná aktualizace serveru Cotton",
         "content": "Aktuální verze serveru: {{currentVersion}}\nDostupná verze serveru: {{latestVersion}}\n\nPoznámky k vydání:\n{{releaseNotes}}\n\nCelé vydání: {{releaseUrl}}"
@@ -2217,6 +2227,16 @@
           "cloud": "Cotton Bridge může spouštět AI výpočty pro tuto instanci. Vyžaduje připojení k internetu a může mít limity."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Vzdálený runner",
+        "subtitle": "Zadejte adresu výpočetní služby.",
+        "fields": {
+          "url": "URL runneru"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Časové pásmo",
         "subtitle": "Vyberte své časové pásmo, abyste nebyli v noci rušeni oznámeními a hlukem disků. Toto se týká pouze serverových úloh; webové rozhraní bude vždy zobrazovat časy ve vašem místním pásmu."
@@ -2837,8 +2857,78 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "progress": "Soubory s vektory: {{indexed}} z {{total}}",
+      "indexingProgress": "Průběh indexování souborů",
+      "indexingDisabled": "Aby chytré vyhledávání fungovalo, zapněte indexování obsahu souborů.",
+      "computation": {
+        "checkSettings": "Zkontrolujte připojení k výpočetní službě v sekci"
+      },
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
+      "title": "Chytré vyhledávání",
+      "enabled": "Zapnuto",
+      "vectorCount": "Vektory",
+      "loading": "Kontrola databáze…",
+      "actions": {
+        "refresh": "Obnovit",
+        "enable": "Připravit databázi",
+        "copy": "Kopírovat",
+        "copied": "Zkopírováno",
+        "checkInstallation": "Ověřit instalaci",
+        "checkAgain": "Ověřit znovu"
+      },
+      "errors": {
+        "loadFailed": "Databázi se nepodařilo zkontrolovat.",
+        "enableFailed": "Databázi se nepodařilo připravit.",
+        "copyFailed": "Příkaz se nepodařilo zkopírovat."
+      },
+      "steps": {
+        "install": "Nainstalovat pgvector",
+        "enable": "Zapnout v databázi"
+      },
+      "installation": {
+        "missing": "Na serveru PostgreSQL není nainstalován pgvector.",
+        "where": "Kde běží PostgreSQL?",
+        "docker": "Docker",
+        "native": "Na serveru",
+        "image": "Aktuální obraz PostgreSQL",
+        "replace": "Nahraďte řádek image v docker-compose.yml:",
+        "imageAbout": "Vydáno vývojáři pgvector, založeno na oficiálním obrazu PostgreSQL.",
+        "dockerApply": "Nejprve zálohujte databázi. Znovu vytvořte kontejner a zachovejte datový svazek i nastavení.",
+        "imageMismatch": "Tato databáze používá PostgreSQL {{version}}. Zachovejte stejnou hlavní verzi.",
+        "imageUnsupported": "Alpine a vlastní obrazy vyžadují samostatný plán migrace; nenahrazujte je přímo.",
+        "imageUnknown": "Zadejte oficiální obraz postgres s číselnou verzí, například {{image}}.",
+        "variant": "Varianta Debian v aktuálním obrazu",
+        "os": "Operační systém",
+        "macVersion": "Balíčky Homebrew podporují PostgreSQL 17 a 18.",
+        "windowsNote": "Otevřete x64 Native Tools Command Prompt z Visual Studia jako správce.",
+        "docs": "Návod k instalaci pgvector",
+        "repository": "Nastavit repozitář balíčků PostgreSQL",
+        "versionUnsupported": "Pro PostgreSQL {{version}} není k dispozici ověřený postup. Podívejte se do návodu pgvector.",
+        "variantHint": "Použijte variantu Debian uvedenou v tagu obrazu nebo na jeho stránce Docker Hub.",
+        "windowsPath": "Instalační složka PostgreSQL"
+      },
+      "activation": {
+        "manual": "Zapnout ručně",
+        "permissionDenied": "Cotton nemá oprávnění zapnout pgvector.",
+        "sqlInstruction": "Otevřete SQL konzoli databáze „{{database}}“ jako správce PostgreSQL a spusťte:",
+        "privileges": "Instalace pgvector vyžaduje SUPERUSER. Samotné GRANT CREATE nestačí."
+      },
+      "index": {
+        "title": "Index",
+        "ready": "Připraven",
+        "missing": "Nepřipraven",
+        "building": "Vytváří se",
+        "permissionDenied": "Spusťte příkaz v databázi „{{database}}“ jako vlastník tabulky file_embeddings. Tato role potřebuje také oprávnění CREATE ve schématu public.",
+        "incompatible": "Název vyhledávacího indexu používá jiný index. Zkontrolujte jeho definici v PostgreSQL.",
+        "invalidData": "Vektory verze 1 musí obsahovat 1024 konečných čísel. Opravte data a zkuste to znovu.",
+        "failed": "Index se nepodařilo vytvořit. Zkontrolujte protokol serveru a zkuste to znovu."
+      }
+    },
     "title": "Správa",
     "menu": {
+      "smartSearch": "Chytré vyhledávání",
       "navigate": "Sekce",
       "expand": "Rozbalit navigaci",
       "collapse": "Sbalit navigaci",
@@ -2969,14 +3059,16 @@
           "storageSpaceMode": "Režim prostoru úložiště",
           "computionMode": "Režim výpočtů",
           "geoIpLookupMode": "Režim překladu IP",
-          "customGeoIpLookupUrl": "URL vlastního překladu IP"
+          "customGeoIpLookupUrl": "URL vlastního překladu IP",
+          "remoteComputationRunnerUrl": "URL vzdáleného runneru"
         },
         "validation": {
           "required": "Toto pole je povinné.",
           "publicBaseUrlInvalid": "Zadejte platnou základní URL HTTP nebo HTTPS bez přihlašovacích údajů, dotazu nebo hashe.",
           "publicBaseUrlMismatch": "Aktuální adresa je {{current}}, ale generované veřejné odkazy budou používat {{configured}}. Před uložením této hodnoty buďte opatrní.",
           "timezoneInvalid": "Vyberte ze seznamu platné časové pásmo IANA.",
-          "customGeoIpLookupUrlInvalid": "Zadejte platnou URL HTTP nebo HTTPS pro vyhledávání."
+          "customGeoIpLookupUrlInvalid": "Zadejte platnou URL HTTP nebo HTTPS pro vyhledávání.",
+          "remoteComputationRunnerUrlInvalid": "Zadejte platnou absolutní adresu HTTP nebo HTTPS."
         },
         "help": {
           "publicBaseUrl": "I přes toto nastavení Cotton téměř všude určuje veřejnou URL automaticky. Nastavte ji jen tehdy, když je automatická detekce nesprávná.",
@@ -3032,6 +3124,24 @@
           "title": "Otevřít průvodce nastavením",
           "description": "Projděte si znovu úvodního průvodce nastavením.",
           "button": "Otevřít"
+        },
+        "remoteRunner": {
+          "statusLoadFailed": "Nepodařilo se zjistit stav služby.",
+          "validateAndSave": "Ověřit a uložit",
+          "connected": "Připojeno · {{model}} · {{dimensions}} rozměrů · {{tokens}} tokenů",
+          "errors": {
+            "NotConfigured": "Adresa runneru není nastavena.",
+            "UnsupportedMode": "Textové embeddingy zatím nejsou v tomto režimu dostupné.",
+            "InvalidUrl": "Zadejte základní adresu HTTP nebo HTTPS bez přihlašovacích údajů, parametrů a fragmentu.",
+            "Unreachable": "Nelze se připojit k runneru. Zkontrolujte adresu a dostupnost.",
+            "Timeout": "Runner neodpověděl včas. Zkuste to znovu.",
+            "InvalidResponse": "Runner vrátil neplatnou odpověď.",
+            "NotEmbeddingModel": "Tento server nepodporuje textové embeddingy.",
+            "IncompatibleModel": "Model není kompatibilní s aktuálním indexem vyhledávání BGE-M3.",
+            "InvalidDimensions": "Runner musí vracet vektory s přesně 1024 rozměry.",
+            "InvalidVectors": "Runner vrátil neplatné vektory embeddingů.",
+            "InvalidInput": "Zadejte neprázdné textové úseky."
+          }
         }
       },
       "privacy": {

@@ -9,6 +9,7 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Services;
+using Cotton.Server.Extensions;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
@@ -363,10 +364,12 @@ namespace Cotton.Server.Handlers.WebDav
             if (sourceResult.NodeFile is not null)
             {
                 NodeFile nodeFile = await _dbContext.NodeFiles
+                    .Include(file => file.FileManifest)
                     .FirstAsync(f => f.Id == sourceResult.NodeFile.Id, ct);
 
                 nodeFile.NodeId = destParentResult.ParentNode!.Id;
                 nodeFile.SetName(destParentResult.ResourceName!);
+                nodeFile.FileManifest.ResetFailedPreview();
                 _syncChanges.StageFileChange(
                     SyncChangeKind.FileMoved,
                     nodeFile,

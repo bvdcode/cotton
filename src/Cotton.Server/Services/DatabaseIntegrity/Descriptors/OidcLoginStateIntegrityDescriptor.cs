@@ -7,16 +7,18 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
 {
     public class OidcLoginStateIntegrityDescriptor : DatabaseIntegrityDescriptor<OidcLoginState>
     {
+        public const int LatestVersion = 1;
+
         public override string EntityName => "oidc_login_states";
 
-        public override int SchemaVersion => 1;
+        public override int SchemaVersion => LatestVersion;
 
         public override string GetEntityKey(OidcLoginState entity)
         {
             return entity.Id.ToString("D");
         }
 
-        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, OidcLoginState entity)
+        public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, OidcLoginState entity, int version)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);
             writer.WriteGuidField(nameof(entity.ProviderId), entity.ProviderId);

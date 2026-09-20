@@ -60,11 +60,12 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(manifest.SmallFilePreviewHash, Is.Null);
                 Assert.That(manifest.SmallFilePreviewHashEncrypted, Is.Null);
                 Assert.That(manifest.LargeFilePreviewHash, Is.Null);
-                Assert.That(manifest.PreviewGenerationError, Is.Null);
+                Assert.That(manifest.PreviewGenerationError, Is.Not.Null);
             });
 
             NodeFileManifestDto listedFile = await GetNodeFileAsync(root.Id, "raw.bin");
             Assert.That(listedFile.PreviewHashEncryptedHex, Is.Null);
+            Assert.That(await GetPendingPreviewIdsAsync(), Does.Not.Contain(createdFile.FileManifestId));
         }
 
         [Test]

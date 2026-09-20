@@ -9,7 +9,11 @@ namespace Cotton.Previews
 {
     public class SvgPreviewGenerator : IPreviewGenerator
     {
+        public string Id => "svg";
+
         public int Version => 1;
+
+        public int Priority => 0;
 
         public IEnumerable<string> SupportedContentTypes =>
         [

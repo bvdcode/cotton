@@ -23,6 +23,21 @@ namespace Cotton.Server.Services.DatabaseIntegrity
 
         public abstract int SchemaVersion { get; }
 
+        public virtual IReadOnlyCollection<int> SupportedVersions => [SchemaVersion];
+
+        public virtual IDatabaseIntegrityDescriptor Latest => this;
+
+        public virtual IDatabaseIntegrityDescriptor ForVersion(int version)
+        {
+            if (!SupportedVersions.Contains(version))
+            {
+                throw new ArgumentOutOfRangeException(nameof(version), version,
+                    $"Unsupported database integrity version for {EntityName}.");
+            }
+
+            return version == SchemaVersion ? this : new VersionedDatabaseIntegrityDescriptor<T>(this, version);
+        }
+
         public abstract string GetEntityKey(T entity);
 
         public string GetEntityKey(object entity)
@@ -36,7 +51,7 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             return DatabaseIntegrityCanonicalWriter.Build(writer =>
             {
                 writer.WriteEntityHeader(EntityName, SchemaVersion, GetEntityKey(typedEntity));
-                WriteCanonicalData(writer, typedEntity);
+                WriteCanonicalData(writer, typedEntity, SchemaVersion);
             });
         }
 
@@ -45,16 +60,17 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(dbContext);
+            int[] supportedVersions = [.. SupportedVersions];
 
             return dbContext.Set<T>()
                 .CountAsync(entity => EF.Property<byte[]?>(entity, DatabaseIntegrityColumns.MacProperty) == null
-                    || EF.Property<int?>(
+                    || !supportedVersions.Contains(EF.Property<int?>(
                         entity,
-                        DatabaseIntegrityColumns.VersionProperty) != SchemaVersion,
+                        DatabaseIntegrityColumns.VersionProperty).GetValueOrDefault()),
                     cancellationToken);
         }
 
-        public abstract void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, T entity);
+        public abstract void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, T entity, int version);
 
         private static T Cast(object entity)
         {

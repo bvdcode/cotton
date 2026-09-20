@@ -4,11 +4,17 @@ Previews and media playback are derived views of stored file content. Failure to
 
 ## Preview generation
 
-The recurring preview job selects eligible manifests that do not have a current preview result. It skips active uploads, opens the file through the normal storage pipeline, chooses a generator by content type, and stores the resulting WebP bytes as content-addressed data.
+The recurring preview job selects eligible manifests that do not have a current preview result. It skips empty files and active uploads, opens the file through the normal storage pipeline, chooses a generator by content type, and stores the resulting WebP bytes as content-addressed data. A maintenance job clears previously stored preview data for the empty-content manifest using its indexed content hash.
 
 Supported generator families include images, HEIC, documents, text, audio, video, and selected 3D formats. Generator availability depends on the runtime libraries and external binaries present in the deployment.
 
-Preview metadata is written only after the derived object exists. Re-running generation is idempotent because identical output has the same storage hash. A generator-version change may make an older result eligible for regeneration without changing the source file.
+Files named as HEIC or HEIF are checked for JPEG, PNG, GIF, BMP, WebP and TIFF signatures in memory. A matching signature uses the ordinary image generator; other inputs use the HEIF decoder.
+
+Video previews use embedded cover art when available. Otherwise, clips up to one second use the first frame; longer clips use a frame from the middle.
+
+Preview metadata is written only after the derived object exists. Each new successful result records the stable identifier and version of the generator that produced it. Only changes to that generator's version make the result eligible for automatic regeneration. Existing cached previews without a recorded generator remain available and are excluded from version-based regeneration; their generator is not inferred from current filenames.
+
+Failed attempts use a fingerprint of the registered generators to retry after the available processing capabilities change. A failed refresh preserves the previous cached image and does not retry on every job run. Re-running generation is idempotent because identical output has the same storage hash.
 
 ## Failure classification
 

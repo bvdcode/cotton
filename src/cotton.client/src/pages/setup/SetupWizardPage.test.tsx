@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SetupWizardPage } from "./SetupWizardPage";
 
 const testState = vi.hoisted(() => ({
+  stepKey: "telemetry",
   setupInitialized: false as boolean | null,
   getTelemetry: vi.fn(),
   saveSetupStep: vi.fn(),
@@ -26,7 +27,8 @@ vi.mock("../../features/auth/useAuth", () => ({
   }),
 }));
 
-vi.mock("../../shared/api/httpClient", () => ({
+vi.mock("../../shared/api/httpClient", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../shared/api/httpClient")>()),
   showApiErrorToast: vi.fn(),
 }));
 
@@ -66,15 +68,16 @@ vi.mock("./components", () => ({
 vi.mock("./useSetupSteps.tsx", () => ({
   useSetupSteps: () => [
     {
-      key: "telemetry",
+      key: testState.stepKey,
       render: () => <div>telemetry step</div>,
-      isValid: () => false,
+      isValid: () => testState.stepKey === "remoteComputationRunnerUrl",
     },
   ],
 }));
 
 describe("SetupWizardPage", () => {
   beforeEach(() => {
+    testState.stepKey = "telemetry";
     testState.setupInitialized = false;
     testState.getTelemetry.mockReset();
     testState.getTelemetry.mockResolvedValue(false);
@@ -104,5 +107,30 @@ describe("SetupWizardPage", () => {
     await waitFor(() =>
       expect(testState.getTelemetry).toHaveBeenCalledTimes(1),
     );
+  });
+
+  it("stays on runner setup when server validation rejects the URL", async () => {
+    testState.stepKey = "remoteComputationRunnerUrl";
+    testState.saveSetupStep.mockRejectedValueOnce(
+      Object.assign(new Error("invalid"), {
+        isAxiosError: true,
+        response: { data: { code: "InvalidDimensions" } },
+      }),
+    );
+    render(<SetupWizardPage />);
+    fireEvent.click(screen.getByRole("button", { name: "actions.start" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "admin:settings.general.remoteRunner.validateAndSave",
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        "admin:settings.general.remoteRunner.errors.InvalidDimensions",
+      ),
+    ).toBeInTheDocument();
+    expect(testState.navigate).not.toHaveBeenCalled();
+    expect(testState.fetchSetupStatus).not.toHaveBeenCalled();
   });
 });

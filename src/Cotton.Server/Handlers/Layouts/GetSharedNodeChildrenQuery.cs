@@ -135,7 +135,7 @@ namespace Cotton.Server.Handlers.Layouts
                 UpdatedAt = x.UpdatedAt,
                 NodeId = x.NodeId,
                 Name = x.Name,
-                ContentType = x.FileManifest.ContentType,
+                ContentType = x.ContentType,
                 SizeBytes = x.FileManifest.SizeBytes,
                 PreviewHashEncryptedHex = x.FileManifest.GetPreviewHashEncryptedHex(),
             })];

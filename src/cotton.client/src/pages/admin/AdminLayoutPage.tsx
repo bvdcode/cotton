@@ -1,6 +1,7 @@
 import BackupIcon from "@mui/icons-material/Backup";
 import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
 import LoginIcon from "@mui/icons-material/Login";
+import ManageSearchIcon from "@mui/icons-material/ManageSearch";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import PersonIcon from "@mui/icons-material/Person";
 import PolicyIcon from "@mui/icons-material/Policy";
@@ -9,6 +10,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import StorageIcon from "@mui/icons-material/Storage";
 import { Box, useMediaQuery } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
+import { ADMIN_GENERAL_SETTINGS_ROUTE } from "@shared/config/adminRoutes";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -79,6 +81,12 @@ export const AdminLayoutPage = () => {
           title: t("menu.storageStatistics"),
           icon: QueryStatsIcon,
         },
+        {
+          id: "smartSearch",
+          to: "/admin/smart-search",
+          title: t("menu.smartSearch"),
+          icon: ManageSearchIcon,
+        },
       ],
     },
     {
@@ -105,7 +113,7 @@ export const AdminLayoutPage = () => {
       items: [
         {
           id: "generalSettings",
-          to: "/admin/general-settings",
+          to: ADMIN_GENERAL_SETTINGS_ROUTE,
           title: t("menu.generalSettings"),
           icon: SettingsIcon,
         },

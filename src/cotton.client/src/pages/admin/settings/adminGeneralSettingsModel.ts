@@ -197,6 +197,45 @@ export const validateCustomGeoIpLookupUrl = (
   return { error: null, normalized: trimmed };
 };
 
+export const validateRemoteComputationRunnerUrl = (
+  value: string,
+  required: boolean,
+  requiredMessage: string,
+  invalidMessage: string,
+): TextUrlValidation => {
+  const trimmed = value.trim();
+  if (!required) {
+    return { error: null, normalized: trimmed };
+  }
+
+  if (!trimmed) {
+    return { error: requiredMessage, normalized: null };
+  }
+
+  try {
+    const url = new URL(trimmed);
+    if (
+      !isHttpUrl(url) ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    ) {
+      return {
+        error: invalidMessage,
+        normalized: null,
+      };
+    }
+  } catch {
+    return {
+      error: invalidMessage,
+      normalized: null,
+    };
+  }
+
+  return { error: null, normalized: trimmed.replace(/\/+$/, "") };
+};
+
 export const isSameArray = <T>(
   left: readonly T[],
   right: readonly T[],

@@ -65,7 +65,7 @@ namespace Cotton.Server.Handlers.WebDav
                 Found: true,
                 IsCollection: false,
                 Content: stream,
-                ContentType: manifest.ContentType,
+                ContentType: nodeFile.ContentType,
                 ContentLength: manifest.SizeBytes,
                 FileName: nodeFile.Name,
                 LastModified: nodeFile.UpdatedAt,

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Previews;
 using Microsoft.AspNetCore.StaticFiles;
 
-namespace Cotton.Server.Services
+namespace Cotton.ContentTypes
 {
     public static class FileContentTypeResolver
     {
@@ -29,6 +28,7 @@ namespace Cotton.Server.Services
                 [".opus"] = Override("audio/opus"),
                 [".flac"] = Override("audio/flac"),
                 [".oga"] = Override("audio/ogg"),
+                [".ogg"] = Override("audio/ogg"),
                 [".weba"] = Override("audio/webm"),
                 [".aac"] = Override("audio/aac"),
                 [".m4b"] = Override("audio/mp4"),
@@ -38,6 +38,8 @@ namespace Cotton.Server.Services
                 [".markdown"] = Override("text/markdown"),
                 [".cs"] = Override("text/plain"),
                 [".csx"] = Override("text/plain"),
+                [".ts"] = Override("text/plain"),
+                [".tsx"] = Override("text/plain"),
                 [".lrc"] = Override("text/plain"),
                 [".srt"] = Override("text/plain"),
                 [".svg"] = Override("image/svg+xml"),
@@ -65,14 +67,26 @@ namespace Cotton.Server.Services
             ".yaml", ".yml", ".toml", ".ini", ".conf", ".cfg", ".sql", ".vue", ".svelte",
         };
 
+        public static string ResolveFromFileName(string? fileName)
+        {
+            string? contentType = ResolveOverride(fileName, string.Empty)
+                ?? ResolveExtension(fileName);
+            if ((contentType is null || contentType == DefaultContentType)
+                && IsSourceTextFileName(fileName))
+            {
+                return "text/plain";
+            }
+
+            return contentType ?? DefaultContentType;
+        }
+
         public static string Resolve(string? fileName, string? contentType)
         {
             string normalizedContentType = Normalize(contentType);
             return ResolveOverride(fileName, normalizedContentType)
-                ?? ResolveProvided(fileName, normalizedContentType)
-                ?? ResolveDetected(fileName)
-                ?? (IsSourceTextFileName(fileName) ? "text/plain" : null)
-                ?? (string.IsNullOrWhiteSpace(normalizedContentType) ? DefaultContentType : normalizedContentType);
+                ?? (string.IsNullOrWhiteSpace(normalizedContentType) || normalizedContentType == DefaultContentType
+                    ? ResolveFromFileName(fileName)
+                    : normalizedContentType);
         }
 
         public static bool IsSourceTextFileName(string? fileName)
@@ -109,20 +123,7 @@ namespace Cotton.Server.Services
             return null;
         }
 
-        private static string? ResolveProvided(string? fileName, string normalizedContentType)
-        {
-            if (string.IsNullOrWhiteSpace(normalizedContentType)
-                || string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase))
-            {
-                return null;
-            }
-
-            return IsSourceTextFileName(fileName) && ShouldUseSourceTextContentType(normalizedContentType)
-                ? "text/plain"
-                : normalizedContentType;
-        }
-
-        private static string? ResolveDetected(string? fileName)
+        private static string? ResolveExtension(string? fileName)
         {
             if (string.IsNullOrWhiteSpace(fileName)
                 || !FileExtensionContentTypeProvider.TryGetContentType(fileName, out string? detectedContentType)
@@ -131,23 +132,7 @@ namespace Cotton.Server.Services
                 return null;
             }
 
-            string normalizedContentType = Normalize(detectedContentType);
-            return IsSourceTextFileName(fileName) && ShouldUseSourceTextContentType(normalizedContentType)
-                ? "text/plain"
-                : normalizedContentType;
-        }
-
-        private static bool ShouldUseSourceTextContentType(string contentType)
-        {
-            if (string.IsNullOrWhiteSpace(contentType)
-                || string.Equals(contentType, DefaultContentType, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            return PreviewGeneratorProvider.GetGeneratorByContentType(contentType) is null
-                && (contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
-                    || contentType.StartsWith("application/x-", StringComparison.OrdinalIgnoreCase));
+            return Normalize(detectedContentType);
         }
 
         private static string Normalize(string? contentType)

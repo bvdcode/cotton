@@ -55,16 +55,16 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(VideoPlaybackResolver.RequiresTranscoding(contentType, hasPreview), Is.EqualTo(expected));
         }
 
-        [TestCase("video/mp4", true, false)]
-        [TestCase("video/webm", true, false)]
-        [TestCase("video/ogg", true, false)]
-        [TestCase("video/quicktime", true, false)]
-        [TestCase("video/x-msvideo", true, true)]
-        [TestCase("video/x-msvideo", false, false)]
-        [TestCase("video/x-matroska", true, true)]
-        [TestCase("application/pdf", true, false)]
+        [TestCase("sample.mp4", true, false)]
+        [TestCase("sample.webm", true, false)]
+        [TestCase("sample.ogv", true, false)]
+        [TestCase("sample.mov", true, false)]
+        [TestCase("sample.avi", true, true)]
+        [TestCase("sample.avi", false, false)]
+        [TestCase("sample.mkv", true, true)]
+        [TestCase("sample.pdf", true, false)]
         public void MapsterProjection_RequiresVideoTranscoding_AgreesWithResolver(
-            string contentType,
+            string fileName,
             bool hasPreview,
             bool expected)
         {
@@ -74,12 +74,12 @@ namespace Cotton.Server.IntegrationTests
             {
                 FileManifest = new FileManifest
                 {
-                    ContentType = contentType,
+                    ContentType = "application/octet-stream",
                     ProposedContentHash = [4, 5, 6],
                     SmallFilePreviewHash = hasPreview ? [1, 2, 3] : null,
                 },
             };
-            nodeFile.SetName("sample.bin");
+            nodeFile.SetName(fileName);
 
             NodeFileManifestDto dto = nodeFile.Adapt<NodeFileManifestDto>();
 
@@ -87,7 +87,7 @@ namespace Cotton.Server.IntegrationTests
             {
                 Assert.That(dto.RequiresVideoTranscoding, Is.EqualTo(expected));
                 Assert.That(dto.RequiresVideoTranscoding,
-                    Is.EqualTo(VideoPlaybackResolver.RequiresTranscoding(contentType, hasPreview)));
+                    Is.EqualTo(VideoPlaybackResolver.RequiresTranscoding(nodeFile.ContentType, hasPreview)));
             });
         }
     }

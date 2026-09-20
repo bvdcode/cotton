@@ -16,7 +16,11 @@ namespace Cotton.Server.IntegrationTests
             NodeDto root = await GetRootNodeAsync();
             byte[] sourceImage = CreateGradientPngBytes(width: 320, height: 240);
 
+            NodeFileManifestDto original = await UploadAndCreateFileAsync(root.Id, "opaque-name", "application/octet-stream", sourceImage);
             NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, "photo.png", "image/png", sourceImage);
+            Assert.That(createdFile.FileManifestId, Is.EqualTo(original.FileManifestId));
+            await ExecuteExtractFileMetadataJobAsync();
+            Assert.That((await GetFileManifestMetadataStateAsync(createdFile.Id)).Metadata, Does.ContainKey("image.width"));
 
             HttpResponseMessage response = await _client!.PostAsync($"/api/v1/files/{createdFile.Id}/metadata/extract", null);
             response.EnsureSuccessStatusCode();

@@ -5,6 +5,55 @@ namespace Cotton.Previews.Tests
 {
     public class PreviewGeneratorProviderTests
     {
+        [TestCase("image/png", "image")]
+        [TestCase("image/heic", "heic")]
+        [TestCase("image/svg+xml", "svg")]
+        [TestCase("text/plain", "text")]
+        [TestCase("application/pdf", "pdf")]
+        [TestCase("audio/mpeg", "audio")]
+        [TestCase("video/mp4", "video")]
+        [TestCase("application/vnd.android.package-archive", "android-package")]
+        [TestCase("model/stl", "stl")]
+        [TestCase("model/obj", "obj")]
+        [TestCase("model/3mf", "3mf")]
+        public void GeneratorIds_AreStableAcrossContentTypes(string contentType, string expectedId)
+        {
+            IPreviewGenerator generator = PreviewGeneratorProvider.GetGeneratorByContentType(contentType)!;
+            Assert.That(generator.Id, Is.EqualTo(expectedId));
+            Assert.That(PreviewGeneratorProvider.GetGeneratorVersions()[expectedId], Is.EqualTo(generator.Version));
+        }
+
+        [Test]
+        public void GetGeneratorsByContentTypes_DeduplicatesAndOrdersByPriority()
+        {
+            IReadOnlyList<IPreviewGenerator> generators = PreviewGeneratorProvider.GetGeneratorsByContentTypes(
+                ["text/plain", "image/png", "IMAGE/PNG", "image/jpeg", "text/css", "application/octet-stream"]);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(generators, Has.Count.EqualTo(2));
+                Assert.That(generators[0], Is.TypeOf<ImagePreviewGenerator>());
+                Assert.That(generators[1], Is.TypeOf<TextPreviewGenerator>());
+                Assert.That(generators[0].Priority, Is.LessThan(generators[1].Priority));
+            });
+        }
+
+        [Test]
+        public void GetGeneratorsByContentTypes_KeepsDistinctModelFormats()
+        {
+            IReadOnlyList<IPreviewGenerator> generators = PreviewGeneratorProvider.GetGeneratorsByContentTypes(
+                ["model/stl", "model/obj", "model/3mf", "application/sla"]);
+
+            Assert.That(generators, Has.Count.EqualTo(3));
+            Assert.That(generators, Is.Unique);
+        }
+
+        [Test]
+        public void GetGeneratorsByContentTypes_UnknownTypes_HasNoCandidates()
+        {
+            Assert.That(PreviewGeneratorProvider.GetGeneratorsByContentTypes(["application/octet-stream", ""]), Is.Empty);
+        }
+
         [TestCase("text/plain", typeof(TextPreviewGenerator))]
         [TestCase("text/x-csharp", typeof(TextPreviewGenerator))]
         [TestCase("application/pdf", typeof(PdfPreviewGenerator))]

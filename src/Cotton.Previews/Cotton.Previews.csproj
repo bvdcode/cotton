@@ -7,6 +7,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\Cotton.ContentTypes\Cotton.ContentTypes.csproj" />
 		<PackageReference Include="Docnet.Core" Version="2.6.0" />
 		<PackageReference Include="EasyExtensions.Fonts" Version="3.0.81" />
 		<PackageReference Include="LibHeif.Native" Version="1.15.1" />

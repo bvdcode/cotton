@@ -9,7 +9,11 @@ namespace Cotton.Previews
 {
     public class ImagePreviewGenerator : IPreviewGenerator
     {
+        public string Id => "image";
+
         public int Version => 3;
+
+        public int Priority => 0;
 
         public IEnumerable<string> SupportedContentTypes =>
             Configuration.Default.ImageFormats.SelectMany(x => x.MimeTypes);

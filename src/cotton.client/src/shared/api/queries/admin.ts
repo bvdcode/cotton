@@ -13,8 +13,12 @@ import {
   type GcTimelineBucketKind,
   type LatestDatabaseBackupDto,
   type SecurityDiagnosticsDto,
+  type VectorExtensionStatusDto,
 } from "../adminApi";
 import { queryKeys } from "./queryKeys";
+import { settingsApi } from "../settingsApi";
+
+const SMART_SEARCH_REFRESH_INTERVAL = 10_000;
 
 export interface AdminUsersQueryOptions {
   withStorage: boolean;
@@ -101,6 +105,35 @@ export const useSecurityDiagnosticsQuery = () =>
     queryKey: queryKeys.admin.securityDiagnostics(),
     queryFn: ({ signal }) => adminApi.getSecurityDiagnostics(signal),
   });
+
+export const useVectorExtensionStatusQuery = () =>
+  useQuery<VectorExtensionStatusDto>({
+    queryKey: queryKeys.admin.vectorExtensionStatus(),
+    queryFn: ({ signal }) => adminApi.getVectorExtensionStatus(signal),
+    refetchOnMount: "always",
+    refetchInterval: SMART_SEARCH_REFRESH_INTERVAL,
+  });
+
+export const useComputationStatusQuery = () =>
+  useQuery({
+    queryKey: queryKeys.admin.computationStatus(),
+    queryFn: ({ signal }) => settingsApi.getComputationStatus(signal),
+    refetchOnMount: "always",
+    refetchInterval: SMART_SEARCH_REFRESH_INTERVAL,
+    retry: false,
+  });
+
+export const useEnableVectorExtensionMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => adminApi.enableVectorExtension(),
+    onSettled: () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.vectorExtensionStatus(),
+      }),
+  });
+};
 
 export const useCreateAdminUserMutation = () => {
   const queryClient = useQueryClient();

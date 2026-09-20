@@ -13,16 +13,27 @@ namespace Cotton.Previews
 {
     public class TextPreviewGenerator : IPreviewGenerator
     {
+        public string Id => "text";
+
         public int Version => 0;
+
+        public int Priority => 100;
 
         public IEnumerable<string> SupportedContentTypes =>
         [
             "text/plain",
             "text/markdown",
             "text/x-csharp",
+            "text/css",
+            "text/html",
+            "text/javascript",
+            "text/jscript",
+            "text/xml",
+            "text/csv",
             "application/xml",
             "application/json",
             "application/javascript",
+            "application/x-sh",
         ];
 
         private const int MaxCharsToRead = 24_000;

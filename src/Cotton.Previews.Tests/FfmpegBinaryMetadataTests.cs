@@ -126,8 +126,9 @@ namespace Cotton.Previews.Tests
             Assert.That(result, Is.Null);
         }
 
-        [Test]
-        public async Task TerminateProcessAsync_ActiveProcess_KillsProcessTree()
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task PreviewProcess_ActiveProcess_Terminates(bool waitForTimeout)
         {
             await FfmpegBinary.EnsureAvailableAsync();
             ProcessStartInfo startInfo = new()
@@ -162,9 +163,25 @@ namespace Cotton.Previews.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(100));
             Assert.That(process.HasExited, Is.False);
 
-            await FfmpegBinary.TerminateProcessAsync(process);
+            try
+            {
+                if (waitForTimeout)
+                {
+                    bool completed = await PreviewProcess.WaitForExitAsync(
+                        process, TimeSpan.FromMilliseconds(100), CancellationToken.None);
+                    Assert.That(completed, Is.False);
+                }
+                else
+                {
+                    await PreviewProcess.TerminateAsync(process);
+                }
 
-            Assert.That(process.HasExited, Is.True);
+                Assert.That(process.HasExited, Is.True);
+            }
+            finally
+            {
+                await PreviewProcess.TerminateAsync(process);
+            }
         }
 
         private static async Task CreateTaggedAudioAsync(string path)

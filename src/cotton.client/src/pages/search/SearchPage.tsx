@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { Box, Alert, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate } from "react-router-dom";
@@ -42,6 +42,7 @@ export const SearchPage: React.FC = () => {
   const searchState = useLayoutSearch({
     layoutId,
     debounceMs: 200,
+    pageSize: 100,
   });
 
   const {
@@ -54,6 +55,8 @@ export const SearchPage: React.FC = () => {
     setQuery,
     setPage,
     setPageSize,
+    deep,
+    toggleDeep,
   } = searchState;
   const trimmedSearchQuery = query.trim();
   const {
@@ -68,11 +71,6 @@ export const SearchPage: React.FC = () => {
     !results &&
     searchHistoryEntries.length > 0,
   );
-
-  // Reset to the first page when query changes.
-  useEffect(() => {
-    setPage(1);
-  }, [query, setPage]);
 
   const recordActiveSearchHistory = useCallback(() => {
     if (!completedQuery) {
@@ -181,11 +179,13 @@ export const SearchPage: React.FC = () => {
         onChange={setQuery}
         disabled={!layoutId}
         placeholder={t("searchPlaceholder", { ns: "search" })}
+        deep={deep}
+        onToggleDeep={toggleDeep}
       />
 
       {error && (
         <Box mb={2}>
-          <Alert severity="error">{t("error", { ns: "search" })}</Alert>
+          <Alert severity="error">{t(error, { ns: "search" })}</Alert>
         </Box>
       )}
 
@@ -266,6 +266,10 @@ export const SearchPage: React.FC = () => {
               ns: "files",
             })}
             pagination={{
+              model: {
+                page: searchState.page - 1,
+                pageSize: searchState.pageSize,
+              },
               totalCount,
               loading,
               onPaginationModelChange: (model) => {

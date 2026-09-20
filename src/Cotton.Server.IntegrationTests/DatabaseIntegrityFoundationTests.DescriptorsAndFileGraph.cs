@@ -176,9 +176,9 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void FileManifestDescriptor_UsesReleaseSchemaVersion()
+        public void FileManifestDescriptor_UsesLatestSchemaVersion()
         {
-            Assert.That(new FileManifestIntegrityDescriptor().SchemaVersion, Is.EqualTo(1));
+            Assert.That(new FileManifestIntegrityDescriptor().SchemaVersion, Is.EqualTo(FileManifestIntegrityDescriptor.LatestVersion));
         }
 
         [Test]

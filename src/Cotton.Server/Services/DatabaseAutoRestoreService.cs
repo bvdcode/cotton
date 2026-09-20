@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models.Enums;
 using Cotton.Localization;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
 using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.Models.Enums;
@@ -108,8 +109,8 @@ namespace Cotton.Server.Services
         {
             // pg_restore replays dump schema before EF migrations can run, so extension-backed types
             // used by the dump must exist up front.
-            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS citext;", cancellationToken);
-            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS hstore;", cancellationToken);
+            await dbContext.Database.EnsurePostgresExtensionAsync("citext", cancellationToken);
+            await dbContext.Database.EnsurePostgresExtensionAsync("hstore", cancellationToken);
         }
 
         private async Task EnsureConnectionOpenAsync(CancellationToken cancellationToken)

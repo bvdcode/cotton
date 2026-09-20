@@ -45,7 +45,7 @@ namespace Cotton.Server.Handlers.WebDav
                 return new WebDavHeadResult(
                     Found: true,
                     IsCollection: false,
-                    ContentType: manifest.ContentType,
+                    ContentType: resolveResult.NodeFile.ContentType,
                     ContentLength: manifest.SizeBytes,
                     FileName: resolveResult.NodeFile.Name,
                     LastModified: resolveResult.NodeFile.UpdatedAt,

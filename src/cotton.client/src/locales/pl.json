@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Inteligentne wyszukiwanie",
+      "enable": "Włącz inteligentne wyszukiwanie",
+      "disable": "Wyłącz inteligentne wyszukiwanie",
+      "error": "Inteligentne wyszukiwanie jest niedostępne. Spróbuj później lub wyłącz je, aby wyszukiwać po nazwie."
+    },
     "title": "Wyszukiwanie",
     "searchPlaceholder": "Wyszukaj pliki i foldery...",
     "error": "Wyszukiwanie nie powiodło się. Spróbuj ponownie.",
@@ -1435,6 +1441,10 @@
         "title": "Brakuje danych pliku w magazynie",
         "content": "Kontrola spójności magazynu wykryła, że brakuje danych dla pliku '{{fileName}}' w magazynie bazowym. Sprawdź integralność magazynu i prześlij plik ponownie."
       },
+      "upgradePreparationCompleted": {
+        "title": "Przygotowanie do aktualizacji Cotton {{targetVersion}} zakończone",
+        "content": "Zadanie w tle {{jobName}} zakończyło się pomyślnie. Ten etap przygotowania do Cotton {{targetVersion}} jest gotowy. Przed aktualizacją sprawdź pozostałe wymagania w tabeli ścieżek aktualizacji."
+      },
       "appUpdateAvailable": {
         "title": "Dostępna aktualizacja serwera Cotton",
         "content": "Bieżąca wersja serwera: {{currentVersion}}\nDostępna wersja serwera: {{latestVersion}}\n\nInformacje o wydaniu:\n{{releaseNotes}}\n\nPełne wydanie: {{releaseUrl}}"
@@ -2220,6 +2230,16 @@
           "cloud": "Cotton Bridge może wykonywać obliczenia AI dla tej instancji. Wymaga połączenia z internetem i może mieć limity."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Zdalny runner",
+        "subtitle": "Wprowadź adres usługi obliczeniowej.",
+        "fields": {
+          "url": "URL runnera"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Strefa czasowa",
         "subtitle": "Wybierz strefę czasową, aby uniknąć powiadomień i hałasu dysków w nocy. Dotyczy tylko procedur serwerowych — interfejs WWW zawsze będzie pokazywać godziny w lokalnej strefie czasowej."
@@ -2840,8 +2860,78 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "progress": "Pliki z wektorami: {{indexed}} z {{total}}",
+      "indexingProgress": "Postęp indeksowania plików",
+      "indexingDisabled": "Włącz indeksowanie zawartości plików, aby korzystać z inteligentnego wyszukiwania.",
+      "computation": {
+        "checkSettings": "Sprawdź połączenie z usługą obliczeniową w sekcji"
+      },
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
+      "title": "Inteligentne wyszukiwanie",
+      "enabled": "Włączone",
+      "vectorCount": "Wektory",
+      "loading": "Sprawdzanie bazy…",
+      "actions": {
+        "refresh": "Odśwież",
+        "enable": "Przygotuj bazę",
+        "copy": "Kopiuj",
+        "copied": "Skopiowano",
+        "checkInstallation": "Sprawdź instalację",
+        "checkAgain": "Sprawdź ponownie"
+      },
+      "errors": {
+        "loadFailed": "Nie udało się sprawdzić bazy danych.",
+        "enableFailed": "Nie udało się przygotować bazy danych.",
+        "copyFailed": "Nie udało się skopiować polecenia."
+      },
+      "steps": {
+        "install": "Zainstaluj pgvector",
+        "enable": "Włącz w bazie"
+      },
+      "installation": {
+        "missing": "pgvector nie jest zainstalowany na serwerze PostgreSQL.",
+        "where": "Gdzie działa PostgreSQL?",
+        "docker": "Docker",
+        "native": "Na serwerze",
+        "image": "Obecny obraz PostgreSQL",
+        "replace": "Zastąp wiersz image w docker-compose.yml:",
+        "imageAbout": "Opublikowany przez twórców pgvector, oparty na oficjalnym obrazie PostgreSQL.",
+        "dockerApply": "Najpierw wykonaj kopię zapasową bazy. Odtwórz kontener, zachowując wolumin danych i ustawienia.",
+        "imageMismatch": "Ta baza używa PostgreSQL {{version}}. Zachowaj tę samą wersję główną.",
+        "imageUnsupported": "Alpine i obrazy niestandardowe wymagają osobnego planu migracji; nie zastępuj ich bezpośrednio.",
+        "imageUnknown": "Podaj oficjalny obraz postgres z wersją liczbową, np. {{image}}.",
+        "variant": "Wariant Debian obecnego obrazu",
+        "os": "System operacyjny",
+        "macVersion": "Pakiety Homebrew obsługują PostgreSQL 17 i 18.",
+        "windowsNote": "Otwórz x64 Native Tools Command Prompt z Visual Studio jako administrator.",
+        "docs": "Instrukcja instalacji pgvector",
+        "repository": "Skonfiguruj repozytorium pakietów PostgreSQL",
+        "versionUnsupported": "Brak sprawdzonej procedury instalacji dla PostgreSQL {{version}}. Sprawdź instrukcję pgvector.",
+        "variantHint": "Wariant Debian znajdziesz w tagu obrazu lub na jego stronie Docker Hub.",
+        "windowsPath": "Folder instalacji PostgreSQL"
+      },
+      "activation": {
+        "manual": "Włącz ręcznie",
+        "permissionDenied": "Cotton nie ma uprawnień do włączenia pgvector.",
+        "sqlInstruction": "Otwórz konsolę SQL bazy „{{database}}” jako administrator PostgreSQL i wykonaj:",
+        "privileges": "Instalacja pgvector wymaga SUPERUSER. Samo GRANT CREATE nie wystarczy."
+      },
+      "index": {
+        "title": "Indeks",
+        "ready": "Gotowy",
+        "missing": "Niegotowy",
+        "building": "Tworzenie",
+        "permissionDenied": "Wykonaj polecenie w bazie „{{database}}” jako właściciel tabeli file_embeddings. Ta rola wymaga też uprawnienia CREATE w schemacie public.",
+        "incompatible": "Nazwa indeksu wyszukiwania jest używana przez inny indeks. Sprawdź jego definicję w PostgreSQL.",
+        "invalidData": "Wektory wersji 1 muszą zawierać 1024 skończone liczby. Popraw dane i spróbuj ponownie.",
+        "failed": "Nie udało się utworzyć indeksu. Sprawdź dziennik serwera i spróbuj ponownie."
+      }
+    },
     "title": "Administrator",
     "menu": {
+      "smartSearch": "Inteligentne wyszukiwanie",
       "navigate": "Sekcja",
       "expand": "Rozwiń nawigację",
       "collapse": "Zwiń nawigację",
@@ -2972,14 +3062,16 @@
           "storageSpaceMode": "Tryb wykorzystania miejsca",
           "computionMode": "Tryb obliczeń",
           "geoIpLookupMode": "Tryb rozpoznawania IP",
-          "customGeoIpLookupUrl": "Własny URL rozpoznawania IP"
+          "customGeoIpLookupUrl": "Własny URL rozpoznawania IP",
+          "remoteComputationRunnerUrl": "URL zdalnego runnera"
         },
         "validation": {
           "required": "To pole jest wymagane.",
           "publicBaseUrlInvalid": "Wprowadź prawidłowy bazowy URL HTTP lub HTTPS bez danych logowania, parametrów zapytania ani fragmentu.",
           "publicBaseUrlMismatch": "Bieżący adres to {{current}}, ale generowane publiczne linki będą używać {{configured}}. Zachowaj ostrożność przed zapisaniem tej wartości.",
           "timezoneInvalid": "Wybierz prawidłową strefę czasową IANA z listy.",
-          "customGeoIpLookupUrlInvalid": "Wprowadź prawidłowy URL HTTP lub HTTPS."
+          "customGeoIpLookupUrlInvalid": "Wprowadź prawidłowy URL HTTP lub HTTPS.",
+          "remoteComputationRunnerUrlInvalid": "Wprowadź prawidłowy bezwzględny adres HTTP lub HTTPS."
         },
         "help": {
           "publicBaseUrl": "Mimo tego ustawienia Cotton niemal wszędzie automatycznie ustala publiczny URL. Ustaw to tylko wtedy, gdy automatyczne wykrywanie jest nieprawidłowe.",
@@ -3035,6 +3127,24 @@
           "title": "Otwórz kreator konfiguracji",
           "description": "Przejdź ponownie kreator konfiguracji pierwszego uruchomienia.",
           "button": "Otwórz"
+        },
+        "remoteRunner": {
+          "statusLoadFailed": "Nie udało się sprawdzić stanu usługi.",
+          "validateAndSave": "Sprawdź i zapisz",
+          "connected": "Połączono · {{model}} · {{dimensions}} wymiary · {{tokens}} tokenów",
+          "errors": {
+            "NotConfigured": "Adres runnera nie jest skonfigurowany.",
+            "UnsupportedMode": "Embeddingi tekstu nie są jeszcze dostępne w tym trybie.",
+            "InvalidUrl": "Podaj bazowy adres HTTP lub HTTPS bez danych logowania, parametrów i fragmentu.",
+            "Unreachable": "Nie można połączyć się z runnerem. Sprawdź adres i dostępność.",
+            "Timeout": "Runner nie odpowiedział na czas. Spróbuj ponownie.",
+            "InvalidResponse": "Runner zwrócił nieprawidłową odpowiedź.",
+            "NotEmbeddingModel": "Ten serwer nie obsługuje embeddingów tekstu.",
+            "IncompatibleModel": "Model jest niezgodny z bieżącym indeksem wyszukiwania BGE-M3.",
+            "InvalidDimensions": "Runner musi zwracać wektory o dokładnie 1024 wymiarach.",
+            "InvalidVectors": "Runner zwrócił nieprawidłowe wektory embeddingów.",
+            "InvalidInput": "Podaj niepuste fragmenty tekstu."
+          }
         }
       },
       "privacy": {

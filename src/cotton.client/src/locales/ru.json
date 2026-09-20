@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Умный поиск",
+      "enable": "Включить умный поиск",
+      "disable": "Выключить умный поиск",
+      "error": "Умный поиск недоступен. Повторите позже или выключите его для поиска по имени."
+    },
     "title": "Поиск",
     "searchPlaceholder": "Поиск файлов и папок...",
     "error": "Поиск не удался. Попробуйте снова.",
@@ -2276,6 +2282,16 @@
           "cloud": "Cotton Bridge может выполнять AI-вычисления для этого инстанса. Требуется подключение к интернету и могут действовать лимиты."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Удалённый раннер",
+        "subtitle": "Укажите адрес сервиса вычислений.",
+        "fields": {
+          "url": "URL раннера"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Временная зона",
         "subtitle": "Выберите вашу временную зону, чтобы не будить вас ночью уведомлениями и шумом дисков. Это только для серверных рутин, веб-интерфейс всегда будет показывать время в вашей локальной временной зоне."
@@ -2922,8 +2938,78 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "progress": "Файлы с векторами: {{indexed}} из {{total}}",
+      "indexingProgress": "Прогресс индексации файлов",
+      "indexingDisabled": "Чтобы заработал умный поиск, включите индексацию содержимого файлов.",
+      "computation": {
+        "checkSettings": "Проверьте подключение к службе вычислений в разделе"
+      },
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
+      "title": "Умный поиск",
+      "enabled": "Включён",
+      "vectorCount": "Векторы",
+      "loading": "Проверка базы…",
+      "actions": {
+        "refresh": "Обновить",
+        "enable": "Подготовить базу",
+        "copy": "Копировать",
+        "copied": "Скопировано",
+        "checkInstallation": "Проверить установку",
+        "checkAgain": "Проверить снова"
+      },
+      "errors": {
+        "loadFailed": "Не удалось проверить базу данных.",
+        "enableFailed": "Не удалось подготовить базу данных.",
+        "copyFailed": "Не удалось скопировать команду."
+      },
+      "steps": {
+        "install": "Установить pgvector",
+        "enable": "Включить в базе"
+      },
+      "installation": {
+        "missing": "На сервере PostgreSQL не установлен pgvector.",
+        "where": "Где работает PostgreSQL?",
+        "docker": "Docker",
+        "native": "На сервере",
+        "image": "Текущий образ PostgreSQL",
+        "replace": "Замените строку image в docker-compose.yml:",
+        "imageAbout": "Образ от разработчиков pgvector на базе официального образа PostgreSQL.",
+        "dockerApply": "Сначала сделайте бэкап базы. Пересоздайте контейнер, сохранив том данных и настройки.",
+        "imageMismatch": "База работает на PostgreSQL {{version}}. Сохраните ту же основную версию.",
+        "imageUnsupported": "Для Alpine и нестандартных образов нужен отдельный план переноса; напрямую заменять их нельзя.",
+        "imageUnknown": "Укажите официальный образ postgres с числовой версией, например {{image}}.",
+        "variant": "Вариант Debian в текущем образе",
+        "os": "Операционная система",
+        "macVersion": "Пакеты Homebrew поддерживают PostgreSQL 17 и 18.",
+        "windowsNote": "Откройте x64 Native Tools Command Prompt из Visual Studio от имени администратора.",
+        "docs": "Инструкция по установке pgvector",
+        "repository": "Подключить репозиторий пакетов PostgreSQL",
+        "versionUnsupported": "Для PostgreSQL {{version}} нет проверенного рецепта установки. Сверьтесь с инструкцией pgvector.",
+        "variantHint": "Вариант Debian указан в теге образа или на его странице в Docker Hub.",
+        "windowsPath": "Папка установки PostgreSQL"
+      },
+      "activation": {
+        "manual": "Включить вручную",
+        "permissionDenied": "У Cotton нет прав на включение pgvector.",
+        "sqlInstruction": "Откройте SQL-консоль базы «{{database}}» под администратором PostgreSQL и выполните:",
+        "privileges": "Для установки pgvector нужен SUPERUSER. Одного GRANT CREATE недостаточно."
+      },
+      "index": {
+        "title": "Индекс",
+        "ready": "Готов",
+        "missing": "Не готов",
+        "building": "Создаётся",
+        "permissionDenied": "В базе «{{database}}» выполните команду от владельца таблицы file_embeddings. Для этой роли также требуется CREATE в схеме public.",
+        "incompatible": "Имя поискового индекса занято другим индексом. Проверьте его определение в PostgreSQL.",
+        "invalidData": "Векторы первой версии должны содержать 1024 конечных числа. Исправьте данные и повторите.",
+        "failed": "Не удалось построить индекс. Проверьте журнал сервера и повторите."
+      }
+    },
     "title": "Администрирование",
     "menu": {
+      "smartSearch": "Умный поиск",
       "navigate": "Раздел",
       "expand": "Развернуть навигацию",
       "collapse": "Свернуть навигацию",
@@ -3346,14 +3432,16 @@
           "storageSpaceMode": "Режим использования места",
           "computionMode": "Режим вычислений",
           "geoIpLookupMode": "Режим определения IP",
-          "customGeoIpLookupUrl": "URL своего резолвера IP"
+          "customGeoIpLookupUrl": "URL своего резолвера IP",
+          "remoteComputationRunnerUrl": "URL удалённого раннера"
         },
         "validation": {
           "required": "Это поле обязательно.",
           "publicBaseUrlInvalid": "Введите корректный HTTP- или HTTPS-URL без авторизации, query и hash.",
           "publicBaseUrlMismatch": "Текущий адрес — {{current}}, но публичные ссылки будут использовать {{configured}}. Будьте внимательны при сохранении.",
           "timezoneInvalid": "Выберите корректный часовой пояс IANA из списка.",
-          "customGeoIpLookupUrlInvalid": "Введите корректный HTTP- или HTTPS-URL."
+          "customGeoIpLookupUrlInvalid": "Введите корректный HTTP- или HTTPS-URL.",
+          "remoteComputationRunnerUrlInvalid": "Введите корректный абсолютный HTTP- или HTTPS-адрес."
         },
         "help": {
           "publicBaseUrl": "Несмотря на эту настройку, Cotton почти везде определяет публичный URL автоматически. Задавайте его только когда автоматика ошибается.",
@@ -3402,6 +3490,24 @@
           "title": "Открыть мастер первоначальной настройки",
           "description": "Пройти первоначальный мастер настройки ещё раз.",
           "button": "Открыть"
+        },
+        "remoteRunner": {
+          "statusLoadFailed": "Не удалось проверить состояние сервиса.",
+          "validateAndSave": "Проверить и сохранить",
+          "connected": "Подключено · {{model}} · {{dimensions}} измерения · {{tokens}} токенов",
+          "errors": {
+            "NotConfigured": "Адрес раннера не задан.",
+            "UnsupportedMode": "В этом режиме текстовые эмбеддинги пока недоступны.",
+            "InvalidUrl": "Введите базовый HTTP- или HTTPS-адрес без логина, параметров и фрагмента.",
+            "Unreachable": "Не удалось подключиться к раннеру. Проверьте адрес и доступность.",
+            "Timeout": "Раннер не ответил вовремя. Попробуйте ещё раз.",
+            "InvalidResponse": "Раннер вернул некорректный ответ.",
+            "NotEmbeddingModel": "Этот сервер не поддерживает текстовые эмбеддинги.",
+            "IncompatibleModel": "Модель несовместима с текущим поисковым индексом BGE-M3.",
+            "InvalidDimensions": "Раннер должен возвращать векторы длиной ровно 1024.",
+            "InvalidVectors": "Раннер вернул некорректные векторы.",
+            "InvalidInput": "Передайте непустые текстовые фрагменты."
+          }
         }
       },
       "actions": {
@@ -3645,6 +3751,10 @@
       "storageChunkMissing": {
         "title": "Данные файла отсутствуют в хранилище",
         "content": "Проверка целостности хранилища обнаружила, что данные файла '{{fileName}}' отсутствуют в нижележащем хранилище. Проверьте целостность хранилища и загрузите файл повторно."
+      },
+      "upgradePreparationCompleted": {
+        "title": "Подготовка к обновлению Cotton {{targetVersion}} завершена",
+        "content": "Фоновая задача {{jobName}} выполнена успешно. Этот этап подготовки к Cotton {{targetVersion}} завершён. Перед обновлением проверьте оставшиеся условия в таблице переходов."
       },
       "appUpdateAvailable": {
         "title": "Доступно обновление сервера Cotton",

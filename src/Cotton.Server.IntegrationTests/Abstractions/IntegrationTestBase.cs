@@ -29,6 +29,8 @@ namespace Cotton.Server.IntegrationTests.Abstractions
                 Username = TestPostgresUsername,
                 Password = TestPostgresPassword,
                 Database = databaseName,
+                Pooling = false,
+                PersistSecurityInfo = true,
             };
             optionsBuilder.UseNpgsql(userBuilder.ConnectionString, x =>
             {

@@ -48,6 +48,21 @@ export interface LatestDatabaseBackupDto {
   sourcePort: number;
 }
 
+export interface VectorExtensionStatusDto {
+  extensionEnabled: boolean;
+  extensionAvailable: boolean;
+  postgresMajorVersion: number;
+  databaseName: string;
+  vectorCount: number;
+  fileCount: number;
+  embeddedFileCount: number;
+  indexReady: boolean;
+  indexBuilding: boolean;
+  indexSizeBytes: number;
+  indexErrorCode: string | null;
+  indexCreateSql: string;
+}
+
 export type GcTimelineBucketKind = "hour" | "day";
 
 export interface StorageUsageStatsDto {
@@ -259,6 +274,20 @@ export const adminApi = {
       { signal },
     );
     return response.data;
+  },
+
+  getVectorExtensionStatus: async (
+    signal?: AbortSignal,
+  ): Promise<VectorExtensionStatusDto> => {
+    const response = await httpClient.get<VectorExtensionStatusDto>(
+      "server/database/extensions/vector",
+      { signal },
+    );
+    return response.data;
+  },
+
+  enableVectorExtension: async (): Promise<void> => {
+    await httpClient.patch("server/database/extensions/vector");
   },
 
   getGcChunksTimeline: async (

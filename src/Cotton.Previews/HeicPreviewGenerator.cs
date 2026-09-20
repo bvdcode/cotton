@@ -3,6 +3,13 @@
 
 using LibHeifSharp;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Bmp;
+using SixLabors.ImageSharp.Formats.Gif;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Tiff;
+using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
 using System.Runtime.InteropServices;
 
@@ -10,9 +17,23 @@ namespace Cotton.Previews
 {
     public class HeicPreviewGenerator : IPreviewGenerator
     {
+        public string Id => "heic";
+
         private const int Rgba32BytesPerPixel = 4;
 
-        public int Version => 2;
+        private static readonly IImageFormatDetector[] ImageFormatDetectors =
+        [
+            new JpegImageFormatDetector(),
+            new PngImageFormatDetector(),
+            new GifImageFormatDetector(),
+            new BmpImageFormatDetector(),
+            new WebpImageFormatDetector(),
+            new TiffImageFormatDetector(),
+        ];
+
+        public int Version => 3;
+
+        public int Priority => 0;
 
         public IEnumerable<string> SupportedContentTypes =>
         [
@@ -27,12 +48,6 @@ namespace Cotton.Previews
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
-            using Image<Rgba32> image = await DecodeToImageAsync(stream).ConfigureAwait(false);
-            return await ImagePreviewGenerator.EncodeMaxResizedWebpAsync(image, size);
-        }
-
-        private static async Task<Image<Rgba32>> DecodeToImageAsync(Stream stream)
-        {
             if (stream.CanSeek)
             {
                 stream.Position = 0;
@@ -41,7 +56,21 @@ namespace Cotton.Previews
             using MemoryStream buffer = new();
             await stream.CopyToAsync(buffer).ConfigureAwait(false);
 
-            using HeifContext context = new HeifContext(buffer.ToArray());
+            foreach (IImageFormatDetector detector in ImageFormatDetectors)
+            {
+                if (detector.TryDetectFormat(buffer.GetBuffer().AsSpan(0, checked((int)buffer.Length)), out _))
+                {
+                    return await new ImagePreviewGenerator().GeneratePreviewWebPAsync(buffer, size);
+                }
+            }
+
+            using Image<Rgba32> image = DecodeToImage(buffer.ToArray());
+            return await ImagePreviewGenerator.EncodeMaxResizedWebpAsync(image, size);
+        }
+
+        private static Image<Rgba32> DecodeToImage(byte[] bytes)
+        {
+            using HeifContext context = new HeifContext(bytes);
             using HeifImageHandle handle = context.GetPrimaryImageHandle();
             using HeifImage decoded = handle.Decode(HeifColorspace.Rgb, HeifChroma.InterleavedRgba32);
 

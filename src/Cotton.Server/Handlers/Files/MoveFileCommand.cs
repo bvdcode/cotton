@@ -9,6 +9,7 @@ using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Server.Extensions;
 using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
@@ -130,6 +131,7 @@ namespace Cotton.Server.Handlers.Files
             Guid oldParentId = nodeFile.NodeId;
             nodeFile.NodeId = targetParent.Id;
             nodeFile.SetName(destinationName);
+            nodeFile.FileManifest.ResetFailedPreview();
             _syncChanges.StageFileChange(SyncChangeKind.FileMoved, nodeFile, sourceLayoutId, oldParentId);
             await SaveMovedFileAsync(nodeFile, cancellationToken);
             return oldParentId;

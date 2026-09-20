@@ -51,6 +51,27 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
+describe("adminApi vector extension", () => {
+  it("loads extension status with cancellation", async () => {
+    const status = { extensionEnabled: false, vectorCount: 12 };
+    const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: status });
+    const signal = new AbortController().signal;
+
+    expect(await adminApi.getVectorExtensionStatus(signal)).toEqual(status);
+    expect(get).toHaveBeenCalledWith("server/database/extensions/vector", {
+      signal,
+    });
+  });
+
+  it("enables the extension using PATCH", async () => {
+    const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({});
+
+    await adminApi.enableVectorExtension();
+
+    expect(patch).toHaveBeenCalledWith("server/database/extensions/vector");
+  });
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
 });

@@ -31,19 +31,19 @@ namespace Cotton.Server.Services
             bool requestedInline = !download;
             FileResponseSecurity.ApplyFileResponseHeaders(
                 response,
-                nodeFile.FileManifest.ContentType,
+                nodeFile.ContentType,
                 requestedInline);
 
             return new FileStreamResult(
                 stream,
                 FileResponseSecurity.ResolveContentTypeForResponse(
-                    nodeFile.FileManifest.ContentType,
+                    nodeFile.ContentType,
                     requestedInline))
             {
                 FileDownloadName = FileResponseSecurity.ResolveFileDownloadName(
                     nodeFile.Name,
                     requestedInline,
-                    nodeFile.FileManifest.ContentType),
+                    nodeFile.ContentType),
                 LastModified = new DateTimeOffset(nodeFile.CreatedAt),
                 EntityTag = FileETags.CreateContentEntityTag(nodeFile),
                 EnableRangeProcessing = true,

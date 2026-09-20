@@ -84,8 +84,6 @@ namespace Cotton.Server.Services
 
         public async Task<FileManifest> CreateNewFileManifestAsync(
             List<Chunk> chunks,
-            string fileName,
-            string? contentType,
             byte[] proposedContentHash,
             Guid userId,
             bool includeChunks = false,
@@ -93,7 +91,7 @@ namespace Cotton.Server.Services
         {
             FileManifest newFileManifest = new()
             {
-                ContentType = FileContentTypeResolver.Resolve(fileName, contentType),
+                ContentType = string.Empty,
                 SizeBytes = chunks.Sum(chunk => chunk.PlainSizeBytes),
                 ProposedContentHash = proposedContentHash,
                 PreviewGeneratorVersion = PreviewGeneratorProvider.DefaultGeneratorVersion,

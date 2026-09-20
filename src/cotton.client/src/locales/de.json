@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Intelligente Suche",
+      "enable": "Intelligente Suche aktivieren",
+      "disable": "Intelligente Suche deaktivieren",
+      "error": "Die intelligente Suche ist nicht verfügbar. Versuche es später erneut oder deaktiviere sie, um nach Namen zu suchen."
+    },
     "title": "Suche",
     "searchPlaceholder": "Dateien und Ordner suchen...",
     "error": "Suche fehlgeschlagen. Bitte versuche es erneut.",
@@ -1427,6 +1433,10 @@
         "title": "Dateidaten fehlen im Speicher",
         "content": "Eine Konsistenzprüfung hat festgestellt, dass Daten für deine Datei '{{fileName}}' im zugrunde liegenden Speicher fehlen. Prüfe die Integrität des Speichers und lade die Datei erneut hoch."
       },
+      "upgradePreparationCompleted": {
+        "title": "Vorbereitung für das Upgrade auf Cotton {{targetVersion}} abgeschlossen",
+        "content": "Die Hintergrundaufgabe {{jobName}} wurde erfolgreich abgeschlossen. Dieser Vorbereitungsschritt für Cotton {{targetVersion}} ist erledigt. Prüfen Sie vor dem Upgrade den erforderlichen Upgrade-Pfad auf weitere Schritte."
+      },
       "appUpdateAvailable": {
         "title": "Cotton-Serverupdate verfügbar",
         "content": "Aktuelle Serverversion: {{currentVersion}}\nVerfügbare Serverversion: {{latestVersion}}\n\nVersionshinweise:\n{{releaseNotes}}\n\nVollständiges Release: {{releaseUrl}}"
@@ -2212,6 +2222,16 @@
           "cloud": "Cotton Bridge kann AI-Berechnungen für diese Instanz ausführen. Erfordert eine Internetverbindung und kann Limits haben."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Remote-Runner",
+        "subtitle": "Gib die Adresse des Berechnungsdienstes ein.",
+        "fields": {
+          "url": "Runner-URL"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Zeitzone",
         "subtitle": "Wähle deine Zeitzone, damit Benachrichtigungen und Festplattengeräusche dich nachts nicht stören. Das gilt nur für Serverroutinen; die Weboberfläche zeigt Zeiten immer in deiner lokalen Zeitzone an."
@@ -2792,8 +2812,78 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "progress": "Dateien mit Vektoren: {{indexed}} von {{total}}",
+      "indexingProgress": "Fortschritt der Dateiindizierung",
+      "indexingDisabled": "Aktivieren Sie die Indexierung von Dateiinhalten, damit die intelligente Suche funktioniert.",
+      "computation": {
+        "checkSettings": "Prüfen Sie die Verbindung zum Berechnungsdienst unter"
+      },
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
+      "title": "Intelligente Suche",
+      "enabled": "Aktiviert",
+      "vectorCount": "Vektoren",
+      "loading": "Datenbank wird geprüft…",
+      "actions": {
+        "refresh": "Aktualisieren",
+        "enable": "Datenbank vorbereiten",
+        "copy": "Kopieren",
+        "copied": "Kopiert",
+        "checkInstallation": "Installation prüfen",
+        "checkAgain": "Erneut prüfen"
+      },
+      "errors": {
+        "loadFailed": "Die Datenbank konnte nicht geprüft werden.",
+        "enableFailed": "Die Datenbank konnte nicht vorbereitet werden.",
+        "copyFailed": "Der Befehl konnte nicht kopiert werden."
+      },
+      "steps": {
+        "install": "pgvector installieren",
+        "enable": "In Datenbank aktivieren"
+      },
+      "installation": {
+        "missing": "pgvector ist auf dem PostgreSQL-Server nicht installiert.",
+        "where": "Wo läuft PostgreSQL?",
+        "docker": "Docker",
+        "native": "Auf einem Server",
+        "image": "Aktuelles PostgreSQL-Image",
+        "replace": "Ersetzen Sie die image-Zeile in docker-compose.yml:",
+        "imageAbout": "Von den pgvector-Entwicklern veröffentlicht, basierend auf dem offiziellen PostgreSQL-Image.",
+        "dockerApply": "Sichern Sie zuerst die Datenbank. Erstellen Sie den Container neu und behalten Sie das Datenvolume und die Einstellungen bei.",
+        "imageMismatch": "Diese Datenbank verwendet PostgreSQL {{version}}. Behalten Sie dieselbe Hauptversion bei.",
+        "imageUnsupported": "Alpine und angepasste Images benötigen einen eigenen Migrationsplan; ersetzen Sie diese nicht direkt.",
+        "imageUnknown": "Geben Sie ein offizielles postgres-Image mit numerischer Version ein, z. B. {{image}}.",
+        "variant": "Debian-Variante des aktuellen Images",
+        "os": "Betriebssystem",
+        "macVersion": "Homebrew-Pakete unterstützen PostgreSQL 17 und 18.",
+        "windowsNote": "Öffnen Sie die x64 Native Tools Command Prompt von Visual Studio als Administrator.",
+        "docs": "Installationsanleitung für pgvector",
+        "repository": "PostgreSQL-Paketquelle einrichten",
+        "versionUnsupported": "Für PostgreSQL {{version}} liegt keine geprüfte Installationsanleitung vor. Prüfen Sie die pgvector-Dokumentation.",
+        "variantHint": "Verwenden Sie die Debian-Variante aus dem Image-Tag oder von dessen Docker-Hub-Seite.",
+        "windowsPath": "PostgreSQL-Installationsordner"
+      },
+      "activation": {
+        "manual": "Manuell aktivieren",
+        "permissionDenied": "Cotton hat keine Berechtigung, pgvector zu aktivieren.",
+        "sqlInstruction": "Öffnen Sie die SQL-Konsole der Datenbank „{{database}}“ als PostgreSQL-Administrator und führen Sie Folgendes aus:",
+        "privileges": "Die Installation von pgvector erfordert SUPERUSER. GRANT CREATE allein reicht nicht aus."
+      },
+      "index": {
+        "title": "Index",
+        "ready": "Bereit",
+        "missing": "Nicht bereit",
+        "building": "Wird erstellt",
+        "permissionDenied": "Führen Sie den Befehl in der Datenbank „{{database}}“ als Eigentümer von file_embeddings aus. Diese Rolle benötigt auch CREATE für das Schema public.",
+        "incompatible": "Der Name des Suchindex wird von einem anderen Index verwendet. Prüfen Sie seine Definition in PostgreSQL.",
+        "invalidData": "Vektoren der Version 1 müssen 1024 endliche Zahlen enthalten. Korrigieren Sie die Daten und versuchen Sie es erneut.",
+        "failed": "Der Index konnte nicht erstellt werden. Prüfen Sie das Serverprotokoll und versuchen Sie es erneut."
+      }
+    },
     "title": "Admin",
     "menu": {
+      "smartSearch": "Intelligente Suche",
       "navigate": "Abschnitt",
       "expand": "Navigation erweitern",
       "collapse": "Navigation einklappen",
@@ -2924,14 +3014,16 @@
           "storageSpaceMode": "Modus für Speicherplatz",
           "computionMode": "Rechenmodus",
           "geoIpLookupMode": "IP-Suchmodus",
-          "customGeoIpLookupUrl": "URL für eigene IP-Suche"
+          "customGeoIpLookupUrl": "URL für eigene IP-Suche",
+          "remoteComputationRunnerUrl": "URL des Remote-Runners"
         },
         "validation": {
           "required": "Dieses Feld ist erforderlich.",
           "publicBaseUrlInvalid": "Gib eine gültige HTTP- oder HTTPS-Basis-URL ohne Anmeldedaten, Query oder Hash ein.",
           "publicBaseUrlMismatch": "Die aktuelle Adresse ist {{current}}, aber erzeugte öffentliche Links verwenden {{configured}}. Sei vorsichtig vor dem Speichern.",
           "timezoneInvalid": "Wähle eine gültige IANA-Zeitzone aus der Liste.",
-          "customGeoIpLookupUrlInvalid": "Gib eine gültige HTTP- oder HTTPS-URL für die Suche ein."
+          "customGeoIpLookupUrlInvalid": "Gib eine gültige HTTP- oder HTTPS-URL für die Suche ein.",
+          "remoteComputationRunnerUrlInvalid": "Gib eine gültige absolute HTTP- oder HTTPS-URL ein."
         },
         "help": {
           "publicBaseUrl": "Trotz dieser Einstellung ermittelt Cotton die öffentliche URL fast überall automatisch. Setze sie nur, wenn die automatische Erkennung falsch ist.",
@@ -2987,6 +3079,24 @@
           "title": "Einrichtungsassistent öffnen",
           "description": "Den Erst-Einrichtungsassistenten erneut durchgehen.",
           "button": "Öffnen"
+        },
+        "remoteRunner": {
+          "statusLoadFailed": "Der Dienststatus konnte nicht abgerufen werden.",
+          "validateAndSave": "Prüfen und speichern",
+          "connected": "Verbunden · {{model}} · {{dimensions}} Dimensionen · {{tokens}} Token",
+          "errors": {
+            "NotConfigured": "Die Runner-URL ist nicht konfiguriert.",
+            "UnsupportedMode": "Text-Embeddings sind in diesem Berechnungsmodus noch nicht verfügbar.",
+            "InvalidUrl": "Geben Sie eine HTTP- oder HTTPS-Basis-URL ohne Zugangsdaten, Abfrage oder Fragment ein.",
+            "Unreachable": "Der Runner ist nicht erreichbar. Prüfen Sie Adresse und Verfügbarkeit.",
+            "Timeout": "Der Runner hat nicht rechtzeitig geantwortet. Versuchen Sie es erneut.",
+            "InvalidResponse": "Der Runner hat eine ungültige Antwort geliefert.",
+            "NotEmbeddingModel": "Dieser Server unterstützt keine Text-Embeddings.",
+            "IncompatibleModel": "Das Modell ist mit dem aktuellen BGE-M3-Suchindex nicht kompatibel.",
+            "InvalidDimensions": "Der Runner muss Vektoren mit genau 1024 Dimensionen liefern.",
+            "InvalidVectors": "Der Runner hat ungültige Embedding-Vektoren geliefert.",
+            "InvalidInput": "Geben Sie nicht leere Textabschnitte an."
+          }
         }
       },
       "privacy": {

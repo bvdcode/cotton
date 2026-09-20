@@ -44,7 +44,7 @@ const AdminNavigationItem = ({ item, expanded }: AdminNavigationItemProps) => {
           color: "text.secondary",
         },
         "&[aria-current='page']": {
-          color: "primary.main",
+          color: "text.primary",
           bgcolor: "action.selected",
           "& .MuiListItemIcon-root": {
             color: "primary.main",
@@ -177,6 +177,11 @@ export const MobileAdminNavigation = ({
       label={label}
       value={selectedTo}
       onChange={onChange}
+      renderValue={(value) =>
+        sections
+          .flatMap((section) => section.items)
+          .find((item) => item.to === value)?.title
+      }
     >
       {sections.flatMap((section) => [
         <ListSubheader key={`${section.id}-header`}>

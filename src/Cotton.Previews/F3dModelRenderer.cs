@@ -108,11 +108,20 @@ namespace Cotton.Previews
                 Task<string> stderrTask = process.StandardError.ReadToEndAsync();
                 Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
 
-                using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(renderTimeoutSeconds));
-                await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+                bool completed = await PreviewProcess.WaitForExitAsync(
+                    process, TimeSpan.FromSeconds(renderTimeoutSeconds), CancellationToken.None).ConfigureAwait(false);
                 await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
                 string stdout = await stdoutTask.ConfigureAwait(false);
                 string stderr = await stderrTask.ConfigureAwait(false);
+
+                if (!completed)
+                {
+                    return new F3dRenderResult(
+                        false,
+                        $"f3d render timed out after {renderTimeoutSeconds} seconds " +
+                        $"(max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, " +
+                        $"verbose={includeVerboseArgument}).");
+                }
 
                 if (process.ExitCode != 0)
                 {
@@ -133,14 +142,6 @@ namespace Cotton.Previews
                         $"max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, " +
                         $"verbose={includeVerboseArgument}). stdout: {LimitDiagnostic(stdout)} " +
                         $"stderr: {LimitDiagnostic(stderr)}");
-            }
-            catch (OperationCanceledException)
-            {
-                return new F3dRenderResult(
-                    false,
-                    $"f3d render timed out after {renderTimeoutSeconds} seconds " +
-                    $"(max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, " +
-                    $"verbose={includeVerboseArgument}).");
             }
             catch (Exception exception)
             {

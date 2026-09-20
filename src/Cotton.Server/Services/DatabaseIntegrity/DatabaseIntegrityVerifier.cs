@@ -34,7 +34,8 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             EntityEntry<TEntity> entry = dbContext.Entry(entity);
             EnsureVerifiableEntry(entry, descriptor, boundary);
             (int version, byte[] mac) = RequireSignature(entry, descriptor, entity, boundary);
-            if (version == descriptor.SchemaVersion && _protector.Verify(entity, descriptor, mac))
+            if (_descriptors.TryGet(entity.GetType(), version, out IDatabaseIntegrityDescriptor storedDescriptor)
+                && _protector.Verify(entity, storedDescriptor, mac))
             {
                 return;
             }

@@ -83,13 +83,23 @@ export const layoutsApi = {
     query: string;
     page?: number;
     pageSize?: number;
+    deep?: boolean;
+    signal?: AbortSignal;
   }): Promise<LayoutSearchResult> => {
-    const { layoutId, query, page = 1, pageSize = 20 } = options;
+    const {
+      layoutId,
+      query,
+      page = 1,
+      pageSize = 20,
+      deep = false,
+      signal,
+    } = options;
 
     const response = await httpClient.get<LayoutSearchResultDto>(
       `/layouts/${layoutId}/search`,
       {
-        params: { query, page, pageSize },
+        params: { query: query.trim(), page, pageSize, deep },
+        signal,
       },
     );
 

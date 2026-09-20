@@ -1,4 +1,5 @@
 import type { RouteConfig } from "./types";
+import { ADMIN_GENERAL_SETTINGS_ROUTE } from "@shared/config/adminRoutes";
 import { RequireAdmin, RequireAuth, useAuth } from "../features/auth";
 import { useEffect, useState } from "react";
 import {
@@ -35,6 +36,7 @@ import { AdminStorageSettingsPage } from "../pages/admin/settings/AdminStorageSe
 import { AdminGeneralSettingsPage } from "../pages/admin/settings/AdminGeneralSettingsPage";
 import { AdminPrivacySettingsPage } from "../pages/admin/settings/AdminPrivacySettingsPage";
 import { AdminSecurityDiagnosticsPage } from "../pages/admin/security/AdminSecurityDiagnosticsPage";
+import { AdminSmartSearchPage } from "../pages/admin/smart-search/AdminSmartSearchPage";
 import { AdminIdentityProvidersPage } from "../pages/admin/identity-providers/AdminIdentityProvidersPage";
 import { AdminNotificationsSettingsPage } from "../pages/admin/settings/AdminNotificationsSettingsPage";
 import { ResetPasswordPage } from "../pages/reset-password/ResetPasswordPage";
@@ -211,7 +213,7 @@ export function AppRoutes() {
             element={<AdminStorageSettingsPage />}
           />
           <Route
-            path="general-settings"
+            path={ADMIN_GENERAL_SETTINGS_ROUTE}
             element={<AdminGeneralSettingsPage />}
           />
           <Route
@@ -219,6 +221,7 @@ export function AppRoutes() {
             element={<AdminPrivacySettingsPage />}
           />
           <Route path="security" element={<AdminSecurityDiagnosticsPage />} />
+          <Route path="smart-search" element={<AdminSmartSearchPage />} />
           <Route
             path="identity-providers"
             element={<AdminIdentityProvidersPage />}

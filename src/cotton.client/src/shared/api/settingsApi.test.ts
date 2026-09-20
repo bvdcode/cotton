@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readyComputationStatus } from "../../test/computationStatus";
 
 vi.mock("@shared/ui/notifications", () => ({
   toast: { error: vi.fn() },
@@ -252,6 +253,9 @@ describe("settingsApi getters", () => {
       })
       .mockResolvedValueOnce({
         data: { customGeoIpLookupUrl: null },
+      })
+      .mockResolvedValueOnce({
+        data: { remoteComputationRunnerUrl: "https://runner.example" },
       });
 
     await expect(settingsApi.getS3Config()).resolves.toEqual({
@@ -270,6 +274,9 @@ describe("settingsApi getters", () => {
       useSSL: false,
     });
     await expect(settingsApi.getCustomGeoIpLookupUrl()).resolves.toBe("");
+    await expect(settingsApi.getRemoteComputationRunnerUrl()).resolves.toBe(
+      "https://runner.example",
+    );
   });
 });
 
@@ -445,7 +452,7 @@ describe("settingsApi setters", () => {
 
   it("patches object configs and calls test endpoints", async () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
-      data: undefined,
+      data: readyComputationStatus,
     });
     const geoIpTestResult = {
       inputLabel: "Google DNS IP",
@@ -482,6 +489,7 @@ describe("settingsApi setters", () => {
     await settingsApi.setEmailConfig(emailConfig);
     await settingsApi.testEmailConfig();
     await settingsApi.setCustomGeoIpLookupUrl("https://geo.example");
+    await settingsApi.setRemoteComputationRunnerUrl("https://runner.example");
     await expect(settingsApi.testCustomGeoIpLookupUrl()).resolves.toEqual(
       geoIpTestResult,
     );
@@ -504,6 +512,11 @@ describe("settingsApi setters", () => {
       3,
       "server/settings/custom-geoip-lookup-url",
       "https://geo.example",
+    );
+    expect(patch).toHaveBeenNthCalledWith(
+      4,
+      "server/settings/remote-computation-runner-url",
+      "https://runner.example",
     );
     expect(post).toHaveBeenNthCalledWith(
       2,
@@ -593,13 +606,16 @@ describe("settingsApi.saveSetupStep", () => {
     ]);
   });
 
-  it("defers external storage and email modes until config steps", async () => {
+  it("defers external modes until their config steps", async () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
       data: undefined,
     });
 
     await settingsApi.saveSetupStep("storage", { storage: "S3" });
     await settingsApi.saveSetupStep("email", { email: "custom" });
+    await settingsApi.saveSetupStep("computionMode", {
+      computionMode: "remote",
+    });
 
     expect(patch).not.toHaveBeenCalled();
   });
@@ -615,7 +631,7 @@ describe("settingsApi.saveSetupStep", () => {
       geoIpLookupMode: "cottoncloud",
     });
     await settingsApi.saveSetupStep("computionMode", {
-      computionMode: "remote",
+      computionMode: "local",
     });
     await settingsApi.saveSetupStep("timezone", {
       timezone: "Europe/Amsterdam",
@@ -635,7 +651,7 @@ describe("settingsApi.saveSetupStep", () => {
     );
     expect(patch).toHaveBeenNthCalledWith(
       4,
-      "server/settings/compution-mode/Remote",
+      "server/settings/compution-mode/Local",
     );
     expect(patch).toHaveBeenNthCalledWith(
       5,
@@ -650,7 +666,7 @@ describe("settingsApi.saveSetupStep", () => {
 
   it("saves config steps, enables their modes, and runs validation calls", async () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
-      data: undefined,
+      data: readyComputationStatus,
     });
     const post = vi
       .spyOn(httpClient, "post")
@@ -688,6 +704,9 @@ describe("settingsApi.saveSetupStep", () => {
     });
     await settingsApi.saveSetupStep("customGeoIpLookupUrl", {
       customGeoIpLookupUrl: { url: "https://geo.example" },
+    });
+    await settingsApi.saveSetupStep("remoteComputationRunnerUrl", {
+      remoteComputationRunnerUrl: { url: " https://runner.example " },
     });
 
     expect(patch).toHaveBeenNthCalledWith(1, "server/settings/s3-config", {
@@ -727,6 +746,12 @@ describe("settingsApi.saveSetupStep", () => {
       2,
       "server/settings/custom-geoip-lookup-url/test",
     );
+    expect(patch).toHaveBeenNthCalledWith(
+      7,
+      "server/settings/remote-computation-runner-url",
+      "https://runner.example",
+    );
+    expect(patch).toHaveBeenCalledTimes(7);
   });
 
   it("ignores unknown steps and empty timezone answers", async () => {
@@ -743,11 +768,10 @@ describe("settingsApi.saveSetupStep", () => {
 
 describe("settingsApi.saveSetupAnswers", () => {
   it("continues after a failed step and warns once", async () => {
-    const patch = vi
-      .spyOn(httpClient, "patch")
+    const saveStep = vi
+      .spyOn(settingsApi, "saveSetupStep")
       .mockRejectedValueOnce(new Error("failed"))
-      .mockRejectedValueOnce(new Error("failed"))
-      .mockResolvedValue({ data: undefined });
+      .mockResolvedValue(undefined);
     const warn = vi.spyOn(console, "warn");
 
     await settingsApi.saveSetupAnswers({
@@ -759,6 +783,9 @@ describe("settingsApi.saveSetupAnswers", () => {
       'Failed to save setup step "trustedMode"',
       expect.any(Error),
     );
-    expect(patch).toHaveBeenCalledWith("server/settings/telemetry", true);
+    expect(saveStep).toHaveBeenCalledWith("telemetry", {
+      trustedMode: "family",
+      telemetry: true,
+    });
   });
 });

@@ -1,5 +1,11 @@
 {
   "search": {
+    "smartSearch": {
+      "label": "Smart search",
+      "enable": "Enable smart search",
+      "disable": "Disable smart search",
+      "error": "Smart search is unavailable. Try again later or turn it off to search by name."
+    },
     "title": "Search",
     "searchPlaceholder": "Search files and folders...",
     "error": "Search failed. Please try again.",
@@ -1228,6 +1234,10 @@
         "title": "File data missing from storage",
         "content": "A storage consistency check detected that data for your file '{{fileName}}' is missing from the underlying storage. Please verify your storage integrity and re-upload this file."
       },
+      "upgradePreparationCompleted": {
+        "title": "Upgrade preparation for Cotton {{targetVersion}} completed",
+        "content": "Background job {{jobName}} completed successfully. This preparation step for Cotton {{targetVersion}} is finished. Check the required upgrade path for any remaining steps before updating."
+      },
       "appUpdateAvailable": {
         "title": "Cotton server update available",
         "content": "Current server version: {{currentVersion}}\nAvailable server version: {{latestVersion}}\n\nRelease notes:\n{{releaseNotes}}\n\nFull release: {{releaseUrl}}"
@@ -2013,6 +2023,16 @@
           "cloud": "Cotton Bridge can run AI computations for this instance. Requires internet connection and may have limits."
         }
       },
+      "remoteComputationRunnerUrl": {
+        "title": "Remote runner",
+        "subtitle": "Enter the address of the computation service.",
+        "fields": {
+          "url": "Runner URL"
+        },
+        "placeholders": {
+          "url": "https://runner.example.com"
+        }
+      },
       "timezone": {
         "title": "Time Zone",
         "subtitle": "Select your time zone to avoid being disturbed by notifications and disk noise at night. This is only for server routines, Web UI will always show times in your local time zone."
@@ -2593,8 +2613,78 @@
     }
   },
   "admin": {
+    "smartSearch": {
+      "progress": "Files with vectors: {{indexed}} of {{total}}",
+      "indexingProgress": "File indexing progress",
+      "indexingDisabled": "Enable file content indexing to use smart search.",
+      "computation": {
+        "checkSettings": "Check the computation service connection in"
+      },
+      "extension": "pgvector",
+      "database": "PostgreSQL {{version}} · {{database}}",
+      "title": "Smart search",
+      "enabled": "Enabled",
+      "vectorCount": "Vectors",
+      "loading": "Checking database…",
+      "actions": {
+        "refresh": "Refresh",
+        "enable": "Prepare database",
+        "copy": "Copy",
+        "copied": "Copied",
+        "checkInstallation": "Check installation",
+        "checkAgain": "Check again"
+      },
+      "errors": {
+        "loadFailed": "Could not check the database.",
+        "enableFailed": "Could not prepare the database.",
+        "copyFailed": "Could not copy the command."
+      },
+      "steps": {
+        "install": "Install pgvector",
+        "enable": "Enable in database"
+      },
+      "installation": {
+        "missing": "The PostgreSQL server does not have pgvector installed.",
+        "where": "Where is PostgreSQL running?",
+        "docker": "Docker",
+        "native": "On a server",
+        "image": "Current PostgreSQL image",
+        "replace": "Replace the image line in docker-compose.yml:",
+        "imageAbout": "Published by the pgvector developers, based on the official PostgreSQL image.",
+        "dockerApply": "Back up the database first. Recreate the container, keeping its data volume and settings.",
+        "imageMismatch": "This database runs PostgreSQL {{version}}. Keep the same major version.",
+        "imageUnsupported": "Alpine and custom images need a separate migration plan; do not replace them directly.",
+        "imageUnknown": "Enter an official postgres image with a numeric version, such as {{image}}.",
+        "variant": "Debian variant of the current image",
+        "os": "Operating system",
+        "macVersion": "Homebrew packages support PostgreSQL 17 and 18.",
+        "windowsNote": "Open the Visual Studio x64 Native Tools Command Prompt as administrator.",
+        "docs": "pgvector installation guide",
+        "repository": "Set up the PostgreSQL package repository",
+        "versionUnsupported": "No verified installation recipe is available for PostgreSQL {{version}}. Check the pgvector guide.",
+        "variantHint": "Use the Debian variant from your image tag or its Docker Hub page.",
+        "windowsPath": "PostgreSQL installation folder"
+      },
+      "activation": {
+        "manual": "Enable manually",
+        "permissionDenied": "Cotton does not have permission to enable pgvector.",
+        "sqlInstruction": "Open the SQL console for database “{{database}}” as a PostgreSQL administrator and run:",
+        "privileges": "Installing pgvector requires SUPERUSER. GRANT CREATE alone is not sufficient."
+      },
+      "index": {
+        "title": "Index",
+        "ready": "Ready",
+        "missing": "Not ready",
+        "building": "Building",
+        "permissionDenied": "Run the command in database “{{database}}” as the owner of file_embeddings. This role also needs CREATE on schema public.",
+        "incompatible": "The search index name is used by a different index. Check its definition in PostgreSQL.",
+        "invalidData": "Version 1 vectors must contain 1024 finite numbers. Correct the data and retry.",
+        "failed": "Could not build the index. Check the server log and retry."
+      }
+    },
     "title": "Admin",
     "menu": {
+      "smartSearch": "Smart search",
       "navigate": "Section",
       "expand": "Expand navigation",
       "collapse": "Collapse navigation",
@@ -2725,14 +2815,16 @@
           "storageSpaceMode": "Storage space mode",
           "computionMode": "Computation mode",
           "geoIpLookupMode": "IP lookup mode",
-          "customGeoIpLookupUrl": "Custom IP lookup URL"
+          "customGeoIpLookupUrl": "Custom IP lookup URL",
+          "remoteComputationRunnerUrl": "Remote runner URL"
         },
         "validation": {
           "required": "This field is required.",
           "publicBaseUrlInvalid": "Enter a valid HTTP or HTTPS base URL without credentials, query, or hash.",
           "publicBaseUrlMismatch": "Current address is {{current}}, but generated public links will use {{configured}}. Be careful before saving this value.",
           "timezoneInvalid": "Choose a valid IANA time zone from the list.",
-          "customGeoIpLookupUrlInvalid": "Enter a valid HTTP or HTTPS lookup URL."
+          "customGeoIpLookupUrlInvalid": "Enter a valid HTTP or HTTPS lookup URL.",
+          "remoteComputationRunnerUrlInvalid": "Enter a valid absolute HTTP or HTTPS URL."
         },
         "help": {
           "publicBaseUrl": "Despite this setting, Cotton determines the public URL automatically almost everywhere. Set it only when automatic detection is wrong.",
@@ -2788,6 +2880,24 @@
           "title": "Open setup wizard",
           "description": "Walk through the first-run setup wizard again.",
           "button": "Open"
+        },
+        "remoteRunner": {
+          "statusLoadFailed": "Could not check the service status.",
+          "validateAndSave": "Validate and save",
+          "connected": "Connected · {{model}} · {{dimensions}} dimensions · {{tokens}} tokens",
+          "errors": {
+            "NotConfigured": "Runner URL is not configured.",
+            "UnsupportedMode": "Text embeddings are not available in this computation mode yet.",
+            "InvalidUrl": "Enter an HTTP or HTTPS base URL without credentials, a query, or a fragment.",
+            "Unreachable": "Cannot connect to the runner. Check its address and availability.",
+            "Timeout": "The runner did not respond in time. Try again.",
+            "InvalidResponse": "The runner returned an invalid response.",
+            "NotEmbeddingModel": "This server does not provide text embeddings.",
+            "IncompatibleModel": "The model is incompatible with the current BGE-M3 search index.",
+            "InvalidDimensions": "The runner must return vectors with exactly 1024 dimensions.",
+            "InvalidVectors": "The runner returned invalid embedding vectors.",
+            "InvalidInput": "Provide non-empty text fragments."
+          }
         }
       },
       "privacy": {

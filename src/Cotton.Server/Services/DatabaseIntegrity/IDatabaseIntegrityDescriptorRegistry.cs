@@ -11,5 +11,9 @@ namespace Cotton.Server.Services.DatabaseIntegrity
         IReadOnlyCollection<IDatabaseIntegrityDescriptor> All { get; }
 
         bool TryGet(Type entityType, out IDatabaseIntegrityDescriptor descriptor);
+
+        bool TryGet(Type entityType, int version, out IDatabaseIntegrityDescriptor descriptor);
+
+        IDatabaseIntegrityDescriptor<T> Get<T>(int? version = null) where T : class;
     }
 }

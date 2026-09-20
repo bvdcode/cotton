@@ -318,6 +318,10 @@ export const customGeoIpLookupUrlSchema = z
   .object({ customGeoIpLookupUrl: nullableStringSchema })
   .transform((value) => value.customGeoIpLookupUrl ?? "");
 
+export const remoteComputationRunnerUrlSchema = z
+  .object({ remoteComputationRunnerUrl: nullableStringSchema })
+  .transform((value) => value.remoteComputationRunnerUrl ?? "");
+
 export const customGeoIpLookupTestResultSchema = z.object({
   inputLabel: z.string(),
   inputValue: z.string(),

@@ -8,6 +8,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Services;
+using Cotton.Server.Extensions;
 using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
@@ -91,6 +92,7 @@ namespace Cotton.Server.Handlers.Files
                 }
 
                 nodeFile.SetName(request.Name);
+                nodeFile.FileManifest.ResetFailedPreview();
                 _syncChanges.StageFileChange(
                     SyncChangeKind.FileRenamed,
                     nodeFile,
