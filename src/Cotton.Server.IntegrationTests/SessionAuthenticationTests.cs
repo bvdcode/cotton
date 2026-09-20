@@ -6,10 +6,12 @@ using Cotton.Server.Extensions;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
+using EasyExtensions.AspNetCore.Authorization.Extensions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -17,16 +19,18 @@ using NUnit.Framework;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Cotton.Server.IntegrationTests
 {
-    public class AuthHardeningTests
+    public partial class SessionAuthenticationTests
     {
         private const string TestIssuer = "session-validation-tests";
         private const string TestAudience = "session-validation-client";
         private const string TestSessionId = "test-session";
         private static readonly Guid TestUserId = Guid.NewGuid();
-        private static readonly SymmetricSecurityKey SigningKey = new(RandomNumberGenerator.GetBytes(32));
+        private static readonly string SigningSecret = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+        private static readonly SymmetricSecurityKey SigningKey = new(Encoding.UTF8.GetBytes(SigningSecret));
 
         [Test]
         public async Task AbortedRequestDuringSessionLookup_DoesNotAuthenticateOrLogJwtFailure()
@@ -145,30 +149,36 @@ namespace Cotton.Server.IntegrationTests
 
         private static ServiceProvider CreateServices(
             SessionValidationConnectionInterceptor interceptor,
-            NUnitLoggerProvider logger)
+            NUnitLoggerProvider logger,
+            Action<JwtBearerOptions>? configureOptions = null)
         {
             ServiceCollection services = new();
             services.AddLogging(logging => logging.AddProvider(logger).SetMinimumLevel(LogLevel.Debug));
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
+            services.AddSingleton<IConfiguration>(new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    options.MapInboundClaims = false;
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidIssuer = TestIssuer,
-                        ValidAudience = TestAudience,
-                        IssuerSigningKey = SigningKey,
-                    };
-                });
+                    ["JwtSettings:Key"] = SigningSecret,
+                    ["JwtSettings:Issuer"] = TestIssuer,
+                    ["JwtSettings:Audience"] = TestAudience,
+                }).Build());
+            services.AddJwt();
+            services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                options.MapInboundClaims = false;
+                configureOptions?.Invoke(options);
+            });
             services.AddDbContext<CottonDbContext>(options => options
                 .UseNpgsql("Host=localhost;Database=unused;Username=unused")
                 .AddInterceptors(interceptor));
             services.AddSingleton<IDatabaseIntegrityVerifier, UnexpectedDatabaseIntegrityVerifier>();
-            services.AddAuthHardening();
+            services.AddSessionAuthentication();
             return services.BuildServiceProvider();
         }
 
-        private static DefaultHttpContext CreateContext(IServiceProvider services, CancellationToken requestAborted)
+        private static DefaultHttpContext CreateContext(
+            IServiceProvider services,
+            CancellationToken requestAborted,
+            Claim[]? claims = null)
         {
             DefaultHttpContext context = new()
             {
@@ -178,7 +188,7 @@ namespace Cotton.Server.IntegrationTests
             JwtSecurityToken token = new(
                 issuer: TestIssuer,
                 audience: TestAudience,
-                claims:
+                claims: claims ??
                 [
                     new Claim(JwtRegisteredClaimNames.Sub, TestUserId.ToString()),
                     new Claim(JwtRegisteredClaimNames.Sid, TestSessionId),
