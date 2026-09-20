@@ -188,7 +188,7 @@ For the build/CI details (multi-stage Dockerfile, GitHub Actions, SixLabors lice
 
 ## Upgrading
 
-Cotton is still in the `0.x` release line, where a minor-version upgrade may require the final transition release from the previous minor line. Before changing the minor version, check the **[required upgrade paths](docs/technical/27-deployment-operations.md#required-upgrade-paths)**. Do not skip a listed transition release: it must run against the same database, storage, and master key before the target release starts.
+Before upgrading, check the **[required upgrade paths](docs/technical/27-deployment-operations.md#required-upgrade-paths)**. Some releases require an intermediate version to finish background preparation against the same database, storage, and master key. The table lists the required version and the completion notification, log message, or waiting period for each transition. These requirements also apply after version `1.0`.
 
 ---
 

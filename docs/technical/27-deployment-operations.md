@@ -99,7 +99,7 @@ Common failure classes are:
 
 ## Upgrades
 
-Cotton follows semantic versioning: in `0.5.12`, `0` is the major version, `5` is the minor version, and `12` is the patch version. While the project remains on major version `0`, minor releases may contain storage or database transitions that cannot be skipped safely.
+Some releases change storage formats or database contracts and require background preparation on an intermediate release. These requirements apply to any release line, including versions `1.x` and later.
 
 ### Required upgrade paths
 
@@ -107,9 +107,12 @@ This table applies to existing installations. A new empty installation can start
 
 | Target release | Required transition release | Completion requirement |
 | --- | --- | --- |
-| `0.5.x` from `0.4.x` or earlier | `0.4.35` | Run `0.4.35` with the same database, storage, and master key. Proceed after the server logs `CTN2 rewrite job finished.`, or after at least 24 hours of uninterrupted operation with no CTN2 rewrite errors. |
+| `0.5.x` from `0.4.x` or earlier | `0.4.35` | **Completion signal:** the log contains `CTN2 rewrite job finished.` (this release does not send a completion notification). **Time-based alternative:** keep `0.4.35` running continuously for at least **7 days**. |
+| `0.6.x` from `0.5.x` (planned) | Final `0.5.x` transition release — to be announced | **Completion signal:** an administrator notification names `HotfixBackfillContentTypeJob` and target `0.6`, or the log contains `Upgrade preparation job HotfixBackfillContentTypeJob for Cotton 0.6 completed successfully.` **Time-based alternative:** keep the required release running continuously for at least **24 hours**. The required release and full set of steps must be confirmed before `0.6` is published. |
 
-Before upgrading to a new `0.x` minor line, install the transition release listed for that target and keep it running until its completion condition is satisfied. Patch upgrades within the same minor line do not require an additional transition unless the release notes explicitly say otherwise.
+Run each required release against the same database, storage, and master key. Follow the listed transitions in order when crossing multiple release lines. Completion signals allow proceeding without waiting for the full time allowance. The time-based alternative is for operators who cannot inspect logs; it assumes the server remains unlocked and background jobs can run normally. Elapsed time cannot guarantee completion if jobs fail, are interrupted, or take longer on a large installation.
+
+The `0.6` content-type step fills individual file content types and clears obsolete manifest content types while upgrading manifest signatures. Both stages must finish before the completion notification is sent. Notifications appear in Cotton for every administrator and are deduplicated by job and target version across repeated runs and server restarts. A notification confirms the named step; follow every requirement listed for the target release before upgrading.
 
 Version 0.5 does not decrypt CTN1 or backfill unsigned protected rows. Encountering either produces a targeted compatibility error rather than silent repair.
 
