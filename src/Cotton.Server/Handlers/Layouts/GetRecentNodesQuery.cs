@@ -6,6 +6,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
+using Cotton.Topology;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
@@ -55,7 +56,8 @@ namespace Cotton.Server.Handlers.Layouts
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .Where(x => x.Node.Type == NodeType.Default)
-                .Where(x => x.OwnerId == request.UserId && x.Node.LayoutId == request.LayoutId)
+                .AccessibleTo(request.UserId)
+                .Where(x => x.Node.LayoutId == request.LayoutId)
                 .OrderByDescending(x => x.CreatedAt);
 
             if (includedPattern is not null)

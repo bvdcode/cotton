@@ -1,7 +1,8 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Topology;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Services;
@@ -28,14 +29,13 @@ namespace Cotton.Server.Handlers.Files
             ResolveOwnedFileContentQuery request,
             CancellationToken ct)
         {
-            NodeFile? nodeFile = await _dbContext.NodeFiles
+            NodeFile? nodeFile = await _dbContext.NodeFiles.AccessibleTo(request.UserId)
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
                 .SingleOrDefaultAsync(
                     x => x.Id == request.NodeFileId
-                        && x.OwnerId == request.UserId
                         && x.Node.Type == NodeType.Default,
                     ct);
             if (nodeFile is null)

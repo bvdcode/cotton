@@ -1,7 +1,8 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Topology;
 using Cotton.Database.Models;
 using Cotton.Nodes;
 using EasyExtensions.Mediator;
@@ -22,11 +23,9 @@ namespace Cotton.Server.Handlers.Nodes
             GetOwnedNodeQuery request,
             CancellationToken ct)
         {
-            Node? node = await _dbContext.Nodes
+            Node? node = await _dbContext.Nodes.AccessibleTo(request.UserId)
                 .AsNoTracking()
-                .Where(x => x.Id == request.NodeId
-                    && x.OwnerId == request.UserId)
-                .SingleOrDefaultAsync(ct);
+                .SingleOrDefaultAsync(x => x.Id == request.NodeId, ct);
             return node?.Adapt<NodeDto>();
         }
     }

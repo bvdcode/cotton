@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
-using Cotton.Database.Models.Enums;
+using Cotton.Topology;
 using Cotton.Files;
 using Cotton.Nodes;
 using Cotton.Server.Models;
@@ -271,9 +271,8 @@ namespace Cotton.Server.Handlers.Layouts
                 return ([], []);
             }
 
-            Dictionary<Guid, string> allNodePaths = await ResolveNodePathsAsync(
-                userId,
-                layoutId,
+            Dictionary<Guid, string> allNodePaths = await NodeHierarchy.ResolvePathsAsync(
+                _dbContext.Nodes.AccessibleTo(userId).Where(node => node.LayoutId == layoutId),
                 allNodeIdsNeededForPaths,
                 cancellationToken);
 
@@ -308,118 +307,6 @@ namespace Cotton.Server.Handlers.Layouts
             }
 
             return parentPath.TrimEnd(separator) + separator + name;
-        }
-
-        private async Task<Dictionary<Guid, string>> ResolveNodePathsAsync(
-            Guid userId,
-            Guid layoutId,
-            IEnumerable<Guid> startNodeIds,
-            CancellationToken cancellationToken)
-        {
-            HashSet<Guid> nodeIds = startNodeIds.ToHashSet();
-            if (nodeIds.Count == 0)
-            {
-                return [];
-            }
-
-            Dictionary<Guid, (Guid? ParentId, string Name, int Type)> nodeInfo = await LoadNodeLineageAsync(
-                userId,
-                layoutId,
-                nodeIds,
-                cancellationToken);
-
-            Dictionary<Guid, string> nodePaths = new(nodeIds.Count);
-            foreach (Guid id in nodeIds)
-            {
-                nodePaths[id] = ResolveNodePath(nodeInfo, id);
-            }
-
-            return nodePaths;
-        }
-
-        private async Task<Dictionary<Guid, (Guid? ParentId, string Name, int Type)>> LoadNodeLineageAsync(
-            Guid userId,
-            Guid layoutId,
-            HashSet<Guid> startNodeIds,
-            CancellationToken cancellationToken)
-        {
-            Dictionary<Guid, (Guid? ParentId, string Name, int Type)> nodeInfo = [];
-            HashSet<Guid> frontier = new(startNodeIds);
-
-            while (frontier.Count > 0)
-            {
-                Guid[] ids = [.. frontier];
-                frontier.Clear();
-
-                var chunk = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(node => node.OwnerId == userId
-                        && node.LayoutId == layoutId
-                        && ids.Contains(node.Id))
-                    .Select(node => new { node.Id, node.ParentId, node.Name, node.Type })
-                    .ToListAsync(cancellationToken);
-
-                foreach (var node in chunk)
-                {
-                    if (nodeInfo.ContainsKey(node.Id))
-                    {
-                        continue;
-                    }
-
-                    nodeInfo[node.Id] = (node.ParentId, node.Name, (int)node.Type);
-
-                    if (node.ParentId.HasValue && !nodeInfo.ContainsKey(node.ParentId.Value))
-                    {
-                        frontier.Add(node.ParentId.Value);
-                    }
-                }
-            }
-
-            foreach ((Guid id, (Guid? ParentId, string Name, int Type) info) in nodeInfo.ToArray())
-            {
-                if (info.ParentId.HasValue
-                    && nodeInfo.TryGetValue(
-                        info.ParentId.Value,
-                        out (Guid? ParentId, string Name, int Type) parent)
-                    && parent.Type != info.Type)
-                {
-                    nodeInfo[id] = (null, info.Name, info.Type);
-                }
-            }
-
-            return nodeInfo;
-        }
-
-        private static string ResolveNodePath(
-            IReadOnlyDictionary<Guid, (Guid? ParentId, string Name, int Type)> nodeInfo,
-            Guid id)
-        {
-            const int MaxDepth = 256;
-
-            Stack<string> parts = new();
-            HashSet<Guid> visited = [];
-
-            Guid currentId = id;
-            int depth = 0;
-
-            while (nodeInfo.TryGetValue(currentId, out (Guid? ParentId, string Name, int Type) info))
-            {
-                if (!visited.Add(currentId) || depth++ >= MaxDepth)
-                {
-                    break;
-                }
-
-                parts.Push(info.Name);
-
-                if (!info.ParentId.HasValue)
-                {
-                    break;
-                }
-
-                currentId = info.ParentId.Value;
-            }
-
-            return Constants.DefaultPathSeparator + string.Join(Constants.DefaultPathSeparator, parts);
         }
     }
 }

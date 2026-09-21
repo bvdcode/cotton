@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Handlers.Computation;
 using Cotton.Server.Handlers.Server;
 using Cotton.Server.Services.Search;
+using Cotton.Topology;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Models;
 using EasyExtensions.Mediator;
@@ -28,9 +29,8 @@ namespace Cotton.Server.Handlers.Layouts
             SearchVectorLayoutHitsQuery request, CancellationToken cancellationToken)
         {
             LayoutSearchRequest search = request.Search;
-            IQueryable<NodeFile> files = dbContext.NodeFiles.AsNoTracking().Where(file =>
-                file.OwnerId == search.UserId
-                && file.Node.LayoutId == search.LayoutId
+            IQueryable<NodeFile> files = dbContext.NodeFiles.AsNoTracking().AccessibleTo(search.UserId).Where(file =>
+                file.Node.LayoutId == search.LayoutId
                 && file.Node.Type == NodeType.Default
                 && (file.OriginalNodeFileId == Guid.Empty || file.OriginalNodeFileId == file.Id));
 

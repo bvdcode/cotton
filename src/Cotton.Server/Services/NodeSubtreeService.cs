@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Topology;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -22,9 +23,8 @@ namespace Cotton.Server.Services
 
                 List<Guid> children = await _dbContext.Nodes
                     .AsNoTracking()
-                    .Where(x => x.OwnerId == userId
-                        && x.ParentId != null
-                        && batch.Contains(x.ParentId.Value))
+                    .ChildrenOf(batch)
+                    .Where(x => x.OwnerId == userId)
                     .Select(x => x.Id)
                     .ToListAsync(ct);
 

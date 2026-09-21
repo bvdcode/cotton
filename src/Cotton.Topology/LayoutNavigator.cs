@@ -7,12 +7,14 @@ using Cotton.Database.Models.Enums;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Cotton.Topology
 {
     public class LayoutNavigator(
         CottonDbContext _dbContext,
-        ILayoutService _layouts) : ILayoutNavigator
+        ILayoutService _layouts,
+        ILogger<LayoutNavigator> _logger) : ILayoutNavigator
     {
         public async Task<(Layout Layout, Node Root)> GetLayoutAndRootAsync(Guid userId, NodeType nodeType, CancellationToken ct = default)
         {
@@ -23,27 +25,26 @@ namespace Cotton.Topology
 
         public async Task<Node?> ResolveNodeByPathAsync(Guid userId, string? path, NodeType nodeType, CancellationToken ct = default)
         {
-            var (layout, currentNode) = await GetLayoutAndRootAsync(userId, nodeType, ct);
+            ResolvedNodePath? resolved = await ResolveNodePathAsync(userId, path, nodeType, ct);
+            return resolved?.Node;
+        }
+
+        public async Task<ResolvedNodePath?> ResolveNodePathAsync(Guid userId, string? path, NodeType nodeType, CancellationToken ct = default)
+        {
+            var (_, currentNode) = await GetLayoutAndRootAsync(userId, nodeType, ct);
             if (string.IsNullOrWhiteSpace(path))
             {
-                return currentNode;
+                return new(currentNode, string.Empty);
             }
 
             string[] parts = (path ?? string.Empty)
                 .Replace('\\', Constants.DefaultPathSeparator)
                 .Trim(Constants.DefaultPathSeparator)
                 .Split(Constants.DefaultPathSeparator, StringSplitOptions.RemoveEmptyEntries);
+            List<string> resolvedParts = new(parts.Length);
             foreach (string part in parts)
             {
-                string nameKey = NameValidator.NormalizeAndGetNameKey(part);
-                Node? nextNode = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => x.LayoutId == layout.Id
-                        && x.ParentId == currentNode.Id
-                        && x.OwnerId == userId
-                        && x.NameKey == nameKey
-                        && x.Type == nodeType)
-                    .SingleOrDefaultAsync(ct);
+                Node? nextNode = await FindChildNodeAsync(currentNode, part, ct);
 
                 if (nextNode is null)
                 {
@@ -51,49 +52,41 @@ namespace Cotton.Topology
                 }
 
                 currentNode = nextNode;
+                resolvedParts.Add(nextNode.Name);
             }
 
-            return currentNode;
+            return new(currentNode, string.Join(Constants.DefaultPathSeparator, resolvedParts));
+        }
+
+        public Task<Node?> FindChildNodeAsync(Node parent, string name, CancellationToken ct = default)
+        {
+            string nameKey = NameValidator.NormalizeAndGetNameKey(name);
+            return new NodeDirectory(_dbContext, parent).Nodes.AsNoTracking()
+                .SingleOrDefaultAsync(node => node.NameKey == nameKey, ct);
         }
 
         public async Task<string?> GetNodePathFromRootAsync(Guid userId, Guid nodeId, NodeType nodeType, CancellationToken ct = default)
         {
-            const int maxDepth = 256;
-
-            var current = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == nodeType)
-                .Select(x => new { x.Id, x.ParentId, x.Name })
-                .SingleOrDefaultAsync(ct);
-            if (current is null)
+            IQueryable<Node> nodes = _dbContext.Nodes.AsNoTracking().AccessibleTo(userId)
+                .Where(node => node.Type == nodeType);
+            Stack<string> parts = new();
+            try
             {
-                return null;
-            }
-
-            Stack<string> parts = new Stack<string>();
-            HashSet<Guid> visited = new HashSet<Guid>();
-            int depth = 0;
-
-            while (current.ParentId.HasValue)
-            {
-                if (!visited.Add(current.Id) || depth++ >= maxDepth)
+                await foreach (var node in NodeHierarchy.ReadAncestorsAsync(
+                    nodes, nodeId, node => new { node.ParentId, node.Name }, node => node.ParentId, cancellationToken: ct))
                 {
-                    return null;
-                }
-
-                parts.Push(current.Name);
-                current = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => x.Id == current.ParentId.Value && x.OwnerId == userId && x.Type == nodeType)
-                    .Select(x => new { x.Id, x.ParentId, x.Name })
-                    .SingleOrDefaultAsync(ct);
-                if (current is null)
-                {
-                    return null;
+                    if (!node.ParentId.HasValue)
+                    {
+                        return string.Join(Constants.DefaultPathSeparator, parts);
+                    }
+                    parts.Push(node.Name);
                 }
             }
-
-            return string.Join(Constants.DefaultPathSeparator, parts);
+            catch (NodeHierarchyException exception)
+            {
+                _logger.LogWarning(exception, "Cannot resolve path for node {NodeId}", nodeId);
+            }
+            return null;
         }
 
         public async Task<(Node Parent, string ResourceName)?> ResolveParentAndNameAsync(Guid userId, string path, NodeType nodeType, CancellationToken ct = default)

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Topology;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
@@ -203,7 +204,8 @@ namespace Cotton.Server.Services
                 Guid[] parentIds = [.. currentLevel.Keys];
 
                 IQueryable<NodeFile> filesQuery = _dbContext.NodeFiles
-                    .Where(x => parentIds.Contains(x.NodeId) && x.OwnerId == userId && x.Node.Type == NodeType.Default)
+                    .ChildrenOf(parentIds)
+                    .Where(x => x.OwnerId == userId && x.Node.Type == NodeType.Default)
                     .Include(x => x.Node)
                     .Include(x => x.FileManifest)
                     .ThenInclude(x => x.FileManifestChunks)
@@ -232,7 +234,8 @@ namespace Cotton.Server.Services
 
                 IQueryable<Node> childFoldersQuery = _dbContext.Nodes
                     .AsNoTracking()
-                    .Where(x => x.ParentId.HasValue && parentIds.Contains(x.ParentId.Value) && x.OwnerId == userId && x.Type == NodeType.Default)
+                    .ChildrenOf(parentIds)
+                    .Where(x => x.OwnerId == userId && x.Type == NodeType.Default)
                     .OrderBy(x => x.Name);
                 childFoldersQuery = ApplyLimitProbe(childFoldersQuery, limits);
                 List<Node> childFolders = await childFoldersQuery.ToListAsync(cancellationToken);

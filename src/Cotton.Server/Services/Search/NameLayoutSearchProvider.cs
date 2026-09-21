@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Topology;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -30,8 +31,8 @@ namespace Cotton.Server.Services.Search
 
             IQueryable<Node> baseQuery = _dbContext.Nodes
                 .AsNoTracking()
-                .Where(x => x.OwnerId == request.UserId
-                    && x.LayoutId == request.LayoutId
+                .AccessibleTo(request.UserId)
+                .Where(x => x.LayoutId == request.LayoutId
                     && x.Type == NodeType.Default);
 
             IQueryable<Node> query = ApplyCriteria(baseQuery, criteria);
@@ -59,8 +60,8 @@ namespace Cotton.Server.Services.Search
 
             IQueryable<NodeFile> baseQuery = _dbContext.NodeFiles
                 .AsNoTracking()
-                .Where(x => x.OwnerId == request.UserId
-                    && x.Node.LayoutId == request.LayoutId
+                .AccessibleTo(request.UserId)
+                .Where(x => x.Node.LayoutId == request.LayoutId
                     && x.Node.Type == NodeType.Default);
 
             IQueryable<NodeFile> query = ApplyCriteria(baseQuery, criteria);
