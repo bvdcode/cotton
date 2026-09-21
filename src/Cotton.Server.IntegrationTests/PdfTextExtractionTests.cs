@@ -14,10 +14,26 @@ namespace Cotton.Server.IntegrationTests
         private static PdfTextExtractor CreateExtractor() => new(NullLogger<PdfTextExtractor>.Instance);
 
         [Test]
+        public async Task Extract_LimitIndexesBeginningOfFirstPage()
+        {
+            using MemoryStream source = new(PdfTestDocument.Create("First page", "Second page"));
+            Assert.That(await CreateExtractor().ExtractAsync(source, 5),
+                Is.EqualTo(new TextExtractionResult("First", true)));
+        }
+
+        [Test]
+        public async Task Extract_ExactLimit_DoesNotCountGeneratedTrailingLineBreak()
+        {
+            using MemoryStream source = new(PdfTestDocument.Create("First"));
+            Assert.That(await CreateExtractor().ExtractAsync(source, 5),
+                Is.EqualTo(new TextExtractionResult("First", false)));
+        }
+
+        [Test]
         public async Task Extract_ReadsAllPagesInOrder_AndKeepsSourceOpen()
         {
             using MemoryStream source = new(PdfTestDocument.Create("First page", "Second page"));
-            string text = await CreateExtractor().ExtractAsync(source);
+            string text = (await CreateExtractor().ExtractAsync(source)).Text;
             Assert.Multiple(() =>
             {
                 Assert.That(text, Is.EqualTo($"First page{Environment.NewLine}Second page"));
@@ -29,7 +45,7 @@ namespace Cotton.Server.IntegrationTests
         public async Task Extract_BlankPdf_ReturnsEmptyText()
         {
             using MemoryStream source = new(PdfTestDocument.Create(""));
-            Assert.That(await CreateExtractor().ExtractAsync(source), Is.Empty);
+            Assert.That((await CreateExtractor().ExtractAsync(source)).Text, Is.Empty);
         }
 
         [Test]
@@ -46,7 +62,7 @@ namespace Cotton.Server.IntegrationTests
             using CancellationTokenSource cancellation = new();
             cancellation.Cancel();
             Assert.ThrowsAsync<OperationCanceledException>(async () =>
-                await CreateExtractor().ExtractAsync(source, cancellation.Token));
+                await CreateExtractor().ExtractAsync(source, cancellationToken: cancellation.Token));
         }
 
         [Test]

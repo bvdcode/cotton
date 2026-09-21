@@ -4,11 +4,10 @@
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
-using System.Text;
 
 namespace Cotton.TextExtraction
 {
-    public class HtmlTextExtractor : IFileTextExtractor
+    public class HtmlTextExtractor : FileTextExtractor
     {
         private static readonly IReadOnlySet<string> IgnoredElements = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -24,39 +23,38 @@ namespace Cotton.TextExtraction
 
         public static readonly string[] ContentTypes = ["text/html", "application/xhtml+xml"];
 
-        public IEnumerable<string> SupportedContentTypes => ContentTypes;
+        public override IEnumerable<string> SupportedContentTypes => ContentTypes;
 
-        public async Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default)
+        protected override Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
+        {
+            return ExtractIntoAsync(source, text, cancellationToken);
+        }
+
+        internal static async Task ExtractIntoAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(source);
             HtmlParser parser = new();
-            IHtmlDocument document = await parser.ParseDocumentAsync(source, cancellationToken);
-            return ExtractDocument(document);
+            using IHtmlDocument document = await parser.ParseDocumentAsync(source, cancellationToken);
+            AppendNode(document.Body ?? document.DocumentElement, text, cancellationToken);
         }
 
-        internal static async Task<string> ExtractAsync(string html, CancellationToken cancellationToken)
+        internal static async Task ExtractIntoAsync(string html, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
             HtmlParser parser = new();
-            IHtmlDocument document = await parser.ParseDocumentAsync(html, cancellationToken);
-            return ExtractDocument(document);
+            using IHtmlDocument document = await parser.ParseDocumentAsync(html, cancellationToken);
+            AppendNode(document.Body ?? document.DocumentElement, text, cancellationToken);
         }
 
-        private static string ExtractDocument(IHtmlDocument document)
+        private static void AppendNode(INode? node, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            StringBuilder text = new();
-            AppendNode(document.Body ?? document.DocumentElement, text);
-            return TextExtractionUtilities.JoinLines(text.ToString().Split('\n'));
-        }
-
-        private static void AppendNode(INode? node, StringBuilder text)
-        {
-            if (node is null)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (node is null || text.IsTruncated)
             {
                 return;
             }
             if (node is IText characterData)
             {
-                text.Append(characterData.Data);
+                text.AppendNormalized(characterData.Data);
                 return;
             }
             if (node is IElement element && IgnoredElements.Contains(element.LocalName))
@@ -67,23 +65,19 @@ namespace Cotton.TextExtraction
             bool isBlock = node is IElement block && BlockElements.Contains(block.LocalName);
             if (isBlock)
             {
-                AppendLineBreak(text);
+                text.AppendLineBreak();
             }
             foreach (INode child in node.ChildNodes)
             {
-                AppendNode(child, text);
+                AppendNode(child, text, cancellationToken);
+                if (text.IsTruncated)
+                {
+                    break;
+                }
             }
             if (isBlock)
             {
-                AppendLineBreak(text);
-            }
-        }
-
-        private static void AppendLineBreak(StringBuilder text)
-        {
-            if (text.Length > 0 && text[^1] != '\n')
-            {
-                text.Append('\n');
+                text.AppendLineBreak();
             }
         }
     }

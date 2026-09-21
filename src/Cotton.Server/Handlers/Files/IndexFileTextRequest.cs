@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Extensions;
+using Cotton.Server.Models.Configuration;
 using Cotton.Server.Services.Computation;
 using Cotton.Server.Services.Search;
 using Cotton.Storage.Abstractions;
@@ -14,6 +15,7 @@ using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Options;
 using System.Runtime.CompilerServices;
 
 namespace Cotton.Server.Handlers.Files
@@ -27,7 +29,7 @@ namespace Cotton.Server.Handlers.Files
 
     public class IndexFileTextRequestHandler(
         CottonDbContext dbContext, IStoragePipeline storage, FileTextExtractorProvider extractors,
-        ComputationService computation, ILogger<IndexFileTextRequestHandler> logger)
+        ComputationService computation, IOptions<TextIndexingOptions> options, ILogger<IndexFileTextRequestHandler> logger)
         : IRequestHandler<IndexFileTextRequest>
     {
         public async Task Handle(IndexFileTextRequest request, CancellationToken cancellationToken)
@@ -111,8 +113,17 @@ namespace Cotton.Server.Handlers.Files
                         ChunkLengths = manifest.FileManifestChunks.GetChunkLengths(),
                     };
                     await using Stream source = storage.GetBlobStream(manifest.FileManifestChunks.GetChunkHashes(), context);
-                    text = await extractor.ExtractAsync(source, cancellationToken);
-                    error = null;
+                    int limit = options.Value.MaxExtractedTextBytes;
+                    TextExtractionResult result = await extractor.ExtractAsync(source, limit, cancellationToken);
+                    text = result.Text;
+                    error = result.IsTruncated
+                        ? $"text_truncated: indexed the beginning within {limit} UTF-8 bytes."
+                        : null;
+                    if (result.IsTruncated)
+                    {
+                        logger.LogInformation("Text indexing for file manifest {FileManifestId} was truncated at {MaxExtractedTextBytes} UTF-8 bytes.",
+                            manifest.Id, limit);
+                    }
                     break;
                 }
                 catch (FileTextExtractionException ex)

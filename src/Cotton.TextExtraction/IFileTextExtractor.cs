@@ -7,6 +7,7 @@ namespace Cotton.TextExtraction
     {
         IEnumerable<string> SupportedContentTypes { get; }
 
-        Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default);
+        Task<TextExtractionResult> ExtractAsync(Stream source,
+            int maxUtf8Bytes = FileTextExtractor.DefaultMaxUtf8Bytes, CancellationToken cancellationToken = default);
     }
 }

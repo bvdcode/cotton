@@ -7,7 +7,7 @@ using System.Xml.Linq;
 
 namespace Cotton.TextExtraction
 {
-    public class OpenDocumentTextExtractor(ILogger<OpenDocumentTextExtractor> logger) : IFileTextExtractor
+    public class OpenDocumentTextExtractor(ILogger<OpenDocumentTextExtractor> logger) : FileTextExtractor
     {
         public static readonly string[] ContentTypes =
         [
@@ -16,12 +16,10 @@ namespace Cotton.TextExtraction
             "application/vnd.oasis.opendocument.presentation",
         ];
 
-        public IEnumerable<string> SupportedContentTypes => ContentTypes;
+        public override IEnumerable<string> SupportedContentTypes => ContentTypes;
 
-        public async Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default)
+        protected override async Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 await using SeekableReadStream seekable = await SeekableReadStream.OpenAsync(source, cancellationToken);
@@ -30,9 +28,9 @@ namespace Cotton.TextExtraction
                     ?? throw new InvalidDataException("The OpenDocument package has no content.xml entry.");
                 await using Stream content = await contentEntry.OpenAsync(cancellationToken);
                 XDocument document = await XDocument.LoadAsync(content, LoadOptions.None, cancellationToken);
-                return TextExtractionUtilities.JoinLines(document.Descendants()
+                text.AppendLines(document.Descendants()
                     .Where(element => element.Name.LocalName is "h" or "p")
-                    .Select(element => element.Value));
+                    .Select(element => element.Value), cancellationToken);
             }
             catch (Exception ex) when (ex is InvalidDataException or System.Xml.XmlException)
             {

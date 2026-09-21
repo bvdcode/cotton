@@ -6,31 +6,31 @@ using MimeKit;
 
 namespace Cotton.TextExtraction
 {
-    public class EmailTextExtractor(ILogger<EmailTextExtractor> logger) : IFileTextExtractor
+    public class EmailTextExtractor(ILogger<EmailTextExtractor> logger) : FileTextExtractor
     {
         public const string ContentType = "message/rfc822";
 
-        public IEnumerable<string> SupportedContentTypes => [ContentType];
+        public override IEnumerable<string> SupportedContentTypes => [ContentType];
 
-        public async Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default)
+        protected override async Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                MimeMessage message = await MimeMessage.LoadAsync(source, cancellationToken);
+                using MimeMessage message = await MimeMessage.LoadAsync(source, cancellationToken);
+                text.AppendLines([message.Subject, message.From.ToString(), message.To.ToString()], cancellationToken);
+                if (text.IsTruncated)
+                {
+                    return;
+                }
                 string? body = message.TextBody;
                 if (string.IsNullOrWhiteSpace(body) && !string.IsNullOrWhiteSpace(message.HtmlBody))
                 {
-                    body = await HtmlTextExtractor.ExtractAsync(message.HtmlBody, cancellationToken);
+                    await HtmlTextExtractor.ExtractIntoAsync(message.HtmlBody, text, cancellationToken);
                 }
-                return TextExtractionUtilities.JoinLines(
-                [
-                    message.Subject,
-                    message.From.ToString(),
-                    message.To.ToString(),
-                    body,
-                ]);
+                else
+                {
+                    text.AppendNormalized(body);
+                }
             }
             catch (ParseException ex)
             {

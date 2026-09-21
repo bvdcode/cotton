@@ -8,16 +8,14 @@ using System.IO.Packaging;
 
 namespace Cotton.TextExtraction
 {
-    public class SpreadsheetTextExtractor(ILogger<SpreadsheetTextExtractor> logger) : IFileTextExtractor
+    public class SpreadsheetTextExtractor(ILogger<SpreadsheetTextExtractor> logger) : FileTextExtractor
     {
         public const string ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-        public IEnumerable<string> SupportedContentTypes => [ContentType];
+        public override IEnumerable<string> SupportedContentTypes => [ContentType];
 
-        public async Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default)
+        protected override async Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 await using SeekableReadStream seekable = await SeekableReadStream.OpenAsync(source, cancellationToken);
@@ -28,23 +26,35 @@ namespace Cotton.TextExtraction
                     ?? throw new FileFormatException("The workbook root is missing.");
                 SharedStringItem[] sharedStrings = workbookPart.SharedStringTablePart?.SharedStringTable?
                     .Elements<SharedStringItem>().ToArray() ?? [];
-                List<string> lines = [];
                 foreach (Sheet sheet in workbook.Sheets?.Elements<Sheet>() ?? [])
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     string relationshipId = sheet.Id?.Value
                         ?? throw new FileFormatException("A worksheet has no relationship id.");
                     WorksheetPart worksheetPart = (WorksheetPart)workbookPart.GetPartById(relationshipId);
-                    lines.Add(sheet.Name?.Value ?? string.Empty);
+                    text.AppendNormalized(sheet.Name?.Value);
+                    text.AppendLineBreak();
+                    if (text.IsTruncated)
+                    {
+                        return;
+                    }
                     Worksheet worksheet = worksheetPart.Worksheet
                         ?? throw new FileFormatException("A worksheet is empty.");
                     foreach (Row row in worksheet.Descendants<Row>())
                     {
-                        string[] values = [.. row.Elements<Cell>().Select(cell => GetCellText(cell, sharedStrings))];
-                        lines.Add(string.Join('\t', values));
+                        cancellationToken.ThrowIfCancellationRequested();
+                        foreach (Cell cell in row.Elements<Cell>())
+                        {
+                            text.AppendNormalized(GetCellText(cell, sharedStrings));
+                            if (text.IsTruncated)
+                            {
+                                return;
+                            }
+                            text.AppendNormalized("\t");
+                        }
+                        text.AppendLineBreak();
                     }
                 }
-                return TextExtractionUtilities.JoinLines(lines);
             }
             catch (Exception ex) when (ex is OpenXmlPackageException or FileFormatException or InvalidDataException)
             {

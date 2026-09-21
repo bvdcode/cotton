@@ -12,12 +12,44 @@ namespace Cotton.Server.IntegrationTests
     public class EpubTextExtractionTests
     {
         [Test]
+        public async Task Extract_TruncationStopsBeforeOpeningLaterChapters()
+        {
+            using MemoryStream source = CreateEpub();
+            using (ZipArchive archive = new(source, ZipArchiveMode.Update, leaveOpen: true))
+            {
+                archive.GetEntry("OEBPS/second.xhtml")!.Delete();
+            }
+            source.Position = 0;
+            EpubTextExtractor extractor = new(NullLogger<EpubTextExtractor>.Instance);
+
+            Assert.That(await extractor.ExtractAsync(source, 5), Is.EqualTo(new TextExtractionResult("First", true)));
+        }
+
+        [Test]
+        public async Task Extract_ImagesAndArchiveSize_DoNotConsumeTextBudget()
+        {
+            using MemoryStream source = CreateEpub();
+            using (ZipArchive archive = new(source, ZipArchiveMode.Update, leaveOpen: true))
+            {
+                await using Stream image = await archive.CreateEntry("OEBPS/image.bin", CompressionLevel.NoCompression).OpenAsync();
+                await image.WriteAsync(new byte[65536]);
+            }
+            source.Position = 0;
+            EpubTextExtractor extractor = new(NullLogger<EpubTextExtractor>.Instance);
+            string expected = string.Join(Environment.NewLine, "First chapter", "First body", "Second chapter", "Second body");
+            int limit = Encoding.UTF8.GetByteCount(expected);
+
+            Assert.That(source.Length, Is.GreaterThan(limit));
+            Assert.That(await extractor.ExtractAsync(source, limit), Is.EqualTo(new TextExtractionResult(expected, false)));
+        }
+
+        [Test]
         public async Task Extract_ReadsSpineInOrder()
         {
             using MemoryStream source = CreateEpub();
             EpubTextExtractor extractor = new(NullLogger<EpubTextExtractor>.Instance);
 
-            string text = await extractor.ExtractAsync(source);
+            string text = (await extractor.ExtractAsync(source)).Text;
 
             Assert.Multiple(() =>
             {

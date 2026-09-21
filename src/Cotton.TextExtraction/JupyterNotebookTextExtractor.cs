@@ -6,16 +6,14 @@ using System.Text.Json;
 
 namespace Cotton.TextExtraction
 {
-    public class JupyterNotebookTextExtractor(ILogger<JupyterNotebookTextExtractor> logger) : IFileTextExtractor
+    public class JupyterNotebookTextExtractor(ILogger<JupyterNotebookTextExtractor> logger) : FileTextExtractor
     {
         public const string ContentType = "application/x-ipynb+json";
 
-        public IEnumerable<string> SupportedContentTypes => [ContentType];
+        public override IEnumerable<string> SupportedContentTypes => [ContentType];
 
-        public async Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default)
+        protected override async Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 using JsonDocument document = await JsonDocument.ParseAsync(source, cancellationToken: cancellationToken);
@@ -26,7 +24,16 @@ namespace Cotton.TextExtraction
                     throw new JsonException("The notebook has no cells array.");
                 }
 
-                return TextExtractionUtilities.JoinLines(cells.EnumerateArray().Select(ReadCellSource));
+                foreach (JsonElement cell in cells.EnumerateArray())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    AppendCellSource(cell, text);
+                    text.AppendLineBreak();
+                    if (text.IsTruncated)
+                    {
+                        return;
+                    }
+                }
             }
             catch (JsonException ex)
             {
@@ -35,7 +42,7 @@ namespace Cotton.TextExtraction
             }
         }
 
-        private static string ReadCellSource(JsonElement cell)
+        private static void AppendCellSource(JsonElement cell, TextExtractionBuffer text)
         {
             if (cell.ValueKind != JsonValueKind.Object)
             {
@@ -43,16 +50,27 @@ namespace Cotton.TextExtraction
             }
             if (!cell.TryGetProperty("source", out JsonElement source))
             {
-                return string.Empty;
+                return;
             }
 
-            return source.ValueKind switch
+            switch (source.ValueKind)
             {
-                JsonValueKind.String => source.GetString() ?? string.Empty,
-                JsonValueKind.Array => string.Concat(source.EnumerateArray()
-                    .Select(ReadSourceLine)),
-                _ => throw new JsonException("A notebook cell has an invalid source."),
-            };
+                case JsonValueKind.String:
+                    text.AppendNormalized(source.GetString());
+                    break;
+                case JsonValueKind.Array:
+                    foreach (JsonElement line in source.EnumerateArray())
+                    {
+                        text.AppendNormalized(ReadSourceLine(line));
+                        if (text.IsTruncated)
+                        {
+                            return;
+                        }
+                    }
+                    break;
+                default:
+                    throw new JsonException("A notebook cell has an invalid source.");
+            }
         }
 
         private static string ReadSourceLine(JsonElement line)

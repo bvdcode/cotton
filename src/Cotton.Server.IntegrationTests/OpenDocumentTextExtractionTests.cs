@@ -12,12 +12,20 @@ namespace Cotton.Server.IntegrationTests
     public class OpenDocumentTextExtractionTests
     {
         [Test]
+        public async Task Extract_LimitIndexesBeginningOfFirstParagraph()
+        {
+            using MemoryStream source = CreateDocument();
+            OpenDocumentTextExtractor extractor = new(NullLogger<OpenDocumentTextExtractor>.Instance);
+            Assert.That(await extractor.ExtractAsync(source, 8), Is.EqualTo(new TextExtractionResult("Document", true)));
+        }
+
+        [Test]
         public async Task Extract_ReadsParagraphsAndKeepsSourceOpen()
         {
             using MemoryStream source = CreateDocument();
             OpenDocumentTextExtractor extractor = new(NullLogger<OpenDocumentTextExtractor>.Instance);
 
-            string text = await extractor.ExtractAsync(source);
+            string text = (await extractor.ExtractAsync(source)).Text;
 
             Assert.Multiple(() =>
             {

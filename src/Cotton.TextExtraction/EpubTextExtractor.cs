@@ -7,16 +7,14 @@ using System.Xml.Linq;
 
 namespace Cotton.TextExtraction
 {
-    public class EpubTextExtractor(ILogger<EpubTextExtractor> logger) : IFileTextExtractor
+    public class EpubTextExtractor(ILogger<EpubTextExtractor> logger) : FileTextExtractor
     {
         public const string ContentType = "application/epub+zip";
 
-        public IEnumerable<string> SupportedContentTypes => [ContentType];
+        public override IEnumerable<string> SupportedContentTypes => [ContentType];
 
-        public async Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default)
+        protected override async Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 await using SeekableReadStream seekable = await SeekableReadStream.OpenAsync(source, cancellationToken);
@@ -34,14 +32,17 @@ namespace Cotton.TextExtraction
                             ?? throw new InvalidDataException("An EPUB manifest item has no href."),
                         StringComparer.Ordinal);
                 string packageDirectory = GetDirectory(packagePath);
-                List<string> sections = [.. package.Descendants()
+                text.AppendLines(package.Descendants()
                     .Where(element => element.Name.LocalName is "title" or "creator" or "subject" or "description")
-                    .Select(element => element.Value)];
-                HtmlTextExtractor htmlExtractor = new();
+                    .Select(element => element.Value), cancellationToken);
                 foreach (XElement itemReference in package.Descendants()
                     .Where(element => element.Name.LocalName == "itemref"))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    if (text.IsTruncated)
+                    {
+                        return;
+                    }
                     string id = (string?)itemReference.Attribute("idref")
                         ?? throw new InvalidDataException("An EPUB spine item has no idref.");
                     if (!manifest.TryGetValue(id, out string? relativePath))
@@ -50,9 +51,9 @@ namespace Cotton.TextExtraction
                     }
                     ZipArchiveEntry contentEntry = GetEntry(archive, ResolvePath(packageDirectory, relativePath));
                     await using Stream content = await contentEntry.OpenAsync(cancellationToken);
-                    sections.Add(await htmlExtractor.ExtractAsync(content, cancellationToken));
+                    await HtmlTextExtractor.ExtractIntoAsync(content, text, cancellationToken);
+                    text.AppendLineBreak();
                 }
-                return TextExtractionUtilities.JoinLines(sections);
             }
             catch (Exception ex) when (ex is InvalidDataException or System.Xml.XmlException)
             {

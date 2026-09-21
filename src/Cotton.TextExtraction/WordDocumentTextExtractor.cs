@@ -8,16 +8,14 @@ using System.IO.Packaging;
 
 namespace Cotton.TextExtraction
 {
-    public class WordDocumentTextExtractor(ILogger<WordDocumentTextExtractor> logger) : IFileTextExtractor
+    public class WordDocumentTextExtractor(ILogger<WordDocumentTextExtractor> logger) : FileTextExtractor
     {
         public const string ContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-        public IEnumerable<string> SupportedContentTypes => [ContentType];
+        public override IEnumerable<string> SupportedContentTypes => [ContentType];
 
-        public async Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default)
+        protected override async Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 await using SeekableReadStream seekable = await SeekableReadStream.OpenAsync(source, cancellationToken);
@@ -31,8 +29,19 @@ namespace Cotton.TextExtraction
                     part.Header?.Descendants<Paragraph>() ?? []);
                 IEnumerable<Paragraph> footers = mainPart.FooterParts.SelectMany(part =>
                     part.Footer?.Descendants<Paragraph>() ?? []);
-                return TextExtractionUtilities.JoinLines(paragraphs.Concat(headers).Concat(footers)
-                    .Select(paragraph => string.Concat(paragraph.Descendants<Text>().Select(text => text.Text))));
+                foreach (Paragraph paragraph in paragraphs.Concat(headers).Concat(footers))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    foreach (Text run in paragraph.Descendants<Text>())
+                    {
+                        text.AppendNormalized(run.Text);
+                        if (text.IsTruncated)
+                        {
+                            return;
+                        }
+                    }
+                    text.AppendLineBreak();
+                }
             }
             catch (Exception ex) when (ex is OpenXmlPackageException or FileFormatException or InvalidDataException)
             {

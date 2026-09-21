@@ -10,6 +10,18 @@ namespace Cotton.Server.IntegrationTests
 {
     public class EmailTextExtractionTests
     {
+        [TestCase("text/plain", "Hello world")]
+        [TestCase("text/html", "<p>Hello <b>world</b></p>")]
+        public async Task Extract_LimitIsSharedBetweenHeadersAndBody(string contentType, string body)
+        {
+            using MemoryStream source = new(Encoding.UTF8.GetBytes(
+                $"Subject: Title\r\nContent-Type: {contentType}; charset=utf-8\r\n\r\n{body}"));
+            EmailTextExtractor extractor = new(NullLogger<EmailTextExtractor>.Instance);
+            string expected = $"Title{Environment.NewLine}Hello";
+            Assert.That(await extractor.ExtractAsync(source, Encoding.UTF8.GetByteCount(expected)),
+                Is.EqualTo(new TextExtractionResult(expected, true)));
+        }
+
         [Test]
         public async Task Extract_ReadsHeadersAndPrefersPlainTextBody()
         {
@@ -23,7 +35,7 @@ namespace Cotton.Server.IntegrationTests
             using MemoryStream source = new(Encoding.UTF8.GetBytes(Message));
             EmailTextExtractor extractor = new(NullLogger<EmailTextExtractor>.Instance);
 
-            string text = await extractor.ExtractAsync(source);
+            string text = (await extractor.ExtractAsync(source)).Text;
 
             Assert.That(text, Does.Contain("Project update"));
             Assert.That(text, Does.Contain("alice@example.com"));

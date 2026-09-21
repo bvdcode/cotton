@@ -11,6 +11,14 @@ namespace Cotton.Server.IntegrationTests
     public class JupyterNotebookTextExtractionTests
     {
         [Test]
+        public async Task Extract_LimitStopsBeforeReadingLaterCellSources()
+        {
+            using MemoryStream source = new(Encoding.UTF8.GetBytes("{\"cells\":[{\"source\":[\"Hello\",\" world\"]},{\"source\":[42]}]}"));
+            JupyterNotebookTextExtractor extractor = new(NullLogger<JupyterNotebookTextExtractor>.Instance);
+            Assert.That(await extractor.ExtractAsync(source, 5), Is.EqualTo(new TextExtractionResult("Hello", true)));
+        }
+
+        [Test]
         public async Task Extract_ReadsCellSourcesWithoutOutputsAndKeepsSourceOpen()
         {
             const string notebook = """
@@ -26,7 +34,7 @@ namespace Cotton.Server.IntegrationTests
             using MemoryStream source = new(Encoding.UTF8.GetBytes(notebook));
             JupyterNotebookTextExtractor extractor = new(NullLogger<JupyterNotebookTextExtractor>.Instance);
 
-            string text = await extractor.ExtractAsync(source);
+            string text = (await extractor.ExtractAsync(source)).Text;
 
             Assert.Multiple(() =>
             {

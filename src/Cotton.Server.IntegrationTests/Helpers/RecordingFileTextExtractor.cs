@@ -5,15 +5,16 @@ using Cotton.TextExtraction;
 
 namespace Cotton.Server.IntegrationTests.Helpers
 {
-    public class RecordingFileTextExtractor(string[] contentTypes, Func<Stream, int, string> extract) : IFileTextExtractor
+    public class RecordingFileTextExtractor(string[] contentTypes, Func<Stream, int, string> extract) : FileTextExtractor
     {
-        public IEnumerable<string> SupportedContentTypes => contentTypes;
+        public override IEnumerable<string> SupportedContentTypes => contentTypes;
 
         public int Attempts { get; private set; }
 
-        public Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default)
+        protected override Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            return Task.FromResult(extract(source, ++Attempts));
+            text.Append(extract(source, ++Attempts));
+            return Task.CompletedTask;
         }
     }
 }

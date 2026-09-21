@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Cotton.TextExtraction
 {
-    public class TextFileExtractor(ILogger<TextFileExtractor> logger) : IFileTextExtractor
+    public class TextFileExtractor(ILogger<TextFileExtractor> logger) : FileTextExtractor
     {
         public static readonly string[] ContentTypes =
         [
@@ -31,12 +31,10 @@ namespace Cotton.TextExtraction
             "application/x-yaml",
         ];
 
-        public IEnumerable<string> SupportedContentTypes => ContentTypes;
+        public override IEnumerable<string> SupportedContentTypes => ContentTypes;
 
-        public async Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default)
+        protected override async Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 using StreamReader reader = new(
@@ -44,7 +42,16 @@ namespace Cotton.TextExtraction
                     new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true),
                     detectEncodingFromByteOrderMarks: true,
                     leaveOpen: true);
-                return (await reader.ReadToEndAsync(cancellationToken)).Trim();
+                char[] buffer = new char[4096];
+                while (!text.IsTruncated)
+                {
+                    int count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken);
+                    if (count == 0)
+                    {
+                        break;
+                    }
+                    text.Append(buffer.AsSpan(0, count));
+                }
             }
             catch (DecoderFallbackException ex)
             {

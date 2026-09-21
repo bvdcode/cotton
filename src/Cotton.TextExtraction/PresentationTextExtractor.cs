@@ -9,16 +9,14 @@ using DrawingText = DocumentFormat.OpenXml.Drawing.Text;
 
 namespace Cotton.TextExtraction
 {
-    public class PresentationTextExtractor(ILogger<PresentationTextExtractor> logger) : IFileTextExtractor
+    public class PresentationTextExtractor(ILogger<PresentationTextExtractor> logger) : FileTextExtractor
     {
         public const string ContentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
-        public IEnumerable<string> SupportedContentTypes => [ContentType];
+        public override IEnumerable<string> SupportedContentTypes => [ContentType];
 
-        public async Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default)
+        protected override async Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 await using SeekableReadStream seekable = await SeekableReadStream.OpenAsync(source, cancellationToken);
@@ -29,7 +27,6 @@ namespace Cotton.TextExtraction
                     ?? throw new FileFormatException("The presentation root is missing.");
                 SlideIdList slideIds = presentation.SlideIdList
                     ?? throw new FileFormatException("The presentation has no slide list.");
-                List<string> lines = [];
                 foreach (SlideId slideId in slideIds.Elements<SlideId>())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -38,23 +35,44 @@ namespace Cotton.TextExtraction
                     SlidePart slidePart = (SlidePart)presentationPart.GetPartById(relationshipId);
                     Slide slide = slidePart.Slide
                         ?? throw new FileFormatException("A slide is empty.");
-                    lines.AddRange(slide.Descendants<DocumentFormat.OpenXml.Drawing.Paragraph>()
-                        .Select(paragraph => string.Concat(paragraph.Descendants<DrawingText>()
-                            .Select(text => text.Text))));
+                    AppendParagraphs(slide, text, cancellationToken);
+                    if (text.IsTruncated)
+                    {
+                        return;
+                    }
                     if (slidePart.NotesSlidePart?.NotesSlide is not null)
                     {
-                        lines.AddRange(slidePart.NotesSlidePart.NotesSlide
-                            .Descendants<DocumentFormat.OpenXml.Drawing.Paragraph>()
-                            .Select(paragraph => string.Concat(paragraph.Descendants<DrawingText>()
-                                .Select(text => text.Text))));
+                        AppendParagraphs(slidePart.NotesSlidePart.NotesSlide, text, cancellationToken);
+                        if (text.IsTruncated)
+                        {
+                            return;
+                        }
                     }
                 }
-                return TextExtractionUtilities.JoinLines(lines);
             }
             catch (Exception ex) when (ex is OpenXmlPackageException or FileFormatException or InvalidDataException)
             {
                 logger.LogWarning(ex, "Unable to extract presentation text.");
                 throw new FileTextExtractionException("Unable to read presentation text.", ex);
+            }
+        }
+
+        private static void AppendParagraphs(DocumentFormat.OpenXml.OpenXmlElement root,
+            TextExtractionBuffer text, CancellationToken cancellationToken)
+        {
+            foreach (DocumentFormat.OpenXml.Drawing.Paragraph paragraph in
+                root.Descendants<DocumentFormat.OpenXml.Drawing.Paragraph>())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                foreach (DrawingText run in paragraph.Descendants<DrawingText>())
+                {
+                    text.AppendNormalized(run.Text);
+                    if (text.IsTruncated)
+                    {
+                        return;
+                    }
+                }
+                text.AppendLineBreak();
             }
         }
     }

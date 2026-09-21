@@ -6,6 +6,7 @@ using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Database.Integrity;
 using Cotton.Server.Auth;
+using Cotton.Server.Models.Configuration;
 using Cotton.Server.Handlers.WebDav;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -26,6 +27,10 @@ namespace Cotton.Server.Extensions
     {
         public static IServiceCollection AddComputationServices(this IServiceCollection services)
         {
+            services.AddOptions<TextIndexingOptions>()
+                .Validate(options => options.MaxExtractedTextBytes > 0,
+                    "TextIndexing:MaxExtractedTextBytes must be greater than zero.")
+                .ValidateOnStart();
             services.AddSingleton<EmbeddingDimensionCache>();
             services.AddScoped<ComputationService>();
             services.AddScoped<TeiClient>();

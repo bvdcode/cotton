@@ -15,12 +15,27 @@ namespace Cotton.Server.IntegrationTests
     public class OfficeTextExtractionTests
     {
         [Test]
+        public async Task Extractors_LimitTextAcrossOfficeFormats()
+        {
+            using MemoryStream word = CreateWordDocument("First paragraph", "Second paragraph");
+            using MemoryStream presentation = CreatePresentation("First slide", "Second slide");
+            using MemoryStream spreadsheet = CreateSpreadsheet();
+
+            Assert.That(await new WordDocumentTextExtractor(NullLogger<WordDocumentTextExtractor>.Instance)
+                .ExtractAsync(word, 5), Is.EqualTo(new TextExtractionResult("First", true)));
+            Assert.That(await new PresentationTextExtractor(NullLogger<PresentationTextExtractor>.Instance)
+                .ExtractAsync(presentation, 5), Is.EqualTo(new TextExtractionResult("First", true)));
+            Assert.That(await new SpreadsheetTextExtractor(NullLogger<SpreadsheetTextExtractor>.Instance)
+                .ExtractAsync(spreadsheet, 5), Is.EqualTo(new TextExtractionResult("Peopl", true)));
+        }
+
+        [Test]
         public async Task WordExtractor_ReadsParagraphs()
         {
             using MemoryStream source = CreateWordDocument("First paragraph", "Second paragraph");
             WordDocumentTextExtractor extractor = new(NullLogger<WordDocumentTextExtractor>.Instance);
 
-            string text = await extractor.ExtractAsync(source);
+            string text = (await extractor.ExtractAsync(source)).Text;
 
             Assert.Multiple(() =>
             {
@@ -35,7 +50,7 @@ namespace Cotton.Server.IntegrationTests
             using MemoryStream source = CreatePresentation("First slide", "Second slide");
             PresentationTextExtractor extractor = new(NullLogger<PresentationTextExtractor>.Instance);
 
-            string text = await extractor.ExtractAsync(source);
+            string text = (await extractor.ExtractAsync(source)).Text;
 
             Assert.Multiple(() =>
             {
@@ -50,7 +65,7 @@ namespace Cotton.Server.IntegrationTests
             using MemoryStream source = CreateSpreadsheet();
             SpreadsheetTextExtractor extractor = new(NullLogger<SpreadsheetTextExtractor>.Instance);
 
-            string text = await extractor.ExtractAsync(source);
+            string text = (await extractor.ExtractAsync(source)).Text;
 
             Assert.Multiple(() =>
             {
