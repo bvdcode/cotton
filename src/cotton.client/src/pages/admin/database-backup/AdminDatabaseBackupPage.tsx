@@ -8,7 +8,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
 import {
@@ -19,11 +19,6 @@ import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 import { AdminPageHeader } from "../components/AdminPageHeader";
-
-type TriggerFeedback =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "error"; message: string };
 
 const formatDateTime = (value: string): string => {
   const hasExplicitTimeZone = /([zZ]|[+-]\d{2}:\d{2})$/.test(value);
@@ -45,10 +40,6 @@ const formatDateTime = (value: string): string => {
 export const AdminDatabaseBackupPage = () => {
   const { t } = useTranslation(["admin", "common"]);
 
-  const [triggerFeedback, setTriggerFeedback] = useState<TriggerFeedback>({
-    kind: "idle",
-  });
-
   const backupQuery = useLatestDatabaseBackupQuery();
   const backup = backupQuery.data ?? null;
   const triggerBackupMutation = useTriggerDatabaseBackupMutation();
@@ -57,27 +48,14 @@ export const AdminDatabaseBackupPage = () => {
     await backupQuery.refetch();
   }, [backupQuery]);
 
-  const handleTriggerBackup = useCallback(async () => {
-    setTriggerFeedback({ kind: "loading" });
-
-    try {
-      await triggerBackupMutation.mutateAsync();
-      setTriggerFeedback({ kind: "idle" });
-      toast.success(t("databaseBackup.state.triggerSuccess"), {
-        toastId: "admin:database-backup:trigger:success",
-      });
-    } catch (error) {
-      const message = getApiErrorMessage(error);
-      if (message) {
-        setTriggerFeedback({ kind: "error", message });
-        return;
-      }
-
-      setTriggerFeedback({
-        kind: "error",
-        message: t("databaseBackup.errors.triggerFailed"),
-      });
-    }
+  const handleTriggerBackup = useCallback(() => {
+    triggerBackupMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(t("databaseBackup.state.triggerSuccess"), {
+          toastId: "admin:database-backup:trigger:success",
+        });
+      },
+    });
   }, [triggerBackupMutation, t]);
 
   const placeholder = t("placeholder", { ns: "common" });
@@ -86,7 +64,11 @@ export const AdminDatabaseBackupPage = () => {
     ? (getApiErrorMessage(backupQuery.error) ??
       t("databaseBackup.errors.loadFailed"))
     : null;
-  const isTriggering = triggerFeedback.kind === "loading";
+  const isTriggering = triggerBackupMutation.isPending;
+  const triggerErrorMessage = triggerBackupMutation.isError
+    ? getApiErrorMessage(triggerBackupMutation.error) ||
+      t("databaseBackup.errors.triggerFailed")
+    : null;
   const isInitialLoading = backupQuery.isPending;
   const isRefreshing = backupQuery.isFetching && !backupQuery.isPending;
 
@@ -164,7 +146,7 @@ export const AdminDatabaseBackupPage = () => {
                 </Button>
                 <Button
                   variant="contained"
-                  onClick={() => void handleTriggerBackup()}
+                  onClick={handleTriggerBackup}
                   disabled={isTriggering}
                 >
                   {isTriggering ? (
@@ -186,8 +168,8 @@ export const AdminDatabaseBackupPage = () => {
             <Alert severity="error">{loadErrorMessage}</Alert>
           )}
 
-          {triggerFeedback.kind === "error" && (
-            <Alert severity="error">{triggerFeedback.message}</Alert>
+          {triggerErrorMessage && (
+            <Alert severity="error">{triggerErrorMessage}</Alert>
           )}
 
           <Stack minHeight={4}>

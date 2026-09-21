@@ -23,18 +23,10 @@ import { AdminPageHeader } from "../components/AdminPageHeader";
 import { GcTimelineChart } from "./components/GcTimelineChart";
 import { StorageSummaryCards } from "./components/StorageSummaryCards";
 
-type TriggerState =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "error"; message: string };
-
 export const AdminStorageStatisticsPage = () => {
   const { t } = useTranslation(["admin", "common"]);
 
   const [bucket, setBucket] = useState<GcTimelineBucketKind>("day");
-  const [triggerState, setTriggerState] = useState<TriggerState>({
-    kind: "idle",
-  });
 
   const timelineQuery = useGcChunksTimelineQuery({ bucket });
   const timeline = timelineQuery.data ?? null;
@@ -55,27 +47,14 @@ export const AdminStorageStatisticsPage = () => {
     void timelineQuery.refetch();
   };
 
-  const handleTriggerGarbageCollector = async () => {
-    setTriggerState({ kind: "loading" });
-
-    try {
-      await triggerGcMutation.mutateAsync();
-      setTriggerState({ kind: "idle" });
-      toast.success(t("storageStatistics.state.triggerGcSuccess"), {
-        toastId: "admin:storage-statistics:trigger-gc:success",
-      });
-    } catch (error) {
-      const message = getApiErrorMessage(error);
-      if (message) {
-        setTriggerState({ kind: "error", message });
-        return;
-      }
-
-      setTriggerState({
-        kind: "error",
-        message: t("storageStatistics.errors.triggerGcFailed"),
-      });
-    }
+  const handleTriggerGarbageCollector = () => {
+    triggerGcMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(t("storageStatistics.state.triggerGcSuccess"), {
+          toastId: "admin:storage-statistics:trigger-gc:success",
+        });
+      },
+    });
   };
 
   const isLoading = timelineQuery.isPending || timelineQuery.isFetching;
@@ -83,7 +62,11 @@ export const AdminStorageStatisticsPage = () => {
     ? (getApiErrorMessage(timelineQuery.error) ??
       t("storageStatistics.errors.loadFailed"))
     : null;
-  const isTriggering = triggerState.kind === "loading";
+  const isTriggering = triggerGcMutation.isPending;
+  const triggerErrorMessage = triggerGcMutation.isError
+    ? getApiErrorMessage(triggerGcMutation.error) ||
+      t("storageStatistics.errors.triggerGcFailed")
+    : null;
   return (
     <Stack spacing={2}>
       <AdminPageSurface>
@@ -115,7 +98,7 @@ export const AdminStorageStatisticsPage = () => {
 
                 <Button
                   variant="contained"
-                  onClick={() => void handleTriggerGarbageCollector()}
+                  onClick={handleTriggerGarbageCollector}
                   disabled={isLoading || isTriggering}
                   startIcon={
                     isTriggering ? (
@@ -145,8 +128,8 @@ export const AdminStorageStatisticsPage = () => {
             <Alert severity="error">{loadErrorMessage}</Alert>
           )}
 
-          {triggerState.kind === "error" && (
-            <Alert severity="error">{triggerState.message}</Alert>
+          {triggerErrorMessage && (
+            <Alert severity="error">{triggerErrorMessage}</Alert>
           )}
 
           <Box minHeight={4}>
