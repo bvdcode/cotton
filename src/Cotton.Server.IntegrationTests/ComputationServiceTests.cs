@@ -59,7 +59,7 @@ namespace Cotton.Server.IntegrationTests
             services.AddTransient<IRequestHandler<GetComputationServiceInfoQuery, ComputationServiceInfo>, GetComputationServiceInfoQueryHandler>();
             services.AddTransient<IRequestHandler<GetComputationStatusQuery, ComputationStatus>, GetComputationStatusQueryHandler>();
             services.AddTransient<IRequestHandler<GetTextEmbeddingsRequest, float[][]>, GetTextEmbeddingsRequestHandler>();
-            services.AddTransient<IRequestHandler<GetTextEmbeddingFragmentsRequest, float[][]>, GetTextEmbeddingFragmentsRequestHandler>();
+            services.AddTransient<IRequestHandler<GetTextEmbeddingFragmentsRequest, float[][][]>, GetTextEmbeddingFragmentsRequestHandler>();
             _provider = services.BuildServiceProvider();
             _service = _provider.GetRequiredService<ComputationService>();
         }

@@ -7,3 +7,7 @@ Cloud uses the Cotton Bridge base URL and the persistent instance credential. Te
 Bridge authorizes the request and forwards the original protocol payload to the configured computation service. It records request metadata and input lengths without storing input text or vector values in the usage journal. Computation endpoints require credentials even during the temporary access period for older Bridge APIs.
 
 The service advertises maximum inputs per request, tokens per input, and tokens per batch through `info`. Cotton uses these limits when splitting documents and forming embedding batches.
+
+Background indexing reads up to 32 pending files per queue pass and combines their fragments into shared inference batches. Each batch respects both the advertised input count and the padded token budget (longest input multiplied by batch size). Extracted documents are read sequentially, without retaining all source texts together. Remaining fragments are sent immediately when the selected files are exhausted; there is no delay waiting for future files.
+
+Results retain their file and fragment order. The selected files are committed together only after every inference response passes validation. Inference errors, cancellation, and database failures leave that group pending for retry without partial vector replacement. Indexing stops reading additional files when uploads start or global indexing is disabled, and finishes the files already read.

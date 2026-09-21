@@ -14,10 +14,16 @@ using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using System.Runtime.CompilerServices;
 
 namespace Cotton.Server.Handlers.Files
 {
-    public record IndexFileTextRequest(Guid FileManifestId) : IRequest;
+    public record IndexFileTextRequest(IEnumerable<Guid> FileManifestIds) : IRequest
+    {
+        public IndexFileTextRequest(Guid fileManifestId) : this([fileManifestId])
+        {
+        }
+    }
 
     public class IndexFileTextRequestHandler(
         CottonDbContext dbContext, IStoragePipeline storage, FileTextExtractorProvider extractors,
@@ -26,15 +32,65 @@ namespace Cotton.Server.Handlers.Files
     {
         public async Task Handle(IndexFileTextRequest request, CancellationToken cancellationToken)
         {
-            FileManifest? manifest = await FileTextIndexQuery.Pending(dbContext, extractors.GetSupportedContentTypes())
-                .Include(file => file.FileManifestChunks).ThenInclude(chunk => chunk.Chunk)
-                .Include(file => file.NodeFiles)
-                .AsSplitQuery()
-                .SingleOrDefaultAsync(file => file.Id == request.FileManifestId, cancellationToken);
-            if (manifest is null)
+            List<(FileManifest Manifest, string? Error)> files = [];
+            float[][][] vectors = await computation.GetTextEmbeddingFragmentsAsync(
+                ReadDocumentsAsync(cancellationToken), cancellationToken);
+            if (files.Count == 0)
             {
                 return;
             }
+
+            await using IDbContextTransaction transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            for (int fileIndex = 0; fileIndex < files.Count; fileIndex++)
+            {
+                (FileManifest manifest, string? error) = files[fileIndex];
+                await dbContext.FileEmbeddings.Where(embedding => embedding.FileManifestId == manifest.Id)
+                    .ExecuteDeleteAsync(cancellationToken);
+                for (int fragment = 0; fragment < vectors[fileIndex].Length; fragment++)
+                {
+                    dbContext.FileEmbeddings.Add(new FileEmbedding
+                    {
+                        FileManifestId = manifest.Id,
+                        IndexVersion = VectorIndexDefinition.Version,
+                        FragmentIndex = fragment,
+                        Embedding = vectors[fileIndex][fragment],
+                    });
+                }
+                manifest.TextIndexVersion = VectorIndexDefinition.Version;
+                manifest.TextIndexError = error;
+            }
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            async IAsyncEnumerable<string> ReadDocumentsAsync([EnumeratorCancellation] CancellationToken token)
+            {
+                string[] contentTypes = extractors.GetSupportedContentTypes();
+                foreach (Guid id in request.FileManifestIds.Distinct())
+                {
+                    token.ThrowIfCancellationRequested();
+                    FileManifest? manifest = await FileTextIndexQuery.Pending(dbContext, contentTypes)
+                        .Include(file => file.FileManifestChunks).ThenInclude(chunk => chunk.Chunk)
+                        .Include(file => file.NodeFiles)
+                        .AsSplitQuery()
+                        .SingleOrDefaultAsync(file => file.Id == id, token);
+                    if (manifest is null)
+                    {
+                        continue;
+                    }
+                    (string? text, string? error) = await ExtractTextAsync(manifest, token);
+                    if (text is null && error is null)
+                    {
+                        continue;
+                    }
+                    files.Add((manifest, error));
+                    yield return text ?? string.Empty;
+                }
+            }
+        }
+
+        private async Task<(string? Text, string? Error)> ExtractTextAsync(
+            FileManifest manifest, CancellationToken cancellationToken)
+        {
             IEnumerable<string> contentTypes = manifest.NodeFiles
                 .Select(file => file.ContentType)
                 .Distinct(StringComparer.OrdinalIgnoreCase);
@@ -67,31 +123,7 @@ namespace Cotton.Server.Handlers.Files
                     error = ex.Message;
                 }
             }
-            if (text is null && error is null)
-            {
-                return;
-            }
-            float[][] vectors = text is not null
-                ? await computation.GetTextEmbeddingFragmentsAsync(text, cancellationToken)
-                : [];
-
-            await using IDbContextTransaction transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-            await dbContext.FileEmbeddings.Where(embedding => embedding.FileManifestId == manifest.Id)
-                .ExecuteDeleteAsync(cancellationToken);
-            for (int index = 0; index < vectors.Length; index++)
-            {
-                dbContext.FileEmbeddings.Add(new FileEmbedding
-                {
-                    FileManifestId = manifest.Id,
-                    IndexVersion = VectorIndexDefinition.Version,
-                    FragmentIndex = index,
-                    Embedding = vectors[index],
-                });
-            }
-            manifest.TextIndexVersion = VectorIndexDefinition.Version;
-            manifest.TextIndexError = error;
-            await dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            return (text, error);
         }
     }
 }

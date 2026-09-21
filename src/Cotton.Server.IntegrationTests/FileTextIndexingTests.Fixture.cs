@@ -65,7 +65,7 @@ namespace Cotton.Server.IntegrationTests
             services.AddTransient<IRequestHandler<IndexFileTextRequest>, IndexFileTextRequestHandler>();
             services.AddTransient<IRequestHandler<GetComputationServiceInfoQuery, ComputationServiceInfo>, GetComputationServiceInfoQueryHandler>();
             services.AddTransient<IRequestHandler<GetComputationStatusQuery, ComputationStatus>, GetComputationStatusQueryHandler>();
-            services.AddTransient<IRequestHandler<GetTextEmbeddingFragmentsRequest, float[][]>, GetTextEmbeddingFragmentsRequestHandler>();
+            services.AddTransient<IRequestHandler<GetTextEmbeddingFragmentsRequest, float[][][]>, GetTextEmbeddingFragmentsRequestHandler>();
             services.AddTransient<IRequestHandler<GetVectorIndexMetadataQuery, PostgresIndexStatus>, GetVectorIndexMetadataQueryHandler>();
             services.AddTransient<IRequestHandler<BuildVectorIndexRequest, string?>, BuildVectorIndexRequestHandler>();
             _services = services.BuildServiceProvider();
