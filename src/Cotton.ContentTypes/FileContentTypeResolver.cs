@@ -36,6 +36,7 @@ namespace Cotton.ContentTypes
                 [".m4r"] = Override("audio/mp4"),
                 [".md"] = Override("text/markdown"),
                 [".markdown"] = Override("text/markdown"),
+                [".epub"] = Override("application/epub+zip"),
                 [".cs"] = Override("text/plain"),
                 [".csx"] = Override("text/plain"),
                 [".ts"] = Override("text/plain"),

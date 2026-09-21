@@ -30,6 +30,13 @@ namespace Cotton.Server.Extensions
             services.AddScoped<ComputationService>();
             services.AddScoped<TextEmbeddingChunker>();
             services.AddSingleton<IFileTextExtractor, PdfTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, TextFileExtractor>();
+            services.AddSingleton<IFileTextExtractor, HtmlTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, WordDocumentTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, PresentationTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, SpreadsheetTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, EpubTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, EmailTextExtractor>();
             services.AddSingleton<FileTextExtractorProvider>();
             services.AddHttpClient<TeiClient>(client => client.Timeout = TeiClient.RequestTimeout)
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
