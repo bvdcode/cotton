@@ -175,7 +175,7 @@ export const AdminLayoutPage = () => {
             md: `${navWidth}px minmax(0, 1fr)`,
           },
           gap: 2,
-          transition: theme.transitions.create("grid-template-columns"),
+          transition: theme.transitions.create(["width", "grid-template-columns"]),
         })}
       >
         <DesktopAdminNavigation

@@ -82,7 +82,32 @@ describe("AdminNavigation", () => {
     expect(
       within(navigation).getByRole("link", { name: "Security checkup" }),
     ).toHaveAttribute("aria-current", "page");
-    expect(within(navigation).queryByText("Security")).not.toBeInTheDocument();
+    expect(within(navigation).getByText("Security")).not.toBeVisible();
+  });
+
+  it("preserves navigation links and labels while collapsing", () => {
+    const renderNavigation = (expanded: boolean) => (
+      <MemoryRouter initialEntries={["/admin/privacy-settings"]}>
+        <DesktopAdminNavigation
+          sections={sections}
+          expanded={expanded}
+          onToggle={() => undefined}
+          navigationLabel="Administration"
+          toggleLabel="Toggle navigation"
+        />
+      </MemoryRouter>
+    );
+    const { rerender } = render(renderNavigation(true));
+    const link = screen.getByRole("link", { name: "Privacy" });
+    const label = within(link).getByText("Privacy");
+    const section = screen.getByText("Security");
+
+    rerender(renderNavigation(false));
+
+    expect(screen.getByRole("link", { name: "Privacy" })).toBe(link);
+    expect(within(link).getByText("Privacy")).toBe(label);
+    expect(screen.getByText("Security")).toBe(section);
+    expect(link).toHaveAttribute("aria-current", "page");
   });
 
   it("labels the mobile section picker", () => {
