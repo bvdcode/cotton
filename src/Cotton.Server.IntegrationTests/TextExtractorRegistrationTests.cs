@@ -20,6 +20,22 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("workbook.xlsx")]
         [TestCase("book.epub")]
         [TestCase("message.eml")]
+        [TestCase("document.odt")]
+        [TestCase("workbook.ods")]
+        [TestCase("presentation.odp")]
+        [TestCase("calendar.ics")]
+        [TestCase("contact.vcf")]
+        [TestCase("notebook.ipynb")]
+        [TestCase("application.log")]
+        [TestCase("document.rst")]
+        [TestCase("document.rest")]
+        [TestCase("document.adoc")]
+        [TestCase("document.asciidoc")]
+        [TestCase("document.org")]
+        [TestCase("paper.tex")]
+        [TestCase("references.bib")]
+        [TestCase("application.properties")]
+        [TestCase("development.env")]
         public void RegisteredProviderSupportsResolvedFileType(string fileName)
         {
             ServiceCollection services = new();

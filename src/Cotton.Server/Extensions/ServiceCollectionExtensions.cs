@@ -38,6 +38,8 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<IFileTextExtractor, SpreadsheetTextExtractor>();
             services.AddSingleton<IFileTextExtractor, EpubTextExtractor>();
             services.AddSingleton<IFileTextExtractor, EmailTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, OpenDocumentTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, JupyterNotebookTextExtractor>();
             services.AddSingleton<FileTextExtractorProvider>();
             services.AddHttpClient(TeiClient.RemoteClientName, client => client.Timeout = TeiClient.RequestTimeout)
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
