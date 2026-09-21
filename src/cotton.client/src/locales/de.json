@@ -3084,6 +3084,8 @@
           "statusLoadFailed": "Der Dienststatus konnte nicht abgerufen werden.",
           "validateAndSave": "Prüfen und speichern",
           "connected": "Verbunden · {{model}} · {{dimensions}} Dimensionen · {{tokens}} Token",
+          "cloudConnected": "Cotton Bridge autorisiert · Cloud-Berechnungen verfügbar · {{model}} · {{dimensions}} Dimensionen",
+          "cloudUnavailable": "Cotton Bridge konnte diesen Server nicht autorisieren oder Cloud-Berechnungen bereitstellen. Versuchen Sie es erneut.",
           "errors": {
             "NotConfigured": "Die Runner-URL ist nicht konfiguriert.",
             "UnsupportedMode": "Text-Embeddings sind in diesem Berechnungsmodus noch nicht verfügbar.",

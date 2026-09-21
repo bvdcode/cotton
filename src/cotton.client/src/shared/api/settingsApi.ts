@@ -510,8 +510,15 @@ export const settingsApi = {
   getComputionMode: (): Promise<ComputionMode> =>
     getValidated("server/settings/compution-mode", computionModeResponseSchema),
 
-  setComputionMode: async (mode: ComputionMode): Promise<void> => {
-    await httpClient.patch(`server/settings/compution-mode/${mode}`);
+  setComputionMode: async (
+    mode: ComputionMode,
+  ): Promise<ComputationStatus | null> => {
+    const path = `server/settings/compution-mode/${mode}`;
+    const response = await httpClient.patch<unknown>(path);
+    if (response.status === 204) {
+      return null;
+    }
+    return parseValidated(path, response.data, computationStatusSchema);
   },
 
   getRemoteComputationRunnerUrl: (): Promise<string> =>

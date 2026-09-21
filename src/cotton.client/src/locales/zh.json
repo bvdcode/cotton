@@ -3097,6 +3097,8 @@
           "statusLoadFailed": "无法检查服务状态。",
           "validateAndSave": "验证并保存",
           "connected": "已连接 · {{model}} · {{dimensions}} 维 · {{tokens}} 个词元",
+          "cloudConnected": "Cotton Bridge 已授权 · 云计算可用 · {{model}} · {{dimensions}} 维",
+          "cloudUnavailable": "Cotton Bridge 无法授权此服务器或提供云计算。请重试。",
           "errors": {
             "NotConfigured": "尚未配置运行器地址。",
             "UnsupportedMode": "此计算模式暂不支持文本嵌入。",

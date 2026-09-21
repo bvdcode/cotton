@@ -226,8 +226,8 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetComputionMode([FromRoute] ComputionMode mode, CancellationToken cancellationToken)
         {
             SetComputionModeRequest request = new(mode, GetFallbackPublicBaseUrl());
-            await _mediator.Send(request, cancellationToken);
-            return NoContent();
+            ComputationStatus? status = await _mediator.Send(request, cancellationToken);
+            return status is null ? NoContent() : Ok(status);
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]

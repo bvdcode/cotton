@@ -3495,6 +3495,8 @@
           "statusLoadFailed": "Не удалось проверить состояние сервиса.",
           "validateAndSave": "Проверить и сохранить",
           "connected": "Подключено · {{model}} · {{dimensions}} измерения · {{tokens}} токенов",
+          "cloudConnected": "Cotton Bridge авторизован · облачные вычисления доступны · {{model}} · {{dimensions}} измерения",
+          "cloudUnavailable": "Cotton Bridge не смог авторизовать этот сервер или предоставить облачные вычисления. Попробуйте ещё раз.",
           "errors": {
             "NotConfigured": "Адрес раннера не задан.",
             "UnsupportedMode": "В этом режиме текстовые эмбеддинги пока недоступны.",

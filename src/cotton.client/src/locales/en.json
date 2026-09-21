@@ -2885,6 +2885,8 @@
           "statusLoadFailed": "Could not check the service status.",
           "validateAndSave": "Validate and save",
           "connected": "Connected · {{model}} · {{dimensions}} dimensions · {{tokens}} tokens",
+          "cloudConnected": "Cotton Bridge authorized · cloud computations available · {{model}} · {{dimensions}} dimensions",
+          "cloudUnavailable": "Cotton Bridge could not authorize this server or provide cloud computations. Try again.",
           "errors": {
             "NotConfigured": "Runner URL is not configured.",
             "UnsupportedMode": "Text embeddings are not available in this computation mode yet.",

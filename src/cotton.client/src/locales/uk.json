@@ -3103,6 +3103,8 @@
           "statusLoadFailed": "Не вдалося перевірити стан сервісу.",
           "validateAndSave": "Перевірити й зберегти",
           "connected": "Підключено · {{model}} · {{dimensions}} виміри · {{tokens}} токенів",
+          "cloudConnected": "Cotton Bridge авторизовано · хмарні обчислення доступні · {{model}} · {{dimensions}} вимірів",
+          "cloudUnavailable": "Cotton Bridge не зміг авторизувати цей сервер або надати хмарні обчислення. Спробуйте ще раз.",
           "errors": {
             "NotConfigured": "Адресу раннера не задано.",
             "UnsupportedMode": "У цьому режимі текстові ембеддинги поки недоступні.",

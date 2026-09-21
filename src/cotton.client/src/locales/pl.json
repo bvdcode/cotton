@@ -3132,6 +3132,8 @@
           "statusLoadFailed": "Nie udało się sprawdzić stanu usługi.",
           "validateAndSave": "Sprawdź i zapisz",
           "connected": "Połączono · {{model}} · {{dimensions}} wymiary · {{tokens}} tokenów",
+          "cloudConnected": "Cotton Bridge autoryzowany · obliczenia w chmurze dostępne · {{model}} · {{dimensions}} wymiarów",
+          "cloudUnavailable": "Cotton Bridge nie zdołał autoryzować tego serwera ani udostępnić obliczeń w chmurze. Spróbuj ponownie.",
           "errors": {
             "NotConfigured": "Adres runnera nie jest skonfigurowany.",
             "UnsupportedMode": "Embeddingi tekstu nie są jeszcze dostępne w tym trybie.",

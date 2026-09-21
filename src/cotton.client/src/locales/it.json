@@ -3090,6 +3090,8 @@
           "statusLoadFailed": "Impossibile verificare lo stato del servizio.",
           "validateAndSave": "Verifica e salva",
           "connected": "Connesso · {{model}} · {{dimensions}} dimensioni · {{tokens}} token",
+          "cloudConnected": "Cotton Bridge autorizzato · calcolo cloud disponibile · {{model}} · {{dimensions}} dimensioni",
+          "cloudUnavailable": "Cotton Bridge non ha potuto autorizzare questo server o fornire il calcolo cloud. Riprova.",
           "errors": {
             "NotConfigured": "L’URL del runner non è configurato.",
             "UnsupportedMode": "Gli embedding di testo non sono ancora disponibili in questa modalità.",

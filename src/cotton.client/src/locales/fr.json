@@ -3088,6 +3088,8 @@
           "statusLoadFailed": "Impossible de vérifier l’état du service.",
           "validateAndSave": "Vérifier et enregistrer",
           "connected": "Connecté · {{model}} · {{dimensions}} dimensions · {{tokens}} tokens",
+          "cloudConnected": "Cotton Bridge autorisé · calculs cloud disponibles · {{model}} · {{dimensions}} dimensions",
+          "cloudUnavailable": "Cotton Bridge n’a pas pu autoriser ce serveur ni fournir les calculs cloud. Réessayez.",
           "errors": {
             "NotConfigured": "L’URL du moteur distant n’est pas configurée.",
             "UnsupportedMode": "Les embeddings de texte ne sont pas encore disponibles dans ce mode.",

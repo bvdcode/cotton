@@ -3129,6 +3129,8 @@
           "statusLoadFailed": "Nepodařilo se zjistit stav služby.",
           "validateAndSave": "Ověřit a uložit",
           "connected": "Připojeno · {{model}} · {{dimensions}} rozměrů · {{tokens}} tokenů",
+          "cloudConnected": "Cotton Bridge autorizován · cloudové výpočty jsou dostupné · {{model}} · {{dimensions}} rozměrů",
+          "cloudUnavailable": "Cotton Bridge nemohl tento server autorizovat nebo poskytnout cloudové výpočty. Zkuste to znovu.",
           "errors": {
             "NotConfigured": "Adresa runneru není nastavena.",
             "UnsupportedMode": "Textové embeddingy zatím nejsou v tomto režimu dostupné.",

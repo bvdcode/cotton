@@ -3091,6 +3091,8 @@
           "statusLoadFailed": "Não foi possível verificar o estado do serviço.",
           "validateAndSave": "Validar e guardar",
           "connected": "Ligado · {{model}} · {{dimensions}} dimensões · {{tokens}} tokens",
+          "cloudConnected": "Cotton Bridge autorizado · computação na nuvem disponível · {{model}} · {{dimensions}} dimensões",
+          "cloudUnavailable": "O Cotton Bridge não conseguiu autorizar este servidor nem fornecer computação na nuvem. Tente novamente.",
           "errors": {
             "NotConfigured": "O URL do executor não está configurado.",
             "UnsupportedMode": "Os embeddings de texto ainda não estão disponíveis neste modo.",

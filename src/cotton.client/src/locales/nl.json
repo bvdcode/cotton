@@ -3089,6 +3089,8 @@
           "statusLoadFailed": "De servicestatus kon niet worden gecontroleerd.",
           "validateAndSave": "Controleren en opslaan",
           "connected": "Verbonden · {{model}} · {{dimensions}} dimensies · {{tokens}} tokens",
+          "cloudConnected": "Cotton Bridge geautoriseerd · cloudberekeningen beschikbaar · {{model}} · {{dimensions}} dimensies",
+          "cloudUnavailable": "Cotton Bridge kon deze server niet autoriseren of cloudberekeningen leveren. Probeer het opnieuw.",
           "errors": {
             "NotConfigured": "De runner-URL is niet ingesteld.",
             "UnsupportedMode": "Tekstembeddings zijn nog niet beschikbaar in deze rekenmodus.",

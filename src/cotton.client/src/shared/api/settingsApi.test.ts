@@ -418,7 +418,8 @@ describe("settingsApi setters", () => {
           maxChunkSizeBytes: 16777216,
           supportedMaxChunkSizeBytes: [4194304, 8388608, 16777216],
         },
-      });
+      })
+      .mockResolvedValueOnce({ data: undefined, status: 204 });
 
     await settingsApi.setStorageSpaceMode("Limited");
     await settingsApi.setChunkSize(16777216);
@@ -447,6 +448,17 @@ describe("settingsApi setters", () => {
     expect(patch).toHaveBeenNthCalledWith(
       6,
       "server/settings/geoip-lookup-mode/CottonCloud",
+    );
+  });
+
+  it("returns the validated computation status when cloud mode is enabled", async () => {
+    vi.spyOn(httpClient, "patch").mockResolvedValue({
+      data: readyComputationStatus,
+      status: 200,
+    });
+
+    await expect(settingsApi.setComputionMode("Cloud")).resolves.toEqual(
+      readyComputationStatus,
     );
   });
 
@@ -623,6 +635,7 @@ describe("settingsApi.saveSetupStep", () => {
   it("saves local/simple setup choices immediately", async () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
       data: undefined,
+      status: 204,
     });
 
     await settingsApi.saveSetupStep("telemetry", { telemetry: true });
