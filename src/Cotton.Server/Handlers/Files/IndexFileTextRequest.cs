@@ -115,6 +115,16 @@ namespace Cotton.Server.Handlers.Files
                 {
                     continue;
                 }
+                long fileSizeLimit = options.Value.MaxStructuredFileBytes;
+                if (manifest.SizeBytes > fileSizeLimit
+                    && TextIndexingOptions.StructuredContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
+                {
+                    error = $"file_too_large: {contentType} exceeds {fileSizeLimit} bytes.";
+                    logger.LogInformation(
+                        "Skipping text indexing for file manifest {FileManifestId}: {ContentType}, {SizeBytes} bytes exceeds the {MaxFileBytes} byte limit.",
+                        manifest.Id, contentType, manifest.SizeBytes, fileSizeLimit);
+                    continue;
+                }
                 try
                 {
                     PipelineContext context = new()

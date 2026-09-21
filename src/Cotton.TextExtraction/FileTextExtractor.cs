@@ -5,7 +5,7 @@ namespace Cotton.TextExtraction
 {
     public abstract class FileTextExtractor : IFileTextExtractor
     {
-        public const int DefaultMaxUtf8Bytes = 256 * 1024 * 1024;
+        public const int DefaultMaxUtf8Bytes = 4 * 1024 * 1024;
 
         public abstract IEnumerable<string> SupportedContentTypes { get; }
 

@@ -9,6 +9,25 @@ namespace Cotton.Server.Models.Configuration
     {
         public const string SectionName = "TextIndexing";
 
+        public static readonly string[] StructuredContentTypes =
+        [
+            "text/csv",
+            "text/tab-separated-values",
+            "application/json",
+            "text/xml",
+            "application/xml",
+            "text/yaml",
+            "application/yaml",
+            "application/x-yaml",
+            "text/css",
+            "text/javascript",
+            "application/javascript",
+            "text/typescript",
+            "application/typescript",
+        ];
+
         public int MaxExtractedTextBytes { get; set; } = FileTextExtractor.DefaultMaxUtf8Bytes;
+
+        public long MaxStructuredFileBytes { get; set; } = 1024 * 1024;
     }
 }
