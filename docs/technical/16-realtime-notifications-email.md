@@ -41,6 +41,10 @@ The selected mode determines transport only. Password reset, verification, sign-
 
 SMTP credentials are encrypted at rest and never returned in plaintext. Saving email configuration and sending a test message are distinct operations so administrators can verify deliverability deliberately.
 
+Managed relay calls register the instance with Cotton Bridge using a persistent random credential stored in the encrypted cloud-services setting. Registration and later calls use outbound HTTPS only; Bridge does not require a publicly reachable instance URL. The URL included in email remains the destination for account-action links and must be reachable by the recipient.
+
+Bridge records request metadata and email delivery outcomes. Managed calls remain conditional on telemetry consent. The bridge credential is sent only to the configured Cotton Bridge origin, and authenticated clients do not follow redirects.
+
 ## Shared template system
 
 Transactional email uses one renderer and shared visual shell. The current message variants are email confirmation, password reset, and a generic security alert. Structured inputs include:

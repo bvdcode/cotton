@@ -10,15 +10,17 @@ using System.Text.Json;
 using System.Net;
 using Cotton.Database.Models;
 using EasyExtensions.Clients.Models;
+using Cotton.Server.Extensions;
 
 namespace Cotton.Server.Services
 {
     public class GeoLookupService(
         SettingsProvider _settings,
-        HttpClient _httpClient) : IGeoLookupService
+        HttpClient _httpClient,
+        IHttpClientFactory _clients,
+        ILogger<GeoLookupService> _logger) : IGeoLookupService
     {
         private const string GoogleDnsIpAddress = "8.8.8.8";
-        private static readonly GeoIpClient CottonBridgeGeoIpClient = new(global::Cotton.Constants.CottonBridgeGeoIpLookupUrl);
 
         public async Task<GeoLookupResult?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default)
         {
@@ -42,7 +44,7 @@ namespace Cotton.Server.Services
                 return null;
             }
 
-            GeoIpInfo? geo = await CottonBridgeGeoIpClient.TryLookupAsync(ipAddress.ToString(), cancellationToken);
+            GeoIpInfo? geo = await TryBridgeLookupAsync(ipAddress, cancellationToken);
             if (geo is null)
             {
                 return null;
@@ -52,6 +54,25 @@ namespace Cotton.Server.Services
                 Country: geo.Country,
                 Region: geo.Region,
                 City: geo.City);
+        }
+
+        private async Task<GeoIpInfo?> TryBridgeLookupAsync(IPAddress address, CancellationToken cancellationToken)
+        {
+            try
+            {
+                using HttpClient client = _clients.CreateClient(CottonBridgeServiceCollectionExtensions.ServicesClientName);
+                return await client.GetFromJsonAsync<GeoIpInfo>(
+                    "lookup/" + Uri.EscapeDataString(address.ToString()), cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception) when (exception is HttpRequestException or JsonException or OperationCanceledException)
+            {
+                _logger.LogWarning(exception, "Cotton Bridge GeoIP lookup failed.");
+                return null;
+            }
         }
 
         public async Task<CustomGeoLookupTestResult> TestCustomLookupAsync(

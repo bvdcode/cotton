@@ -58,10 +58,11 @@ namespace Cotton.Server.Jobs
                 StoragePipelineProbe = storagePipelineProbe,
             };
             using HttpClient httpClient = _httpClientFactory.CreateClient(HttpClientName);
-            await httpClient.PostAsJsonAsync(
+            using HttpResponseMessage response = await httpClient.PostAsJsonAsync(
                 global::Cotton.Constants.CottonBridgeTelemetryUrl,
                 request,
                 cancellationToken);
+            response.EnsureSuccessStatusCode();
             _logger.LogInformation("CollectPerformanceJob completed - telemetry data was sent to Cotton Bridge");
         }
 
