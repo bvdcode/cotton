@@ -13,6 +13,7 @@ const eventHubMock = vi.hoisted(() => {
     listeners,
     start: vi.fn(async (): Promise<void> => undefined),
     on: vi.fn((method: string, callback: EventCallback): (() => void) => {
+      method = method.toLowerCase();
       const callbacks = listeners.get(method) ?? new Set<EventCallback>();
       callbacks.add(callback);
       listeners.set(method, callbacks);
@@ -21,7 +22,7 @@ const eventHubMock = vi.hoisted(() => {
       };
     }),
     emit(method: string, ...args: JsonValue[]): void {
-      for (const callback of listeners.get(method) ?? []) {
+      for (const callback of listeners.get(method.toLowerCase()) ?? []) {
         callback(...args);
       }
     },
@@ -42,11 +43,14 @@ describe("useFileTreeRealtimeInvalidation", () => {
   it("coalesces accepted mutation events and ignores rejected ones", () => {
     vi.useFakeTimers();
     const onInvalidate = vi.fn();
+    const shouldInvalidate = vi.fn(
+      (method: string) => method === HUB_METHODS.FileCreated,
+    );
     const { unmount } = renderHook(() =>
       useFileTreeRealtimeInvalidation({
         enabled: true,
         onInvalidate,
-        shouldInvalidate: (method) => method === HUB_METHODS.FileCreated,
+        shouldInvalidate,
       }),
     );
 
@@ -59,8 +63,9 @@ describe("useFileTreeRealtimeInvalidation", () => {
 
     expect(eventHubMock.start).toHaveBeenCalledOnce();
     expect(onInvalidate).toHaveBeenCalledOnce();
+    expect(shouldInvalidate).toHaveBeenCalledTimes(3);
     unmount();
-    expect(eventHubMock.listeners.get(HUB_METHODS.FileCreated)?.size).toBe(0);
+    expect(eventHubMock.listeners.get("filecreated")?.size).toBe(0);
   });
 
   it("does not connect or subscribe while disabled", () => {

@@ -3,20 +3,16 @@ import type { JsonValue } from "../types/json";
 import { eventHub } from "./eventHub";
 import {
   FILE_AND_NODE_MUTATION_HUB_METHODS,
-  getHubMethodVariants,
-  type HubMethodOrLower,
+  type HubMethod,
 } from "./hubMethods";
 
-const FILE_TREE_MUTATION_METHODS = getHubMethodVariants(
-  FILE_AND_NODE_MUTATION_HUB_METHODS,
-);
 const INVALIDATION_DELAY_MS = 250;
 const INVALIDATION_MAX_WAIT_MS = 1000;
 
 interface UseFileTreeRealtimeInvalidationOptions {
   enabled: boolean;
   onInvalidate: () => void;
-  shouldInvalidate?: (method: HubMethodOrLower, args: JsonValue[]) => boolean;
+  shouldInvalidate?: (method: HubMethod, args: JsonValue[]) => boolean;
 }
 
 export const useFileTreeRealtimeInvalidation = ({
@@ -80,7 +76,7 @@ export const useFileTreeRealtimeInvalidation = ({
       // Connection retries are managed by SignalR.
     });
 
-    const unsubscribes = FILE_TREE_MUTATION_METHODS.map((method) =>
+    const unsubscribes = FILE_AND_NODE_MUTATION_HUB_METHODS.map((method) =>
       eventHub.on(method, (...args: JsonValue[]) => {
         const predicate = shouldInvalidateRef.current;
         if (predicate && !predicate(method, args)) {

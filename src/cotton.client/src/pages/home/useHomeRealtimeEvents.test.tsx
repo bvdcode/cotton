@@ -20,13 +20,14 @@ const hub = vi.hoisted(() => {
     listeners,
     start: vi.fn(async (): Promise<void> => undefined),
     on: vi.fn((method: string, callback: EventCallback): (() => void) => {
+      method = method.toLowerCase();
       const callbacks = listeners.get(method) ?? new Set<EventCallback>();
       callbacks.add(callback);
       listeners.set(method, callbacks);
       return () => callbacks.delete(callback);
     }),
     emit(method: string, ...args: JsonValue[]): void {
-      for (const callback of listeners.get(method) ?? []) {
+      for (const callback of listeners.get(method.toLowerCase()) ?? []) {
         callback(...args);
       }
     },
@@ -99,6 +100,7 @@ describe("useHomeRealtimeEvents", () => {
     async (method) => {
       const fetchFiles = vi.fn(async () => [file]);
       const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+      const update = vi.spyOn(queryClient, "setQueriesData");
       const { result } = renderHook(
         () => {
           useHomeRealtimeEvents(true, "layout-1");
@@ -123,6 +125,7 @@ describe("useHomeRealtimeEvents", () => {
       expect(queryClient.getQueryData(otherLayoutKey)).toEqual([file]);
       expect(fetchFiles).not.toHaveBeenCalled();
       expect(invalidate).not.toHaveBeenCalled();
+      expect(update).toHaveBeenCalledOnce();
     },
   );
 
@@ -178,10 +181,9 @@ describe("useHomeRealtimeEvents", () => {
     ]);
 
     rerender({ enabled: false, layoutId: "layout-2" });
-    expect(hub.listeners.get(HUB_METHODS.PreviewGenerated)?.size).toBe(0);
+    expect(hub.listeners.get("previewgenerated")?.size).toBe(0);
     rerender({ enabled: true, layoutId: "layout-2" });
     unmount();
-    expect(hub.listeners.get(HUB_METHODS.PreviewGenerated)?.size).toBe(0);
     expect(hub.listeners.get("previewgenerated")?.size).toBe(0);
   });
 
