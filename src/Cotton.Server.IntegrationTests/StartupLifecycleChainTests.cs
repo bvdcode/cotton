@@ -90,7 +90,7 @@ namespace Cotton.Server.IntegrationTests
 
             _runner = new TeiTestHandler();
             _factory = new TestAppFactory(overrides, services =>
-                services.AddHttpClient<TeiClient>().ConfigurePrimaryHttpMessageHandler(() => _runner));
+                services.AddHttpClient(TeiClient.RemoteClientName).ConfigurePrimaryHttpMessageHandler(() => _runner));
         }
 
         [TearDown]
