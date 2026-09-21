@@ -6,18 +6,25 @@ using Cotton.Server.Providers;
 using Cotton.Server.Services.Computation;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
+using System.Diagnostics;
 
 namespace Cotton.Server.Handlers.Computation
 {
     public record GetTextEmbeddingFragmentsRequest(IAsyncEnumerable<string> Texts) : IRequest<float[][][]>;
 
     public class GetTextEmbeddingFragmentsRequestHandler(
-        IMediator mediator, SettingsProvider settings, TeiClient client, TextEmbeddingChunker chunker)
+        IMediator mediator, SettingsProvider settings, TeiClient client, TextEmbeddingChunker chunker,
+        ILogger<GetTextEmbeddingFragmentsRequestHandler> logger)
         : IRequestHandler<GetTextEmbeddingFragmentsRequest, float[][][]>
     {
+        private static readonly TimeSpan ProgressLogInterval = TimeSpan.FromSeconds(10);
+
         public async Task<float[][][]> Handle(GetTextEmbeddingFragmentsRequest request, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(request.Texts);
+            long startedAt = Stopwatch.GetTimestamp();
+            long lastProgressAt = startedAt;
+            int computedVectors = 0;
             Uri? url = null;
             ComputationServiceInfo? info = null;
             List<string> batch = [];
@@ -67,6 +74,13 @@ namespace Cotton.Server.Handlers.Computation
                 for (int index = 0; index < vectors.Length; index++)
                 {
                     result[owners[index]].Add(vectors[index]);
+                }
+                computedVectors += vectors.Length;
+                if (Stopwatch.GetElapsedTime(lastProgressAt) >= ProgressLogInterval)
+                {
+                    logger.LogInformation("Computed {VectorCount} text embedding vectors in {ElapsedSeconds:F1} seconds.",
+                        computedVectors, Stopwatch.GetElapsedTime(startedAt).TotalSeconds);
+                    lastProgressAt = Stopwatch.GetTimestamp();
                 }
                 batch.Clear();
                 owners.Clear();

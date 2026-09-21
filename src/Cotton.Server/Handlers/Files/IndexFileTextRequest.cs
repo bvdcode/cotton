@@ -16,6 +16,7 @@ using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Cotton.Server.Handlers.Files
@@ -34,6 +35,7 @@ namespace Cotton.Server.Handlers.Files
     {
         public async Task Handle(IndexFileTextRequest request, CancellationToken cancellationToken)
         {
+            long startedAt = Stopwatch.GetTimestamp();
             List<(FileManifest Manifest, string? Error)> files = [];
             float[][][] vectors = await computation.GetTextEmbeddingFragmentsAsync(
                 ReadDocumentsAsync(cancellationToken), cancellationToken);
@@ -42,6 +44,9 @@ namespace Cotton.Server.Handlers.Files
                 return;
             }
 
+            int vectorCount = vectors.Sum(document => document.Length);
+            logger.LogInformation("Saving text index batch: {FileCount} file manifests, {VectorCount} vectors.",
+                files.Count, vectorCount);
             await using IDbContextTransaction transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
             for (int fileIndex = 0; fileIndex < files.Count; fileIndex++)
             {
@@ -63,6 +68,9 @@ namespace Cotton.Server.Handlers.Files
             }
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            logger.LogInformation(
+                "Text index batch saved: {FileCount} file manifests, {VectorCount} vectors in {ElapsedSeconds:F1} seconds.",
+                files.Count, vectorCount, Stopwatch.GetElapsedTime(startedAt).TotalSeconds);
 
             async IAsyncEnumerable<string> ReadDocumentsAsync([EnumeratorCancellation] CancellationToken token)
             {
@@ -79,6 +87,8 @@ namespace Cotton.Server.Handlers.Files
                     {
                         continue;
                     }
+                    logger.LogInformation("Indexing text for file manifest {FileManifestId}, size {SizeBytes} bytes.",
+                        manifest.Id, manifest.SizeBytes);
                     (string? text, string? error) = await ExtractTextAsync(manifest, token);
                     if (text is null && error is null)
                     {

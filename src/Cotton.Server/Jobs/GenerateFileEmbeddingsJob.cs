@@ -68,6 +68,7 @@ namespace Cotton.Server.Jobs
                     }
                     try
                     {
+                        logger.LogInformation("Starting text index batch with up to {FileCount} file manifests.", ids.Count);
                         IEnumerable<Guid> available = ids.TakeWhile(_ =>
                             settings.GetServerSettings().AllowGlobalIndexing && !perf.IsUploading());
                         await mediator.Send(new IndexFileTextRequest(available), cancellationToken);
