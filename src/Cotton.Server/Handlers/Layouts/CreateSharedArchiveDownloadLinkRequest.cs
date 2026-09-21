@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database.Models;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using EasyExtensions.Mediator;
@@ -31,13 +32,13 @@ namespace Cotton.Server.Handlers.Layouts
             }
 
             Guid targetNodeId = request.NodeId ?? access.NodeId;
-            bool canAccessNode = await _mediator.Send(
-                new VerifySharedNodeSubtreeAccessQuery(
+            IReadOnlyList<Node>? ancestry = await _mediator.Send(
+                new ResolveSharedNodeAncestryQuery(
                     targetNodeId,
                     access.NodeId,
                     access.CreatedByUserId),
                 ct);
-            if (!canAccessNode)
+            if (ancestry is null)
             {
                 return new CreateSharedArchiveDownloadLinkResult(
                     CreateSharedArchiveDownloadLinkStatus.FolderNotFound);

@@ -8,7 +8,9 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Topology;
 using Cotton.Topology.Abstractions;
+using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -44,8 +46,8 @@ namespace Cotton.Server.Handlers.Nodes
             Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, ct);
             Node parentNode = await _dbContext.Nodes
                 .AsNoTracking()
+                .AccessibleTo(request.UserId)
                 .Where(x => x.Id == request.NodeId
-                    && x.OwnerId == request.UserId
                     && x.LayoutId == layout.Id
                     && x.Type == request.NodeType)
                 .SingleOrDefaultAsync(cancellationToken: ct)
@@ -59,17 +61,12 @@ namespace Cotton.Server.Handlers.Nodes
             // depth == N: skip N intermediate levels and return their descendants.
             // We materialize each level into a list to avoid deeply nested IQueryable<T>
             // expression trees that cause EF Core's ExpressionTreeFuncletizer to stack-overflow.
+            NodeDirectory directory = new(_dbContext, parentNode);
             List<Guid> currentParentIds = [parentNode.Id];
 
             for (int i = 0; i < request.Depth; i++)
             {
-                currentParentIds = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => x.ParentId != null
-                        && currentParentIds.Contains(x.ParentId.Value)
-                        && x.OwnerId == request.UserId
-                        && x.LayoutId == layout.Id
-                        && x.Type == request.NodeType)
+                currentParentIds = await directory.GetNodes(currentParentIds).AsNoTracking()
                     .Select(x => x.Id)
                     .ToListAsync(cancellationToken: ct);
 
@@ -87,18 +84,8 @@ namespace Cotton.Server.Handlers.Nodes
             }
 
             int skip = (request.Page - 1) * request.PageSize;
-            IQueryable<Node> nodesBaseQuery = _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.ParentId != null
-                    && currentParentIds.Contains(x.ParentId.Value)
-                    && x.OwnerId == request.UserId
-                    && x.LayoutId == layout.Id
-                    && x.Type == request.NodeType);
-
-            IQueryable<NodeFile> filesBaseQuery = _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => currentParentIds.Contains(x.NodeId)
-                    && x.OwnerId == request.UserId);
+            IQueryable<Node> nodesBaseQuery = directory.GetNodes(currentParentIds).AsNoTracking();
+            IQueryable<NodeFile> filesBaseQuery = directory.GetFiles(currentParentIds).AsNoTracking();
 
             if (request.NodeType == NodeType.Trash)
             {
@@ -115,22 +102,8 @@ namespace Cotton.Server.Handlers.Nodes
                     ct);
             }
 
-            IQueryable<NodeDto> nodesQuery = nodesBaseQuery
-                .OrderBy(x => x.NameKey)
-                .ProjectToType<NodeDto>();
-
-            int nodesCount = await nodesQuery.CountAsync(cancellationToken: ct);
-            int filesCount = await filesBaseQuery.CountAsync(cancellationToken: ct);
-
-            int nodesToTake = Math.Max(0, Math.Min(request.PageSize, nodesCount - skip));
-            int filesSkip = Math.Max(0, skip - nodesCount);
-            int filesToTake = Math.Max(0, request.PageSize - nodesToTake);
-
-            List<NodeDto> nodes = nodesToTake == 0 ? []
-                : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync(cancellationToken: ct);
-
-            List<NodeFileManifestDto> files = filesToTake == 0 ? []
-                : await LoadFilePageAsync(filesBaseQuery, filesSkip, filesToTake, ct);
+            var (nodes, files, totalCount) = await DirectoryListing.ReadPageAsync<NodeFileManifestDto>(
+                nodesBaseQuery, filesBaseQuery, skip, request.PageSize, ct);
 
             return new(new NodeContentDto
             {
@@ -139,37 +112,7 @@ namespace Cotton.Server.Handlers.Nodes
                 Id = request.NodeId,
                 CreatedAt = parentNode.CreatedAt,
                 UpdatedAt = parentNode.UpdatedAt,
-            }, nodesCount + filesCount);
-        }
-
-        private static async Task<List<NodeFileManifestDto>> LoadFilePageAsync(
-            IQueryable<NodeFile> filesQuery,
-            int skip,
-            int take,
-            CancellationToken cancellationToken)
-        {
-            Guid[] fileIds = await filesQuery
-                .OrderBy(file => file.NameKey)
-                .ThenBy(file => file.Id)
-                .Skip(skip)
-                .Take(take)
-                .Select(file => file.Id)
-                .ToArrayAsync(cancellationToken);
-            if (fileIds.Length == 0)
-            {
-                return [];
-            }
-
-            List<NodeFileManifestDto> files = await filesQuery
-                .Where(file => fileIds.Contains(file.Id))
-                .Include(file => file.FileManifest)
-                .ProjectToType<NodeFileManifestDto>()
-                .ToListAsync(cancellationToken);
-            Dictionary<Guid, int> order = fileIds
-                .Select((id, index) => new { id, index })
-                .ToDictionary(item => item.id, item => item.index);
-            files.Sort((left, right) => order[left.Id].CompareTo(order[right.Id]));
-            return files;
+            }, totalCount);
         }
 
         private async Task<PagedResult<NodeContentDto>> LoadTrashChildrenAsync(

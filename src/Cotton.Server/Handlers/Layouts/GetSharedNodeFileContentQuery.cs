@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
@@ -57,13 +57,13 @@ namespace Cotton.Server.Handlers.Layouts
                 return NotFound(GetSharedNodeFileContentStatus.FileNotFound);
             }
 
-            bool canAccessFile = await _mediator.Send(
-                new VerifySharedNodeSubtreeAccessQuery(
+            IReadOnlyList<Node>? ancestry = await _mediator.Send(
+                new ResolveSharedNodeAncestryQuery(
                     nodeFile.NodeId,
                     access.NodeId,
                     access.CreatedByUserId),
                 ct);
-            if (!canAccessFile)
+            if (ancestry is null)
             {
                 return NotFound(GetSharedNodeFileContentStatus.FileNotFound);
             }

@@ -1,15 +1,13 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
-using Cotton.Nodes;
 using Cotton.Server.Models.Dto;
-using Cotton.Storage.Extensions;
+using Cotton.Topology;
+using Cotton.Server.Services;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
-using Mapster;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Layouts
@@ -42,64 +40,17 @@ namespace Cotton.Server.Handlers.Layouts
             }
 
             Guid targetNodeId = request.NodeId ?? access.NodeId;
-            bool canAccessNode = await _mediator.Send(
-                new VerifySharedNodeSubtreeAccessQuery(
-                    targetNodeId,
-                    access.NodeId,
-                    access.CreatedByUserId),
-                ct);
-            if (!canAccessNode)
+            IReadOnlyList<Node>? ancestry = await _mediator.Send(
+                new ResolveSharedNodeAncestryQuery(targetNodeId, access.NodeId, access.CreatedByUserId), ct);
+            if (ancestry is null)
             {
-                return new GetSharedNodeChildrenResult(
-                    GetSharedNodeChildrenStatus.FolderNotFound);
+                return new GetSharedNodeChildrenResult(GetSharedNodeChildrenStatus.FolderNotFound);
             }
-
-            Node? targetNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == targetNodeId
-                    && x.OwnerId == access.CreatedByUserId
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync(ct);
-            if (targetNode is null)
-            {
-                return new GetSharedNodeChildrenResult(
-                    GetSharedNodeChildrenStatus.FolderNotFound);
-            }
-
+            Node targetNode = ancestry[0];
+            NodeDirectory directory = new(_dbContext, targetNode);
             int skip = (request.Page - 1) * request.PageSize;
-            IQueryable<NodeDto> nodesQuery = _dbContext.Nodes
-                .AsNoTracking()
-                .OrderBy(x => x.NameKey)
-                .Where(x => x.ParentId == targetNodeId
-                    && x.OwnerId == access.CreatedByUserId
-                    && x.Type == NodeType.Default)
-                .ProjectToType<NodeDto>();
-            IQueryable<NodeFile> filesQuery = _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.NodeId == targetNodeId
-                    && x.OwnerId == access.CreatedByUserId);
-
-            int nodesCount = await nodesQuery.CountAsync(ct);
-            int filesCount = await filesQuery.CountAsync(ct);
-            int nodesToTake = Math.Max(
-                0,
-                Math.Min(request.PageSize, nodesCount - skip));
-            int filesSkip = Math.Max(0, skip - nodesCount);
-            int filesToTake = Math.Max(0, request.PageSize - nodesToTake);
-
-            List<NodeDto> nodes = nodesToTake == 0
-                ? []
-                : await nodesQuery
-                    .Skip(skip)
-                    .Take(nodesToTake)
-                    .ToListAsync(ct);
-            List<SharedNodeFileDto> files = filesToTake == 0
-                ? []
-                : await LoadSharedFilesAsync(
-                    filesQuery,
-                    filesSkip,
-                    filesToTake,
-                    ct);
+            var (nodes, files, totalCount) = await DirectoryListing.ReadPageAsync<SharedNodeFileDto>(
+                directory.Nodes.AsNoTracking(), directory.Files.AsNoTracking(), skip, request.PageSize, ct);
 
             SharedNodeContentDto content = new()
             {
@@ -112,33 +63,7 @@ namespace Cotton.Server.Handlers.Layouts
             return new GetSharedNodeChildrenResult(
                 GetSharedNodeChildrenStatus.Success,
                 content,
-                nodesCount + filesCount);
-        }
-
-        private static async Task<List<SharedNodeFileDto>> LoadSharedFilesAsync(
-            IQueryable<NodeFile> filesQuery,
-            int skip,
-            int take,
-            CancellationToken ct)
-        {
-            List<NodeFile> files = await filesQuery
-                .OrderBy(x => x.NameKey)
-                .Include(x => x.FileManifest)
-                .Skip(skip)
-                .Take(take)
-                .ToListAsync(ct);
-
-            return [.. files.Select(x => new SharedNodeFileDto
-            {
-                Id = x.Id,
-                CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt,
-                NodeId = x.NodeId,
-                Name = x.Name,
-                ContentType = x.ContentType,
-                SizeBytes = x.FileManifest.SizeBytes,
-                PreviewHashEncryptedHex = x.FileManifest.GetPreviewHashEncryptedHex(),
-            })];
+                totalCount);
         }
     }
 }
