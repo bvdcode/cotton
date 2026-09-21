@@ -57,9 +57,9 @@ namespace Cotton.Server.Controllers
 
         [HttpPatch("database-backup/trigger")]
         [Authorize(Roles = nameof(UserRole.Admin))]
-        public async Task<IActionResult> TriggerDatabaseBackup(CancellationToken cancellationToken)
+        public async Task<IActionResult> TriggerDatabaseBackup()
         {
-            await _mediator.Send(new TriggerDatabaseBackupRequest(), cancellationToken);
+            await _scheduler.TriggerJobAsync<DumpDatabaseJob>();
             return Ok();
         }
 

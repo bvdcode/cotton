@@ -259,11 +259,9 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("remote-computation-runner-url")]
-        public async Task<IActionResult> GetRemoteComputationRunnerUrl(CancellationToken cancellationToken)
+        public IActionResult GetRemoteComputationRunnerUrl()
         {
-            string? remoteComputationRunnerUrl = await _mediator.Send(
-                new GetRemoteComputationRunnerUrlQuery(),
-                cancellationToken);
+            string? remoteComputationRunnerUrl = Settings.GetServerSettings().RemoteComputationRunnerUrl;
             return Ok(new { remoteComputationRunnerUrl });
         }
 
