@@ -19,7 +19,6 @@ export const SettingsToggleButtonGroup = <
   value,
 }: SettingsToggleButtonGroupProps<TValue>) => (
   <ToggleButtonGroup
-    size="small"
     exclusive
     value={value}
     onChange={(_, next: TValue | null) => onChange(next)}
@@ -31,7 +30,7 @@ export const SettingsToggleButtonGroup = <
         flex: 1,
         minWidth: 0,
         whiteSpace: "normal",
-        lineHeight: 1.2,
+        overflowWrap: "anywhere",
       },
     }}
   >
