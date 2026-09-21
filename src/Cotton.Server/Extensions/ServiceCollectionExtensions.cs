@@ -28,6 +28,7 @@ namespace Cotton.Server.Extensions
         {
             services.AddSingleton<EmbeddingDimensionCache>();
             services.AddScoped<ComputationService>();
+            services.AddScoped<TeiClient>();
             services.AddScoped<TextEmbeddingChunker>();
             services.AddSingleton<IFileTextExtractor, PdfTextExtractor>();
             services.AddSingleton<IFileTextExtractor, TextFileExtractor>();
@@ -38,7 +39,7 @@ namespace Cotton.Server.Extensions
             services.AddSingleton<IFileTextExtractor, EpubTextExtractor>();
             services.AddSingleton<IFileTextExtractor, EmailTextExtractor>();
             services.AddSingleton<FileTextExtractorProvider>();
-            services.AddHttpClient<TeiClient>(client => client.Timeout = TeiClient.RequestTimeout)
+            services.AddHttpClient(TeiClient.RemoteClientName, client => client.Timeout = TeiClient.RequestTimeout)
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
                 {
                     AllowAutoRedirect = false,

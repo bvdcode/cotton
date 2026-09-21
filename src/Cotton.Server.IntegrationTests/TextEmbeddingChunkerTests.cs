@@ -16,8 +16,7 @@ namespace Cotton.Server.IntegrationTests
         public async Task Split_PreservesUnicodeAndOrder_AndIncludesSpecialTokens(string text, int limit)
         {
             using TeiTestHandler handler = new();
-            using HttpClient http = new(handler);
-            TextEmbeddingChunker chunker = new(new TeiClient(http));
+            TextEmbeddingChunker chunker = new(new TeiClient(new TeiTestClientFactory(handler)));
             List<TextEmbeddingChunk> chunks = [];
 
             await foreach (TextEmbeddingChunk chunk in chunker.SplitAsync(new Uri("https://runner.example/"), text, limit, default))
@@ -38,8 +37,7 @@ namespace Cotton.Server.IntegrationTests
         public async Task Split_LongDocument_DoesNotCutSurrogatePairsAtRequestBoundary()
         {
             using TeiTestHandler handler = new();
-            using HttpClient http = new(handler);
-            TextEmbeddingChunker chunker = new(new TeiClient(http));
+            TextEmbeddingChunker chunker = new(new TeiClient(new TeiTestClientFactory(handler)));
             string text = new string('a', 32767) + "😀конец";
             StringBuilder result = new();
             await foreach (TextEmbeddingChunk chunk in chunker.SplitAsync(new Uri("https://runner.example/"), text, 8192, default))
@@ -54,8 +52,7 @@ namespace Cotton.Server.IntegrationTests
         public async Task Split_Whitespace_DoesNotContactWorker()
         {
             using TeiTestHandler handler = new();
-            using HttpClient http = new(handler);
-            TextEmbeddingChunker chunker = new(new TeiClient(http));
+            TextEmbeddingChunker chunker = new(new TeiClient(new TeiTestClientFactory(handler)));
             await foreach (TextEmbeddingChunk chunk in chunker.SplitAsync(new Uri("https://runner.example/"), " \n\t", 8, default))
             {
                 Assert.Fail($"Unexpected fragment: {chunk.Text}");

@@ -59,8 +59,7 @@ namespace Cotton.Server.IntegrationTests
             services.AddScoped<SettingsProvider>();
             services.AddSingleton<IStoragePipeline>(_storage);
             services.AddComputationServices();
-            services.AddSingleton(_ => new HttpClient(_worker));
-            services.AddSingleton<TeiClient>();
+            services.AddHttpClient(TeiClient.RemoteClientName).ConfigurePrimaryHttpMessageHandler(() => _worker);
             services.AddSingleton<PerfTracker>();
             services.AddTransient<GenerateFileEmbeddingsJob>();
             services.AddTransient<IRequestHandler<IndexFileTextRequest>, IndexFileTextRequestHandler>();

@@ -40,8 +40,13 @@ namespace Cotton.Server.Handlers.Computation
                         throw new ComputationException(ComputationError.NotConfigured);
                     }
                     return snapshot.RemoteComputationRunnerUrl;
-                case ComputionMode.Local:
                 case ComputionMode.Cloud:
+                    if (!snapshot.TelemetryEnabled)
+                    {
+                        throw new ComputationException(ComputationError.NotConfigured);
+                    }
+                    return global::Cotton.Constants.CottonBridgeBaseUrl;
+                case ComputionMode.Local:
                     throw new ComputationException(ComputationError.UnsupportedMode);
                 default:
                     throw new ComputationException(ComputationError.UnsupportedMode);
