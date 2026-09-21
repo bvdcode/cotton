@@ -42,6 +42,7 @@ namespace Cotton.Server.Jobs
                 {
                     return;
                 }
+                await mediator.Send(new RecoverFileTextIndexRequest(), cancellationToken);
                 string[] contentTypes = extractors.GetSupportedContentTypes();
                 for (int processed = 0; processed < MaxItemsPerRun;)
                 {

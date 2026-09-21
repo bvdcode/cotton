@@ -262,7 +262,7 @@ namespace Cotton.Server.IntegrationTests
             }
             await _db.Database.EnsurePostgresExtensionAsync("vector", CancellationToken.None);
             await _services.GetRequiredService<IMediator>().Send(new BuildVectorIndexRequest(), CancellationToken.None);
-            await AddFileAsync("unsupported.txt", "text/plain", "Text content"u8.ToArray());
+            await AddFileAsync("unsupported.bin", "application/octet-stream", "Binary content"u8.ToArray());
 
             await _services.GetRequiredService<GenerateFileEmbeddingsJob>().Execute(null!);
 

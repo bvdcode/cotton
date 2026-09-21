@@ -18,6 +18,8 @@ The manifest is content-addressed. The latest pointer is intentionally mutable a
 
 Backup chunks require an owning user for the normal ingest model. A fresh instance with no users therefore has nothing meaningful to back up and skips or fails the operation explicitly.
 
+The dump includes the `file_embeddings` table and its indexes, but excludes its rows. Search embeddings are regenerated from the stored files after restoration.
+
 ## Scheduling and administration
 
 The backup job is single-flight and runs on its configured recurring cadence. Its first process execution is staggered with other maintenance jobs. An administrator may trigger the registered job on demand and inspect metadata for the latest resolvable backup.
@@ -40,6 +42,8 @@ Restore follows this sequence:
 8. remove the temporary dump in `finally`.
 
 A hash mismatch, missing required artifact, decryption failure, or non-zero restore exit stops startup. Cotton does not continue with a partially restored database.
+
+On its first eligible run after startup, the text indexing job checks whether `file_embeddings` is empty. If so, it clears the manifests' text indexing versions and errors in batches of 500 before resuming indexing. The check runs once per process so documents without extractable text are not retried every minute. Regeneration requires global indexing to be enabled, the vector extension and index to be ready, and the computation service to be available.
 
 ## Garbage-collection protection
 

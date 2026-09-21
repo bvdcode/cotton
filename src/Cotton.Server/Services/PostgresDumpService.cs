@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Abstractions;
+using Cotton.Server.Services.Search;
 using System.Diagnostics;
 using System.Globalization;
 
@@ -118,6 +119,8 @@ namespace Cotton.Server.Services
             };
 
             processStartInfo.ArgumentList.Add("--format=custom");
+            processStartInfo.ArgumentList.Add(
+                $"--exclude-table-data={VectorIndexDefinition.Expected.SchemaName}.{VectorIndexDefinition.Expected.TableName}");
             processStartInfo.ArgumentList.Add("--no-password");
             processStartInfo.ArgumentList.Add("--host");
             processStartInfo.ArgumentList.Add(settings.Host);

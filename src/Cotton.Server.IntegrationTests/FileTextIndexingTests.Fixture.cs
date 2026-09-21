@@ -53,6 +53,7 @@ namespace Cotton.Server.IntegrationTests
             }));
             ServiceCollection services = new();
             services.AddLogging();
+            services.AddMemoryCache();
             services.AddMediator();
             services.AddSingleton(_db);
             services.AddSingleton(_settingsCache);
@@ -63,6 +64,7 @@ namespace Cotton.Server.IntegrationTests
             services.AddSingleton<PerfTracker>();
             services.AddTransient<GenerateFileEmbeddingsJob>();
             services.AddTransient<IRequestHandler<IndexFileTextRequest>, IndexFileTextRequestHandler>();
+            services.AddTransient<IRequestHandler<RecoverFileTextIndexRequest>, RecoverFileTextIndexRequestHandler>();
             services.AddTransient<IRequestHandler<GetComputationServiceInfoQuery, ComputationServiceInfo>, GetComputationServiceInfoQueryHandler>();
             services.AddTransient<IRequestHandler<GetComputationStatusQuery, ComputationStatus>, GetComputationStatusQueryHandler>();
             services.AddTransient<IRequestHandler<GetTextEmbeddingFragmentsRequest, float[][][]>, GetTextEmbeddingFragmentsRequestHandler>();
