@@ -9,7 +9,6 @@ import { CreateUserDialog } from "./CreateUserDialog";
 import { DeleteUserDialog } from "./DeleteUserDialog";
 import { EditUserDialog } from "./EditUserDialog";
 import { AdminPageSurface } from "../components/AdminPageSurface";
-import { AdminPageHeader } from "../components/AdminPageHeader";
 import { UsersGridToolbar } from "./components/UsersGridToolbar";
 import { useAdminUsersColumns } from "./hooks/useAdminUsersColumns";
 import { useAdminUsersData } from "./hooks/useAdminUsersData";
@@ -92,10 +91,6 @@ export const AdminUsersPage = () => {
   return (
     <Stack spacing={2}>
       <AdminPageSurface>
-        <Stack p={3} pb={2} spacing={0.5}>
-          <AdminPageHeader title={t("users.title")} />
-        </Stack>
-
         {loadState.kind === "error" && (
           <Box px={3} pb={2}>
             <Alert severity="error">{loadState.message}</Alert>
@@ -107,8 +102,6 @@ export const AdminUsersPage = () => {
             height: { xs: 520, md: 640 },
             minHeight: 420,
             maxHeight: "calc(100dvh - 220px)",
-            borderTop: "1px solid",
-            borderColor: "divider",
           }}
         >
           <DataGrid

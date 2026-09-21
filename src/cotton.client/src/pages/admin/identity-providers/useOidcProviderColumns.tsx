@@ -84,6 +84,7 @@ export const useOidcProviderColumns = ({
       {
         field: "scopes",
         headerName: t("identityProviders.columns.scopes"),
+        display: "flex",
         flex: 1,
         minWidth: 160,
         valueGetter: (_, row) => joinList(row.scopes),
@@ -98,6 +99,7 @@ export const useOidcProviderColumns = ({
       {
         field: "allowedEmailDomains",
         headerName: t("identityProviders.columns.domains"),
+        display: "flex",
         flex: 1,
         minWidth: 160,
         valueGetter: (_, row) => joinList(row.allowedEmailDomains),
