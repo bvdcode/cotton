@@ -28,6 +28,7 @@ namespace Cotton.Server.IntegrationTests.Common
         public int? FailingEmbeddingCall { get; set; }
         public Action? EmbeddingRequested { get; set; }
         public int TokenizeCalls { get; private set; }
+        public List<int> TokenizationInputLengths { get; } = [];
         public List<string[]> Batches { get; } = [];
         public List<Uri> Addresses { get; } = [];
         public List<(string? Token, string? InstanceId)> Credentials { get; } = [];
@@ -70,6 +71,7 @@ namespace Cotton.Server.IntegrationTests.Common
             {
                 TokenizeCalls++;
                 string input = body.GetProperty("inputs").GetString()!;
+                TokenizationInputLengths.Add(input.Length);
                 List<TeiToken> tokens = [new(true, null, null)];
                 int position = 0;
                 foreach (Rune rune in input.EnumerateRunes())
