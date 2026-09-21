@@ -1,4 +1,5 @@
 import RefreshIcon from "@mui/icons-material/Refresh";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import {
   Alert,
   Button,
@@ -16,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { getApiErrorMessage } from "@shared/api/httpClient";
 import {
   useEnableVectorExtensionMutation,
+  useTriggerFileIndexingMutation,
   useVectorExtensionStatusQuery,
 } from "@shared/api/queries/admin";
 import { AdminPageSurface } from "../components/AdminPageSurface";
@@ -28,6 +30,7 @@ import { SmartSearchComputationStatus } from "./SmartSearchComputationStatus";
 import { BooleanSwitchSettingControl } from "../settings/BooleanSwitchSetting";
 import { useAutoSavedSetting } from "../settings/useAutoSavedSetting";
 import { settingsApi } from "@shared/api/settingsApi";
+import { toast } from "@shared/ui/notifications";
 
 export const AdminSmartSearchPage = () => {
   const { t, i18n } = useTranslation("admin");
@@ -41,6 +44,7 @@ export const AdminSmartSearchPage = () => {
   });
   const statusQuery = useVectorExtensionStatusQuery();
   const enableMutation = useEnableVectorExtensionMutation();
+  const triggerMutation = useTriggerFileIndexingMutation();
   const [environment, setEnvironment] = useState<"docker" | "native">("docker");
   const status = statusQuery.data;
   const progress =
@@ -53,6 +57,15 @@ export const AdminSmartSearchPage = () => {
     status &&
     (!status.extensionAvailable || failure === "pgvector_package_missing");
   const busy = statusQuery.isFetching || enableMutation.isPending;
+  const triggerIndexing = () => {
+    triggerMutation.mutate(undefined, {
+      onSuccess: () => toast.success(t("smartSearch.indexingRequested")),
+      onError: (error) =>
+        toast.error(
+          getApiErrorMessage(error) ?? t("smartSearch.errors.triggerFailed"),
+        ),
+    });
+  };
   const refresh = async () => {
     const result = await statusQuery.refetch();
     if (
@@ -134,17 +147,31 @@ export const AdminSmartSearchPage = () => {
               </Typography>
             )}
           </Stack>
-          <Tooltip title={t("smartSearch.actions.refresh")}>
-            <span>
-              <IconButton
-                aria-label={t("smartSearch.actions.refresh")}
-                disabled={busy}
-                onClick={() => void refresh()}
-              >
-                <RefreshIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
+          <Stack direction="row" spacing={0.5} flexShrink={0}>
+            <Tooltip title={t("smartSearch.actions.triggerIndexing")}>
+              <span>
+                <IconButton
+                  aria-label={t("smartSearch.actions.triggerIndexing")}
+                  loading={triggerMutation.isPending}
+                  disabled={!indexing.savedValue || !status?.indexReady}
+                  onClick={triggerIndexing}
+                >
+                  <PlayArrowIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title={t("smartSearch.actions.refresh")}>
+              <span>
+                <IconButton
+                  aria-label={t("smartSearch.actions.refresh")}
+                  disabled={busy}
+                  onClick={() => void refresh()}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
         </Stack>
 
         <BooleanSwitchSettingControl

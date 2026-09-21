@@ -2819,6 +2819,7 @@
       "progress": "Archivos con vectores: {{indexed}} de {{total}}",
       "indexingProgress": "Progreso de indexación de archivos",
       "indexingDisabled": "Activa la indexación del contenido de los archivos para usar la búsqueda inteligente.",
+      "indexingRequested": "Se ha solicitado la indexación.",
       "computation": {
         "checkSettings": "Comprueba la conexión al servicio de cálculo en"
       },
@@ -2830,6 +2831,7 @@
       "loading": "Comprobando la base de datos…",
       "actions": {
         "refresh": "Actualizar",
+        "triggerIndexing": "Iniciar indexación",
         "enable": "Preparar base de datos",
         "copy": "Copiar",
         "copied": "Copiado",
@@ -2839,6 +2841,7 @@
       "errors": {
         "loadFailed": "No se pudo comprobar la base de datos.",
         "enableFailed": "No se pudo preparar la base de datos.",
+        "triggerFailed": "No se pudo iniciar la indexación.",
         "copyFailed": "No se pudo copiar el comando."
       },
       "steps": {

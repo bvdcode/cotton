@@ -2864,6 +2864,7 @@
       "progress": "Pliki z wektorami: {{indexed}} z {{total}}",
       "indexingProgress": "Postęp indeksowania plików",
       "indexingDisabled": "Włącz indeksowanie zawartości plików, aby korzystać z inteligentnego wyszukiwania.",
+      "indexingRequested": "Wysłano żądanie indeksowania.",
       "computation": {
         "checkSettings": "Sprawdź połączenie z usługą obliczeniową w sekcji"
       },
@@ -2875,6 +2876,7 @@
       "loading": "Sprawdzanie bazy…",
       "actions": {
         "refresh": "Odśwież",
+        "triggerIndexing": "Rozpocznij indeksowanie",
         "enable": "Przygotuj bazę",
         "copy": "Kopiuj",
         "copied": "Skopiowano",
@@ -2884,6 +2886,7 @@
       "errors": {
         "loadFailed": "Nie udało się sprawdzić bazy danych.",
         "enableFailed": "Nie udało się przygotować bazy danych.",
+        "triggerFailed": "Nie udało się rozpocząć indeksowania.",
         "copyFailed": "Nie udało się skopiować polecenia."
       },
       "steps": {

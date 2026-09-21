@@ -2829,6 +2829,7 @@
       "progress": "已有向量的文件：{{indexed}} / {{total}}",
       "indexingProgress": "文件索引进度",
       "indexingDisabled": "请启用文件内容索引，以使用智能搜索。",
+      "indexingRequested": "已请求启动索引。",
       "computation": {
         "checkSettings": "请在以下设置中检查计算服务的连接："
       },
@@ -2840,6 +2841,7 @@
       "loading": "正在检查数据库…",
       "actions": {
         "refresh": "刷新",
+        "triggerIndexing": "开始索引",
         "enable": "准备数据库",
         "copy": "复制",
         "copied": "已复制",
@@ -2849,6 +2851,7 @@
       "errors": {
         "loadFailed": "无法检查数据库。",
         "enableFailed": "无法准备数据库。",
+        "triggerFailed": "无法启动索引。",
         "copyFailed": "无法复制命令。"
       },
       "steps": {

@@ -2820,6 +2820,7 @@
       "progress": "Fichiers avec vecteurs : {{indexed}} sur {{total}}",
       "indexingProgress": "Progression de l’indexation des fichiers",
       "indexingDisabled": "Activez l’indexation du contenu des fichiers pour utiliser la recherche intelligente.",
+      "indexingRequested": "Indexation demandée.",
       "computation": {
         "checkSettings": "Vérifiez la connexion au service de calcul dans"
       },
@@ -2831,6 +2832,7 @@
       "loading": "Vérification de la base…",
       "actions": {
         "refresh": "Actualiser",
+        "triggerIndexing": "Lancer l’indexation",
         "enable": "Préparer la base",
         "copy": "Copier",
         "copied": "Copié",
@@ -2840,6 +2842,7 @@
       "errors": {
         "loadFailed": "Impossible de vérifier la base de données.",
         "enableFailed": "Impossible de préparer la base de données.",
+        "triggerFailed": "Impossible de lancer l’indexation.",
         "copyFailed": "Impossible de copier la commande."
       },
       "steps": {

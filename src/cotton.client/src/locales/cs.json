@@ -2861,6 +2861,7 @@
       "progress": "Soubory s vektory: {{indexed}} z {{total}}",
       "indexingProgress": "Průběh indexování souborů",
       "indexingDisabled": "Aby chytré vyhledávání fungovalo, zapněte indexování obsahu souborů.",
+      "indexingRequested": "Spuštění indexování bylo vyžádáno.",
       "computation": {
         "checkSettings": "Zkontrolujte připojení k výpočetní službě v sekci"
       },
@@ -2872,6 +2873,7 @@
       "loading": "Kontrola databáze…",
       "actions": {
         "refresh": "Obnovit",
+        "triggerIndexing": "Spustit indexování",
         "enable": "Připravit databázi",
         "copy": "Kopírovat",
         "copied": "Zkopírováno",
@@ -2881,6 +2883,7 @@
       "errors": {
         "loadFailed": "Databázi se nepodařilo zkontrolovat.",
         "enableFailed": "Databázi se nepodařilo připravit.",
+        "triggerFailed": "Indexování se nepodařilo spustit.",
         "copyFailed": "Příkaz se nepodařilo zkopírovat."
       },
       "steps": {

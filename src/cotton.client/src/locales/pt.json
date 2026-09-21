@@ -2823,6 +2823,7 @@
       "progress": "Ficheiros com vetores: {{indexed}} de {{total}}",
       "indexingProgress": "Progresso da indexação de ficheiros",
       "indexingDisabled": "Ative a indexação do conteúdo dos arquivos para usar a pesquisa inteligente.",
+      "indexingRequested": "Indexação solicitada.",
       "computation": {
         "checkSettings": "Verifique a ligação ao serviço de computação em"
       },
@@ -2834,6 +2835,7 @@
       "loading": "Verificando o banco…",
       "actions": {
         "refresh": "Atualizar",
+        "triggerIndexing": "Iniciar indexação",
         "enable": "Preparar banco de dados",
         "copy": "Copiar",
         "copied": "Copiado",
@@ -2843,6 +2845,7 @@
       "errors": {
         "loadFailed": "Não foi possível verificar o banco de dados.",
         "enableFailed": "Não foi possível preparar o banco de dados.",
+        "triggerFailed": "Não foi possível iniciar a indexação.",
         "copyFailed": "Não foi possível copiar o comando."
       },
       "steps": {

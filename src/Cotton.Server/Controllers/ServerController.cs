@@ -79,6 +79,14 @@ namespace Cotton.Server.Controllers
             return Accepted();
         }
 
+        [HttpPatch("indexing/trigger")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> TriggerFileIndexing()
+        {
+            await _scheduler.TriggerJobAsync<GenerateFileEmbeddingsJob>();
+            return Accepted();
+        }
+
         [HttpPatch("gc/trigger")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> TriggerGarbageCollector()

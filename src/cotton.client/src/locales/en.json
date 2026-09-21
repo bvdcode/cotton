@@ -2617,6 +2617,7 @@
       "progress": "Files with vectors: {{indexed}} of {{total}}",
       "indexingProgress": "File indexing progress",
       "indexingDisabled": "Enable file content indexing to use smart search.",
+      "indexingRequested": "Indexing requested.",
       "computation": {
         "checkSettings": "Check the computation service connection in"
       },
@@ -2628,6 +2629,7 @@
       "loading": "Checking database…",
       "actions": {
         "refresh": "Refresh",
+        "triggerIndexing": "Start indexing",
         "enable": "Prepare database",
         "copy": "Copy",
         "copied": "Copied",
@@ -2637,6 +2639,7 @@
       "errors": {
         "loadFailed": "Could not check the database.",
         "enableFailed": "Could not prepare the database.",
+        "triggerFailed": "Could not start indexing.",
         "copyFailed": "Could not copy the command."
       },
       "steps": {
