@@ -17,6 +17,27 @@ namespace Cotton.Server.IntegrationTests
 {
     public partial class FileTextIndexingTests
     {
+        [TestCase("lrc")]
+        [TestCase("srt")]
+        [TestCase("vtt")]
+        [TestCase("sbv")]
+        [TestCase("ass")]
+        [TestCase("ssa")]
+        public async Task Index_LyricsAndSubtitleFiles_ProducesVectors(string extension)
+        {
+            FileManifest manifest = await AddFileAsync($"captions.{extension}", "application/octet-stream",
+                Encoding.UTF8.GetBytes("00:00:01\nDistinctive spoken phrase"));
+            _db.ChangeTracker.Clear();
+
+            await IndexAsync(manifest.Id);
+            _db.ChangeTracker.Clear();
+
+            Assert.That(await _db.NodeFiles.SingleAsync(file => file.FileManifestId == manifest.Id),
+                Has.Property(nameof(NodeFile.ContentType)).EqualTo("text/plain"));
+            Assert.That(await _db.FileEmbeddings.AnyAsync(vector => vector.FileManifestId == manifest.Id), Is.True);
+            Assert.That(string.Concat(_worker.Batches.SelectMany(batch => batch)), Does.Contain("Distinctive spoken phrase"));
+        }
+
         [TestCase("csv")]
         [TestCase("tsv")]
         [TestCase("json")]

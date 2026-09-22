@@ -36,6 +36,12 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("references.bib")]
         [TestCase("application.properties")]
         [TestCase("development.env")]
+        [TestCase("lyrics.lrc")]
+        [TestCase("captions.srt")]
+        [TestCase("captions.vtt")]
+        [TestCase("captions.sbv")]
+        [TestCase("captions.ass")]
+        [TestCase("captions.ssa")]
         public void RegisteredProviderSupportsResolvedFileType(string fileName)
         {
             ServiceCollection services = new();
