@@ -125,7 +125,8 @@ namespace Cotton.Server.IntegrationTests
         public async Task Index_Html_IgnoresMarkupAndScriptsWhenApplyingTextBudget()
         {
             _services.GetRequiredService<IOptions<TextIndexingOptions>>().Value.MaxStructuredFileBytes = 8;
-            _services.GetRequiredService<IOptions<TextIndexingOptions>>().Value.MaxExtractedTextBytes = 32;
+            _services.GetRequiredService<IOptions<TextIndexingOptions>>().Value.MaxExtractedTextBytes = 8;
+            _services.GetRequiredService<IOptions<TextIndexingOptions>>().Value.MaxHtmlExtractedTextBytes = 32;
             FileManifest manifest = await AddFileAsync("messages.html", "text/html",
                 Encoding.UTF8.GetBytes("<html><body><script>ignored content</script><style>ignored styles</style><p>Chat message</p></body></html>"));
             Assert.That(manifest.SizeBytes, Is.GreaterThan(32));

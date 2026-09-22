@@ -30,6 +30,8 @@ namespace Cotton.Server.Extensions
             services.AddOptions<TextIndexingOptions>()
                 .Validate(options => options.MaxExtractedTextBytes > 0,
                     "TextIndexing:MaxExtractedTextBytes must be greater than zero.")
+                .Validate(options => options.MaxHtmlExtractedTextBytes > 0,
+                    "TextIndexing:MaxHtmlExtractedTextBytes must be greater than zero.")
                 .Validate(options => options.MaxStructuredFileBytes > 0,
                     "TextIndexing:MaxStructuredFileBytes must be greater than zero.")
                 .ValidateOnStart();

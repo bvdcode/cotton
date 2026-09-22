@@ -133,7 +133,9 @@ namespace Cotton.Server.Handlers.Files
                         ChunkLengths = manifest.FileManifestChunks.GetChunkLengths(),
                     };
                     await using Stream source = storage.GetBlobStream(manifest.FileManifestChunks.GetChunkHashes(), context);
-                    int limit = options.Value.MaxExtractedTextBytes;
+                    int limit = HtmlTextExtractor.ContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase)
+                        ? options.Value.MaxHtmlExtractedTextBytes
+                        : options.Value.MaxExtractedTextBytes;
                     TextExtractionResult result = await extractor.ExtractAsync(source, limit, cancellationToken);
                     text = result.Text;
                     error = result.IsTruncated

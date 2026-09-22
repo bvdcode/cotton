@@ -44,6 +44,38 @@ namespace Cotton.Server.IntegrationTests
             });
         }
 
+        [TestCase(null, 67108864)]
+        [TestCase("4096", 4096)]
+        public void HtmlTextBudget_UsesConfigurationOr64MiBDefault(string? configured, int expected)
+        {
+            Dictionary<string, string?> values = [];
+            if (configured is not null)
+            {
+                values["TextIndexing:MaxHtmlExtractedTextBytes"] = configured;
+            }
+            IConfiguration configuration = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+            ServiceCollection services = new();
+            services.AddComputationServices();
+            services.AddOptions<TextIndexingOptions>().Bind(configuration.GetSection(TextIndexingOptions.SectionName));
+            using ServiceProvider provider = services.BuildServiceProvider();
+            Assert.That(provider.GetRequiredService<IOptions<TextIndexingOptions>>().Value.MaxHtmlExtractedTextBytes,
+                Is.EqualTo(expected));
+        }
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        public void HtmlTextBudget_NonPositiveConfigurationIsRejected(int limit)
+        {
+            ServiceCollection services = new();
+            services.AddComputationServices();
+            services.Configure<TextIndexingOptions>(options => options.MaxHtmlExtractedTextBytes = limit);
+            using ServiceProvider provider = services.BuildServiceProvider();
+            Assert.Throws<OptionsValidationException>(() =>
+            {
+                _ = provider.GetRequiredService<IOptions<TextIndexingOptions>>().Value;
+            });
+        }
+
         [TestCase(null, 1048576)]
         [TestCase("4096", 4096)]
         public void StructuredFileLimit_UsesConfigurationOr1MiBDefault(string? configured, long expected)

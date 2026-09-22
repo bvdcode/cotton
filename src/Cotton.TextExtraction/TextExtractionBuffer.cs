@@ -21,6 +21,8 @@ namespace Cotton.TextExtraction
 
         public bool IsTruncated { get; private set; }
 
+        internal void MarkTruncated() => IsTruncated = true;
+
         public void Append(ReadOnlySpan<char> value)
         {
             if (IsTruncated || value.IsEmpty)

@@ -28,6 +28,8 @@ namespace Cotton.Server.Models.Configuration
 
         public int MaxExtractedTextBytes { get; set; } = FileTextExtractor.DefaultMaxUtf8Bytes;
 
+        public int MaxHtmlExtractedTextBytes { get; set; } = 64 * 1024 * 1024;
+
         public long MaxStructuredFileBytes { get; set; } = 1024 * 1024;
     }
 }

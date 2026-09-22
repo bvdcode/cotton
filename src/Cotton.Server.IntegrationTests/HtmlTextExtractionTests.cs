@@ -30,5 +30,84 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(text, Is.EqualTo(string.Join(Environment.NewLine,
                 "Heading", "Hello world", "First", "Second")));
         }
+
+        [Test]
+        public async Task Extract_ChatExport_ReturnsOnlyTheActiveConversationPath()
+        {
+            const string Html = """
+                <html><head><title>ChatGPT Data Export</title></head><body><div id="root"></div><script>
+                var jsonData = [{
+                  "title": "Useful &amp; chat",
+                  "current_node": "answer",
+                  "mapping": {
+                    "system": {
+                      "parent": null,
+                      "message": {
+                        "author": { "role": "system" },
+                        "content": { "content_type": "text", "parts": ["Hidden system message"] }
+                      }
+                    },
+                    "question": {
+                      "parent": "system",
+                      "message": {
+                        "author": { "role": "user" },
+                        "content": { "content_type": "text", "parts": ["Question &lt;one&gt;"] }
+                      }
+                    },
+                    "answer": {
+                      "parent": "question",
+                      "message": {
+                        "author": { "role": "assistant" },
+                        "content": { "content_type": "text", "parts": ["Answer with ] in the text"] }
+                      }
+                    },
+                    "unused": {
+                      "parent": "question",
+                      "message": {
+                        "author": { "role": "assistant" },
+                        "content": { "content_type": "text", "parts": ["Unused branch"] }
+                      }
+                    }
+                  }
+                }];
+                </script></body></html>
+                """;
+            using MemoryStream source = new(Encoding.UTF8.GetBytes(Html));
+
+            TextExtractionResult result = await new HtmlTextExtractor().ExtractAsync(source);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Text, Is.EqualTo(string.Join(Environment.NewLine,
+                    "Useful & chat", "Question <one>", "Answer with ] in the text")));
+                Assert.That(result.IsTruncated, Is.False);
+            });
+        }
+
+        [Test]
+        public void Extract_InvalidChatExport_ThrowsExtractionException()
+        {
+            using MemoryStream source = new(Encoding.UTF8.GetBytes(
+                "<title>ChatGPT Data Export</title><script>var jsonData = [{ invalid }];</script>"));
+
+            Assert.ThrowsAsync<FileTextExtractionException>(
+                async () => await new HtmlTextExtractor().ExtractAsync(source));
+        }
+
+        [Test]
+        public async Task Extract_LargeGenericHtml_StopsReadingSourceAndMarksTextAsTruncated()
+        {
+            string html = $"<p>Visible text</p><script>{new string('x', 17 * 1024 * 1024)}</script>";
+            using MemoryStream source = new(Encoding.UTF8.GetBytes(html));
+
+            TextExtractionResult result = await new HtmlTextExtractor().ExtractAsync(source);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Text, Is.EqualTo("Visible text"));
+                Assert.That(result.IsTruncated, Is.True);
+                Assert.That(source.Position, Is.LessThan(source.Length));
+            });
+        }
     }
 }
