@@ -50,10 +50,15 @@ namespace Cotton.TextExtraction
             Dictionary<string, JsonElement> nodes = mapping.EnumerateObject()
                 .ToDictionary(property => property.Name, property => property.Value, StringComparer.Ordinal);
             List<JsonElement> path = [];
+            HashSet<string> visited = new(StringComparer.Ordinal);
             string? currentNode = currentNodeElement.GetString();
             while (currentNode is not null && nodes.TryGetValue(currentNode, out JsonElement node))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (!visited.Add(currentNode))
+                {
+                    throw new InvalidDataException("The chat export contains a cyclic conversation path.");
+                }
                 path.Add(node);
                 currentNode = node.TryGetProperty("parent", out JsonElement parent)
                     && parent.ValueKind == JsonValueKind.String

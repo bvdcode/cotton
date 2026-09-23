@@ -95,6 +95,24 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public void Extract_ChatExportWithCyclicParent_ThrowsExtractionException()
+        {
+            const string Html = """
+                <title>ChatGPT Data Export</title><script>var jsonData = [{
+                  "current_node": "answer",
+                  "mapping": {
+                    "question": { "parent": "answer" },
+                    "answer": { "parent": "question" }
+                  }
+                }];</script>
+                """;
+            using MemoryStream source = new(Encoding.UTF8.GetBytes(Html));
+
+            Assert.ThrowsAsync<FileTextExtractionException>(
+                async () => await new HtmlTextExtractor().ExtractAsync(source));
+        }
+
+        [Test]
         public async Task Extract_LargeGenericHtml_StopsReadingSourceAndMarksTextAsTruncated()
         {
             string html = $"<p>Visible text</p><script>{new string('x', 17 * 1024 * 1024)}</script>";
