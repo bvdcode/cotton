@@ -7,7 +7,6 @@ using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
-using Cotton.Server.Services.Computation;
 using Microsoft.Extensions.DependencyInjection;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.Models.Enums;
@@ -89,8 +88,7 @@ namespace Cotton.Server.IntegrationTests
             };
 
             _runner = new TeiTestHandler();
-            _factory = new TestAppFactory(overrides, services =>
-                services.AddHttpClient<TeiClient>().ConfigurePrimaryHttpMessageHandler(() => _runner));
+            _factory = new TestAppFactory(overrides, ConfigureComputationClients);
         }
 
         [TearDown]

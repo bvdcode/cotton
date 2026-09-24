@@ -2864,6 +2864,7 @@
       "progress": "Pliki z wektorami: {{indexed}} z {{total}}",
       "indexingProgress": "Postęp indeksowania plików",
       "indexingDisabled": "Włącz indeksowanie zawartości plików, aby korzystać z inteligentnego wyszukiwania.",
+      "indexingRequested": "Wysłano żądanie indeksowania.",
       "computation": {
         "checkSettings": "Sprawdź połączenie z usługą obliczeniową w sekcji"
       },
@@ -2875,6 +2876,7 @@
       "loading": "Sprawdzanie bazy…",
       "actions": {
         "refresh": "Odśwież",
+        "triggerIndexing": "Rozpocznij indeksowanie",
         "enable": "Przygotuj bazę",
         "copy": "Kopiuj",
         "copied": "Skopiowano",
@@ -2884,6 +2886,7 @@
       "errors": {
         "loadFailed": "Nie udało się sprawdzić bazy danych.",
         "enableFailed": "Nie udało się przygotować bazy danych.",
+        "triggerFailed": "Nie udało się rozpocząć indeksowania.",
         "copyFailed": "Nie udało się skopiować polecenia."
       },
       "steps": {
@@ -3132,6 +3135,8 @@
           "statusLoadFailed": "Nie udało się sprawdzić stanu usługi.",
           "validateAndSave": "Sprawdź i zapisz",
           "connected": "Połączono · {{model}} · {{dimensions}} wymiary · {{tokens}} tokenów",
+          "cloudConnected": "Cotton Bridge autoryzowany · obliczenia w chmurze dostępne · {{model}} · {{dimensions}} wymiarów",
+          "cloudUnavailable": "Cotton Bridge nie zdołał autoryzować tego serwera ani udostępnić obliczeń w chmurze. Spróbuj ponownie.",
           "errors": {
             "NotConfigured": "Adres runnera nie jest skonfigurowany.",
             "UnsupportedMode": "Embeddingi tekstu nie są jeszcze dostępne w tym trybie.",

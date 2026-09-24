@@ -2,6 +2,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import {
   Box,
+  Collapse,
   Divider,
   FormControl,
   IconButton,
@@ -34,10 +35,10 @@ const AdminNavigationItem = ({ item, expanded }: AdminNavigationItemProps) => {
       aria-label={expanded ? undefined : item.title}
       sx={{
         position: "relative",
-        justifyContent: expanded ? "flex-start" : "center",
         minHeight: 44,
         mx: 0.75,
-        px: expanded ? 1.5 : 0.75,
+        px: 0.75,
+        overflow: "hidden",
         borderRadius: 0.5,
         color: "text.primary",
         "& .MuiListItemIcon-root": {
@@ -65,19 +66,26 @@ const AdminNavigationItem = ({ item, expanded }: AdminNavigationItemProps) => {
     >
       <ListItemIcon
         sx={{
-          minWidth: expanded ? 40 : 0,
+          minWidth: 40,
           justifyContent: "center",
         }}
       >
         <Icon />
       </ListItemIcon>
-      {expanded && <ListItemText primary={item.title} />}
+      <ListItemText
+        primary={item.title}
+        aria-hidden={!expanded}
+        slotProps={{ primary: { noWrap: true } }}
+        sx={(theme) => ({
+          pl: 0.75,
+          opacity: expanded ? 1 : 0,
+          transition: theme.transitions.create("opacity"),
+        })}
+      />
     </ListItemButton>
   );
 
-  return expanded ? (
-    button
-  ) : (
+  return (
     <Tooltip title={item.title} placement="right">
       {button}
     </Tooltip>
@@ -109,11 +117,17 @@ export const DesktopAdminNavigation = ({
       overflow: "hidden",
     }}
   >
-    <Box component="nav" aria-label={navigationLabel} overflow="auto" flex={1}>
+    <Box
+      component="nav"
+      aria-label={navigationLabel}
+      overflow="auto"
+      flex={1}
+      sx={{ overflowX: "hidden" }}
+    >
       <List sx={{ py: 1 }}>
         {sections.map((section, sectionIndex) => (
           <Box component="li" key={section.id} sx={{ listStyle: "none" }}>
-            {expanded && (
+            <Collapse in={expanded}>
               <ListSubheader
                 component="div"
                 disableSticky
@@ -121,11 +135,12 @@ export const DesktopAdminNavigation = ({
                   bgcolor: "transparent",
                   lineHeight: 2.5,
                   textTransform: "uppercase",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {section.title}
               </ListSubheader>
-            )}
+            </Collapse>
             {section.items.map((item) => (
               <AdminNavigationItem
                 key={item.id}
@@ -143,8 +158,9 @@ export const DesktopAdminNavigation = ({
     <Divider />
     <Box
       display="flex"
-      justifyContent={expanded ? "flex-end" : "center"}
-      p={0.5}
+      justifyContent="flex-end"
+      px={1.5}
+      py={0.5}
     >
       <IconButton aria-label={toggleLabel} onClick={onToggle}>
         {expanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}

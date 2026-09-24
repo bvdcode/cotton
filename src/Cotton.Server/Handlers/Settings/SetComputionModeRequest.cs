@@ -3,6 +3,8 @@
 
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Handlers.Computation;
+using Cotton.Server.Models.Computation;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -13,7 +15,7 @@ namespace Cotton.Server.Handlers.Settings
 {
     public class SetComputionModeRequest(
         ComputionMode mode,
-        string fallbackPublicBaseUrl) : IRequest
+        string fallbackPublicBaseUrl) : IRequest<ComputationStatus?>
     {
         public ComputionMode Mode { get; } = mode;
         public string FallbackPublicBaseUrl { get; } = fallbackPublicBaseUrl;
@@ -22,14 +24,16 @@ namespace Cotton.Server.Handlers.Settings
     public class SetComputionModeRequestHandler(
         SettingsProvider _settings,
         ServerSettingsValidator _validator,
-        IMediator _mediator) : IRequestHandler<SetComputionModeRequest>
+        IMediator _mediator) : IRequestHandler<SetComputionModeRequest, ComputationStatus?>
     {
-        public async Task Handle(SetComputionModeRequest request, CancellationToken cancellationToken)
+        public async Task<ComputationStatus?> Handle(
+            SetComputionModeRequest request,
+            CancellationToken cancellationToken)
         {
-            string? error = _validator.ValidateComputionMode(request.Mode);
-            if (error is not null)
+            string? validationError = _validator.ValidateComputionMode(request.Mode);
+            if (validationError is not null)
             {
-                throw new BadRequestException<CottonServerSettings>(error);
+                throw new BadRequestException<CottonServerSettings>(validationError);
             }
 
             ServerSettingsSnapshot settings = _settings.GetServerSettings();
@@ -41,11 +45,24 @@ namespace Cotton.Server.Handlers.Settings
 
             if (request.Mode == ComputionMode.Remote)
             {
-                await _mediator.Send(
+                return await _mediator.Send(
                     new SetRemoteComputationRunnerUrlRequest(
                         settings.RemoteComputationRunnerUrl, request.FallbackPublicBaseUrl),
                     cancellationToken);
-                return;
+            }
+
+            ComputationStatus? status = null;
+            if (request.Mode == ComputionMode.Cloud)
+            {
+                status = await _mediator.Send(
+                    new GetComputationStatusQuery(
+                        global::Cotton.Constants.CottonBridgeBaseUrl,
+                        ForceRefresh: true),
+                    cancellationToken);
+                if (status.Error is ComputationError error)
+                {
+                    throw new ComputationException(error);
+                }
             }
 
             await _settings.SetPropertyAsync(
@@ -53,6 +70,7 @@ namespace Cotton.Server.Handlers.Settings
                 request.Mode,
                 request.FallbackPublicBaseUrl,
                 cancellationToken);
+            return status;
         }
     }
 }

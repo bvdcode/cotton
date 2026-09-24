@@ -22,7 +22,7 @@ import {
 import {
   HUB_METHODS,
   useFileTreeRealtimeInvalidation,
-  type HubMethodOrLower,
+  type HubMethod,
 } from "../../shared/signalr";
 import { useFileListSourceLogic } from "../files/hooks/useFileListPageLogic";
 import { TrashPageContent } from "./components/TrashPageContent";
@@ -42,17 +42,15 @@ import {
   isCurrentTrashWrapper,
 } from "./utils/trashBreadcrumbs";
 
-const TRASH_MUTATION_METHODS = new Set<string>(
-  [
-    HUB_METHODS.FileDeleted,
-    HUB_METHODS.FileRestored,
-    HUB_METHODS.NodeDeleted,
-    HUB_METHODS.NodeRestored,
-  ].map((method) => method.toLowerCase()),
-);
+const TRASH_MUTATION_METHODS = new Set<HubMethod>([
+  HUB_METHODS.FileDeleted,
+  HUB_METHODS.FileRestored,
+  HUB_METHODS.NodeDeleted,
+  HUB_METHODS.NodeRestored,
+]);
 
-const shouldInvalidateTrash = (method: HubMethodOrLower): boolean =>
-  TRASH_MUTATION_METHODS.has(method.toLowerCase());
+const shouldInvalidateTrash = (method: HubMethod): boolean =>
+  TRASH_MUTATION_METHODS.has(method);
 
 export const TrashPage: React.FC = () => {
   const { t } = useTranslation(["trash", "common", "files", "tasks"]);

@@ -12,6 +12,10 @@ namespace Cotton.Topology.Abstractions
 
         Task<Node?> ResolveNodeByPathAsync(Guid userId, string? path, NodeType nodeType, CancellationToken ct = default);
 
+        Task<ResolvedNodePath?> ResolveNodePathAsync(Guid userId, string? path, NodeType nodeType, CancellationToken ct = default);
+
+        Task<Node?> FindChildNodeAsync(Node parent, string name, CancellationToken ct = default);
+
         Task<(Node Parent, string ResourceName)?> ResolveParentAndNameAsync(Guid userId, string path, NodeType nodeType, CancellationToken ct = default);
 
         Task<string?> GetNodePathFromRootAsync(Guid userId, Guid nodeId, NodeType nodeType, CancellationToken ct = default);

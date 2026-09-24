@@ -43,6 +43,11 @@ namespace Cotton.Server.Mappings
                     && src.ContentType != "video/quicktime")
                 .Map(d => d.PreviewHashEncryptedHex, s => s.FileManifest.GetPreviewHashEncryptedHex());
 
+            TypeAdapterConfig<NodeFile, SharedNodeFileDto>
+                .NewConfig()
+                .Map(dest => dest.SizeBytes, src => src.FileManifest.SizeBytes)
+                .Map(dest => dest.PreviewHashEncryptedHex, src => src.FileManifest.GetPreviewHashEncryptedHex());
+
             TypeAdapterConfig<User, UserDto>
                 .NewConfig()
                 .Map(dest => dest.AvatarHashEncryptedHex, src => src.GetAvatarHashEncryptedHex());

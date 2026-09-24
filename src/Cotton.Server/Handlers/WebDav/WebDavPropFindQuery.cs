@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Topology;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
@@ -40,13 +41,12 @@ namespace Cotton.Server.Handlers.WebDav
             List<WebDavResource> resources = new List<WebDavResource>();
             string hrefBase = EnsureTrailingSlash(request.HrefBase);
             int depth = Math.Clamp(request.Depth, 0, MaxDepth);
-            Dictionary<Guid, Node> pathCache = new Dictionary<Guid, Database.Models.Node>();
             WebDavQuota quota = await GetQuotaPropertiesAsync(request.UserId, ct);
 
             if (resolveResult.IsCollection && resolveResult.Node is not null)
             {
                 Node node = resolveResult.Node;
-                string nodePath = await BuildNodePathAsync(node, pathCache, ct);
+                string nodePath = resolveResult.Path;
                 string nodeHref = BuildHref(hrefBase, nodePath);
 
                 // Add the collection itself
@@ -62,21 +62,13 @@ namespace Cotton.Server.Handlers.WebDav
                 // If depth > 0, add children
                 if (depth > 0)
                 {
-                    await AddChildResourcesAsync(resources, node, hrefBase, nodePath, depth, 1, pathCache, ct);
+                    await AddChildResourcesAsync(resources, node, hrefBase, nodePath, depth, 1, ct);
                 }
             }
             else if (resolveResult.NodeFile is not null)
             {
                 NodeFile nodeFile = resolveResult.NodeFile;
-                Node? parentNode = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(n => n.Id == nodeFile.NodeId, ct);
-
-                string parentPath = parentNode is not null
-                    ? await BuildNodePathAsync(parentNode, pathCache, ct)
-                    : string.Empty;
-
-                string fileHref = BuildHref(hrefBase, parentPath, nodeFile.Name);
+                string fileHref = BuildHref(hrefBase, resolveResult.Path);
 
                 resources.Add(new WebDavResource(
                     Href: fileHref,
@@ -106,16 +98,10 @@ namespace Cotton.Server.Handlers.WebDav
             string parentPath,
             int maxDepth,
             int currentDepth,
-            Dictionary<Guid, Database.Models.Node> pathCache,
             CancellationToken ct)
         {
-            // Get child nodes (folders)
-            List<Node> childNodes = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(n => n.ParentId == parentNode.Id
-                    && n.Type == WebDavPathResolver.DefaultNodeType
-                    && n.OwnerId == parentNode.OwnerId
-                    && n.LayoutId == parentNode.LayoutId)
+            NodeDirectory directory = new(_dbContext, parentNode);
+            List<Node> childNodes = await directory.Nodes.AsNoTracking()
                 .OrderBy(n => n.NameKey)
                 .ToListAsync(ct);
 
@@ -135,16 +121,11 @@ namespace Cotton.Server.Handlers.WebDav
 
                 if (currentDepth < maxDepth)
                 {
-                    await AddChildResourcesAsync(resources, childNode, hrefBase, childPath, maxDepth, currentDepth + 1, pathCache, ct);
+                    await AddChildResourcesAsync(resources, childNode, hrefBase, childPath, maxDepth, currentDepth + 1, ct);
                 }
             }
 
-            // Get child files
-            List<NodeFile> childFiles = await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Include(f => f.FileManifest)
-                .Where(f => f.NodeId == parentNode.Id
-                    && f.OwnerId == parentNode.OwnerId)
+            List<NodeFile> childFiles = await directory.Files.AsNoTracking().Include(f => f.FileManifest)
                 .OrderBy(f => f.NameKey)
                 .ToListAsync(ct);
 
@@ -163,47 +144,6 @@ namespace Cotton.Server.Handlers.WebDav
                     ETag: FileETags.GetQuotedContentETag(childFile.FileManifest),
                     ContentType: childFile.ContentType));
             }
-        }
-
-        private async Task<string> BuildNodePathAsync(
-            Database.Models.Node node,
-            Dictionary<Guid, Database.Models.Node> cache,
-            CancellationToken ct)
-        {
-            if (!cache.ContainsKey(node.Id))
-            {
-                cache[node.Id] = node;
-            }
-            List<string> parts = new List<string>();
-            Node? current = node;
-
-            // Don't include root node in path
-            while (current.ParentId is not null)
-            {
-                parts.Add(current.Name);
-
-                if (!cache.TryGetValue(current.ParentId.Value, out Node? parent))
-                {
-                    parent = await _dbContext.Nodes
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(n => n.Id == current.ParentId, ct);
-
-                    if (parent is not null)
-                    {
-                        cache[parent.Id] = parent;
-                    }
-                }
-
-                current = parent;
-
-                if (current is null)
-                {
-                    break;
-                }
-            }
-
-            parts.Reverse();
-            return string.Join(WebDavPathResolver.PathSeparator, parts);
         }
 
         private static string BuildHref(string baseHref, params string[] pathParts)

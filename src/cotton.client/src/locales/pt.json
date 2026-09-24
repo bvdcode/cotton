@@ -2823,6 +2823,7 @@
       "progress": "Ficheiros com vetores: {{indexed}} de {{total}}",
       "indexingProgress": "Progresso da indexação de ficheiros",
       "indexingDisabled": "Ative a indexação do conteúdo dos arquivos para usar a pesquisa inteligente.",
+      "indexingRequested": "Indexação solicitada.",
       "computation": {
         "checkSettings": "Verifique a ligação ao serviço de computação em"
       },
@@ -2834,6 +2835,7 @@
       "loading": "Verificando o banco…",
       "actions": {
         "refresh": "Atualizar",
+        "triggerIndexing": "Iniciar indexação",
         "enable": "Preparar banco de dados",
         "copy": "Copiar",
         "copied": "Copiado",
@@ -2843,6 +2845,7 @@
       "errors": {
         "loadFailed": "Não foi possível verificar o banco de dados.",
         "enableFailed": "Não foi possível preparar o banco de dados.",
+        "triggerFailed": "Não foi possível iniciar a indexação.",
         "copyFailed": "Não foi possível copiar o comando."
       },
       "steps": {
@@ -3091,6 +3094,8 @@
           "statusLoadFailed": "Não foi possível verificar o estado do serviço.",
           "validateAndSave": "Validar e guardar",
           "connected": "Ligado · {{model}} · {{dimensions}} dimensões · {{tokens}} tokens",
+          "cloudConnected": "Cotton Bridge autorizado · computação na nuvem disponível · {{model}} · {{dimensions}} dimensões",
+          "cloudUnavailable": "O Cotton Bridge não conseguiu autorizar este servidor nem fornecer computação na nuvem. Tente novamente.",
           "errors": {
             "NotConfigured": "O URL do executor não está configurado.",
             "UnsupportedMode": "Os embeddings de texto ainda não estão disponíveis neste modo.",

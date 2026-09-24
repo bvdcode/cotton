@@ -3,7 +3,6 @@ import {
   HUB_METHODS,
   subscribeToPreviewGenerated,
   type HubMethod,
-  type HubMethodOrLower,
   useFileTreeRealtimeInvalidation,
 } from "../../../shared/signalr";
 import { useAuth } from "../../../features/auth";
@@ -19,12 +18,8 @@ interface UseFilesRealtimeEventsOptions {
   ) => boolean;
 }
 
-const HUB_METHOD_BY_WIRE_NAME = new Map<string, HubMethod>(
-  Object.values(HUB_METHODS).map((method) => [method.toLowerCase(), method]),
-);
-
 export const shouldInvalidateCurrentNode = (
-  method: HubMethodOrLower,
+  method: HubMethod,
   args: JsonValue[],
   currentNodeId: string | null,
 ): boolean => {
@@ -37,14 +32,13 @@ export const shouldInvalidateCurrentNode = (
 };
 
 const getAffectedNodeIds = (
-  method: HubMethodOrLower,
+  method: HubMethod,
   args: JsonValue[],
 ): Set<string> => {
-  const canonicalMethod = HUB_METHOD_BY_WIRE_NAME.get(method.toLowerCase());
   const payload = args[0];
   const affected = new Set<string>();
 
-  if (!canonicalMethod || !isJsonObject(payload)) {
+  if (!isJsonObject(payload)) {
     return affected;
   }
 
@@ -67,7 +61,7 @@ const getAffectedNodeIds = (
     }
   };
 
-  switch (canonicalMethod) {
+  switch (method) {
     case HUB_METHODS.FileCreated:
     case HUB_METHODS.FileUpdated:
     case HUB_METHODS.FileRenamed:

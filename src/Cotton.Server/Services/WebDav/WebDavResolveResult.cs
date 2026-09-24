@@ -14,5 +14,7 @@ namespace Cotton.Server.Services.WebDav
         public Node? Node { get; init; }
 
         public NodeFile? NodeFile { get; init; }
+
+        public string Path { get; init; } = string.Empty;
     }
 }

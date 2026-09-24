@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Topology;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,6 @@ namespace Cotton.Server.Services.WebDav
 {
     public class WebDavPathResolver(
         CottonDbContext _dbContext,
-        ILayoutService _layouts,
         ILayoutNavigator _navigator) : IWebDavPathResolver
     {
         public const NodeType DefaultNodeType = NodeType.Default;
@@ -53,8 +53,8 @@ namespace Cotton.Server.Services.WebDav
                 .Select(SafeUnescapePathSegment)
                 .ToArray();
             string parentPath = string.Join(PathSeparator, parts.Take(parts.Length - 1));
-            Node? currentNode = await _navigator.ResolveNodeByPathAsync(userId, parentPath, DefaultNodeType, ct);
-            if (currentNode is null)
+            ResolvedNodePath? parent = await _navigator.ResolveNodePathAsync(userId, parentPath, DefaultNodeType, ct);
+            if (parent is null)
             {
                 return new WebDavResolveResult { Found = false };
             }
@@ -63,17 +63,8 @@ namespace Cotton.Server.Services.WebDav
             string lastName = parts[^1];
             string lastNameKey = NameValidator.NormalizeAndGetNameKey(lastName);
 
-            Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId, ct);
-
-            // Try to find as node first
-            Node? childNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.LayoutId == layout.Id
-                    && x.ParentId == currentNode.Id
-                    && x.OwnerId == userId
-                    && x.NameKey == lastNameKey
-                    && x.Type == DefaultNodeType)
-                .SingleOrDefaultAsync(ct);
+            Node currentNode = parent.Node;
+            Node? childNode = await _navigator.FindChildNodeAsync(currentNode, lastName, ct);
 
             if (childNode is not null)
             {
@@ -81,15 +72,14 @@ namespace Cotton.Server.Services.WebDav
                 {
                     Found = true,
                     IsCollection = true,
+                    Path = CombinePath(parent.Path, childNode.Name),
                     Node = childNode
                 };
             }
 
             // Try to find as file
-            IQueryable<NodeFile> fileQuery = _dbContext.NodeFiles
-                .Where(x => x.NodeId == currentNode.Id
-                    && x.OwnerId == userId
-                    && x.NameKey == lastNameKey);
+            IQueryable<NodeFile> fileQuery = new NodeDirectory(_dbContext, currentNode).Files
+                .Where(x => x.NameKey == lastNameKey);
 
             if (includeFileContentGraph)
             {
@@ -114,6 +104,7 @@ namespace Cotton.Server.Services.WebDav
                 {
                     Found = true,
                     IsCollection = false,
+                    Path = CombinePath(parent.Path, nodeFile.Name),
                     NodeFile = nodeFile
                 };
             }
@@ -139,6 +130,9 @@ namespace Cotton.Server.Services.WebDav
                 ResourceName = resolved.Value.ResourceName
             };
         }
+
+        private static string CombinePath(string parentPath, string name) =>
+            string.IsNullOrEmpty(parentPath) ? name : parentPath + PathSeparator + name;
 
         private static string NormalizePath(string? path)
         {

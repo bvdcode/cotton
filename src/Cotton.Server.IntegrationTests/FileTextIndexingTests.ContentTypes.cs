@@ -4,11 +4,13 @@
 using Cotton.Database.Models;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Helpers;
+using Cotton.Server.Models.Configuration;
 using Cotton.Server.Services.Computation;
 using Cotton.TextExtraction;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NUnit.Framework;
 
 namespace Cotton.Server.IntegrationTests
@@ -37,7 +39,8 @@ namespace Cotton.Server.IntegrationTests
                 return "Extracted document text";
             });
             IndexFileTextRequestHandler handler = new(_db, _storage, new FileTextExtractorProvider([extractor]),
-                _services.GetRequiredService<ComputationService>(), NullLogger<IndexFileTextRequestHandler>.Instance);
+                _services.GetRequiredService<ComputationService>(), _services.GetRequiredService<IOptions<TextIndexingOptions>>(),
+                NullLogger<IndexFileTextRequestHandler>.Instance);
 
             await handler.Handle(new IndexFileTextRequest(id), CancellationToken.None);
             _db.ChangeTracker.Clear();

@@ -249,6 +249,8 @@ namespace Cotton.Server.IntegrationTests
             {
                 options.SchedulerName = $"VectorEndpointTests-{Guid.NewGuid():N}";
                 options.AddJob<BuildVectorIndexJob>(job => job.WithIdentity(nameof(BuildVectorIndexJob)).StoreDurably());
+                options.AddJob<GenerateFileEmbeddingsJob>(job => job.WithIdentity(nameof(GenerateFileEmbeddingsJob))
+                    .DisallowConcurrentExecution().StoreDurably());
             });
             builder.Services.AddTransient<IRequestHandler<EnsureVectorExtensionRequest>, EnsureVectorExtensionRequestHandler>();
             builder.Services.AddTransient<IRequestHandler<GetVectorExtensionStatusQuery, VectorExtensionStatusDto>, GetVectorExtensionStatusQueryHandler>();
@@ -259,7 +261,7 @@ namespace Cotton.Server.IntegrationTests
             builder.Services.AddAuthorization();
             builder.Services.AddControllers().AddControllersAsServices();
             builder.Services.AddTransient(provider => new ServerController(
-                provider.GetRequiredService<IMediator>(), null!, null!, null!));
+                provider.GetRequiredService<IMediator>(), null!, provider.GetRequiredService<ISchedulerFactory>(), null!));
 
             WebApplication application = builder.Build();
             application.UseRouting();

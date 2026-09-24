@@ -226,8 +226,8 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SetComputionMode([FromRoute] ComputionMode mode, CancellationToken cancellationToken)
         {
             SetComputionModeRequest request = new(mode, GetFallbackPublicBaseUrl());
-            await _mediator.Send(request, cancellationToken);
-            return NoContent();
+            ComputationStatus? status = await _mediator.Send(request, cancellationToken);
+            return status is null ? NoContent() : Ok(status);
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -259,11 +259,9 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("remote-computation-runner-url")]
-        public async Task<IActionResult> GetRemoteComputationRunnerUrl(CancellationToken cancellationToken)
+        public IActionResult GetRemoteComputationRunnerUrl()
         {
-            string? remoteComputationRunnerUrl = await _mediator.Send(
-                new GetRemoteComputationRunnerUrlQuery(),
-                cancellationToken);
+            string? remoteComputationRunnerUrl = Settings.GetServerSettings().RemoteComputationRunnerUrl;
             return Ok(new { remoteComputationRunnerUrl });
         }
 

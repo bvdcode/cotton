@@ -6,6 +6,7 @@ using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Database.Integrity;
 using Cotton.Server.Auth;
+using Cotton.Server.Models.Configuration;
 using Cotton.Server.Handlers.WebDav;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -26,12 +27,30 @@ namespace Cotton.Server.Extensions
     {
         public static IServiceCollection AddComputationServices(this IServiceCollection services)
         {
+            services.AddOptions<TextIndexingOptions>()
+                .Validate(options => options.MaxExtractedTextBytes > 0,
+                    "TextIndexing:MaxExtractedTextBytes must be greater than zero.")
+                .Validate(options => options.MaxHtmlExtractedTextBytes > 0,
+                    "TextIndexing:MaxHtmlExtractedTextBytes must be greater than zero.")
+                .Validate(options => options.MaxStructuredFileBytes > 0,
+                    "TextIndexing:MaxStructuredFileBytes must be greater than zero.")
+                .ValidateOnStart();
             services.AddSingleton<EmbeddingDimensionCache>();
             services.AddScoped<ComputationService>();
+            services.AddScoped<TeiClient>();
             services.AddScoped<TextEmbeddingChunker>();
             services.AddSingleton<IFileTextExtractor, PdfTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, TextFileExtractor>();
+            services.AddSingleton<IFileTextExtractor, HtmlTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, WordDocumentTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, PresentationTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, SpreadsheetTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, EpubTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, EmailTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, OpenDocumentTextExtractor>();
+            services.AddSingleton<IFileTextExtractor, JupyterNotebookTextExtractor>();
             services.AddSingleton<FileTextExtractorProvider>();
-            services.AddHttpClient<TeiClient>(client => client.Timeout = TeiClient.RequestTimeout)
+            services.AddHttpClient(TeiClient.RemoteClientName, client => client.Timeout = TeiClient.RequestTimeout)
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
                 {
                     AllowAutoRedirect = false,

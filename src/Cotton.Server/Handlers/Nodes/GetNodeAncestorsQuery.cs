@@ -1,10 +1,11 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Nodes;
+using Cotton.Topology;
 using Cotton.Topology.Abstractions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -20,11 +21,10 @@ namespace Cotton.Server.Handlers.Nodes
 
     public class GetNodeAncestorsQueryHandler(
         CottonDbContext _dbContext,
-        ILayoutService _layouts)
+        ILayoutService _layouts,
+        ILogger<GetNodeAncestorsQueryHandler> _logger)
         : IRequestHandler<GetNodeAncestorsQuery, GetNodeAncestorsResult>
     {
-        private const int MaxDepth = 256;
-
         public async Task<GetNodeAncestorsResult> Handle(
             GetNodeAncestorsQuery request,
             CancellationToken ct)
@@ -34,47 +34,31 @@ namespace Cotton.Server.Handlers.Nodes
                 ct);
             IQueryable<Node> nodes = _dbContext.Nodes
                 .AsNoTracking()
-                .Where(x => x.OwnerId == request.UserId
-                    && x.LayoutId == layout.Id
+                .AccessibleTo(request.UserId)
+                .Where(x => x.LayoutId == layout.Id
                     && x.Type == request.NodeType);
 
-            Node? currentNode = await nodes.SingleOrDefaultAsync(
-                x => x.Id == request.NodeId,
-                ct);
-            if (currentNode is null)
-            {
-                return new GetNodeAncestorsResult(
-                    GetNodeAncestorsStatus.NodeNotFound);
-            }
-
-            HashSet<Guid> visited = [currentNode.Id];
+            bool found = false;
             List<NodeDto> ancestors = [];
-            int depth = 0;
-            while (currentNode.ParentId.HasValue)
+            try
             {
-                if (depth++ >= MaxDepth)
+                await foreach (Node node in NodeHierarchy.ReadAncestorsAsync(nodes, request.NodeId, cancellationToken: ct))
                 {
-                    return InvalidHierarchy(
-                        "Maximum node hierarchy depth exceeded.");
+                    if (found)
+                    {
+                        ancestors.Add(node.Adapt<NodeDto>());
+                    }
+                    found = true;
                 }
-
-                Guid parentId = currentNode.ParentId.Value;
-                if (!visited.Add(parentId))
-                {
-                    return InvalidHierarchy(
-                        "Circular reference detected in node hierarchy.");
-                }
-
-                Node? parentNode = await nodes.SingleOrDefaultAsync(
-                    x => x.Id == parentId,
-                    ct);
-                if (parentNode is null)
-                {
-                    break;
-                }
-
-                ancestors.Add(parentNode.Adapt<NodeDto>());
-                currentNode = parentNode;
+            }
+            catch (NodeHierarchyException exception)
+            {
+                _logger.LogWarning(exception, "Cannot read ancestors of node {NodeId}", request.NodeId);
+                return InvalidHierarchy(exception.Message);
+            }
+            if (!found)
+            {
+                return new GetNodeAncestorsResult(GetNodeAncestorsStatus.NodeNotFound);
             }
 
             ancestors.Reverse();

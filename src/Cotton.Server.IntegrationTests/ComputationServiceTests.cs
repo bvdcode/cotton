@@ -5,6 +5,9 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Handlers.Computation;
+using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
+using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Computation;
 using Cotton.Server.Providers;
@@ -19,18 +22,21 @@ using System.Text;
 
 namespace Cotton.Server.IntegrationTests
 {
-    public class ComputationServiceTests
+    public partial class ComputationServiceTests
     {
         private ServiceProvider _provider = null!;
         private ComputationService _service = null!;
         private TeiTestHandler _handler = null!;
+        private ServerSettingsCache _cache = null!;
+        private BridgeTestCredentialProvider _credentials = null!;
 
         [SetUp]
         public void SetUp()
         {
             _handler = new TeiTestHandler();
-            ServerSettingsCache cache = new();
-            cache.GetOrAdd(() => ServerSettingsSnapshot.FromEntity(new CottonServerSettings
+            _cache = new();
+            _credentials = new();
+            _cache.GetOrAdd(() => ServerSettingsSnapshot.FromEntity(new CottonServerSettings
             {
                 ComputionMode = ComputionMode.Remote,
                 RemoteComputationRunnerUrl = "https://runner.example/proxy",
@@ -38,9 +44,13 @@ namespace Cotton.Server.IntegrationTests
             ServiceCollection services = new();
             services.AddLogging();
             services.AddMediator();
-            services.AddSingleton(cache);
+            services.AddSingleton(_cache);
             services.AddSingleton<EmbeddingDimensionCache>();
-            services.AddSingleton(_ => new HttpClient(_handler));
+            services.AddCottonBridgeClients();
+            services.AddSingleton<IBridgeCredentialProvider>(_credentials);
+            services.AddHttpClient(TeiClient.RemoteClientName).ConfigurePrimaryHttpMessageHandler(() => _handler);
+            services.AddHttpClient(CottonBridgeServiceCollectionExtensions.ComputationClientName)
+                .ConfigurePrimaryHttpMessageHandler(() => _handler);
             services.AddSingleton<TeiClient>();
             services.AddTransient<TextEmbeddingChunker>();
             services.AddDbContext<CottonDbContext>(options => options.UseNpgsql());
@@ -49,7 +59,7 @@ namespace Cotton.Server.IntegrationTests
             services.AddTransient<IRequestHandler<GetComputationServiceInfoQuery, ComputationServiceInfo>, GetComputationServiceInfoQueryHandler>();
             services.AddTransient<IRequestHandler<GetComputationStatusQuery, ComputationStatus>, GetComputationStatusQueryHandler>();
             services.AddTransient<IRequestHandler<GetTextEmbeddingsRequest, float[][]>, GetTextEmbeddingsRequestHandler>();
-            services.AddTransient<IRequestHandler<GetTextEmbeddingFragmentsRequest, float[][]>, GetTextEmbeddingFragmentsRequestHandler>();
+            services.AddTransient<IRequestHandler<GetTextEmbeddingFragmentsRequest, float[][][]>, GetTextEmbeddingFragmentsRequestHandler>();
             _provider = services.BuildServiceProvider();
             _service = _provider.GetRequiredService<ComputationService>();
         }

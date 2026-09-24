@@ -2816,6 +2816,7 @@
       "progress": "Dateien mit Vektoren: {{indexed}} von {{total}}",
       "indexingProgress": "Fortschritt der Dateiindizierung",
       "indexingDisabled": "Aktivieren Sie die Indexierung von Dateiinhalten, damit die intelligente Suche funktioniert.",
+      "indexingRequested": "Indexierung wurde angefordert.",
       "computation": {
         "checkSettings": "Prüfen Sie die Verbindung zum Berechnungsdienst unter"
       },
@@ -2827,6 +2828,7 @@
       "loading": "Datenbank wird geprüft…",
       "actions": {
         "refresh": "Aktualisieren",
+        "triggerIndexing": "Indexierung starten",
         "enable": "Datenbank vorbereiten",
         "copy": "Kopieren",
         "copied": "Kopiert",
@@ -2836,6 +2838,7 @@
       "errors": {
         "loadFailed": "Die Datenbank konnte nicht geprüft werden.",
         "enableFailed": "Die Datenbank konnte nicht vorbereitet werden.",
+        "triggerFailed": "Indexierung konnte nicht gestartet werden.",
         "copyFailed": "Der Befehl konnte nicht kopiert werden."
       },
       "steps": {
@@ -3084,6 +3087,8 @@
           "statusLoadFailed": "Der Dienststatus konnte nicht abgerufen werden.",
           "validateAndSave": "Prüfen und speichern",
           "connected": "Verbunden · {{model}} · {{dimensions}} Dimensionen · {{tokens}} Token",
+          "cloudConnected": "Cotton Bridge autorisiert · Cloud-Berechnungen verfügbar · {{model}} · {{dimensions}} Dimensionen",
+          "cloudUnavailable": "Cotton Bridge konnte diesen Server nicht autorisieren oder Cloud-Berechnungen bereitstellen. Versuchen Sie es erneut.",
           "errors": {
             "NotConfigured": "Die Runner-URL ist nicht konfiguriert.",
             "UnsupportedMode": "Text-Embeddings sind in diesem Berechnungsmodus noch nicht verfügbar.",

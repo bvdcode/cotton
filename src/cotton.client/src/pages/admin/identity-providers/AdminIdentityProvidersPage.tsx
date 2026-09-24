@@ -11,7 +11,6 @@ import {
   useDeleteOidcProviderMutation,
 } from "@shared/api/queries/oidc";
 import { AdminPageSurface } from "../components/AdminPageSurface";
-import { AdminPageHeader } from "../components/AdminPageHeader";
 import { OidcProviderFormDialog } from "./OidcProviderFormDialog";
 import { OidcProvidersGridToolbar } from "./OidcProvidersGridToolbar";
 import { useOidcProviderColumns } from "./useOidcProviderColumns";
@@ -113,13 +112,6 @@ export const AdminIdentityProvidersPage = () => {
       }}
     >
       <AdminPageSurface fullHeight>
-        <Box p={3} pb={2}>
-          <AdminPageHeader
-            title={t("identityProviders.title")}
-            description={t("identityProviders.description")}
-          />
-        </Box>
-
         {(providersQuery.isError || pageError) && (
           <Box p={2} pb={0}>
             <Alert severity="error">

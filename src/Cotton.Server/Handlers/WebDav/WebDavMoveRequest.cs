@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Topology;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
@@ -341,7 +342,7 @@ namespace Cotton.Server.Handlers.WebDav
         {
             if (sourceResult.IsCollection && sourceResult.Node is not null)
             {
-                if (await IsDescendantAsync(destParentResult.ParentNode!.Id, sourceResult.Node.Id, ct))
+                if (await IsDescendantAsync(destParentResult.ParentNode!.Id, sourceResult.Node.Id, request.UserId, ct))
                 {
                     _logger.LogWarning("WebDAV MOVE: Attempted to move node {NodeId} into its descendant {DestParentId} for user {UserId}",
                         sourceResult.Node.Id, destParentResult.ParentNode.Id, request.UserId);
@@ -380,31 +381,27 @@ namespace Cotton.Server.Handlers.WebDav
             return null;
         }
 
-        private async Task<bool> IsDescendantAsync(Guid destParentId, Guid sourceNodeId, CancellationToken ct)
+        private async Task<bool> IsDescendantAsync(Guid destParentId, Guid sourceNodeId, Guid userId, CancellationToken ct)
         {
-            const int MaxDepth = 256;
-            int depth = 0;
-            Guid? currentId = destParentId;
-            while (currentId.HasValue)
+            IQueryable<Node> nodes = _dbContext.Nodes.AsNoTracking().AccessibleTo(userId);
+            try
             {
-                if (depth++ >= MaxDepth)
+                await foreach (var node in NodeHierarchy.ReadAncestorsAsync(
+                    nodes, destParentId, node => new { node.Id, node.ParentId }, node => node.ParentId,
+                    sourceNodeId, NodeHierarchy.DefaultMaxDepth - 1, ct))
                 {
-                    return true;
+                    if (node.Id == sourceNodeId || node.ParentId == sourceNodeId)
+                    {
+                        return true;
+                    }
                 }
-
-                if (currentId.Value == sourceNodeId)
-                {
-                    return true;
-                }
-
-                currentId = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(n => n.Id == currentId.Value)
-                    .Select(n => n.ParentId)
-                    .SingleOrDefaultAsync(ct);
+                return false;
             }
-
-            return false;
+            catch (NodeHierarchyException exception)
+            {
+                _logger.LogWarning(exception, "Cannot move a folder within an invalid hierarchy");
+                return true;
+            }
         }
     }
 }

@@ -61,36 +61,6 @@ export const useSearchFileList = ({
       return `${normalized.slice(0, slashIndex + 1)}${fileName}`;
     };
 
-    // Some backend versions return filePaths keyed by file manifest IDs.
-    // Others may return node-file association IDs. Prefer direct lookup by file.id,
-    // but keep a best-effort fallback to match by file name.
-    const filePathsByName = new Map<string, string[]>();
-    for (const fullPath of Object.values(filePaths)) {
-      const segments = fullPath.split("/");
-      const fileName = segments[segments.length - 1];
-      const list = filePathsByName.get(fileName) ?? [];
-      list.push(fullPath);
-      filePathsByName.set(fileName, list);
-    }
-
-    const consumedIndices = new Map<string, number>();
-    const consumeNextPath = (fileName: string): string | undefined => {
-      const paths = filePathsByName.get(fileName);
-      if (!paths) return undefined;
-      const idx = consumedIndices.get(fileName) ?? 0;
-      if (idx >= paths.length) return undefined;
-      consumedIndices.set(fileName, idx + 1);
-      return paths[idx];
-    };
-
-    const getFullPathForFile = (
-      file: NodeFileManifestDto,
-    ): string | undefined => {
-      const byId = filePaths[file.id];
-      if (byId) return byId;
-      return consumeNextPath(file.name);
-    };
-
     const folders = results.nodes ?? [];
     const files = results.files ?? [];
 
@@ -106,7 +76,7 @@ export const useSearchFileList = ({
           }) as const,
       ),
       ...files.map((file) => {
-        const fullPath = getFullPathForFile(file);
+        const fullPath = filePaths[file.id];
 
         // containerPath stays as the full original path for backend resolution
         const containerPath = fullPath ? getContainerPath(fullPath) : undefined;

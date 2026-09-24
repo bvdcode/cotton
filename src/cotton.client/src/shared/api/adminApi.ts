@@ -266,6 +266,10 @@ export const adminApi = {
     await httpClient.patch("server/gc/trigger");
   },
 
+  triggerFileIndexing: async (): Promise<void> => {
+    await httpClient.patch("server/indexing/trigger");
+  },
+
   getSecurityDiagnostics: async (
     signal?: AbortSignal,
   ): Promise<SecurityDiagnosticsDto> => {

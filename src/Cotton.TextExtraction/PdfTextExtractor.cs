@@ -6,21 +6,18 @@ using Docnet.Core.Exceptions;
 using Docnet.Core.Models;
 using Docnet.Core.Readers;
 using Microsoft.Extensions.Logging;
-using System.Text;
 
 namespace Cotton.TextExtraction
 {
-    public class PdfTextExtractor(ILogger<PdfTextExtractor> logger) : IFileTextExtractor
+    public class PdfTextExtractor(ILogger<PdfTextExtractor> logger) : FileTextExtractor
     {
         public const string ContentType = "application/pdf";
         public const string FileExtension = ".pdf";
 
-        public IEnumerable<string> SupportedContentTypes => [ContentType];
+        public override IEnumerable<string> SupportedContentTypes => [ContentType];
 
-        public async Task<string> ExtractAsync(Stream source, CancellationToken cancellationToken = default)
+        protected override async Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            cancellationToken.ThrowIfCancellationRequested();
             string path = Path.Combine(Path.GetTempPath(), $"cotton-text-{Guid.NewGuid():N}.pdf");
             try
             {
@@ -31,15 +28,14 @@ namespace Cotton.TextExtraction
                 }
 
                 using IDocReader document = DocLib.Instance.GetDocReader(path, new PageDimensions(1));
-                StringBuilder text = new();
                 int pageCount = document.GetPageCount();
-                for (int pageIndex = 0; pageIndex < pageCount; pageIndex++)
+                for (int pageIndex = 0; pageIndex < pageCount && !text.IsTruncated; pageIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     using IPageReader page = document.GetPageReader(pageIndex);
-                    text.AppendLine(page.GetText());
+                    text.AppendSeparated(page.GetText());
+                    text.AppendLineBreak();
                 }
-                return text.ToString().Trim();
             }
             catch (DocnetException ex)
             {

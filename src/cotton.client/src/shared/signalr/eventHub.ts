@@ -15,7 +15,7 @@ import type { JsonValue } from "../types/json";
 import {
   HUB_METHODS,
   SILENCED_HUB_METHODS,
-  type HubMethodOrLower,
+  type HubMethod,
 } from "./hubMethods";
 
 type HubEventCallback = (...args: JsonValue[]) => void;
@@ -23,7 +23,7 @@ type HubConnectionCallback = () => void;
 
 class EventHubService {
   private connection: HubConnection | null = null;
-  private listeners = new Map<HubMethodOrLower, Set<HubEventCallback>>();
+  private listeners = new Map<HubMethod, Set<HubEventCallback>>();
   private connectionListeners = new Set<HubConnectionCallback>();
   private started = false;
   private startPromise: Promise<void> | null = null;
@@ -100,7 +100,6 @@ class EventHubService {
           .configureLogging(LogLevel.Warning)
           .build();
 
-        // Some server versions emit lowercased method names.
         // Registering no-op handlers prevents SignalR warnings on pages
         // that don't subscribe to file-related events.
         for (const method of SILENCED_HUB_METHODS) {
@@ -147,7 +146,7 @@ class EventHubService {
     };
   }
 
-  on(method: HubMethodOrLower, callback: HubEventCallback): () => void {
+  on(method: HubMethod, callback: HubEventCallback): () => void {
     if (!this.listeners.has(method)) {
       this.listeners.set(method, new Set());
     }

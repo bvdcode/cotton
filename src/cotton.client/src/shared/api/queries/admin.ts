@@ -186,3 +186,8 @@ export const useTriggerDatabaseBackupMutation = () => {
       }),
   });
 };
+
+export const useTriggerFileIndexingMutation = () =>
+  useMutation({
+    mutationFn: () => adminApi.triggerFileIndexing(),
+  });

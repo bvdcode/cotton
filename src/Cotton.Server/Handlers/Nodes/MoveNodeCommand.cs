@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Nodes;
+using Cotton.Topology;
 using Cotton.Files;
 using Cotton.Database;
 using Cotton.Database.Models;
@@ -202,30 +203,24 @@ namespace Cotton.Server.Handlers.Nodes
 
         private async Task<bool> IsDescendantAsync(Guid candidateChildId, Guid possibleAncestorId, Guid userId, CancellationToken ct)
         {
-            // Walks parent pointers upward from `candidateChildId`. If we encounter `possibleAncestorId`
-            // before reaching the root, the candidate is a descendant of the ancestor.
-            // Scoped to userId so a foreign tree can't pollute the walk.
-            HashSet<Guid> visited = [];
-            Guid? currentId = candidateChildId;
-            while (currentId.HasValue)
+            IQueryable<Node> nodes = _dbContext.Nodes.AsNoTracking().AccessibleTo(userId);
+            try
             {
-                if (!visited.Add(currentId.Value))
+                await foreach (var node in NodeHierarchy.ReadAncestorsAsync(
+                    nodes, candidateChildId, node => new { node.Id, node.ParentId }, node => node.ParentId,
+                    possibleAncestorId, int.MaxValue, ct))
                 {
-                    throw new BadRequestException<Node>("Folder hierarchy contains a cycle.");
+                    if (node.Id == possibleAncestorId || node.ParentId == possibleAncestorId)
+                    {
+                        return true;
+                    }
                 }
-
-                if (currentId.Value == possibleAncestorId)
-                {
-                    return true;
-                }
-
-                currentId = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(n => n.Id == currentId.Value && n.OwnerId == userId)
-                    .Select(n => n.ParentId)
-                    .SingleOrDefaultAsync(ct);
             }
-
+            catch (NodeHierarchyException exception)
+            {
+                _logger.LogWarning(exception, "Cannot move a folder within an invalid hierarchy");
+                throw new BadRequestException<Node>("Folder hierarchy contains a cycle.");
+            }
             return false;
         }
 

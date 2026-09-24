@@ -2821,6 +2821,7 @@
       "progress": "Bestanden met vectoren: {{indexed}} van {{total}}",
       "indexingProgress": "Voortgang van bestandsindexering",
       "indexingDisabled": "Schakel de indexering van bestandsinhoud in om slim zoeken te gebruiken.",
+      "indexingRequested": "Indexering aangevraagd.",
       "computation": {
         "checkSettings": "Controleer de verbinding met de rekenservice bij"
       },
@@ -2832,6 +2833,7 @@
       "loading": "Database controleren…",
       "actions": {
         "refresh": "Vernieuwen",
+        "triggerIndexing": "Indexering starten",
         "enable": "Database voorbereiden",
         "copy": "Kopiëren",
         "copied": "Gekopieerd",
@@ -2841,6 +2843,7 @@
       "errors": {
         "loadFailed": "De database kon niet worden gecontroleerd.",
         "enableFailed": "De database kon niet worden voorbereid.",
+        "triggerFailed": "Kan indexering niet starten.",
         "copyFailed": "De opdracht kon niet worden gekopieerd."
       },
       "steps": {
@@ -3089,6 +3092,8 @@
           "statusLoadFailed": "De servicestatus kon niet worden gecontroleerd.",
           "validateAndSave": "Controleren en opslaan",
           "connected": "Verbonden · {{model}} · {{dimensions}} dimensies · {{tokens}} tokens",
+          "cloudConnected": "Cotton Bridge geautoriseerd · cloudberekeningen beschikbaar · {{model}} · {{dimensions}} dimensies",
+          "cloudUnavailable": "Cotton Bridge kon deze server niet autoriseren of cloudberekeningen leveren. Probeer het opnieuw.",
           "errors": {
             "NotConfigured": "De runner-URL is niet ingesteld.",
             "UnsupportedMode": "Tekstembeddings zijn nog niet beschikbaar in deze rekenmodus.",

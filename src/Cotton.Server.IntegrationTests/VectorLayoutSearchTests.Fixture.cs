@@ -56,8 +56,7 @@ namespace Cotton.Server.IntegrationTests
             services.AddSingleton(settings);
             services.AddScoped<SettingsProvider>();
             services.AddComputationServices();
-            services.AddSingleton(_ => new HttpClient(_worker));
-            services.AddSingleton<TeiClient>();
+            services.AddHttpClient(TeiClient.RemoteClientName).ConfigurePrimaryHttpMessageHandler(() => _worker);
             services.AddLayoutSearchProviders();
             services.AddTransient<IRequestHandler<GetComputationServiceInfoQuery, ComputationServiceInfo>, GetComputationServiceInfoQueryHandler>();
             services.AddTransient<IRequestHandler<GetTextEmbeddingsRequest, float[][]>, GetTextEmbeddingsRequestHandler>();

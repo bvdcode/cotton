@@ -51,8 +51,10 @@ const saveSettings = async (
       };
     case "Local":
     case "Cloud":
-      await settingsApi.setComputionMode(value.mode);
-      return { ...value, service: null };
+      return {
+        ...value,
+        service: await settingsApi.setComputionMode(value.mode),
+      };
   }
 };
 
@@ -70,9 +72,9 @@ export const ComputationModeSetting = () => {
     refetchOnMount: "always",
   });
   const service = useQuery({
-    queryKey: [...serviceQueryKey, settings.data?.url],
+    queryKey: [...serviceQueryKey, settings.data?.mode, settings.data?.url],
     queryFn: () => settingsApi.getComputationStatus(),
-    enabled: settings.data?.mode === "Remote" && !settings.isFetching,
+    enabled: settings.data?.mode !== "Local" && !settings.isFetching,
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -91,7 +93,10 @@ export const ComputationModeSetting = () => {
     onSuccess: async ({ service, ...value }) => {
       await queryClient.cancelQueries({ queryKey: serviceQueryKey });
       if (service !== null) {
-        queryClient.setQueryData([...serviceQueryKey, value.url], service);
+        queryClient.setQueryData(
+          [...serviceQueryKey, value.mode, value.url],
+          service,
+        );
       }
       queryClient.setQueryData(queryKey, value);
       setDraftMode(null);
@@ -107,10 +112,11 @@ export const ComputationModeSetting = () => {
   const busy = settings.isFetching || settings.isPending || save.isPending;
   const disabled = busy || settings.isError;
   const failure = getComputationError(save.error);
+  const failedMode = save.isError ? save.variables?.mode : null;
   const showingSavedService =
-    mode === "Remote" &&
     mode === settings.data?.mode &&
-    validation.normalized === settings.data?.url;
+    (mode === "Cloud" ||
+      (mode === "Remote" && validation.normalized === settings.data?.url));
   const savedService =
     showingSavedService && !service.isError ? service.data : null;
   const serviceError = savedService?.error;
@@ -202,16 +208,21 @@ export const ComputationModeSetting = () => {
                 {t("settings.general.remoteRunner.validateAndSave")}
               </Button>
             </Stack>
-            {!save.isError && savedService?.isReady && savedService.info && (
-              <Typography variant="body2" color="text.secondary" role="status">
-                {t("settings.general.remoteRunner.connected", {
-                  model: savedService.info.modelId,
-                  dimensions: savedService.dimensions,
-                  tokens: savedService.info.maxInputTokens,
-                })}
-              </Typography>
-            )}
           </>
+        )}
+        {!save.isError && savedService?.isReady && savedService.info && (
+          <Typography variant="body2" color="text.secondary" role="status">
+            {t(
+              mode === "Cloud"
+                ? "settings.general.remoteRunner.cloudConnected"
+                : "settings.general.remoteRunner.connected",
+              {
+                model: savedService.info.modelId,
+                dimensions: savedService.dimensions,
+                tokens: savedService.info.maxInputTokens,
+              },
+            )}
+          </Typography>
         )}
         {settings.isError && (
           <Alert severity="error">{t("settings.errors.loadFailed")}</Alert>
@@ -223,14 +234,18 @@ export const ComputationModeSetting = () => {
         )}
         {save.isError && (
           <Alert severity="error">
-            {failure
-              ? t(`settings.general.remoteRunner.errors.${failure}`)
-              : t("settings.errors.saveFailed")}
+            {failedMode === "Cloud" && failure
+              ? t("settings.general.remoteRunner.cloudUnavailable")
+              : failure
+                ? t(`settings.general.remoteRunner.errors.${failure}`)
+                : t("settings.errors.saveFailed")}
           </Alert>
         )}
         {!save.isError && serviceError && (
           <Alert severity="warning">
-            {t(`settings.general.remoteRunner.errors.${serviceError}`)}
+            {mode === "Cloud"
+              ? t("settings.general.remoteRunner.cloudUnavailable")
+              : t(`settings.general.remoteRunner.errors.${serviceError}`)}
           </Alert>
         )}
       </Stack>

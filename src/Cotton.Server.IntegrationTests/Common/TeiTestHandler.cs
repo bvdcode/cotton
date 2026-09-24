@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text;
 using Cotton.Server.Models.Computation;
+using Cotton.Server.Services.Bridge;
 
 namespace Cotton.Server.IntegrationTests.Common
 {
@@ -27,8 +28,10 @@ namespace Cotton.Server.IntegrationTests.Common
         public int? FailingEmbeddingCall { get; set; }
         public Action? EmbeddingRequested { get; set; }
         public int TokenizeCalls { get; private set; }
+        public List<int> TokenizationInputLengths { get; } = [];
         public List<string[]> Batches { get; } = [];
         public List<Uri> Addresses { get; } = [];
+        public List<(string? Token, string? InstanceId)> Credentials { get; } = [];
         public bool? Truncate { get; private set; }
         public bool? Normalize { get; private set; }
 
@@ -37,6 +40,9 @@ namespace Cotton.Server.IntegrationTests.Common
         {
             cancellationToken.ThrowIfCancellationRequested();
             Addresses.Add(request.RequestUri!);
+            Credentials.Add((request.Headers.Authorization?.Parameter,
+                request.Headers.TryGetValues(BridgeCredentialProvider.InstanceIdHeader, out IEnumerable<string>? ids)
+                    ? string.Join(",", ids) : null));
             if (InvalidJson)
             {
                 return new HttpResponseMessage(StatusCode) { Content = new StringContent("invalid json") };
@@ -65,6 +71,7 @@ namespace Cotton.Server.IntegrationTests.Common
             {
                 TokenizeCalls++;
                 string input = body.GetProperty("inputs").GetString()!;
+                TokenizationInputLengths.Add(input.Length);
                 List<TeiToken> tokens = [new(true, null, null)];
                 int position = 0;
                 foreach (Rune rune in input.EnumerateRunes())

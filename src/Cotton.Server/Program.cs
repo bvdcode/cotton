@@ -124,16 +124,11 @@ namespace Cotton.Server
                     client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
                 })
                 .ConfigurePrimaryHttpMessageHandler(OidcAvatarConnectionPolicy.CreateHandler);
-            builder.Services.AddHttpClient<CottonPublicEmailProvider>(client =>
-            {
-                client.BaseAddress = new Uri(CottonPublicEmailProvider.CottonBridgeBaseUrl);
-                client.Timeout = TimeSpan.FromSeconds(15);
-            });
+            builder.Services.AddCottonBridgeClients();
             builder.Services.AddHttpClient<IGeoLookupService, GeoLookupService>(client =>
             {
                 client.Timeout = TimeSpan.FromSeconds(10);
             });
-            builder.Services.AddHttpClient(CollectPerformanceJob.HttpClientName);
             builder.Services
                 .AddHttpClient<IProxyTopologyProbeService, ProxyTopologyProbeService>(client =>
                 {
@@ -176,6 +171,9 @@ namespace Cotton.Server
             builder.Services
                 .AddOptions<StoragePressureOptions>()
                 .Bind(builder.Configuration.GetSection("StoragePressure"));
+            builder.Services
+                .AddOptions<TextIndexingOptions>()
+                .Bind(builder.Configuration.GetSection(TextIndexingOptions.SectionName));
             builder.Services
                 .AddMediator()
                 .AddQuartzJobs()

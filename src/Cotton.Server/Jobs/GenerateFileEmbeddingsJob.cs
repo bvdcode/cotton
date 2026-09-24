@@ -42,6 +42,7 @@ namespace Cotton.Server.Jobs
                 {
                     return;
                 }
+                await mediator.Send(new RecoverFileTextIndexRequest(), cancellationToken);
                 string[] contentTypes = extractors.GetSupportedContentTypes();
                 for (int processed = 0; processed < MaxItemsPerRun;)
                 {
@@ -61,27 +62,26 @@ namespace Cotton.Server.Jobs
                             return;
                         }
                     }
-                    foreach (Guid id in ids)
+                    if (!settings.GetServerSettings().AllowGlobalIndexing || perf.IsUploading())
                     {
-                        if (!settings.GetServerSettings().AllowGlobalIndexing || perf.IsUploading())
-                        {
-                            return;
-                        }
-                        try
-                        {
-                            await mediator.Send(new IndexFileTextRequest(id), cancellationToken);
-                            processed++;
-                        }
-                        catch (DbUpdateConcurrencyException ex)
-                        {
-                            logger.LogInformation(ex, "Skipped stale text index update for file manifest {FileManifestId}.", id);
-                            processed++;
-                        }
-                        finally
-                        {
-                            dbContext.ChangeTracker.Clear();
-                        }
+                        return;
                     }
+                    try
+                    {
+                        logger.LogInformation("Starting text index batch with up to {FileCount} file manifests.", ids.Count);
+                        IEnumerable<Guid> available = ids.TakeWhile(_ =>
+                            settings.GetServerSettings().AllowGlobalIndexing && !perf.IsUploading());
+                        await mediator.Send(new IndexFileTextRequest(available), cancellationToken);
+                    }
+                    catch (DbUpdateConcurrencyException ex)
+                    {
+                        logger.LogInformation(ex, "Skipped a stale text index batch.");
+                    }
+                    finally
+                    {
+                        dbContext.ChangeTracker.Clear();
+                    }
+                    processed += ids.Count;
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

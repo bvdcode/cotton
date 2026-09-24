@@ -34,6 +34,15 @@ export const AdminGridToolbar = ({
 
   return (
     <GridToolbar
+      sx={{
+        flex: "0 0 auto",
+        flexWrap: { xs: "wrap", sm: "nowrap" },
+        "& .MuiDataGrid-toolbarLabel": {
+          fontSize: "h6.fontSize",
+          flexBasis: { xs: "100%", sm: "auto" },
+          whiteSpace: { xs: "normal", sm: "nowrap" },
+        },
+      }}
       mainControls={
         <>
           <Tooltip title={refreshLabel}>
