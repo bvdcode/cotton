@@ -106,6 +106,7 @@ namespace Cotton.Previews
                 ScanBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
                 byte[] buffer = ArrayPool<byte>.Shared.Rent(ScanBufferBytes);
+                byte previousThree = 0;
                 byte previousTwo = 0;
                 byte previousOne = 0;
                 long position = 0;
@@ -117,14 +118,17 @@ namespace Cotton.Previews
                         for (int index = 0; index < read; index++, position++)
                         {
                             byte current = buffer[index];
-                            if (previousTwo == 0xff && previousOne == 0xd8 && current == 0xff)
+                            // Embedded photos start with DQT or APP; RAW payloads can also contain SOI markers.
+                            if (previousThree == 0xff && previousTwo == 0xd8 && previousOne == 0xff
+                                && (current == 0xdb || current is >= 0xe0 and <= 0xef))
                             {
-                                offsets.Add(position - 2);
+                                offsets.Add(position - 3);
                                 if (offsets.Count > MaxJpegCandidates)
                                 {
                                     throw new InvalidDataException("RAW file has too many embedded image candidates.");
                                 }
                             }
+                            previousThree = previousTwo;
                             previousTwo = previousOne;
                             previousOne = current;
                         }
