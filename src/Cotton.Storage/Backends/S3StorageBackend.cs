@@ -221,5 +221,49 @@ namespace Cotton.Storage.Backends
             }
             while (continuationToken is not null);
         }
+
+        public async IAsyncEnumerable<string> ListKeysByPrefixAsync(
+            char prefix,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            if (!Uri.IsHexDigit(prefix))
+            {
+                throw new ArgumentOutOfRangeException(nameof(prefix));
+            }
+
+            IAmazonS3 s3 = _s3Provider.GetS3Client();
+            string bucket = _s3Provider.GetBucketName();
+            string? continuationToken = null;
+            string keyPrefix = char.ToLowerInvariant(prefix).ToString();
+
+            do
+            {
+                ListObjectsV2Response response = await s3.ListObjectsV2Async(new ListObjectsV2Request
+                {
+                    BucketName = bucket,
+                    Prefix = keyPrefix,
+                    MaxKeys = 1000,
+                    ContinuationToken = continuationToken,
+                }, ct);
+
+                foreach (S3Object obj in response.S3Objects)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (!obj.Key.EndsWith(".ctn", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    string[] parts = obj.Key.Split('/');
+                    if (parts.Length == 3)
+                    {
+                        yield return parts[0] + parts[1] + Path.GetFileNameWithoutExtension(parts[2]);
+                    }
+                }
+
+                continuationToken = response.IsTruncated == true ? response.NextContinuationToken : null;
+            }
+            while (continuationToken is not null);
+        }
     }
 }

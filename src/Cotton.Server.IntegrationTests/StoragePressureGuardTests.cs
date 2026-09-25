@@ -196,6 +196,9 @@ namespace Cotton.Server.IntegrationTests
                 string uid,
                 Stream stream) => throw new NotImplementedException();
             public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => throw new NotImplementedException();
+
+            public IAsyncEnumerable<string> ListKeysByPrefixAsync(char prefix, CancellationToken ct = default) =>
+                throw new NotImplementedException();
         }
 
         private class RecordingNotificationsProvider : INotificationsProvider
