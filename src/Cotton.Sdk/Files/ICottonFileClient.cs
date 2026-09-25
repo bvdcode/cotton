@@ -83,12 +83,5 @@ namespace Cotton.Sdk.Files
             IProgress<long>? progress = null,
             CancellationToken cancellationToken = default);
 
-        /// <summary>
-        /// Gets the immutable content manifest and ordered chunk metadata for an owned file.
-        /// </summary>
-        Task<FileContentManifestDto> GetContentManifestAsync(
-            Guid nodeFileId,
-            string? expectedETag = null,
-            CancellationToken cancellationToken = default);
     }
 }

@@ -195,21 +195,6 @@ namespace Cotton.Sdk.Files
                 validateResponse: response => ValidateRangeResponse(response, offset, length, expectedETag));
         }
 
-        /// <summary>
-        /// Gets the immutable content manifest and ordered chunk metadata for an owned file.
-        /// </summary>
-        public Task<FileContentManifestDto> GetContentManifestAsync(
-            Guid nodeFileId,
-            string? expectedETag = null,
-            CancellationToken cancellationToken = default)
-        {
-            return _transport.SendJsonAsync<FileContentManifestDto>(
-                HttpMethod.Get,
-                $"{Routes.V1.Files}/{nodeFileId}/content-manifest",
-                headers: CreateIfMatchHeader(expectedETag),
-                cancellationToken: cancellationToken);
-        }
-
         private static IReadOnlyDictionary<string, string>? CreateIfMatchHeader(string? expectedETag)
         {
             if (string.IsNullOrWhiteSpace(expectedETag))

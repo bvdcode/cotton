@@ -222,7 +222,6 @@ namespace Cotton.Server.Controllers
                 new ResolveOwnedFileContentQuery(
                     userId,
                     nodeFileId,
-                    OwnedFileContentPurpose.Download,
                     FileETags.ReadIfMatch(Request)),
                 HttpContext.RequestAborted);
             if (nodeFile is null)
@@ -231,25 +230,6 @@ namespace Cotton.Server.Controllers
             }
 
             return FileDownloadResultFactory.Create(Response, _storage, nodeFile, download);
-        }
-
-        [Authorize]
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/content-manifest")]
-        public async Task<IActionResult> GetOwnedFileContentManifest([FromRoute] Guid nodeFileId)
-        {
-            Guid userId = User.GetUserId();
-            FileContentManifestDto? manifest = await _mediator.Send(
-                new GetOwnedFileContentManifestQuery(
-                    userId,
-                    nodeFileId,
-                    FileETags.ReadIfMatch(Request)),
-                HttpContext.RequestAborted);
-            if (manifest is null)
-            {
-                return CottonResult.NotFound("Node file not found");
-            }
-
-            return Ok(manifest);
         }
 
         [Authorize]

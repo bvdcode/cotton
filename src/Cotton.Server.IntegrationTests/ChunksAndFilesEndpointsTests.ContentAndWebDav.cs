@@ -60,60 +60,6 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task Get_Content_Manifest_Returns_Ordered_Chunk_Verification_Metadata()
-        {
-            string token = await LoginAsync();
-            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
-            Assert.That(root, Is.Not.Null);
-
-            byte[] firstChunk = Encoding.UTF8.GetBytes("0123");
-            byte[] secondChunk = Encoding.UTF8.GetBytes("456");
-            string firstChunkHash = Hasher.ToHexStringHash(Hasher.HashData(firstChunk));
-            string secondChunkHash = Hasher.ToHexStringHash(Hasher.HashData(secondChunk));
-            (await UploadRawChunkAsync(firstChunk, firstChunkHash)).EnsureSuccessStatusCode();
-            (await UploadRawChunkAsync(secondChunk, secondChunkHash)).EnsureSuccessStatusCode();
-
-            byte[] fullContent = [.. firstChunk, .. secondChunk];
-            string fullHash = Hasher.ToHexStringHash(Hasher.HashData(fullContent));
-            HttpResponseMessage createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileFromChunksRequestDto
-            {
-                ChunkHashes = [firstChunkHash, secondChunkHash],
-                Name = "manifest-range.txt",
-                ContentType = "text/plain",
-                Hash = fullHash,
-                NodeId = root!.Id,
-                Validate = true,
-            });
-            createResponse.EnsureSuccessStatusCode();
-            NodeFileManifestDto? created = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
-            Assert.That(created, Is.Not.Null);
-
-            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/files/{created!.Id}/content-manifest");
-            request.Headers.IfMatch.Add(new EntityTagHeaderValue($"\"{created.ETag}\""));
-            HttpResponseMessage manifestResponse = await _client.SendAsync(request);
-            manifestResponse.EnsureSuccessStatusCode();
-            FileContentManifestDto? manifest = await manifestResponse.Content.ReadFromJsonAsync<FileContentManifestDto>();
-
-            Assert.That(manifest, Is.Not.Null);
-            Assert.Multiple(() =>
-            {
-                Assert.That(manifest!.NodeFileId, Is.EqualTo(created.Id));
-                Assert.That(manifest.FileManifestId, Is.EqualTo(created.FileManifestId));
-                Assert.That(manifest.ContentHash, Is.EqualTo(fullHash));
-                Assert.That(manifest.ETag, Is.EqualTo(created.ETag));
-                Assert.That(manifest.SizeBytes, Is.EqualTo(7));
-                Assert.That(manifest.ChunkSizeBytes, Is.EqualTo(4));
-                Assert.That(manifest.Chunks.Select(x => x.Index), Is.EqualTo(new[] { 0, 1 }));
-                Assert.That(manifest.Chunks.Select(x => x.Offset), Is.EqualTo(new long[] { 0, 4 }));
-                Assert.That(manifest.Chunks.Select(x => x.Length), Is.EqualTo(new long[] { 4, 3 }));
-                Assert.That(manifest.Chunks.Select(x => x.Hash), Is.EqualTo(new[] { firstChunkHash, secondChunkHash }));
-                Assert.That(manifest.Chunks.Select(x => x.ChunkId), Is.EqualTo(new[] { firstChunkHash, secondChunkHash }));
-            });
-        }
-
-        [Test]
         public async Task WebDav_UsesNodeFileContentType_AndSameContentETagAsFileApi()
         {
             string token = await LoginAsync();

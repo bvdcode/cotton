@@ -17,7 +17,6 @@ namespace Cotton.Server.Handlers.Files
     public record ResolveOwnedFileContentQuery(
         Guid UserId,
         Guid NodeFileId,
-        OwnedFileContentPurpose Purpose,
         string? ExpectedETag) : IRequest<NodeFile?>;
 
     public class ResolveOwnedFileContentQueryHandler(
@@ -43,26 +42,14 @@ namespace Cotton.Server.Handlers.Files
                 return null;
             }
 
-            string integrityOperation = request.Purpose switch
-            {
-                OwnedFileContentPurpose.Download => "file.content",
-                OwnedFileContentPurpose.Manifest => "file.content-manifest",
-                _ => throw new ArgumentOutOfRangeException(nameof(request.Purpose)),
-            };
             _fileGraphIntegrity.RequireValidContent(
                 _dbContext,
                 nodeFile,
-                integrityOperation);
+                "file.content");
 
             if (!FileETags.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
             {
-                string message = request.Purpose switch
-                {
-                    OwnedFileContentPurpose.Download => "File content changed before download.",
-                    OwnedFileContentPurpose.Manifest => "File content changed before manifest fetch.",
-                    _ => throw new ArgumentOutOfRangeException(nameof(request.Purpose)),
-                };
-                throw new FilePreconditionFailedException<NodeFile>(message);
+                throw new FilePreconditionFailedException<NodeFile>("File content changed before download.");
             }
 
             return nodeFile;
