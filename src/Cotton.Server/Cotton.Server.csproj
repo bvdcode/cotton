@@ -13,6 +13,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<None Update="THIRD_PARTY_NOTICES.txt;Licenses\*.txt" CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
 		<Folder Include="wwwroot\" />
 		<PackageReference Include="EasyExtensions.Clients" Version="3.0.81" />
