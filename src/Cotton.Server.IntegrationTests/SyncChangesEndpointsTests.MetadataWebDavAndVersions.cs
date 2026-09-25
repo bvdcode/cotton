@@ -2,6 +2,8 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Net.Http.Headers;
+using Cotton.Server.Services.DatabaseIntegrity;
+using Microsoft.Extensions.DependencyInjection;
 using FileVersionDto = Cotton.Files.FileVersionDto;
 
 namespace Cotton.Server.IntegrationTests
@@ -91,6 +93,105 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(change.ParentNodeId, Is.EqualTo(root.Id));
                 Assert.That(change.FileManifestId, Is.Not.Null);
             });
+        }
+
+        [Test]
+        public async Task WebDavPutFile_PersistsComputedContentHash()
+        {
+            await SignInAsync();
+            await UseWebDavBasicAuthAsync();
+            const string body = "webdav-hash-body";
+            using HttpResponseMessage response = await SendWebDavPutAsync(
+                "/api/v1/webdav/webdav-hash.txt",
+                body);
+            response.EnsureSuccessStatusCode();
+
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            FileManifest manifest = await dbContext.NodeFiles
+                .Where(file => file.Name == "webdav-hash.txt")
+                .Select(file => file.FileManifest)
+                .SingleAsync();
+            byte[] expectedHash = Hasher.HashData(Encoding.UTF8.GetBytes(body));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(manifest.ProposedContentHash, Is.EqualTo(expectedHash));
+                Assert.That(manifest.ComputedContentHash, Is.EqualTo(expectedHash));
+            });
+            scope.ServiceProvider.GetRequiredService<IDatabaseIntegrityVerifier>()
+                .RequireValid(dbContext, manifest, "test.webdav-computed-hash");
+        }
+
+        [Test]
+        public async Task WebDavPutFile_ValidatesReusedUncomputedManifest()
+        {
+            await SignInAsync();
+            NodeDto root = await GetRootAsync();
+            const string body = "webdav-reused-body";
+            NodeFileManifestDto created = await CreateFileAsync(root.Id, "existing-webdav.txt", body);
+
+            await using (AsyncServiceScope beforeScope = _factory!.Services.CreateAsyncScope())
+            {
+                CottonDbContext before = beforeScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                FileManifest manifest = await before.FileManifests.SingleAsync(item => item.Id == created.FileManifestId);
+                Assert.That(manifest.ComputedContentHash, Is.Null);
+            }
+
+            await UseWebDavBasicAuthAsync();
+            using HttpResponseMessage response = await SendWebDavPutAsync(
+                "/api/v1/webdav/reused-webdav.txt",
+                body);
+            response.EnsureSuccessStatusCode();
+
+            await using AsyncServiceScope scope = _factory.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            FileManifest reused = await dbContext.FileManifests.SingleAsync(item => item.Id == created.FileManifestId);
+            Assert.That(reused.ComputedContentHash, Is.EqualTo(Hasher.HashData(Encoding.UTF8.GetBytes(body))));
+            scope.ServiceProvider.GetRequiredService<IDatabaseIntegrityVerifier>()
+                .RequireValid(dbContext, reused, "test.webdav-reused-hash");
+        }
+
+        [Test]
+        public async Task WebDavPutFile_DoesNotValidateDifferentChunksWithSameProposedHash()
+        {
+            await SignInAsync();
+            NodeDto root = await GetRootAsync();
+            const string actualBody = "webdav-actual-body";
+            const string otherBody = "different-contents";
+            string otherChunkHash = await UploadChunkAsync(otherBody);
+            byte[] actualHash = Hasher.HashData(Encoding.UTF8.GetBytes(actualBody));
+
+            using HttpResponseMessage createResponse = await _client!.PostAsJsonAsync(
+                $"{Routes.V1.Files}/from-chunks",
+                new CreateFileFromChunksRequestDto
+                {
+                    ChunkHashes = [otherChunkHash],
+                    Name = "unverified-webdav.txt",
+                    ContentType = "text/plain",
+                    Hash = Hasher.ToHexStringHash(actualHash),
+                    NodeId = root.Id,
+                });
+            createResponse.EnsureSuccessStatusCode();
+            NodeFileManifestDto? created = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+            Assert.That(created, Is.Not.Null);
+
+            await UseWebDavBasicAuthAsync();
+            using HttpResponseMessage putResponse = await SendWebDavPutAsync(
+                "/api/v1/webdav/second-webdav.txt",
+                actualBody);
+            putResponse.EnsureSuccessStatusCode();
+
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            FileManifest manifest = await dbContext.FileManifests.SingleAsync(item => item.Id == created!.FileManifestId);
+            Assert.Multiple(() =>
+            {
+                Assert.That(manifest.ProposedContentHash, Is.EqualTo(actualHash));
+                Assert.That(manifest.ComputedContentHash, Is.Null);
+            });
+            scope.ServiceProvider.GetRequiredService<IDatabaseIntegrityVerifier>()
+                .RequireValid(dbContext, manifest, "test.webdav-different-chunks");
         }
 
         [Test]

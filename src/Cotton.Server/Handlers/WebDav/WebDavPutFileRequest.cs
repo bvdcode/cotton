@@ -6,10 +6,11 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Services;
-using Cotton.Server.Extensions;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -37,6 +38,7 @@ namespace Cotton.Server.Handlers.WebDav
         WebDavPutContentReader _contentReader,
         IWebDavPathResolver _pathResolver,
         FileManifestService _fileManifestService,
+        IDatabaseIntegrityVerifier _integrity,
         UserStorageQuotaService _quota,
         IEventNotificationService _eventNotification,
         ISyncChangeRecorder _syncChanges,
@@ -257,7 +259,10 @@ namespace Cotton.Server.Handlers.WebDav
             Guid userId,
             CancellationToken ct)
         {
-            FileManifest? fileManifest = await _fileManifestService.GetReusableOwnedManifestAsync(fileHash, userId, cancellationToken: ct);
+            FileManifest? fileManifest = await _fileManifestService.GetReusableOwnedManifestAsync(
+                fileHash,
+                userId,
+                cancellationToken: ct);
 
             if (fileManifest is not null)
             {
@@ -270,10 +275,51 @@ namespace Cotton.Server.Handlers.WebDav
                     chunks,
                     fileHash,
                     userId,
-                    cancellationToken: ct);
+                    includeChunks: true,
+                    cancellationToken: ct,
+                    computedContentHash: fileHash);
+            }
+
+            if (fileManifest.ComputedContentHash is null)
+            {
+                await _dbContext.Entry(fileManifest)
+                    .Collection(manifest => manifest.FileManifestChunks)
+                    .LoadAsync(ct);
+                _integrity.RequireValid(_dbContext, fileManifest, "webdav.put.manifest");
+                foreach (FileManifestChunk manifestChunk in fileManifest.FileManifestChunks)
+                {
+                    _integrity.RequireValid(_dbContext, manifestChunk, "webdav.put.manifest-chunk");
+                }
+
+                if (MatchesUploadedChunks(fileManifest, chunks))
+                {
+                    fileManifest.ComputedContentHash = fileHash;
+                    await _dbContext.SaveChangesAsync(ct);
+                }
             }
 
             return fileManifest;
+        }
+
+        private static bool MatchesUploadedChunks(FileManifest manifest, List<Chunk> chunks)
+        {
+            if (manifest.FileManifestChunks.Count != chunks.Count
+                || manifest.SizeBytes != chunks.Sum(chunk => chunk.PlainSizeBytes))
+            {
+                return false;
+            }
+
+            FileManifestChunk[] orderedChunks = [.. manifest.FileManifestChunks.OrderBy(chunk => chunk.ChunkOrder)];
+            for (int index = 0; index < orderedChunks.Length; index++)
+            {
+                if (orderedChunks[index].ChunkOrder != index
+                    || !orderedChunks[index].ChunkHash.SequenceEqual(chunks[index].Hash))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private async Task<WebDavPutFileResult?> TryPreflightKnownLengthQuotaAsync(
