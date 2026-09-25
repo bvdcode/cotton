@@ -118,14 +118,14 @@ namespace Cotton.Server.IntegrationTests
                 WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
                 using (OpenXmlWriter writer = OpenXmlWriter.Create(worksheetPart))
                 {
-                    writer.WriteStartElement(new Worksheet());
-                    writer.WriteStartElement(new SheetData());
+                    await writer.WriteStartElementAsync(new Worksheet());
+                    await writer.WriteStartElementAsync(new SheetData());
                     for (int index = 0; index < 2_000; index++)
                     {
-                        writer.WriteElement(CreateRow("Value", index.ToString()));
+                        await writer.WriteElementAsync(CreateRow("Value", index.ToString()));
                     }
-                    writer.WriteEndElement();
-                    writer.WriteEndElement();
+                    await writer.WriteEndElementAsync();
+                    await writer.WriteEndElementAsync();
                 }
                 workbookPart.Workbook = new Workbook(new Sheets(new Sheet
                 {
