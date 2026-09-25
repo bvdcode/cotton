@@ -55,6 +55,7 @@ namespace Cotton.Server.Services
         public static FileStreamResult CreateChunk(
             HttpResponse response,
             IStoragePipeline storage,
+            NodeFile nodeFile,
             FileManifestChunk chunk,
             int chunkCount)
         {
@@ -72,7 +73,10 @@ namespace Cotton.Server.Services
                 System.Globalization.CultureInfo.InvariantCulture);
             FileResponseSecurity.ApplyFileResponseHeaders(response, null, requestedInline: true);
 
-            return new FileStreamResult(storage.GetBlobStream([hash], context), "application/octet-stream");
+            return new FileStreamResult(storage.GetBlobStream([hash], context), "application/octet-stream")
+            {
+                EntityTag = FileETags.CreateContentEntityTag(nodeFile),
+            };
         }
     }
 }

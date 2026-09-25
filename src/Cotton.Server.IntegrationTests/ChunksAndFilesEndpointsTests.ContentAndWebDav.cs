@@ -96,6 +96,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
                 Assert.That(first.Headers.GetValues("X-Cotton-Chunk-Count"), Does.Contain("2"));
                 Assert.That(second.Headers.GetValues("X-Cotton-Chunk-Count"), Does.Contain("2"));
+                Assert.That(first.Headers.ETag?.Tag, Is.EqualTo($"\"{file.ETag}\""));
+                Assert.That(second.Headers.ETag?.Tag, Is.EqualTo($"\"{file.ETag}\""));
                 Assert.That(first.Content.Headers.ContentLength, Is.EqualTo(3));
                 Assert.That(second.Content.Headers.ContentLength, Is.EqualTo(5));
                 Assert.That(first.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/octet-stream"));

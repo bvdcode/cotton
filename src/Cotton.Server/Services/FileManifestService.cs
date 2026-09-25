@@ -19,6 +19,7 @@ namespace Cotton.Server.Services
         ILogger<FileManifestService> _logger)
     {
         private const string ProposedContentHashConstraintName = "IX_file_manifests_proposed_content_hash";
+        private const string ComputedContentHashConstraintName = "IX_file_manifests_computed_content_hash";
 
         public async Task<List<Chunk>> GetChunksAsync(
             string[] chunkHashes,
@@ -87,13 +88,15 @@ namespace Cotton.Server.Services
             byte[] proposedContentHash,
             Guid userId,
             bool includeChunks = false,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            byte[]? computedContentHash = null)
         {
             FileManifest newFileManifest = new()
             {
                 ContentType = string.Empty,
                 SizeBytes = chunks.Sum(chunk => chunk.PlainSizeBytes),
                 ProposedContentHash = proposedContentHash,
+                ComputedContentHash = computedContentHash,
                 PreviewGeneratorVersion = PreviewGeneratorProvider.DefaultGeneratorVersion,
             };
 
@@ -184,8 +187,8 @@ namespace Cotton.Server.Services
             return ex.InnerException is PostgresException
             {
                 SqlState: PostgresErrorCodes.UniqueViolation,
-                ConstraintName: ProposedContentHashConstraintName,
-            };
+            } conflict
+                && conflict.ConstraintName is ProposedContentHashConstraintName or ComputedContentHashConstraintName;
         }
     }
 }
