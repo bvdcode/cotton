@@ -20,6 +20,7 @@ namespace Cotton.Previews
         [
             new PdfPreviewGenerator(),
             new HeicPreviewGenerator(),
+            new RawPreviewGenerator(),
             new StlThumbPreviewGenerator(),
             StlThumbPreviewGenerator.CreateObjGenerator(),
             StlThumbPreviewGenerator.CreateThreeMfGenerator(),

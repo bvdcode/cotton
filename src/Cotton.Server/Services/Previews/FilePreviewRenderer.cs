@@ -25,7 +25,7 @@ namespace Cotton.Server.Services.Previews
                 {
                     byte[] small = await RenderSizeAsync(manifest, generator, PreviewGeneratorProvider.DefaultSmallPreviewSize);
                     byte[]? large = null;
-                    if (generator is ImagePreviewGenerator or HeicPreviewGenerator or SvgPreviewGenerator)
+                    if (generator is ImagePreviewGenerator or HeicPreviewGenerator or RawPreviewGenerator or SvgPreviewGenerator)
                     {
                         large = await RenderSizeAsync(manifest, generator, PreviewGeneratorProvider.DefaultLargePreviewSize);
                     }
