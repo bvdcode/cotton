@@ -229,28 +229,29 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
-            NodeFile? nodeFile = await _mediator.Send(
+            ResolvedOwnedFileContent? content = await _mediator.Send(
                 new ResolveOwnedFileContentQuery(
                     userId,
                     nodeFileId,
-                    FileETags.ReadIfMatch(Request)),
+                    FileETags.ReadIfMatch(Request),
+                    chunkNumber),
                 HttpContext.RequestAborted);
-            if (nodeFile is null)
+            if (content is null)
             {
                 return CottonResult.NotFound("Node file not found");
             }
 
             if (chunkNumber is not null)
             {
-                if (chunkNumber.Value >= nodeFile.FileManifest.FileManifestChunks.Count)
+                if (content.Chunk is null)
                 {
                     return CottonResult.BadRequest("Chunk number is outside the file.");
                 }
 
-                return FileDownloadResultFactory.CreateChunk(Response, _storage, nodeFile, chunkNumber.Value);
+                return FileDownloadResultFactory.CreateChunk(Response, _storage, content.Chunk, content.ChunkCount);
             }
 
-            return FileDownloadResultFactory.Create(Response, _storage, nodeFile, download);
+            return FileDownloadResultFactory.Create(Response, _storage, content.NodeFile, download);
         }
 
         [Authorize]

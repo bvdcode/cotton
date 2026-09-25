@@ -55,11 +55,9 @@ namespace Cotton.Server.Services
         public static FileStreamResult CreateChunk(
             HttpResponse response,
             IStoragePipeline storage,
-            NodeFile nodeFile,
-            int chunkNumber)
+            FileManifestChunk chunk,
+            int chunkCount)
         {
-            FileManifestChunk chunk = nodeFile.FileManifest.FileManifestChunks
-                .Single(x => x.ChunkOrder == chunkNumber);
             string hash = Hasher.ToHexStringHash(chunk.ChunkHash);
             long length = chunk.Chunk.PlainSizeBytes;
             PipelineContext context = new()
@@ -70,7 +68,7 @@ namespace Cotton.Server.Services
 
             response.Headers.ContentEncoding = "identity";
             response.Headers.CacheControl = "private, no-store, no-transform";
-            response.Headers[ChunkCountHeader] = nodeFile.FileManifest.FileManifestChunks.Count.ToString(
+            response.Headers[ChunkCountHeader] = chunkCount.ToString(
                 System.Globalization.CultureInfo.InvariantCulture);
             FileResponseSecurity.ApplyFileResponseHeaders(response, null, requestedInline: true);
 
