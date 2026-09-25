@@ -34,9 +34,9 @@ export const DashboardOverviewWidget = ({
         flexWrap="wrap"
       >
         <Stack
-          direction="row"
-          alignItems="baseline"
-          gap={1}
+          direction={{ xs: "column", sm: "row" }}
+          alignItems={{ xs: "flex-start", sm: "baseline" }}
+          gap={{ xs: 0, sm: 1 }}
           flexWrap="wrap"
           flexShrink={0}
         >
