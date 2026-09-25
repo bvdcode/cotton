@@ -11,6 +11,9 @@ namespace Cotton.Server.Jobs
 {
     internal static class PreviewQueueLoader
     {
+        private const string PreviousOutOfMemoryError =
+            "All matching preview generators failed. (Exception of type 'System.OutOfMemoryException' was thrown.)";
+
         public static async Task<List<Guid>> LoadNextIdsAsync(
             CottonDbContext dbContext,
             int limit,
@@ -58,7 +61,8 @@ namespace Cotton.Server.Jobs
 
             if (manifest.PreviewGenerationError is not null)
             {
-                return manifest.PreviewGeneratorVersion != PreviewGeneratorProvider.FailedAttemptVersion;
+                return manifest.PreviewGeneratorVersion != PreviewGeneratorProvider.FailedAttemptVersion
+                    || manifest.PreviewGenerationError == PreviousOutOfMemoryError;
             }
 
             return manifest.SmallFilePreviewHash is null || manifest.SmallFilePreviewHashEncrypted is null
@@ -77,6 +81,11 @@ namespace Cotton.Server.Jobs
                     || (manifest.PreviewGenerationError != null
                         && manifest.PreviewGeneratorVersion != PreviewGeneratorProvider.FailedAttemptVersion))
                 .Select(manifest => manifest.Id);
+
+            candidateIds = candidateIds.Union(manifests
+                .Where(manifest => manifest.PreviewGeneratorVersion == PreviewGeneratorProvider.FailedAttemptVersion
+                    && manifest.PreviewGenerationError == PreviousOutOfMemoryError)
+                .Select(manifest => manifest.Id));
 
             foreach (IGrouping<int, KeyValuePair<string, int>> group in PreviewGeneratorProvider.GetGeneratorVersions().GroupBy(generator => generator.Value))
             {

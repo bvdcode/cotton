@@ -5,7 +5,8 @@ using Cotton.Storage.Pipelines;
 
 namespace Cotton.Server.IntegrationTests.Helpers
 {
-    public class CallbackStoragePipeline(IStoragePipeline inner, Func<int, Task> beforeRead) : IStoragePipeline
+    public class CallbackStoragePipeline(
+        IStoragePipeline inner, Func<int, Task> beforeRead, Func<int, Task>? beforeWrite = null) : IStoragePipeline
     {
         public int ReadCount { get; private set; }
 
@@ -24,11 +25,15 @@ namespace Cotton.Server.IntegrationTests.Helpers
 
         public Task<long> GetSizeAsync(string uid) => inner.GetSizeAsync(uid);
 
-        public Task<long> WriteAsync(string uid, Stream stream, PipelineContext? context = null,
+        public async Task<long> WriteAsync(string uid, Stream stream, PipelineContext? context = null,
             CancellationToken cancellationToken = default)
         {
             WriteCount++;
-            return inner.WriteAsync(uid, stream, context, cancellationToken);
+            if (beforeWrite is not null)
+            {
+                await beforeWrite(WriteCount);
+            }
+            return await inner.WriteAsync(uid, stream, context, cancellationToken);
         }
 
         public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => inner.ListAllKeysAsync(ct);

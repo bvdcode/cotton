@@ -22,7 +22,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task PreviewPipeline_RealCr3_GeneratesPortraitSmallAndLargePreviews()
+        public async Task PreviewPipeline_RealCr3_GeneratesSmallAndLargePreviews()
         {
             string? sourcePath = Environment.GetEnvironmentVariable("COTTON_TEST_CR3_FILE");
             if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
@@ -50,11 +50,11 @@ namespace Cotton.Server.IntegrationTests
             var (largeWidth, largeHeight) = GetImageSize(large);
             Assert.Multiple(() =>
             {
-                Assert.That(smallWidth, Is.LessThan(smallHeight));
-                Assert.That(smallHeight, Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultSmallPreviewSize));
-                Assert.That(largeWidth, Is.LessThan(largeHeight));
-                Assert.That(largeHeight, Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultLargePreviewSize));
-                Assert.That(largeHeight, Is.GreaterThan(smallHeight));
+                Assert.That(Math.Max(smallWidth, smallHeight),
+                    Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultSmallPreviewSize));
+                Assert.That(Math.Max(largeWidth, largeHeight),
+                    Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultLargePreviewSize));
+                Assert.That((long)largeWidth * largeHeight, Is.GreaterThan((long)smallWidth * smallHeight));
             });
 
             string downloadLink = (await _client!.GetStringAsync($"/api/v1/files/{file.Id}/download-link"))

@@ -5,6 +5,7 @@ using Cotton.ContentTypes;
 using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -53,7 +54,8 @@ namespace Cotton.Previews
                 await using FileStream jpegStream = new(temporaryFile, FileMode.Open, FileAccess.Read, FileShare.Read,
                     ScanBufferBytes, FileOptions.Asynchronous | FileOptions.RandomAccess);
                 jpegStream.Position = offset;
-                using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(jpegStream);
+                DecoderOptions decodeOptions = new() { TargetSize = new Size(size, size) };
+                using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(decodeOptions, jpegStream);
 
                 ushort? orientation = ReadOrientation(temporaryFile);
                 if (orientation.HasValue)

@@ -37,7 +37,7 @@ namespace Cotton.Server.Services.Previews
                 {
                     throw;
                 }
-                catch (Exception exception)
+                catch (Exception exception) when (exception is not OutOfMemoryException)
                 {
                     logger.LogWarning(exception, "Preview attempt for {FileManifestId} failed with generator supporting {ContentTypes}",
                         manifest.Id, string.Join(", ", generator.SupportedContentTypes));
