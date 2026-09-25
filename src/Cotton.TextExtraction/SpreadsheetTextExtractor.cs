@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,8 @@ namespace Cotton.TextExtraction
     public class SpreadsheetTextExtractor(ILogger<SpreadsheetTextExtractor> logger) : FileTextExtractor
     {
         public const string ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        private const int MaxSharedStringCharacters = 8 * 1024 * 1024;
+        private const int MaxSharedStrings = 500_000;
 
         public override IEnumerable<string> SupportedContentTypes => [ContentType];
 
@@ -24,8 +27,31 @@ namespace Cotton.TextExtraction
                     ?? throw new FileFormatException("The workbook has no main part.");
                 Workbook workbook = workbookPart.Workbook
                     ?? throw new FileFormatException("The workbook root is missing.");
-                SharedStringItem[] sharedStrings = workbookPart.SharedStringTablePart?.SharedStringTable?
-                    .Elements<SharedStringItem>().ToArray() ?? [];
+                List<string> sharedStrings = [];
+                int sharedStringCharacters = 0;
+                if (workbookPart.SharedStringTablePart is SharedStringTablePart sharedStringPart)
+                {
+                    using OpenXmlReader sharedStringReader = OpenXmlReader.Create(sharedStringPart);
+                    while (sharedStringReader.Read())
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (sharedStringReader.IsStartElement && sharedStringReader.ElementType == typeof(SharedStringItem))
+                        {
+                            if (sharedStrings.Count >= MaxSharedStrings)
+                            {
+                                throw new InvalidDataException("The spreadsheet shared string table is too large to index.");
+                            }
+                            string value = sharedStringReader.LoadCurrentElement()?.InnerText
+                                ?? throw new FileFormatException("A shared string is empty.");
+                            if (value.Length > MaxSharedStringCharacters - sharedStringCharacters)
+                            {
+                                throw new InvalidDataException("The spreadsheet shared string table is too large to index.");
+                            }
+                            sharedStringCharacters += value.Length;
+                            sharedStrings.Add(value);
+                        }
+                    }
+                }
                 foreach (Sheet sheet in workbook.Sheets?.Elements<Sheet>() ?? [])
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -38,13 +64,14 @@ namespace Cotton.TextExtraction
                     {
                         return;
                     }
-                    Worksheet worksheet = worksheetPart.Worksheet
-                        ?? throw new FileFormatException("A worksheet is empty.");
-                    foreach (Row row in worksheet.Descendants<Row>())
+                    using OpenXmlReader worksheetReader = OpenXmlReader.Create(worksheetPart);
+                    while (worksheetReader.Read())
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        foreach (Cell cell in row.Elements<Cell>())
+                        if (worksheetReader.IsStartElement && worksheetReader.ElementType == typeof(Cell))
                         {
+                            Cell cell = worksheetReader.LoadCurrentElement() as Cell
+                                ?? throw new FileFormatException("A worksheet cell is empty.");
                             text.AppendNormalized(GetCellText(cell, sharedStrings));
                             if (text.IsTruncated)
                             {
@@ -52,7 +79,10 @@ namespace Cotton.TextExtraction
                             }
                             text.AppendNormalized("\t");
                         }
-                        text.AppendLineBreak();
+                        else if (worksheetReader.IsEndElement && worksheetReader.ElementType == typeof(Row))
+                        {
+                            text.AppendLineBreak();
+                        }
                     }
                 }
             }
@@ -63,14 +93,14 @@ namespace Cotton.TextExtraction
             }
         }
 
-        private static string GetCellText(Cell cell, IReadOnlyList<SharedStringItem> sharedStrings)
+        private static string GetCellText(Cell cell, IReadOnlyList<string> sharedStrings)
         {
             if (cell.DataType?.Value == CellValues.SharedString
                 && int.TryParse(cell.CellValue?.Text, out int sharedStringIndex)
                 && sharedStringIndex >= 0
                 && sharedStringIndex < sharedStrings.Count)
             {
-                return sharedStrings[sharedStringIndex].InnerText;
+                return sharedStrings[sharedStringIndex];
             }
             if (cell.DataType?.Value == CellValues.InlineString)
             {

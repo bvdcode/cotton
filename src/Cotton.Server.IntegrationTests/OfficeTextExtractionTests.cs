@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.TextExtraction;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Presentation;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -72,6 +73,111 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(text, Is.EqualTo(string.Join(Environment.NewLine, "People", "Name Age", "Alice 42")));
                 Assert.That(source.CanRead, Is.True);
             });
+        }
+
+        [Test]
+        public async Task SpreadsheetExtractor_ReadsSharedAndInlineStrings()
+        {
+            using MemoryStream source = new();
+            using (SpreadsheetDocument document = SpreadsheetDocument.Create(
+                source, DocumentFormat.OpenXml.SpreadsheetDocumentType.Workbook, autoSave: true))
+            {
+                WorkbookPart workbookPart = document.AddWorkbookPart();
+                SharedStringTablePart stringsPart = workbookPart.AddNewPart<SharedStringTablePart>();
+                stringsPart.SharedStringTable = new SharedStringTable(
+                    new SharedStringItem(new DocumentFormat.OpenXml.Spreadsheet.Text("Shared")));
+                WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
+                worksheetPart.Worksheet = new Worksheet(new SheetData(new Row(
+                    new Cell { DataType = CellValues.SharedString, CellValue = new CellValue("0") },
+                    new Cell { DataType = CellValues.InlineString, InlineString = new InlineString(
+                        new DocumentFormat.OpenXml.Spreadsheet.Text("Inline")) })));
+                workbookPart.Workbook = new Workbook(new Sheets(new Sheet
+                {
+                    Id = workbookPart.GetIdOfPart(worksheetPart),
+                    SheetId = 1,
+                    Name = "Sheet",
+                }));
+            }
+            source.Position = 0;
+
+            TextExtractionResult result = await new SpreadsheetTextExtractor(
+                NullLogger<SpreadsheetTextExtractor>.Instance).ExtractAsync(source);
+
+            Assert.That(result, Is.EqualTo(new TextExtractionResult(
+                string.Join(Environment.NewLine, "Sheet", "Shared Inline"), false)));
+        }
+
+        [Test]
+        public async Task SpreadsheetExtractor_TruncatesBeforeReadingLargeWorksheet()
+        {
+            using MemoryStream source = new();
+            using (SpreadsheetDocument document = SpreadsheetDocument.Create(
+                source, DocumentFormat.OpenXml.SpreadsheetDocumentType.Workbook, autoSave: true))
+            {
+                WorkbookPart workbookPart = document.AddWorkbookPart();
+                WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
+                using (OpenXmlWriter writer = OpenXmlWriter.Create(worksheetPart))
+                {
+                    writer.WriteStartElement(new Worksheet());
+                    writer.WriteStartElement(new SheetData());
+                    for (int index = 0; index < 2_000; index++)
+                    {
+                        writer.WriteElement(CreateRow("Value", index.ToString()));
+                    }
+                    writer.WriteEndElement();
+                    writer.WriteEndElement();
+                }
+                workbookPart.Workbook = new Workbook(new Sheets(new Sheet
+                {
+                    Id = workbookPart.GetIdOfPart(worksheetPart),
+                    SheetId = 1,
+                    Name = "Sheet",
+                }));
+            }
+            source.Position = 0;
+
+            TextExtractionResult result = await new SpreadsheetTextExtractor(
+                NullLogger<SpreadsheetTextExtractor>.Instance).ExtractAsync(source, 6);
+
+            Assert.That(result, Is.EqualTo(new TextExtractionResult("Sheet", true)));
+        }
+
+        [Test]
+        public void SpreadsheetExtractor_RejectsOversizedSharedStringTable()
+        {
+            using MemoryStream source = new();
+            using (SpreadsheetDocument document = SpreadsheetDocument.Create(
+                source, DocumentFormat.OpenXml.SpreadsheetDocumentType.Workbook, autoSave: true))
+            {
+                WorkbookPart workbookPart = document.AddWorkbookPart();
+                SharedStringTablePart stringsPart = workbookPart.AddNewPart<SharedStringTablePart>();
+                using (OpenXmlWriter writer = OpenXmlWriter.Create(stringsPart))
+                {
+                    writer.WriteStartElement(new SharedStringTable());
+                    string value = new('x', 1024);
+                    for (int index = 0; index < 8_193; index++)
+                    {
+                        writer.WriteElement(new SharedStringItem(
+                            new DocumentFormat.OpenXml.Spreadsheet.Text(value)));
+                    }
+                    writer.WriteEndElement();
+                }
+                WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
+                worksheetPart.Worksheet = new Worksheet(new SheetData());
+                workbookPart.Workbook = new Workbook(new Sheets(new Sheet
+                {
+                    Id = workbookPart.GetIdOfPart(worksheetPart),
+                    SheetId = 1,
+                    Name = "Sheet",
+                }));
+            }
+            source.Position = 0;
+
+            FileTextExtractionException? error = Assert.ThrowsAsync<FileTextExtractionException>(async () =>
+                await new SpreadsheetTextExtractor(NullLogger<SpreadsheetTextExtractor>.Instance)
+                    .ExtractAsync(source));
+
+            Assert.That(error?.InnerException, Is.TypeOf<InvalidDataException>());
         }
 
         [Test]
