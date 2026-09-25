@@ -116,17 +116,7 @@ namespace Cotton.Server.IntegrationTests
             {
                 WorkbookPart workbookPart = document.AddWorkbookPart();
                 WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
-                using (OpenXmlWriter writer = OpenXmlWriter.Create(worksheetPart))
-                {
-                    await writer.WriteStartElementAsync(new Worksheet());
-                    await writer.WriteStartElementAsync(new SheetData());
-                    for (int index = 0; index < 2_000; index++)
-                    {
-                        await writer.WriteElementAsync(CreateRow("Value", index.ToString()));
-                    }
-                    await writer.WriteEndElementAsync();
-                    await writer.WriteEndElementAsync();
-                }
+                WriteLargeWorksheet(worksheetPart);
                 workbookPart.Workbook = new Workbook(new Sheets(new Sheet
                 {
                     Id = workbookPart.GetIdOfPart(worksheetPart),
@@ -140,6 +130,19 @@ namespace Cotton.Server.IntegrationTests
                 NullLogger<SpreadsheetTextExtractor>.Instance).ExtractAsync(source, 6);
 
             Assert.That(result, Is.EqualTo(new TextExtractionResult("Sheet", true)));
+        }
+
+        private static void WriteLargeWorksheet(WorksheetPart worksheetPart)
+        {
+            using OpenXmlWriter writer = OpenXmlWriter.Create(worksheetPart);
+            writer.WriteStartElement(new Worksheet());
+            writer.WriteStartElement(new SheetData());
+            for (int index = 0; index < 2_000; index++)
+            {
+                writer.WriteElement(CreateRow("Value", index.ToString()));
+            }
+            writer.WriteEndElement();
+            writer.WriteEndElement();
         }
 
         [Test]
