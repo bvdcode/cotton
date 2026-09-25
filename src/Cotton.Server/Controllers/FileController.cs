@@ -215,41 +215,43 @@ namespace Cotton.Server.Controllers
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/content")]
         public async Task<IActionResult> DownloadOwnedFileContent(
             [FromRoute] Guid nodeFileId,
-            [FromQuery] bool download = false)
+            [FromQuery] bool download = false,
+            [FromQuery] int? chunkNumber = null)
         {
+            if (chunkNumber < 0)
+            {
+                return CottonResult.BadRequest("Chunk number must be non-negative.");
+            }
+
+            if (chunkNumber is not null && Request.Headers.ContainsKey("Range"))
+            {
+                return CottonResult.BadRequest("Range cannot be combined with chunkNumber.");
+            }
+
             Guid userId = User.GetUserId();
-            NodeFile? nodeFile = await _mediator.Send(
+            ResolvedOwnedFileContent? content = await _mediator.Send(
                 new ResolveOwnedFileContentQuery(
                     userId,
                     nodeFileId,
-                    OwnedFileContentPurpose.Download,
-                    FileETags.ReadIfMatch(Request)),
+                    FileETags.ReadIfMatch(Request),
+                    chunkNumber),
                 HttpContext.RequestAborted);
-            if (nodeFile is null)
+            if (content is null)
             {
                 return CottonResult.NotFound("Node file not found");
             }
 
-            return FileDownloadResultFactory.Create(Response, _storage, nodeFile, download);
-        }
-
-        [Authorize]
-        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/content-manifest")]
-        public async Task<IActionResult> GetOwnedFileContentManifest([FromRoute] Guid nodeFileId)
-        {
-            Guid userId = User.GetUserId();
-            FileContentManifestDto? manifest = await _mediator.Send(
-                new GetOwnedFileContentManifestQuery(
-                    userId,
-                    nodeFileId,
-                    FileETags.ReadIfMatch(Request)),
-                HttpContext.RequestAborted);
-            if (manifest is null)
+            if (chunkNumber is not null)
             {
-                return CottonResult.NotFound("Node file not found");
+                if (content.Chunk is null)
+                {
+                    return CottonResult.BadRequest("Chunk number is outside the file.");
+                }
+
+                return FileDownloadResultFactory.CreateChunk(Response, _storage, content.Chunk, content.ChunkCount);
             }
 
-            return Ok(manifest);
+            return FileDownloadResultFactory.Create(Response, _storage, content.NodeFile, download);
         }
 
         [Authorize]

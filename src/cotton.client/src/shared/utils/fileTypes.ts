@@ -36,6 +36,17 @@ const IMAGE_EXTENSIONS = [
   "svg",
   "svgz",
   "heic",
+  "cr2",
+  "cr3",
+  "nef",
+  "nrw",
+  "arw",
+  "dng",
+  "raf",
+  "orf",
+  "rw2",
+  "pef",
+  "srw",
 ];
 const SVG_EXTENSIONS = ["svg", "svgz"];
 const PDF_EXTENSIONS = ["pdf"];

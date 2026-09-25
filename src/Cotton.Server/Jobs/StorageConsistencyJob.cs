@@ -20,9 +20,11 @@ namespace Cotton.Server.Jobs
         CottonDbContext _dbContext,
         INotificationsProvider _notifications,
         ChunkUsageService _chunkUsage,
-        ILogger<StorageConsistencyJob> _logger) : IJob
+        ILogger<StorageConsistencyJob> _logger,
+        IServiceScopeFactory _scopes) : IJob
     {
         private const int BatchSize = 10000;
+        private const string HashPrefixes = "0123456789abcdef";
 
         public async Task Execute(IJobExecutionContext context)
         {
@@ -34,40 +36,62 @@ namespace Cotton.Server.Jobs
         public async Task RunOnceAsync(CancellationToken ct = default)
         {
             _logger.LogInformation("Storage consistency check started.");
-            HashSet<string> storageKeys = await CollectStorageKeysAsync(ct);
-            _logger.LogInformation("Found {Count} keys in storage.", storageKeys.Count);
+            HashSet<string> protectedStorageKeys = await _chunkUsage.GetProtectedStorageKeysAsync(ct);
+            long totalStorageKeys = 0;
+            await using AsyncServiceScope readerScope = _scopes.CreateAsyncScope();
+            CottonDbContext readerContext = readerScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            await using IAsyncEnumerator<byte[]> dbHashes = readerContext.Chunks
+                .AsNoTracking()
+                .OrderBy(chunk => chunk.Hash)
+                .Select(chunk => chunk.Hash)
+                .AsAsyncEnumerable()
+                .GetAsyncEnumerator(ct);
+            byte[]? currentHash = await dbHashes.MoveNextAsync() ? dbHashes.Current : null;
+            foreach (char prefix in HashPrefixes)
+            {
+                HashSet<string> storageKeys = await CollectStorageKeysAsync(prefix, ct);
+                int listedCount = storageKeys.Count;
+                totalStorageKeys += listedCount;
+                currentHash = await CheckDbChunksAgainstStorageAsync(prefix, storageKeys, dbHashes, currentHash, ct);
+                await RegisterOrphanedStorageKeysAsync(storageKeys, protectedStorageKeys, ct);
+                _logger.LogInformation("Storage consistency checked prefix {Prefix}: {Count} storage keys.", prefix, listedCount);
+            }
 
-            await CheckDbChunksAgainstStorageAsync(storageKeys, ct);
-            await RegisterOrphanedStorageKeysAsync(storageKeys, ct);
+            _logger.LogInformation("Found {Count} keys in storage.", totalStorageKeys);
 
             _logger.LogInformation("Storage consistency check completed.");
         }
 
-        private async Task<HashSet<string>> CollectStorageKeysAsync(CancellationToken ct)
+        private async Task<HashSet<string>> CollectStorageKeysAsync(char prefix, CancellationToken ct)
         {
             HashSet<string> keys = new(StringComparer.OrdinalIgnoreCase);
-            await foreach (string key in _storage.ListAllKeysAsync(ct))
+            await foreach (string key in _storage.ListKeysByPrefixAsync(prefix, ct))
             {
                 keys.Add(key);
             }
             return keys;
         }
 
-        private async Task CheckDbChunksAgainstStorageAsync(HashSet<string> storageKeys, CancellationToken ct)
+        private async Task<byte[]?> CheckDbChunksAgainstStorageAsync(
+            char prefix,
+            HashSet<string> storageKeys,
+            IAsyncEnumerator<byte[]> dbHashes,
+            byte[]? currentHash,
+            CancellationToken ct)
         {
             int missingCount = 0;
             int initialListingMissCount = 0;
             List<byte[]> missingChunkHashes = [];
             List<string> initialListingMissSamples = [];
 
-            await foreach (byte[] chunkHash in _dbContext.Chunks
-                .AsNoTracking()
-                .OrderBy(c => c.Hash)
-                .Select(c => c.Hash)
-                .AsAsyncEnumerable()
-                .WithCancellation(ct))
+            int firstNibble = Convert.ToInt32(prefix.ToString(), 16);
+            while (currentHash is not null && currentHash[0] / 16 == firstNibble)
             {
+                ct.ThrowIfCancellationRequested();
+                byte[] chunkHash = currentHash;
                 string uid = Hasher.ToHexStringHash(chunkHash);
+
+                currentHash = await dbHashes.MoveNextAsync() ? dbHashes.Current : null;
 
                 if (storageKeys.Remove(uid))
                 {
@@ -108,6 +132,8 @@ namespace Cotton.Server.Jobs
             {
                 _logger.LogError("Storage consistency check found {Count} chunks missing from storage.", missingCount);
             }
+
+            return currentHash;
         }
 
         private async Task HandleMissingChunkAsync(byte[] chunkHash, CancellationToken ct)
@@ -216,14 +242,16 @@ namespace Cotton.Server.Jobs
             }
         }
 
-        private async Task RegisterOrphanedStorageKeysAsync(HashSet<string> remainingStorageKeys, CancellationToken ct)
+        private async Task RegisterOrphanedStorageKeysAsync(
+            HashSet<string> remainingStorageKeys,
+            HashSet<string> protectedStorageKeys,
+            CancellationToken ct)
         {
             if (remainingStorageKeys.Count == 0)
             {
                 return;
             }
 
-            HashSet<string> protectedStorageKeys = await _chunkUsage.GetProtectedStorageKeysAsync(ct);
             remainingStorageKeys.ExceptWith(protectedStorageKeys);
             if (remainingStorageKeys.Count == 0)
             {
@@ -277,13 +305,18 @@ namespace Cotton.Server.Jobs
                 if (registered % BatchSize == 0)
                 {
                     await _dbContext.SaveChangesAsync(ct);
+                    _dbContext.ChangeTracker.Clear();
                     _logger.LogInformation("Registered {Count} orphaned storage keys so far...", registered);
                 }
             }
 
-            if (registered > 0)
+            if (registered % BatchSize != 0)
             {
                 await _dbContext.SaveChangesAsync(ct);
+                _dbContext.ChangeTracker.Clear();
+            }
+            if (registered > 0)
+            {
                 _logger.LogInformation("Registered {Count} orphaned storage keys for garbage collection.", registered);
             }
         }

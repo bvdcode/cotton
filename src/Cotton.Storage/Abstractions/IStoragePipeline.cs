@@ -22,5 +22,7 @@ namespace Cotton.Storage.Abstractions
             CancellationToken cancellationToken = default);
 
         IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default);
+
+        IAsyncEnumerable<string> ListKeysByPrefixAsync(char prefix, CancellationToken ct = default);
     }
 }

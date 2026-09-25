@@ -17,6 +17,19 @@ namespace Cotton.Storage.Tests.Backends
         private string _testBasePath = null!;
         private static string NewUid() => Guid.NewGuid().ToString("N")[..12];
 
+        [Test]
+        public async Task ListKeysByPrefix_OnlyEnumeratesMatchingStorageShard()
+        {
+            const string matching = "a01234567890";
+            const string other = "b01234567890";
+            await _backend.WriteAsync(matching, new MemoryStream([1]));
+            await _backend.WriteAsync(other, new MemoryStream([2]));
+
+            List<string> keys = await _backend.ListKeysByPrefixAsync('A').ToListAsync();
+
+            Assert.That(keys, Is.EqualTo(new[] { matching }));
+        }
+
         [SetUp]
         public void Setup()
         {

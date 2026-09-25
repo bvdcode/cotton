@@ -28,6 +28,14 @@ describe("file type predicates", () => {
     expect(isImageFile("document.pdf")).toBe(false);
   });
 
+  it.each([
+    "cr2", "cr3", "nef", "nrw", "arw", "dng", "raf", "orf", "rw2", "pef", "srw",
+  ])("treats .%s RAW files as images", (extension) => {
+    const fileName = `photo.${extension}`;
+    expect(isImageFile(fileName)).toBe(true);
+    expect(getFileTypeInfo(fileName).type).toBe("image");
+  });
+
   it("recognizes pdf files", () => {
     expect(isPdfFile("document.pdf")).toBe(true);
     expect(isPdfFile("document.PDF")).toBe(true);

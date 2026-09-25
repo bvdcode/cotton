@@ -18,6 +18,17 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("styles.css", "text/css")]
         [TestCase("song.ogg", "audio/ogg")]
         [TestCase("script.ts", "text/plain")]
+        [TestCase("photo.cr2", "image/x-canon-cr2")]
+        [TestCase("photo.CR3", "image/x-canon-cr3")]
+        [TestCase("photo.nef", "image/x-nikon-nef")]
+        [TestCase("photo.nrw", "image/x-nikon-nrw")]
+        [TestCase("photo.arw", "image/x-sony-arw")]
+        [TestCase("photo.dng", "image/x-adobe-dng")]
+        [TestCase("photo.raf", "image/x-fujifilm-raf")]
+        [TestCase("photo.orf", "image/x-olympus-orf")]
+        [TestCase("photo.rw2", "image/x-panasonic-rw2")]
+        [TestCase("photo.pef", "image/x-pentax-pef")]
+        [TestCase("photo.srw", "image/x-samsung-srw")]
         [TestCase("opaque-file-name", "application/octet-stream")]
         public void Mapping_UsesNodeFileTypeInsteadOfSharedManifestType(string name, string expectedContentType)
         {

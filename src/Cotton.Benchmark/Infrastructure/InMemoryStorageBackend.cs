@@ -61,5 +61,15 @@ namespace Cotton.Benchmark.Infrastructure
 
             await Task.CompletedTask;
         }
+
+        public async IAsyncEnumerable<string> ListKeysByPrefixAsync(char prefix, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            foreach (string key in _storage.Keys.Where(key => key.StartsWith(prefix.ToString(), StringComparison.OrdinalIgnoreCase)))
+            {
+                ct.ThrowIfCancellationRequested();
+                yield return key;
+            }
+            await Task.CompletedTask;
+        }
     }
 }

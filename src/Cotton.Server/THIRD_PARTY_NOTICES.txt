@@ -1,0 +1,17 @@
+Third-party notices for camera RAW preview metadata
+
+MetadataExtractor 2.9.3
+Copyright 2002-2019 Drew Noakes and contributors
+Copyright 2014 Imazen LLC (initial conversion from Java to C#)
+License: Apache License 2.0
+Source: https://github.com/drewnoakes/metadata-extractor-dotnet
+License text: Licenses/MetadataExtractor-LICENSE.txt
+
+XmpCore 6.1.10.1
+Maintained by Drew Noakes and contributors; originally ported to .NET by
+Yakov Danila and Nathanael Jones from Adobe's XMP SDK.
+Source file headers include Copyright 2006-2007 Adobe Systems Incorporated.
+The package metadata states Copyright 2015-2021.
+License: BSD 3-Clause, as stated by the XmpCore project for the Adobe XMP SDK port.
+Source: https://github.com/drewnoakes/xmp-core-dotnet
+License text: Licenses/XmpCore-LICENSE.txt

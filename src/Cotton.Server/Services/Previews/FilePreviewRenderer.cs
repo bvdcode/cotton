@@ -25,7 +25,7 @@ namespace Cotton.Server.Services.Previews
                 {
                     byte[] small = await RenderSizeAsync(manifest, generator, PreviewGeneratorProvider.DefaultSmallPreviewSize);
                     byte[]? large = null;
-                    if (generator is ImagePreviewGenerator or HeicPreviewGenerator or SvgPreviewGenerator)
+                    if (generator is ImagePreviewGenerator or HeicPreviewGenerator or RawPreviewGenerator or SvgPreviewGenerator)
                     {
                         large = await RenderSizeAsync(manifest, generator, PreviewGeneratorProvider.DefaultLargePreviewSize);
                     }
@@ -37,7 +37,7 @@ namespace Cotton.Server.Services.Previews
                 {
                     throw;
                 }
-                catch (Exception exception)
+                catch (Exception exception) when (exception is not OutOfMemoryException)
                 {
                     logger.LogWarning(exception, "Preview attempt for {FileManifestId} failed with generator supporting {ContentTypes}",
                         manifest.Id, string.Join(", ", generator.SupportedContentTypes));

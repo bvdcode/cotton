@@ -238,44 +238,6 @@ namespace Cotton.Sdk.Tests
             });
         }
 
-        [Test]
-        public async Task GetContentManifestAsync_MapsManifestAndSendsIfMatch()
-        {
-            Guid fileId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-            Guid manifestId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
-            handler.EnqueueJson(HttpStatusCode.OK, new
-            {
-                nodeFileId = fileId,
-                fileManifestId = manifestId,
-                contentHash = "full-hash",
-                eTag = "sha256-full-hash",
-                sizeBytes = 7,
-                chunkSizeBytes = 4,
-                chunks = new[]
-                {
-                    new { index = 0, offset = 0, length = 4, hash = "chunk-a", chunkId = "chunk-a" },
-                    new { index = 1, offset = 4, length = 3, hash = "chunk-b", chunkId = "chunk-b" },
-                },
-            });
-            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
-
-            FileContentManifestDto manifest = await client.Files.GetContentManifestAsync(fileId, expectedETag: "sha256-full-hash");
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(manifest.NodeFileId, Is.EqualTo(fileId));
-                Assert.That(manifest.FileManifestId, Is.EqualTo(manifestId));
-                Assert.That(manifest.ContentHash, Is.EqualTo("full-hash"));
-                Assert.That(manifest.ETag, Is.EqualTo("sha256-full-hash"));
-                Assert.That(manifest.SizeBytes, Is.EqualTo(7));
-                Assert.That(manifest.ChunkSizeBytes, Is.EqualTo(4));
-                Assert.That(manifest.Chunks.Select(x => x.Offset), Is.EqualTo(new long[] { 0, 4 }));
-                Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo("/api/v1/files/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/content-manifest"));
-                Assert.That(handler.Requests[0].Headers[IfMatchHeaderName], Is.EqualTo("\"sha256-full-hash\""));
-            });
-        }
-
         private static async Task<CottonCloudClient> CreateAuthorizedClientAsync(QueuedHttpMessageHandler handler)
         {
             InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();

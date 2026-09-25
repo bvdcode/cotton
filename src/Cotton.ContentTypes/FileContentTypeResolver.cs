@@ -14,6 +14,17 @@ namespace Cotton.ContentTypes
             new Dictionary<string, (string ContentType, bool ForceContentType)>(StringComparer.OrdinalIgnoreCase)
             {
                 [".heic"] = Override("image/heic"),
+                [".cr2"] = Override(RawImageContentTypes.Cr2),
+                [".cr3"] = Override(RawImageContentTypes.Cr3),
+                [".nef"] = Override(RawImageContentTypes.Nef),
+                [".nrw"] = Override(RawImageContentTypes.Nrw),
+                [".arw"] = Override(RawImageContentTypes.Arw),
+                [".dng"] = Override(RawImageContentTypes.Dng),
+                [".raf"] = Override(RawImageContentTypes.Raf),
+                [".orf"] = Override(RawImageContentTypes.Orf),
+                [".rw2"] = Override(RawImageContentTypes.Rw2),
+                [".pef"] = Override(RawImageContentTypes.Pef),
+                [".srw"] = Override(RawImageContentTypes.Srw),
                 [".heif"] = Override("image/heif"),
                 [".heics"] = Override("image/heic-sequence"),
                 [".heifs"] = Override("image/heif-sequence"),
@@ -73,6 +84,7 @@ namespace Cotton.ContentTypes
                 [".apks"] = Override(AndroidPackageContentTypes.Apks, forceContentType: true),
                 [".xapk"] = Override(AndroidPackageContentTypes.Xapk, forceContentType: true),
                 [".apkm"] = Override(AndroidPackageContentTypes.Apkm, forceContentType: true),
+                [".tgs"] = Override(AnimatedStickerContentTypes.Tgs, forceContentType: true),
             };
 
         private static readonly IReadOnlySet<string> SourceTextExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

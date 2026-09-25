@@ -53,6 +53,7 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("model.stl", "model/stl")]
         [TestCase("package.apk", "application/vnd.android.package-archive")]
         [TestCase("file.unknownext", "application/octet-stream")]
+        [TestCase("AnimatedSticker.tgs", AnimatedStickerContentTypes.Tgs)]
         [TestCase("opaque-file-name", "application/octet-stream")]
         [TestCase(null, "application/octet-stream")]
         public void ResolveFromFileName_PreservesMediaTypeIndependentlyOfPreviewSupport(
@@ -90,6 +91,7 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("AUDIO_1.m4b", "application/octet-stream", "audio/mp4")]
         [TestCase("AUDIO_1.mka", "audio/matroska", "audio/x-matroska")]
         [TestCase("README.md", "application/octet-stream", "text/markdown")]
+        [TestCase("AnimatedSticker.tgs", "application/gzip", AnimatedStickerContentTypes.Tgs)]
         [TestCase("notebook.ipynb", "application/json", "application/x-ipynb+json")]
         [TestCase("document.odt", "application/zip", "application/vnd.oasis.opendocument.text")]
         [TestCase("workbook.ods", "application/zip", "application/vnd.oasis.opendocument.spreadsheet")]

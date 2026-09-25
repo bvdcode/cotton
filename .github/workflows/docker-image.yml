@@ -111,6 +111,10 @@ jobs:
         working-directory: src/cotton.client
         run: npm test
 
+      - name: Lint frontend
+        working-directory: src/cotton.client
+        run: npm run lint
+
       - name: Build frontend
         working-directory: src/cotton.client
         run: npm run build

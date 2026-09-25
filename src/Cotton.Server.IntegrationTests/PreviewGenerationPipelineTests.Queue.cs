@@ -101,5 +101,77 @@ namespace Cotton.Server.IntegrationTests
             Assert.ThrowsAsync<OperationCanceledException>(() => renderer.RenderAsync(manifest, cancellation.Token));
             Assert.That(manifest.PreviewGenerationError, Is.Null);
         }
+
+        [Test]
+        public async Task PreviewQueue_OutOfMemory_DoesNotRecordPermanentFailure()
+        {
+            SetBearer(await LoginAsync());
+            NodeDto root = await GetRootNodeAsync();
+            NodeFileManifestDto file = await UploadAndCreateFileAsync(
+                root.Id, "photo.png", "image/png", CreateGradientPngBytes(48, 32));
+
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            CallbackStoragePipeline storage = new(scope.ServiceProvider.GetRequiredService<IStoragePipeline>(),
+                _ => throw new OutOfMemoryException());
+
+            Assert.ThrowsAsync<OutOfMemoryException>(() => ExecutePreviewWithStorageAsync(scope.ServiceProvider, storage));
+            dbContext.ChangeTracker.Clear();
+            FileManifest manifest = await LoadFileManifestAsync(dbContext, file.Id);
+            Assert.That(manifest.PreviewGenerationError, Is.Null);
+            Assert.That(await PreviewQueueLoader.LoadNextIdsAsync(dbContext, 10, new HashSet<Guid>(), CancellationToken.None),
+                Does.Contain(file.FileManifestId));
+
+            await ExecuteGeneratePreviewJobAsync();
+            Assert.That((await GetFileManifestByNodeFileIdAsync(file.Id)).SmallFilePreviewHash, Is.Not.Null);
+        }
+
+        [Test]
+        public async Task PreviewQueue_OutOfMemoryDuringStorage_DoesNotRecordPermanentFailure()
+        {
+            SetBearer(await LoginAsync());
+            NodeDto root = await GetRootNodeAsync();
+            NodeFileManifestDto file = await UploadAndCreateFileAsync(
+                root.Id, "photo.png", "image/png", CreateGradientPngBytes(48, 32));
+
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            CallbackStoragePipeline storage = new(scope.ServiceProvider.GetRequiredService<IStoragePipeline>(),
+                _ => Task.CompletedTask, _ => throw new OutOfMemoryException());
+
+            Assert.ThrowsAsync<OutOfMemoryException>(() => ExecutePreviewWithStorageAsync(scope.ServiceProvider, storage));
+            dbContext.ChangeTracker.Clear();
+            FileManifest manifest = await LoadFileManifestAsync(dbContext, file.Id);
+            Assert.That(manifest.PreviewGenerationError, Is.Null);
+            Assert.That(manifest.SmallFilePreviewHash, Is.Null);
+            Assert.That(await PreviewQueueLoader.LoadNextIdsAsync(dbContext, 10, new HashSet<Guid>(), CancellationToken.None),
+                Does.Contain(file.FileManifestId));
+        }
+
+        [Test]
+        public async Task PreviewQueue_PreviousOutOfMemoryFailure_IsRetried()
+        {
+            SetBearer(await LoginAsync());
+            NodeDto root = await GetRootNodeAsync();
+            NodeFileManifestDto file = await UploadAndCreateFileAsync(
+                root.Id, "photo.png", "image/png", CreateGradientPngBytes(48, 32));
+
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            FileManifest manifest = await LoadFileManifestAsync(dbContext, file.Id);
+            manifest.PreviewGenerationError =
+                "All matching preview generators failed. (Exception of type 'System.OutOfMemoryException' was thrown.)";
+            manifest.PreviewGeneratorVersion = PreviewGeneratorProvider.FailedAttemptVersion;
+            await dbContext.SaveChangesAsync();
+            dbContext.ChangeTracker.Clear();
+
+            Assert.That(await PreviewQueueLoader.LoadNextIdsAsync(dbContext, 10, new HashSet<Guid>(), CancellationToken.None),
+                Does.Contain(file.FileManifestId));
+
+            await ExecuteGeneratePreviewJobAsync();
+            FileManifestPreviewState result = await GetFileManifestByNodeFileIdAsync(file.Id);
+            Assert.That(result.PreviewGenerationError, Is.Null);
+            Assert.That(result.SmallFilePreviewHash, Is.Not.Null);
+        }
     }
 }

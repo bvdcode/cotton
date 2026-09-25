@@ -6,11 +6,15 @@ Previews and media playback are derived views of stored file content. Failure to
 
 The recurring preview job selects eligible manifests that do not have a current preview result. It skips empty files and active uploads, opens the file through the normal storage pipeline, chooses a generator by content type, and stores the resulting WebP bytes as content-addressed data. A maintenance job clears previously stored preview data for the empty-content manifest using its indexed content hash.
 
-Supported generator families include images, HEIC, documents, text, audio, video, and selected 3D formats. Generator availability depends on the runtime libraries and external binaries present in the deployment.
+Supported generator families include images, HEIC, camera RAW files, documents, text, audio, video, and selected 3D formats. Generator availability depends on the runtime libraries and external binaries present in the deployment.
+
+Camera RAW previews find embedded JPEG images in CR2, CR3, NEF, NRW, ARW, DNG, RAF, ORF, RW2, PEF, and SRW files. The small preview uses the smallest embedded image with enough pixels; the large preview uses the largest. The source file's orientation is applied before encoding both results as WebP. The RAW sensor data is not developed; files without a usable embedded JPEG cannot produce a preview. Source size, JPEG candidates, and decoded pixel count are bounded.
 
 Files named as HEIC or HEIF are checked for JPEG, PNG, GIF, BMP, WebP and TIFF signatures in memory. A matching signature uses the ordinary image generator; other inputs use the HEIF decoder.
 
 Video previews use embedded cover art when available. Otherwise, clips up to one second use the first frame; longer clips use a frame from the middle.
+
+Telegram `.tgs` stickers are gzip-compressed Lottie animations. The preview generator renders a frame from the middle of the animation as a static WebP poster. It limits the expanded JSON to 8 MiB. A public file-share page displays the poster when it exists; animated playback is not provided.
 
 Preview metadata is written only after the derived object exists. Each new successful result records the stable identifier and version of the generator that produced it. Only changes to that generator's version make the result eligible for automatic regeneration. Existing cached previews without a recorded generator remain available and are excluded from version-based regeneration; their generator is not inferred from current filenames.
 
@@ -22,7 +26,7 @@ An unsupported or corrupt individual file records a preview-generation failure a
 
 `ffmpeg` and `ffprobe` exit status, timeout, cancellation, and startup errors are handled separately. A generic catch must not convert an infrastructure outage into a permanent "unsupported file" result.
 
-Temporary files used by generators that require filesystem paths are removed in `finally`. Original plaintext media is otherwise streamed from encrypted storage rather than materialized as one complete temp file.
+Temporary files used by generators that require filesystem paths are removed in `finally`. RAW generation creates a bounded temporary copy to scan and decode embedded images. Other plaintext media is streamed from encrypted storage rather than materialized as one complete temp file.
 
 ## Serving previews
 

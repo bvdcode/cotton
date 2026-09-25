@@ -23,5 +23,8 @@ namespace Cotton.Server.IntegrationTests.Common
 
         public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) =>
             _inner.ListAllKeysAsync(ct);
+
+        public IAsyncEnumerable<string> ListKeysByPrefixAsync(char prefix, CancellationToken ct = default) =>
+            _inner.ListKeysByPrefixAsync(prefix, ct);
     }
 }

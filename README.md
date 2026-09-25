@@ -297,7 +297,7 @@ Writes flow through the storage pipeline **compression → crypto → backend** 
 - `src/Cotton.Storage` — storage pipeline, processors (compression/crypto), filesystem & S3 backends, seekable read streams.
 - `src/Cotton.Crypto` — in-repo streaming AES-GCM cipher (`AesGcmStreamCipher`) and HKDF key derivation (`KeyDerivation`).
 - `src/Cotton.Topology` — layout/tree manipulation services.
-- `src/Cotton.Previews` — image/SVG/HEIC, PDF, text, audio, video, and 3D-model preview generators.
+- `src/Cotton.Previews` — image/SVG/HEIC/RAW, PDF, text, audio, video, and 3D-model preview generators.
 - `src/Cotton.Autoconfig` — master-key derivation, environment scrubbing, unlock/bootstrap configuration.
 - `src/Cotton.Validators` — name/username validation (`NameValidator`, `NameKey` generation).
 - `src/Cotton.Localization` — server-side notification templates.

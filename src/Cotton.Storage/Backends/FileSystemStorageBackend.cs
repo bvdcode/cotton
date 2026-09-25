@@ -277,5 +277,38 @@ namespace Cotton.Storage.Backends
                 yield return uid;
             }
         }
+
+        public async IAsyncEnumerable<string> ListKeysByPrefixAsync(
+            char prefix,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            if (!Uri.IsHexDigit(prefix))
+            {
+                throw new ArgumentOutOfRangeException(nameof(prefix));
+            }
+
+            string normalizedPrefix = char.ToLowerInvariant(prefix).ToString();
+            const string hexDigits = "0123456789abcdef";
+            foreach (char secondNibble in hexDigits)
+            {
+                string firstDirectory = normalizedPrefix + secondNibble;
+                string root = Path.Combine(_basePath, firstDirectory);
+                if (!Directory.Exists(root))
+                {
+                    continue;
+                }
+
+                foreach (string filePath in Directory.EnumerateFiles(root, "*" + ChunkFileExtension, SearchOption.AllDirectories))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    string relativePath = Path.GetRelativePath(_basePath, filePath);
+                    string[] parts = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    if (parts.Length == 3)
+                    {
+                        yield return parts[0] + parts[1] + Path.GetFileNameWithoutExtension(parts[2]);
+                    }
+                }
+            }
+        }
     }
 }

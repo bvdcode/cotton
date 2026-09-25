@@ -25,5 +25,7 @@ namespace Cotton.Storage.Abstractions
         Task<long> WriteAsync(string uid, Stream stream);
 
         IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default);
+
+        IAsyncEnumerable<string> ListKeysByPrefixAsync(char prefix, CancellationToken ct = default);
     }
 }

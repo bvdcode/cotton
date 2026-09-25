@@ -93,5 +93,10 @@ namespace Cotton.Storage.Pipelines
         {
             return _backendProvider.GetBackend().ListAllKeysAsync(ct);
         }
+
+        public IAsyncEnumerable<string> ListKeysByPrefixAsync(char prefix, CancellationToken ct = default)
+        {
+            return _backendProvider.GetBackend().ListKeysByPrefixAsync(prefix, ct);
+        }
     }
 }

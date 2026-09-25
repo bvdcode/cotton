@@ -265,7 +265,8 @@ namespace Cotton.Server.IntegrationTests
                 DbContext,
                 new NoopNotificationsProvider(),
                 usage,
-                NullLogger<StorageConsistencyJob>.Instance);
+                NullLogger<StorageConsistencyJob>.Instance,
+                CreateReaderScopes());
 
             await job.RunOnceAsync();
             DbContext.ChangeTracker.Clear();
@@ -319,7 +320,8 @@ namespace Cotton.Server.IntegrationTests
                 DbContext,
                 new NoopNotificationsProvider(),
                 usage,
-                NullLogger<StorageConsistencyJob>.Instance);
+                NullLogger<StorageConsistencyJob>.Instance,
+                CreateReaderScopes());
 
             await job.RunOnceAsync();
             DbContext.ChangeTracker.Clear();
@@ -335,6 +337,13 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(updatedManifest.SmallFilePreviewHashEncrypted, Is.Null);
                 Assert.That(updatedManifest.LargeFilePreviewHash, Is.Null);
             });
+        }
+
+        private IServiceScopeFactory CreateReaderScopes()
+        {
+            ServiceCollection services = new();
+            services.AddDbContext<CottonDbContext>(options => options.UseNpgsql(DbContext.Database.GetConnectionString()));
+            return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
         }
 
         private static ChunkUsageService CreateChunkUsageService(

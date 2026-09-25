@@ -105,40 +105,46 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task<NodeFileManifestDto> UploadAndCreateFileAsync(Guid nodeId, string fileName, string contentType, byte[] content)
         {
-            string chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
-
-            using MultipartFormDataContent uploadForm = new MultipartFormDataContent
+            const int uploadChunkSizeBytes = 4 * 1024 * 1024;
+            List<string> chunkHashes = [];
+            for (int offset = 0; offset < Math.Max(content.Length, 1); offset += uploadChunkSizeBytes)
             {
+                byte[] chunk = content.AsSpan(offset, Math.Min(uploadChunkSizeBytes, content.Length - offset)).ToArray();
+                string chunkHash = Hasher.ToHexStringHash(Hasher.HashData(chunk));
+                using MultipartFormDataContent uploadForm = new MultipartFormDataContent
                 {
-                    new ByteArrayContent(content)
                     {
-                        Headers =
+                        new ByteArrayContent(chunk)
                         {
-                            ContentType = new MediaTypeHeaderValue("application/octet-stream")
-                        }
+                            Headers =
+                            {
+                                ContentType = new MediaTypeHeaderValue("application/octet-stream")
+                            }
+                        },
+                        "file",
+                        fileName
                     },
-                    "file",
-                    fileName
-                },
-                {
-                    new StringContent(chunkHashLower),
-                    "hash"
-                }
-            };
+                    {
+                        new StringContent(chunkHash),
+                        "hash"
+                    }
+                };
 
-            HttpResponseMessage uploadResponse = await _client!.PostAsync("/api/v1/chunks", uploadForm);
-            uploadResponse.EnsureSuccessStatusCode();
+                HttpResponseMessage uploadResponse = await _client!.PostAsync("/api/v1/chunks", uploadForm);
+                uploadResponse.EnsureSuccessStatusCode();
+                chunkHashes.Add(chunkHash);
+            }
 
             CreateFileFromChunksRequestDto createFileRequest = new CreateFileFromChunksRequestDto
             {
-                ChunkHashes = [chunkHashLower],
+                ChunkHashes = chunkHashes,
                 Name = fileName,
                 ContentType = contentType,
-                Hash = chunkHashLower,
+                Hash = Hasher.ToHexStringHash(Hasher.HashData(content)),
                 NodeId = nodeId,
             };
 
-            HttpResponseMessage createResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", createFileRequest);
+            HttpResponseMessage createResponse = await _client!.PostAsJsonAsync("/api/v1/files/from-chunks", createFileRequest);
             createResponse.EnsureSuccessStatusCode();
 
             return await GetNodeFileAsync(nodeId, fileName);

@@ -138,7 +138,7 @@ namespace Cotton.Server.Jobs
                     await RecordPreviewGenerationFailureAsync(item, ex.Message, cancellationToken);
                     return;
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OutOfMemoryException)
                 {
                     _logger.LogError(ex, "Failed to load, store or notify preview for file manifest {FileManifestId}", itemId);
                     return;

@@ -59,33 +59,42 @@ namespace Cotton.Server.Services.DatabaseIntegrity
             for (int i = 0; i < orderedChunks.Count; i++)
             {
                 FileManifestChunk manifestChunk = orderedChunks[i];
-                RequireNavigation(manifestChunk.Chunk, nameof(manifestChunk.Chunk));
-
-                if (manifestChunk.FileManifestId != manifest.Id)
-                {
-                    throw CreateStructuralFailure(nameof(FileManifestChunk.FileManifestId), boundary, manifest.Id);
-                }
-
-                if (manifestChunk.ChunkOrder != i)
-                {
-                    throw CreateStructuralFailure(nameof(FileManifestChunk.ChunkOrder), boundary, manifest.Id);
-                }
-
-                if (!manifestChunk.ChunkHash.SequenceEqual(manifestChunk.Chunk.Hash))
-                {
-                    throw CreateStructuralFailure(nameof(FileManifestChunk.ChunkHash), boundary, manifest.Id);
-                }
-
+                RequireValidManifestChunk(dbContext, manifest, manifestChunk, i, boundary);
                 plainSizeBytes = checked(plainSizeBytes + manifestChunk.Chunk.PlainSizeBytes);
-
-                _integrity.RequireValid(dbContext, manifestChunk, boundary + ".manifest-chunk");
-                _integrity.RequireValid(dbContext, manifestChunk.Chunk, boundary + ".chunk");
             }
 
             if (plainSizeBytes != manifest.SizeBytes)
             {
                 throw CreateStructuralFailure(nameof(FileManifest.SizeBytes), boundary, manifest.Id);
             }
+        }
+
+        public void RequireValidManifestChunk(
+            CottonDbContext dbContext,
+            FileManifest manifest,
+            FileManifestChunk chunk,
+            int expectedOrder,
+            string boundary)
+        {
+            RequireNavigation(chunk.Chunk, nameof(chunk.Chunk));
+
+            if (chunk.FileManifestId != manifest.Id)
+            {
+                throw CreateStructuralFailure(nameof(FileManifestChunk.FileManifestId), boundary, manifest.Id);
+            }
+
+            if (chunk.ChunkOrder != expectedOrder)
+            {
+                throw CreateStructuralFailure(nameof(FileManifestChunk.ChunkOrder), boundary, manifest.Id);
+            }
+
+            if (!chunk.ChunkHash.SequenceEqual(chunk.Chunk.Hash))
+            {
+                throw CreateStructuralFailure(nameof(FileManifestChunk.ChunkHash), boundary, manifest.Id);
+            }
+
+            _integrity.RequireValid(dbContext, chunk, boundary + ".manifest-chunk");
+            _integrity.RequireValid(dbContext, chunk.Chunk, boundary + ".chunk");
         }
 
         private static void RequireNavigation<T>(T? value, string navigationName)
