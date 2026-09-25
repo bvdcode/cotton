@@ -259,8 +259,8 @@ const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
         alignItems="center"
         justifyContent="center"
         sx={{
-          width: { xs: 72, sm: 88 },
-          height: { xs: 72, sm: 88 },
+          width: hasSmallPreviewIcon ? 200 : { xs: 72, sm: 88 },
+          height: hasSmallPreviewIcon ? 200 : { xs: 72, sm: 88 },
           "& > svg": { width: { xs: 64, sm: 80 }, height: { xs: 64, sm: 80 } },
           color: "text.secondary",
         }}
@@ -297,9 +297,11 @@ const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
         </Typography>
       )}
 
-      <Typography color="text.secondary">
-        {t("unsupported", { ns: "share" })}
-      </Typography>
+      {!hasSmallPreviewIcon && (
+        <Typography color="text.secondary">
+          {t("unsupported", { ns: "share" })}
+        </Typography>
+      )}
     </Box>
   );
 };

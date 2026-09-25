@@ -84,6 +84,7 @@ namespace Cotton.ContentTypes
                 [".apks"] = Override(AndroidPackageContentTypes.Apks, forceContentType: true),
                 [".xapk"] = Override(AndroidPackageContentTypes.Xapk, forceContentType: true),
                 [".apkm"] = Override(AndroidPackageContentTypes.Apkm, forceContentType: true),
+                [".tgs"] = Override(AnimatedStickerContentTypes.Tgs, forceContentType: true),
             };
 
         private static readonly IReadOnlySet<string> SourceTextExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

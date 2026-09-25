@@ -14,6 +14,8 @@ Files named as HEIC or HEIF are checked for JPEG, PNG, GIF, BMP, WebP and TIFF s
 
 Video previews use embedded cover art when available. Otherwise, clips up to one second use the first frame; longer clips use a frame from the middle.
 
+Telegram `.tgs` stickers are gzip-compressed Lottie animations. The preview generator renders a frame from the middle of the animation as a static WebP poster. It limits the expanded JSON to 8 MiB. A public file-share page displays the poster when it exists; animated playback is not provided.
+
 Preview metadata is written only after the derived object exists. Each new successful result records the stable identifier and version of the generator that produced it. Only changes to that generator's version make the result eligible for automatic regeneration. Existing cached previews without a recorded generator remain available and are excluded from version-based regeneration; their generator is not inferred from current filenames.
 
 Failed attempts use a fingerprint of the registered generators to retry after the available processing capabilities change. A failed refresh preserves the previous cached image and does not retry on every job run. Re-running generation is idempotent because identical output has the same storage hash.
