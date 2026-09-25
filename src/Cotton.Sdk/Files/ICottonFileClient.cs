@@ -83,5 +83,16 @@ namespace Cotton.Sdk.Files
             IProgress<long>? progress = null,
             CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// Downloads one zero-based content chunk and returns the file's total chunk count.
+        /// </summary>
+        Task<int> DownloadContentChunkAsync(
+            Guid nodeFileId,
+            int chunkNumber,
+            Stream destination,
+            string? expectedETag = null,
+            IProgress<long>? progress = null,
+            CancellationToken cancellationToken = default);
+
     }
 }

@@ -215,8 +215,19 @@ namespace Cotton.Server.Controllers
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/content")]
         public async Task<IActionResult> DownloadOwnedFileContent(
             [FromRoute] Guid nodeFileId,
-            [FromQuery] bool download = false)
+            [FromQuery] bool download = false,
+            [FromQuery] int? chunkNumber = null)
         {
+            if (chunkNumber < 0)
+            {
+                return CottonResult.BadRequest("Chunk number must be non-negative.");
+            }
+
+            if (chunkNumber is not null && Request.Headers.ContainsKey("Range"))
+            {
+                return CottonResult.BadRequest("Range cannot be combined with chunkNumber.");
+            }
+
             Guid userId = User.GetUserId();
             NodeFile? nodeFile = await _mediator.Send(
                 new ResolveOwnedFileContentQuery(
@@ -227,6 +238,16 @@ namespace Cotton.Server.Controllers
             if (nodeFile is null)
             {
                 return CottonResult.NotFound("Node file not found");
+            }
+
+            if (chunkNumber is not null)
+            {
+                if (chunkNumber.Value >= nodeFile.FileManifest.FileManifestChunks.Count)
+                {
+                    return CottonResult.BadRequest("Chunk number is outside the file.");
+                }
+
+                return FileDownloadResultFactory.CreateChunk(Response, _storage, nodeFile, chunkNumber.Value);
             }
 
             return FileDownloadResultFactory.Create(Response, _storage, nodeFile, download);

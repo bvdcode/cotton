@@ -195,6 +195,56 @@ namespace Cotton.Sdk.Files
                 validateResponse: response => ValidateRangeResponse(response, offset, length, expectedETag));
         }
 
+        /// <summary>
+        /// Downloads one zero-based content chunk and returns the file's total chunk count.
+        /// </summary>
+        public async Task<int> DownloadContentChunkAsync(
+            Guid nodeFileId,
+            int chunkNumber,
+            Stream destination,
+            string? expectedETag = null,
+            IProgress<long>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(chunkNumber);
+
+            string path = $"{Routes.V1.Files}/{nodeFileId}/content?chunkNumber={chunkNumber}";
+            IReadOnlyDictionary<string, string>? headers = CreateIfMatchHeader(expectedETag);
+            int chunkCount = 0;
+            await _transport.DownloadAsync(
+                path,
+                destination,
+                authorize: true,
+                progress,
+                cancellationToken,
+                headers,
+                expectedStatusCode: HttpStatusCode.OK,
+                validateResponse: response =>
+                {
+                    if (!response.Headers.TryGetValues("X-Cotton-Chunk-Count", out IEnumerable<string>? values)
+                        || !int.TryParse(values.SingleOrDefault(), out chunkCount)
+                        || chunkCount <= chunkNumber)
+                    {
+                        throw new CottonApiException(
+                            response.StatusCode,
+                            null,
+                            "Cotton API chunk download returned an invalid chunk count.");
+                    }
+
+                    if (response.Content.Headers.ContentLength is not long contentLength || contentLength < 0)
+                    {
+                        throw new CottonApiException(
+                            response.StatusCode,
+                            null,
+                            "Cotton API chunk download returned no valid Content-Length.");
+                    }
+
+                    return contentLength;
+                }).ConfigureAwait(false);
+
+            return chunkCount;
+        }
+
         private static IReadOnlyDictionary<string, string>? CreateIfMatchHeader(string? expectedETag)
         {
             if (string.IsNullOrWhiteSpace(expectedETag))

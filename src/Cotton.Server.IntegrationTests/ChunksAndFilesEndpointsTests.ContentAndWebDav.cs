@@ -60,6 +60,68 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task Download_Owned_File_Content_By_Chunk_Reassembles_Multiple_Chunks()
+        {
+            string token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            NodeDto? root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+            Assert.That(root, Is.Not.Null);
+
+            string firstHash = await UploadChunkAndGetHashAsync("abc");
+            string secondHash = await UploadChunkAndGetHashAsync("defgh");
+            string fullHash = Hasher.ToHexStringHash(Hasher.HashData(Encoding.UTF8.GetBytes("abcdefgh")));
+            using HttpResponseMessage createResponse = await _client.PostAsJsonAsync(
+                "/api/v1/files/from-chunks",
+                new CreateFileFromChunksRequestDto
+                {
+                    ChunkHashes = [firstHash, secondHash],
+                    Name = "chunked.txt",
+                    ContentType = "text/plain",
+                    Hash = fullHash,
+                    NodeId = root!.Id,
+                });
+            createResponse.EnsureSuccessStatusCode();
+            NodeFileManifestDto? file = await createResponse.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+            Assert.That(file, Is.Not.Null);
+
+            using HttpRequestMessage firstRequest = new(HttpMethod.Get, $"/api/v1/files/{file!.Id}/content?chunkNumber=0");
+            firstRequest.Headers.IfMatch.Add(new EntityTagHeaderValue($"\"{file.ETag}\""));
+            using HttpResponseMessage first = await _client.SendAsync(firstRequest);
+            using HttpResponseMessage second = await _client.GetAsync($"/api/v1/files/{file.Id}/content?chunkNumber=1");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(first.Headers.GetValues("X-Cotton-Chunk-Count"), Does.Contain("2"));
+                Assert.That(second.Headers.GetValues("X-Cotton-Chunk-Count"), Does.Contain("2"));
+                Assert.That(first.Content.Headers.ContentLength, Is.EqualTo(3));
+                Assert.That(second.Content.Headers.ContentLength, Is.EqualTo(5));
+                Assert.That(first.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/octet-stream"));
+            });
+            byte[] firstBytes = await first.Content.ReadAsByteArrayAsync();
+            byte[] secondBytes = await second.Content.ReadAsByteArrayAsync();
+            Assert.That(Encoding.UTF8.GetString([.. firstBytes, .. secondBytes]), Is.EqualTo("abcdefgh"));
+
+            using HttpResponseMessage outOfRange = await _client.GetAsync($"/api/v1/files/{file.Id}/content?chunkNumber=2");
+            using HttpResponseMessage negative = await _client.GetAsync($"/api/v1/files/{file.Id}/content?chunkNumber=-1");
+            using HttpRequestMessage staleRequest = new(HttpMethod.Get, $"/api/v1/files/{file.Id}/content?chunkNumber=1");
+            staleRequest.Headers.IfMatch.Add(new EntityTagHeaderValue("\"sha256-stale\""));
+            using HttpResponseMessage stale = await _client.SendAsync(staleRequest);
+            using HttpRequestMessage rangeRequest = new(HttpMethod.Get, $"/api/v1/files/{file.Id}/content?chunkNumber=1");
+            rangeRequest.Headers.Range = new RangeHeaderValue(0, 1);
+            using HttpResponseMessage range = await _client.SendAsync(rangeRequest);
+            Assert.Multiple(() =>
+            {
+                Assert.That(outOfRange.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(negative.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(stale.StatusCode, Is.EqualTo(HttpStatusCode.PreconditionFailed));
+                Assert.That(range.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            });
+        }
+
+        [Test]
         public async Task WebDav_UsesNodeFileContentType_AndSameContentETagAsFileApi()
         {
             string token = await LoginAsync();

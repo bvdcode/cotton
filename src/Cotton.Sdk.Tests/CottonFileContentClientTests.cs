@@ -149,6 +149,56 @@ namespace Cotton.Sdk.Tests
             });
         }
 
+        [Test]
+        public async Task DownloadContentChunkAsync_SendsChunkNumberAndReturnsCount()
+        {
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
+            handler.Enqueue(_ =>
+            {
+                HttpResponseMessage response = new(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent(Encoding.UTF8.GetBytes("def")),
+                };
+                response.Headers.Add("X-Cotton-Chunk-Count", "2");
+                return response;
+            });
+            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
+            using MemoryStream destination = new();
+
+            int chunkCount = await client.Files.DownloadContentChunkAsync(
+                Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                1,
+                destination,
+                expectedETag: "sha256-current");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(chunkCount, Is.EqualTo(2));
+                Assert.That(Encoding.UTF8.GetString(destination.ToArray()), Is.EqualTo("def"));
+                Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo(
+                    "/api/v1/files/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/content?chunkNumber=1"));
+                Assert.That(handler.Requests[0].Headers[IfMatchHeaderName], Is.EqualTo("\"sha256-current\""));
+            });
+        }
+
+        [Test]
+        public async Task DownloadContentChunkAsync_RejectsMissingChunkCount()
+        {
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
+            handler.Enqueue(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(Encoding.UTF8.GetBytes("abc")),
+            });
+            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
+            using MemoryStream destination = new();
+
+            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
+                await client.Files.DownloadContentChunkAsync(Guid.NewGuid(), 0, destination));
+
+            Assert.That(exception!.Message, Does.Contain("invalid chunk count"));
+            Assert.That(destination.Length, Is.Zero);
+        }
+
         private static async Task<CottonCloudClient> CreateAuthorizedClientAsync(QueuedHttpMessageHandler handler)
         {
             InMemoryCottonTokenStore store = new InMemoryCottonTokenStore();

@@ -13,6 +13,8 @@ namespace Cotton.Server.Services
 {
     public static class FileDownloadResultFactory
     {
+        private const string ChunkCountHeader = "X-Cotton-Chunk-Count";
+
         public static FileStreamResult Create(
             HttpResponse response,
             IStoragePipeline storage,
@@ -48,6 +50,31 @@ namespace Cotton.Server.Services
                 EntityTag = FileETags.CreateContentEntityTag(nodeFile),
                 EnableRangeProcessing = true,
             };
+        }
+
+        public static FileStreamResult CreateChunk(
+            HttpResponse response,
+            IStoragePipeline storage,
+            NodeFile nodeFile,
+            int chunkNumber)
+        {
+            FileManifestChunk chunk = nodeFile.FileManifest.FileManifestChunks
+                .Single(x => x.ChunkOrder == chunkNumber);
+            string hash = Hasher.ToHexStringHash(chunk.ChunkHash);
+            long length = chunk.Chunk.PlainSizeBytes;
+            PipelineContext context = new()
+            {
+                FileSizeBytes = length,
+                ChunkLengths = new Dictionary<string, long> { [hash] = length },
+            };
+
+            response.Headers.ContentEncoding = "identity";
+            response.Headers.CacheControl = "private, no-store, no-transform";
+            response.Headers[ChunkCountHeader] = nodeFile.FileManifest.FileManifestChunks.Count.ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+            FileResponseSecurity.ApplyFileResponseHeaders(response, null, requestedInline: true);
+
+            return new FileStreamResult(storage.GetBlobStream([hash], context), "application/octet-stream");
         }
     }
 }
