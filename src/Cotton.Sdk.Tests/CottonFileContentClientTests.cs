@@ -3,6 +3,7 @@
 
 using Cotton.Auth;
 using Cotton.Sdk.Auth;
+using Cotton.Sdk.Files;
 using Cotton.Sdk.Tests.Fakes;
 using System.Net;
 using System.Net.Http.Headers;
@@ -150,7 +151,7 @@ namespace Cotton.Sdk.Tests
         }
 
         [Test]
-        public async Task DownloadContentChunkAsync_SendsChunkNumberAndReturnsCount()
+        public async Task DownloadContentChunkAsync_SendsChunkNumberAndReturnsCountAndETag()
         {
             QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(_ =>
@@ -160,12 +161,13 @@ namespace Cotton.Sdk.Tests
                     Content = new ByteArrayContent(Encoding.UTF8.GetBytes("def")),
                 };
                 response.Headers.Add("X-Cotton-Chunk-Count", "2");
+                response.Headers.ETag = new EntityTagHeaderValue("\"sha256-current\"");
                 return response;
             });
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
             using MemoryStream destination = new();
 
-            int chunkCount = await client.Files.DownloadContentChunkAsync(
+            CottonContentChunkDownloadResult result = await client.Files.DownloadContentChunkAsync(
                 Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
                 1,
                 destination,
@@ -173,7 +175,8 @@ namespace Cotton.Sdk.Tests
 
             Assert.Multiple(() =>
             {
-                Assert.That(chunkCount, Is.EqualTo(2));
+                Assert.That(result.ChunkCount, Is.EqualTo(2));
+                Assert.That(result.ETag, Is.EqualTo("sha256-current"));
                 Assert.That(Encoding.UTF8.GetString(destination.ToArray()), Is.EqualTo("def"));
                 Assert.That(handler.Requests[0].PathAndQuery, Is.EqualTo(
                     "/api/v1/files/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/content?chunkNumber=1"));
@@ -196,6 +199,57 @@ namespace Cotton.Sdk.Tests
                 await client.Files.DownloadContentChunkAsync(Guid.NewGuid(), 0, destination));
 
             Assert.That(exception!.Message, Does.Contain("invalid chunk count"));
+            Assert.That(destination.Length, Is.Zero);
+        }
+
+        [Test]
+        public async Task DownloadContentChunkAsync_RejectsMissingETag()
+        {
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
+            handler.Enqueue(_ =>
+            {
+                HttpResponseMessage response = new(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent(Encoding.UTF8.GetBytes("abc")),
+                };
+                response.Headers.Add("X-Cotton-Chunk-Count", "1");
+                return response;
+            });
+            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
+            using MemoryStream destination = new();
+
+            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
+                await client.Files.DownloadContentChunkAsync(Guid.NewGuid(), 0, destination));
+
+            Assert.That(exception!.Message, Does.Contain("no valid ETag"));
+            Assert.That(destination.Length, Is.Zero);
+        }
+
+        [Test]
+        public async Task DownloadContentChunkAsync_RejectsUnexpectedETag()
+        {
+            QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
+            handler.Enqueue(_ =>
+            {
+                HttpResponseMessage response = new(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent(Encoding.UTF8.GetBytes("abc")),
+                };
+                response.Headers.Add("X-Cotton-Chunk-Count", "1");
+                response.Headers.ETag = new EntityTagHeaderValue("\"sha256-new\"");
+                return response;
+            });
+            CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
+            using MemoryStream destination = new();
+
+            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
+                await client.Files.DownloadContentChunkAsync(
+                    Guid.NewGuid(),
+                    0,
+                    destination,
+                    expectedETag: "sha256-old"));
+
+            Assert.That(exception!.Message, Does.Contain("unexpected ETag"));
             Assert.That(destination.Length, Is.Zero);
         }
 

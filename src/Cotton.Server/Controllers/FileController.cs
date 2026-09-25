@@ -248,7 +248,12 @@ namespace Cotton.Server.Controllers
                     return CottonResult.BadRequest("Chunk number is outside the file.");
                 }
 
-                return FileDownloadResultFactory.CreateChunk(Response, _storage, content.Chunk, content.ChunkCount);
+                return FileDownloadResultFactory.CreateChunk(
+                    Response,
+                    _storage,
+                    content.NodeFile,
+                    content.Chunk,
+                    content.ChunkCount);
             }
 
             return FileDownloadResultFactory.Create(Response, _storage, content.NodeFile, download);

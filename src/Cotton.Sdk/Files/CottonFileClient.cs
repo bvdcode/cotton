@@ -196,9 +196,9 @@ namespace Cotton.Sdk.Files
         }
 
         /// <summary>
-        /// Downloads one zero-based content chunk and returns the file's total chunk count.
+        /// Downloads one zero-based content chunk and returns its file's chunk count and content ETag.
         /// </summary>
-        public async Task<int> DownloadContentChunkAsync(
+        public async Task<CottonContentChunkDownloadResult> DownloadContentChunkAsync(
             Guid nodeFileId,
             int chunkNumber,
             Stream destination,
@@ -211,6 +211,7 @@ namespace Cotton.Sdk.Files
             string path = $"{Routes.V1.Files}/{nodeFileId}/content?chunkNumber={chunkNumber}";
             IReadOnlyDictionary<string, string>? headers = CreateIfMatchHeader(expectedETag);
             int chunkCount = 0;
+            string? eTag = null;
             await _transport.DownloadAsync(
                 path,
                 destination,
@@ -239,10 +240,30 @@ namespace Cotton.Sdk.Files
                             "Cotton API chunk download returned no valid Content-Length.");
                     }
 
+                    if (response.Headers.ETag is not EntityTagHeaderValue responseETag
+                        || responseETag.IsWeak)
+                    {
+                        throw new CottonApiException(
+                            response.StatusCode,
+                            null,
+                            "Cotton API chunk download returned no valid ETag.");
+                    }
+
+                    eTag = responseETag.Tag.Trim('"');
+                    if (!string.IsNullOrWhiteSpace(expectedETag)
+                        && expectedETag.Trim() != "*"
+                        && !string.Equals(eTag, NormalizeETag(expectedETag), StringComparison.Ordinal))
+                    {
+                        throw new CottonApiException(
+                            response.StatusCode,
+                            null,
+                            "Cotton API chunk download returned an unexpected ETag.");
+                    }
+
                     return contentLength;
                 }).ConfigureAwait(false);
 
-            return chunkCount;
+            return new CottonContentChunkDownloadResult(chunkCount, eTag!);
         }
 
         private static IReadOnlyDictionary<string, string>? CreateIfMatchHeader(string? expectedETag)
