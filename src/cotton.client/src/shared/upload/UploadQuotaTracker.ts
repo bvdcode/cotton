@@ -75,7 +75,7 @@ export class UploadQuotaTracker {
       0,
       quota.availableBytes - this.pendingBytes,
     );
-    if (task._file.size > availableBytes) {
+    if (task.bytesTotal > availableBytes) {
       task.status = "failed";
       task.completedAt = Date.now();
       task.errorKey = "storageQuotaExceeded";
@@ -83,7 +83,7 @@ export class UploadQuotaTracker {
       return false;
     }
 
-    task._quotaReservationBytes = task._file.size;
+    task._quotaReservationBytes = task.bytesTotal;
     this.pendingBytes += task._quotaReservationBytes;
     return true;
   }

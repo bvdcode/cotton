@@ -69,6 +69,11 @@ export class UploadTaskRunner {
   }
 
   startTask(task: UploadTaskInternal, server: UploadServerParams): void {
+    const file = task._file;
+    if (!file) {
+      throw new Error("Queued upload has no file.");
+    }
+
     this.activeUploads += 1;
     task.status = "uploading";
     task.error = undefined;
@@ -93,17 +98,18 @@ export class UploadTaskRunner {
     }, uploadConfig.fileHeadOfLineProbeMs);
 
     this.callbacks.onStatusChange();
-    void this.executeTask(task, server, state);
+    void this.executeTask(task, file, server, state);
   }
 
   private async executeTask(
     task: UploadTaskInternal,
+    file: File,
     server: UploadServerParams,
     state: UploadExecutionState,
   ): Promise<void> {
     try {
       const uploadedFile = await uploadFileToNode({
-        file: task._file,
+        file,
         nodeId: task.nodeId,
         replaceNodeFileId: task._replaceNodeFileId,
         server,

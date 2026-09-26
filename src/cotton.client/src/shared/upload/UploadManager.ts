@@ -16,6 +16,7 @@ import {
   filterFinishedTasks,
   pruneUploadTasks,
   pruneExternalTasks,
+  releaseUploadInputs,
 } from "./UploadTaskRetention";
 import { UploadProgressTracker } from "./UploadProgressTracker";
 import {
@@ -23,7 +24,10 @@ import {
   type UploadExecutionState,
 } from "./UploadTaskRunner";
 import { globalHashWorkerPool } from "./hash/HashWorkerPool";
-import type { UploadFileQueueItem } from "./types";
+import {
+  normalizeUploadQueueEntries,
+  type UploadQueueEntry,
+} from "./UploadQueueEntries";
 import type {
   AppTaskHandle,
   AppTaskSnapshot,
@@ -50,7 +54,7 @@ export interface UploadTask {
 }
 
 export interface UploadTaskInternal extends UploadTask {
-  _file: File;
+  _file?: File;
   _encrypt: boolean;
   _replaceNodeFileId?: Guid | null;
   _onFileUploaded?: (file: NodeFileManifestDto) => void;
@@ -67,8 +71,6 @@ export interface EnqueueOptions {
   onFileUploaded?: (file: NodeFileManifestDto) => void;
 }
 
-type UploadQueueEntry = File | UploadFileQueueItem;
-
 export interface UploadFilePickerContext {
   nodeId: Guid;
   nodeLabel: string;
@@ -79,19 +81,6 @@ export interface UploadFilePickerContext {
 type Listener = () => void;
 
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-const normalizeUploadQueueEntries = (
-  files: FileList | UploadQueueEntry[],
-): UploadFileQueueItem[] => {
-  const list = Array.isArray(files) ? files : Array.from(files);
-  return list.map((entry) => {
-    if ("file" in entry) {
-      return entry;
-    }
-
-    return { file: entry };
-  });
-};
 
 const PRUNE_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -354,6 +343,7 @@ export class UploadManager {
           next.status = "failed";
           next.completedAt = Date.now();
           next.errorKey = "serverSettingsNotLoaded";
+          releaseUploadInputs(next);
           this.emit();
           continue;
         }
@@ -364,6 +354,7 @@ export class UploadManager {
         }
 
         if (!this.quota.tryReserve(next)) {
+          releaseUploadInputs(next);
           this.emit();
           continue;
         }
@@ -404,6 +395,7 @@ export class UploadManager {
     this.progress.complete(task, beforeFinalize);
 
     this.runner.observe(task, true);
+    releaseUploadInputs(task);
     this.emit();
 
     if (!uploadedFileCached) {
@@ -432,6 +424,7 @@ export class UploadManager {
     task.errorKey = getUploadErrorKey(error);
     task.errorParams = getUploadErrorParams(error);
     this.runner.observe(task, false);
+    releaseUploadInputs(task);
     this.emit();
   }
 

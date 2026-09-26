@@ -7,6 +7,12 @@ const MAX_FINISHED_TASKS = 10000;
 const FINISHED_TASK_TTL_MS = 30 * 60 * 1000;
 const FINISHED_TASK_STATUSES = new Set<AppTaskStatus>(["completed", "failed"]);
 
+export const releaseUploadInputs = (task: UploadTaskInternal): void => {
+  delete task._file;
+  delete task._onFileUploaded;
+  delete task._replaceNodeFileId;
+};
+
 export const filterFinishedTasks = <T extends { status: string }>(
   tasks: T[],
   includeCompleted: boolean,
