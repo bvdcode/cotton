@@ -1,159 +1,16 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { NodeContentDto, NodeFileManifestDto } from "../api/nodesApi";
-import type { NodeDto } from "../api/layoutsApi";
+import type { NodeContentDto } from "../api/nodesApi";
 import { NODES_STORAGE_KEY } from "../config/storageKeys";
-import {
-  applyDisplayMetaToFiles,
-  toPersistableFileDisplayMetadata,
-} from "../crypto/displayMeta";
+import { applyDisplayMetaToFiles } from "../crypto/displayMeta";
 import { resetNodesActionsInternals } from "./nodesActionInternals";
 
-type NodesState = {
-  cacheOwnerUserId: string | null;
-  currentNode: NodeDto | null;
-  ancestors: NodeDto[];
-  contentByNodeId: Record<string, NodeContentDto | undefined>;
-  ancestorsByNodeId: Record<string, NodeDto[] | undefined>;
-  rootNodeId: string | null;
-  loading: boolean;
-  error: string | null;
-  lastUpdatedByNodeId: Record<string, number | undefined>;
-  updateNode: (updated: NodeDto) => void;
-  moveFolderInCache: (
-    updated: NodeDto,
-    sourceParentId: string,
-    targetParentId: string,
-  ) => void;
-  moveFileInCache: (
-    updated: NodeFileManifestDto,
-    sourceParentId: string,
-    targetParentId: string,
-  ) => void;
-  addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
-  updateFileInCache: (
-    parentNodeId: string,
-    file: NodeContentDto["files"][number],
-  ) => void;
-  upsertFileInCache: (
-    parentNodeId: string,
-    file: NodeContentDto["files"][number],
-  ) => boolean;
-  optimisticRenameFile: (
-    parentNodeId: string,
-    fileId: string,
-    newName: string,
-  ) => void;
-  optimisticSetFilePreviewHash: (
-    parentNodeId: string,
-    fileId: string,
-    previewHashEncryptedHex: string,
-  ) => boolean;
-  optimisticDeleteFile: (parentNodeId: string, fileId: string) => void;
-  refreshCachedFileDisplayMetadata: () => Promise<void>;
-  reset: (cacheOwnerUserId?: string | null) => void;
-};
-
-// Folders larger than this are not persisted to sessionStorage to avoid
-// exceeding the roughly 5 MB browser quota; they get refetched on reload.
-const MAX_PERSISTED_NODE_CONTENT_ITEMS = 10000;
-
-function buildPersistedContentSnapshot(state: {
-  rootNodeId: string | null;
-  currentNode: NodeDto | null;
-  ancestors: NodeDto[];
-  contentByNodeId: Record<string, NodeContentDto | undefined>;
-  ancestorsByNodeId: Record<string, NodeDto[] | undefined>;
-  lastUpdatedByNodeId: Record<string, number | undefined>;
-}) {
-  const keepNodeIds = new Set<string>();
-
-  if (state.rootNodeId) {
-    keepNodeIds.add(state.rootNodeId);
-  }
-
-  if (state.currentNode?.id) {
-    keepNodeIds.add(state.currentNode.id);
-  }
-
-  for (const ancestor of state.ancestors) {
-    keepNodeIds.add(ancestor.id);
-  }
-
-  const contentByNodeId: Record<string, NodeContentDto | undefined> = {};
-  const ancestorsByNodeId: Record<string, NodeDto[] | undefined> = {};
-  const lastUpdatedByNodeId: Record<string, number | undefined> = {};
-
-  for (const nodeId of keepNodeIds) {
-    const content = state.contentByNodeId[nodeId];
-    if (content) {
-      const itemCount = content.nodes.length + content.files.length;
-      if (itemCount <= MAX_PERSISTED_NODE_CONTENT_ITEMS) {
-        contentByNodeId[nodeId] = {
-          ...content,
-          files: content.files
-            .map(toPersistableFileDisplayMetadata)
-            .filter((file) => file !== null),
-        };
-      }
-    }
-
-    ancestorsByNodeId[nodeId] = state.ancestorsByNodeId[nodeId];
-    lastUpdatedByNodeId[nodeId] = state.lastUpdatedByNodeId[nodeId];
-  }
-
-  return {
-    contentByNodeId,
-    ancestorsByNodeId,
-    lastUpdatedByNodeId,
-  };
-}
-
-function dropAncestorCachesAffectedByMove(
-  ancestorsByNodeId: Record<string, NodeDto[] | undefined>,
-  movedNodeId: string,
-): Record<string, NodeDto[] | undefined> {
-  let changed = false;
-  const next = { ...ancestorsByNodeId };
-
-  for (const [nodeId, ancestors] of Object.entries(ancestorsByNodeId)) {
-    if (
-      nodeId === movedNodeId ||
-      ancestors?.some((node) => node.id === movedNodeId)
-    ) {
-      delete next[nodeId];
-      changed = true;
-    }
-  }
-
-  return changed ? next : ancestorsByNodeId;
-}
-
-const safeSessionStorage = {
-  getItem: (key: string) => sessionStorage.getItem(key),
-  removeItem: (key: string) => sessionStorage.removeItem(key),
-  setItem: (key: string, value: string) => {
-    try {
-      sessionStorage.setItem(key, value);
-    } catch (error) {
-      const isQuota =
-        error instanceof DOMException &&
-        (error.name === "QuotaExceededError" ||
-          error.name === "NS_ERROR_DOM_QUOTA_REACHED");
-      if (!isQuota) throw error;
-
-      try {
-        sessionStorage.removeItem(key);
-      } catch {
-        // ignore
-      }
-
-      console.warn(
-        `[nodesStore] sessionStorage quota exceeded for "${key}" (${value.length} chars). Skipping persistence.`,
-      );
-    }
-  },
-};
+import type { NodesState } from "./nodesStoreTypes";
+import {
+  buildPersistedContentSnapshot,
+  dropAncestorCachesAffectedByMove,
+  safeSessionStorage,
+} from "./nodesPersistence";
 
 export const useNodesStore = create<NodesState>()(
   persist(

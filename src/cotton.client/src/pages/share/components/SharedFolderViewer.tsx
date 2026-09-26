@@ -10,13 +10,12 @@ import type {
   FolderOperations,
   TilesSize,
 } from "@shared/types/FileListViewTypes";
-import { getFileIcon } from "@shared/utils/icons";
-import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { useContentTiles } from "../../../shared/hooks/useContentTiles";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
+import { useSharedFolderContent } from "./useSharedFolderContent";
+import { buildSharedMediaItems } from "./sharedFolderMedia";
 import type { Guid } from "../../../shared/api/layoutsApi";
-import type { SharedNodeContentDto } from "../../../shared/api/sharedFoldersApi";
-import type { MediaItem } from "@shared/types/mediaLightbox";
 import type { FileBrowserViewMode } from "@shared/utils/viewMode";
 import { useFilePreview } from "@shared/hooks/useFilePreview";
 import { openDownloadLink } from "@shared/utils/fileHandlers";
@@ -38,13 +37,6 @@ type BreadcrumbState = {
   breadcrumbs: BreadcrumbNode[];
 };
 
-type SharedFolderContentState = {
-  nodeId: Guid | null;
-  content: SharedNodeContentDto | null;
-  loading: boolean;
-  loadError: string | null;
-};
-
 const createRootBreadcrumbState = (
   rootNodeId: Guid,
   rootName: string,
@@ -52,15 +44,6 @@ const createRootBreadcrumbState = (
   rootNodeId,
   rootName,
   breadcrumbs: [{ id: rootNodeId, name: rootName }],
-});
-
-const createPendingContentState = (
-  nodeId: Guid | null,
-): SharedFolderContentState => ({
-  nodeId,
-  content: null,
-  loading: nodeId !== null,
-  loadError: null,
 });
 
 interface SharedFolderViewerProps {
@@ -91,10 +74,6 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
     breadcrumbState.rootName === rootName
       ? breadcrumbState.breadcrumbs
       : rootBreadcrumbs;
-  const [contentState, setContentState] =
-    React.useState<SharedFolderContentState>(() =>
-      createPendingContentState(rootNodeId),
-    );
   const [layoutType, setLayoutType] = React.useState<InterfaceLayoutType>(
     InterfaceLayoutType.Tiles,
   );
@@ -108,48 +87,10 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
     () => breadcrumbs[breadcrumbs.length - 1] ?? null,
     [breadcrumbs],
   );
-  const effectiveContentState =
-    contentState.nodeId === (currentNode?.id ?? null)
-      ? contentState
-      : createPendingContentState(currentNode?.id ?? null);
-  const { content, loading, loadError } = effectiveContentState;
-
-  React.useEffect(() => {
-    if (!currentNode) return;
-
-    let cancelled = false;
-    const nodeId = currentNode.id;
-
-    void (async () => {
-      try {
-        const response = await sharedFoldersApi.getChildren(token, {
-          nodeId,
-          page: 1,
-          pageSize: 1000,
-        });
-
-        if (cancelled) return;
-        setContentState({
-          nodeId,
-          content: response.content,
-          loading: false,
-          loadError: null,
-        });
-      } catch {
-        if (cancelled) return;
-        setContentState({
-          nodeId,
-          content: null,
-          loading: false,
-          loadError: t("errors.loadFailed", { ns: "share" }),
-        });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentNode, t, token]);
+  const { content, loading, loadError } = useSharedFolderContent(
+    token,
+    currentNode?.id ?? null,
+  );
 
   const handleOpenFolder = React.useCallback(
     (folderId: Guid, folderName: string) => {
@@ -197,34 +138,10 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
 
   const { sortedFiles, tiles } = useContentTiles(content ?? undefined);
 
-  const mediaItems = React.useMemo<MediaItem[]>(() => {
-    return sortedFiles
-      .map((file) => ({
-        file,
-        typeInfo: getFileTypeInfo(file.name, file.contentType),
-      }))
-      .filter(
-        ({ typeInfo }) =>
-          typeInfo.type === "image" || typeInfo.type === "video",
-      )
-      .map(({ file, typeInfo }) => {
-        const preview = getFileIcon(
-          file.previewHashEncryptedHex ?? null,
-          file.name,
-          file.contentType,
-        );
-        const previewUrl = typeof preview === "string" ? preview : "";
-
-        return {
-          id: file.id,
-          kind: typeInfo.type === "image" ? "image" : "video",
-          name: file.name,
-          previewUrl,
-          mimeType: file.contentType,
-          sizeBytes: file.sizeBytes,
-        };
-      });
-  }, [sortedFiles]);
+  const mediaItems = React.useMemo(
+    () => buildSharedMediaItems(sortedFiles),
+    [sortedFiles],
+  );
 
   const handleMediaClick = React.useCallback(
     (fileId: string) => {
