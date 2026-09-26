@@ -1,42 +1,37 @@
 import { getApiErrorMessage } from "../api/httpClient";
 import type { Guid } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
-import { queryClient } from "../api/queries/queryClient";
-import { queryKeys } from "../api/queries/queryKeys";
 import { refreshNodeContent } from "../store/nodesActions";
 import { useNodesStore } from "../store/nodesStore";
 import { getCachedServerSettings } from "../api/queries/serverSettings";
 import {
-  storageQuotaApi,
-  type UserStorageQuotaDto,
-} from "../api/storageQuotaApi";
-import { ClientEncryptionSizeLimitError, NoKeyError } from "../crypto";
-import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
-import { uploadConfig } from "./config";
-import { uploadFileToNode } from "./uploadFileToNode";
-import { RollingBytesPerSecondEstimator } from "./RollingBytesPerSecondEstimator";
+  getEncryptionErrorKey,
+  getUploadErrorKey,
+  getUploadErrorParams,
+} from "./UploadErrorDetails";
+import { UploadQuotaTracker } from "./UploadQuotaTracker";
+import { UploadExternalTasks } from "./UploadExternalTasks";
+import { toAppTask } from "./UploadTaskView";
+import {
+  filterFinishedTasks,
+  pruneUploadTasks,
+  pruneExternalTasks,
+} from "./UploadTaskRetention";
+import { UploadProgressTracker } from "./UploadProgressTracker";
+import {
+  UploadTaskRunner,
+  type UploadExecutionState,
+} from "./UploadTaskRunner";
 import { globalHashWorkerPool } from "./hash/HashWorkerPool";
+import type { UploadFileQueueItem } from "./types";
 import type {
-  UploadFileQueueItem,
-  UploadProgressSnapshot,
-  UploadServerParams,
-} from "./types";
-import { formatBytes } from "../utils/formatBytes";
-import type {
-  AppTask,
   AppTaskHandle,
   AppTaskSnapshot,
-  AppTaskStatus,
   CreateAppTaskOptions,
-  UpdateAppTaskOptions,
 } from "../tasks/types";
 
 export type UploadTaskStatus =
-  | "queued"
-  | "uploading"
-  | "finalizing"
-  | "completed"
-  | "failed";
+  "queued" | "uploading" | "finalizing" | "completed" | "failed";
 
 export interface UploadTask {
   id: string;
@@ -54,7 +49,7 @@ export interface UploadTask {
   completedAt?: number;
 }
 
-interface UploadTaskInternal extends UploadTask {
+export interface UploadTaskInternal extends UploadTask {
   _file: File;
   _encrypt: boolean;
   _replaceNodeFileId?: Guid | null;
@@ -65,17 +60,6 @@ interface UploadTaskInternal extends UploadTask {
   _laneProbeTimeout?: ReturnType<typeof setTimeout>;
   _bytesTransferredForSpeed?: number;
   _quotaReservationBytes?: number;
-}
-
-interface UploadExecutionState {
-  encryptionTask: AppTaskHandle | null;
-  encryptionTaskFinished: boolean;
-  lastEmitTime: number;
-  taskEstimator: RollingBytesPerSecondEstimator;
-}
-
-interface ExternalTaskInternal extends AppTask {
-  _external: true;
 }
 
 export interface EnqueueOptions {
@@ -109,21 +93,28 @@ const normalizeUploadQueueEntries = (
   });
 };
 
-const MAX_FINISHED_TASKS = 10000;
-const FINISHED_TASK_TTL_MS = 30 * 60 * 1000;
 const PRUNE_INTERVAL_MS = 5 * 60 * 1000;
-const QUOTA_SNAPSHOT_TTL_MS = 30 * 60 * 1000;
-const FINISHED_TASK_STATUSES = new Set<AppTaskStatus>(["completed", "failed"]);
 
 export class UploadManager {
   private readonly listeners = new Set<Listener>();
   private readonly tasks: UploadTaskInternal[] = [];
-  private readonly externalTasks: ExternalTaskInternal[] = [];
+  private readonly external = new UploadExternalTasks(() => this.emit());
   private pumping = false;
-  private activeUploads = 0;
-  private readonly fileConcurrency = new AdaptiveConcurrencyController({
-    maxConcurrency: uploadConfig.maxConcurrentFileUploads,
-    rampUpDurationMs: uploadConfig.concurrencyRampUpMs,
+  private readonly runner = new UploadTaskRunner({
+    createEncryptionTask: (task, bytesTotal) =>
+      this.createTask({
+        kind: "encrypt",
+        label: task.fileName,
+        scopeLabel: task.nodeLabel,
+        bytesTotal,
+      }),
+    onProgress: (task, state, bytesUploaded, snapshot) =>
+      this.progress.record(task, state, bytesUploaded, snapshot),
+    onComplete: (task, file) => this.completeUpload(task, file),
+    onFailure: (task, state, error) => this.failUpload(task, state, error),
+    onStatusChange: () => this.emit(),
+    onCapacityAvailable: () => this.pump(),
+    hasQueuedTasks: () => this.tasks.some((task) => task.status === "queued"),
   });
   private open = false;
   private snapshot: AppTaskSnapshot = {
@@ -138,32 +129,24 @@ export class UploadManager {
   };
   private readonly refreshNodeIds = new Set<Guid>();
   private refreshTimeout: ReturnType<typeof setTimeout> | null = null;
-  private quotaSnapshot: UserStorageQuotaDto | null = null;
-  private quotaSnapshotLoadedAt = 0;
-  private quotaRefreshInFlight: Promise<void> | null = null;
-  private quotaRefreshRequiredForCurrentBatch = false;
-  private pendingQuotaBytes = 0;
+  private readonly quota = new UploadQuotaTracker(() => this.pump());
 
-  private overallBytesTotal = 0;
-  private overallBytesUploaded = 0;
-  private overallBytesTransferredForSpeed = 0;
-  private overallEstimator = new RollingBytesPerSecondEstimator({
-    windowMs: 2000,
-    minDurationMs: 300,
-  });
+  private readonly progress = new UploadProgressTracker(
+    (task, now) => this.runner.maybeOpenLaneForHeadOfLine(task, now),
+    () => this.emit(),
+  );
 
   private filePickerOpen:
-    | ((options: { multiple: boolean; accept?: string }) => void)
-    | null = null;
+    ((options: { multiple: boolean; accept?: string }) => void) | null = null;
   private pendingFilePickerContext: UploadFilePickerContext | null = null;
   private pruneIntervalId: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.pruneIntervalId = setInterval(() => {
-      if (this.tasks.length > 0 || this.externalTasks.length > 0) {
-        const before = this.tasks.length + this.externalTasks.length;
+      if (this.tasks.length > 0 || this.external.tasks.length > 0) {
+        const before = this.tasks.length + this.external.tasks.length;
         this.pruneFinishedTasks();
-        if (this.tasks.length + this.externalTasks.length !== before) {
+        if (this.tasks.length + this.external.tasks.length !== before) {
           this.emit();
         }
       }
@@ -189,45 +172,11 @@ export class UploadManager {
   }
 
   createTask(options: CreateAppTaskOptions): AppTaskHandle {
-    const bytesTotal = Math.max(0, options.bytesTotal ?? 0);
-    const task: ExternalTaskInternal = {
-      _external: true,
-      id: makeId(),
-      kind: options.kind,
-      label: options.label,
-      scopeLabel: options.scopeLabel ?? "",
-      bytesTotal,
-      bytesCompleted: 0,
-      progress01: bytesTotal > 0 ? 0 : 1,
-      status: "queued",
-    };
-
-    this.externalTasks.unshift(task);
+    const handle = this.external.createTask(options);
     this.open = true;
     this.pruneFinishedTasks();
     this.emit();
-
-    return {
-      id: task.id,
-      update: (update) => this.updateExternalTask(task.id, update),
-      complete: () =>
-        this.updateExternalTask(task.id, {
-          status: "completed",
-          bytesCompleted: task.bytesTotal,
-          progress01: 1,
-        }),
-      fail: (error) => {
-        const current = this.externalTasks.find((x) => x.id === task.id);
-        if (!current) return;
-
-        current.status = "failed";
-        current.completedAt = Date.now();
-        current.error = error?.message;
-        current.errorKey = error?.key;
-        current.errorParams = error?.params;
-        this.emit();
-      },
-    };
+    return handle;
   }
 
   clearFinished(options?: {
@@ -237,44 +186,32 @@ export class UploadManager {
     const includeCompleted = options?.includeCompleted ?? true;
     const includeFailed = options?.includeFailed ?? true;
 
-    const remainingUploadTasks = this.tasks.filter((t) => {
-      if (t.status === "completed") return !includeCompleted;
-      if (t.status === "failed") return !includeFailed;
-      return true;
-    });
-    const remainingExternalTasks = this.externalTasks.filter((t) => {
-      if (t.status === "completed") return !includeCompleted;
-      if (t.status === "failed") return !includeFailed;
-      return true;
-    });
+    const remainingUploadTasks = filterFinishedTasks(
+      this.tasks,
+      includeCompleted,
+      includeFailed,
+    );
+    const remainingExternalTasks = filterFinishedTasks(
+      this.external.tasks,
+      includeCompleted,
+      includeFailed,
+    );
 
     if (
       remainingUploadTasks.length === this.tasks.length &&
-      remainingExternalTasks.length === this.externalTasks.length
+      remainingExternalTasks.length === this.external.tasks.length
     ) {
       return;
     }
 
     this.tasks.length = 0;
     this.tasks.push(...remainingUploadTasks);
-    this.externalTasks.length = 0;
-    this.externalTasks.push(...remainingExternalTasks);
+    this.external.tasks.length = 0;
+    this.external.tasks.push(...remainingExternalTasks);
 
-    this.overallBytesTotal = this.tasks.reduce(
-      (sum, t) => sum + t.bytesTotal,
-      0,
-    );
-    this.overallBytesUploaded = this.tasks.reduce(
-      (sum, t) => sum + t.bytesUploaded,
-      0,
-    );
-    this.overallBytesTransferredForSpeed = this.tasks.reduce(
-      (sum, t) => sum + (t._bytesTransferredForSpeed ?? t.bytesUploaded),
-      0,
-    );
-    this.overallEstimator.reset();
+    this.progress.recount(this.tasks);
 
-    if (this.tasks.length === 0 && this.externalTasks.length === 0) {
+    if (this.tasks.length === 0 && this.external.tasks.length === 0) {
       this.open = false;
     }
 
@@ -312,17 +249,13 @@ export class UploadManager {
     const startsNewBatch = !this.hasActiveTasks();
 
     if (startsNewBatch) {
-      this.overallBytesTotal = 0;
-      this.overallBytesUploaded = 0;
-      this.overallBytesTransferredForSpeed = 0;
-      this.overallEstimator.reset();
-      this.fileConcurrency.reset();
-      this.syncQuotaSnapshotFromQueryCache();
-      this.quotaRefreshRequiredForCurrentBatch = this.isQuotaSnapshotExpired();
+      this.progress.beginBatch();
+      this.runner.reset();
+      this.quota.beginBatch();
     }
 
     for (const file of list) {
-      this.overallBytesTotal += file.file.size;
+      this.progress.addFile(file.file.size);
       this.tasks.unshift({
         id: makeId(),
         nodeId,
@@ -346,77 +279,15 @@ export class UploadManager {
   }
 
   private pruneFinishedTasks(): void {
-    const now = Date.now();
-
-    for (let i = this.tasks.length - 1; i >= 0; i--) {
-      const t = this.tasks[i];
-      if (
-        FINISHED_TASK_STATUSES.has(this.toAppTaskStatus(t.status)) &&
-        t.completedAt &&
-        now - t.completedAt > FINISHED_TASK_TTL_MS
-      ) {
-        this.tasks.splice(i, 1);
-      }
-    }
-    for (let i = this.externalTasks.length - 1; i >= 0; i--) {
-      const t = this.externalTasks[i];
-      if (
-        FINISHED_TASK_STATUSES.has(t.status) &&
-        t.completedAt &&
-        now - t.completedAt > FINISHED_TASK_TTL_MS
-      ) {
-        this.externalTasks.splice(i, 1);
-      }
-    }
-
-    const finished = this.tasks.filter((t) =>
-      FINISHED_TASK_STATUSES.has(this.toAppTaskStatus(t.status)),
-    );
-    if (finished.length > MAX_FINISHED_TASKS) {
-      const toRemove = finished.length - MAX_FINISHED_TASKS;
-      let removed = 0;
-      for (let i = this.tasks.length - 1; i >= 0 && removed < toRemove; i--) {
-        if (
-          FINISHED_TASK_STATUSES.has(this.toAppTaskStatus(this.tasks[i].status))
-        ) {
-          this.tasks.splice(i, 1);
-          removed++;
-        }
-      }
-    }
-
-    const externalFinished = this.externalTasks.filter((t) =>
-      FINISHED_TASK_STATUSES.has(t.status),
-    );
-    if (externalFinished.length > MAX_FINISHED_TASKS) {
-      const toRemove = externalFinished.length - MAX_FINISHED_TASKS;
-      let removed = 0;
-      for (
-        let i = this.externalTasks.length - 1;
-        i >= 0 && removed < toRemove;
-        i--
-      ) {
-        if (FINISHED_TASK_STATUSES.has(this.externalTasks[i].status)) {
-          this.externalTasks.splice(i, 1);
-          removed++;
-        }
-      }
-    }
-
-    this.overallBytesTotal = this.tasks.reduce(
-      (sum, t) => sum + t.bytesTotal,
-      0,
-    );
-    this.overallBytesUploaded = this.tasks.reduce(
-      (sum, t) => sum + t.bytesUploaded,
-      0,
-    );
+    pruneUploadTasks(this.tasks);
+    pruneExternalTasks(this.external.tasks);
+    this.progress.countTasks(this.tasks);
   }
 
   private emit() {
     const tasks = [
-      ...this.externalTasks.map((task) => this.toPublicExternalTask(task)),
-      ...this.tasks.map((task) => this.toAppTask(task)),
+      ...this.external.getPublicTasks(),
+      ...this.tasks.map((task) => toAppTask(task)),
     ];
     const bytesTotal = tasks.reduce((sum, task) => sum + task.bytesTotal, 0);
     const bytesCompleted = tasks.reduce(
@@ -425,8 +296,7 @@ export class UploadManager {
     );
     const progress01 = bytesTotal > 0 ? bytesCompleted / bytesTotal : 0;
 
-    this.overallBytesTotal = bytesTotal;
-    this.overallBytesUploaded = bytesCompleted;
+    this.progress.syncSnapshot(bytesTotal, bytesCompleted);
 
     this.snapshot = {
       open: this.open,
@@ -435,93 +305,10 @@ export class UploadManager {
         bytesTotal,
         bytesCompleted,
         progress01,
-        speedBytesPerSec:
-          this.overallEstimator.getSnapshot().rollingBytesPerSec,
+        speedBytesPerSec: this.progress.getSpeed(),
       },
     };
     for (const l of this.listeners) l();
-  }
-
-  private updateExternalTask(
-    taskId: string,
-    update: UpdateAppTaskOptions,
-  ): void {
-    const task = this.externalTasks.find((x) => x.id === taskId);
-    if (!task) return;
-
-    if (update.label !== undefined) task.label = update.label;
-    if (update.scopeLabel !== undefined) task.scopeLabel = update.scopeLabel;
-    if (update.bytesTotal !== undefined) {
-      task.bytesTotal = Math.max(0, update.bytesTotal);
-      task.bytesCompleted = Math.min(task.bytesCompleted, task.bytesTotal);
-      task.progress01 =
-        task.bytesTotal > 0 ? task.bytesCompleted / task.bytesTotal : 1;
-    }
-    if (update.status !== undefined) {
-      task.status = update.status;
-      if (update.status === "completed" || update.status === "failed") {
-        task.completedAt = Date.now();
-      }
-    }
-    if (update.bytesCompleted !== undefined) {
-      task.bytesCompleted = Math.max(
-        0,
-        Math.min(task.bytesTotal, update.bytesCompleted),
-      );
-      task.progress01 =
-        task.bytesTotal > 0 ? task.bytesCompleted / task.bytesTotal : 1;
-    }
-    if (update.progress01 !== undefined) {
-      task.progress01 = Math.max(0, Math.min(1, update.progress01));
-      if (task.bytesTotal > 0 && update.bytesCompleted === undefined) {
-        task.bytesCompleted = Math.round(task.bytesTotal * task.progress01);
-      }
-    }
-    if (update.speedBytesPerSec !== undefined) {
-      task.speedBytesPerSec = update.speedBytesPerSec;
-    }
-
-    this.emit();
-  }
-
-  private toAppTask(task: UploadTaskInternal): AppTask {
-    return {
-      id: task.id,
-      kind: "upload",
-      label: task.fileName,
-      scopeLabel: task.nodeLabel,
-      bytesTotal: task.bytesTotal,
-      bytesCompleted: task.bytesUploaded,
-      progress01: task.progress01,
-      status: this.toAppTaskStatus(task.status),
-      speedBytesPerSec: task.uploadSpeedBytesPerSec,
-      error: task.error,
-      errorKey: task.errorKey,
-      errorParams: task.errorParams,
-      completedAt: task.completedAt,
-    };
-  }
-
-  private toPublicExternalTask(task: ExternalTaskInternal): AppTask {
-    return {
-      id: task.id,
-      kind: task.kind,
-      label: task.label,
-      scopeLabel: task.scopeLabel,
-      bytesTotal: task.bytesTotal,
-      bytesCompleted: task.bytesCompleted,
-      progress01: task.progress01,
-      status: task.status,
-      speedBytesPerSec: task.speedBytesPerSec,
-      error: task.error,
-      errorKey: task.errorKey,
-      errorParams: task.errorParams,
-      completedAt: task.completedAt,
-    };
-  }
-
-  private toAppTaskStatus(status: UploadTaskStatus): AppTaskStatus {
-    return status === "uploading" ? "running" : status;
   }
 
   private scheduleNodeRefresh(nodeId: Guid) {
@@ -548,129 +335,12 @@ export class UploadManager {
     );
   }
 
-  private shouldRefreshQuotaSnapshot(): boolean {
-    if (!this.quotaRefreshRequiredForCurrentBatch) {
-      return false;
-    }
-
-    this.syncQuotaSnapshotFromQueryCache();
-    if (!this.isQuotaSnapshotExpired()) {
-      this.quotaRefreshRequiredForCurrentBatch = false;
-      return false;
-    }
-
-    return true;
-  }
-
-  private isQuotaSnapshotExpired(): boolean {
-    return (
-      this.quotaSnapshotLoadedAt === 0 ||
-      Date.now() - this.quotaSnapshotLoadedAt >= QUOTA_SNAPSHOT_TTL_MS
-    );
-  }
-
-  private syncQuotaSnapshotFromQueryCache(): void {
-    const queryState = queryClient.getQueryState<UserStorageQuotaDto>(
-      queryKeys.storageQuota.current(),
-    );
-    if (!queryState?.data) {
-      return;
-    }
-
-    if (queryState.dataUpdatedAt <= this.quotaSnapshotLoadedAt) {
-      return;
-    }
-
-    this.quotaSnapshot = queryState.data;
-    this.quotaSnapshotLoadedAt = queryState.dataUpdatedAt;
-  }
-
-  private setQuotaSnapshot(quota: UserStorageQuotaDto): void {
-    this.quotaSnapshot = quota;
-    this.quotaSnapshotLoadedAt = Date.now();
-    queryClient.setQueryData(queryKeys.storageQuota.current(), quota);
-  }
-
-  private refreshQuotaSnapshot(): void {
-    if (this.quotaRefreshInFlight) {
-      return;
-    }
-
-    this.quotaRefreshInFlight = storageQuotaApi
-      .getCurrent()
-      .then((quota) => {
-        this.setQuotaSnapshot(quota);
-      })
-      .catch(() => {
-        this.quotaSnapshot = null;
-        this.quotaSnapshotLoadedAt = Date.now();
-      })
-      .finally(() => {
-        this.quotaRefreshRequiredForCurrentBatch = false;
-        this.quotaRefreshInFlight = null;
-        this.pump();
-      });
-  }
-
-  private tryReserveQuotaForTask(task: UploadTaskInternal): boolean {
-    if (task._replaceNodeFileId) {
-      return true;
-    }
-
-    const quota = this.quotaSnapshot;
-    if (!quota?.quotaBytes || quota.availableBytes === null) {
-      return true;
-    }
-
-    const availableBytes = Math.max(
-      0,
-      quota.availableBytes - this.pendingQuotaBytes,
-    );
-    if (task._file.size > availableBytes) {
-      task.status = "failed";
-      task.completedAt = Date.now();
-      task.errorKey = "storageQuotaExceeded";
-      task.errorParams = { available: formatBytes(availableBytes) };
-      return false;
-    }
-
-    task._quotaReservationBytes = task._file.size;
-    this.pendingQuotaBytes += task._quotaReservationBytes;
-    return true;
-  }
-
-  private releaseQuotaReservation(
-    task: UploadTaskInternal,
-    committed: boolean,
-  ): void {
-    const reservationBytes = task._quotaReservationBytes ?? 0;
-    if (reservationBytes <= 0) {
-      return;
-    }
-
-    task._quotaReservationBytes = undefined;
-    this.pendingQuotaBytes = Math.max(
-      0,
-      this.pendingQuotaBytes - reservationBytes,
-    );
-    if (committed && this.quotaSnapshot) {
-      this.setQuotaSnapshot({
-        ...this.quotaSnapshot,
-        usedBytes: this.quotaSnapshot.usedBytes + reservationBytes,
-        availableBytes:
-          this.quotaSnapshot.availableBytes === null
-            ? null
-            : Math.max(0, this.quotaSnapshot.availableBytes - reservationBytes),
-      });
-    }
-  }
-
   private pump() {
     if (this.pumping) return;
     this.pumping = true;
 
     try {
-      while (this.activeUploads < this.fileConcurrency.current) {
+      while (this.runner.canStart()) {
         const next = this.tasks.find((t) => t.status === "queued");
         if (!next) {
           if (!this.hasActiveTasks()) {
@@ -688,17 +358,17 @@ export class UploadManager {
           continue;
         }
 
-        if (this.shouldRefreshQuotaSnapshot()) {
-          this.refreshQuotaSnapshot();
+        if (this.quota.shouldRefresh()) {
+          this.quota.refresh();
           return;
         }
 
-        if (!this.tryReserveQuotaForTask(next)) {
+        if (!this.quota.tryReserve(next)) {
           this.emit();
           continue;
         }
 
-        this.startTask(next, {
+        this.runner.startTask(next, {
           maxChunkSizeBytes: settings.maxChunkSizeBytes,
           supportedHashAlgorithm: settings.supportedHashAlgorithm,
         });
@@ -706,173 +376,6 @@ export class UploadManager {
     } finally {
       this.pumping = false;
     }
-  }
-
-  private startTask(task: UploadTaskInternal, server: UploadServerParams) {
-    this.activeUploads += 1;
-    task.status = "uploading";
-    task.error = undefined;
-    task.uploadSpeedBytesPerSec = 0;
-    task._startedAt = Date.now();
-    task._sawProgress = false;
-    task._laneProbeConsumed = false;
-    task._bytesTransferredForSpeed = 0;
-
-    const executionState: UploadExecutionState = {
-      encryptionTask: null,
-      encryptionTaskFinished: false,
-      lastEmitTime: 0,
-      taskEstimator: new RollingBytesPerSecondEstimator({
-        windowMs: 1500,
-        minDurationMs: 250,
-      }),
-    };
-
-    task._laneProbeTimeout = setTimeout(() => {
-      this.maybeOpenLaneForHeadOfLine(task, Date.now());
-    }, uploadConfig.fileHeadOfLineProbeMs);
-
-    this.emit();
-
-    void this.executeTask(task, server, executionState);
-  }
-
-  private async executeTask(
-    task: UploadTaskInternal,
-    server: UploadServerParams,
-    state: UploadExecutionState,
-  ): Promise<void> {
-    try {
-      const uploadedFile = await uploadFileToNode({
-        file: task._file,
-        nodeId: task.nodeId,
-        replaceNodeFileId: task._replaceNodeFileId,
-        server,
-        encrypt: task._encrypt,
-        onEncryptProgress: (bytesEncrypted, bytesTotal) =>
-          this.updateEncryptionProgress(
-            task,
-            state,
-            bytesEncrypted,
-            bytesTotal,
-          ),
-        onEncryptComplete: () => this.completeEncryption(state),
-        onProgress: (bytesUploaded, snapshot) =>
-          this.updateUploadProgress(task, state, bytesUploaded, snapshot),
-        onFinalizing: () => {
-          task.status = "finalizing";
-          this.emit();
-        },
-      });
-
-      this.completeUpload(task, uploadedFile);
-    } catch (error) {
-      this.failUpload(task, state, error instanceof Error ? error : null);
-    } finally {
-      this.finishTaskExecution(task);
-    }
-  }
-
-  private updateEncryptionProgress(
-    task: UploadTaskInternal,
-    state: UploadExecutionState,
-    bytesEncrypted: number,
-    bytesTotal: number,
-  ): void {
-    state.encryptionTask ??= this.createTask({
-      kind: "encrypt",
-      label: task.fileName,
-      scopeLabel: task.nodeLabel,
-      bytesTotal,
-    });
-    state.encryptionTask.update({
-      status: "running",
-      bytesTotal,
-      bytesCompleted: bytesEncrypted,
-    });
-  }
-
-  private completeEncryption(state: UploadExecutionState): void {
-    state.encryptionTaskFinished = true;
-    state.encryptionTask?.complete();
-  }
-
-  private updateUploadProgress(
-    task: UploadTaskInternal,
-    state: UploadExecutionState,
-    bytesUploaded: number,
-    snapshot?: UploadProgressSnapshot,
-  ): void {
-    const previousBytesUploaded = task.bytesUploaded;
-    task.bytesUploaded = Math.min(task.bytesTotal, Math.max(0, bytesUploaded));
-    task.progress01 =
-      task.bytesTotal > 0 ? task.bytesUploaded / task.bytesTotal : 1;
-
-    const now = Date.now();
-    this.updateUploadSpeed(task, state, snapshot, now);
-    const delta = task.bytesUploaded - previousBytesUploaded;
-    this.updateOverallUploadProgress(delta);
-
-    if (this.shouldEmitUploadProgress(task, state.lastEmitTime, delta, now)) {
-      state.lastEmitTime = now;
-      this.emit();
-    }
-  }
-
-  private updateUploadSpeed(
-    task: UploadTaskInternal,
-    state: UploadExecutionState,
-    snapshot: UploadProgressSnapshot | undefined,
-    now: number,
-  ): void {
-    if (task.bytesUploaded > 0) {
-      task._sawProgress = true;
-      this.maybeOpenLaneForHeadOfLine(task, now);
-    }
-
-    const previousSpeedBytes = task._bytesTransferredForSpeed ?? 0;
-    const nextSpeedBytes = Math.max(
-      previousSpeedBytes,
-      snapshot ? snapshot.bytesTransmitted : task.bytesUploaded,
-    );
-    const speedDelta = nextSpeedBytes - previousSpeedBytes;
-    if (speedDelta <= 0) {
-      return;
-    }
-
-    task._bytesTransferredForSpeed = nextSpeedBytes;
-    const taskRate = state.taskEstimator.update(nextSpeedBytes, now);
-    task.uploadSpeedBytesPerSec =
-      taskRate.rollingBytesPerSec > 0
-        ? taskRate.rollingBytesPerSec
-        : taskRate.averageBytesPerSec;
-    this.overallBytesTransferredForSpeed += speedDelta;
-    this.overallEstimator.update(this.overallBytesTransferredForSpeed, now);
-  }
-
-  private updateOverallUploadProgress(delta: number): void {
-    if (delta === 0) {
-      return;
-    }
-
-    this.overallBytesUploaded += delta;
-    this.overallBytesUploaded = Math.max(
-      0,
-      Math.min(this.overallBytesTotal, this.overallBytesUploaded),
-    );
-  }
-
-  private shouldEmitUploadProgress(
-    task: UploadTaskInternal,
-    lastEmitTime: number,
-    delta: number,
-    now: number,
-  ): boolean {
-    return (
-      delta < 0 ||
-      now - lastEmitTime >= uploadConfig.progressEmitIntervalMs ||
-      task.bytesUploaded >= task.bytesTotal
-    );
   }
 
   private completeUpload(
@@ -892,23 +395,15 @@ export class UploadManager {
     }
 
     task.status = "completed";
-    this.releaseQuotaReservation(task, true);
+    this.quota.release(task, true);
     task.completedAt = Date.now();
     const beforeFinalize = task.bytesUploaded;
     task.bytesUploaded = task.bytesTotal;
     task.progress01 = 1;
 
-    const finalizeDelta = task.bytesUploaded - beforeFinalize;
-    if (finalizeDelta > 0) {
-      this.overallBytesUploaded += finalizeDelta;
-      this.overallEstimator.update(this.overallBytesUploaded, Date.now());
-    }
+    this.progress.complete(task, beforeFinalize);
 
-    this.fileConcurrency.observe({
-      bytes: task.bytesTotal,
-      durationMs: task.completedAt - (task._startedAt ?? task.completedAt),
-      succeeded: true,
-    });
+    this.runner.observe(task, true);
     this.emit();
 
     if (!uploadedFileCached) {
@@ -921,90 +416,23 @@ export class UploadManager {
     state: UploadExecutionState,
     error: Error | null,
   ): void {
-    this.releaseQuotaReservation(task, false);
+    this.quota.release(task, false);
     const errorMessage = getApiErrorMessage(error) ?? error?.message;
     if (state.encryptionTask && !state.encryptionTaskFinished) {
       state.encryptionTask.fail({
         message: errorMessage,
-        key: this.getEncryptionErrorKey(error),
-        params: this.getUploadErrorParams(error),
+        key: getEncryptionErrorKey(error),
+        params: getUploadErrorParams(error),
       });
     }
 
     task.status = "failed";
     task.completedAt = Date.now();
     task.error = errorMessage;
-    task.errorKey = this.getUploadErrorKey(error);
-    task.errorParams = this.getUploadErrorParams(error);
-    this.fileConcurrency.observe({
-      bytes: task.bytesTotal,
-      durationMs: task.completedAt - (task._startedAt ?? task.completedAt),
-      succeeded: false,
-    });
+    task.errorKey = getUploadErrorKey(error);
+    task.errorParams = getUploadErrorParams(error);
+    this.runner.observe(task, false);
     this.emit();
-  }
-
-  private getEncryptionErrorKey(error: Error | null): string {
-    if (error instanceof NoKeyError) {
-      return "encryptionVaultLocked";
-    }
-
-    if (error instanceof ClientEncryptionSizeLimitError) {
-      return "clientEncryptionFileTooLarge";
-    }
-
-    return "encryptionFailed";
-  }
-
-  private getUploadErrorKey(error: Error | null): string {
-    if (error instanceof NoKeyError) {
-      return "encryptionVaultLocked";
-    }
-
-    if (error instanceof ClientEncryptionSizeLimitError) {
-      return "clientEncryptionFileTooLarge";
-    }
-
-    return "uploadFailed";
-  }
-
-  private getUploadErrorParams(
-    error: Error | null,
-  ): Record<string, string | number> | undefined {
-    return error instanceof ClientEncryptionSizeLimitError
-      ? { maxSize: formatBytes(error.maxBytes) }
-      : undefined;
-  }
-
-  private finishTaskExecution(task: UploadTaskInternal): void {
-    if (task._laneProbeTimeout) {
-      clearTimeout(task._laneProbeTimeout);
-      task._laneProbeTimeout = undefined;
-    }
-
-    this.activeUploads = Math.max(0, this.activeUploads - 1);
-    this.pump();
-  }
-
-  private maybeOpenLaneForHeadOfLine(task: UploadTaskInternal, now: number) {
-    if (
-      task._laneProbeConsumed ||
-      !task._sawProgress ||
-      this.fileConcurrency.current > 1 ||
-      !this.tasks.some((t) => t.status === "queued")
-    ) {
-      return;
-    }
-
-    const startedAt = task._startedAt ?? now;
-    if (now - startedAt < uploadConfig.fileHeadOfLineProbeMs) {
-      return;
-    }
-
-    task._laneProbeConsumed = true;
-    if (this.fileConcurrency.tryIncrease()) {
-      this.pump();
-    }
   }
 
   destroy(): void {
@@ -1017,12 +445,7 @@ export class UploadManager {
       this.refreshTimeout = null;
       this.refreshNodeIds.clear();
     }
-    for (const task of this.tasks) {
-      if (task._laneProbeTimeout) {
-        clearTimeout(task._laneProbeTimeout);
-        task._laneProbeTimeout = undefined;
-      }
-    }
+    this.runner.destroy(this.tasks);
     globalHashWorkerPool.destroy();
   }
 
