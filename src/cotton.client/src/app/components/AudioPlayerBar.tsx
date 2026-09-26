@@ -32,41 +32,14 @@ import {
   selectAudioPlayerShuffleEnabled,
   useAudioPlayerStore,
 } from "../../shared/store/audioPlayerStore";
-import { useTrackLyricsQuery } from "../../shared/api/queries/audio";
 import { AudioPlayer } from "../../shared/ui/AudioPlayer";
 import { AudioLyricsView } from "../../shared/ui/AudioLyricsView";
-import { findActiveLrcLineIndex, type LrcLine } from "../../shared/utils/lrc";
+import { useAudioLyricsPlayback } from "./useAudioLyricsPlayback";
+import { useAudioPlayerBarOffset } from "./useAudioPlayerBarOffset";
 import {
   getAudioDisplaySubtitle,
   getAudioDisplayTitle,
 } from "../../shared/utils/mediaMetadata";
-
-type LyricsStatus = "idle" | "loading" | "ready" | "notFound" | "error";
-
-type LyricsPlaybackState = {
-  key: string;
-  activeIndex: number;
-  countdown: number | null;
-  started: boolean;
-  countdownConsumed: boolean;
-};
-
-const createLyricsPlaybackState = (key: string): LyricsPlaybackState => ({
-  key,
-  activeIndex: 0,
-  countdown: null,
-  started: false,
-  countdownConsumed: false,
-});
-
-const buildLyricsPlaybackKey = (
-  fileId: string | null,
-  lines: ReadonlyArray<LrcLine>,
-): string => {
-  const firstLineTime = lines[0]?.timeSeconds ?? "";
-  const lastLineTime = lines[lines.length - 1]?.timeSeconds ?? "";
-  return [fileId ?? "", lines.length, firstLineTime, lastLineTime].join(":");
-};
 
 export const AudioPlayerBar: React.FC = () => {
   const { t } = useTranslation(["audioPlayer"]);
@@ -94,43 +67,8 @@ export const AudioPlayerBar: React.FC = () => {
     [],
   );
   const [queueOpen, setQueueOpen] = React.useState<boolean>(false);
-  const [lyricsPlaybackState, setLyricsPlaybackState] =
-    React.useState<LyricsPlaybackState>(() => createLyricsPlaybackState(""));
 
-  const paperRef = React.useRef<HTMLDivElement | null>(null);
-
-  React.useLayoutEffect(() => {
-    const root = document.documentElement;
-
-    if (!open) {
-      root.style.setProperty("--audio-player-bar-offset", "0px");
-      return;
-    }
-
-    const el = paperRef.current;
-    if (!el) {
-      return;
-    }
-
-    const update = () => {
-      const heightPx = Math.ceil(el.getBoundingClientRect().height);
-      root.style.setProperty(
-        "--audio-player-bar-offset",
-        `calc(${heightPx}px + env(safe-area-inset-bottom, 0px))`,
-      );
-    };
-
-    update();
-
-    if (typeof ResizeObserver === "undefined") {
-      return;
-    }
-
-    const ro = new ResizeObserver(() => update());
-    ro.observe(el);
-
-    return () => ro.disconnect();
-  }, [open]);
+  const paperRef = useAudioPlayerBarOffset(open);
 
   const playlistTotal = playlist.length;
   const currentIndex = React.useMemo<number>(() => {
@@ -161,116 +99,18 @@ export const AudioPlayerBar: React.FC = () => {
     failedCoverPreviewUrl === currentPreviewUrl;
   const effectiveLyricsOpen = open && lyricsOpen;
 
-  const lyricsAudioFileName = currentItem?.name ?? currentFileName;
-  const lyricsQuery = useTrackLyricsQuery({
-    folderNodeId: currentItem?.nodeId ?? null,
-    audioFileName: lyricsAudioFileName,
-    enabled: effectiveLyricsOpen,
+  const {
+    lyricsLines,
+    lyricsStatus,
+    lyricsPlayback,
+    lyricsListenEnabled,
+    handleListen,
+  } = useAudioLyricsPlayback({
+    currentFileId,
+    currentFileName,
+    currentItem,
+    effectiveLyricsOpen,
   });
-  const lyricsLines = React.useMemo<ReadonlyArray<LrcLine>>(
-    () => lyricsQuery.data ?? [],
-    [lyricsQuery.data],
-  );
-  const lyricsStatus: LyricsStatus = lyricsQuery.isPending
-    ? effectiveLyricsOpen
-      ? "loading"
-      : "idle"
-    : lyricsQuery.isError
-      ? "error"
-      : lyricsLines.length > 0
-        ? "ready"
-        : "notFound";
-
-  const lyricsPlaybackKey = React.useMemo(
-    () => buildLyricsPlaybackKey(currentFileId, lyricsLines),
-    [currentFileId, lyricsLines],
-  );
-  const lyricsPlayback =
-    lyricsPlaybackState.key === lyricsPlaybackKey
-      ? lyricsPlaybackState
-      : createLyricsPlaybackState(lyricsPlaybackKey);
-  const lyricsListenEnabled = effectiveLyricsOpen && lyricsLines.length > 0;
-
-  const handleListen = React.useCallback(
-    (timeSeconds: number) => {
-      if (!lyricsListenEnabled) return;
-
-      const firstTime = lyricsLines[0]?.timeSeconds;
-      if (typeof firstTime !== "number") {
-        return;
-      }
-
-      setLyricsPlaybackState((previous) => {
-        const current =
-          previous.key === lyricsPlaybackKey
-            ? previous
-            : createLyricsPlaybackState(lyricsPlaybackKey);
-        const started = timeSeconds >= firstTime;
-
-        if (started) {
-          const nextActiveIndex = findActiveLrcLineIndex(
-            lyricsLines,
-            timeSeconds,
-          );
-          if (
-            current.started &&
-            current.countdown === null &&
-            current.countdownConsumed &&
-            current.activeIndex === nextActiveIndex
-          ) {
-            return current;
-          }
-
-          return {
-            ...current,
-            activeIndex: nextActiveIndex,
-            countdown: null,
-            started: true,
-            countdownConsumed: true,
-          };
-        }
-
-        if (current.countdownConsumed) {
-          if (!current.started && current.countdown === null) {
-            return current;
-          }
-
-          return {
-            ...current,
-            countdown: null,
-            started: false,
-          };
-        }
-
-        const delta = firstTime - timeSeconds;
-
-        if (delta > 3) {
-          if (!current.started && current.countdown === null) {
-            return current;
-          }
-
-          return {
-            ...current,
-            countdown: null,
-            started: false,
-          };
-        }
-
-        const safeDelta = Math.max(0.0001, delta);
-        const nextCountdown = Math.ceil(safeDelta);
-        if (!current.started && current.countdown === nextCountdown) {
-          return current;
-        }
-
-        return {
-          ...current,
-          countdown: nextCountdown,
-          started: false,
-        };
-      });
-    },
-    [lyricsLines, lyricsListenEnabled, lyricsPlaybackKey],
-  );
 
   const positionLabel =
     playlistTotal > 1 ? `${currentIndex + 1}/${playlistTotal}` : null;
