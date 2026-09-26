@@ -10,350 +10,29 @@ import Slideshow from "yet-another-react-lightbox/plugins/slideshow";
 import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
 import Share from "yet-another-react-lightbox/plugins/share";
 import "yet-another-react-lightbox/plugins/thumbnails.css";
-import type { Slide } from "yet-another-react-lightbox";
-import {
-  Close,
-  Share as ShareIcon,
-  Pause as PauseIcon,
-  Download as DownloadIcon,
-  Slideshow as SlideshowIcon,
-  DeleteOutline as DeleteIcon,
-} from "@mui/icons-material";
-import { CircularProgress } from "@mui/material";
-import { useActivityDetection } from "../../hooks/useActivityDetection";
-import type {
-  MediaLightboxProps,
-  SlideHlsVideo,
-  SlideWithTitle,
-} from "@shared/types/mediaLightbox";
-import {
-  HLS_VIDEO_SLIDE_TYPE,
-  isSlideWithTitle,
-} from "@shared/types/mediaLightbox";
+import { DeleteOutline as DeleteIcon } from "@mui/icons-material";
+import type { MediaLightboxProps } from "@shared/types/mediaLightbox";
 import { useMediaLightboxUrls } from "./useMediaLightboxUrls";
 import { stopLightboxMediaPlayback } from "./mediaLightboxPlayback";
 import { useMediaSessionSource } from "../../hooks/useMediaSessionSource";
 import { MEDIA_SESSION_SOURCE_PRIORITY } from "../../utils/mediaSessionCoordinator";
 import { buildVideoMediaSessionTrack } from "../../utils/mediaSessionTrack";
-import { shareLinks } from "../../utils/shareLinks";
 import {
   selectGalleryPreferPreview,
   useUserPreferencesStore,
 } from "../../store/userPreferencesStore";
-import { HlsVideoSlide } from "./HlsVideoSlide";
 
 const LIGHTBOX_ANIMATION_MS = 200;
-const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
 const TOUCH_CONTROLS_AUTOHIDE_MS = 2500;
-const LIGHTBOX_TITLE_SEPARATOR = "\u2022";
-type LightboxIndexState = {
-  key: string;
-  index: number;
-};
+const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
+import { useLightboxIndex, useActiveVideoElement } from "./useLightboxState";
+import { useMediaLightboxRender } from "./mediaLightboxRender";
+import { useLightboxTouchControls } from "./useLightboxTouchControls";
+import { useLightboxSharing } from "./useLightboxSharing";
+import { useActivityDetection } from "../../hooks/useActivityDetection";
 
-type ClosingState = {
-  open: boolean;
-  closing: boolean;
-};
-
-type IndexOrUpdater = number | ((current: number) => number);
-
-type DeleteProgressState = {
-  itemId: string | null;
-  inProgress: boolean;
-};
-
-type ActiveVideoState = {
-  key: string;
-  fileId: string;
-  element: HTMLVideoElement;
-};
-
-type SetActiveVideoElementForFile = (
-  fileId: string,
-  element: HTMLVideoElement | null,
-) => void;
-
-const buildLightboxIndexKey = (
-  open: boolean,
-  initialIndex: number,
-  items: MediaLightboxProps["items"],
-): string => {
-  if (!open) {
-    return "closed";
-  }
-
-  return [initialIndex, items[initialIndex]?.id ?? ""].join("\u0000");
-};
-
-const resolveIndex = (current: number, next: IndexOrUpdater): number => {
-  return typeof next === "function" ? next(current) : next;
-};
-
-type HlsVideoLightboxSlideProps = {
-  currentItemId: string | null;
-  errorText: string;
-  noticeText: string;
-  offset: number;
-  setActiveVideoElementForFile: SetActiveVideoElementForFile;
-  slide: Slide;
-};
-
-const HlsVideoLightboxSlide = ({
-  currentItemId,
-  errorText,
-  noticeText,
-  offset,
-  setActiveVideoElementForFile,
-  slide,
-}: HlsVideoLightboxSlideProps) => {
-  if (slide.type !== HLS_VIDEO_SLIDE_TYPE || !isSlideWithTitle(slide)) {
-    return undefined;
-  }
-
-  const hlsSlide: SlideHlsVideo & SlideWithTitle = slide;
-  return (
-    <HlsVideoSlide
-      src={hlsSlide.src}
-      poster={hlsSlide.poster}
-      width={hlsSlide.width}
-      height={hlsSlide.height}
-      active={offset === 0 && hlsSlide.fileId === currentItemId}
-      onVideoElementChange={(element) =>
-        setActiveVideoElementForFile(hlsSlide.fileId, element)
-      }
-      noticeText={noticeText}
-      errorText={errorText}
-    />
-  );
-};
-
-const MediaLightboxSlideHeader = ({ slide }: { slide: Slide }) => {
-  const maybeTitle = isSlideWithTitle(slide) ? slide.title : undefined;
-  const title = typeof maybeTitle === "string" ? maybeTitle : "";
-  const parts = title
-    .split(LIGHTBOX_TITLE_SEPARATOR)
-    .map((p: string) => p.trim())
-    .filter((p: string) => p.length > 0);
-
-  const counter = parts[0] ?? "";
-  const size = parts.length >= 3 ? (parts[1] ?? "") : "";
-  const name = parts.length >= 2 ? (parts[parts.length - 1] ?? "") : "";
-
-  return (
-    <div className="media-lightbox__header" aria-label={title}>
-      <span className="media-lightbox__counter">{counter}</span>
-      <span className="media-lightbox__meta">
-        {size ? (
-          <>
-            <span className="media-lightbox__sep">
-              {LIGHTBOX_TITLE_SEPARATOR}
-            </span>
-            <span className="media-lightbox__size">{size}</span>
-          </>
-        ) : null}
-        {name ? (
-          <>
-            <span className="media-lightbox__sep">
-              {LIGHTBOX_TITLE_SEPARATOR}
-            </span>
-            <span className="media-lightbox__name">{name}</span>
-          </>
-        ) : null}
-      </span>
-    </div>
-  );
-};
-
-type MediaLightboxSlideContainerProps = {
-  children?: React.ReactNode;
-  currentItemId: string | null;
-  handleSlideImageError: (slide: Slide) => void;
-  setActiveVideoElementForFile: SetActiveVideoElementForFile;
-  slide: Slide;
-};
-
-const MediaLightboxSlideContainer = ({
-  children,
-  currentItemId,
-  handleSlideImageError,
-  setActiveVideoElementForFile,
-  slide,
-}: MediaLightboxSlideContainerProps) => {
-  const lightboxSlide = slide as Partial<SlideWithTitle>;
-  const fileId =
-    typeof lightboxSlide.fileId === "string" ? lightboxSlide.fileId : null;
-  const previewUrl =
-    slide.type === "image"
-      ? (slide as { thumbnail?: string }).thumbnail
-      : undefined;
-
-  return (
-    <div
-      className="media-lightbox__tap-area"
-      data-cotton-media-lightbox-file-id={fileId ?? undefined}
-      onPlayCapture={(event) => {
-        const target = event.target;
-        if (
-          fileId &&
-          fileId === currentItemId &&
-          target instanceof HTMLVideoElement
-        ) {
-          setActiveVideoElementForFile(fileId, target);
-        }
-      }}
-      onErrorCapture={() => {
-        void handleSlideImageError(slide);
-      }}
-    >
-      {previewUrl && (
-        <img
-          src={previewUrl}
-          alt=""
-          aria-hidden
-          draggable={false}
-          className="media-lightbox__preview-bg"
-        />
-      )}
-      {children}
-    </div>
-  );
-};
-
-type UseMediaLightboxRenderOptions = {
-  currentItemId: string | null;
-  handleSlideImageError: (slide: Slide) => void;
-  hlsErrorText: string;
-  hlsNoticeText: string;
-  setActiveVideoElementForFile: SetActiveVideoElementForFile;
-};
-
-const useMediaLightboxRender = ({
-  currentItemId,
-  handleSlideImageError,
-  hlsErrorText,
-  hlsNoticeText,
-  setActiveVideoElementForFile,
-}: UseMediaLightboxRenderOptions) =>
-  React.useMemo(
-    () => ({
-      buttonZoom: () => null,
-      iconZoomIn: () => null,
-      iconZoomOut: () => null,
-      iconLoading: () => <CircularProgress size={28} />,
-      iconClose: () => <Close />,
-      iconShare: () => <ShareIcon />,
-      iconDownload: () => <DownloadIcon />,
-      iconSlideshowPause: () => <PauseIcon />,
-      iconSlideshowPlay: () => <SlideshowIcon />,
-      slide: ({ slide, offset }: { slide: Slide; offset: number }) =>
-        slide.type === HLS_VIDEO_SLIDE_TYPE ? (
-          <HlsVideoLightboxSlide
-            currentItemId={currentItemId}
-            errorText={hlsErrorText}
-            noticeText={hlsNoticeText}
-            offset={offset}
-            setActiveVideoElementForFile={setActiveVideoElementForFile}
-            slide={slide}
-          />
-        ) : undefined,
-      slideHeader: ({ slide }: { slide: Slide }) => (
-        <MediaLightboxSlideHeader slide={slide} />
-      ),
-      slideContainer: ({
-        children,
-        slide,
-      }: {
-        children?: React.ReactNode;
-        slide: Slide;
-      }) => (
-        <MediaLightboxSlideContainer
-          currentItemId={currentItemId}
-          handleSlideImageError={handleSlideImageError}
-          setActiveVideoElementForFile={setActiveVideoElementForFile}
-          slide={slide}
-        >
-          {children}
-        </MediaLightboxSlideContainer>
-      ),
-    }),
-    [
-      currentItemId,
-      handleSlideImageError,
-      hlsErrorText,
-      hlsNoticeText,
-      setActiveVideoElementForFile,
-    ],
-  );
-
-const useLightboxIndex = (
-  open: boolean,
-  initialIndex: number,
-  items: MediaLightboxProps["items"],
-) => {
-  const indexKey = buildLightboxIndexKey(open, initialIndex, items);
-  const [indexState, setIndexState] = React.useState<LightboxIndexState>(
-    () => ({
-      key: indexKey,
-      index: initialIndex,
-    }),
-  );
-  const rawIndex =
-    indexState.key === indexKey ? indexState.index : initialIndex;
-  const index = items.length === 0 ? 0 : Math.min(rawIndex, items.length - 1);
-  const setLightboxIndex = React.useCallback(
-    (next: IndexOrUpdater) => {
-      setIndexState((currentState) => {
-        const current =
-          currentState.key === indexKey
-            ? currentState
-            : { key: indexKey, index: initialIndex };
-        const nextIndex = resolveIndex(current.index, next);
-        if (nextIndex === current.index) {
-          return currentState.key === indexKey ? currentState : current;
-        }
-
-        return { key: indexKey, index: nextIndex };
-      });
-    },
-    [indexKey, initialIndex],
-  );
-
-  return { index, indexKey, setLightboxIndex };
-};
-
-const useActiveVideoElement = (
-  indexKey: string,
-  currentItemId: string | null,
-) => {
-  const [activeVideoState, setActiveVideoState] =
-    React.useState<ActiveVideoState | null>(null);
-  const activeVideoElement =
-    activeVideoState?.key === indexKey &&
-    activeVideoState.fileId === currentItemId
-      ? activeVideoState.element
-      : null;
-  const setActiveVideoElementForFile = React.useCallback(
-    (fileId: string, element: HTMLVideoElement | null) => {
-      setActiveVideoState((current) => {
-        if (!element) {
-          return current?.key === indexKey && current.fileId === fileId
-            ? null
-            : current;
-        }
-
-        return { key: indexKey, fileId, element };
-      });
-    },
-    [indexKey],
-  );
-
-  return {
-    activeVideoElement,
-    setActiveVideoElementForFile,
-    setActiveVideoState,
-  };
-};
+type ClosingState = { open: boolean; closing: boolean };
+type DeleteProgressState = { itemId: string | null; inProgress: boolean };
 
 export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   items,
@@ -424,8 +103,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   );
 
   const isActive = useActivityDetection(TOUCH_CONTROLS_AUTOHIDE_MS);
-  const [touchControlsVisible, setTouchControlsVisible] =
-    React.useState<boolean>(true);
+  const {
+    touchControlsVisible,
+    showTouchControls,
+    toggleTouchControls,
+    setTouchControlsVisible,
+  } = useLightboxTouchControls(open, isTouchDevice);
   const [closingState, setClosingState] = React.useState<ClosingState>(() => ({
     open,
     closing: false,
@@ -435,68 +118,13 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     isClosing = false;
     setClosingState({ open, closing: false });
   }
-  const touchControlsTimerRef = React.useRef<number | null>(null);
-
-  const clearTouchControlsTimer = React.useCallback(() => {
-    if (touchControlsTimerRef.current !== null) {
-      window.clearTimeout(touchControlsTimerRef.current);
-      touchControlsTimerRef.current = null;
-    }
-  }, []);
-
-  const showTouchControls = React.useCallback(() => {
-    if (!isTouchDevice) return;
-
-    setTouchControlsVisible(true);
-    clearTouchControlsTimer();
-
-    touchControlsTimerRef.current = window.setTimeout(() => {
-      setTouchControlsVisible(false);
-      touchControlsTimerRef.current = null;
-    }, TOUCH_CONTROLS_AUTOHIDE_MS);
-  }, [clearTouchControlsTimer, isTouchDevice]);
-
   const handleClose = React.useCallback(() => {
     setClosingState({ open, closing: true });
     stopLightboxMediaPlayback();
     setActiveVideoState(null);
     setTouchControlsVisible(true);
     onClose();
-  }, [onClose, open, setActiveVideoState]);
-
-  const toggleTouchControls = React.useCallback(() => {
-    if (!isTouchDevice) return;
-
-    setTouchControlsVisible((previous) => {
-      const next = !previous;
-      clearTouchControlsTimer();
-
-      if (next) {
-        touchControlsTimerRef.current = window.setTimeout(() => {
-          setTouchControlsVisible(false);
-          touchControlsTimerRef.current = null;
-        }, TOUCH_CONTROLS_AUTOHIDE_MS);
-      }
-
-      return next;
-    });
-  }, [clearTouchControlsTimer, isTouchDevice]);
-
-  React.useEffect(() => {
-    if (!open || !isTouchDevice) {
-      return;
-    }
-
-    clearTouchControlsTimer();
-    touchControlsTimerRef.current = window.setTimeout(() => {
-      setTouchControlsVisible(false);
-      touchControlsTimerRef.current = null;
-    }, TOUCH_CONTROLS_AUTOHIDE_MS);
-
-    return () => {
-      clearTouchControlsTimer();
-    };
-  }, [open, isTouchDevice, clearTouchControlsTimer]);
+  }, [onClose, open, setActiveVideoState, setTouchControlsVisible]);
 
   const [deleteProgress, setDeleteProgress] =
     React.useState<DeleteProgressState>(() => ({
@@ -577,41 +205,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     currentItemId,
   });
 
-  const handleCustomDownload = React.useCallback(
-    async ({
-      slide,
-      saveAs,
-    }: {
-      slide: Slide;
-      saveAs: (source: string | Blob, name?: string) => void;
-    }) => {
-      if (!isSlideWithTitle(slide)) return;
-      const downloadUrl = await resolveSlideDownloadUrl(slide);
-      if (!downloadUrl) return;
-      saveAs(downloadUrl, slide.fileName);
-    },
-    [resolveSlideDownloadUrl],
-  );
-
-  const handleCustomShare = React.useCallback(
-    async ({ slide }: { slide: Slide }) => {
-      if (!isSlideWithTitle(slide)) return;
-      if (!navigator.canShare) return;
-
-      const downloadUrl = await resolveSlideDownloadUrl(slide);
-      if (!downloadUrl) return;
-
-      const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadUrl);
-      const shareUrl = token ? shareLinks.buildShareUrl(token) : downloadUrl;
-      const sharePayload = { title: slide.fileName, url: shareUrl };
-
-      if (!navigator.canShare(sharePayload)) return;
-
-      navigator.share(sharePayload).catch(() => {
-        // Ignore dismissed share sheets.
-      });
-    },
-    [resolveSlideDownloadUrl],
+  const { handleCustomDownload, handleCustomShare } = useLightboxSharing(
+    resolveSlideDownloadUrl,
   );
 
   React.useEffect(() => {
