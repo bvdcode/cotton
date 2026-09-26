@@ -24,6 +24,10 @@ export default defineConfig([
       },
     },
     rules: {
+      "max-lines": [
+        "error",
+        { max: 400, skipBlankLines: true, skipComments: true },
+      ],
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unsafe-type-assertion": "error",
       "no-restricted-syntax": [
