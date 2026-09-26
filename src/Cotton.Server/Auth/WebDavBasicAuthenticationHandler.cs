@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
-using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
@@ -43,13 +42,6 @@ namespace Cotton.Server.Auth
             encoderShouldEmitUTF8Identifier: false,
             throwOnInvalidBytes: true);
         private const string RateLimitedContextItemKey = "__cotton_webdav_basic_rate_limited";
-
-        private IPAddress GetRequestIpAddress()
-        {
-            return Constants.IsPublicInstance
-                ? IPAddress.Loopback
-                : Request.GetTrustedClientIPAddress();
-        }
 
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
@@ -271,7 +263,7 @@ namespace Cotton.Server.Auth
                 "WebDAV auth: invalid token for user '{Username}' ({UserId}). Remote IP: {RemoteIp}",
                 user.Username,
                 user.Id,
-                GetRequestIpAddress());
+                Request.GetTrustedClientIPAddress());
 
             try
             {
@@ -279,7 +271,7 @@ namespace Cotton.Server.Auth
                     geoLookup,
                     user.Id,
                     username,
-                    GetRequestIpAddress(),
+                    Request.GetTrustedClientIPAddress(),
                     Request.Headers.UserAgent);
             }
             catch (Exception ex)

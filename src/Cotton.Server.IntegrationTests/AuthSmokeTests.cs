@@ -289,7 +289,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task Login_StoresClientDeviceNameInSession()
+        public async Task Login_StoresClientMetadataInSession()
         {
             Assert.That(_client, Is.Not.Null);
 
@@ -306,9 +306,12 @@ namespace Cotton.Server.IntegrationTests
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", payload!.AccessToken);
             List<SessionDto>? sessions = await _client.GetFromJsonAsync<List<SessionDto>>("/api/v1/auth/sessions");
 
-            Assert.That(
-                sessions?.Single(session => session.IsCurrentSession).Device,
-                Is.EqualTo("Cotton Sync Desktop (CI workstation)"));
+            SessionDto? session = sessions?.Single(session => session.IsCurrentSession);
+            Assert.Multiple(() =>
+            {
+                Assert.That(session?.Device, Is.EqualTo("Cotton Sync Desktop (CI workstation)"));
+                Assert.That(session?.IpAddress, Is.EqualTo("8.8.4.4"));
+            });
         }
 
         [Test]

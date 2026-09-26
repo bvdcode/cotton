@@ -59,7 +59,7 @@ public class AppCodeOAuthController(
         Guid approvalId = Guid.NewGuid();
         DateTime now = DateTime.UtcNow;
         DateTime expiresAt = now.Add(RequestLifetime);
-        IPAddress originAddress = ResolveRequestIpAddress(Request);
+        IPAddress originAddress = Request.GetTrustedClientIPAddress();
         string origin = originAddress.ToString();
         string userAgent = Request.Headers.UserAgent.ToString();
 
@@ -414,13 +414,6 @@ public class AppCodeOAuthController(
     private static string CreatePollToken(Guid approvalId, string pollSecret)
     {
         return $"{approvalId:D}.{pollSecret}";
-    }
-
-    private static IPAddress ResolveRequestIpAddress(HttpRequest request)
-    {
-        return Constants.IsPublicInstance
-            ? IPAddress.Loopback
-            : request.GetTrustedClientIPAddress();
     }
 
     private static string NormalizeGeoField(string? value)

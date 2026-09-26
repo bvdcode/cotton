@@ -34,7 +34,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
-using System.Net;
 using CottonLoginRequestDto = Cotton.Auth.LoginRequestDto;
 using CottonStreamCipher = Cotton.Crypto.IStreamCipher;
 
@@ -86,7 +85,7 @@ namespace Cotton.Server.Controllers
                 _settings,
                 _logger,
                 userId,
-                GetRequestIpAddress(),
+                Request.GetTrustedClientIPAddress(),
                 Request.Headers.UserAgent);
             return Ok(token);
         }
@@ -192,7 +191,7 @@ namespace Cotton.Server.Controllers
                     _geoLookup,
                     user.Id,
                     request.Username,
-                    GetRequestIpAddress(),
+                    Request.GetTrustedClientIPAddress(),
                     Request.Headers.UserAgent);
                 return false;
             }
@@ -224,7 +223,7 @@ namespace Cotton.Server.Controllers
                     _geoLookup,
                     user.Id,
                     maxFailedAttempts,
-                    GetRequestIpAddress(),
+                    Request.GetTrustedClientIPAddress(),
                     Request.Headers.UserAgent);
                 return this.ApiForbidden("Maximum number of TOTP verification attempts exceeded");
             }
@@ -241,7 +240,7 @@ namespace Cotton.Server.Controllers
                     _geoLookup,
                     user.Id,
                     user.TotpFailedAttempts,
-                    GetRequestIpAddress(),
+                    Request.GetTrustedClientIPAddress(),
                     Request.Headers.UserAgent);
                 return this.ApiForbidden("Invalid two-factor authentication code");
             }
@@ -348,13 +347,6 @@ namespace Cotton.Server.Controllers
             AuthType authType)
         {
             return await _sessionIssuer.SignInAsync(user, trustDevice, authType, HttpContext.RequestAborted);
-        }
-
-        private IPAddress GetRequestIpAddress()
-        {
-            return Constants.IsPublicInstance
-                ? IPAddress.Loopback
-                : Request.GetTrustedClientIPAddress();
         }
 
         private async Task<User?> TryGetNewUserAsync(CottonLoginRequestDto request)

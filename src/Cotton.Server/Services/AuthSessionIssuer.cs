@@ -37,7 +37,6 @@ namespace Cotton.Server.Services
         ILogger<AuthSessionIssuer> _logger)
     {
         private const string UnknownGeoLabel = "Unknown";
-        private const string DemoGeoLabel = "Demo";
 
         public async Task<AuthSessionResponseDto> SignInAsync(
             User user,
@@ -57,7 +56,7 @@ namespace Cotton.Server.Services
                 _settings,
                 _logger,
                 user.Id,
-                GetRequestIpAddress(request),
+                dbToken.IpAddress,
                 request.Headers.UserAgent);
 
             return new()
@@ -87,7 +86,7 @@ namespace Cotton.Server.Services
             string? sessionId = null)
         {
             HttpRequest request = GetRequest();
-            IPAddress ipAddress = GetRequestIpAddress(request);
+            IPAddress ipAddress = request.GetTrustedClientIPAddress();
             GeoLookupResult? lookup = await _geoLookup.TryLookupAsync(ipAddress);
             (string City, string Region, string Country) geo = ResolveRefreshTokenGeoFields(lookup);
             sessionId ??= StringHelpers.CreateRandomString(AuthController.RefreshTokenLength);
@@ -140,21 +139,9 @@ namespace Cotton.Server.Services
                 ?? throw new InvalidOperationException("HTTP response is required to issue an auth session.");
         }
 
-        private static IPAddress GetRequestIpAddress(HttpRequest request)
-        {
-            return Constants.IsPublicInstance
-                ? IPAddress.Loopback
-                : request.GetTrustedClientIPAddress();
-        }
-
         private static (string City, string Region, string Country) ResolveRefreshTokenGeoFields(
             GeoLookupResult? lookup)
         {
-            if (lookup is null && Constants.IsPublicInstance)
-            {
-                return (DemoGeoLabel, string.Empty, string.Empty);
-            }
-
             return (
                 NormalizeGeoField(lookup?.City),
                 NormalizeGeoField(lookup?.Region),
