@@ -92,7 +92,7 @@ namespace Cotton.Server.Extensions
 
         internal static string GetRemoteAddressPartition(HttpContext httpContext)
         {
-            return httpContext.Request.GetTrustedClientIPAddress().ToString();
+            return httpContext.Request.GetRateLimitClientIPAddress().ToString();
         }
 
         private static IActionResult? GetPublicShareLookupRejection(

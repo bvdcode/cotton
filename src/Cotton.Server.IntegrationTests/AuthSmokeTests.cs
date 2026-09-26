@@ -199,7 +199,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task Login_IsRateLimited()
+        public async Task Login_CannotBypassRateLimitByChangingForwardedAddress()
         {
             Assert.That(_client, Is.Not.Null);
 
@@ -222,7 +222,7 @@ namespace Cotton.Server.IntegrationTests
             using HttpResponseMessage limitedLogin = await PostLoginAsync(
                 "limiteduser",
                 "wrong-password",
-                ipAddress);
+                "8.8.4.4");
             CottonResult? result = await limitedLogin.Content.ReadFromJsonAsync<CottonResult>();
             Assert.Multiple(() =>
             {

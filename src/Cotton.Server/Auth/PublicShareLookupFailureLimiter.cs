@@ -15,7 +15,7 @@ namespace Cotton.Server.Auth
         private readonly PartitionedRateLimiter<HttpRequest> _limiter;
 
         public PublicShareLookupFailureLimiter()
-            : this(request => request.GetTrustedClientIPAddress().ToString())
+            : this(request => request.GetRateLimitClientIPAddress().ToString())
         {
         }
 

@@ -3314,7 +3314,7 @@
     "securityDiagnostics": {
       "trustedProxy": {
         "field": "Proxy de confiance",
-        "threatVector": "Un attaquant pouvant joindre Cotton directement, ou via un proxy qui ne nettoie pas les en-têtes, peut changer son adresse apparente et contourner les limites par IP.",
+        "threatVector": "Un client peut falsifier l’adresse IP enregistrée dans les sessions et notifications. Derrière un proxy non configuré, tous les clients partagent la même limite de requêtes.",
         "fix": "Dans les paramètres généraux, choisissez Sans proxy pour un déploiement direct, ou utilisez Auto ou saisissez l’adresse du proxy directement connecté, puis vérifiez et enregistrez. Le proxy doit remplacer les en-têtes transmis par le client.",
         "passed": "Le mode de confiance de l’adresse client est explicitement configuré"
       },

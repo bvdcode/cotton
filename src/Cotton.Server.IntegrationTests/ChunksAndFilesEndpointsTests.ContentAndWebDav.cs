@@ -225,7 +225,9 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(failed.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
             }
 
-            HttpResponseMessage limited = await _client.GetAsync("/api/v1/webdav");
+            using HttpRequestMessage limitedRequest = new(HttpMethod.Get, "/api/v1/webdav");
+            limitedRequest.Headers.Add("X-Forwarded-For", "203.0.113.42");
+            using HttpResponseMessage limited = await _client.SendAsync(limitedRequest);
             Assert.That(limited.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
         }
 

@@ -288,7 +288,7 @@ namespace Cotton.Server.Auth
 
         private AuthenticateResult? TryRejectRateLimitedCredentials(string username)
         {
-            if (!authenticationFailureLimiter.IsLimited(Request.GetTrustedClientIPAddress(), username))
+            if (!authenticationFailureLimiter.IsLimited(Request.GetRateLimitClientIPAddress(), username))
             {
                 return null;
             }
@@ -297,13 +297,13 @@ namespace Cotton.Server.Auth
             Logger.LogWarning(
                 "WebDAV auth: rate limited username '{Username}' from remote IP {RemoteIp}.",
                 username,
-                Request.GetTrustedClientIPAddress());
+                Request.GetRateLimitClientIPAddress());
             return AuthenticateResult.Fail("Too many WebDAV authentication attempts.");
         }
 
         private void RecordAuthenticationFailure(string username)
         {
-            if (authenticationFailureLimiter.RecordFailure(Request.GetTrustedClientIPAddress(), username))
+            if (authenticationFailureLimiter.RecordFailure(Request.GetRateLimitClientIPAddress(), username))
             {
                 Context.Items[RateLimitedContextItemKey] = true;
             }
@@ -311,7 +311,7 @@ namespace Cotton.Server.Auth
 
         private void ClearAuthenticationFailures(string username)
         {
-            authenticationFailureLimiter.Clear(Request.GetTrustedClientIPAddress(), username);
+            authenticationFailureLimiter.Clear(Request.GetRateLimitClientIPAddress(), username);
         }
 
         private AuthenticateResult AuthenticateSuccess(Guid userId, string username)

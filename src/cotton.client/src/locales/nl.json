@@ -3315,7 +3315,7 @@
     "securityDiagnostics": {
       "trustedProxy": {
         "field": "Vertrouwde proxy",
-        "threatVector": "Een aanvaller die Cotton rechtstreeks kan bereiken, of via een proxy die headers niet opschoont, kan het zichtbare clientadres wijzigen en IP-limieten omzeilen.",
+        "threatVector": "Een client kan het IP-adres in sessies en meldingen vervalsen. Achter een niet-ingestelde proxy delen alle clients één verzoeklimiet.",
         "fix": "Kies bij Algemene instellingen Zonder proxy voor een directe installatie, of gebruik Automatisch of voer het adres van de direct verbonden proxy in en controleer en bewaar dit. Een proxy moet doorgestuurde clientheaders overschrijven.",
         "passed": "De vertrouwensmodus voor clientadressen is expliciet ingesteld"
       },

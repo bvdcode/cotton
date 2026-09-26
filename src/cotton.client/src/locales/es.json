@@ -3062,7 +3062,7 @@
     "securityDiagnostics": {
       "trustedProxy": {
         "field": "Proxy de confianza",
-        "threatVector": "Un atacante con acceso directo a Cotton o a través de un proxy que no limpie encabezados puede cambiar su dirección aparente y eludir límites basados en IP.",
+        "threatVector": "Un cliente puede falsificar la IP guardada en sesiones y notificaciones. Detrás de un proxy sin configurar, todos los clientes comparten un mismo límite de solicitudes.",
         "fix": "En Configuración general, elige Sin proxy para una instalación directa, o usa Automático o introduce la dirección del proxy inmediato y después verifica y guarda. El proxy debe sobrescribir los encabezados reenviados por el cliente.",
         "passed": "El modo de confianza de la dirección del cliente está configurado explícitamente"
       },

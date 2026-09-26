@@ -3310,7 +3310,7 @@
     "securityDiagnostics": {
       "trustedProxy": {
         "field": "Vertrauenswürdiger Proxy",
-        "threatVector": "Ein Angreifer mit direktem Zugriff auf Cotton oder über einen Proxy ohne Header-Bereinigung kann seine scheinbare Clientadresse wechseln und IP-basierte Limits umgehen.",
+        "threatVector": "Ein Client kann die in Sitzungen und Benachrichtigungen gespeicherte IP-Adresse fälschen. Hinter einem nicht konfigurierten Proxy teilen sich alle Clients ein Anfragelimit.",
         "fix": "Unter Allgemeine Einstellungen für eine direkte Bereitstellung Ohne Proxy wählen oder Automatisch verwenden bzw. die Adresse des unmittelbar verbundenen Proxys eingeben und anschließend prüfen und speichern. Ein Proxy muss Client-Forwarding-Header überschreiben.",
         "passed": "Der Vertrauensmodus für Clientadressen ist ausdrücklich konfiguriert"
       },

@@ -3316,7 +3316,7 @@
     "securityDiagnostics": {
       "trustedProxy": {
         "field": "Proxy attendibile",
-        "threatVector": "Un attaccante che può raggiungere Cotton direttamente, o tramite un proxy che non pulisce gli header, può cambiare l’indirizzo apparente e aggirare i limiti basati su IP.",
+        "threatVector": "Un client può falsificare l’IP registrato nelle sessioni e nelle notifiche. Dietro un proxy non configurato, tutti i client condividono lo stesso limite di richieste.",
         "fix": "Nelle impostazioni generali scegli Senza proxy per una distribuzione diretta, oppure usa Auto o inserisci l’indirizzo del proxy collegato direttamente, quindi verifica e salva. Il proxy deve sovrascrivere gli header di inoltro inviati dal client.",
         "passed": "La modalità di attendibilità dell’indirizzo client è configurata esplicitamente"
       },
