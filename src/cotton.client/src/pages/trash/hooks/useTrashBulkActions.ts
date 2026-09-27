@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useCallback, useState } from "react";
 import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
 import { filesApi } from "../../../shared/api/filesApi";
@@ -131,7 +132,7 @@ const runTrashDeleteTask = async (args: {
       await deleteTrashTarget(target);
     } catch (error) {
       failed += 1;
-      console.error(
+      reportClientError(
         "Failed to delete " + target.diagnosticsLabel + " " + target.id + ":",
         error,
       );

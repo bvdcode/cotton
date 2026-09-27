@@ -24,7 +24,7 @@ type FakeMediaElement = HTMLMediaElement & {
 const createFakeMediaElement = (): FakeMediaElement => {
   const listeners = new Map<string, Set<EventListenerOrEventListenerObject>>();
 
-  return {
+  const element: Pick<FakeMediaElement, "paused" | "readyState" | "networkState" | "duration" | "currentTime" | "playbackRate" | "addEventListener" | "removeEventListener" | "emit"> = {
     paused: false,
     readyState: 4,
     networkState: 1,
@@ -48,7 +48,8 @@ const createFakeMediaElement = (): FakeMediaElement => {
         }
       }
     },
-  } as unknown as FakeMediaElement;
+  };
+  return element as FakeMediaElement;
 };
 
 describe("useMediaSessionSource", () => {

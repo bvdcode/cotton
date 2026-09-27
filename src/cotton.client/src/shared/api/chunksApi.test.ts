@@ -1,5 +1,5 @@
 import type { AxiosProgressEvent, AxiosResponse } from "axios";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@shared/ui/notifications", () => ({
   toast: { error: vi.fn() },
@@ -20,10 +20,6 @@ vi.mock("../store/authStore", () => ({
 
 const { httpClient } = await import("./httpClient");
 const { chunksApi } = await import("./chunksApi");
-
-beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => undefined);
-});
 
 afterEach(() => {
   vi.restoreAllMocks();

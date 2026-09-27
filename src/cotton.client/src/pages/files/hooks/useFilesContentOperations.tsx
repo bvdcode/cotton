@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@mui/material";
 import type { QueryClient } from "@tanstack/react-query";
@@ -122,7 +123,7 @@ export const useFilesContentOperations = ({
           reloadCurrentNode();
         }
       } catch (error) {
-        console.error("Failed to undo media delete:", error);
+        reportClientError("Failed to undo media delete:", error);
         toast.error(t("preview.deleteUndoFailed", { ns: "files" }));
       }
     },
@@ -179,7 +180,7 @@ export const useFilesContentOperations = ({
       fileOps.handleRenameFile(displayFile.id, displayFile.name);
       void refreshNodeContent(nodeId);
     } catch (error) {
-      console.error("Failed to create markdown file:", error);
+      reportClientError("Failed to create markdown file:", error);
       showToast(
         t("uploadDrop.errors.createMarkdownFileFailed", { ns: "files" }),
         "error",

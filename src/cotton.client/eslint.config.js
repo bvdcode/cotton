@@ -30,8 +30,37 @@ export default defineConfig([
       ],
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unsafe-type-assertion": "error",
+      "no-console": "error",
+      "no-restricted-globals": [
+        "error",
+        { name: "localStorage", message: "Use application state instead." },
+      ],
       "no-restricted-syntax": [
         "error",
+        {
+          selector: 'Identifier[name="console"]',
+          message: "Use the client diagnostics module instead of console.",
+        },
+        {
+          selector: 'MemberExpression[property.value="console"]',
+          message: "Use the client diagnostics module instead of console.",
+        },
+        {
+          selector: "TSUnknownKeyword",
+          message: "Use a specific type and validate data at its boundary.",
+        },
+        {
+          selector: 'MemberExpression[property.name="localStorage"]',
+          message: "Use application state instead of localStorage.",
+        },
+        {
+          selector: 'MemberExpression[property.value="localStorage"]',
+          message: "Use application state instead of localStorage.",
+        },
+        {
+          selector: "TSAsExpression > TSAsExpression",
+          message: "Nested type assertions are not allowed.",
+        },
         {
           selector:
             'TSTypeReference[typeName.name="Array"] > TSTypeParameterInstantiation > TSTypeLiteral',
@@ -50,7 +79,6 @@ export default defineConfig([
     files: ["**/*.test.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-unsafe-type-assertion": "off",
-      "no-restricted-syntax": "off",
     },
   },
   {

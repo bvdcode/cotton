@@ -18,7 +18,7 @@ interface SetupSettingsApi {
   setTelemetry(value: boolean): Promise<void>;
   setGeoIpLookupMode(value: GeoIpLookupMode): Promise<void>;
   setCustomGeoIpLookupUrl(value: string): Promise<void>;
-  testCustomGeoIpLookupUrl(): Promise<unknown>;
+  testCustomGeoIpLookupUrl(): Promise<JsonValue>;
   setStorageType(value: StorageType): Promise<void>;
   setS3Config(value: S3Config): Promise<void>;
   setEmailMode(value: EmailMode): Promise<void>;
@@ -43,31 +43,31 @@ const mapUsageAnswer = (value: string): ServerUsage => {
   }
 };
 
-const toStorageType = (value: unknown): StorageType =>
+const toStorageType = (value: JsonValue): StorageType =>
   typeof value === "string" && value.toLowerCase() === "s3" ? "S3" : "Local";
 
-const toEmailMode = (value: unknown): EmailMode => {
+const toEmailMode = (value: JsonValue): EmailMode => {
   if (typeof value !== "string") return "None";
   if (value.toLowerCase() === "cloud") return "Cloud";
   if (value.toLowerCase() === "custom") return "Custom";
   return "None";
 };
 
-const toComputionMode = (value: unknown): ComputionMode => {
+const toComputionMode = (value: JsonValue): ComputionMode => {
   if (typeof value !== "string") return "Local";
   if (value.toLowerCase() === "cloud") return "Cloud";
   if (value.toLowerCase() === "remote") return "Remote";
   return "Local";
 };
 
-const toStorageSpaceMode = (value: unknown): StorageSpaceMode => {
+const toStorageSpaceMode = (value: JsonValue): StorageSpaceMode => {
   if (typeof value !== "string") return "Optimal";
   if (value.toLowerCase() === "limited") return "Limited";
   if (value.toLowerCase() === "unlimited") return "Unlimited";
   return "Optimal";
 };
 
-const toGeoIpLookupMode = (value: unknown): GeoIpLookupMode => {
+const toGeoIpLookupMode = (value: JsonValue): GeoIpLookupMode => {
   if (typeof value !== "string") return "Disabled";
   if (value.toLowerCase() === "cottoncloud") return "CottonCloud";
   if (value.toLowerCase() === "maxmindlocal") return "MaxMindLocal";

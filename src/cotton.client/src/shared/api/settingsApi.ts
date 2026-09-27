@@ -1,3 +1,4 @@
+import { reportClientWarning } from "@shared/utils/clientDiagnostics";
 import {
   mergeCloudflareMetadata,
   mergeDetectedProxyServices,
@@ -115,7 +116,7 @@ export const settingsApi = {
   setChunkSize: async (
     maxChunkSizeBytes: number,
   ): Promise<ChunkSizeSettings> => {
-    const response = await httpClient.patch<unknown>(
+    const response = await httpClient.patch<JsonValue>(
       `server/settings/chunk-size/${maxChunkSizeBytes}`,
     );
     return parseValidated(
@@ -134,7 +135,7 @@ export const settingsApi = {
   setCompressionLevel: async (
     compressionLevel: number,
   ): Promise<StoragePipelineSettings> => {
-    const response = await httpClient.patch<unknown>(
+    const response = await httpClient.patch<JsonValue>(
       `server/settings/compression-level/${compressionLevel}`,
     );
     return parseValidated(
@@ -147,7 +148,7 @@ export const settingsApi = {
   setCipherChunkSize: async (
     cipherChunkSizeBytes: number,
   ): Promise<StoragePipelineSettings> => {
-    const response = await httpClient.patch<unknown>(
+    const response = await httpClient.patch<JsonValue>(
       `server/settings/cipher-chunk-size/${cipherChunkSizeBytes}`,
     );
     return parseValidated(
@@ -160,7 +161,7 @@ export const settingsApi = {
   setEncryptionThreads: async (
     encryptionThreads: number,
   ): Promise<StoragePipelineSettings> => {
-    const response = await httpClient.patch<unknown>(
+    const response = await httpClient.patch<JsonValue>(
       `server/settings/encryption-threads/${encryptionThreads}`,
     );
     return parseValidated(
@@ -239,7 +240,7 @@ export const settingsApi = {
 
   getObservedProxyInfo: async (): Promise<ObservedProxyInfo> => {
     const path = "server/settings/trusted-proxy-ip-address/observed";
-    const response = await httpClient.get<unknown>(path);
+    const response = await httpClient.get<JsonValue>(path);
     const result = parseValidated(path, response.data, observedProxyInfoSchema);
     return {
       ...result,
@@ -257,7 +258,7 @@ export const settingsApi = {
   verifyAndSaveTrustedProxyIpAddress: async (
     ipAddress: string | null,
   ): Promise<TrustedProxyVerificationResult> => {
-    const response = await httpClient.post<unknown>(
+    const response = await httpClient.post<JsonValue>(
       "server/settings/trusted-proxy-ip-address/verify-and-save",
       ipAddress,
     );
@@ -326,7 +327,7 @@ export const settingsApi = {
     mode: ComputionMode,
   ): Promise<ComputationStatus | null> => {
     const path = `server/settings/compution-mode/${mode}`;
-    const response = await httpClient.patch<unknown>(path);
+    const response = await httpClient.patch<JsonValue>(path);
     if (response.status === 204) {
       return null;
     }
@@ -414,7 +415,7 @@ export const settingsApi = {
 
   testCustomGeoIpLookupUrl: async (): Promise<CustomGeoIpLookupTestResult> => {
     const url = "server/settings/custom-geoip-lookup-url/test";
-    const response = await httpClient.post<unknown>(url);
+    const response = await httpClient.post<JsonValue>(url);
     return parseValidated(
       url,
       response.data,
@@ -434,7 +435,7 @@ export const settingsApi = {
       try {
         await settingsApi.saveSetupStep(stepKey, answers);
       } catch (error) {
-        console.warn(`Failed to save setup step "${stepKey}"`, error);
+        reportClientWarning(`Failed to save setup step "${stepKey}"`, error);
       }
     }
   },

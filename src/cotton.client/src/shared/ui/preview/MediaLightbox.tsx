@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import Lightbox, { IconButton } from "yet-another-react-lightbox";
@@ -156,7 +157,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         handleClose();
       }
     } catch (error) {
-      console.error("Failed to delete media item:", error);
+      reportClientError("Failed to delete media item:", error);
     } finally {
       deleteInProgressRef.current = {
         itemId: currentItemId,

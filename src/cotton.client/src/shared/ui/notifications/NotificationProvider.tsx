@@ -76,8 +76,8 @@ const ThemedNotificationContent = forwardRef<
         elevation={theme.palette.mode === "dark" ? 10 : 8}
         sx={{
           width: "100%",
-          minWidth: { xs: "calc(100vw - 32px)", sm: 360 },
-          maxWidth: { xs: "calc(100vw - 32px)", sm: 520 },
+          minWidth: { xs: "calc(100% - 32px)", sm: 360 },
+          maxWidth: { xs: "calc(100% - 32px)", sm: 520 },
           borderRadius: 2,
           border: `1px solid ${alpha(tone.main, theme.palette.mode === "dark" ? 0.42 : 0.28)}`,
           bgcolor: theme.palette.background.paper,

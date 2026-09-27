@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { JsonValue } from "../types/json";
 
 vi.mock("@shared/ui/notifications", () => ({
   toast: { error: vi.fn() },
@@ -41,16 +42,12 @@ const makeNode = (id = nodeId) => ({
   metadata: {},
 });
 
-const makeContent = (files: unknown[] = []) => ({
+const makeContent = (files: JsonValue[] = []) => ({
   id: nodeId,
   createdAt: "2026-05-17T00:00:00Z",
   updatedAt: "2026-05-17T00:00:00Z",
   nodes: [makeNode("child-1")],
   files,
-});
-
-beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
 afterEach(() => {

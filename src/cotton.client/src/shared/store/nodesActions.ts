@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import { layoutsApi, type NodeDto } from "../api/layoutsApi";
 import { isAxiosError } from "../api/httpClient";
@@ -140,7 +141,7 @@ const scheduleRootResolve = (options?: {
         });
       }
     } catch (error) {
-      console.error("Failed to resolve root node in background", error);
+      reportClientError("Failed to resolve root node in background", error);
     }
   })();
 
@@ -175,7 +176,7 @@ export const loadRoot = async (options?: {
     await loadNode(root.id, { loadChildren });
     return root;
   } catch (error) {
-    console.error("Failed to resolve root node", error);
+    reportClientError("Failed to resolve root node", error);
     useNodesStore.setState({
       loading: false,
       error: tFileError("errors.resolveRootFailed"),
@@ -261,7 +262,7 @@ const tryRecoverRootNodeAsync = async (
     });
     return true;
   } catch (recoveryError) {
-    console.error("Failed to recover root node", recoveryError);
+    reportClientError("Failed to recover root node", recoveryError);
     useNodesStore.setState({
       loading: false,
       error: tFileError("errors.resolveRootFailed"),
@@ -359,16 +360,16 @@ const getLoadNodeErrorMessage = (statusCode: number | undefined): string =>
     ? tFileError("errors.folderNotFound")
     : tFileError("errors.loadContentsFailed");
 
-const handleLoadNodeFailureAsync = async (
+const handleLoadNodeFailureAsync = async <T>(
   nodeId: string,
-  error: unknown,
+  error: T,
   options: LoadNodeOptions,
 ): Promise<void> => {
   const statusCode = isAxiosError(error) ? error.response?.status : undefined;
   const recovered = await tryRecoverRootNodeAsync(nodeId, statusCode, options);
   if (recovered) return;
 
-  console.error("Failed to load node view", error);
+  reportClientError("Failed to load node view", error);
   useNodesStore.setState({
     loading: false,
     error: getLoadNodeErrorMessage(statusCode),

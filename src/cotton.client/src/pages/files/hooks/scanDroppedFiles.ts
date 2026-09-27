@@ -13,7 +13,7 @@ export type DroppedScanResult = {
   skippedItems: string[];
 };
 
-const isNotFoundError = (error: unknown): boolean => {
+const isNotFoundError = <T>(error: T): boolean => {
   if (error instanceof DOMException) return error.name === "NotFoundError";
   if (error instanceof Error) return error.name === "NotFoundError";
   return readStringProperty(error, "name") === "NotFoundError";

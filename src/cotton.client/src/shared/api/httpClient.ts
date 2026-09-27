@@ -1,9 +1,11 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import axios, {
   type AxiosError,
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from "axios";
 import { z } from "zod";
+import { isJsonObject, type JsonValue } from "../types/json";
 import { getRefreshEnabled, useAuthStore } from "../store/authStore";
 import { toast } from "@shared/ui/notifications";
 import { translateError } from "../i18n/translateError";
@@ -18,10 +20,7 @@ type ToastAwareAxiosError = AxiosError & {
   _apiErrorToastDispatched?: boolean;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const normalizeMessage = (value: unknown): string | null => {
+const normalizeMessage = (value: JsonValue | undefined): string | null => {
   if (typeof value !== "string") {
     return null;
   }
@@ -30,7 +29,7 @@ const normalizeMessage = (value: unknown): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-const collectStringMessages = (value: unknown, output: string[]): void => {
+const collectStringMessages = (value: JsonValue, output: string[]): void => {
   if (typeof value === "string") {
     const trimmed = value.trim();
     if (trimmed.length > 0) {
@@ -44,7 +43,7 @@ const collectStringMessages = (value: unknown, output: string[]): void => {
     return;
   }
 
-  if (!isRecord(value)) {
+  if (!isJsonObject(value)) {
     return;
   }
 
@@ -52,9 +51,9 @@ const collectStringMessages = (value: unknown, output: string[]): void => {
 };
 
 const extractApiValidationErrorMessage = (
-  responseData: unknown,
+  responseData: JsonValue | undefined,
 ): string | null => {
-  if (!isRecord(responseData)) {
+  if (responseData === undefined || !isJsonObject(responseData)) {
     return null;
   }
 
@@ -69,14 +68,14 @@ const extractApiValidationErrorMessage = (
 };
 
 export const extractApiErrorMessage = (
-  responseData: unknown,
+  responseData: JsonValue | undefined,
 ): string | null => {
   const plainTextMessage = normalizeMessage(responseData);
   if (plainTextMessage) {
     return plainTextMessage;
   }
 
-  if (!isRecord(responseData)) {
+  if (responseData === undefined || !isJsonObject(responseData)) {
     return null;
   }
 
@@ -88,8 +87,8 @@ export const extractApiErrorMessage = (
   );
 };
 
-export const getApiErrorMessage = (error: unknown): string | null => {
-  if (!axios.isAxiosError(error)) {
+export const getApiErrorMessage = <T>(error: T): string | null => {
+  if (!axios.isAxiosError<JsonValue>(error)) {
     return null;
   }
 
@@ -113,7 +112,7 @@ const dispatchApiErrorToast = (error: AxiosError, message: string): void => {
   toastAwareError._apiErrorToastDispatched = true;
 };
 
-const tryDispatchApiErrorToast = (error: AxiosError): void => {
+const tryDispatchApiErrorToast = (error: AxiosError<JsonValue>): void => {
   const requestUrl = error.config?.url ?? "";
   if (requestUrl.includes("auth/refresh")) {
     return;
@@ -132,8 +131,8 @@ export const hasApiErrorToastBeenDispatched = (error: AxiosError): boolean => {
   return toastAwareError._apiErrorToastDispatched === true;
 };
 
-export const showApiErrorToast = (
-  error: unknown,
+export const showApiErrorToast = <T>(
+  error: T,
   fallbackMessage: string,
   toastId: string,
 ): void => {
@@ -190,7 +189,7 @@ const dispatchLogoutEventOnce = (): void => {
   window.dispatchEvent(new CustomEvent("auth:logout"));
 };
 
-const isMissingRefreshSession = (error: unknown): boolean => {
+const isMissingRefreshSession = <T>(error: T): boolean => {
   if (!axios.isAxiosError(error)) {
     return false;
   }
@@ -204,9 +203,9 @@ const disableRefreshAndLogout = (): void => {
   dispatchLogoutEventOnce();
 };
 
-const isServerLockedResponse = (error: AxiosError): boolean =>
+const isServerLockedResponse = (error: AxiosError<JsonValue>): boolean =>
   error.response?.status === 423 &&
-  isRecord(error.response.data) &&
+  isJsonObject(error.response.data) &&
   error.response.data.locked === true;
 
 const redirectToUnlockOnce = (): void => {
@@ -326,7 +325,7 @@ export const httpClient = axios.create({
 const SCHEMA_VALIDATION_TOAST_ID = "api-schema-validation";
 
 const reportSchemaFailure = (url: string, error: z.ZodError): void => {
-  console.error(`[httpClient] Schema validation failed for ${url}:`, error);
+  reportClientError(`[httpClient] Schema validation failed for ${url}:`, error);
 
   if (typeof window !== "undefined") {
     toast.error(translateError("common", "errors.schemaValidationFailed"), {
@@ -335,9 +334,9 @@ const reportSchemaFailure = (url: string, error: z.ZodError): void => {
   }
 };
 
-export const parseValidated = <TSchema extends z.ZodTypeAny>(
+export const parseValidated = <TSchema extends z.ZodTypeAny, TData>(
   url: string,
-  data: unknown,
+  data: TData,
   schema: TSchema,
 ): z.infer<TSchema> => {
   const result = schema.safeParse(data);
@@ -355,7 +354,7 @@ export const getValidated = async <TSchema extends z.ZodTypeAny>(
   schema: TSchema,
   config?: AxiosRequestConfig,
 ): Promise<z.infer<TSchema>> => {
-  const response = await httpClient.get<unknown>(url, config);
+  const response = await httpClient.get<JsonValue>(url, config);
   return parseValidated(url, response.data, schema);
 };
 
@@ -380,7 +379,7 @@ httpClient.interceptors.request.use(
 // Response interceptor - handle 401 with refresh queue
 httpClient.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
+  async (error: AxiosError<JsonValue>) => {
     const originalRequest = error.config;
     if (!originalRequest) {
       tryDispatchApiErrorToast(error);

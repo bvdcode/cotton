@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AUTH_STORAGE_KEY } from "../config/storageKeys";
 
-const localStorageMock = vi.hoisted(() => {
+const sessionStorageMock = vi.hoisted(() => {
   const values = new Map<string, string>();
   const storage: Storage = {
     get length() {
@@ -19,7 +20,7 @@ const localStorageMock = vi.hoisted(() => {
     },
   };
 
-  Object.defineProperty(globalThis, "localStorage", {
+  Object.defineProperty(globalThis, "sessionStorage", {
     value: storage,
     configurable: true,
   });
@@ -31,7 +32,7 @@ import { getRefreshEnabled, useAuthStore } from "./authStore";
 
 describe("authStore", () => {
   beforeEach(() => {
-    localStorageMock.clear();
+    sessionStorageMock.clear();
     useAuthStore.setState({
       user: null,
       phase: "booting",
@@ -44,6 +45,20 @@ describe("authStore", () => {
 
     expect(getRefreshEnabled()).toBe(false);
     expect(useAuthStore.getState().phase).toBe("anonymous");
+    expect(sessionStorageMock.getItem(AUTH_STORAGE_KEY)).toContain(
+      '"refreshEnabled":false',
+    );
+  });
+
+  it("restores the refresh setting from this tab's storage", async () => {
+    sessionStorageMock.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({ state: { refreshEnabled: false }, version: 0 }),
+    );
+
+    await useAuthStore.persist.rehydrate();
+
+    expect(getRefreshEnabled()).toBe(false);
   });
 
   it("uses one phase value for authenticated and anonymous transitions", () => {
@@ -67,9 +82,9 @@ describe("authStore", () => {
     expect(getRefreshEnabled()).toBe(true);
   });
 
-  it("updates auth state when localStorage is unavailable", () => {
-    const availableStorage = globalThis.localStorage;
-    Object.defineProperty(globalThis, "localStorage", {
+  it("updates auth state when sessionStorage is unavailable", () => {
+    const availableStorage = globalThis.sessionStorage;
+    Object.defineProperty(globalThis, "sessionStorage", {
       value: undefined,
       configurable: true,
     });
@@ -78,7 +93,7 @@ describe("authStore", () => {
       expect(() => useAuthStore.getState().logoutLocal()).not.toThrow();
       expect(getRefreshEnabled()).toBe(false);
     } finally {
-      Object.defineProperty(globalThis, "localStorage", {
+      Object.defineProperty(globalThis, "sessionStorage", {
         value: availableStorage,
         configurable: true,
       });

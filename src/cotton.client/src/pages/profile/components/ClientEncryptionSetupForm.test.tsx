@@ -21,9 +21,9 @@ const cryptoMocks = vi.hoisted(() => ({
 vi.mock("../../../shared/crypto", () => ({
   persistEnvelope: cryptoMocks.persistEnvelope,
   setupEnvelope: cryptoMocks.setupEnvelope,
-  useVault: (
-    selector: (state: { unlock: typeof cryptoMocks.unlock }) => unknown,
-  ) => selector({ unlock: cryptoMocks.unlock }),
+  useVault: <T,>(
+    selector: (state: { unlock: typeof cryptoMocks.unlock }) => T,
+  ): T => selector({ unlock: cryptoMocks.unlock }),
 }));
 
 const recoveryPhrase = Array.from(

@@ -1,4 +1,5 @@
 import { getValidated, httpClient, parseValidated } from "./httpClient";
+import type { JsonValue } from "../types/json";
 import type { BaseDto, Guid, NodeDto } from "./layoutsApi";
 import { readRequiredIntHeader } from "./utils/headerUtils";
 import {
@@ -97,7 +98,7 @@ export const nodesApi = {
     const requestedPage = options?.page ?? 1;
     const requestedPageSize = options?.pageSize ?? 1000000;
     const url = `/layouts/nodes/${nodeId}/children`;
-    const response = await httpClient.get<unknown>(url, {
+    const response = await httpClient.get<JsonValue>(url, {
       params: {
         page: requestedPage,
         pageSize: requestedPageSize,
@@ -117,7 +118,7 @@ export const nodesApi = {
 
   createNode: async (request: CreateNodeRequest): Promise<NodeDto> => {
     const url = "layouts/nodes";
-    const response = await httpClient.put<unknown>(url, request);
+    const response = await httpClient.put<JsonValue>(url, request);
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
@@ -132,7 +133,7 @@ export const nodesApi = {
     request: RenameNodeRequest,
   ): Promise<NodeDto> => {
     const url = `/layouts/nodes/${nodeId}/rename`;
-    const response = await httpClient.patch<unknown>(url, request);
+    const response = await httpClient.patch<JsonValue>(url, request);
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
@@ -141,7 +142,7 @@ export const nodesApi = {
     request: MoveNodeRequest,
   ): Promise<NodeDto> => {
     const url = `/layouts/nodes/${nodeId}/move`;
-    const response = await httpClient.patch<unknown>(url, request);
+    const response = await httpClient.patch<JsonValue>(url, request);
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
@@ -150,7 +151,7 @@ export const nodesApi = {
     patch: Record<string, string>,
   ): Promise<NodeDto> => {
     const url = `/layouts/nodes/${nodeId}/metadata`;
-    const response = await httpClient.patch<unknown>(url, patch);
+    const response = await httpClient.patch<JsonValue>(url, patch);
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
@@ -159,7 +160,7 @@ export const nodesApi = {
     options: RestoreOptions = {},
   ): Promise<RestoreOutcomeDto> => {
     const url = `/layouts/nodes/${nodeId}/restore`;
-    const response = await httpClient.post<unknown>(url, {
+    const response = await httpClient.post<JsonValue>(url, {
       createMissingParents: options.createMissingParents ?? false,
       overwrite: options.overwrite ?? false,
     });

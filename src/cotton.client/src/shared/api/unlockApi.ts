@@ -36,12 +36,12 @@ const isMainAppReady = async (): Promise<boolean> => {
 };
 
 const isUnlockStatusResponse = (
-  value: unknown,
-): value is UnlockStatusResponse =>
-  isRecord(value) && typeof value.requiresBootstrapToken === "boolean";
+  value: JsonValue,
+): value is UnlockStatusResponse & JsonValue =>
+  isJsonObject(value) && typeof value.requiresBootstrapToken === "boolean";
 
-const isUnlockResponse = (value: unknown): value is UnlockResponse =>
-  isRecord(value) &&
+const isUnlockResponse = (value: JsonValue): value is UnlockResponse & JsonValue =>
+  isJsonObject(value) &&
   typeof value.ok === "boolean" &&
   typeof value.message === "string";
 
@@ -52,7 +52,7 @@ const readUnlockResponse = async (
     return { ok: false, message: response.statusText || "Unlock failed." };
   }
 
-  const body: unknown = await response.json();
+  const body: JsonValue = await response.json();
   if (isUnlockResponse(body)) {
     return body;
   }
@@ -71,7 +71,7 @@ export const unlockApi = {
       return null;
     }
 
-    const body: unknown = await response.json();
+    const body: JsonValue = await response.json();
     return isUnlockStatusResponse(body) ? body : null;
   },
 
@@ -129,4 +129,4 @@ export const unlockApi = {
     return body;
   },
 };
-import { isRecord } from "../utils/typeGuards";
+import { isJsonObject, type JsonValue } from "../types/json";

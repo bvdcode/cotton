@@ -5,10 +5,10 @@ import {
   expect,
   it,
   vi,
-  type Mock,
 } from "vitest";
 import type { AxiosError } from "axios";
 import { z } from "zod";
+import type { JsonValue } from "../types/json";
 
 vi.mock("@shared/ui/notifications", () => ({
   toast: {
@@ -46,11 +46,11 @@ const {
 } = await import("./httpClient");
 
 const { toast } = await import("@shared/ui/notifications");
-const toastErrorMock = toast.error as unknown as Mock;
+const toastErrorMock = vi.mocked(toast.error);
 
 const buildAxiosError = (
   status: number,
-  data: unknown,
+  data: JsonValue,
   url = "/test",
 ): AxiosError =>
   ({
@@ -66,7 +66,6 @@ beforeEach(() => {
   refreshEnabledMock.mockReturnValue(true);
   toastErrorMock.mockClear();
   logoutLocalMock.mockClear();
-  vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
 afterEach(() => {

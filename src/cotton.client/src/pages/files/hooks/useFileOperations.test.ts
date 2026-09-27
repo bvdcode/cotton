@@ -14,8 +14,8 @@ const mocks = vi.hoisted(() => ({
   updateFileMetadata: vi.fn(),
   refreshNodeContent: vi.fn(() => Promise.resolve()),
   encryptDisplayMeta: vi.fn(async () => "encrypted-display-meta"),
-  applyDisplayMetaToFile: vi.fn(async (file: unknown) => ({
-    ...(file as object),
+  applyDisplayMetaToFile: vi.fn(async <T extends object>(file: T) => ({
+    ...file,
     name: "new-name.png",
     contentType: "image/png",
   })),
@@ -45,8 +45,8 @@ vi.mock("../../../shared/crypto", () => ({
 }));
 
 vi.mock("../../../shared/hooks/useFileRenameDeleteOperations", () => ({
-  useFileRenameDeleteOperations: (options: unknown) => {
-    mocks.renameDeleteOptions = options as typeof mocks.renameDeleteOptions;
+  useFileRenameDeleteOperations: (options: Parameters<typeof import("../../../shared/hooks/useFileRenameDeleteOperations").useFileRenameDeleteOperations>[0]) => {
+    mocks.renameDeleteOptions = options;
     return {};
   },
 }));

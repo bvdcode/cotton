@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
@@ -119,7 +120,7 @@ const moveCandidatesToTarget = async (options: {
         notMoved.push(item);
         lastErrorMessage =
           extractErrorMessage(outcome.error) ?? lastErrorMessage;
-        console.error(
+        reportClientError(
           "Failed to move " + item.kind + " " + item.id,
           outcome.error,
         );
@@ -283,7 +284,7 @@ const collectMovedFolderEncryptionCandidates = async (
       incomplete: scan.truncated,
     };
   } catch (error) {
-    console.error("Failed to scan moved folders for plain files", error);
+    reportClientError("Failed to scan moved folders for plain files", error);
     return { candidates: [], incomplete: true };
   }
 };

@@ -1,3 +1,4 @@
+import { reportClientError, reportClientWarning } from "@shared/utils/clientDiagnostics";
 import {
   Box,
   Button,
@@ -107,7 +108,7 @@ export function SetupWizardPage() {
         );
       })
       .catch((error) => {
-        console.warn(`Failed to prefill setup step "${currentStepKey}"`, error);
+        reportClientWarning(`Failed to prefill setup step "${currentStepKey}"`, error);
       });
 
     return () => {
@@ -151,7 +152,7 @@ export function SetupWizardPage() {
           return;
         }
       }
-      console.error(`Failed to save setup step "${currentStep.key}":`, err);
+      reportClientError(`Failed to save setup step "${currentStep.key}":`, err);
       showApiErrorToast(
         err,
         t("errors.saveChoiceFailed"),
@@ -180,7 +181,7 @@ export function SetupWizardPage() {
         sx={{
           position: "relative",
           width: "100%",
-          minHeight: "100vh",
+          minHeight: "100%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -210,7 +211,8 @@ export function SetupWizardPage() {
       sx={{
         position: "relative",
         width: "100%",
-        minHeight: "100vh",
+        minHeight: "100%",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -255,8 +257,8 @@ export function SetupWizardPage() {
           position: "relative",
           width: "100%",
           maxWidth: 1000,
-          minHeight: { xs: "calc(100vh - 60px)", sm: 600 },
-          height: { xs: "calc(100vh - 60px)", sm: "auto" },
+          minHeight: { xs: "calc(100% - 60px)", sm: 600 },
+          height: { xs: "calc(100% - 60px)", sm: "auto" },
           mt: "auto",
           mb: "auto",
           borderRadius: 3,
@@ -285,9 +287,9 @@ export function SetupWizardPage() {
             p: { xs: 3, sm: 4 },
             display: "flex",
             flexDirection: "column",
-            minHeight: { xs: "calc(100vh - 80px)", sm: "calc(600px - 48px)" },
-            maxHeight: { xs: "calc(100vh - 80px)", sm: "calc(800px - 48px)" },
-            height: "100%",
+            minHeight: { xs: "calc(100% - 20px)", sm: "calc(600px - 48px)" },
+            maxHeight: { xs: "calc(100% - 20px)", sm: "calc(800px - 48px)" },
+            height: { xs: "calc(100% - 20px)", sm: "100%" },
             overflow: "auto",
           }}
         >

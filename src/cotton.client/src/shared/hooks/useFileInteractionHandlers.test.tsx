@@ -45,9 +45,9 @@ vi.mock("../utils/fileHandlers", () => ({
 }));
 
 vi.mock("../store/audioPlayerStore", () => ({
-  useAudioPlayerStore: (
-    selector: (state: { openFromSelection: typeof mocks.openAudio }) => unknown,
-  ) => selector({ openFromSelection: mocks.openAudio }),
+  useAudioPlayerStore: <T,>(
+    selector: (state: { openFromSelection: typeof mocks.openAudio }) => T,
+  ): T => selector({ openFromSelection: mocks.openAudio }),
 }));
 
 vi.mock("./useFilePreview", () => ({

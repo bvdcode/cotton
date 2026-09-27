@@ -49,7 +49,7 @@ const createMediaElement = ({
 }): HTMLMediaElement => {
   let pausedState = paused;
 
-  const mediaElement = {
+  const mediaElement: Pick<HTMLMediaElement, "paused" | "duration" | "currentTime" | "playbackRate" | "play" | "pause" | "fastSeek"> = {
     get paused() {
       return pausedState;
     },
@@ -67,9 +67,9 @@ const createMediaElement = ({
     fastSeek: vi.fn((time: number) => {
       mediaElement.currentTime = time;
     }),
-  } as unknown as HTMLMediaElement;
+  };
 
-  return mediaElement;
+  return mediaElement as HTMLMediaElement;
 };
 
 describe("MediaSessionCoordinator", () => {

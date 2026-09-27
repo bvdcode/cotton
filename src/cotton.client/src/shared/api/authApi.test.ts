@@ -36,7 +36,6 @@ const baseUserResponse = {
 beforeEach(() => {
   refreshEnabledMock.mockReturnValue(true);
   logoutLocalMock.mockClear();
-  vi.spyOn(console, "error").mockImplementation(() => undefined);
   clearAccessToken();
 });
 

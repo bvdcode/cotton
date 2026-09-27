@@ -4,7 +4,7 @@ import { ConflictAction } from "../../../shared/types/nameConflict";
 import { resolveUploadConflicts } from "./uploadConflicts";
 
 const createContent = (
-  fileNames: Array<{ id: string; name: string }>,
+  fileNames: Pick<NodeContentDto["files"][number], "id" | "name">[],
   folderNames: string[] = [],
 ): NodeContentDto =>
   ({

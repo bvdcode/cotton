@@ -39,7 +39,9 @@ const edgeProxyServices = new Set<DetectedProxyService>([
   "aws-alb",
 ]);
 
-const parseCloudflareDatacenterCode = (value: unknown): string | null => {
+const parseCloudflareDatacenterCode = (
+  value: AxiosHeaderValue | undefined,
+): string | null => {
   if (typeof value !== "string") return null;
   const firstValue = value.split(",", 1)[0].trim();
   const separatorIndex = firstValue.lastIndexOf("-");
@@ -50,7 +52,7 @@ const parseCloudflareDatacenterCode = (value: unknown): string | null => {
 
 export const mergeCloudflareMetadata = (
   metadata: CloudflareProxyMetadata,
-  rayHeader: unknown,
+  rayHeader: AxiosHeaderValue | undefined,
 ): CloudflareProxyMetadata => {
   const browserDatacenterCode = parseCloudflareDatacenterCode(rayHeader);
   if (!browserDatacenterCode) return metadata;
@@ -61,7 +63,7 @@ export const mergeCloudflareMetadata = (
 };
 
 const detectResponseServerService = (
-  serverHeader: unknown,
+  serverHeader: AxiosHeaderValue | undefined,
 ): DetectedProxyService[] => {
   if (typeof serverHeader !== "string") return [];
   const match = responseServerSignatures.find(([, pattern]) =>
@@ -72,7 +74,7 @@ const detectResponseServerService = (
 
 export const mergeDetectedProxyServices = (
   detected: DetectedProxyService[],
-  serverHeader: unknown,
+  serverHeader: AxiosHeaderValue | undefined,
 ): DetectedProxyService[] => {
   const responseServices = detectResponseServerService(serverHeader);
   const identifiesUnknownLocalProxy = responseServices.some(
@@ -88,3 +90,4 @@ export const mergeDetectedProxyServices = (
   }
   return merged;
 };
+import type { AxiosHeaderValue } from "axios";

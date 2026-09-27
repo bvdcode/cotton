@@ -34,18 +34,25 @@ class FakeDataTransfer {
   }
 }
 
+const asDataTransfer = (value: FakeDataTransfer): DataTransfer => {
+  const transfer: Pick<DataTransfer, "setData" | "getData" | "clearData" | "types" | "effectAllowed" | "dropEffect"> = value;
+  return transfer as DataTransfer;
+};
+
 const makeDragEvent = (
   dataTransfer: FakeDataTransfer,
   currentTarget = document.createElement("div"),
   relatedTarget: EventTarget | null = null,
-): DragEvent<HTMLDivElement> =>
-  ({
-    dataTransfer: dataTransfer as unknown as DataTransfer,
+): DragEvent<HTMLDivElement> => {
+  const event: Pick<DragEvent<HTMLDivElement>, "dataTransfer" | "currentTarget" | "relatedTarget" | "preventDefault" | "stopPropagation"> = {
+    dataTransfer: asDataTransfer(dataTransfer),
     currentTarget,
     relatedTarget,
     preventDefault: vi.fn(),
     stopPropagation: vi.fn(),
-  }) as unknown as DragEvent<HTMLDivElement>;
+  };
+  return event as DragEvent<HTMLDivElement>;
+};
 
 const makeFolderTile = (
   id: string,
@@ -221,7 +228,7 @@ describe("useTileDragAndDrop drag over and leave", () => {
       }),
     );
     const dataTransfer = new FakeDataTransfer();
-    writeMoveDragPayload(dataTransfer as unknown as DataTransfer, {
+    writeMoveDragPayload(asDataTransfer(dataTransfer), {
       items: [{ id: "source", kind: "folder", sourceParentId: "parent-1" }],
     });
     const event = makeDragEvent(dataTransfer);
@@ -242,7 +249,7 @@ describe("useTileDragAndDrop drag over and leave", () => {
       }),
     );
     const dataTransfer = new FakeDataTransfer();
-    writeMoveDragPayload(dataTransfer as unknown as DataTransfer, {
+    writeMoveDragPayload(asDataTransfer(dataTransfer), {
       items: [{ id: "target", kind: "folder", sourceParentId: "parent-1" }],
     });
     const itemEvent = makeDragEvent(dataTransfer);
@@ -265,7 +272,7 @@ describe("useTileDragAndDrop drag over and leave", () => {
       }),
     );
     const dataTransfer = new FakeDataTransfer();
-    writeMoveDragPayload(dataTransfer as unknown as DataTransfer, {
+    writeMoveDragPayload(asDataTransfer(dataTransfer), {
       items: [{ id: "source", kind: "file", sourceParentId: "parent-1" }],
     });
     const target = document.createElement("div");
@@ -306,7 +313,7 @@ describe("useTileDragAndDrop drop", () => {
       }),
     );
     const dataTransfer = new FakeDataTransfer();
-    writeMoveDragPayload(dataTransfer as unknown as DataTransfer, {
+    writeMoveDragPayload(asDataTransfer(dataTransfer), {
       items: [
         { id: "move-me", kind: "folder", sourceParentId: "parent-1" },
         { id: "already-here", kind: "file", sourceParentId: "target" },

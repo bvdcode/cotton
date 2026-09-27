@@ -1,4 +1,5 @@
 import { httpClient, parseValidated } from "./httpClient";
+import type { JsonValue } from "../types/json";
 import type { Guid } from "./layoutsApi";
 import type {
   NodeFileManifestDto,
@@ -50,7 +51,7 @@ export const filesApi = {
     request: CreateFileFromChunksRequest,
   ): Promise<NodeFileManifestDto> => {
     const url = "files/from-chunks";
-    const response = await httpClient.post<unknown>(url, request);
+    const response = await httpClient.post<JsonValue>(url, request);
     return parseValidated(url, response.data, nodeFileManifestSchema);
   },
 
@@ -59,7 +60,7 @@ export const filesApi = {
     request: CreateFileFromChunksRequest,
   ): Promise<NodeFileManifestDto> => {
     const url = `files/${nodeFileId}/update-content`;
-    const response = await httpClient.patch<unknown>(url, request);
+    const response = await httpClient.patch<JsonValue>(url, request);
     return parseValidated(url, response.data, nodeFileManifestSchema);
   },
 
@@ -137,7 +138,7 @@ export const filesApi = {
     request: UpdateFileMetadataRequest,
   ): Promise<NodeFileManifestDto> => {
     const url = `/files/${nodeFileId}/metadata`;
-    const response = await httpClient.patch<unknown>(url, request);
+    const response = await httpClient.patch<JsonValue>(url, request);
     return parseValidated(url, response.data, nodeFileManifestSchema);
   },
 
@@ -154,7 +155,7 @@ export const filesApi = {
     request: MoveFileRequest,
   ): Promise<NodeFileManifestDto> => {
     const url = `/files/${nodeFileId}/move`;
-    const response = await httpClient.patch<unknown>(url, request);
+    const response = await httpClient.patch<JsonValue>(url, request);
     return parseValidated(url, response.data, nodeFileManifestSchema);
   },
 

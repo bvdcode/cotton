@@ -59,7 +59,7 @@ export const TaskQueueWidget = () => {
         bottom: 16,
         zIndex: (theme) => theme.zIndex.snackbar,
         width: 360,
-        maxWidth: "calc(100vw - 32px)",
+        maxWidth: "calc(100% - 32px)",
       }}
     >
       <Paper

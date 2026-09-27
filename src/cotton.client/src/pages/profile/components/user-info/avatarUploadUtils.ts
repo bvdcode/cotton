@@ -66,15 +66,15 @@ const loadImageFromBlob = async (blob: Blob): Promise<HTMLImageElement> => {
 };
 
 const convertHeicBlobToJpeg = async (blob: Blob): Promise<Blob> => {
-  const convertedUnknown: unknown = await heic2any({
+  const convertedResult = await heic2any({
     blob,
     toType: "image/jpeg",
     quality: AVATAR_START_QUALITY,
   });
 
-  const converted = Array.isArray(convertedUnknown)
-    ? convertedUnknown[0]
-    : convertedUnknown;
+  const converted = Array.isArray(convertedResult)
+    ? convertedResult[0]
+    : convertedResult;
 
   if (converted instanceof Blob) {
     return converted;

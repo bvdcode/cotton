@@ -6,12 +6,12 @@ import {
   isFileEncrypted,
 } from "../crypto";
 import type { MoveClipboardItem } from "../store/moveClipboardStore";
-import { isRecord } from "../utils/typeGuards";
+import { isJsonObject, type JsonValue } from "../types/json";
 
-export const extractErrorMessage = (error: unknown): string | null => {
-  if (!isAxiosError(error)) return null;
+export const extractErrorMessage = <T>(error: T): string | null => {
+  if (!isAxiosError<JsonValue>(error)) return null;
   const data = error.response?.data;
-  if (isRecord(data)) {
+  if (data !== undefined && isJsonObject(data)) {
     if (typeof data.message === "string" && data.message.length > 0) {
       return data.message;
     }

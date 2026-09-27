@@ -54,7 +54,7 @@ const getCachedTargetNames = (targetParentId: string): Set<string> => {
   return taken;
 };
 
-const getMoveConflictKind = (error: unknown): RestoreConflictKind | null => {
+const getMoveConflictKind = <T>(error: T): RestoreConflictKind | null => {
   if (!isAxiosError(error) || error.response?.status !== 409) {
     return null;
   }

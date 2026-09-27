@@ -40,9 +40,9 @@ vi.mock("../../shared/api/settingsApi", () => ({
 }));
 
 vi.mock("../../shared/store/setupStatusStore", () => {
-  const useSetupStatusStore = ((
-    selector: (state: { isInitialized: boolean | null }) => unknown,
-  ) =>
+  const useSetupStatusStore = (<T,>(
+    selector: (state: { isInitialized: boolean | null }) => T,
+  ): T =>
     selector({
       isInitialized: testState.setupInitialized,
     })) as typeof import("../../shared/store/setupStatusStore").useSetupStatusStore;

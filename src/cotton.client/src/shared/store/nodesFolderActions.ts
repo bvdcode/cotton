@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import type { NodeDto } from "../api/layoutsApi";
 import {
@@ -102,7 +103,7 @@ export const createFolder = async (
     void refreshNodeContent(parentNodeId);
     return folder;
   } catch (error) {
-    console.error("Failed to create folder", error);
+    reportClientError("Failed to create folder", error);
     useNodesStore.setState({
       loading: false,
       error: tFileError("errors.createFolderFailed"),
@@ -147,7 +148,7 @@ export const deleteFolder = async (
 
     return true;
   } catch (error) {
-    console.error("Failed to delete folder", error);
+    reportClientError("Failed to delete folder", error);
     useNodesStore.setState({
       loading: false,
       error: tFileError("errors.deleteFolderFailed"),
@@ -212,7 +213,7 @@ export const renameFolder = async (
 
     return true;
   } catch (error) {
-    console.error("Failed to rename folder", error);
+    reportClientError("Failed to rename folder", error);
     useNodesStore.setState({
       loading: false,
       error: tFileError("errors.renameFolderFailed"),

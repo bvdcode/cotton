@@ -1,3 +1,4 @@
+import { reportClientWarning } from "@shared/utils/clientDiagnostics";
 import { HashWorkerClient } from "./hashWorkerClient";
 import type { SupportedHashAlgorithm } from "./hashing";
 
@@ -66,7 +67,7 @@ class HashWorkerPool {
    */
   release(worker: HashWorkerClient): void {
     if (!this.inUse.has(worker)) {
-      console.warn("Attempting to release a worker that is not in use");
+      reportClientWarning("Attempting to release a worker that is not in use");
       return;
     }
 

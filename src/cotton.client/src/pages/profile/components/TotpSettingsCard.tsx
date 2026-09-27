@@ -170,7 +170,7 @@ export const TotpSettingsCard = ({
 
 type Translate = ReturnType<typeof useTranslation>["t"];
 
-const resolveTotpSetupError = (error: unknown, t: Translate) => {
+const resolveTotpSetupError = <T,>(error: T, t: Translate) => {
   if (isAxiosError(error) && error.response?.status === 409) {
     return t("totp.errors.alreadyEnabled");
   }
@@ -178,7 +178,7 @@ const resolveTotpSetupError = (error: unknown, t: Translate) => {
   return getApiErrorMessage(error) ?? t("totp.errors.setupFailed");
 };
 
-const resolveTotpConfirmError = (error: unknown, t: Translate) => {
+const resolveTotpConfirmError = <T,>(error: T, t: Translate) => {
   if (isAxiosError(error)) {
     const statusMessage = getConfirmStatusMessage(error.response?.status, t);
     if (statusMessage) {
@@ -202,7 +202,7 @@ const getConfirmStatusMessage = (status: number | undefined, t: Translate) => {
   }
 };
 
-const resolveTotpDisableError = (error: unknown, t: Translate) => {
+const resolveTotpDisableError = <T,>(error: T, t: Translate) => {
   if (isAxiosError(error) && error.response?.status === 403) {
     return t("totp.errors.invalidPassword");
   }

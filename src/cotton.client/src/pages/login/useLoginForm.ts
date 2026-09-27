@@ -68,7 +68,7 @@ export const useLoginForm = ({
   const [searchParams] = useSearchParams();
   const [initialDemoCredentials] = useState<DemoCredentials | null>(() =>
     searchParams.get("demo") === "true"
-      ? getOrCreateDemoCredentials(window.localStorage)
+      ? getOrCreateDemoCredentials(window.sessionStorage)
       : null,
   );
 

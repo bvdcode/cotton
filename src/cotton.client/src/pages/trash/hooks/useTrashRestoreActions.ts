@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import {
   useCallback,
   useMemo,
@@ -278,7 +279,7 @@ export const useTrashRestoreActions = ({
           }
           options = decision.options;
         } catch (error) {
-          console.error("Restore call failed", error);
+          reportClientError("Restore call failed", error);
           reportRestoreFailure(item);
           return "failed";
         }

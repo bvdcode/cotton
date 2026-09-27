@@ -1,3 +1,4 @@
+import { reportClientDebug } from "@shared/utils/clientDiagnostics";
 import {
   Badge,
   Box,
@@ -132,7 +133,7 @@ export const NotificationsMenu = () => {
 
   const menuListSx = useMemo(
     () => ({
-      maxHeight: isMobile ? "calc(100dvh - 140px)" : 420,
+      maxHeight: isMobile ? undefined : 420,
       overflowY: "auto" as const,
     }),
     [isMobile],
@@ -140,8 +141,9 @@ export const NotificationsMenu = () => {
 
   const menuPaperSx = useMemo(
     () => ({
-      width: isMobile ? "100dvw" : 340,
-      maxWidth: isMobile ? "100dvw" : 340,
+      width: isMobile ? "100%" : 340,
+      maxWidth: isMobile ? "100%" : 340,
+      maxHeight: isMobile ? "calc(100% - 140px)" : undefined,
       borderRadius: isMobile ? 0 : undefined,
       left: isMobile ? "0 !important" : undefined,
       right: isMobile ? "0 !important" : undefined,
@@ -259,7 +261,7 @@ export const NotificationsMenu = () => {
                         markAsRead(n.id);
                       }
                     } catch (err) {
-                      console.debug("notification confirm failed", err);
+                      reportClientDebug("notification confirm failed", err);
                     }
                   }}
                   sx={{

@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../shared/api/filesApi";
@@ -99,7 +100,7 @@ export const useFileOperations = (onFilesChanged?: () => void) => {
         if (parentId) {
           void refreshNodeContent(parentId);
         }
-        console.error("Failed to rename file:", error);
+        reportClientError("Failed to rename file:", error);
         return false;
       }
     },

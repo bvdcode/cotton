@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getRecentClientDiagnostics } from "../utils/clientDiagnostics";
 
 const mocks = vi.hoisted(() => ({
   getCachedServerSettings: vi.fn(() => ({
@@ -382,9 +383,6 @@ describe("UploadManager task facade", () => {
     const onFileUploaded = vi.fn(() => {
       throw error;
     });
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
     mocks.uploadFileToNode.mockResolvedValue({
       id: "file-1",
       name: "report.txt",
@@ -402,12 +400,10 @@ describe("UploadManager task facade", () => {
     );
 
     expect(onFileUploaded).toHaveBeenCalled();
-    expect(consoleError).toHaveBeenCalledWith(
-      "Upload completion listener failed:",
-      error,
-    );
-
-    consoleError.mockRestore();
+    const diagnostic = getRecentClientDiagnostics().at(-1);
+    expect(diagnostic?.source).toBe("app.error");
+    expect(diagnostic?.message).toContain("Upload completion listener failed:");
+    expect(diagnostic?.message).toContain(error.message);
   });
 
   it("preserves the server failure detail for failed upload tasks", async () => {

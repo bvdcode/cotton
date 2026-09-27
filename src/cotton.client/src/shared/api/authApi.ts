@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import {
   httpClient,
   setAccessToken,
@@ -60,7 +61,7 @@ export const authApi = {
 
     // Validate critical fields from BaseDto
     if (!response.data.createdAt || !response.data.updatedAt) {
-      console.error(
+      reportClientError(
         "Missing required BaseDto fields from /auth/me:",
         response.data,
       );

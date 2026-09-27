@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { fetchServerSettings } from "../../../shared/api/queries/serverSettings";
@@ -107,7 +108,7 @@ export const useFolderClientEncryptionActions = ({
           filesToEncrypt = scan.files;
         }
       } catch (error) {
-        console.error("Failed to scan folder for plain files", error);
+        reportClientError("Failed to scan folder for plain files", error);
         scanIncomplete = true;
       }
       const refreshedParents = new Set<string>([nodeId]);
@@ -210,7 +211,7 @@ export const useFolderClientEncryptionActions = ({
           filesToDecrypt = scan.files;
         }
       } catch (error) {
-        console.error("Failed to scan folder for encrypted files", error);
+        reportClientError("Failed to scan folder for encrypted files", error);
         scanIncomplete = true;
       }
       const refreshedParents = new Set<string>([nodeId]);

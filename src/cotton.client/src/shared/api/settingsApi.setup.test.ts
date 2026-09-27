@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { getRecentClientDiagnostics } from "../utils/clientDiagnostics";
 import { readyComputationStatus } from "../../test/computationStatus";
 
 vi.mock("@shared/ui/notifications", () => ({
@@ -20,11 +21,6 @@ vi.mock("../store/authStore", () => ({
 
 const { httpClient } = await import("./httpClient");
 const { settingsApi } = await import("./settingsApi");
-
-beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => undefined);
-  vi.spyOn(console, "warn").mockImplementation(() => undefined);
-});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -278,17 +274,14 @@ describe("settingsApi.saveSetupAnswers", () => {
       .spyOn(settingsApi, "saveSetupStep")
       .mockRejectedValueOnce(new Error("failed"))
       .mockResolvedValue(undefined);
-    const warn = vi.spyOn(console, "warn");
-
     await settingsApi.saveSetupAnswers({
       trustedMode: "family",
       telemetry: true,
     });
 
-    expect(warn).toHaveBeenCalledWith(
-      'Failed to save setup step "trustedMode"',
-      expect.any(Error),
-    );
+    const warning = getRecentClientDiagnostics().at(-1);
+    expect(warning?.source).toBe("app.warning");
+    expect(warning?.message).toContain('Failed to save setup step "trustedMode"');
     expect(saveStep).toHaveBeenCalledWith("telemetry", {
       trustedMode: "family",
       telemetry: true,

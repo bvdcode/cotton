@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@shared/ui/notifications", () => ({
   toast: { error: vi.fn() },
@@ -19,11 +19,6 @@ vi.mock("../store/authStore", () => ({
 
 const { httpClient } = await import("./httpClient");
 const { settingsApi } = await import("./settingsApi");
-
-beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => undefined);
-  vi.spyOn(console, "warn").mockImplementation(() => undefined);
-});
 
 afterEach(() => {
   vi.restoreAllMocks();

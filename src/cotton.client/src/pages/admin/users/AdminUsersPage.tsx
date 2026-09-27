@@ -89,7 +89,7 @@ export const AdminUsersPage = () => {
   }, [createLabel, isLoading, refresh, refreshLabel]);
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} height="100%" minHeight={0}>
       <AdminPageSurface>
         {loadState.kind === "error" && (
           <Box px={3} pb={2}>
@@ -101,7 +101,7 @@ export const AdminUsersPage = () => {
           sx={{
             height: { xs: 520, md: 640 },
             minHeight: 420,
-            maxHeight: "calc(100dvh - 220px)",
+            maxHeight: "calc(100% - 220px)",
           }}
         >
           <DataGrid

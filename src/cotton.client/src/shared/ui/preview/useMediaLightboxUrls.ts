@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import * as React from "react";
 import type { Slide } from "yet-another-react-lightbox";
 import { convertHeicToJpeg, isHeicFile } from "../../utils/heicConverter";
@@ -153,7 +154,7 @@ export const useMediaLightboxUrls = ({
 
           return displayUrl;
         } catch (error) {
-          console.error("Failed to load media URL", error);
+          reportClientError("Failed to load media URL", error);
           return null;
         } finally {
           inFlightOriginalLoadsRef.current.delete(item.id);
@@ -227,7 +228,7 @@ export const useMediaLightboxUrls = ({
           setDisplayUrls((prev) => ({ ...prev, [item.id]: convertedUrl }));
           return convertedUrl;
         } catch (error) {
-          console.error("Failed to convert HEIC after image load error", error);
+          reportClientError("Failed to convert HEIC after image load error", error);
           return null;
         } finally {
           inFlightHeicFallbacksRef.current.delete(item.id);
@@ -264,7 +265,7 @@ export const useMediaLightboxUrls = ({
           );
           return nextUrl;
         } catch (error) {
-          console.error("Failed to load media download URL", error);
+          reportClientError("Failed to load media download URL", error);
           return null;
         } finally {
           inFlightDownloadLoadsRef.current.delete(fileId);

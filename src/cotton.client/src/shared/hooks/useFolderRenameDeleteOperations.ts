@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useConfirm } from "material-ui-confirm";
 import { destructiveConfirmOptions } from "@shared/ui/confirmOptions";
 import { useRenameState } from "./useRenameState";
@@ -32,7 +33,7 @@ export const useFolderRenameDeleteOperations = (
       try {
         return await options.renameFolder(folderId, newName);
       } catch (error) {
-        console.error(options.renameErrorMessage, error);
+        reportClientError(options.renameErrorMessage, error);
         return false;
       }
     });
@@ -57,7 +58,7 @@ export const useFolderRenameDeleteOperations = (
 
       await options.deleteFolder(folderId);
     } catch (error) {
-      console.error(options.deleteErrorMessage, error);
+      reportClientError(options.deleteErrorMessage, error);
     }
   };
 

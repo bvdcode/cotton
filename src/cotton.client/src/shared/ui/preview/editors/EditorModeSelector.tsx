@@ -63,9 +63,8 @@ export const EditorModeSelector: React.FC<EditorModeSelectorProps> = ({
       value={currentMode}
       exclusive
       onChange={(_, newMode) => {
-        const candidate: unknown = newMode;
-        if (isEditorMode(candidate)) {
-          onModeChange(candidate);
+        if (isEditorMode(newMode)) {
+          onModeChange(newMode);
         }
       }}
       size="small"

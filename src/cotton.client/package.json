@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "build": "npm run lint && tsc -b && vite build",
+    "lint": "eslint . && node scripts/check-viewport-units.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

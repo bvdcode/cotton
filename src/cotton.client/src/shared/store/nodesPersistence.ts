@@ -1,3 +1,4 @@
+import { reportClientWarning } from "@shared/utils/clientDiagnostics";
 import type { NodeContentDto } from "../api/nodesApi";
 import type { NodeDto } from "../api/layoutsApi";
 import { toPersistableFileDisplayMetadata } from "../crypto/displayMeta";
@@ -96,7 +97,7 @@ export const safeSessionStorage = {
         // ignore
       }
 
-      console.warn(
+      reportClientWarning(
         `[nodesStore] sessionStorage quota exceeded for "${key}" (${value.length} chars). Skipping persistence.`,
       );
     }

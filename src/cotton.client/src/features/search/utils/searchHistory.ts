@@ -5,22 +5,19 @@ export interface SearchHistoryEntry {
 
 export const SEARCH_HISTORY_LIMIT = 10;
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === "object" && !Array.isArray(value);
-
 export const normalizeSearchHistoryQuery = (query: string): string =>
   query.trim().replace(/\s+/g, " ");
 
 const getSearchHistoryKey = (query: string): string =>
   query.toLocaleLowerCase();
 
-const toSearchHistoryEntry = (value: unknown): SearchHistoryEntry | null => {
+const toSearchHistoryEntry = (value: JsonValue): SearchHistoryEntry | null => {
   if (typeof value === "string") {
     const query = normalizeSearchHistoryQuery(value);
     return query ? { query, lastUsedAt: "" } : null;
   }
 
-  if (!isRecord(value)) {
+  if (!isJsonObject(value)) {
     return null;
   }
 
@@ -47,7 +44,7 @@ export const parseSearchHistoryPreference = (
   if (!value) return [];
 
   try {
-    const parsed: unknown = JSON.parse(value);
+    const parsed: JsonValue = JSON.parse(value);
     if (!Array.isArray(parsed)) {
       return [];
     }
@@ -121,3 +118,4 @@ export const removeSearchHistoryEntry = (
     (entry) => getSearchHistoryKey(entry.query) !== removeKey,
   );
 };
+import { isJsonObject, type JsonValue } from "../../../shared/types/json";

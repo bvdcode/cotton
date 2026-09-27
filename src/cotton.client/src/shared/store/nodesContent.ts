@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import { useNodesStore } from "./nodesStore";
 
@@ -59,6 +60,6 @@ export const refreshNodeContent = async (nodeId: string): Promise<void> => {
       },
     }));
   } catch (error) {
-    console.error("Failed to refresh node content", error);
+    reportClientError("Failed to refresh node content", error);
   }
 };

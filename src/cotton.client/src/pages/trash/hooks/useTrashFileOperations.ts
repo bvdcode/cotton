@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../shared/api/filesApi";
 import { nodesApi } from "../../../shared/api/nodesApi";
@@ -24,7 +25,7 @@ export const useTrashFileOperations = (
           onFilesChanged();
         }
       } catch (error) {
-        console.error("Failed to rename file:", error);
+        reportClientError("Failed to rename file:", error);
         return false;
       }
     },

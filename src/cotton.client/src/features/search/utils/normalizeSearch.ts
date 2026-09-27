@@ -1,6 +1,6 @@
 import type { LayoutSearchResultDto } from "../../../shared/api/layoutsApi";
 import type { SearchDictionaryEntry } from "../types";
-import { isRecord } from "../../../shared/utils/typeGuards";
+import { isJsonObject, type JsonValue } from "../../../shared/types/json";
 
 export const normalizeSearchText = (value: string): string =>
   value.toLocaleLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -9,9 +9,9 @@ export const normalizeCompactSearchText = (value: string): string =>
   normalizeSearchText(value).replace(/[\s._\-/:\\]+/g, "");
 
 export const isDictionaryEntry = (
-  value: unknown,
-): value is SearchDictionaryEntry => {
-  if (!isRecord(value)) return false;
+  value: JsonValue,
+): value is SearchDictionaryEntry & JsonValue => {
+  if (!isJsonObject(value)) return false;
   const keywords = value.keywords;
 
   return (

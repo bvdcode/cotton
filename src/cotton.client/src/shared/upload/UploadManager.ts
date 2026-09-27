@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { getApiErrorMessage } from "../api/httpClient";
 import type { Guid } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
@@ -381,7 +382,7 @@ export class UploadManager {
       try {
         task._onFileUploaded?.(uploadedFile);
       } catch (listenerError) {
-        console.error("Upload completion listener failed:", listenerError);
+        reportClientError("Upload completion listener failed:", listenerError);
       }
     }
 

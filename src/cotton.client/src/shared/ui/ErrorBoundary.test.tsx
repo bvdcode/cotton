@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import "../../i18n";
 import { ErrorBoundary } from "./ErrorBoundary";
 
@@ -16,10 +16,6 @@ const TestPage = ({ fail = false }: TestPageProps) => {
 };
 
 describe("ErrorBoundary", () => {
-  beforeEach(() => {
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
   });
