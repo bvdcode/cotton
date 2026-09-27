@@ -63,16 +63,7 @@ namespace Cotton.Server.Controllers
                 }
             }
 
-            return result.Kind switch
-            {
-                "badRequest" => this.ApiBadRequest(result.ErrorMessage ?? "Bad request"),
-                "notFound" => this.ApiNotFound(result.ErrorMessage ?? "File not found"),
-                "redirect" => Redirect(result.RedirectUrl ?? "/"),
-                "html" => Content(result.HtmlContent ?? string.Empty, "text/html; charset=utf-8"),
-                "head" => CreateShareHeadResponse(result),
-                "stream" => CreateShareStreamResponse(result),
-                _ => this.ApiBadRequest("Invalid share response")
-            };
+            return result.Response;
         }
 
         [Authorize]
@@ -165,70 +156,6 @@ namespace Cotton.Server.Controllers
             return servesPreview
                 ? ServeLargePreview(nodeFile)
                 : ServeTokenFileDownload(nodeFile, downloadToken, download);
-        }
-
-        private IActionResult CreateShareHeadResponse(ShareFileResult result)
-        {
-            bool requestedInline = result.Inline == true;
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, requestedInline);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            Response.ContentType = FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline);
-            Response.ContentLength = result.ContentLength;
-            if (!string.IsNullOrWhiteSpace(result.EntityTag))
-            {
-                Response.Headers.ETag = result.EntityTag;
-            }
-
-            ContentDispositionHeaderValue contentDisposition = new(
-                FileResponseSecurity.ResolveContentDispositionType(result.ContentType, requestedInline))
-            {
-                FileNameStar = result.FileName,
-                FileName = result.FileName,
-            };
-            Response.Headers[HeaderNames.ContentDisposition] = contentDisposition.ToString();
-            return new EmptyResult();
-        }
-
-        private IActionResult CreateShareStreamResponse(ShareFileResult result)
-        {
-            bool requestedInline = string.IsNullOrWhiteSpace(result.DownloadName);
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, requestedInline);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            RegisterDeleteAfterUse(result);
-
-            string streamFileName = result.FileName ?? result.DownloadName ?? "download";
-            string? streamDownloadName = requestedInline
-                ? FileResponseSecurity.ResolveFileDownloadName(streamFileName, requestedInline: true, result.ContentType)
-                : result.DownloadName;
-            return File(
-                result.FileStream!,
-                FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline),
-                fileDownloadName: streamDownloadName,
-                lastModified: result.LastModified,
-                entityTag: result.EntityTagValue!,
-                enableRangeProcessing: true);
-        }
-
-        private void RegisterDeleteAfterUse(ShareFileResult result)
-        {
-            if (!result.DeleteAfterUse || !result.DeleteTokenId.HasValue)
-            {
-                return;
-            }
-
-            Guid tokenId = result.DeleteTokenId.Value;
-            Response.OnCompleted(async () =>
-            {
-                DownloadToken? tokenEntity = await _dbContext.DownloadTokens
-                    .FirstOrDefaultAsync(x => x.Id == tokenId);
-                if (tokenEntity is not null)
-                {
-                    _dbContext.DownloadTokens.Remove(tokenEntity);
-                    await _dbContext.SaveChangesAsync();
-                }
-            });
         }
 
         private async Task<bool> ShareTokenExistsAsync(string token)
