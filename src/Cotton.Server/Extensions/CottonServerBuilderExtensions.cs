@@ -9,6 +9,7 @@ using Cotton.Server.Mappings;
 using Cotton.Server.Models.Configuration;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Server.Services.Passkeys;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
@@ -125,7 +126,7 @@ namespace Cotton.Server.Extensions
                 .AddScoped<ServerSettingsValidator>()
                 .AddScoped<SecurityDiagnosticsService>()
                 .AddScoped<StoragePipelineProbeService>()
-                .AddScoped<PasskeyService>()
+                .AddScoped<IPasskeyClientFactory, PasskeyClientFactory>()
                 .AddScoped<AuthSessionIssuer>()
                 .AddScoped<OidcProviderService>()
                 .AddScoped<OidcAuthenticationService>()
