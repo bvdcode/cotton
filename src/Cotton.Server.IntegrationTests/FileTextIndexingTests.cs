@@ -1,33 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
-using Cotton.Server.Extensions;
-using Cotton.Server.Handlers.Files;
-using Cotton.Server.Handlers.Server;
-using Cotton.Server.IntegrationTests.Abstractions;
-using Cotton.Server.IntegrationTests.Common;
-using Cotton.Server.Jobs;
-using Cotton.Server.Models.Computation;
-using Cotton.Server.Providers;
 using Cotton.Server.Services.Search;
 using Cotton.TextExtraction;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
+using Microsoft.Extensions.Configuration;
+using Cotton.Server.Handlers.Files;
 using EasyExtensions.Mediator;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using NUnit.Framework;
-using System.Net;
-using System.Text;
+using Cotton.Server.Extensions;
+using Cotton.Server.Handlers.Server;
+using Cotton.Server.Models.Computation;
 
 namespace Cotton.Server.IntegrationTests
 {
-    public partial class FileTextIndexingTests : IntegrationTestBase
+    public class FileTextIndexingTests : FileTextIndexingTestBase
     {
-        public FileTextIndexingTests() : base($"cotton_text_index_tests_{Guid.NewGuid():N}")
-        {
-        }
 
         [TestCase("application/pdf", "document.bin")]
         [TestCase("application/octet-stream", "document.PDF")]

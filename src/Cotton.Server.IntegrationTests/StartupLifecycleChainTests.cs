@@ -1,108 +1,15 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Auth;
-using Cotton.Server.IntegrationTests.Abstractions;
-using Cotton.Server.IntegrationTests.Common;
-using Cotton.Server.Models.Dto;
-using Cotton.Server.Providers;
-using Cotton.Server.Services;
-using Microsoft.Extensions.DependencyInjection;
-using EasyExtensions.AspNetCore.Authorization.Models.Dto;
-using EasyExtensions.Models.Enums;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Microsoft.EntityFrameworkCore.Storage;
-using Npgsql;
-using NUnit.Framework;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
-using CottonLoginRequestDto = Cotton.Auth.LoginRequestDto;
 
 namespace Cotton.Server.IntegrationTests
 {
     [NonParallelizable]
     [FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
-    public partial class StartupLifecycleChainTests : IntegrationTestBase
+    public class StartupLifecycleChainTests : StartupLifecycleTestBase
     {
-        private const string PreRestoredMigrationId = "20260427214223_AddCustomGeoIpLookupUrl";
-        private const string RestoredMigrationTailId = "20260516005639_DropNodeFilesNameKeyUniqueness";
-
-        private TestAppFactory? _factory;
-        private HttpClient? _client;
-        private TeiTestHandler _runner = null!;
-
-        public StartupLifecycleChainTests()
-            : base("cotton_dev_tests_startup_" + Guid.NewGuid().ToString("N"))
-        {
-        }
-
-        private record IsServerInitializedResponse(bool IsServerInitialized);
-        private record ProblemDetailsResponse(string? Type, string? Title, int? Status, string? Detail, string? Instance);
-
-        [SetUp]
-        public void SetUp()
-        {
-            _client = null;
-            _factory = null;
-
-            NpgsqlConnection.ClearAllPools();
-            IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
-            creator.EnsureDeleted();
-            creator.Create();
-            NpgsqlConnection.ClearAllPools();
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(creator.Exists(), Is.True);
-                Assert.That(creator.HasTables(), Is.False);
-            });
-
-            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
-            {
-                Host = "localhost",
-                Port = 5432,
-                Database = CurrentDatabaseName,
-                Username = "postgres",
-                Password = "postgres"
-            };
-
-            Dictionary<string, string?> overrides = new Dictionary<string, string?>
-            {
-                ["DatabaseSettings:Host"] = csb.Host,
-                ["DatabaseSettings:Port"] = csb.Port.ToString(),
-                ["DatabaseSettings:Database"] = csb.Database,
-                ["DatabaseSettings:Username"] = csb.Username,
-                ["DatabaseSettings:Password"] = csb.Password,
-                ["MasterEncryptionKey"] = Convert.ToBase64String(Hasher.HashData(Encoding.UTF8.GetBytes("super"))),
-                ["MasterEncryptionKeyId"] = "1",
-                ["EncryptionThreads"] = "1",
-                ["MaxChunkSizeBytes"] = "16777216",
-                ["CipherChunkSizeBytes"] = "20971520",
-                ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
-            };
-
-            _runner = new TeiTestHandler();
-            _factory = new TestAppFactory(overrides, ConfigureComputationClients);
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            _client?.Dispose();
-            _factory?.Dispose();
-            NpgsqlConnection.ClearAllPools();
-            DbContext.GetService<IRelationalDatabaseCreator>().EnsureDeleted();
-            NpgsqlConnection.ClearAllPools();
-
-            _client = null;
-            _factory = null;
-        }
 
         [Test]
         public async Task Startup_OnCleanDatabase_AppliesMigrations_AndCreatesInitialAdminWithinWindow()
@@ -348,35 +255,8 @@ namespace Cotton.Server.IntegrationTests
                 "/api/v1/server/settings/storage-type/S3",
                 "S3 settings must be configured before enabling S3 storage.");
         }
-
-        private async Task<TokenPairResponseDto> LoginAsync(string username = "testuser", string password = "testpassword")
-        {
-            EnsureClientCreated();
-
-            HttpResponseMessage response = await LoginRawAsync(username, password);
-            response.EnsureSuccessStatusCode();
-
-            TokenPairResponseDto? payload = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
-            Assert.That(payload, Is.Not.Null);
-            return payload!;
-        }
-
-        private async Task<HttpResponseMessage> LoginRawAsync(string username, string password)
-        {
-            EnsureClientCreated();
-
-            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
-            {
-                Content = JsonContent.Create(new CottonLoginRequestDto
-                {
-                    Username = username,
-                    Password = password
-                })
-            };
-
-            request.Headers.Add("X-Forwarded-For", "8.8.8.8");
-            return await _client!.SendAsync(request);
-        }
+        private const string PreRestoredMigrationId = "20260427214223_AddCustomGeoIpLookupUrl";
+        private const string RestoredMigrationTailId = "20260516005639_DropNodeFilesNameKeyUniqueness";
 
         private async Task<bool> GetIsServerInitializedAsync()
         {
@@ -385,14 +265,6 @@ namespace Cotton.Server.IntegrationTests
             IsServerInitializedResponse? response = await _client!.GetFromJsonAsync<IsServerInitializedResponse>("/api/v1/server/settings/is-setup-complete");
             Assert.That(response, Is.Not.Null);
             return response!.IsServerInitialized;
-        }
-
-        private async Task<JsonElement> GetJsonAsync(string url)
-        {
-            EnsureClientCreated();
-
-            JsonElement response = await _client!.GetFromJsonAsync<JsonElement>(url);
-            return response;
         }
 
         private async Task<bool> MigrationAppliedAsync(string migrationId)
@@ -429,12 +301,6 @@ namespace Cotton.Server.IntegrationTests
             return connection;
         }
 
-        private void SetBearer(string accessToken)
-        {
-            EnsureClientCreated();
-            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        }
-
         private static async Task AssertBadRequestProblemDetailsAsync(
             HttpResponseMessage response,
             string expectedInstance,
@@ -448,19 +314,6 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(payload.Title, Is.EqualTo("Bad Request"));
             Assert.That(payload.Detail, Is.EqualTo(expectedDetail));
             Assert.That(payload.Instance, Is.EqualTo(expectedInstance));
-        }
-
-        private void EnsureClientCreated()
-        {
-            if (_client is not null)
-            {
-                return;
-            }
-
-            _client = _factory!.CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false
-            });
         }
     }
 }

@@ -1,29 +1,111 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Database;
-using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
-using Cotton.Server.Handlers.Computation;
-using Cotton.Server.Abstractions;
-using Cotton.Server.Extensions;
-using Cotton.Server.IntegrationTests.Helpers;
-using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Computation;
-using Cotton.Server.Providers;
+using Cotton.Server.Handlers.Computation;
+using Cotton.Server.Extensions;
 using Cotton.Server.Services.Computation;
 using EasyExtensions.Mediator;
-using EasyExtensions.Mediator.Contracts;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using NUnit.Framework;
-using System.Net;
-using System.Text;
 
 namespace Cotton.Server.IntegrationTests
 {
-    public partial class ComputationServiceTests
+    public class ComputationServiceTests
     {
+        [Test]
+        public async Task Documents_UseFullAdvertisedBatchesWithoutWaitingForMoreFiles()
+        {
+            string[] texts = Enumerable.Range(0, 65).Select(index => $"Document {index}").ToArray();
+            float[][][] results = await _service.GetTextEmbeddingFragmentsAsync(texts.ToAsyncEnumerable());
+            Assert.That(_handler.Batches.Select(batch => batch.Length), Is.EqualTo(new[] { 32, 32, 1 }));
+            Assert.That(results, Has.Length.EqualTo(65));
+            Assert.That(_handler.InfoCalls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Documents_FillBatchesAcrossFileBoundariesAndKeepEmptyResults()
+        {
+            _handler.MaxBatchInputs = 3;
+            string[] texts = ["one", "", "four", " ", "three", "xx"];
+            float[][][] results = await _service.GetTextEmbeddingFragmentsAsync(texts.ToAsyncEnumerable());
+            Assert.Multiple(() =>
+            {
+                Assert.That(_handler.Batches.Select(batch => batch.Length), Is.EqualTo(new[] { 3, 1 }));
+                Assert.That(results.Select(document => document.Length), Is.EqualTo(new[] { 1, 0, 1, 0, 1, 1 }));
+                Assert.That(results.Where(document => document.Length > 0).Select(document => document[0][0]),
+                    Is.EqualTo(new[] { 3f, 4f, 5f, 2f }));
+                Assert.That(_handler.InfoCalls, Is.EqualTo(1));
+            });
+        }
+
+        [TestCase(32, 16)]
+        [TestCase(2, 100)]
+        public async Task Documents_RespectTokenAndInputLimitsAcrossLongFiles(int inputLimit, int tokenLimit)
+        {
+            _handler.MaxInputTokens = 8;
+            _handler.MaxBatchInputs = inputLimit;
+            _handler.MaxBatchTokens = tokenLimit;
+            string[] texts = ["abcdefghi", "первый 😀", "second longer document"];
+            float[][][] results = await _service.GetTextEmbeddingFragmentsAsync(texts.ToAsyncEnumerable());
+            Assert.That(results.Length, Is.EqualTo(texts.Length));
+            string[] fragments = _handler.Batches.SelectMany(batch => batch).ToArray();
+            int offset = 0;
+            for (int index = 0; index < texts.Length; index++)
+            {
+                string[] document = fragments.Skip(offset).Take(results[index].Length).ToArray();
+                Assert.That(string.Concat(document), Is.EqualTo(texts[index]));
+                Assert.That(results[index].Select(vector => vector[0]), Is.EqualTo(document.Select(text => (float)text.Length)));
+                offset += results[index].Length;
+            }
+            Assert.That(_handler.Batches.All(batch => batch.Length <= inputLimit
+                && batch.Max(text => text.EnumerateRunes().Count() + 2) * batch.Length <= tokenLimit), Is.True);
+        }
+        [Test]
+        public async Task Cloud_UsesTheSameProtocolWithBridgeCredentials()
+        {
+            ConfigureCloud(telemetry: true);
+            ComputationStatus status = await _service.GetStatusAsync();
+            float[][] fragments = await _service.GetTextEmbeddingFragmentsAsync("Cloud document.");
+            Assert.Multiple(() =>
+            {
+                Assert.That(status.IsReady, Is.True);
+                Assert.That(fragments, Has.Length.EqualTo(1));
+                Assert.That(_handler.Addresses.All(uri =>
+                    new Uri(global::Cotton.Constants.CottonBridgeBaseUrl).IsBaseOf(uri)), Is.True);
+                Assert.That(_handler.Addresses.Select(uri => uri.Segments.Last()), Does.Contain("tokenize"));
+                Assert.That(_handler.Credentials.All(value => value ==
+                    (_credentials.Credential.Token, _credentials.Credential.InstanceId.ToString())), Is.True);
+            });
+        }
+
+        [Test]
+        public async Task Remote_DoesNotReceiveBridgeCredentials()
+        {
+            await _service.GetStatusAsync();
+            await _service.GetTextEmbeddingFragmentsAsync("Private runner document.");
+            Assert.That(_handler.Credentials.All(value => value == (null, null)), Is.True);
+            Assert.That(_credentials.Calls, Is.Zero);
+        }
+
+        [Test]
+        public async Task Cloud_WithTelemetryDisabled_DoesNotSendContent()
+        {
+            ConfigureCloud(telemetry: false);
+            ComputationStatus status = await _service.GetStatusAsync();
+            Assert.That(status.Error, Is.EqualTo(ComputationError.NotConfigured));
+            Assert.That(_handler.Addresses, Is.Empty);
+            Assert.That(_credentials.Calls, Is.Zero);
+        }
+
+        private void ConfigureCloud(bool telemetry)
+        {
+            _cache.InvalidateSettings(serverIsInitialized: true);
+            _cache.GetOrAdd(() => ServerSettingsSnapshot.FromEntity(new CottonServerSettings
+            {
+                ComputionMode = ComputionMode.Cloud,
+                TelemetryEnabled = telemetry,
+                RemoteComputationRunnerUrl = "https://unused.example/",
+            }));
+        }
         private ServiceProvider _provider = null!;
         private ComputationService _service = null!;
         private TeiTestHandler _handler = null!;
@@ -228,6 +310,36 @@ namespace Cotton.Server.IntegrationTests
             source.Cancel();
             Assert.CatchAsync<OperationCanceledException>(
                 async () => await _service.GetStatusAsync(cancellationToken: source.Token));
+        }
+        [TestCase(1, 1_048_576)]
+        [TestCase(65, 40_000)]
+        public async Task LargeDocuments_PreserveEveryFragmentAndRespectAllRequestLimits(int count, int characters)
+        {
+            const string pattern = "aБ😀中";
+            string content = string.Concat(Enumerable.Repeat(pattern, characters / pattern.Length));
+            string[] documents = Enumerable.Range(0, count).Select(index => content + index).ToArray();
+            float[][][] results = await _service.GetTextEmbeddingFragmentsAsync(documents.ToAsyncEnumerable());
+            string[] fragments = _handler.Batches.SelectMany(batch => batch).ToArray();
+            Assert.That(results.Length, Is.EqualTo(count));
+            int offset = 0;
+            for (int index = 0; index < documents.Length; index++)
+            {
+                string[] documentFragments = fragments.Skip(offset).Take(results[index].Length).ToArray();
+                Assert.That(string.Concat(documentFragments), Is.EqualTo(documents[index]));
+                Assert.That(results[index].Select(vector => vector[0]),
+                    Is.EqualTo(documentFragments.Select(text => (float)text.Length)));
+                offset += results[index].Length;
+            }
+            Assert.Multiple(() =>
+            {
+                Assert.That(offset, Is.EqualTo(fragments.Length));
+                Assert.That(_handler.InfoCalls, Is.EqualTo(1));
+                Assert.That(_handler.TokenizationInputLengths.Max(), Is.LessThanOrEqualTo(32768));
+                Assert.That(fragments.All(text => text.EnumerateRunes().Count() + 2 <= _handler.MaxInputTokens), Is.True);
+                Assert.That(_handler.Batches.All(batch => batch.Length <= _handler.MaxBatchInputs
+                    && (long)batch.Max(text => text.EnumerateRunes().Count() + 2) * batch.Length <= _handler.MaxBatchTokens), Is.True);
+                Assert.That(results.SelectMany(document => document).All(vector => vector.Length == 1024), Is.True);
+            });
         }
     }
 }
