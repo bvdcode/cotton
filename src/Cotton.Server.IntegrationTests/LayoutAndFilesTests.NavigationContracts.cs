@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Handlers.WebDav;
+using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Topology.Abstractions;
 using EasyExtensions.Mediator;
@@ -12,6 +13,48 @@ namespace Cotton.Server.IntegrationTests
 {
     public partial class LayoutAndFilesTests
     {
+        [Test]
+        public async Task NavigationContract_RejectsUnboundedListingRequests()
+        {
+            NodeDto root = await PrepareNavigationRootAsync();
+            NodeDto folder = await CreateNodeAsync(root.Id, "bounded-listing");
+            string shareToken = await GetNavigationShareTokenAsync(folder.Id);
+
+            using HttpResponseMessage validOwned = await _client!.GetAsync(
+                $"/api/v1/layouts/nodes/{folder.Id}/children?pageSize={ListingRequestLimits.MaxPageSize}");
+            using HttpResponseMessage oversizedOwned = await _client.GetAsync(
+                $"/api/v1/layouts/nodes/{folder.Id}/children?pageSize={ListingRequestLimits.MaxPageSize + 1}");
+            using HttpResponseMessage excessiveDepth = await _client.GetAsync(
+                $"/api/v1/layouts/nodes/{folder.Id}/children?depth={ListingRequestLimits.MaxDepth + 1}");
+            using HttpResponseMessage overflowingPage = await _client.GetAsync(
+                $"/api/v1/layouts/nodes/{folder.Id}/children?page={int.MaxValue}&pageSize={ListingRequestLimits.MaxPageSize}");
+            using HttpResponseMessage validRecent = await _client.GetAsync(
+                $"/api/v1/layouts/{root.LayoutId}/recent?count={ListingRequestLimits.MaxRecentCount}");
+            using HttpResponseMessage oversizedRecent = await _client.GetAsync(
+                $"/api/v1/layouts/{root.LayoutId}/recent?count={ListingRequestLimits.MaxRecentCount + 1}");
+
+            _client.DefaultRequestHeaders.Authorization = null;
+            using HttpResponseMessage validShared = await _client.GetAsync(
+                $"/api/v1/layouts/shared/{shareToken}/children?pageSize={ListingRequestLimits.MaxPageSize}");
+            using HttpResponseMessage oversizedShared = await _client.GetAsync(
+                $"/api/v1/layouts/shared/{shareToken}/children?pageSize={ListingRequestLimits.MaxPageSize + 1}");
+            using HttpResponseMessage overflowingShared = await _client.GetAsync(
+                $"/api/v1/layouts/shared/{shareToken}/children?page={int.MaxValue}&pageSize={ListingRequestLimits.MaxPageSize}");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(validOwned.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(oversizedOwned.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(excessiveDepth.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(overflowingPage.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(validRecent.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(oversizedRecent.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(validShared.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(oversizedShared.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+                Assert.That(overflowingShared.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            });
+        }
+
         [Test]
         public async Task NavigationContract_PrivateAndSharedPagesCrossFolderFileBoundary()
         {

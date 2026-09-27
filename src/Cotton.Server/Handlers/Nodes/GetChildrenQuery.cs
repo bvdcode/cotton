@@ -43,6 +43,8 @@ namespace Cotton.Server.Handlers.Nodes
     {
         public async Task<PagedResult<NodeContentDto>> Handle(GetChildrenQuery request, CancellationToken ct)
         {
+            int skip = ListingRequestLimits.GetSkip(request.Page, request.PageSize);
+            ListingRequestLimits.ValidateDepth(request.Depth);
             Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, ct);
             Node parentNode = await _dbContext.Nodes
                 .AsNoTracking()
@@ -52,10 +54,6 @@ namespace Cotton.Server.Handlers.Nodes
                     && x.Type == request.NodeType)
                 .SingleOrDefaultAsync(cancellationToken: ct)
                     ?? throw new EntityNotFoundException(nameof(Node), "Folder not found in the requested layout.");
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.Page);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.PageSize);
-            ArgumentOutOfRangeException.ThrowIfNegative(request.Depth);
-
             // Resolve the set of parent IDs whose children should be returned.
             // depth == 0: direct children of parentNode (default).
             // depth == N: skip N intermediate levels and return their descendants.
@@ -63,12 +61,21 @@ namespace Cotton.Server.Handlers.Nodes
             // expression trees that cause EF Core's ExpressionTreeFuncletizer to stack-overflow.
             NodeDirectory directory = new(_dbContext, parentNode);
             List<Guid> currentParentIds = [parentNode.Id];
+            int traversedNodes = 0;
 
             for (int i = 0; i < request.Depth; i++)
             {
+                int remaining = ListingRequestLimits.MaxTraversedNodes - traversedNodes;
                 currentParentIds = await directory.GetNodes(currentParentIds).AsNoTracking()
                     .Select(x => x.Id)
+                    .Take(remaining + 1)
                     .ToListAsync(cancellationToken: ct);
+
+                traversedNodes += currentParentIds.Count;
+                if (traversedNodes > ListingRequestLimits.MaxTraversedNodes)
+                {
+                    throw new BadRequestException($"Folder traversal exceeds {ListingRequestLimits.MaxTraversedNodes} nodes.");
+                }
 
                 if (currentParentIds.Count == 0)
                 {
@@ -83,7 +90,6 @@ namespace Cotton.Server.Handlers.Nodes
                 }
             }
 
-            int skip = (request.Page - 1) * request.PageSize;
             IQueryable<Node> nodesBaseQuery = directory.GetNodes(currentParentIds).AsNoTracking();
             IQueryable<NodeFile> filesBaseQuery = directory.GetFiles(currentParentIds).AsNoTracking();
 

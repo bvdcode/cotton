@@ -7,6 +7,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using Cotton.Topology;
+using Cotton.Server.Services;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
@@ -47,7 +48,7 @@ namespace Cotton.Server.Handlers.Layouts
 
         public async Task<IEnumerable<NodeFileManifestDto>> Handle(GetRecentNodesQuery request, CancellationToken ct)
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.Count);
+            ListingRequestLimits.ValidateRecentCount(request.Count);
             string? includedPattern = BuildRegexPattern(request.ContentTypes);
             string? excludedPattern = BuildRegexPattern(request.ExcludedContentTypes);
 
