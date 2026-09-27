@@ -43,7 +43,8 @@ namespace Cotton.Server.Services.DatabaseIntegrity
 
                 if (!HasIntegrityShadowProperties(entry))
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Protected entity {descriptor.EntityName} is missing database integrity shadow properties.");
                 }
 
                 // The primary key participates in the signed payload, so signing a temporary EF key would create
