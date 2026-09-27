@@ -4,9 +4,7 @@
 using Cotton.Server.Auth;
 using Cotton.Server.Handlers.Auth.Passkeys;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
 using EasyExtensions;
-using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

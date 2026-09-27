@@ -3,18 +3,11 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Localization;
-using Cotton.Server.Abstractions;
-using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Enums;
-using Cotton.Server.Providers;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.Passkeys;
-using EasyExtensions.AspNetCore.Exceptions;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using EasyExtensions.Mediator;
