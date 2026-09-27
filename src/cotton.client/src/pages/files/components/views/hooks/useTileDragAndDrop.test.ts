@@ -1,5 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
-import type { DragEvent } from "react";
+import {
+  FakeDataTransfer,
+  makeDragEvent,
+} from "../../../../../test/dragEvents";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   MOVE_DRAG_DATA_MIME,
@@ -11,48 +14,6 @@ import type {
   IFileListView,
 } from "@shared/types/FileListViewTypes";
 import { useTileDragAndDrop } from "./useTileDragAndDrop";
-
-class FakeDataTransfer {
-  private store = new Map<string, string>();
-  effectAllowed: DataTransfer["effectAllowed"] = "uninitialized";
-  dropEffect: DataTransfer["dropEffect"] = "none";
-
-  setData(format: string, value: string): void {
-    this.store.set(format, value);
-  }
-
-  getData(format: string): string {
-    return this.store.get(format) ?? "";
-  }
-
-  clearData(): void {
-    this.store.clear();
-  }
-
-  get types(): readonly string[] {
-    return Array.from(this.store.keys());
-  }
-}
-
-const asDataTransfer = (value: FakeDataTransfer): DataTransfer => {
-  const transfer: Pick<DataTransfer, "setData" | "getData" | "clearData" | "types" | "effectAllowed" | "dropEffect"> = value;
-  return transfer as DataTransfer;
-};
-
-const makeDragEvent = (
-  dataTransfer: FakeDataTransfer,
-  currentTarget = document.createElement("div"),
-  relatedTarget: EventTarget | null = null,
-): DragEvent<HTMLDivElement> => {
-  const event: Pick<DragEvent<HTMLDivElement>, "dataTransfer" | "currentTarget" | "relatedTarget" | "preventDefault" | "stopPropagation"> = {
-    dataTransfer: asDataTransfer(dataTransfer),
-    currentTarget,
-    relatedTarget,
-    preventDefault: vi.fn(),
-    stopPropagation: vi.fn(),
-  };
-  return event as DragEvent<HTMLDivElement>;
-};
 
 const makeFolderTile = (
   id: string,
@@ -228,7 +189,7 @@ describe("useTileDragAndDrop drag over and leave", () => {
       }),
     );
     const dataTransfer = new FakeDataTransfer();
-    writeMoveDragPayload(asDataTransfer(dataTransfer), {
+    writeMoveDragPayload(dataTransfer, {
       items: [{ id: "source", kind: "folder", sourceParentId: "parent-1" }],
     });
     const event = makeDragEvent(dataTransfer);
@@ -249,7 +210,7 @@ describe("useTileDragAndDrop drag over and leave", () => {
       }),
     );
     const dataTransfer = new FakeDataTransfer();
-    writeMoveDragPayload(asDataTransfer(dataTransfer), {
+    writeMoveDragPayload(dataTransfer, {
       items: [{ id: "target", kind: "folder", sourceParentId: "parent-1" }],
     });
     const itemEvent = makeDragEvent(dataTransfer);
@@ -272,7 +233,7 @@ describe("useTileDragAndDrop drag over and leave", () => {
       }),
     );
     const dataTransfer = new FakeDataTransfer();
-    writeMoveDragPayload(asDataTransfer(dataTransfer), {
+    writeMoveDragPayload(dataTransfer, {
       items: [{ id: "source", kind: "file", sourceParentId: "parent-1" }],
     });
     const target = document.createElement("div");
@@ -313,7 +274,7 @@ describe("useTileDragAndDrop drop", () => {
       }),
     );
     const dataTransfer = new FakeDataTransfer();
-    writeMoveDragPayload(asDataTransfer(dataTransfer), {
+    writeMoveDragPayload(dataTransfer, {
       items: [
         { id: "move-me", kind: "folder", sourceParentId: "parent-1" },
         { id: "already-here", kind: "file", sourceParentId: "target" },

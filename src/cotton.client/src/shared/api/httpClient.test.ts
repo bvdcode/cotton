@@ -1,12 +1,6 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
-import type { AxiosError } from "axios";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AxiosError, AxiosHeaders } from "axios";
+import { createHttpResponse } from "../../test/httpFixtures";
 import { z } from "zod";
 import type { JsonValue } from "../types/json";
 
@@ -52,15 +46,14 @@ const buildAxiosError = (
   status: number,
   data: JsonValue,
   url = "/test",
-): AxiosError =>
-  ({
-    config: { url },
-    response: { status, data },
-    isAxiosError: true,
-    message: "Request failed",
-    name: "AxiosError",
-    toJSON: () => ({}),
-  }) as AxiosError;
+): AxiosError<JsonValue> => {
+  const config = { url, headers: new AxiosHeaders() };
+  return new AxiosError("Request failed", undefined, config, undefined, {
+    ...createHttpResponse(data),
+    status,
+    config,
+  });
+};
 
 beforeEach(() => {
   refreshEnabledMock.mockReturnValue(true);

@@ -1,3 +1,4 @@
+import { createFile, createFolder } from "../../test/fileFixtures";
 import { describe, expect, it, vi } from "vitest";
 import type { FileSystemTile } from "../../shared/types/FileListViewTypes";
 import {
@@ -11,8 +12,9 @@ import {
 
 describe("filesPageModel", () => {
   it("builds a case-insensitive unique sibling name before the extension", () => {
-    expect(buildUniqueSiblingName("notes.md", ["Notes.md", "notes 1.md"]))
-      .toBe("notes 2.md");
+    expect(buildUniqueSiblingName("notes.md", ["Notes.md", "notes 1.md"])).toBe(
+      "notes 2.md",
+    );
     expect(buildUniqueSiblingName("README", ["other"])).toBe("README");
   });
 
@@ -35,16 +37,16 @@ describe("filesPageModel", () => {
   });
 
   it("builds an archive request from the selected files and folders", () => {
-    const tiles = [
+    const tiles: FileSystemTile[] = [
       {
         kind: "folder",
-        node: { id: "folder-id", name: "Folder" },
+        node: createFolder({ id: "folder-id", name: "Folder" }),
       },
       {
         kind: "file",
-        file: { id: "file-id", name: "File.txt" },
+        file: createFile({ id: "file-id", name: "File.txt" }),
       },
-    ] as FileSystemTile[];
+    ];
 
     expect(
       buildSelectionArchiveRequest(

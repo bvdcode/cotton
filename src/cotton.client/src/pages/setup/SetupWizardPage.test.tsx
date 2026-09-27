@@ -40,14 +40,7 @@ vi.mock("../../shared/api/settingsApi", () => ({
 }));
 
 vi.mock("../../shared/store/setupStatusStore", () => {
-  const useSetupStatusStore = (<T,>(
-    selector: (state: { isInitialized: boolean | null }) => T,
-  ): T =>
-    selector({
-      isInitialized: testState.setupInitialized,
-    })) as typeof import("../../shared/store/setupStatusStore").useSetupStatusStore;
-
-  useSetupStatusStore.getState = () => ({
+  const getState = () => ({
     isInitialized: testState.setupInitialized,
     loading: false,
     loaded: true,
@@ -55,6 +48,11 @@ vi.mock("../../shared/store/setupStatusStore", () => {
     fetchSetupStatus: testState.fetchSetupStatus,
     reset: vi.fn(),
   });
+  const useSetupStatusStore = Object.assign(
+    <T,>(selector: (state: ReturnType<typeof getState>) => T): T =>
+      selector(getState()),
+    { getState },
+  );
 
   return { useSetupStatusStore };
 });

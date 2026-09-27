@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import type { GridRenderCellParams } from "@mui/x-data-grid";
+import { DataGrid } from "@mui/x-data-grid";
 import { describe, expect, it, vi } from "vitest";
 import {
   ENCRYPTED_FLAG_KEY,
@@ -67,9 +67,12 @@ function renderActions(
   });
 
   render(
-    column.renderCell?.({
-      row,
-    } as GridRenderCellParams<FileListRow>),
+    <DataGrid
+      rows={[row]}
+      columns={[column]}
+      disableVirtualization
+      hideFooter
+    />,
   );
 }
 

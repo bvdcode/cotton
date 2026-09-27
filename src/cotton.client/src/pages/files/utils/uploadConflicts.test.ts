@@ -1,3 +1,4 @@
+import { createFile, createFolder } from "../../../test/fileFixtures";
 import { describe, expect, it, vi } from "vitest";
 import type { NodeContentDto } from "../../../shared/api/nodesApi";
 import { ConflictAction } from "../../../shared/types/nameConflict";
@@ -6,18 +7,15 @@ import { resolveUploadConflicts } from "./uploadConflicts";
 const createContent = (
   fileNames: Pick<NodeContentDto["files"][number], "id" | "name">[],
   folderNames: string[] = [],
-): NodeContentDto =>
-  ({
-    id: "node-1",
-    nodes: folderNames.map((name, index) => ({
-      id: `folder-${index + 1}`,
-      name,
-    })),
-    files: fileNames.map((file) => ({
-      id: file.id,
-      name: file.name,
-    })),
-  }) as NodeContentDto;
+): NodeContentDto => ({
+  id: "node-1",
+  createdAt: "2026-05-17T00:00:00Z",
+  updatedAt: "2026-05-17T00:00:00Z",
+  nodes: folderNames.map((name, index) =>
+    createFolder({ id: `folder-${index + 1}`, name }),
+  ),
+  files: fileNames.map(createFile),
+});
 
 describe("resolveUploadConflicts", () => {
   it("normalizes names before resolving conflicts", async () => {

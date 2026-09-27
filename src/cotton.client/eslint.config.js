@@ -76,12 +76,6 @@ export default defineConfig([
     },
   },
   {
-    files: ["**/*.test.{ts,tsx}"],
-    rules: {
-      "@typescript-eslint/no-unsafe-type-assertion": "off",
-    },
-  },
-  {
     files: ["src/shared/**/*.{ts,tsx}", "src/features/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [

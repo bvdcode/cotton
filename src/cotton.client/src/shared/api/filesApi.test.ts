@@ -1,3 +1,4 @@
+import { createHttpResponse } from "../../test/httpFixtures";
 import type { AxiosResponse } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -118,7 +119,7 @@ describe("filesApi.getDownloadLink", () => {
     const first = filesApi.getDownloadLink(fileId, 1440);
     const second = filesApi.getDownloadLink(fileId, 1440);
 
-    resolve({ data: "https://download.example/file" } as AxiosResponse<string>);
+    resolve(createHttpResponse("https://download.example/file"));
 
     await expect(Promise.all([first, second])).resolves.toEqual([
       "https://download.example/file",

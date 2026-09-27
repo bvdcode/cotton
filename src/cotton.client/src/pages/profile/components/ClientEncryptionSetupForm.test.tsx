@@ -1,3 +1,4 @@
+import { generateMasterKey } from "@shared/crypto/keys";
 import {
   cleanup,
   fireEvent,
@@ -44,7 +45,7 @@ describe("ClientEncryptionSetupForm", () => {
 
   it("persists the generated envelope and unlocks the vault on finish", async () => {
     const envelope = new Uint8Array([1, 2, 3]);
-    const masterKey = {} as CryptoKey;
+    const masterKey = await generateMasterKey();
     const preferences = { cryptoEnvelope: "opaque-envelope" };
     const onSuccess = vi.fn();
 

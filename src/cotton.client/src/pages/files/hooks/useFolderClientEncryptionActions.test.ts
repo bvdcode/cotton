@@ -1,3 +1,5 @@
+import { generateMasterKey } from "@shared/crypto/keys";
+import { createFile, createFolder } from "../../../test/fileFixtures";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
@@ -55,30 +57,14 @@ import {
 } from "../../../shared/tasks";
 import { useFolderClientEncryptionActions } from "./useFolderClientEncryptionActions";
 
-const makeNode = (metadata: Record<string, string> = {}): NodeDto => ({
-  id: "node-1",
-  createdAt: "2026-05-17T00:00:00Z",
-  updatedAt: "2026-05-17T00:00:00Z",
-  layoutId: "layout-1",
-  parentId: null,
-  name: "Vault",
-  metadata,
-});
+const makeNode = (metadata: Record<string, string> = {}): NodeDto =>
+  createFolder({ id: "node-1", name: "Vault", metadata });
 
 const makeFile = (
   id: string,
   metadata: Record<string, string> = {},
-): NodeFileManifestDto => ({
-  id,
-  createdAt: "2026-05-17T00:00:00Z",
-  updatedAt: "2026-05-17T00:00:00Z",
-  nodeId: "node-1",
-  ownerId: "user-1",
-  name: `${id}.txt`,
-  contentType: "text/plain",
-  sizeBytes: 100,
-  metadata,
-});
+): NodeFileManifestDto =>
+  createFile({ id, nodeId: "node-1", name: `${id}.txt`, sizeBytes: 100, metadata });
 
 const makeContent = (files: NodeFileManifestDto[]): NodeContentDto => ({
   id: "node-1",
@@ -197,7 +183,10 @@ describe("useFolderClientEncryptionActions", () => {
   });
 
   it("encrypts existing plain files through task-backed encryption", async () => {
-    useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
+    useVault.setState({
+      isUnlocked: true,
+      masterKey: await generateMasterKey(),
+    });
     const onToast = vi.fn();
     const content = makeContent([makeFile("a"), makeFile("b")]);
 
@@ -254,7 +243,10 @@ describe("useFolderClientEncryptionActions", () => {
   });
 
   it("decrypts existing encrypted files through task-backed decryption", async () => {
-    useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
+    useVault.setState({
+      isUnlocked: true,
+      masterKey: await generateMasterKey(),
+    });
     const onToast = vi.fn();
     const content = makeContent([
       makeFile("encrypted-a", { isClientEncrypted: "true" }),
@@ -294,7 +286,10 @@ describe("useFolderClientEncryptionActions", () => {
   });
 
   it("decrypts recursive encrypted files when the current folder action runs", async () => {
-    useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
+    useVault.setState({
+      isUnlocked: true,
+      masterKey: await generateMasterKey(),
+    });
     const onToast = vi.fn();
     const nestedFile = {
       ...makeFile("nested-encrypted", { isClientEncrypted: "true" }),
@@ -342,7 +337,10 @@ describe("useFolderClientEncryptionActions", () => {
   });
 
   it("encrypts recursive plain files when the current encrypted folder action runs", async () => {
-    useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
+    useVault.setState({
+      isUnlocked: true,
+      masterKey: await generateMasterKey(),
+    });
     const onToast = vi.fn();
     const nestedFile = { ...makeFile("nested"), nodeId: "nested-node" };
     vi.mocked(collectPlainFilesInFoldersForClientEncryption).mockResolvedValue({
@@ -383,7 +381,10 @@ describe("useFolderClientEncryptionActions", () => {
   });
 
   it("warns when recursive plain file encryption scan is incomplete", async () => {
-    useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
+    useVault.setState({
+      isUnlocked: true,
+      masterKey: await generateMasterKey(),
+    });
     const onToast = vi.fn();
     vi.mocked(collectPlainFilesInFoldersForClientEncryption).mockResolvedValue({
       folders: [],

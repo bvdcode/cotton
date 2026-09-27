@@ -49,27 +49,22 @@ const createMediaElement = ({
 }): HTMLMediaElement => {
   let pausedState = paused;
 
-  const mediaElement: Pick<HTMLMediaElement, "paused" | "duration" | "currentTime" | "playbackRate" | "play" | "pause" | "fastSeek"> = {
-    get paused() {
-      return pausedState;
-    },
-    get duration() {
-      return duration;
-    },
-    currentTime,
-    playbackRate: 1,
-    play: vi.fn(async () => {
-      pausedState = false;
-    }),
-    pause: vi.fn(() => {
-      pausedState = true;
-    }),
-    fastSeek: vi.fn((time: number) => {
-      mediaElement.currentTime = time;
-    }),
-  };
-
-  return mediaElement as HTMLMediaElement;
+  const mediaElement = document.createElement("audio");
+  Object.defineProperties(mediaElement, {
+    paused: { get: () => pausedState },
+    duration: { value: duration },
+  });
+  mediaElement.currentTime = currentTime;
+  mediaElement.play = vi.fn(async () => {
+    pausedState = false;
+  });
+  mediaElement.pause = vi.fn(() => {
+    pausedState = true;
+  });
+  mediaElement.fastSeek = vi.fn((time: number) => {
+    mediaElement.currentTime = time;
+  });
+  return mediaElement;
 };
 
 describe("MediaSessionCoordinator", () => {

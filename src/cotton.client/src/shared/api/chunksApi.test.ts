@@ -1,4 +1,8 @@
-import type { AxiosProgressEvent, AxiosResponse } from "axios";
+import type { AxiosProgressEvent } from "axios";
+import {
+  createHttpResponse,
+  createUploadProgress,
+} from "../../test/httpFixtures";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@shared/ui/notifications", () => ({
@@ -85,12 +89,10 @@ describe("chunksApi.exists", () => {
 
     await chunksApi.exists("abc");
 
-    const config = get.mock.calls[0][1] as {
-      validateStatus: (status: number) => boolean;
-    };
-    expect(config.validateStatus(200)).toBe(true);
-    expect(config.validateStatus(404)).toBe(true);
-    expect(config.validateStatus(500)).toBe(false);
+    const validateStatus = get.mock.calls[0][1]?.validateStatus;
+    expect(validateStatus?.(200)).toBe(true);
+    expect(validateStatus?.(404)).toBe(true);
+    expect(validateStatus?.(500)).toBe(false);
   });
 });
 
@@ -109,15 +111,11 @@ describe("chunksApi.uploadChunk", () => {
       hash: "chunk-hash",
     });
 
-    const [url, body, config] = post.mock.calls[0] as [
-      string,
-      Blob,
-      { params: { hash: string }; headers: Record<string, string> },
-    ];
+    const [url, body, config] = post.mock.calls[0];
     expect(url).toBe("chunks/raw");
     expect(body).toBe(blob);
-    expect(config.params.hash).toBe("chunk-hash");
-    expect(config.headers["Content-Type"]).toBe("application/octet-stream");
+    expect(config?.params).toEqual({ hash: "chunk-hash" });
+    expect(config?.headers?.["Content-Type"]).toBe("application/octet-stream");
   });
 
   it("requires a hash for raw chunk uploads", async () => {
@@ -167,9 +165,7 @@ describe("chunksApi.uploadChunk", () => {
 
     vi.spyOn(httpClient, "post").mockImplementation((_url, _data, config) => {
       progressCallback = config?.onUploadProgress;
-      return Promise.resolve({
-        data: undefined,
-      } as AxiosResponse<void>);
+      return Promise.resolve(createHttpResponse(undefined));
     });
 
     await chunksApi.uploadChunk({
@@ -179,9 +175,9 @@ describe("chunksApi.uploadChunk", () => {
       onProgress,
     });
 
-    progressCallback?.({ loaded: 50, total: 100 } as AxiosProgressEvent);
-    progressCallback?.({ loaded: 500, total: 100 } as AxiosProgressEvent);
-    progressCallback?.({ loaded: 4 } as AxiosProgressEvent);
+    progressCallback?.(createUploadProgress(50, 100));
+    progressCallback?.(createUploadProgress(500, 100));
+    progressCallback?.(createUploadProgress(4));
 
     expect(onProgress).toHaveBeenNthCalledWith(1, Math.floor(blob.size * 0.5));
     expect(onProgress).toHaveBeenNthCalledWith(2, blob.size);
@@ -201,11 +197,9 @@ describe("chunksApi.uploadChunk", () => {
       }),
     ).resolves.toBeUndefined();
 
-    const config = post.mock.calls[0][2] as {
-      onUploadProgress?: (event: AxiosProgressEvent) => void;
-    };
+    const config = post.mock.calls[0][2];
     expect(() =>
-      config.onUploadProgress?.({ loaded: 1 } as AxiosProgressEvent),
+      config?.onUploadProgress?.(createUploadProgress(1)),
     ).not.toThrow();
   });
 });

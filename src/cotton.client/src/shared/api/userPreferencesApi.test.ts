@@ -34,9 +34,12 @@ describe("userPreferencesApi.update", () => {
 
     await expect(userPreferencesApi.update(patch)).resolves.toEqual(patch);
 
-    const config = httpPatch.mock.calls[0]?.[2] as
-      { params?: { token?: string } } | undefined;
-    const token = config?.params?.token;
+    const config = httpPatch.mock.calls[0]?.[2];
+    const params = config?.params;
+    if (typeof params !== "object" || params === null || !("token" in params)) {
+      throw new TypeError("Expected preference update parameters");
+    }
+    const token = params.token;
     expect(httpPatch).toHaveBeenCalledWith("users/me/preferences", patch, {
       params: { token },
     });

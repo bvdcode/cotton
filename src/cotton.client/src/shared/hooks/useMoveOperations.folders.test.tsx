@@ -1,3 +1,4 @@
+import { generateMasterKey } from "@shared/crypto/keys";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useVault } from "../crypto";
@@ -116,7 +117,7 @@ const makeEmptyChildrenResponse = (id = "empty") => ({
 });
 
 describe("useMoveOperations", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     useMoveClipboardStore.setState({ items: [] });
     useNodesStore.setState({
@@ -155,7 +156,10 @@ describe("useMoveOperations", () => {
       ancestorsByNodeId: {},
       lastUpdatedByNodeId: {},
     });
-    useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
+    useVault.setState({
+      isUnlocked: true,
+      masterKey: await generateMasterKey(),
+    });
     mocks.moveFile.mockImplementation((id: string) =>
       Promise.resolve(makeMovedFileDto({ ...plainFileItem, id })),
     );

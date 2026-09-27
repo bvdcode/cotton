@@ -8,7 +8,7 @@ import { CorruptedContainerError, NotAContainerError } from "./errors";
 import { generateMasterKey } from "./keys";
 import { CHUNK_HEADER_BYTES, FILE_HEADER_BYTES, MAGIC } from "./container";
 
-async function blobToBytes(blob: Blob): Promise<Uint8Array> {
+async function blobToBytes(blob: Blob): Promise<Uint8Array<ArrayBuffer>> {
   return new Uint8Array(await blob.arrayBuffer());
 }
 
@@ -152,7 +152,7 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     bytes[bytes.length - 20] ^= 0x01;
 
     await expect(
-      decryptBlobToBlob(new Blob([bytes as BlobPart]), masterKey),
+      decryptBlobToBlob(new Blob([bytes]), masterKey),
     ).rejects.toBeInstanceOf(CorruptedContainerError);
   });
 
@@ -169,10 +169,10 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     extended.set(bytes);
 
     await expect(
-      decryptBlobToBlob(new Blob([truncated as BlobPart]), masterKey),
+      decryptBlobToBlob(new Blob([truncated]), masterKey),
     ).rejects.toBeInstanceOf(CorruptedContainerError);
     await expect(
-      decryptBlobToBlob(new Blob([extended as BlobPart]), masterKey),
+      decryptBlobToBlob(new Blob([extended]), masterKey),
     ).rejects.toBeInstanceOf(CorruptedContainerError);
   });
 
