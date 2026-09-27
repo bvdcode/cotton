@@ -6,7 +6,7 @@ using Cotton.Auth;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
-using Cotton.Server.Controllers;
+using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models;
@@ -89,8 +89,8 @@ namespace Cotton.Server.Services
             IPAddress ipAddress = request.GetTrustedClientIPAddress();
             GeoLookupResult? lookup = await _geoLookup.TryLookupAsync(ipAddress);
             (string City, string Region, string Country) geo = ResolveRefreshTokenGeoFields(lookup);
-            sessionId ??= StringHelpers.CreateRandomString(AuthController.RefreshTokenLength);
-            string refreshToken = StringHelpers.CreateRandomString(AuthController.RefreshTokenLength);
+            sessionId ??= StringHelpers.CreateRandomString(AuthConstants.RefreshTokenLength);
+            string refreshToken = StringHelpers.CreateRandomString(AuthConstants.RefreshTokenLength);
             ExtendedRefreshToken dbToken = new()
             {
                 RevokedAt = null,
@@ -113,7 +113,7 @@ namespace Cotton.Server.Services
         {
             const int yearHours = 24 * 365;
             int sessionTimeoutHours = _settings.GetServerSettings().SessionTimeoutHours;
-            GetResponse().Cookies.Append(AuthController.CookieRefreshTokenKey, refreshToken, new CookieOptions
+            GetResponse().Cookies.Append(AuthConstants.RefreshTokenCookie, refreshToken, new CookieOptions
             {
                 Secure = true,
                 HttpOnly = true,
