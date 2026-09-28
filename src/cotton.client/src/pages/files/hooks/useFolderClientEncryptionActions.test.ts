@@ -308,13 +308,13 @@ describe("useFolderClientEncryptionActions", () => {
       useFolderClientEncryptionActions({
         nodeId: "node-1",
         currentNode: makeNode({}),
-        content: makeContent([
-          makeFile("direct-encrypted", { isClientEncrypted: "true" }),
-        ]),
+        content: makeContent([makeFile("visible-plain")]),
+        stats: { folders: 0, files: 2, encryptedFiles: 1, sizeBytes: 200 },
         onToast,
       }),
     );
 
+    expect(result.current.encryptedFilesCount).toBe(1);
     await act(async () => {
       await result.current.decryptEncryptedFiles();
     });

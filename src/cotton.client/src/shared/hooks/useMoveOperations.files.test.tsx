@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   moveNode: vi.fn(),
   confirmConflict: vi.fn(),
   getChildren: vi.fn(),
+  getNode: vi.fn(),
+  getAncestors: vi.fn(),
   fetchServerSettings: vi.fn(),
   encryptExistingFileWithTask: vi.fn(),
   decryptExistingFileWithTask: vi.fn(),
@@ -48,6 +50,8 @@ vi.mock("../api/nodesApi", () => ({
   nodesApi: {
     moveNode: mocks.moveNode,
     getChildren: mocks.getChildren,
+    getNode: mocks.getNode,
+    getAncestors: mocks.getAncestors,
   },
 }));
 
@@ -175,6 +179,13 @@ describe("useMoveOperations", () => {
       Promise.resolve(makeMovedFolderDto(id)),
     );
     mocks.getChildren.mockResolvedValue(makeEmptyChildrenResponse());
+    mocks.getNode.mockResolvedValue({
+      ...makeMovedFolderDto(targetParentId),
+      name: "Vault",
+      parentId: null,
+      metadata: { [FOLDER_ENCRYPTION_POLICY_KEY]: "true" },
+    });
+    mocks.getAncestors.mockResolvedValue([]);
     mocks.fetchServerSettings.mockResolvedValue({
       maxChunkSizeBytes: 1024,
       supportedHashAlgorithm: "SHA-256",
@@ -184,6 +195,7 @@ describe("useMoveOperations", () => {
   });
 
   it("does not keep moved files in the clipboard when post-move encryption fails", async () => {
+    useNodesStore.setState({ contentByNodeId: {} });
     mocks.encryptExistingFileWithTask.mockRejectedValueOnce(
       new Error("encryption failed"),
     );
@@ -238,6 +250,41 @@ describe("useMoveOperations", () => {
     });
     expect(useMoveClipboardStore.getState().items).toEqual([]);
     expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("uses current target names when suggesting a name after a conflict", async () => {
+    useMoveClipboardStore.getState().setItems([plainFileItem]);
+    mocks.moveFile.mockRejectedValueOnce(createNameConflictError());
+    mocks.getChildren.mockResolvedValueOnce({
+      ...makeEmptyChildrenResponse(targetParentId),
+      content: {
+        ...makeEmptyChildrenResponse(targetParentId).content,
+        files: [
+          makeMovedFileDto(plainFileItem),
+          { ...makeMovedFileDto(plainFileItem), id: "another-file", name: "plain (1).txt" },
+        ],
+      },
+      totalCount: 2,
+    });
+    mocks.confirmConflict.mockResolvedValueOnce(ConflictAction.Rename);
+
+    const { result } = renderHook(() =>
+      useMoveOperations({ confirmConflict: mocks.confirmConflict }),
+    );
+
+    await act(async () => {
+      await result.current.pasteInto(targetParentId);
+    });
+
+    expect(mocks.getChildren).toHaveBeenCalledWith(targetParentId, { page: 1 });
+    expect(mocks.confirmConflict).toHaveBeenCalledWith({
+      newName: "plain (2).txt",
+      canOverwrite: true,
+    });
+    expect(mocks.moveFile).toHaveBeenNthCalledWith(2, plainFileItem.id, {
+      parentId: targetParentId,
+      name: "plain (2).txt",
+    });
   });
 
   it("replaces a conflicting file after confirmation", async () => {

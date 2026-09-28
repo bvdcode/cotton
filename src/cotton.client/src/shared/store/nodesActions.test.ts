@@ -40,6 +40,12 @@ const makeNode = (id: string, name: string): NodeDto => ({
   metadata: {},
 });
 
+const nameConflictError = () =>
+  Object.assign(new Error("Name conflict"), {
+    isAxiosError: true,
+    response: { status: 409 },
+  });
+
 const seedFolder = (parentId: string, nodes: NodeDto[]) => {
   const content: NodeContentDto = {
     id: parentId,
@@ -125,16 +131,24 @@ describe("createFolder", () => {
     expect(nodesApi.createNode).not.toHaveBeenCalled();
   });
 
-  it("rejects duplicate names from cached siblings", async () => {
+  it("allows a name from a stale cache when the server accepts it", async () => {
     seedFolder("parent-1", [makeNode("a", "Drafts")]);
+    vi.mocked(nodesApi.createNode).mockResolvedValue(makeNode("b", "drafts"));
 
     const result = await createFolder("parent-1", "drafts");
 
-    expect(result).toBeNull();
-    expect(nodesApi.createNode).not.toHaveBeenCalled();
-    expect(useNodesStore.getState().error).toBe(
-      "A folder with this name already exists",
-    );
+    expect(result?.name).toBe("drafts");
+    expect(nodesApi.createNode).toHaveBeenCalledWith({
+      parentId: "parent-1",
+      name: "drafts",
+    });
+  });
+
+  it("shows a localized duplicate error when the server rejects the name", async () => {
+    vi.mocked(nodesApi.createNode).mockRejectedValue(nameConflictError());
+
+    expect(await createFolder("parent-1", "Drafts")).toBeNull();
+    expect(useNodesStore.getState().error).toBe("A folder with this name already exists");
   });
 
   it("adds the new folder to the parent cache on success", async () => {
@@ -296,16 +310,21 @@ describe("renameFolder", () => {
     expect(nodesApi.renameNode).not.toHaveBeenCalled();
   });
 
-  it("rejects duplicate names from cached siblings", async () => {
+  it("allows a name from a stale cache when the server accepts it", async () => {
     seedFolder("parent-1", [makeNode("a", "Drafts"), makeNode("b", "Photos")]);
+    vi.mocked(nodesApi.renameNode).mockResolvedValue(makeNode("a", "Photos"));
 
     const ok = await renameFolder("a", "Photos", "parent-1");
 
-    expect(ok).toBe(false);
-    expect(nodesApi.renameNode).not.toHaveBeenCalled();
-    expect(useNodesStore.getState().error).toBe(
-      "A folder with this name already exists",
-    );
+    expect(ok).toBe(true);
+    expect(nodesApi.renameNode).toHaveBeenCalledWith("a", { name: "Photos" });
+  });
+
+  it("shows a localized duplicate error when the server rejects the rename", async () => {
+    vi.mocked(nodesApi.renameNode).mockRejectedValue(nameConflictError());
+
+    expect(await renameFolder("a", "Photos", "parent-1")).toBe(false);
+    expect(useNodesStore.getState().error).toBe("A folder with this name already exists");
   });
 
   it("allows renaming a folder to its own current name", async () => {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "@shared/api/layoutsApi";
-import type { NodeContentDto } from "@shared/api/nodesApi";
+import type { FolderStatsDto, NodeContentDto } from "@shared/api/nodesApi";
 import {
   getFolderEncryptionPolicyState,
   readEnvelopeFromPreferences,
@@ -25,6 +25,7 @@ interface UseFilesEncryptionControllerOptions {
   activeCurrentNode: NodeDto | null;
   ancestors: NodeDto[];
   content: NodeContentDto | undefined;
+  stats?: FolderStatsDto;
   nodeId: string | null;
   showToast: (message: string, variant?: "info" | "error") => void;
 }
@@ -53,6 +54,7 @@ export const useFilesEncryptionController = ({
   activeCurrentNode,
   ancestors,
   content,
+  stats,
   nodeId,
   showToast,
 }: UseFilesEncryptionControllerOptions): FilesEncryptionController => {
@@ -94,15 +96,16 @@ export const useFilesEncryptionController = ({
   const {
     decryptEncryptedFiles,
     encryptPlainFiles,
-    encryptedFiles,
+    encryptedFilesCount,
     folderPolicyEnabled,
     isDecryptingEncryptedFiles,
     isEncryptingPlainFiles,
-    plainFiles,
+    plainFilesCount,
   } = useFolderClientEncryptionActions({
     nodeId,
     currentNode: activeCurrentNode,
     content,
+    stats,
     folderPolicyEnabled: currentFolderEncryptionPolicy.effectiveEnabled,
     onToast: showToast,
   });
@@ -198,9 +201,9 @@ export const useFilesEncryptionController = ({
       buildFolderEncryptionPrompt({
         decryptEncryptedFiles: () =>
           runFolderClientEncryptionAction("decrypt-existing"),
-        encryptedFilesCount: encryptedFiles.length,
+        encryptedFilesCount,
         encryptedFilesMessage: t("clientEncryption.encryptedFilesRemain.toast", {
-          count: encryptedFiles.length,
+          count: encryptedFilesCount,
         }),
         encryptedFilesAction: t("clientEncryption.encryptedFilesRemain.action"),
         encryptPlainFiles: () =>
@@ -208,18 +211,18 @@ export const useFilesEncryptionController = ({
         folderPolicyEnabled,
         isDecryptingEncryptedFiles,
         isEncryptingPlainFiles,
-        plainFilesCount: plainFiles.length,
+        plainFilesCount,
         plainFilesMessage: t("clientEncryption.mixedPlain.toast", {
-          count: plainFiles.length,
+          count: plainFilesCount,
         }),
         plainFilesAction: t("clientEncryption.mixedPlain.action"),
       }),
     [
-      encryptedFiles.length,
+      encryptedFilesCount,
       folderPolicyEnabled,
       isDecryptingEncryptedFiles,
       isEncryptingPlainFiles,
-      plainFiles.length,
+      plainFilesCount,
       runFolderClientEncryptionAction,
       t,
     ],

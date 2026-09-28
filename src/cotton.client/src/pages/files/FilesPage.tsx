@@ -8,10 +8,8 @@ import { useNodesStore } from "../../shared/store/nodesStore";
 import {
   loadNode,
   loadRoot,
-  refreshNodeContent,
   resolveRootInBackground,
 } from "../../shared/store/nodesActions";
-import { useAuthStore } from "../../shared/store/authStore";
 import { useFilesLayout } from "@shared/hooks/useFilesLayout";
 import { useFilesData } from "./hooks/useFilesData";
 import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
@@ -41,13 +39,13 @@ import {
 } from "./components/FilesPageOverlays";
 import {
   getActiveCurrentNode,
-  getCurrentContent,
   getGoUpParentId,
   isHugeFolderCount,
   resolveFilesNodeId,
   shouldRenderFilesList,
 } from "./filesPageModel";
-import { readStringProperty } from "../../shared/utils/typeGuards";
+import { readObjectProperty } from "../../shared/utils/typeGuards";
+import { nodeFileManifestSchema } from "../../shared/api/schemas/node";
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -56,21 +54,22 @@ export const FilesPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams<{ nodeId?: string }>();
-  const pendingSelectedFileIdRef = React.useRef<string | null>(
-    readStringProperty(location.state, "selectedFileId"),
-  );
+  const [selectedFileForNavigation] = React.useState(() => {
+    const parsed = nodeFileManifestSchema.safeParse(
+      readObjectProperty(location.state, "selectedFile"),
+    );
+    return parsed.success ? parsed.data : null;
+  });
+  const selectedFileOpenedRef = React.useRef(false);
 
   const {
     currentNode,
     ancestors,
-    contentByNodeId,
-    cacheOwnerUserId,
     rootNodeId,
-    loading,
-    error,
+    loading: nodeLoading,
+    error: nodeError,
     optimisticDeleteFile,
   } = useNodesStore();
-  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
 
   const routeNodeId = params.nodeId;
   const { layoutType, setLayoutType, tilesSize, viewMode, cycleViewMode } =
@@ -86,24 +85,28 @@ export const FilesPage: React.FC = () => {
   useEffect(() => {
     if (routeNodeId) return;
     resolveRootInBackground({
-      loadChildren: layoutType !== InterfaceLayoutType.List,
+      loadChildren: false,
     });
   }, [routeNodeId, layoutType]);
 
   const nodeId = resolveFilesNodeId(routeNodeId, rootNodeId);
-  const isUserCacheValid = cacheOwnerUserId === currentUserId;
-  const content = getCurrentContent(nodeId, isUserCacheValid, contentByNodeId);
-
   const {
+    content,
+    stats,
+    loading: contentLoading,
+    error: contentError,
+    pagination,
+    loadMore,
     childrenTotalCount,
     handleFolderChanged,
     reloadCurrentNode,
-    optimisticUpdateCurrentNodeFilePreviewHash,
   } = useFilesData({
     nodeId,
+    layoutType,
     loadNode,
-    refreshNodeContent,
   });
+  const loading = nodeLoading || contentLoading;
+  const error = nodeError ?? contentError;
 
   const handleRealtimeInvalidate = React.useCallback(() => {
     void invalidateAllFileVersions(queryClient);
@@ -113,7 +116,6 @@ export const FilesPage: React.FC = () => {
   useFilesRealtimeEvents({
     nodeId,
     onInvalidate: handleRealtimeInvalidate,
-    onPreviewGenerated: optimisticUpdateCurrentNodeFilePreviewHash,
   });
 
   const isHugeFolder = isHugeFolderCount(childrenTotalCount);
@@ -144,14 +146,17 @@ export const FilesPage: React.FC = () => {
 
   const activeCurrentNode = getActiveCurrentNode(nodeId, currentNode);
   const fileListSource = useFolderFileList({
-    nodeId,
-    layoutType,
+    content,
+    loading,
+    error,
+    refresh: handleFolderChanged,
     deferContent: true,
   });
 
   const fileListLogic = useFileListPageLogic({
     source: fileListSource,
     sourceKind: "nodes",
+    additionalFile: selectedFileForNavigation,
   });
 
   const { sortedFiles, tiles } = fileListLogic;
@@ -165,15 +170,16 @@ export const FilesPage: React.FC = () => {
 
   const { handleFileClick, handleMediaClick } = fileListLogic.interaction;
 
-  // Consume selectedFileId from router state (e.g. dashboard → open file)
+  // Open the file selected on the dashboard even if it is outside this page.
   React.useEffect(() => {
-    const targetId = pendingSelectedFileIdRef.current;
+    if (selectedFileOpenedRef.current) return;
+    const targetId = selectedFileForNavigation?.id;
     if (!targetId || sortedFiles.length === 0) return;
 
     const file = sortedFiles.find((f) => f.id === targetId);
     if (!file) return;
 
-    pendingSelectedFileIdRef.current = null;
+    selectedFileOpenedRef.current = true;
     window.history.replaceState({}, "");
 
     const typeInfo = getFileTypeInfo(file.name, file.contentType ?? null, {
@@ -184,7 +190,7 @@ export const FilesPage: React.FC = () => {
     } else {
       handleFileClick(file.id, file.name, file.sizeBytes);
     }
-  }, [sortedFiles, handleFileClick, handleMediaClick]);
+  }, [selectedFileForNavigation, sortedFiles, handleFileClick, handleMediaClick]);
 
   const showToast = React.useCallback(
     (message: string, variant: "info" | "error" = "info") => {
@@ -203,11 +209,25 @@ export const FilesPage: React.FC = () => {
     activeCurrentNode,
     ancestors,
     content,
+    stats,
     nodeId,
     showToast,
   });
 
   const fileSelection = useFileSelection();
+  const { deselectAll } = fileSelection;
+
+  useEffect(() => {
+    deselectAll();
+  }, [deselectAll, nodeId]);
+
+  const folderPagination = useMemo(() => pagination && ({
+    ...pagination,
+    onPaginationModelChange: (model: { page: number; pageSize: number }) => {
+      deselectAll();
+      pagination.onPaginationModelChange(model);
+    },
+  }), [deselectAll, pagination]);
 
   const handleGoUp = React.useCallback(() => {
     if (ancestors.length === 0) {
@@ -281,7 +301,7 @@ export const FilesPage: React.FC = () => {
           <FilesPageHeader
             breadcrumbs={breadcrumbs}
             canGoUp={ancestors.length > 0}
-            content={content}
+            stats={stats}
             contentOperations={contentOperations}
             cycleViewMode={cycleViewMode}
             fileSelection={fileSelection}
@@ -307,6 +327,8 @@ export const FilesPage: React.FC = () => {
           fileListLogic={fileListLogic}
           fileSelection={fileSelection}
           layoutType={layoutType}
+          pagination={folderPagination}
+          onLoadMore={loadMore}
           move={move}
           nodeId={nodeId}
           onNavigateBack={handleGoUp}

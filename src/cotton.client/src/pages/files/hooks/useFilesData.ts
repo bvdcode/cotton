@@ -1,92 +1,71 @@
 import { useEffect, useCallback, useRef } from "react";
+import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 import { useAuthStore } from "../../../shared/store/authStore";
+import { useFolderListing } from "./useFolderListing";
 
 interface UseFilesDataParams {
   nodeId: string | null;
+  layoutType: InterfaceLayoutType;
   loadNode: (
     nodeId: string,
     options?: { loadChildren?: boolean; force?: boolean },
   ) => Promise<void>;
-  refreshNodeContent: (nodeId: string) => Promise<void>;
 }
-
-/**
- * Keeps the active folder content loaded and exposes helpers that operate on
- * the current node. List mode uses the same loaded content as tile mode.
- */
 
 export const useFilesData = ({
   nodeId,
   loadNode,
-  refreshNodeContent,
+  layoutType,
 }: UseFilesDataParams) => {
-  const loadedNodeIdRef = useRef<string | null>(null);
+  const loadedNodeKeyRef = useRef<string | null>(null);
 
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
   const cacheOwnerUserId = useNodesStore((s) => s.cacheOwnerUserId);
-  const rawCachedContent = useNodesStore((s) =>
-    nodeId ? s.contentByNodeId[nodeId] : undefined,
+  const listing = useFolderListing(
+    nodeId,
+    cacheOwnerUserId === currentUserId ? currentUserId : null,
+    layoutType,
   );
-  const cachedContent =
-    cacheOwnerUserId === currentUserId ? rawCachedContent : undefined;
+  const { refresh } = listing;
 
-  const optimisticSetFilePreviewHash = useNodesStore(
-    (s) => s.optimisticSetFilePreviewHash,
-  );
-  const childrenTotalCount = cachedContent
-    ? cachedContent.nodes.length + cachedContent.files.length
-    : null;
+  const childrenTotalCount = listing.totalCount;
 
   useEffect(() => {
-    if (!nodeId) {
-      loadedNodeIdRef.current = null;
+    if (!nodeId || !currentUserId) {
+      loadedNodeKeyRef.current = null;
       return;
     }
 
-    const hasLoadedNode = loadedNodeIdRef.current === nodeId;
-    if (hasLoadedNode && cachedContent) {
+    const key = `${currentUserId}:${nodeId}`;
+    if (loadedNodeKeyRef.current === key) {
       return;
     }
 
-    loadedNodeIdRef.current = nodeId;
-    void loadNode(nodeId, { loadChildren: true });
-  }, [cachedContent, nodeId, loadNode]);
+    loadedNodeKeyRef.current = key;
+    void loadNode(nodeId, { loadChildren: false });
+  }, [currentUserId, nodeId, loadNode]);
 
   const handleFolderChanged = useCallback(() => {
     if (!nodeId) {
       return;
     }
-    void refreshNodeContent(nodeId);
-  }, [nodeId, refreshNodeContent]);
+    refresh();
+  }, [nodeId, refresh]);
 
   const reloadCurrentNode = useCallback(() => {
     if (!nodeId) {
       return;
     }
 
-    void loadNode(nodeId, { loadChildren: true, force: true });
-  }, [nodeId, loadNode]);
-
-  const optimisticUpdateCurrentNodeFilePreviewHash = useCallback(
-    (nodeFileId: string, previewHashEncryptedHex: string) => {
-      if (!nodeId) {
-        return false;
-      }
-
-      return optimisticSetFilePreviewHash(
-        nodeId,
-        nodeFileId,
-        previewHashEncryptedHex,
-      );
-    },
-    [nodeId, optimisticSetFilePreviewHash],
-  );
+    void loadNode(nodeId, { loadChildren: false, force: true });
+    refresh();
+  }, [nodeId, loadNode, refresh]);
 
   return {
+    ...listing,
     childrenTotalCount,
     handleFolderChanged,
     reloadCurrentNode,
-    optimisticUpdateCurrentNodeFilePreviewHash,
   };
 };

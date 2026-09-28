@@ -46,7 +46,7 @@ export const DashboardRecentFilesWidget = ({
     }
 
     navigate(`/files/${file.nodeId}`, {
-      state: { selectedFileId: file.id },
+      state: { selectedFile: file },
     });
   };
 

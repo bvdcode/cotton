@@ -34,8 +34,7 @@ export type { MoveDragPayload } from "./moveDragPayload";
 
 import {
   extractErrorMessage,
-  findCachedNode,
-  getCachedFolderEncryptionPolicyEnabled,
+  getMoveTarget,
   needsEncryptionAfterMove,
   needsDecryptionAfterMove,
 } from "./moveState";
@@ -327,9 +326,20 @@ export const useMoveOperations = ({
         };
       }
 
-      const targetNode = findCachedNode(targetParentId);
-      const targetEncryptsNewFiles =
-        getCachedFolderEncryptionPolicyEnabled(targetParentId);
+      let target: Awaited<ReturnType<typeof getMoveTarget>>;
+      try {
+        target = await getMoveTarget(targetParentId);
+      } catch (error) {
+        reportClientError("Failed to load move target", error);
+        toast.error(t("move.toasts.failed", { ns: "files", count: candidates.length }));
+        return {
+          succeeded: [],
+          failed: candidates,
+          notMoved: candidates,
+          lastErrorMessage: null,
+        };
+      }
+      const targetEncryptsNewFiles = target.encryptsNewFiles;
       const hasMoveEncryptionFollowups =
         targetEncryptsNewFiles &&
         candidates.some(
@@ -361,13 +371,13 @@ export const useMoveOperations = ({
           ...nestedEncryptionCandidateScan.candidates,
         ],
         settings: encryptionServerSettings,
-        targetNodeName: targetNode?.name ?? "",
+        targetNodeName: target.node.name,
         targetParentId,
         t,
       });
       offerDecryptForMovedFiles({
         files: result.movedFilesToOfferDecrypt,
-        targetNodeName: targetNode?.name ?? "",
+        targetNodeName: target.node.name,
         targetParentId,
         t,
       });

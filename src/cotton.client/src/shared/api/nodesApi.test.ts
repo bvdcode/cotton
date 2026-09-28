@@ -97,6 +97,7 @@ describe("nodesApi reads", () => {
         pageSize: 1000,
         nodeType: undefined,
         depth: undefined,
+        includeStats: undefined,
       },
     });
     expect(result.content.nodes[0].id).toBe("child-1");
@@ -156,6 +157,7 @@ describe("nodesApi reads", () => {
         pageSize: 50,
         nodeType: "trash",
         depth: 2,
+        includeStats: undefined,
       },
     });
   });

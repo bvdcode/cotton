@@ -5,6 +5,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
 import { filesApi } from "@shared/api/filesApi";
+import { fetchAllNodeChildren } from "@shared/api/nodeChildren";
 import { invalidateFileVersions } from "@shared/api/queries/fileVersions";
 import { fetchServerSettings } from "@shared/api/queries/serverSettings";
 import type {
@@ -58,7 +59,7 @@ export const useFilesContentOperations = ({
   tiles,
 }: UseFilesContentOperationsOptions) => {
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
-  const fileOps = useFileOperations(reloadCurrentNode);
+  const fileOps = useFileOperations(reloadCurrentNode, content);
   const [isCreatingMarkdownFile, setIsCreatingMarkdownFile] = useState(false);
 
   const handleFileUploaded = useCallback(
@@ -73,20 +74,38 @@ export const useFilesContentOperations = ({
   });
 
   const getCurrentSiblingNames = useCallback(
-    () =>
-      tiles.map((tile) =>
-        tile.kind === "folder" ? tile.node.name : tile.file.name,
-      ),
-    [tiles],
+    async (): Promise<string[]> => {
+      if (!nodeId) {
+        return [];
+      }
+      if (content?.stats &&
+        content.stats.folders + content.stats.files === tiles.length) {
+        return tiles.map((tile) =>
+          tile.kind === "folder" ? tile.node.name : tile.file.name,
+        );
+      }
+      const fullContent = (await fetchAllNodeChildren(nodeId)).content;
+      return [...fullContent.nodes.map((node) => node.name),
+        ...fullContent.files.map((file) => file.name)];
+    },
+    [content, nodeId, tiles],
   );
 
-  const handleNewFolderClick = useCallback(() => {
-    const folderName = buildUniqueSiblingName(
-      t("actions.defaultNewFolderName", { ns: "files" }),
-      getCurrentSiblingNames(),
-    );
-    folderOps.handleNewFolder(folderName);
-  }, [folderOps, getCurrentSiblingNames, t]);
+  const handleNewFolderClick = useCallback(async () => {
+    if (!nodeId) {
+      return;
+    }
+    try {
+      const folderName = buildUniqueSiblingName(
+        t("actions.defaultNewFolderName", { ns: "files" }),
+        await getCurrentSiblingNames(),
+      );
+      folderOps.handleNewFolder(folderName);
+    } catch (error) {
+      reportClientError("Failed to load folder names:", error);
+      showToast(t("errors.loadContentsFailed", { ns: "files" }), "error");
+    }
+  }, [folderOps, getCurrentSiblingNames, nodeId, showToast, t]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -101,7 +120,7 @@ export const useFilesContentOperations = ({
       }
 
       event.preventDefault();
-      handleNewFolderClick();
+      void handleNewFolderClick();
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -156,14 +175,13 @@ export const useFilesContentOperations = ({
       return;
     }
 
-    const fileName = buildUniqueSiblingName(
-      t("actions.defaultMarkdownFileName", { ns: "files" }),
-      getCurrentSiblingNames(),
-    );
-
     setIsCreatingMarkdownFile(true);
 
     try {
+      const fileName = buildUniqueSiblingName(
+        t("actions.defaultMarkdownFileName", { ns: "files" }),
+        await getCurrentSiblingNames(),
+      );
       const settings = await fetchServerSettings(queryClient);
       const createdFile = await uploadFileToNode({
         file: new File([""], fileName, { type: MARKDOWN_FILE_CONTENT_TYPE }),

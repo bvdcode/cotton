@@ -12,9 +12,13 @@ import {
 } from "../../../shared/crypto";
 import { useFileRenameDeleteOperations } from "../../../shared/hooks/useFileRenameDeleteOperations";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
+import type { NodeContentDto } from "../../../shared/api/nodesApi";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 
-export const useFileOperations = (onFilesChanged?: () => void) => {
+export const useFileOperations = (
+  onFilesChanged?: () => void,
+  visibleContent?: NodeContentDto,
+) => {
   const { t } = useTranslation(["files", "common"]);
   const {
     currentNode,
@@ -66,9 +70,8 @@ export const useFileOperations = (onFilesChanged?: () => void) => {
           optimisticRenameFile(parentId, fileId, newName);
         }
 
-        const currentFile = parentId
-          ? contentByNodeId[parentId]?.files.find((file) => file.id === fileId)
-          : undefined;
+        const currentFile = visibleContent?.files.find((file) => file.id === fileId)
+          ?? (parentId ? contentByNodeId[parentId]?.files.find((file) => file.id === fileId) : undefined);
 
         if (currentFile && isFileEncrypted(currentFile.metadata)) {
           const contentType =

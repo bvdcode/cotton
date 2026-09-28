@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   moveNode: vi.fn(),
   confirmConflict: vi.fn(),
   getChildren: vi.fn(),
+  getNode: vi.fn(),
+  getAncestors: vi.fn(),
   fetchServerSettings: vi.fn(),
   encryptExistingFileWithTask: vi.fn(),
   decryptExistingFileWithTask: vi.fn(),
@@ -48,6 +50,8 @@ vi.mock("../api/nodesApi", () => ({
   nodesApi: {
     moveNode: mocks.moveNode,
     getChildren: mocks.getChildren,
+    getNode: mocks.getNode,
+    getAncestors: mocks.getAncestors,
   },
 }));
 
@@ -167,6 +171,13 @@ describe("useMoveOperations", () => {
       Promise.resolve(makeMovedFolderDto(id)),
     );
     mocks.getChildren.mockResolvedValue(makeEmptyChildrenResponse());
+    mocks.getNode.mockResolvedValue({
+      ...makeMovedFolderDto(targetParentId),
+      name: "Vault",
+      parentId: null,
+      metadata: { [FOLDER_ENCRYPTION_POLICY_KEY]: "true" },
+    });
+    mocks.getAncestors.mockResolvedValue([]);
     mocks.fetchServerSettings.mockResolvedValue({
       maxChunkSizeBytes: 1024,
       supportedHashAlgorithm: "SHA-256",

@@ -56,6 +56,7 @@ describe("folder listing pagination", () => {
             pageSize: 1000,
             nodeType: undefined,
             depth: undefined,
+            includeStats: undefined,
           },
         },
       );
@@ -104,7 +105,7 @@ describe("folder listing pagination", () => {
         page,
         `/layouts/nodes/${folder.id}/children`,
         {
-          params: { page, pageSize: 1000, nodeType: "trash", depth: 1 },
+          params: { page, pageSize: 1000, nodeType: "trash", depth: 1, includeStats: undefined },
         },
       );
     }

@@ -32,6 +32,7 @@ export const TilesView: React.FC<IFileListView> = ({
   loading = false,
   loadingTitle,
   loadingCaption,
+  onLoadMore,
   tileSize = "medium",
   selectionMode = false,
   selectedIds,
@@ -233,6 +234,7 @@ export const TilesView: React.FC<IFileListView> = ({
               </Box>
             );
           }}
+          endReached={onLoadMore}
         />
       ) : (
         <Box sx={gridStyles}>

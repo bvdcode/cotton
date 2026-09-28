@@ -1,50 +1,29 @@
-import { useDeferredValue, useMemo } from "react";
-import { refreshNodeContent } from "../../store/nodesActions";
-import { useNodesStore } from "../../store/nodesStore";
-import { useAuthStore } from "../../store/authStore";
+import { useDeferredValue } from "react";
 import { useContentTiles } from "../useContentTiles";
 import type { FileListSource } from "../../types/fileListSource";
-import { InterfaceLayoutType } from "../../api/layoutsApi";
 import type { NodeContentDto } from "../../api/nodesApi";
 
 interface UseFolderFileListOptions {
-  nodeId: string | null;
-  layoutType: InterfaceLayoutType;
-  listContent?: NodeContentDto | null;
+  content: NodeContentDto | undefined;
+  loading: boolean;
+  error: string | null;
+  refresh: () => void;
   deferContent?: boolean;
 }
 
 export const useFolderFileList = ({
-  nodeId,
-  layoutType,
-  listContent,
+  content,
+  loading,
+  error,
+  refresh,
   deferContent = false,
 }: UseFolderFileListOptions): FileListSource => {
-  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
-  const cacheOwnerUserId = useNodesStore((s) => s.cacheOwnerUserId);
-  const rawContent = useNodesStore((s) =>
-    nodeId ? s.contentByNodeId[nodeId] : undefined,
-  );
-  const loading = useNodesStore((s) => s.loading);
-  const error = useNodesStore((s) => s.error);
-
-  const content = cacheOwnerUserId === currentUserId ? rawContent : undefined;
-  const effectiveContent =
-    layoutType === InterfaceLayoutType.List
-      ? (listContent ?? content)
-      : content;
-
-  const deferredContent = useDeferredValue(effectiveContent);
-  const visibleContent = deferContent ? deferredContent : effectiveContent;
+  const deferredContent = useDeferredValue(content);
+  const visibleContent = deferContent ? deferredContent : content;
   const isContentTransitioning =
-    deferContent && !!effectiveContent && deferredContent !== effectiveContent;
+    deferContent && !!content && deferredContent !== content;
 
-  const { tiles } = useContentTiles(visibleContent ?? undefined);
-
-  const refresh = useMemo(() => {
-    if (!nodeId) return undefined;
-    return () => refreshNodeContent(nodeId);
-  }, [nodeId]);
+  const { tiles } = useContentTiles(visibleContent ?? undefined, { sortMode: "server" });
 
   return {
     loading,

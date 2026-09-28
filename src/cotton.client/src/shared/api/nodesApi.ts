@@ -35,6 +35,14 @@ export interface NodeResponse {
 export interface NodeContentDto extends BaseDto {
   nodes: NodeDto[];
   files: NodeFileManifestDto[];
+  stats?: FolderStatsDto | null;
+}
+
+export interface FolderStatsDto {
+  folders: number;
+  files: number;
+  encryptedFiles: number;
+  sizeBytes: number;
 }
 
 export interface CreateNodeRequest {
@@ -93,6 +101,7 @@ export const nodesApi = {
       page?: number;
       pageSize?: number;
       depth?: number;
+      includeStats?: boolean;
     },
   ): Promise<NodeResponse> => {
     const requestedPage = options?.page ?? 1;
@@ -104,6 +113,7 @@ export const nodesApi = {
         pageSize: requestedPageSize,
         nodeType: options?.nodeType,
         depth: options?.depth,
+        includeStats: options?.includeStats,
       },
     });
     const content = parseValidated(url, response.data, nodeContentSchema);

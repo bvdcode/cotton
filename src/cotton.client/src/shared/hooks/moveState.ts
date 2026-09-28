@@ -1,8 +1,8 @@
 import type { NodeDto } from "../api/layoutsApi";
+import { nodesApi } from "../api/nodesApi";
 import { isAxiosError } from "../api/httpClient";
-import { useNodesStore } from "../store/nodesStore";
 import {
-  getFolderEncryptionPolicyStateFromParentResolver,
+  getFolderEncryptionPolicyState,
   isFileEncrypted,
 } from "../crypto";
 import type { MoveClipboardItem } from "../store/moveClipboardStore";
@@ -19,36 +19,18 @@ export const extractErrorMessage = <T>(error: T): string | null => {
   return null;
 };
 
-export const findCachedNode = (nodeId: string): NodeDto | null => {
-  const state = useNodesStore.getState();
-
-  if (state.currentNode?.id === nodeId) {
-    return state.currentNode;
-  }
-
-  const ancestor = state.ancestors.find((node) => node.id === nodeId);
-  if (ancestor) {
-    return ancestor;
-  }
-
-  for (const content of Object.values(state.contentByNodeId)) {
-    const node = content?.nodes.find((item) => item.id === nodeId);
-    if (node) {
-      return node;
-    }
-  }
-
-  return null;
-};
-
-export const getCachedFolderEncryptionPolicyEnabled = (
-  nodeId: string,
-): boolean => {
-  const node = findCachedNode(nodeId);
-  if (!node) return false;
-
-  return getFolderEncryptionPolicyStateFromParentResolver(node, findCachedNode)
-    .effectiveEnabled;
+export const getMoveTarget = async (nodeId: string): Promise<{
+  node: NodeDto;
+  encryptsNewFiles: boolean;
+}> => {
+  const [node, ancestors] = await Promise.all([
+    nodesApi.getNode(nodeId),
+    nodesApi.getAncestors(nodeId),
+  ]);
+  return {
+    node,
+    encryptsNewFiles: getFolderEncryptionPolicyState(node, ancestors).effectiveEnabled,
+  };
 };
 
 export const needsEncryptionAfterMove = (item: MoveClipboardItem): boolean =>

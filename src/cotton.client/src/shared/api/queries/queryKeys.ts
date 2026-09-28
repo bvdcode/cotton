@@ -7,8 +7,18 @@ const serverSettingsRoot = ["serverSettings"] as const;
 const storageQuotaRoot = ["storageQuota"] as const;
 const fileVersionsRoot = ["fileVersions"] as const;
 const oidcRoot = ["oidc"] as const;
+const nodeChildrenRoot = ["nodeChildren"] as const;
 
 export const queryKeys = {
+  nodeChildren: {
+    all: (nodeId: string) => [...nodeChildrenRoot, nodeId] as const,
+    overview: (nodeId: string, userId: string) =>
+      [...queryKeys.nodeChildren.all(nodeId), userId, "overview"] as const,
+    page: (nodeId: string, userId: string, page: number) =>
+      [...queryKeys.nodeChildren.all(nodeId), userId, "page", page] as const,
+    tiles: (nodeId: string, userId: string) =>
+      [...queryKeys.nodeChildren.all(nodeId), userId, "tiles"] as const,
+  },
   notifications: {
     all: () => notificationsRoot,
     list: (filters: { unreadOnly: boolean }) =>

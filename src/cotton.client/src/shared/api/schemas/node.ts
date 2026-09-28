@@ -37,6 +37,12 @@ export const nodeFileManifestSchema = baseDtoSchema.extend({
 export const nodeContentSchema = baseDtoSchema.extend({
   nodes: z.array(nodeDtoSchema),
   files: z.array(nodeFileManifestSchema),
+  stats: z.object({
+    folders: z.number(),
+    files: z.number(),
+    encryptedFiles: z.number(),
+    sizeBytes: z.number(),
+  }).nullable().optional(),
 });
 
 export const restoreStatusSchema = z.enum([

@@ -81,8 +81,11 @@ export const useFileUpload = (
 
       skipAllConflictsRef.current = false;
 
-      const contentForCheck =
-        content ?? (await fetchAllNodeChildren(nodeId)).content;
+      const visibleCount = (content?.nodes.length ?? 0) + (content?.files.length ?? 0);
+      const contentForCheck = content && content.stats &&
+        content.stats.folders + content.stats.files === visibleCount
+        ? content
+        : (await fetchAllNodeChildren(nodeId)).content;
 
       const confirmConflict = async (
         prompt: Parameters<typeof showConflictDialog>[0],

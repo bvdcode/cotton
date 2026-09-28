@@ -1,4 +1,5 @@
 import { reportClientError } from "@shared/utils/clientDiagnostics";
+import { isAxiosError } from "../api/httpClient";
 import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import type { NodeDto } from "../api/layoutsApi";
 import {
@@ -48,22 +49,6 @@ export const createFolder = async (
   if (trimmed.length === 0) return null;
   if (useNodesStore.getState().loading) return null;
 
-  const state = useNodesStore.getState();
-  const currentContent = state.contentByNodeId[parentNodeId];
-
-  if (currentContent) {
-    const normalizedName = trimmed.toLowerCase();
-    const duplicate = currentContent.nodes.find(
-      (n) => n.name.toLowerCase() === normalizedName,
-    );
-    if (duplicate) {
-      useNodesStore.setState({
-        error: tFileError("errors.duplicateFolderName"),
-      });
-      return null;
-    }
-  }
-
   useNodesStore.setState({ loading: true, error: null });
 
   try {
@@ -106,7 +91,11 @@ export const createFolder = async (
     reportClientError("Failed to create folder", error);
     useNodesStore.setState({
       loading: false,
-      error: tFileError("errors.createFolderFailed"),
+      error: tFileError(
+        isAxiosError(error) && error.response?.status === 409
+          ? "errors.duplicateFolderName"
+          : "errors.createFolderFailed",
+      ),
     });
     return null;
   }
@@ -166,24 +155,6 @@ export const renameFolder = async (
   if (trimmed.length === 0) return false;
   if (useNodesStore.getState().loading) return false;
 
-  const state = useNodesStore.getState();
-  const currentContent = parentNodeId
-    ? state.contentByNodeId[parentNodeId]
-    : undefined;
-
-  if (currentContent) {
-    const normalizedName = trimmed.toLowerCase();
-    const duplicate = currentContent.nodes.find(
-      (n) => n.id !== nodeId && n.name.toLowerCase() === normalizedName,
-    );
-    if (duplicate) {
-      useNodesStore.setState({
-        error: tFileError("errors.duplicateFolderName"),
-      });
-      return false;
-    }
-  }
-
   useNodesStore.setState({ loading: true, error: null });
 
   try {
@@ -216,7 +187,11 @@ export const renameFolder = async (
     reportClientError("Failed to rename folder", error);
     useNodesStore.setState({
       loading: false,
-      error: tFileError("errors.renameFolderFailed"),
+      error: tFileError(
+        isAxiosError(error) && error.response?.status === 409
+          ? "errors.duplicateFolderName"
+          : "errors.renameFolderFailed",
+      ),
     });
     return false;
   }

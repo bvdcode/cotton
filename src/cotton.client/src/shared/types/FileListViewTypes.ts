@@ -219,6 +219,7 @@ export interface IFileListView {
    * Optional pagination props for List view (not used in Tiles view)
    */
   pagination?: PaginationProps;
+  onLoadMore?: () => void;
 
   /**
    * Optional tile size for Tiles view.

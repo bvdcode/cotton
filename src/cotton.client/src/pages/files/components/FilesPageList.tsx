@@ -5,7 +5,7 @@ import { InterfaceLayoutType } from "@shared/api/layoutsApi";
 import type { NodeContentDto } from "@shared/api/nodesApi";
 import type { FileSelectionState } from "@shared/hooks/useFileSelection";
 import type { useFilesLayout } from "@shared/hooks/useFilesLayout";
-import type { FileSystemTile } from "@shared/types/FileListViewTypes";
+import type { FileSystemTile, PaginationProps } from "@shared/types/FileListViewTypes";
 import {
   buildFileOperations,
   buildFolderOperations,
@@ -28,6 +28,8 @@ interface FilesPageListProps {
   fileListLogic: FileListPageLogic;
   fileSelection: FileSelectionState;
   layoutType: InterfaceLayoutType;
+  pagination?: PaginationProps;
+  onLoadMore?: () => void;
   move: ReturnType<typeof useFileMoveController>;
   nodeId: string | null;
   onNavigateBack: () => void;
@@ -45,6 +47,8 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
   fileListLogic,
   fileSelection,
   layoutType,
+  pagination,
+  onLoadMore,
   move,
   nodeId,
   onNavigateBack,
@@ -123,6 +127,8 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
         >
           <FileListViewFactory
             layoutType={layoutType}
+            pagination={pagination}
+            onLoadMore={onLoadMore}
             tiles={tiles}
             folderOperations={folderOperations}
             fileOperations={fileOperations}

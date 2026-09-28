@@ -1,21 +1,8 @@
-import { reportClientError } from "@shared/utils/clientDiagnostics";
-import { fetchAllNodeChildren } from "../api/nodeChildren";
-import { useNodesStore } from "./nodesStore";
+import { queryClient } from "../api/queries/queryClient";
+import { queryKeys } from "../api/queries/queryKeys";
 
 export const refreshNodeContent = async (nodeId: string): Promise<void> => {
-  try {
-    const { content } = await fetchAllNodeChildren(nodeId);
-    useNodesStore.setState((prev) => ({
-      contentByNodeId: {
-        ...prev.contentByNodeId,
-        [nodeId]: content,
-      },
-      lastUpdatedByNodeId: {
-        ...prev.lastUpdatedByNodeId,
-        [nodeId]: Date.now(),
-      },
-    }));
-  } catch (error) {
-    reportClientError("Failed to refresh node content", error);
-  }
+  await queryClient.invalidateQueries({
+    queryKey: queryKeys.nodeChildren.all(nodeId),
+  });
 };
