@@ -374,11 +374,8 @@ export class UploadManager {
     task: UploadTaskInternal,
     uploadedFile: NodeFileManifestDto | undefined,
   ): void {
-    let uploadedFileCached = false;
     if (uploadedFile) {
-      uploadedFileCached = useNodesStore
-        .getState()
-        .upsertFileInCache(task.nodeId, uploadedFile);
+      useNodesStore.getState().upsertFileInCache(task.nodeId, uploadedFile);
       try {
         task._onFileUploaded?.(uploadedFile);
       } catch (listenerError) {
@@ -399,9 +396,7 @@ export class UploadManager {
     releaseUploadInputs(task);
     this.emit();
 
-    if (!uploadedFileCached) {
-      this.scheduleNodeRefresh(task.nodeId);
-    }
+    this.scheduleNodeRefresh(task.nodeId);
   }
 
   private failUpload(

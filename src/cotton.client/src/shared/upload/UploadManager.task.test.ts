@@ -349,7 +349,7 @@ describe("UploadManager task facade", () => {
     }
   });
 
-  it("updates cached parent content instead of refreshing after upload", async () => {
+  it("updates cached parent content and refreshes the folder listing after upload", async () => {
     const taskManager = createManager();
     queryClient.setQueryData(queryKeys.storageQuota.current(), {
       usedBytes: 0,
@@ -374,7 +374,8 @@ describe("UploadManager task facade", () => {
     expect(useNodesStore.getState().contentByNodeId["node-1"]?.files).toEqual([
       uploadedFile,
     ]);
-    expect(mocks.refreshNodeContent).not.toHaveBeenCalled();
+    expect(mocks.refreshNodeContent).toHaveBeenCalledOnce();
+    expect(mocks.refreshNodeContent).toHaveBeenCalledWith("node-1");
   });
 
   it("keeps committed uploads completed when completion listeners fail", async () => {

@@ -35,7 +35,7 @@ interface AudioPlayerState {
 }
 
 const SCAN_PAGE_SIZE = 500;
-const MAX_SCAN_DEPTH = 256;
+const MAX_SCAN_DEPTH = 32;
 const MAX_FOLDERS_TO_SCAN = 2500;
 const MAX_AUDIO_FILES = 25000;
 
