@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Handlers.Archives;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
@@ -8,16 +9,18 @@ using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
+using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route(Routes.V1.Archives)]
     public class ArchiveController(
-        ArchiveDownloadService _archives,
+        IMediator _mediator,
         ArchiveDownloadTicketStore _tickets,
         StoredZipArchiveWriter _zipWriter,
         IStoragePipeline _storage) : ControllerBase
@@ -28,9 +31,8 @@ namespace Cotton.Server.Controllers
             [FromBody] CreateArchiveDownloadLinkRequest request,
             CancellationToken cancellationToken)
         {
-            CreateArchiveDownloadLinkResult result = await _archives.CreateDownloadLinkAsync(
-                User.GetUserId(),
-                request,
+            CreateArchiveDownloadLinkResult result = await _mediator.Send(
+                new CreateArchiveDownloadLinkQuery(User.GetUserId(), request),
                 cancellationToken);
 
             return result.StatusCode switch
@@ -51,9 +53,17 @@ namespace Cotton.Server.Controllers
                 return NotFound("Archive download link not found.");
             }
 
-            IReadOnlyList<StoredZipSourceEntry> entries = [.. ticket.Entries.Select(ToSourceEntry)];
+            await _zipWriter.WriteAsync(Response.Body, PrepareSourcesAsync(ticket, cancellationToken), cancellationToken);
+            return new EmptyResult();
+        }
+
+        private async IAsyncEnumerable<StoredZipSourceEntry> PrepareSourcesAsync(
+            ArchiveDownloadTicket ticket, [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            await using ArchiveDownloadPlan plan = new();
+            await _mediator.Send(new PrepareArchiveDownloadRequest(ticket, plan), cancellationToken);
             Response.ContentType = "application/zip";
-            Response.ContentLength = ticket.SizeBytes;
+            Response.ContentLength = plan.SizeBytes;
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
             Response.Headers["X-Content-Type-Options"] = "nosniff";
@@ -62,8 +72,10 @@ namespace Cotton.Server.Controllers
                 FileNameStar = ticket.FileName,
             }.ToString();
 
-            await _zipWriter.WriteAsync(Response.Body, entries, cancellationToken);
-            return new EmptyResult();
+            await foreach (ArchiveDownloadEntry entry in plan.ReadAsync(cancellationToken))
+            {
+                yield return ToSourceEntry(entry);
+            }
         }
 
         private StoredZipSourceEntry ToSourceEntry(ArchiveDownloadEntry entry)

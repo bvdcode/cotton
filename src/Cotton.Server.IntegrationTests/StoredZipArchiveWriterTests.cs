@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Models.Configuration;
@@ -29,13 +29,13 @@ namespace Cotton.Server.IntegrationTests
 
             Task firstWrite = writer.WriteAsync(
                 firstDestination,
-                [firstEntry],
+                new[] { firstEntry }.ToAsyncEnumerable(),
                 CancellationToken.None);
             await firstOpened.Task.WaitAsync(TimeSpan.FromSeconds(1));
 
             Task secondWrite = writer.WriteAsync(
                 secondDestination,
-                [secondEntry],
+                new[] { secondEntry }.ToAsyncEnumerable(),
                 CancellationToken.None);
             Assert.That(secondOpened.Task.IsCompleted, Is.False);
 
@@ -70,13 +70,13 @@ namespace Cotton.Server.IntegrationTests
 
             Task firstWrite = writer.WriteAsync(
                 firstDestination,
-                [firstEntry],
+                new[] { firstEntry }.ToAsyncEnumerable(),
                 CancellationToken.None);
             await firstOpened.Task.WaitAsync(TimeSpan.FromSeconds(1));
 
             Task cancelledWrite = writer.WriteAsync(
                 cancelledDestination,
-                [cancelledEntry],
+                new[] { cancelledEntry }.ToAsyncEnumerable(),
                 cancellation.Token);
             await cancellation.CancelAsync();
             Assert.CatchAsync<OperationCanceledException>(
@@ -85,7 +85,7 @@ namespace Cotton.Server.IntegrationTests
 
             Task followerWrite = writer.WriteAsync(
                 followerDestination,
-                [followerEntry],
+                new[] { followerEntry }.ToAsyncEnumerable(),
                 CancellationToken.None);
             Assert.That(followerOpened.Task.IsCompleted, Is.False);
 
@@ -114,12 +114,12 @@ namespace Cotton.Server.IntegrationTests
             Assert.ThrowsAsync<IOException>(
                 async () => await writer.WriteAsync(
                     failingDestination,
-                    [failingEntry],
+                    new[] { failingEntry }.ToAsyncEnumerable(),
                     CancellationToken.None));
 
             await writer.WriteAsync(
                 followerDestination,
-                [followerEntry],
+                new[] { followerEntry }.ToAsyncEnumerable(),
                 CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(1));
             Assert.That(followerOpened.Task.IsCompletedSuccessfully, Is.True);
         }
@@ -131,7 +131,7 @@ namespace Cotton.Server.IntegrationTests
             byte[] pathBytes = Encoding.UTF8.GetBytes(path);
             long zip64Offset = uint.MaxValue;
 
-            StoredZipArchiveWriter.ZipEntryPlan plan = new(
+            ZipEntryPlan plan = new(
                 path,
                 pathBytes,
                 12L,
@@ -141,10 +141,10 @@ namespace Cotton.Server.IntegrationTests
             {
                 CentralExtraLength = 12L,
             };
-            StoredZipArchiveWriter.WrittenZipEntry written = new(plan, 0u);
+            WrittenZipEntry written = new(plan, 0u);
             using MemoryStream destination = new();
 
-            await StoredZipArchiveWriter.WriteCentralDirectoryEntryAsync(
+            await StoredZipHeaders.WriteCentralDirectoryEntryAsync(
                 destination,
                 written,
                 CancellationToken.None);
@@ -167,7 +167,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void RequiresZip64CentralDirectoryMetadata_ReturnsFalse_WhenSizeAndOffsetFit()
         {
-            bool requiresZip64 = StoredZipArchiveWriter.RequiresZip64CentralDirectoryMetadata(
+            bool requiresZip64 = StoredZipHeaders.RequiresZip64CentralDirectoryMetadata(
                 (long)uint.MaxValue - 1,
                 (long)uint.MaxValue - 1);
 
@@ -177,7 +177,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void RequiresZip64CentralDirectoryMetadata_ReturnsTrue_WhenOffsetUsesZip64Sentinel()
         {
-            bool requiresZip64 = StoredZipArchiveWriter.RequiresZip64CentralDirectoryMetadata(
+            bool requiresZip64 = StoredZipHeaders.RequiresZip64CentralDirectoryMetadata(
                 1024,
                 uint.MaxValue);
 
@@ -187,7 +187,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void RequiresZip64CentralDirectoryMetadata_ReturnsTrue_WhenSizeUsesZip64Sentinel()
         {
-            bool requiresZip64 = StoredZipArchiveWriter.RequiresZip64CentralDirectoryMetadata(
+            bool requiresZip64 = StoredZipHeaders.RequiresZip64CentralDirectoryMetadata(
                 uint.MaxValue,
                 1024);
 
@@ -197,7 +197,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void RequiresZip64CentralDirectoryMetadata_ReturnsTrue_WhenOnlyOffsetOverflows()
         {
-            bool requiresZip64 = StoredZipArchiveWriter.RequiresZip64CentralDirectoryMetadata(
+            bool requiresZip64 = StoredZipHeaders.RequiresZip64CentralDirectoryMetadata(
                 1024,
                 (long)uint.MaxValue + 1);
 
@@ -207,7 +207,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public void RequiresZip64CentralDirectoryMetadata_ReturnsTrue_WhenSizeOverflows()
         {
-            bool requiresZip64 = StoredZipArchiveWriter.RequiresZip64CentralDirectoryMetadata(
+            bool requiresZip64 = StoredZipHeaders.RequiresZip64CentralDirectoryMetadata(
                 (long)uint.MaxValue + 1,
                 1024);
 

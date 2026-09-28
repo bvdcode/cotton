@@ -1,0 +1,287 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
+
+using System.Buffers;
+using System.Buffers.Binary;
+
+namespace Cotton.Server.Services
+{
+    internal static class StoredZipHeaders
+    {
+        internal const ushort Utf8Flag = 1 << 11;
+        internal const ushort DataDescriptorFlag = 1 << 3;
+        internal const ushort StoreMethod = 0;
+        internal const ushort VersionStore = 20;
+        internal const ushort VersionZip64 = 45;
+        internal const uint UInt32Max = uint.MaxValue;
+        internal const ushort UInt16Max = ushort.MaxValue;
+
+        internal static bool RequiresZip64CentralDirectoryMetadata(long sizeBytes, long localHeaderOffset)
+        {
+            return RequiresZip64UInt32(sizeBytes) || RequiresZip64UInt32(localHeaderOffset);
+        }
+
+        internal static async Task WriteLocalHeaderAsync(
+            Stream destination,
+            ZipEntryPlan entry,
+            ushort flags,
+            ushort versionNeeded,
+            CancellationToken cancellationToken)
+        {
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(30);
+            try
+            {
+                Span<byte> header = buffer.AsSpan(0, 30);
+                BinaryPrimitives.WriteUInt32LittleEndian(header[0..4], 0x04034b50);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[4..6], versionNeeded);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[6..8], flags);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[8..10], StoreMethod);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[10..12], 0);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[12..14], 0);
+                BinaryPrimitives.WriteUInt32LittleEndian(header[14..18], 0);
+                BinaryPrimitives.WriteUInt32LittleEndian(header[18..22], 0);
+                BinaryPrimitives.WriteUInt32LittleEndian(header[22..26], 0);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[26..28], checked((ushort)entry.PathBytes.Length));
+                BinaryPrimitives.WriteUInt16LittleEndian(header[28..30], 0);
+                await destination.WriteAsync(buffer.AsMemory(0, header.Length), cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+
+            await destination.WriteAsync(entry.PathBytes, cancellationToken).ConfigureAwait(false);
+        }
+
+        internal static async Task WriteDataDescriptorAsync(
+            Stream destination,
+            uint crc,
+            long sizeBytes,
+            bool useZip64,
+            CancellationToken cancellationToken)
+        {
+            int length = useZip64 ? 24 : 16;
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(length);
+            try
+            {
+                Span<byte> descriptor = buffer.AsSpan(0, length);
+                BinaryPrimitives.WriteUInt32LittleEndian(descriptor[0..4], 0x08074b50);
+                BinaryPrimitives.WriteUInt32LittleEndian(descriptor[4..8], crc);
+                if (useZip64)
+                {
+                    BinaryPrimitives.WriteInt64LittleEndian(descriptor[8..16], sizeBytes);
+                    BinaryPrimitives.WriteInt64LittleEndian(descriptor[16..24], sizeBytes);
+                }
+                else
+                {
+                    BinaryPrimitives.WriteUInt32LittleEndian(descriptor[8..12], checked((uint)sizeBytes));
+                    BinaryPrimitives.WriteUInt32LittleEndian(descriptor[12..16], checked((uint)sizeBytes));
+                }
+
+                await destination.WriteAsync(buffer.AsMemory(0, length), cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        internal static async Task WriteCentralDirectoryEntryAsync(
+            Stream destination,
+            WrittenZipEntry written,
+            CancellationToken cancellationToken)
+        {
+            ZipEntryPlan entry = written.Plan;
+            bool sizeNeedsZip64 = RequiresZip64UInt32(entry.SizeBytes);
+            bool offsetNeedsZip64 = RequiresZip64UInt32(entry.LocalHeaderOffset);
+            // ZIP64 central metadata is required even when each file is small if the local
+            // header offset crosses the 4 GiB boundary in a large folder archive.
+            bool requiresZip64CentralMetadata = RequiresZip64CentralDirectoryMetadata(
+                entry.SizeBytes,
+                entry.LocalHeaderOffset);
+            ushort versionNeeded = requiresZip64CentralMetadata ? VersionZip64 : VersionStore;
+            ushort versionMadeBy = (ushort)((3 << 8) | versionNeeded);
+            ushort flags = Utf8Flag;
+            if (!entry.IsDirectory)
+            {
+                flags |= DataDescriptorFlag;
+            }
+
+            const int fixedLength = 46;
+            int extraLength = checked((int)entry.CentralExtraLength);
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(fixedLength);
+            try
+            {
+                Span<byte> header = buffer.AsSpan(0, fixedLength);
+                BinaryPrimitives.WriteUInt32LittleEndian(header[0..4], 0x02014b50);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[4..6], versionMadeBy);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[6..8], versionNeeded);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[8..10], flags);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[10..12], StoreMethod);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[12..14], 0);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[14..16], 0);
+                BinaryPrimitives.WriteUInt32LittleEndian(header[16..20], written.Crc32);
+                BinaryPrimitives.WriteUInt32LittleEndian(header[20..24], sizeNeedsZip64 ? UInt32Max : checked((uint)entry.SizeBytes));
+                BinaryPrimitives.WriteUInt32LittleEndian(header[24..28], sizeNeedsZip64 ? UInt32Max : checked((uint)entry.SizeBytes));
+                BinaryPrimitives.WriteUInt16LittleEndian(header[28..30], checked((ushort)entry.PathBytes.Length));
+                BinaryPrimitives.WriteUInt16LittleEndian(header[30..32], checked((ushort)extraLength));
+                BinaryPrimitives.WriteUInt16LittleEndian(header[32..34], 0);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[34..36], 0);
+                BinaryPrimitives.WriteUInt16LittleEndian(header[36..38], 0);
+                BinaryPrimitives.WriteUInt32LittleEndian(header[38..42], entry.IsDirectory ? 0x10u : 0u);
+                BinaryPrimitives.WriteUInt32LittleEndian(header[42..46], offsetNeedsZip64 ? UInt32Max : checked((uint)entry.LocalHeaderOffset));
+
+                await destination.WriteAsync(buffer.AsMemory(0, header.Length), cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+
+            await destination.WriteAsync(entry.PathBytes, cancellationToken).ConfigureAwait(false);
+            if (extraLength > 0)
+            {
+                await WriteZip64CentralExtraAsync(
+                    destination,
+                    entry,
+                    sizeNeedsZip64,
+                    offsetNeedsZip64,
+                    extraLength,
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        private static async Task WriteZip64CentralExtraAsync(
+            Stream destination,
+            ZipEntryPlan entry,
+            bool sizeNeedsZip64,
+            bool offsetNeedsZip64,
+            int extraLength,
+            CancellationToken cancellationToken)
+        {
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(extraLength);
+            try
+            {
+                Span<byte> extra = buffer.AsSpan(0, extraLength);
+                WriteZip64CentralExtra(extra, entry, sizeNeedsZip64, offsetNeedsZip64);
+                await destination.WriteAsync(buffer.AsMemory(0, extraLength), cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        private static void WriteZip64CentralExtra(
+            Span<byte> destination,
+            ZipEntryPlan entry,
+            bool sizeNeedsZip64,
+            bool offsetNeedsZip64)
+        {
+            int payloadLength = (sizeNeedsZip64 ? 16 : 0) + (offsetNeedsZip64 ? 8 : 0);
+            BinaryPrimitives.WriteUInt16LittleEndian(destination[0..2], 0x0001);
+            BinaryPrimitives.WriteUInt16LittleEndian(destination[2..4], checked((ushort)payloadLength));
+            int cursor = 4;
+            if (sizeNeedsZip64)
+            {
+                BinaryPrimitives.WriteInt64LittleEndian(destination[cursor..(cursor + 8)], entry.SizeBytes);
+                cursor += 8;
+                BinaryPrimitives.WriteInt64LittleEndian(destination[cursor..(cursor + 8)], entry.SizeBytes);
+                cursor += 8;
+            }
+
+            if (offsetNeedsZip64)
+            {
+                BinaryPrimitives.WriteInt64LittleEndian(destination[cursor..(cursor + 8)], entry.LocalHeaderOffset);
+            }
+        }
+
+        internal static async Task WriteZip64EndAsync(
+            Stream destination,
+            int entryCount,
+            StoredZipLengthCalculator plan,
+            CancellationToken cancellationToken)
+        {
+            long zip64EndOffset = plan.CentralDirectoryOffset + plan.CentralDirectoryLength;
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(76);
+            try
+            {
+                Span<byte> zip64 = buffer.AsSpan(0, 56);
+                BinaryPrimitives.WriteUInt32LittleEndian(zip64[0..4], 0x06064b50);
+                BinaryPrimitives.WriteInt64LittleEndian(zip64[4..12], 44);
+                BinaryPrimitives.WriteUInt16LittleEndian(zip64[12..14], VersionZip64);
+                BinaryPrimitives.WriteUInt16LittleEndian(zip64[14..16], VersionZip64);
+                BinaryPrimitives.WriteUInt32LittleEndian(zip64[16..20], 0);
+                BinaryPrimitives.WriteUInt32LittleEndian(zip64[20..24], 0);
+                BinaryPrimitives.WriteInt64LittleEndian(zip64[24..32], entryCount);
+                BinaryPrimitives.WriteInt64LittleEndian(zip64[32..40], entryCount);
+                BinaryPrimitives.WriteInt64LittleEndian(zip64[40..48], plan.CentralDirectoryLength);
+                BinaryPrimitives.WriteInt64LittleEndian(zip64[48..56], plan.CentralDirectoryOffset);
+
+                Span<byte> locator = buffer.AsSpan(56, 20);
+                BinaryPrimitives.WriteUInt32LittleEndian(locator[0..4], 0x07064b50);
+                BinaryPrimitives.WriteUInt32LittleEndian(locator[4..8], 0);
+                BinaryPrimitives.WriteInt64LittleEndian(locator[8..16], zip64EndOffset);
+                BinaryPrimitives.WriteUInt32LittleEndian(locator[16..20], 1);
+
+                await destination.WriteAsync(buffer.AsMemory(0, 76), cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        internal static async Task WriteEndOfCentralDirectoryAsync(
+            Stream destination,
+            int entryCount,
+            StoredZipLengthCalculator plan,
+            CancellationToken cancellationToken)
+        {
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(22);
+            try
+            {
+                Span<byte> eocd = buffer.AsSpan(0, 22);
+                BinaryPrimitives.WriteUInt32LittleEndian(eocd[0..4], 0x06054b50);
+                BinaryPrimitives.WriteUInt16LittleEndian(eocd[4..6], 0);
+                BinaryPrimitives.WriteUInt16LittleEndian(eocd[6..8], 0);
+                BinaryPrimitives.WriteUInt16LittleEndian(eocd[8..10], RequiresZip64UInt16(entryCount) ? UInt16Max : (ushort)entryCount);
+                BinaryPrimitives.WriteUInt16LittleEndian(eocd[10..12], RequiresZip64UInt16(entryCount) ? UInt16Max : (ushort)entryCount);
+                BinaryPrimitives.WriteUInt32LittleEndian(eocd[12..16], RequiresZip64UInt32(plan.CentralDirectoryLength) ? UInt32Max : (uint)plan.CentralDirectoryLength);
+                BinaryPrimitives.WriteUInt32LittleEndian(eocd[16..20], RequiresZip64UInt32(plan.CentralDirectoryOffset) ? UInt32Max : (uint)plan.CentralDirectoryOffset);
+                BinaryPrimitives.WriteUInt16LittleEndian(eocd[20..22], 0);
+                await destination.WriteAsync(buffer.AsMemory(0, 22), cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        internal static long GetCentralZip64ExtraLength(long sizeBytes, long localHeaderOffset)
+        {
+            int payloadLength = 0;
+            if (RequiresZip64UInt32(sizeBytes))
+            {
+                payloadLength += 16;
+            }
+
+            if (RequiresZip64UInt32(localHeaderOffset))
+            {
+                payloadLength += 8;
+            }
+
+            return payloadLength == 0 ? 0 : 4 + payloadLength;
+        }
+
+        internal static bool RequiresZip64UInt16(int value)
+        {
+            return value >= UInt16Max;
+        }
+
+        internal static bool RequiresZip64UInt32(long value)
+        {
+            return value >= UInt32Max;
+        }
+    }
+}

@@ -143,7 +143,6 @@ namespace Cotton.Server.Extensions
                 .AddScoped<PublicShareTokenGenerator>()
                 .AddSingleton<ArchiveDownloadTicketStore>()
                 .AddSingleton<StoredZipArchiveWriter>()
-                .AddScoped<ArchiveDownloadService>()
                 .AddScoped<StoragePressureGuard>()
                 .AddScoped<DefaultUserContentSeeder>()
                 .AddScoped<ChunkUsageService>()

@@ -95,10 +95,8 @@ namespace Cotton.Server.IntegrationTests
 
             HttpResponseMessage download = await _client.GetAsync(archive.Url);
             download.EnsureSuccessStatusCode();
-            Assert.That(download.Content.Headers.ContentLength, Is.EqualTo(archive.SizeBytes));
-
             byte[] bytes = await download.Content.ReadAsByteArrayAsync();
-            Assert.That(bytes.Length, Is.EqualTo(archive.SizeBytes));
+            Assert.That(download.Content.Headers.ContentLength, Is.EqualTo(bytes.Length));
 
             using ZipArchive zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
             AssertZipEntry(zip, "долги.txt", "рубли");

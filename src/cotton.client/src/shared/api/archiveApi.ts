@@ -10,8 +10,6 @@ export interface CreateArchiveDownloadLinkRequest {
 export interface ArchiveDownloadLinkDto {
   url: string;
   fileName: string;
-  sizeBytes: number;
-  entryCount: number;
 }
 
 export const archiveApi = {
