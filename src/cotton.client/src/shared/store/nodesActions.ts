@@ -8,7 +8,7 @@ import {
   rootResolveState,
 } from "./nodesActionInternals";
 import { useNodesStore } from "./nodesStore";
-import { fetchAllNodeChildren } from "./nodesContent";
+import { fetchAllNodeChildren } from "../api/nodeChildren";
 export { refreshNodeContent } from "./nodesContent";
 export { createFolder, deleteFolder, renameFolder } from "./nodesFolderActions";
 
@@ -224,7 +224,7 @@ const refreshChildrenInBackground = (
 
   void (async () => {
     try {
-      const fresh = await fetchAllNodeChildren(nodeId);
+      const { content: fresh } = await fetchAllNodeChildren(nodeId);
       useNodesStore.setState((prev) => ({
         contentByNodeId: {
           ...prev.contentByNodeId,
@@ -312,7 +312,7 @@ const resolveNodeContentAsync = async (
     return undefined;
   }
 
-  return cachedContent ?? fetchAllNodeChildren(nodeId);
+  return cachedContent ?? (await fetchAllNodeChildren(nodeId)).content;
 };
 
 const applyLoadedNodeState = (

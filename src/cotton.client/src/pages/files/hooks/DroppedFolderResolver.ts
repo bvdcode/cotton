@@ -1,4 +1,5 @@
 import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
+import { fetchAllNodeChildren } from "../../../shared/api/nodeChildren";
 import {
   FOLDER_ENCRYPTION_POLICY_KEY,
   isFolderEncryptionPolicyEnabled,
@@ -50,7 +51,7 @@ export class DroppedFolderResolver {
   private async getChildren(id: string): Promise<NodeContentDto> {
     const cached = this.childrenByNodeId.get(id);
     if (cached) return cached;
-    const loaded = await nodesApi.getChildren(id);
+    const loaded = await fetchAllNodeChildren(id);
     this.childrenByNodeId.set(id, loaded.content);
     return loaded.content;
   }

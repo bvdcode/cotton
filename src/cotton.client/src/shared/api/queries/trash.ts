@@ -1,10 +1,8 @@
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { layoutsApi, type NodeDto } from "../layoutsApi";
-import { nodesApi, type NodeContentDto } from "../nodesApi";
+import { nodesApi, type NodeResponse } from "../nodesApi";
+import { fetchAllNodeChildren } from "../nodeChildren";
 import { queryKeys } from "./queryKeys";
-
-const TILES_PAGE = 1;
-const TILES_PAGE_SIZE = 1_000_000;
 
 interface TrashNodeMeta {
   node: NodeDto;
@@ -50,24 +48,24 @@ export const useTrashChildrenQuery = (options: {
   pageSize?: number;
   enabled?: boolean;
 }) => {
-  const {
-    nodeId,
-    isRoot,
-    page = TILES_PAGE,
-    pageSize = TILES_PAGE_SIZE,
-    enabled = true,
-  } = options;
+  const { nodeId, isRoot, page = 1, pageSize, enabled = true } = options;
   const depth = isRoot ? 1 : 0;
 
-  return useQuery<{ content: NodeContentDto; totalCount: number }>({
-    queryKey: queryKeys.trash.children.page(nodeId ?? "", {
-      page,
-      pageSize,
-      depth,
-    }),
+  return useQuery<NodeResponse>({
+    queryKey:
+      pageSize === undefined
+        ? queryKeys.trash.children.complete(nodeId ?? "", depth)
+        : queryKeys.trash.children.page(nodeId ?? "", {
+            page,
+            pageSize,
+            depth,
+          }),
     queryFn: () => {
       if (!nodeId) {
         throw new Error("Trash children query requires a node id");
+      }
+      if (pageSize === undefined) {
+        return fetchAllNodeChildren(nodeId, { nodeType: "trash", depth });
       }
       return nodesApi.getChildren(nodeId, {
         nodeType: "trash",

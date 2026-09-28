@@ -68,6 +68,8 @@ export const queryKeys = {
     meta: (nodeId: string) => [...trashRoot, "meta", nodeId] as const,
     children: {
       all: (nodeId: string) => [...trashRoot, "children", nodeId] as const,
+      complete: (nodeId: string, depth: number) =>
+        [...trashRoot, "children", nodeId, "complete", depth] as const,
       page: (
         nodeId: string,
         params: { page: number; pageSize: number; depth: number },

@@ -109,7 +109,6 @@ describe("loadNode", () => {
     expect(nodesApi.getAncestors).toHaveBeenCalledWith("folder-1");
     expect(nodesApi.getChildren).toHaveBeenCalledWith("folder-1", {
       page: 1,
-      pageSize: 100000,
     });
     expect(useNodesStore.getState().currentNode?.name).toBe("New name");
     expect(useNodesStore.getState().contentByNodeId["folder-1"]?.nodes).toEqual(

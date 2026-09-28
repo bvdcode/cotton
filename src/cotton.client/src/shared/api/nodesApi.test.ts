@@ -94,7 +94,7 @@ describe("nodesApi reads", () => {
     expect(get).toHaveBeenCalledWith(`/layouts/nodes/${nodeId}/children`, {
       params: {
         page: 1,
-        pageSize: 1000000,
+        pageSize: 1000,
         nodeType: undefined,
         depth: undefined,
       },

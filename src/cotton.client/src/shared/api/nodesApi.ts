@@ -96,7 +96,7 @@ export const nodesApi = {
     },
   ): Promise<NodeResponse> => {
     const requestedPage = options?.page ?? 1;
-    const requestedPageSize = options?.pageSize ?? 1000000;
+    const requestedPageSize = options?.pageSize ?? 1000;
     const url = `/layouts/nodes/${nodeId}/children`;
     const response = await httpClient.get<JsonValue>(url, {
       params: {

@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  nodesApi,
   type NodeContentDto,
   type NodeFileManifestDto,
 } from "../../../shared/api/nodesApi";
+import { fetchAllNodeChildren } from "../../../shared/api/nodeChildren";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 import { ConflictAction } from "../../../shared/types/nameConflict";
 import { resolveUploadConflicts } from "../utils/uploadConflicts";
@@ -82,7 +82,7 @@ export const useFileUpload = (
       skipAllConflictsRef.current = false;
 
       const contentForCheck =
-        content ?? (await nodesApi.getChildren(nodeId)).content;
+        content ?? (await fetchAllNodeChildren(nodeId)).content;
 
       const confirmConflict = async (
         prompt: Parameters<typeof showConflictDialog>[0],
@@ -206,7 +206,7 @@ export const useFileUpload = (
       }));
 
       for (const [targetNodeId, bucket] of filesByTarget) {
-        const contentForCheck = (await nodesApi.getChildren(targetNodeId))
+        const contentForCheck = (await fetchAllNodeChildren(targetNodeId))
           .content;
         const result = await resolveUploadConflicts(
           bucket.files,
