@@ -11,7 +11,7 @@ namespace Cotton.Server.Services
 {
     public static class DirectoryListing
     {
-        public static async Task<(List<NodeDto> Nodes, List<TFile> Files, int TotalCount)> ReadPageAsync<TFile>(
+        public static async Task<(List<NodeDto> Nodes, List<TFile> Files, int NodeCount, int FileCount)> ReadPageAsync<TFile>(
             IQueryable<Node> nodesQuery,
             IQueryable<NodeFile> filesQuery,
             int skip,
@@ -30,7 +30,7 @@ namespace Cotton.Server.Services
                     .Skip(skip).Take(nodesToTake).ProjectToType<NodeDto>().ToListAsync(cancellationToken);
             List<TFile> files = filesToTake == 0 ? []
                 : await LoadFilesAsync<TFile>(filesQuery, filesSkip, filesToTake, cancellationToken);
-            return (nodes, files, nodesCount + filesCount);
+            return (nodes, files, nodesCount, filesCount);
         }
 
         private static async Task<List<TFile>> LoadFilesAsync<TFile>(

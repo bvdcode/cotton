@@ -94,6 +94,44 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task NavigationContract_FolderStatsIncludeOnlyDirectChildrenWhenRequested()
+        {
+            NodeDto root = await PrepareNavigationRootAsync();
+            NodeDto folder = await CreateNodeAsync(root.Id, "stats-parent");
+            NodeDto nested = await CreateNodeAsync(folder.Id, "nested");
+            await CreateNodeAsync(folder.Id, "second");
+            await UploadTextFileAsync(folder.Id, "direct.txt", "direct contents");
+            NodeFileManifestDto encrypted = await UploadTextFileAsync(folder.Id, "encrypted.txt", "ciphertext");
+            using HttpResponseMessage metadataResponse = await _client!.PatchAsJsonAsync(
+                $"/api/v1/files/{encrypted.Id}/metadata",
+                new Dictionary<string, string?> { ["isClientEncrypted"] = "true" });
+            metadataResponse.EnsureSuccessStatusCode();
+            await UploadTextFileAsync(nested.Id, "nested.txt", "nested contents are excluded");
+
+            using HttpResponseMessage first = await _client!.GetAsync(
+                $"/api/v1/layouts/nodes/{folder.Id}/children?page=1&pageSize=2&includeStats=true");
+            first.EnsureSuccessStatusCode();
+            NodeContentDto firstPage = (await first.Content.ReadFromJsonAsync<NodeContentDto>())!;
+            using HttpResponseMessage second = await _client.GetAsync(
+                $"/api/v1/layouts/nodes/{folder.Id}/children?page=2&pageSize=2");
+            second.EnsureSuccessStatusCode();
+            NodeContentDto secondPage = (await second.Content.ReadFromJsonAsync<NodeContentDto>())!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(firstPage.Stats, Is.Not.Null);
+                Assert.That(firstPage.Stats!.Folders, Is.EqualTo(2));
+                Assert.That(firstPage.Stats.Files, Is.EqualTo(2));
+                Assert.That(firstPage.Stats.EncryptedFiles, Is.EqualTo(1));
+                Assert.That(firstPage.Stats.SizeBytes, Is.EqualTo("direct contents".Length + "ciphertext".Length));
+                Assert.That(first.Headers.GetValues("X-Total-Count").Single(), Is.EqualTo("4"));
+                Assert.That(firstPage.Nodes, Has.Count.EqualTo(2));
+                Assert.That(secondPage.Files, Has.Count.EqualTo(2));
+                Assert.That(secondPage.Stats, Is.Null);
+            });
+        }
+
+        [Test]
         public async Task NavigationContract_PrivateDepthSkipsIntermediateLevels()
         {
             NodeDto root = await PrepareNavigationRootAsync();

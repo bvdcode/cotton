@@ -262,10 +262,11 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType nodeType = NodeType.Default,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 100,
-            [FromQuery] int depth = 0)
+            [FromQuery] int depth = 0,
+            [FromQuery] bool includeStats = false)
         {
             Guid userId = User.GetUserId();
-            GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize, depth);
+            GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize, depth, includeStats);
             PagedResult<NodeContentDto> result = await _mediator.Send(query);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
             return Ok(result.Payload);

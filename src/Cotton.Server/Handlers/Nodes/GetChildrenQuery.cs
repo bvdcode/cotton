@@ -21,7 +21,7 @@ namespace Cotton.Server.Handlers.Nodes
 {
     public class GetChildrenQuery(
         Guid userId, Guid nodeId, NodeType nodeType,
-        int page, int pageSize, int depth = 0) : IRequest<PagedResult<NodeContentDto>>
+        int page, int pageSize, int depth = 0, bool includeStats = false) : IRequest<PagedResult<NodeContentDto>>
     {
         public Guid UserId { get; } = userId;
 
@@ -34,6 +34,8 @@ namespace Cotton.Server.Handlers.Nodes
         public int PageSize { get; } = pageSize;
 
         public int Depth { get; } = depth;
+
+        public bool IncludeStats { get; } = includeStats;
     }
 
     public class GetChildrenQueryHandler(
@@ -86,6 +88,7 @@ namespace Cotton.Server.Handlers.Nodes
                         Id = request.NodeId,
                         CreatedAt = parentNode.CreatedAt,
                         UpdatedAt = parentNode.UpdatedAt,
+                        Stats = request.IncludeStats ? new FolderStatsDto() : null,
                     }, 0);
                 }
             }
@@ -108,8 +111,24 @@ namespace Cotton.Server.Handlers.Nodes
                     ct);
             }
 
-            var (nodes, files, totalCount) = await DirectoryListing.ReadPageAsync<NodeFileManifestDto>(
+            var (nodes, files, nodeCount, fileCount) = await DirectoryListing.ReadPageAsync<NodeFileManifestDto>(
                 nodesBaseQuery, filesBaseQuery, skip, request.PageSize, ct);
+
+            FolderStatsDto? stats = null;
+            if (request.IncludeStats)
+            {
+                long sizeBytes = await filesBaseQuery.SumAsync(
+                    file => (long?)file.FileManifest.SizeBytes, ct) ?? 0L;
+                int encryptedFiles = await filesBaseQuery.CountAsync(
+                    file => CottonDbContext.GetHstoreValue(file.Metadata, "isClientEncrypted") == "true", ct);
+                stats = new FolderStatsDto
+                {
+                    Folders = nodeCount,
+                    Files = fileCount,
+                    EncryptedFiles = encryptedFiles,
+                    SizeBytes = sizeBytes,
+                };
+            }
 
             return new(new NodeContentDto
             {
@@ -118,7 +137,8 @@ namespace Cotton.Server.Handlers.Nodes
                 Id = request.NodeId,
                 CreatedAt = parentNode.CreatedAt,
                 UpdatedAt = parentNode.UpdatedAt,
-            }, totalCount);
+                Stats = stats,
+            }, nodeCount + fileCount);
         }
 
         private async Task<PagedResult<NodeContentDto>> LoadTrashChildrenAsync(

@@ -47,7 +47,7 @@ namespace Cotton.Server.Handlers.Layouts
             }
             Node targetNode = ancestry[0];
             NodeDirectory directory = new(_dbContext, targetNode);
-            var (nodes, files, totalCount) = await DirectoryListing.ReadPageAsync<SharedNodeFileDto>(
+            var (nodes, files, nodeCount, fileCount) = await DirectoryListing.ReadPageAsync<SharedNodeFileDto>(
                 directory.Nodes.AsNoTracking(), directory.Files.AsNoTracking(), skip, request.PageSize, ct);
 
             SharedNodeContentDto content = new()
@@ -61,7 +61,7 @@ namespace Cotton.Server.Handlers.Layouts
             return new GetSharedNodeChildrenResult(
                 GetSharedNodeChildrenStatus.Success,
                 content,
-                totalCount);
+                nodeCount + fileCount);
         }
     }
 }
