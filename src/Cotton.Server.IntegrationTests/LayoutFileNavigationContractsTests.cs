@@ -132,6 +132,35 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task NavigationContract_RequestedFolderStatsCanIncludeDescendants()
+        {
+            NodeDto root = await PrepareNavigationRootAsync();
+            NodeDto folder = await CreateNodeAsync(root.Id, "stats-details");
+            NodeDto nested = await CreateNodeAsync(folder.Id, "nested-details");
+            await CreateNodeAsync(nested.Id, "grandchild-details");
+            await UploadTextFileAsync(folder.Id, "direct-details.txt", "direct");
+            await UploadTextFileAsync(nested.Id, "nested-details.txt", "nested");
+
+            FolderStatsDto direct = (await _client!.GetFromJsonAsync<FolderStatsDto>(
+                $"/api/v1/layouts/nodes/{folder.Id}/stats"))!;
+            FolderStatsDto recursive = (await _client.GetFromJsonAsync<FolderStatsDto>(
+                $"/api/v1/layouts/nodes/{folder.Id}/stats?recursive=true"))!;
+            using HttpResponseMessage missing = await _client.GetAsync(
+                $"/api/v1/layouts/nodes/{Guid.NewGuid()}/stats?recursive=true");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(direct.Folders, Is.EqualTo(1));
+                Assert.That(direct.Files, Is.EqualTo(1));
+                Assert.That(direct.SizeBytes, Is.EqualTo("direct".Length));
+                Assert.That(recursive.Folders, Is.EqualTo(2));
+                Assert.That(recursive.Files, Is.EqualTo(2));
+                Assert.That(recursive.SizeBytes, Is.EqualTo("direct".Length + "nested".Length));
+                Assert.That(missing.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            });
+        }
+
+        [Test]
         public async Task NavigationContract_PrivateDepthSkipsIntermediateLevels()
         {
             NodeDto root = await PrepareNavigationRootAsync();

@@ -273,6 +273,20 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpGet("nodes/{nodeId:guid}/stats")]
+        public async Task<IActionResult> GetFolderStats(
+            [FromRoute] Guid nodeId,
+            [FromQuery] bool recursive = false)
+        {
+            FolderStatsDto? stats = await _mediator.Send(
+                new GetFolderStatsQuery(User.GetUserId(), nodeId, recursive),
+                HttpContext.RequestAborted);
+            return stats is null
+                ? CottonResult.NotFound("Folder not found.")
+                : Ok(stats);
+        }
+
+        [Authorize]
         [HttpGet("resolver")]
         [HttpGet("resolver/{*path}")]
         public async Task<IActionResult> ResolveLayout([FromRoute] string? path,
