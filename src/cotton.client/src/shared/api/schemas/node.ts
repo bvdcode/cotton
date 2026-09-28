@@ -34,15 +34,17 @@ export const nodeFileManifestSchema = baseDtoSchema.extend({
   previewHashEncryptedHex: z.string().nullable().optional(),
 });
 
+export const folderStatsSchema = z.object({
+  folders: z.number(),
+  files: z.number(),
+  encryptedFiles: z.number(),
+  sizeBytes: z.number(),
+});
+
 export const nodeContentSchema = baseDtoSchema.extend({
   nodes: z.array(nodeDtoSchema),
   files: z.array(nodeFileManifestSchema),
-  stats: z.object({
-    folders: z.number(),
-    files: z.number(),
-    encryptedFiles: z.number(),
-    sizeBytes: z.number(),
-  }).nullable().optional(),
+  stats: folderStatsSchema.nullable().optional(),
 });
 
 export const restoreStatusSchema = z.enum([

@@ -75,6 +75,7 @@ export interface FolderOperations {
   onShare?: (folderId: string, name: string) => void;
   onCut?: (folderId: string) => void;
   onTogglePin?: (folderId: string) => void;
+  onShowInfo?: (folder: NodeDto) => void;
   isPinned?: (folderId: string) => boolean;
   onToggleEncryptionPolicy?: (
     folderId: string,

@@ -28,6 +28,7 @@ const labels = {
   disableEncryptionPolicy: "Disable E2E",
   pin: "Pin",
   unpin: "Unpin",
+  info: "Information",
 };
 
 const fileOperations = {
@@ -85,7 +86,7 @@ describe("file list action column", () => {
       folderOperations,
     });
 
-    expect(column.minWidth).toBeGreaterThanOrEqual(220);
+    expect(column.minWidth).toBeGreaterThanOrEqual(340);
   });
 
   it("shows share action for plain files", () => {
@@ -121,7 +122,28 @@ const folderRow: FileListRow = {
   sizeBytes: null,
 };
 
+const folderNode = {
+  id: "folder-1",
+  createdAt: "2026-05-13T00:00:00Z",
+  updatedAt: "2026-05-13T00:00:00Z",
+  layoutId: "layout-1",
+  parentId: "parent-1",
+  name: "Reports",
+  metadata: {},
+};
+
 describe("folder list actions", () => {
+  it("opens information for the selected folder", () => {
+    const onShowInfo = vi.fn();
+    renderActions(
+      { ...folderRow, tile: { kind: "folder", node: folderNode } },
+      { folderOperations: { ...folderOperations, onShowInfo } },
+    );
+
+    fireEvent.click(screen.getByTitle("Information"));
+    expect(onShowInfo).toHaveBeenCalledWith(folderNode);
+  });
+
   it("preserves action order and passes the folder to each operation", () => {
     const operations = createFolderOperations();
     renderActions(folderRow, { folderOperations: operations });

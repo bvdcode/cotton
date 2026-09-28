@@ -2395,6 +2395,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Informationen",
+      "title": "{{name}}",
+      "created": "Erstellt: {{date}}",
+      "modified": "Geändert: {{date}}",
+      "calculating": "Ordnergröße wird berechnet…",
+      "loadFailed": "Ordnergröße konnte nicht berechnet werden.",
+      "folders": "Ordner: {{count}}",
+      "files": "Dateien: {{count}}",
+      "size": "Gesamtgröße: {{size}}"
+    },
     "title": "Dateien",
     "errors": {
       "resolveRootFailed": "Stammordner konnte nicht aufgelöst werden",

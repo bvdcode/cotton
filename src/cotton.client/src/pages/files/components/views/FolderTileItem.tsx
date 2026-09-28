@@ -107,6 +107,11 @@ export const FolderTileItem = ({
             ? () => folderOperations.onTogglePin?.(tile.node.id)
             : undefined
         }
+        onShowInfo={
+          folderOperations.onShowInfo
+            ? () => folderOperations.onShowInfo?.(tile.node)
+            : undefined
+        }
         isPinned={folderOperations.isPinned?.(tile.node.id) ?? false}
         onToggleEncryptionPolicy={
           folderOperations.onToggleEncryptionPolicy

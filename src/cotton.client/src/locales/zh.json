@@ -2408,6 +2408,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "信息",
+      "title": "{{name}}",
+      "created": "创建时间: {{date}}",
+      "modified": "修改时间: {{date}}",
+      "calculating": "正在计算文件夹大小…",
+      "loadFailed": "无法计算文件夹大小。",
+      "folders": "文件夹: {{count}}",
+      "files": "文件: {{count}}",
+      "size": "总大小: {{size}}"
+    },
     "title": "文件",
     "errors": {
       "resolveRootFailed": "无法解析根文件夹",

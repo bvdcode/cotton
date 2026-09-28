@@ -2482,6 +2482,17 @@
   },
   "files": {
     "title": "Файлы",
+    "folderInfo": {
+      "action": "Информация",
+      "title": "{{name}}",
+      "created": "Создана: {{date}}",
+      "modified": "Изменена: {{date}}",
+      "calculating": "Считаем размер папки…",
+      "loadFailed": "Не удалось посчитать размер папки.",
+      "folders": "Папок: {{count}}",
+      "files": "Файлов: {{count}}",
+      "size": "Общий размер: {{size}}"
+    },
     "errors": {
       "resolveRootFailed": "Не удалось определить корневую папку",
       "loadContentsFailed": "Не удалось загрузить содержимое папки",

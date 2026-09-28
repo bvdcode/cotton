@@ -140,6 +140,7 @@ export const ListView: React.FC<IFileListView> = ({
           disableEncryptionPolicy: t("clientEncryption.disablePolicy"),
           pin: t("home:dashboard.pinnedFolders.pin"),
           unpin: t("home:dashboard.pinnedFolders.unpin"),
+          info: t("folderInfo.action"),
         },
         newFolderName,
         onNewFolderNameChange,

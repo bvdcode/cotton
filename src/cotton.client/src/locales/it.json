@@ -2401,6 +2401,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Informazioni",
+      "title": "{{name}}",
+      "created": "Creata: {{date}}",
+      "modified": "Modificata: {{date}}",
+      "calculating": "Calcolo della dimensione della cartella…",
+      "loadFailed": "Impossibile calcolare la dimensione della cartella.",
+      "folders": "Cartelle: {{count}}",
+      "files": "File: {{count}}",
+      "size": "Dimensione totale: {{size}}"
+    },
     "title": "File",
     "errors": {
       "resolveRootFailed": "Impossibile risolvere la cartella radice",

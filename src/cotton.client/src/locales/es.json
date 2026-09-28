@@ -2398,6 +2398,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Información",
+      "title": "{{name}}",
+      "created": "Creada: {{date}}",
+      "modified": "Modificada: {{date}}",
+      "calculating": "Calculando el tamaño de la carpeta…",
+      "loadFailed": "No se pudo calcular el tamaño de la carpeta.",
+      "folders": "Carpetas: {{count}}",
+      "files": "Archivos: {{count}}",
+      "size": "Tamaño total: {{size}}"
+    },
     "title": "Archivos",
     "errors": {
       "resolveRootFailed": "No se pudo resolver la carpeta raíz",

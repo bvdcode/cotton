@@ -19,6 +19,8 @@ import type { useFilesSelectionActions } from "../hooks/useFilesSelectionActions
 import { FileListViewFactory } from "./views";
 import { FileVersionsDialog } from "./FileVersionsDialog";
 import { usePinnedFolders } from "@shared/dashboard/usePinnedFolders";
+import type { NodeDto } from "@shared/api/layoutsApi";
+import { FolderInfoDialog } from "./FolderInfoDialog";
 
 interface FilesPageListProps {
   content: NodeContentDto | undefined;
@@ -62,6 +64,7 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
     id: string;
     name: string;
   } | null>(null);
+  const [infoFolder, setInfoFolder] = useState<NodeDto | null>(null);
   const pinnedFolders = usePinnedFolders();
 
   const handleOpenVersions = useCallback((fileId: string, fileName: string) => {
@@ -88,17 +91,20 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
     [fileSelection],
   );
 
-  const folderOperations = buildFolderOperations(
-    contentOperations.folderOps,
-    encryption.goToFolder,
-    selectionActions.handleShareFolder,
-    move.handleCutFolder,
-    encryption.handleToggleFolderEncryption,
-    encryption.getChildFolderEncryptionPolicyState,
-    selectionActions.handleDownloadFolder,
-    pinnedFolders.togglePinned,
-    pinnedFolders.isPinned,
-  );
+  const folderOperations = {
+    ...buildFolderOperations(
+      contentOperations.folderOps,
+      encryption.goToFolder,
+      selectionActions.handleShareFolder,
+      move.handleCutFolder,
+      encryption.handleToggleFolderEncryption,
+      encryption.getChildFolderEncryptionPolicyState,
+      selectionActions.handleDownloadFolder,
+      pinnedFolders.togglePinned,
+      pinnedFolders.isPinned,
+    ),
+    onShowInfo: setInfoFolder,
+  };
   const fileOperations = buildFileOperations(contentOperations.fileOps, {
     onDownload: fileListLogic.interaction.handleDownloadFile,
     onVersions: handleOpenVersions,
@@ -168,6 +174,7 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
         onClose={handleCloseVersions}
         onRestored={handleVersionsChanged}
       />
+      <FolderInfoDialog folder={infoFolder} onClose={() => setInfoFolder(null)} />
     </>
   );
 };

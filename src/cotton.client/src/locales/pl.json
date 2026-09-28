@@ -2403,6 +2403,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Informacje",
+      "title": "{{name}}",
+      "created": "Utworzono: {{date}}",
+      "modified": "Zmieniono: {{date}}",
+      "calculating": "Obliczanie rozmiaru folderu…",
+      "loadFailed": "Nie udało się obliczyć rozmiaru folderu.",
+      "folders": "Foldery: {{count}}",
+      "files": "Pliki: {{count}}",
+      "size": "Łączny rozmiar: {{size}}"
+    },
     "title": "Pliki",
     "errors": {
       "resolveRootFailed": "Nie udało się ustalić folderu głównego",

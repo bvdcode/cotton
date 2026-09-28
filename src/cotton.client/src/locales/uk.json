@@ -2406,6 +2406,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Інформація",
+      "title": "{{name}}",
+      "created": "Створено: {{date}}",
+      "modified": "Змінено: {{date}}",
+      "calculating": "Обчислення розміру папки…",
+      "loadFailed": "Не вдалося обчислити розмір папки.",
+      "folders": "Папок: {{count}}",
+      "files": "Файлів: {{count}}",
+      "size": "Загальний розмір: {{size}}"
+    },
     "title": "Файли",
     "errors": {
       "resolveRootFailed": "Не вдалося визначити кореневу теку",

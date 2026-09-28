@@ -2400,6 +2400,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Informatie",
+      "title": "{{name}}",
+      "created": "Aangemaakt: {{date}}",
+      "modified": "Gewijzigd: {{date}}",
+      "calculating": "Mapgrootte berekenen…",
+      "loadFailed": "Kan de mapgrootte niet berekenen.",
+      "folders": "Mappen: {{count}}",
+      "files": "Bestanden: {{count}}",
+      "size": "Totale grootte: {{size}}"
+    },
     "title": "Bestanden",
     "errors": {
       "resolveRootFailed": "Het oplossen van de hoofdmap is mislukt",

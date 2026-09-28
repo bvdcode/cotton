@@ -2399,6 +2399,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Informations",
+      "title": "{{name}}",
+      "created": "Créé: {{date}}",
+      "modified": "Modifié: {{date}}",
+      "calculating": "Calcul de la taille du dossier…",
+      "loadFailed": "Impossible de calculer la taille du dossier.",
+      "folders": "Dossiers: {{count}}",
+      "files": "Fichiers: {{count}}",
+      "size": "Taille totale: {{size}}"
+    },
     "title": "Fichiers",
     "errors": {
       "resolveRootFailed": "Échec de la résolution du dossier racine",

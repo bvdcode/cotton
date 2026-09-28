@@ -2400,6 +2400,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Informace",
+      "title": "{{name}}",
+      "created": "Vytvořeno: {{date}}",
+      "modified": "Změněno: {{date}}",
+      "calculating": "Počítání velikosti složky…",
+      "loadFailed": "Velikost složky se nepodařilo spočítat.",
+      "folders": "Složky: {{count}}",
+      "files": "Soubory: {{count}}",
+      "size": "Celková velikost: {{size}}"
+    },
     "title": "Soubory",
     "errors": {
       "resolveRootFailed": "Nepodařilo se určit kořenovou složku",

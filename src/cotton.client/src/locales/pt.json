@@ -2402,6 +2402,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Informações",
+      "title": "{{name}}",
+      "created": "Criada: {{date}}",
+      "modified": "Modificada: {{date}}",
+      "calculating": "A calcular o tamanho da pasta…",
+      "loadFailed": "Não foi possível calcular o tamanho da pasta.",
+      "folders": "Pastas: {{count}}",
+      "files": "Ficheiros: {{count}}",
+      "size": "Tamanho total: {{size}}"
+    },
     "title": "Arquivos",
     "errors": {
       "resolveRootFailed": "Falha ao resolver a pasta raiz",

@@ -5,6 +5,7 @@ import { readRequiredIntHeader } from "./utils/headerUtils";
 import {
   nodeContentSchema,
   nodeDtoSchema,
+  folderStatsSchema,
   restoreOutcomeSchema,
 } from "./schemas/node";
 import { applyDisplayMetaToFiles } from "../crypto/displayMeta";
@@ -85,6 +86,11 @@ const nodeListSchema = z.array(nodeDtoSchema);
 export const nodesApi = {
   getNode: (nodeId: Guid): Promise<NodeDto> =>
     getValidated(`/layouts/nodes/${nodeId}`, nodeDtoSchema),
+
+  getFolderStats: (nodeId: Guid, recursive = false): Promise<FolderStatsDto> =>
+    getValidated(`/layouts/nodes/${nodeId}/stats`, folderStatsSchema, {
+      params: { recursive },
+    }),
 
   getAncestors: async (
     nodeId: Guid,

@@ -2197,6 +2197,17 @@
   },
   "files": {
     "title": "Files",
+    "folderInfo": {
+      "action": "Information",
+      "title": "{{name}}",
+      "created": "Created: {{date}}",
+      "modified": "Modified: {{date}}",
+      "calculating": "Calculating folder size…",
+      "loadFailed": "Could not calculate folder size.",
+      "folders": "Folders: {{count}}",
+      "files": "Files: {{count}}",
+      "size": "Total size: {{size}}"
+    },
     "errors": {
       "resolveRootFailed": "Failed to resolve root folder",
       "loadContentsFailed": "Failed to load folder contents",
