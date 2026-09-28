@@ -7,6 +7,7 @@ import {
   nodeDtoSchema,
   folderStatsSchema,
   restoreOutcomeSchema,
+  siblingNameLookupSchema,
 } from "./schemas/node";
 import { applyDisplayMetaToFiles } from "../crypto/displayMeta";
 import { z } from "zod";
@@ -37,6 +38,16 @@ export interface NodeContentDto extends BaseDto {
   nodes: NodeDto[];
   files: NodeFileManifestDto[];
   stats?: FolderStatsDto | null;
+}
+
+export interface FileNameMatchDto extends BaseDto {
+  name: string;
+}
+
+export interface SiblingNameLookupDto {
+  nodes: NodeDto[];
+  files: FileNameMatchDto[];
+  takenNameKeys: string[];
 }
 
 export interface FolderStatsDto {
@@ -91,6 +102,19 @@ export const nodesApi = {
     getValidated(`/layouts/nodes/${nodeId}/stats`, folderStatsSchema, {
       params: { recursive },
     }),
+
+  lookupSiblingNames: async (
+    nodeId: Guid,
+    names: string[],
+    includeTakenNamesOnConflict = false,
+  ): Promise<SiblingNameLookupDto> => {
+    const url = `/layouts/nodes/${nodeId}/sibling-names`;
+    const response = await httpClient.post<JsonValue>(url, {
+      names,
+      includeTakenNamesOnConflict,
+    });
+    return parseValidated(url, response.data, siblingNameLookupSchema);
+  },
 
   getAncestors: async (
     nodeId: Guid,

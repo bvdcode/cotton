@@ -273,6 +273,23 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPost("nodes/{nodeId:guid}/sibling-names")]
+        public async Task<IActionResult> LookupSiblingNames(
+            [FromRoute] Guid nodeId,
+            [FromBody] SiblingNameLookupRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            SiblingNameLookupDto result = await _mediator.Send(
+                new LookupSiblingNamesQuery(
+                    User.GetUserId(),
+                    nodeId,
+                    request.Names,
+                    request.IncludeTakenNamesOnConflict),
+                cancellationToken);
+            return Ok(result);
+        }
+
+        [Authorize]
         [HttpGet("nodes/{nodeId:guid}/stats")]
         public async Task<IActionResult> GetFolderStats(
             [FromRoute] Guid nodeId,

@@ -47,6 +47,12 @@ export const nodeContentSchema = baseDtoSchema.extend({
   stats: folderStatsSchema.nullable().optional(),
 });
 
+export const siblingNameLookupSchema = z.object({
+  nodes: z.array(nodeDtoSchema),
+  files: z.array(baseDtoSchema.extend({ name: z.string() })),
+  takenNameKeys: z.array(z.string()),
+});
+
 export const restoreStatusSchema = z.enum([
   "Restored",
   "ParentMissing",

@@ -5,17 +5,16 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
 import { filesApi } from "@shared/api/filesApi";
-import { fetchAllNodeChildren } from "@shared/api/nodeChildren";
 import { invalidateFileVersions } from "@shared/api/queries/fileVersions";
 import { fetchServerSettings } from "@shared/api/queries/serverSettings";
 import type {
   NodeContentDto,
   NodeFileManifestDto,
 } from "@shared/api/nodesApi";
+import { nodesApi } from "@shared/api/nodesApi";
 import { applyDisplayMetaToFile } from "@shared/crypto";
 import { refreshNodeContent } from "@shared/store/nodesActions";
 import { useNodesStore } from "@shared/store/nodesStore";
-import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import { uploadFileToNode } from "@shared/upload";
 import {
   buildUniqueSiblingName,
@@ -41,7 +40,6 @@ interface UseFilesContentOperationsOptions {
   reloadCurrentNode: () => void;
   showToast: (message: string, variant?: "info" | "error") => void;
   t: ReturnType<typeof useTranslation>["t"];
-  tiles: FileSystemTile[];
 }
 
 export const useFilesContentOperations = ({
@@ -56,7 +54,6 @@ export const useFilesContentOperations = ({
   reloadCurrentNode,
   showToast,
   t,
-  tiles,
 }: UseFilesContentOperationsOptions) => {
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
   const fileOps = useFileOperations(reloadCurrentNode, content);
@@ -68,27 +65,20 @@ export const useFilesContentOperations = ({
     },
     [queryClient],
   );
-  const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
+  const fileUpload = useFileUpload(nodeId, breadcrumbs, {
     onToast: showToast,
     onFileUploaded: handleFileUploaded,
   });
 
-  const getCurrentSiblingNames = useCallback(
-    async (): Promise<string[]> => {
+  const getAvailableSiblingName = useCallback(
+    async (baseName: string): Promise<string> => {
       if (!nodeId) {
-        return [];
+        return baseName;
       }
-      if (content?.stats &&
-        content.stats.folders + content.stats.files === tiles.length) {
-        return tiles.map((tile) =>
-          tile.kind === "folder" ? tile.node.name : tile.file.name,
-        );
-      }
-      const fullContent = (await fetchAllNodeChildren(nodeId)).content;
-      return [...fullContent.nodes.map((node) => node.name),
-        ...fullContent.files.map((file) => file.name)];
+      const lookup = await nodesApi.lookupSiblingNames(nodeId, [baseName], true);
+      return buildUniqueSiblingName(baseName, lookup.takenNameKeys);
     },
-    [content, nodeId, tiles],
+    [nodeId],
   );
 
   const handleNewFolderClick = useCallback(async () => {
@@ -96,16 +86,15 @@ export const useFilesContentOperations = ({
       return;
     }
     try {
-      const folderName = buildUniqueSiblingName(
+      const folderName = await getAvailableSiblingName(
         t("actions.defaultNewFolderName", { ns: "files" }),
-        await getCurrentSiblingNames(),
       );
       folderOps.handleNewFolder(folderName);
     } catch (error) {
       reportClientError("Failed to load folder names:", error);
       showToast(t("errors.loadContentsFailed", { ns: "files" }), "error");
     }
-  }, [folderOps, getCurrentSiblingNames, nodeId, showToast, t]);
+  }, [folderOps, getAvailableSiblingName, nodeId, showToast, t]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -178,9 +167,8 @@ export const useFilesContentOperations = ({
     setIsCreatingMarkdownFile(true);
 
     try {
-      const fileName = buildUniqueSiblingName(
+      const fileName = await getAvailableSiblingName(
         t("actions.defaultMarkdownFileName", { ns: "files" }),
-        await getCurrentSiblingNames(),
       );
       const settings = await fetchServerSettings(queryClient);
       const createdFile = await uploadFileToNode({
@@ -210,7 +198,7 @@ export const useFilesContentOperations = ({
     currentFolderEncryptionEnabled,
     ensureCurrentFolderUnlocked,
     fileOps,
-    getCurrentSiblingNames,
+    getAvailableSiblingName,
     isCreatingMarkdownFile,
     nodeId,
     queryClient,

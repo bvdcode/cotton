@@ -269,7 +269,6 @@ export const FilesPage: React.FC = () => {
     reloadCurrentNode,
     showToast,
     t,
-    tiles,
   });
 
   const selectionActions = useFilesSelectionActions({

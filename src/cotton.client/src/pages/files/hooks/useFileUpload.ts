@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  type NodeContentDto,
   type NodeFileManifestDto,
+  nodesApi,
 } from "../../../shared/api/nodesApi";
-import { fetchAllNodeChildren } from "../../../shared/api/nodeChildren";
+import { normalizeFileName } from "../../../shared/utils/fileNameUtils";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 import { ConflictAction } from "../../../shared/types/nameConflict";
 import { resolveUploadConflicts } from "../utils/uploadConflicts";
@@ -32,7 +32,6 @@ type FileUploadOptions = {
 export const useFileUpload = (
   nodeId: string | null,
   breadcrumbs: UseBreadcrumb[],
-  content: NodeContentDto | undefined,
   options?: FileUploadOptions,
 ) => {
   const { t } = useTranslation(["files"]);
@@ -81,11 +80,8 @@ export const useFileUpload = (
 
       skipAllConflictsRef.current = false;
 
-      const visibleCount = (content?.nodes.length ?? 0) + (content?.files.length ?? 0);
-      const contentForCheck = content && content.stats &&
-        content.stats.folders + content.stats.files === visibleCount
-        ? content
-        : (await fetchAllNodeChildren(nodeId)).content;
+      const names = list.map((file) => normalizeFileName(file.name));
+      const contentForCheck = await nodesApi.lookupSiblingNames(nodeId, names, true);
 
       const confirmConflict = async (
         prompt: Parameters<typeof showConflictDialog>[0],
@@ -123,7 +119,6 @@ export const useFileUpload = (
     },
     [
       nodeId,
-      content,
       baseLabel,
       showConflictDialog,
       onToast,
@@ -209,8 +204,11 @@ export const useFileUpload = (
       }));
 
       for (const [targetNodeId, bucket] of filesByTarget) {
-        const contentForCheck = (await fetchAllNodeChildren(targetNodeId))
-          .content;
+        const contentForCheck = await nodesApi.lookupSiblingNames(
+          targetNodeId,
+          bucket.files.map((file) => normalizeFileName(file.name)),
+          true,
+        );
         const result = await resolveUploadConflicts(
           bucket.files,
           contentForCheck,

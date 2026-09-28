@@ -94,6 +94,53 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task NavigationContract_SiblingNameLookupReturnsOnlyMatchesUntilNamesAreNeeded()
+        {
+            NodeDto root = await PrepareNavigationRootAsync();
+            NodeDto folder = await CreateNodeAsync(root.Id, "lookup-parent");
+            NodeDto existing = await CreateNodeAsync(folder.Id, "Photos");
+            await CreateNodeAsync(folder.Id, "Other");
+            NodeFileManifestDto file = await UploadTextFileAsync(folder.Id, "Report.txt", "report");
+            string route = $"/api/v1/layouts/nodes/{folder.Id}/sibling-names";
+
+            using HttpResponseMessage unmatchedResponse = await _client!.PostAsJsonAsync(route,
+                new SiblingNameLookupRequestDto { Names = ["missing"] });
+            unmatchedResponse.EnsureSuccessStatusCode();
+            SiblingNameLookupDto unmatched = (await unmatchedResponse.Content
+                .ReadFromJsonAsync<SiblingNameLookupDto>())!;
+
+            using HttpResponseMessage matchedResponse = await _client.PostAsJsonAsync(route,
+                new SiblingNameLookupRequestDto { Names = ["photos", "REPORT.TXT", "missing"] });
+            matchedResponse.EnsureSuccessStatusCode();
+            SiblingNameLookupDto matched = (await matchedResponse.Content
+                .ReadFromJsonAsync<SiblingNameLookupDto>())!;
+
+            using HttpResponseMessage takenResponse = await _client.PostAsJsonAsync(route,
+                new SiblingNameLookupRequestDto
+                {
+                    Names = ["photos"],
+                    IncludeTakenNamesOnConflict = true,
+                });
+            takenResponse.EnsureSuccessStatusCode();
+            SiblingNameLookupDto taken = (await takenResponse.Content
+                .ReadFromJsonAsync<SiblingNameLookupDto>())!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(unmatched.Nodes, Is.Empty);
+                Assert.That(unmatched.Files, Is.Empty);
+                Assert.That(unmatched.TakenNameKeys, Is.Empty);
+                Assert.That(matched.Nodes.Select(node => (node.Id, node.Name)),
+                    Is.EqualTo(new[] { (existing.Id, "Photos") }));
+                Assert.That(matched.Files.Select(item => (item.Id, item.Name)),
+                    Is.EqualTo(new[] { (file.Id, "Report.txt") }));
+                Assert.That(matched.TakenNameKeys, Is.Empty);
+                Assert.That(taken.TakenNameKeys,
+                    Is.EquivalentTo(new[] { "photos", "other", "report.txt" }));
+            });
+        }
+
+        [Test]
         public async Task NavigationContract_FolderStatsIncludeOnlyDirectChildrenWhenRequested()
         {
             NodeDto root = await PrepareNavigationRootAsync();

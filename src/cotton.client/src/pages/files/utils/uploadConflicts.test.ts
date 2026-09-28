@@ -1,20 +1,22 @@
 import { createFile, createFolder } from "../../../test/fileFixtures";
 import { describe, expect, it, vi } from "vitest";
-import type { NodeContentDto } from "../../../shared/api/nodesApi";
+import type { SiblingNameLookupDto } from "../../../shared/api/nodesApi";
+import { getFileNameKey } from "../../../shared/utils/fileNameUtils";
 import { ConflictAction } from "../../../shared/types/nameConflict";
 import { resolveUploadConflicts } from "./uploadConflicts";
 
 const createContent = (
-  fileNames: Pick<NodeContentDto["files"][number], "id" | "name">[],
+  fileNames: Pick<SiblingNameLookupDto["files"][number], "id" | "name">[],
   folderNames: string[] = [],
-): NodeContentDto => ({
-  id: "node-1",
-  createdAt: "2026-05-17T00:00:00Z",
-  updatedAt: "2026-05-17T00:00:00Z",
+): SiblingNameLookupDto => ({
   nodes: folderNames.map((name, index) =>
     createFolder({ id: `folder-${index + 1}`, name }),
   ),
   files: fileNames.map(createFile),
+  takenNameKeys: [
+    ...fileNames.map((file) => getFileNameKey(file.name)),
+    ...folderNames.map(getFileNameKey),
+  ],
 });
 
 describe("resolveUploadConflicts", () => {
