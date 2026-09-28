@@ -6,6 +6,7 @@ import {
   useVault,
 } from "../../../shared/crypto";
 import { useNodesStore } from "../../../shared/store/nodesStore";
+import { getFileNameKey } from "../../../shared/utils/fileNameUtils";
 import type { DroppedFile } from "./scanDroppedFiles";
 
 interface FolderBucket {
@@ -14,7 +15,7 @@ interface FolderBucket {
 }
 
 export class DroppedFolderResolver {
-  private readonly folderIdByKey = new Map<string, string>();
+  private readonly folderByKey = new Map<string, { id: string; name: string }>();
   private readonly childrenByNodeId = new Map<string, NodeContentDto>();
   private readonly policyEnabledByNodeId: Map<string, boolean>;
   private readonly rootNodeId: string;
@@ -61,17 +62,17 @@ export class DroppedFolderResolver {
     baseName: string,
   ): Promise<string> {
     const content = await this.getChildren(parentId);
-    const takenLower = new Set<string>([
-      ...content.nodes.map((node) => node.name.toLowerCase()),
-      ...content.files.map((file) => file.name.toLowerCase()),
+    const takenNames = new Set<string>([
+      ...content.nodes.map((node) => getFileNameKey(node.name)),
+      ...content.files.map((file) => getFileNameKey(file.name)),
     ]);
 
     const preferred = `${baseName} (folder)`;
-    if (!takenLower.has(preferred.toLowerCase())) return preferred;
+    if (!takenNames.has(getFileNameKey(preferred))) return preferred;
 
     for (let index = 2; index < 10_000; index += 1) {
       const candidate = `${baseName} (folder ${index})`;
-      if (!takenLower.has(candidate.toLowerCase())) return candidate;
+      if (!takenNames.has(getFileNameKey(candidate))) return candidate;
     }
     return `${baseName}-${Date.now()}`;
   }
@@ -80,27 +81,31 @@ export class DroppedFolderResolver {
     parentId: string,
     desiredName: string,
   ): Promise<{ id: string; name: string }> {
-    const key = `${parentId}::${desiredName}`;
-    const cachedId = this.folderIdByKey.get(key);
-    if (cachedId) return { id: cachedId, name: desiredName };
+    const desiredNameKey = getFileNameKey(desiredName);
+    const key = `${parentId}::${desiredNameKey}`;
+    const cachedFolder = this.folderByKey.get(key);
+    if (cachedFolder) return cachedFolder;
 
     const content = await this.getChildren(parentId);
-    const existing = content.nodes.find((node) => node.name === desiredName);
+    const existing = content.nodes.find(
+      (node) => getFileNameKey(node.name) === desiredNameKey,
+    );
     if (existing) {
       const parentPolicyEnabled =
         this.policyEnabledByNodeId.get(parentId) ??
         this.isPolicyEnabledForNode(parentId);
-      this.folderIdByKey.set(key, existing.id);
+      const folder = { id: existing.id, name: existing.name };
+      this.folderByKey.set(key, folder);
       this.policyEnabledByNodeId.set(
         existing.id,
         parentPolicyEnabled ||
           isFolderEncryptionPolicyEnabled(existing.metadata),
       );
-      return { id: existing.id, name: desiredName };
+      return folder;
     }
 
     const hasFileConflict = content.files.some(
-      (file) => file.name === desiredName,
+      (file) => getFileNameKey(file.name) === desiredNameKey,
     );
     const nameToCreate = hasFileConflict
       ? await this.findAvailableFolderName(parentId, desiredName)
@@ -121,7 +126,10 @@ export class DroppedFolderResolver {
     this.policyEnabledByNodeId.set(folder.id, parentPolicyEnabled);
     content.nodes.push(folder);
     useNodesStore.getState().addFolderToCache(parentId, folder);
-    this.folderIdByKey.set(`${parentId}::${nameToCreate}`, folder.id);
+    this.folderByKey.set(`${parentId}::${getFileNameKey(nameToCreate)}`, {
+      id: folder.id,
+      name: folder.name,
+    });
 
     return { id: folder.id, name: nameToCreate };
   }

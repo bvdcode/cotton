@@ -5,7 +5,7 @@ import { DroppedFolderResolver } from "./DroppedFolderResolver";
 
 afterEach(() => vi.restoreAllMocks());
 
-it("reuses an existing dropped folder beyond the first page", async () => {
+it("merges dropped folders by name key and preserves the existing name", async () => {
   const parent = createFolder({ id: "parent" });
   const existing = createFolder({
     id: "existing",
@@ -30,6 +30,7 @@ it("reuses an existing dropped folder beyond the first page", async () => {
     });
   const create = vi.spyOn(nodesApi, "createNode");
   const file = new File(["photo"], "photo.jpg");
+  const secondFile = new File(["other"], "other.jpg");
   const resolver = new DroppedFolderResolver(
     parent.id,
     "Files",
@@ -38,11 +39,17 @@ it("reuses an existing dropped folder beyond the first page", async () => {
   );
 
   const grouped = await resolver.groupFiles(
-    [{ file, relativePath: "Photos/photo.jpg" }],
+    [
+      { file, relativePath: "photos/photo.jpg" },
+      { file: secondFile, relativePath: "PHOTOS/other.jpg" },
+    ],
     () => {},
   );
 
-  expect(grouped.get(existing.id)?.files).toEqual([file]);
+  expect(grouped.get(existing.id)).toEqual({
+    label: "Files / Photos",
+    files: [file, secondFile],
+  });
   expect(get).toHaveBeenCalledTimes(2);
   expect(create).not.toHaveBeenCalled();
 });
