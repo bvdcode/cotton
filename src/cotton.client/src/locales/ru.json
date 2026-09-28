@@ -2485,8 +2485,8 @@
     "folderInfo": {
       "action": "Информация",
       "title": "{{name}}",
-      "created": "Создана: {{date}}",
-      "modified": "Изменена: {{date}}",
+      "created": "Создано: {{date}}",
+      "modified": "Изменено: {{date}}",
       "calculating": "Считаем размер папки…",
       "loadFailed": "Не удалось посчитать размер папки.",
       "folders": "Папок: {{count}}",
