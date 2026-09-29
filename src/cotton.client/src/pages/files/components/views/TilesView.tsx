@@ -69,7 +69,6 @@ export const TilesView: React.FC<IFileListView> = ({
     columns,
     containerRef,
     shouldVirtualize: tiles.length > VIRTUALIZATION_THRESHOLD,
-    loading,
     folderOperations,
     fileOperations,
     readOnly,

@@ -7,9 +7,9 @@ import {
   nodeDtoSchema,
   folderStatsSchema,
   restoreOutcomeSchema,
-  siblingNameLookupSchema,
 } from "./schemas/node";
-import { applyDisplayMetaToFiles } from "../crypto/displayMeta";
+import { lookupSiblingNames } from "./siblingNames";
+import type { DirectoryListingOptions } from "./types/DirectoryListingOptions";
 import { z } from "zod";
 
 export interface NodeFileManifestDto extends BaseDto {
@@ -103,18 +103,7 @@ export const nodesApi = {
       params: { recursive },
     }),
 
-  lookupSiblingNames: async (
-    nodeId: Guid,
-    names: string[],
-    includeTakenNamesOnConflict = false,
-  ): Promise<SiblingNameLookupDto> => {
-    const url = `/layouts/nodes/${nodeId}/sibling-names`;
-    const response = await httpClient.post<JsonValue>(url, {
-      names,
-      includeTakenNamesOnConflict,
-    });
-    return parseValidated(url, response.data, siblingNameLookupSchema);
-  },
+  lookupSiblingNames,
 
   getAncestors: async (
     nodeId: Guid,
@@ -132,26 +121,27 @@ export const nodesApi = {
       pageSize?: number;
       depth?: number;
       includeStats?: boolean;
+      listing?: DirectoryListingOptions;
     },
   ): Promise<NodeResponse> => {
     const requestedPage = options?.page ?? 1;
     const requestedPageSize = options?.pageSize ?? 1000;
     const url = `/layouts/nodes/${nodeId}/children`;
     const response = await httpClient.get<JsonValue>(url, {
+      paramsSerializer: { indexes: null },
       params: {
         page: requestedPage,
         pageSize: requestedPageSize,
         nodeType: options?.nodeType,
         depth: options?.depth,
         includeStats: options?.includeStats,
+        ...options?.listing,
       },
     });
     const content = parseValidated(url, response.data, nodeContentSchema);
     const totalCount = readRequiredIntHeader(response.headers, "x-total-count");
-    const files = await applyDisplayMetaToFiles(content.files);
-
     return {
-      content: files === content.files ? content : { ...content, files },
+      content,
       totalCount,
     };
   },

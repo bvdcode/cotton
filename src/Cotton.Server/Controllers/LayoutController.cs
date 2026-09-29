@@ -263,11 +263,12 @@ namespace Cotton.Server.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 100,
             [FromQuery] int depth = 0,
-            [FromQuery] bool includeStats = false)
+            [FromQuery] bool includeStats = false,
+            [FromQuery] DirectoryListingOptions? listing = null)
         {
             Guid userId = User.GetUserId();
-            GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize, depth, includeStats);
-            PagedResult<NodeContentDto> result = await _mediator.Send(query);
+            GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize, depth, includeStats, listing);
+            PagedResult<NodeContentDto> result = await _mediator.Send(query, HttpContext.RequestAborted);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
             return Ok(result.Payload);
         }

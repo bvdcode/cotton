@@ -1,6 +1,6 @@
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { filesApi } from "../filesApi";
-import { nodesApi } from "../nodesApi";
+import { fetchNodeChildren } from "../nodeChildren";
 import { parseLrc, type LrcLine } from "../../utils/lrc";
 import { parseSrt } from "../../utils/srt";
 import { queryKeys } from "./queryKeys";
@@ -59,7 +59,7 @@ const fetchTrackLyrics = async (
   let bestRank: number = TEXT_TRACK_EXTENSIONS.length;
 
   while (page <= MAX_LYRICS_PAGES) {
-    const response = await nodesApi.getChildren(folderNodeId, {
+    const response = await fetchNodeChildren(folderNodeId, {
       page,
       pageSize: LYRICS_PAGE_SIZE,
       depth: 0,

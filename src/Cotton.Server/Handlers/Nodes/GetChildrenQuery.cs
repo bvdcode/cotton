@@ -8,6 +8,8 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
+using Cotton.Server.Models.Enums;
 using Cotton.Topology;
 using Cotton.Topology.Abstractions;
 using Cotton.Server.Services;
@@ -21,7 +23,8 @@ namespace Cotton.Server.Handlers.Nodes
 {
     public class GetChildrenQuery(
         Guid userId, Guid nodeId, NodeType nodeType,
-        int page, int pageSize, int depth = 0, bool includeStats = false) : IRequest<PagedResult<NodeContentDto>>
+        int page, int pageSize, int depth = 0, bool includeStats = false,
+        DirectoryListingOptions? listing = null) : IRequest<PagedResult<NodeContentDto>>
     {
         public Guid UserId { get; } = userId;
 
@@ -36,6 +39,7 @@ namespace Cotton.Server.Handlers.Nodes
         public int Depth { get; } = depth;
 
         public bool IncludeStats { get; } = includeStats;
+        public DirectoryListingOptions Listing { get; } = listing ?? new();
     }
 
     public class GetChildrenQueryHandler(
@@ -112,7 +116,7 @@ namespace Cotton.Server.Handlers.Nodes
             }
 
             var (nodes, files, nodeCount, fileCount) = await DirectoryListing.ReadPageAsync<NodeFileManifestDto>(
-                nodesBaseQuery, filesBaseQuery, skip, request.PageSize, ct);
+                nodesBaseQuery, filesBaseQuery, skip, request.PageSize, ct, request.Listing);
 
             FolderStatsDto? stats = null;
             if (request.IncludeStats)
@@ -123,8 +127,10 @@ namespace Cotton.Server.Handlers.Nodes
                     file => CottonDbContext.GetHstoreValue(file.Metadata, "isClientEncrypted") == "true", ct);
                 stats = new FolderStatsDto
                 {
-                    Folders = nodeCount,
-                    Files = fileCount,
+                    Folders = request.Listing.FilterOperator == DirectoryFilterOperator.None
+                        ? nodeCount : await nodesBaseQuery.CountAsync(ct),
+                    Files = request.Listing.FilterOperator == DirectoryFilterOperator.None
+                        ? fileCount : await filesBaseQuery.CountAsync(ct),
                     EncryptedFiles = encryptedFiles,
                     SizeBytes = sizeBytes,
                 };

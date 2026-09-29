@@ -7,11 +7,8 @@ import { toast } from "@shared/ui/notifications";
 import { filesApi } from "@shared/api/filesApi";
 import { invalidateFileVersions } from "@shared/api/queries/fileVersions";
 import { fetchServerSettings } from "@shared/api/queries/serverSettings";
-import type {
-  NodeContentDto,
-  NodeFileManifestDto,
-} from "@shared/api/nodesApi";
-import { nodesApi } from "@shared/api/nodesApi";
+import type { NodeContentDto, NodeFileManifestDto } from "@shared/api/nodesApi";
+import { lookupUploadNames } from "../utils/lookupUploadNames";
 import { applyDisplayMetaToFile } from "@shared/crypto";
 import { refreshNodeContent } from "@shared/store/nodesActions";
 import { useNodesStore } from "@shared/store/nodesStore";
@@ -75,14 +72,18 @@ export const useFilesContentOperations = ({
       if (!nodeId) {
         return baseName;
       }
-      const lookup = await nodesApi.lookupSiblingNames(nodeId, [baseName], true);
+      const lookup = await lookupUploadNames(
+        nodeId,
+        [baseName],
+        currentFolderEncryptionEnabled,
+      );
       return buildUniqueSiblingName(baseName, lookup.takenNameKeys);
     },
-    [nodeId],
+    [nodeId, currentFolderEncryptionEnabled],
   );
 
   const handleNewFolderClick = useCallback(async () => {
-    if (!nodeId) {
+    if (!nodeId || !ensureCurrentFolderUnlocked()) {
       return;
     }
     try {
@@ -94,7 +95,14 @@ export const useFilesContentOperations = ({
       reportClientError("Failed to load folder names:", error);
       showToast(t("errors.loadContentsFailed", { ns: "files" }), "error");
     }
-  }, [folderOps, getAvailableSiblingName, nodeId, showToast, t]);
+  }, [
+    folderOps,
+    getAvailableSiblingName,
+    nodeId,
+    showToast,
+    t,
+    ensureCurrentFolderUnlocked,
+  ]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

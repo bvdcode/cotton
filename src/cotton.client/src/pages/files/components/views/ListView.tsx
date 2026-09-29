@@ -154,7 +154,11 @@ export const ListView: React.FC<IFileListView> = ({
         columnFlex: listColumnFlex,
         failedPreviews,
         setFailedPreviews,
-      }),
+      }).map((column) =>
+        column.field === "name" && pagination?.query?.namesEnabled === false
+          ? { ...column, sortable: false, filterable: false }
+          : column,
+      ),
     [
       t,
       readOnly,
@@ -169,6 +173,7 @@ export const ListView: React.FC<IFileListView> = ({
       onGoToFileLocation,
       listColumnFlex,
       failedPreviews,
+      pagination?.query?.namesEnabled,
     ],
   );
 
@@ -304,6 +309,12 @@ export const ListView: React.FC<IFileListView> = ({
         onRowClick={handleRowClick}
         hideFooter={false}
         paginationMode={pagination ? "server" : "client"}
+        sortingMode={pagination?.query ? "server" : "client"}
+        filterMode={pagination?.query ? "server" : "client"}
+        sortModel={pagination?.query?.sortModel}
+        filterModel={pagination?.query?.filterModel}
+        onSortModelChange={pagination?.query?.onSortModelChange}
+        onFilterModelChange={pagination?.query?.onFilterModelChange}
         paginationModel={pagination?.model}
         initialState={{
           pagination: {

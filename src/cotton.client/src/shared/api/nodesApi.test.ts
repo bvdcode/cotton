@@ -102,6 +102,7 @@ describe("nodesApi reads", () => {
     const result = await nodesApi.getChildren(nodeId);
 
     expect(get).toHaveBeenCalledWith(`/layouts/nodes/${nodeId}/children`, {
+      paramsSerializer: { indexes: null },
       params: {
         page: 1,
         pageSize: 1000,
@@ -114,7 +115,7 @@ describe("nodesApi reads", () => {
     expect(result.totalCount).toBe(5);
   });
 
-  it("decorates encrypted child file names when the vault is unlocked", async () => {
+  it("keeps encrypted child names opaque in the server response", async () => {
     useVault.getState().unlock(await generateMasterKey());
     const encryptedMeta = await encryptDisplayMeta({
       name: "private.pdf",
@@ -143,8 +144,8 @@ describe("nodesApi reads", () => {
     const result = await nodesApi.getChildren(nodeId);
 
     expect(result.content.files[0]).toMatchObject({
-      name: "private.pdf",
-      contentType: "application/pdf",
+      name: "11111111-2222-4333-8444-555555555555",
+      contentType: "application/octet-stream",
     });
   });
 
@@ -162,6 +163,7 @@ describe("nodesApi reads", () => {
     });
 
     expect(get).toHaveBeenCalledWith(`/layouts/nodes/${nodeId}/children`, {
+      paramsSerializer: { indexes: null },
       params: {
         page: 3,
         pageSize: 50,

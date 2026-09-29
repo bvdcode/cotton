@@ -3,6 +3,7 @@ import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 import { useAuthStore } from "../../../shared/store/authStore";
 import { useFolderListing } from "./useFolderListing";
+import { getFolderEncryptionPolicyState } from "../../../shared/crypto/metadataFlags";
 
 interface UseFilesDataParams {
   nodeId: string | null;
@@ -22,10 +23,17 @@ export const useFilesData = ({
 
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
   const cacheOwnerUserId = useNodesStore((s) => s.cacheOwnerUserId);
+  const currentNode = useNodesStore((s) => s.currentNode);
+  const ancestors = useNodesStore((s) => s.ancestors);
+  const folderPolicy = getFolderEncryptionPolicyState(
+    currentNode?.id === nodeId ? currentNode : null,
+    ancestors,
+  );
   const listing = useFolderListing(
     nodeId,
     cacheOwnerUserId === currentUserId ? currentUserId : null,
     layoutType,
+    folderPolicy.effectiveEnabled,
   );
   const { refresh } = listing;
 

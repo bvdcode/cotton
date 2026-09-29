@@ -1,3 +1,5 @@
+import type { DirectoryListingOptions } from "../types/DirectoryListingOptions";
+
 const notificationsRoot = ["notifications"] as const;
 const layoutsRoot = ["layouts"] as const;
 const adminRoot = ["admin"] as const;
@@ -12,10 +14,26 @@ const nodeChildrenRoot = ["nodeChildren"] as const;
 export const queryKeys = {
   nodeChildren: {
     all: (nodeId: string) => [...nodeChildrenRoot, nodeId] as const,
-    overview: (nodeId: string, userId: string) =>
-      [...queryKeys.nodeChildren.all(nodeId), userId, "overview"] as const,
-    page: (nodeId: string, userId: string, page: number) =>
-      [...queryKeys.nodeChildren.all(nodeId), userId, "page", page] as const,
+    overview: (nodeId: string, userId: string, pageSize: number) =>
+      [
+        ...queryKeys.nodeChildren.all(nodeId),
+        userId,
+        "overview",
+        pageSize,
+      ] as const,
+    page: (
+      nodeId: string,
+      userId: string,
+      page: number,
+      listing: DirectoryListingOptions = {},
+    ) =>
+      [
+        ...queryKeys.nodeChildren.all(nodeId),
+        userId,
+        "page",
+        page,
+        listing,
+      ] as const,
     tiles: (nodeId: string, userId: string) =>
       [...queryKeys.nodeChildren.all(nodeId), userId, "tiles"] as const,
     folderInfo: (nodeId: string, userId: string) =>

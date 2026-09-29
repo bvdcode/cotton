@@ -1,4 +1,5 @@
 import type { NodeDto } from "../api/layoutsApi";
+import type { GridFilterModel, GridSortModel } from "@mui/x-data-grid";
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import type { SharedNodeFileDto } from "../api/sharedFoldersApi";
 import type { FolderEncryptionPolicyState } from "../crypto";
@@ -109,6 +110,13 @@ export interface FileOperations {
  * Pagination props for list views with server-side pagination
  */
 export interface PaginationProps {
+  query?: {
+    sortModel: GridSortModel;
+    filterModel: GridFilterModel;
+    onSortModelChange: (model: GridSortModel) => void;
+    onFilterModelChange: (model: GridFilterModel) => void;
+    namesEnabled: boolean;
+  };
   model?: { page: number; pageSize: number };
   /**
    * Total number of items across all pages

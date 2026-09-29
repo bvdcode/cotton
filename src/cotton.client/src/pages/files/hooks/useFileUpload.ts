@@ -1,10 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  type NodeFileManifestDto,
-  nodesApi,
-} from "../../../shared/api/nodesApi";
-import { normalizeFileName } from "../../../shared/utils/fileNameUtils";
+import { type NodeFileManifestDto } from "../../../shared/api/nodesApi";
+import { lookupUploadNames } from "../utils/lookupUploadNames";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 import { ConflictAction } from "../../../shared/types/nameConflict";
 import { resolveUploadConflicts } from "../utils/uploadConflicts";
@@ -80,8 +77,11 @@ export const useFileUpload = (
 
       skipAllConflictsRef.current = false;
 
-      const names = list.map((file) => normalizeFileName(file.name));
-      const contentForCheck = await nodesApi.lookupSiblingNames(nodeId, names, true);
+      const contentForCheck = await lookupUploadNames(
+        nodeId,
+        list.map((file) => file.name),
+        decision.encrypt,
+      );
 
       const confirmConflict = async (
         prompt: Parameters<typeof showConflictDialog>[0],
@@ -204,10 +204,18 @@ export const useFileUpload = (
       }));
 
       for (const [targetNodeId, bucket] of filesByTarget) {
-        const contentForCheck = await nodesApi.lookupSiblingNames(
+        const decision = folderResolver.decideEncryption(targetNodeId);
+        if (decision.vaultLocked) {
+          onToast?.(
+            t("uploadDrop.toasts.vaultLocked", { ns: "files" }),
+            "error",
+          );
+          continue;
+        }
+        const contentForCheck = await lookupUploadNames(
           targetNodeId,
-          bucket.files.map((file) => normalizeFileName(file.name)),
-          true,
+          bucket.files.map((file) => file.name),
+          decision.encrypt,
         );
         const result = await resolveUploadConflicts(
           bucket.files,
@@ -225,15 +233,6 @@ export const useFileUpload = (
           filesFound: dropped.length,
           processed: dropped.length,
         }));
-        const decision = folderResolver.decideEncryption(targetNodeId);
-        if (decision.vaultLocked) {
-          onToast?.(
-            t("uploadDrop.toasts.vaultLocked", { ns: "files" }),
-            "error",
-          );
-          continue;
-        }
-
         uploadManager.enqueue(result.files, targetNodeId, bucket.label, {
           encrypt: decision.encrypt,
           onFileUploaded,

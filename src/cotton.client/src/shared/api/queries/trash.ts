@@ -1,7 +1,7 @@
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { layoutsApi, type NodeDto } from "../layoutsApi";
 import { nodesApi, type NodeResponse } from "../nodesApi";
-import { fetchAllNodeChildren } from "../nodeChildren";
+import { fetchAllNodeChildren, fetchNodeChildren } from "../nodeChildren";
 import { queryKeys } from "./queryKeys";
 
 interface TrashNodeMeta {
@@ -67,7 +67,7 @@ export const useTrashChildrenQuery = (options: {
       if (pageSize === undefined) {
         return fetchAllNodeChildren(nodeId, { nodeType: "trash", depth });
       }
-      return nodesApi.getChildren(nodeId, {
+      return fetchNodeChildren(nodeId, {
         nodeType: "trash",
         page,
         pageSize,

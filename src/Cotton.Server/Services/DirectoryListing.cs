@@ -3,6 +3,7 @@
 
 using Cotton.Database.Models;
 using Cotton.Nodes;
+using Cotton.Server.Models.Requests;
 using EasyExtensions.Models.Dto;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
@@ -16,9 +17,15 @@ namespace Cotton.Server.Services
             IQueryable<NodeFile> filesQuery,
             int skip,
             int pageSize,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            DirectoryListingOptions? options = null)
             where TFile : BaseDto<Guid>
         {
+            if (options is not null && !options.IsDefault)
+            {
+                return await OrderedDirectoryListing.ReadPageAsync<TFile>(
+                    nodesQuery, filesQuery, skip, pageSize, options, cancellationToken);
+            }
             int nodesCount = await nodesQuery.CountAsync(cancellationToken);
             int filesCount = await filesQuery.CountAsync(cancellationToken);
             int nodesToTake = Math.Max(0, Math.Min(pageSize, nodesCount - skip));
@@ -26,7 +33,7 @@ namespace Cotton.Server.Services
             int filesToTake = Math.Max(0, pageSize - nodesToTake);
 
             List<NodeDto> nodes = nodesToTake == 0 ? []
-                : await nodesQuery.OrderBy(node => node.NameKey)
+                : await nodesQuery.OrderBy(node => node.NameKey).ThenBy(node => node.Id)
                     .Skip(skip).Take(nodesToTake).ProjectToType<NodeDto>().ToListAsync(cancellationToken);
             List<TFile> files = filesToTake == 0 ? []
                 : await LoadFilesAsync<TFile>(filesQuery, filesSkip, filesToTake, cancellationToken);

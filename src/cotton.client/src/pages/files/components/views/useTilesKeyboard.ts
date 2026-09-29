@@ -60,20 +60,12 @@ interface KeyboardEventLike {
   stopPropagation: () => void;
 }
 
-/**
- * TilesView Component
- *
- * Renders files/folders in a responsive grid. For large collections
- * (>80 items) uses react-virtuoso VirtuosoGrid for DOM virtualization.
- * Smaller collections render directly for simplicity.
- */
 export const useTilesKeyboard = (options: {
   tiles: IFileListView["tiles"];
   selectedIds: IFileListView["selectedIds"];
   columns: number;
   containerRef: React.RefObject<HTMLDivElement | null>;
   shouldVirtualize: boolean;
-  loading: boolean;
   folderOperations: IFileListView["folderOperations"];
   fileOperations: IFileListView["fileOperations"];
   readOnly: boolean;
@@ -85,7 +77,6 @@ export const useTilesKeyboard = (options: {
     columns,
     containerRef,
     shouldVirtualize,
-    loading,
     folderOperations,
     fileOperations,
     readOnly,
@@ -112,13 +103,6 @@ export const useTilesKeyboard = (options: {
 
     return null;
   }, [orderedIds, selectedIds]);
-
-  const contentMarker = useMemo(() => {
-    const firstId = orderedIds[0] ?? "";
-    const lastId = orderedIds[orderedIds.length - 1] ?? "";
-
-    return `${orderedIds.length}:${firstId}:${lastId}`;
-  }, [orderedIds]);
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [previousTilesLength, setPreviousTilesLength] = useState(tiles.length);
@@ -219,29 +203,6 @@ export const useTilesKeyboard = (options: {
     },
     [focusTileDom, tiles.length],
   );
-
-  useEffect(() => {
-    if (loading || tiles.length === 0) return;
-
-    const host = containerRef.current;
-    if (!host) return;
-
-    const activeElement = document.activeElement;
-    if (activeElement instanceof HTMLElement) {
-      if (host.contains(activeElement)) return;
-      if (isEditableTarget(activeElement)) return;
-    }
-
-    const indexToFocus = activeIndexRef.current ?? selectedIndex ?? 0;
-    focusTileDom(indexToFocus);
-  }, [
-    containerRef,
-    contentMarker,
-    focusTileDom,
-    loading,
-    selectedIndex,
-    tiles.length,
-  ]);
 
   const resolveCurrentIndex = useCallback(
     (target: EventTarget | null): number | null => {

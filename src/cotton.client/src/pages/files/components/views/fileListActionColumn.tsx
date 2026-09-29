@@ -277,6 +277,7 @@ export const createActionsColumn = (
   headerName: options.labels.actionsTitle,
   minWidth: 340,
   sortable: false,
+  filterable: false,
   align: "right",
   headerAlign: "right",
   renderCell: (params) => {
