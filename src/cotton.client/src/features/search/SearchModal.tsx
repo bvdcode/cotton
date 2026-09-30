@@ -398,6 +398,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
         fileSizeBytes={previewState.fileSizeBytes}
         file={previewState.file}
         onClose={closePreview}
+        onDownload={handleDownloadFile}
       />
 
       {lightboxOpen && mediaItems.length > 0 && (

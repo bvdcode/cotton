@@ -23,6 +23,14 @@ import type { NodeFileManifestDto } from "../../api/nodesApi";
 import { PdfPreview } from "./PdfPreview";
 import { TextPreview } from "./TextPreview";
 import { ModelPreview } from "./ModelPreview";
+import { FilePreviewUnavailable } from "./FilePreviewUnavailable";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
+import { previewConfig } from "../../config/previewConfig";
+import { formatBytes } from "../../utils/formatBytes";
+import {
+  CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES,
+  isFileEncrypted,
+} from "../../crypto";
 
 interface FilePreviewModalProps {
   isOpen: boolean;
@@ -32,6 +40,7 @@ interface FilePreviewModalProps {
   fileSizeBytes: number | null;
   file?: NodeFileManifestDto | null;
   onClose: () => void;
+  onDownload: (fileId: string, fileName: string) => Promise<void>;
   onSaved?: () => void;
 }
 
@@ -54,6 +63,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   fileSizeBytes,
   file,
   onClose,
+  onDownload,
   onSaved,
 }) => {
   const isModel = fileType === "model";
@@ -76,8 +86,8 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     <PreviewModal
       open={isOpen}
       onClose={onClose}
-      layout={getPreviewLayout(fileType, isModel)}
-      title={getPreviewTitle(fileName, fileType, isModel)}
+      layout={getPreviewLayout(fileType)}
+      title={getPreviewLayout(fileType) === "header" ? fileName : undefined}
       forceFullScreen={isModel}
       headerActions={
         isModel ? (
@@ -94,6 +104,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
         fileSource={fileSource}
         modelControls={modelControls}
         onSaved={onSaved}
+        onDownload={onDownload}
       />
       {isModel && (
         <ModelPalettePopover
@@ -113,14 +124,22 @@ const getModelControlsKey = (
 ) =>
   isOpen && isModel && fileId ? [fileId, defaultModelColor].join("\u0000") : "";
 
-const getPreviewLayout = (fileType: FileType | null, isModel: boolean) =>
-  fileType === "pdf" || isModel ? "header" : "overlay";
-
-const getPreviewTitle = (
-  fileName: string,
-  fileType: FileType | null,
-  isModel: boolean,
-) => (fileType === "pdf" || isModel ? fileName : undefined);
+const getPreviewLayout = (fileType: FileType | null): "header" | "overlay" => {
+  switch (fileType) {
+    case "pdf":
+    case "model":
+    case "document":
+    case "archive":
+    case "other":
+      return "header";
+    case "text":
+    case "image":
+    case "video":
+    case "audio":
+    case null:
+      return "overlay";
+  }
+};
 
 type ModelHeaderActionsProps = {
   modelControls: ModelPreviewControls;
@@ -202,6 +221,7 @@ type FilePreviewBodyProps = {
   fileSource: FilePreviewSource | null;
   modelControls: ModelPreviewControls;
   onSaved?: () => void;
+  onDownload: (fileId: string, fileName: string) => Promise<void>;
 };
 
 const FilePreviewBody = ({
@@ -213,34 +233,60 @@ const FilePreviewBody = ({
   fileSource,
   modelControls,
   onSaved,
-}: FilePreviewBodyProps) => (
-  <>
-    {fileType === "pdf" && fileSource && (
-      <PdfPreview
-        source={fileSource}
-        fileName={fileName}
-        fileSizeBytes={fileSizeBytes}
-      />
-    )}
-    {fileType === "text" && (
-      <TextPreview
-        nodeFileId={fileId}
-        fileName={fileName}
-        fileSizeBytes={fileSizeBytes}
-        sourceFile={sourceFile}
-        onSaved={onSaved}
-      />
-    )}
-    {fileType === "model" && fileSource && (
-      <ModelPreviewBody
-        fileName={fileName}
-        fileSizeBytes={fileSizeBytes}
-        fileSource={fileSource}
-        modelControls={modelControls}
-      />
-    )}
-  </>
-);
+  onDownload,
+}: FilePreviewBodyProps) => {
+  const { t } = useTranslation("files");
+  const textPreviewLimit =
+    sourceFile && isFileEncrypted(sourceFile.metadata)
+      ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
+      : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
+  const oversizedText =
+    getFileTypeInfo(fileName, sourceFile?.contentType).type === "text" &&
+    (fileSizeBytes ?? 0) > textPreviewLimit;
+  return (
+    <>
+      {fileType === "other" && (
+        <FilePreviewUnavailable
+          message={
+            oversizedText
+              ? t("preview.errors.fileTooLarge", {
+                  size: formatBytes(fileSizeBytes ?? 0),
+                  maxSize: formatBytes(textPreviewLimit),
+                })
+              : undefined
+          }
+          onDownload={() => {
+            void onDownload(fileId, fileName);
+          }}
+        />
+      )}
+      {fileType === "pdf" && fileSource && (
+        <PdfPreview
+          source={fileSource}
+          fileName={fileName}
+          fileSizeBytes={fileSizeBytes}
+        />
+      )}
+      {fileType === "text" && (
+        <TextPreview
+          nodeFileId={fileId}
+          fileName={fileName}
+          fileSizeBytes={fileSizeBytes}
+          sourceFile={sourceFile}
+          onSaved={onSaved}
+        />
+      )}
+      {fileType === "model" && fileSource && (
+        <ModelPreviewBody
+          fileName={fileName}
+          fileSizeBytes={fileSizeBytes}
+          fileSource={fileSource}
+          modelControls={modelControls}
+        />
+      )}
+    </>
+  );
+};
 
 type ModelPreviewBodyProps = {
   fileName: string;

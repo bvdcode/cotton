@@ -2,7 +2,6 @@ import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import type { FileListSource } from "@shared/types/fileListSource";
-import { createFile } from "../../../test/fileFixtures";
 
 type InteractionOptions = Parameters<
   typeof import("@shared/hooks/useFileInteractionHandlers").useFileInteractionHandlers
@@ -117,19 +116,6 @@ describe("useFileListSourceLogic", () => {
       "file1.txt",
       "file2.txt",
       "file10.txt",
-    ]);
-  });
-
-  it("can open a dashboard file outside the currently visible page", () => {
-    const additionalFile = createFile({ id: "later-page", name: "later.txt" });
-    const { result } = renderHook(() => useFileListSourceLogic({
-      source: makeSource({ tiles: [makeFileTile("first-page", "first.txt")] }),
-      sourceKind: "nodes",
-      additionalFile,
-    }));
-
-    expect(result.current.sortedFiles.map((file) => file.id)).toEqual([
-      "first-page", "later-page",
     ]);
   });
 

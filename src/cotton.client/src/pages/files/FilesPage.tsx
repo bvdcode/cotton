@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@shared/ui/notifications";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useNodesStore } from "../../shared/store/nodesStore";
@@ -15,7 +15,6 @@ import { useFilesData } from "./hooks/useFilesData";
 import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
 import { useFileSelection } from "@shared/hooks/useFileSelection";
 import { buildBreadcrumbs } from "./utils/nodeUtils";
-import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { invalidateAllFileVersions } from "../../shared/api/queries/fileVersions";
 import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
@@ -44,23 +43,13 @@ import {
   resolveFilesNodeId,
   shouldRenderFilesList,
 } from "./filesPageModel";
-import { readObjectProperty } from "../../shared/utils/typeGuards";
-import { nodeFileManifestSchema } from "../../shared/api/schemas/node";
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const location = useLocation();
   const params = useParams<{ nodeId?: string }>();
-  const [selectedFileForNavigation] = React.useState(() => {
-    const parsed = nodeFileManifestSchema.safeParse(
-      readObjectProperty(location.state, "selectedFile"),
-    );
-    return parsed.success ? parsed.data : null;
-  });
-  const selectedFileOpenedRef = React.useRef(false);
 
   const {
     currentNode,
@@ -156,10 +145,9 @@ export const FilesPage: React.FC = () => {
   const fileListLogic = useFileListPageLogic({
     source: fileListSource,
     sourceKind: "nodes",
-    additionalFile: selectedFileForNavigation,
   });
 
-  const { sortedFiles, tiles } = fileListLogic;
+  const { tiles } = fileListLogic;
 
   const setScanRootNodeId = useAudioPlayerStore((s) => s.setScanRootNodeId);
 
@@ -167,30 +155,6 @@ export const FilesPage: React.FC = () => {
     if (!nodeId) return;
     setScanRootNodeId(nodeId);
   }, [nodeId, setScanRootNodeId]);
-
-  const { handleFileClick, handleMediaClick } = fileListLogic.interaction;
-
-  // Open the file selected on the dashboard even if it is outside this page.
-  React.useEffect(() => {
-    if (selectedFileOpenedRef.current) return;
-    const targetId = selectedFileForNavigation?.id;
-    if (!targetId || sortedFiles.length === 0) return;
-
-    const file = sortedFiles.find((f) => f.id === targetId);
-    if (!file) return;
-
-    selectedFileOpenedRef.current = true;
-    window.history.replaceState({}, "");
-
-    const typeInfo = getFileTypeInfo(file.name, file.contentType ?? null, {
-      requiresVideoTranscoding: file.requiresVideoTranscoding ?? false,
-    });
-    if (typeInfo.type === "image" || typeInfo.type === "video") {
-      handleMediaClick(file.id);
-    } else {
-      handleFileClick(file.id, file.name, file.sizeBytes);
-    }
-  }, [selectedFileForNavigation, sortedFiles, handleFileClick, handleMediaClick]);
 
   const showToast = React.useCallback(
     (message: string, variant: "info" | "error" = "info") => {
@@ -221,13 +185,20 @@ export const FilesPage: React.FC = () => {
     deselectAll();
   }, [deselectAll, nodeId]);
 
-  const folderPagination = useMemo(() => pagination && ({
-    ...pagination,
-    onPaginationModelChange: (model: { page: number; pageSize: number }) => {
-      deselectAll();
-      pagination.onPaginationModelChange(model);
-    },
-  }), [deselectAll, pagination]);
+  const folderPagination = useMemo(
+    () =>
+      pagination && {
+        ...pagination,
+        onPaginationModelChange: (model: {
+          page: number;
+          pageSize: number;
+        }) => {
+          deselectAll();
+          pagination.onPaginationModelChange(model);
+        },
+      },
+    [deselectAll, pagination],
+  );
 
   const handleGoUp = React.useCallback(() => {
     if (ancestors.length === 0) {

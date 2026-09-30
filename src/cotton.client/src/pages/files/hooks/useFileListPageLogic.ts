@@ -15,7 +15,6 @@ import {
 export interface UseFileListPageLogicOptions {
   source: FileListSource;
   sourceKind: FileListSourceKind;
-  additionalFile?: NodeFileManifestDto | null;
 }
 
 export interface FileListPageLogic {
@@ -39,7 +38,6 @@ const isNodeFileManifest = (
 export const useFileListSourceLogic = ({
   source,
   sourceKind,
-  additionalFile,
 }: UseFileListPageLogicOptions): FileListSourceLogic => {
   const sortedFiles = useMemo<NodeFileManifestDto[]>(() => {
     const files: NodeFileManifestDto[] = [];
@@ -51,15 +49,11 @@ export const useFileListSourceLogic = ({
       }
     }
 
-    if (additionalFile && !files.some((file) => file.id === additionalFile.id)) {
-      files.push(additionalFile);
-    }
-
     files.sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { numeric: true }),
     );
     return files;
-  }, [additionalFile, source.tiles]);
+  }, [source.tiles]);
 
   const capabilities = useMemo(
     () => getFileListCapabilities(sourceKind),

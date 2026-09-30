@@ -28,6 +28,7 @@ import {
 import type { FileType } from "@shared/utils/fileTypes";
 import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
 import { ReadOnlyTextViewer } from "./ReadOnlyTextViewer";
+import { FilePreviewUnavailable } from "@shared/ui/preview/FilePreviewUnavailable";
 
 interface SharedFilePreviewModalProps {
   open: boolean;
@@ -38,6 +39,7 @@ interface SharedFilePreviewModalProps {
   fileSizeBytes: number | null;
   contentType: string | null;
   onClose: () => void;
+  onDownload: () => void;
 }
 
 type ModelControls = ReturnType<typeof useModelPreviewControls>;
@@ -296,7 +298,10 @@ const SharedModelPalette = ({
 };
 
 const isSupportedSharedPreviewType = (fileType: FileType | null): boolean =>
-  fileType === "pdf" || fileType === "text" || fileType === "model";
+  fileType === "pdf" ||
+  fileType === "text" ||
+  fileType === "model" ||
+  fileType === "other";
 
 export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   open,
@@ -307,6 +312,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   fileSizeBytes,
   contentType,
   onClose,
+  onDownload,
 }) => {
   const isModel = fileType === "model";
   const defaultModelColor = useDefaultModelColor();
@@ -334,7 +340,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     return null;
   }
 
-  const headerLayout = fileType === "pdf" || isModel;
+  const headerLayout = fileType === "pdf" || isModel || fileType === "other";
 
   return (
     <PreviewModal
@@ -349,6 +355,9 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
         ) : undefined
       }
     >
+      {fileType === "other" && (
+        <FilePreviewUnavailable onDownload={onDownload} />
+      )}
       {fileType === "pdf" && (
         <PdfPreview
           source={{

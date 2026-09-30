@@ -289,6 +289,7 @@ export const SearchPage: React.FC = () => {
         fileSizeBytes={previewState.fileSizeBytes}
         file={previewState.file}
         onClose={closePreview}
+        onDownload={handleDownloadFile}
       />
 
       {lightboxOpen && mediaItems.length > 0 && (

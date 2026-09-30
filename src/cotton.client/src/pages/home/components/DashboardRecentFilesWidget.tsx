@@ -1,7 +1,12 @@
 import { Box, Skeleton, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
+import { useFileInteractionHandlers } from "@shared/hooks/useFileInteractionHandlers";
+import { FilePreviewModal, MediaLightbox } from "@shared/ui/preview";
+import {
+  selectGallerySmoothTransitions,
+  useUserPreferencesStore,
+} from "../../../shared/store/userPreferencesStore";
 import { useRecentFilesQuery } from "../../../shared/api/queries/layouts";
 import {
   RECENT_FILES_FILTERS,
@@ -39,16 +44,10 @@ export const DashboardRecentFilesWidget = ({
     enabled,
   });
   const files = query.data ?? [];
-
-  const handleFileClick = (file: NodeFileManifestDto): void => {
-    if (!file.nodeId) {
-      return;
-    }
-
-    navigate(`/files/${file.nodeId}`, {
-      state: { selectedFile: file },
-    });
-  };
+  const interaction = useFileInteractionHandlers({ sortedFiles: files });
+  const smoothTransitions = useUserPreferencesStore(
+    selectGallerySmoothTransitions,
+  );
 
   if (query.isPending && files.length === 0) {
     return (
@@ -78,18 +77,44 @@ export const DashboardRecentFilesWidget = ({
   }
 
   return (
-    <Box
-      display="grid"
-      gridTemplateColumns="repeat(auto-fit, minmax(min(100%, 240px), 1fr))"
-      gap={1}
-    >
-      {files.map((file) => (
-        <RecentFileCard
-          key={file.id}
-          file={file}
-          onClick={() => handleFileClick(file)}
+    <>
+      <Box
+        display="grid"
+        gridTemplateColumns="repeat(auto-fit, minmax(min(100%, 240px), 1fr))"
+        gap={1}
+      >
+        {files.map((file) => (
+          <RecentFileCard
+            key={file.id}
+            file={file}
+            onClick={() =>
+              interaction.handleFileClick(file.id, file.name, file.sizeBytes)
+            }
+            onOpenLocation={() => navigate(`/files/${file.nodeId}`)}
+          />
+        ))}
+      </Box>
+      <FilePreviewModal
+        isOpen={interaction.previewState.isOpen}
+        fileId={interaction.previewState.fileId}
+        fileName={interaction.previewState.fileName}
+        fileType={interaction.previewState.fileType}
+        fileSizeBytes={interaction.previewState.fileSizeBytes}
+        file={interaction.previewState.file}
+        onClose={interaction.closePreview}
+        onDownload={interaction.handleDownloadFile}
+      />
+      {interaction.lightboxOpen && interaction.mediaItems.length > 0 && (
+        <MediaLightbox
+          open={interaction.lightboxOpen}
+          initialIndex={interaction.lightboxIndex}
+          items={interaction.mediaItems}
+          getSignedMediaUrl={interaction.getSignedMediaUrl}
+          getDownloadUrl={interaction.getDownloadUrl}
+          onClose={() => interaction.setLightboxOpen(false)}
+          smoothTransitions={smoothTransitions}
         />
-      ))}
-    </Box>
+      )}
+    </>
   );
 };

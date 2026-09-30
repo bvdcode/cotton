@@ -74,6 +74,7 @@ export const FilesPageOverlays: React.FC<FilesPageOverlaysProps> = ({
         fileSizeBytes={interaction.previewState.fileSizeBytes}
         file={interaction.previewState.file}
         onClose={interaction.closePreview}
+        onDownload={interaction.handleDownloadFile}
         onSaved={refreshCurrentNodeContent}
       />
 

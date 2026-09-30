@@ -222,23 +222,9 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
         return;
       }
 
-      if (
-        typeInfo.type === "pdf" ||
-        typeInfo.type === "text" ||
-        typeInfo.type === "model"
-      ) {
-        const opened = openPreview(
-          fileId,
-          fileName,
-          fileSizeBytes,
-          file?.contentType ?? null,
-        );
-        if (opened) return;
-      }
-
-      void handleDownload(fileId, fileName);
+      openPreview(fileId, fileName, fileSizeBytes, file?.contentType ?? null);
     },
-    [content?.files, handleDownload, handleMediaClick, openPreview],
+    [content?.files, handleMediaClick, openPreview],
   );
 
   const fileOperations = React.useMemo<FileOperations>(
@@ -417,6 +403,11 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
         fileSizeBytes={previewState.fileSizeBytes}
         contentType={previewContentType}
         onClose={closePreview}
+        onDownload={() => {
+          if (previewState.fileId && previewState.fileName) {
+            void handleDownload(previewState.fileId, previewState.fileName);
+          }
+        }}
       />
     </Box>
   );
