@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import {
   Box,
@@ -28,7 +29,7 @@ class ErrorBoundaryImpl extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error("Unhandled UI error", error, info);
+    reportClientError("Unhandled UI error", error, info);
   }
 
   componentDidUpdate(previousProps: Props): void {

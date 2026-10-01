@@ -47,7 +47,7 @@
   top: calc(var(--yarl__toolbar_padding, 16px) + 48px);
   left: 50%;
   z-index: 2;
-  max-width: min(520px, calc(100vw - 32px));
+  max-width: min(520px, calc(100% - 32px));
   padding: 10px 14px;
   border-radius: 6px;
   transform: translateX(-50%);

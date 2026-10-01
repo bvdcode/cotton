@@ -4,7 +4,7 @@ Cotton combines application controls with deployment diagnostics. The security d
 
 ## Trusted proxy boundary
 
-Client IP and scheme headers are trustworthy only when the immediate connection comes from the configured reverse proxy.
+Client IP and scheme headers should be trusted only when the immediate connection comes from the configured reverse proxy.
 
 The proxy setting supports three modes:
 
@@ -16,9 +16,9 @@ Auto-detection reports the peer that opened the current connection and suggests 
 
 Verification saves a proxy address or network only when it contains the currently observed peer. Requests arriving from outside a configured trusted proxy boundary cannot use supplied forwarding headers.
 
-For compatibility, an unconfigured proxy setting retains legacy header trust and is reported as a security warning. New deployments should choose direct mode or verify an explicit proxy boundary.
+For compatibility, an unconfigured proxy setting retains legacy header trust for client-address metadata and request-derived URL schemes. IP-based abuse limits instead use the connecting peer address. Behind a reverse proxy, those limits are shared by all clients until an explicit trusted proxy boundary is configured. The unconfigured mode is reported as a security warning. New deployments should choose direct mode or verify an explicit proxy boundary.
 
-All consumers—including authentication limits, WebDAV limits, share lookup protection, audit metadata, and fallback public-URL construction—use the same trusted-address and trusted-protocol policy.
+Authentication, WebDAV, and share-lookup limits use the same rate-limit address policy. Session metadata and fallback public-URL construction retain the legacy header behavior when no proxy is configured.
 
 ## Endpoint abuse protection
 
@@ -55,7 +55,7 @@ Diagnostics are read-only. They do not rewrite deployment configuration, repair 
 
 ## Public URL and protocol
 
-Security-sensitive links should use the configured public base URL. When a request-derived fallback is required, its forwarded scheme is accepted only through the trusted-proxy boundary. Raw `X-Forwarded-Proto` is never read as authority from an arbitrary client connection.
+Security-sensitive links should use the configured public base URL. When a request-derived fallback is required, its forwarded scheme is accepted from the configured trusted proxy. With no proxy configured, the legacy behavior still accepts `X-Forwarded-Proto` from any connection; direct mode ignores it.
 
 ## Logging and secret handling
 

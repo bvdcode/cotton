@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { JsonValue } from "../types/json";
 
 vi.mock("@shared/ui/notifications", () => ({
   toast: { error: vi.fn() },
@@ -41,16 +42,12 @@ const makeNode = (id = nodeId) => ({
   metadata: {},
 });
 
-const makeContent = (files: unknown[] = []) => ({
+const makeContent = (files: JsonValue[] = []) => ({
   id: nodeId,
   createdAt: "2026-05-17T00:00:00Z",
   updatedAt: "2026-05-17T00:00:00Z",
   nodes: [makeNode("child-1")],
   files,
-});
-
-beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
 afterEach(() => {
@@ -59,6 +56,16 @@ afterEach(() => {
 });
 
 describe("nodesApi reads", () => {
+  it("requests recursive folder statistics separately from the listing", async () => {
+    const stats = { folders: 2, files: 3, encryptedFiles: 0, sizeBytes: 1024 };
+    const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: stats });
+
+    await expect(nodesApi.getFolderStats(nodeId, true)).resolves.toEqual(stats);
+    expect(get).toHaveBeenCalledWith(`/layouts/nodes/${nodeId}/stats`, {
+      params: { recursive: true },
+    });
+  });
+
   it("gets one node and validates the body", async () => {
     const get = vi.spyOn(httpClient, "get").mockResolvedValue({
       data: makeNode(),
@@ -95,18 +102,20 @@ describe("nodesApi reads", () => {
     const result = await nodesApi.getChildren(nodeId);
 
     expect(get).toHaveBeenCalledWith(`/layouts/nodes/${nodeId}/children`, {
+      paramsSerializer: { indexes: null },
       params: {
         page: 1,
-        pageSize: 1000000,
+        pageSize: 1000,
         nodeType: undefined,
         depth: undefined,
+        includeStats: undefined,
       },
     });
     expect(result.content.nodes[0].id).toBe("child-1");
     expect(result.totalCount).toBe(5);
   });
 
-  it("decorates encrypted child file names when the vault is unlocked", async () => {
+  it("keeps encrypted child names opaque in the server response", async () => {
     useVault.getState().unlock(await generateMasterKey());
     const encryptedMeta = await encryptDisplayMeta({
       name: "private.pdf",
@@ -135,8 +144,8 @@ describe("nodesApi reads", () => {
     const result = await nodesApi.getChildren(nodeId);
 
     expect(result.content.files[0]).toMatchObject({
-      name: "private.pdf",
-      contentType: "application/pdf",
+      name: "11111111-2222-4333-8444-555555555555",
+      contentType: "application/octet-stream",
     });
   });
 
@@ -154,11 +163,13 @@ describe("nodesApi reads", () => {
     });
 
     expect(get).toHaveBeenCalledWith(`/layouts/nodes/${nodeId}/children`, {
+      paramsSerializer: { indexes: null },
       params: {
         page: 3,
         pageSize: 50,
         nodeType: "trash",
         depth: 2,
+        includeStats: undefined,
       },
     });
   });

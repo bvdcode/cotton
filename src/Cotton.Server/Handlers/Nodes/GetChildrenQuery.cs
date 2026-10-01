@@ -8,6 +8,8 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
+using Cotton.Server.Models.Enums;
 using Cotton.Topology;
 using Cotton.Topology.Abstractions;
 using Cotton.Server.Services;
@@ -21,7 +23,8 @@ namespace Cotton.Server.Handlers.Nodes
 {
     public class GetChildrenQuery(
         Guid userId, Guid nodeId, NodeType nodeType,
-        int page, int pageSize, int depth = 0) : IRequest<PagedResult<NodeContentDto>>
+        int page, int pageSize, int depth = 0, bool includeStats = false,
+        DirectoryListingOptions? listing = null) : IRequest<PagedResult<NodeContentDto>>
     {
         public Guid UserId { get; } = userId;
 
@@ -34,6 +37,9 @@ namespace Cotton.Server.Handlers.Nodes
         public int PageSize { get; } = pageSize;
 
         public int Depth { get; } = depth;
+
+        public bool IncludeStats { get; } = includeStats;
+        public DirectoryListingOptions Listing { get; } = listing ?? new();
     }
 
     public class GetChildrenQueryHandler(
@@ -43,6 +49,8 @@ namespace Cotton.Server.Handlers.Nodes
     {
         public async Task<PagedResult<NodeContentDto>> Handle(GetChildrenQuery request, CancellationToken ct)
         {
+            int skip = ListingRequestLimits.GetSkip(request.Page, request.PageSize);
+            ListingRequestLimits.ValidateDepth(request.Depth);
             Layout layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId, ct);
             Node parentNode = await _dbContext.Nodes
                 .AsNoTracking()
@@ -52,10 +60,6 @@ namespace Cotton.Server.Handlers.Nodes
                     && x.Type == request.NodeType)
                 .SingleOrDefaultAsync(cancellationToken: ct)
                     ?? throw new EntityNotFoundException(nameof(Node), "Folder not found in the requested layout.");
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.Page);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.PageSize);
-            ArgumentOutOfRangeException.ThrowIfNegative(request.Depth);
-
             // Resolve the set of parent IDs whose children should be returned.
             // depth == 0: direct children of parentNode (default).
             // depth == N: skip N intermediate levels and return their descendants.
@@ -63,12 +67,21 @@ namespace Cotton.Server.Handlers.Nodes
             // expression trees that cause EF Core's ExpressionTreeFuncletizer to stack-overflow.
             NodeDirectory directory = new(_dbContext, parentNode);
             List<Guid> currentParentIds = [parentNode.Id];
+            int traversedNodes = 0;
 
             for (int i = 0; i < request.Depth; i++)
             {
+                int remaining = ListingRequestLimits.MaxTraversedNodes - traversedNodes;
                 currentParentIds = await directory.GetNodes(currentParentIds).AsNoTracking()
                     .Select(x => x.Id)
+                    .Take(remaining + 1)
                     .ToListAsync(cancellationToken: ct);
+
+                traversedNodes += currentParentIds.Count;
+                if (traversedNodes > ListingRequestLimits.MaxTraversedNodes)
+                {
+                    throw new BadRequestException($"Folder traversal exceeds {ListingRequestLimits.MaxTraversedNodes} nodes.");
+                }
 
                 if (currentParentIds.Count == 0)
                 {
@@ -79,11 +92,11 @@ namespace Cotton.Server.Handlers.Nodes
                         Id = request.NodeId,
                         CreatedAt = parentNode.CreatedAt,
                         UpdatedAt = parentNode.UpdatedAt,
+                        Stats = request.IncludeStats ? new FolderStatsDto() : null,
                     }, 0);
                 }
             }
 
-            int skip = (request.Page - 1) * request.PageSize;
             IQueryable<Node> nodesBaseQuery = directory.GetNodes(currentParentIds).AsNoTracking();
             IQueryable<NodeFile> filesBaseQuery = directory.GetFiles(currentParentIds).AsNoTracking();
 
@@ -102,8 +115,15 @@ namespace Cotton.Server.Handlers.Nodes
                     ct);
             }
 
-            var (nodes, files, totalCount) = await DirectoryListing.ReadPageAsync<NodeFileManifestDto>(
-                nodesBaseQuery, filesBaseQuery, skip, request.PageSize, ct);
+            var (nodes, files, nodeCount, fileCount) = await DirectoryListing.ReadPageAsync<NodeFileManifestDto>(
+                nodesBaseQuery, filesBaseQuery, skip, request.PageSize, ct, request.Listing);
+
+            FolderStatsDto? stats = null;
+            if (request.IncludeStats)
+            {
+                stats = await LoadStatsAsync(nodesBaseQuery, filesBaseQuery, nodeCount, fileCount,
+                    request.Listing.FilterOperator != DirectoryFilterOperator.None, ct);
+            }
 
             return new(new NodeContentDto
             {
@@ -112,7 +132,28 @@ namespace Cotton.Server.Handlers.Nodes
                 Id = request.NodeId,
                 CreatedAt = parentNode.CreatedAt,
                 UpdatedAt = parentNode.UpdatedAt,
-            }, totalCount);
+                Stats = stats,
+            }, nodeCount + fileCount);
+        }
+
+        private static async Task<FolderStatsDto> LoadStatsAsync(
+            IQueryable<Node> nodes,
+            IQueryable<NodeFile> files,
+            int nodeCount,
+            int fileCount,
+            bool filtered,
+            CancellationToken ct)
+        {
+            long sizeBytes = await files.SumAsync(file => (long?)file.FileManifest.SizeBytes, ct) ?? 0L;
+            int encryptedFiles = await files.CountAsync(
+                file => CottonDbContext.GetHstoreValue(file.Metadata, "isClientEncrypted") == "true", ct);
+            return new FolderStatsDto
+            {
+                Folders = filtered ? await nodes.CountAsync(ct) : nodeCount,
+                Files = filtered ? await files.CountAsync(ct) : fileCount,
+                EncryptedFiles = encryptedFiles,
+                SizeBytes = sizeBytes,
+            };
         }
 
         private async Task<PagedResult<NodeContentDto>> LoadTrashChildrenAsync(

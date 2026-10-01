@@ -18,36 +18,36 @@ type AuthStoreState = {
   logoutLocal: () => void;
 };
 
-const getLocalStorage = (): Storage | undefined => {
+const getSessionStorage = (): Storage | undefined => {
   if (typeof window === "undefined") {
     return undefined;
   }
 
   try {
-    return window.localStorage ?? undefined;
+    return window.sessionStorage ?? undefined;
   } catch {
     return undefined;
   }
 };
 
-const safeLocalStorage: StateStorage = {
+const safeSessionStorage: StateStorage = {
   getItem: (key) => {
     try {
-      return getLocalStorage()?.getItem(key) ?? null;
+      return getSessionStorage()?.getItem(key) ?? null;
     } catch {
       return null;
     }
   },
   removeItem: (key) => {
     try {
-      getLocalStorage()?.removeItem(key);
+      getSessionStorage()?.removeItem(key);
     } catch {
       // best-effort: auth state should still update when storage is blocked
     }
   },
   setItem: (key, value) => {
     try {
-      getLocalStorage()?.setItem(key, value);
+      getSessionStorage()?.setItem(key, value);
     } catch {
       // best-effort: auth state should still update when storage is blocked
     }
@@ -93,7 +93,7 @@ export const useAuthStore = create<AuthStoreState>()(
     }),
     {
       name: AUTH_STORAGE_KEY,
-      storage: createJSONStorage(() => safeLocalStorage),
+      storage: createJSONStorage(() => safeSessionStorage),
       partialize: (state) => ({ refreshEnabled: state.refreshEnabled }),
     },
   ),

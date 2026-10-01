@@ -182,21 +182,8 @@ namespace Cotton.Previews
             int position = 2;
             while (position + 4 <= header.Length)
             {
-                if (header[position++] != 0xff)
-                {
-                    return null;
-                }
-                while (position < header.Length && header[position] == 0xff)
-                {
-                    position++;
-                }
-                if (position >= header.Length)
-                {
-                    return null;
-                }
-
-                byte marker = header[position++];
-                if (marker is 0xd9 or 0xda)
+                byte? marker = ReadJpegMarker(header, ref position);
+                if (marker is null or 0xd9 or 0xda)
                 {
                     return null;
                 }
@@ -204,33 +191,67 @@ namespace Cotton.Previews
                 {
                     continue;
                 }
-                if (position + 2 > header.Length)
+                if (!TryReadJpegPayload(header, ref position, out ReadOnlySpan<byte> payload))
                 {
                     return null;
                 }
 
-                int segmentLength = BinaryPrimitives.ReadUInt16BigEndian(header.Slice(position, 2));
-                position += 2;
-                int payloadLength = segmentLength - 2;
-                if (payloadLength < 0 || position + payloadLength > header.Length)
+                if (IsJpegFrameMarker(marker.Value))
                 {
-                    return null;
+                    return ReadJpegFrameDimensions(payload);
                 }
-                if (marker is >= 0xc0 and <= 0xc3 or >= 0xc5 and <= 0xc7
-                    or >= 0xc9 and <= 0xcb or >= 0xcd and <= 0xcf)
-                {
-                    if (payloadLength < 5)
-                    {
-                        return null;
-                    }
-                    int height = BinaryPrimitives.ReadUInt16BigEndian(header.Slice(position + 1, 2));
-                    int width = BinaryPrimitives.ReadUInt16BigEndian(header.Slice(position + 3, 2));
-                    return width > 0 && height > 0 && (long)width * height <= MaxDecodedPixels
-                        ? (width, height) : null;
-                }
-                position += payloadLength;
+                position += payload.Length;
             }
             return null;
+        }
+
+        private static byte? ReadJpegMarker(ReadOnlySpan<byte> header, ref int position)
+        {
+            if (header[position++] != 0xff)
+            {
+                return null;
+            }
+            while (position < header.Length && header[position] == 0xff)
+            {
+                position++;
+            }
+            return position < header.Length ? header[position++] : null;
+        }
+
+        private static bool TryReadJpegPayload(ReadOnlySpan<byte> header, ref int position, out ReadOnlySpan<byte> payload)
+        {
+            payload = default;
+            if (position + 2 > header.Length)
+            {
+                return false;
+            }
+            int segmentLength = BinaryPrimitives.ReadUInt16BigEndian(header.Slice(position, 2));
+            position += 2;
+            int payloadLength = segmentLength - 2;
+            if (payloadLength < 0 || position + payloadLength > header.Length)
+            {
+                return false;
+            }
+            payload = header.Slice(position, payloadLength);
+            return true;
+        }
+
+        private static bool IsJpegFrameMarker(byte marker)
+        {
+            return marker is >= 0xc0 and <= 0xc3 or >= 0xc5 and <= 0xc7
+                or >= 0xc9 and <= 0xcb or >= 0xcd and <= 0xcf;
+        }
+
+        private static (int Width, int Height)? ReadJpegFrameDimensions(ReadOnlySpan<byte> payload)
+        {
+            if (payload.Length < 5)
+            {
+                return null;
+            }
+            int height = BinaryPrimitives.ReadUInt16BigEndian(payload.Slice(1, 2));
+            int width = BinaryPrimitives.ReadUInt16BigEndian(payload.Slice(3, 2));
+            return width > 0 && height > 0 && (long)width * height <= MaxDecodedPixels
+                ? (width, height) : null;
         }
 
         private static async Task WriteSourceAsync(Stream source, string path)

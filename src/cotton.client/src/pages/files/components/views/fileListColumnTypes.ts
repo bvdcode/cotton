@@ -1,5 +1,7 @@
 import type React from "react";
 import type { FolderEncryptionPolicyState } from "@shared/crypto";
+import type { NodeDto } from "@shared/api/layoutsApi";
+import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 
 export interface FileListRow {
   id: string;
@@ -13,14 +15,7 @@ export interface FileListRow {
   metadata?: Record<string, string>;
   encryptionPolicy?: FolderEncryptionPolicyState;
   requiresVideoTranscoding?: boolean;
-  tile?: {
-    kind: "folder" | "file";
-    file?: {
-      id: string;
-      name: string;
-      previewHashEncryptedHex?: string | null;
-    };
-  };
+  tile?: FileSystemTile;
 }
 
 export interface ColumnOptions {
@@ -45,6 +40,7 @@ export interface ColumnOptions {
     disableEncryptionPolicy: string;
     pin: string;
     unpin: string;
+    info: string;
   };
   newFolderName: string;
   onNewFolderNameChange: (value: string) => void;
@@ -75,6 +71,7 @@ export interface ColumnOptions {
     onToggleEncryptionPolicy?: (id: string, currentlyEnabled: boolean) => void;
     onTogglePin?: (id: string) => void;
     isPinned?: (id: string) => boolean;
+    onShowInfo?: (folder: NodeDto) => void;
   };
   fileOperations: {
     isRenaming: (id: string) => boolean;

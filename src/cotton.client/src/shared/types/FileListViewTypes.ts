@@ -1,4 +1,5 @@
 import type { NodeDto } from "../api/layoutsApi";
+import type { GridFilterModel, GridSortModel } from "@mui/x-data-grid";
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import type { SharedNodeFileDto } from "../api/sharedFoldersApi";
 import type { FolderEncryptionPolicyState } from "../crypto";
@@ -75,6 +76,7 @@ export interface FolderOperations {
   onShare?: (folderId: string, name: string) => void;
   onCut?: (folderId: string) => void;
   onTogglePin?: (folderId: string) => void;
+  onShowInfo?: (folder: NodeDto) => void;
   isPinned?: (folderId: string) => boolean;
   onToggleEncryptionPolicy?: (
     folderId: string,
@@ -108,6 +110,13 @@ export interface FileOperations {
  * Pagination props for list views with server-side pagination
  */
 export interface PaginationProps {
+  query?: {
+    sortModel: GridSortModel;
+    filterModel: GridFilterModel;
+    onSortModelChange: (model: GridSortModel) => void;
+    onFilterModelChange: (model: GridFilterModel) => void;
+    namesEnabled: boolean;
+  };
   model?: { page: number; pageSize: number };
   /**
    * Total number of items across all pages
@@ -219,6 +228,7 @@ export interface IFileListView {
    * Optional pagination props for List view (not used in Tiles view)
    */
   pagination?: PaginationProps;
+  onLoadMore?: () => void;
 
   /**
    * Optional tile size for Tiles view.

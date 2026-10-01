@@ -10,7 +10,7 @@ interface ContentTilesSource<TFile extends FileListFileDto> {
   files: TFile[];
 }
 
-type ContentTilesSortMode = "name" | "updatedAtDesc";
+type ContentTilesSortMode = "name" | "updatedAtDesc" | "server";
 
 interface ContentTilesOptions {
   sortMode?: ContentTilesSortMode;
@@ -48,8 +48,16 @@ const sortByUpdatedAtDesc = <T extends { name: string; updatedAt: string }>(
 const sortItems = <T extends { name: string; updatedAt: string }>(
   items: T[],
   sortMode: ContentTilesSortMode,
-): T[] =>
-  sortMode === "updatedAtDesc" ? sortByUpdatedAtDesc(items) : sortByName(items);
+): T[] => {
+  switch (sortMode) {
+    case "name":
+      return sortByName(items);
+    case "updatedAtDesc":
+      return sortByUpdatedAtDesc(items);
+    case "server":
+      return items;
+  }
+};
 
 const getTileUpdatedAt = (tile: FileSystemTile): string =>
   tile.kind === "folder" ? tile.node.updatedAt : tile.file.updatedAt;
@@ -92,9 +100,13 @@ export const useContentTiles = <TFile extends FileListFileDto>(
       ...sortedFiles.map((file) => ({ kind: "file", file }) as const),
     ];
 
-    return sortMode === "updatedAtDesc"
-      ? sortTilesByUpdatedAtDesc(groupedTiles)
-      : groupedTiles;
+    switch (sortMode) {
+      case "updatedAtDesc":
+        return sortTilesByUpdatedAtDesc(groupedTiles);
+      case "name":
+      case "server":
+        return groupedTiles;
+    }
   }, [sortMode, sortedFolders, sortedFiles]);
 
   return { sortedFolders, sortedFiles, tiles };

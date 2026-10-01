@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
@@ -7,6 +7,9 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Helpers;
+using Cotton.Server.Models.Results;
+using Cotton.Previews;
+using Microsoft.AspNetCore.Mvc;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
@@ -18,12 +21,11 @@ using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
-using System.Net;
-using System.Text.Json;
 
 namespace Cotton.Server.Handlers.Files
 {
-    public class ShareFileQuery(string token, string? view, bool preview, HttpRequest httpRequest) : IRequest<ShareFileResult>
+    public class ShareFileQuery(string token, string? view, bool preview, HttpRequest httpRequest,
+        SharedFilePreviewFormat previewFormat = SharedFilePreviewFormat.Webp) : IRequest<ShareFileResult>
     {
         /// <summary>
         /// Gets the opaque token.
@@ -33,6 +35,8 @@ namespace Cotton.Server.Handlers.Files
         public string? View { get; } = view;
 
         public bool Preview { get; } = preview;
+
+        public SharedFilePreviewFormat PreviewFormat { get; } = previewFormat;
 
         public HttpRequest HttpRequest { get; } = httpRequest;
     }
@@ -51,7 +55,8 @@ namespace Cotton.Server.Handlers.Files
             (bool IsHtml, bool IsInlineFile)? viewMode = TryParseViewMode(request.View);
             if (viewMode is null)
             {
-                return ShareFileResult.AsBadRequest("Invalid view mode. Valid values: page, download, inline.");
+                return new ShareFileResult(new ApiProblemResult(StatusCodes.Status400BadRequest,
+                    "Invalid view mode. Valid values: page, download, inline.", "bad_request"));
             }
 
             DateTime now = DateTime.UtcNow;
@@ -124,7 +129,7 @@ namespace Cotton.Server.Handlers.Files
 
             if (nodeShareToken.Node.Type != NodeType.Default)
             {
-                return ShareFileResult.AsRedirect($"{baseAppUrl}/404");
+                return new ShareFileResult(new RedirectResult($"{baseAppUrl}/404"));
             }
 
             _integrity.RequireValid(_dbContext, nodeShareToken, "share.node-token");
@@ -151,13 +156,14 @@ namespace Cotton.Server.Handlers.Files
         {
             if (!isHtml)
             {
-                return ShareFileResult.AsTokenNotFound("File not found");
+                return new ShareFileResult(new ApiProblemResult(StatusCodes.Status404NotFound,
+                    "File not found", "not_found"), IsTokenLookupFailure: true);
             }
 
             NodeShareToken? nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
             if (nodeShareToken is null || nodeShareToken.Node.Type != NodeType.Default)
             {
-                return ShareFileResult.AsTokenNotFoundRedirect($"{baseAppUrl}/404");
+                return new ShareFileResult(new RedirectResult($"{baseAppUrl}/404"), IsTokenLookupFailure: true);
             }
 
             _integrity.RequireValid(_dbContext, nodeShareToken, "share.node-token");
@@ -177,19 +183,19 @@ namespace Cotton.Server.Handlers.Files
             string token,
             string baseAppUrl)
         {
-            string html = BuildRedirectHtml(
+            string html = SharePageHtml.Create(
                 baseAppUrl: baseAppUrl,
                 token: token,
                 fileName: nodeShareToken.Name,
-                previewHashEncryptedHex: null);
-            return ShareFileResult.AsHtml(html);
+                hasPreview: false);
+            return new ShareFileResult(new ContentResult { Content = html, ContentType = "text/html; charset=utf-8" });
         }
 
         private static ShareFileResult BuildNotFoundResult(bool isHtml, string baseAppUrl)
         {
             return isHtml
-                ? ShareFileResult.AsRedirect($"{baseAppUrl}/404")
-                : ShareFileResult.AsNotFound("File not found");
+                ? new ShareFileResult(new RedirectResult($"{baseAppUrl}/404"))
+                : new ShareFileResult(new ApiProblemResult(StatusCodes.Status404NotFound, "File not found", "not_found"));
         }
 
         private async Task<ShareFileResult> BuildDownloadTokenResultAsync(
@@ -208,18 +214,18 @@ namespace Cotton.Server.Handlers.Files
 
             if (RequestsInlinePreview(request, viewMode))
             {
-                return CreatePreviewStreamResult(downloadToken, file);
+                return await CreatePreviewStreamResultAsync(downloadToken, file, request.PreviewFormat, ct);
             }
 
             EntityTagHeaderValue entityTag = CreateEntityTag(file);
             if (isHead)
             {
-                return ShareFileResult.AsHead(
+                return new ShareFileResult(new SharedFileHeadResult(
                     contentType: downloadToken.NodeFile.ContentType,
                     contentLength: file.SizeBytes,
-                    entityTag: entityTag.ToString(),
+                    entityTag: entityTag,
                     fileName: downloadToken.FileName,
-                    inline: viewMode.IsInlineFile);
+                    inline: viewMode.IsInlineFile));
             }
 
             bool isMetadataRangeProbe = IsInlineMetadataRangeProbe(request.HttpRequest, viewMode.IsInlineFile);
@@ -240,12 +246,12 @@ namespace Cotton.Server.Handlers.Files
             string token,
             string baseAppUrl)
         {
-            string html = BuildRedirectHtml(
+            string html = SharePageHtml.Create(
                 baseAppUrl: baseAppUrl,
                 token: token,
                 fileName: downloadToken.FileName,
-                previewHashEncryptedHex: file.GetPreviewHashEncryptedHex());
-            return ShareFileResult.AsHtml(html);
+                hasPreview: file.LargeFilePreviewHash is not null || file.SmallFilePreviewHash is not null);
+            return new ShareFileResult(new ContentResult { Content = html, ContentType = "text/html; charset=utf-8" });
         }
 
         private static (bool IsHtml, bool IsInlineFile)? TryParseViewMode(string? view)
@@ -306,68 +312,45 @@ namespace Cotton.Server.Handlers.Files
             return FileETags.CreateContentEntityTag(file);
         }
 
-        private ShareFileResult CreatePreviewStreamResult(DownloadToken downloadToken, FileManifest file)
+        private async Task<ShareFileResult> CreatePreviewStreamResultAsync(
+            DownloadToken downloadToken, FileManifest file, SharedFilePreviewFormat format, CancellationToken ct)
         {
-            if (file.SmallFilePreviewHash is null)
+            byte[]? previewHash = file.LargeFilePreviewHash ?? file.SmallFilePreviewHash;
+            if (previewHash is null)
             {
-                return ShareFileResult.AsNotFound("Preview not found");
+                return new ShareFileResult(new ApiProblemResult(StatusCodes.Status404NotFound, "Preview not found", "not_found"));
             }
 
-            string previewHashHex = Hasher.ToHexStringHash(file.SmallFilePreviewHash);
-            EntityTagHeaderValue entityTag = new($"\"sha256-{previewHashHex}\"");
-            Stream previewStream = _storage.GetBlobStream([previewHashHex]);
+            string previewHashHex = Hasher.ToHexStringHash(previewHash);
+            Stream previewStream;
+            string contentType;
+            string etag;
+            switch (format)
+            {
+                case SharedFilePreviewFormat.Webp:
+                    previewStream = _storage.GetBlobStream([previewHashHex]);
+                    contentType = "image/webp";
+                    etag = $"\"sha256-{previewHashHex}\"";
+                    break;
+                case SharedFilePreviewFormat.Jpeg:
+                    await using (Stream source = _storage.GetBlobStream([previewHashHex]))
+                    {
+                        previewStream = await SocialPreviewImage.EncodeJpegAsync(source, ct);
+                    }
+                    contentType = "image/jpeg";
+                    etag = $"\"sha256-{previewHashHex}-jpeg-{SocialPreviewImage.EncodingVersion}\"";
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(format), format, null);
+            }
 
-            return ShareFileResult.AsStream(
+            return new ShareFileResult(new SharedFileStreamResult(
                 stream: previewStream,
-                contentType: "image/webp",
+                contentType: contentType,
                 fileName: downloadToken.FileName,
-                downloadName: null,
+                inline: true,
                 lastModified: new DateTimeOffset(downloadToken.CreatedAt),
-                entityTag: entityTag,
-                deleteAfterUse: false,
-                deleteTokenId: downloadToken.Id);
-        }
-
-        private static string BuildRedirectHtml(string baseAppUrl,
-            string token, string fileName, string? previewHashEncryptedHex)
-        {
-            string canonicalUrl = $"{baseAppUrl}/s/{token}";
-            string appShareUrl = $"{baseAppUrl}/share/{token}";
-
-            string previewUrl = previewHashEncryptedHex is null
-                ? $"{baseAppUrl}/assets/images/social-preview.jpg"
-                : $"{baseAppUrl}{Routes.V1.Previews}/{previewHashEncryptedHex}.webp";
-
-            string previewTag =
-                $"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />\n" +
-                $"<meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />";
-
-            return $"""
-                <!doctype html>
-                <html lang="en">
-                <head>
-                  <meta charset="utf-8">
-                  <title>{WebUtility.HtmlEncode(fileName)} - Cotton Cloud</title>
-                  <meta http-equiv="refresh" content="0;url={WebUtility.HtmlEncode(appShareUrl)}" />
-                  <link rel="canonical" href="{WebUtility.HtmlEncode(canonicalUrl)}" />
-                  <meta property="og:site_name" content="Cotton Cloud" />
-                  <meta property="og:title" content="{WebUtility.HtmlEncode(fileName)}" />
-                  <meta property="og:description" content="Shared via Cotton Cloud" />
-                  <meta property="og:type" content="website" />
-                  <meta property="og:url" content="{WebUtility.HtmlEncode(canonicalUrl)}" />
-                  {previewTag}
-                  <meta name="twitter:card" content="summary_large_image" />
-                </head>
-                <body>
-                  <noscript>
-                    <p><a href="{WebUtility.HtmlEncode(appShareUrl)}">Continue</a></p>
-                  </noscript>
-                  <script>
-                    window.location.replace({JsonSerializer.Serialize(appShareUrl)});
-                  </script>
-                </body>
-                </html>
-                """;
+                entityTag: new EntityTagHeaderValue(etag)));
         }
 
         private async Task<ShareFileResult> CreateStreamResultAsync(
@@ -388,7 +371,6 @@ namespace Cotton.Server.Handlers.Files
             };
 
             Stream stream = _storage.GetBlobStream(uids, context);
-            string? downloadName = inline ? null : downloadToken.FileName;
 
             if (notifyDownload && _httpContextAccessor.HttpContext is not null)
             {
@@ -400,15 +382,14 @@ namespace Cotton.Server.Handlers.Files
                     ct);
             }
 
-            return ShareFileResult.AsStream(
+            return new ShareFileResult(new SharedFileStreamResult(
                 stream: stream,
                 contentType: downloadToken.NodeFile.ContentType,
                 fileName: downloadToken.FileName,
-                downloadName: downloadName,
+                inline: inline,
                 lastModified: lastModified,
                 entityTag: entityTag,
-                deleteAfterUse: deleteAfterUse,
-                deleteTokenId: downloadToken.Id);
+                deleteTokenId: deleteAfterUse ? downloadToken.Id : null));
         }
     }
 }

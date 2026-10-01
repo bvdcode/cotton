@@ -6,6 +6,7 @@ import {
   Download,
   Edit,
   History,
+  InfoOutlined,
   LockOpenOutlined,
   LockOutlined,
   Restore,
@@ -122,6 +123,16 @@ const buildFolderActionButtons = (
       icon: <Download fontSize="small" />,
       title: options.labels.download,
       onClick: () => operations.onDownload?.(row.id, row.name),
+    });
+  }
+
+  const folder = row.tile?.kind === "folder" ? row.tile.node : null;
+  if (operations.onShowInfo && folder) {
+    actions.push({
+      key: "info",
+      icon: <InfoOutlined fontSize="small" />,
+      title: options.labels.info,
+      onClick: () => operations.onShowInfo?.(folder),
     });
   }
 
@@ -264,8 +275,9 @@ export const createActionsColumn = (
 ): GridColDef<FileListRow> => ({
   field: "actions",
   headerName: options.labels.actionsTitle,
-  minWidth: 220,
+  minWidth: 340,
   sortable: false,
+  filterable: false,
   align: "right",
   headerAlign: "right",
   renderCell: (params) => {

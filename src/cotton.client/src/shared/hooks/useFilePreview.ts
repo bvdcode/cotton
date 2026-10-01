@@ -52,32 +52,29 @@ export const useFilePreview = () => {
       file?: NodeFileManifestDto | null,
     ) => {
       const typeInfo = getFileTypeInfo(fileName, contentType);
-      if (typeInfo.supportsInlineView) {
-        const textPreviewLimit =
-          file && isFileEncrypted(file.metadata)
-            ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
-            : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
-        if (
-          typeInfo.type === "text" &&
-          fileSizeBytes &&
-          fileSizeBytes > textPreviewLimit
-        ) {
-          return false;
-        }
-
-        setPreviewState({
-          isOpen: true,
-          fileId,
-          fileName,
-          fileType: typeInfo.type,
-          fileSizeBytes: fileSizeBytes ?? null,
-          file: file ?? null,
-        });
-        window.history.pushState({ overlay: PREVIEW_HISTORY_STATE }, "");
-        historyPushedRef.current = true;
-        return true;
+      const encrypted = file ? isFileEncrypted(file.metadata) : false;
+      const textPreviewLimit = encrypted
+        ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
+        : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
+      let fileType = typeInfo.type;
+      if (
+        (fileType !== "pdf" && fileType !== "text" && fileType !== "model") ||
+        (encrypted && fileType !== "text") ||
+        (fileType === "text" && (fileSizeBytes ?? 0) > textPreviewLimit)
+      ) {
+        fileType = "other";
       }
-      return false;
+
+      setPreviewState({
+        isOpen: true,
+        fileId,
+        fileName,
+        fileType,
+        fileSizeBytes: fileSizeBytes ?? null,
+        file: file ?? null,
+      });
+      window.history.pushState({ overlay: PREVIEW_HISTORY_STATE }, "");
+      historyPushedRef.current = true;
     },
     [],
   );

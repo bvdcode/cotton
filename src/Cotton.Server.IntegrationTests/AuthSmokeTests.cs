@@ -1,122 +1,17 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Auth;
-using Cotton.Email;
-using Cotton.Server.IntegrationTests.Abstractions;
-using Cotton.Server.IntegrationTests.Common;
-using Cotton.Server.IntegrationTests.Helpers;
-using Cotton;
-using Cotton.Models.Enums;
-using Cotton.Server.Abstractions;
-using Cotton.Server.Models;
-using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
-using Cotton.Server.Providers;
-using Cotton.Server.Services;
-using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;
-using Cotton.Storage.Abstractions;
-using EasyExtensions.AspNetCore.Authorization.Models.Dto;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Npgsql;
-using NUnit.Framework;
-using System.IdentityModel.Tokens.Jwt;
-using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text;
+using Cotton.Email;
+using Cotton.Server.Models;
+using ServerChangePasswordRequestDto = Cotton.Server.Models.Requests.ChangePasswordRequestDto;
+using System.IdentityModel.Tokens.Jwt;
 using CottonLoginRequestDto = Cotton.Auth.LoginRequestDto;
 
 namespace Cotton.Server.IntegrationTests
 {
-    public partial class AuthSmokeTests : IntegrationTestBase
+    public class AuthSmokeTests : AuthEndpointTestBase
     {
-        private TestAppFactory? _factory;
-        private WebApplicationFactory<Program>? _customFactory;
-        private HttpClient? _client;
-        private RecordingNotificationsProvider? _notifications;
-
-        [SetUp]
-        public void SetUp()
-        {
-            IRelationalDatabaseCreator creator = DbContext.GetService<IRelationalDatabaseCreator>();
-            creator.EnsureDeleted();
-            creator.Create();
-            Assert.Multiple(() =>
-            {
-                Assert.That(creator.Exists(), Is.True, "DB must exist after Create()");
-                Assert.That(creator.HasTables(), Is.False, "DB must have no user tables after Create()");
-            });
-
-            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
-            {
-                Host = TestPostgresHost,
-                Port = TestPostgresPort,
-                Database = CurrentDatabaseName,
-                Username = TestPostgresUsername,
-                Password = TestPostgresPassword
-            };
-
-            Dictionary<string, string?> overrides = new Dictionary<string, string?>
-            {
-                ["DatabaseSettings:Host"] = csb.Host,
-                ["DatabaseSettings:Port"] = csb.Port.ToString(),
-                ["DatabaseSettings:Database"] = csb.Database,
-                ["DatabaseSettings:Username"] = csb.Username,
-                ["DatabaseSettings:Password"] = csb.Password,
-                ["MasterEncryptionKey"] = Convert.ToBase64String(Encoding.UTF8.GetBytes("0123456789ABCDEF0123456789ABCDEF")),
-                ["MasterEncryptionKeyId"] = "1",
-                ["EncryptionThreads"] = "1",
-                ["MaxChunkSizeBytes"] = "16777216",
-                ["CipherChunkSizeBytes"] = "20971520",
-                ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
-            };
-
-            _factory = new TestAppFactory(overrides);
-            RecordingNotificationsProvider notifications = new();
-            _notifications = notifications;
-            _customFactory = _factory.WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureServices(services =>
-                {
-                    ServiceDescriptor? existing = services.FirstOrDefault(d => d.ServiceType == typeof(IStoragePipeline));
-                    if (existing != null) services.Remove(existing);
-                    services.AddSingleton<IStoragePipeline, InMemoryStorage>();
-
-                    ServiceDescriptor? existingNotifications = services
-                        .FirstOrDefault(d => d.ServiceType == typeof(INotificationsProvider));
-                    if (existingNotifications is not null)
-                    {
-                        services.Remove(existingNotifications);
-                    }
-                    services.AddSingleton<INotificationsProvider>(notifications);
-                });
-                builder.ConfigureLogging((ctx, logging) =>
-                {
-                    logging.ClearProviders();
-                    logging.AddProvider(new NUnitLoggerProvider());
-                    logging.SetMinimumLevel(LogLevel.Information);
-                });
-            });
-
-            _client = _customFactory.CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false
-            });
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            _client?.Dispose();
-            _customFactory?.Dispose();
-            _factory?.Dispose();
-        }
 
         [Test]
         public async Task Login_Returns_Auth_Session()
@@ -199,7 +94,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task Login_IsRateLimited()
+        public async Task Login_CannotBypassRateLimitByChangingForwardedAddress()
         {
             Assert.That(_client, Is.Not.Null);
 
@@ -222,7 +117,7 @@ namespace Cotton.Server.IntegrationTests
             using HttpResponseMessage limitedLogin = await PostLoginAsync(
                 "limiteduser",
                 "wrong-password",
-                ipAddress);
+                "8.8.4.4");
             CottonResult? result = await limitedLogin.Content.ReadFromJsonAsync<CottonResult>();
             Assert.Multiple(() =>
             {
@@ -289,7 +184,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task Login_StoresClientDeviceNameInSession()
+        public async Task Login_StoresClientMetadataInSession()
         {
             Assert.That(_client, Is.Not.Null);
 
@@ -306,9 +201,12 @@ namespace Cotton.Server.IntegrationTests
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", payload!.AccessToken);
             List<SessionDto>? sessions = await _client.GetFromJsonAsync<List<SessionDto>>("/api/v1/auth/sessions");
 
-            Assert.That(
-                sessions?.Single(session => session.IsCurrentSession).Device,
-                Is.EqualTo("Cotton Sync Desktop (CI workstation)"));
+            SessionDto? session = sessions?.Single(session => session.IsCurrentSession);
+            Assert.Multiple(() =>
+            {
+                Assert.That(session?.Device, Is.EqualTo("Cotton Sync Desktop (CI workstation)"));
+                Assert.That(session?.IpAddress, Is.EqualTo("8.8.4.4"));
+            });
         }
 
         [Test]
@@ -356,39 +254,6 @@ namespace Cotton.Server.IntegrationTests
 
             using HttpResponseMessage afterChange = await _client.GetAsync("/api/v1/auth/me");
             Assert.That(afterChange.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-        }
-
-        private async Task<AuthSessionResponseDto> LoginAsync(string username, string password)
-        {
-            using HttpResponseMessage response = await PostLoginAsync(username, password, "8.8.8.8");
-            response.EnsureSuccessStatusCode();
-
-            AuthSessionResponseDto? payload = await response.Content.ReadFromJsonAsync<AuthSessionResponseDto>();
-            Assert.That(payload, Is.Not.Null);
-            return payload!;
-        }
-
-        private Task<HttpResponseMessage> PostLoginAsync(
-            string username,
-            string password,
-            string ipAddress,
-            string? deviceName = null)
-        {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
-            {
-                Content = JsonContent.Create(new CottonLoginRequestDto
-                {
-                    Username = username,
-                    Password = password
-                })
-            };
-            request.Headers.Add("X-Forwarded-For", ipAddress);
-            if (!string.IsNullOrWhiteSpace(deviceName))
-            {
-                request.Headers.Add(CottonClientHeaders.DeviceName, deviceName);
-            }
-
-            return _client!.SendAsync(request);
         }
     }
 }

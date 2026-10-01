@@ -1,431 +1,94 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Database;
-using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
-using Cotton.Localization;
-using Cotton.Auth;
 using Cotton;
+using Cotton.Auth;
 using Cotton.Server.Auth;
-using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
-using Cotton.Server.Models;
-using Cotton.Server.Providers;
+using Cotton.Server.Handlers.Auth.AppCode;
 using Cotton.Server.Services;
-using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions;
-using EasyExtensions.AspNetCore.Authorization.Models.Dto;
-using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.EntityFrameworkCore.Database;
-using EasyExtensions.Models.Enums;
+using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Net;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace Cotton.Server.Controllers
 {
-[ApiController]
-[Route(Routes.V1.AppCodeOAuth)]
-public class AppCodeOAuthController(
-    CottonDbContext _dbContext,
-    AuthSessionIssuer _sessionIssuer,
-    INotificationsProvider _notifications,
-    IDatabaseIntegrityVerifier _integrity,
-    IGeoLookupService _geoLookup,
-    SettingsProvider _settings,
-    AppCodeRequestStore _requestStore,
-    ILogger<AppCodeOAuthController> _logger) : ControllerBase
-{
-    private const int PollSecretByteLength = 32;
-    private const int PollSecretLength = PollSecretByteLength * 2;
-
-    private static readonly TimeSpan RequestLifetime = TimeSpan.FromMinutes(10);
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
-    private static readonly TimeSpan LongPollTimeout = TimeSpan.FromSeconds(25);
-
-    [AllowAnonymous]
-    [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
-    [HttpPost("start")]
-    public ActionResult<AppCodeStartResponseDto> Start([FromBody] AppCodeStartRequestDto request)
+    [ApiController]
+    [Route(Routes.V1.AppCodeOAuth)]
+    public class AppCodeOAuthController(IMediator mediator) : ControllerBase
     {
-        string applicationName = NormalizeRequired(request.ApplicationName, "ApplicationName", maxLength: 120);
-        string applicationVersion = NormalizeOptional(request.ApplicationVersion, maxLength: 80) ?? "Unknown version";
-        string? deviceName = NormalizeOptional(request.DeviceName, maxLength: 160);
-        Guid approvalId = Guid.NewGuid();
-        DateTime now = DateTime.UtcNow;
-        DateTime expiresAt = now.Add(RequestLifetime);
-        IPAddress originAddress = ResolveRequestIpAddress(Request);
-        string origin = originAddress.ToString();
-        string userAgent = Request.Headers.UserAgent.ToString();
+        private const int PollIntervalSeconds = 2;
 
-        string pollSecret = CreatePollSecret();
-        string pollToken = CreatePollToken(approvalId, pollSecret);
-        AppCodeRequestState state = new(
-            approvalId,
-            HashPollSecret(pollSecret),
-            applicationName,
-            applicationVersion,
-            deviceName,
-            origin,
-            userAgent,
-            now,
-            expiresAt);
-        if (!_requestStore.TryAdd(state))
+        [AllowAnonymous]
+        [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
+        [HttpPost("start")]
+        public async Task<IActionResult> Start(
+            [FromBody] AppCodeStartRequestDto request,
+            CancellationToken cancellationToken)
         {
-            return StatusCode(StatusCodes.Status429TooManyRequests, new AppCodePollErrorDto
-            {
-                Error = "too_many_requests",
-                RetryAfterSeconds = (int)PollInterval.TotalSeconds,
-            });
+            IPAddress originAddress = Request.GetTrustedClientIPAddress();
+            AppCodeStartResponseDto? result = await mediator.Send(new StartAppCodeRequest(
+                request, originAddress, Request.Headers.UserAgent.ToString()), cancellationToken);
+            return result is null
+                ? StatusCode(StatusCodes.Status429TooManyRequests, new AppCodePollErrorDto
+                {
+                    Error = "too_many_requests",
+                    RetryAfterSeconds = PollIntervalSeconds,
+                })
+                : Ok(result);
         }
 
-        return Ok(new AppCodeStartResponseDto
+        [Authorize]
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> Get([FromRoute] Guid id, CancellationToken cancellationToken)
         {
-            ApprovalId = approvalId,
-            ApprovalUrl = $"/oauth/app-code/{approvalId:D}",
-            PollToken = pollToken,
-            ExpiresAt = expiresAt,
-            PollIntervalSeconds = (int)PollInterval.TotalSeconds,
-        });
-    }
+            AppCodeDetailsDto result = await mediator.Send(new GetAppCodeRequest(id), cancellationToken);
+            return Ok(result);
+        }
 
-    [Authorize]
-    [HttpGet("{id:guid}")]
-    public ActionResult<AppCodeDetailsDto> Get([FromRoute] Guid id)
-    {
-        AppCodeRequestState state = GetExistingState(id);
-        return Ok(new AppCodeDetailsDto
+        [Authorize]
+        [HttpPost("{id:guid}/approve")]
+        public async Task<IActionResult> Approve([FromRoute] Guid id, CancellationToken cancellationToken)
         {
-            Id = state.ApprovalId,
-            ApplicationName = state.ApplicationName,
-            ApplicationVersion = state.ApplicationVersion,
-            DeviceName = state.DeviceName,
-            Origin = state.Origin,
-            RequestedAt = state.RequestedAt,
-            ExpiresAt = state.ExpiresAt,
-            Status = state.Status.ToString().ToLowerInvariant(),
-        });
-    }
+            await mediator.Send(new ApproveAppCodeRequest(id, User.GetUserId()), cancellationToken);
+            return Ok();
+        }
 
-    [Authorize]
-    [HttpPost("{id:guid}/approve")]
-    public async Task<IActionResult> Approve([FromRoute] Guid id, CancellationToken cancellationToken)
-    {
-        AppCodeRequestState state = GetExistingState(id);
-
-        await state.Gate.WaitAsync(cancellationToken);
-        try
+        [Authorize]
+        [HttpPost("{id:guid}/deny")]
+        public async Task<IActionResult> Deny([FromRoute] Guid id, CancellationToken cancellationToken)
         {
-            EnsurePending(state);
-            Guid userId = User.GetUserId();
-            User user = await _dbContext.Users.FindAsync([userId], cancellationToken)
-                ?? throw new EntityNotFoundException<User>("Current user not found.");
-            _integrity.RequireValid(_dbContext, user, "oauth.app-code.approve-user");
+            await mediator.Send(new DenyAppCodeRequest(id), cancellationToken);
+            return Ok();
+        }
 
-            var (dbToken, refreshToken) = await _sessionIssuer
-                .CreateRefreshTokenAsync(user, trustDevice: true, AuthType.Credentials)
-                .ConfigureAwait(false);
-            await ApplyApplicationSessionMetadataAsync(dbToken, state, cancellationToken);
-
-            string accessToken = _sessionIssuer.CreateAccessToken(user, dbToken.SessionId!);
-            await _dbContext.RefreshTokens.AddAsync(dbToken, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            state.Tokens = new TokenPairResponseDto
+        [AllowAnonymous]
+        [EnableRateLimiting(AuthRateLimitPolicies.Refresh)]
+        [HttpPost("poll")]
+        public async Task<IActionResult> Poll(
+            [FromBody] AppCodePollRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            AppCodePollResult result = await mediator.Send(new PollAppCodeRequest(request.PollToken), cancellationToken);
+            return result.Status switch
             {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
+                AppCodePollStatus.NotFound => NotFound(new AppCodePollErrorDto { Error = "not_found" }),
+                AppCodePollStatus.Expired => StatusCode(StatusCodes.Status410Gone,
+                    new AppCodePollErrorDto { Error = "expired" }),
+                AppCodePollStatus.Denied => StatusCode(StatusCodes.Status403Forbidden,
+                    new AppCodePollErrorDto { Error = "denied" }),
+                AppCodePollStatus.Approved => Ok(result.Tokens),
+                AppCodePollStatus.Pending => Accepted(new AppCodePollErrorDto
+                {
+                    Error = "pending",
+                    RetryAfterSeconds = PollIntervalSeconds,
+                }),
+                _ => throw new InvalidOperationException($"Unsupported app-code poll status: {result.Status}"),
             };
-            state.Status = AppCodeRequestStatus.Approved;
-            state.ApprovedAt = DateTime.UtcNow;
-
-            await SendApprovedSecurityEventAsync(userId, state);
-            state.Completion.TrySetResult();
-        }
-        finally
-        {
-            state.Gate.Release();
-        }
-
-        return Ok();
-    }
-
-    [Authorize]
-    [HttpPost("{id:guid}/deny")]
-    public async Task<IActionResult> Deny([FromRoute] Guid id, CancellationToken cancellationToken)
-    {
-        AppCodeRequestState state = GetExistingState(id);
-
-        await state.Gate.WaitAsync(cancellationToken);
-        try
-        {
-            EnsurePending(state);
-            state.Status = AppCodeRequestStatus.Denied;
-            state.Completion.TrySetResult();
-        }
-        finally
-        {
-            state.Gate.Release();
-        }
-
-        return Ok();
-    }
-
-    [AllowAnonymous]
-    [EnableRateLimiting(AuthRateLimitPolicies.Refresh)]
-    [HttpPost("poll")]
-    public async Task<IActionResult> Poll([FromBody] AppCodePollRequestDto request, CancellationToken cancellationToken)
-    {
-        var (approvalId, pollSecret) = ParsePollToken(request.PollToken);
-        if (!_requestStore.TryGet(approvalId, out AppCodeRequestState? cachedState)
-            || cachedState is null
-            || !IsPollSecretValid(cachedState, pollSecret))
-        {
-            return NotFound(new AppCodePollErrorDto { Error = "not_found" });
-        }
-
-        AppCodeRequestState state = cachedState;
-        if (state.Status == AppCodeRequestStatus.Pending && !IsExpired(state))
-        {
-            TimeSpan wait = GetPollWaitTimeout(state);
-            if (wait > TimeSpan.Zero)
-            {
-                await Task.WhenAny(state.Completion.Task, Task.Delay(wait, cancellationToken));
-            }
-        }
-
-        await state.Gate.WaitAsync(cancellationToken);
-        try
-        {
-            if (IsExpired(state))
-            {
-                _requestStore.Remove(state);
-                return StatusCode(StatusCodes.Status410Gone, new AppCodePollErrorDto { Error = "expired" });
-            }
-
-            if (state.Status == AppCodeRequestStatus.Denied)
-            {
-                _requestStore.Remove(state);
-                return StatusCode(StatusCodes.Status403Forbidden, new AppCodePollErrorDto { Error = "denied" });
-            }
-
-            if (state.Status == AppCodeRequestStatus.Approved && state.Tokens is not null)
-            {
-                TokenPairResponseDto tokens = state.Tokens;
-                state.Status = AppCodeRequestStatus.Consumed;
-                state.Tokens = null;
-                _requestStore.Remove(state);
-                return Ok(tokens);
-            }
-
-            return Accepted(new AppCodePollErrorDto
-            {
-                Error = "pending",
-                RetryAfterSeconds = (int)PollInterval.TotalSeconds,
-            });
-        }
-        finally
-        {
-            state.Gate.Release();
         }
     }
-
-    private async Task ApplyApplicationSessionMetadataAsync(
-        ExtendedRefreshToken dbToken,
-        AppCodeRequestState state,
-        CancellationToken cancellationToken)
-    {
-        dbToken.Device = BuildSessionDeviceName(state);
-        dbToken.UserAgent = state.UserAgent;
-        if (!IPAddress.TryParse(state.Origin, out IPAddress? originAddress))
-        {
-            return;
-        }
-
-        dbToken.IpAddress = originAddress;
-        GeoLookupResult? lookup = await _geoLookup.TryLookupAsync(originAddress, cancellationToken);
-        dbToken.Country = NormalizeGeoField(lookup?.Country);
-        dbToken.Region = NormalizeGeoField(lookup?.Region);
-        dbToken.City = NormalizeGeoField(lookup?.City);
-    }
-
-    private async Task SendApprovedSecurityEventAsync(Guid userId, AppCodeRequestState state)
-    {
-        string notificationContent = NotificationTemplates.AppCodeApprovalContent(
-            state.ApplicationName,
-            state.ApplicationVersion,
-            origin: null);
-        string emailContent = NotificationTemplates.AppCodeApprovalContent(
-            state.ApplicationName,
-            state.ApplicationVersion,
-            state.Origin);
-
-        try
-        {
-            Dictionary<string, string> metadata = new()
-            {
-                ["applicationName"] = state.ApplicationName,
-                ["applicationVersion"] = state.ApplicationVersion,
-                ["origin"] = state.Origin,
-                ["requestId"] = state.ApprovalId.ToString("D"),
-            };
-            Dictionary<string, string> templateMetadata = NotificationTemplateMetadata.Create(
-                NotificationTemplateKeys.AppCodeApprovalTitle,
-                NotificationTemplateKeys.AppCodeApprovalContent,
-                metadata);
-
-            await _notifications.SendNotificationAsync(
-                userId,
-                NotificationTemplates.AppCodeApprovalTitle,
-                notificationContent,
-                NotificationPriority.Medium,
-                templateMetadata);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Failed to send app-code approval notification for request {RequestId}",
-                state.ApprovalId);
-        }
-
-        await _notifications.SendSecurityEmailAsync(
-            _settings,
-            _logger,
-            userId,
-            NotificationTemplates.AppCodeApprovalTitle,
-            emailContent,
-            state.ApprovedAt ?? DateTime.UtcNow);
-    }
-
-    private AppCodeRequestState GetExistingState(Guid id)
-    {
-        if (!_requestStore.TryGet(id, out AppCodeRequestState? state) || state is null)
-        {
-            throw new EntityNotFoundException<AppCodeDetailsDto>("App sign-in request not found.");
-        }
-
-        if (IsExpired(state))
-        {
-            _requestStore.Remove(state);
-            throw new EntityNotFoundException<AppCodeDetailsDto>("App sign-in request has expired.");
-        }
-
-        return state;
-    }
-
-    private void EnsurePending(AppCodeRequestState state)
-    {
-        if (IsExpired(state))
-        {
-            _requestStore.Remove(state);
-            throw new BadRequestException<AppCodeDetailsDto>("Application sign-in request has expired.");
-        }
-
-        if (state.Status != AppCodeRequestStatus.Pending)
-        {
-            throw new BadRequestException<AppCodeDetailsDto>("Application sign-in request is no longer pending.");
-        }
-    }
-
-    private static bool IsExpired(AppCodeRequestState state)
-    {
-        return state.ExpiresAt <= DateTime.UtcNow;
-    }
-
-    private static TimeSpan GetPollWaitTimeout(AppCodeRequestState state)
-    {
-        TimeSpan remaining = state.ExpiresAt - DateTime.UtcNow;
-        return remaining <= LongPollTimeout ? remaining : LongPollTimeout;
-    }
-
-    private static string BuildSessionDeviceName(AppCodeRequestState state)
-    {
-        string app = state.ApplicationVersion == "Unknown version"
-            ? state.ApplicationName
-            : $"{state.ApplicationName} {state.ApplicationVersion}";
-        return string.IsNullOrWhiteSpace(state.DeviceName)
-            ? app
-            : $"{app} on {state.DeviceName}";
-    }
-
-    private static string NormalizeRequired(string? value, string fieldName, int maxLength)
-    {
-        string? normalized = NormalizeOptional(value, maxLength);
-        if (normalized is null)
-        {
-            throw new BadRequestException<AppCodeStartRequestDto>($"{fieldName} is required.");
-        }
-
-        return normalized;
-    }
-
-    private static string? NormalizeOptional(string? value, int maxLength)
-    {
-        string? normalized = value?.Trim();
-        if (string.IsNullOrEmpty(normalized))
-        {
-            return null;
-        }
-
-        return normalized.Length <= maxLength ? normalized : normalized[..maxLength];
-    }
-
-    private static (Guid ApprovalId, string PollSecret) ParsePollToken(string? value)
-    {
-        string? normalized = value?.Trim();
-        if (string.IsNullOrEmpty(normalized))
-        {
-            throw new BadRequestException<AppCodePollRequestDto>("PollToken is required.");
-        }
-
-        string[] parts = normalized.Split('.', 2);
-        if (parts.Length != 2
-            || !Guid.TryParse(parts[0], out Guid approvalId)
-            || parts[1].Length != PollSecretLength)
-        {
-            throw new BadRequestException<AppCodePollRequestDto>("PollToken is invalid.");
-        }
-
-        return (approvalId, parts[1]);
-    }
-
-    private static bool IsPollSecretValid(AppCodeRequestState state, string pollSecret)
-    {
-        byte[] candidateHash = HashPollSecret(pollSecret);
-        return CryptographicOperations.FixedTimeEquals(state.PollSecretHash, candidateHash);
-    }
-
-    private static byte[] HashPollSecret(string pollSecret)
-    {
-        return SHA256.HashData(Encoding.UTF8.GetBytes(pollSecret));
-    }
-
-    private static string CreatePollSecret()
-    {
-        return Convert.ToHexString(RandomNumberGenerator.GetBytes(PollSecretByteLength)).ToLowerInvariant();
-    }
-
-    private static string CreatePollToken(Guid approvalId, string pollSecret)
-    {
-        return $"{approvalId:D}.{pollSecret}";
-    }
-
-    private static IPAddress ResolveRequestIpAddress(HttpRequest request)
-    {
-        return Constants.IsPublicInstance
-            ? IPAddress.Loopback
-            : request.GetTrustedClientIPAddress();
-    }
-
-    private static string NormalizeGeoField(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? "Unknown" : value;
-    }
-}
 }

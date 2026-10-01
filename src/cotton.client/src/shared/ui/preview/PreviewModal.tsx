@@ -41,14 +41,10 @@ export const PreviewModal = ({
       fullScreen={isFullScreen}
       PaperProps={{
         sx: {
-          height: isFullScreen
-            ? "100dvh"
-            : { xs: "100dvh", sm: "90dvh", md: "90vh" },
-          maxHeight: isFullScreen
-            ? "100dvh"
-            : { xs: "100dvh", sm: "90dvh", md: "90vh" },
-          width: forceFullScreen ? "100vw" : undefined,
-          maxWidth: forceFullScreen ? "100vw" : undefined,
+          height: isFullScreen ? "100%" : { xs: "100%", sm: "90%" },
+          maxHeight: isFullScreen ? "100%" : { xs: "100%", sm: "90%" },
+          width: forceFullScreen ? "100%" : undefined,
+          maxWidth: forceFullScreen ? "100%" : undefined,
           borderRadius: isFullScreen ? 0 : { xs: 0, sm: 2, md: 2 },
         },
       }}

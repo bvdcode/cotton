@@ -1,64 +1,23 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { NodeDto } from "../../../shared/api/layoutsApi";
-import {
-  nodesApi,
-  type NodeContentDto,
-  type NodeFileManifestDto,
-} from "../../../shared/api/nodesApi";
-import {
-  FOLDER_ENCRYPTION_POLICY_KEY,
-  getFolderEncryptionPolicyStateFromParentResolver,
-  isFolderEncryptionPolicyEnabled,
-  useVault,
-} from "../../../shared/crypto";
-import { useNodesStore } from "../../../shared/store/nodesStore";
+import { type NodeFileManifestDto } from "../../../shared/api/nodesApi";
+import { lookupUploadNames } from "../utils/lookupUploadNames";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 import { ConflictAction } from "../../../shared/types/nameConflict";
 import { resolveUploadConflicts } from "../utils/uploadConflicts";
 import { showActionToast } from "../../../shared/ui/ActionToast";
 import { toast } from "../../../shared/ui/notifications";
 import { useFileConflictDialog } from "./useFileConflictDialog";
-import { readStringProperty } from "../../../shared/utils/typeGuards";
-
-interface UseBreadcrumb {
-  id: string;
-  name: string;
-}
-
-type DroppedFile = {
-  file: File;
-  relativePath: string;
-};
-
-type DropPreparationPhase = "idle" | "scanning" | "preparing";
-
-type DropPreparationStep =
-  "idle" | "scanning" | "mapping" | "folders" | "conflicts" | "enqueue";
-
-type DropPreparationState = {
-  active: boolean;
-  phase: DropPreparationPhase;
-  step: DropPreparationStep;
-  filesFound: number;
-  processed: number;
-};
-
-type SkippedItemsDialogState = {
-  open: boolean;
-  total: number;
-  items: string[];
-  truncated: boolean;
-};
-
-const emptySkippedItemsDialog: SkippedItemsDialogState = {
-  open: false,
-  total: 0,
-  items: [],
-  truncated: false,
-};
-
-const maxSkippedItemsToKeep = 500;
+import { useUploadEncryptionPolicy } from "./useUploadEncryptionPolicy";
+import { hasFileDragPayload } from "./hasFileDragPayload";
+import type {
+  UseBreadcrumb,
+  DropPreparationState,
+  SkippedItemsDialogState,
+} from "./fileUploadTypes";
+import { getAllFilesFromItems, type DroppedFile } from "./scanDroppedFiles";
+import { DroppedFolderResolver } from "./DroppedFolderResolver";
+import { emptySkippedItemsDialog } from "./fileUploadTypes";
 
 type UploadToastVariant = "info" | "error";
 
@@ -67,26 +26,9 @@ type FileUploadOptions = {
   onFileUploaded?: (file: NodeFileManifestDto) => void;
 };
 
-const hasFileDragPayload = (dataTransfer: DataTransfer | null): boolean => {
-  if (!dataTransfer) {
-    return false;
-  }
-
-  if (dataTransfer.items && dataTransfer.items.length > 0) {
-    return Array.from(dataTransfer.items).some((item) => item.kind === "file");
-  }
-
-  if (dataTransfer.types && dataTransfer.types.length > 0) {
-    return Array.from(dataTransfer.types).includes("Files");
-  }
-
-  return Boolean(dataTransfer.files && dataTransfer.files.length > 0);
-};
-
 export const useFileUpload = (
   nodeId: string | null,
   breadcrumbs: UseBreadcrumb[],
-  content: NodeContentDto | undefined,
   options?: FileUploadOptions,
 ) => {
   const { t } = useTranslation(["files"]);
@@ -118,32 +60,7 @@ export const useFileUpload = (
     return label.length > 0 ? label : t("breadcrumbs.root", { ns: "files" });
   }, [breadcrumbs, t]);
 
-  const isPolicyEnabledForNode = useMemo(
-    () =>
-      (targetNodeId: string): boolean => {
-        const state = useNodesStore.getState();
-        const target = findNodeById(state, targetNodeId);
-        if (!target) return false;
-
-        return getFolderEncryptionPolicyStateFromParentResolver(target, (id) =>
-          findNodeById(state, id),
-        ).effectiveEnabled;
-      },
-    [],
-  );
-
-  const decideEncrypt = useMemo(
-    () =>
-      (targetNodeId: string): { encrypt: boolean; vaultLocked: boolean } => {
-        if (!isPolicyEnabledForNode(targetNodeId)) {
-          return { encrypt: false, vaultLocked: false };
-        }
-
-        const vaultUnlocked = useVault.getState().isUnlocked;
-        return { encrypt: vaultUnlocked, vaultLocked: !vaultUnlocked };
-      },
-    [isPolicyEnabledForNode],
-  );
+  const { isPolicyEnabledForNode, decideEncrypt } = useUploadEncryptionPolicy();
 
   const handleUploadFiles = useMemo(
     () => async (files: FileList | File[]) => {
@@ -160,8 +77,11 @@ export const useFileUpload = (
 
       skipAllConflictsRef.current = false;
 
-      const contentForCheck =
-        content ?? (await nodesApi.getChildren(nodeId)).content;
+      const contentForCheck = await lookupUploadNames(
+        nodeId,
+        list.map((file) => file.name),
+        decision.encrypt,
+      );
 
       const confirmConflict = async (
         prompt: Parameters<typeof showConflictDialog>[0],
@@ -199,7 +119,6 @@ export const useFileUpload = (
     },
     [
       nodeId,
-      content,
       baseLabel,
       showConflictDialog,
       onToast,
@@ -248,128 +167,12 @@ export const useFileUpload = (
         return action;
       };
 
-      const folderIdByKey = new Map<string, string>();
-      const childrenByNodeId = new Map<string, NodeContentDto>();
-      const policyEnabledByNodeId = new Map<string, boolean>([
-        [nodeId, rootPolicyEnabled],
-      ]);
-
-      const decideDroppedTargetEncryption = (
-        targetNodeId: string,
-      ): { encrypt: boolean; vaultLocked: boolean } => {
-        const policyEnabled =
-          policyEnabledByNodeId.get(targetNodeId) ??
-          isPolicyEnabledForNode(targetNodeId);
-        if (!policyEnabled) {
-          return { encrypt: false, vaultLocked: false };
-        }
-
-        const vaultUnlocked = useVault.getState().isUnlocked;
-        return { encrypt: vaultUnlocked, vaultLocked: !vaultUnlocked };
-      };
-
-      const getChildrenCached = async (id: string): Promise<NodeContentDto> => {
-        const cached = childrenByNodeId.get(id);
-        if (cached) return cached;
-        const loaded = await nodesApi.getChildren(id);
-        childrenByNodeId.set(id, loaded.content);
-        return loaded.content;
-      };
-
-      const findAvailableFolderName = async (
-        parentId: string,
-        baseName: string,
-      ): Promise<string> => {
-        const content = await getChildrenCached(parentId);
-        const takenLower = new Set<string>([
-          ...content.nodes.map((n) => n.name.toLowerCase()),
-          ...content.files.map((f) => f.name.toLowerCase()),
-        ]);
-
-        const preferred = `${baseName} (folder)`;
-        if (!takenLower.has(preferred.toLowerCase())) return preferred;
-
-        for (let i = 2; i < 10_000; i += 1) {
-          const candidate = `${baseName} (folder ${i})`;
-          if (!takenLower.has(candidate.toLowerCase())) return candidate;
-        }
-        return `${baseName}-${Date.now()}`;
-      };
-
-      const ensureFolder = async (
-        parentId: string,
-        desiredName: string,
-      ): Promise<{ id: string; name: string }> => {
-        const key = `${parentId}::${desiredName}`;
-        const cachedId = folderIdByKey.get(key);
-        if (cachedId) return { id: cachedId, name: desiredName };
-
-        const content = await getChildrenCached(parentId);
-        const existing = content.nodes.find((n) => n.name === desiredName);
-        if (existing) {
-          const parentPolicyEnabled =
-            policyEnabledByNodeId.get(parentId) ??
-            isPolicyEnabledForNode(parentId);
-          folderIdByKey.set(key, existing.id);
-          policyEnabledByNodeId.set(
-            existing.id,
-            parentPolicyEnabled ||
-              isFolderEncryptionPolicyEnabled(existing.metadata),
-          );
-          return { id: existing.id, name: desiredName };
-        }
-
-        // If a file exists with the same name, we can't create a folder with that name.
-        const hasFileConflict = content.files.some(
-          (f) => f.name === desiredName,
-        );
-        const nameToCreate = hasFileConflict
-          ? await findAvailableFolderName(parentId, desiredName)
-          : desiredName;
-
-        const created = await nodesApi.createNode({
-          parentId,
-          name: nameToCreate,
-        });
-        const parentPolicyEnabled =
-          policyEnabledByNodeId.get(parentId) ??
-          isPolicyEnabledForNode(parentId);
-        const folder = parentPolicyEnabled
-          ? await nodesApi.updateNodeMetadata(created.id, {
-              [FOLDER_ENCRYPTION_POLICY_KEY]: "true",
-            })
-          : created;
-        policyEnabledByNodeId.set(folder.id, parentPolicyEnabled);
-        // Update caches optimistically.
-        content.nodes.push(folder);
-        useNodesStore.getState().addFolderToCache(parentId, folder);
-        folderIdByKey.set(`${parentId}::${nameToCreate}`, folder.id);
-
-        return { id: folder.id, name: nameToCreate };
-      };
-
-      const ensureFolderPath = async (
-        rootId: string,
-        segments: string[],
-      ): Promise<{ nodeId: string; labelSuffix: string }> => {
-        let currentId = rootId;
-        const effectiveSegments: string[] = [];
-
-        for (const raw of segments) {
-          const seg = raw.trim();
-          if (seg.length === 0) continue;
-          const next = await ensureFolder(currentId, seg);
-          currentId = next.id;
-          effectiveSegments.push(next.name);
-        }
-
-        return {
-          nodeId: currentId,
-          labelSuffix: effectiveSegments.join(" / "),
-        };
-      };
-
-      const filesByTarget = new Map<string, { label: string; files: File[] }>();
+      const folderResolver = new DroppedFolderResolver(
+        nodeId,
+        baseLabel,
+        rootPolicyEnabled,
+        isPolicyEnabledForNode,
+      );
 
       let lastProgressTime = 0;
       const updateProgress = (processed: number) => {
@@ -386,38 +189,10 @@ export const useFileUpload = (
         }));
       };
 
-      updateProgress(0);
-
-      for (let i = 0; i < dropped.length; i += 1) {
-        updateProgress(i);
-
-        const item = dropped[i];
-        const normalized = item.relativePath.replace(/^\\+|^\/+/, "");
-        const parts = normalized.split(/[\\/]+/).filter((p) => p.length > 0);
-
-        // If we somehow don't get a filename, fall back to the File's name.
-        if (parts.length === 0) {
-          const bucket = filesByTarget.get(nodeId) ?? {
-            label: baseLabel,
-            files: [],
-          };
-          bucket.files.push(item.file);
-          filesByTarget.set(nodeId, bucket);
-          continue;
-        }
-
-        parts.pop();
-        const { nodeId: targetNodeId, labelSuffix } = await ensureFolderPath(
-          nodeId,
-          parts,
-        );
-        const label =
-          labelSuffix.length > 0 ? `${baseLabel} / ${labelSuffix}` : baseLabel;
-
-        const bucket = filesByTarget.get(targetNodeId) ?? { label, files: [] };
-        bucket.files.push(item.file);
-        filesByTarget.set(targetNodeId, bucket);
-      }
+      const filesByTarget = await folderResolver.groupFiles(
+        dropped,
+        updateProgress,
+      );
 
       setDropPreparation((prev) => ({
         ...prev,
@@ -429,8 +204,19 @@ export const useFileUpload = (
       }));
 
       for (const [targetNodeId, bucket] of filesByTarget) {
-        const contentForCheck = (await nodesApi.getChildren(targetNodeId))
-          .content;
+        const decision = folderResolver.decideEncryption(targetNodeId);
+        if (decision.vaultLocked) {
+          onToast?.(
+            t("uploadDrop.toasts.vaultLocked", { ns: "files" }),
+            "error",
+          );
+          continue;
+        }
+        const contentForCheck = await lookupUploadNames(
+          targetNodeId,
+          bucket.files.map((file) => file.name),
+          decision.encrypt,
+        );
         const result = await resolveUploadConflicts(
           bucket.files,
           contentForCheck,
@@ -447,15 +233,6 @@ export const useFileUpload = (
           filesFound: dropped.length,
           processed: dropped.length,
         }));
-        const decision = decideDroppedTargetEncryption(targetNodeId);
-        if (decision.vaultLocked) {
-          onToast?.(
-            t("uploadDrop.toasts.vaultLocked", { ns: "files" }),
-            "error",
-          );
-          continue;
-        }
-
         uploadManager.enqueue(result.files, targetNodeId, bucket.label, {
           encrypt: decision.encrypt,
           onFileUploaded,
@@ -492,126 +269,6 @@ export const useFileUpload = (
       }
     };
     input.click();
-  };
-
-  type DroppedScanResult = {
-    files: DroppedFile[];
-    skippedNotFound: number;
-    skippedItems: string[];
-  };
-
-  const isNotFoundError = (error: unknown): boolean => {
-    if (error instanceof DOMException) return error.name === "NotFoundError";
-    if (error instanceof Error) return error.name === "NotFoundError";
-    return readStringProperty(error, "name") === "NotFoundError";
-  };
-
-  const isFileEntry = (entry: FileSystemEntry): entry is FileSystemFileEntry =>
-    entry.isFile;
-
-  const isDirectoryEntry = (
-    entry: FileSystemEntry,
-  ): entry is FileSystemDirectoryEntry => entry.isDirectory;
-
-  const getAllFilesFromItems = async (
-    items: DataTransferItemList,
-    onFileFound: (filesFound: number) => void,
-  ): Promise<DroppedScanResult> => {
-    const files: DroppedFile[] = [];
-    const skippedItems: string[] = [];
-    let skippedNotFound = 0;
-
-    const rememberSkippedItem = (entry: FileSystemEntry) => {
-      if (skippedItems.length >= maxSkippedItemsToKeep) return;
-      const fullPath = readStringProperty(entry, "fullPath");
-      const display = (fullPath ?? entry.name).replace(/^\/+/, "").trim();
-      if (display.length === 0) return;
-      skippedItems.push(display);
-    };
-
-    let lastNotifiedCount = 0;
-    let lastNotifyTime = 0;
-    const notify = () => {
-      const now = Date.now();
-      const count = files.length;
-      if (count === lastNotifiedCount) return;
-      if (now - lastNotifyTime < 120) return;
-      lastNotifiedCount = count;
-      lastNotifyTime = now;
-      onFileFound(count);
-    };
-
-    const traverseEntry = async (entry: FileSystemEntry): Promise<void> => {
-      if (isFileEntry(entry)) {
-        let file: File;
-        try {
-          file = await new Promise<File>((resolve, reject) => {
-            entry.file(resolve, reject);
-          });
-        } catch (e) {
-          if (isNotFoundError(e)) {
-            skippedNotFound += 1;
-            rememberSkippedItem(entry);
-            return;
-          }
-          throw e;
-        }
-        const clonedFile = new File([file], file.name, {
-          type: file.type,
-          lastModified: file.lastModified,
-        });
-
-        const fullPath = readStringProperty(entry, "fullPath");
-        const relativePath = (fullPath ?? file.name).replace(/^\/+/, "");
-        files.push({ file: clonedFile, relativePath });
-        notify();
-      } else if (isDirectoryEntry(entry)) {
-        const reader = entry.createReader();
-
-        const readAllEntries = async (): Promise<FileSystemEntry[]> => {
-          const allEntries: FileSystemEntry[] = [];
-          let batch: FileSystemEntry[];
-
-          do {
-            batch = await new Promise<FileSystemEntry[]>((resolve, reject) => {
-              reader.readEntries(resolve, reject);
-            });
-            allEntries.push(...batch);
-          } while (batch.length > 0);
-
-          return allEntries;
-        };
-
-        let entries: FileSystemEntry[];
-        try {
-          entries = await readAllEntries();
-        } catch (e) {
-          if (isNotFoundError(e)) {
-            skippedNotFound += 1;
-            rememberSkippedItem(entry);
-            return;
-          }
-          throw e;
-        }
-        for (const childEntry of entries) {
-          await traverseEntry(childEntry);
-        }
-      }
-    };
-
-    const promises: Promise<void>[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.kind === "file") {
-        const entry = item.webkitGetAsEntry();
-        if (entry) {
-          promises.push(traverseEntry(entry));
-        }
-      }
-    }
-    await Promise.all(promises);
-
-    return { files, skippedNotFound, skippedItems };
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -791,29 +448,3 @@ export const useFileUpload = (
     },
   };
 };
-
-type NodesStateView = {
-  currentNode: NodeDto | null;
-  ancestors: NodeDto[];
-  contentByNodeId: Record<string, NodeContentDto | undefined>;
-};
-
-function findNodeById(state: NodesStateView, id: string): NodeDto | undefined {
-  if (state.currentNode?.id === id) {
-    return state.currentNode;
-  }
-
-  const ancestor = state.ancestors.find((node) => node.id === id);
-  if (ancestor) {
-    return ancestor;
-  }
-
-  for (const content of Object.values(state.contentByNodeId)) {
-    const found = content?.nodes.find((node) => node.id === id);
-    if (found) {
-      return found;
-    }
-  }
-
-  return undefined;
-}

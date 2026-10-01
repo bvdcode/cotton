@@ -93,6 +93,5 @@ namespace Cotton.Sdk.Files
             string? expectedETag = null,
             IProgress<long>? progress = null,
             CancellationToken cancellationToken = default);
-
     }
 }

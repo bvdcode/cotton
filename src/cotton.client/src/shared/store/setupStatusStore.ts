@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { create } from "zustand";
 import { settingsApi } from "../api/settingsApi";
 import { isAxiosError } from "../api/httpClient";
@@ -46,7 +47,7 @@ export const useSetupStatusStore = create<SetupStatusState>((set, get) => ({
         return;
       }
 
-      console.error("Failed to load setup status", error);
+      reportClientError("Failed to load setup status", error);
       set({
         isInitialized: true,
         loading: false,

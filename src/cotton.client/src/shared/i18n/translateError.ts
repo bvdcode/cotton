@@ -1,18 +1,21 @@
 import i18next from "i18next";
 import en from "../../locales/en.json";
-import { isRecord } from "../utils/typeGuards";
 
 type LocaleNamespace = keyof typeof en;
 
 const resolveEnglish = (namespace: LocaleNamespace, key: string): string => {
-  let cursor: unknown = en[namespace];
+  let cursor: object | string = en[namespace];
 
   for (const segment of key.split(".")) {
-    if (!isRecord(cursor)) {
+    if (typeof cursor !== "object" || cursor === null) {
       return key;
     }
-
-    cursor = cursor[segment];
+    const next: object | string | null | undefined = Object.entries(cursor)
+      .find(([entryKey]) => entryKey === segment)?.[1];
+    if ((typeof next !== "object" && typeof next !== "string") || next === null) {
+      return key;
+    }
+    cursor = next;
   }
 
   return typeof cursor === "string" ? cursor : key;

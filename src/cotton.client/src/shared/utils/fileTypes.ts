@@ -26,16 +26,7 @@ export interface FileTypeOptions {
   requiresVideoTranscoding?: boolean;
 }
 
-const IMAGE_EXTENSIONS = [
-  "jpg",
-  "jpeg",
-  "png",
-  "gif",
-  "webp",
-  "bmp",
-  "svg",
-  "svgz",
-  "heic",
+const RAW_IMAGE_EXTENSIONS = [
   "cr2",
   "cr3",
   "nef",
@@ -47,6 +38,32 @@ const IMAGE_EXTENSIONS = [
   "rw2",
   "pef",
   "srw",
+];
+const RAW_IMAGE_MIME_TYPES = new Set([
+  "image/x-canon-cr2",
+  "image/x-canon-cr3",
+  "image/x-nikon-nef",
+  "image/x-nikon-nrw",
+  "image/x-sony-arw",
+  "image/x-adobe-dng",
+  "image/x-fujifilm-raf",
+  "image/x-olympus-orf",
+  "image/x-panasonic-rw2",
+  "image/x-pentax-pef",
+  "image/x-samsung-srw",
+]);
+
+const IMAGE_EXTENSIONS = [
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "webp",
+  "bmp",
+  "svg",
+  "svgz",
+  "heic",
+  ...RAW_IMAGE_EXTENSIONS,
 ];
 const SVG_EXTENSIONS = ["svg", "svgz"];
 const PDF_EXTENSIONS = ["pdf"];
@@ -107,6 +124,17 @@ export const getFileExtension = (fileName: string): string => {
 export const isImageFile = (fileName: string): boolean => {
   const ext = getFileExtension(fileName);
   return IMAGE_EXTENSIONS.includes(ext);
+};
+
+export const isRawImageFile = (
+  fileName: string,
+  contentType?: string | null,
+): boolean => {
+  const mimeType = contentType?.split(";")[0]?.trim().toLowerCase() ?? "";
+  return (
+    RAW_IMAGE_EXTENSIONS.includes(getFileExtension(fileName)) ||
+    RAW_IMAGE_MIME_TYPES.has(mimeType)
+  );
 };
 
 export const isPdfFile = (fileName: string): boolean => {

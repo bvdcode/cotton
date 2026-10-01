@@ -8,9 +8,5 @@ namespace Cotton.Server.Models.Dto
         public string Url { get; init; } = string.Empty;
 
         public string FileName { get; init; } = string.Empty;
-
-        public long SizeBytes { get; init; }
-
-        public int EntryCount { get; init; }
     }
 }

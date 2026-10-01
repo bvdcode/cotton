@@ -12,80 +12,44 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getApiErrorMessage } from "@shared/api/httpClient";
-import {
-  useEnableVectorExtensionMutation,
-  useTriggerFileIndexingMutation,
-  useVectorExtensionStatusQuery,
-} from "@shared/api/queries/admin";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 import { PgvectorDockerSetup } from "./PgvectorDockerSetup";
 import { PgvectorNativeSetup } from "./PgvectorNativeSetup";
 import { PgvectorActivation } from "./PgvectorActivation";
 import { PgvectorIndexSetup } from "./PgvectorIndexSetup";
-import { getVectorSetupFailure } from "./smartSearchSetup";
 import { SmartSearchComputationStatus } from "./SmartSearchComputationStatus";
 import { BooleanSwitchSettingControl } from "../settings/BooleanSwitchSetting";
-import { useAutoSavedSetting } from "../settings/useAutoSavedSetting";
-import { settingsApi } from "@shared/api/settingsApi";
-import { toast } from "@shared/ui/notifications";
+import { useSmartSearchSetup } from "./useSmartSearchSetup";
 
 export const AdminSmartSearchPage = () => {
-  const { t, i18n } = useTranslation("admin");
-  const indexing = useAutoSavedSetting<boolean>({
-    initial: false,
-    load: settingsApi.getAllowGlobalIndexing,
-    save: settingsApi.setAllowGlobalIndexing,
-    toastIdPrefix: "admin-smart-search:indexing",
-    loadErrorMessage: t("settings.errors.loadFailed"),
-    saveErrorMessage: t("settings.errors.saveFailed"),
-  });
-  const statusQuery = useVectorExtensionStatusQuery();
-  const enableMutation = useEnableVectorExtensionMutation();
-  const triggerMutation = useTriggerFileIndexingMutation();
-  const [environment, setEnvironment] = useState<"docker" | "native">("docker");
-  const status = statusQuery.data;
-  const progress =
-    status && status.fileCount > 0
-      ? status.embeddedFileCount / status.fileCount
-      : 0;
-  const numberFormat = new Intl.NumberFormat(i18n.language);
-  const failure = getVectorSetupFailure(enableMutation.error);
-  const needsInstallation =
-    status &&
-    (!status.extensionAvailable || failure === "pgvector_package_missing");
-  const busy = statusQuery.isFetching || enableMutation.isPending;
-  const triggerIndexing = () => {
-    triggerMutation.mutate(undefined, {
-      onSuccess: () => toast.success(t("smartSearch.indexingRequested")),
-      onError: (error) =>
-        toast.error(
-          getApiErrorMessage(error) ?? t("smartSearch.errors.triggerFailed"),
-        ),
-    });
-  };
-  const refresh = async () => {
-    const result = await statusQuery.refetch();
-    if (
-      result.isSuccess &&
-      (result.data.extensionEnabled || failure !== "pgvector_permission_denied")
-    ) {
-      enableMutation.reset();
-    }
-  };
+  const { t } = useTranslation("admin");
+  const {
+    indexing,
+    statusQuery,
+    enableMutation,
+    triggerMutation,
+    environment,
+    status,
+    progress,
+    numberFormat,
+    failure,
+    needsInstallation,
+    busy,
+    activationError,
+    triggerIndexing,
+    refresh,
+    changeEnvironment,
+    loadError,
+    canTriggerIndexing,
+  } = useSmartSearchSetup();
   const environmentControl = (
     <ToggleButtonGroup
       value={environment}
       exclusive
       size="small"
       aria-label={t("smartSearch.installation.where")}
-      onChange={(_, value: string | null) => {
-        if (value === "docker" || value === "native") {
-          setEnvironment(value);
-        }
-      }}
+      onChange={(_, value: string | null) => changeEnvironment(value)}
       sx={{ flexShrink: 0 }}
     >
       <ToggleButton value="docker">
@@ -153,7 +117,7 @@ export const AdminSmartSearchPage = () => {
                 <IconButton
                   aria-label={t("smartSearch.actions.triggerIndexing")}
                   loading={triggerMutation.isPending}
-                  disabled={!indexing.savedValue || !status?.indexReady}
+                  disabled={!canTriggerIndexing}
                   onClick={triggerIndexing}
                 >
                   <PlayArrowIcon />
@@ -197,12 +161,7 @@ export const AdminSmartSearchPage = () => {
             aria-label={t("smartSearch.loading")}
           />
         )}
-        {statusQuery.isError && (
-          <Alert severity="error">
-            {getApiErrorMessage(statusQuery.error) ??
-              t("smartSearch.errors.loadFailed")}
-          </Alert>
-        )}
+        {statusQuery.isError && <Alert severity="error">{loadError}</Alert>}
 
         {status && (
           <>
@@ -225,12 +184,7 @@ export const AdminSmartSearchPage = () => {
                 status={status}
                 pending={enableMutation.isPending}
                 disabled={statusQuery.isFetching || statusQuery.isError}
-                error={
-                  failure === null && enableMutation.isError
-                    ? (getApiErrorMessage(enableMutation.error) ??
-                      t("smartSearch.errors.enableFailed"))
-                    : null
-                }
+                error={activationError}
                 onPrepare={() => enableMutation.mutate()}
               />
             ) : needsInstallation ? (
@@ -257,12 +211,7 @@ export const AdminSmartSearchPage = () => {
               <PgvectorActivation
                 databaseName={status.databaseName}
                 permissionDenied={failure === "pgvector_permission_denied"}
-                error={
-                  failure === null && enableMutation.isError
-                    ? (getApiErrorMessage(enableMutation.error) ??
-                      t("smartSearch.errors.enableFailed"))
-                    : null
-                }
+                error={activationError}
                 pending={enableMutation.isPending}
                 disabled={statusQuery.isFetching || statusQuery.isError}
                 onEnable={() => enableMutation.mutate()}

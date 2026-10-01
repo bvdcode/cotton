@@ -1,12 +1,15 @@
 import { getValidated, httpClient, parseValidated } from "./httpClient";
+import type { JsonValue } from "../types/json";
 import type { BaseDto, Guid, NodeDto } from "./layoutsApi";
 import { readRequiredIntHeader } from "./utils/headerUtils";
 import {
   nodeContentSchema,
   nodeDtoSchema,
+  folderStatsSchema,
   restoreOutcomeSchema,
 } from "./schemas/node";
-import { applyDisplayMetaToFiles } from "../crypto/displayMeta";
+import { lookupSiblingNames } from "./siblingNames";
+import type { DirectoryListingOptions } from "./types/DirectoryListingOptions";
 import { z } from "zod";
 
 export interface NodeFileManifestDto extends BaseDto {
@@ -34,6 +37,24 @@ export interface NodeResponse {
 export interface NodeContentDto extends BaseDto {
   nodes: NodeDto[];
   files: NodeFileManifestDto[];
+  stats?: FolderStatsDto | null;
+}
+
+export interface FileNameMatchDto extends BaseDto {
+  name: string;
+}
+
+export interface SiblingNameLookupDto {
+  nodes: NodeDto[];
+  files: FileNameMatchDto[];
+  takenNameKeys: string[];
+}
+
+export interface FolderStatsDto {
+  folders: number;
+  files: number;
+  encryptedFiles: number;
+  sizeBytes: number;
 }
 
 export interface CreateNodeRequest {
@@ -77,6 +98,13 @@ export const nodesApi = {
   getNode: (nodeId: Guid): Promise<NodeDto> =>
     getValidated(`/layouts/nodes/${nodeId}`, nodeDtoSchema),
 
+  getFolderStats: (nodeId: Guid, recursive = false): Promise<FolderStatsDto> =>
+    getValidated(`/layouts/nodes/${nodeId}/stats`, folderStatsSchema, {
+      params: { recursive },
+    }),
+
+  lookupSiblingNames,
+
   getAncestors: async (
     nodeId: Guid,
     options?: { nodeType?: string },
@@ -92,32 +120,35 @@ export const nodesApi = {
       page?: number;
       pageSize?: number;
       depth?: number;
+      includeStats?: boolean;
+      listing?: DirectoryListingOptions;
     },
   ): Promise<NodeResponse> => {
     const requestedPage = options?.page ?? 1;
-    const requestedPageSize = options?.pageSize ?? 1000000;
+    const requestedPageSize = options?.pageSize ?? 1000;
     const url = `/layouts/nodes/${nodeId}/children`;
-    const response = await httpClient.get<unknown>(url, {
+    const response = await httpClient.get<JsonValue>(url, {
+      paramsSerializer: { indexes: null },
       params: {
         page: requestedPage,
         pageSize: requestedPageSize,
         nodeType: options?.nodeType,
         depth: options?.depth,
+        includeStats: options?.includeStats,
+        ...options?.listing,
       },
     });
     const content = parseValidated(url, response.data, nodeContentSchema);
     const totalCount = readRequiredIntHeader(response.headers, "x-total-count");
-    const files = await applyDisplayMetaToFiles(content.files);
-
     return {
-      content: files === content.files ? content : { ...content, files },
+      content,
       totalCount,
     };
   },
 
   createNode: async (request: CreateNodeRequest): Promise<NodeDto> => {
     const url = "layouts/nodes";
-    const response = await httpClient.put<unknown>(url, request);
+    const response = await httpClient.put<JsonValue>(url, request);
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
@@ -132,7 +163,7 @@ export const nodesApi = {
     request: RenameNodeRequest,
   ): Promise<NodeDto> => {
     const url = `/layouts/nodes/${nodeId}/rename`;
-    const response = await httpClient.patch<unknown>(url, request);
+    const response = await httpClient.patch<JsonValue>(url, request);
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
@@ -141,7 +172,7 @@ export const nodesApi = {
     request: MoveNodeRequest,
   ): Promise<NodeDto> => {
     const url = `/layouts/nodes/${nodeId}/move`;
-    const response = await httpClient.patch<unknown>(url, request);
+    const response = await httpClient.patch<JsonValue>(url, request);
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
@@ -150,7 +181,7 @@ export const nodesApi = {
     patch: Record<string, string>,
   ): Promise<NodeDto> => {
     const url = `/layouts/nodes/${nodeId}/metadata`;
-    const response = await httpClient.patch<unknown>(url, patch);
+    const response = await httpClient.patch<JsonValue>(url, patch);
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
@@ -159,7 +190,7 @@ export const nodesApi = {
     options: RestoreOptions = {},
   ): Promise<RestoreOutcomeDto> => {
     const url = `/layouts/nodes/${nodeId}/restore`;
-    const response = await httpClient.post<unknown>(url, {
+    const response = await httpClient.post<JsonValue>(url, {
       createMissingParents: options.createMissingParents ?? false,
       overwrite: options.overwrite ?? false,
     });

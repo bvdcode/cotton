@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useEffect, useCallback, useRef, type ReactNode } from "react";
 import { authApi } from "../../shared/api/authApi";
 import type { AuthContextValue, RestoreResult, User } from "./types";
@@ -201,7 +202,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await authApi.logout();
     } catch (error) {
       // Ignore logout errors - still clear local state
-      console.error("Logout error:", error);
+      reportClientError("Logout error:", error);
     }
   }, [logoutLocal, resetForIdentity]);
 

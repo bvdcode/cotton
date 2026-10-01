@@ -1,13 +1,11 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Database.Models;
 using Cotton.Server.Auth;
-using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
-using EasyExtensions.AspNetCore.Extensions;
 using Cotton.Server.Models.Requests;
-using Cotton.Server.Services;
+using Cotton.Server.Handlers.Auth.Oidc;
+using EasyExtensions.Mediator;
 using EasyExtensions;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -18,21 +16,19 @@ namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route(Routes.V1.Auth + "/oidc")]
-    public class OidcController(
-        OidcProviderService _providers,
-        OidcAuthenticationService _auth) : ControllerBase
+    public class OidcController(IMediator mediator) : ControllerBase
     {
         [HttpGet("providers")]
         public async Task<IActionResult> GetPublicProviders(CancellationToken cancellationToken)
         {
-            return Ok(await _providers.ListPublicAsync(cancellationToken));
+            return Ok(await mediator.Send(new GetPublicOidcProvidersQuery(), cancellationToken));
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("providers/admin")]
         public async Task<IActionResult> GetAdminProviders(CancellationToken cancellationToken)
         {
-            return Ok(await _providers.ListAdminAsync(cancellationToken));
+            return Ok(await mediator.Send(new GetAdminOidcProvidersQuery(), cancellationToken));
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -41,7 +37,7 @@ namespace Cotton.Server.Controllers
             [FromBody] OidcProviderRequestDto request,
             CancellationToken cancellationToken)
         {
-            return Ok(await _providers.CreateAsync(request, cancellationToken));
+            return Ok(await mediator.Send(new CreateOidcProviderRequest(request), cancellationToken));
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -51,7 +47,7 @@ namespace Cotton.Server.Controllers
             [FromBody] OidcProviderRequestDto request,
             CancellationToken cancellationToken)
         {
-            return Ok(await _providers.UpdateAsync(providerId, request, cancellationToken));
+            return Ok(await mediator.Send(new UpdateOidcProviderRequest(providerId, request), cancellationToken));
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -60,7 +56,7 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid providerId,
             CancellationToken cancellationToken)
         {
-            await _providers.DeleteAsync(providerId, cancellationToken);
+            await mediator.Send(new DeleteOidcProviderRequest(providerId), cancellationToken);
             return NoContent();
         }
 
@@ -71,11 +67,8 @@ namespace Cotton.Server.Controllers
             [FromBody] OidcAuthorizationRequestDto? request,
             CancellationToken cancellationToken)
         {
-            string authorizationUrl = await _auth.BeginSignInAsync(
-                providerSlug,
-                request?.ReturnUrl,
-                request?.TrustDevice ?? false,
-                cancellationToken);
+            string authorizationUrl = await mediator.Send(new BeginOidcAuthenticationRequest(
+                providerSlug, request?.ReturnUrl, request?.TrustDevice ?? false), cancellationToken);
             return Ok(new OidcAuthorizationUrlDto { AuthorizationUrl = authorizationUrl });
         }
 
@@ -87,11 +80,8 @@ namespace Cotton.Server.Controllers
             [FromBody] OidcAuthorizationRequestDto? request,
             CancellationToken cancellationToken)
         {
-            string authorizationUrl = await _auth.BeginLinkAsync(
-                User.GetUserId(),
-                providerSlug,
-                request?.ReturnUrl,
-                cancellationToken);
+            string authorizationUrl = await mediator.Send(new BeginOidcAuthenticationRequest(
+                providerSlug, request?.ReturnUrl, false, User.GetUserId()), cancellationToken);
             return Ok(new OidcAuthorizationUrlDto { AuthorizationUrl = authorizationUrl });
         }
 
@@ -113,10 +103,7 @@ namespace Cotton.Server.Controllers
                 return BadRequest("OIDC callback is missing state or code.");
             }
 
-            string returnUrl = await _auth.CompleteCallbackAsync(
-                state.Trim(),
-                code.Trim(),
-                cancellationToken);
+            string returnUrl = await mediator.Send(new CompleteOidcAuthenticationRequest(state.Trim(), code.Trim()), cancellationToken);
             return Redirect(returnUrl);
         }
 
@@ -124,7 +111,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("links")]
         public async Task<IActionResult> GetLinks(CancellationToken cancellationToken)
         {
-            return Ok(await _auth.ListLinkedAsync(User.GetUserId(), cancellationToken));
+            return Ok(await mediator.Send(new GetLinkedOidcIdentitiesQuery(User.GetUserId()), cancellationToken));
         }
 
         [Authorize]
@@ -133,7 +120,7 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid identityId,
             CancellationToken cancellationToken)
         {
-            await _auth.UnlinkAsync(User.GetUserId(), identityId, cancellationToken);
+            await mediator.Send(new UnlinkOidcIdentityRequest(User.GetUserId(), identityId), cancellationToken);
             return NoContent();
         }
     }

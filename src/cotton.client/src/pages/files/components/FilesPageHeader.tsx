@@ -1,9 +1,7 @@
-import React, { useCallback, useMemo } from "react";
-import type { NodeContentDto } from "@shared/api/nodesApi";
+import React, { useCallback } from "react";
 import type { FileSelectionState } from "@shared/hooks/useFileSelection";
 import type { useFilesLayout } from "@shared/hooks/useFilesLayout";
-import type { FileSystemTile } from "@shared/types/FileListViewTypes";
-import { calculateFolderStats } from "../utils/nodeUtils";
+import type { FileSystemTile, FileListStats } from "@shared/types/FileListViewTypes";
 import type { useFileMoveController } from "../hooks/useFileMoveController";
 import type { useFilesContentOperations } from "../hooks/useFilesContentOperations";
 import type { useFilesSelectionActions } from "../hooks/useFilesSelectionActions";
@@ -12,7 +10,7 @@ import { PageHeader } from "./PageHeader";
 interface FilesPageHeaderProps {
   breadcrumbs: React.ComponentProps<typeof PageHeader>["breadcrumbs"];
   canGoUp: boolean;
-  content: NodeContentDto | undefined;
+  stats: FileListStats;
   contentOperations: ReturnType<typeof useFilesContentOperations>;
   cycleViewMode: ReturnType<typeof useFilesLayout>["cycleViewMode"];
   fileSelection: FileSelectionState;
@@ -30,7 +28,7 @@ interface FilesPageHeaderProps {
 export const FilesPageHeader: React.FC<FilesPageHeaderProps> = ({
   breadcrumbs,
   canGoUp,
-  content,
+  stats,
   contentOperations,
   cycleViewMode,
   fileSelection,
@@ -44,10 +42,6 @@ export const FilesPageHeader: React.FC<FilesPageHeaderProps> = ({
   tiles,
   viewMode,
 }) => {
-  const stats = useMemo(
-    () => calculateFolderStats(content?.nodes, content?.files),
-    [content?.files, content?.nodes],
-  );
   const handleSelectAll = useCallback(
     () => fileSelection.selectAll(tiles),
     [fileSelection, tiles],

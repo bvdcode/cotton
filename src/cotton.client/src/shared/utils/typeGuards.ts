@@ -1,11 +1,23 @@
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-export const readStringProperty = (
-  value: unknown,
+export const readStringProperty = <T>(
+  value: T,
   property: string,
 ): string | null => {
-  if (!isRecord(value)) return null;
-  const propertyValue = value[property];
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const propertyValue = Object.entries(value).find(([key]) => key === property)?.[1];
   return typeof propertyValue === "string" ? propertyValue : null;
+};
+
+export const readObjectProperty = <T>(
+  value: T,
+  property: string,
+): object | null => {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const propertyValue = Object.entries(value).find(([key]) => key === property)?.[1];
+  return typeof propertyValue === "object" && propertyValue !== null
+    ? propertyValue
+    : null;
 };

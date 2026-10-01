@@ -1,18 +1,16 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import { layoutsApi, type NodeDto } from "../api/layoutsApi";
 import { isAxiosError } from "../api/httpClient";
-import {
-  FOLDER_ENCRYPTION_POLICY_KEY,
-  getFolderEncryptionPolicyStateFromParentResolver,
-} from "../crypto";
 import { translateError } from "../i18n/translateError";
 import {
   ROOT_RESOLVE_MIN_INTERVAL_MS,
   rootResolveState,
 } from "./nodesActionInternals";
 import { useNodesStore } from "./nodesStore";
-
-const CHILDREN_FETCH_PAGE_SIZE = 100_000;
+import { fetchAllNodeChildren } from "../api/nodeChildren";
+export { refreshNodeContent } from "./nodesContent";
+export { createFolder, deleteFolder, renameFolder } from "./nodesFolderActions";
 
 const tFileError = (key: string): string => translateError("files", key);
 
@@ -22,51 +20,6 @@ type ResolveSnapshot = {
   contentByNodeId: Record<string, NodeContentDto | undefined>;
   ancestorsByNodeId: Record<string, NodeDto[] | undefined>;
 };
-
-type NodeLookupSnapshot = Pick<
-  ResolveSnapshot,
-  "currentNode" | "ancestors" | "contentByNodeId"
->;
-
-async function fetchAllNodeChildren(nodeId: string): Promise<NodeContentDto> {
-  const firstPage = await nodesApi.getChildren(nodeId, {
-    page: 1,
-    pageSize: CHILDREN_FETCH_PAGE_SIZE,
-  });
-
-  let merged: NodeContentDto = {
-    ...firstPage.content,
-    nodes: [...firstPage.content.nodes],
-    files: [...firstPage.content.files],
-  };
-
-  const totalCount = firstPage.totalCount;
-  let page = 2;
-
-  while (merged.nodes.length + merged.files.length < totalCount) {
-    const response = await nodesApi.getChildren(nodeId, {
-      page,
-      pageSize: CHILDREN_FETCH_PAGE_SIZE,
-    });
-
-    if (
-      response.content.nodes.length === 0 &&
-      response.content.files.length === 0
-    ) {
-      break;
-    }
-
-    merged = {
-      ...merged,
-      nodes: [...merged.nodes, ...response.content.nodes],
-      files: [...merged.files, ...response.content.files],
-    };
-
-    page += 1;
-  }
-
-  return merged;
-}
 
 async function resolveNodeAndAncestors(
   nodeId: string,
@@ -142,29 +95,6 @@ async function resolveNodeAndAncestors(
   return { node, ancestors };
 }
 
-function findCachedNodeById(
-  state: NodeLookupSnapshot,
-  nodeId: string,
-): NodeDto | null {
-  if (state.currentNode?.id === nodeId) {
-    return state.currentNode;
-  }
-
-  const ancestor = state.ancestors.find((node) => node.id === nodeId);
-  if (ancestor) {
-    return ancestor;
-  }
-
-  for (const content of Object.values(state.contentByNodeId)) {
-    const found = content?.nodes.find((node) => node.id === nodeId);
-    if (found) {
-      return found;
-    }
-  }
-
-  return null;
-}
-
 const scheduleRootResolve = (options?: {
   loadChildren?: boolean;
   force?: boolean;
@@ -211,7 +141,7 @@ const scheduleRootResolve = (options?: {
         });
       }
     } catch (error) {
-      console.error("Failed to resolve root node in background", error);
+      reportClientError("Failed to resolve root node in background", error);
     }
   })();
 
@@ -246,7 +176,7 @@ export const loadRoot = async (options?: {
     await loadNode(root.id, { loadChildren });
     return root;
   } catch (error) {
-    console.error("Failed to resolve root node", error);
+    reportClientError("Failed to resolve root node", error);
     useNodesStore.setState({
       loading: false,
       error: tFileError("errors.resolveRootFailed"),
@@ -294,7 +224,7 @@ const refreshChildrenInBackground = (
 
   void (async () => {
     try {
-      const fresh = await fetchAllNodeChildren(nodeId);
+      const { content: fresh } = await fetchAllNodeChildren(nodeId);
       useNodesStore.setState((prev) => ({
         contentByNodeId: {
           ...prev.contentByNodeId,
@@ -332,7 +262,7 @@ const tryRecoverRootNodeAsync = async (
     });
     return true;
   } catch (recoveryError) {
-    console.error("Failed to recover root node", recoveryError);
+    reportClientError("Failed to recover root node", recoveryError);
     useNodesStore.setState({
       loading: false,
       error: tFileError("errors.resolveRootFailed"),
@@ -382,7 +312,7 @@ const resolveNodeContentAsync = async (
     return undefined;
   }
 
-  return cachedContent ?? fetchAllNodeChildren(nodeId);
+  return cachedContent ?? (await fetchAllNodeChildren(nodeId)).content;
 };
 
 const applyLoadedNodeState = (
@@ -430,16 +360,16 @@ const getLoadNodeErrorMessage = (statusCode: number | undefined): string =>
     ? tFileError("errors.folderNotFound")
     : tFileError("errors.loadContentsFailed");
 
-const handleLoadNodeFailureAsync = async (
+const handleLoadNodeFailureAsync = async <T>(
   nodeId: string,
-  error: unknown,
+  error: T,
   options: LoadNodeOptions,
 ): Promise<void> => {
   const statusCode = isAxiosError(error) ? error.response?.status : undefined;
   const recovered = await tryRecoverRootNodeAsync(nodeId, statusCode, options);
   if (recovered) return;
 
-  console.error("Failed to load node view", error);
+  reportClientError("Failed to load node view", error);
   useNodesStore.setState({
     loading: false,
     error: getLoadNodeErrorMessage(statusCode),
@@ -493,204 +423,4 @@ export const resolveRootInBackground = (options?: {
   force?: boolean;
 }): void => {
   scheduleRootResolve(options);
-};
-
-export const refreshNodeContent = async (nodeId: string): Promise<void> => {
-  try {
-    const content = await fetchAllNodeChildren(nodeId);
-    useNodesStore.setState((prev) => ({
-      contentByNodeId: {
-        ...prev.contentByNodeId,
-        [nodeId]: content,
-      },
-      lastUpdatedByNodeId: {
-        ...prev.lastUpdatedByNodeId,
-        [nodeId]: Date.now(),
-      },
-    }));
-  } catch (error) {
-    console.error("Failed to refresh node content", error);
-  }
-};
-
-export const createFolder = async (
-  parentNodeId: string,
-  name: string,
-): Promise<NodeDto | null> => {
-  const trimmed = name.trim();
-  if (trimmed.length === 0) return null;
-  if (useNodesStore.getState().loading) return null;
-
-  const state = useNodesStore.getState();
-  const currentContent = state.contentByNodeId[parentNodeId];
-
-  if (currentContent) {
-    const normalizedName = trimmed.toLowerCase();
-    const duplicate = currentContent.nodes.find(
-      (n) => n.name.toLowerCase() === normalizedName,
-    );
-    if (duplicate) {
-      useNodesStore.setState({
-        error: tFileError("errors.duplicateFolderName"),
-      });
-      return null;
-    }
-  }
-
-  useNodesStore.setState({ loading: true, error: null });
-
-  try {
-    const created = await nodesApi.createNode({
-      parentId: parentNodeId,
-      name: trimmed,
-    });
-    const stateAfterCreate = useNodesStore.getState();
-    const parentNode = findCachedNodeById(stateAfterCreate, parentNodeId);
-    const parentPolicyEnabled = parentNode
-      ? getFolderEncryptionPolicyStateFromParentResolver(parentNode, (id) =>
-          findCachedNodeById(stateAfterCreate, id),
-        ).effectiveEnabled
-      : false;
-    const folder = parentPolicyEnabled
-      ? await nodesApi.updateNodeMetadata(created.id, {
-          [FOLDER_ENCRYPTION_POLICY_KEY]: "true",
-        })
-      : created;
-
-    useNodesStore.setState((prev) => {
-      const existing = prev.contentByNodeId[parentNodeId];
-      if (!existing) return { loading: false };
-
-      return {
-        contentByNodeId: {
-          ...prev.contentByNodeId,
-          [parentNodeId]: {
-            ...existing,
-            nodes: [...existing.nodes, folder],
-          },
-        },
-        loading: false,
-      };
-    });
-
-    void refreshNodeContent(parentNodeId);
-    return folder;
-  } catch (error) {
-    console.error("Failed to create folder", error);
-    useNodesStore.setState({
-      loading: false,
-      error: tFileError("errors.createFolderFailed"),
-    });
-    return null;
-  }
-};
-
-export const deleteFolder = async (
-  nodeId: string,
-  parentNodeId?: string,
-  skipTrash: boolean = false,
-): Promise<boolean> => {
-  if (useNodesStore.getState().loading) return false;
-
-  useNodesStore.setState({ loading: true, error: null });
-
-  try {
-    await nodesApi.deleteNode(nodeId, skipTrash);
-
-    if (parentNodeId) {
-      useNodesStore.setState((prev) => {
-        const existing = prev.contentByNodeId[parentNodeId];
-        if (!existing) return { loading: false };
-
-        return {
-          contentByNodeId: {
-            ...prev.contentByNodeId,
-            [parentNodeId]: {
-              ...existing,
-              nodes: existing.nodes.filter((n) => n.id !== nodeId),
-            },
-          },
-          loading: false,
-        };
-      });
-
-      void refreshNodeContent(parentNodeId);
-    } else {
-      useNodesStore.setState({ loading: false });
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Failed to delete folder", error);
-    useNodesStore.setState({
-      loading: false,
-      error: tFileError("errors.deleteFolderFailed"),
-    });
-    return false;
-  }
-};
-
-export const renameFolder = async (
-  nodeId: string,
-  newName: string,
-  parentNodeId?: string,
-): Promise<boolean> => {
-  const trimmed = newName.trim();
-  if (trimmed.length === 0) return false;
-  if (useNodesStore.getState().loading) return false;
-
-  const state = useNodesStore.getState();
-  const currentContent = parentNodeId
-    ? state.contentByNodeId[parentNodeId]
-    : undefined;
-
-  if (currentContent) {
-    const normalizedName = trimmed.toLowerCase();
-    const duplicate = currentContent.nodes.find(
-      (n) => n.id !== nodeId && n.name.toLowerCase() === normalizedName,
-    );
-    if (duplicate) {
-      useNodesStore.setState({
-        error: tFileError("errors.duplicateFolderName"),
-      });
-      return false;
-    }
-  }
-
-  useNodesStore.setState({ loading: true, error: null });
-
-  try {
-    const updated = await nodesApi.renameNode(nodeId, { name: trimmed });
-
-    if (parentNodeId) {
-      useNodesStore.setState((prev) => {
-        const existing = prev.contentByNodeId[parentNodeId];
-        if (!existing) return { loading: false };
-
-        return {
-          contentByNodeId: {
-            ...prev.contentByNodeId,
-            [parentNodeId]: {
-              ...existing,
-              nodes: existing.nodes.map((n) => (n.id === nodeId ? updated : n)),
-            },
-          },
-          loading: false,
-        };
-      });
-
-      void refreshNodeContent(parentNodeId);
-    } else {
-      useNodesStore.setState({ loading: false });
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Failed to rename folder", error);
-    useNodesStore.setState({
-      loading: false,
-      error: tFileError("errors.renameFolderFailed"),
-    });
-    return false;
-  }
 };

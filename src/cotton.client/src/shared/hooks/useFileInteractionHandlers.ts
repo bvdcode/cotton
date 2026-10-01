@@ -142,38 +142,6 @@ export const useFileInteractionHandlers = ({
     [t],
   );
 
-  const handleFileClick = React.useCallback(
-    (fileId: string, fileName: string, fileSizeBytes?: number) => {
-      const file = filesById.get(fileId);
-
-      const typeInfo = getFileTypeInfo(fileName, file?.contentType ?? null, {
-        requiresVideoTranscoding: file?.requiresVideoTranscoding ?? false,
-      });
-
-      if (file && isFileEncrypted(file.metadata) && typeInfo.type !== "text") {
-        void handleDownloadFile(fileId, fileName);
-        return;
-      }
-
-      if (typeInfo.type === "audio") {
-        openAudio({ fileId, fileName, playlist: audioPlaylist });
-        return;
-      }
-
-      const opened = openPreview(
-        fileId,
-        fileName,
-        fileSizeBytes,
-        file?.contentType ?? null,
-        file ?? null,
-      );
-      if (!opened) {
-        void handleDownloadFile(fileId, fileName);
-      }
-    },
-    [audioPlaylist, filesById, handleDownloadFile, openAudio, openPreview],
-  );
-
   const {
     lightboxOpen,
     lightboxIndex,
@@ -189,13 +157,40 @@ export const useFileInteractionHandlers = ({
       const file = filesById.get(fileId);
 
       if (file && isFileEncrypted(file.metadata)) {
-        void handleDownloadFile(file.id, file.name);
+        openPreview(file.id, file.name, file.sizeBytes, file.contentType, file);
         return;
       }
 
       openMediaLightbox(fileId);
     },
-    [filesById, handleDownloadFile, openMediaLightbox],
+    [filesById, openPreview, openMediaLightbox],
+  );
+
+  const handleFileClick = React.useCallback(
+    (fileId: string, fileName: string, fileSizeBytes?: number) => {
+      const file = filesById.get(fileId);
+      const typeInfo = getFileTypeInfo(fileName, file?.contentType ?? null, {
+        requiresVideoTranscoding: file?.requiresVideoTranscoding ?? false,
+      });
+      if (!file || !isFileEncrypted(file.metadata)) {
+        if (typeInfo.type === "image" || typeInfo.type === "video") {
+          handleMediaClick(fileId);
+          return;
+        }
+        if (typeInfo.type === "audio") {
+          openAudio({ fileId, fileName, playlist: audioPlaylist });
+          return;
+        }
+      }
+      openPreview(
+        fileId,
+        fileName,
+        fileSizeBytes,
+        file?.contentType ?? null,
+        file ?? null,
+      );
+    },
+    [audioPlaylist, filesById, handleMediaClick, openAudio, openPreview],
   );
 
   return {

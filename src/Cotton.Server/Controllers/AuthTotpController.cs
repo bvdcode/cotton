@@ -10,7 +10,6 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
 
 namespace Cotton.Server.Controllers
 {
@@ -27,7 +26,7 @@ namespace Cotton.Server.Controllers
             DisableTotpRequest command = new(
                 User.GetUserId(),
                 request.Password,
-                GetRequestIpAddress(),
+                Request.GetTrustedClientIPAddress(),
                 Request.Headers.UserAgent.ToString());
             TotpOperationResult result = await _mediator.Send(command, cancellationToken);
             return ToActionResult(result);
@@ -41,7 +40,7 @@ namespace Cotton.Server.Controllers
             ConfirmTotpRequest command = new(
                 User.GetUserId(),
                 request.TwoFactorCode,
-                GetRequestIpAddress(),
+                Request.GetTrustedClientIPAddress(),
                 Request.Headers.UserAgent.ToString());
             TotpOperationResult result = await _mediator.Send(command, cancellationToken);
             return ToActionResult(result);
@@ -67,13 +66,6 @@ namespace Cotton.Server.Controllers
                 TotpOperationStatus.Conflict => this.ApiConflict(result.Error!),
                 _ => throw new InvalidOperationException($"Unsupported TOTP operation status: {result.Status}"),
             };
-        }
-
-        private IPAddress GetRequestIpAddress()
-        {
-            return Constants.IsPublicInstance
-                ? IPAddress.Loopback
-                : Request.GetTrustedClientIPAddress();
         }
     }
 }

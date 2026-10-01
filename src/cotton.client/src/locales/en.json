@@ -2197,6 +2197,17 @@
   },
   "files": {
     "title": "Files",
+    "folderInfo": {
+      "action": "Information",
+      "title": "{{name}}",
+      "created": "Created: {{date}}",
+      "modified": "Modified: {{date}}",
+      "calculating": "Calculating folder size…",
+      "loadFailed": "Could not calculate folder size.",
+      "folders": "Folders: {{count}}",
+      "files": "Files: {{count}}",
+      "size": "Total size: {{size}}"
+    },
     "errors": {
       "resolveRootFailed": "Failed to resolve root folder",
       "loadContentsFailed": "Failed to load folder contents",
@@ -3111,7 +3122,7 @@
     "securityDiagnostics": {
       "trustedProxy": {
         "field": "Trusted proxy",
-        "threatVector": "A caller that can reach Cotton directly, or pass unsanitized headers through a proxy, can rotate its apparent client address and bypass IP-based abuse limits.",
+        "threatVector": "A caller can spoof the IP stored in sessions and notifications. Behind an unconfigured proxy, all clients share one request limit.",
         "fix": "In General settings, choose No proxy for a direct deployment, or use Auto or enter the immediate proxy address and then verify and save it. Ensure a proxy overwrites client-supplied forwarding headers.",
         "passed": "Client-address trust mode is explicitly configured"
       },

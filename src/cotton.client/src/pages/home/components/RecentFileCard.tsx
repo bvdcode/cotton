@@ -1,5 +1,12 @@
 import React from "react";
-import { Box, CardActionArea, Typography } from "@mui/material";
+import {
+  Box,
+  CardActionArea,
+  IconButton,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { OpenInNew } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
 import { getFileIcon } from "@shared/utils/icons";
@@ -9,6 +16,7 @@ import { formatTimeAgo } from "../../../shared/utils/formatTimeAgo";
 interface RecentFileCardProps {
   file: NodeFileManifestDto;
   onClick: () => void;
+  onOpenLocation: () => void;
 }
 
 const PREVIEW_SIZE = 40;
@@ -17,8 +25,9 @@ const PREVIEW_ICON_SIZE = 28;
 export const RecentFileCard: React.FC<RecentFileCardProps> = ({
   file,
   onClick,
+  onOpenLocation,
 }) => {
-  const { t } = useTranslation("common");
+  const { t } = useTranslation(["common", "files"]);
   const icon = React.useMemo(
     () =>
       getFileIcon(
@@ -35,8 +44,9 @@ export const RecentFileCard: React.FC<RecentFileCardProps> = ({
   const isPreviewUrl = typeof icon === "string";
 
   return (
-    <CardActionArea
-      onClick={onClick}
+    <Box
+      display="flex"
+      alignItems="center"
       sx={{
         border: "1px solid",
         borderColor: "divider",
@@ -46,42 +56,52 @@ export const RecentFileCard: React.FC<RecentFileCardProps> = ({
         width: "100%",
       }}
     >
-      <Box display="flex" alignItems="center" gap={1.5} px={1} py={0.75}>
-        <Box
-          width={PREVIEW_SIZE}
-          height={PREVIEW_SIZE}
-          flexShrink={0}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          overflow="hidden"
-          borderRadius={1}
-          sx={{ "& > svg": { fontSize: PREVIEW_ICON_SIZE } }}
-        >
-          {isPreviewUrl ? (
-            <Box
-              component="img"
-              src={icon}
-              alt=""
-              width={PREVIEW_SIZE}
-              height={PREVIEW_SIZE}
-              sx={{ objectFit: "cover" }}
-            />
-          ) : (
-            icon
-          )}
-        </Box>
+      <CardActionArea onClick={onClick} sx={{ flex: 1, minWidth: 0 }}>
+        <Box display="flex" alignItems="center" gap={1.5} px={1} py={0.75}>
+          <Box
+            width={PREVIEW_SIZE}
+            height={PREVIEW_SIZE}
+            flexShrink={0}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            overflow="hidden"
+            borderRadius={1}
+            sx={{ "& > svg": { fontSize: PREVIEW_ICON_SIZE } }}
+          >
+            {isPreviewUrl ? (
+              <Box
+                component="img"
+                src={icon}
+                alt=""
+                width={PREVIEW_SIZE}
+                height={PREVIEW_SIZE}
+                sx={{ objectFit: "cover" }}
+              />
+            ) : (
+              icon
+            )}
+          </Box>
 
-        <Box minWidth={0} flex={1}>
-          <Typography variant="body2" noWrap>
-            {file.name}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap>
-            {formatBytes(file.sizeBytes)} &middot;{" "}
-            {formatTimeAgo(file.createdAt, t)}
-          </Typography>
+          <Box minWidth={0} flex={1}>
+            <Typography variant="body2" noWrap>
+              {file.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {formatBytes(file.sizeBytes)} &middot;{" "}
+              {formatTimeAgo(file.createdAt, t)}
+            </Typography>
+          </Box>
         </Box>
-      </Box>
-    </CardActionArea>
+      </CardActionArea>
+      <Tooltip title={t("files:actions.goToFolder")}>
+        <IconButton
+          aria-label={t("files:actions.goToFolder")}
+          onClick={onOpenLocation}
+        >
+          <OpenInNew />
+        </IconButton>
+      </Tooltip>
+    </Box>
   );
 };

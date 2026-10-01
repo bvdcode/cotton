@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { updateFolderFilePreview } from "../../../shared/api/queries/folderPreviews";
 import {
   HUB_METHODS,
   subscribeToPreviewGenerated,
@@ -12,10 +14,6 @@ import { isGuidString } from "../../../shared/utils/guid";
 interface UseFilesRealtimeEventsOptions {
   nodeId: string | null;
   onInvalidate: () => void;
-  onPreviewGenerated?: (
-    nodeFileId: string,
-    previewHashEncryptedHex: string,
-  ) => boolean;
 }
 
 export const shouldInvalidateCurrentNode = (
@@ -106,21 +104,16 @@ const getAffectedNodeIds = (
 export function useFilesRealtimeEvents({
   nodeId,
   onInvalidate,
-  onPreviewGenerated,
 }: UseFilesRealtimeEventsOptions): void {
   const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
 
   const nodeIdRef = useRef<string | null>(nodeId);
   useEffect(() => {
     nodeIdRef.current = nodeId;
   }, [nodeId]);
 
-  const onPreviewGeneratedRef = useRef(onPreviewGenerated);
-  useEffect(() => {
-    onPreviewGeneratedRef.current = onPreviewGenerated;
-  }, [onPreviewGenerated]);
-
-  const scheduleInvalidate = useFileTreeRealtimeInvalidation({
+  useFileTreeRealtimeInvalidation({
     enabled: isAuthenticated,
     onInvalidate,
     shouldInvalidate: (method, args) =>
@@ -138,13 +131,13 @@ export function useFilesRealtimeEvents({
           return;
         }
 
-        const handler = onPreviewGeneratedRef.current;
-        if (handler && handler(nodeFileId, previewHashHex)) {
-          return;
-        }
-
-        scheduleInvalidate();
+        updateFolderFilePreview(
+          queryClient,
+          eventNodeId,
+          nodeFileId,
+          previewHashHex,
+        );
       },
     );
-  }, [isAuthenticated, scheduleInvalidate]);
+  }, [isAuthenticated, queryClient]);
 }

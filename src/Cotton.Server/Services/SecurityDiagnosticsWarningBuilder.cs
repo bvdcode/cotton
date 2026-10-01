@@ -57,7 +57,7 @@ namespace Cotton.Server.Services
             warnings.Add(Create(
                 "trusted-proxy-not-configured",
                 "warning",
-                "No trusted reverse-proxy IP address is configured. Client-address headers are accepted from every connection for backward compatibility."));
+                "No trusted reverse-proxy IP address is configured. Forwarded headers can affect client metadata; rate limits use the connecting peer, so clients behind one proxy share a limit."));
         }
 
         private static void AddTempDirectoryWarning(

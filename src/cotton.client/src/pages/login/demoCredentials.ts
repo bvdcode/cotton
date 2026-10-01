@@ -1,4 +1,5 @@
 import { STORAGE_KEY_PREFIX } from "../../shared/config/storageKeys";
+import type { JsonValue } from "../../shared/types/json";
 
 export interface DemoCredentials {
   username: string;
@@ -52,14 +53,14 @@ const demoLastNames = [
 export const DEMO_CREDENTIALS_STORAGE_KEY =
   STORAGE_KEY_PREFIX + "demo-credentials";
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
 const demoUsernameRegex = /^u_[a-z0-9]{6}$/;
 const demoNameRegex = /^[A-Z][a-z]{1,31}$/;
 
-export const isDemoCredentials = (value: unknown): value is DemoCredentials => {
-  if (!isRecord(value)) {
+export const isDemoCredentials = <T>(value: T): value is T & DemoCredentials => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  if (!("username" in value && "password" in value && "firstName" in value && "lastName" in value)) {
     return false;
   }
 
@@ -112,7 +113,7 @@ export const readStoredDemoCredentials = (
       return null;
     }
 
-    const parsed: unknown = JSON.parse(raw);
+    const parsed: JsonValue = JSON.parse(raw);
     return isDemoCredentials(parsed) ? parsed : null;
   } catch {
     return null;
@@ -131,7 +132,7 @@ export const getOrCreateDemoCredentials = (
   try {
     storage.setItem(DEMO_CREDENTIALS_STORAGE_KEY, JSON.stringify(created));
   } catch {
-    // Demo login should still work in private contexts where localStorage writes fail.
+    // Demo login should still work in private contexts where storage writes fail.
   }
 
   return created;

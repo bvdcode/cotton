@@ -37,10 +37,23 @@ namespace Cotton.Server.Controllers
     {
         [HttpGet("/s/{token}")]
         [HttpHead("/s/{token}")]
-        public async Task<IActionResult> Share(
+        public Task<IActionResult> Share(
             [FromRoute] string token,
             [FromQuery] string? view = null,
             [FromQuery] bool preview = false)
+        {
+            return ShareAsync(token, view, preview, SharedFilePreviewFormat.Webp);
+        }
+
+        [HttpGet("/s/{token}/preview.jpg")]
+        [HttpHead("/s/{token}/preview.jpg")]
+        public Task<IActionResult> SocialPreview([FromRoute] string token)
+        {
+            return ShareAsync(token, "inline", true, SharedFilePreviewFormat.Jpeg);
+        }
+
+        private async Task<IActionResult> ShareAsync(
+            string token, string? view, bool preview, SharedFilePreviewFormat format)
         {
             IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
                 _publicShareLookupFailures,
@@ -50,7 +63,8 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            ShareFileResult result = await _mediator.Send(new ShareFileQuery(token, view, preview, Request));
+            ShareFileResult result = await _mediator.Send(
+                new ShareFileQuery(token, view, preview, Request, format), HttpContext.RequestAborted);
 
             if (result.IsTokenLookupFailure)
             {
@@ -63,16 +77,7 @@ namespace Cotton.Server.Controllers
                 }
             }
 
-            return result.Kind switch
-            {
-                "badRequest" => this.ApiBadRequest(result.ErrorMessage ?? "Bad request"),
-                "notFound" => this.ApiNotFound(result.ErrorMessage ?? "File not found"),
-                "redirect" => Redirect(result.RedirectUrl ?? "/"),
-                "html" => Content(result.HtmlContent ?? string.Empty, "text/html; charset=utf-8"),
-                "head" => CreateShareHeadResponse(result),
-                "stream" => CreateShareStreamResponse(result),
-                _ => this.ApiBadRequest("Invalid share response")
-            };
+            return result.Response;
         }
 
         [Authorize]
@@ -165,70 +170,6 @@ namespace Cotton.Server.Controllers
             return servesPreview
                 ? ServeLargePreview(nodeFile)
                 : ServeTokenFileDownload(nodeFile, downloadToken, download);
-        }
-
-        private IActionResult CreateShareHeadResponse(ShareFileResult result)
-        {
-            bool requestedInline = result.Inline == true;
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, requestedInline);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            Response.ContentType = FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline);
-            Response.ContentLength = result.ContentLength;
-            if (!string.IsNullOrWhiteSpace(result.EntityTag))
-            {
-                Response.Headers.ETag = result.EntityTag;
-            }
-
-            ContentDispositionHeaderValue contentDisposition = new(
-                FileResponseSecurity.ResolveContentDispositionType(result.ContentType, requestedInline))
-            {
-                FileNameStar = result.FileName,
-                FileName = result.FileName,
-            };
-            Response.Headers[HeaderNames.ContentDisposition] = contentDisposition.ToString();
-            return new EmptyResult();
-        }
-
-        private IActionResult CreateShareStreamResponse(ShareFileResult result)
-        {
-            bool requestedInline = string.IsNullOrWhiteSpace(result.DownloadName);
-            FileResponseSecurity.ApplyFileResponseHeaders(Response, result.ContentType, requestedInline);
-            Response.Headers.ContentEncoding = "identity";
-            Response.Headers.CacheControl = "private, no-store, no-transform";
-            RegisterDeleteAfterUse(result);
-
-            string streamFileName = result.FileName ?? result.DownloadName ?? "download";
-            string? streamDownloadName = requestedInline
-                ? FileResponseSecurity.ResolveFileDownloadName(streamFileName, requestedInline: true, result.ContentType)
-                : result.DownloadName;
-            return File(
-                result.FileStream!,
-                FileResponseSecurity.ResolveContentTypeForResponse(result.ContentType, requestedInline),
-                fileDownloadName: streamDownloadName,
-                lastModified: result.LastModified,
-                entityTag: result.EntityTagValue!,
-                enableRangeProcessing: true);
-        }
-
-        private void RegisterDeleteAfterUse(ShareFileResult result)
-        {
-            if (!result.DeleteAfterUse || !result.DeleteTokenId.HasValue)
-            {
-                return;
-            }
-
-            Guid tokenId = result.DeleteTokenId.Value;
-            Response.OnCompleted(async () =>
-            {
-                DownloadToken? tokenEntity = await _dbContext.DownloadTokens
-                    .FirstOrDefaultAsync(x => x.Id == tokenId);
-                if (tokenEntity is not null)
-                {
-                    _dbContext.DownloadTokens.Remove(tokenEntity);
-                    await _dbContext.SaveChangesAsync();
-                }
-            });
         }
 
         private async Task<bool> ShareTokenExistsAsync(string token)

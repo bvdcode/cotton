@@ -1,23 +1,23 @@
+import { createFile, createFolder } from "../../../test/fileFixtures";
 import { describe, expect, it, vi } from "vitest";
-import type { NodeContentDto } from "../../../shared/api/nodesApi";
+import type { SiblingNameLookupDto } from "../../../shared/api/nodesApi";
+import { getFileNameKey } from "../../../shared/utils/fileNameUtils";
 import { ConflictAction } from "../../../shared/types/nameConflict";
 import { resolveUploadConflicts } from "./uploadConflicts";
 
 const createContent = (
-  fileNames: Array<{ id: string; name: string }>,
+  fileNames: Pick<SiblingNameLookupDto["files"][number], "id" | "name">[],
   folderNames: string[] = [],
-): NodeContentDto =>
-  ({
-    id: "node-1",
-    nodes: folderNames.map((name, index) => ({
-      id: `folder-${index + 1}`,
-      name,
-    })),
-    files: fileNames.map((file) => ({
-      id: file.id,
-      name: file.name,
-    })),
-  }) as NodeContentDto;
+): SiblingNameLookupDto => ({
+  nodes: folderNames.map((name, index) =>
+    createFolder({ id: `folder-${index + 1}`, name }),
+  ),
+  files: fileNames.map(createFile),
+  takenNameKeys: [
+    ...fileNames.map((file) => getFileNameKey(file.name)),
+    ...folderNames.map(getFileNameKey),
+  ],
+});
 
 describe("resolveUploadConflicts", () => {
   it("normalizes names before resolving conflicts", async () => {

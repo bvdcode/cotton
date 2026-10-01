@@ -14,19 +14,12 @@ namespace Cotton.Server.Services
         INotificationsProvider _notifications,
         IGeoLookupService _geoLookup) : ISharedFileDownloadNotifier
     {
-        private static IPAddress GetRequestIpAddress(HttpContext httpContext)
-        {
-            return Constants.IsPublicInstance
-                ? IPAddress.Loopback
-                : httpContext.Request.GetTrustedClientIPAddress();
-        }
-
         private static string BuildKey(Guid ownerId, Guid tokenId, string ip, string userAgent) =>
             $"shared-download:{ownerId:N}:{tokenId:N}:{ip}:{userAgent}";
 
         public async Task NotifyOnceAsync(Guid ownerId, Guid tokenId, string fileName, HttpContext httpContext, CancellationToken ct)
         {
-            IPAddress requestIp = GetRequestIpAddress(httpContext);
+            IPAddress requestIp = httpContext.Request.GetTrustedClientIPAddress();
             string ip = requestIp.ToString();
             string userAgent = httpContext.Request.Headers.UserAgent.ToString();
 

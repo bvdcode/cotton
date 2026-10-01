@@ -69,6 +69,21 @@ namespace Cotton.Topology
             IReadOnlyCollection<Guid> nodeIds,
             CancellationToken cancellationToken = default)
         {
+            Dictionary<Guid, (Guid? ParentId, string Name, NodeType Type)> lineage =
+                await LoadLineageAsync(nodes, nodeIds, cancellationToken);
+            Dictionary<Guid, string> paths = new(nodeIds.Count);
+            foreach (Guid id in nodeIds)
+            {
+                paths[id] = BuildPath(lineage, id);
+            }
+            return paths;
+        }
+
+        private static async Task<Dictionary<Guid, (Guid? ParentId, string Name, NodeType Type)>> LoadLineageAsync(
+            IQueryable<Node> nodes,
+            IReadOnlyCollection<Guid> nodeIds,
+            CancellationToken cancellationToken)
+        {
             Dictionary<Guid, (Guid? ParentId, string Name, NodeType Type)> lineage = [];
             HashSet<Guid> frontier = new(nodeIds);
             while (frontier.Count > 0)
@@ -93,29 +108,31 @@ namespace Cotton.Topology
                 frontier.RemoveWhere(lineage.ContainsKey);
             }
 
-            Dictionary<Guid, string> paths = new(nodeIds.Count);
-            foreach (Guid id in nodeIds)
+            return lineage;
+        }
+
+        private static string BuildPath(
+            IReadOnlyDictionary<Guid, (Guid? ParentId, string Name, NodeType Type)> lineage,
+            Guid id)
+        {
+            Stack<string> parts = new();
+            HashSet<Guid> visited = [];
+            Guid currentId = id;
+            while (lineage.TryGetValue(currentId, out (Guid? ParentId, string Name, NodeType Type) node))
             {
-                Stack<string> parts = new();
-                HashSet<Guid> visited = [];
-                Guid currentId = id;
-                while (lineage.TryGetValue(currentId, out (Guid? ParentId, string Name, NodeType Type) node))
+                if (!visited.Add(currentId) || parts.Count >= DefaultMaxDepth)
                 {
-                    if (!visited.Add(currentId) || parts.Count >= DefaultMaxDepth)
-                    {
-                        break;
-                    }
-                    parts.Push(node.Name);
-                    if (!node.ParentId.HasValue
-                        || (lineage.TryGetValue(node.ParentId.Value, out (Guid? ParentId, string Name, NodeType Type) parent) && parent.Type != node.Type))
-                    {
-                        break;
-                    }
-                    currentId = node.ParentId.Value;
+                    break;
                 }
-                paths[id] = Constants.DefaultPathSeparator + string.Join(Constants.DefaultPathSeparator, parts);
+                parts.Push(node.Name);
+                if (!node.ParentId.HasValue
+                    || (lineage.TryGetValue(node.ParentId.Value, out (Guid? ParentId, string Name, NodeType Type) parent) && parent.Type != node.Type))
+                {
+                    break;
+                }
+                currentId = node.ParentId.Value;
             }
-            return paths;
+            return Constants.DefaultPathSeparator + string.Join(Constants.DefaultPathSeparator, parts);
         }
     }
 }

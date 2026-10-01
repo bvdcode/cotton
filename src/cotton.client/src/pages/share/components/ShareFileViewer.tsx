@@ -1,16 +1,12 @@
 import * as React from "react";
-import { Box, Container, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { LockOutlined } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { formatBytes } from "../../../shared/utils/formatBytes";
-import { MediaLightbox, ModelPreview, PdfPreview } from "@shared/ui/preview";
-import type { MediaItem } from "@shared/types/mediaLightbox";
-import {
-  selectGallerySmoothTransitions,
-  useUserPreferencesStore,
-} from "../../../shared/store/userPreferencesStore";
+import { ModelPreview, PdfPreview } from "@shared/ui/preview";
 import { getFileIcon } from "@shared/utils/icons";
+import { ShareMediaViewer } from "./ShareMediaViewer";
 import { ReadOnlyTextViewer } from "./ReadOnlyTextViewer";
 
 interface ShareFileViewerProps {
@@ -25,117 +21,6 @@ interface ShareFileViewerProps {
   textContent: string | null;
   encryptedContainer: boolean;
 }
-
-interface ShareMediaViewerProps {
-  token: string;
-  title: string;
-  inlineUrl: string;
-  downloadUrl: string | null;
-  fileName: string | null;
-  contentType: string | null;
-  contentLength: number | null;
-}
-
-const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
-  token,
-  title,
-  inlineUrl,
-  downloadUrl,
-  fileName,
-  contentType,
-  contentLength,
-}) => {
-  const [closedLightboxKey, setClosedLightboxKey] = React.useState<
-    string | null
-  >(null);
-  const smoothGalleryTransitions = useUserPreferencesStore(
-    selectGallerySmoothTransitions,
-  );
-
-  const fileTypeInfo = React.useMemo(() => {
-    const name = fileName ?? "";
-    return getFileTypeInfo(name, contentType);
-  }, [contentType, fileName]);
-
-  const lightboxKey = [token, fileTypeInfo.type].join(":");
-  const lightboxOpen = closedLightboxKey !== lightboxKey;
-  const reopenLightbox = React.useCallback(() => {
-    setClosedLightboxKey(null);
-  }, []);
-
-  if (fileTypeInfo.type !== "image" && fileTypeInfo.type !== "video") {
-    return null;
-  }
-
-  const item: MediaItem = {
-    id: token,
-    kind: fileTypeInfo.type,
-    name: fileName ?? title,
-    previewUrl: inlineUrl,
-    mimeType: contentType ?? "application/octet-stream",
-    sizeBytes: contentLength ?? undefined,
-  };
-
-  return (
-    <Box width="100%" height="100%">
-      <MediaLightbox
-        items={[item]}
-        open={lightboxOpen}
-        initialIndex={0}
-        onClose={() => setClosedLightboxKey(lightboxKey)}
-        getSignedMediaUrl={async () => inlineUrl}
-        getDownloadUrl={downloadUrl ? async () => downloadUrl : undefined}
-        smoothTransitions={smoothGalleryTransitions}
-      />
-
-      {!lightboxOpen && (
-        <Box
-          width="100%"
-          height="100%"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <Container
-            maxWidth="lg"
-            disableGutters
-            sx={{
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              px: { xs: 2, sm: 3 },
-            }}
-          >
-            {fileTypeInfo.type === "image" ? (
-              <Box
-                component="img"
-                src={inlineUrl}
-                alt={fileName ?? ""}
-                onClick={reopenLightbox}
-                sx={{
-                  width: "100%",
-                  maxHeight: "100%",
-                  objectFit: "contain",
-                  display: "block",
-                  cursor: "pointer",
-                }}
-              />
-            ) : (
-              <Box
-                component="video"
-                src={inlineUrl}
-                controls
-                onPlay={reopenLightbox}
-                sx={{ width: "100%", maxHeight: "100%", display: "block" }}
-              />
-            )}
-          </Container>
-        </Box>
-      )}
-    </Box>
-  );
-};
 
 interface ShareTextViewerProps {
   title: string;
@@ -339,6 +224,7 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
         title={title}
         inlineUrl={inlineUrl}
         downloadUrl={downloadUrl}
+        previewUrl={previewUrl}
         fileName={fileName}
         contentType={contentType}
         contentLength={contentLength}

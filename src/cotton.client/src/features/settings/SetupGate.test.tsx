@@ -18,9 +18,8 @@ vi.mock("../auth", () => ({
 }));
 
 vi.mock("../../shared/store/setupStatusStore", () => ({
-  useSetupStatusStore: (
-    selector: (state: typeof testState) => unknown,
-  ): unknown => selector(testState),
+  useSetupStatusStore: <T,>(selector: (state: typeof testState) => T): T =>
+    selector(testState),
 }));
 
 const renderGate = (initialEntry = "/") =>

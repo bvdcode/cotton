@@ -53,6 +53,7 @@ export const createIconColumn = (
   headerName: "",
   width: 44,
   sortable: false,
+  filterable: false,
   renderCell: (params) => {
     const previewUrl =
       params.row.type === "file" && params.row.tile?.kind === "file"
@@ -221,6 +222,7 @@ export const createSizeColumn = (
   options: Pick<ColumnOptions, "labels">,
 ): GridColDef<FileListRow> => ({
   field: "sizeBytes",
+  type: "number",
   headerName: options.labels.size,
   width: 70,
   renderCell: (params) => {

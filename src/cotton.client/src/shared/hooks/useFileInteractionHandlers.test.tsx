@@ -45,9 +45,9 @@ vi.mock("../utils/fileHandlers", () => ({
 }));
 
 vi.mock("../store/audioPlayerStore", () => ({
-  useAudioPlayerStore: (
-    selector: (state: { openFromSelection: typeof mocks.openAudio }) => unknown,
-  ) => selector({ openFromSelection: mocks.openAudio }),
+  useAudioPlayerStore: <T,>(
+    selector: (state: { openFromSelection: typeof mocks.openAudio }) => T,
+  ): T => selector({ openFromSelection: mocks.openAudio }),
 }));
 
 vi.mock("./useFilePreview", () => ({
@@ -134,7 +134,7 @@ describe("useFileInteractionHandlers", () => {
     mocks.createTask.mockReturnValue(mocks.taskHandle);
   });
 
-  it("keeps encrypted files out of inline media and downloads them from media clicks", () => {
+  it("keeps encrypted files out of inline media and offers an explicit download", () => {
     const plainImage = createFile({
       id: "plain-image",
       name: "photo.jpg",
@@ -161,16 +161,40 @@ describe("useFileInteractionHandlers", () => {
       result.current.handleMediaClick("encrypted-image");
     });
 
-    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(
+    expect(mocks.downloadReadableFile).not.toHaveBeenCalled();
+    expect(mocks.openPreview).toHaveBeenCalledWith(
+      encryptedImage.id,
+      encryptedImage.name,
+      encryptedImage.sizeBytes,
+      encryptedImage.contentType,
       encryptedImage,
-      undefined,
-      expect.objectContaining({
-        onDecryptProgress: expect.any(Function),
-        onDecryptComplete: expect.any(Function),
-      }),
     );
     expect(mocks.openMediaLightbox).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["photo.jpg", "image/jpeg", "media"],
+    ["movie.mp4", "video/mp4", "media"],
+    ["song.mp3", "audio/mpeg", "audio"],
+    ["archive.zip", "application/zip", "preview"],
+  ])(
+    "opens %s with its standard action without downloading",
+    (name, contentType, action) => {
+      const file = createFile({ name, contentType });
+      const { result } = renderHook(() =>
+        useFileInteractionHandlers({ sortedFiles: [file] }),
+      );
+      act(() => result.current.handleFileClick(file.id, name, file.sizeBytes));
+      expect(mocks.openMediaLightbox).toHaveBeenCalledTimes(
+        action === "media" ? 1 : 0,
+      );
+      expect(mocks.openAudio).toHaveBeenCalledTimes(action === "audio" ? 1 : 0);
+      expect(mocks.openPreview).toHaveBeenCalledTimes(
+        action === "preview" ? 1 : 0,
+      );
+      expect(mocks.downloadFile).not.toHaveBeenCalled();
+    },
+  );
 
   it("preserves legacy direct downloads for plain files", async () => {
     const plainFile = createFile({ id: "plain-file", name: "plain.txt" });
@@ -281,7 +305,7 @@ describe("useFileInteractionHandlers", () => {
     expect(mocks.downloadReadableFile).not.toHaveBeenCalled();
   });
 
-  it("downloads encrypted audio clicks instead of adding ciphertext to the player", () => {
+  it("offers encrypted audio download without adding ciphertext to the player", () => {
     const encryptedAudio = createFile({
       id: "encrypted-audio",
       name: "song.mp3",
@@ -298,16 +322,15 @@ describe("useFileInteractionHandlers", () => {
       result.current.handleFileClick("encrypted-audio", "song.mp3", 4);
     });
 
-    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(
-      encryptedAudio,
-      undefined,
-      expect.objectContaining({
-        onDecryptProgress: expect.any(Function),
-        onDecryptComplete: expect.any(Function),
-      }),
-    );
+    expect(mocks.downloadReadableFile).not.toHaveBeenCalled();
     expect(mocks.openAudio).not.toHaveBeenCalled();
-    expect(mocks.openPreview).not.toHaveBeenCalled();
+    expect(mocks.openPreview).toHaveBeenCalledExactlyOnceWith(
+      encryptedAudio.id,
+      "song.mp3",
+      4,
+      encryptedAudio.contentType,
+      encryptedAudio,
+    );
   });
 
   it("includes file manifest identity in the audio playlist", () => {

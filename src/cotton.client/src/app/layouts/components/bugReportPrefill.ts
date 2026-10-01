@@ -1,30 +1,14 @@
 import { UserRole } from "../../../features/auth";
-
-type ConsoleErrorSource =
-  "console.error" | "window.error" | "unhandledrejection" | "resource.error";
+import {
+  getRecentClientDiagnostics,
+  recordClientDiagnostic,
+  toDiagnosticMessage,
+} from "../../../shared/utils/clientDiagnostics";
 
 type BrowserDetails = {
   name: string;
   version: string;
 };
-
-type ConsoleErrorEntry = {
-  timestamp: string;
-  source: ConsoleErrorSource;
-  message: string;
-};
-
-type ConsoleCaptureState = {
-  installed: boolean;
-  errors: ConsoleErrorEntry[];
-  originalConsoleError?: typeof console.error;
-};
-
-declare global {
-  interface Window {
-    __cottonBugReportConsoleCaptureState?: ConsoleCaptureState;
-  }
-}
 
 export type BuildBugReportUrlArgs = {
   serverVersion?: string | null;
@@ -33,26 +17,9 @@ export type BuildBugReportUrlArgs = {
 };
 
 const ISSUE_URL = "https://github.com/bvdcode/cotton/issues/new";
-const MAX_CAPTURED_CONSOLE_ERRORS = 30;
 const MAX_CONSOLE_BLOCK_LENGTH = 8000;
 const MAX_SINGLE_ERROR_LENGTH = 1200;
-const getConsoleCaptureState = (): ConsoleCaptureState => {
-  const existing = window.__cottonBugReportConsoleCaptureState;
-  if (
-    existing &&
-    typeof existing === "object" &&
-    Array.isArray(existing.errors)
-  ) {
-    return existing;
-  }
-
-  const created: ConsoleCaptureState = {
-    installed: false,
-    errors: [],
-  };
-  window.__cottonBugReportConsoleCaptureState = created;
-  return created;
-};
+let captureInstalled = false;
 
 const truncateText = (value: string, maxLength: number): string =>
   value.length <= maxLength
@@ -61,42 +28,6 @@ const truncateText = (value: string, maxLength: number): string =>
 
 const sanitizeForCodeBlock = (value: string): string =>
   value.replaceAll("```", "'''");
-
-const toConsoleMessage = (value: unknown): string => {
-  if (value instanceof Error) {
-    const stack = value.stack ? `\n${value.stack}` : "";
-    return `${value.name}: ${value.message}${stack}`;
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-};
-
-const formatConsoleArgs = (args: unknown[]): string =>
-  args.map((arg) => toConsoleMessage(arg)).join(" ");
-
-const pushConsoleError = (
-  source: ConsoleErrorSource,
-  message: string,
-): void => {
-  const state = getConsoleCaptureState();
-  state.errors.push({
-    timestamp: new Date().toISOString(),
-    source,
-    message,
-  });
-
-  if (state.errors.length > MAX_CAPTURED_CONSOLE_ERRORS) {
-    state.errors.splice(0, state.errors.length - MAX_CAPTURED_CONSOLE_ERRORS);
-  }
-};
 
 const detectBrowser = (): BrowserDetails => {
   const ua = navigator.userAgent;
@@ -173,7 +104,7 @@ const getRoleLabel = (role: number | null | undefined): string => {
 };
 
 const buildConsoleErrorsMarkdown = (): string | null => {
-  const entries = getConsoleCaptureState().errors.slice(-15);
+  const entries = getRecentClientDiagnostics();
   if (entries.length === 0) {
     return null;
   }
@@ -202,22 +133,12 @@ const buildConsoleErrorsMarkdown = (): string | null => {
   ].join("\n");
 };
 
-export const initializeBugReportConsoleCapture = (): void => {
-  const state = getConsoleCaptureState();
-  if (state.installed) {
+export const initializeBugReportDiagnostics = (): void => {
+  if (captureInstalled) {
     return;
   }
 
-  state.installed = true;
-
-  if (!state.originalConsoleError) {
-    state.originalConsoleError = console.error.bind(console);
-  }
-  const originalConsoleError = state.originalConsoleError;
-  console.error = (...args: unknown[]) => {
-    pushConsoleError("console.error", formatConsoleArgs(args));
-    originalConsoleError(...args);
-  };
+  captureInstalled = true;
 
   window.addEventListener("error", (event: ErrorEvent) => {
     const location = event.filename
@@ -225,10 +146,10 @@ export const initializeBugReportConsoleCapture = (): void => {
       : "";
     const errorDetails =
       event.error instanceof Error
-        ? toConsoleMessage(event.error)
+        ? toDiagnosticMessage(event.error)
         : event.message || "Unknown window error";
 
-    pushConsoleError("window.error", `${errorDetails}${location}`);
+    recordClientDiagnostic("window.error", `${errorDetails}${location}`);
   });
 
   // Capture resource load errors (scripts/styles/images) that do not bubble
@@ -259,7 +180,7 @@ export const initializeBugReportConsoleCapture = (): void => {
           ? target.tagName
           : "resource";
 
-      pushConsoleError(
+      recordClientDiagnostic(
         "resource.error",
         `${tagName} failed to load: ${resourceUrl}`,
       );
@@ -270,7 +191,10 @@ export const initializeBugReportConsoleCapture = (): void => {
   window.addEventListener(
     "unhandledrejection",
     (event: PromiseRejectionEvent) => {
-      pushConsoleError("unhandledrejection", toConsoleMessage(event.reason));
+      recordClientDiagnostic(
+        "unhandledrejection",
+        toDiagnosticMessage(event.reason),
+      );
     },
   );
 };
@@ -288,7 +212,7 @@ export const buildBugReportUrl = ({
   const consoleErrorsMarkdown = buildConsoleErrorsMarkdown();
   const consoleErrorsSection = consoleErrorsMarkdown
     ? `
-## Console errors (recent)
+## Client diagnostics (recent)
 ${consoleErrorsMarkdown}
 `
     : "";

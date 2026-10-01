@@ -3,6 +3,7 @@ import {
   Delete,
   Download,
   Edit,
+  InfoOutlined,
   LockOpenOutlined,
   LockOutlined,
   Restore,
@@ -34,6 +35,7 @@ interface FolderCardProps {
   onShare?: () => void;
   onCut?: () => void;
   onTogglePin?: () => void;
+  onShowInfo?: () => void;
   isPinned?: boolean;
   onToggleEncryptionPolicy?: () => void;
   encryptionPolicy?: FolderEncryptionPolicyState;
@@ -55,6 +57,7 @@ type FolderActionOptions = Pick<
   | "onShare"
   | "onStartRename"
   | "onTogglePin"
+  | "onShowInfo"
   | "onToggleEncryptionPolicy"
   | "readOnly"
 > & {
@@ -67,6 +70,13 @@ type FolderActionOptions = Pick<
 const buildFolderActions = (options: FolderActionOptions): FolderAction[] => {
   const actions: FolderAction[] = [];
   addDownloadAction(actions, options);
+  if (options.onShowInfo) {
+    actions.push({
+      icon: <InfoOutlined />,
+      onClick: options.onShowInfo,
+      tooltip: options.t("files:folderInfo.action"),
+    });
+  }
   if (options.readOnly) {
     return actions;
   }
@@ -209,6 +219,7 @@ export const FolderCard = ({
   onShare,
   onCut,
   onTogglePin,
+  onShowInfo,
   isPinned = false,
   onToggleEncryptionPolicy,
   encryptionPolicy,
@@ -236,6 +247,7 @@ export const FolderCard = ({
         onShare,
         onStartRename,
         onTogglePin,
+        onShowInfo,
         onToggleEncryptionPolicy,
         readOnly,
         t,
@@ -251,6 +263,7 @@ export const FolderCard = ({
       onShare,
       onStartRename,
       onTogglePin,
+      onShowInfo,
       onToggleEncryptionPolicy,
       readOnly,
       t,

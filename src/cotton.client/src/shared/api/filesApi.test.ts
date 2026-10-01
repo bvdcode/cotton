@@ -1,5 +1,6 @@
+import { createHttpResponse } from "../../test/httpFixtures";
 import type { AxiosResponse } from "axios";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@shared/ui/notifications", () => ({
   toast: { error: vi.fn() },
@@ -46,10 +47,6 @@ const chunkResponse = {
   createdAt: "2026-05-30T00:00:00Z",
   updatedAt: "2026-05-30T00:00:00Z",
 };
-
-beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => undefined);
-});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -122,7 +119,7 @@ describe("filesApi.getDownloadLink", () => {
     const first = filesApi.getDownloadLink(fileId, 1440);
     const second = filesApi.getDownloadLink(fileId, 1440);
 
-    resolve({ data: "https://download.example/file" } as AxiosResponse<string>);
+    resolve(createHttpResponse("https://download.example/file"));
 
     await expect(Promise.all([first, second])).resolves.toEqual([
       "https://download.example/file",

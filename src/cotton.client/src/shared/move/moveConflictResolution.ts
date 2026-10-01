@@ -1,4 +1,5 @@
 import { isAxiosError } from "../api/httpClient";
+import { fetchAllNodeChildren } from "../api/nodeChildren";
 import { filesApi, type MoveFileRequest } from "../api/filesApi";
 import type { NodeDto } from "../api/layoutsApi";
 import {
@@ -8,7 +9,6 @@ import {
   type RestoreConflictKind,
 } from "../api/nodesApi";
 import type { MoveClipboardItem } from "../store/moveClipboardStore";
-import { useNodesStore } from "../store/nodesStore";
 import { ConflictAction, type NameConflictPrompt } from "../types/nameConflict";
 import { getFileNameKey, nextAvailableName } from "../utils/fileNameUtils";
 import { readStringProperty } from "../utils/typeGuards";
@@ -39,8 +39,8 @@ const getMoveItemName = async (item: MoveClipboardItem): Promise<string> => {
   return node.name;
 };
 
-const getCachedTargetNames = (targetParentId: string): Set<string> => {
-  const content = useNodesStore.getState().contentByNodeId[targetParentId];
+const getTargetNames = async (targetParentId: string): Promise<Set<string>> => {
+  const { content } = await fetchAllNodeChildren(targetParentId);
   const taken = new Set<string>();
 
   for (const node of content?.nodes ?? []) {
@@ -54,7 +54,7 @@ const getCachedTargetNames = (targetParentId: string): Set<string> => {
   return taken;
 };
 
-const getMoveConflictKind = (error: unknown): RestoreConflictKind | null => {
+const getMoveConflictKind = <T>(error: T): RestoreConflictKind | null => {
   if (!isAxiosError(error) || error.response?.status !== 409) {
     return null;
   }
@@ -104,6 +104,7 @@ export const moveItemWithConflictResolution = async (options: {
   let name: string | undefined;
   let overwrite = false;
   const rejectedNames = new Set<string>();
+  let targetNames: Set<string> | null = null;
 
   while (true) {
     try {
@@ -140,7 +141,14 @@ export const moveItemWithConflictResolution = async (options: {
       }
 
       const conflictKind = getMoveConflictKind(error);
-      const targetNames = getCachedTargetNames(options.targetParentId);
+      try {
+        targetNames ??= await getTargetNames(options.targetParentId);
+      } catch (loadError) {
+        return {
+          kind: "failed",
+          error: loadError instanceof Error ? loadError : new Error("Could not load target folder."),
+        };
+      }
       const conflictingName = name ?? originalName;
       const conflictingNameKey = getFileNameKey(conflictingName);
       rejectedNames.add(conflictingNameKey);

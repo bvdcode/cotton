@@ -133,6 +133,7 @@ namespace Cotton.Server.Extensions
         {
             services.AddSingleton<TempDirectoryProbe>();
             services.AddScoped<StartupPreflightValidator>();
+            services.AddScoped<IStartupCheck, DatabaseIntegrityStartupCheck>();
             services.AddScoped<IStartupCheck, TempDirectoryStartupCheck>();
 
             return services;

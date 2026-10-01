@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
+using Cotton.Server.Handlers.Archives;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using EasyExtensions.Mediator;
@@ -14,8 +15,7 @@ namespace Cotton.Server.Handlers.Layouts
         Guid? NodeId) : IRequest<CreateSharedArchiveDownloadLinkResult>;
 
     public class CreateSharedArchiveDownloadLinkRequestHandler(
-        IMediator _mediator,
-        ArchiveDownloadService _archives)
+        IMediator _mediator)
         : IRequestHandler<CreateSharedArchiveDownloadLinkRequest, CreateSharedArchiveDownloadLinkResult>
     {
         public async Task<CreateSharedArchiveDownloadLinkResult> Handle(
@@ -44,13 +44,13 @@ namespace Cotton.Server.Handlers.Layouts
                     CreateSharedArchiveDownloadLinkStatus.FolderNotFound);
             }
 
-            CreateArchiveDownloadLinkResult archive = await _archives.CreateDownloadLinkAsync(
+            CreateArchiveDownloadLinkResult archive = await _mediator.Send(new CreateArchiveDownloadLinkQuery(
                 access.CreatedByUserId,
                 new CreateArchiveDownloadLinkRequest
                 {
                     NodeIds = [targetNodeId],
                     EnforcePublicShareLimits = true,
-                },
+                }, request.Token),
                 ct);
 
             return new CreateSharedArchiveDownloadLinkResult(

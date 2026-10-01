@@ -26,14 +26,7 @@ namespace Cotton.Server.Services
                 RequireHttps = true
             };
 
-            try
-            {
-                return await OpenIdConnectConfigurationRetriever.GetAsync(metadataAddress, retriever, ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                throw new BadRequestException<OidcProvider>("OIDC discovery document could not be loaded.");
-            }
+            return await OpenIdConnectConfigurationRetriever.GetAsync(metadataAddress, retriever, ct);
         }
 
         public async Task ValidateConfigurationAsync(OidcProvider provider, CancellationToken ct)

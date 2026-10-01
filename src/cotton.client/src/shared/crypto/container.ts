@@ -1,4 +1,17 @@
 import {
+  assertChunkIndex,
+  assertPlaintextSize,
+  MAX_CHUNK_SIZE,
+} from "./chunkSizing";
+export {
+  chunkCount,
+  chunkPlaintextLength,
+  assertCompatibleChunkSize,
+  MIN_CHUNK_SIZE,
+  MAX_CHUNK_SIZE,
+} from "./chunkSizing";
+
+import {
   CorruptedContainerError,
   InvalidCryptoInputError,
   NotAContainerError,
@@ -33,13 +46,10 @@ export const FILE_HEADER_BYTES =
   FILE_KEY_BYTES;
 export const CHUNK_HEADER_BYTES = MAGIC.length + 4 + 8 + 4 + GCM_TAG_BYTES;
 export const DEFAULT_CHUNK_SIZE = 1 * 1024 * 1024;
-export const MIN_CHUNK_SIZE = 8 * 1024;
-export const MAX_CHUNK_SIZE = 64 * 1024 * 1024;
 export const MAX_CHUNK_COUNT = Number.MAX_SAFE_INTEGER;
 
 export type ContainerFormatVersion =
-  | typeof LEGACY_CONTAINER_VERSION
-  | typeof CONTAINER_VERSION;
+  typeof LEGACY_CONTAINER_VERSION | typeof CONTAINER_VERSION;
 
 export interface ContainerHeader {
   formatVersion: ContainerFormatVersion;
@@ -288,44 +298,6 @@ export function chunkNonce(
   return nonce;
 }
 
-export function chunkPlaintextLength(
-  chunkIndex: number,
-  chunkSize: number,
-  plaintextSize: number,
-): number {
-  assertChunkIndex(chunkIndex);
-  assertPlaintextShape(plaintextSize, chunkSize);
-
-  const start = chunkIndex * chunkSize;
-  if (start >= plaintextSize) {
-    return 0;
-  }
-
-  return Math.min(chunkSize, plaintextSize - start);
-}
-
-export function chunkCount(plaintextSize: number, chunkSize: number): number {
-  assertPlaintextShape(plaintextSize, chunkSize);
-
-  if (plaintextSize === 0) {
-    return 0;
-  }
-
-  return Math.ceil(plaintextSize / chunkSize);
-}
-
-export function assertCompatibleChunkSize(chunkSize: number): void {
-  if (
-    !Number.isSafeInteger(chunkSize) ||
-    chunkSize < MIN_CHUNK_SIZE ||
-    chunkSize > MAX_CHUNK_SIZE
-  ) {
-    throw new InvalidCryptoInputError(
-      "Chunk size is outside the supported range.",
-    );
-  }
-}
-
 function magicForVersion(formatVersion: ContainerFormatVersion): Uint8Array {
   if (formatVersion === CONTAINER_VERSION) {
     return MAGIC;
@@ -400,17 +372,6 @@ function assertParsedChunkHeader(header: ChunkHeader): void {
   }
 }
 
-function assertPlaintextShape(plaintextSize: number, chunkSize: number): void {
-  assertPlaintextSize(plaintextSize);
-  assertCompatibleChunkSize(chunkSize);
-}
-
-function assertPlaintextSize(plaintextSize: number): void {
-  if (!Number.isSafeInteger(plaintextSize) || plaintextSize < 0) {
-    throw new InvalidCryptoInputError("Invalid plaintext size.");
-  }
-}
-
 function assertPlaintextLength(
   plaintextLength: number,
   allowZero: boolean = false,
@@ -422,14 +383,6 @@ function assertPlaintextLength(
     plaintextLength > MAX_CHUNK_SIZE
   ) {
     throw new InvalidCryptoInputError("Invalid chunk plaintext length.");
-  }
-}
-
-function assertChunkIndex(chunkIndex: number): void {
-  if (!Number.isSafeInteger(chunkIndex) || chunkIndex < 0) {
-    throw new InvalidCryptoInputError(
-      "Chunk index must be a safe non-negative integer.",
-    );
   }
 }
 

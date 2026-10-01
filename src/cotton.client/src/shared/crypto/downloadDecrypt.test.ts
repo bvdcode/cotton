@@ -137,12 +137,7 @@ describe("downloadDecrypt", () => {
 
     useVault.getState().unlock(masterKey);
     getDownloadLinkMock.mockResolvedValue("https://files.example/encrypted");
-    fetchMock.mockResolvedValue({
-      ok: true,
-      status: 200,
-      statusText: "OK",
-      blob: async () => encrypted,
-    } as Response);
+    fetchMock.mockResolvedValue(new Response(await encrypted.arrayBuffer()));
     const onDecryptProgress = vi.fn();
     const onDecryptComplete = vi.fn();
 
@@ -156,8 +151,10 @@ describe("downloadDecrypt", () => {
     expect(getDownloadLinkMock).toHaveBeenCalledWith("file-1", undefined);
     expect(fetchMock).toHaveBeenCalledWith("https://files.example/encrypted");
 
-    const decryptedBlob = vi.mocked(URL.createObjectURL).mock
-      .calls[0]?.[0] as Blob;
+    const decryptedBlob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0];
+    if (!(decryptedBlob instanceof Blob)) {
+      throw new TypeError("Expected a decrypted Blob");
+    }
     expect(decryptedBlob.type).toBe("image/png");
     await expect(readBlobBytes(decryptedBlob)).resolves.toEqual([1, 2, 3, 4]);
     expect(onDecryptProgress).toHaveBeenCalledWith(0, 4);
@@ -192,17 +189,14 @@ describe("downloadDecrypt", () => {
     });
 
     getDownloadLinkMock.mockResolvedValue("https://files.example/encrypted");
-    fetchMock.mockResolvedValue({
-      ok: true,
-      status: 200,
-      statusText: "OK",
-      blob: async () => encrypted,
-    } as Response);
+    fetchMock.mockResolvedValue(new Response(await encrypted.arrayBuffer()));
 
     await getReadableFileUrl(file);
 
-    const decryptedBlob = vi.mocked(URL.createObjectURL).mock
-      .calls[0]?.[0] as Blob;
+    const decryptedBlob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0];
+    if (!(decryptedBlob instanceof Blob)) {
+      throw new TypeError("Expected a decrypted Blob");
+    }
     expect(decryptedBlob.type).toBe("application/pdf");
   });
 
@@ -239,12 +233,7 @@ describe("downloadDecrypt", () => {
     });
 
     getDownloadLinkMock.mockResolvedValue("https://files.example/encrypted");
-    fetchMock.mockResolvedValue({
-      ok: true,
-      status: 200,
-      statusText: "OK",
-      blob: async () => encrypted,
-    } as Response);
+    fetchMock.mockResolvedValue(new Response(await encrypted.arrayBuffer()));
 
     await downloadReadableFile(file);
     vi.runOnlyPendingTimers();
@@ -262,11 +251,9 @@ describe("downloadDecrypt", () => {
 
     useVault.getState().unlock(masterKey);
     getDownloadLinkMock.mockResolvedValue("https://files.example/encrypted");
-    vi.mocked(fetch).mockResolvedValue({
-      ok: false,
-      status: 403,
-      statusText: "Forbidden",
-    } as Response);
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(null, { status: 403, statusText: "Forbidden" }),
+    );
 
     await expect(getReadableFileUrl(file)).rejects.toThrow(
       "Failed to fetch encrypted file: 403 Forbidden",

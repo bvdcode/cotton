@@ -36,7 +36,7 @@ export function OnboardingPage() {
       sx={{
         position: "relative",
         width: "100%",
-        minHeight: "100vh",
+        minHeight: "100%",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

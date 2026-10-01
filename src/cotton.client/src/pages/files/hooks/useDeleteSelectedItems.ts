@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import * as React from "react";
 import { filesApi } from "../../../shared/api/filesApi";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
@@ -73,7 +74,7 @@ export const useDeleteSelectedItems = ({
         try {
           await deleteFolder(tile.node.id, nodeId);
         } catch (error) {
-          console.error("Failed to delete selected folder", error);
+          reportClientError("Failed to delete selected folder", error);
         }
         continue;
       }
@@ -82,7 +83,7 @@ export const useDeleteSelectedItems = ({
         optimisticDeleteFile(nodeId, tile.file.id);
         await filesApi.deleteFile(tile.file.id);
       } catch (error) {
-        console.error("Failed to delete selected file", error);
+        reportClientError("Failed to delete selected file", error);
       }
     }
 

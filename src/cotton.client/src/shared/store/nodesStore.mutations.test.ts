@@ -1,0 +1,277 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("./nodesActionInternals", () => ({
+  resetNodesActionsInternals: vi.fn(),
+}));
+
+import type { NodeDto } from "../api/layoutsApi";
+import type { NodeContentDto, NodeFileManifestDto } from "../api/nodesApi";
+import { useVault } from "../crypto";
+import { useNodesStore } from "./nodesStore";
+
+const makeNode = (id: string, name: string): NodeDto => ({
+  id,
+  createdAt: "",
+  updatedAt: "",
+  layoutId: "layout-1",
+  parentId: "parent-1",
+  name,
+  metadata: {},
+});
+
+const makeFile = (
+  id: string,
+  name: string,
+  overrides: Partial<NodeFileManifestDto> = {},
+): NodeFileManifestDto => ({
+  id,
+  createdAt: "",
+  updatedAt: "",
+  nodeId: "parent-1",
+  ownerId: "user-1",
+  name,
+  contentType: "text/plain",
+  sizeBytes: 0,
+  metadata: {},
+  ...overrides,
+});
+
+const seedParent = (
+  parentId: string,
+  nodes: NodeDto[],
+  files: NodeFileManifestDto[],
+) => {
+  const content: NodeContentDto = {
+    id: parentId,
+    createdAt: "",
+    updatedAt: "",
+    nodes,
+    files,
+  };
+  useNodesStore.setState((prev) => ({
+    ...prev,
+    contentByNodeId: { ...prev.contentByNodeId, [parentId]: content },
+  }));
+};
+
+const resetStore = () => {
+  useNodesStore.setState({
+    cacheOwnerUserId: null,
+    rootNodeId: null,
+    currentNode: null,
+    ancestors: [],
+    contentByNodeId: {},
+    ancestorsByNodeId: {},
+    loading: false,
+    error: null,
+    lastUpdatedByNodeId: {},
+  });
+};
+
+beforeEach(() => {
+  sessionStorage.clear();
+  resetStore();
+  vi.clearAllMocks();
+});
+
+afterEach(() => {
+  resetStore();
+  useVault.getState().lock();
+  sessionStorage.clear();
+});
+
+describe("addFolderToCache", () => {
+  it("appends a new folder to the parent's nodes", () => {
+    seedParent("parent-1", [makeNode("a", "Drafts")], []);
+
+    useNodesStore
+      .getState()
+      .addFolderToCache("parent-1", makeNode("b", "Photos"));
+
+    expect(
+      useNodesStore
+        .getState()
+        .contentByNodeId["parent-1"]?.nodes.map((n) => n.id),
+    ).toEqual(["a", "b"]);
+  });
+
+  it("is idempotent when the folder is already present", () => {
+    seedParent("parent-1", [makeNode("a", "Drafts")], []);
+
+    useNodesStore
+      .getState()
+      .addFolderToCache("parent-1", makeNode("a", "Drafts"));
+
+    expect(
+      useNodesStore.getState().contentByNodeId["parent-1"]?.nodes.length,
+    ).toBe(1);
+  });
+
+  it("is a no-op when the parent has no cached content", () => {
+    useNodesStore
+      .getState()
+      .addFolderToCache("nowhere", makeNode("a", "Drafts"));
+
+    expect(useNodesStore.getState().contentByNodeId["nowhere"]).toBeUndefined();
+  });
+});
+
+describe("updateNode", () => {
+  it("replaces a node wherever it appears in the cache", () => {
+    const current = makeNode("current", "Current");
+    const ancestor = makeNode("ancestor", "Ancestor");
+    const child = makeNode("child", "Child");
+    const updatedChild = {
+      ...child,
+      name: "Child updated",
+      metadata: { isClientEncryptionEnabled: "true" },
+    };
+
+    useNodesStore.setState({
+      currentNode: current,
+      ancestors: [ancestor, child],
+    });
+    seedParent("current", [child], []);
+
+    useNodesStore.getState().updateNode(updatedChild);
+
+    const state = useNodesStore.getState();
+    expect(state.currentNode).toBe(current);
+    expect(state.ancestors[1]).toEqual(updatedChild);
+    expect(state.contentByNodeId.current?.nodes[0]).toEqual(updatedChild);
+  });
+
+  it("updates the current node without rewriting unchanged content maps", () => {
+    const current = makeNode("current", "Current");
+    const updated = { ...current, metadata: { key: "value" } };
+    seedParent("parent-1", [makeNode("other", "Other")], []);
+    const contentBefore = useNodesStore.getState().contentByNodeId;
+
+    useNodesStore.setState({ currentNode: current });
+    useNodesStore.getState().updateNode(updated);
+
+    expect(useNodesStore.getState().currentNode).toEqual(updated);
+    expect(useNodesStore.getState().contentByNodeId).toBe(contentBefore);
+  });
+});
+
+describe("moveFolderInCache", () => {
+  it("moves the fresh folder snapshot between cached parents", () => {
+    const folder = makeNode("folder-1", "Docs");
+    const updated = { ...folder, parentId: "target" };
+    seedParent("source", [folder], []);
+    seedParent("target", [], []);
+    useNodesStore.setState({
+      ancestorsByNodeId: {
+        "folder-1": [makeNode("source", "Source")],
+      },
+    });
+
+    useNodesStore.getState().moveFolderInCache(updated, "source", "target");
+
+    const state = useNodesStore.getState();
+    expect(state.contentByNodeId.source?.nodes).toEqual([]);
+    expect(state.contentByNodeId.target?.nodes).toEqual([updated]);
+    expect(state.ancestorsByNodeId["folder-1"]).toBeUndefined();
+  });
+
+  it("replaces the folder without removing it when the move is a no-op", () => {
+    const folder = makeNode("folder-1", "Docs");
+    const updated = { ...folder, name: "Docs fresh" };
+    seedParent("parent-1", [folder], []);
+
+    useNodesStore.getState().moveFolderInCache(updated, "parent-1", "parent-1");
+
+    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.nodes).toEqual(
+      [updated],
+    );
+  });
+});
+
+describe("moveFileInCache", () => {
+  it("moves the fresh file snapshot between cached parents", () => {
+    const file = makeFile("file-1", "paper.txt", { nodeId: "source" });
+    const updated = { ...file, nodeId: "target" };
+    seedParent("source", [], [file]);
+    seedParent("target", [], []);
+
+    useNodesStore.getState().moveFileInCache(updated, "source", "target");
+
+    const state = useNodesStore.getState();
+    expect(state.contentByNodeId.source?.files).toEqual([]);
+    expect(state.contentByNodeId.target?.files).toEqual([updated]);
+  });
+
+  it("replaces the file without removing it when the move is a no-op", () => {
+    const file = makeFile("file-1", "paper.txt");
+    const updated = { ...file, name: "paper fresh.txt" };
+    seedParent("parent-1", [], [file]);
+
+    useNodesStore.getState().moveFileInCache(updated, "parent-1", "parent-1");
+
+    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.files).toEqual(
+      [updated],
+    );
+  });
+});
+
+describe("optimisticRenameFile", () => {
+  it("renames the matching file", () => {
+    seedParent("parent-1", [], [makeFile("f1", "old.txt")]);
+
+    useNodesStore.getState().optimisticRenameFile("parent-1", "f1", "new.txt");
+
+    expect(
+      useNodesStore.getState().contentByNodeId["parent-1"]?.files[0]?.name,
+    ).toBe("new.txt");
+  });
+
+  it("leaves other files alone", () => {
+    seedParent(
+      "parent-1",
+      [],
+      [makeFile("f1", "a.txt"), makeFile("f2", "b.txt")],
+    );
+
+    useNodesStore
+      .getState()
+      .optimisticRenameFile("parent-1", "f2", "renamed.txt");
+
+    expect(
+      useNodesStore
+        .getState()
+        .contentByNodeId["parent-1"]?.files.map((f) => f.name),
+    ).toEqual(["a.txt", "renamed.txt"]);
+  });
+});
+
+describe("updateFileInCache", () => {
+  it("replaces the matching cached file with the full server snapshot", () => {
+    seedParent("parent-1", [], [makeFile("f1", "old.txt")]);
+    const updated = {
+      ...makeFile("f1", "new.txt"),
+      metadata: { en: "new-display-meta" },
+      contentType: "image/png",
+    };
+
+    useNodesStore.getState().updateFileInCache("parent-1", updated);
+
+    expect(
+      useNodesStore.getState().contentByNodeId["parent-1"]?.files[0],
+    ).toEqual(updated);
+  });
+
+  it("keeps cache unchanged for missing parents or files", () => {
+    seedParent("parent-1", [], [makeFile("f1", "old.txt")]);
+    const before = useNodesStore.getState().contentByNodeId;
+
+    useNodesStore
+      .getState()
+      .updateFileInCache("parent-1", makeFile("missing", "missing.txt"));
+    useNodesStore
+      .getState()
+      .updateFileInCache("nowhere", makeFile("f1", "new.txt"));
+
+    expect(useNodesStore.getState().contentByNodeId).toBe(before);
+  });
+});

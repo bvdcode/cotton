@@ -1,4 +1,5 @@
 import type { NodeFileManifestDto } from "../api/nodesApi";
+import { isJsonObject, type JsonValue } from "../types/json";
 import { asBufferSource } from "./bufferSource";
 import { base64ToBytes, bytesToBase64 } from "./base64";
 import { InvalidCryptoInputError } from "./errors";
@@ -160,20 +161,19 @@ function normalizeDisplayMeta(meta: DisplayMeta): DisplayMeta {
 }
 
 function parseDisplayMeta(value: string): DisplayMeta {
-  const parsed: unknown = JSON.parse(value);
+  const parsed: JsonValue = JSON.parse(value);
 
-  if (!parsed || typeof parsed !== "object") {
+  if (!isJsonObject(parsed)) {
     throw new InvalidCryptoInputError("Display metadata must be an object.");
   }
 
-  const candidate = parsed as { n?: unknown; c?: unknown };
-  if (typeof candidate.n !== "string" || typeof candidate.c !== "string") {
+  if (typeof parsed.n !== "string" || typeof parsed.c !== "string") {
     throw new InvalidCryptoInputError("Display metadata shape is invalid.");
   }
 
   return normalizeDisplayMeta({
-    name: candidate.n,
-    contentType: candidate.c,
+    name: parsed.n,
+    contentType: parsed.c,
   });
 }
 

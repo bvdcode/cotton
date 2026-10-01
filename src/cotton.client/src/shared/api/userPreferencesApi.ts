@@ -1,4 +1,5 @@
 import { httpClient, parseValidated } from "./httpClient";
+import type { JsonValue } from "../types/json";
 import {
   userPreferencesSchema,
   type UserPreferences,
@@ -28,7 +29,7 @@ export const userPreferencesApi = {
     options?: { token?: string },
   ): Promise<UserPreferences> => {
     const token = options?.token ?? PREFERENCE_UPDATE_TOKEN;
-    const response = await httpClient.patch<unknown>(PREFERENCES_URL, patch, {
+    const response = await httpClient.patch<JsonValue>(PREFERENCES_URL, patch, {
       params: { token },
     });
     return parseValidated(

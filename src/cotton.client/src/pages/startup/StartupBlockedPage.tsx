@@ -84,7 +84,7 @@ export const StartupBlockedPage = ({
   return (
     <Box
       sx={{
-        minHeight: "100dvh",
+        minHeight: "100%",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

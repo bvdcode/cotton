@@ -160,6 +160,7 @@ namespace Cotton.Server.IntegrationTests.Common
                 {
                     app.Use(async (context, nextMiddleware) =>
                     {
+                        context.Connection.RemoteIpAddress = IPAddress.Loopback;
                         if (context.Request.Headers.TryGetValue(RemoteIpAddressHeader, out StringValues values)
                             && IPAddress.TryParse(values.ToString(), out IPAddress? remoteIpAddress))
                         {

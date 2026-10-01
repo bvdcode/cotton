@@ -16,7 +16,7 @@ export const EditorMode = {
 
 export type EditorMode = (typeof EditorMode)[keyof typeof EditorMode];
 
-export const isEditorMode = (value: unknown): value is EditorMode =>
+export const isEditorMode = <T>(value: T): value is T & EditorMode =>
   value === EditorMode.Text ||
   value === EditorMode.Markdown ||
   value === EditorMode.Code;

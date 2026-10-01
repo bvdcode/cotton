@@ -1,3 +1,5 @@
+import type { DirectoryListingOptions } from "../types/DirectoryListingOptions";
+
 const notificationsRoot = ["notifications"] as const;
 const layoutsRoot = ["layouts"] as const;
 const adminRoot = ["admin"] as const;
@@ -7,8 +9,36 @@ const serverSettingsRoot = ["serverSettings"] as const;
 const storageQuotaRoot = ["storageQuota"] as const;
 const fileVersionsRoot = ["fileVersions"] as const;
 const oidcRoot = ["oidc"] as const;
+const nodeChildrenRoot = ["nodeChildren"] as const;
 
 export const queryKeys = {
+  nodeChildren: {
+    all: (nodeId: string) => [...nodeChildrenRoot, nodeId] as const,
+    overview: (nodeId: string, userId: string, pageSize: number) =>
+      [
+        ...queryKeys.nodeChildren.all(nodeId),
+        userId,
+        "overview",
+        pageSize,
+      ] as const,
+    page: (
+      nodeId: string,
+      userId: string,
+      page: number,
+      listing: DirectoryListingOptions = {},
+    ) =>
+      [
+        ...queryKeys.nodeChildren.all(nodeId),
+        userId,
+        "page",
+        page,
+        listing,
+      ] as const,
+    tiles: (nodeId: string, userId: string) =>
+      [...queryKeys.nodeChildren.all(nodeId), userId, "tiles"] as const,
+    folderInfo: (nodeId: string, userId: string) =>
+      [...queryKeys.nodeChildren.all(nodeId), userId, "folderInfo"] as const,
+  },
   notifications: {
     all: () => notificationsRoot,
     list: (filters: { unreadOnly: boolean }) =>
@@ -68,6 +98,8 @@ export const queryKeys = {
     meta: (nodeId: string) => [...trashRoot, "meta", nodeId] as const,
     children: {
       all: (nodeId: string) => [...trashRoot, "children", nodeId] as const,
+      complete: (nodeId: string, depth: number) =>
+        [...trashRoot, "children", nodeId, "complete", depth] as const,
       page: (
         nodeId: string,
         params: { page: number; pageSize: number; depth: number },

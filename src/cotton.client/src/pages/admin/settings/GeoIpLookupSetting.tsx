@@ -136,7 +136,7 @@ export const GeoIpLookupSetting = ({
   }, []);
 
   const reportError = useCallback(
-    (error: unknown) => {
+    <T,>(error: T) => {
       setStatus("error");
       showApiErrorToast(
         error,

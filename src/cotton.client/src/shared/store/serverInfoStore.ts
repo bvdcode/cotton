@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { create } from "zustand";
 import { settingsApi, type PublicServerInfo } from "../api/settingsApi";
 
@@ -34,7 +35,7 @@ export const useServerInfoStore = create<ServerInfoState>((set, get) => ({
         error: null,
       });
     } catch (error) {
-      console.error("Failed to load server info", error);
+      reportClientError("Failed to load server info", error);
       set({ loading: false, error: "Failed to load server info" });
     }
   },

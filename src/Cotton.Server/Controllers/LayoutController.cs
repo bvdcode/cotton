@@ -262,13 +262,46 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType nodeType = NodeType.Default,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 100,
-            [FromQuery] int depth = 0)
+            [FromQuery] int depth = 0,
+            [FromQuery] bool includeStats = false,
+            [FromQuery] DirectoryListingOptions? listing = null)
         {
             Guid userId = User.GetUserId();
-            GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize, depth);
-            PagedResult<NodeContentDto> result = await _mediator.Send(query);
+            GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize, depth, includeStats, listing);
+            PagedResult<NodeContentDto> result = await _mediator.Send(query, HttpContext.RequestAborted);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
             return Ok(result.Payload);
+        }
+
+        [Authorize]
+        [HttpPost("nodes/{nodeId:guid}/sibling-names")]
+        public async Task<IActionResult> LookupSiblingNames(
+            [FromRoute] Guid nodeId,
+            [FromBody] SiblingNameLookupRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            SiblingNameLookupDto result = await _mediator.Send(
+                new LookupSiblingNamesQuery(
+                    User.GetUserId(),
+                    nodeId,
+                    request.Names,
+                    request.IncludeTakenNamesOnConflict),
+                cancellationToken);
+            return Ok(result);
+        }
+
+        [Authorize]
+        [HttpGet("nodes/{nodeId:guid}/stats")]
+        public async Task<IActionResult> GetFolderStats(
+            [FromRoute] Guid nodeId,
+            [FromQuery] bool recursive = false)
+        {
+            FolderStatsDto? stats = await _mediator.Send(
+                new GetFolderStatsQuery(User.GetUserId(), nodeId, recursive),
+                HttpContext.RequestAborted);
+            return stats is null
+                ? CottonResult.NotFound("Folder not found.")
+                : Ok(stats);
         }
 
         [Authorize]

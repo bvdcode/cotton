@@ -38,11 +38,28 @@ namespace Cotton.Server.Extensions
                 return;
             }
 
+            response.OnCompleted(() => DeleteAsync(dbContext, downloadToken));
+        }
+
+        public static void RegisterDeleteAfterUse(
+            this HttpResponse response,
+            CottonDbContext dbContext,
+            Guid tokenId)
+        {
             response.OnCompleted(async () =>
             {
-                dbContext.DownloadTokens.Remove(downloadToken);
-                await dbContext.SaveChangesAsync();
+                DownloadToken? token = await dbContext.DownloadTokens.FirstOrDefaultAsync(x => x.Id == tokenId);
+                if (token is not null)
+                {
+                    await DeleteAsync(dbContext, token);
+                }
             });
+        }
+
+        private static async Task DeleteAsync(CottonDbContext dbContext, DownloadToken token)
+        {
+            dbContext.DownloadTokens.Remove(token);
+            await dbContext.SaveChangesAsync();
         }
     }
 }

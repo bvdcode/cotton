@@ -2,7 +2,7 @@ const RELOAD_TIMESTAMP_KEY = "cottonStaleChunkReloadAtMs";
 const RELOAD_COOLDOWN_MS = 60_000;
 let lastReloadAttemptMs = 0;
 
-export function isStaleChunkError(error: unknown): boolean {
+export function isStaleChunkError<T>(error: T): boolean {
   const message =
     error instanceof Error
       ? error.message
@@ -23,7 +23,7 @@ export function isStaleChunkError(error: unknown): boolean {
   );
 }
 
-export function maybeReloadForStaleChunk(error: unknown): boolean {
+export function maybeReloadForStaleChunk<T>(error: T): boolean {
   if (!isStaleChunkError(error)) {
     return false;
   }

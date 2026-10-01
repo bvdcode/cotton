@@ -24,19 +24,14 @@ const storageMocks = vi.hoisted(() => {
     };
   };
 
-  const localStorage = createMemoryStorage();
   const sessionStorage = createMemoryStorage();
 
-  Object.defineProperty(globalThis, "localStorage", {
-    value: localStorage,
-    configurable: true,
-  });
   Object.defineProperty(globalThis, "sessionStorage", {
     value: sessionStorage,
     configurable: true,
   });
 
-  return { localStorage, sessionStorage };
+  return { sessionStorage };
 });
 
 import { useAuthStore } from "../../shared/store";
@@ -113,7 +108,6 @@ const DoubleRestoreProbe = () => {
 
 describe("AuthProvider OIDC restore", () => {
   beforeEach(() => {
-    storageMocks.localStorage.clear();
     storageMocks.sessionStorage.clear();
     resetAuthStore();
     authApiMocks.restoreSession.mockReset();
@@ -121,7 +115,6 @@ describe("AuthProvider OIDC restore", () => {
   });
 
   afterEach(() => {
-    storageMocks.localStorage.clear();
     storageMocks.sessionStorage.clear();
     resetAuthStore();
   });

@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   getReadableFileUrl: vi.fn(),
   isFileEncrypted: vi.fn(),
   revoke: vi.fn(),
-  t: vi.fn((key: string, params?: Record<string, unknown>) =>
+  t: vi.fn((key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
   ),
 }));

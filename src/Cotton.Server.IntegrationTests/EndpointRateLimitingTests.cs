@@ -33,17 +33,43 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void RemoteAddressPartition_UsesForwardedClientAddress()
+        public void RemoteAddressPartition_UsesConnectingAddressWithoutTrustedProxy()
         {
             DefaultHttpContext context = new();
             context.Connection.RemoteIpAddress = IPAddress.Loopback;
             context.Request.Headers["X-Forwarded-For"] = "203.0.113.42";
 
-            string partition = context.Request
-                .GetTrustedClientIPAddress(trustedProxyIpAddress: null)
-                .ToString();
+            string partition = context.Request.GetRateLimitClientIPAddress(
+                trustedProxyIpAddress: null).ToString();
 
-            Assert.That(partition, Is.EqualTo("203.0.113.42"));
+            Assert.That(partition, Is.EqualTo(IPAddress.Loopback.ToString()));
+        }
+
+        [Test]
+        public void RemoteAddressPartition_UsesForwardedAddressFromTrustedProxy()
+        {
+            DefaultHttpContext context = new();
+            context.Connection.RemoteIpAddress = IPAddress.Loopback;
+            context.Request.Headers["X-Forwarded-For"] = "203.0.113.42";
+
+            IPAddress address = context.Request.GetRateLimitClientIPAddress(IPAddress.Loopback);
+
+            Assert.That(address, Is.EqualTo(IPAddress.Parse("203.0.113.42")));
+        }
+
+        [Test]
+        public void RemoteAddressPartition_UnconfiguredProxyIgnoresAllClientAddressHeaders()
+        {
+            DefaultHttpContext context = new();
+            context.Connection.RemoteIpAddress = IPAddress.Parse("::ffff:198.51.100.25");
+            context.Request.Headers["CF-Connecting-IP"] = "203.0.113.40";
+            context.Request.Headers["X-Real-IP"] = "203.0.113.41";
+            context.Request.Headers["X-Forwarded-For"] = "203.0.113.42";
+
+            IPAddress address = context.Request.GetRateLimitClientIPAddress(
+                trustedProxyIpAddress: null);
+
+            Assert.That(address, Is.EqualTo(IPAddress.Parse("198.51.100.25")));
         }
 
         [Test]
@@ -331,7 +357,7 @@ namespace Cotton.Server.IntegrationTests
         public void PublicShareLookupFailureLimiter_IsPartitionedByForwardedClientAddress()
         {
             using PublicShareLookupFailureLimiter limiter = new(request => request
-                .GetTrustedClientIPAddress(trustedProxyIpAddress: null)
+                .GetRateLimitClientIPAddress(IPAddress.Loopback)
                 .ToString());
             HttpRequest firstClient = CreateRequest("203.0.113.42");
             HttpRequest secondClient = CreateRequest("203.0.113.43");
@@ -358,6 +384,26 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(separateClientLease?.IsAcquired, Is.True);
                 Assert.That(expandedTokenLease, Is.Null);
             });
+        }
+
+        [Test]
+        public void PublicShareLookupFailureLimiter_IgnoresSpoofedAddressWithoutTrustedProxy()
+        {
+            using PublicShareLookupFailureLimiter limiter = new(request => request
+                .GetRateLimitClientIPAddress(trustedProxyIpAddress: null)
+                .ToString());
+            HttpRequest firstHeader = CreateRequest("203.0.113.42");
+            HttpRequest secondHeader = CreateRequest("203.0.113.43");
+            const string compactToken = "short123";
+
+            for (int i = 0; i < 60; i++)
+            {
+                using RateLimitLease? lease = limiter.RecordFailure(firstHeader, compactToken);
+                Assert.That(lease?.IsAcquired, Is.True);
+            }
+
+            using RateLimitLease? rejectedLease = limiter.CheckAvailability(secondHeader, compactToken);
+            Assert.That(rejectedLease?.IsAcquired, Is.False);
         }
 
         private static HttpRequest CreateRequest(string forwardedAddress)

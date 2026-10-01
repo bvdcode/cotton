@@ -219,8 +219,11 @@ describe("TilesView keyboard behavior", () => {
   it("does not expose share action for encrypted file tiles", () => {
     const encryptedTile = makeFileTile("encrypted-file", "vault.bin");
     if (encryptedTile.kind === "file") {
-      (encryptedTile.file as { metadata: Record<string, string> }).metadata = {
-        [ENCRYPTED_FLAG_KEY]: "true",
+      encryptedTile.file = {
+        ...encryptedTile.file,
+        metadata: {
+          [ENCRYPTED_FLAG_KEY]: "true",
+        },
       };
     }
 

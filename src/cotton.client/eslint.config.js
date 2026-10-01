@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
-  globalIgnores(["dist"]),
+  globalIgnores(["dist", ".vs"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -24,10 +24,43 @@ export default defineConfig([
       },
     },
     rules: {
+      "max-lines": [
+        "error",
+        { max: 400, skipBlankLines: true, skipComments: true },
+      ],
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unsafe-type-assertion": "error",
+      "no-console": "error",
+      "no-restricted-globals": [
+        "error",
+        { name: "localStorage", message: "Use application state instead." },
+      ],
       "no-restricted-syntax": [
         "error",
+        {
+          selector: 'Identifier[name="console"]',
+          message: "Use the client diagnostics module instead of console.",
+        },
+        {
+          selector: 'MemberExpression[property.value="console"]',
+          message: "Use the client diagnostics module instead of console.",
+        },
+        {
+          selector: "TSUnknownKeyword",
+          message: "Use a specific type and validate data at its boundary.",
+        },
+        {
+          selector: 'MemberExpression[property.name="localStorage"]',
+          message: "Use application state instead of localStorage.",
+        },
+        {
+          selector: 'MemberExpression[property.value="localStorage"]',
+          message: "Use application state instead of localStorage.",
+        },
+        {
+          selector: "TSAsExpression > TSAsExpression",
+          message: "Nested type assertions are not allowed.",
+        },
         {
           selector:
             'TSTypeReference[typeName.name="Array"] > TSTypeParameterInstantiation > TSTypeLiteral',
@@ -40,13 +73,6 @@ export default defineConfig([
             "Anonymous array item models are not allowed. Define a named model in a dedicated file.",
         },
       ],
-    },
-  },
-  {
-    files: ["**/*.test.{ts,tsx}"],
-    rules: {
-      "@typescript-eslint/no-unsafe-type-assertion": "off",
-      "no-restricted-syntax": "off",
     },
   },
   {

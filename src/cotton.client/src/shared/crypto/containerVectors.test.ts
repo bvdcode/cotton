@@ -37,7 +37,7 @@ describe("Cotton container golden vectors", () => {
   it("decrypts the fixed legacy CTN1 container", async () => {
     const masterKey = await importMasterKey(MASTER_KEY_BYTES);
     const decrypted = await decryptBlobToBlob(
-      new Blob([hexToBytes(GOLDEN_CONTAINER_HEX) as BlobPart]),
+      new Blob([hexToBytes(GOLDEN_CONTAINER_HEX)]),
       masterKey,
       "text/plain",
     );
@@ -51,7 +51,7 @@ describe("Cotton container golden vectors", () => {
   it("decrypts the single-chunk legacy CTN1 fixture", async () => {
     const masterKey = await importMasterKey(MASTER_KEY_BYTES);
     const decrypted = await decryptBlobToBlob(
-      new Blob([hexToBytes(LEGACY_CTN1_SINGLE_CHUNK_HEX) as BlobPart]),
+      new Blob([hexToBytes(LEGACY_CTN1_SINGLE_CHUNK_HEX)]),
       masterKey,
       "text/plain",
     );
@@ -64,7 +64,7 @@ describe("Cotton container golden vectors", () => {
   it("decrypts the CTN2 backend fixture with authenticated terminator", async () => {
     const masterKey = await importMasterKey(MASTER_KEY_BYTES);
     const decrypted = await decryptBlobToBlob(
-      new Blob([hexToBytes(COTTON_CTN2_SINGLE_CHUNK_HEX) as BlobPart]),
+      new Blob([hexToBytes(COTTON_CTN2_SINGLE_CHUNK_HEX)]),
       masterKey,
       "text/plain",
     );
@@ -159,7 +159,7 @@ describe("Cotton container golden vectors", () => {
     mutate(tampered);
 
     await expect(
-      decryptBlobToBlob(new Blob([tampered as BlobPart]), masterKey),
+      decryptBlobToBlob(new Blob([tampered]), masterKey),
     ).rejects.toBeInstanceOf(CorruptedContainerError);
   });
 
@@ -199,12 +199,12 @@ describe("Cotton container golden vectors", () => {
     const masterKey = await importMasterKey(MASTER_KEY_BYTES);
 
     await expect(
-      decryptBlobToBlob(new Blob([build() as BlobPart]), masterKey),
+      decryptBlobToBlob(new Blob([build()]), masterKey),
     ).rejects.toBeInstanceOf(CorruptedContainerError);
   });
 });
 
-async function buildGoldenContainer(): Promise<Uint8Array> {
+async function buildGoldenContainer(): Promise<Uint8Array<ArrayBuffer>> {
   const masterKey = await importMasterKey(MASTER_KEY_BYTES);
   const fileKey = await crypto.subtle.importKey(
     "raw",
@@ -271,7 +271,7 @@ async function buildGoldenContainer(): Promise<Uint8Array> {
   return concatBytes(...parts);
 }
 
-function hexToBytes(hex: string): Uint8Array {
+function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
   const bytes = new Uint8Array(hex.length / 2);
 
   for (let index = 0; index < bytes.length; index += 1) {
@@ -287,11 +287,11 @@ function bytesToHex(bytes: Uint8Array): string {
   );
 }
 
-async function blobToBytes(blob: Blob): Promise<Uint8Array> {
+async function blobToBytes(blob: Blob): Promise<Uint8Array<ArrayBuffer>> {
   return new Uint8Array(await blob.arrayBuffer());
 }
 
-function concatBytes(...parts: Uint8Array[]): Uint8Array {
+function concatBytes(...parts: Uint8Array[]): Uint8Array<ArrayBuffer> {
   const output = new Uint8Array(
     parts.reduce((length, part) => length + part.length, 0),
   );

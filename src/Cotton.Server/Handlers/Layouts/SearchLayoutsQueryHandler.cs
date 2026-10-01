@@ -53,30 +53,7 @@ namespace Cotton.Server.Handlers.Layouts
 
             hitsQuery = LayoutSearchHitMerger.MergeDuplicateHits(hitsQuery);
 
-            int totalCount;
-            List<LayoutSearchHit> hits;
-            await using (IDbContextTransaction? transaction = request.Deep
-                ? await _dbContext.Database.BeginTransactionAsync(cancellationToken)
-                : null)
-            {
-                if (transaction is not null)
-                {
-                    await _dbContext.Database.EnableHnswStrictOrderScanAsync(cancellationToken);
-                }
-
-                totalCount = await hitsQuery.CountAsync(cancellationToken);
-                if (totalCount == 0)
-                {
-                    return CreateEmptySearchResult(totalCount);
-                }
-
-                int skip = checked((request.Page - 1) * request.PageSize);
-                hits = await LoadPagedHitsAsync(hitsQuery, skip, request.PageSize, cancellationToken);
-                if (transaction is not null)
-                {
-                    await transaction.CommitAsync(cancellationToken);
-                }
-            }
+            var (hits, totalCount) = await LoadSearchPageAsync(hitsQuery, request, cancellationToken);
 
             if (hits.Count == 0)
             {
@@ -97,6 +74,34 @@ namespace Cotton.Server.Handlers.Layouts
                 NodePaths = nodePaths,
                 FilePaths = filePaths,
             }, totalCount);
+        }
+
+        private async Task<(List<LayoutSearchHit> Hits, int TotalCount)> LoadSearchPageAsync(
+            IQueryable<LayoutSearchHit> hitsQuery,
+            SearchLayoutsQuery request,
+            CancellationToken cancellationToken)
+        {
+            await using IDbContextTransaction? transaction = request.Deep
+                ? await _dbContext.Database.BeginTransactionAsync(cancellationToken)
+                : null;
+            if (transaction is not null)
+            {
+                await _dbContext.Database.EnableHnswStrictOrderScanAsync(cancellationToken);
+            }
+
+            int totalCount = await hitsQuery.CountAsync(cancellationToken);
+            if (totalCount == 0)
+            {
+                return ([], totalCount);
+            }
+
+            int skip = checked((request.Page - 1) * request.PageSize);
+            List<LayoutSearchHit> hits = await LoadPagedHitsAsync(hitsQuery, skip, request.PageSize, cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+            return (hits, totalCount);
         }
 
         private IQueryable<LayoutSearchHit>? BuildHitsQuery(

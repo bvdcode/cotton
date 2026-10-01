@@ -14,22 +14,21 @@ import ru from "./ru.json";
 import uk from "./uk.json";
 import zh from "./zh.json";
 
-type LocaleObject = Record<string, unknown>;
+type LocaleObject = object;
 
 const PLURAL_SUFFIX_RE = /_(zero|one|two|few|many|other)$/;
 
 const baseKey = (key: string): string => key.replace(PLURAL_SUFFIX_RE, "");
 
-const flatten = (obj: LocaleObject, prefix = ""): Record<string, unknown> => {
-  const out: Record<string, unknown> = {};
+const flatten = (obj: LocaleObject, prefix = ""): Record<string, string> => {
+  const out: Record<string, string> = {};
 
-  for (const key of Object.keys(obj)) {
-    const value = obj[key];
+  for (const [key, value] of Object.entries(obj)) {
     const fullKey = prefix ? `${prefix}.${key}` : key;
 
     if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-      Object.assign(out, flatten(value as LocaleObject, fullKey));
-    } else {
+      Object.assign(out, flatten(value, fullKey));
+    } else if (typeof value === "string") {
       out[fullKey] = value;
     }
   }
@@ -37,16 +36,16 @@ const flatten = (obj: LocaleObject, prefix = ""): Record<string, unknown> => {
   return out;
 };
 
-const flatEn = flatten(en as LocaleObject);
+const flatEn = flatten(en);
 const enKeys = new Set(Object.keys(flatEn));
 const enBaseKeys = new Set([...enKeys].map(baseKey));
 
-const findOrphans = (locale: Record<string, unknown>): string[] =>
+const findOrphans = (locale: Record<string, string>): string[] =>
   Object.keys(locale).filter(
     (key) => !enKeys.has(key) && !enBaseKeys.has(baseKey(key)),
   );
 
-const findMissing = (locale: Record<string, unknown>): string[] =>
+const findMissing = (locale: Record<string, string>): string[] =>
   [...enKeys].filter((key) => !(key in locale));
 
 const requiredGalleryUndoKeys = [
@@ -55,32 +54,34 @@ const requiredGalleryUndoKeys = [
   "files.preview.deleteUndoFailed",
 ] as const;
 
-const getLocaleValue = (locale: LocaleObject, path: string): unknown =>
-  path.split(".").reduce<unknown>((current, segment) => {
-    if (
-      current !== null &&
-      typeof current === "object" &&
-      !Array.isArray(current) &&
-      segment in current
-    ) {
-      return (current as LocaleObject)[segment];
+const getLocaleValue = (locale: LocaleObject, path: string): string | null => {
+  let current: object | string | null = locale;
+  for (const segment of path.split(".")) {
+    if (current === null || typeof current !== "object") {
+      return null;
     }
-
-    return undefined;
-  }, locale);
+    const entry: [string, string | object | null] | undefined =
+      Object.entries(current).find(([key]) => key === segment);
+    if (!entry) {
+      return null;
+    }
+    current = entry[1];
+  }
+  return typeof current === "string" ? current : null;
+};
 
 const nonEnLocales: ReadonlyArray<readonly [string, LocaleObject]> = [
-  ["Czech", cs as LocaleObject],
-  ["German", de as LocaleObject],
-  ["Spanish", es as LocaleObject],
-  ["French", fr as LocaleObject],
-  ["Italian", itLocale as LocaleObject],
-  ["Dutch", nl as LocaleObject],
-  ["Polish", pl as LocaleObject],
-  ["Portuguese", pt as LocaleObject],
-  ["Russian", ru as LocaleObject],
-  ["Ukrainian", uk as LocaleObject],
-  ["Chinese", zh as LocaleObject],
+  ["Czech", cs],
+  ["German", de],
+  ["Spanish", es],
+  ["French", fr],
+  ["Italian", itLocale],
+  ["Dutch", nl],
+  ["Polish", pl],
+  ["Portuguese", pt],
+  ["Russian", ru],
+  ["Ukrainian", uk],
+  ["Chinese", zh],
 ] as const;
 
 describe("locale parity", () => {

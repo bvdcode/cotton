@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { TFunction } from "i18next";
+import { createInstance } from "i18next";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import { useFileMoveController } from "./useFileMoveController";
 
@@ -26,7 +26,9 @@ vi.mock("../../../shared/store/moveClipboardStore", () => ({
   useMoveClipboardStore: vi.fn(() => []),
 }));
 
-const t = ((key: string) => key) as TFunction;
+const translations = createInstance();
+await translations.init({ lng: "en", resources: {} });
+const t = translations.t;
 
 const makeFileTile = (): FileSystemTile => ({
   kind: "file",

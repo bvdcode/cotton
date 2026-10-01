@@ -1,9 +1,8 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
-import type { NodeDto } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
-import { isAxiosError } from "../api/httpClient";
 import { fetchServerSettings } from "../api/queries/serverSettings";
 import { queryClient } from "../api/queries/queryClient";
 import { refreshNodeContent } from "../store/nodesActions";
@@ -12,303 +11,45 @@ import {
   type MoveClipboardItem,
 } from "../store/moveClipboardStore";
 import { useNodesStore } from "../store/nodesStore";
-import {
-  getFolderEncryptionPolicyStateFromParentResolver,
-  isFileEncrypted,
-  useVault,
-} from "../crypto";
-import {
-  decryptExistingFileWithTask,
-  encryptExistingFileWithTask,
-} from "../tasks";
-import { showActionToast } from "../ui/ActionToast";
+import { useVault } from "../crypto";
+import { encryptExistingFileWithTask } from "../tasks";
 import { collectPlainFilesInFoldersForClientEncryption } from "../utils/clientEncryptionFolderScan";
-import type { ExistingFileEncryptionTaskFile } from "../tasks";
 import {
   moveItemWithConflictResolution,
-  type MoveConflictResolver,
   type MoveSingleItemResult,
 } from "../move/moveConflictResolution";
-import { isRecord } from "../utils/typeGuards";
+export {
+  MOVE_DRAG_DATA_TYPE,
+  MOVE_DRAG_DATA_MIME,
+  writeMoveDragPayload,
+  moveDragHasSourceParent,
+  moveDragHasItem,
+  filterMoveItemsForTarget,
+  isMoveDrag,
+  getMoveDragSourceParents,
+  getMoveDragItemIds,
+  readMoveDragPayload,
+} from "./moveDragPayload";
+export type { MoveDragPayload } from "./moveDragPayload";
 
-/**
- * Non-authoritative drag hint type. Used so synchronous drag-over handlers can
- * cheaply detect "this is a move drag" and read which source-parent(s) the drag
- * came from without parsing JSON. The server still revalidates everything.
- */
-export const MOVE_DRAG_DATA_TYPE = "application/x-cotton-move";
+import {
+  extractErrorMessage,
+  getMoveTarget,
+  needsEncryptionAfterMove,
+  needsDecryptionAfterMove,
+} from "./moveState";
+import { normalizeDragId } from "./moveDragPayload";
 
-/**
- * Per-item marker prefix. Encodes each dragged item's id as a fake MIME suffix
- * so drag-over can synchronously reject drops onto the items themselves
- * (e.g. dragging folder F onto itself). `DataTransfer.getData()` is restricted
- * during dragenter/dragover for security; `DataTransfer.types` is always readable.
- */
-const MOVE_DRAG_ITEM_TYPE = "application/x-cotton-move-item";
-
-/**
- * Authoritative drag payload type. The drop handler is the only consumer.
- */
-export const MOVE_DRAG_DATA_MIME = "application/x-cotton-move-items";
-
-export interface MoveDragPayload {
-  items: ReadonlyArray<MoveClipboardItem>;
-}
-
-const isMoveClipboardItem = (value: unknown): value is MoveClipboardItem => {
-  if (!isRecord(value)) return false;
-  if (
-    typeof value.id !== "string" ||
-    (value.kind !== "folder" && value.kind !== "file") ||
-    typeof value.sourceParentId !== "string"
-  ) {
-    return false;
-  }
-
-  if (value.file === undefined) return true;
-  return (
-    isRecord(value.file) &&
-    typeof value.file.name === "string" &&
-    typeof value.file.contentType === "string" &&
-    typeof value.file.sizeBytes === "number" &&
-    isRecord(value.file.metadata) &&
-    Object.values(value.file.metadata).every(
-      (entry) => typeof entry === "string",
-    )
-  );
-};
-
-const isMoveDragPayload = (value: unknown): value is MoveDragPayload =>
-  isRecord(value) &&
-  Array.isArray(value.items) &&
-  value.items.every(isMoveClipboardItem);
-
-/**
- * Normalize an id for drag-marker comparisons. Browsers lowercase the MIME
- * `type` string anyway, so writing the suffix upper-case and reading it back
- * via `DataTransfer.types` would silently miss. We always compare lower-case.
- */
-const normalizeDragId = (id: string): string => id.toLowerCase();
-
-export const writeMoveDragPayload = (
-  dataTransfer: DataTransfer,
-  payload: MoveDragPayload,
-): void => {
-  dataTransfer.effectAllowed = "move";
-
-  // Tag the drag with source-parent IDs so drag-over can synchronously reject
-  // drops onto the source folder without parsing the payload. UI hint only.
-  const sources = new Set(
-    payload.items.map((i) => normalizeDragId(i.sourceParentId)),
-  );
-  for (const source of sources) {
-    dataTransfer.setData(`${MOVE_DRAG_DATA_TYPE}/${source}`, "1");
-  }
-  dataTransfer.setData(MOVE_DRAG_DATA_TYPE, "1");
-
-  // Same trick for per-item IDs so drag-over can reject dropping a folder onto itself.
-  for (const item of payload.items) {
-    dataTransfer.setData(
-      `${MOVE_DRAG_ITEM_TYPE}/${normalizeDragId(item.id)}`,
-      "1",
-    );
-  }
-
-  try {
-    dataTransfer.setData(
-      MOVE_DRAG_DATA_MIME,
-      JSON.stringify({ items: payload.items }),
-    );
-  } catch {
-    // Some browsers refuse non-text data on DataTransfer; the marker types
-    // still let drop handlers detect a move drag, just without payload.
-  }
-};
-
-/**
- * True if the drag's source-parent set contains the given id (case-insensitive).
- * Prefer over `getMoveDragSourceParents().has(...)` from callers — handles the
- * mixed-case GUID gotcha that browser MIME-type lowercasing creates.
- */
-export const moveDragHasSourceParent = (
-  dataTransfer: DataTransfer | null,
-  parentId: string,
-): boolean =>
-  getMoveDragSourceParents(dataTransfer).has(normalizeDragId(parentId));
-
-/**
- * True if the drag includes the given id as one of its items (case-insensitive).
- */
-export const moveDragHasItem = (
-  dataTransfer: DataTransfer | null,
-  itemId: string,
-): boolean => getMoveDragItemIds(dataTransfer).has(normalizeDragId(itemId));
-
-/**
- * Strip items that would be a no-op or invalid for a move into `targetParentId`:
- * items already inside the target, and the target itself. Case-insensitive — see
- * `normalizeDragId` for the GUID-casing rationale.
- */
-export const filterMoveItemsForTarget = (
-  items: ReadonlyArray<MoveClipboardItem>,
-  targetParentId: string,
-): MoveClipboardItem[] => {
-  const target = normalizeDragId(targetParentId);
-  return items.filter(
-    (item) =>
-      normalizeDragId(item.id) !== target &&
-      normalizeDragId(item.sourceParentId) !== target,
-  );
-};
-
-export const isMoveDrag = (dataTransfer: DataTransfer | null): boolean => {
-  if (!dataTransfer) return false;
-  const types = dataTransfer.types;
-  if (!types) return false;
-  for (const type of Array.from(types)) {
-    if (type === MOVE_DRAG_DATA_TYPE) return true;
-    if (type.startsWith(`${MOVE_DRAG_DATA_TYPE}/`)) return true;
-  }
-  return false;
-};
-
-export const getMoveDragSourceParents = (
-  dataTransfer: DataTransfer | null,
-): ReadonlySet<string> => {
-  const result = new Set<string>();
-  if (!dataTransfer) return result;
-  for (const type of Array.from(dataTransfer.types ?? [])) {
-    if (type.startsWith(`${MOVE_DRAG_DATA_TYPE}/`)) {
-      result.add(type.slice(MOVE_DRAG_DATA_TYPE.length + 1));
-    }
-  }
-  return result;
-};
-
-/**
- * Returns the set of dragged item IDs as recorded by writeMoveDragPayload.
- * Safe to call during dragenter/dragover (does not read JSON payload).
- */
-export const getMoveDragItemIds = (
-  dataTransfer: DataTransfer | null,
-): ReadonlySet<string> => {
-  const result = new Set<string>();
-  if (!dataTransfer) return result;
-  for (const type of Array.from(dataTransfer.types ?? [])) {
-    if (type.startsWith(`${MOVE_DRAG_ITEM_TYPE}/`)) {
-      result.add(type.slice(MOVE_DRAG_ITEM_TYPE.length + 1));
-    }
-  }
-  return result;
-};
-
-export const readMoveDragPayload = (
-  dataTransfer: DataTransfer | null,
-): MoveDragPayload | null => {
-  if (!dataTransfer) return null;
-  const raw = dataTransfer.getData(MOVE_DRAG_DATA_MIME);
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return isMoveDragPayload(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-const extractErrorMessage = (error: unknown): string | null => {
-  if (!isAxiosError(error)) return null;
-  const data = error.response?.data;
-  if (isRecord(data)) {
-    if (typeof data.message === "string" && data.message.length > 0) {
-      return data.message;
-    }
-  }
-  return null;
-};
-
-const findCachedNode = (nodeId: string): NodeDto | null => {
-  const state = useNodesStore.getState();
-
-  if (state.currentNode?.id === nodeId) {
-    return state.currentNode;
-  }
-
-  const ancestor = state.ancestors.find((node) => node.id === nodeId);
-  if (ancestor) {
-    return ancestor;
-  }
-
-  for (const content of Object.values(state.contentByNodeId)) {
-    const node = content?.nodes.find((item) => item.id === nodeId);
-    if (node) {
-      return node;
-    }
-  }
-
-  return null;
-};
-
-const getCachedFolderEncryptionPolicyEnabled = (nodeId: string): boolean => {
-  const node = findCachedNode(nodeId);
-  if (!node) return false;
-
-  return getFolderEncryptionPolicyStateFromParentResolver(node, findCachedNode)
-    .effectiveEnabled;
-};
-
-const needsEncryptionAfterMove = (item: MoveClipboardItem): boolean =>
-  item.kind === "file" &&
-  item.file !== undefined &&
-  !isFileEncrypted(item.file.metadata);
-
-const needsDecryptionAfterMove = (item: MoveClipboardItem): boolean =>
-  item.kind === "file" &&
-  item.file !== undefined &&
-  isFileEncrypted(item.file.metadata);
-
-interface MoveOutcome {
-  succeeded: ReadonlyArray<MoveClipboardItem>;
-  failed: ReadonlyArray<MoveClipboardItem>;
-  notMoved: ReadonlyArray<MoveClipboardItem>;
-  lastErrorMessage: string | null;
-}
-
-interface MoveExecutionResult extends MoveOutcome {
-  movedFilesToEncrypt: ReadonlyArray<MoveClipboardItem>;
-  movedFilesToOfferDecrypt: ReadonlyArray<MoveClipboardItem>;
-  sourceParents: ReadonlySet<string>;
-}
-
-interface UseMoveOperationsOptions {
-  confirmConflict: MoveConflictResolver;
-}
-
-interface EncryptionCandidate {
-  file: ExistingFileEncryptionTaskFile;
-  targetNodeId: string;
-}
-
-interface EncryptionCandidateScanResult {
-  candidates: EncryptionCandidate[];
-  incomplete: boolean;
-}
-
-type MoveTranslation = ReturnType<
-  typeof useTranslation<["files", "common", "tasks"]>
->["t"];
-
-interface UseMoveOperationsResult {
-  cutItems: (items: ReadonlyArray<MoveClipboardItem>) => void;
-  clearClipboard: () => void;
-  /** Paste current clipboard contents into the target parent. */
-  pasteInto: (targetParentId: string) => Promise<void>;
-  /** Move arbitrary items (e.g. from drag-and-drop) into the target parent. */
-  moveItems: (
-    items: ReadonlyArray<MoveClipboardItem>,
-    targetParentId: string,
-  ) => Promise<void>;
-}
+import type {
+  MoveOutcome,
+  MoveExecutionResult,
+  UseMoveOperationsOptions,
+  EncryptionCandidate,
+  EncryptionCandidateScanResult,
+  MoveTranslation,
+  UseMoveOperationsResult,
+} from "./moveTypes";
+export type { MoveTranslation } from "./moveTypes";
 
 const getMoveCandidates = (
   items: ReadonlyArray<MoveClipboardItem>,
@@ -378,7 +119,7 @@ const moveCandidatesToTarget = async (options: {
         notMoved.push(item);
         lastErrorMessage =
           extractErrorMessage(outcome.error) ?? lastErrorMessage;
-        console.error(
+        reportClientError(
           "Failed to move " + item.kind + " " + item.id,
           outcome.error,
         );
@@ -542,102 +283,15 @@ const collectMovedFolderEncryptionCandidates = async (
       incomplete: scan.truncated,
     };
   } catch (error) {
-    console.error("Failed to scan moved folders for plain files", error);
+    reportClientError("Failed to scan moved folders for plain files", error);
     return { candidates: [], incomplete: true };
   }
 };
 
-const offerDecryptForMovedFiles = (options: {
-  files: ReadonlyArray<MoveClipboardItem>;
-  targetNodeName: string;
-  targetParentId: string;
-  t: MoveTranslation;
-}): void => {
-  if (options.files.length === 0) return;
-
-  showActionToast({
-    toastId:
-      "files-cse-decrypt-moved-" + options.targetParentId + "-" + Date.now(),
-    message: options.t("clientEncryption.movedEncrypted.toast", {
-      ns: "files",
-      count: options.files.length,
-    }),
-    action: options.t("clientEncryption.movedEncrypted.action", {
-      ns: "files",
-    }),
-    onAction: () => {
-      void decryptMovedEncryptedFiles({
-        files: options.files,
-        targetParentId: options.targetParentId,
-        targetNodeName: options.targetNodeName,
-        t: options.t,
-      });
-    },
-  });
-};
-
-const showMoveOutcomeToasts = (options: {
-  encryptionFailedCount: number;
-  encryptionScanIncomplete: boolean;
-  failed: ReadonlyArray<MoveClipboardItem>;
-  lastErrorMessage: string | null;
-  succeeded: ReadonlyArray<MoveClipboardItem>;
-  targetParentId: string;
-  t: MoveTranslation;
-}): void => {
-  if (options.succeeded.length > 0) {
-    toast.success(
-      options.t("move.toasts.moved", {
-        ns: "files",
-        count: options.succeeded.length,
-      }),
-      {
-        toastId: "move-success-" + options.targetParentId + "-" + Date.now(),
-      },
-    );
-  }
-
-  if (options.failed.length > 0) {
-    toast.error(
-      options.lastErrorMessage ??
-        options.t("move.toasts.failed", {
-          ns: "files",
-          count: options.failed.length,
-        }),
-      {
-        toastId: "move-error-" + options.targetParentId + "-" + Date.now(),
-      },
-    );
-  }
-
-  if (options.encryptionFailedCount > 0) {
-    toast.error(
-      options.t("clientEncryption.toasts.encryptExistingFailed", {
-        ns: "files",
-        count: options.encryptionFailedCount,
-      }),
-      {
-        toastId:
-          "move-encrypt-error-" + options.targetParentId + "-" + Date.now(),
-      },
-    );
-  }
-
-  if (options.encryptionScanIncomplete) {
-    toast.error(
-      options.t("clientEncryption.toasts.encryptExistingScanIncomplete", {
-        ns: "files",
-      }),
-      {
-        toastId:
-          "move-encrypt-scan-incomplete-" +
-          options.targetParentId +
-          "-" +
-          Date.now(),
-      },
-    );
-  }
-};
+import {
+  offerDecryptForMovedFiles,
+  showMoveOutcomeToasts,
+} from "./moveNotifications";
 
 export const useMoveOperations = ({
   confirmConflict,
@@ -672,9 +326,20 @@ export const useMoveOperations = ({
         };
       }
 
-      const targetNode = findCachedNode(targetParentId);
-      const targetEncryptsNewFiles =
-        getCachedFolderEncryptionPolicyEnabled(targetParentId);
+      let target: Awaited<ReturnType<typeof getMoveTarget>>;
+      try {
+        target = await getMoveTarget(targetParentId);
+      } catch (error) {
+        reportClientError("Failed to load move target", error);
+        toast.error(t("move.toasts.failed", { ns: "files", count: candidates.length }));
+        return {
+          succeeded: [],
+          failed: candidates,
+          notMoved: candidates,
+          lastErrorMessage: null,
+        };
+      }
+      const targetEncryptsNewFiles = target.encryptsNewFiles;
       const hasMoveEncryptionFollowups =
         targetEncryptsNewFiles &&
         candidates.some(
@@ -706,13 +371,13 @@ export const useMoveOperations = ({
           ...nestedEncryptionCandidateScan.candidates,
         ],
         settings: encryptionServerSettings,
-        targetNodeName: targetNode?.name ?? "",
+        targetNodeName: target.node.name,
         targetParentId,
         t,
       });
       offerDecryptForMovedFiles({
         files: result.movedFilesToOfferDecrypt,
-        targetNodeName: targetNode?.name ?? "",
+        targetNodeName: target.node.name,
         targetParentId,
         t,
       });
@@ -770,73 +435,3 @@ export const useMoveOperations = ({
     moveItems: moveItemsVoid,
   };
 };
-
-async function decryptMovedEncryptedFiles(options: {
-  files: ReadonlyArray<MoveClipboardItem>;
-  targetParentId: string;
-  targetNodeName: string;
-  t: ReturnType<typeof useTranslation<["files", "common", "tasks"]>>["t"];
-}): Promise<void> {
-  const { files, targetParentId, targetNodeName, t } = options;
-
-  if (!useVault.getState().isUnlocked) {
-    toast.error(t("clientEncryption.toasts.unlockRequired", { ns: "files" }));
-    return;
-  }
-
-  let settings: Awaited<ReturnType<typeof fetchServerSettings>>;
-  try {
-    settings = await fetchServerSettings(queryClient);
-  } catch {
-    toast.error(t("errors.serverSettingsNotLoaded", { ns: "tasks" }));
-    return;
-  }
-
-  let decryptedCount = 0;
-  let failedCount = 0;
-
-  for (const item of files) {
-    if (!item.file) continue;
-
-    try {
-      await decryptExistingFileWithTask({
-        file: {
-          id: item.id,
-          name: item.file.name,
-          contentType: item.file.contentType,
-          sizeBytes: item.file.sizeBytes,
-          metadata: item.file.metadata,
-        },
-        targetNodeId: targetParentId,
-        scopeLabel: targetNodeName,
-        server: {
-          maxChunkSizeBytes: settings.maxChunkSizeBytes,
-          supportedHashAlgorithm: settings.supportedHashAlgorithm,
-        },
-      });
-      decryptedCount += 1;
-    } catch {
-      failedCount += 1;
-    }
-  }
-
-  void refreshNodeContent(targetParentId);
-
-  if (decryptedCount > 0) {
-    toast.success(
-      t("clientEncryption.toasts.decryptExistingComplete", {
-        ns: "files",
-        count: decryptedCount,
-      }),
-    );
-  }
-
-  if (failedCount > 0) {
-    toast.error(
-      t("clientEncryption.toasts.decryptExistingFailed", {
-        ns: "files",
-        count: failedCount,
-      }),
-    );
-  }
-}

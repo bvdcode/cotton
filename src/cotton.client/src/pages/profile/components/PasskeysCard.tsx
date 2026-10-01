@@ -40,7 +40,7 @@ const passkeyCancellationErrorNames = new Set([
   "NotAllowedError",
 ]);
 
-const isPasskeyCreationCancelled = (error: unknown): boolean => {
+const isPasskeyCreationCancelled = <T,>(error: T): boolean => {
   return (
     typeof DOMException !== "undefined" &&
     error instanceof DOMException &&

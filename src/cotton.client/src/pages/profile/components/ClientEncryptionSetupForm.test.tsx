@@ -1,3 +1,4 @@
+import { generateMasterKey } from "@shared/crypto/keys";
 import {
   cleanup,
   fireEvent,
@@ -21,9 +22,9 @@ const cryptoMocks = vi.hoisted(() => ({
 vi.mock("../../../shared/crypto", () => ({
   persistEnvelope: cryptoMocks.persistEnvelope,
   setupEnvelope: cryptoMocks.setupEnvelope,
-  useVault: (
-    selector: (state: { unlock: typeof cryptoMocks.unlock }) => unknown,
-  ) => selector({ unlock: cryptoMocks.unlock }),
+  useVault: <T,>(
+    selector: (state: { unlock: typeof cryptoMocks.unlock }) => T,
+  ): T => selector({ unlock: cryptoMocks.unlock }),
 }));
 
 const recoveryPhrase = Array.from(
@@ -44,7 +45,7 @@ describe("ClientEncryptionSetupForm", () => {
 
   it("persists the generated envelope and unlocks the vault on finish", async () => {
     const envelope = new Uint8Array([1, 2, 3]);
-    const masterKey = {} as CryptoKey;
+    const masterKey = await generateMasterKey();
     const preferences = { cryptoEnvelope: "opaque-envelope" };
     const onSuccess = vi.fn();
 

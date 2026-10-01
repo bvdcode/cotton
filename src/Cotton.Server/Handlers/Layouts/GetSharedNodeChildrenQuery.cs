@@ -27,8 +27,7 @@ namespace Cotton.Server.Handlers.Layouts
             GetSharedNodeChildrenQuery request,
             CancellationToken ct)
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.Page);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.PageSize);
+            int skip = ListingRequestLimits.GetSkip(request.Page, request.PageSize);
 
             SharedNodeAccess? access = await _mediator.Send(
                 new ResolveSharedNodeAccessQuery(request.Token),
@@ -48,8 +47,7 @@ namespace Cotton.Server.Handlers.Layouts
             }
             Node targetNode = ancestry[0];
             NodeDirectory directory = new(_dbContext, targetNode);
-            int skip = (request.Page - 1) * request.PageSize;
-            var (nodes, files, totalCount) = await DirectoryListing.ReadPageAsync<SharedNodeFileDto>(
+            var (nodes, files, nodeCount, fileCount) = await DirectoryListing.ReadPageAsync<SharedNodeFileDto>(
                 directory.Nodes.AsNoTracking(), directory.Files.AsNoTracking(), skip, request.PageSize, ct);
 
             SharedNodeContentDto content = new()
@@ -63,7 +61,7 @@ namespace Cotton.Server.Handlers.Layouts
             return new GetSharedNodeChildrenResult(
                 GetSharedNodeChildrenStatus.Success,
                 content,
-                totalCount);
+                nodeCount + fileCount);
         }
     }
 }

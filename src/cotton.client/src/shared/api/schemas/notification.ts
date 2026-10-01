@@ -13,7 +13,7 @@ export const notificationSchema = z.object({
 
 export type NotificationDto = z.infer<typeof notificationSchema>;
 
-export const isNotificationDto = (value: unknown): value is NotificationDto =>
+export const isNotificationDto = <T>(value: T): value is T & NotificationDto =>
   notificationSchema.safeParse(value).success;
 
 export const notificationListResponseSchema = z

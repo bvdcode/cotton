@@ -1,5 +1,6 @@
 import type { NodeDto } from "../api/layoutsApi";
-import { nodesApi, type NodeFileManifestDto } from "../api/nodesApi";
+import type { NodeFileManifestDto } from "../api/nodesApi";
+import { fetchNodeChildren } from "../api/nodeChildren";
 import { isFileEncrypted } from "../crypto/metadataFlags";
 
 export const CLIENT_ENCRYPTION_FOLDER_SCAN_MAX_FILES = 500;
@@ -141,7 +142,7 @@ async function scanNextFolder(
   let seenChildren = 0;
 
   while (state.files.length < limits.maxFiles) {
-    const response = await nodesApi.getChildren(nodeId, {
+    const response = await fetchNodeChildren(nodeId, {
       page,
       pageSize: CLIENT_ENCRYPTION_FOLDER_SCAN_PAGE_SIZE,
     });

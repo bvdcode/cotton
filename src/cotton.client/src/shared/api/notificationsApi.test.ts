@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@shared/ui/notifications", () => ({
   toast: { error: vi.fn() },
@@ -28,10 +28,6 @@ const makeNotification = (id: string) => ({
   title: `Notification ${id}`,
   content: null,
   readAt: null,
-});
-
-beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
 afterEach(() => {

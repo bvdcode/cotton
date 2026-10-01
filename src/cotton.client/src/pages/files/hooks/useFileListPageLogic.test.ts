@@ -3,13 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import type { FileListSource } from "@shared/types/fileListSource";
 
+type InteractionOptions = Parameters<
+  typeof import("@shared/hooks/useFileInteractionHandlers").useFileInteractionHandlers
+>[0];
+
 const interactionMock = { focusedFileId: "file-2" };
 const useFileInteractionHandlersMock = vi.fn<
-  (args: unknown) => typeof interactionMock
+  (args: InteractionOptions) => typeof interactionMock
 >(() => interactionMock);
 
 vi.mock("@shared/hooks/useFileInteractionHandlers", () => ({
-  useFileInteractionHandlers: (args: unknown) =>
+  useFileInteractionHandlers: (args: InteractionOptions) =>
     useFileInteractionHandlersMock(args),
 }));
 

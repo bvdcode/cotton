@@ -50,12 +50,14 @@ If the original parent no longer exists, the caller must choose or accept an exp
 
 Multi-item archive download is a two-stage operation:
 
-1. An authenticated request resolves and validates the selected subtree, computes deterministic archive entries and length, and creates a short-lived ticket.
-2. The ticket URL streams the stored ZIP representation without rebuilding authorization decisions mid-response.
+1. A link request validates the selected items and creates a short-lived ticket containing their IDs and owner. Public folder selections also pass the shared-folder access and entry-count checks.
+2. The ticket download rechecks public share access, reads the selected subtree in batches of 256 from one repeatable-read database snapshot, verifies the signed file graphs, and writes entry metadata to a temporary plan while calculating the exact ZIP length. The transaction ends when the plan is complete, before file chunks are streamed using that fixed plan.
 
-Archive tickets are high-entropy, expire automatically, and are held in process memory. They do not survive a server restart. The writer streams file chunks and emits directory entries without buffering the complete archive.
+Archive tickets are high-entropy, expire automatically, and are held in process memory. They do not survive a server restart. Tickets contain no expanded file or chunk lists. Temporary files hold the plan and ZIP central directory, and are removed when the download completes or fails. File contents stream directly from storage to the response. The archive concurrency limit covers preparation and streaming.
 
 Entry paths are normalized and uniquified so repeated names cannot produce ambiguous ZIP entries. The response declares its exact content length and disables transformation by intermediaries.
+
+Concurrent uploads, renames, moves, and deletions do not change the prepared archive's paths or content references. If referenced chunk data becomes unavailable during streaming, the response fails instead of silently omitting entries or changing its declared length.
 
 ## Logical quota
 
@@ -80,7 +82,7 @@ WebDAV exposes the same quota and returns its protocol-specific insufficient-sto
 ## Failure and security boundaries
 
 - A token lookup never bypasses owner, node-state, or integrity validation.
-- Archive planning fails before issuing a ticket if selected content cannot be resolved safely.
+- Archive planning fails before sending ZIP headers or file bytes if selected content cannot be resolved safely.
 - Restoring or copying cannot bypass quota by targeting a different folder.
 - Quota cache entries are an optimization; a cold aggregate from the database is authoritative.
 - Expired token rows may remain until retention cleanup, but they grant no access after expiration.

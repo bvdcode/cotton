@@ -1,4 +1,5 @@
 import { getValidated, httpClient, parseValidated } from "./httpClient";
+import type { JsonValue } from "../types/json";
 import {
   notificationListResponseSchema,
   unreadCountResponseSchema,
@@ -21,7 +22,7 @@ export const notificationsApi = {
     // Gridify: when value is omitted for '=' it matches null/default values.
     // We want unread => readAt is null.
     const filter = unreadOnly ? "readAt=" : undefined;
-    const response = await httpClient.get<unknown>("/notifications", {
+    const response = await httpClient.get<JsonValue>("/notifications", {
       params: {
         page,
         pageSize,

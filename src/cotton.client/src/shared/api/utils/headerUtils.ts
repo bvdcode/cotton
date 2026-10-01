@@ -1,9 +1,11 @@
-import { isRecord } from "../../utils/typeGuards";
+import type { AxiosResponseHeaders, RawAxiosResponseHeaders } from "axios";
 
 type HeaderPrimitive = string | number | boolean | string[] | null | undefined;
 
-const tryReadHeader = (headers: unknown, name: string): HeaderPrimitive => {
-  if (!isRecord(headers)) return undefined;
+const tryReadHeader = (
+  headers: AxiosResponseHeaders | RawAxiosResponseHeaders,
+  name: string,
+): HeaderPrimitive => {
   const direct = headers[name];
   if (
     typeof direct === "string" ||
@@ -30,7 +32,7 @@ const tryReadHeader = (headers: unknown, name: string): HeaderPrimitive => {
 };
 
 export const readRequiredIntHeader = (
-  headers: unknown,
+  headers: AxiosResponseHeaders | RawAxiosResponseHeaders,
   headerName: string,
 ): number => {
   const value = tryReadHeader(headers, headerName);

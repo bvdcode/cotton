@@ -10,7 +10,7 @@ export type ShareLinkActionOutcome =
   | { kind: "aborted" }
   | { kind: "error"; error: "copyFailed" };
 
-function isAbortError(error: unknown): boolean {
+function isAbortError<T>(error: T): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
 

@@ -14,41 +14,17 @@ vi.mock("../utils/mediaSessionCoordinator", () => ({
   mediaSessionCoordinator: coordinatorMock,
 }));
 
-type FakeMediaElement = HTMLMediaElement & {
-  emit: (type: string) => void;
-  paused: boolean;
-  readyState: number;
-  networkState: number;
-};
-
-const createFakeMediaElement = (): FakeMediaElement => {
-  const listeners = new Map<string, Set<EventListenerOrEventListenerObject>>();
-
-  return {
-    paused: false,
-    readyState: 4,
-    networkState: 1,
-    duration: 120,
-    currentTime: 0,
-    playbackRate: 1,
-    addEventListener: vi.fn((type, listener) => {
-      const group = listeners.get(type) ?? new Set();
-      group.add(listener);
-      listeners.set(type, group);
-    }),
-    removeEventListener: vi.fn((type, listener) => {
-      listeners.get(type)?.delete(listener);
-    }),
-    emit: (type: string) => {
-      for (const listener of listeners.get(type) ?? []) {
-        if (typeof listener === "function") {
-          listener(new Event(type));
-        } else {
-          listener.handleEvent(new Event(type));
-        }
-      }
-    },
-  } as unknown as FakeMediaElement;
+const createFakeMediaElement = () => {
+  const element = document.createElement("audio");
+  Object.defineProperties(element, {
+    paused: { value: false, writable: true },
+    readyState: { value: 4, writable: true },
+    networkState: { value: 1, writable: true },
+    duration: { value: 120 },
+  });
+  return Object.assign(element, {
+    emit: (type: string) => element.dispatchEvent(new Event(type)),
+  });
 };
 
 describe("useMediaSessionSource", () => {

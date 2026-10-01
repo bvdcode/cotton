@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { nodesApi } from "../api/nodesApi";
+import { fetchNodeChildren } from "../api/nodeChildren";
 import type { AudioPlaylistItem } from "../types/audio";
 import { getAudioPlaylistMetadata } from "../utils/mediaMetadata";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
@@ -35,7 +36,7 @@ interface AudioPlayerState {
 }
 
 const SCAN_PAGE_SIZE = 500;
-const MAX_SCAN_DEPTH = 256;
+const MAX_SCAN_DEPTH = 32;
 const MAX_FOLDERS_TO_SCAN = 2500;
 const MAX_AUDIO_FILES = 25000;
 
@@ -237,7 +238,7 @@ const buildRecursiveAudioPlaylist = async (
     let hasNextLevelNodes = false;
 
     while (true) {
-      const response = await nodesApi.getChildren(rootNodeId, {
+      const response = await fetchNodeChildren(rootNodeId, {
         page,
         pageSize: SCAN_PAGE_SIZE,
         depth,

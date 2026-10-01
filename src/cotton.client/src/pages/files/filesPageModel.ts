@@ -1,6 +1,7 @@
 import { readEnvelopeFromPreferences } from "../../shared/crypto";
 import type { FileSystemTile } from "../../shared/types/FileListViewTypes";
 import { downloadArchive } from "../../shared/utils/fileHandlers";
+import { getFileNameKey } from "../../shared/utils/fileNameUtils";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
 
@@ -23,15 +24,12 @@ export type FolderEncryptionPromptModel = {
 
 export type ArchiveDownloadRequest = Parameters<typeof downloadArchive>[0];
 
-const normalizeSiblingName = (name: string): string =>
-  name.trim().toLocaleLowerCase();
-
 export const buildUniqueSiblingName = (
   baseName: string,
   siblingNames: ReadonlyArray<string>,
 ): string => {
-  const normalizedNames = new Set(siblingNames.map(normalizeSiblingName));
-  if (!normalizedNames.has(normalizeSiblingName(baseName))) {
+  const normalizedNames = new Set(siblingNames.map(getFileNameKey));
+  if (!normalizedNames.has(getFileNameKey(baseName))) {
     return baseName;
   }
 
@@ -44,7 +42,7 @@ export const buildUniqueSiblingName = (
 
   for (let index = 1; index < 1000; index += 1) {
     const candidate = `${nameWithoutExtension} ${index}${extension}`;
-    if (!normalizedNames.has(normalizeSiblingName(candidate))) {
+    if (!normalizedNames.has(getFileNameKey(candidate))) {
       return candidate;
     }
   }

@@ -2402,6 +2402,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Informações",
+      "title": "{{name}}",
+      "created": "Criada: {{date}}",
+      "modified": "Modificada: {{date}}",
+      "calculating": "A calcular o tamanho da pasta…",
+      "loadFailed": "Não foi possível calcular o tamanho da pasta.",
+      "folders": "Pastas: {{count}}",
+      "files": "Ficheiros: {{count}}",
+      "size": "Tamanho total: {{size}}"
+    },
     "title": "Arquivos",
     "errors": {
       "resolveRootFailed": "Falha ao resolver a pasta raiz",
@@ -3317,7 +3328,7 @@
     "securityDiagnostics": {
       "trustedProxy": {
         "field": "Proxy confiável",
-        "threatVector": "Um atacante que consiga aceder diretamente ao Cotton, ou através de um proxy que não limpe cabeçalhos, pode alterar o endereço aparente e contornar limites por IP.",
+        "threatVector": "Um cliente pode falsificar o IP registado nas sessões e notificações. Atrás de um proxy não configurado, todos os clientes partilham o mesmo limite de pedidos.",
         "fix": "Nas definições gerais, escolha Sem proxy para uma instalação direta, ou use Automático ou introduza o endereço do proxy ligado diretamente; depois verifique e guarde. O proxy deve substituir os cabeçalhos encaminhados pelo cliente.",
         "passed": "O modo de confiança do endereço do cliente está configurado explicitamente"
       },

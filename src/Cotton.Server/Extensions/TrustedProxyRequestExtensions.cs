@@ -31,6 +31,35 @@ namespace Cotton.Server.Extensions
                 settings.TrustedProxyPrefixLength);
         }
 
+        public static IPAddress GetRateLimitClientIPAddress(this HttpRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            SettingsProvider settingsProvider = request.HttpContext.RequestServices
+                .GetRequiredService<SettingsProvider>();
+            ServerSettingsSnapshot settings = settingsProvider.GetServerSettings();
+            return request.GetRateLimitClientIPAddress(
+                settings.TrustedProxyIpAddress,
+                settings.TrustedProxyPrefixLength);
+        }
+
+        internal static IPAddress GetRateLimitClientIPAddress(
+            this HttpRequest request,
+            IPAddress? trustedProxyIpAddress,
+            byte? trustedProxyPrefixLength = null)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            if (trustedProxyIpAddress is null)
+            {
+                return request.GetTrustedClientIPAddress(DirectConnectionIpAddress);
+            }
+
+            return request.GetTrustedClientIPAddress(
+                trustedProxyIpAddress,
+                trustedProxyPrefixLength);
+        }
+
         internal static IPAddress GetTrustedClientIPAddress(
             this HttpRequest request,
             IPAddress? trustedProxyIpAddress,

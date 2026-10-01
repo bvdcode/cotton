@@ -134,7 +134,24 @@ describe("admin query hooks", () => {
         totalChunks: 0,
         totalSizeBytes: 0,
         buckets: [],
-        storage: {} as never,
+        storage: {
+          storageType: "Local",
+          totalUniqueChunkCount: 0,
+          totalUniqueChunkPlainSizeBytes: 0,
+          totalUniqueChunkStoredSizeBytes: 0,
+          referencedUniqueChunkCount: 0,
+          referencedUniqueChunkPlainSizeBytes: 0,
+          referencedUniqueChunkStoredSizeBytes: 0,
+          referencedLogicalChunkCount: 0,
+          referencedLogicalPlainSizeBytes: 0,
+          deduplicatedUniqueChunkCount: 0,
+          dedupSavedBytes: 0,
+          compressionSavedBytes: 0,
+          pendingGcChunkCount: 0,
+          pendingGcStoredSizeBytes: 0,
+          overdueGcChunkCount: 0,
+          overdueGcStoredSizeBytes: 0,
+        },
       });
     const queryClient = createQueryClient();
 

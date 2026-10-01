@@ -22,5 +22,10 @@ namespace Cotton.Nodes
         /// Gets or sets the child files returned by the request.
         /// </summary>
         public List<NodeFileManifestDto> Files { get; set; } = [];
+
+        /// <summary>
+        /// Gets the totals for direct children when requested with includeStats.
+        /// </summary>
+        public FolderStatsDto? Stats { get; set; }
     }
 }

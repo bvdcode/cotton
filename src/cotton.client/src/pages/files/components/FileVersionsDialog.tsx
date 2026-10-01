@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import React from "react";
 import {
   Box,
@@ -103,7 +104,7 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
         onRestored();
         await refetch();
       } catch (restoreError) {
-        console.error("Failed to restore file version:", restoreError);
+        reportClientError("Failed to restore file version:", restoreError);
         setActionError({
           fileId,
           message: t("fileVersions.restoreFailed", { ns: "files" }),
@@ -137,7 +138,7 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
         await deleteFileVersion({ fileId, versionId: version.id });
         await refetch();
       } catch (deleteError) {
-        console.error("Failed to delete file version:", deleteError);
+        reportClientError("Failed to delete file version:", deleteError);
         setActionError({
           fileId,
           message: t("fileVersions.deleteFailed", { ns: "files" }),
@@ -160,7 +161,7 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
           : await filesApi.getVersionDownloadLink(fileId, version.id);
         openDownloadLink(link, version.name);
       } catch (downloadError) {
-        console.error("Failed to download file version:", downloadError);
+        reportClientError("Failed to download file version:", downloadError);
         setActionError({
           fileId,
           message: t("fileVersions.downloadFailed", { ns: "files" }),

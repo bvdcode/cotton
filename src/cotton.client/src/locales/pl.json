@@ -2403,6 +2403,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Informacje",
+      "title": "{{name}}",
+      "created": "Utworzono: {{date}}",
+      "modified": "Zmieniono: {{date}}",
+      "calculating": "Obliczanie rozmiaru folderu…",
+      "loadFailed": "Nie udało się obliczyć rozmiaru folderu.",
+      "folders": "Foldery: {{count}}",
+      "files": "Pliki: {{count}}",
+      "size": "Łączny rozmiar: {{size}}"
+    },
     "title": "Pliki",
     "errors": {
       "resolveRootFailed": "Nie udało się ustalić folderu głównego",
@@ -3358,7 +3369,7 @@
     "securityDiagnostics": {
       "trustedProxy": {
         "field": "Zaufany serwer proxy",
-        "threatVector": "Atakujący, który może dotrzeć bezpośrednio do Cotton lub przez proxy bez czyszczenia nagłówków, może zmieniać widoczny adres klienta i omijać limity IP.",
+        "threatVector": "Klient może sfałszować adres IP zapisany w sesjach i powiadomieniach. Za nieskonfigurowanym proxy wszyscy klienci mają wspólny limit żądań.",
         "fix": "W ustawieniach ogólnych wybierz Bez proxy dla wdrożenia bezpośredniego albo użyj opcji Automatycznie lub wpisz adres bezpośredniego proxy, następnie sprawdź i zapisz. Proxy musi nadpisywać nagłówki przekazywane przez klienta.",
         "passed": "Tryb zaufania adresu klienta jest jawnie skonfigurowany"
       },

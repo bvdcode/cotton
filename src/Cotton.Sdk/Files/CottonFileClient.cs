@@ -210,8 +210,7 @@ namespace Cotton.Sdk.Files
 
             string path = $"{Routes.V1.Files}/{nodeFileId}/content?chunkNumber={chunkNumber}";
             IReadOnlyDictionary<string, string>? headers = CreateIfMatchHeader(expectedETag);
-            int chunkCount = 0;
-            string? eTag = null;
+            CottonContentChunkDownloadResult? result = null;
             await _transport.DownloadAsync(
                 path,
                 destination,
@@ -222,48 +221,54 @@ namespace Cotton.Sdk.Files
                 expectedStatusCode: HttpStatusCode.OK,
                 validateResponse: response =>
                 {
-                    if (!response.Headers.TryGetValues("X-Cotton-Chunk-Count", out IEnumerable<string>? values)
-                        || !int.TryParse(values.SingleOrDefault(), out chunkCount)
-                        || chunkCount <= chunkNumber)
-                    {
-                        throw new CottonApiException(
-                            response.StatusCode,
-                            null,
-                            "Cotton API chunk download returned an invalid chunk count.");
-                    }
-
-                    if (response.Content.Headers.ContentLength is not long contentLength || contentLength < 0)
-                    {
-                        throw new CottonApiException(
-                            response.StatusCode,
-                            null,
-                            "Cotton API chunk download returned no valid Content-Length.");
-                    }
-
-                    if (response.Headers.ETag is not EntityTagHeaderValue responseETag
-                        || responseETag.IsWeak)
-                    {
-                        throw new CottonApiException(
-                            response.StatusCode,
-                            null,
-                            "Cotton API chunk download returned no valid ETag.");
-                    }
-
-                    eTag = responseETag.Tag.Trim('"');
-                    if (!string.IsNullOrWhiteSpace(expectedETag)
-                        && expectedETag.Trim() != "*"
-                        && !string.Equals(eTag, NormalizeETag(expectedETag), StringComparison.Ordinal))
-                    {
-                        throw new CottonApiException(
-                            response.StatusCode,
-                            null,
-                            "Cotton API chunk download returned an unexpected ETag.");
-                    }
-
+                    int chunkCount = ReadChunkCount(response, chunkNumber);
+                    long contentLength = ReadChunkContentLength(response);
+                    result = new CottonContentChunkDownloadResult(chunkCount, ReadChunkETag(response, expectedETag));
                     return contentLength;
                 }).ConfigureAwait(false);
 
-            return new CottonContentChunkDownloadResult(chunkCount, eTag!);
+            return result!;
+        }
+
+        private static int ReadChunkCount(HttpResponseMessage response, int chunkNumber)
+        {
+            if (!response.Headers.TryGetValues("X-Cotton-Chunk-Count", out IEnumerable<string>? values)
+                || !int.TryParse(values.SingleOrDefault(), out int chunkCount)
+                || chunkCount <= chunkNumber)
+            {
+                throw new CottonApiException(response.StatusCode, null,
+                    "Cotton API chunk download returned an invalid chunk count.");
+            }
+            return chunkCount;
+        }
+
+        private static long ReadChunkContentLength(HttpResponseMessage response)
+        {
+            if (response.Content.Headers.ContentLength is not long contentLength || contentLength < 0)
+            {
+                throw new CottonApiException(response.StatusCode, null,
+                    "Cotton API chunk download returned no valid Content-Length.");
+            }
+            return contentLength;
+        }
+
+        private static string ReadChunkETag(HttpResponseMessage response, string? expectedETag)
+        {
+            if (response.Headers.ETag is not EntityTagHeaderValue responseETag || responseETag.IsWeak)
+            {
+                throw new CottonApiException(response.StatusCode, null,
+                    "Cotton API chunk download returned no valid ETag.");
+            }
+
+            string eTag = responseETag.Tag.Trim('"');
+            if (!string.IsNullOrWhiteSpace(expectedETag)
+                && expectedETag.Trim() != "*"
+                && !string.Equals(eTag, NormalizeETag(expectedETag), StringComparison.Ordinal))
+            {
+                throw new CottonApiException(response.StatusCode, null,
+                    "Cotton API chunk download returned an unexpected ETag.");
+            }
+            return eTag;
         }
 
         private static IReadOnlyDictionary<string, string>? CreateIfMatchHeader(string? expectedETag)

@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@mui/material";
 import type { QueryClient } from "@tanstack/react-query";
@@ -6,14 +7,11 @@ import { toast } from "@shared/ui/notifications";
 import { filesApi } from "@shared/api/filesApi";
 import { invalidateFileVersions } from "@shared/api/queries/fileVersions";
 import { fetchServerSettings } from "@shared/api/queries/serverSettings";
-import type {
-  NodeContentDto,
-  NodeFileManifestDto,
-} from "@shared/api/nodesApi";
+import type { NodeContentDto, NodeFileManifestDto } from "@shared/api/nodesApi";
+import { lookupUploadNames } from "../utils/lookupUploadNames";
 import { applyDisplayMetaToFile } from "@shared/crypto";
 import { refreshNodeContent } from "@shared/store/nodesActions";
 import { useNodesStore } from "@shared/store/nodesStore";
-import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import { uploadFileToNode } from "@shared/upload";
 import {
   buildUniqueSiblingName,
@@ -39,7 +37,6 @@ interface UseFilesContentOperationsOptions {
   reloadCurrentNode: () => void;
   showToast: (message: string, variant?: "info" | "error") => void;
   t: ReturnType<typeof useTranslation>["t"];
-  tiles: FileSystemTile[];
 }
 
 export const useFilesContentOperations = ({
@@ -54,10 +51,9 @@ export const useFilesContentOperations = ({
   reloadCurrentNode,
   showToast,
   t,
-  tiles,
 }: UseFilesContentOperationsOptions) => {
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
-  const fileOps = useFileOperations(reloadCurrentNode);
+  const fileOps = useFileOperations(reloadCurrentNode, content);
   const [isCreatingMarkdownFile, setIsCreatingMarkdownFile] = useState(false);
 
   const handleFileUploaded = useCallback(
@@ -66,26 +62,47 @@ export const useFilesContentOperations = ({
     },
     [queryClient],
   );
-  const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
+  const fileUpload = useFileUpload(nodeId, breadcrumbs, {
     onToast: showToast,
     onFileUploaded: handleFileUploaded,
   });
 
-  const getCurrentSiblingNames = useCallback(
-    () =>
-      tiles.map((tile) =>
-        tile.kind === "folder" ? tile.node.name : tile.file.name,
-      ),
-    [tiles],
+  const getAvailableSiblingName = useCallback(
+    async (baseName: string): Promise<string> => {
+      if (!nodeId) {
+        return baseName;
+      }
+      const lookup = await lookupUploadNames(
+        nodeId,
+        [baseName],
+        currentFolderEncryptionEnabled,
+      );
+      return buildUniqueSiblingName(baseName, lookup.takenNameKeys);
+    },
+    [nodeId, currentFolderEncryptionEnabled],
   );
 
-  const handleNewFolderClick = useCallback(() => {
-    const folderName = buildUniqueSiblingName(
-      t("actions.defaultNewFolderName", { ns: "files" }),
-      getCurrentSiblingNames(),
-    );
-    folderOps.handleNewFolder(folderName);
-  }, [folderOps, getCurrentSiblingNames, t]);
+  const handleNewFolderClick = useCallback(async () => {
+    if (!nodeId || !ensureCurrentFolderUnlocked()) {
+      return;
+    }
+    try {
+      const folderName = await getAvailableSiblingName(
+        t("actions.defaultNewFolderName", { ns: "files" }),
+      );
+      folderOps.handleNewFolder(folderName);
+    } catch (error) {
+      reportClientError("Failed to load folder names:", error);
+      showToast(t("errors.loadContentsFailed", { ns: "files" }), "error");
+    }
+  }, [
+    folderOps,
+    getAvailableSiblingName,
+    nodeId,
+    showToast,
+    t,
+    ensureCurrentFolderUnlocked,
+  ]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -100,7 +117,7 @@ export const useFilesContentOperations = ({
       }
 
       event.preventDefault();
-      handleNewFolderClick();
+      void handleNewFolderClick();
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -122,7 +139,7 @@ export const useFilesContentOperations = ({
           reloadCurrentNode();
         }
       } catch (error) {
-        console.error("Failed to undo media delete:", error);
+        reportClientError("Failed to undo media delete:", error);
         toast.error(t("preview.deleteUndoFailed", { ns: "files" }));
       }
     },
@@ -155,14 +172,12 @@ export const useFilesContentOperations = ({
       return;
     }
 
-    const fileName = buildUniqueSiblingName(
-      t("actions.defaultMarkdownFileName", { ns: "files" }),
-      getCurrentSiblingNames(),
-    );
-
     setIsCreatingMarkdownFile(true);
 
     try {
+      const fileName = await getAvailableSiblingName(
+        t("actions.defaultMarkdownFileName", { ns: "files" }),
+      );
       const settings = await fetchServerSettings(queryClient);
       const createdFile = await uploadFileToNode({
         file: new File([""], fileName, { type: MARKDOWN_FILE_CONTENT_TYPE }),
@@ -179,7 +194,7 @@ export const useFilesContentOperations = ({
       fileOps.handleRenameFile(displayFile.id, displayFile.name);
       void refreshNodeContent(nodeId);
     } catch (error) {
-      console.error("Failed to create markdown file:", error);
+      reportClientError("Failed to create markdown file:", error);
       showToast(
         t("uploadDrop.errors.createMarkdownFileFailed", { ns: "files" }),
         "error",
@@ -191,7 +206,7 @@ export const useFilesContentOperations = ({
     currentFolderEncryptionEnabled,
     ensureCurrentFolderUnlocked,
     fileOps,
-    getCurrentSiblingNames,
+    getAvailableSiblingName,
     isCreatingMarkdownFile,
     nodeId,
     queryClient,

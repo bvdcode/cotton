@@ -1,37 +1,21 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Database;
-using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
 using Cotton.Server.Controllers;
 using Cotton.Server.Handlers.Server;
-using Cotton.Server.IntegrationTests.Abstractions;
-using Cotton.Server.IntegrationTests.Helpers;
-using Cotton.Server.Models.Dto;
 using Cotton.Server.Services.Search;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Models;
-using Cotton.Server.Jobs;
 using EasyExtensions.Mediator;
-using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using NUnit.Framework;
 using Quartz;
-using System.Net;
-using System.Net.Http.Json;
+using Quartz.Impl;
+using Quartz.Spi;
 
 namespace Cotton.Server.IntegrationTests
 {
-    public partial class VectorExtensionEndpointTests : IntegrationTestBase
+    public class VectorExtensionEndpointTests : IntegrationTestBase
     {
         private const string Endpoint = Routes.V1.Server + "/database/extensions/vector";
 
@@ -270,6 +254,82 @@ namespace Cotton.Server.IntegrationTests
             application.MapControllers();
             await application.StartAsync();
             return application;
+        }
+        [TestCase(PostgresErrorCodes.InsufficientPrivilege, "pgvector_index_permission_denied")]
+        [TestCase(PostgresErrorCodes.InternalError, "pgvector_index_build_failed")]
+        [TestCase(null, "pgvector_index_incompatible")]
+        public async Task Get_ReportsLastBuildFailureWithoutAnIndexAndClearsItAfterSuccess(string? sqlState, string expectedError)
+        {
+            bool fail = true;
+            VectorIndexBuildTestHandler handler = new(() =>
+            {
+                if (!fail)
+                {
+                    return null;
+                }
+                if (sqlState is not null)
+                {
+                    throw new PostgresException("Index creation failed", "ERROR", "ERROR", sqlState);
+                }
+                return expectedError;
+            });
+            await using WebApplication application = await CreateApplicationAsync(DbContext, handler);
+            BuildVectorIndexJob job = new(application.Services.GetRequiredService<IMediator>(), NullLogger<BuildVectorIndexJob>.Instance);
+            IScheduler scheduler = await application.Services.GetRequiredService<ISchedulerFactory>().GetScheduler();
+            IJobDetail detail = JobBuilder.Create<BuildVectorIndexJob>().Build();
+            TriggerFiredBundle bundle = new(detail, (IOperableTrigger)TriggerBuilder.Create().Build(),
+                null, false, DateTimeOffset.UtcNow, null, null, null);
+            using JobExecutionContextImpl context = new(scheduler, bundle, job);
+            try
+            {
+                await DbContext.Database.EnsureCreatedAsync();
+                if (sqlState is not null)
+                {
+                    Assert.ThrowsAsync<PostgresException>(() => job.Execute(context));
+                }
+                else
+                {
+                    await job.Execute(context);
+                }
+                using HttpClient client = application.GetTestClient();
+                client.DefaultRequestHeaders.Add(VectorEndpointTestAuthenticationHandler.RoleHeader, nameof(UserRole.Admin));
+                VectorExtensionStatusDto? failed = await client.GetFromJsonAsync<VectorExtensionStatusDto>(Endpoint);
+                Assert.That(failed!.IndexReady, Is.False);
+                Assert.That(failed.IndexSizeBytes, Is.Zero);
+                Assert.That(failed.IndexErrorCode, Is.EqualTo(expectedError));
+
+                fail = false;
+                await job.Execute(context);
+                VectorExtensionStatusDto? retried = await client.GetFromJsonAsync<VectorExtensionStatusDto>(Endpoint);
+                Assert.That(retried!.IndexErrorCode, Is.Null);
+            }
+            finally
+            {
+                fail = false;
+                await job.Execute(context);
+                await DbContext.Database.EnsureDeletedAsync();
+            }
+        }
+        [TestCase(null, HttpStatusCode.Unauthorized, 0)]
+        [TestCase(nameof(UserRole.User), HttpStatusCode.Forbidden, 0)]
+        [TestCase(nameof(UserRole.Admin), HttpStatusCode.Accepted, 1)]
+        public async Task TriggerIndexing_RequiresAdministratorAndSchedulesExistingJob(
+            string? role, HttpStatusCode expectedStatus, int expectedTriggers)
+        {
+            await using WebApplication application = await CreateApplicationAsync(DbContext);
+            using HttpClient client = application.GetTestClient();
+            if (role is not null)
+            {
+                client.DefaultRequestHeaders.Add(VectorEndpointTestAuthenticationHandler.RoleHeader, role);
+            }
+
+            using HttpResponseMessage response = await client.PatchAsync(Routes.V1.Server + "/indexing/trigger", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(expectedStatus));
+            IScheduler scheduler = await application.Services.GetRequiredService<ISchedulerFactory>().GetScheduler();
+            IReadOnlyCollection<ITrigger> triggers = await scheduler.GetTriggersOfJob(new JobKey(nameof(GenerateFileEmbeddingsJob)));
+            Assert.That(triggers, Has.Count.EqualTo(expectedTriggers));
+            Assert.That(triggers.All(trigger => trigger.GetNextFireTimeUtc() <= DateTimeOffset.UtcNow), Is.True);
         }
     }
 }

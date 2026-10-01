@@ -1,3 +1,4 @@
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 import {
   archiveApi,
   type CreateArchiveDownloadLinkRequest,
@@ -15,7 +16,7 @@ export const downloadFile = async (
     const downloadLink = await filesApi.getDownloadLink(nodeFileId);
     openDownloadLink(downloadLink, fileName);
   } catch (error) {
-    console.error("Failed to download file:", error);
+    reportClientError("Failed to download file:", error);
     throw error;
   }
 };
@@ -27,7 +28,7 @@ export const downloadArchive = async (
     const archive = await archiveApi.createDownloadLink(request);
     openDownloadLink(archive.url, archive.fileName);
   } catch (error) {
-    console.error("Failed to download archive:", error);
+    reportClientError("Failed to download archive:", error);
     throw error;
   }
 };

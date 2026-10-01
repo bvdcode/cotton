@@ -2400,6 +2400,17 @@
     }
   },
   "files": {
+    "folderInfo": {
+      "action": "Informace",
+      "title": "{{name}}",
+      "created": "Vytvořeno: {{date}}",
+      "modified": "Změněno: {{date}}",
+      "calculating": "Počítání velikosti složky…",
+      "loadFailed": "Velikost složky se nepodařilo spočítat.",
+      "folders": "Složky: {{count}}",
+      "files": "Soubory: {{count}}",
+      "size": "Celková velikost: {{size}}"
+    },
     "title": "Soubory",
     "errors": {
       "resolveRootFailed": "Nepodařilo se určit kořenovou složku",
@@ -3355,7 +3366,7 @@
     "securityDiagnostics": {
       "trustedProxy": {
         "field": "Důvěryhodný proxy server",
-        "threatVector": "Útočník s přímým přístupem ke Cottonu nebo přes proxy bez čištění hlaviček může měnit zdánlivou adresu klienta a obcházet IP limity.",
+        "threatVector": "Klient může podvrhnout IP adresu uloženou v relacích a oznámeních. Za nenastaveným proxy sdílejí všichni klienti jeden limit požadavků.",
         "fix": "V Obecných nastaveních zvolte Bez proxy pro přímé nasazení, nebo použijte Automaticky či zadejte adresu přímého proxy serveru a poté ji ověřte a uložte. Proxy musí přepisovat klientské přeposílací hlavičky.",
         "passed": "Režim důvěry adresy klienta je výslovně nastaven"
       },

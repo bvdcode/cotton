@@ -1,4 +1,4 @@
-import type { NodeContentDto } from "../../../shared/api/nodesApi";
+import type { SiblingNameLookupDto } from "../../../shared/api/nodesApi";
 import type { UploadFileQueueItem } from "../../../shared/upload/types";
 import {
   ConflictAction,
@@ -26,13 +26,14 @@ export interface ConflictResult {
  */
 export async function resolveUploadConflicts(
   files: File[],
-  content: NodeContentDto,
+  content: SiblingNameLookupDto,
   confirmConflict: (prompt: NameConflictPrompt) => Promise<ConflictAction>,
 ): Promise<ConflictResult> {
   const filesByNameKey = new Map(
     content.files.map((file) => [getFileNameKey(file.name), file]),
   );
   const takenNameKeys = new Set<string>([
+    ...content.takenNameKeys,
     ...content.nodes.map((node) => getFileNameKey(node.name)),
     ...filesByNameKey.keys(),
   ]);
