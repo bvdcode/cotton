@@ -4,37 +4,12 @@ import type { Slide } from "yet-another-react-lightbox";
 import { convertHeicToJpeg, isHeicFile } from "../../utils/heicConverter";
 import { buildSlidesFromItems } from "./mediaLightboxSlides";
 import { HLS_VIDEO_SLIDE_TYPE } from "@shared/types/mediaLightbox";
+import { resolveImageDisplayUrl } from "../../utils/imageDisplayUrl";
 import {
   isSlideWithTitle,
   type MediaItem,
   type SlideWithTitle,
 } from "@shared/types/mediaLightbox";
-
-const PREVIEW_QUERY_PARAM = "preview";
-const PREVIEW_QUERY_VALUE = "true";
-
-const getPreviewQueryValue = (preferPreview: boolean): string => {
-  return preferPreview ? PREVIEW_QUERY_VALUE : "false";
-};
-
-const applyPreviewModeToUrl = (url: string, preferPreview: boolean): string => {
-  try {
-    const parsed = new URL(url);
-    parsed.searchParams.set(
-      PREVIEW_QUERY_PARAM,
-      getPreviewQueryValue(preferPreview),
-    );
-    return parsed.toString();
-  } catch {
-    const [base, queryString = ""] = url.split("?");
-    const searchParams = new URLSearchParams(queryString);
-
-    searchParams.set(PREVIEW_QUERY_PARAM, getPreviewQueryValue(preferPreview));
-
-    const nextQuery = searchParams.toString();
-    return nextQuery ? `${base}?${nextQuery}` : base;
-  }
-};
 
 interface UseMediaLightboxUrlsArgs {
   items: MediaItem[];
@@ -80,6 +55,14 @@ export const useMediaLightboxUrls = ({
     downloadUrlsRef.current = downloadUrls;
   }, [downloadUrls]);
 
+  const itemsById = React.useMemo(() => {
+    const indexed = new Map<string, MediaItem>();
+    for (const item of items) {
+      indexed.set(item.id, item);
+    }
+    return indexed;
+  }, [items]);
+
   const effectiveDisplayUrls = React.useMemo(() => {
     if (Object.keys(displayUrls).length === 0) {
       return displayUrls;
@@ -87,13 +70,19 @@ export const useMediaLightboxUrls = ({
 
     const updated: Record<string, string> = {};
     for (const [fileId, currentUrl] of Object.entries(displayUrls)) {
-      updated[fileId] = currentUrl.startsWith("blob:")
-        ? currentUrl
-        : applyPreviewModeToUrl(currentUrl, preferPreview);
+      const item = itemsById.get(fileId);
+      if (item) {
+        updated[fileId] = resolveImageDisplayUrl(
+          currentUrl,
+          preferPreview,
+          item.name,
+          item.mimeType,
+        );
+      }
     }
 
     return updated;
-  }, [displayUrls, preferPreview]);
+  }, [displayUrls, itemsById, preferPreview]);
 
   React.useEffect(() => {
     displayUrlsRef.current = effectiveDisplayUrls;
@@ -143,9 +132,11 @@ export const useMediaLightboxUrls = ({
             return baseSignedUrl;
           }
 
-          const displayUrl = applyPreviewModeToUrl(
+          const displayUrl = resolveImageDisplayUrl(
             baseSignedUrl,
             preferPreview,
+            item.name,
+            item.mimeType,
           );
 
           setDisplayUrls((prev) =>
@@ -228,7 +219,10 @@ export const useMediaLightboxUrls = ({
           setDisplayUrls((prev) => ({ ...prev, [item.id]: convertedUrl }));
           return convertedUrl;
         } catch (error) {
-          reportClientError("Failed to convert HEIC after image load error", error);
+          reportClientError(
+            "Failed to convert HEIC after image load error",
+            error,
+          );
           return null;
         } finally {
           inFlightHeicFallbacksRef.current.delete(item.id);

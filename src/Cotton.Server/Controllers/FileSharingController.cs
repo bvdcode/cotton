@@ -37,10 +37,23 @@ namespace Cotton.Server.Controllers
     {
         [HttpGet("/s/{token}")]
         [HttpHead("/s/{token}")]
-        public async Task<IActionResult> Share(
+        public Task<IActionResult> Share(
             [FromRoute] string token,
             [FromQuery] string? view = null,
             [FromQuery] bool preview = false)
+        {
+            return ShareAsync(token, view, preview, SharedFilePreviewFormat.Webp);
+        }
+
+        [HttpGet("/s/{token}/preview.jpg")]
+        [HttpHead("/s/{token}/preview.jpg")]
+        public Task<IActionResult> SocialPreview([FromRoute] string token)
+        {
+            return ShareAsync(token, "inline", true, SharedFilePreviewFormat.Jpeg);
+        }
+
+        private async Task<IActionResult> ShareAsync(
+            string token, string? view, bool preview, SharedFilePreviewFormat format)
         {
             IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
                 _publicShareLookupFailures,
@@ -50,7 +63,8 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            ShareFileResult result = await _mediator.Send(new ShareFileQuery(token, view, preview, Request));
+            ShareFileResult result = await _mediator.Send(
+                new ShareFileQuery(token, view, preview, Request, format), HttpContext.RequestAborted);
 
             if (result.IsTokenLookupFailure)
             {
