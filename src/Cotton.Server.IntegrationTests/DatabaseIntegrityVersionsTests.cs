@@ -49,7 +49,7 @@ namespace Cotton.Server.IntegrationTests
             byte[][] macs = [Convert.FromHexString(LegacyNodeFileMac), Convert.FromHexString(Version2NodeFileMac)];
             Parallel.For(0, 100, index =>
             {
-                int version = index % 2 + 1;
+                int version = (index % 2) + 1;
                 IDatabaseIntegrityDescriptor<NodeFile> descriptor = registry.Get<NodeFile>(version);
                 Assert.That(protector.Verify(file, descriptor, macs[version - 1]), Is.True);
                 Assert.That(registry.Get<NodeFile>().SchemaVersion, Is.EqualTo(NodeFileIntegrityDescriptor.LatestVersion));

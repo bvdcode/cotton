@@ -66,13 +66,21 @@ namespace Cotton.Server.Handlers.Files
                 return new ResolvedOwnedFileContent(nodeFile, null, nodeFile.FileManifest.FileManifestChunks.Count);
             }
 
+            return await ResolveChunkAsync(nodeFile, request.ChunkNumber.Value, ct);
+        }
+
+        private async Task<ResolvedOwnedFileContent> ResolveChunkAsync(
+            NodeFile nodeFile,
+            int chunkNumber,
+            CancellationToken ct)
+        {
             int? lastChunkOrder = await _dbContext.FileManifestChunks
                 .Where(x => x.FileManifestId == nodeFile.FileManifestId)
                 .OrderByDescending(x => x.ChunkOrder)
                 .Select(x => (int?)x.ChunkOrder)
                 .FirstOrDefaultAsync(ct);
             int chunkCount = lastChunkOrder is null ? 0 : checked(lastChunkOrder.Value + 1);
-            if (request.ChunkNumber.Value >= chunkCount)
+            if (chunkNumber >= chunkCount)
             {
                 return new ResolvedOwnedFileContent(nodeFile, null, chunkCount);
             }
@@ -81,14 +89,14 @@ namespace Cotton.Server.Handlers.Files
                 .Include(x => x.Chunk)
                 .SingleOrDefaultAsync(x =>
                     x.FileManifestId == nodeFile.FileManifestId
-                    && x.ChunkOrder == request.ChunkNumber.Value, ct);
+                    && x.ChunkOrder == chunkNumber, ct);
             if (chunk is not null)
             {
                 _fileGraphIntegrity.RequireValidManifestChunk(
                     _dbContext,
                     nodeFile.FileManifest,
                     chunk,
-                    request.ChunkNumber.Value,
+                    chunkNumber,
                     "file.content-chunk");
             }
 

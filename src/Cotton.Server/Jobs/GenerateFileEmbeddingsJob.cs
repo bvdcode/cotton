@@ -43,46 +43,7 @@ namespace Cotton.Server.Jobs
                     return;
                 }
                 await mediator.Send(new RecoverFileTextIndexRequest(), cancellationToken);
-                string[] contentTypes = extractors.GetSupportedContentTypes();
-                for (int processed = 0; processed < MaxItemsPerRun;)
-                {
-                    List<Guid> ids = await FileTextIndexQuery.Pending(dbContext, contentTypes)
-                        .OrderBy(manifest => manifest.CreatedAt).ThenBy(manifest => manifest.Id)
-                        .Select(manifest => manifest.Id).Take(Math.Min(BatchSize, MaxItemsPerRun - processed))
-                        .ToListAsync(cancellationToken);
-                    if (ids.Count == 0)
-                    {
-                        return;
-                    }
-                    if (processed == 0)
-                    {
-                        ComputationStatus status = await computation.GetStatusAsync(cancellationToken: cancellationToken);
-                        if (!status.IsReady)
-                        {
-                            return;
-                        }
-                    }
-                    if (!settings.GetServerSettings().AllowGlobalIndexing || perf.IsUploading())
-                    {
-                        return;
-                    }
-                    try
-                    {
-                        logger.LogInformation("Starting text index batch with up to {FileCount} file manifests.", ids.Count);
-                        IEnumerable<Guid> available = ids.TakeWhile(_ =>
-                            settings.GetServerSettings().AllowGlobalIndexing && !perf.IsUploading());
-                        await mediator.Send(new IndexFileTextRequest(available), cancellationToken);
-                    }
-                    catch (DbUpdateConcurrencyException ex)
-                    {
-                        logger.LogInformation(ex, "Skipped a stale text index batch.");
-                    }
-                    finally
-                    {
-                        dbContext.ChangeTracker.Clear();
-                    }
-                    processed += ids.Count;
-                }
+                await ProcessPendingFilesAsync(cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -92,6 +53,55 @@ namespace Cotton.Server.Jobs
             {
                 logger.LogError(ex, "File text indexing did not complete.");
                 throw;
+            }
+        }
+
+        private async Task ProcessPendingFilesAsync(CancellationToken cancellationToken)
+        {
+            string[] contentTypes = extractors.GetSupportedContentTypes();
+            for (int processed = 0; processed < MaxItemsPerRun;)
+            {
+                List<Guid> ids = await FileTextIndexQuery.Pending(dbContext, contentTypes)
+                    .OrderBy(manifest => manifest.CreatedAt).ThenBy(manifest => manifest.Id)
+                    .Select(manifest => manifest.Id).Take(Math.Min(BatchSize, MaxItemsPerRun - processed))
+                    .ToListAsync(cancellationToken);
+                if (ids.Count == 0)
+                {
+                    return;
+                }
+                if (processed == 0)
+                {
+                    ComputationStatus status = await computation.GetStatusAsync(cancellationToken: cancellationToken);
+                    if (!status.IsReady)
+                    {
+                        return;
+                    }
+                }
+                if (!settings.GetServerSettings().AllowGlobalIndexing || perf.IsUploading())
+                {
+                    return;
+                }
+                await ProcessBatchAsync(ids, cancellationToken);
+                processed += ids.Count;
+            }
+        }
+
+        private async Task ProcessBatchAsync(List<Guid> ids, CancellationToken cancellationToken)
+        {
+            try
+            {
+                logger.LogInformation("Starting text index batch with up to {FileCount} file manifests.", ids.Count);
+                IEnumerable<Guid> available = ids.TakeWhile(_ =>
+                    settings.GetServerSettings().AllowGlobalIndexing && !perf.IsUploading());
+                await mediator.Send(new IndexFileTextRequest(available), cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                logger.LogInformation(ex, "Skipped a stale text index batch.");
+            }
+            finally
+            {
+                dbContext.ChangeTracker.Clear();
             }
         }
     }

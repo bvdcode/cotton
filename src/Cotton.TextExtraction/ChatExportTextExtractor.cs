@@ -49,9 +49,21 @@ namespace Cotton.TextExtraction
             }
             Dictionary<string, JsonElement> nodes = mapping.EnumerateObject()
                 .ToDictionary(property => property.Name, property => property.Value, StringComparer.Ordinal);
+            List<JsonElement> path = ReadConversationPath(nodes, currentNodeElement.GetString(), cancellationToken);
+            for (int index = path.Count - 1; index >= 0 && !text.IsTruncated; index--)
+            {
+                AppendMessage(path[index], text);
+            }
+            text.AppendLineBreak();
+        }
+
+        private static List<JsonElement> ReadConversationPath(
+            IReadOnlyDictionary<string, JsonElement> nodes,
+            string? currentNode,
+            CancellationToken cancellationToken)
+        {
             List<JsonElement> path = [];
             HashSet<string> visited = new(StringComparer.Ordinal);
-            string? currentNode = currentNodeElement.GetString();
             while (currentNode is not null && nodes.TryGetValue(currentNode, out JsonElement node))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -65,11 +77,7 @@ namespace Cotton.TextExtraction
                     ? parent.GetString()
                     : null;
             }
-            for (int index = path.Count - 1; index >= 0 && !text.IsTruncated; index--)
-            {
-                AppendMessage(path[index], text);
-            }
-            text.AppendLineBreak();
+            return path;
         }
 
         private static void AppendMessage(JsonElement node, TextExtractionBuffer text)
@@ -79,13 +87,7 @@ namespace Cotton.TextExtraction
                 || !message.TryGetProperty("author", out JsonElement author)
                 || !author.TryGetProperty("role", out JsonElement roleElement)
                 || roleElement.ValueKind != JsonValueKind.String
-                || !message.TryGetProperty("content", out JsonElement content)
-                || content.ValueKind != JsonValueKind.Object
-                || !content.TryGetProperty("content_type", out JsonElement contentType)
-                || contentType.ValueKind != JsonValueKind.String
-                || contentType.GetString() is not ("text" or "multimodal_text")
-                || !content.TryGetProperty("parts", out JsonElement parts)
-                || parts.ValueKind != JsonValueKind.Array)
+                || !TryGetTextParts(message, out JsonElement parts))
             {
                 return;
             }
@@ -100,24 +102,41 @@ namespace Cotton.TextExtraction
             }
             foreach (JsonElement part in parts.EnumerateArray())
             {
-                if (part.ValueKind == JsonValueKind.String && part.GetString() is string value)
-                {
-                    AppendDecoded(text, value);
-                }
-                else if (part.ValueKind == JsonValueKind.Object
-                    && part.TryGetProperty("content_type", out JsonElement partType)
-                    && partType.ValueKind == JsonValueKind.String
-                    && partType.GetString() == "audio_transcription"
-                    && part.TryGetProperty("text", out JsonElement transcript)
-                    && transcript.ValueKind == JsonValueKind.String)
-                {
-                    AppendDecoded(text, transcript.GetString());
-                }
+                AppendTextPart(part, text);
                 text.AppendLineBreak();
                 if (text.IsTruncated)
                 {
                     return;
                 }
+            }
+        }
+
+        private static bool TryGetTextParts(JsonElement message, out JsonElement parts)
+        {
+            parts = default;
+            return message.TryGetProperty("content", out JsonElement content)
+                && content.ValueKind == JsonValueKind.Object
+                && content.TryGetProperty("content_type", out JsonElement contentType)
+                && contentType.ValueKind == JsonValueKind.String
+                && contentType.GetString() is "text" or "multimodal_text"
+                && content.TryGetProperty("parts", out parts)
+                && parts.ValueKind == JsonValueKind.Array;
+        }
+
+        private static void AppendTextPart(JsonElement part, TextExtractionBuffer text)
+        {
+            if (part.ValueKind == JsonValueKind.String && part.GetString() is string value)
+            {
+                AppendDecoded(text, value);
+            }
+            else if (part.ValueKind == JsonValueKind.Object
+                && part.TryGetProperty("content_type", out JsonElement partType)
+                && partType.ValueKind == JsonValueKind.String
+                && partType.GetString() == "audio_transcription"
+                && part.TryGetProperty("text", out JsonElement transcript)
+                && transcript.ValueKind == JsonValueKind.String)
+            {
+                AppendDecoded(text, transcript.GetString());
             }
         }
 

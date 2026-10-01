@@ -121,19 +121,8 @@ namespace Cotton.Server.Handlers.Nodes
             FolderStatsDto? stats = null;
             if (request.IncludeStats)
             {
-                long sizeBytes = await filesBaseQuery.SumAsync(
-                    file => (long?)file.FileManifest.SizeBytes, ct) ?? 0L;
-                int encryptedFiles = await filesBaseQuery.CountAsync(
-                    file => CottonDbContext.GetHstoreValue(file.Metadata, "isClientEncrypted") == "true", ct);
-                stats = new FolderStatsDto
-                {
-                    Folders = request.Listing.FilterOperator == DirectoryFilterOperator.None
-                        ? nodeCount : await nodesBaseQuery.CountAsync(ct),
-                    Files = request.Listing.FilterOperator == DirectoryFilterOperator.None
-                        ? fileCount : await filesBaseQuery.CountAsync(ct),
-                    EncryptedFiles = encryptedFiles,
-                    SizeBytes = sizeBytes,
-                };
+                stats = await LoadStatsAsync(nodesBaseQuery, filesBaseQuery, nodeCount, fileCount,
+                    request.Listing.FilterOperator != DirectoryFilterOperator.None, ct);
             }
 
             return new(new NodeContentDto
@@ -145,6 +134,26 @@ namespace Cotton.Server.Handlers.Nodes
                 UpdatedAt = parentNode.UpdatedAt,
                 Stats = stats,
             }, nodeCount + fileCount);
+        }
+
+        private static async Task<FolderStatsDto> LoadStatsAsync(
+            IQueryable<Node> nodes,
+            IQueryable<NodeFile> files,
+            int nodeCount,
+            int fileCount,
+            bool filtered,
+            CancellationToken ct)
+        {
+            long sizeBytes = await files.SumAsync(file => (long?)file.FileManifest.SizeBytes, ct) ?? 0L;
+            int encryptedFiles = await files.CountAsync(
+                file => CottonDbContext.GetHstoreValue(file.Metadata, "isClientEncrypted") == "true", ct);
+            return new FolderStatsDto
+            {
+                Folders = filtered ? await nodes.CountAsync(ct) : nodeCount,
+                Files = filtered ? await files.CountAsync(ct) : fileCount,
+                EncryptedFiles = encryptedFiles,
+                SizeBytes = sizeBytes,
+            };
         }
 
         private async Task<PagedResult<NodeContentDto>> LoadTrashChildrenAsync(

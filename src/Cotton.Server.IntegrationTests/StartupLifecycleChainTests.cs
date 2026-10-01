@@ -227,7 +227,6 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("InvalidUrl"));
         }
 
-
         [Test]
         public async Task SettingsPatch_Rejects_CustomEmail_WithoutEmailConfig()
         {

@@ -27,31 +27,7 @@ namespace Cotton.TextExtraction
                     ?? throw new FileFormatException("The workbook has no main part.");
                 Workbook workbook = workbookPart.Workbook
                     ?? throw new FileFormatException("The workbook root is missing.");
-                List<string> sharedStrings = [];
-                int sharedStringCharacters = 0;
-                if (workbookPart.SharedStringTablePart is SharedStringTablePart sharedStringPart)
-                {
-                    using OpenXmlReader sharedStringReader = OpenXmlReader.Create(sharedStringPart);
-                    while (sharedStringReader.Read())
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        if (sharedStringReader.IsStartElement && sharedStringReader.ElementType == typeof(SharedStringItem))
-                        {
-                            if (sharedStrings.Count >= MaxSharedStrings)
-                            {
-                                throw new InvalidDataException("The spreadsheet shared string table is too large to index.");
-                            }
-                            string value = sharedStringReader.LoadCurrentElement()?.InnerText
-                                ?? throw new FileFormatException("A shared string is empty.");
-                            if (value.Length > MaxSharedStringCharacters - sharedStringCharacters)
-                            {
-                                throw new InvalidDataException("The spreadsheet shared string table is too large to index.");
-                            }
-                            sharedStringCharacters += value.Length;
-                            sharedStrings.Add(value);
-                        }
-                    }
-                }
+                List<string> sharedStrings = ReadSharedStrings(workbookPart.SharedStringTablePart, cancellationToken);
                 foreach (Sheet sheet in workbook.Sheets?.Elements<Sheet>() ?? [])
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -64,25 +40,10 @@ namespace Cotton.TextExtraction
                     {
                         return;
                     }
-                    using OpenXmlReader worksheetReader = OpenXmlReader.Create(worksheetPart);
-                    while (worksheetReader.Read())
+                    AppendWorksheet(worksheetPart, sharedStrings, text, cancellationToken);
+                    if (text.IsTruncated)
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        if (worksheetReader.IsStartElement && worksheetReader.ElementType == typeof(Cell))
-                        {
-                            Cell cell = worksheetReader.LoadCurrentElement() as Cell
-                                ?? throw new FileFormatException("A worksheet cell is empty.");
-                            text.AppendNormalized(GetCellText(cell, sharedStrings));
-                            if (text.IsTruncated)
-                            {
-                                return;
-                            }
-                            text.AppendNormalized("\t");
-                        }
-                        else if (worksheetReader.IsEndElement && worksheetReader.ElementType == typeof(Row))
-                        {
-                            text.AppendLineBreak();
-                        }
+                        return;
                     }
                 }
             }
@@ -90,6 +51,66 @@ namespace Cotton.TextExtraction
             {
                 logger.LogWarning(ex, "Unable to extract spreadsheet text.");
                 throw new FileTextExtractionException("Unable to read spreadsheet text.", ex);
+            }
+        }
+
+        private static List<string> ReadSharedStrings(SharedStringTablePart? part, CancellationToken cancellationToken)
+        {
+            List<string> sharedStrings = [];
+            if (part is null)
+            {
+                return sharedStrings;
+            }
+            int sharedStringCharacters = 0;
+            using OpenXmlReader reader = OpenXmlReader.Create(part);
+            while (reader.Read())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!reader.IsStartElement || reader.ElementType != typeof(SharedStringItem))
+                {
+                    continue;
+                }
+                if (sharedStrings.Count >= MaxSharedStrings)
+                {
+                    throw new InvalidDataException("The spreadsheet shared string table is too large to index.");
+                }
+                string value = reader.LoadCurrentElement()?.InnerText
+                    ?? throw new FileFormatException("A shared string is empty.");
+                if (value.Length > MaxSharedStringCharacters - sharedStringCharacters)
+                {
+                    throw new InvalidDataException("The spreadsheet shared string table is too large to index.");
+                }
+                sharedStringCharacters += value.Length;
+                sharedStrings.Add(value);
+            }
+            return sharedStrings;
+        }
+
+        private static void AppendWorksheet(
+            WorksheetPart worksheetPart,
+            IReadOnlyList<string> sharedStrings,
+            TextExtractionBuffer text,
+            CancellationToken cancellationToken)
+        {
+            using OpenXmlReader reader = OpenXmlReader.Create(worksheetPart);
+            while (reader.Read())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (reader.IsStartElement && reader.ElementType == typeof(Cell))
+                {
+                    Cell cell = reader.LoadCurrentElement() as Cell
+                        ?? throw new FileFormatException("A worksheet cell is empty.");
+                    text.AppendNormalized(GetCellText(cell, sharedStrings));
+                    if (text.IsTruncated)
+                    {
+                        return;
+                    }
+                    text.AppendNormalized("\t");
+                }
+                else if (reader.IsEndElement && reader.ElementType == typeof(Row))
+                {
+                    text.AppendLineBreak();
+                }
             }
         }
 

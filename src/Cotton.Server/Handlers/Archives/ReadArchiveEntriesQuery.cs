@@ -83,75 +83,107 @@ namespace Cotton.Server.Handlers.Archives
             while (pending.TryDequeue(out ArchiveFolder? parent))
             {
                 ArchivePathUniquifier siblingNames = new();
-                string? lastName = null;
-                while (true)
+                await foreach (ArchiveDownloadDirectoryEntry entry in ReadChildFoldersAsync(
+                    db, integrity, ticket.UserId, parent, visitedFolders, pending, siblingNames, ct))
                 {
-                    IQueryable<Node> query = db.Nodes.Where(node => node.ParentId == parent.Id
-                        && node.LayoutId == parent.LayoutId && node.OwnerId == ticket.UserId && node.Type == NodeType.Default);
-                    if (lastName is not null)
-                    {
-                        query = query.Where(node => string.Compare(node.NameKey, lastName) > 0);
-                    }
-                    List<Node> children = await query.OrderBy(node => node.NameKey).Take(ArchiveDownloadLimits.BatchSize).ToListAsync(ct);
-                    foreach (Node child in children)
-                    {
-                        integrity.RequireValid(db, child, "archive.child-folder");
-                        if (!visitedFolders.Add(child.Id))
-                        {
-                            continue;
-                        }
-                        string name = siblingNames.AddDirectory(child.Name).TrimEnd('/');
-                        string path = ArchivePathUniquifier.Combine(parent.Path, name);
-                        pending.Enqueue(new ArchiveFolder(child.Id, child.LayoutId, path));
-                        yield return new ArchiveDownloadDirectoryEntry(path + "/");
-                    }
-                    db.ChangeTracker.Clear();
-                    if (children.Count < ArchiveDownloadLimits.BatchSize)
-                    {
-                        break;
-                    }
-                    lastName = children[^1].NameKey;
+                    yield return entry;
                 }
-
-                lastName = null;
-                Guid lastId = Guid.Empty;
-                while (true)
+                await foreach (ArchiveDownloadFileEntry entry in ReadFolderFilesAsync(
+                    db, contentIntegrity, request, parent, explicitFiles, siblingNames, ct))
                 {
-                    IQueryable<NodeFile> query = db.NodeFiles.Where(file => file.NodeId == parent.Id
-                        && file.OwnerId == ticket.UserId && file.Node.Type == NodeType.Default);
-                    if (lastName is not null)
-                    {
-                        query = query.Where(file => string.Compare(file.NameKey, lastName) > 0
-                            || file.NameKey == lastName && file.Id.CompareTo(lastId) > 0);
-                    }
-                    var page = await query.OrderBy(file => file.NameKey).ThenBy(file => file.Id)
-                        .Take(ArchiveDownloadLimits.BatchSize).Select(file => new { file.Id, file.NameKey }).ToListAsync(ct);
-                    if (page.Count == 0)
-                    {
-                        break;
-                    }
-                    Guid[] ids = [.. page.Select(file => file.Id).Where(id => !explicitFiles.Contains(id))];
-                    List<NodeFile> files = await LoadFilesAsync(db, ids, ticket.UserId, request.IncludeContent, ct);
-                    Dictionary<Guid, NodeFile> byId = files.ToDictionary(file => file.Id);
-                    foreach (Guid id in ids)
-                    {
-                        if (!byId.TryGetValue(id, out NodeFile? file) || file.NodeId != parent.Id)
-                        {
-                            throw new IOException("Folder contents changed while preparing the archive. Retry the download.");
-                        }
-                        string path = ArchivePathUniquifier.Combine(parent.Path, siblingNames.AddFile(file.Name));
-                        yield return CreateFileEntry(db, contentIntegrity, file, path, request.IncludeContent);
-                    }
-                    db.ChangeTracker.Clear();
-                    lastName = page[^1].NameKey;
-                    lastId = page[^1].Id;
-                    if (page.Count < ArchiveDownloadLimits.BatchSize)
-                    {
-                        break;
-                    }
+                    yield return entry;
                 }
             }
             await snapshot.CommitAsync(ct);
+        }
+
+        private static async IAsyncEnumerable<ArchiveDownloadDirectoryEntry> ReadChildFoldersAsync(
+            CottonDbContext db,
+            IDatabaseIntegrityVerifier integrity,
+            Guid userId,
+            ArchiveFolder parent,
+            HashSet<Guid> visitedFolders,
+            Queue<ArchiveFolder> pending,
+            ArchivePathUniquifier siblingNames,
+            [EnumeratorCancellation] CancellationToken ct)
+        {
+            string? lastName = null;
+            while (true)
+            {
+                IQueryable<Node> query = db.Nodes.Where(node => node.ParentId == parent.Id
+                    && node.LayoutId == parent.LayoutId && node.OwnerId == userId && node.Type == NodeType.Default);
+                if (lastName is not null)
+                {
+                    query = query.Where(node => string.Compare(node.NameKey, lastName) > 0);
+                }
+                List<Node> children = await query.OrderBy(node => node.NameKey).Take(ArchiveDownloadLimits.BatchSize).ToListAsync(ct);
+                foreach (Node child in children)
+                {
+                    integrity.RequireValid(db, child, "archive.child-folder");
+                    if (!visitedFolders.Add(child.Id))
+                    {
+                        continue;
+                    }
+                    string name = siblingNames.AddDirectory(child.Name).TrimEnd('/');
+                    string path = ArchivePathUniquifier.Combine(parent.Path, name);
+                    pending.Enqueue(new ArchiveFolder(child.Id, child.LayoutId, path));
+                    yield return new ArchiveDownloadDirectoryEntry(path + "/");
+                }
+                db.ChangeTracker.Clear();
+                if (children.Count < ArchiveDownloadLimits.BatchSize)
+                {
+                    break;
+                }
+                lastName = children[^1].NameKey;
+            }
+        }
+
+        private static async IAsyncEnumerable<ArchiveDownloadFileEntry> ReadFolderFilesAsync(
+            CottonDbContext db,
+            FileGraphIntegrityVerifier integrity,
+            ReadArchiveEntriesQuery request,
+            ArchiveFolder parent,
+            HashSet<Guid> explicitFiles,
+            ArchivePathUniquifier siblingNames,
+            [EnumeratorCancellation] CancellationToken ct)
+        {
+            string? lastName = null;
+            Guid lastId = Guid.Empty;
+            while (true)
+            {
+                IQueryable<NodeFile> query = db.NodeFiles.Where(file => file.NodeId == parent.Id
+                    && file.OwnerId == request.Ticket.UserId && file.Node.Type == NodeType.Default);
+                if (lastName is not null)
+                {
+                    query = query.Where(file => string.Compare(file.NameKey, lastName) > 0
+                        || file.NameKey == lastName && file.Id.CompareTo(lastId) > 0);
+                }
+                var page = await query.OrderBy(file => file.NameKey).ThenBy(file => file.Id)
+                    .Take(ArchiveDownloadLimits.BatchSize).Select(file => new { file.Id, file.NameKey }).ToListAsync(ct);
+                if (page.Count == 0)
+                {
+                    break;
+                }
+                Guid[] ids = [.. page.Select(file => file.Id).Where(id => !explicitFiles.Contains(id))];
+                List<NodeFile> files = await LoadFilesAsync(db, ids, request.Ticket.UserId, request.IncludeContent, ct);
+                Dictionary<Guid, NodeFile> byId = files.ToDictionary(file => file.Id);
+                foreach (Guid id in ids)
+                {
+                    if (!byId.TryGetValue(id, out NodeFile? file) || file.NodeId != parent.Id)
+                    {
+                        throw new IOException("Folder contents changed while preparing the archive. Retry the download.");
+                    }
+                    string path = ArchivePathUniquifier.Combine(parent.Path, siblingNames.AddFile(file.Name));
+                    yield return CreateFileEntry(db, integrity, file, path, request.IncludeContent);
+                }
+                db.ChangeTracker.Clear();
+                lastName = page[^1].NameKey;
+                lastId = page[^1].Id;
+                if (page.Count < ArchiveDownloadLimits.BatchSize)
+                {
+                    break;
+                }
+            }
         }
 
         private static Task<List<NodeFile>> LoadFilesAsync(

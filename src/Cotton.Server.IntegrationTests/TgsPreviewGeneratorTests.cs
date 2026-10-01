@@ -42,7 +42,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task GeneratePreview_ExcessiveExpandedJsonIsRejected()
         {
-            byte[] bytes = await TgsTestDocument.CreateAsync(new string('x', 8 * 1024 * 1024 + 1));
+            byte[] bytes = await TgsTestDocument.CreateAsync(new string('x', (8 * 1024 * 1024) + 1));
             using MemoryStream source = new(bytes);
             Assert.ThrowsAsync<InvalidDataException>(async () =>
                 await new TgsPreviewGenerator().GeneratePreviewWebPAsync(source, 200));

@@ -9,7 +9,7 @@ namespace Cotton.Server.IntegrationTests.Common
     {
         public static byte[] Create(params string[] pages)
         {
-            string children = string.Join(" ", Enumerable.Range(0, pages.Length).Select(index => $"{4 + index * 2} 0 R"));
+            string children = string.Join(" ", Enumerable.Range(0, pages.Length).Select(index => $"{4 + (index * 2)} 0 R"));
             List<string> objects =
             [
                 "<< /Type /Catalog /Pages 2 0 R >>",
