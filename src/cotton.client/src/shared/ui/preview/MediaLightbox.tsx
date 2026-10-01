@@ -332,13 +332,13 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       zoomInMultiplier: 1,
       doubleTapDelay: 300,
       doubleClickDelay: 300,
-      doubleClickMaxStops: 1,
+      doubleClickMaxStops: isTouchDevice ? 2 : 1,
       keyboardMoveDistance: 50,
       wheelZoomDistanceFactor: 500,
       pinchZoomDistanceFactor: 100,
       scrollToZoom: true,
     }),
-    [],
+    [isTouchDevice],
   );
 
   const lightboxSlideshow = React.useMemo(
