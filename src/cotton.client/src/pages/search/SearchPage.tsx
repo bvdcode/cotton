@@ -299,6 +299,7 @@ export const SearchPage: React.FC = () => {
           items={mediaItems}
           getSignedMediaUrl={getSignedMediaUrl}
           getDownloadUrl={getDownloadUrl}
+          onShare={handleShareFile}
           smoothTransitions={smoothGalleryTransitions}
           onClose={() => setLightboxOpen(false)}
         />

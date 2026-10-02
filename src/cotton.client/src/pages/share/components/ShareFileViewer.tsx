@@ -20,6 +20,7 @@ interface ShareFileViewerProps {
   contentLength: number | null;
   textContent: string | null;
   encryptedContainer: boolean;
+  onShareLink: () => Promise<void>;
 }
 
 interface ShareTextViewerProps {
@@ -202,6 +203,7 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
   contentLength,
   textContent,
   encryptedContainer,
+  onShareLink,
 }) => {
   const fileTypeInfo = React.useMemo(() => {
     const name = fileName ?? "";
@@ -228,6 +230,7 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
         fileName={fileName}
         contentType={contentType}
         contentLength={contentLength}
+        onShareLink={onShareLink}
       />
     );
   }

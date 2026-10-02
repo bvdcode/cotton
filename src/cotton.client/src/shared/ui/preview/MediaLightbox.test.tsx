@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
+import type { Slide } from "yet-another-react-lightbox";
 import { describe, expect, it, vi } from "vitest";
 import { MediaLightbox } from "./MediaLightbox";
 import type { MediaItem } from "@shared/types/mediaLightbox";
@@ -8,7 +9,8 @@ type CapturedLightboxProps = {
   close: () => void;
   index?: number;
   open: boolean;
-  slides: ReadonlyArray<object>;
+  slides: ReadonlyArray<Slide>;
+  share?: { share: (event: { slide: Slide }) => Promise<void> };
   on?: {
     view?: (event: { index: number }) => void;
   };
@@ -82,9 +84,16 @@ vi.mock("./useMediaLightboxUrls", () => ({
       item.kind === "video"
         ? {
             type: "video",
+            fileId: item.id,
+            fileName: item.name,
             sources: [{ src: `/${item.name}`, type: item.mimeType }],
           }
-        : { type: "image", src: `/${item.name}` },
+        : {
+            type: "image",
+            src: `/${item.name}`,
+            fileId: item.id,
+            fileName: item.name,
+          },
     ),
     ensureSlideHasOriginal: vi.fn(),
     handleSlideImageError: vi.fn(),
@@ -117,6 +126,29 @@ const galleryItems: MediaItem[] = [
 ];
 
 describe("MediaLightbox", () => {
+  it("uses the supplied share action for the selected photo", async () => {
+    capturedLightboxProps.length = 0;
+    const onShare = vi.fn().mockResolvedValue(undefined);
+    render(
+      <MediaLightbox
+        items={galleryItems}
+        open
+        initialIndex={1}
+        onClose={vi.fn()}
+        onShare={onShare}
+        getSignedMediaUrl={vi.fn()}
+      />,
+    );
+
+    const props = capturedLightboxProps.at(-1);
+    if (!props?.share) {
+      throw new Error("Gallery share action is missing");
+    }
+    await act(() => props.share?.share({ slide: props.slides[1] }));
+
+    expect(onShare).toHaveBeenCalledExactlyOnceWith("image-2", "second.jpg");
+  });
+
   it("removes playable slides before closing so videos cannot resume in the background", () => {
     capturedLightboxProps.length = 0;
     const onClose = vi.fn();
@@ -129,6 +161,8 @@ describe("MediaLightbox", () => {
         initialIndex={0}
         onClose={onClose}
         getSignedMediaUrl={getSignedMediaUrl}
+
+        onShare={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
@@ -151,6 +185,8 @@ describe("MediaLightbox", () => {
           initialIndex={0}
           onClose={onClose}
           getSignedMediaUrl={getSignedMediaUrl}
+
+          onShare={vi.fn().mockResolvedValue(undefined)}
         />,
       );
     });
@@ -163,6 +199,8 @@ describe("MediaLightbox", () => {
           initialIndex={0}
           onClose={onClose}
           getSignedMediaUrl={getSignedMediaUrl}
+
+          onShare={vi.fn().mockResolvedValue(undefined)}
         />,
       );
     });
@@ -182,6 +220,8 @@ describe("MediaLightbox", () => {
         initialIndex={0}
         onClose={vi.fn()}
         getSignedMediaUrl={vi.fn()}
+
+        onShare={vi.fn().mockResolvedValue(undefined)}
         onDelete={onDelete}
       />,
     );
@@ -203,6 +243,8 @@ describe("MediaLightbox", () => {
         initialIndex={0}
         onClose={vi.fn()}
         getSignedMediaUrl={vi.fn()}
+
+        onShare={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
@@ -217,6 +259,8 @@ describe("MediaLightbox", () => {
         initialIndex={0}
         onClose={vi.fn()}
         getSignedMediaUrl={vi.fn()}
+
+        onShare={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
@@ -232,6 +276,8 @@ describe("MediaLightbox", () => {
         initialIndex={0}
         onClose={vi.fn()}
         getSignedMediaUrl={vi.fn()}
+
+        onShare={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
@@ -246,6 +292,8 @@ describe("MediaLightbox", () => {
         initialIndex={0}
         onClose={vi.fn()}
         getSignedMediaUrl={vi.fn()}
+
+        onShare={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
@@ -263,6 +311,8 @@ describe("MediaLightbox", () => {
         initialIndex={0}
         onClose={vi.fn()}
         getSignedMediaUrl={vi.fn()}
+
+        onShare={vi.fn().mockResolvedValue(undefined)}
         onDelete={onDelete}
       />,
     );

@@ -50,6 +50,7 @@ interface SharedFolderViewerProps {
   token: string;
   rootNodeId: Guid;
   rootName: string;
+  onShareLink: () => Promise<void>;
   onDownloadActionChange?: (
     action: { disabled: boolean; onDownload: () => void } | null,
   ) => void;
@@ -59,6 +60,7 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   token,
   rootNodeId,
   rootName,
+  onShareLink,
   onDownloadActionChange,
 }) => {
   const { t } = useTranslation(["share", "common"]);
@@ -391,6 +393,7 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
           onClose={() => setLightboxOpen(false)}
           getSignedMediaUrl={getSignedMediaUrl}
           getDownloadUrl={getDownloadUrl}
+          onShare={onShareLink}
         />
       )}
 

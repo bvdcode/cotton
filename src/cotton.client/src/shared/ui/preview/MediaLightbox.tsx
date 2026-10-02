@@ -43,6 +43,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   getSignedMediaUrl,
   smoothTransitions = true,
   getDownloadUrl,
+  onShare,
   onDelete,
 }) => {
   const { t } = useTranslation(["files", "common"]);
@@ -208,6 +209,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
   const { handleCustomDownload, handleCustomShare } = useLightboxSharing(
     resolveSlideDownloadUrl,
+    onShare,
   );
 
   React.useEffect(() => {

@@ -1,10 +1,13 @@
 import React from "react";
 import type { Slide } from "yet-another-react-lightbox";
-import { isSlideWithTitle } from "@shared/types/mediaLightbox";
-import { shareLinks } from "../../utils/shareLinks";
+import {
+  isSlideWithTitle,
+  type MediaLightboxProps,
+} from "@shared/types/mediaLightbox";
 
 export const useLightboxSharing = (
   resolveSlideDownloadUrl: (slide: Slide) => Promise<string | null>,
+  onShare: MediaLightboxProps["onShare"],
 ) => {
   const handleCustomDownload = React.useCallback(
     async ({
@@ -14,9 +17,13 @@ export const useLightboxSharing = (
       slide: Slide;
       saveAs: (source: string | Blob, name?: string) => void;
     }) => {
-      if (!isSlideWithTitle(slide)) return;
+      if (!isSlideWithTitle(slide)) {
+        return;
+      }
       const downloadUrl = await resolveSlideDownloadUrl(slide);
-      if (!downloadUrl) return;
+      if (!downloadUrl) {
+        return;
+      }
       saveAs(downloadUrl, slide.fileName);
     },
     [resolveSlideDownloadUrl],
@@ -24,23 +31,12 @@ export const useLightboxSharing = (
 
   const handleCustomShare = React.useCallback(
     async ({ slide }: { slide: Slide }) => {
-      if (!isSlideWithTitle(slide)) return;
-      if (!navigator.canShare) return;
-
-      const downloadUrl = await resolveSlideDownloadUrl(slide);
-      if (!downloadUrl) return;
-
-      const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadUrl);
-      const shareUrl = token ? shareLinks.buildShareUrl(token) : downloadUrl;
-      const sharePayload = { title: slide.fileName, url: shareUrl };
-
-      if (!navigator.canShare(sharePayload)) return;
-
-      navigator.share(sharePayload).catch(() => {
-        // Ignore dismissed share sheets.
-      });
+      if (!isSlideWithTitle(slide)) {
+        return;
+      }
+      await onShare(slide.fileId, slide.fileName);
     },
-    [resolveSlideDownloadUrl],
+    [onShare],
   );
 
   return { handleCustomDownload, handleCustomShare };
