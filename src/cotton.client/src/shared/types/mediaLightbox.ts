@@ -37,6 +37,7 @@ export interface MediaLightboxProps {
   getSignedMediaUrl: (id: string) => Promise<string>;
   smoothTransitions?: boolean;
   getDownloadUrl?: (id: string) => Promise<string>;
+  onShare: (fileId: string, fileName: string) => Promise<void>;
   onDelete?: (item: MediaItem) => void | Promise<void>;
 }
 

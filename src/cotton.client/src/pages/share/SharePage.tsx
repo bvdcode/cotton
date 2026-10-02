@@ -316,6 +316,7 @@ export const SharePage: React.FC = () => {
             token={viewState.token}
             rootNodeId={viewState.folder.nodeId}
             rootName={viewState.folder.name}
+            onShareLink={handleShareLink}
             onDownloadActionChange={handleFolderDownloadActionChange}
           />
         </>
@@ -352,6 +353,7 @@ export const SharePage: React.FC = () => {
               contentLength={contentLength}
               textContent={textContent}
               encryptedContainer={encryptedContainer}
+              onShareLink={handleShareLink}
             />
           </Box>
         </>

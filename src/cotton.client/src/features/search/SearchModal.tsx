@@ -408,6 +408,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
           items={mediaItems}
           getSignedMediaUrl={getSignedMediaUrl}
           getDownloadUrl={getDownloadUrl}
+          onShare={handleShareFile}
           smoothTransitions={smoothGalleryTransitions}
           onClose={() => setLightboxOpen(false)}
         />

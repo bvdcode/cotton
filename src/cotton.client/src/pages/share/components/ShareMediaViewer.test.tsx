@@ -40,6 +40,8 @@ describe("ShareMediaViewer", () => {
           previewUrl="/s/photo?view=inline&preview=true"
           contentType="image/x-canon-cr3"
           contentLength={1234}
+
+          onShareLink={vi.fn().mockResolvedValue(undefined)}
         />,
       );
 
@@ -59,6 +61,27 @@ describe("ShareMediaViewer", () => {
     },
   );
 
+  it("uses the public share action instead of issuing authenticated download tokens", async () => {
+    const onShareLink = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ShareMediaViewer
+        token="public-photo"
+        title="photo.CR3"
+        fileName="photo.CR3"
+        inlineUrl="/s/public-photo?view=inline"
+        downloadUrl="/s/public-photo?view=download"
+        previewUrl="/s/public-photo?view=inline&preview=true"
+        contentType="image/x-canon-cr3"
+        contentLength={1234}
+        onShareLink={onShareLink}
+      />,
+    );
+
+    await lightboxProps?.onShare("public-photo", "photo.CR3");
+
+    expect(onShareLink).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the original JPEG when originals are preferred", () => {
     render(
       <ShareMediaViewer
@@ -70,6 +93,8 @@ describe("ShareMediaViewer", () => {
         previewUrl="/s/photo?view=inline&preview=true"
         contentType="image/jpeg"
         contentLength={1234}
+
+        onShareLink={vi.fn().mockResolvedValue(undefined)}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Close gallery" }));

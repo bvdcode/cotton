@@ -86,6 +86,7 @@ export const FilesPageOverlays: React.FC<FilesPageOverlaysProps> = ({
           onClose={() => interaction.setLightboxOpen(false)}
           getSignedMediaUrl={interaction.getSignedMediaUrl}
           getDownloadUrl={interaction.getDownloadUrl}
+          onShare={interaction.handleShareFile}
           onDelete={handleLightboxDelete}
           smoothTransitions={smoothGalleryTransitions}
         />

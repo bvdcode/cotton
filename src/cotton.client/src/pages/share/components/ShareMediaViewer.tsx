@@ -19,6 +19,7 @@ interface ShareMediaViewerProps {
   fileName: string | null;
   contentType: string | null;
   contentLength: number | null;
+  onShareLink: () => Promise<void>;
 }
 
 export const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
@@ -30,6 +31,7 @@ export const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
   fileName,
   contentType,
   contentLength,
+  onShareLink,
 }) => {
   const [closedLightboxKey, setClosedLightboxKey] = React.useState<
     string | null
@@ -72,6 +74,7 @@ export const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
         onClose={() => setClosedLightboxKey(lightboxKey)}
         getSignedMediaUrl={async () => inlineUrl}
         getDownloadUrl={downloadUrl ? async () => downloadUrl : undefined}
+        onShare={onShareLink}
         smoothTransitions={smoothGalleryTransitions}
       />
 

@@ -111,6 +111,7 @@ export const DashboardRecentFilesWidget = ({
           items={interaction.mediaItems}
           getSignedMediaUrl={interaction.getSignedMediaUrl}
           getDownloadUrl={interaction.getDownloadUrl}
+          onShare={interaction.handleShareFile}
           onClose={() => interaction.setLightboxOpen(false)}
           smoothTransitions={smoothTransitions}
         />
