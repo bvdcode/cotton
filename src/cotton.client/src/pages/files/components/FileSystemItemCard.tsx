@@ -86,12 +86,7 @@ const CardArtwork = ({
           gap: 0.5,
           px: 0.25,
           height: 22,
-          borderRadius: 0.75,
-          bgcolor: "background.paper",
-          color: "text.secondary",
-          border: "1px solid",
-          borderColor: "divider",
-          boxShadow: 1,
+          color: "primary.main",
           "& > svg": {
             fontSize: 16,
           },

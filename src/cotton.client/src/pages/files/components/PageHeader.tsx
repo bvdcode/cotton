@@ -259,18 +259,13 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                       }}
                       aria-label={action.title}
                       aria-pressed={action.active}
+                      color={action.color ?? "primary"}
                       disabled={action.disabled}
                       onClick={action.onClick}
                       onDragOver={action.onDragOver}
                       onDragLeave={action.onDragLeave}
                       onDrop={action.onDrop}
                       sx={(theme) => ({
-                        color:
-                          action.color === "error"
-                            ? theme.palette.error.main
-                            : action.active || action.color === "secondary"
-                              ? theme.palette.secondary.main
-                              : theme.palette.primary.main,
                         transition:
                           "box-shadow 120ms ease-out, background-color 120ms ease-out",
                         ...(action.dropActive && {
