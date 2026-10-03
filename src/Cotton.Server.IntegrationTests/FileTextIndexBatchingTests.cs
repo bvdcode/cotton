@@ -4,11 +4,42 @@
 using Cotton.Server.Services.Search;
 using Cotton.Server.Handlers.Files;
 using EasyExtensions.Mediator;
+using Cotton.TextExtraction;
 
 namespace Cotton.Server.IntegrationTests
 {
     public class FileTextIndexBatchingTests : FileTextIndexingTestBase
     {
+        [Test]
+        public async Task Batch_WorkbookWithChartSheet_DoesNotBlockFollowingPdf()
+        {
+            FileManifest workbook = await AddFileAsync("chart.xlsx", SpreadsheetTextExtractor.ContentType,
+                SpreadsheetTestDocument.CreateWithChartSheet());
+            FileManifest pdf = await AddFileAsync("new.pdf", PdfTextExtractor.ContentType,
+                PdfTestDocument.Create("New PDF content"));
+            Guid[] ids = [workbook.Id, pdf.Id];
+            _db.ChangeTracker.Clear();
+
+            await _services.GetRequiredService<IMediator>().Send(new IndexFileTextRequest(ids), CancellationToken.None);
+            _db.ChangeTracker.Clear();
+
+            List<FileManifest> indexed = await _db.FileManifests.ToListAsync();
+            List<FileEmbedding> vectors = await _db.FileEmbeddings.ToListAsync();
+            Assert.Multiple(() =>
+            {
+                Assert.That(indexed.All(file => file.TextIndexVersion == VectorIndexDefinition.Version), Is.True);
+                Assert.That(indexed.All(file => file.TextIndexError is null), Is.True);
+                Assert.That(vectors.Any(vector => vector.FileManifestId == workbook.Id), Is.True);
+                Assert.That(vectors.Any(vector => vector.FileManifestId == pdf.Id), Is.True);
+            });
+
+            int calls = _worker.EmbedCalls;
+            _db.ChangeTracker.Clear();
+            await _services.GetRequiredService<IMediator>().Send(new IndexFileTextRequest(ids), CancellationToken.None);
+            Assert.That(_worker.EmbedCalls, Is.EqualTo(calls));
+            Assert.That(await _db.FileEmbeddings.CountAsync(), Is.EqualTo(vectors.Count));
+        }
+
         [Test]
         public async Task Batch_CombinesSmallFilesAndStoresVectorsUnderTheirOwnManifest()
         {
