@@ -93,6 +93,11 @@ namespace Cotton.Server.Services
             return EnsureCanAddLogicalBytesAsync(userId, sizeBytes, reserveInRequestState: false, ct);
         }
 
+        public Task ReserveFileReferencesAsync(Guid userId, long sizeBytes, CancellationToken ct = default)
+        {
+            return EnsureCanAddLogicalBytesAsync(userId, sizeBytes, reserveInRequestState: true, ct);
+        }
+
         public async Task<long> EnsureCanChangeFileManifestAsync(
             Guid userId,
             Guid nodeFileId,

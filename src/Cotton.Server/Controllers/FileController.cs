@@ -8,6 +8,7 @@ using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using EasyExtensions;
@@ -24,6 +25,16 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         IStoragePipeline _storage) : ControllerBase
     {
+        [Authorize]
+        [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/copy")]
+        public async Task<IActionResult> CopyFile(Guid nodeFileId, [FromBody] CopyItemRequestDto request)
+        {
+            NodeFileManifestDto copy = await _mediator.Send(new CopyFileCommand(
+                User.GetUserId(), nodeFileId, request.ParentId, request.Name, request.Overwrite),
+                HttpContext.RequestAborted);
+            return Ok(copy);
+        }
+
         [Authorize]
         [HttpDelete(Routes.V1.Files + "/{nodeFileId:guid}")]
         public async Task<IActionResult> DeleteFile(

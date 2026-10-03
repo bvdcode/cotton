@@ -49,6 +49,22 @@ namespace Cotton.Database.Models
             ContentType = FileContentTypeResolver.ResolveFromFileName(normalized);
         }
 
+        public NodeFile CopyTo(Node parent, string name)
+        {
+            Guid id = Guid.CreateVersion7();
+            NodeFile copy = new()
+            {
+                Id = id,
+                OwnerId = parent.OwnerId,
+                NodeId = parent.Id,
+                FileManifestId = FileManifestId,
+                OriginalNodeFileId = id,
+                Metadata = Metadata is null ? null : new(Metadata),
+            };
+            copy.SetName(name);
+            return copy;
+        }
+
         [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual FileManifest FileManifest { get; set; } = null!;
 
