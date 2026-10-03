@@ -47,6 +47,15 @@ export interface FileVersionDto {
 }
 
 export const filesApi = {
+  copyFile: async (
+    fileId: Guid,
+    request: MoveFileRequest,
+  ): Promise<NodeFileManifestDto> => {
+    const url = `/files/${fileId}/copy`;
+    const response = await httpClient.post<JsonValue>(url, request);
+    return parseValidated(url, response.data, nodeFileManifestSchema);
+  },
+
   createFromChunks: async (
     request: CreateFileFromChunksRequest,
   ): Promise<NodeFileManifestDto> => {

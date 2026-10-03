@@ -1,11 +1,13 @@
-import { renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createInstance } from "i18next";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import { useFileMoveController } from "./useFileMoveController";
+import { useMoveClipboardStore } from "@shared/store/moveClipboardStore";
 
 const mocks = vi.hoisted(() => ({
   cutItems: vi.fn(),
+  copyItems: vi.fn(),
   pasteInto: vi.fn(),
   moveItems: vi.fn(),
 }));
@@ -16,15 +18,17 @@ vi.mock("../../../shared/hooks/useMoveOperations", () => ({
   readMoveDragPayload: vi.fn(() => null),
   useMoveOperations: () => ({
     cutItems: mocks.cutItems,
+    copyItems: mocks.copyItems,
     pasteInto: mocks.pasteInto,
     moveItems: mocks.moveItems,
     clearClipboard: vi.fn(),
   }),
 }));
 
-vi.mock("../../../shared/store/moveClipboardStore", () => ({
-  useMoveClipboardStore: vi.fn(() => []),
-}));
+beforeEach(() => {
+  vi.clearAllMocks();
+  useMoveClipboardStore.getState().clear();
+});
 
 const translations = createInstance();
 await translations.init({ lng: "en", resources: {} });
@@ -46,8 +50,43 @@ const makeFileTile = (): FileSystemTile => ({
 });
 
 describe("useFileMoveController", () => {
+  it("copies with Ctrl+C, leaves the original undimmed and preserves text-field shortcuts", () => {
+    const onClipboardSet = vi.fn();
+    const { result } = renderHook(() =>
+      useFileMoveController({
+        nodeId: "node-1",
+        tiles: [makeFileTile()],
+        selectedIds: new Set(["file-1"]),
+        selectedCount: 1,
+        goUpParentId: null,
+        onClipboardSet,
+        showToast: vi.fn(),
+        t,
+      }),
+    );
+    fireEvent.keyDown(window, { key: "c", code: "KeyC", ctrlKey: true });
+    expect(mocks.copyItems).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "file-1" }),
+    ]);
+    expect(onClipboardSet).toHaveBeenCalledOnce();
+    act(() =>
+      useMoveClipboardStore
+        .getState()
+        .setItems(
+          [{ id: "file-1", kind: "file", sourceParentId: "node-1" }],
+          "copy",
+        ),
+    );
+    expect(result.current.moveSupport?.cutItemIds.size).toBe(0);
+    const input = document.createElement("input");
+    document.body.append(input);
+    input.focus();
+    fireEvent.keyDown(input, { key: "c", code: "KeyC", ctrlKey: true });
+    expect(mocks.copyItems).toHaveBeenCalledOnce();
+    input.remove();
+  });
   it("leaves selection mode after cutting the current selection", () => {
-    const onItemsCut = vi.fn();
+    const onClipboardSet = vi.fn();
     const showToast = vi.fn();
     const { result } = renderHook(() =>
       useFileMoveController({
@@ -56,7 +95,7 @@ describe("useFileMoveController", () => {
         selectedIds: new Set(["file-1"]),
         selectedCount: 1,
         goUpParentId: null,
-        onItemsCut,
+        onClipboardSet,
         showToast,
         t,
       }),
@@ -67,7 +106,7 @@ describe("useFileMoveController", () => {
     expect(mocks.cutItems).toHaveBeenCalledWith([
       expect.objectContaining({ id: "file-1", kind: "file" }),
     ]);
-    expect(onItemsCut).toHaveBeenCalledOnce();
+    expect(onClipboardSet).toHaveBeenCalledOnce();
     expect(showToast).toHaveBeenCalledWith("move.toasts.cut");
   });
 });

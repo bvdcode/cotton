@@ -2,6 +2,7 @@ import React from "react";
 import { Box, IconButton } from "@mui/material";
 import {
   ContentCut,
+  ContentCopy,
   Delete,
   Download,
   Edit,
@@ -161,6 +162,14 @@ const buildFolderActionButtons = (
       onClick: () => operations.onShare?.(row.id, row.name),
     });
   }
+  if (operations.onCopy) {
+    actions.push({
+      key: "copy",
+      icon: <ContentCopy fontSize="small" />,
+      title: options.labels.copy,
+      onClick: () => operations.onCopy?.(row.id),
+    });
+  }
   if (operations.onCut) {
     actions.push({
       key: "cut",
@@ -239,6 +248,14 @@ const buildFileActionButtons = (
       onClick: () => operations.onStartRename?.(row.id, row.name),
     });
   }
+  if (operations.onCopy) {
+    actions.push({
+      key: "copy",
+      icon: <ContentCopy fontSize="small" />,
+      title: options.labels.copy,
+      onClick: () => operations.onCopy?.(row.id),
+    });
+  }
   if (operations.onCut) {
     actions.push({
       key: "cut",
@@ -275,7 +292,7 @@ export const createActionsColumn = (
 ): GridColDef<FileListRow> => ({
   field: "actions",
   headerName: options.labels.actionsTitle,
-  minWidth: 340,
+  minWidth: 376,
   sortable: false,
   filterable: false,
   align: "right",

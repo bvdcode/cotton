@@ -1323,7 +1323,8 @@
       "pause": "Pause",
       "copied": "Copied!",
       "reload": "Reload",
-      "retry": "Retry"
+      "retry": "Retry",
+      "copy": "Copy"
     },
     "errors": {
       "unexpectedTitle": "Unable to display this page",
@@ -2507,6 +2508,13 @@
         "decryptExistingFailed_one": "Could not decrypt {{count}} file. Check the task panel.",
         "decryptExistingFailed_other": "Could not decrypt {{count}} files. Check the task panel.",
         "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
+      }
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Ready to copy: {{count}}",
+        "copied": "Copied: {{count}}",
+        "failed": "Could not copy: {{count}}"
       }
     }
   },

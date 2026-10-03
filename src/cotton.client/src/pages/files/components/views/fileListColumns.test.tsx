@@ -22,6 +22,7 @@ const labels = {
   versions: "Versions",
   share: "Share",
   cut: "Cut",
+  copy: "Copy",
   encryptedFile: "Encrypted file",
   encryptedFolder: "Encrypted folder",
   enableEncryptionPolicy: "Enable E2E",

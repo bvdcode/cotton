@@ -27,6 +27,31 @@ function renderHeader(overrides: Partial<PageHeaderProps> = {}): void {
   render(<PageHeader {...defaultProps} {...overrides} />);
 }
 
+it("keeps primary folder actions before creation actions and exposes their toggle state", () => {
+  const toggle = vi.fn();
+  renderHeader({
+    primaryActionItems: [
+      {
+        key: "favorite",
+        title: "Favorite",
+        icon: <span />,
+        onClick: toggle,
+        active: true,
+      },
+    ],
+    showUpload: true,
+    onUploadClick: vi.fn(),
+  });
+  const favorite = screen.getByRole("button", { name: "Favorite" });
+  expect(favorite).toHaveAttribute("aria-pressed", "true");
+  const buttons = screen.getAllByRole("button");
+  expect(buttons.indexOf(favorite)).toBeLessThan(
+    buttons.indexOf(screen.getByRole("button", { name: "actions.upload" })),
+  );
+  fireEvent.click(favorite);
+  expect(toggle).toHaveBeenCalledOnce();
+});
+
 beforeEach(() => {
   Object.defineProperty(window, "ResizeObserver", {
     configurable: true,
@@ -53,17 +78,16 @@ afterEach(() => {
 describe("PageHeader", () => {
   it("keeps overflow actions stable when hidden buttons cannot be measured", () => {
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(124);
-    vi.spyOn(
-      HTMLElement.prototype,
-      "getBoundingClientRect",
-    ).mockImplementation(function (this: HTMLElement) {
-      const parentDisplay = this.parentElement
-        ? window.getComputedStyle(this.parentElement).display
-        : "";
-      const width = parentDisplay === "none" ? 0 : 40;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const parentDisplay = this.parentElement
+          ? window.getComputedStyle(this.parentElement).display
+          : "";
+        const width = parentDisplay === "none" ? 0 : 40;
 
-      return DOMRect.fromRect({ width, height: 40 });
-    });
+        return DOMRect.fromRect({ width, height: 40 });
+      },
+    );
 
     renderHeader();
 

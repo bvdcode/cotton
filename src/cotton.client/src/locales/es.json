@@ -1525,7 +1525,8 @@
       "copied": "¡Copiado!",
       "reload": "Recargar",
       "retry": "Reintentar",
-      "versions": "Versiones"
+      "versions": "Versiones",
+      "copy": "Copiar"
     },
     "errors": {
       "unexpectedTitle": "No se pudo mostrar la página",
@@ -2710,6 +2711,13 @@
       "restoreConfirmDescription": "El contenido actual del archivo se guardará como una nueva versión y, después, la versión {{version}} pasará a ser la actual.",
       "deleteConfirmTitle": "¿Eliminar esta versión?",
       "deleteConfirmDescription": "Se eliminará la versión {{version}}. El archivo actual no cambiará."
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Listos para copiar: {{count}}",
+        "copied": "Copiados: {{count}}",
+        "failed": "No se pudieron copiar: {{count}}"
+      }
     }
   },
   "tasks": {

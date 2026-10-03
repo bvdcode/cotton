@@ -70,6 +70,7 @@ export interface PageHeaderProps {
 
   // Custom actions rendered in overflow-aware action bar
   customActionItems?: PageHeaderActionItem[];
+  primaryActionItems?: PageHeaderActionItem[];
 
   /** Optional drop handlers for breadcrumbs (move drag target). */
   breadcrumbsDropHandlers?: React.ComponentProps<
@@ -112,6 +113,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   onSelectAll,
   onDeselectAll,
   customActionItems,
+  primaryActionItems,
   breadcrumbsDropHandlers,
   goUpDropHandlers,
 }) => {
@@ -148,6 +150,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const actionTabs = buildPageHeaderActions({
     canGoUp,
     customActionItems,
+    primaryActionItems,
     goUpDropHandlers,
     isCreatingFile,
     isCreatingFolder,
@@ -255,6 +258,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                         actionButtonRefs.current[action.key] = el;
                       }}
                       aria-label={action.title}
+                      aria-pressed={action.active}
                       disabled={action.disabled}
                       onClick={action.onClick}
                       onDragOver={action.onDragOver}

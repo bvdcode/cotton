@@ -1535,7 +1535,8 @@
       "copied": "已复制！",
       "reload": "刷新",
       "retry": "重试",
-      "versions": "版本"
+      "versions": "版本",
+      "copy": "复制"
     },
     "errors": {
       "unexpectedTitle": "无法显示此页面",
@@ -2720,6 +2721,13 @@
       "restoreConfirmDescription": "当前文件内容将保存为新版本，然后版本 {{version}} 将成为当前版本。",
       "deleteConfirmTitle": "删除此版本？",
       "deleteConfirmDescription": "版本 {{version}} 将被删除。当前文件不会更改。"
+    },
+    "copy": {
+      "toasts": {
+        "ready": "准备复制：{{count}}",
+        "copied": "已复制：{{count}}",
+        "failed": "无法复制：{{count}}"
+      }
     }
   },
   "tasks": {

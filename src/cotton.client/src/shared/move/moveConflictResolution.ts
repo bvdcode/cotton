@@ -8,10 +8,15 @@ import {
   type NodeFileManifestDto,
   type RestoreConflictKind,
 } from "../api/nodesApi";
-import type { MoveClipboardItem } from "../store/moveClipboardStore";
+import type {
+  FileTransferOperation,
+  MoveClipboardItem,
+} from "../store/moveClipboardStore";
 import { ConflictAction, type NameConflictPrompt } from "../types/nameConflict";
 import { getFileNameKey, nextAvailableName } from "../utils/fileNameUtils";
 import { readStringProperty } from "../utils/typeGuards";
+import { isFileEncrypted } from "../crypto";
+import { createOpaqueServerFileName } from "../upload/uploadFileToNode";
 
 export type MoveConflictResolver = (
   prompt: NameConflictPrompt,
@@ -74,14 +79,25 @@ const moveSingleItem = async (
   targetParentId: string,
   name: string | undefined,
   overwrite: boolean,
+  operation: FileTransferOperation,
 ): Promise<MoveSingleItemResult> => {
   if (item.kind === "folder") {
     const request: MoveNodeRequest = { parentId: targetParentId };
     if (name !== undefined) {
       request.name = name;
     }
-    const folder = await nodesApi.moveNode(item.id, request);
-    return { kind: "folder", folder };
+    switch (operation) {
+      case "move":
+        return {
+          kind: "folder",
+          folder: await nodesApi.moveNode(item.id, request),
+        };
+      case "copy":
+        return {
+          kind: "folder",
+          folder: await nodesApi.copyNode(item.id, request),
+        };
+    }
   }
 
   const request: MoveFileRequest = { parentId: targetParentId };
@@ -91,11 +107,19 @@ const moveSingleItem = async (
   if (overwrite) {
     request.overwrite = true;
   }
-  const file = await filesApi.moveFile(item.id, request);
-  return { kind: "file", file };
+  switch (operation) {
+    case "move":
+      return { kind: "file", file: await filesApi.moveFile(item.id, request) };
+    case "copy":
+      if (isFileEncrypted(item.file?.metadata)) {
+        request.name = createOpaqueServerFileName();
+      }
+      return { kind: "file", file: await filesApi.copyFile(item.id, request) };
+  }
 };
 
 export const moveItemWithConflictResolution = async (options: {
+  operation?: FileTransferOperation;
   confirmConflict: MoveConflictResolver;
   item: MoveClipboardItem;
   skipAllConflicts: boolean;
@@ -113,6 +137,7 @@ export const moveItemWithConflictResolution = async (options: {
         options.targetParentId,
         name,
         overwrite,
+        options.operation ?? "move",
       );
       return { kind: "moved", moved };
     } catch (error) {
@@ -146,7 +171,10 @@ export const moveItemWithConflictResolution = async (options: {
       } catch (loadError) {
         return {
           kind: "failed",
-          error: loadError instanceof Error ? loadError : new Error("Could not load target folder."),
+          error:
+            loadError instanceof Error
+              ? loadError
+              : new Error("Could not load target folder."),
         };
       }
       const conflictingName = name ?? originalName;
@@ -159,7 +187,13 @@ export const moveItemWithConflictResolution = async (options: {
       const newName = nextAvailableName(originalName, targetNames);
       const action = await options.confirmConflict({
         newName,
-        canOverwrite: options.item.kind === "file" && conflictKind === "File",
+        canOverwrite:
+          options.item.kind === "file" &&
+          conflictKind === "File" &&
+          !(
+            options.operation === "copy" &&
+            options.item.sourceParentId === options.targetParentId
+          ),
       });
 
       switch (action) {

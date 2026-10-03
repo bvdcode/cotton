@@ -1527,7 +1527,8 @@
       "copied": "Gekopieerd!",
       "reload": "Opnieuw laden",
       "retry": "Opnieuw proberen",
-      "versions": "Versies"
+      "versions": "Versies",
+      "copy": "Kopiëren"
     },
     "errors": {
       "unexpectedTitle": "Deze pagina kan niet worden weergegeven",
@@ -2712,6 +2713,13 @@
       "restoreConfirmDescription": "De huidige bestandsinhoud wordt als nieuwe versie opgeslagen. Daarna wordt versie {{version}} de huidige versie.",
       "deleteConfirmTitle": "Deze versie verwijderen?",
       "deleteConfirmDescription": "Versie {{version}} wordt verwijderd. Het huidige bestand blijft ongewijzigd."
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Klaar om te kopiëren: {{count}}",
+        "copied": "Gekopieerd: {{count}}",
+        "failed": "Kopiëren mislukt: {{count}}"
+      }
     }
   },
   "tasks": {

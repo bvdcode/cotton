@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import {
   ContentCut,
+  ContentCopy,
   ContentPaste,
   Delete,
   Download,
@@ -24,6 +25,7 @@ interface UseFilesSelectionActionsOptions {
   currentFolderName?: string | null;
   fileSelection: FileSelectionState;
   handleCutSelection: () => void;
+  handleCopySelection: () => void;
   handlePasteHere: () => void;
   loading: boolean;
   nodeId: string | null;
@@ -37,14 +39,8 @@ interface UseFilesSelectionActionsOptions {
 
 interface FilesSelectionActions {
   customActionItems: PageHeaderProps["customActionItems"];
-  handleDownloadFolder: (
-    folderId: string,
-    folderName: string,
-  ) => Promise<void>;
-  handleShareFolder: (
-    folderId: string,
-    folderName: string,
-  ) => Promise<void>;
+  handleDownloadFolder: (folderId: string, folderName: string) => Promise<void>;
+  handleShareFolder: (folderId: string, folderName: string) => Promise<void>;
 }
 
 export const useFilesSelectionActions = ({
@@ -54,6 +50,7 @@ export const useFilesSelectionActions = ({
   currentFolderName,
   fileSelection,
   handleCutSelection,
+  handleCopySelection,
   handlePasteHere,
   loading,
   nodeId,
@@ -147,6 +144,13 @@ export const useFilesSelectionActions = ({
           disabled: loading,
         },
         {
+          key: "copy-selected",
+          icon: <ContentCopy />,
+          title: t("actions.copy", { ns: "common" }),
+          onClick: handleCopySelection,
+          disabled: loading,
+        },
+        {
           key: "cut-selected",
           icon: <ContentCut />,
           title: t("move.cut", { ns: "files" }),
@@ -186,6 +190,7 @@ export const useFilesSelectionActions = ({
     fileSelection.selectedCount,
     fileSelection.selectionMode,
     handleCutSelection,
+    handleCopySelection,
     handleDeleteSelected,
     handleDownloadSelection,
     handlePasteHere,

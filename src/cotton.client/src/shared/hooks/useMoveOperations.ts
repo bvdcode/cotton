@@ -1,23 +1,30 @@
 import { reportClientError } from "@shared/utils/clientDiagnostics";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
-import type { NodeFileManifestDto } from "../api/nodesApi";
-import { fetchServerSettings } from "../api/queries/serverSettings";
-import { queryClient } from "../api/queries/queryClient";
-import { refreshNodeContent } from "../store/nodesActions";
+import { useVault } from "../crypto";
 import {
   useMoveClipboardStore,
   type MoveClipboardItem,
+  type FileTransferOperation,
 } from "../store/moveClipboardStore";
-import { useNodesStore } from "../store/nodesStore";
-import { useVault } from "../crypto";
-import { encryptExistingFileWithTask } from "../tasks";
-import { collectPlainFilesInFoldersForClientEncryption } from "../utils/clientEncryptionFolderScan";
+import { getMoveTarget, needsEncryptionAfterMove } from "./moveState";
+import type {
+  EncryptionCandidate,
+  MoveOutcome,
+  UseMoveOperationsOptions,
+  UseMoveOperationsResult,
+} from "./moveTypes";
 import {
-  moveItemWithConflictResolution,
-  type MoveSingleItemResult,
-} from "../move/moveConflictResolution";
+  getMoveCandidates,
+  loadEncryptionServerSettings,
+  moveCandidatesToTarget,
+  refreshMovedParents,
+  encryptMovedFiles,
+  toDirectEncryptionCandidate,
+  collectMovedFolderEncryptionCandidates,
+} from "./fileTransferExecution";
+export type { MoveTranslation } from "./moveTypes";
 export {
   MOVE_DRAG_DATA_TYPE,
   MOVE_DRAG_DATA_MIME,
@@ -33,264 +40,9 @@ export {
 export type { MoveDragPayload } from "./moveDragPayload";
 
 import {
-  extractErrorMessage,
-  getMoveTarget,
-  needsEncryptionAfterMove,
-  needsDecryptionAfterMove,
-} from "./moveState";
-import { normalizeDragId } from "./moveDragPayload";
-
-import type {
-  MoveOutcome,
-  MoveExecutionResult,
-  UseMoveOperationsOptions,
-  EncryptionCandidate,
-  EncryptionCandidateScanResult,
-  MoveTranslation,
-  UseMoveOperationsResult,
-} from "./moveTypes";
-export type { MoveTranslation } from "./moveTypes";
-
-const getMoveCandidates = (
-  items: ReadonlyArray<MoveClipboardItem>,
-  targetParentId: string,
-): MoveClipboardItem[] => {
-  // Only filter the truly impossible case (a folder dropped on itself).
-  // Do NOT filter by item.sourceParentId === target — that field is captured
-  // at cut-time and can go stale if another window/client moves the entity.
-  const target = normalizeDragId(targetParentId);
-  return items.filter((item) => normalizeDragId(item.id) !== target);
-};
-
-const loadEncryptionServerSettings = async (
-  shouldLoad: boolean,
-): Promise<Awaited<ReturnType<typeof fetchServerSettings>> | null> => {
-  if (!shouldLoad) return null;
-  if (!useVault.getState().isUnlocked) return null;
-
-  try {
-    return await fetchServerSettings(queryClient);
-  } catch {
-    return null;
-  }
-};
-
-const moveCandidatesToTarget = async (options: {
-  candidates: ReadonlyArray<MoveClipboardItem>;
-  confirmConflict: UseMoveOperationsOptions["confirmConflict"];
-  targetEncryptsNewFiles: boolean;
-  targetParentId: string;
-}): Promise<MoveExecutionResult> => {
-  const sourceParents = new Set<string>();
-  const succeeded: MoveClipboardItem[] = [];
-  const failed: MoveClipboardItem[] = [];
-  const notMoved: MoveClipboardItem[] = [];
-  const movedFilesToEncrypt: MoveClipboardItem[] = [];
-  const movedFilesToOfferDecrypt: MoveClipboardItem[] = [];
-  let lastErrorMessage: string | null = null;
-  let skipAllConflicts = false;
-
-  // Serial loop: the server's collision/cycle checks are pre-update reads,
-  // so concurrent moves can still race in the small window before the unique
-  // index throws. Serial keeps the multi-item UX deterministic.
-  for (let index = 0; index < options.candidates.length; index += 1) {
-    const item = options.candidates[index];
-    const outcome = await moveItemWithConflictResolution({
-      confirmConflict: options.confirmConflict,
-      item,
-      skipAllConflicts,
-      targetParentId: options.targetParentId,
-    });
-
-    switch (outcome.kind) {
-      case "moved":
-        applyMovedItemToCache(item, outcome.moved, options.targetParentId);
-        sourceParents.add(item.sourceParentId);
-        succeeded.push(item);
-        collectMovedEncryptionFollowups({
-          item,
-          movedFilesToEncrypt,
-          movedFilesToOfferDecrypt,
-          targetEncryptsNewFiles: options.targetEncryptsNewFiles,
-        });
-        break;
-      case "failed":
-        failed.push(item);
-        notMoved.push(item);
-        lastErrorMessage =
-          extractErrorMessage(outcome.error) ?? lastErrorMessage;
-        reportClientError(
-          "Failed to move " + item.kind + " " + item.id,
-          outcome.error,
-        );
-        break;
-      case "skipped":
-        notMoved.push(item);
-        skipAllConflicts ||= outcome.skipAll;
-        break;
-      case "cancelled":
-        notMoved.push(...options.candidates.slice(index));
-        index = options.candidates.length;
-        break;
-    }
-  }
-
-  return {
-    failed,
-    lastErrorMessage,
-    movedFilesToEncrypt,
-    movedFilesToOfferDecrypt,
-    notMoved,
-    sourceParents,
-    succeeded,
-  };
-};
-
-const applyMovedItemToCache = (
-  item: MoveClipboardItem,
-  moved: MoveSingleItemResult,
-  targetParentId: string,
-): void => {
-  const store = useNodesStore.getState();
-  if (moved.kind === "folder") {
-    store.moveFolderInCache(moved.folder, item.sourceParentId, targetParentId);
-    return;
-  }
-
-  store.moveFileInCache(moved.file, item.sourceParentId, targetParentId);
-};
-
-const collectMovedEncryptionFollowups = (options: {
-  item: MoveClipboardItem;
-  movedFilesToEncrypt: MoveClipboardItem[];
-  movedFilesToOfferDecrypt: MoveClipboardItem[];
-  targetEncryptsNewFiles: boolean;
-}): void => {
-  if (
-    options.targetEncryptsNewFiles &&
-    needsEncryptionAfterMove(options.item)
-  ) {
-    options.movedFilesToEncrypt.push(options.item);
-    return;
-  }
-
-  if (
-    !options.targetEncryptsNewFiles &&
-    needsDecryptionAfterMove(options.item)
-  ) {
-    options.movedFilesToOfferDecrypt.push(options.item);
-  }
-};
-
-const refreshMovedParents = (
-  sourceParents: ReadonlySet<string>,
-  targetParentId: string,
-): void => {
-  const parentsToRefresh = new Set<string>(sourceParents);
-  parentsToRefresh.add(targetParentId);
-
-  for (const id of parentsToRefresh) {
-    void refreshNodeContent(id);
-  }
-};
-
-const encryptMovedFiles = async (options: {
-  files: ReadonlyArray<EncryptionCandidate>;
-  settings: Awaited<ReturnType<typeof fetchServerSettings>> | null;
-  targetNodeName: string;
-  targetParentId: string;
-  t: MoveTranslation;
-}): Promise<number> => {
-  if (options.files.length === 0) return 0;
-
-  if (!options.settings) {
-    if (useVault.getState().isUnlocked) {
-      toast.error(options.t("errors.serverSettingsNotLoaded", { ns: "tasks" }));
-    }
-    void refreshNodeContent(options.targetParentId);
-    return 0;
-  }
-
-  let failedCount = 0;
-  const refreshedParents = new Set<string>([options.targetParentId]);
-
-  for (const item of options.files) {
-    try {
-      await encryptExistingFileWithTask({
-        file: item.file,
-        targetNodeId: item.targetNodeId,
-        scopeLabel: options.targetNodeName,
-        server: {
-          maxChunkSizeBytes: options.settings.maxChunkSizeBytes,
-          supportedHashAlgorithm: options.settings.supportedHashAlgorithm,
-        },
-      });
-      refreshedParents.add(item.targetNodeId);
-    } catch {
-      failedCount += 1;
-    }
-  }
-
-  for (const parentId of refreshedParents) {
-    void refreshNodeContent(parentId);
-  }
-  return failedCount;
-};
-
-const toDirectEncryptionCandidate = (
-  item: MoveClipboardItem,
-  targetParentId: string,
-): EncryptionCandidate | null => {
-  if (!item.file) return null;
-
-  return {
-    file: {
-      id: item.id,
-      name: item.file.name,
-      contentType: item.file.contentType,
-      sizeBytes: item.file.sizeBytes,
-    },
-    targetNodeId: targetParentId,
-  };
-};
-
-const toNestedEncryptionCandidate = (
-  file: NodeFileManifestDto,
-): EncryptionCandidate => ({
-  file: {
-    id: file.id,
-    name: file.name,
-    contentType: file.contentType,
-    sizeBytes: file.sizeBytes,
-  },
-  targetNodeId: file.nodeId,
-});
-
-const collectMovedFolderEncryptionCandidates = async (
-  folders: ReadonlyArray<MoveClipboardItem>,
-): Promise<EncryptionCandidateScanResult> => {
-  if (folders.length === 0) {
-    return { candidates: [], incomplete: false };
-  }
-
-  try {
-    const scan = await collectPlainFilesInFoldersForClientEncryption(
-      folders.map((folder) => folder.id),
-    );
-
-    return {
-      candidates: scan.files.map(toNestedEncryptionCandidate),
-      incomplete: scan.truncated,
-    };
-  } catch (error) {
-    reportClientError("Failed to scan moved folders for plain files", error);
-    return { candidates: [], incomplete: true };
-  }
-};
-
-import {
   offerDecryptForMovedFiles,
   showMoveOutcomeToasts,
+  getTransferToastKeys,
 } from "./moveNotifications";
 
 export const useMoveOperations = ({
@@ -299,6 +51,11 @@ export const useMoveOperations = ({
   const { t } = useTranslation(["files", "common", "tasks"]);
   const setItems = useMoveClipboardStore((s) => s.setItems);
   const clear = useMoveClipboardStore((s) => s.clear);
+  const pasting = useRef(false);
+  const copyItems = useCallback(
+    (items: ReadonlyArray<MoveClipboardItem>) => setItems(items, "copy"),
+    [setItems],
+  );
 
   const cutItems = useCallback(
     (items: ReadonlyArray<MoveClipboardItem>) => {
@@ -315,6 +72,7 @@ export const useMoveOperations = ({
     async (
       items: ReadonlyArray<MoveClipboardItem>,
       targetParentId: string,
+      operation: FileTransferOperation = "move",
     ): Promise<MoveOutcome> => {
       const candidates = getMoveCandidates(items, targetParentId);
       if (candidates.length === 0) {
@@ -331,7 +89,12 @@ export const useMoveOperations = ({
         target = await getMoveTarget(targetParentId);
       } catch (error) {
         reportClientError("Failed to load move target", error);
-        toast.error(t("move.toasts.failed", { ns: "files", count: candidates.length }));
+        toast.error(
+          t(getTransferToastKeys(operation).failure, {
+            ns: "files",
+            count: candidates.length,
+          }),
+        );
         return {
           succeeded: [],
           failed: candidates,
@@ -348,7 +111,27 @@ export const useMoveOperations = ({
       const encryptionServerSettings = await loadEncryptionServerSettings(
         hasMoveEncryptionFollowups,
       );
+      if (
+        operation === "copy" &&
+        hasMoveEncryptionFollowups &&
+        !encryptionServerSettings
+      ) {
+        if (useVault.getState().isUnlocked) {
+          toast.error(t("errors.serverSettingsNotLoaded", { ns: "tasks" }));
+        } else {
+          toast.error(
+            t("clientEncryption.toasts.unlockRequired", { ns: "files" }),
+          );
+        }
+        return {
+          succeeded: [],
+          failed: candidates,
+          notMoved: candidates,
+          lastErrorMessage: null,
+        };
+      }
       const result = await moveCandidatesToTarget({
+        operation,
         candidates,
         confirmConflict,
         targetEncryptsNewFiles,
@@ -375,13 +158,16 @@ export const useMoveOperations = ({
         targetParentId,
         t,
       });
-      offerDecryptForMovedFiles({
-        files: result.movedFilesToOfferDecrypt,
-        targetNodeName: target.node.name,
-        targetParentId,
-        t,
-      });
+      if (operation === "move") {
+        offerDecryptForMovedFiles({
+          files: result.movedFilesToOfferDecrypt,
+          targetNodeName: target.node.name,
+          targetParentId,
+          t,
+        });
+      }
       showMoveOutcomeToasts({
+        operation,
         encryptionFailedCount,
         encryptionScanIncomplete: nestedEncryptionCandidateScan.incomplete,
         failed: result.failed,
@@ -413,22 +199,32 @@ export const useMoveOperations = ({
 
   const pasteInto = useCallback(
     async (targetParentId: string): Promise<void> => {
-      const items = useMoveClipboardStore.getState().items;
-      if (items.length === 0) return;
-
-      const outcome = await moveItems(items, targetParentId);
-
-      // Keep failed, skipped, and cancelled items available for another paste.
-      if (outcome.notMoved.length === 0) {
-        clear();
-      } else {
-        useMoveClipboardStore.getState().setItems(outcome.notMoved);
+      const { items, operation } = useMoveClipboardStore.getState();
+      if (items.length === 0 || pasting.current) {
+        return;
+      }
+      pasting.current = true;
+      try {
+        const outcome = await moveItems(items, targetParentId, operation);
+        if (
+          operation === "move" &&
+          useMoveClipboardStore.getState().items === items
+        ) {
+          if (outcome.notMoved.length === 0) {
+            clear();
+          } else {
+            useMoveClipboardStore.getState().setItems(outcome.notMoved);
+          }
+        }
+      } finally {
+        pasting.current = false;
       }
     },
     [clear, moveItems],
   );
 
   return {
+    copyItems,
     cutItems,
     clearClipboard: clear,
     pasteInto,

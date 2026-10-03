@@ -35,6 +35,7 @@ export type MoveTranslation = ReturnType<
 >["t"];
 
 export interface UseMoveOperationsResult {
+  copyItems: (items: ReadonlyArray<MoveClipboardItem>) => void;
   cutItems: (items: ReadonlyArray<MoveClipboardItem>) => void;
   clearClipboard: () => void;
   /** Paste current clipboard contents into the target parent. */

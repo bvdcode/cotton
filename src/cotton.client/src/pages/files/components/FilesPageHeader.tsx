@@ -1,13 +1,20 @@
 import React, { useCallback } from "react";
 import type { FileSelectionState } from "@shared/hooks/useFileSelection";
 import type { useFilesLayout } from "@shared/hooks/useFilesLayout";
-import type { FileSystemTile, FileListStats } from "@shared/types/FileListViewTypes";
+import type {
+  FileSystemTile,
+  FileListStats,
+} from "@shared/types/FileListViewTypes";
 import type { useFileMoveController } from "../hooks/useFileMoveController";
 import type { useFilesContentOperations } from "../hooks/useFilesContentOperations";
 import type { useFilesSelectionActions } from "../hooks/useFilesSelectionActions";
-import { PageHeader } from "./PageHeader";
+import { PageHeader, type PageHeaderActionItem } from "./PageHeader";
+import { Star, StarBorder } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
+import type { usePinnedFolders } from "@shared/dashboard/usePinnedFolders";
 
 interface FilesPageHeaderProps {
+  pinnedFolders: ReturnType<typeof usePinnedFolders>;
   breadcrumbs: React.ComponentProps<typeof PageHeader>["breadcrumbs"];
   canGoUp: boolean;
   stats: FileListStats;
@@ -26,6 +33,7 @@ interface FilesPageHeaderProps {
 }
 
 export const FilesPageHeader: React.FC<FilesPageHeaderProps> = ({
+  pinnedFolders,
   breadcrumbs,
   canGoUp,
   stats,
@@ -42,6 +50,23 @@ export const FilesPageHeader: React.FC<FilesPageHeaderProps> = ({
   tiles,
   viewMode,
 }) => {
+  const { t } = useTranslation("home");
+  const isPinned = nodeId !== null && pinnedFolders.isPinned(nodeId);
+  const actions: PageHeaderActionItem[] = [];
+  if (nodeId) {
+    actions.unshift({
+      key: "pin-current-folder",
+      icon: isPinned ? <Star /> : <StarBorder />,
+      title: t(
+        isPinned
+          ? "dashboard.pinnedFolders.unpin"
+          : "dashboard.pinnedFolders.pin",
+      ),
+      onClick: () => pinnedFolders.togglePinned(nodeId),
+      disabled: loading,
+      active: isPinned,
+    });
+  }
   const handleSelectAll = useCallback(
     () => fileSelection.selectAll(tiles),
     [fileSelection, tiles],
@@ -71,6 +96,7 @@ export const FilesPageHeader: React.FC<FilesPageHeaderProps> = ({
       onToggleSelectionMode={fileSelection.toggleSelectionMode}
       onSelectAll={handleSelectAll}
       onDeselectAll={fileSelection.deselectAll}
+      primaryActionItems={actions}
       customActionItems={selectionActions.customActionItems}
       breadcrumbsDropHandlers={move.breadcrumbsDropHandlers}
       goUpDropHandlers={move.goUpDropHandlers}

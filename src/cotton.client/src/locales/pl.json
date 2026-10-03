@@ -1530,7 +1530,8 @@
       "copied": "Skopiowano!",
       "reload": "Odśwież",
       "retry": "Spróbuj ponownie",
-      "versions": "Wersje"
+      "versions": "Wersje",
+      "copy": "Kopiuj"
     },
     "errors": {
       "unexpectedTitle": "Nie udało się wyświetlić strony",
@@ -2749,6 +2750,13 @@
       "restoreConfirmDescription": "Bieżąca zawartość pliku zostanie zapisana jako nowa wersja, a następnie wersja {{version}} stanie się bieżącą.",
       "deleteConfirmTitle": "Usunąć tę wersję?",
       "deleteConfirmDescription": "Wersja {{version}} zostanie usunięta. Bieżący plik nie zostanie zmieniony."
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Gotowe do skopiowania: {{count}}",
+        "copied": "Skopiowano: {{count}}",
+        "failed": "Nie udało się skopiować: {{count}}"
+      }
     }
   },
   "tasks": {

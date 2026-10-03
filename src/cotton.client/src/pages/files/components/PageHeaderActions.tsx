@@ -18,6 +18,7 @@ type PageHeaderActionFactoryOptions = Pick<
   PageHeaderProps,
   | "canGoUp"
   | "customActionItems"
+  | "primaryActionItems"
   | "goUpDropHandlers"
   | "isCreatingFile"
   | "isCreatingFolder"
@@ -55,6 +56,7 @@ export const buildPageHeaderActions = (
       options.goUpDropHandlers,
     ),
   ];
+  actions.push(...(options.primaryActionItems ?? []));
 
   appendCreationActions(actions, {
     isCreatingFile: options.isCreatingFile,

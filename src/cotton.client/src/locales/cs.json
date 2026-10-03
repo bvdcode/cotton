@@ -1527,7 +1527,8 @@
       "copied": "Zkopírováno!",
       "reload": "Obnovit",
       "retry": "Zkusit znovu",
-      "versions": "Verze"
+      "versions": "Verze",
+      "copy": "Kopírovat"
     },
     "errors": {
       "unexpectedTitle": "Stránku se nepodařilo zobrazit",
@@ -2746,6 +2747,13 @@
       "restoreConfirmDescription": "Aktuální obsah souboru bude uložen jako nová verze a poté se verze {{version}} stane aktuální.",
       "deleteConfirmTitle": "Odstranit tuto verzi?",
       "deleteConfirmDescription": "Verze {{version}} bude odstraněna. Aktuální soubor se nezmění."
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Připraveno ke kopírování: {{count}}",
+        "copied": "Zkopírováno: {{count}}",
+        "failed": "Nepodařilo se zkopírovat: {{count}}"
+      }
     }
   },
   "tasks": {

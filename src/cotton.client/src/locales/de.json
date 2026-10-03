@@ -1522,7 +1522,8 @@
       "copied": "Kopiert!",
       "reload": "Neu laden",
       "retry": "Erneut versuchen",
-      "versions": "Versionen"
+      "versions": "Versionen",
+      "copy": "Kopieren"
     },
     "errors": {
       "unexpectedTitle": "Seite konnte nicht angezeigt werden",
@@ -2707,6 +2708,13 @@
       "restoreConfirmDescription": "Der aktuelle Dateiinhalt wird als neue Version gespeichert. Anschließend wird Version {{version}} zur aktuellen Version.",
       "deleteConfirmTitle": "Diese Version löschen?",
       "deleteConfirmDescription": "Version {{version}} wird gelöscht. Die aktuelle Datei bleibt unverändert."
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Zum Kopieren bereit: {{count}}",
+        "copied": "Kopiert: {{count}}",
+        "failed": "Kopieren fehlgeschlagen: {{count}}"
+      }
     }
   },
   "tasks": {

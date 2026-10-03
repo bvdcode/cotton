@@ -6,6 +6,7 @@ import {
   Image as ImageIcon,
   InsertDriveFile,
   LockOutlined,
+  Star,
   TextSnippet,
   VideoFile,
 } from "@mui/icons-material";
@@ -206,6 +207,14 @@ export const createNameColumn = (
             sx={{ color: "text.secondary", flexShrink: 0 }}
           />
         )}
+        {row.type === "folder" &&
+          options.folderOperations.isPinned?.(row.id) && (
+            <Star
+              fontSize="small"
+              titleAccess={options.labels.unpin}
+              color="action"
+            />
+          )}
         <Typography
           variant="body2"
           noWrap

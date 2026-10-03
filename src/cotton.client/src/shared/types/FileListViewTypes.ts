@@ -74,6 +74,7 @@ export interface FolderOperations {
   onDelete?: (folderId: string, name: string) => void;
   onDownload?: (folderId: string, name: string) => void;
   onShare?: (folderId: string, name: string) => void;
+  onCopy?: (folderId: string) => void;
   onCut?: (folderId: string) => void;
   onTogglePin?: (folderId: string) => void;
   onShowInfo?: (folder: NodeDto) => void;
@@ -101,6 +102,7 @@ export interface FileOperations {
   onDownload?: (fileId: string, name: string) => void;
   onVersions?: (fileId: string, name: string) => void;
   onShare?: (fileId: string, name: string) => void;
+  onCopy?: (fileId: string) => void;
   onCut?: (fileId: string) => void;
   onClick: (fileId: string, name: string, sizeBytes?: number) => void;
   onMediaClick?: (fileId: string) => void;

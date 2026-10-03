@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 export type MoveClipboardKind = "folder" | "file";
+export type FileTransferOperation = "move" | "copy";
 
 export interface MoveClipboardFileSnapshot {
   name: string;
@@ -18,13 +19,18 @@ export interface MoveClipboardItem {
 }
 
 interface MoveClipboardState {
+  operation: FileTransferOperation;
   items: ReadonlyArray<MoveClipboardItem>;
-  setItems: (items: ReadonlyArray<MoveClipboardItem>) => void;
+  setItems: (
+    items: ReadonlyArray<MoveClipboardItem>,
+    operation?: FileTransferOperation,
+  ) => void;
   clear: () => void;
 }
 
 export const useMoveClipboardStore = create<MoveClipboardState>((set) => ({
+  operation: "move",
   items: [],
-  setItems: (items) => set({ items }),
-  clear: () => set({ items: [] }),
+  setItems: (items, operation = "move") => set({ items, operation }),
+  clear: () => set({ items: [], operation: "move" }),
 }));

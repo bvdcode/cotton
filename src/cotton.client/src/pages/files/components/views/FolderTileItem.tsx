@@ -1,4 +1,6 @@
 import React from "react";
+import { LockOutlined, Star } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
 import { FolderCard } from "../FolderCard";
 import { isFolderEncryptionPolicyEnabled } from "../../../../shared/crypto";
 import type {
@@ -41,6 +43,7 @@ export const FolderTileItem = ({
   onMoveDragLeave?: (event: React.DragEvent<HTMLDivElement>) => void;
   onMoveDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
 }): React.ReactElement => {
+  const { t } = useTranslation(["common", "home"]);
   const isRenamingFolder = folderOperations.isRenaming(tile.node.id);
   const folderEncryptionPolicy = folderOperations.getEncryptionPolicyState?.(
     tile.node,
@@ -48,6 +51,9 @@ export const FolderTileItem = ({
   const folderEncrypted =
     folderEncryptionPolicy?.explicitEnabled ??
     isFolderEncryptionPolicyEnabled(tile.node.metadata);
+  const effectiveEncryption =
+    folderEncryptionPolicy?.effectiveEnabled ?? folderEncrypted;
+  const isPinned = folderOperations.isPinned?.(tile.node.id) ?? false;
 
   return (
     <TileFrame
@@ -70,6 +76,22 @@ export const FolderTileItem = ({
     >
       <FolderCard
         folder={tile.node}
+        cornerAdornment={
+          (effectiveEncryption || isPinned) && (
+            <>
+              {effectiveEncryption && (
+                <LockOutlined
+                  titleAccess={t(
+                    "common:clientEncryption.folderPolicyEnabledHint",
+                  )}
+                />
+              )}
+              {isPinned && (
+                <Star titleAccess={t("home:dashboard.widgets.pinnedFolders")} />
+              )}
+            </>
+          )
+        }
         encryptionPolicy={folderEncryptionPolicy}
         isRenaming={isRenamingFolder}
         renamingName={folderOperations.getRenamingName()}
@@ -97,6 +119,11 @@ export const FolderTileItem = ({
             ? () => folderOperations.onShare?.(tile.node.id, tile.node.name)
             : undefined
         }
+        onCopy={
+          folderOperations.onCopy
+            ? () => folderOperations.onCopy?.(tile.node.id)
+            : undefined
+        }
         onCut={
           folderOperations.onCut
             ? () => folderOperations.onCut?.(tile.node.id)
@@ -112,7 +139,7 @@ export const FolderTileItem = ({
             ? () => folderOperations.onShowInfo?.(tile.node)
             : undefined
         }
-        isPinned={folderOperations.isPinned?.(tile.node.id) ?? false}
+        isPinned={isPinned}
         onToggleEncryptionPolicy={
           folderOperations.onToggleEncryptionPolicy
             ? () =>

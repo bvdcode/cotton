@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ContentCut,
+  ContentCopy,
   Delete,
   Download,
   Edit,
@@ -165,6 +166,13 @@ const buildFileTileActions = (options: {
       icon: <Edit />,
       onClick: () => fileOperations.onStartRename?.(file.id, file.name),
       tooltip: t("actions.rename", { ns: "common" }),
+    });
+  }
+  if (!readOnly && fileOperations.onCopy) {
+    actions.push({
+      icon: <ContentCopy />,
+      onClick: () => fileOperations.onCopy?.(file.id),
+      tooltip: t("actions.copy", { ns: "common" }),
     });
   }
   if (!readOnly && fileOperations.onCut) {
