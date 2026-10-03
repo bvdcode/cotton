@@ -1,0 +1,144 @@
+name: Publish artifacts
+
+on:
+  workflow_call:
+    outputs:
+      Version:
+        description: Package and image version
+        value: ${{ jobs.build.outputs.Version }}
+      CommitsSinceVersionSource:
+        description: Number of commits since the version source
+        value: ${{ jobs.build.outputs.CommitsSinceVersionSource }}
+
+env:
+  IMAGE_NAME: cotton
+  CONTEXT_PATH: src
+  SOURCES_PATH: Cotton.Server
+
+jobs:
+  build:
+    name: Build and Publish Artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      Version: ${{ steps.gitversion.outputs.SemVer }}
+      CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}
+    permissions:
+      contents: read
+      packages: write
+    env:
+      NUGET_GITHUB_TOKEN: ${{ secrets.DEPLOY_GITHUB_TOKEN != '' && secrets.DEPLOY_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - name: check repository
+        uses: actions/checkout@v5
+        with:
+          lfs: "true"
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v3.1.11
+        with:
+          versionSpec: 5.x
+
+      - name: Determine Version
+        uses: gittools/actions/gitversion/execute@v3.1.11
+        id: gitversion # step id used as reference for output values
+      - name: Display GitVersion outputs
+        run: |
+          echo "Version: ${{ steps.gitversion.outputs.SemVer }}"
+          echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}"
+
+      - name: Setup .NET
+        if: github.ref == 'refs/heads/main'
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore SDK package projects
+        if: github.ref == 'refs/heads/main'
+        run: dotnet restore src/Cotton.Sdk/Cotton.Sdk.csproj
+
+      - name: Build SDK package projects
+        if: github.ref == 'refs/heads/main'
+        run: dotnet build src/Cotton.Sdk/Cotton.Sdk.csproj --configuration Release --no-restore
+
+      - name: Pack shared NuGet package
+        if: github.ref == 'refs/heads/main'
+        run: dotnet pack src/Cotton.Shared/Cotton.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.gitversion.outputs.SemVer }}'
+
+      - name: Pack SDK NuGet package
+        if: github.ref == 'refs/heads/main'
+        run: dotnet pack src/Cotton.Sdk/Cotton.Sdk.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.gitversion.outputs.SemVer }}'
+
+      - name: Upload NuGet package artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v5
+        with:
+          name: nupkg
+          path: nupkg
+
+      - name: Write SixLabors license secret for Docker build
+        env:
+          SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+        run: |
+          if [ -z "${SIXLABORS_LICENSE:-}" ]; then
+            echo "SIXLABORS_LICENSE secret is required for Docker image builds." >&2
+            exit 1
+          fi
+          install -m 600 /dev/null /tmp/sixlabors.lic
+          printf '%s' "$SIXLABORS_LICENSE" > /tmp/sixlabors.lic
+
+      - name: login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{secrets.DOCKERHUB_USERNAME}}
+          password: ${{secrets.DOCKERHUB_TOKEN}}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker image tags
+        id: image
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            bvdcode/${{ env.IMAGE_NAME }}
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ steps.gitversion.outputs.SemVer }},enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ env.CONTEXT_PATH }}
+          push: true
+          tags: ${{ steps.image.outputs.tags }}
+          labels: ${{ steps.image.outputs.labels }}
+          file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
+          build-args: |
+            BUILD_VERSION=${{ steps.gitversion.outputs.SemVer }}
+          secret-files: |
+            sixlabors_license=/tmp/sixlabors.lic
+          cache-from: type=gha,scope=cotton-${{ github.ref_name }}
+          cache-to: type=gha,mode=max,scope=cotton-${{ github.ref_name }}
+
+      - name: Add GitHub Packages source
+        if: github.ref == 'refs/heads/main' && steps.gitversion.outputs.CommitsSinceVersionSource > 0
+        run: dotnet nuget add source --username ${{ github.actor }} --password ${{ env.NUGET_GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+
+      - name: Push package to GitHub Packages
+        if: github.ref == 'refs/heads/main' && steps.gitversion.outputs.CommitsSinceVersionSource > 0
+        run: dotnet nuget push "nupkg/*.nupkg" --skip-duplicate --api-key ${{ env.NUGET_GITHUB_TOKEN }} --source "github"
+
+      - name: Push package to NuGet.org
+        if: github.ref == 'refs/heads/main' && steps.gitversion.outputs.CommitsSinceVersionSource > 0
+        run: dotnet nuget push "nupkg/*.nupkg" --skip-duplicate --api-key ${{ secrets.NUGET_KEY }} --source https://api.nuget.org/v3/index.json
+
