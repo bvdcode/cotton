@@ -76,8 +76,18 @@ afterEach(() => {
 });
 
 describe("PageHeader", () => {
+  it("keeps navigation on go-up without a separate home button", () => {
+    const onGoUp = vi.fn();
+    renderHeader({ canGoUp: true, onGoUp });
+    expect(
+      screen.queryByRole("button", { name: "breadcrumbs.root" }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "actions.goUp" }));
+    expect(onGoUp).toHaveBeenCalledOnce();
+  });
+
   it("keeps overflow actions stable when hidden buttons cannot be measured", () => {
-    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(124);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(64);
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
       function (this: HTMLElement) {
         const parentDisplay = this.parentElement

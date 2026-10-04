@@ -2490,6 +2490,7 @@
       "folderNamePlaceholder": "Mapnaam",
       "goToFolder": "Naar map gaan",
       "goUp": "Omhoog",
+      "goUpHoldHint": "Omhoog; houd ingedrukt om naar de hoofdmap te gaan",
       "dropFiles": "Sleep bestanden hier om te uploaden",
       "switchToTilesView": "Tegelweergave",
       "switchToListView": "Lijstweergave",

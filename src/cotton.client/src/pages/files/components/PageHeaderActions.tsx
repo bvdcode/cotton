@@ -5,7 +5,6 @@ import {
   CheckBoxOutlineBlank,
   CreateNewFolder,
   Deselect,
-  Home,
   NoteAdd,
   SelectAll,
   UploadFile,
@@ -25,7 +24,6 @@ type PageHeaderActionFactoryOptions = Pick<
   | "loading"
   | "onDeselectAll"
   | "onGoUp"
-  | "onHomeClick"
   | "onNewFileClick"
   | "onNewFolderClick"
   | "onSelectAll"
@@ -70,7 +68,6 @@ export const buildPageHeaderActions = (
     showUpload: options.showUpload,
     t: options.t,
   });
-  actions.push(createHomeAction(options.onHomeClick, options.t));
   appendViewModeAction(
     actions,
     options.showViewModeToggle ?? true,
@@ -159,17 +156,6 @@ const appendCreationActions = (
     });
   }
 };
-
-const createHomeAction = (
-  onHomeClick: () => void,
-  t: ReturnType<typeof useTranslation>["t"],
-): PageHeaderActionItem => ({
-  key: "home",
-  icon: <Home />,
-  title: t("breadcrumbs.root"),
-  onClick: onHomeClick,
-  disabled: false,
-});
 
 const appendViewModeAction = (
   actions: PageHeaderActionItem[],

@@ -2498,6 +2498,7 @@
       "folderNamePlaceholder": "Název složky",
       "goToFolder": "Přejít do složky",
       "goUp": "O úroveň výš",
+      "goUpHoldHint": "O úroveň výš; podržením přejdete do kořenové složky",
       "dropFiles": "Přetáhněte soubory k nahrání",
       "switchToTilesView": "Přepnout na dlaždice",
       "switchToListView": "Přepnout na seznam",

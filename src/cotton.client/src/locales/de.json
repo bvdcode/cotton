@@ -2485,6 +2485,7 @@
       "folderNamePlaceholder": "Ordnername",
       "goToFolder": "Zum Ordner gehen",
       "goUp": "Nach oben",
+      "goUpHoldHint": "Nach oben; gedrückt halten, um zum Stammordner zu wechseln",
       "dropFiles": "Dateien zum Hochladen ablegen",
       "switchToTilesView": "Zu Kacheln wechseln",
       "switchToListView": "Zur Listenansicht wechseln",

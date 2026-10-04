@@ -2579,6 +2579,7 @@
       "folderNamePlaceholder": "Название папки",
       "goToFolder": "Перейти в папку",
       "goUp": "Вверх",
+      "goUpHoldHint": "Вверх; удерживайте для перехода в корневую папку",
       "dropFiles": "Перетащите файлы для загрузки",
       "switchToTilesView": "Переключиться на плитки",
       "switchToListView": "Переключиться на список",

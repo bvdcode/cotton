@@ -14,9 +14,7 @@ type VisibleActionsState = {
   keys: string[];
 };
 
-const ACTION_GAP = 4;
-const DEFAULT_ACTION_BUTTON_WIDTH = 36;
-const MORE_BUTTON_WIDTH = 36;
+const DEFAULT_ACTION_BUTTON_WIDTH = 40;
 
 const sameKeys = (
   left: ReadonlyArray<string>,
@@ -38,13 +36,10 @@ export const useOverflowActionKeys = ({
   actionButtonRefs,
 }: UseOverflowActionKeysParams): string[] => {
   const measuredActionWidthsRef = React.useRef<Record<string, number>>({});
+  const actionSignature = actions.map((action) => action.key).join("\u0000");
   const actionKeys = React.useMemo(
-    () => actions.map((action) => action.key),
-    [actions],
-  );
-  const actionSignature = React.useMemo(
-    () => actionKeys.join("\u0000"),
-    [actionKeys],
+    () => (actionSignature ? actionSignature.split("\u0000") : []),
+    [actionSignature],
   );
   const [visibleActionsState, setVisibleActionsState] =
     React.useState<VisibleActionsState>(() => ({
@@ -74,7 +69,7 @@ export const useOverflowActionKeys = ({
 
   React.useLayoutEffect(() => {
     const container = actionsContainerRef.current;
-    if (!container || actions.length === 0) {
+    if (!container || actionKeys.length === 0) {
       commitVisibleActionKeys(actionKeys);
       return;
     }
@@ -86,11 +81,11 @@ export const useOverflowActionKeys = ({
         return;
       }
 
-      const widths = actions.map((action) => {
-        const el = actionButtonRefs.current[action.key];
+      const gap = parseFloat(window.getComputedStyle(container).columnGap) || 0;
+      const widths = actionKeys.map((key) => {
+        const el = actionButtonRefs.current[key];
         const previousWidth =
-          measuredActionWidthsRef.current[action.key] ??
-          DEFAULT_ACTION_BUTTON_WIDTH;
+          measuredActionWidthsRef.current[key] ?? DEFAULT_ACTION_BUTTON_WIDTH;
         if (!el) {
           return previousWidth;
         }
@@ -100,13 +95,13 @@ export const useOverflowActionKeys = ({
           return previousWidth;
         }
 
-        measuredActionWidthsRef.current[action.key] = measured;
+        measuredActionWidthsRef.current[key] = measured;
         return measured;
       });
 
       const totalWidth =
         widths.reduce((sum, width) => sum + width, 0) +
-        Math.max(0, widths.length - 1) * ACTION_GAP;
+        Math.max(0, widths.length - 1) * gap;
 
       if (totalWidth <= available) {
         commitVisibleActionKeys(actionKeys);
@@ -115,26 +110,28 @@ export const useOverflowActionKeys = ({
 
       const maxWithoutOverflow = Math.max(
         0,
-        available - MORE_BUTTON_WIDTH - ACTION_GAP,
+        available -
+          (actionButtonRefs.current.overflow?.getBoundingClientRect().width ||
+            DEFAULT_ACTION_BUTTON_WIDTH) -
+          gap,
       );
       const nextVisible: string[] = [];
       let consumed = 0;
 
-      for (let index = 0; index < actions.length; index += 1) {
+      for (let index = 0; index < actionKeys.length; index += 1) {
         const width = widths[index] ?? DEFAULT_ACTION_BUTTON_WIDTH;
-        const projected =
-          consumed + width + (nextVisible.length > 0 ? ACTION_GAP : 0);
+        const projected = consumed + width + (nextVisible.length > 0 ? gap : 0);
 
         if (projected > maxWithoutOverflow) {
           break;
         }
 
-        nextVisible.push(actions[index].key);
+        nextVisible.push(actionKeys[index]);
         consumed = projected;
       }
 
-      if (nextVisible.length === 0 && actions.length > 0) {
-        nextVisible.push(actions[0].key);
+      if (nextVisible.length === 0 && actionKeys.length > 0) {
+        nextVisible.push(actionKeys[0]);
       }
 
       commitVisibleActionKeys(nextVisible);
@@ -156,7 +153,6 @@ export const useOverflowActionKeys = ({
   }, [
     actionButtonRefs,
     actionKeys,
-    actions,
     actionsContainerRef,
     commitVisibleActionKeys,
   ]);

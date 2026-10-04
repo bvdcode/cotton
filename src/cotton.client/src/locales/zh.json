@@ -2498,6 +2498,7 @@
       "folderNamePlaceholder": "文件夹名称",
       "goToFolder": "前往文件夹",
       "goUp": "上一级",
+      "goUpHoldHint": "上一级；长按前往根目录",
       "dropFiles": "拖放文件以上传",
       "switchToTilesView": "切换为平铺视图",
       "switchToListView": "切换为列表视图",

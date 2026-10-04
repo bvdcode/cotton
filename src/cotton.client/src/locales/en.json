@@ -2286,6 +2286,7 @@
       "folderNamePlaceholder": "Folder name",
       "goToFolder": "Go to folder",
       "goUp": "Go up",
+      "goUpHoldHint": "Go up; hold to go to the root folder",
       "dropFiles": "Drop files to upload",
       "switchToTilesView": "Switch to tiles",
       "switchToListView": "Switch to list view",

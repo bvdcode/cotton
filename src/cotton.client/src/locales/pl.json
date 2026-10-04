@@ -2501,6 +2501,7 @@
       "folderNamePlaceholder": "Nazwa folderu",
       "goToFolder": "Przejdź do folderu",
       "goUp": "Wyżej",
+      "goUpHoldHint": "Wyżej; przytrzymaj, aby przejść do folderu głównego",
       "dropFiles": "Upuść pliki, aby przesłać",
       "switchToTilesView": "Przełącz na kafelki",
       "switchToListView": "Przełącz na widok listy",

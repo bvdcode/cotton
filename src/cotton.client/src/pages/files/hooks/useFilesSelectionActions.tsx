@@ -122,13 +122,13 @@ export const useFilesSelectionActions = ({
   const customActionItems = useMemo(() => {
     const items: NonNullable<PageHeaderProps["customActionItems"]> = [];
 
-    if (!fileSelection.selectionMode && activeCurrentNode) {
+    if (!fileSelection.selectionMode && nodeId) {
       items.push({
         key: "share-current-folder",
         icon: <ShareIcon />,
         title: t("actions.share", { ns: "common" }),
         onClick: handleShareCurrentFolder,
-        disabled: loading,
+        disabled: loading || !activeCurrentNode,
       });
     }
 

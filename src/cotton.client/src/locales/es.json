@@ -2488,6 +2488,7 @@
       "folderNamePlaceholder": "Nombre de la carpeta",
       "goToFolder": "Ir a la carpeta",
       "goUp": "Subir",
+      "goUpHoldHint": "Subir; mantén pulsado para ir a la carpeta raíz",
       "dropFiles": "Suelta archivos para subirlos",
       "switchToTilesView": "Cambiar a mosaicos",
       "switchToListView": "Cambiar a vista de lista",

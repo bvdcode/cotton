@@ -2489,6 +2489,7 @@
       "folderNamePlaceholder": "Nom du dossier",
       "goToFolder": "Aller au dossier",
       "goUp": "Remonter",
+      "goUpHoldHint": "Remonter ; maintenir pour aller au dossier racine",
       "dropFiles": "Déposez les fichiers pour les téléverser",
       "switchToTilesView": "Passer en vue tuiles",
       "switchToListView": "Passer en vue liste",

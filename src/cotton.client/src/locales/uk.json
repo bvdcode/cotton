@@ -2496,6 +2496,7 @@
       "folderNamePlaceholder": "Назва теки",
       "goToFolder": "Перейти до теки",
       "goUp": "Вгору",
+      "goUpHoldHint": "Вгору; утримуйте для переходу до кореневої папки",
       "dropFiles": "Перетягніть файли для вивантаження",
       "switchToTilesView": "Перемкнути на плитки",
       "switchToListView": "Перемкнути на список",

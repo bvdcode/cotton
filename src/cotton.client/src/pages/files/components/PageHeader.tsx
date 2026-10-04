@@ -18,6 +18,7 @@ import {
   type FileBrowserViewMode,
 } from "@shared/utils/viewMode";
 import { useOverflowActionKeys } from "../hooks/useOverflowActionKeys";
+import { useLongPress } from "@shared/hooks/useLongPress";
 import type {
   FileBreadcrumb,
   FileListStats,
@@ -120,6 +121,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const { t } = useTranslation(["files", "trash", "common"]);
   const nextViewTitleKey = getNextFileBrowserViewTitleKey(viewMode);
   const actionsContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const goUpLongPressHandlers = useLongPress(onHomeClick, loading || !canGoUp);
   const actionButtonRefs = React.useRef<
     Record<string, HTMLButtonElement | null>
   >({});
@@ -158,7 +160,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     nextViewTitleKey,
     onDeselectAll,
     onGoUp,
-    onHomeClick,
     onNewFileClick,
     onNewFolderClick,
     onSelectAll,
@@ -217,23 +218,22 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         }}
       >
         <Box
+          ref={actionsContainerRef}
           sx={{
             display: "flex",
             alignItems: "center",
             flexShrink: 0,
             minWidth: 0,
-            gap: 0.5,
+            gap: { xs: 0, md: 0.5 },
             order: { xs: 1, md: 1 },
             width: { xs: "100%", md: "auto" },
           }}
         >
           <Box
-            ref={actionsContainerRef}
             sx={{
               display: "flex",
               alignItems: "center",
-              justifyContent: { xs: "space-between", md: "flex-start" },
-              gap: 0.5,
+              gap: { xs: 0, md: 0.5 },
               minWidth: 0,
               overflow: "hidden",
               flex: 1,
@@ -244,7 +244,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
               return (
                 <Tooltip
                   key={action.key}
-                  title={action.title}
+                  title={
+                    action.key === "go-up"
+                      ? t("actions.goUpHoldHint")
+                      : action.title
+                  }
                   disableInteractive
                 >
                   <Box
@@ -262,6 +266,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                       color={action.color ?? "primary"}
                       disabled={action.disabled}
                       onClick={action.onClick}
+                      {...(action.key === "go-up" ? goUpLongPressHandlers : {})}
                       onDragOver={action.onDragOver}
                       onDragLeave={action.onDragLeave}
                       onDrop={action.onDrop}
@@ -286,6 +291,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             <>
               <Tooltip title={t("common:actions.more")} disableInteractive>
                 <IconButton
+                  ref={(el) => {
+                    actionButtonRefs.current.overflow = el;
+                  }}
                   aria-label={t("common:actions.more")}
                   onClick={(e) => setMenuAnchorEl(e.currentTarget)}
                   sx={{ color: "primary.main" }}
@@ -327,6 +335,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             gap: 1,
             minWidth: 0,
             order: { xs: 2, md: 2 },
+            minHeight: (theme) => theme.spacing(3),
           }}
         >
           <FileBreadcrumbs

@@ -2492,6 +2492,7 @@
       "folderNamePlaceholder": "Nome da pasta",
       "goToFolder": "Ir para a pasta",
       "goUp": "Subir um nível",
+      "goUpHoldHint": "Subir um nível; mantenha pressionado para ir à pasta raiz",
       "dropFiles": "Solte os arquivos para enviar",
       "switchToTilesView": "Alternar para blocos",
       "switchToListView": "Alternar para visualização em lista",
