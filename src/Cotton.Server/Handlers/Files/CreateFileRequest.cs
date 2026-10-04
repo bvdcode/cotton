@@ -115,6 +115,7 @@ namespace Cotton.Server.Handlers.Files
             NodeFileManifestDto file = nodeFile.Adapt<NodeFileManifestDto>();
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
+            await _scheduler.TriggerJobAsync<GenerateFileEmbeddingsJob>();
             await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
             await _notifications.NotifyFileCreatedAsync(file, cancellationToken);
             return file;
