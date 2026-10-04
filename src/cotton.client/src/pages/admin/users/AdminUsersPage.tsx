@@ -1,4 +1,4 @@
-import { Alert, Box, Stack, useMediaQuery } from "@mui/material";
+import { Alert, Box, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -89,55 +89,41 @@ export const AdminUsersPage = () => {
   }, [createLabel, isLoading, refresh, refreshLabel]);
 
   return (
-    <Stack spacing={2} height="100%" minHeight={0}>
-      <AdminPageSurface>
+    <>
+      <AdminPageSurface fullHeight>
         {loadState.kind === "error" && (
           <Box px={3} pb={2}>
             <Alert severity="error">{loadState.message}</Alert>
           </Box>
         )}
 
-        <Box
+        <DataGrid
+          rows={users}
+          columns={columns}
+          columnVisibilityModel={columnVisibilityModel}
+          onColumnVisibilityModelChange={handleColumnVisibilityModelChange}
+          getRowId={(row) => row.id}
+          loading={isLoading}
+          localeText={localeText}
+          disableRowSelectionOnClick
+          showToolbar
+          label={t("users.title")}
+          autoPageSize
+          pageSizeOptions={[]}
+          pagination
+          slots={{ toolbar: GridToolbarSlot }}
           sx={{
-            height: { xs: 520, md: 640 },
-            minHeight: 420,
-            maxHeight: "calc(100% - 220px)",
+            flex: 1,
+            minHeight: 0,
+            border: 0,
+            "& .MuiDataGrid-toolbar": {
+              px: 1,
+              py: 0.75,
+              borderBottom: "1px solid",
+              borderColor: "divider",
+            },
           }}
-        >
-          <DataGrid
-            rows={users}
-            columns={columns}
-            columnVisibilityModel={columnVisibilityModel}
-            onColumnVisibilityModelChange={handleColumnVisibilityModelChange}
-            getRowId={(row) => row.id}
-            loading={isLoading}
-            localeText={localeText}
-            disableRowSelectionOnClick
-            showToolbar
-            label={t("users.title")}
-            pageSizeOptions={[10, 25, 50, 100]}
-            initialState={{
-              pagination: {
-                paginationModel: {
-                  pageSize: 25,
-                  page: 0,
-                },
-              },
-            }}
-            pagination
-            slots={{ toolbar: GridToolbarSlot }}
-            sx={{
-              height: "100%",
-              border: 0,
-              "& .MuiDataGrid-toolbar": {
-                px: 1,
-                py: 0.75,
-                borderBottom: "1px solid",
-                borderColor: "divider",
-              },
-            }}
-          />
-        </Box>
+        />
       </AdminPageSurface>
 
       <CreateUserDialog
@@ -154,6 +140,6 @@ export const AdminUsersPage = () => {
         user={deletingUser}
         onClose={() => setDeletingUser(null)}
       />
-    </Stack>
+    </>
   );
 };
