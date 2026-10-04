@@ -76,6 +76,49 @@ afterEach(() => {
 });
 
 describe("PageHeader", () => {
+  it("uses overflow only when the minimum button widths exceed available space", () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(320);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const hidden =
+          this.parentElement &&
+          window.getComputedStyle(this.parentElement).display === "none";
+        return DOMRect.fromRect({ width: hidden ? 0 : 40, height: 40 });
+      },
+    );
+    const actions = Array.from({ length: 6 }, (_, index) => ({
+      key: `action-${index}`,
+      icon: <span />,
+      title: `Action ${index}`,
+      onClick: vi.fn(),
+    }));
+    const view = render(
+      <PageHeader {...defaultProps} primaryActionItems={actions} />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "common:actions.more" }),
+    ).toBeNull();
+    expect(screen.getAllByRole("button")).toHaveLength(8);
+    view.rerender(
+      <PageHeader
+        {...defaultProps}
+        primaryActionItems={[
+          ...actions,
+          {
+            key: "extra",
+            icon: <span />,
+            title: "Extra",
+            onClick: vi.fn(),
+          },
+        ]}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    ).toBeVisible();
+    expect(screen.getAllByRole("button")).toHaveLength(8);
+  });
+
   it("keeps navigation on go-up without a separate home button", () => {
     const onGoUp = vi.fn();
     renderHeader({ canGoUp: true, onGoUp });

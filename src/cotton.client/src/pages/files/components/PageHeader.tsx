@@ -2,12 +2,15 @@ import React from "react";
 import type { ReactElement } from "react";
 import {
   Box,
+  Fade,
   Divider,
   IconButton,
   Menu,
   MenuItem,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { MoreVert, ViewModule, ViewList } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
@@ -18,6 +21,7 @@ import {
   type FileBrowserViewMode,
 } from "@shared/utils/viewMode";
 import { useOverflowActionKeys } from "../hooks/useOverflowActionKeys";
+import { useTransitionActionItems } from "../hooks/useTransitionActionItems";
 import { useLongPress } from "@shared/hooks/useLongPress";
 import type {
   FileBreadcrumb,
@@ -28,7 +32,7 @@ export interface PageHeaderActionItem {
   key: string;
   icon: ReactElement;
   title: string;
-  onClick: () => void;
+  onClick: (event?: React.MouseEvent<HTMLElement>) => void;
   disabled?: boolean;
   color?: "primary" | "secondary" | "error";
   active?: boolean;
@@ -119,6 +123,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   goUpDropHandlers,
 }) => {
   const { t } = useTranslation(["files", "trash", "common"]);
+  const theme = useTheme();
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const nextViewTitleKey = getNextFileBrowserViewTitleKey(viewMode);
   const actionsContainerRef = React.useRef<HTMLDivElement | null>(null);
   const goUpLongPressHandlers = useLongPress(onHomeClick, loading || !canGoUp);
@@ -192,6 +198,30 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     setMenuAnchorEl(null);
   }, [setMenuAnchorEl]);
 
+  const visibleActions: PageHeaderActionItem[] = actionTabs.filter((action) =>
+    visibleActionKeys.includes(action.key),
+  );
+  if (overflowActions.length > 0) {
+    visibleActions.push({
+      key: "overflow",
+      icon: <MoreVert />,
+      title: t("common:actions.more"),
+      onClick: (event) => {
+        if (event) {
+          setMenuAnchorEl(event.currentTarget);
+        }
+      },
+    });
+  }
+  const transitionDuration = reducedMotion
+    ? 0
+    : theme.transitions.duration.shorter;
+  const transition = useTransitionActionItems(
+    visibleActions,
+    actionButtonRefs,
+    transitionDuration,
+  );
+
   return (
     <Box
       sx={{
@@ -222,108 +252,102 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           sx={{
             display: "flex",
             alignItems: "center",
+            justifyContent: { xs: "space-between", md: "flex-start" },
             flexShrink: 0,
             minWidth: 0,
             gap: { xs: 0, md: 0.5 },
             order: { xs: 1, md: 1 },
             width: { xs: "100%", md: "auto" },
+            overflow: "hidden",
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: { xs: 0, md: 0.5 },
-              minWidth: 0,
-              overflow: "hidden",
-              flex: 1,
-            }}
-          >
-            {actionTabs.map((action) => {
-              const isVisible = visibleActionKeys.includes(action.key);
-              return (
-                <Tooltip
-                  key={action.key}
-                  title={
-                    action.key === "go-up"
-                      ? t("actions.goUpHoldHint")
-                      : action.title
-                  }
-                  disableInteractive
-                >
-                  <Box
-                    component="span"
-                    sx={{
-                      display: isVisible ? "inline-flex" : "none",
-                    }}
-                  >
-                    <IconButton
-                      ref={(el) => {
-                        actionButtonRefs.current[action.key] = el;
-                      }}
-                      aria-label={action.title}
-                      aria-pressed={action.active}
-                      color={action.color ?? "primary"}
-                      disabled={action.disabled}
-                      onClick={action.onClick}
-                      {...(action.key === "go-up" ? goUpLongPressHandlers : {})}
-                      onDragOver={action.onDragOver}
-                      onDragLeave={action.onDragLeave}
-                      onDrop={action.onDrop}
-                      sx={(theme) => ({
-                        transition:
-                          "box-shadow 120ms ease-out, background-color 120ms ease-out",
-                        ...(action.dropActive && {
-                          boxShadow: `inset 0 0 0 2px ${theme.palette.primary.main}`,
-                          backgroundColor: theme.palette.action.selected,
-                        }),
-                      })}
-                    >
-                      {action.icon}
-                    </IconButton>
-                  </Box>
-                </Tooltip>
-              );
-            })}
-          </Box>
-
-          {overflowActions.length > 0 && (
-            <>
-              <Tooltip title={t("common:actions.more")} disableInteractive>
-                <IconButton
-                  ref={(el) => {
-                    actionButtonRefs.current.overflow = el;
-                  }}
-                  aria-label={t("common:actions.more")}
-                  onClick={(e) => setMenuAnchorEl(e.currentTarget)}
-                  sx={{ color: "primary.main" }}
-                >
-                  <MoreVert />
-                </IconButton>
-              </Tooltip>
-              <Menu
-                anchorEl={menuAnchorEl}
-                open={Boolean(menuAnchorEl)}
-                onClose={closeMenu}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
+          {transition.actions.map((action) => {
+            const isVisible = visibleActions.some(
+              (item) => item.key === action.key,
+            );
+            return (
+              <Fade
+                key={action.key}
+                in={isVisible}
+                appear
+                timeout={transitionDuration}
+                onExited={() => transition.handleExited(action.key)}
               >
-                {overflowActions.map((action) => (
-                  <MenuItem
-                    key={action.key}
-                    disabled={action.disabled}
-                    onClick={() => {
-                      closeMenu();
-                      action.onClick();
-                    }}
-                    sx={{ gap: 1 }}
+                <Box
+                  component="span"
+                  display="inline-flex"
+                  flexShrink={0}
+                  aria-hidden={!isVisible}
+                >
+                  <Tooltip
+                    title={
+                      action.key === "go-up"
+                        ? t("actions.goUpHoldHint")
+                        : action.title
+                    }
+                    disableInteractive
                   >
-                    {action.icon}
-                    <Typography variant="body2">{action.title}</Typography>
-                  </MenuItem>
-                ))}
-              </Menu>
-            </>
+                    <Box
+                      component="span"
+                      sx={{
+                        display: "inline-flex",
+                      }}
+                    >
+                      <IconButton
+                        ref={(el) => {
+                          actionButtonRefs.current[action.key] = el;
+                        }}
+                        aria-label={action.title}
+                        aria-pressed={action.active}
+                        color={action.color ?? "primary"}
+                        disabled={action.disabled || !isVisible}
+                        onClick={action.onClick}
+                        {...(action.key === "go-up"
+                          ? goUpLongPressHandlers
+                          : {})}
+                        onDragOver={action.onDragOver}
+                        onDragLeave={action.onDragLeave}
+                        onDrop={action.onDrop}
+                        sx={(theme) => ({
+                          transition:
+                            "box-shadow 120ms ease-out, background-color 120ms ease-out",
+                          ...(action.dropActive && {
+                            boxShadow: `inset 0 0 0 2px ${theme.palette.primary.main}`,
+                            backgroundColor: theme.palette.action.selected,
+                          }),
+                        })}
+                      >
+                        {action.icon}
+                      </IconButton>
+                    </Box>
+                  </Tooltip>
+                </Box>
+              </Fade>
+            );
+          })}
+          {overflowActions.length > 0 && (
+            <Menu
+              anchorEl={menuAnchorEl}
+              open={Boolean(menuAnchorEl)}
+              onClose={closeMenu}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+              {overflowActions.map((action) => (
+                <MenuItem
+                  key={action.key}
+                  disabled={action.disabled}
+                  onClick={() => {
+                    closeMenu();
+                    action.onClick();
+                  }}
+                  sx={{ gap: 1 }}
+                >
+                  {action.icon}
+                  <Typography variant="body2">{action.title}</Typography>
+                </MenuItem>
+              ))}
+            </Menu>
           )}
         </Box>
 
