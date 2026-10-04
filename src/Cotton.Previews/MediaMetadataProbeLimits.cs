@@ -5,12 +5,12 @@ namespace Cotton.Previews
 {
     public class MediaMetadataProbeLimits
     {
-        public const int DefaultMaxTagValueBytes = 4 * 1024;
+        public const int DefaultMaxTagValueBytes = 1024 * 1024;
 
-        public const int DefaultMaxTotalTagBytes = 32 * 1024;
+        public const int DefaultMaxTotalTagBytes = 4 * 1024 * 1024;
 
         public static MediaMetadataProbeLimits Default { get; } = new(
-            FfprobeOutputLimits.Default,
+            new FfprobeOutputLimits(DefaultMaxTotalTagBytes, FfprobeOutputLimits.DefaultMaxStandardErrorBytes),
             DefaultMaxTagValueBytes,
             DefaultMaxTotalTagBytes);
 

@@ -44,7 +44,8 @@ namespace Cotton.Previews
                     ParseFirstStreamCodec(root, "audio"),
                     ParseFirstVideoStreamInt(root, "width"),
                     ParseFirstVideoStreamInt(root, "height"),
-                    ParseFormatTags(root, limits));
+                    ParseFormatTags(root, limits),
+                    FlattenMetadata(root));
             }
             catch (JsonException)
             {
@@ -58,6 +59,30 @@ namespace Cotton.Previews
                 && format.TryGetProperty("duration", out JsonElement durationElement)
                     ? ParsePositiveDuration(durationElement.GetString() ?? string.Empty)
                     : null;
+        }
+
+        private static IReadOnlyDictionary<string, string> FlattenMetadata(JsonElement root)
+        {
+            Dictionary<string, string> result = new(StringComparer.Ordinal);
+            foreach (JsonProperty property in root.EnumerateObject())
+            {
+                if (property.Name == "format")
+                {
+                    foreach (JsonProperty formatProperty in property.Value.EnumerateObject())
+                    {
+                        if (formatProperty.Name != "filename")
+                        {
+                            FlatMetadataWriter.WriteJson(result,
+                                $"media.format.{FlatMetadataWriter.EscapeKey(formatProperty.Name)}", formatProperty.Value);
+                        }
+                    }
+                }
+                else
+                {
+                    FlatMetadataWriter.WriteJson(result, $"media.{FlatMetadataWriter.EscapeKey(property.Name)}", property.Value);
+                }
+            }
+            return result;
         }
 
         private static double? ParsePositiveDuration(string raw)

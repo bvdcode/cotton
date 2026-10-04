@@ -95,7 +95,8 @@ namespace Cotton.Server.Jobs
         private IQueryable<FileManifest> CreateItemsToProcessQuery()
         {
             return _dbContext.FileManifests
-                .Where(x => x.Metadata == null)
+                .Where(x => (CottonDbContext.GetHstoreValue(x.Metadata, FileContentMetadataKeys.ExtractionVersion) ?? "")
+                    != FileContentMetadataKeys.CurrentExtractionVersion)
                 .Where(x => x.NodeFiles.Any(file =>
                     file.ContentType.StartsWith("audio/")
                     || file.ContentType.StartsWith("video/")

@@ -108,7 +108,7 @@ namespace Cotton.Server.Handlers.Files
 
         private static bool HasExtractedMetadata(FileManifest manifest)
         {
-            return FileContentMetadataDictionary.HasProcessedValues(manifest.Metadata);
+            return FileContentMetadataDictionary.HasCurrentVersion(manifest.Metadata);
         }
 
         private async Task<bool> ExtractAndStoreAsync(FileManifest manifest, CancellationToken cancellationToken)
@@ -116,6 +116,7 @@ namespace Cotton.Server.Handlers.Files
             IEnumerable<string> contentTypes = manifest.NodeFiles
                 .Select(file => file.ContentType)
                 .Distinct(StringComparer.OrdinalIgnoreCase);
+            bool extractionUnavailable = false;
             foreach (string contentType in contentTypes)
             {
                 IFileContentMetadataExtractor? extractor = _extractorProvider.GetExtractor(contentType);
@@ -135,6 +136,7 @@ namespace Cotton.Server.Handlers.Files
                 }
                 catch (FileMetadataUnavailableException ex)
                 {
+                    extractionUnavailable = true;
                     _logger.LogDebug(ex,
                         "Metadata is unavailable for file manifest {FileManifestId} content type {ContentType}.",
                         manifest.Id, contentType);
@@ -158,14 +160,19 @@ namespace Cotton.Server.Handlers.Files
                 return !AreEquivalent(oldMetadata, manifest.Metadata);
             }
 
-            await MarkMetadataProcessedAsync(manifest, cancellationToken);
+            if (!extractionUnavailable)
+            {
+                return await MarkMetadataProcessedAsync(manifest, cancellationToken);
+            }
             return false;
         }
 
-        private async Task MarkMetadataProcessedAsync(FileManifest manifest, CancellationToken cancellationToken)
+        private async Task<bool> MarkMetadataProcessedAsync(FileManifest manifest, CancellationToken cancellationToken)
         {
+            Dictionary<string, string>? oldMetadata = manifest.Metadata;
             manifest.Metadata = FileContentMetadataDictionary.MarkProcessed(manifest.Metadata);
             await SaveManifestMetadataAsync(manifest, cancellationToken);
+            return !AreEquivalent(oldMetadata, manifest.Metadata);
         }
 
         internal async Task SaveManifestMetadataAsync(

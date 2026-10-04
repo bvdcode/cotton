@@ -50,7 +50,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task MetadataExtraction_CorruptRecognizedImage_MarksAttemptProcessed()
+        public async Task MetadataExtraction_TruncatedImageReadFailure_DoesNotRecordCurrentVersion()
         {
             byte[] corruptImage = CreateTruncatedPngBytes();
             InvalidImageContentException? invalidContent = Assert.ThrowsAsync<InvalidImageContentException>(async () =>
@@ -73,18 +73,11 @@ namespace Cotton.Server.IntegrationTests
             await Pipeline.ExecuteExtractFileMetadataJobAsync();
 
             FileManifestMetadataState processedState = await Pipeline.GetFileManifestMetadataStateAsync(createdFile.Id);
-            Assert.That(processedState.Metadata, Is.Not.Null);
-            Dictionary<string, string> processedMetadata = processedState.Metadata!;
-            Assert.Multiple(() =>
-            {
-                Assert.That(processedMetadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
-                Assert.That(processedMetadata, Does.Not.ContainKey(FileContentMetadataKeys.ImageWidth));
-                Assert.That(processedMetadata, Does.Not.ContainKey(FileContentMetadataKeys.ImageHeight));
-            });
+            Assert.That(processedState.Metadata, Is.Null);
 
             await Pipeline.ExecuteExtractFileMetadataJobAsync();
             FileManifestMetadataState repeatedState = await Pipeline.GetFileManifestMetadataStateAsync(createdFile.Id);
-            Assert.That(repeatedState.Metadata, Is.EquivalentTo(processedMetadata));
+            Assert.That(repeatedState.Metadata, Is.Null);
         }
 
         [Test]

@@ -88,7 +88,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task MetadataExtraction_InvalidMedia_PreservesCustomMetadataAndMarksEmptyAttemptsProcessed()
+        public async Task MetadataExtraction_UnavailableMedia_PreservesCustomMetadataAndDoesNotMarkCurrentVersion()
         {
             const string ExistingTitle = "Existing title";
             const string ExistingKey = "custom.title";
@@ -140,10 +140,9 @@ namespace Cotton.Server.IntegrationTests
             FileManifestMetadataState emptyFailedState = await Pipeline.GetFileManifestMetadataStateAsync(emptyMetadataFile.Id);
             Assert.Multiple(() =>
             {
-                Assert.That(emptyFailedState.Metadata, Is.Not.Null);
-                Assert.That(emptyFailedState.Metadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
+                Assert.That(emptyFailedState.Metadata, Is.Null);
                 Assert.That(emptyAttemptDto?.Metadata, Is.Not.Null);
-                Assert.That(emptyAttemptDto!.Metadata, Does.Not.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
+                Assert.That(emptyAttemptDto!.Metadata, Does.Not.ContainKey(FileContentMetadataKeys.ExtractionVersion));
             });
 
             await Pipeline.ExecuteExtractFileMetadataJobAsync();
@@ -154,9 +153,8 @@ namespace Cotton.Server.IntegrationTests
             Assert.Multiple(() =>
             {
                 Assert.That(invalidMediaState.Metadata?[ExistingKey], Is.EqualTo(ExistingTitle));
-                Assert.That(invalidMediaState.Metadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
-                Assert.That(emptyInvalidMediaState.Metadata, Is.Not.Null);
-                Assert.That(emptyInvalidMediaState.Metadata, Does.ContainKey(FileContentMetadataKeys.ExtractionProcessed));
+                Assert.That(invalidMediaState.Metadata, Does.Not.ContainKey(FileContentMetadataKeys.ExtractionVersion));
+                Assert.That(emptyInvalidMediaState.Metadata, Is.Null);
                 Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageWidth], Is.EqualTo("64"));
                 Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageHeight], Is.EqualTo("48"));
             });

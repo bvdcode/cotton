@@ -10,7 +10,7 @@ namespace Cotton.Previews.Tests
     public class FfmpegBinaryMetadataTests
     {
         [Test]
-        public async Task TryGetMediaMetadataAsync_FiltersTagsAndEnforcesOutputLimit()
+        public async Task TryGetMediaMetadataAsync_PreservesAllTagsAndEnforcesOutputLimit()
         {
             await FfmpegBinary.EnsureAvailableAsync();
             string mediaPath = Path.Combine(
@@ -33,7 +33,10 @@ namespace Cotton.Previews.Tests
                     Assert.That(metadata!.Tags["title"], Is.EqualTo("Bounded title"));
                     Assert.That(metadata.Tags["artist"], Is.EqualTo("Bounded artist"));
                     Assert.That(metadata.Tags["album_artist"], Is.EqualTo("Bounded album artist"));
-                    Assert.That(metadata.Tags.ContainsKey("comment"), Is.False);
+                    Assert.That(metadata.Tags["comment"], Is.EqualTo("Additional comment"));
+                    Assert.That(metadata.Properties["media.format.tags.comment"], Is.EqualTo("Additional comment"));
+                    Assert.That(metadata.Properties["media.streams.0.codec_name"], Is.EqualTo("mp3"));
+                    Assert.That(metadata.Properties.ContainsKey("media.format.filename"), Is.False);
                 });
 
                 MediaMetadataProbeLimits strictLimits = new(
@@ -81,7 +84,7 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
-        public async Task TryGetMediaMetadataAsync_NoSupportedTags_ReturnsSuccessfulEmptyTagSet()
+        public async Task TryGetMediaMetadataAsync_CustomTags_ReturnsAllTags()
         {
             await FfmpegBinary.EnsureAvailableAsync();
             string mediaPath = Path.Combine(
@@ -103,7 +106,8 @@ namespace Cotton.Previews.Tests
                 {
                     Assert.That(metadata!.AudioCodec, Is.EqualTo("mp3"));
                     Assert.That(metadata.DurationSeconds, Is.GreaterThan(0));
-                    Assert.That(metadata.Tags, Is.Empty);
+                    Assert.That(metadata.Tags["comment"], Is.EqualTo("Additional comment"));
+                    Assert.That(metadata.Tags.ContainsKey("title"), Is.False);
                 });
             }
             finally
@@ -210,7 +214,7 @@ namespace Cotton.Previews.Tests
                 "-t",
                 "0.1",
                 "-metadata",
-                "comment=must-not-be-returned",
+                "comment=Additional comment",
             ];
             if (includeSupportedTags)
             {

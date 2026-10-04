@@ -5,7 +5,7 @@ namespace Cotton.Server.Services.FileMetadata
 {
     internal static class FileContentMetadataDictionary
     {
-        public static Dictionary<string, string>? ReplaceManagedValues(
+        public static Dictionary<string, string> ReplaceManagedValues(
             Dictionary<string, string>? current,
             IReadOnlyDictionary<string, string> extracted)
         {
@@ -20,44 +20,40 @@ namespace Cotton.Server.Services.FileMetadata
 
             foreach ((string key, string value) in extracted)
             {
-                if (!string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(value))
+                if (!string.IsNullOrWhiteSpace(key))
                 {
                     result[key] = value;
                 }
             }
 
-            result[FileContentMetadataKeys.ExtractionProcessed] = "true";
+            result[FileContentMetadataKeys.ExtractionVersion] = FileContentMetadataKeys.CurrentExtractionVersion;
             return result;
         }
 
         public static Dictionary<string, string> MarkProcessed(Dictionary<string, string>? current)
         {
-            Dictionary<string, string> result = current is null
-                ? new Dictionary<string, string>(StringComparer.Ordinal)
-                : new Dictionary<string, string>(current, StringComparer.Ordinal);
-
-            result[FileContentMetadataKeys.ExtractionProcessed] = "true";
-            return result;
+            return ReplaceManagedValues(current, new Dictionary<string, string>());
         }
 
-        public static bool HasProcessedValues(Dictionary<string, string>? metadata)
+        public static bool HasCurrentVersion(Dictionary<string, string>? metadata)
         {
             return metadata is not null
-                && (metadata.Count == 0
-                    || metadata.ContainsKey(FileContentMetadataKeys.ExtractionProcessed)
-                    || metadata.Keys.Any(IsManagedKey));
+                && metadata.TryGetValue(FileContentMetadataKeys.ExtractionVersion, out string? version)
+                && version == FileContentMetadataKeys.CurrentExtractionVersion;
         }
 
         public static bool IsProjectionKey(string key)
         {
-            return !string.Equals(
-                key,
-                FileContentMetadataKeys.ExtractionProcessed,
-                StringComparison.Ordinal);
+            return !key.StartsWith("contentMetadata.", StringComparison.Ordinal);
         }
 
         private static bool IsManagedKey(string key)
         {
+            if (key == FileContentMetadataKeys.ExtractionVersion)
+            {
+                return true;
+            }
+
             foreach (string prefix in FileContentMetadataKeys.ManagedPrefixes)
             {
                 if (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
