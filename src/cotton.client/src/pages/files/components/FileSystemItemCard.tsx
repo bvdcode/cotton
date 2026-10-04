@@ -13,6 +13,7 @@ export interface FileSystemItemCardAction {
 export interface FileSystemItemCardProps {
   icon: ReactNode;
   title: string;
+  titleContent?: ReactNode;
   titleAdornment?: ReactNode;
   cornerAdornment?: ReactNode;
   subtitle?: string;
@@ -166,7 +167,9 @@ const CardText = ({
   onToggleActions,
   subtitle,
   title,
+  titleContent,
   titleAdornment,
+  variant,
 }: {
   actionsOpen: boolean;
   cardHovered: boolean;
@@ -174,7 +177,9 @@ const CardText = ({
   onToggleActions: (event: MouseEvent<HTMLButtonElement>) => void;
   subtitle?: string;
   title: string;
+  titleContent?: ReactNode;
   titleAdornment?: ReactNode;
+  variant: FileSystemItemCardProps["variant"];
 }): React.ReactElement => (
   <Box sx={{ px: 0.75, pb: 0.75 }}>
     <Box
@@ -209,7 +214,9 @@ const CardText = ({
           lineHeight: 1.4,
         }}
       >
-        <HoverMarqueeText text={title} cardHovered={cardHovered} />
+        {titleContent ?? (
+          <HoverMarqueeText text={title} cardHovered={cardHovered} />
+        )}
       </Typography>
       {hasActions && (
         <CardActionButton
@@ -218,14 +225,18 @@ const CardText = ({
         />
       )}
     </Box>
-    {subtitle && (
+    {(subtitle || variant === "squareTile") && (
       <Typography
         variant="caption"
         color="text.secondary"
         display="block"
         noWrap
         title={subtitle}
-        sx={{ fontSize: { xs: "0.7rem", md: "0.75rem" }, lineHeight: 1.4 }}
+        sx={{
+          fontSize: { xs: "0.7rem", md: "0.75rem" },
+          lineHeight: 1.4,
+          minHeight: "1.4em",
+        }}
       >
         {subtitle}
       </Typography>
@@ -282,6 +293,7 @@ const CardActionsMenu = ({
 const FileSystemItemCardImpl = ({
   icon,
   title,
+  titleContent,
   titleAdornment,
   cornerAdornment,
   subtitle,
@@ -319,40 +331,42 @@ const FileSystemItemCardImpl = ({
           onClick?.(event);
         }
       }}
-      sx={{
-        position: "relative",
-        overflow: "hidden",
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 1,
-        ...(variant === "squareTile" && {
-          aspectRatio: "1 / 1",
-          display: "flex",
-          flexDirection: "column",
-        }),
-        cursor: clickable ? "pointer" : "default",
-        userSelect: "none",
-        WebkitTapHighlightColor: "transparent",
-        outline: "none",
-        "&:hover": clickable ? { bgcolor: "action.hover" } : undefined,
-        ...(hasActions
-          ? {
-              "&:hover .card-menu-slot, &:focus-within .card-menu-slot": {
-                width: 28,
-                opacity: 1,
-                pointerEvents: "auto",
-              },
-            }
-          : undefined),
-        "&:focus-visible": clickable
-          ? {
-              borderColor: "primary.main",
-              boxShadow: "none",
-              bgcolor: "action.hover",
-            }
-          : undefined,
-        ...sx,
-      }}
+      sx={[
+        {
+          position: "relative",
+          overflow: "hidden",
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 1,
+          ...(variant === "squareTile" && {
+            aspectRatio: "1 / 1",
+            display: "flex",
+            flexDirection: "column",
+          }),
+          cursor: clickable ? "pointer" : "default",
+          userSelect: "none",
+          WebkitTapHighlightColor: "transparent",
+          outline: "none",
+          "&:hover": clickable ? { bgcolor: "action.hover" } : undefined,
+          ...(hasActions
+            ? {
+                "&:hover .card-menu-slot, &:focus-within .card-menu-slot": {
+                  width: 28,
+                  opacity: 1,
+                  pointerEvents: "auto",
+                },
+              }
+            : undefined),
+          "&:focus-visible": clickable
+            ? {
+                borderColor: "primary.main",
+                boxShadow: "none",
+                bgcolor: "action.hover",
+              }
+            : undefined,
+        },
+        ...(Array.isArray(sx) ? sx : [sx ?? {}]),
+      ]}
     >
       <CardArtwork
         cornerAdornment={cornerAdornment}
@@ -367,7 +381,9 @@ const FileSystemItemCardImpl = ({
         onToggleActions={handleToggleActions}
         subtitle={subtitle}
         title={title}
+        titleContent={titleContent}
         titleAdornment={titleAdornment}
+        variant={variant}
       />
       {hasActions && (
         <CardActionsMenu

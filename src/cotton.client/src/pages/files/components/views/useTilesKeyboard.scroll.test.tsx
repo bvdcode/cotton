@@ -28,11 +28,12 @@ it("only scrolls for keyboard navigation, not appended pages or layout changes",
     onClick: vi.fn(),
   };
   const { result, rerender } = renderHook(
-    ({ count, columns }) =>
+    ({ count, columns, leadingItemCount }) =>
       useTilesKeyboard({
         tiles: tiles.slice(0, count),
         selectedIds: undefined,
         columns,
+        leadingItemCount,
         containerRef,
         shouldVirtualize: true,
         folderOperations: operations,
@@ -40,7 +41,7 @@ it("only scrolls for keyboard navigation, not appended pages or layout changes",
         readOnly: false,
         onNavigateBack: undefined,
       }),
-    { initialProps: { count: 100, columns: 4 } },
+    { initialProps: { count: 100, columns: 4, leadingItemCount: 0 } },
   );
   const scrollToIndex = vi.fn();
   result.current.virtuosoRef.current = {
@@ -52,16 +53,27 @@ it("only scrolls for keyboard navigation, not appended pages or layout changes",
     scrollToIndex,
   };
 
-  rerender({ count: 200, columns: 4 });
+  rerender({ count: 200, columns: 4, leadingItemCount: 0 });
   expect(scrollToIndex).not.toHaveBeenCalled();
-  rerender({ count: 300, columns: 4 });
+  rerender({ count: 300, columns: 4, leadingItemCount: 0 });
   expect(scrollToIndex).not.toHaveBeenCalled();
-  rerender({ count: 300, columns: 3 });
+  rerender({ count: 300, columns: 3, leadingItemCount: 0 });
   expect(scrollToIndex).not.toHaveBeenCalled();
 
   fireEvent.keyDown(window, { key: "ArrowDown" });
   expect(scrollToIndex).toHaveBeenCalledExactlyOnceWith({
     index: 1,
+    align: "center",
+    behavior: "auto",
+  });
+
+  scrollToIndex.mockClear();
+  rerender({ count: 300, columns: 3, leadingItemCount: 1 });
+  expect(scrollToIndex).not.toHaveBeenCalled();
+  fireEvent.keyDown(window, { key: "ArrowRight" });
+  fireEvent.keyDown(window, { key: "ArrowRight" });
+  expect(scrollToIndex).toHaveBeenLastCalledWith({
+    index: 2,
     align: "center",
     behavior: "auto",
   });

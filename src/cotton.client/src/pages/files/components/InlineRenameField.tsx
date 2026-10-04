@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, InputBase } from "@mui/material";
+import { Input } from "@mui/material";
 
 interface InlineRenameFieldProps {
   value: string;
@@ -41,52 +41,26 @@ export const InlineRenameField: React.FC<InlineRenameFieldProps> = ({
   };
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        width: "100%",
-        minWidth: 0,
-        minHeight: 28,
-        px: 1,
-        py: 0.25,
-        borderRadius: 0.75,
-        bgcolor: "action.hover",
-        border: "1px solid",
-        borderColor: "divider",
-        transition: "border-color 0.2s ease, background-color 0.2s ease",
-        "&:focus-within": {
-          borderColor: "primary.main",
-          bgcolor: "background.paper",
-        },
+    <Input
+      autoFocus
+      fullWidth
+      value={value}
+      placeholder={placeholder}
+      onChange={(event) => onChange(event.target.value)}
+      onKeyDown={handleKeyDown}
+      onBlur={() => {
+        void onConfirm();
       }}
       onClick={stopEventPropagation}
       onMouseDown={stopEventPropagation}
       onDoubleClick={stopEventPropagation}
       onDragStart={stopDragStart}
-    >
-      <InputBase
-        autoFocus
-        fullWidth
-        value={value}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={() => {
-          void onConfirm();
-        }}
-        sx={{
-          width: "100%",
-          minWidth: 0,
-          fontSize: { xs: "0.8rem", md: "0.875rem" },
-          lineHeight: 1.43,
-          color: "text.primary",
-          "& input": {
-            p: 0,
-            minWidth: 0,
-          },
-        }}
-      />
-    </Box>
+      sx={{
+        fontSize: "inherit",
+        fontWeight: "inherit",
+        lineHeight: "inherit",
+        "& input": { p: 0, height: "auto" },
+      }}
+    />
   );
 };

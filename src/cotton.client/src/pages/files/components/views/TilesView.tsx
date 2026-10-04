@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import FolderOpenOutlinedIcon from "@mui/icons-material/FolderOpenOutlined";
 import { Virtuoso } from "react-virtuoso";
@@ -56,6 +56,7 @@ export const TilesView: React.FC<IFileListView> = ({
   });
 
   const shouldVirtualize = tiles.length > VIRTUALIZATION_THRESHOLD;
+  const leadingItemCount = isCreatingFolder ? 1 : 0;
 
   const {
     virtuosoRef,
@@ -67,13 +68,20 @@ export const TilesView: React.FC<IFileListView> = ({
     tiles,
     selectedIds,
     columns,
+    leadingItemCount,
     containerRef,
-    shouldVirtualize: tiles.length > VIRTUALIZATION_THRESHOLD,
+    shouldVirtualize,
     folderOperations,
     fileOperations,
     readOnly,
     onNavigateBack,
   });
+
+  useEffect(() => {
+    if (isCreatingFolder) {
+      virtuosoRef.current?.scrollToIndex({ index: 0, align: "start" });
+    }
+  }, [isCreatingFolder, virtuosoRef]);
 
   const renderTile = useCallback(
     (tile: FileSystemTile, index: number) => {
@@ -146,6 +154,16 @@ export const TilesView: React.FC<IFileListView> = ({
     ],
   );
 
+  const newFolderCard = isCreatingFolder && (
+    <NewFolderCard
+      newFolderName={newFolderName}
+      onNewFolderNameChange={onNewFolderNameChange}
+      onConfirmNewFolder={onConfirmNewFolder}
+      onCancelNewFolder={onCancelNewFolder}
+      folderNamePlaceholder={folderNamePlaceholder}
+    />
+  );
+
   if (!loading && !isCreatingFolder && tiles.length === 0 && emptyStateText) {
     return (
       <Box
@@ -196,27 +214,16 @@ export const TilesView: React.FC<IFileListView> = ({
         </Box>
       )}
 
-      {isCreatingFolder && (
-        <Box sx={{ ...gridStyles, mb: `${gapPx}px` }}>
-          <NewFolderCard
-            newFolderName={newFolderName}
-            onNewFolderNameChange={onNewFolderNameChange}
-            onConfirmNewFolder={onConfirmNewFolder}
-            onCancelNewFolder={onCancelNewFolder}
-            folderNamePlaceholder={folderNamePlaceholder}
-          />
-        </Box>
-      )}
-
       {shouldVirtualize ? (
         <Virtuoso
           ref={virtuosoRef}
           customScrollParent={scrollParent ?? undefined}
-          totalCount={Math.ceil(tiles.length / columns)}
+          totalCount={Math.ceil((tiles.length + leadingItemCount) / columns)}
           overscan={600}
           itemContent={(rowIndex: number) => {
-            const start = rowIndex * columns;
-            const rowTiles = tiles.slice(start, start + columns);
+            const start = rowIndex * columns - leadingItemCount;
+            const firstTileIndex = Math.max(0, start);
+            const rowTiles = tiles.slice(firstTileIndex, start + columns);
 
             return (
               <Box
@@ -227,8 +234,9 @@ export const TilesView: React.FC<IFileListView> = ({
                   pb: `${gapPx}px`,
                 }}
               >
+                {rowIndex === 0 && newFolderCard}
                 {rowTiles.map((tile: FileSystemTile, tileOffset: number) =>
-                  renderTile(tile, start + tileOffset),
+                  renderTile(tile, firstTileIndex + tileOffset),
                 )}
               </Box>
             );
@@ -237,6 +245,7 @@ export const TilesView: React.FC<IFileListView> = ({
         />
       ) : (
         <Box sx={gridStyles}>
+          {newFolderCard}
           {tiles.map((tile: FileSystemTile, index: number) =>
             renderTile(tile, index),
           )}
