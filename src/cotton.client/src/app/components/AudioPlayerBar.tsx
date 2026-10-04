@@ -2,7 +2,6 @@ import React from "react";
 import {
   Box,
   Collapse,
-  CircularProgress,
   Divider,
   IconButton,
   LinearProgress,
@@ -256,14 +255,10 @@ export const AudioPlayerBar: React.FC = () => {
                 onClick={() => {
                   void scanRecursively();
                 }}
-                disabled={isScanning}
+                loading={isScanning}
                 aria-label={t("audioPlayer:actions.scanRecursively")}
               >
-                {isScanning ? (
-                  <CircularProgress size={18} />
-                ) : (
-                  <TravelExplore fontSize="small" />
-                )}
+                <TravelExplore fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
