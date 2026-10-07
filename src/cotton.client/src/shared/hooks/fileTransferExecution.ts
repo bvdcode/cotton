@@ -1,3 +1,4 @@
+import { FolderTransferNames } from "../move/FolderTransferNames";
 import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { toast } from "@shared/ui/notifications";
 import type { NodeFileManifestDto } from "../api/nodesApi";
@@ -73,6 +74,7 @@ export const moveCandidatesToTarget = async (options: {
   // Serial loop: the server's collision/cycle checks are pre-update reads,
   // so concurrent moves can still race in the small window before the unique
   // index throws. Serial keeps the multi-item UX deterministic.
+  const folderNames = new FolderTransferNames(options.targetParentId);
   for (let index = 0; index < options.candidates.length; index += 1) {
     const item = options.candidates[index];
     const outcome = await moveItemWithConflictResolution({
@@ -81,6 +83,7 @@ export const moveCandidatesToTarget = async (options: {
       item,
       skipAllConflicts,
       targetParentId: options.targetParentId,
+      folderNames,
     });
 
     switch (outcome.kind) {

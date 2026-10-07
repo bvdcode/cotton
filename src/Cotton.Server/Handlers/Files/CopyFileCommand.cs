@@ -19,7 +19,8 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Files
 {
-    public record CopyFileCommand(Guid UserId, Guid FileId, Guid ParentId, string? Name, bool Overwrite)
+    public record CopyFileCommand(Guid UserId, Guid FileId, Guid ParentId, string? Name, bool Overwrite,
+        Dictionary<string, string?>? Metadata = null)
         : IRequest<NodeFileManifestDto>;
 
     public class CopyFileCommandHandler(
@@ -51,6 +52,7 @@ namespace Cotton.Server.Handlers.Files
                     request.Overwrite, source.Id), ct);
                 long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, source.FileManifestId, ct);
                 copy = source.CopyTo(parent, request.Name ?? source.Name);
+                copy.Metadata = NodeMetadataPatch.Apply(copy.Metadata, request.Metadata);
                 copy.FileManifest = source.FileManifest;
                 source.FileManifest.ResetFailedPreview();
                 _dbContext.NodeFiles.Add(copy);

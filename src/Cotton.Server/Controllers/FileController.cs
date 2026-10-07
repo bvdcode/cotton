@@ -30,7 +30,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> CopyFile(Guid nodeFileId, [FromBody] CopyItemRequestDto request)
         {
             NodeFileManifestDto copy = await _mediator.Send(new CopyFileCommand(
-                User.GetUserId(), nodeFileId, request.ParentId, request.Name, request.Overwrite),
+                User.GetUserId(), nodeFileId, request.ParentId, request.Name, request.Overwrite, request.Metadata),
                 HttpContext.RequestAborted);
             return Ok(copy);
         }
@@ -82,6 +82,7 @@ namespace Cotton.Server.Controllers
                 NodeFileId = nodeFileId,
                 ParentId = request.ParentId,
                 Name = request.Name,
+                Metadata = request.Metadata,
                 Overwrite = request.Overwrite,
                 UserId = User.GetUserId(),
                 ExpectedETag = FileETags.ReadIfMatch(Request),

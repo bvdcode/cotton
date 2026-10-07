@@ -2,7 +2,8 @@ import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
-import { useVault } from "../crypto";
+import { isFileEncrypted, useVault } from "../crypto";
+
 import {
   useMoveClipboardStore,
   type MoveClipboardItem,
@@ -103,6 +104,23 @@ export const useMoveOperations = ({
         };
       }
       const targetEncryptsNewFiles = target.encryptsNewFiles;
+      if (
+        !useVault.getState().isUnlocked &&
+        candidates.some(
+          (item) =>
+            item.kind === "file" && isFileEncrypted(item.file?.metadata),
+        )
+      ) {
+        toast.error(
+          t("clientEncryption.toasts.unlockRequired", { ns: "files" }),
+        );
+        return {
+          succeeded: [],
+          failed: candidates,
+          notMoved: candidates,
+          lastErrorMessage: null,
+        };
+      }
       const hasMoveEncryptionFollowups =
         targetEncryptsNewFiles &&
         candidates.some(

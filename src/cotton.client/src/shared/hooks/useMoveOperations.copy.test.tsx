@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ENCRYPTED_FLAG_KEY, generateMasterKey, useVault } from "../crypto";
+import { DISPLAY_META_KEY, encryptDisplayMeta } from "../crypto/displayMeta";
 import { FOLDER_ENCRYPTION_POLICY_KEY } from "../crypto/metadataFlags";
 import {
   useMoveClipboardStore,
@@ -169,13 +170,23 @@ describe("copy and paste", () => {
   });
 
   it("retains encryption metadata and does not encrypt ciphertext again", async () => {
+    useVault.setState({
+      isUnlocked: true,
+      masterKey: await generateMasterKey(),
+    });
     mocks.getNode.mockResolvedValue({
       ...target,
       metadata: { [FOLDER_ENCRYPTION_POLICY_KEY]: "true" },
     });
     const encrypted = {
       ...original,
-      metadata: { [ENCRYPTED_FLAG_KEY]: "true" },
+      metadata: {
+        [ENCRYPTED_FLAG_KEY]: "true",
+        [DISPLAY_META_KEY]: await encryptDisplayMeta({
+          name: original.name,
+          contentType: original.contentType,
+        }),
+      },
     };
     mocks.copyFile.mockResolvedValue({
       ...encrypted,

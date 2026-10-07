@@ -8,5 +8,6 @@ namespace Cotton.Server.Models.Requests
         public Guid ParentId { get; set; }
         public string? Name { get; set; }
         public bool Overwrite { get; set; }
+        public Dictionary<string, string?>? Metadata { get; set; }
     }
 }

@@ -1,17 +1,12 @@
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import { isJsonObject, type JsonValue } from "../types/json";
-import { asBufferSource } from "./bufferSource";
-import { base64ToBytes, bytesToBase64 } from "./base64";
 import { InvalidCryptoInputError } from "./errors";
 import { isFileEncrypted } from "./metadataFlags";
-import { randomBytes } from "./keys";
-import { requireMetadataKey, useVault } from "./vault";
+import { useVault } from "./vault";
+import { encryptMetadata, decryptMetadata } from "./metadataCipher";
 
 export const DISPLAY_META_KEY = "en";
 
-const NONCE_BYTES = 12;
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
 const OPAQUE_FILE_VALUES = Symbol("cotton.opaqueFileValues");
 
 export interface DisplayMeta {
@@ -30,46 +25,26 @@ type FileWithOpaqueValues<TFile extends FileDisplayMetaFields> = TFile & {
 
 export async function encryptDisplayMeta(meta: DisplayMeta): Promise<string> {
   const normalized = normalizeDisplayMeta(meta);
-  const metadataKey = await requireMetadataKey();
-  const iv = randomBytes(NONCE_BYTES);
-  const plaintext = encoder.encode(
-    JSON.stringify({
-      n: normalized.name,
-      c: normalized.contentType,
-    }),
-  );
-  const ciphertext = new Uint8Array(
-    await subtle().encrypt(
-      { name: "AES-GCM", iv: asBufferSource(iv) },
-      metadataKey,
-      asBufferSource(plaintext),
-    ),
-  );
-  const payload = new Uint8Array(iv.length + ciphertext.length);
-
-  payload.set(iv, 0);
-  payload.set(ciphertext, iv.length);
-
-  return bytesToBase64(payload);
+  return encryptMetadata(JSON.stringify({ n: normalized.name, c: normalized.contentType }));
 }
 
 export async function decryptDisplayMeta(value: string): Promise<DisplayMeta> {
-  const metadataKey = await requireMetadataKey();
-  const payload = base64ToBytes(value);
+  return parseDisplayMeta(await decryptMetadata(value));
+}
 
-  if (payload.length <= NONCE_BYTES) {
-    throw new InvalidCryptoInputError("Display metadata payload is too short.");
+export async function readFileDisplayMeta(
+  file: FileDisplayMetaFields,
+): Promise<DisplayMeta> {
+  if (!isFileEncrypted(file.metadata)) {
+    return { name: file.name, contentType: file.contentType };
   }
-
-  const iv = payload.slice(0, NONCE_BYTES);
-  const ciphertext = payload.slice(NONCE_BYTES);
-  const plaintext = await subtle().decrypt(
-    { name: "AES-GCM", iv: asBufferSource(iv) },
-    metadataKey,
-    asBufferSource(ciphertext),
-  );
-
-  return parseDisplayMeta(decoder.decode(plaintext));
+  const value = file.metadata[DISPLAY_META_KEY];
+  if (!value) {
+    throw new InvalidCryptoInputError(
+      "Encrypted file display metadata is missing.",
+    );
+  }
+  return decryptDisplayMeta(value);
 }
 
 export async function applyDisplayMetaToFile<
@@ -175,14 +150,4 @@ function parseDisplayMeta(value: string): DisplayMeta {
     name: parsed.n,
     contentType: parsed.c,
   });
-}
-
-function subtle(): SubtleCrypto {
-  const subtleCrypto = globalThis.crypto?.subtle;
-
-  if (!subtleCrypto) {
-    throw new InvalidCryptoInputError("WebCrypto is not available.");
-  }
-
-  return subtleCrypto;
 }

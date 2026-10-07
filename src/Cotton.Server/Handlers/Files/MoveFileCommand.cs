@@ -29,6 +29,8 @@ namespace Cotton.Server.Handlers.Files
 
         public string? Name { get; set; }
 
+        public Dictionary<string, string?>? Metadata { get; set; }
+
         public bool Overwrite { get; set; }
 
         public Guid UserId { get; set; }
@@ -131,6 +133,7 @@ namespace Cotton.Server.Handlers.Files
             Guid oldParentId = nodeFile.NodeId;
             nodeFile.NodeId = targetParent.Id;
             nodeFile.SetName(destinationName);
+            nodeFile.Metadata = NodeMetadataPatch.Apply(nodeFile.Metadata, request.Metadata);
             nodeFile.FileManifest.ResetFailedPreview();
             _syncChanges.StageFileChange(SyncChangeKind.FileMoved, nodeFile, sourceLayoutId, oldParentId);
             await SaveMovedFileAsync(nodeFile, cancellationToken);

@@ -30,6 +30,7 @@ export interface MoveFileRequest {
   parentId: Guid;
   name?: string;
   overwrite?: boolean;
+  metadata?: Record<string, string>;
 }
 
 export interface FileVersionDto {
