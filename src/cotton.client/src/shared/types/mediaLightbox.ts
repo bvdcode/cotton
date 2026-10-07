@@ -12,6 +12,7 @@ export interface MediaItem {
   mimeType: string;
   sizeBytes?: number;
   requiresTranscoding?: boolean;
+  metadata?: Record<string, string>;
 }
 
 export interface MediaLightboxSourceFile {
@@ -22,6 +23,7 @@ export interface MediaLightboxSourceFile {
   largeFilePreviewPresignedToken?: string | null;
   contentType?: string | null;
   requiresVideoTranscoding?: boolean;
+  metadata?: Record<string, string>;
 }
 
 export interface MediaVideoSource {
@@ -58,6 +60,7 @@ declare module "yet-another-react-lightbox" {
 
   interface Labels {
     Delete?: string;
+    Metadata?: string;
   }
 }
 
@@ -65,6 +68,8 @@ export type SlideWithTitle = Slide & {
   fileId: string;
   fileName: string;
   title?: string;
+  metadata?: Record<string, string>;
+  sizeBytes?: number;
 };
 
 export const isSlideWithTitle = (slide: Slide): slide is SlideWithTitle =>

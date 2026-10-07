@@ -10,6 +10,7 @@ import {
   Switch,
   ToggleButton,
   ToggleButtonGroup,
+  Typography,
 } from "@mui/material";
 import {
   Brightness4,
@@ -22,12 +23,14 @@ import i18n from "../../../i18n";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 import {
   selectGalleryPreferPreview,
+  selectGalleryMetadataPosition,
   selectGallerySmoothTransitions,
   selectUiLanguage,
   selectThemeMode,
   useUserPreferencesStore,
 } from "../../../shared/store/userPreferencesStore";
 import type { ThemeMode } from "../../../shared/theme";
+import type { GalleryMetadataPosition } from "../../../shared/types/galleryMetadataPosition";
 import { supportedLanguages, type SupportedLanguage } from "../../../locales";
 import { nativeLanguageNames } from "../../../locales/languageDisplayNames";
 
@@ -52,6 +55,12 @@ export const AppearanceSettingsCard = () => {
     (s) => s.setGalleryPreferPreview,
   );
   const loadOriginalsEnabled = !galleryPreferPreview;
+  const galleryMetadataPosition = useUserPreferencesStore(
+    selectGalleryMetadataPosition,
+  );
+  const setGalleryMetadataPosition = useUserPreferencesStore(
+    (s) => s.setGalleryMetadataPosition,
+  );
 
   const selectedLanguage = (preferredLanguage ??
     i18n.language ??
@@ -124,7 +133,7 @@ export const AppearanceSettingsCard = () => {
 
         <Divider />
 
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        <Stack spacing={1}>
           <FormControlLabel
             control={
               <Switch
@@ -144,6 +153,32 @@ export const AppearanceSettingsCard = () => {
             }
             label={t("appearance.galleryPreferPreview")}
           />
+          <Stack spacing={1}>
+            <Typography id="gallery-metadata-position-label">
+              {t("appearance.galleryMetadataPosition.label")}
+            </Typography>
+            <ToggleButtonGroup
+              fullWidth
+              exclusive
+              value={galleryMetadataPosition}
+              aria-labelledby="gallery-metadata-position-label"
+              onChange={(_, position: GalleryMetadataPosition | null) => {
+                if (position !== null) {
+                  setGalleryMetadataPosition(position);
+                }
+              }}
+            >
+              <ToggleButton value="left">
+                {t("appearance.galleryMetadataPosition.left")}
+              </ToggleButton>
+              <ToggleButton value="hidden">
+                {t("appearance.galleryMetadataPosition.hidden")}
+              </ToggleButton>
+              <ToggleButton value="right">
+                {t("appearance.galleryMetadataPosition.right")}
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
         </Stack>
       </Stack>
     </ProfileAccordionCard>

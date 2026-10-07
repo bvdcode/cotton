@@ -1731,6 +1731,12 @@
       "description": "Voorkeuren voor de gebruikersinterface en personalisatie.",
       "gallerySmoothTransitions": "Vloeiende overgangen in de galerij",
       "galleryPreferPreview": "Originelen tonen in plaats van voorvertoningen",
+      "galleryMetadataPosition": {
+        "label": "Metadata tonen bij het bekijken van foto’s en video’s",
+        "left": "Links",
+        "hidden": "Verborgen",
+        "right": "Rechts"
+      },
       "themeMode": {
         "label": "Thema",
         "light": "Licht",
@@ -2564,6 +2570,24 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Metadata",
+        "dimensions": "Afmetingen",
+        "duration": "Duur",
+        "seconds": "{{value}} s",
+        "format": "Formaat",
+        "title": "Titel",
+        "artist": "Artiest",
+        "album": "Album",
+        "albumArtist": "Albumartiest",
+        "track": "Track",
+        "disc": "Schijf",
+        "date": "Datum",
+        "year": "Jaar",
+        "genre": "Genre",
+        "audioCodec": "Audiocodec",
+        "videoCodec": "Videocodec"
+      },
       "actions": {
         "edit": "Bewerken",
         "save": "Opslaan",

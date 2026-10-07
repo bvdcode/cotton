@@ -1814,6 +1814,12 @@
       "description": "Настройки отображения и поведения интерфейса.",
       "gallerySmoothTransitions": "Плавная прокрутка в галерее",
       "galleryPreferPreview": "Загружать оригиналы (выкл/вкл)",
+      "galleryMetadataPosition": {
+        "label": "Показывать метаданные при просмотре фото и видео",
+        "left": "Слева",
+        "hidden": "Скрыто",
+        "right": "Справа"
+      },
       "themeMode": {
         "label": "Тема",
         "light": "Светлая",
@@ -2676,6 +2682,24 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Метаданные",
+        "dimensions": "Разрешение",
+        "duration": "Длительность",
+        "seconds": "{{value}} с",
+        "format": "Формат",
+        "title": "Название",
+        "artist": "Исполнитель",
+        "album": "Альбом",
+        "albumArtist": "Исполнитель альбома",
+        "track": "Дорожка",
+        "disc": "Диск",
+        "date": "Дата",
+        "year": "Год",
+        "genre": "Жанр",
+        "audioCodec": "Аудиокодек",
+        "videoCodec": "Видеокодек"
+      },
       "actions": {
         "edit": "Редактировать",
         "save": "Сохранить",

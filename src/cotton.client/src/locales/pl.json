@@ -1736,6 +1736,12 @@
       "description": "Preferencje interfejsu i personalizacja.",
       "gallerySmoothTransitions": "Płynne przejścia w galerii",
       "galleryPreferPreview": "Pokazuj oryginały zamiast podglądów",
+      "galleryMetadataPosition": {
+        "label": "Pokazuj metadane podczas oglądania zdjęć i filmów",
+        "left": "Po lewej",
+        "hidden": "Ukryte",
+        "right": "Po prawej"
+      },
       "themeMode": {
         "label": "Motyw",
         "light": "Jasny",
@@ -2583,6 +2589,24 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Metadane",
+        "dimensions": "Wymiary",
+        "duration": "Czas trwania",
+        "seconds": "{{value}} s",
+        "format": "Format",
+        "title": "Tytuł",
+        "artist": "Wykonawca",
+        "album": "Album",
+        "albumArtist": "Wykonawca albumu",
+        "track": "Ścieżka",
+        "disc": "Płyta",
+        "date": "Data",
+        "year": "Rok",
+        "genre": "Gatunek",
+        "audioCodec": "Kodek audio",
+        "videoCodec": "Kodek wideo"
+      },
       "actions": {
         "edit": "Edytuj",
         "save": "Zapisz",

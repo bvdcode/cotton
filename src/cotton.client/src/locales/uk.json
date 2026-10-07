@@ -1739,6 +1739,12 @@
       "description": "Налаштування інтерфейсу та персоналізації.",
       "gallerySmoothTransitions": "Плавні переходи в галереї",
       "galleryPreferPreview": "Показувати оригінали замість прев'ю",
+      "galleryMetadataPosition": {
+        "label": "Показувати метадані під час перегляду фото та відео",
+        "left": "Ліворуч",
+        "hidden": "Приховано",
+        "right": "Праворуч"
+      },
       "themeMode": {
         "label": "Тема",
         "light": "Світла",
@@ -2574,6 +2580,24 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Метадані",
+        "dimensions": "Роздільна здатність",
+        "duration": "Тривалість",
+        "seconds": "{{value}} с",
+        "format": "Формат",
+        "title": "Назва",
+        "artist": "Виконавець",
+        "album": "Альбом",
+        "albumArtist": "Виконавець альбому",
+        "track": "Доріжка",
+        "disc": "Диск",
+        "date": "Дата",
+        "year": "Рік",
+        "genre": "Жанр",
+        "audioCodec": "Аудіокодек",
+        "videoCodec": "Відеокодек"
+      },
       "actions": {
         "edit": "Редагувати",
         "save": "Зберегти",

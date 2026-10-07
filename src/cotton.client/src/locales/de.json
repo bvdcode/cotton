@@ -1728,6 +1728,12 @@
       "description": "Einstellungen für die Oberfläche und Personalisierung.",
       "gallerySmoothTransitions": "Sanfte Übergänge in der Galerie",
       "galleryPreferPreview": "Originale statt Vorschauen anzeigen",
+      "galleryMetadataPosition": {
+        "label": "Metadaten beim Ansehen von Fotos und Videos anzeigen",
+        "left": "Links",
+        "hidden": "Ausgeblendet",
+        "right": "Rechts"
+      },
       "themeMode": {
         "label": "Design",
         "light": "Hell",
@@ -2559,6 +2565,24 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Metadaten",
+        "dimensions": "Auflösung",
+        "duration": "Dauer",
+        "seconds": "{{value}} s",
+        "format": "Format",
+        "title": "Titel",
+        "artist": "Interpret",
+        "album": "Album",
+        "albumArtist": "Albuminterpret",
+        "track": "Titelnummer",
+        "disc": "Disc",
+        "date": "Datum",
+        "year": "Jahr",
+        "genre": "Genre",
+        "audioCodec": "Audiocodec",
+        "videoCodec": "Videocodec"
+      },
       "actions": {
         "edit": "Bearbeiten",
         "save": "Speichern",

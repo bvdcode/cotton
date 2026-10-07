@@ -1734,6 +1734,12 @@
       "description": "Preferenze dell'interfaccia e personalizzazione.",
       "gallerySmoothTransitions": "Transizioni fluide nella galleria",
       "galleryPreferPreview": "Mostra originali invece delle anteprime",
+      "galleryMetadataPosition": {
+        "label": "Mostra i metadati durante la visualizzazione di foto e video",
+        "left": "Sinistra",
+        "hidden": "Nascosti",
+        "right": "Destra"
+      },
       "themeMode": {
         "label": "Tema",
         "light": "Chiaro",
@@ -2565,6 +2571,24 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Metadati",
+        "dimensions": "Dimensioni",
+        "duration": "Durata",
+        "seconds": "{{value}} s",
+        "format": "Formato",
+        "title": "Titolo",
+        "artist": "Artista",
+        "album": "Album",
+        "albumArtist": "Artista dell’album",
+        "track": "Traccia",
+        "disc": "Disco",
+        "date": "Data",
+        "year": "Anno",
+        "genre": "Genere",
+        "audioCodec": "Codec audio",
+        "videoCodec": "Codec video"
+      },
       "actions": {
         "edit": "Modifica",
         "save": "Salva",

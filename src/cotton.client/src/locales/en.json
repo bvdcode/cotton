@@ -1529,6 +1529,12 @@
       "description": "UI preferences and personalization.",
       "gallerySmoothTransitions": "Smooth transitions in gallery",
       "galleryPreferPreview": "Show originals instead of previews",
+      "galleryMetadataPosition": {
+        "label": "Show metadata when viewing photos and videos",
+        "left": "Left",
+        "hidden": "Hidden",
+        "right": "Right"
+      },
       "themeMode": {
         "label": "Theme",
         "light": "Light",
@@ -2375,6 +2381,24 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Metadata",
+        "dimensions": "Dimensions",
+        "duration": "Duration",
+        "seconds": "{{value}} s",
+        "format": "Format",
+        "title": "Title",
+        "artist": "Artist",
+        "album": "Album",
+        "albumArtist": "Album artist",
+        "track": "Track",
+        "disc": "Disc",
+        "date": "Date",
+        "year": "Year",
+        "genre": "Genre",
+        "audioCodec": "Audio codec",
+        "videoCodec": "Video codec"
+      },
       "actions": {
         "edit": "Edit",
         "save": "Save",

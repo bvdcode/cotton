@@ -31,6 +31,7 @@ import { useMediaLightboxRender } from "./mediaLightboxRender";
 import { useLightboxTouchControls } from "./useLightboxTouchControls";
 import { useLightboxSharing } from "./useLightboxSharing";
 import { useActivityDetection } from "../../hooks/useActivityDetection";
+import { useGalleryMetadata } from "./useGalleryMetadata";
 
 type ClosingState = { open: boolean; closing: boolean };
 type DeleteProgressState = { itemId: string | null; inProgress: boolean };
@@ -120,6 +121,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     isClosing = false;
     setClosingState({ open, closing: false });
   }
+  const metadata = useGalleryMetadata(
+    currentItem,
+    open && !isClosing,
+    isTouchDevice,
+  );
   const handleClose = React.useCallback(() => {
     setClosingState({ open, closing: true });
     stopLightboxMediaPlayback();
@@ -219,7 +225,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     }
   }, [open, index, ensureSlideHasOriginal]);
 
-  const controlsVisible = isTouchDevice ? touchControlsVisible : isActive;
+  const controlsVisible =
+    metadata.visible || (isTouchDevice ? touchControlsVisible : isActive);
   const lightboxClassName = [
     "lightbox-autohide",
     controlsVisible ? "lightbox-autohide--active" : "lightbox-autohide--idle",
@@ -276,6 +283,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     handleSlideImageError,
     hlsErrorText,
     hlsNoticeText,
+    metadataControls: metadata.controls,
     setActiveVideoElementForFile,
   });
 
@@ -315,6 +323,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const lightboxLabels = React.useMemo(
     () => ({
       Delete: t("actions.delete", { ns: "common" }),
+      Metadata: t("preview.metadata.label"),
     }),
     [t],
   );
@@ -322,10 +331,17 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const lightboxToolbar = React.useMemo(
     () => ({
       buttons: deleteButton
-        ? ["slideshow", "download", deleteButton, "share", "close"]
-        : ["slideshow", "download", "share", "close"],
+        ? [
+            "slideshow",
+            "download",
+            deleteButton,
+            metadata.button,
+            "share",
+            "close",
+          ]
+        : ["slideshow", "download", metadata.button, "share", "close"],
     }),
-    [deleteButton],
+    [deleteButton, metadata.button],
   );
 
   const lightboxZoom = React.useMemo(

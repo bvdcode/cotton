@@ -96,6 +96,7 @@ export const useMediaLightbox = (
           previewUrl,
           mimeType: file.contentType ?? "application/octet-stream",
           sizeBytes: file.sizeBytes,
+          metadata: file.metadata,
           requiresTranscoding: file.requiresVideoTranscoding ?? false,
         };
       });

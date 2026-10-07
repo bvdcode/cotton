@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { User } from "../../features/auth/types";
 import type { ThemeMode } from "../theme";
+import type { GalleryMetadataPosition } from "../types/galleryMetadataPosition";
 import { supportedLanguages, type SupportedLanguage } from "../../locales";
 import {
   isSelfPreferenceUpdateToken,
@@ -22,6 +23,7 @@ export const USER_PREFERENCE_KEYS = {
 
   gallerySmoothTransitions: "gallerySmoothTransitions",
   galleryPreferPreview: "galleryPreferPreview",
+  galleryMetadataPosition: "galleryMetadataPosition",
 
   clientEncryptionLockOnRefresh: "clientEncryptionLockOnRefresh",
 
@@ -38,6 +40,7 @@ const DEFAULT_NOTIFICATION_SOUND_ENABLED = true;
 const DEFAULT_NOTIFICATIONS_SHOW_ONLY_UNREAD = false;
 const DEFAULT_GALLERY_SMOOTH_TRANSITIONS = true;
 const DEFAULT_GALLERY_PREFER_PREVIEW = true;
+const DEFAULT_GALLERY_METADATA_POSITION: GalleryMetadataPosition = "right";
 const DEFAULT_CLIENT_ENCRYPTION_LOCK_ON_REFRESH = false;
 
 const parseBoolPreference = (value: string | undefined): boolean | null => {
@@ -87,6 +90,7 @@ interface UserPreferencesState {
 
   setGallerySmoothTransitions: (enabled: boolean) => void;
   setGalleryPreferPreview: (enabled: boolean) => void;
+  setGalleryMetadataPosition: (position: GalleryMetadataPosition) => void;
   setClientEncryptionLockOnRefresh: (enabled: boolean) => void;
 
   reset: () => void;
@@ -171,6 +175,12 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       });
     },
 
+    setGalleryMetadataPosition: (position) => {
+      void get().updatePreferences({
+        [USER_PREFERENCE_KEYS.galleryMetadataPosition]: position,
+      });
+    },
+
     setClientEncryptionLockOnRefresh: (enabled) => {
       void get().updatePreferences({
         [USER_PREFERENCE_KEYS.clientEncryptionLockOnRefresh]: enabled
@@ -232,6 +242,17 @@ export const selectGalleryPreferPreview = (
 ): boolean => {
   const raw = state.preferences[USER_PREFERENCE_KEYS.galleryPreferPreview];
   return parseBoolPreference(raw) ?? DEFAULT_GALLERY_PREFER_PREVIEW;
+};
+
+export const selectGalleryMetadataPosition = (
+  state: UserPreferencesState,
+): GalleryMetadataPosition => {
+  const position =
+    state.preferences[USER_PREFERENCE_KEYS.galleryMetadataPosition];
+  if (position === "left" || position === "hidden" || position === "right") {
+    return position;
+  }
+  return DEFAULT_GALLERY_METADATA_POSITION;
 };
 
 export const selectClientEncryptionLockOnRefresh = (

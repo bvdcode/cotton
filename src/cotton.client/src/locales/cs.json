@@ -1733,6 +1733,12 @@
       "description": "Předvolby uživatelského rozhraní a personalizace.",
       "gallerySmoothTransitions": "Plynulé přechody v galerii",
       "galleryPreferPreview": "Zobrazovat originály místo náhledů",
+      "galleryMetadataPosition": {
+        "label": "Zobrazovat metadata při prohlížení fotografií a videí",
+        "left": "Vlevo",
+        "hidden": "Skryto",
+        "right": "Vpravo"
+      },
       "themeMode": {
         "label": "Motiv",
         "light": "Světlý",
@@ -2580,6 +2586,24 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Metadata",
+        "dimensions": "Rozměry",
+        "duration": "Délka",
+        "seconds": "{{value}} s",
+        "format": "Formát",
+        "title": "Název",
+        "artist": "Interpret",
+        "album": "Album",
+        "albumArtist": "Interpret alba",
+        "track": "Stopa",
+        "disc": "Disk",
+        "date": "Datum",
+        "year": "Rok",
+        "genre": "Žánr",
+        "audioCodec": "Zvukový kodek",
+        "videoCodec": "Video kodek"
+      },
       "actions": {
         "edit": "Upravit",
         "save": "Uložit",
