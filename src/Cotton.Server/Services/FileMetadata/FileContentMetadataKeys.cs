@@ -7,6 +7,7 @@ namespace Cotton.Server.Services.FileMetadata
     {
         public const string ExtractionVersion = "metadataExtractorVersion";
         public const string CurrentExtractionVersion = "1";
+        public const string ExtractionError = "contentMetadata.extractionError";
 
         public const string ImageWidth = "image.width";
         public const string ImageHeight = "image.height";

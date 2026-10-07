@@ -35,6 +35,31 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public void FailedAttempt_StoresVersionAndError_AndSuccessfulExtractionClearsError()
+        {
+            Dictionary<string, string> previous = new()
+            {
+                ["image.width"] = "old",
+                ["custom.label"] = "Keep",
+            };
+            Dictionary<string, string> failed = FileContentMetadataDictionary.MarkProcessed(previous, "Invalid metadata.");
+            Dictionary<string, string> retried = FileContentMetadataDictionary.ReplaceManagedValues(failed,
+                new Dictionary<string, string> { ["image.width"] = "32" });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(FileContentMetadataDictionary.HasCurrentVersion(failed), Is.True);
+                Assert.That(failed[FileContentMetadataKeys.ExtractionError], Is.EqualTo("Invalid metadata."));
+                Assert.That(failed, Does.Not.ContainKey("image.width"));
+                Assert.That(failed["custom.label"], Is.EqualTo("Keep"));
+                Assert.That(FileContentMetadataDictionary.IsProjectionKey(FileContentMetadataKeys.ExtractionError), Is.False);
+                Assert.That(retried, Does.Not.ContainKey(FileContentMetadataKeys.ExtractionError));
+                Assert.That(retried["image.width"], Is.EqualTo("32"));
+                Assert.That(retried["custom.label"], Is.EqualTo("Keep"));
+            });
+        }
+
+        [Test]
         public void HasCurrentVersion_DoesNotAcceptLegacyFlagsOrEmptyDictionary()
         {
             Assert.Multiple(() =>

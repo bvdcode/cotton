@@ -116,7 +116,7 @@ namespace Cotton.Server.Handlers.Files
             IEnumerable<string> contentTypes = manifest.NodeFiles
                 .Select(file => file.ContentType)
                 .Distinct(StringComparer.OrdinalIgnoreCase);
-            bool extractionUnavailable = false;
+            string? extractionError = null;
             foreach (string contentType in contentTypes)
             {
                 IFileContentMetadataExtractor? extractor = _extractorProvider.GetExtractor(contentType);
@@ -136,7 +136,7 @@ namespace Cotton.Server.Handlers.Files
                 }
                 catch (FileMetadataUnavailableException ex)
                 {
-                    extractionUnavailable = true;
+                    extractionError = ex.Message;
                     _logger.LogDebug(ex,
                         "Metadata is unavailable for file manifest {FileManifestId} content type {ContentType}.",
                         manifest.Id, contentType);
@@ -160,17 +160,13 @@ namespace Cotton.Server.Handlers.Files
                 return !AreEquivalent(oldMetadata, manifest.Metadata);
             }
 
-            if (!extractionUnavailable)
-            {
-                return await MarkMetadataProcessedAsync(manifest, cancellationToken);
-            }
-            return false;
+            return await MarkMetadataProcessedAsync(manifest, extractionError, cancellationToken);
         }
 
-        private async Task<bool> MarkMetadataProcessedAsync(FileManifest manifest, CancellationToken cancellationToken)
+        private async Task<bool> MarkMetadataProcessedAsync(FileManifest manifest, string? error, CancellationToken cancellationToken)
         {
             Dictionary<string, string>? oldMetadata = manifest.Metadata;
-            manifest.Metadata = FileContentMetadataDictionary.MarkProcessed(manifest.Metadata);
+            manifest.Metadata = FileContentMetadataDictionary.MarkProcessed(manifest.Metadata, error);
             await SaveManifestMetadataAsync(manifest, cancellationToken);
             return !AreEquivalent(oldMetadata, manifest.Metadata);
         }

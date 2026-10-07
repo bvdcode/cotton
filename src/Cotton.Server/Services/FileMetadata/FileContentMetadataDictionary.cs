@@ -30,9 +30,14 @@ namespace Cotton.Server.Services.FileMetadata
             return result;
         }
 
-        public static Dictionary<string, string> MarkProcessed(Dictionary<string, string>? current)
+        public static Dictionary<string, string> MarkProcessed(Dictionary<string, string>? current, string? error = null)
         {
-            return ReplaceManagedValues(current, new Dictionary<string, string>());
+            Dictionary<string, string> result = ReplaceManagedValues(current, new Dictionary<string, string>());
+            if (error is not null)
+            {
+                result[FileContentMetadataKeys.ExtractionError] = error;
+            }
+            return result;
         }
 
         public static bool HasCurrentVersion(Dictionary<string, string>? metadata)
