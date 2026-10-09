@@ -11,7 +11,7 @@ using System.Text;
 namespace Cotton.Storage.Tests.Backends
 {
     [TestFixture]
-    public class FileSystemStorageBackendTests
+    public partial class FileSystemStorageBackendTests
     {
         private FileSystemStorageBackend _backend = null!;
         private string _testBasePath = null!;

@@ -161,14 +161,14 @@ namespace Cotton.Storage.Backends
             FileStreamOptions fso = new FileStreamOptions
             {
                 Mode = FileMode.Open,
-                Share = FileShare.Read,
+                Share = FileShare.Read | FileShare.Delete,
                 Access = FileAccess.Read,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan
             };
             return Task.FromResult<Stream>(new FileStream(filePath, fso));
         }
 
-        public async Task<long> WriteAsync(string uid, Stream stream)
+        public async Task<long> WriteAsync(string uid, Stream stream, bool overwrite = false)
         {
             const int WriteBufferSize = 2 * 1024 * 1024;
 
@@ -209,11 +209,19 @@ namespace Cotton.Storage.Backends
 
             try
             {
-                File.Move(tmpFilePath, filePath);
+                if (overwrite && File.Exists(filePath))
+                {
+                    File.SetAttributes(filePath, File.GetAttributes(filePath) & ~FileAttributes.ReadOnly);
+                    File.Replace(tmpFilePath, filePath, destinationBackupFileName: null);
+                }
+                else
+                {
+                    File.Move(tmpFilePath, filePath);
+                }
                 File.SetAttributes(filePath, FileAttributes.ReadOnly | FileAttributes.NotContentIndexed);
                 return storedSizeBytes;
             }
-            catch (IOException ex) when (File.Exists(filePath))
+            catch (IOException ex) when (!overwrite && File.Exists(filePath))
             {
                 _logger.LogDebug(ex, "File {Uid} was written concurrently, deduplicated temp write", uid);
                 TryDelete(tmpFilePath);

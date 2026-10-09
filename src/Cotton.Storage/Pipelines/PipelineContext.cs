@@ -9,6 +9,8 @@ namespace Cotton.Storage.Pipelines
 
         public bool StoreInMemoryCache { get; set; }
 
+        public bool Overwrite { get; set; }
+
         public Dictionary<string, long>? ChunkLengths { get; set; }
     }
 }

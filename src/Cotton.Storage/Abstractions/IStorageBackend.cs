@@ -22,7 +22,7 @@ namespace Cotton.Storage.Abstractions
 
         Task<Stream> ReadAsync(string uid);
 
-        Task<long> WriteAsync(string uid, Stream stream);
+        Task<long> WriteAsync(string uid, Stream stream, bool overwrite = false);
 
         IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default);
 
