@@ -3358,7 +3358,9 @@
         "copy": "Kopiuj token",
         "copied": "Skopiowano",
         "failed": "Nie udało się utworzyć tokenu.",
-        "copyFailed": "Nie udało się skopiować. Zaznacz i skopiuj token ręcznie."
+        "copyFailed": "Nie udało się skopiować. Zaznacz i skopiuj token ręcznie.",
+        "curlExample": "Przykład curl",
+        "copyCommand": "Kopiuj polecenie"
       }
     },
     "storageStatistics": {

@@ -1,5 +1,4 @@
 import { Alert, Divider, Skeleton, Stack } from "@mui/material";
-import SecurityIcon from "@mui/icons-material/Security";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import type { SecurityDiagnosticsDto } from "../../../shared/api/adminApi";
@@ -56,7 +55,6 @@ export const AdminSecurityDiagnosticsPage = () => {
           <AdminPageHeader
             title={t("securityDiagnostics.title")}
             description={t("securityDiagnostics.description")}
-            icon={<SecurityIcon color="primary" />}
           />
 
           {diagnosticsQuery.isPending && (

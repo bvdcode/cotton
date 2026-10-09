@@ -11,6 +11,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useTranslation } from "react-i18next";
 import type { LatestDatabaseBackupDto } from "../../../shared/api/adminApi";
 import { formatBytes } from "../../../shared/utils/formatBytes";
+import { HelpButton } from "../../../shared/ui/HelpButton";
 
 type Props = { backups: LatestDatabaseBackupDto[] };
 
@@ -31,13 +32,27 @@ export const DatabaseBackupHistory = ({ backups }: Props) => {
   };
   return (
     <Stack spacing={1} minWidth={0}>
-      <Typography variant="h6">{t("databaseBackup.history.title")}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {t("databaseBackup.history.retention")}
-      </Typography>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Typography variant="h6">
+          {t("databaseBackup.history.title")}
+        </Typography>
+        <HelpButton
+          title={t("databaseBackup.history.title")}
+          content={
+            <Stack spacing={2}>
+              <Typography variant="body2">
+                {t("databaseBackup.history.retention")}
+              </Typography>
+              <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
+                {t("databaseBackup.state.restoreIfEmptyHint")}
+              </Typography>
+            </Stack>
+          }
+        />
+      </Stack>
       <Box>
         {backups.map((backup, index) => (
-          <Accordion key={backup.backupId} defaultExpanded={index === 0}>
+          <Accordion key={backup.backupId}>
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               aria-controls={`backup-${backup.backupId}-details`}

@@ -3315,7 +3315,9 @@
         "copy": "Token kopiëren",
         "copied": "Gekopieerd",
         "failed": "Token maken mislukt.",
-        "copyFailed": "Kopiëren mislukt. Selecteer en kopieer het token handmatig."
+        "copyFailed": "Kopiëren mislukt. Selecteer en kopieer het token handmatig.",
+        "curlExample": "curl-voorbeeld",
+        "copyCommand": "Opdracht kopiëren"
       }
     },
     "storageStatistics": {

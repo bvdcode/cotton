@@ -3310,7 +3310,9 @@
         "copy": "Token kopieren",
         "copied": "Kopiert",
         "failed": "Token konnte nicht erstellt werden.",
-        "copyFailed": "Kopieren fehlgeschlagen. Markieren und kopieren Sie das Token manuell."
+        "copyFailed": "Kopieren fehlgeschlagen. Markieren und kopieren Sie das Token manuell.",
+        "curlExample": "curl-Beispiel",
+        "copyCommand": "Befehl kopieren"
       }
     },
     "storageStatistics": {

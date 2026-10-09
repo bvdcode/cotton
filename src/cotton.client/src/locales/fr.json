@@ -3314,7 +3314,9 @@
         "copy": "Copier le jeton",
         "copied": "Copié",
         "failed": "Impossible de créer le jeton.",
-        "copyFailed": "Échec de la copie. Sélectionnez et copiez le jeton manuellement."
+        "copyFailed": "Échec de la copie. Sélectionnez et copiez le jeton manuellement.",
+        "curlExample": "Exemple curl",
+        "copyCommand": "Copier la commande"
       }
     },
     "storageStatistics": {

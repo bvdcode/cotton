@@ -2,6 +2,7 @@ import {
   Alert,
   Button,
   CircularProgress,
+  Divider,
   LinearProgress,
   Stack,
   Typography,
@@ -52,85 +53,75 @@ export const AdminDatabaseBackupPage = () => {
     : null;
 
   return (
-    <Stack spacing={2}>
-      <AdminPageSurface>
-        <Stack p={3} spacing={3}>
-          <AdminPageHeader
-            title={t("databaseBackup.title")}
-            description={t("databaseBackup.description")}
-            action={
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={1}
-                useFlexGap
-                sx={{ flexWrap: "wrap" }}
+    <AdminPageSurface>
+      <Stack p={3} spacing={3}>
+        <AdminPageHeader
+          title={t("databaseBackup.title")}
+          description={t("databaseBackup.description")}
+          action={
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: "wrap" }}
+            >
+              <Button
+                variant="outlined"
+                color="inherit"
+                onClick={() => void refreshLatestBackup()}
+                disabled={isLoading || isTriggering}
               >
-                <Button
-                  variant="outlined"
-                  color="inherit"
-                  onClick={() => void refreshLatestBackup()}
-                  disabled={isLoading || isTriggering}
-                >
-                  {t("databaseBackup.actions.refresh")}
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={handleTriggerBackup}
-                  disabled={isTriggering}
-                >
-                  {isTriggering ? (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <CircularProgress
-                        size={16}
-                        color="inherit"
-                        aria-label={t("databaseBackup.actions.triggering")}
-                      />
-                      <Typography variant="button">
-                        {t("databaseBackup.actions.triggering")}
-                      </Typography>
-                    </Stack>
-                  ) : (
-                    t("databaseBackup.actions.trigger")
-                  )}
-                </Button>
-              </Stack>
-            }
+                {t("databaseBackup.actions.refresh")}
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleTriggerBackup}
+                disabled={isTriggering}
+              >
+                {isTriggering ? (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <CircularProgress
+                      size={16}
+                      color="inherit"
+                      aria-label={t("databaseBackup.actions.triggering")}
+                    />
+                    <Typography variant="button">
+                      {t("databaseBackup.actions.triggering")}
+                    </Typography>
+                  </Stack>
+                ) : (
+                  t("databaseBackup.actions.trigger")
+                )}
+              </Button>
+            </Stack>
+          }
+        />
+
+        {loadErrorMessage && <Alert severity="error">{loadErrorMessage}</Alert>}
+
+        {triggerErrorMessage && (
+          <Alert severity="error">{triggerErrorMessage}</Alert>
+        )}
+
+        <Stack minHeight={4}>
+          <LinearProgress
+            aria-label={t("databaseBackup.state.loading")}
+            aria-hidden={!isLoading}
+            sx={{
+              opacity: isLoading ? 1 : 0,
+              transition: "opacity 120ms ease",
+            }}
           />
-
-          {loadErrorMessage && (
-            <Alert severity="error">{loadErrorMessage}</Alert>
-          )}
-
-          {triggerErrorMessage && (
-            <Alert severity="error">{triggerErrorMessage}</Alert>
-          )}
-
-          <Stack minHeight={4}>
-            <LinearProgress
-              aria-label={t("databaseBackup.state.loading")}
-              aria-hidden={!isLoading}
-              sx={{
-                opacity: isLoading ? 1 : 0,
-                transition: "opacity 120ms ease",
-              }}
-            />
-          </Stack>
-
-          {!isLoading && !loadErrorMessage && backup === null && (
-            <Alert severity="info">{t("databaseBackup.state.empty")}</Alert>
-          )}
-
-          <Alert
-            severity="info"
-            variant="outlined"
-            sx={{ "& .MuiAlert-message": { overflowWrap: "anywhere" } }}
-          >
-            {t("databaseBackup.state.restoreIfEmptyHint")}
-          </Alert>
-          <DatabaseBackupHistory backups={backupQuery.data ?? []} />
         </Stack>
-      </AdminPageSurface>
-      <DatabaseBackupAccess />
-    </Stack>
+
+        {!isLoading && !loadErrorMessage && backup === null && (
+          <Alert severity="info">{t("databaseBackup.state.empty")}</Alert>
+        )}
+
+        <DatabaseBackupHistory backups={backupQuery.data ?? []} />
+        <Divider />
+        <DatabaseBackupAccess />
+      </Stack>
+    </AdminPageSurface>
   );
 };

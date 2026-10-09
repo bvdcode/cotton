@@ -3355,7 +3355,9 @@
         "copy": "Kopírovat token",
         "copied": "Zkopírováno",
         "failed": "Token se nepodařilo vytvořit.",
-        "copyFailed": "Kopírování selhalo. Vyberte a zkopírujte token ručně."
+        "copyFailed": "Kopírování selhalo. Vyberte a zkopírujte token ručně.",
+        "curlExample": "Příklad curl",
+        "copyCommand": "Kopírovat příkaz"
       }
     },
     "storageStatistics": {

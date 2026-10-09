@@ -3111,7 +3111,9 @@
         "copy": "Copy token",
         "copied": "Copied",
         "failed": "Failed to generate a token.",
-        "copyFailed": "Could not copy. Select and copy the token manually."
+        "copyFailed": "Could not copy. Select and copy the token manually.",
+        "curlExample": "curl example",
+        "copyCommand": "Copy command"
       }
     },
     "storageStatistics": {

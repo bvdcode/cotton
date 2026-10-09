@@ -3062,7 +3062,9 @@
         "copy": "Copiar token",
         "copied": "Copiado",
         "failed": "No se pudo crear el token.",
-        "copyFailed": "No se pudo copiar. Selecciona y copia el token manualmente."
+        "copyFailed": "No se pudo copiar. Selecciona y copia el token manualmente.",
+        "curlExample": "Ejemplo de curl",
+        "copyCommand": "Copiar comando"
       }
     },
     "storageStatistics": {
