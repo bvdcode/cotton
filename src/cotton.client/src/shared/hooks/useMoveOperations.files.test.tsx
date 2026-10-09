@@ -255,7 +255,7 @@ describe("useMoveOperations", () => {
   it("uses current target names when suggesting a name after a conflict", async () => {
     useMoveClipboardStore.getState().setItems([plainFileItem]);
     mocks.moveFile.mockRejectedValueOnce(createNameConflictError());
-    mocks.getChildren.mockResolvedValueOnce({
+    mocks.getChildren.mockResolvedValue({
       ...makeEmptyChildrenResponse(targetParentId),
       content: {
         ...makeEmptyChildrenResponse(targetParentId).content,

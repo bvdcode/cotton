@@ -317,7 +317,74 @@ describe("encrypted file name conflicts", () => {
     );
   });
 
-  it("keeps plaintext transfers free of display-name lookup requests", async () => {
+  it.each(["copy", "move"] as const)(
+    "checks a plaintext %s against decrypted destination names",
+    async (operation) => {
+      const file = { ...source, name: "report.txt" };
+      const existing = await encryptedFile("REPORT.txt", "existing");
+      mocks.children.mockResolvedValue({
+        content: { ...emptyContent, files: [existing] },
+        totalCount: 1,
+      });
+      const send = operation === "copy" ? mocks.copy : mocks.move;
+      send.mockImplementation((_id: string, request: MoveFileRequest) =>
+        Promise.resolve(simulateTransfer(file, request, "transferred")),
+      );
+      const confirm = vi.fn(async () => ConflictAction.Rename);
+
+      const result = await moveItemWithConflictResolution({
+        item: transferItem(file),
+        operation,
+        targetParentId: "target",
+        skipAllConflicts: false,
+        confirmConflict: confirm,
+      });
+
+      expect(confirm).toHaveBeenCalledWith({
+        newName: "report (1).txt",
+        canOverwrite: false,
+      });
+      expect(send).toHaveBeenCalledOnce();
+      expect(send).toHaveBeenCalledWith(file.id, {
+        parentId: "target",
+        name: "report (1).txt",
+      });
+      expect(result.kind).toBe("moved");
+      expect(mocks.children).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("allows overwriting a plaintext conflict while unlocked", async () => {
+    const file = { ...source, name: "report.txt" };
+    mocks.children.mockResolvedValue({
+      content: { ...emptyContent, files: [{ ...file, id: "existing" }] },
+      totalCount: 1,
+    });
+    mocks.copy.mockResolvedValue(file);
+    const confirm = vi.fn(async () => ConflictAction.Overwrite);
+
+    const result = await moveItemWithConflictResolution({
+      item: transferItem(file),
+      operation: "copy",
+      targetParentId: "target",
+      skipAllConflicts: false,
+      confirmConflict: confirm,
+    });
+
+    expect(confirm).toHaveBeenCalledWith({
+      newName: "report (1).txt",
+      canOverwrite: true,
+    });
+    expect(mocks.copy).toHaveBeenCalledWith(file.id, {
+      parentId: "target",
+      name: "report.txt",
+      overwrite: true,
+    });
+    expect(result.kind).toBe("moved");
+  });
+
+  it("keeps locked plaintext transfers free of display-name lookup requests", async () => {
+    useVault.setState({ isUnlocked: false, masterKey: null });
     mocks.copy.mockResolvedValue(source);
     await moveItemWithConflictResolution({
       item: transferItem(source),

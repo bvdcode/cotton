@@ -6,7 +6,7 @@ import {
   readFileDisplayMeta,
 } from "../crypto/displayMeta";
 import { isFileEncrypted } from "../crypto/metadataFlags";
-import { requireMasterKey } from "../crypto/vault";
+import { requireMasterKey, useVault } from "../crypto/vault";
 import type {
   FileTransferOperation,
   MoveClipboardItem,
@@ -54,8 +54,21 @@ export async function transferFile(
         "The encryption key changed while preparing the file transfer.",
       );
     }
-  } else if (name !== undefined) {
-    request.name = name;
+  } else {
+    if (useVault.getState().isUnlocked && displayName !== undefined) {
+      const existingName = await names.check(
+        displayName,
+        operation === "move" ? item.id : undefined,
+        overwrite,
+        false,
+      );
+      if (existingName !== undefined) {
+        request.name = existingName;
+      }
+    }
+    if (name !== undefined) {
+      request.name = name;
+    }
   }
   if (overwrite) {
     request.overwrite = true;

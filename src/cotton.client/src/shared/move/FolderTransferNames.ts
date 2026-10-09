@@ -77,16 +77,16 @@ export class FolderTransferNames {
     name: string,
     excludedId?: string,
     overwrite = false,
+    sourceEncrypted = true,
   ): Promise<string | undefined> {
     const existing = (await this.load()).get(getFileNameKey(name));
     if (existing && existing.id !== excludedId) {
-      if (overwrite && existing.kind === "File" && existing.encrypted) {
+      const canOverwrite =
+        existing.kind === "File" && existing.encrypted === sourceEncrypted;
+      if (overwrite && canOverwrite) {
         return existing.serverName;
       }
-      throw new DisplayNameConflictError(
-        existing.kind,
-        existing.kind === "File" && existing.encrypted,
-      );
+      throw new DisplayNameConflictError(existing.kind, canOverwrite);
     }
   }
 
