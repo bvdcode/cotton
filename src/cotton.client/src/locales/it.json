@@ -2837,7 +2837,7 @@
     },
     "restore": {
       "action": "Ripristina",
-      "inProgress": "Ripristino di {{current}} su {{total}}: {{name}}",
+      "inProgress": "Ripristino di {{total}} elementi...",
       "failed": "Impossibile ripristinare \"{{name}}\"",
       "notRestorable": "L'elemento non può essere ripristinato.",
       "rootFolder": "la cartella radice",

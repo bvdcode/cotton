@@ -2844,7 +2844,7 @@
     },
     "restore": {
       "action": "还原",
-      "inProgress": "正在还原第 {{current}} 项，共 {{total}} 项：{{name}}",
+      "inProgress": "正在还原 {{total}} 个项目……",
       "failed": "还原 \"{{name}}\" 失败",
       "notRestorable": "该项目无法还原。",
       "rootFolder": "根文件夹",

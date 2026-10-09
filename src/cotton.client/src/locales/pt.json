@@ -2838,7 +2838,7 @@
     },
     "restore": {
       "action": "Restaurar",
-      "inProgress": "Restaurando {{current}} de {{total}}: {{name}}",
+      "inProgress": "Restaurando {{total}} itens...",
       "failed": "Falha ao restaurar \"{{name}}\"",
       "notRestorable": "O item não pode ser restaurado.",
       "rootFolder": "a pasta raiz",

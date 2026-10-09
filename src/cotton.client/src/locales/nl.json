@@ -2836,7 +2836,7 @@
     },
     "restore": {
       "action": "Herstellen",
-      "inProgress": "Herstellen {{current}} van {{total}}: {{name}}",
+      "inProgress": "{{total}} items herstellen...",
       "failed": "Herstellen van \"{{name}}\" mislukt",
       "notRestorable": "Item kan niet worden hersteld.",
       "rootFolder": "de hoofdmap",

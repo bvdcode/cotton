@@ -459,7 +459,7 @@ namespace Cotton.Server.Services
 
         // The current file starts a lineage with an empty OriginalNodeFileId. Historical rows always point
         // back to that first visible file id, so this helper normalizes both cases before querying versions.
-        private static Guid GetLineageId(NodeFile file)
+        public static Guid GetLineageId(NodeFile file)
             => file.OriginalNodeFileId == Guid.Empty ? file.Id : file.OriginalNodeFileId;
     }
 }

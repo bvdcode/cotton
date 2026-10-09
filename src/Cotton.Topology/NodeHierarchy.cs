@@ -69,6 +69,15 @@ namespace Cotton.Topology
             IReadOnlyCollection<Guid> nodeIds,
             CancellationToken cancellationToken = default)
         {
+            ResolvedNodePaths result = await ResolvePathsWithAncestorsAsync(nodes, nodeIds, cancellationToken);
+            return result.Paths;
+        }
+
+        public static async Task<ResolvedNodePaths> ResolvePathsWithAncestorsAsync(
+            IQueryable<Node> nodes,
+            IReadOnlyCollection<Guid> nodeIds,
+            CancellationToken cancellationToken = default)
+        {
             Dictionary<Guid, (Guid? ParentId, string Name, NodeType Type)> lineage =
                 await LoadLineageAsync(nodes, nodeIds, cancellationToken);
             Dictionary<Guid, string> paths = new(nodeIds.Count);
@@ -76,7 +85,7 @@ namespace Cotton.Topology
             {
                 paths[id] = BuildPath(lineage, id);
             }
-            return paths;
+            return new(paths, lineage.Keys.ToArray());
         }
 
         private static async Task<Dictionary<Guid, (Guid? ParentId, string Name, NodeType Type)>> LoadLineageAsync(

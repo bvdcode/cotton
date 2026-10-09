@@ -2879,7 +2879,7 @@
     },
     "restore": {
       "action": "Przywróć",
-      "inProgress": "Przywracanie {{current}} z {{total}}: {{name}}",
+      "inProgress": "Przywracanie {{total}} elementów...",
       "failed": "Nie udało się przywrócić \"{{name}}\"",
       "notRestorable": "Elementu nie można przywrócić.",
       "rootFolder": "folder główny",

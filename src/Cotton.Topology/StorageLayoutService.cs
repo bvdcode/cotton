@@ -89,18 +89,30 @@ namespace Cotton.Topology
 
         public async Task<Node> CreateTrashItemAsync(Guid userId, CancellationToken ct = default)
         {
+            IReadOnlyList<Node> items = await CreateTrashItemsAsync(userId, 1, ct);
+            return items[0];
+        }
+
+        public async Task<IReadOnlyList<Node>> CreateTrashItemsAsync(Guid userId, int count, CancellationToken ct = default)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
             Node trashRoot = await GetUserTrashRootAsync(userId, ct);
-            Node trashItem = new()
+            List<Node> items = new(count);
+            for (int index = 0; index < count; index++)
             {
-                OwnerId = userId,
-                LayoutId = trashRoot.LayoutId,
-                Type = NodeType.Trash
-            };
-            trashItem.SetParent(trashRoot);
-            trashItem.SetName("trash-item-" + StringHelpers.CreateRandomString(8));
-            await _dbContext.Nodes.AddAsync(trashItem, ct);
+                Node trashItem = new()
+                {
+                    OwnerId = userId,
+                    LayoutId = trashRoot.LayoutId,
+                    Type = NodeType.Trash
+                };
+                trashItem.SetParent(trashRoot);
+                trashItem.SetName("trash-item-" + StringHelpers.CreateRandomString(8));
+                items.Add(trashItem);
+            }
+            _dbContext.Nodes.AddRange(items);
             await _dbContext.SaveChangesAsync(ct);
-            return trashItem;
+            return items;
         }
     }
 }

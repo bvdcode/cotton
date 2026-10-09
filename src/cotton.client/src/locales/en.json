@@ -2632,7 +2632,7 @@
     },
     "restore": {
       "action": "Restore",
-      "inProgress": "Restoring {{current}} of {{total}}: {{name}}",
+      "inProgress": "Restoring {{total}} items...",
       "failed": "Failed to restore \"{{name}}\"",
       "notRestorable": "Item cannot be restored.",
       "rootFolder": "the root folder",

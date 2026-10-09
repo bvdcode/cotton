@@ -31,8 +31,14 @@ namespace Cotton.Server.Services
             Guid userId,
             string originalParentPath,
             bool createMissingParents,
-            CancellationToken ct)
+            CancellationToken ct,
+            Dictionary<string, string>? metadata = null)
         {
+            List<TrashParent>? parents = TrashParentMetadata.Read(metadata);
+            if (parents is not null)
+            {
+                return await _mediator.Send(new ResolveTrashParentsRequest(userId, parents, createMissingParents), ct);
+            }
             Node? parent;
             try
             {
@@ -111,6 +117,7 @@ namespace Cotton.Server.Services
                 ? []
                 : new Dictionary<string, string>(metadata);
             copy.Remove(TrashMetadataKeys.OriginalParentPath);
+            copy.Remove(TrashParentMetadata.Key);
             return copy;
         }
 

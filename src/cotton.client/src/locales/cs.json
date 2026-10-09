@@ -2876,7 +2876,7 @@
     },
     "restore": {
       "action": "Obnovit",
-      "inProgress": "Obnovování {{current}} z {{total}}: {{name}}",
+      "inProgress": "Obnovování {{total}} položek...",
       "failed": "Obnovení \"{{name}}\" se nezdařilo",
       "notRestorable": "Položku nelze obnovit.",
       "rootFolder": "kořenovou složku",

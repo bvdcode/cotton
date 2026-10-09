@@ -2834,7 +2834,7 @@
     },
     "restore": {
       "action": "Restaurar",
-      "inProgress": "Restaurando {{current}} de {{total}}: {{name}}",
+      "inProgress": "Restaurando {{total}} elementos...",
       "failed": "No se pudo restaurar \"{{name}}\"",
       "notRestorable": "El elemento no se puede restaurar.",
       "rootFolder": "la carpeta raíz",

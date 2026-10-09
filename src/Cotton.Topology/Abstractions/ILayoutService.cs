@@ -10,6 +10,8 @@ namespace Cotton.Topology.Abstractions
     {
         Task<Node> CreateTrashItemAsync(Guid userId, CancellationToken ct = default);
 
+        Task<IReadOnlyList<Node>> CreateTrashItemsAsync(Guid userId, int count, CancellationToken ct = default);
+
         Task<Chunk?> FindChunkAsync(byte[] hash, CancellationToken ct = default);
 
         Task<Layout> GetOrCreateLatestUserLayoutAsync(Guid ownerId, CancellationToken ct = default);

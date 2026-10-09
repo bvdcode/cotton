@@ -2850,7 +2850,7 @@
     },
     "restore": {
       "action": "Відновити",
-      "inProgress": "Відновлення {{current}} з {{total}}: {{name}}",
+      "inProgress": "Відновлення елементів: {{total}}...",
       "failed": "Не вдалося відновити «{{name}}»",
       "notRestorable": "Елемент неможливо відновити.",
       "rootFolder": "кореневу теку",

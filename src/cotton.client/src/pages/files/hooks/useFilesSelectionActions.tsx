@@ -14,7 +14,6 @@ import type { FileSelectionState } from "@shared/hooks/useFileSelection";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import { downloadArchive } from "@shared/utils/fileHandlers";
 import { shareFolder } from "@shared/utils/shareFolder";
-import { deleteFolder } from "@shared/store/nodesActions";
 import type { PageHeaderProps } from "../components/PageHeader";
 import { buildSelectionArchiveRequest } from "../filesPageModel";
 import { useDeleteSelectedItems } from "./useDeleteSelectedItems";
@@ -106,9 +105,9 @@ export const useFilesSelectionActions = ({
     tiles,
     confirm,
     t,
-    deleteFolder,
     optimisticDeleteFile,
     reloadCurrentNode,
+    showToast,
   });
 
   const handleShareCurrentFolder = useCallback(() => {

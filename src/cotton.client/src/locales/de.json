@@ -2831,7 +2831,7 @@
     },
     "restore": {
       "action": "Wiederherstellen",
-      "inProgress": "Stelle {{current}} von {{total}} wieder her: {{name}}",
+      "inProgress": "{{total}} Elemente werden wiederhergestellt...",
       "failed": "\"{{name}}\" konnte nicht wiederhergestellt werden",
       "notRestorable": "Element kann nicht wiederhergestellt werden.",
       "rootFolder": "den Stammordner",
