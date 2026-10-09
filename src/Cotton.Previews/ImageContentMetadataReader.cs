@@ -4,6 +4,7 @@
 using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.Xmp;
+using Microsoft.Extensions.Logging;
 using System.Globalization;
 using XmpCore;
 using XmpCore.Options;
@@ -13,28 +14,30 @@ namespace Cotton.Previews
 {
     public static class ImageContentMetadataReader
     {
-        public static async Task<IReadOnlyDictionary<string, string>> ReadAsync(Stream stream, CancellationToken cancellationToken)
+        public static async Task<IReadOnlyDictionary<string, string>> ReadAsync(Stream stream, ILogger logger, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(stream);
+            ArgumentNullException.ThrowIfNull(logger);
             cancellationToken.ThrowIfCancellationRequested();
             string path = Path.Combine(Path.GetTempPath(), $"cotton_metadata_{Guid.NewGuid():N}.tmp");
             await using FileStream buffer = new(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None,
                 bufferSize: 81920, FileOptions.Asynchronous | FileOptions.DeleteOnClose);
             await stream.CopyToAsync(buffer, cancellationToken);
             buffer.Position = 0;
-            return Read(buffer, cancellationToken);
+            return Read(buffer, logger, cancellationToken);
         }
 
-        public static IReadOnlyDictionary<string, string> Read(Stream stream, CancellationToken cancellationToken)
+        public static IReadOnlyDictionary<string, string> Read(Stream stream, ILogger logger, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(stream);
+            ArgumentNullException.ThrowIfNull(logger);
             cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<MetadataDirectory> directories = ImageMetadataReader.ReadMetadata(stream);
-            return Flatten(directories, cancellationToken);
+            return Flatten(directories, logger, cancellationToken);
         }
 
         internal static IReadOnlyDictionary<string, string> Flatten(
-            IReadOnlyList<MetadataDirectory> directories, CancellationToken cancellationToken)
+            IReadOnlyList<MetadataDirectory> directories, ILogger logger, CancellationToken cancellationToken)
         {
             Dictionary<string, string> result = new(StringComparer.Ordinal);
             Dictionary<string, int> occurrences = new(StringComparer.Ordinal);
@@ -56,7 +59,7 @@ namespace Cotton.Previews
                 {
                     string key = $"{directoryKey}.tags.{FlatMetadataWriter.EscapeKey(tag.Name)}.{tag.Type.ToString(CultureInfo.InvariantCulture)}";
                     ImageMetadataValueWriter.Write(result, key, directory.GetObject(tag.Type), cancellationToken);
-                    string? description = tag.Description;
+                    string? description = GetDescription(tag, directory, logger);
                     if (description is not null)
                     {
                         FlatMetadataWriter.WriteText(result, $"{key}.description", description);
@@ -97,6 +100,20 @@ namespace Cotton.Previews
             }
 
             return result;
+        }
+
+        private static string? GetDescription(Tag tag, MetadataDirectory directory, ILogger logger)
+        {
+            try
+            {
+                return tag.Description;
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                logger.LogWarning(ex, "Could not describe image metadata tag {TagType} in {DirectoryName}.",
+                    tag.Type, directory.Name);
+                return null;
+            }
         }
     }
 }

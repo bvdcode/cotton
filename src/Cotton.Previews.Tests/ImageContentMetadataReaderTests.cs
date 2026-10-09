@@ -2,6 +2,11 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using LibHeifSharp;
+using MetadataExtractor.Formats.Exif;
+using MetadataExtractor.Formats.Exif.Makernotes;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Cotton.Previews.Tests.TestInfrastructure;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.Metadata.Profiles.Iptc;
@@ -10,6 +15,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Buffers.Binary;
+using System.Globalization;
 
 namespace Cotton.Previews.Tests
 {
@@ -36,7 +42,7 @@ namespace Cotton.Previews.Tests
             await image.SaveAsJpegAsync(jpeg);
             using MemoryStream stream = new(AddIptcSegment(jpeg.ToArray()));
 
-            IReadOnlyDictionary<string, string> metadata = await ImageContentMetadataReader.ReadAsync(stream, CancellationToken.None);
+            IReadOnlyDictionary<string, string> metadata = await ImageContentMetadataReader.ReadAsync(stream, NullLogger.Instance, CancellationToken.None);
 
             AssertCommonMetadata(metadata);
             Assert.That(metadata.Values, Does.Contain("IPTC caption"));
@@ -62,7 +68,7 @@ namespace Cotton.Previews.Tests
             context.WriteToStream(stream);
             stream.Position = 0;
 
-            IReadOnlyDictionary<string, string> metadata = await ImageContentMetadataReader.ReadAsync(stream, CancellationToken.None);
+            IReadOnlyDictionary<string, string> metadata = await ImageContentMetadataReader.ReadAsync(stream, NullLogger.Instance, CancellationToken.None);
 
             AssertCommonMetadata(metadata);
             Assert.That(metadata.Keys, Has.Some.Contains("HEIC"));
@@ -75,7 +81,7 @@ namespace Cotton.Previews.Tests
             using CancellationTokenSource cancellation = new();
             cancellation.Cancel();
             Assert.ThrowsAsync<OperationCanceledException>(
-                async () => await ImageContentMetadataReader.ReadAsync(stream, cancellation.Token));
+                async () => await ImageContentMetadataReader.ReadAsync(stream, NullLogger.Instance, cancellation.Token));
         }
 
         [Test]
@@ -87,13 +93,41 @@ namespace Cotton.Previews.Tests
             second.Set(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake, "Second camera");
             second.Set(0xc7ff, "Unknown manufacturer tag");
 
-            IReadOnlyDictionary<string, string> result = ImageContentMetadataReader.Flatten([first, second], CancellationToken.None);
+            IReadOnlyDictionary<string, string> result = ImageContentMetadataReader.Flatten([first, second], NullLogger.Instance, CancellationToken.None);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result["image.Exif IFD0.0.tags.Make.271"], Is.EqualTo("First camera"));
                 Assert.That(result["image.Exif IFD0.1.tags.Make.271"], Is.EqualTo("Second camera"));
                 Assert.That(result.Values, Does.Contain("Unknown manufacturer tag"));
+            });
+        }
+
+        [TestCase(16)]
+        [TestCase(32)]
+        [TestCase(65536)]
+        public void Flatten_InvalidOlympusDescription_PreservesRawValuesAndOtherDirectories(int flags)
+        {
+            OlympusCameraSettingsMakernoteDirectory settings = new();
+            settings.Set(OlympusCameraSettingsMakernoteDirectory.TagNoiseReduction, flags);
+            settings.Set(0xc7ff, "Other manufacturer value");
+            ExifIfd0Directory camera = new();
+            camera.Set(ExifDirectoryBase.TagMake, "Camera maker");
+            CapturingLogger logger = new();
+
+            IReadOnlyDictionary<string, string> result = ImageContentMetadataReader.Flatten([settings, camera], logger, CancellationToken.None);
+            string key = $"image.Olympus Camera Settings.0.tags.Noise Reduction.{OlympusCameraSettingsMakernoteDirectory.TagNoiseReduction}";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result[key], Is.EqualTo(flags.ToString(CultureInfo.InvariantCulture)));
+                Assert.That(result, Does.Not.ContainKey($"{key}.description"));
+                Assert.That(result.Values, Does.Contain("Other manufacturer value"));
+                Assert.That(result["image.Exif IFD0.0.tags.Make.271"], Is.EqualTo("Camera maker"));
+                Assert.That(logger.Entries, Has.Count.EqualTo(1));
+                Assert.That(logger.Entries[0].Level, Is.EqualTo(LogLevel.Warning));
+                Assert.That(logger.Entries[0].Exception, Is.TypeOf<ArgumentOutOfRangeException>());
+                Assert.That(logger.Entries[0].Message, Does.Not.Contain("Other manufacturer value"));
             });
         }
 

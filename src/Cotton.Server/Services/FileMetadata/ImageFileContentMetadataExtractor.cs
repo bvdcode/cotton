@@ -40,7 +40,7 @@ namespace Cotton.Server.Services.FileMetadata
             Dictionary<string, string> result = new(StringComparer.Ordinal);
             try
             {
-                IReadOnlyDictionary<string, string> metadata = await ImageContentMetadataReader.ReadAsync(stream, cancellationToken);
+                IReadOnlyDictionary<string, string> metadata = await ImageContentMetadataReader.ReadAsync(stream, logger, cancellationToken);
                 foreach ((string key, string value) in metadata)
                 {
                     result.Add(key, value);
