@@ -1459,7 +1459,8 @@
       },
       "databaseRestoreCompleted": {
         "title": "Baza danych została automatycznie przywrócona",
-        "content": "Automatyczne przywracanie bazy danych zakończyło się pomyślnie.\n\nID kopii zapasowej: {{backupId}}\nBaza źródłowa: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nKopia utworzona (UTC): {{backupCreatedUtc}} UTC\nKopia utworzona ({{serverTimezone}}): {{backupCreatedLocal}}\nPrzywracanie zakończone (UTC): {{restoreCompletedUtcDisplay}} UTC\nPrzywracanie zakończone ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Automatyczne przywracanie bazy danych zakończyło się pomyślnie.\n\nID kopii zapasowej: {{backupId}}\nBaza źródłowa: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nKopia utworzona (UTC): {{backupCreatedUtc}} UTC\nKopia utworzona ({{serverTimezone}}): {{backupCreatedLocal}}\nPrzywracanie zakończone (UTC): {{restoreCompletedUtcDisplay}} UTC\nPrzywracanie zakończone ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Automatyczne przywracanie bazy danych zakończyło się pomyślnie.\n\nID kopii zapasowej: {{backupId}}\nBaza źródłowa: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nKopia utworzona (UTC): {{backupCreatedUtc}} UTC\nKopia utworzona ({{serverTimezone}}): {{backupCreatedLocal}}\nPrzywracanie zakończone (UTC): {{restoreCompletedUtcDisplay}} UTC\nPrzywracanie zakończone ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nPominięto niedostępne lub uszkodzone kopie: {{skippedBackupIds}}. Przywrócono wcześniejszą kopię."
       },
       "databaseIntegrityFailure": {
         "title": "Wykryto problem integralności bazy danych",
@@ -3316,16 +3317,16 @@
     },
     "databaseBackup": {
       "title": "Kopia zapasowa bazy danych",
-      "description": "Najnowszy manifest kopii zapasowej z serwera.",
+      "description": "Zapisane kopie bazy danych i dostęp dla zewnętrznych narzędzi.",
       "actions": {
         "refresh": "Odśwież",
         "trigger": "Uruchom kopię zapasową",
-        "triggering": "Uruchamianie..."
+        "triggering": "Tworzenie kopii…"
       },
       "state": {
         "loading": "Ładowanie informacji o kopii zapasowej...",
         "empty": "Nie znaleziono jeszcze żadnych kopii zapasowych.",
-        "triggerSuccess": "Zadanie kopii zapasowej zostało uruchomione.",
+        "triggerSuccess": "Kopia została zapisana.",
         "restoreIfEmptyHint": "Jeśli baza danych zostanie utracona i chcesz, aby została automatycznie przywrócona, ustaw COTTON_RESTORE_DATABASE_IF_EMPTY=true w środowisku kontenera. Aby to zadziałało, baza danych musi być pusta, bez żadnych tabel."
       },
       "fields": {
@@ -3342,6 +3343,22 @@
       "errors": {
         "loadFailed": "Nie udało się załadować informacji o kopii zapasowej.",
         "triggerFailed": "Nie udało się uruchomić kopii zapasowej."
+      },
+      "history": {
+        "title": "Historia kopii",
+        "retention": "Przechowywane są wszystkie kopie z ostatnich 7 dni oraz co najmniej 3 najnowsze kopie.",
+        "latest": "Najnowsza"
+      },
+      "access": {
+        "title": "Dostęp dla zewnętrznych kopii",
+        "description": "Ten token pozwala tylko tworzyć kopie bazy danych. Zapisz go w narzędziu do kopii. Działa do zmiany klucza głównego; nowy token nie unieważnia poprzednich.",
+        "request": "Wyślij {{endpoint}} z nagłówkiem {{header}}. Pomyślna odpowiedź oznacza, że zrzut został zapisany.",
+        "token": "Token kopii",
+        "generate": "Utwórz token",
+        "copy": "Kopiuj token",
+        "copied": "Skopiowano",
+        "failed": "Nie udało się utworzyć tokenu.",
+        "copyFailed": "Nie udało się skopiować. Zaznacz i skopiuj token ręcznie."
       }
     },
     "storageStatistics": {

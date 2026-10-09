@@ -258,8 +258,30 @@ export const adminApi = {
     }
   },
 
-  triggerDatabaseBackup: async (): Promise<void> => {
-    await httpClient.patch("server/database-backup/trigger");
+  getDatabaseBackupHistory: async (
+    signal?: AbortSignal,
+  ): Promise<LatestDatabaseBackupDto[]> => {
+    const response = await httpClient.get<LatestDatabaseBackupDto[]>(
+      "server/database-backup",
+      { signal },
+    );
+    return response.data;
+  },
+
+  createDatabaseBackupToken: async (): Promise<string> => {
+    const response = await httpClient.post<{ token: string }>(
+      "server/database-backup/token",
+    );
+    return response.data.token;
+  },
+
+  triggerDatabaseBackup: async (): Promise<LatestDatabaseBackupDto> => {
+    const response = await httpClient.patch<LatestDatabaseBackupDto>(
+      "server/database-backup/trigger",
+      undefined,
+      { timeout: 0 },
+    );
+    return response.data;
   },
 
   triggerGarbageCollector: async (): Promise<void> => {

@@ -1252,7 +1252,8 @@
       },
       "databaseRestoreCompleted": {
         "title": "Database restored automatically",
-        "content": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nUnavailable or damaged backups were skipped: {{skippedBackupIds}}. An earlier backup was restored."
       },
       "databaseIntegrityFailure": {
         "title": "Database integrity issue detected",
@@ -3069,16 +3070,16 @@
     },
     "databaseBackup": {
       "title": "Database backup",
-      "description": "Latest backup manifest from the server.",
+      "description": "Saved database backups and external backup access.",
       "actions": {
         "refresh": "Refresh",
         "trigger": "Trigger backup",
-        "triggering": "Triggering..."
+        "triggering": "Creating backup…"
       },
       "state": {
         "loading": "Loading backup info...",
         "empty": "No backups found yet.",
-        "triggerSuccess": "Backup job was triggered.",
+        "triggerSuccess": "Backup saved successfully.",
         "restoreIfEmptyHint": "If the database is lost and you want it to restore automatically, set COTTON_RESTORE_DATABASE_IF_EMPTY=true in the container environment. Database must be empty without any tables for this to work."
       },
       "fields": {
@@ -3095,6 +3096,22 @@
       "errors": {
         "loadFailed": "Failed to load backup information.",
         "triggerFailed": "Failed to trigger backup."
+      },
+      "history": {
+        "title": "Backup history",
+        "retention": "All backups from the last 7 days and at least the 3 newest backups are retained.",
+        "latest": "Latest"
+      },
+      "access": {
+        "title": "External backup access",
+        "description": "This token only allows creating database backups. Save it in your backup tool. It remains valid while the master key is unchanged; issuing another token does not revoke existing tokens.",
+        "request": "Send {{endpoint}} with the {{header}} header. A successful response means the dump has been saved.",
+        "token": "Backup token",
+        "generate": "Generate token",
+        "copy": "Copy token",
+        "copied": "Copied",
+        "failed": "Failed to generate a token.",
+        "copyFailed": "Could not copy. Select and copy the token manually."
       }
     },
     "storageStatistics": {

@@ -1454,7 +1454,8 @@
       },
       "databaseRestoreCompleted": {
         "title": "Base de datos restaurada automáticamente",
-        "content": "La restauración automática de la base de datos se completó correctamente.\n\nID de copia: {{backupId}}\nBase de datos de origen: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nCopia creada (UTC): {{backupCreatedUtc}} UTC\nCopia creada ({{serverTimezone}}): {{backupCreatedLocal}}\nRestauración completada (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestauración completada ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "La restauración automática de la base de datos se completó correctamente.\n\nID de copia: {{backupId}}\nBase de datos de origen: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nCopia creada (UTC): {{backupCreatedUtc}} UTC\nCopia creada ({{serverTimezone}}): {{backupCreatedLocal}}\nRestauración completada (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestauración completada ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "La restauración automática de la base de datos se completó correctamente.\n\nID de copia: {{backupId}}\nBase de datos de origen: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nCopia creada (UTC): {{backupCreatedUtc}} UTC\nCopia creada ({{serverTimezone}}): {{backupCreatedLocal}}\nRestauración completada (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestauración completada ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nSe omitieron copias no disponibles o dañadas: {{skippedBackupIds}}. Se restauró una copia anterior."
       },
       "databaseIntegrityFailure": {
         "title": "Se detectó un problema de integridad de la base de datos",
@@ -3020,16 +3021,16 @@
     },
     "databaseBackup": {
       "title": "Respaldo de base de datos",
-      "description": "Último manifiesto de respaldo reportado por el servidor.",
+      "description": "Copias guardadas de la base de datos y acceso para herramientas externas.",
       "actions": {
         "refresh": "Actualizar",
         "trigger": "Ejecutar respaldo",
-        "triggering": "Ejecutando..."
+        "triggering": "Creando copia…"
       },
       "state": {
         "loading": "Cargando información del respaldo...",
         "empty": "Aún no se encontraron respaldos.",
-        "triggerSuccess": "La tarea de respaldo fue iniciada.",
+        "triggerSuccess": "Copia guardada correctamente.",
         "restoreIfEmptyHint": "Si la base de datos se pierde y quieres que se restaure automáticamente, establece COTTON_RESTORE_DATABASE_IF_EMPTY=true en el entorno del contenedor."
       },
       "fields": {
@@ -3046,6 +3047,22 @@
       "errors": {
         "loadFailed": "No se pudo cargar la información del respaldo.",
         "triggerFailed": "No se pudo ejecutar el respaldo."
+      },
+      "history": {
+        "title": "Historial de copias",
+        "retention": "Se conservan todas las copias de los últimos 7 días y al menos las 3 más recientes.",
+        "latest": "Más reciente"
+      },
+      "access": {
+        "title": "Acceso para copias externas",
+        "description": "Este token solo permite crear copias de la base de datos. Guárdalo en tu herramienta de copias. Es válido mientras no cambie la clave maestra; un nuevo token no revoca los anteriores.",
+        "request": "Envía {{endpoint}} con la cabecera {{header}}. Una respuesta correcta confirma que el volcado está guardado.",
+        "token": "Token de copias",
+        "generate": "Crear token",
+        "copy": "Copiar token",
+        "copied": "Copiado",
+        "failed": "No se pudo crear el token.",
+        "copyFailed": "No se pudo copiar. Selecciona y copia el token manualmente."
       }
     },
     "storageStatistics": {

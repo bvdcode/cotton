@@ -1464,7 +1464,8 @@
       },
       "databaseRestoreCompleted": {
         "title": "数据库已自动恢复",
-        "content": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}"
+        "content": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}\n\n已跳过不可用或损坏的备份：{{skippedBackupIds}}。已恢复较早的备份。"
       },
       "databaseIntegrityFailure": {
         "title": "检测到数据库完整性问题",
@@ -3281,16 +3282,16 @@
     },
     "databaseBackup": {
       "title": "数据库备份",
-      "description": "服务器上的最新备份清单。",
+      "description": "已保存的数据库备份和外部备份工具访问权限。",
       "actions": {
         "refresh": "刷新",
         "trigger": "触发备份",
-        "triggering": "正在触发……"
+        "triggering": "正在创建备份…"
       },
       "state": {
         "loading": "正在加载备份信息……",
         "empty": "尚未找到任何备份。",
-        "triggerSuccess": "备份任务已触发。",
+        "triggerSuccess": "备份已保存。",
         "restoreIfEmptyHint": "如果数据库丢失且希望自动还原，请在容器环境中设置 COTTON_RESTORE_DATABASE_IF_EMPTY=true。数据库必须为空且不含任何表才能生效。"
       },
       "fields": {
@@ -3307,6 +3308,22 @@
       "errors": {
         "loadFailed": "加载备份信息失败。",
         "triggerFailed": "触发备份失败。"
+      },
+      "history": {
+        "title": "备份历史",
+        "retention": "保留最近 7 天的所有备份，且至少保留最新的 3 个备份。",
+        "latest": "最新"
+      },
+      "access": {
+        "title": "外部备份工具访问",
+        "description": "此令牌仅允许创建数据库备份。请将其保存在备份工具中。只要主密钥不变，令牌就始终有效；签发新令牌不会撤销现有令牌。",
+        "request": "使用 {{header}} 请求头发送 {{endpoint}}。成功响应表示转储已保存。",
+        "token": "备份令牌",
+        "generate": "生成令牌",
+        "copy": "复制令牌",
+        "copied": "已复制",
+        "failed": "无法生成令牌。",
+        "copyFailed": "无法复制。请手动选择并复制令牌。"
       }
     },
     "storageStatistics": {

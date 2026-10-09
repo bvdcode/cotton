@@ -3143,16 +3143,16 @@
     },
     "databaseBackup": {
       "title": "Бэкап базы данных",
-      "description": "Информация о последнем бэкапе из манифеста сервера.",
+      "description": "Сохранённые дампы базы данных и доступ для внешнего бэкапера.",
       "actions": {
         "refresh": "Обновить",
         "trigger": "Запустить бэкап",
-        "triggering": "Запуск..."
+        "triggering": "Создание бэкапа…"
       },
       "state": {
         "loading": "Загрузка информации о бэкапе...",
         "empty": "Бэкапы пока не найдены.",
-        "triggerSuccess": "Задача бэкапа успешно запущена.",
+        "triggerSuccess": "Бэкап успешно сохранён.",
         "restoreIfEmptyHint": "Если база данных потеряна и вы хотите, чтобы она восстановилась автоматически, установите COTTON_RESTORE_DATABASE_IF_EMPTY=true в окружении контейнера. База должна быть пустой и без таблиц, чтобы это сработало."
       },
       "fields": {
@@ -3169,6 +3169,22 @@
       "errors": {
         "loadFailed": "Не удалось загрузить информацию о бэкапе.",
         "triggerFailed": "Не удалось запустить бэкап."
+      },
+      "history": {
+        "title": "История бэкапов",
+        "retention": "Хранятся все бэкапы за последние 7 дней и как минимум 3 самых новых бэкапа.",
+        "latest": "Последний"
+      },
+      "access": {
+        "title": "Доступ для внешнего бэкапера",
+        "description": "Токен разрешает только создание бэкапов базы данных. Сохраните его у бэкапера. Он действует до смены master key; выпуск нового токена не отменяет предыдущие.",
+        "request": "Отправьте {{endpoint}} с заголовком {{header}}. Успешный ответ означает, что дамп сохранён.",
+        "token": "Токен бэкапера",
+        "generate": "Создать токен",
+        "copy": "Скопировать токен",
+        "copied": "Скопировано",
+        "failed": "Не удалось создать токен.",
+        "copyFailed": "Не удалось скопировать. Выделите и скопируйте токен вручную."
       }
     },
     "storageStatistics": {
@@ -3819,7 +3835,8 @@
       },
       "databaseRestoreCompleted": {
         "title": "База данных восстановлена автоматически",
-        "content": "Автоматическое восстановление базы данных успешно завершено.\n\nID бэкапа: {{backupId}}\nИсходная база: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nБэкап создан (UTC): {{backupCreatedUtc}} UTC\nБэкап создан ({{serverTimezone}}): {{backupCreatedLocal}}\nВосстановление завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВосстановление завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Автоматическое восстановление базы данных успешно завершено.\n\nID бэкапа: {{backupId}}\nИсходная база: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nБэкап создан (UTC): {{backupCreatedUtc}} UTC\nБэкап создан ({{serverTimezone}}): {{backupCreatedLocal}}\nВосстановление завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВосстановление завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Автоматическое восстановление базы данных успешно завершено.\n\nID бэкапа: {{backupId}}\nИсходная база: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nБэкап создан (UTC): {{backupCreatedUtc}} UTC\nБэкап создан ({{serverTimezone}}): {{backupCreatedLocal}}\nВосстановление завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВосстановление завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nПропущены недоступные или повреждённые бэкапы: {{skippedBackupIds}}. Восстановлен более ранний бэкап."
       },
       "databaseIntegrityFailure": {
         "title": "Обнаружена проблема целостности базы данных",

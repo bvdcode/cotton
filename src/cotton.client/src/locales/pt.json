@@ -1458,7 +1458,8 @@
       },
       "databaseRestoreCompleted": {
         "title": "Base de dados restaurada automaticamente",
-        "content": "A restauração automática da base de dados foi concluída com sucesso.\n\nID da cópia: {{backupId}}\nBase de dados de origem: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nCópia criada (UTC): {{backupCreatedUtc}} UTC\nCópia criada ({{serverTimezone}}): {{backupCreatedLocal}}\nRestauração concluída (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestauração concluída ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "A restauração automática da base de dados foi concluída com sucesso.\n\nID da cópia: {{backupId}}\nBase de dados de origem: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nCópia criada (UTC): {{backupCreatedUtc}} UTC\nCópia criada ({{serverTimezone}}): {{backupCreatedLocal}}\nRestauração concluída (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestauração concluída ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "A restauração automática da base de dados foi concluída com sucesso.\n\nID da cópia: {{backupId}}\nBase de dados de origem: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nCópia criada (UTC): {{backupCreatedUtc}} UTC\nCópia criada ({{serverTimezone}}): {{backupCreatedLocal}}\nRestauração concluída (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestauração concluída ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nBackups indisponíveis ou danificados foram ignorados: {{skippedBackupIds}}. Um backup anterior foi restaurado."
       },
       "databaseIntegrityFailure": {
         "title": "Problema de integridade do banco de dados detectado",
@@ -3275,16 +3276,16 @@
     },
     "databaseBackup": {
       "title": "Backup do banco de dados",
-      "description": "Último manifesto de backup do servidor.",
+      "description": "Backups salvos do banco de dados e acesso para ferramentas externas.",
       "actions": {
         "refresh": "Atualizar",
         "trigger": "Executar backup",
-        "triggering": "Executando..."
+        "triggering": "Criando backup…"
       },
       "state": {
         "loading": "Carregando informações de backup...",
         "empty": "Nenhum backup encontrado ainda.",
-        "triggerSuccess": "A tarefa de backup foi acionada.",
+        "triggerSuccess": "Backup salvo.",
         "restoreIfEmptyHint": "Se o banco de dados for perdido e você quiser que ele seja restaurado automaticamente, defina COTTON_RESTORE_DATABASE_IF_EMPTY=true no ambiente do container. O banco de dados precisa estar vazio, sem nenhuma tabela, para que isso funcione."
       },
       "fields": {
@@ -3301,6 +3302,22 @@
       "errors": {
         "loadFailed": "Falha ao carregar as informações de backup.",
         "triggerFailed": "Falha ao acionar o backup."
+      },
+      "history": {
+        "title": "Histórico de backups",
+        "retention": "São mantidos todos os backups dos últimos 7 dias e pelo menos os 3 mais recentes.",
+        "latest": "Mais recente"
+      },
+      "access": {
+        "title": "Acesso para backups externos",
+        "description": "Este token permite apenas criar backups do banco de dados. Salve-o na sua ferramenta de backup. Ele permanece válido enquanto a chave mestra não mudar; um novo token não revoga os anteriores.",
+        "request": "Envie {{endpoint}} com o cabeçalho {{header}}. Uma resposta bem-sucedida confirma que o dump foi salvo.",
+        "token": "Token de backup",
+        "generate": "Criar token",
+        "copy": "Copiar token",
+        "copied": "Copiado",
+        "failed": "Não foi possível criar o token.",
+        "copyFailed": "Não foi possível copiar. Selecione e copie o token manualmente."
       }
     },
     "storageStatistics": {

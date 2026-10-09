@@ -100,6 +100,12 @@ export const useLatestDatabaseBackupQuery = () =>
     queryFn: ({ signal }) => adminApi.getLatestDatabaseBackup(signal),
   });
 
+export const useDatabaseBackupHistoryQuery = () =>
+  useQuery({
+    queryKey: queryKeys.admin.databaseBackupHistory(),
+    queryFn: ({ signal }) => adminApi.getDatabaseBackupHistory(signal),
+  });
+
 export const useSecurityDiagnosticsQuery = () =>
   useQuery<SecurityDiagnosticsDto>({
     queryKey: queryKeys.admin.securityDiagnostics(),
@@ -181,9 +187,14 @@ export const useTriggerDatabaseBackupMutation = () => {
   return useMutation({
     mutationFn: () => adminApi.triggerDatabaseBackup(),
     onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.admin.latestDbBackup(),
-      }),
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.admin.latestDbBackup(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.admin.databaseBackupHistory(),
+        }),
+      ]),
   });
 };
 

@@ -1455,7 +1455,8 @@
       },
       "databaseRestoreCompleted": {
         "title": "Base de données restaurée automatiquement",
-        "content": "La restauration automatique de la base de données s’est terminée avec succès.\n\nID de sauvegarde : {{backupId}}\nBase source : {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nSauvegarde créée (UTC) : {{backupCreatedUtc}} UTC\nSauvegarde créée ({{serverTimezone}}) : {{backupCreatedLocal}}\nRestauration terminée (UTC) : {{restoreCompletedUtcDisplay}} UTC\nRestauration terminée ({{serverTimezone}}) : {{restoreCompletedLocalDisplay}}"
+        "content": "La restauration automatique de la base de données s’est terminée avec succès.\n\nID de sauvegarde : {{backupId}}\nBase source : {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nSauvegarde créée (UTC) : {{backupCreatedUtc}} UTC\nSauvegarde créée ({{serverTimezone}}) : {{backupCreatedLocal}}\nRestauration terminée (UTC) : {{restoreCompletedUtcDisplay}} UTC\nRestauration terminée ({{serverTimezone}}) : {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "La restauration automatique de la base de données s’est terminée avec succès.\n\nID de sauvegarde : {{backupId}}\nBase source : {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nSauvegarde créée (UTC) : {{backupCreatedUtc}} UTC\nSauvegarde créée ({{serverTimezone}}) : {{backupCreatedLocal}}\nRestauration terminée (UTC) : {{restoreCompletedUtcDisplay}} UTC\nRestauration terminée ({{serverTimezone}}) : {{restoreCompletedLocalDisplay}}\n\nSauvegardes indisponibles ou endommagées ignorées : {{skippedBackupIds}}. Une sauvegarde antérieure a été restaurée."
       },
       "databaseIntegrityFailure": {
         "title": "Problème d’intégrité de base de données détecté",
@@ -3272,16 +3273,16 @@
     },
     "databaseBackup": {
       "title": "Sauvegarde de la base de données",
-      "description": "Dernier manifeste de sauvegarde provenant du serveur.",
+      "description": "Sauvegardes de la base de données et accès aux outils externes.",
       "actions": {
         "refresh": "Actualiser",
         "trigger": "Déclencher la sauvegarde",
-        "triggering": "Déclenchement en cours..."
+        "triggering": "Création de la sauvegarde…"
       },
       "state": {
         "loading": "Chargement des informations de sauvegarde...",
         "empty": "Aucune sauvegarde trouvée pour le moment.",
-        "triggerSuccess": "La tâche de sauvegarde a été déclenchée.",
+        "triggerSuccess": "Sauvegarde enregistrée.",
         "restoreIfEmptyHint": "Si la base de données est perdue et que vous souhaitez qu'elle se restaure automatiquement, définissez COTTON_RESTORE_DATABASE_IF_EMPTY=true dans l'environnement du conteneur. La base de données doit être vide, sans aucune table, pour que cela fonctionne."
       },
       "fields": {
@@ -3298,6 +3299,22 @@
       "errors": {
         "loadFailed": "Échec du chargement des informations de sauvegarde.",
         "triggerFailed": "Échec du déclenchement de la sauvegarde."
+      },
+      "history": {
+        "title": "Historique des sauvegardes",
+        "retention": "Toutes les sauvegardes des 7 derniers jours et au moins les 3 plus récentes sont conservées.",
+        "latest": "La plus récente"
+      },
+      "access": {
+        "title": "Accès aux outils de sauvegarde externes",
+        "description": "Ce jeton permet uniquement de créer des sauvegardes de la base de données. Enregistrez-le dans votre outil de sauvegarde. Il reste valide tant que la clé principale ne change pas ; un nouveau jeton ne révoque pas les précédents.",
+        "request": "Envoyez {{endpoint}} avec l’en-tête {{header}}. Une réponse réussie confirme que le dump est enregistré.",
+        "token": "Jeton de sauvegarde",
+        "generate": "Créer un jeton",
+        "copy": "Copier le jeton",
+        "copied": "Copié",
+        "failed": "Impossible de créer le jeton.",
+        "copyFailed": "Échec de la copie. Sélectionnez et copiez le jeton manuellement."
       }
     },
     "storageStatistics": {

@@ -1456,7 +1456,8 @@
       },
       "databaseRestoreCompleted": {
         "title": "Databáze byla automaticky obnovena",
-        "content": "Automatická obnova databáze byla úspěšně dokončena.\n\nID zálohy: {{backupId}}\nZdrojová databáze: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nZáloha vytvořena (UTC): {{backupCreatedUtc}} UTC\nZáloha vytvořena ({{serverTimezone}}): {{backupCreatedLocal}}\nObnova dokončena (UTC): {{restoreCompletedUtcDisplay}} UTC\nObnova dokončena ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Automatická obnova databáze byla úspěšně dokončena.\n\nID zálohy: {{backupId}}\nZdrojová databáze: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nZáloha vytvořena (UTC): {{backupCreatedUtc}} UTC\nZáloha vytvořena ({{serverTimezone}}): {{backupCreatedLocal}}\nObnova dokončena (UTC): {{restoreCompletedUtcDisplay}} UTC\nObnova dokončena ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Automatická obnova databáze byla úspěšně dokončena.\n\nID zálohy: {{backupId}}\nZdrojová databáze: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nZáloha vytvořena (UTC): {{backupCreatedUtc}} UTC\nZáloha vytvořena ({{serverTimezone}}): {{backupCreatedLocal}}\nObnova dokončena (UTC): {{restoreCompletedUtcDisplay}} UTC\nObnova dokončena ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nPřeskočeny nedostupné nebo poškozené zálohy: {{skippedBackupIds}}. Byla obnovena starší záloha."
       },
       "databaseIntegrityFailure": {
         "title": "Zjištěn problém s integritou databáze",
@@ -3313,16 +3314,16 @@
     },
     "databaseBackup": {
       "title": "Záloha databáze",
-      "description": "Nejnovější manifest zálohy ze serveru.",
+      "description": "Uložené zálohy databáze a přístup pro externí nástroje.",
       "actions": {
         "refresh": "Obnovit",
         "trigger": "Spustit zálohu",
-        "triggering": "Spouštění..."
+        "triggering": "Vytváření zálohy…"
       },
       "state": {
         "loading": "Načítání informací o záloze...",
         "empty": "Zatím nebyly nalezeny žádné zálohy.",
-        "triggerSuccess": "Úloha zálohování byla spuštěna.",
+        "triggerSuccess": "Záloha byla uložena.",
         "restoreIfEmptyHint": "Pokud bude databáze ztracena a chcete, aby se obnovila automaticky, nastavte v prostředí kontejneru COTTON_RESTORE_DATABASE_IF_EMPTY=true. Aby to fungovalo, musí být databáze prázdná, bez jakýchkoli tabulek."
       },
       "fields": {
@@ -3339,6 +3340,22 @@
       "errors": {
         "loadFailed": "Načtení informací o záloze se nezdařilo.",
         "triggerFailed": "Spuštění zálohy se nezdařilo."
+      },
+      "history": {
+        "title": "Historie záloh",
+        "retention": "Uchovávají se všechny zálohy za posledních 7 dní a alespoň 3 nejnovější zálohy.",
+        "latest": "Nejnovější"
+      },
+      "access": {
+        "title": "Přístup pro externí zálohování",
+        "description": "Tento token umožňuje pouze vytváření záloh databáze. Uložte jej do zálohovacího nástroje. Platí do změny hlavního klíče; nový token nezneplatní předchozí tokeny.",
+        "request": "Odešlete {{endpoint}} s hlavičkou {{header}}. Úspěšná odpověď potvrzuje uložení dumpu.",
+        "token": "Zálohovací token",
+        "generate": "Vytvořit token",
+        "copy": "Kopírovat token",
+        "copied": "Zkopírováno",
+        "failed": "Token se nepodařilo vytvořit.",
+        "copyFailed": "Kopírování selhalo. Vyberte a zkopírujte token ručně."
       }
     },
     "storageStatistics": {

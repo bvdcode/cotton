@@ -1451,7 +1451,8 @@
       },
       "databaseRestoreCompleted": {
         "title": "Datenbank automatisch wiederhergestellt",
-        "content": "Die automatische Datenbankwiederherstellung wurde erfolgreich abgeschlossen.\n\nBackup-ID: {{backupId}}\nQuelldatenbank: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup erstellt (UTC): {{backupCreatedUtc}} UTC\nBackup erstellt ({{serverTimezone}}): {{backupCreatedLocal}}\nWiederherstellung abgeschlossen (UTC): {{restoreCompletedUtcDisplay}} UTC\nWiederherstellung abgeschlossen ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Die automatische Datenbankwiederherstellung wurde erfolgreich abgeschlossen.\n\nBackup-ID: {{backupId}}\nQuelldatenbank: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup erstellt (UTC): {{backupCreatedUtc}} UTC\nBackup erstellt ({{serverTimezone}}): {{backupCreatedLocal}}\nWiederherstellung abgeschlossen (UTC): {{restoreCompletedUtcDisplay}} UTC\nWiederherstellung abgeschlossen ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Die automatische Datenbankwiederherstellung wurde erfolgreich abgeschlossen.\n\nBackup-ID: {{backupId}}\nQuelldatenbank: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup erstellt (UTC): {{backupCreatedUtc}} UTC\nBackup erstellt ({{serverTimezone}}): {{backupCreatedLocal}}\nWiederherstellung abgeschlossen (UTC): {{restoreCompletedUtcDisplay}} UTC\nWiederherstellung abgeschlossen ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nNicht verfügbare oder beschädigte Sicherungen wurden übersprungen: {{skippedBackupIds}}. Eine frühere Sicherung wurde wiederhergestellt."
       },
       "databaseIntegrityFailure": {
         "title": "Datenbankintegritätsproblem erkannt",
@@ -3268,16 +3269,16 @@
     },
     "databaseBackup": {
       "title": "Datenbanksicherung",
-      "description": "Letztes Sicherungsmanifest vom Server.",
+      "description": "Gespeicherte Datenbanksicherungen und Zugriff für externe Sicherungsprogramme.",
       "actions": {
         "refresh": "Aktualisieren",
         "trigger": "Sicherung starten",
-        "triggering": "Wird gestartet..."
+        "triggering": "Sicherung wird erstellt…"
       },
       "state": {
         "loading": "Sicherungsinformationen werden geladen...",
         "empty": "Noch keine Sicherungen gefunden.",
-        "triggerSuccess": "Sicherungsauftrag wurde gestartet.",
+        "triggerSuccess": "Sicherung erfolgreich gespeichert.",
         "restoreIfEmptyHint": "Wenn die Datenbank verloren geht und automatisch wiederhergestellt werden soll, setze COTTON_RESTORE_DATABASE_IF_EMPTY=true in der Container-Umgebung. Die Datenbank muss leer und ohne Tabellen sein, damit das funktioniert."
       },
       "fields": {
@@ -3294,6 +3295,22 @@
       "errors": {
         "loadFailed": "Sicherungsinformationen konnten nicht geladen werden.",
         "triggerFailed": "Sicherung konnte nicht gestartet werden."
+      },
+      "history": {
+        "title": "Sicherungsverlauf",
+        "retention": "Alle Sicherungen der letzten 7 Tage und mindestens die 3 neuesten Sicherungen werden aufbewahrt.",
+        "latest": "Neueste"
+      },
+      "access": {
+        "title": "Zugriff für externe Sicherungen",
+        "description": "Dieses Token erlaubt nur das Erstellen von Datenbanksicherungen. Speichern Sie es in Ihrem Sicherungsprogramm. Es gilt bis zur Änderung des Hauptschlüssels; neue Token widerrufen bestehende Token nicht.",
+        "request": "Senden Sie {{endpoint}} mit dem Header {{header}}. Eine erfolgreiche Antwort bestätigt, dass der Dump gespeichert wurde.",
+        "token": "Sicherungstoken",
+        "generate": "Token erstellen",
+        "copy": "Token kopieren",
+        "copied": "Kopiert",
+        "failed": "Token konnte nicht erstellt werden.",
+        "copyFailed": "Kopieren fehlgeschlagen. Markieren und kopieren Sie das Token manuell."
       }
     },
     "storageStatistics": {

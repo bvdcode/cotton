@@ -1456,7 +1456,8 @@
       },
       "databaseRestoreCompleted": {
         "title": "Database automatisch hersteld",
-        "content": "Automatisch databaseherstel is succesvol voltooid.\n\nBackup-ID: {{backupId}}\nBrondatabase: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup gemaakt (UTC): {{backupCreatedUtc}} UTC\nBackup gemaakt ({{serverTimezone}}): {{backupCreatedLocal}}\nHerstel voltooid (UTC): {{restoreCompletedUtcDisplay}} UTC\nHerstel voltooid ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Automatisch databaseherstel is succesvol voltooid.\n\nBackup-ID: {{backupId}}\nBrondatabase: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup gemaakt (UTC): {{backupCreatedUtc}} UTC\nBackup gemaakt ({{serverTimezone}}): {{backupCreatedLocal}}\nHerstel voltooid (UTC): {{restoreCompletedUtcDisplay}} UTC\nHerstel voltooid ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Automatisch databaseherstel is succesvol voltooid.\n\nBackup-ID: {{backupId}}\nBrondatabase: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup gemaakt (UTC): {{backupCreatedUtc}} UTC\nBackup gemaakt ({{serverTimezone}}): {{backupCreatedLocal}}\nHerstel voltooid (UTC): {{restoreCompletedUtcDisplay}} UTC\nHerstel voltooid ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nNiet-beschikbare of beschadigde back-ups overgeslagen: {{skippedBackupIds}}. Een eerdere back-up is hersteld."
       },
       "databaseIntegrityFailure": {
         "title": "Probleem met database-integriteit gedetecteerd",
@@ -3273,16 +3274,16 @@
     },
     "databaseBackup": {
       "title": "Databaseback-up",
-      "description": "Laatste back-upmanifest van de server.",
+      "description": "Opgeslagen databaseback-ups en toegang voor externe back-uptools.",
       "actions": {
         "refresh": "Vernieuwen",
         "trigger": "Back-up starten",
-        "triggering": "Bezig met starten..."
+        "triggering": "Back-up maken…"
       },
       "state": {
         "loading": "Back-upinformatie laden...",
         "empty": "Er zijn nog geen back-ups gevonden.",
-        "triggerSuccess": "De back-uptaak is gestart.",
+        "triggerSuccess": "Back-up opgeslagen.",
         "restoreIfEmptyHint": "Als de database verloren gaat en u wilt dat deze automatisch wordt hersteld, stel dan COTTON_RESTORE_DATABASE_IF_EMPTY=true in in de containeromgeving. De database moet leeg zijn, zonder enige tabel, om dit te laten werken."
       },
       "fields": {
@@ -3299,6 +3300,22 @@
       "errors": {
         "loadFailed": "Laden van back-upinformatie mislukt.",
         "triggerFailed": "Starten van back-up mislukt."
+      },
+      "history": {
+        "title": "Back-upgeschiedenis",
+        "retention": "Alle back-ups van de afgelopen 7 dagen en minstens de 3 nieuwste back-ups blijven bewaard.",
+        "latest": "Nieuwste"
+      },
+      "access": {
+        "title": "Toegang voor externe back-ups",
+        "description": "Dit token staat alleen het maken van databaseback-ups toe. Bewaar het in je back-uptool. Het blijft geldig zolang de hoofdsleutel niet verandert; nieuwe tokens trekken bestaande tokens niet in.",
+        "request": "Verstuur {{endpoint}} met de header {{header}}. Een geslaagde respons bevestigt dat de dump is opgeslagen.",
+        "token": "Back-uptoken",
+        "generate": "Token maken",
+        "copy": "Token kopiëren",
+        "copied": "Gekopieerd",
+        "failed": "Token maken mislukt.",
+        "copyFailed": "Kopiëren mislukt. Selecteer en kopieer het token handmatig."
       }
     },
     "storageStatistics": {

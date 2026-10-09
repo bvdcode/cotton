@@ -1462,7 +1462,8 @@
       },
       "databaseRestoreCompleted": {
         "title": "Базу даних автоматично відновлено",
-        "content": "Автоматичне відновлення бази даних успішно завершено.\n\nID резервної копії: {{backupId}}\nВихідна база даних: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nРезервну копію створено (UTC): {{backupCreatedUtc}} UTC\nРезервну копію створено ({{serverTimezone}}): {{backupCreatedLocal}}\nВідновлення завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВідновлення завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Автоматичне відновлення бази даних успішно завершено.\n\nID резервної копії: {{backupId}}\nВихідна база даних: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nРезервну копію створено (UTC): {{backupCreatedUtc}} UTC\nРезервну копію створено ({{serverTimezone}}): {{backupCreatedLocal}}\nВідновлення завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВідновлення завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Автоматичне відновлення бази даних успішно завершено.\n\nID резервної копії: {{backupId}}\nВихідна база даних: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nРезервну копію створено (UTC): {{backupCreatedUtc}} UTC\nРезервну копію створено ({{serverTimezone}}): {{backupCreatedLocal}}\nВідновлення завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВідновлення завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nПропущено недоступні або пошкоджені копії: {{skippedBackupIds}}. Відновлено попередню копію."
       },
       "databaseIntegrityFailure": {
         "title": "Виявлено проблему цілісності бази даних",
@@ -3287,16 +3288,16 @@
     },
     "databaseBackup": {
       "title": "Резервне копіювання бази даних",
-      "description": "Останній маніфест резервної копії з сервера.",
+      "description": "Збережені дампи бази даних і доступ для зовнішнього резервного копіювання.",
       "actions": {
         "refresh": "Оновити",
         "trigger": "Запустити резервне копіювання",
-        "triggering": "Запуск..."
+        "triggering": "Створення копії…"
       },
       "state": {
         "loading": "Завантаження інформації про резервні копії...",
         "empty": "Резервних копій ще не знайдено.",
-        "triggerSuccess": "Завдання резервного копіювання запущено.",
+        "triggerSuccess": "Резервну копію збережено.",
         "restoreIfEmptyHint": "Якщо база даних втрачена і ви хочете, щоб вона відновлювалася автоматично, встановіть COTTON_RESTORE_DATABASE_IF_EMPTY=true у середовищі контейнера. Для цього база даних має бути порожньою, без жодних таблиць."
       },
       "fields": {
@@ -3313,6 +3314,22 @@
       "errors": {
         "loadFailed": "Не вдалося завантажити інформацію про резервні копії.",
         "triggerFailed": "Не вдалося запустити резервне копіювання."
+      },
+      "history": {
+        "title": "Історія резервних копій",
+        "retention": "Зберігаються всі копії за останні 7 днів і щонайменше 3 найновіші копії.",
+        "latest": "Остання"
+      },
+      "access": {
+        "title": "Доступ для зовнішнього резервного копіювання",
+        "description": "Токен дозволяє лише створення резервних копій бази даних. Збережіть його у засобі резервного копіювання. Він діє до зміни master key; новий токен не скасовує попередні.",
+        "request": "Надішліть {{endpoint}} із заголовком {{header}}. Успішна відповідь означає, що дамп збережено.",
+        "token": "Токен резервного копіювання",
+        "generate": "Створити токен",
+        "copy": "Копіювати токен",
+        "copied": "Скопійовано",
+        "failed": "Не вдалося створити токен.",
+        "copyFailed": "Не вдалося скопіювати. Виділіть і скопіюйте токен вручну."
       }
     },
     "storageStatistics": {

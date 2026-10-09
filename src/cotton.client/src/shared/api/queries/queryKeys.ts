@@ -82,6 +82,8 @@ export const queryKeys = {
         [...adminRoot, "gcTimeline", params] as const,
     },
     latestDbBackup: () => [...adminRoot, "latestDbBackup"] as const,
+    databaseBackupHistory: () =>
+      [...adminRoot, "databaseBackupHistory"] as const,
     securityDiagnostics: () => [...adminRoot, "securityDiagnostics"] as const,
     vectorExtensionStatus: () =>
       [...adminRoot, "vectorExtensionStatus"] as const,
