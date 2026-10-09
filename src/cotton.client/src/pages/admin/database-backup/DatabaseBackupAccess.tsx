@@ -120,6 +120,7 @@ export const DatabaseBackupAccess = () => {
               value={command}
               fullWidth
               multiline
+              maxRows={8}
               slotProps={{
                 input: { readOnly: true, sx: { fontFamily: "monospace" } },
               }}
@@ -137,7 +138,9 @@ export const DatabaseBackupAccess = () => {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDialog}>{t("common:actions.close")}</Button>
+          <Button color="inherit" onClick={closeDialog}>
+            {t("common:actions.close")}
+          </Button>
         </DialogActions>
       </Dialog>
     </Stack>

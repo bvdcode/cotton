@@ -27,6 +27,7 @@ export const HelpButton = ({
       content,
       hideCancelButton: true,
       confirmationText: t("actions.close"),
+      confirmationButtonProps: { color: "inherit" },
     });
   };
 
