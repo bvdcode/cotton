@@ -8,7 +8,7 @@ A chunk is live while it is referenced by any supported durable relationship, in
 
 - file-manifest membership;
 - preview or avatar storage references;
-- the active database-backup graph;
+- all database-backup generations retained in the current pointer;
 - the master-key sentinel;
 - other explicitly protected storage objects.
 

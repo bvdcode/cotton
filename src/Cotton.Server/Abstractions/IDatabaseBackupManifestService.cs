@@ -8,5 +8,11 @@ namespace Cotton.Server.Abstractions
     public interface IDatabaseBackupManifestService
     {
         Task<ResolvedBackupManifest?> TryGetLatestManifestAsync(CancellationToken cancellationToken = default);
+
+        Task<BackupManifestPointer?> ReadPointerAsync(CancellationToken cancellationToken = default);
+
+        Task<BackupManifest> ReadManifestAsync(BackupManifestReference backup, CancellationToken cancellationToken = default);
+
+        Task<ResolvedBackupManifest> PublishAsync(BackupManifest manifest, CancellationToken cancellationToken = default);
     }
 }

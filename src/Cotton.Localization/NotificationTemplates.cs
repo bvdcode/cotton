@@ -337,6 +337,9 @@ namespace Cotton.Localization
 
         public static string DatabaseRestoreCompletedTitle => "Database restored automatically";
 
+        public static string DatabaseRestoreFallbackContent(string skippedBackupIds) =>
+            $"\n\nRestored an earlier generation because newer backups were unavailable or failed integrity checks. Skipped backup IDs: {skippedBackupIds}.";
+
         public static string DatabaseIntegrityFailureTitle => "Database integrity issue detected";
 
         public static string DatabaseIntegrityFailureContent(

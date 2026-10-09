@@ -8,5 +8,6 @@ namespace Cotton.Server.Models.DatabaseBackup
         string LogicalKey,
         DateTime UpdatedAtUtc,
         string LatestManifestStorageKey,
-        string LatestBackupId);
+        string LatestBackupId,
+        IReadOnlyList<BackupManifestReference>? History = null);
 }

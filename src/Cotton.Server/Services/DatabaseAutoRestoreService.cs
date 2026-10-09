@@ -7,20 +7,17 @@ using Cotton.Localization;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Models.DatabaseBackup;
-using Cotton.Storage.Abstractions;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using System.Buffers;
 using System.Data;
-using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
     public class DatabaseAutoRestoreService(
         IConfiguration configuration,
         CottonDbContext dbContext,
-        IStoragePipeline storage,
+        DatabaseBackupRestorePreparation preparation,
         IPostgresDumpService postgresDump,
         IDatabaseBackupManifestService backupManifestService,
         INotificationsProvider notificationsProvider,
@@ -41,29 +38,27 @@ namespace Cotton.Server.Services
                 return;
             }
 
-            ResolvedBackupManifest? backup = await backupManifestService.TryGetLatestManifestAsync(cancellationToken);
-            if (backup is null)
+            BackupManifestPointer? pointer = await backupManifestService.ReadPointerAsync(cancellationToken);
+            if (pointer is null)
             {
                 logger.LogInformation("Automatic database restore skipped: latest backup manifest was not found.");
                 return;
             }
 
-            logger.LogInformation(
-                "Automatic database restore requested. Found backup {BackupId} created at {CreatedAtUtc}. Starting restore.",
-                backup.Manifest.BackupId,
-                backup.Manifest.CreatedAtUtc);
-
-            string dumpPath = BuildDumpFilePath(backup.Manifest.BackupId);
+            string dumpPath = BuildDumpFilePath(Guid.NewGuid().ToString("N"));
             try
             {
-                await RebuildDumpFileAsync(backup.Manifest, dumpPath, cancellationToken);
+                PreparedDatabaseBackup prepared = await preparation.PrepareAsync(pointer, dumpPath, cancellationToken);
+                ResolvedBackupManifest backup = prepared.Backup;
+                logger.LogInformation("Restoring verified database backup {BackupId} created at {CreatedAtUtc}.",
+                    backup.Manifest.BackupId, backup.Manifest.CreatedAtUtc);
                 await EnsurePostgresExtensionsForRestoreAsync(cancellationToken);
                 await ReloadPostgresTypesAsync(cancellationToken);
                 await postgresDump.RestoreFromFileAsync(dumpPath, cancellationToken);
                 await ReloadPostgresTypesAsync(cancellationToken);
                 await dbContext.Database.MigrateAsync(cancellationToken);
                 await ReloadPostgresTypesAsync(cancellationToken);
-                await NotifyAdminsAboutRestoreAsync(backup, cancellationToken);
+                await NotifyAdminsAboutRestoreAsync(prepared, cancellationToken);
                 logger.LogInformation(
                     "Automatic database restore finished successfully. BackupId={BackupId}",
                     backup.Manifest.BackupId);
@@ -121,49 +116,6 @@ namespace Cotton.Server.Services
             }
         }
 
-        private async Task RebuildDumpFileAsync(BackupManifest manifest, string outputPath, CancellationToken cancellationToken)
-        {
-            string? directory = Path.GetDirectoryName(outputPath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            await using FileStream output = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
-            using IncrementalHash hasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(81920);
-            long totalBytes = 0;
-
-            try
-            {
-                foreach (BackupChunkInfo chunk in manifest.Chunks.OrderBy(x => x.Order))
-                {
-                    await using Stream chunkStream = await storage.ReadAsync(chunk.StorageKey);
-                    int bytesRead;
-                    while ((bytesRead = await chunkStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
-                    {
-                        hasher.AppendData(buffer, 0, bytesRead);
-                        await output.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-                        totalBytes += bytesRead;
-                    }
-                }
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buffer);
-            }
-
-            string contentHash = Hasher.ToHexStringHash(hasher.GetHashAndReset());
-            if (!string.Equals(contentHash, manifest.DumpContentHash, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("Restored dump hash does not match backup manifest hash.");
-            }
-
-            if (totalBytes != manifest.DumpSizeBytes)
-            {
-                throw new InvalidOperationException("Restored dump size does not match backup manifest size.");
-            }
-        }
 
         private static string BuildDumpFilePath(string backupId)
         {
@@ -209,8 +161,9 @@ namespace Cotton.Server.Services
             }
         }
 
-        private async Task NotifyAdminsAboutRestoreAsync(ResolvedBackupManifest backup, CancellationToken cancellationToken)
+        private async Task NotifyAdminsAboutRestoreAsync(PreparedDatabaseBackup prepared, CancellationToken cancellationToken)
         {
+            ResolvedBackupManifest backup = prepared.Backup;
             List<Guid> adminIds = await dbContext.Users
                 .AsNoTracking()
                 .Where(x => x.Role == UserRole.Admin)
@@ -239,6 +192,10 @@ namespace Cotton.Server.Services
                 createdAtLocal,
                 restoreCompletedUtc,
                 restoreCompletedLocal);
+            if (prepared.SkippedBackupIds.Count > 0)
+            {
+                content += NotificationTemplates.DatabaseRestoreFallbackContent(string.Join(", ", prepared.SkippedBackupIds));
+            }
 
             Dictionary<string, string> metadata = new()
             {
@@ -255,11 +212,14 @@ namespace Cotton.Server.Services
                 ["sourceHost"] = backup.Manifest.SourceHost,
                 ["sourcePort"] = backup.Manifest.SourcePort,
                 ["serverTimezone"] = serverTimeZone.Id,
-                ["manifestStorageKey"] = backup.ManifestStorageKey
+                ["manifestStorageKey"] = backup.ManifestStorageKey,
+                ["skippedBackupIds"] = string.Join(", ", prepared.SkippedBackupIds)
             };
             Dictionary<string, string> templateMetadata = NotificationTemplateMetadata.Create(
                 NotificationTemplateKeys.DatabaseRestoreCompletedTitle,
-                NotificationTemplateKeys.DatabaseRestoreCompletedContent,
+                prepared.SkippedBackupIds.Count > 0
+                    ? NotificationTemplateKeys.DatabaseRestoreCompletedWithFallbackContent
+                    : NotificationTemplateKeys.DatabaseRestoreCompletedContent,
                 metadata);
 
             foreach (Guid adminId in adminIds)

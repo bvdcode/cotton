@@ -100,22 +100,19 @@ namespace Cotton.Server.Services
                 return protectedStorageKeys;
             }
 
-            // Database backups are stored as pointer -> manifest -> dump chunks. The manifest service is the
-            // canonical reader for that chain; GC protects every object reachable from the current pointer.
-            ResolvedBackupManifest? latestBackup = await _backupManifestService.TryGetLatestManifestAsync(ct);
-            if (latestBackup is null)
+            BackupManifestPointer? pointer = await _backupManifestService.ReadPointerAsync(ct);
+            if (pointer?.History is not { Count: > 0 })
             {
                 throw new InvalidOperationException(
-                    "Database backup pointer exists, but the latest backup manifest could not be resolved. Aborting chunk garbage collection to avoid deleting backup data.");
+                    "Database backup history could not be resolved. Aborting chunk garbage collection to avoid deleting backup data.");
             }
 
-            // Protect the manifest object itself; it is content-addressed and not referenced by database rows.
-            protectedStorageKeys.Add(latestBackup.ManifestStorageKey);
-            foreach (BackupChunkInfo chunk in latestBackup.Manifest.Chunks)
+            foreach (BackupManifestReference backup in pointer.History)
             {
-                if (!string.IsNullOrWhiteSpace(chunk.StorageKey))
+                BackupManifest manifest = await _backupManifestService.ReadManifestAsync(backup, ct);
+                protectedStorageKeys.Add(backup.ManifestStorageKey);
+                foreach (BackupChunkInfo chunk in manifest.Chunks)
                 {
-                    // Protect each storage chunk that contains the PostgreSQL dump payload.
                     protectedStorageKeys.Add(chunk.StorageKey);
                 }
             }

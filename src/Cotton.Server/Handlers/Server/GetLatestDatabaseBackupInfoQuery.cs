@@ -23,18 +23,8 @@ namespace Cotton.Server.Handlers.Server
                 return null;
             }
 
-            return new LatestDatabaseBackupDto
-            {
-                BackupId = backup.Manifest.BackupId,
-                CreatedAtUtc = backup.Manifest.CreatedAtUtc,
-                PointerUpdatedAtUtc = backup.Pointer.UpdatedAtUtc,
-                DumpSizeBytes = backup.Manifest.DumpSizeBytes,
-                ChunkCount = backup.Manifest.ChunkCount,
-                DumpContentHash = backup.Manifest.DumpContentHash,
-                SourceDatabase = backup.Manifest.SourceDatabase,
-                SourceHost = backup.Manifest.SourceHost,
-                SourcePort = backup.Manifest.SourcePort,
-            };
+            return BackupManifestReference.FromManifest(backup.ManifestStorageKey, backup.Manifest)
+                .ToDto(backup.Pointer.UpdatedAtUtc);
         }
     }
 }

@@ -149,6 +149,7 @@ namespace Cotton.Server.Services
             };
 
             processStartInfo.ArgumentList.Add("--clean");
+            processStartInfo.ArgumentList.Add("--single-transaction");
             processStartInfo.ArgumentList.Add("--if-exists");
             processStartInfo.ArgumentList.Add("--no-owner");
             processStartInfo.ArgumentList.Add("--no-privileges");

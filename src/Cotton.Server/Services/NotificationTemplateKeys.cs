@@ -57,6 +57,7 @@ namespace Cotton.Server.Services
 
         public const string DatabaseRestoreCompletedTitle = "notifications:server.databaseRestoreCompleted.title";
         public const string DatabaseRestoreCompletedContent = "notifications:server.databaseRestoreCompleted.content";
+        public const string DatabaseRestoreCompletedWithFallbackContent = "notifications:server.databaseRestoreCompleted.contentWithFallback";
 
         public const string DatabaseIntegrityFailureTitle = "notifications:server.databaseIntegrityFailure.title";
         public const string DatabaseIntegrityFailureContent = "notifications:server.databaseIntegrityFailure.content";

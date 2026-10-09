@@ -23,6 +23,7 @@ namespace Cotton.Server.Jobs
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         ChunkUsageService _chunkUsage,
+        DatabaseBackupGate _backupGate,
         SettingsProvider _settingsProvider,
         ILogger<GarbageCollectorJob> _logger) : IJob
     {
@@ -64,6 +65,19 @@ namespace Cotton.Server.Jobs
         }
 
         public async Task RunOnceAsync(DateTime now, int batchSize, CancellationToken ct = default)
+        {
+            await _backupGate.WaitAsync(ct);
+            try
+            {
+                await CollectAsync(now, batchSize, ct);
+            }
+            finally
+            {
+                _backupGate.Release();
+            }
+        }
+
+        private async Task CollectAsync(DateTime now, int batchSize, CancellationToken ct)
         {
             HashSet<string> protectedStorageKeys = await _chunkUsage.GetProtectedStorageKeysAsync(ct);
 

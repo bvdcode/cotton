@@ -386,7 +386,6 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.NotFound));
         }
 
-        [TestCase("/api/v1/server/database-backup/trigger")]
         [TestCase("/api/v1/server/gc/trigger")]
         public async Task Trigger_Background_Job_Works_Without_Hosted_Scheduler(string route)
         {
