@@ -88,7 +88,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task MetadataExtraction_UnavailableMedia_PreservesCustomMetadataAndDoesNotMarkCurrentVersion()
+        public async Task MetadataExtraction_UnavailableMedia_PreservesCustomMetadataAndRecordsFailure()
         {
             const string ExistingTitle = "Existing title";
             const string ExistingKey = "custom.title";
@@ -130,6 +130,8 @@ namespace Cotton.Server.IntegrationTests
 
             FileManifestMetadataState failedState = await Pipeline.GetFileManifestMetadataStateAsync(createdFile.Id);
             Assert.That(failedState.Metadata?[ExistingKey], Is.EqualTo(ExistingTitle));
+            Assert.That(FileContentMetadataDictionary.HasCurrentVersion(failedState.Metadata), Is.True);
+            Assert.That(failedState.Metadata?[FileContentMetadataKeys.ExtractionError], Is.Not.Empty);
 
             HttpResponseMessage emptyAttempt = await _client!.PostAsync(
                 $"/api/v1/files/{emptyMetadataFile.Id}/metadata/extract",
@@ -140,9 +142,12 @@ namespace Cotton.Server.IntegrationTests
             FileManifestMetadataState emptyFailedState = await Pipeline.GetFileManifestMetadataStateAsync(emptyMetadataFile.Id);
             Assert.Multiple(() =>
             {
-                Assert.That(emptyFailedState.Metadata, Is.Null);
+                Assert.That(FileContentMetadataDictionary.HasCurrentVersion(emptyFailedState.Metadata), Is.True);
+                Assert.That(emptyFailedState.Metadata?[FileContentMetadataKeys.ExtractionError], Is.Not.Empty);
                 Assert.That(emptyAttemptDto?.Metadata, Is.Not.Null);
-                Assert.That(emptyAttemptDto!.Metadata, Does.Not.ContainKey(FileContentMetadataKeys.ExtractionVersion));
+                Assert.That(emptyAttemptDto!.Metadata[FileContentMetadataKeys.ExtractionVersion],
+                    Is.EqualTo(FileContentMetadataKeys.CurrentExtractionVersion));
+                Assert.That(emptyAttemptDto.Metadata, Does.Not.ContainKey(FileContentMetadataKeys.ExtractionError));
             });
 
             await Pipeline.ExecuteExtractFileMetadataJobAsync();
@@ -153,8 +158,8 @@ namespace Cotton.Server.IntegrationTests
             Assert.Multiple(() =>
             {
                 Assert.That(invalidMediaState.Metadata?[ExistingKey], Is.EqualTo(ExistingTitle));
-                Assert.That(invalidMediaState.Metadata, Does.Not.ContainKey(FileContentMetadataKeys.ExtractionVersion));
-                Assert.That(emptyInvalidMediaState.Metadata, Is.Null);
+                Assert.That(invalidMediaState.Metadata, Is.EqualTo(failedState.Metadata));
+                Assert.That(emptyInvalidMediaState.Metadata, Is.EqualTo(emptyFailedState.Metadata));
                 Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageWidth], Is.EqualTo("64"));
                 Assert.That(validImageState.Metadata?[FileContentMetadataKeys.ImageHeight], Is.EqualTo("48"));
             });
