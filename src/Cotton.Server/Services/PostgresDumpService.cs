@@ -119,6 +119,7 @@ namespace Cotton.Server.Services
             };
 
             processStartInfo.ArgumentList.Add("--format=custom");
+            processStartInfo.ArgumentList.Add("--compress=none");
             processStartInfo.ArgumentList.Add(
                 $"--exclude-table-data={VectorIndexDefinition.Expected.SchemaName}.{VectorIndexDefinition.Expected.TableName}");
             processStartInfo.ArgumentList.Add("--no-password");
