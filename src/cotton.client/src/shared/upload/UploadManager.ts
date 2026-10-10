@@ -63,7 +63,7 @@ export interface UploadTaskInternal extends UploadTask {
   _sawProgress?: boolean;
   _laneProbeConsumed?: boolean;
   _laneProbeTimeout?: ReturnType<typeof setTimeout>;
-  _bytesTransferredForSpeed?: number;
+  _bytesProcessedForSpeed?: number;
   _quotaReservationBytes?: number;
 }
 
@@ -98,8 +98,8 @@ export class UploadManager {
         scopeLabel: task.nodeLabel,
         bytesTotal,
       }),
-    onProgress: (task, state, bytesUploaded, snapshot) =>
-      this.progress.record(task, state, bytesUploaded, snapshot),
+    onProgress: (task, state, bytesUploaded) =>
+      this.progress.record(task, state, bytesUploaded),
     onComplete: (task, file) => this.completeUpload(task, file),
     onFailure: (task, state, error) => this.failUpload(task, state, error),
     onStatusChange: () => this.emit(),
