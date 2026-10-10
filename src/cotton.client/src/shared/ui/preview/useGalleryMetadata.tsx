@@ -109,7 +109,7 @@ export const useGalleryMetadata = (
           <Typography
             component="dt"
             variant="body2"
-            color="text.secondary"
+            color={isTouchDevice ? "text.secondary" : "text.primary"}
             sx={{
               flex: { xs: 1, sm: 2 },
               minWidth: 0,
@@ -136,17 +136,17 @@ export const useGalleryMetadata = (
   );
   const content = (
     <Stack
-      spacing={2}
+      spacing={1.5}
       padding={2}
       flex={1}
       minHeight={0}
       sx={
         !isTouchDevice
           ? (theme) => ({
-              backgroundColor: alpha(theme.palette.background.paper, 0.9),
+              backgroundColor: alpha(theme.palette.background.paper, 0.68),
               transition: theme.transitions.create("background-color"),
-              "&:hover": {
-                backgroundColor: alpha(theme.palette.background.paper, 0.98),
+              "&:hover, &:has(:focus-visible)": {
+                backgroundColor: alpha(theme.palette.background.paper, 0.9),
               },
             })
           : undefined
@@ -156,19 +156,30 @@ export const useGalleryMetadata = (
         <Typography variant="subtitle1" component="h2" id={`${panelId}-title`}>
           {t("preview.metadata.label")}
         </Typography>
-        <IconButton
-          aria-label={t("actions.close", { ns: "common" })}
-          onClick={closePanel}
-        >
-          <Close />
-        </IconButton>
+        {isTouchDevice && (
+          <IconButton
+            aria-label={t("actions.close", { ns: "common" })}
+            onClick={closePanel}
+          >
+            <Close />
+          </IconButton>
+        )}
       </Stack>
-      <Stack spacing={2} flex={1} minHeight={0} overflow="auto" tabIndex={0}>
+      <Stack
+        spacing={1.5}
+        flex="0 1 auto"
+        minHeight={0}
+        overflow="auto"
+        tabIndex={0}
+      >
         <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
           {item.name}
         </Typography>
         {item.sizeBytes !== undefined && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            color={isTouchDevice ? "text.secondary" : "text.primary"}
+          >
             {formatBytes(item.sizeBytes)}
           </Typography>
         )}
@@ -189,6 +200,12 @@ export const useGalleryMetadata = (
       {entries.details.length > 0 && (
         <Button
           color="inherit"
+          size="small"
+          sx={{
+            alignSelf: "flex-start",
+            textTransform: "none",
+            fontWeight: "normal",
+          }}
           startIcon={detailsExpanded ? <ExpandLess /> : <ExpandMore />}
           aria-expanded={detailsExpanded}
           aria-controls={`${panelId}-details`}
@@ -242,14 +259,25 @@ export const useGalleryMetadata = (
               anchor={position}
               variant="persistent"
               open={visible}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                width: "100%",
+                height: "100%",
+              }}
               slotProps={{
                 paper: {
                   ...panelProps,
                   role: "region",
                   "aria-hidden": !visible,
                   sx: {
-                    position: "absolute",
+                    position: "relative",
                     width: "100%",
+                    height: "auto",
+                    maxHeight: "100%",
+                    border: 0,
+                    borderRadius: 1,
+                    overflow: "hidden",
                     pointerEvents: visible ? "auto" : "none",
                     touchAction: "pan-y",
                     userSelect: "text",

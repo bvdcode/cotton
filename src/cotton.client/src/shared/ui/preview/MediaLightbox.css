@@ -199,19 +199,21 @@
 
 .lightbox-autohide .media-lightbox__metadata-container {
   position: absolute;
-  top: calc(var(--yarl__toolbar_padding, 16px) + 48px);
+  top: 0;
   bottom: 0;
+  padding-block: calc(var(--yarl__toolbar_padding, 16px) + 48px);
+  box-sizing: border-box;
   width: min(420px, calc(100% - 32px));
   z-index: 20;
   pointer-events: none;
 }
 
 .lightbox-autohide .media-lightbox__metadata-container--left {
-  left: 0;
+  left: 16px;
 }
 
 .lightbox-autohide .media-lightbox__metadata-container--right {
-  right: 0;
+  right: 16px;
 }
 
 .lightbox-autohide:has(.media-lightbox__info-button) .media-lightbox__header {

@@ -156,7 +156,11 @@ describe("gallery information panel", () => {
       expect(screen.queryByText("True Color")).not.toBeInTheDocument();
       fireEvent.pointerLeave(side);
       expect(screen.getByRole("region", { name: "Information" })).toBeVisible();
-      fireEvent.click(screen.getByRole("button", { name: "Close" }));
+      expect(
+        screen.queryByRole("button", { name: "Close" }),
+      ).not.toBeInTheDocument();
+      button.focus();
+      fireEvent.click(button);
       fireEvent.pointerEnter(side);
       expect(
         screen.queryByRole("region", { name: "Information" }),
@@ -234,6 +238,9 @@ describe("gallery information panel", () => {
       container.querySelector(".media-lightbox__metadata-container"),
     ).toBeNull();
     expect(screen.getByRole("dialog", { name: "Information" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(button);
     fireEvent.keyDown(screen.getByRole("dialog", { name: "Information" }), {
       key: "Escape",
     });
