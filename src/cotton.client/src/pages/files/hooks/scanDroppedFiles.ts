@@ -36,8 +36,7 @@ export const getAllFilesFromItems = async (
 
   const rememberSkippedItem = (entry: FileSystemEntry) => {
     if (skippedItems.length >= maxSkippedItemsToKeep) return;
-    const fullPath = readStringProperty(entry, "fullPath");
-    const display = (fullPath ?? entry.name).replace(/^\/+/, "").trim();
+    const display = entry.fullPath.replace(/^\/+/, "").trim();
     if (display.length === 0) return;
     skippedItems.push(display);
   };
@@ -74,8 +73,7 @@ export const getAllFilesFromItems = async (
         lastModified: file.lastModified,
       });
 
-      const fullPath = readStringProperty(entry, "fullPath");
-      const relativePath = (fullPath ?? file.name).replace(/^\/+/, "");
+      const relativePath = entry.fullPath.replace(/^\/+/, "");
       files.push({ file: clonedFile, relativePath });
       notify();
     } else if (isDirectoryEntry(entry)) {
