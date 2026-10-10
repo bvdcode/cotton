@@ -1,3 +1,5 @@
+import CheckIcon from "@mui/icons-material/Check";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import {
   Alert,
   Button,
@@ -5,8 +7,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
+  InputAdornment,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useState } from "react";
@@ -48,6 +53,31 @@ export const DatabaseBackupAccess = () => {
     setToken(undefined);
     setError(undefined);
     setCopied(undefined);
+  };
+  const copyAdornment = (
+    text: string,
+    target: "token" | "command",
+    label: string,
+  ) => {
+    const copyLabel =
+      copied === target ? t("databaseBackup.access.copied") : label;
+    return (
+      <InputAdornment position="end" sx={{ alignSelf: "flex-start" }}>
+        <Tooltip title={copyLabel}>
+          <IconButton
+            size="small"
+            aria-label={copyLabel}
+            onClick={() => void copyText(text, target)}
+          >
+            {copied === target ? (
+              <CheckIcon fontSize="small" />
+            ) : (
+              <ContentCopyIcon fontSize="small" />
+            )}
+          </IconButton>
+        </Tooltip>
+      </InputAdornment>
+    );
   };
   const command = [
     "curl --fail --request POST \\",
@@ -103,18 +133,17 @@ export const DatabaseBackupAccess = () => {
               fullWidth
               multiline
               maxRows={4}
-              slotProps={{ input: { readOnly: true } }}
+              slotProps={{
+                input: {
+                  readOnly: true,
+                  endAdornment: copyAdornment(
+                    token ?? "",
+                    "token",
+                    t("databaseBackup.access.copy"),
+                  ),
+                },
+              }}
             />
-            <Button
-              color="inherit"
-              onClick={() => void copyText(token ?? "", "token")}
-            >
-              {t(
-                copied === "token"
-                  ? "databaseBackup.access.copied"
-                  : "databaseBackup.access.copy",
-              )}
-            </Button>
             <TextField
               label={t("databaseBackup.access.curlExample")}
               value={command}
@@ -122,19 +151,17 @@ export const DatabaseBackupAccess = () => {
               multiline
               maxRows={8}
               slotProps={{
-                input: { readOnly: true, sx: { fontFamily: "monospace" } },
+                input: {
+                  readOnly: true,
+                  sx: { fontFamily: "monospace" },
+                  endAdornment: copyAdornment(
+                    command,
+                    "command",
+                    t("databaseBackup.access.copyCommand"),
+                  ),
+                },
               }}
             />
-            <Button
-              color="inherit"
-              onClick={() => void copyText(command, "command")}
-            >
-              {t(
-                copied === "command"
-                  ? "databaseBackup.access.copied"
-                  : "databaseBackup.access.copyCommand",
-              )}
-            </Button>
           </Stack>
         </DialogContent>
         <DialogActions>

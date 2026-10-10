@@ -47,6 +47,17 @@ describe("DatabaseBackupAccess", () => {
       `${window.location.origin}/api/v1/server/database-backup`,
     );
     fireEvent.click(
+      screen.getByRole("button", { name: "databaseBackup.access.copy" }),
+    );
+    await waitFor(() =>
+      expect(mocks.writeText).toHaveBeenCalledWith("backup-token"),
+    );
+    expect(
+      await screen.findByRole("button", {
+        name: "databaseBackup.access.copied",
+      }),
+    ).toBeInTheDocument();
+    fireEvent.click(
       screen.getByRole("button", { name: "databaseBackup.access.copyCommand" }),
     );
     await waitFor(() =>
