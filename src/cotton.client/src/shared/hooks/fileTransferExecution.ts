@@ -61,6 +61,7 @@ export const moveCandidatesToTarget = async (options: {
   confirmConflict: UseMoveOperationsOptions["confirmConflict"];
   targetEncryptsNewFiles: boolean;
   targetParentId: string;
+  onProgress?: (processed: number) => void;
 }): Promise<MoveExecutionResult> => {
   const sourceParents = new Set<string>();
   const succeeded: MoveClipboardItem[] = [];
@@ -125,6 +126,7 @@ export const moveCandidatesToTarget = async (options: {
         index = options.candidates.length;
         break;
     }
+    options.onProgress?.(Math.min(index + 1, options.candidates.length));
   }
 
   return {

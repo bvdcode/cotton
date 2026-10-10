@@ -2760,6 +2760,10 @@
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Movendo",
+      "copy": "Copiando"
+    },
     "title": "Tarefas",
     "error": "Erro",
     "errors": {

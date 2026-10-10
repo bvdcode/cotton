@@ -2,6 +2,7 @@ import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
+import { taskManager } from "../tasks/taskManager";
 import { isFileEncrypted, useVault } from "../crypto";
 
 import {
@@ -74,6 +75,7 @@ export const useMoveOperations = ({
       items: ReadonlyArray<MoveClipboardItem>,
       targetParentId: string,
       operation: FileTransferOperation = "move",
+      onProgress?: (processed: number) => void,
     ): Promise<MoveOutcome> => {
       const candidates = getMoveCandidates(items, targetParentId);
       if (candidates.length === 0) {
@@ -154,6 +156,7 @@ export const useMoveOperations = ({
         confirmConflict,
         targetEncryptsNewFiles,
         targetParentId,
+        onProgress,
       });
 
       refreshMovedParents(result.sourceParents, targetParentId);
@@ -222,8 +225,31 @@ export const useMoveOperations = ({
         return;
       }
       pasting.current = true;
+      const task = taskManager.createTask({
+        kind: "system",
+        label: t(`operations.${operation}`, { ns: "tasks" }),
+        bytesTotal: getMoveCandidates(items, targetParentId).length,
+      });
+      task.update({ status: "running" });
       try {
-        const outcome = await moveItems(items, targetParentId, operation);
+        const outcome = await moveItems(
+          items,
+          targetParentId,
+          operation,
+          (processed) => task.update({ bytesCompleted: processed }),
+        );
+        if (outcome.failed.length > 0) {
+          task.fail({
+            message:
+              outcome.lastErrorMessage ??
+              t(getTransferToastKeys(operation).failure, {
+                ns: "files",
+                count: outcome.failed.length,
+              }),
+          });
+        } else {
+          task.complete();
+        }
         if (
           operation === "move" &&
           useMoveClipboardStore.getState().items === items
@@ -234,11 +260,20 @@ export const useMoveOperations = ({
             useMoveClipboardStore.getState().setItems(outcome.notMoved);
           }
         }
+      } catch (error) {
+        reportClientError("Failed to paste items", error);
+        task.fail({
+          message: t(getTransferToastKeys(operation).failure, {
+            ns: "files",
+            count: items.length,
+          }),
+        });
+        throw error;
       } finally {
         pasting.current = false;
       }
     },
-    [clear, moveItems],
+    [clear, moveItems, t],
   );
 
   return {

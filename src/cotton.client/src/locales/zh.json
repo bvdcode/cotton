@@ -2766,6 +2766,10 @@
     }
   },
   "tasks": {
+    "operations": {
+      "move": "移动",
+      "copy": "复制"
+    },
     "title": "任务",
     "error": "错误",
     "errors": {

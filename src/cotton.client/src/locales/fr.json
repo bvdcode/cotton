@@ -2757,6 +2757,10 @@
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Déplacement",
+      "copy": "Copie"
+    },
     "title": "Tâches",
     "error": "Erreur",
     "errors": {

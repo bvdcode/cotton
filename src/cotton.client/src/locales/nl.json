@@ -2758,6 +2758,10 @@
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Verplaatsen",
+      "copy": "Kopiëren"
+    },
     "title": "Taken",
     "error": "Fout",
     "errors": {

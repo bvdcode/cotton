@@ -2792,6 +2792,10 @@
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Přesouvání",
+      "copy": "Kopírování"
+    },
     "title": "Úlohy",
     "error": "Chyba",
     "errors": {

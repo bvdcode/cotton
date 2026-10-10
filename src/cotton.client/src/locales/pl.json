@@ -2795,6 +2795,10 @@
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Przenoszenie",
+      "copy": "Kopiowanie"
+    },
     "title": "Zadania",
     "error": "Błąd",
     "errors": {

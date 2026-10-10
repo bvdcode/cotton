@@ -2753,6 +2753,10 @@
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Verschieben",
+      "copy": "Kopieren"
+    },
     "title": "Aufgaben",
     "error": "Fehler",
     "errors": {

@@ -2554,6 +2554,10 @@
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Moving",
+      "copy": "Copying"
+    },
     "title": "Tasks",
     "error": "Error",
     "errors": {

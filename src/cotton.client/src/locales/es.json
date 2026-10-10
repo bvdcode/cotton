@@ -2756,6 +2756,10 @@
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Moviendo",
+      "copy": "Copiando"
+    },
     "title": "Tareas",
     "error": "Error",
     "errors": {
