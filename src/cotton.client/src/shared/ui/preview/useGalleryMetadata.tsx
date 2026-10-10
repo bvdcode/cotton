@@ -152,19 +152,27 @@ export const useGalleryMetadata = (
           : undefined
       }
     >
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="subtitle1" component="h2" id={`${panelId}-title`}>
-          {t("preview.metadata.label")}
-        </Typography>
-        {isTouchDevice && (
+      {isTouchDevice && (
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <Typography
+            variant="subtitle1"
+            component="h2"
+            id={`${panelId}-title`}
+          >
+            {t("preview.metadata.label")}
+          </Typography>
           <IconButton
             aria-label={t("actions.close", { ns: "common" })}
             onClick={closePanel}
           >
             <Close />
           </IconButton>
-        )}
-      </Stack>
+        </Stack>
+      )}
       <Stack
         spacing={1.5}
         flex="0 1 auto"

@@ -152,6 +152,9 @@ describe("gallery information panel", () => {
       ).not.toBeInTheDocument();
       fireEvent.click(button);
       expect(screen.getByRole("region", { name: "Information" })).toBeVisible();
+      expect(
+        screen.queryByRole("heading", { name: "Information" }),
+      ).not.toBeInTheDocument();
       expect(screen.getByText("Camera Model")).toBeVisible();
       expect(screen.queryByText("True Color")).not.toBeInTheDocument();
       fireEvent.pointerLeave(side);
@@ -238,6 +241,7 @@ describe("gallery information panel", () => {
       container.querySelector(".media-lightbox__metadata-container"),
     ).toBeNull();
     expect(screen.getByRole("dialog", { name: "Information" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Information" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(button).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(button);
