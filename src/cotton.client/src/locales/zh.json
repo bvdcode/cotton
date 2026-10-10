@@ -1741,9 +1741,8 @@
       "gallerySmoothTransitions": "图库平滑过渡",
       "galleryPreferPreview": "显示原图而非预览图",
       "galleryMetadataPosition": {
-        "label": "查看照片和视频时显示元数据",
+        "label": "元数据面板位置",
         "left": "左侧",
-        "hidden": "隐藏",
         "right": "右侧"
       },
       "themeMode": {
@@ -2580,7 +2579,7 @@
     },
     "preview": {
       "metadata": {
-        "label": "元数据",
+        "label": "信息",
         "dimensions": "分辨率",
         "duration": "时长",
         "seconds": "{{value}} 秒",
@@ -2595,7 +2594,17 @@
         "year": "年份",
         "genre": "流派",
         "audioCodec": "音频编解码器",
-        "videoCodec": "视频编解码器"
+        "videoCodec": "视频编解码器",
+        "cameraMake": "制造商",
+        "cameraModel": "相机",
+        "lens": "镜头",
+        "exposureTime": "快门速度",
+        "aperture": "光圈",
+        "iso": "ISO",
+        "dateTaken": "拍摄时间",
+        "focalLength": "焦距",
+        "moreDetails": "更多详情",
+        "lessDetails": "收起详情"
       },
       "actions": {
         "edit": "编辑",

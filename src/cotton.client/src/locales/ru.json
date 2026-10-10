@@ -1815,9 +1815,8 @@
       "gallerySmoothTransitions": "Плавная прокрутка в галерее",
       "galleryPreferPreview": "Загружать оригиналы (выкл/вкл)",
       "galleryMetadataPosition": {
-        "label": "Показывать метаданные при просмотре фото и видео",
+        "label": "Сторона панели метаданных",
         "left": "Слева",
-        "hidden": "Скрыто",
         "right": "Справа"
       },
       "themeMode": {
@@ -2683,7 +2682,7 @@
     },
     "preview": {
       "metadata": {
-        "label": "Метаданные",
+        "label": "Информация",
         "dimensions": "Разрешение",
         "duration": "Длительность",
         "seconds": "{{value}} с",
@@ -2698,7 +2697,17 @@
         "year": "Год",
         "genre": "Жанр",
         "audioCodec": "Аудиокодек",
-        "videoCodec": "Видеокодек"
+        "videoCodec": "Видеокодек",
+        "cameraMake": "Производитель",
+        "cameraModel": "Камера",
+        "lens": "Объектив",
+        "exposureTime": "Выдержка",
+        "aperture": "Диафрагма",
+        "iso": "ISO",
+        "dateTaken": "Дата съёмки",
+        "focalLength": "Фокусное расстояние",
+        "moreDetails": "Подробнее",
+        "lessDetails": "Скрыть подробности"
       },
       "actions": {
         "edit": "Редактировать",

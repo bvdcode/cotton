@@ -6,7 +6,10 @@ import {
   useUserPreferencesStore,
 } from "../../store/userPreferencesStore";
 import type { MediaItem, SlideWithTitle } from "../../types/mediaLightbox";
-import { getGalleryMetadataEntries } from "./galleryMetadata";
+import {
+  getGalleryMetadataEntries,
+  getGalleryMetadataSections,
+} from "./galleryMetadata";
 import { MediaLightboxSlideHeader } from "./MediaLightboxSlideComponents";
 import { buildSlidesFromItems } from "./mediaLightboxSlides";
 
@@ -71,10 +74,10 @@ describe("gallery metadata", () => {
     ).toBe("right");
     useUserPreferencesStore
       .getState()
-      .hydrateFromRemote({ galleryMetadataPosition: "hidden" });
+      .hydrateFromRemote({ galleryMetadataPosition: "right" });
     expect(
       selectGalleryMetadataPosition(useUserPreferencesStore.getState()),
-    ).toBe("hidden");
+    ).toBe("right");
     useUserPreferencesStore
       .getState()
       .hydrateFromRemote({ galleryMetadataPosition: "left" });
@@ -112,6 +115,42 @@ describe("gallery metadata", () => {
           entry.value === "raw model" ||
           entry.value === "encrypted display metadata",
       ),
+    ).toBe(false);
+  });
+
+  it("keeps PNG internals and maker notes out of the summary while retaining all details", () => {
+    const sections = getGalleryMetadataSections(
+      {
+        ...metadata,
+        "image.PNG-IHDR.0.tags.Color Type.4.description": "True Color",
+        "image.PNG-IHDR.0.tags.Image Width.1.description": "539",
+        "image.File Type.0.tags.Detected MIME Type.3.description": "image/png",
+        "image.Exif SubIFD.0.tags.Exposure Time.33434.description": "1/125 sec",
+        "image.Exif SubIFD.0.tags.ISO Speed Ratings.34855.description": "200",
+        "image.Exif IFD1.0.tags.Model.272.description": "Thumbnail camera",
+        "image.Some Maker Note.0.tags.Model.272.description":
+          "Maker-specific value",
+      },
+      i18n.getFixedT("en", "files"),
+      "en",
+    );
+    expect(sections.summary.map((entry) => entry.label)).toEqual([
+      "Dimensions",
+      "Format",
+      "Camera",
+      "Aperture",
+      "Shutter speed",
+      "ISO",
+    ]);
+    expect(sections.details.map((entry) => entry.value)).toEqual([
+      "True Color",
+      "539",
+      "image/png",
+      "Thumbnail camera",
+      "Maker-specific value",
+    ]);
+    expect(
+      sections.summary.some((entry) => entry.value === "internal error"),
     ).toBe(false);
   });
 

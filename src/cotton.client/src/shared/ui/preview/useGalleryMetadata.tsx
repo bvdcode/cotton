@@ -1,7 +1,11 @@
 import React from "react";
 import {
+  alpha,
   Box,
+  Button,
+  Collapse,
   Dialog,
+  Divider,
   Drawer,
   IconButton,
   Portal,
@@ -9,29 +13,26 @@ import {
   ThemeProvider,
   Typography,
 } from "@mui/material";
-import { Close, InfoOutlined } from "@mui/icons-material";
+import {
+  Close,
+  ExpandLess,
+  ExpandMore,
+  InfoOutlined,
+} from "@mui/icons-material";
 import { IconButton as LightboxIconButton } from "yet-another-react-lightbox";
 import { useTranslation } from "react-i18next";
 import type { MediaItem } from "../../types/mediaLightbox";
-import type { GalleryMetadataPosition } from "../../types/galleryMetadataPosition";
 import {
   selectGalleryMetadataPosition,
   useUserPreferencesStore,
 } from "../../store/userPreferencesStore";
 import { darkTheme } from "../../theme";
 import { formatBytes } from "../../utils/formatBytes";
-import { getGalleryMetadataEntries } from "./galleryMetadata";
-
-const getMetadataAnchor = (position: GalleryMetadataPosition) => {
-  switch (position) {
-    case "left":
-      return "left";
-    case "right":
-      return "right";
-    case "hidden":
-      return null;
-  }
-};
+import {
+  getGalleryMetadataSections,
+  type GalleryMetadataEntry,
+} from "./galleryMetadata";
+import { useGalleryMetadataState } from "./useGalleryMetadataState";
 
 export const useGalleryMetadata = (
   item: MediaItem | undefined,
@@ -40,34 +41,31 @@ export const useGalleryMetadata = (
 ) => {
   const { t, i18n } = useTranslation(["files", "common"]);
   const position = useUserPreferencesStore(selectGalleryMetadataPosition);
-  const anchor = getMetadataAnchor(position);
+  const { panelOpen, detailsExpanded, setPanelOpen, setDetailsExpanded } =
+    useGalleryMetadataState();
   const panelId = React.useId();
   const buttonRef = React.useRef<HTMLButtonElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const [interaction, setInteraction] = React.useState({
-    open,
-    position,
-    pinned: false,
-    hovered: false,
-  });
-  if (interaction.open !== open || interaction.position !== position) {
-    setInteraction({ open, position, pinned: false, hovered: false });
-  }
-  const visible =
-    open && anchor !== null && (interaction.pinned || interaction.hovered);
+  const visible = open && panelOpen;
   const entries = React.useMemo(
     () =>
       visible
-        ? getGalleryMetadataEntries(item?.metadata, t, i18n.language)
-        : [],
+        ? getGalleryMetadataSections(item?.metadata, t, i18n.language)
+        : { summary: [], details: [] },
     [visible, item?.metadata, t, i18n.language],
   );
   const closePanel = () => {
-    setInteraction({ open, position, pinned: false, hovered: false });
+    setPanelOpen(false);
     buttonRef.current?.focus();
   };
+  const handleEscape = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (visible && event.key === "Escape") {
+      event.stopPropagation();
+      closePanel();
+    }
+  };
 
-  if (!open || !item || anchor === null) {
+  if (!open || !item) {
     return { button: null, controls: null, visible: false };
   }
 
@@ -81,13 +79,8 @@ export const useGalleryMetadata = (
       icon={InfoOutlined}
       aria-expanded={visible}
       aria-controls={panelId}
-      onClick={() =>
-        setInteraction((previous) => ({
-          ...previous,
-          pinned: !previous.pinned,
-          hovered: false,
-        }))
-      }
+      onClick={() => setPanelOpen(!panelOpen)}
+      onKeyDown={handleEscape}
     />
   );
   const panelProps = {
@@ -109,8 +102,56 @@ export const useGalleryMetadata = (
       }
     },
   };
+  const renderEntries = (values: GalleryMetadataEntry[]) => (
+    <Box component="dl" margin={0}>
+      {values.map((entry) => (
+        <Box key={entry.key} display="flex" gap={2} paddingY={0.5}>
+          <Typography
+            component="dt"
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              flex: { xs: 1, sm: 2 },
+              minWidth: 0,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {entry.label}
+          </Typography>
+          <Typography
+            component="dd"
+            variant="body2"
+            sx={{
+              flex: { xs: 1, sm: 3 },
+              minWidth: 0,
+              margin: 0,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {entry.value}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
+  );
   const content = (
-    <Stack spacing={2} padding={2}>
+    <Stack
+      spacing={2}
+      padding={2}
+      flex={1}
+      minHeight={0}
+      sx={
+        !isTouchDevice
+          ? (theme) => ({
+              backgroundColor: alpha(theme.palette.background.paper, 0.9),
+              transition: theme.transitions.create("background-color"),
+              "&:hover": {
+                backgroundColor: alpha(theme.palette.background.paper, 0.98),
+              },
+            })
+          : undefined
+      }
+    >
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Typography variant="subtitle1" component="h2" id={`${panelId}-title`}>
           {t("preview.metadata.label")}
@@ -122,35 +163,44 @@ export const useGalleryMetadata = (
           <Close />
         </IconButton>
       </Stack>
-      <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
-        {item.name}
-      </Typography>
-      {item.sizeBytes !== undefined && (
-        <Typography variant="body2" color="text.secondary">
-          {formatBytes(item.sizeBytes)}
+      <Stack spacing={2} flex={1} minHeight={0} overflow="auto" tabIndex={0}>
+        <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
+          {item.name}
         </Typography>
+        {item.sizeBytes !== undefined && (
+          <Typography variant="body2" color="text.secondary">
+            {formatBytes(item.sizeBytes)}
+          </Typography>
+        )}
+        {renderEntries(entries.summary)}
+        {entries.details.length > 0 && (
+          <Collapse
+            in={detailsExpanded}
+            unmountOnExit
+            id={`${panelId}-details`}
+          >
+            <Stack spacing={2}>
+              <Divider />
+              {renderEntries(entries.details)}
+            </Stack>
+          </Collapse>
+        )}
+      </Stack>
+      {entries.details.length > 0 && (
+        <Button
+          color="inherit"
+          startIcon={detailsExpanded ? <ExpandLess /> : <ExpandMore />}
+          aria-expanded={detailsExpanded}
+          aria-controls={`${panelId}-details`}
+          onClick={() => setDetailsExpanded(!detailsExpanded)}
+        >
+          {t(
+            detailsExpanded
+              ? "preview.metadata.lessDetails"
+              : "preview.metadata.moreDetails",
+          )}
+        </Button>
       )}
-      <Box component="dl" margin={0}>
-        {entries.map((entry) => (
-          <Box key={entry.key} display="flex" gap={2} paddingY={0.5}>
-            <Typography
-              component="dt"
-              variant="body2"
-              color="text.secondary"
-              sx={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}
-            >
-              {entry.label}
-            </Typography>
-            <Typography
-              component="dd"
-              variant="body2"
-              sx={{ flex: 1, minWidth: 0, m: 0, overflowWrap: "anywhere" }}
-            >
-              {entry.value}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
     </Stack>
   );
   if (isTouchDevice) {
@@ -167,7 +217,9 @@ export const useGalleryMetadata = (
           container={() =>
             buttonRef.current?.closest<HTMLElement>(".yarl__portal") ?? null
           }
-          slotProps={{ paper: panelProps }}
+          slotProps={{
+            paper: { ...panelProps, sx: { backgroundImage: "none" } },
+          }}
         >
           {content}
         </Dialog>
@@ -184,25 +236,10 @@ export const useGalleryMetadata = (
       >
         <ThemeProvider theme={darkTheme}>
           <Box
-            className={`media-lightbox__metadata-edge media-lightbox__metadata-edge--${anchor}`}
-            onPointerLeave={() =>
-              setInteraction((previous) => ({ ...previous, hovered: false }))
-            }
+            className={`media-lightbox__metadata-container media-lightbox__metadata-container--${position}`}
           >
-            <Box
-              className="media-lightbox__metadata-trigger"
-              aria-hidden
-              onPointerEnter={(event) => {
-                if (event.pointerType === "mouse") {
-                  setInteraction((previous) => ({
-                    ...previous,
-                    hovered: true,
-                  }));
-                }
-              }}
-            />
             <Drawer
-              anchor={anchor}
+              anchor={position}
               variant="persistent"
               open={visible}
               slotProps={{
@@ -216,6 +253,8 @@ export const useGalleryMetadata = (
                     pointerEvents: visible ? "auto" : "none",
                     touchAction: "pan-y",
                     userSelect: "text",
+                    backgroundImage: "none",
+                    backgroundColor: "transparent",
                   },
                 },
               }}
@@ -227,5 +266,5 @@ export const useGalleryMetadata = (
       </Portal>
     </>
   );
-  return { button: null, controls, visible };
+  return { button, controls, visible };
 };

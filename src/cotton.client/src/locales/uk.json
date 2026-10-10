@@ -1741,9 +1741,8 @@
       "gallerySmoothTransitions": "Плавні переходи в галереї",
       "galleryPreferPreview": "Показувати оригінали замість прев'ю",
       "galleryMetadataPosition": {
-        "label": "Показувати метадані під час перегляду фото та відео",
+        "label": "Сторона панелі метаданих",
         "left": "Ліворуч",
-        "hidden": "Приховано",
         "right": "Праворуч"
       },
       "themeMode": {
@@ -2582,7 +2581,7 @@
     },
     "preview": {
       "metadata": {
-        "label": "Метадані",
+        "label": "Інформація",
         "dimensions": "Роздільна здатність",
         "duration": "Тривалість",
         "seconds": "{{value}} с",
@@ -2597,7 +2596,17 @@
         "year": "Рік",
         "genre": "Жанр",
         "audioCodec": "Аудіокодек",
-        "videoCodec": "Відеокодек"
+        "videoCodec": "Відеокодек",
+        "cameraMake": "Виробник",
+        "cameraModel": "Камера",
+        "lens": "Об’єктив",
+        "exposureTime": "Витримка",
+        "aperture": "Діафрагма",
+        "iso": "ISO",
+        "dateTaken": "Дата зйомки",
+        "focalLength": "Фокусна відстань",
+        "moreDetails": "Докладніше",
+        "lessDetails": "Згорнути подробиці"
       },
       "actions": {
         "edit": "Редагувати",

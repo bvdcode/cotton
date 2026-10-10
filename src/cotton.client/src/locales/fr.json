@@ -1734,9 +1734,8 @@
       "gallerySmoothTransitions": "Transitions fluides dans la galerie",
       "galleryPreferPreview": "Afficher les originaux au lieu des aperçus",
       "galleryMetadataPosition": {
-        "label": "Afficher les métadonnées lors du visionnage de photos et de vidéos",
+        "label": "Côté du panneau de métadonnées",
         "left": "À gauche",
-        "hidden": "Masqué",
         "right": "À droite"
       },
       "themeMode": {
@@ -2571,7 +2570,7 @@
     },
     "preview": {
       "metadata": {
-        "label": "Métadonnées",
+        "label": "Informations",
         "dimensions": "Dimensions",
         "duration": "Durée",
         "seconds": "{{value}} s",
@@ -2586,7 +2585,17 @@
         "year": "Année",
         "genre": "Genre",
         "audioCodec": "Codec audio",
-        "videoCodec": "Codec vidéo"
+        "videoCodec": "Codec vidéo",
+        "cameraMake": "Fabricant",
+        "cameraModel": "Appareil photo",
+        "lens": "Objectif",
+        "exposureTime": "Temps de pose",
+        "aperture": "Ouverture",
+        "iso": "ISO",
+        "dateTaken": "Date de prise de vue",
+        "focalLength": "Longueur focale",
+        "moreDetails": "Plus de détails",
+        "lessDetails": "Moins de détails"
       },
       "actions": {
         "edit": "Modifier",

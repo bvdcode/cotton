@@ -21,6 +21,52 @@ export interface GalleryMetadataEntry {
   value: string;
 }
 
+const summaryKeys = new Set([
+  "dimensions",
+  "duration",
+  "image.format",
+  "media.date",
+  "media.audioCodec",
+  "media.videoCodec",
+]);
+
+const summaryExifLabels: Readonly<Record<number, string>> = {
+  0x010f: "cameraMake",
+  0x0110: "cameraModel",
+  0x829a: "exposureTime",
+  0x829d: "aperture",
+  0x8827: "iso",
+  0x9003: "dateTaken",
+  0x920a: "focalLength",
+  0xa434: "lens",
+};
+
+export function getGalleryMetadataSections(
+  metadata: Record<string, string> | undefined,
+  t: TFunction<"files">,
+  language: string,
+): { summary: GalleryMetadataEntry[]; details: GalleryMetadataEntry[] } {
+  const summary: GalleryMetadataEntry[] = [];
+  const details: GalleryMetadataEntry[] = [];
+  for (const entry of getGalleryMetadataEntries(metadata, t, language)) {
+    if (summaryKeys.has(entry.key)) {
+      summary.push(entry);
+      continue;
+    }
+    const exif =
+      /^image\.(?:Exif IFD0|Exif SubIFD)\.0\.tags\.[^.]+\.(\d+)\.description$/.exec(
+        entry.key,
+      );
+    const label = exif ? summaryExifLabels[Number(exif[1])] : undefined;
+    if (label) {
+      summary.push({ ...entry, label: t(`preview.metadata.${label}`) });
+    } else {
+      details.push(entry);
+    }
+  }
+  return { summary, details };
+}
+
 const unescapeMetadataKey = (key: string): string =>
   key.replaceAll("~2", "").replaceAll("~1", ".").replaceAll("~0", "~");
 

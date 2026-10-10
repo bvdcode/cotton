@@ -1,1 +1,1 @@
-export type GalleryMetadataPosition = "left" | "hidden" | "right";
+export type GalleryMetadataPosition = "left" | "right";

@@ -1735,9 +1735,8 @@
       "gallerySmoothTransitions": "Plynulé přechody v galerii",
       "galleryPreferPreview": "Zobrazovat originály místo náhledů",
       "galleryMetadataPosition": {
-        "label": "Zobrazovat metadata při prohlížení fotografií a videí",
+        "label": "Strana panelu metadat",
         "left": "Vlevo",
-        "hidden": "Skryto",
         "right": "Vpravo"
       },
       "themeMode": {
@@ -2588,7 +2587,7 @@
     },
     "preview": {
       "metadata": {
-        "label": "Metadata",
+        "label": "Informace",
         "dimensions": "Rozměry",
         "duration": "Délka",
         "seconds": "{{value}} s",
@@ -2603,7 +2602,17 @@
         "year": "Rok",
         "genre": "Žánr",
         "audioCodec": "Zvukový kodek",
-        "videoCodec": "Video kodek"
+        "videoCodec": "Video kodek",
+        "cameraMake": "Výrobce",
+        "cameraModel": "Fotoaparát",
+        "lens": "Objektiv",
+        "exposureTime": "Expoziční čas",
+        "aperture": "Clona",
+        "iso": "ISO",
+        "dateTaken": "Datum pořízení",
+        "focalLength": "Ohnisková vzdálenost",
+        "moreDetails": "Více podrobností",
+        "lessDetails": "Méně podrobností"
       },
       "actions": {
         "edit": "Upravit",

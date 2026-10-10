@@ -1733,9 +1733,8 @@
       "gallerySmoothTransitions": "Vloeiende overgangen in de galerij",
       "galleryPreferPreview": "Originelen tonen in plaats van voorvertoningen",
       "galleryMetadataPosition": {
-        "label": "Metadata tonen bij het bekijken van foto’s en video’s",
+        "label": "Zijde van het metadatapaneel",
         "left": "Links",
-        "hidden": "Verborgen",
         "right": "Rechts"
       },
       "themeMode": {
@@ -2572,7 +2571,7 @@
     },
     "preview": {
       "metadata": {
-        "label": "Metadata",
+        "label": "Informatie",
         "dimensions": "Afmetingen",
         "duration": "Duur",
         "seconds": "{{value}} s",
@@ -2587,7 +2586,17 @@
         "year": "Jaar",
         "genre": "Genre",
         "audioCodec": "Audiocodec",
-        "videoCodec": "Videocodec"
+        "videoCodec": "Videocodec",
+        "cameraMake": "Fabrikant",
+        "cameraModel": "Camera",
+        "lens": "Lens",
+        "exposureTime": "Sluitertijd",
+        "aperture": "Diafragma",
+        "iso": "ISO",
+        "dateTaken": "Opnamedatum",
+        "focalLength": "Brandpuntsafstand",
+        "moreDetails": "Meer details",
+        "lessDetails": "Minder details"
       },
       "actions": {
         "edit": "Bewerken",

@@ -11,7 +11,7 @@ import { userPreferencesApi } from "../../../shared/api/userPreferencesApi";
 import { useUserPreferencesStore } from "../../../shared/store/userPreferencesStore";
 import { AppearanceSettingsCard } from "./AppearanceSettingsCard";
 
-it("defaults to the right edge and saves left, hidden, and right through profile preferences", async () => {
+it("defaults to the right side and saves only left and right through profile preferences", async () => {
   await i18n.changeLanguage("en");
   useUserPreferencesStore.getState().reset();
   const update = vi
@@ -20,15 +20,17 @@ it("defaults to the right edge and saves left, hidden, and right through profile
   render(<AppearanceSettingsCard />);
   fireEvent.click(screen.getByRole("button", { name: /Appearance/ }));
   const group = screen.getByRole("group", {
-    name: "Show metadata when viewing photos and videos",
+    name: "Metadata panel side",
   });
   expect(within(group).getByRole("button", { name: "Right" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
+  expect(
+    within(group).queryByRole("button", { name: "Hidden" }),
+  ).not.toBeInTheDocument();
   for (const [label, position] of [
     ["Left", "left"],
-    ["Hidden", "hidden"],
     ["Right", "right"],
   ]) {
     fireEvent.click(within(group).getByRole("button", { name: label }));

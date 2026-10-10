@@ -171,9 +171,6 @@ export const AppearanceSettingsCard = () => {
               <ToggleButton value="left">
                 {t("appearance.galleryMetadataPosition.left")}
               </ToggleButton>
-              <ToggleButton value="hidden">
-                {t("appearance.galleryMetadataPosition.hidden")}
-              </ToggleButton>
               <ToggleButton value="right">
                 {t("appearance.galleryMetadataPosition.right")}
               </ToggleButton>
