@@ -5,7 +5,10 @@ import {
   useUserPreferencesStore,
 } from "../../store/userPreferencesStore";
 
-export const useGalleryMetadataState = () => {
+export const useGalleryMetadataState = (
+  galleryOpen: boolean,
+  isTouchDevice: boolean,
+) => {
   const savedPanelOpen = useUserPreferencesStore(selectGalleryMetadataOpen);
   const savedDetailsExpanded = useUserPreferencesStore(
     selectGalleryMetadataDetailsExpanded,
@@ -22,6 +25,17 @@ export const useGalleryMetadataState = () => {
     panelOpen: savedPanelOpen,
     detailsExpanded: savedDetailsExpanded,
   });
+  const [mobileView, setMobileView] = useState({
+    galleryOpen,
+    isTouchDevice,
+    panelOpen: false,
+  });
+  if (
+    mobileView.galleryOpen !== galleryOpen ||
+    mobileView.isTouchDevice !== isTouchDevice
+  ) {
+    setMobileView({ galleryOpen, isTouchDevice, panelOpen: false });
+  }
   if (view.loaded !== preferencesLoaded) {
     setView({
       loaded: preferencesLoaded,
@@ -30,6 +44,10 @@ export const useGalleryMetadataState = () => {
     });
   }
   const setPanelOpen = (value: boolean) => {
+    if (isTouchDevice) {
+      setMobileView((previous) => ({ ...previous, panelOpen: value }));
+      return;
+    }
     setView((previous) => ({ ...previous, panelOpen: value }));
     savePanelOpen(value);
   };
@@ -38,7 +56,7 @@ export const useGalleryMetadataState = () => {
     saveDetailsExpanded(value);
   };
   return {
-    panelOpen: view.panelOpen,
+    panelOpen: isTouchDevice ? mobileView.panelOpen : view.panelOpen,
     detailsExpanded: view.detailsExpanded,
     setPanelOpen,
     setDetailsExpanded,

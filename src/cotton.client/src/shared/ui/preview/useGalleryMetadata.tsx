@@ -42,7 +42,7 @@ export const useGalleryMetadata = (
   const { t, i18n } = useTranslation(["files", "common"]);
   const position = useUserPreferencesStore(selectGalleryMetadataPosition);
   const { panelOpen, detailsExpanded, setPanelOpen, setDetailsExpanded } =
-    useGalleryMetadataState();
+    useGalleryMetadataState(open, isTouchDevice);
   const panelId = React.useId();
   const buttonRef = React.useRef<HTMLButtonElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);

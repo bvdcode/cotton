@@ -252,6 +252,61 @@ describe("gallery information panel", () => {
     expect(button).toHaveFocus();
   });
 
+  it("opens mobile information only by the button without changing saved desktop visibility", () => {
+    useUserPreferencesStore.getState().hydrateFromRemote({
+      galleryMetadataOpen: "true",
+    });
+    const { rerender } = render(<Gallery touch />);
+    const button = screen.getByRole("button", { name: "Information" });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(button);
+    expect(screen.getByRole("dialog", { name: "Information" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(button);
+    rerender(<Gallery touch open={false} />);
+    rerender(<Gallery touch />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(userPreferencesApi.update).not.toHaveBeenCalled();
+    expect(
+      useUserPreferencesStore.getState().preferences.galleryMetadataOpen,
+    ).toBe("true");
+    rerender(<Gallery />);
+    expect(screen.getByRole("region", { name: "Information" })).toBeVisible();
+  });
+
+  it("does not open mobile information when desktop preferences arrive later", () => {
+    useUserPreferencesStore.getState().reset();
+    render(<Gallery touch />);
+    act(() =>
+      useUserPreferencesStore.getState().hydrateFromRemote({
+        galleryMetadataOpen: "true",
+        galleryMetadataDetailsExpanded: "true",
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Information" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("closes mobile information when changing layout and retains the desktop preference", () => {
+    useUserPreferencesStore.getState().hydrateFromRemote({
+      galleryMetadataOpen: "true",
+    });
+    const { rerender } = render(<Gallery />);
+    expect(screen.getByRole("region", { name: "Information" })).toBeVisible();
+    rerender(<Gallery touch />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Information" }));
+    expect(screen.getByRole("dialog", { name: "Information" })).toBeVisible();
+    rerender(<Gallery />);
+    expect(screen.getByRole("region", { name: "Information" })).toBeVisible();
+    rerender(<Gallery touch />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("closes the desktop panel with Escape from the information button", () => {
     render(<Gallery />);
     const button = screen.getByRole("button", { name: "Information" });
