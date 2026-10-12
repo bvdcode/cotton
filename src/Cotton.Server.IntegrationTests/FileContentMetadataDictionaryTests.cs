@@ -24,7 +24,7 @@ namespace Cotton.Server.IntegrationTests
 
             Assert.Multiple(() =>
             {
-                Assert.That(result[FileContentMetadataKeys.ExtractionVersion], Is.EqualTo("1"));
+                Assert.That(result[FileContentMetadataKeys.ExtractionVersion], Is.EqualTo(FileContentMetadataKeys.CurrentExtractionVersion));
                 Assert.That(result["media.format.tags.empty"], Is.Empty);
                 Assert.That(result["media.format.tags.spaces"], Is.EqualTo("  "));
                 Assert.That(result["custom.label"], Is.EqualTo("Keep"));

@@ -10,7 +10,7 @@ namespace Cotton.Previews.Tests
     public class FfmpegBinaryMetadataTests
     {
         [Test]
-        public async Task TryGetMediaMetadataAsync_PreservesAllTagsAndEnforcesOutputLimit()
+        public async Task TryGetMediaMetadataAsync_PreservesSupportedTagsAndEnforcesOutputLimit()
         {
             await FfmpegBinary.EnsureAvailableAsync();
             string mediaPath = Path.Combine(
@@ -33,8 +33,8 @@ namespace Cotton.Previews.Tests
                     Assert.That(metadata!.Tags["title"], Is.EqualTo("Bounded title"));
                     Assert.That(metadata.Tags["artist"], Is.EqualTo("Bounded artist"));
                     Assert.That(metadata.Tags["album_artist"], Is.EqualTo("Bounded album artist"));
-                    Assert.That(metadata.Tags["comment"], Is.EqualTo("Additional comment"));
-                    Assert.That(metadata.Properties["media.format.tags.comment"], Is.EqualTo("Additional comment"));
+                    Assert.That(metadata.Tags, Does.Not.ContainKey("comment"));
+                    Assert.That(metadata.Properties, Does.Not.ContainKey("media.format.tags.comment"));
                     Assert.That(metadata.Properties["media.streams.0.codec_name"], Is.EqualTo("mp3"));
                     Assert.That(metadata.Properties.ContainsKey("media.format.filename"), Is.False);
                 });
@@ -84,7 +84,7 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
-        public async Task TryGetMediaMetadataAsync_CustomTags_ReturnsAllTags()
+        public async Task TryGetMediaMetadataAsync_CustomTags_DiscardsUnlistedTags()
         {
             await FfmpegBinary.EnsureAvailableAsync();
             string mediaPath = Path.Combine(
@@ -106,7 +106,7 @@ namespace Cotton.Previews.Tests
                 {
                     Assert.That(metadata!.AudioCodec, Is.EqualTo("mp3"));
                     Assert.That(metadata.DurationSeconds, Is.GreaterThan(0));
-                    Assert.That(metadata.Tags["comment"], Is.EqualTo("Additional comment"));
+                    Assert.That(metadata.Tags, Does.Not.ContainKey("comment"));
                     Assert.That(metadata.Tags.ContainsKey("title"), Is.False);
                 });
             }

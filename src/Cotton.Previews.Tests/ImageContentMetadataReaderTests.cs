@@ -15,7 +15,6 @@ using SixLabors.ImageSharp.PixelFormats;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Buffers.Binary;
-using System.Globalization;
 
 namespace Cotton.Previews.Tests
 {
@@ -33,7 +32,7 @@ namespace Cotton.Previews.Tests
             """;
 
         [Test]
-        public async Task ReadAsync_Jpeg_PreservesExifGpsXmpAndIptc()
+        public async Task ReadAsync_Jpeg_PreservesPhotographyAndGpsWithoutXmpAndIptc()
         {
             using Image<Rgba32> image = new(32, 24);
             image.Metadata.ExifProfile = CreateExif();
@@ -45,13 +44,15 @@ namespace Cotton.Previews.Tests
             IReadOnlyDictionary<string, string> metadata = await ImageContentMetadataReader.ReadAsync(stream, NullLogger.Instance, CancellationToken.None);
 
             AssertCommonMetadata(metadata);
-            Assert.That(metadata.Values, Does.Contain("IPTC caption"));
+            Assert.That(metadata.Values, Does.Not.Contain("IPTC caption"));
+            Assert.That(metadata["image.width"], Is.EqualTo("32"));
+            Assert.That(metadata["image.height"], Is.EqualTo("24"));
             Assert.That(metadata.Keys, Has.Some.Contains("Exposure Time"));
             Assert.That(stream.CanRead, Is.True);
         }
 
         [Test]
-        public async Task ReadAsync_Heic_PreservesExifGpsAndXmp()
+        public async Task ReadAsync_Heic_PreservesPhotographyGpsAndDimensionsWithoutXmp()
         {
             const int size = 32;
             using HeifContext context = new();
@@ -71,7 +72,8 @@ namespace Cotton.Previews.Tests
             IReadOnlyDictionary<string, string> metadata = await ImageContentMetadataReader.ReadAsync(stream, NullLogger.Instance, CancellationToken.None);
 
             AssertCommonMetadata(metadata);
-            Assert.That(metadata.Keys, Has.Some.Contains("HEIC"));
+            Assert.That(metadata["image.width"], Is.EqualTo(size.ToString()));
+            Assert.That(metadata["image.height"], Is.EqualTo(size.ToString()));
         }
 
         [Test]
@@ -124,7 +126,7 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
-        public void Flatten_RepeatedDirectoriesAndUnknownTag_PreservesEachValue()
+        public void Flatten_RepeatedDirectoriesAndUnknownTag_KeepsOnlyPrimaryPhotography()
         {
             MetadataExtractor.Formats.Exif.ExifIfd0Directory first = new();
             MetadataExtractor.Formats.Exif.ExifIfd0Directory second = new();
@@ -137,15 +139,15 @@ namespace Cotton.Previews.Tests
             Assert.Multiple(() =>
             {
                 Assert.That(result["image.Exif IFD0.0.tags.Make.271"], Is.EqualTo("First camera"));
-                Assert.That(result["image.Exif IFD0.1.tags.Make.271"], Is.EqualTo("Second camera"));
-                Assert.That(result.Values, Does.Contain("Unknown manufacturer tag"));
+                Assert.That(result.Keys, Has.None.Contains("image.Exif IFD0.1."));
+                Assert.That(result.Values, Does.Not.Contain("Unknown manufacturer tag"));
             });
         }
 
         [TestCase(16)]
         [TestCase(32)]
         [TestCase(65536)]
-        public void Flatten_InvalidOlympusDescription_PreservesRawValuesAndOtherDirectories(int flags)
+        public void Flatten_InvalidOlympusDescription_DoesNotReadDiscardedManufacturerTags(int flags)
         {
             OlympusCameraSettingsMakernoteDirectory settings = new();
             settings.Set(OlympusCameraSettingsMakernoteDirectory.TagNoiseReduction, flags);
@@ -155,18 +157,64 @@ namespace Cotton.Previews.Tests
             CapturingLogger logger = new();
 
             IReadOnlyDictionary<string, string> result = ImageContentMetadataReader.Flatten([settings, camera], logger, CancellationToken.None);
-            string key = $"image.Olympus Camera Settings.0.tags.Noise Reduction.{OlympusCameraSettingsMakernoteDirectory.TagNoiseReduction}";
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Keys, Has.None.Contains("Olympus"));
+                Assert.That(result.Values, Does.Not.Contain("Other manufacturer value"));
+                Assert.That(result["image.Exif IFD0.0.tags.Make.271"], Is.EqualTo("Camera maker"));
+                Assert.That(logger.Entries, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void Flatten_RawSubDirectories_MergesPhotographyAndKeepsFullImageDimensions()
+        {
+            ExifSubIfdDirectory thumbnail = new();
+            thumbnail.Set(ExifDirectoryBase.TagImageWidth, 160);
+            thumbnail.Set(ExifDirectoryBase.TagImageHeight, 120);
+            ExifSubIfdDirectory photograph = new();
+            photograph.Set(ExifDirectoryBase.TagExifImageWidth, 4000);
+            photograph.Set(ExifDirectoryBase.TagExifImageHeight, 3000);
+            photograph.Set(ExifDirectoryBase.TagExposureTime, new MetadataExtractor.Rational(1, 125));
+            photograph.Set(ExifDirectoryBase.TagIsoEquivalent, 400);
+
+            IReadOnlyDictionary<string, string> result = ImageContentMetadataReader.Flatten([thumbnail, photograph], NullLogger.Instance, CancellationToken.None);
 
             Assert.Multiple(() =>
             {
-                Assert.That(result[key], Is.EqualTo(flags.ToString(CultureInfo.InvariantCulture)));
-                Assert.That(result, Does.Not.ContainKey($"{key}.description"));
-                Assert.That(result.Values, Does.Contain("Other manufacturer value"));
-                Assert.That(result["image.Exif IFD0.0.tags.Make.271"], Is.EqualTo("Camera maker"));
-                Assert.That(logger.Entries, Has.Count.EqualTo(1));
-                Assert.That(logger.Entries[0].Level, Is.EqualTo(LogLevel.Warning));
-                Assert.That(logger.Entries[0].Exception, Is.TypeOf<ArgumentOutOfRangeException>());
-                Assert.That(logger.Entries[0].Message, Does.Not.Contain("Other manufacturer value"));
+                Assert.That(result["image.width"], Is.EqualTo("4000"));
+                Assert.That(result["image.height"], Is.EqualTo("3000"));
+                Assert.That(result["image.Exif SubIFD.0.tags.Exposure Time.33434"], Is.EqualTo("1/125"));
+                Assert.That(result.Values, Does.Contain("400"));
+                Assert.That(result.Keys, Has.None.Contains("image.Exif SubIFD.1."));
+            });
+        }
+
+        [Test]
+        public void Flatten_LargePrivatePayloads_DoesNotSerializeBinaryArraysOrCopyright()
+        {
+            ExifIfd0Directory camera = new();
+            camera.Set(ExifDirectoryBase.TagMake, "Camera maker");
+            camera.Set(ExifDirectoryBase.TagCopyright, new string('x', 100000));
+            ExifSubIfdDirectory exposure = new();
+            exposure.Set(ExifDirectoryBase.TagExposureTime, new MetadataExtractor.Rational(1, 125));
+            exposure.Set(ExifDirectoryBase.TagFNumber, new MetadataExtractor.Rational(28, 10));
+            exposure.Set(ExifDirectoryBase.TagIsoEquivalent, 400);
+            exposure.Set(ExifDirectoryBase.TagMakernote, new byte[1000000]);
+            exposure.Set(0xc7ff, new int[100000]);
+
+            IReadOnlyDictionary<string, string> result = ImageContentMetadataReader.Flatten([camera, exposure], NullLogger.Instance, CancellationToken.None);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Values, Does.Contain("Camera maker"));
+                Assert.That(result.Values, Does.Contain("1/125"));
+                Assert.That(result.Values, Does.Contain("f/2.8"));
+                Assert.That(result.Values, Does.Contain("400"));
+                Assert.That(result, Has.Count.LessThanOrEqualTo(8));
+                Assert.That(result.Sum(entry => entry.Key.Length + entry.Value.Length), Is.LessThan(1000));
+                Assert.That(result.Keys, Has.None.Contains("Copyright"));
+                Assert.That(result.Keys, Has.None.Contains("Makernote"));
             });
         }
 
@@ -224,10 +272,9 @@ namespace Cotton.Previews.Tests
                 Assert.That(metadata.Values, Does.Contain("1/125"));
                 Assert.That(metadata["image.GPS.0.latitude"], Is.EqualTo("32.708333333333336"));
                 Assert.That(metadata["image.GPS.0.longitude"], Is.EqualTo("-117.15"));
-                Assert.That(metadata.Values, Does.Contain("Custom value"));
-                Assert.That(metadata.Values, Does.Contain("First keyword"));
-                Assert.That(metadata.Values, Does.Contain("Second keyword"));
-                Assert.That(metadata["image.XMP.0.packet"], Does.Contain("custom:unlisted"));
+                Assert.That(metadata.Keys, Has.None.StartsWith("image.XMP."));
+                Assert.That(metadata.Keys, Has.None.StartsWith("image.Photoshop."));
+                Assert.That(metadata.Keys, Has.None.EndsWith(".bytes"));
             });
         }
     }

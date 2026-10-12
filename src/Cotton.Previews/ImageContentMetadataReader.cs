@@ -3,11 +3,9 @@
 
 using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
-using MetadataExtractor.Formats.Xmp;
+using MetadataExtractor.Formats.FileType;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
-using XmpCore;
-using XmpCore.Options;
 using MetadataDirectory = MetadataExtractor.Directory;
 
 namespace Cotton.Previews
@@ -49,24 +47,28 @@ namespace Cotton.Previews
             IReadOnlyList<MetadataDirectory> directories, ILogger logger, CancellationToken cancellationToken)
         {
             Dictionary<string, string> result = new(StringComparer.Ordinal);
-            Dictionary<string, int> occurrences = new(StringComparer.Ordinal);
-            Dictionary<MetadataDirectory, string> directoryKeys = new();
-
-            foreach (MetadataDirectory directory in directories)
-            {
-                occurrences.TryGetValue(directory.Name, out int occurrence);
-                directoryKeys.Add(directory,
-                    $"image.{FlatMetadataWriter.EscapeKey(directory.Name)}.{occurrence.ToString(CultureInfo.InvariantCulture)}");
-                occurrences[directory.Name] = occurrence + 1;
-            }
+            HashSet<string> processedTags = new(StringComparer.Ordinal);
 
             foreach (MetadataDirectory directory in directories)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                string directoryKey = directoryKeys[directory];
+                ImageMetadataFields.AddDimensions(result, directory);
+                if (directory is FileTypeDirectory fileType)
+                {
+                    FlatMetadataWriter.WriteText(result, "image.format", fileType.GetString(FileTypeDirectory.TagDetectedFileTypeName));
+                }
+                string directoryKey = $"image.{FlatMetadataWriter.EscapeKey(directory.Name)}.0";
                 foreach (Tag tag in directory.Tags)
                 {
+                    if (!ImageMetadataFields.Includes(directory, tag.Type))
+                    {
+                        continue;
+                    }
                     string key = $"{directoryKey}.tags.{FlatMetadataWriter.EscapeKey(tag.Name)}.{tag.Type.ToString(CultureInfo.InvariantCulture)}";
+                    if (!processedTags.Add(key))
+                    {
+                        continue;
+                    }
                     ImageMetadataValueWriter.Write(result, key, directory.GetObject(tag.Type), cancellationToken);
                     string? description = GetDescription(tag, directory, logger);
                     if (description is not null)
@@ -75,36 +77,10 @@ namespace Cotton.Previews
                     }
                 }
 
-                int errorIndex = 0;
-                foreach (string error in directory.Errors)
-                {
-                    FlatMetadataWriter.WriteText(result,
-                        $"{directoryKey}.errors.{errorIndex.ToString(CultureInfo.InvariantCulture)}", error);
-                    errorIndex++;
-                }
-
-                if (directory.Parent is not null && directoryKeys.TryGetValue(directory.Parent, out string? parentKey))
-                {
-                    result[$"{directoryKey}.parent"] = parentKey;
-                }
-
-                if (directory is XmpDirectory xmp)
-                {
-                    foreach ((string path, string value) in xmp.GetXmpProperties())
-                    {
-                        FlatMetadataWriter.WriteText(result, $"{directoryKey}.properties.{FlatMetadataWriter.EscapeKey(path)}", value);
-                    }
-                    if (xmp.XmpMeta is not null)
-                    {
-                        FlatMetadataWriter.WriteText(result, $"{directoryKey}.packet",
-                            XmpMetaFactory.SerializeToString(xmp.XmpMeta, new SerializeOptions()));
-                    }
-                }
-
                 if (directory is GpsDirectory gps && gps.GetGeoLocation() is GeoLocation location)
                 {
-                    result[$"{directoryKey}.latitude"] = location.Latitude.ToString("R", CultureInfo.InvariantCulture);
-                    result[$"{directoryKey}.longitude"] = location.Longitude.ToString("R", CultureInfo.InvariantCulture);
+                    result.TryAdd($"{directoryKey}.latitude", location.Latitude.ToString("R", CultureInfo.InvariantCulture));
+                    result.TryAdd($"{directoryKey}.longitude", location.Longitude.ToString("R", CultureInfo.InvariantCulture));
                 }
             }
 

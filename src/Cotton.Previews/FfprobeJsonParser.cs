@@ -64,25 +64,72 @@ namespace Cotton.Previews
         private static IReadOnlyDictionary<string, string> FlattenMetadata(JsonElement root)
         {
             Dictionary<string, string> result = new(StringComparer.Ordinal);
-            foreach (JsonProperty property in root.EnumerateObject())
+            if (root.TryGetProperty("format", out JsonElement format))
             {
-                if (property.Name == "format")
+                AddProperties(result, "media.format", format, MediaMetadataFields.FormatProperties);
+                AddTags(result, "media.format.tags", format,
+                    ["location", "location-eng", "com.apple.quicktime.location.ISO6709"]);
+            }
+            if (root.TryGetProperty("streams", out JsonElement streams))
+            {
+                int index = 0;
+                foreach (JsonElement stream in streams.EnumerateArray())
                 {
-                    foreach (JsonProperty formatProperty in property.Value.EnumerateObject())
+                    string key = $"media.streams.{index.ToString(CultureInfo.InvariantCulture)}";
+                    AddProperties(result, key, stream, MediaMetadataFields.StreamProperties);
+                    AddTags(result, $"{key}.tags", stream, MediaMetadataFields.StreamTags);
+                    if (stream.TryGetProperty("side_data_list", out JsonElement sideData))
                     {
-                        if (formatProperty.Name != "filename")
+                        int sideIndex = 0;
+                        foreach (JsonElement side in sideData.EnumerateArray())
                         {
-                            FlatMetadataWriter.WriteJson(result,
-                                $"media.format.{FlatMetadataWriter.EscapeKey(formatProperty.Name)}", formatProperty.Value);
+                            AddProperties(result, $"{key}.side_data_list.{sideIndex.ToString(CultureInfo.InvariantCulture)}", side, ["rotation"]);
+                            sideIndex++;
                         }
                     }
-                }
-                else
-                {
-                    FlatMetadataWriter.WriteJson(result, $"media.{FlatMetadataWriter.EscapeKey(property.Name)}", property.Value);
+                    index++;
                 }
             }
             return result;
+        }
+
+        private static void AddTags(Dictionary<string, string> target, string key, JsonElement parent, string[] names)
+        {
+            if (!parent.TryGetProperty("tags", out JsonElement tags) || tags.ValueKind != JsonValueKind.Object)
+            {
+                return;
+            }
+            foreach (JsonProperty tag in tags.EnumerateObject())
+            {
+                if (names.Contains(tag.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    AddScalar(target, $"{key}.{FlatMetadataWriter.EscapeKey(tag.Name.ToLowerInvariant())}", tag.Value);
+                }
+            }
+        }
+
+        private static void AddProperties(Dictionary<string, string> target, string key, JsonElement parent, string[] names)
+        {
+            foreach (string name in names)
+            {
+                if (parent.TryGetProperty(name, out JsonElement value))
+                {
+                    AddScalar(target, $"{key}.{name}", value);
+                }
+            }
+        }
+
+        private static void AddScalar(Dictionary<string, string> target, string key, JsonElement value)
+        {
+            switch (value.ValueKind)
+            {
+                case JsonValueKind.String:
+                    FlatMetadataWriter.WriteText(target, key, value.GetString());
+                    break;
+                case JsonValueKind.Number:
+                    FlatMetadataWriter.WriteText(target, key, value.GetRawText());
+                    break;
+            }
         }
 
         private static double? ParsePositiveDuration(string raw)
@@ -165,6 +212,10 @@ namespace Cotton.Previews
             int totalBytes = 0;
             foreach (JsonProperty tag in tags.EnumerateObject())
             {
+                if (!MediaMetadataFields.FormatTags.Contains(tag.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
                 string? value = tag.Value.ValueKind == JsonValueKind.String
                     ? tag.Value.GetString()
                     : tag.Value.ToString();

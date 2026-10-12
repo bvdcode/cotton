@@ -50,7 +50,7 @@ namespace Cotton.Previews.Tests
                     Assert.That(metadata.Properties["media.streams.1.tags.language"], Is.EqualTo("eng"));
                     Assert.That(metadata.Properties["media.streams.2.tags.language"], Is.EqualTo("fra"));
                     Assert.That(metadata.Properties["media.streams.2.sample_rate"], Is.EqualTo("8000"));
-                    Assert.That(metadata.Tags["custom_label"], Is.EqualTo("Full metadata"));
+                    Assert.That(metadata.Tags, Does.Not.ContainKey("custom_label"));
                     Assert.That(metadata.Tags["location"], Is.EqualTo("+32.7-117.1/"));
                 });
             }

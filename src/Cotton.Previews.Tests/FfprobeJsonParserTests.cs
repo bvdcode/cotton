@@ -122,7 +122,7 @@ namespace Cotton.Previews.Tests
         public void ParseMediaMetadata_AggregateTagsExceedLimit_Throws()
         {
             const string raw = """
-                { "format": { "tags": { "a": "1234", "b": "5678" } } }
+                { "format": { "tags": { "title": "1234", "artist": "5678" } } }
                 """;
             MediaMetadataProbeLimits limits = new(
                 FfprobeOutputLimits.Default,

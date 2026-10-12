@@ -10,6 +10,7 @@ namespace Cotton.Server.IntegrationTests
     {
         [TestCase(null)]
         [TestCase("0")]
+        [TestCase("1")]
         [TestCase("invalid")]
         public async Task Job_ReextractsOlderMetadataAndPreservesCustomValues(string? oldVersion)
         {
@@ -24,6 +25,9 @@ namespace Cotton.Server.IntegrationTests
                     ["contentMetadata.extractionProcessed"] = "true",
                     ["image.width"] = "999",
                     ["image.removedTag"] = "old value",
+                    ["image.XMP.0.packet"] = new string('x', 1000000),
+                    ["image.ICC Profile.0.tags.Red TRC.1918128707.description"] = new string('x', 200000),
+                    ["media.streams.0.extradata"] = new string('x', 100000),
                     ["custom.label"] = "Keep this",
                 };
                 if (oldVersion is not null)
@@ -37,10 +41,13 @@ namespace Cotton.Server.IntegrationTests
             FileManifestMetadataState state = await Pipeline.GetFileManifestMetadataStateAsync(file.Id);
             Assert.Multiple(() =>
             {
-                Assert.That(state.Metadata![FileContentMetadataKeys.ExtractionVersion], Is.EqualTo("1"));
+                Assert.That(state.Metadata![FileContentMetadataKeys.ExtractionVersion], Is.EqualTo(FileContentMetadataKeys.CurrentExtractionVersion));
                 Assert.That(state.Metadata["image.width"], Is.EqualTo("32"));
                 Assert.That(state.Metadata["custom.label"], Is.EqualTo("Keep this"));
                 Assert.That(state.Metadata, Does.Not.ContainKey("image.removedTag"));
+                Assert.That(state.Metadata, Does.Not.ContainKey("image.XMP.0.packet"));
+                Assert.That(state.Metadata.Keys, Has.None.StartsWith("image.ICC Profile."));
+                Assert.That(state.Metadata, Does.Not.ContainKey("media.streams.0.extradata"));
                 Assert.That(state.Metadata, Does.Not.ContainKey("contentMetadata.extractionProcessed"));
             });
 
@@ -87,7 +94,7 @@ namespace Cotton.Server.IntegrationTests
             await Pipeline.ExecuteExtractFileMetadataJobAsync();
 
             FileManifestMetadataState state = await Pipeline.GetFileManifestMetadataStateAsync(file.Id);
-            Assert.That(state.Metadata![FileContentMetadataKeys.ExtractionVersion], Is.EqualTo("1"));
+            Assert.That(state.Metadata![FileContentMetadataKeys.ExtractionVersion], Is.EqualTo(FileContentMetadataKeys.CurrentExtractionVersion));
             Assert.That(state.Metadata.Keys, Has.Some.StartsWith("image."));
         }
     }

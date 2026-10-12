@@ -6,7 +6,7 @@ namespace Cotton.Previews.Tests
     public class FfprobeCompleteMetadataTests
     {
         [Test]
-        public void ParseMediaMetadata_PreservesEveryStreamChapterAndUnlistedTag()
+        public void ParseMediaMetadata_PreservesUsefulTracksAndLocationWithoutRawPayloads()
         {
             const string raw = """
                 {
@@ -33,15 +33,34 @@ namespace Cotton.Previews.Tests
                 Assert.That(metadata.Properties["media.streams.0.side_data_list.0.rotation"], Is.EqualTo("-90"));
                 Assert.That(metadata.Properties["media.streams.1.channels"], Is.EqualTo("6"));
                 Assert.That(metadata.Properties["media.streams.2.codec_name"], Is.EqualTo("ac3"));
-                Assert.That(metadata.Properties["media.streams.3.disposition.forced"], Is.EqualTo("1"));
-                Assert.That(metadata.Properties["media.chapters.0.tags.title"], Is.EqualTo("Opening"));
-                Assert.That(metadata.Properties["media.programs.0.program_id"], Is.EqualTo("42"));
+                Assert.That(metadata.Properties["media.streams.3.codec_name"], Is.EqualTo("subrip"));
                 Assert.That(metadata.Properties["media.format.tags.location"], Is.EqualTo("+32.7083-117.15/"));
-                Assert.That(metadata.Properties["media.format.tags.custom"], Is.EqualTo("  keep spaces  "));
-                Assert.That(metadata.Properties["media.format.tags.empty"], Is.Empty);
-                Assert.That(metadata.Properties["media.format.tags.a~1b"], Is.EqualTo("one"));
-                Assert.That(metadata.Properties["media.format.tags.a~01b"], Is.EqualTo("two"));
+                Assert.That(metadata.Properties.Keys, Has.None.Contains("disposition"));
+                Assert.That(metadata.Properties.Keys, Has.None.StartsWith("media.chapters"));
+                Assert.That(metadata.Properties.Keys, Has.None.StartsWith("media.programs"));
+                Assert.That(metadata.Properties, Does.Not.ContainKey("media.format.tags.custom"));
+                Assert.That(metadata.Tags, Does.Not.ContainKey("custom"));
                 Assert.That(metadata.Properties, Does.Not.ContainKey("media.format.filename"));
+            });
+        }
+
+        [Test]
+        public void ParseMediaMetadata_OversizedDiscardedTags_DoNotHideUsefulMetadata()
+        {
+            string raw = "{\"streams\":[{\"codec_type\":\"video\",\"codec_name\":\"hevc\",\"extradata\":\""
+                + new string('x', 1000000) + "\"}],\"format\":{\"duration\":\"42.5\",\"tags\":{\"title\":\"Video\",\"id3v2_priv.XMP\":\""
+                + new string('x', 1000000) + "\"}}}";
+
+            MediaMetadataInfo result = FfprobeJsonParser.ParseMediaMetadata(raw, MediaMetadataProbeLimits.Default)!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.DurationSeconds, Is.EqualTo(42.5));
+                Assert.That(result.VideoCodec, Is.EqualTo("hevc"));
+                Assert.That(result.Tags["title"], Is.EqualTo("Video"));
+                Assert.That(result.Properties, Has.Count.EqualTo(2));
+                Assert.That(result.Properties.Keys, Has.None.Contains("extradata"));
+                Assert.That(result.Tags, Does.Not.ContainKey("id3v2_priv.XMP"));
             });
         }
     }
