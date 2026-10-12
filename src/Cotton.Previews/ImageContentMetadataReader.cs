@@ -32,7 +32,16 @@ namespace Cotton.Previews
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentNullException.ThrowIfNull(logger);
             cancellationToken.ThrowIfCancellationRequested();
-            IReadOnlyList<MetadataDirectory> directories = ImageMetadataReader.ReadMetadata(stream);
+            IReadOnlyList<MetadataDirectory> directories;
+            try
+            {
+                directories = ImageMetadataReader.ReadMetadata(stream);
+            }
+            catch (IOException ex) when (stream.CanSeek && stream.Position >= stream.Length)
+            {
+                logger.LogDebug(ex, "Image metadata ended before the reader finished parsing it.");
+                throw new TruncatedImageMetadataException(ex);
+            }
             return Flatten(directories, logger, cancellationToken);
         }
 

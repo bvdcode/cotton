@@ -84,6 +84,45 @@ namespace Cotton.Previews.Tests
                 async () => await ImageContentMetadataReader.ReadAsync(stream, NullLogger.Instance, cancellation.Token));
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ReadAsync_TruncatedJpeg_ReportsIncompleteMetadata(bool truncatedSegment)
+        {
+            byte[] bytes = truncatedSegment
+                ? [0xFF, 0xD8, 0xFF, 0xE1, 0x00, 0x10, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00]
+                : [0xFF, 0xD8, 0xFF, 0xFE, 0x00, 0x02];
+            using MemoryStream stream = new(bytes);
+
+            TruncatedImageMetadataException? error = Assert.ThrowsAsync<TruncatedImageMetadataException>(
+                async () => await ImageContentMetadataReader.ReadAsync(stream, NullLogger.Instance, CancellationToken.None));
+
+            Assert.That(error?.InnerException, Is.TypeOf<IOException>());
+        }
+
+        [Test]
+        public void ReadAsync_SourceReadFailure_PreservesIOException()
+        {
+            IOException failure = new("End of data reached.");
+            using FailingCopyStream stream = new(failure);
+
+            IOException? error = Assert.ThrowsAsync<IOException>(
+                async () => await ImageContentMetadataReader.ReadAsync(stream, NullLogger.Instance, CancellationToken.None));
+
+            Assert.That(error, Is.SameAs(failure));
+        }
+
+        [Test]
+        public async Task ReadAsync_CanceledWhileCopying_PreservesCancellation()
+        {
+            using BlockingReadStream stream = new(32);
+            using CancellationTokenSource cancellation = new();
+            Task<IReadOnlyDictionary<string, string>> reading = ImageContentMetadataReader.ReadAsync(stream, NullLogger.Instance, cancellation.Token);
+            await stream.ReadStarted.WaitAsync(TimeSpan.FromSeconds(5));
+            await cancellation.CancelAsync();
+
+            Assert.ThrowsAsync<TaskCanceledException>(async () => await reading);
+        }
+
         [Test]
         public void Flatten_RepeatedDirectoriesAndUnknownTag_PreservesEachValue()
         {

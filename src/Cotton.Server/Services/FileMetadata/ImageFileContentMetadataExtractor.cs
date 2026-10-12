@@ -46,6 +46,10 @@ namespace Cotton.Server.Services.FileMetadata
                     result.Add(key, value);
                 }
             }
+            catch (TruncatedImageMetadataException ex)
+            {
+                throw new FileMetadataUnavailableException(ex.Message, ex);
+            }
             catch (MetadataExtractor.ImageProcessingException ex)
             {
                 logger.LogDebug(ex, "Image metadata reader could not identify content type {ContentType}.", contentType);

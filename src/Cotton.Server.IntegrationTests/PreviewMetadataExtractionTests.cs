@@ -49,16 +49,16 @@ namespace Cotton.Server.IntegrationTests
             });
         }
 
-        [Test]
-        public async Task MetadataExtraction_TruncatedImageReadFailure_DoesNotRecordCurrentVersion()
+        [TestCase("png")]
+        [TestCase("jpg")]
+        public async Task MetadataExtraction_TruncatedImage_RecordsVersionAndErrorOnce(string extension)
         {
-            byte[] corruptImage = CreateTruncatedPngBytes();
-            InvalidImageContentException? invalidContent = Assert.ThrowsAsync<InvalidImageContentException>(async () =>
+            byte[] corruptImage = extension switch
             {
-                await using MemoryStream stream = new(corruptImage, writable: false);
-                await Image.IdentifyAsync(stream);
-            });
-            Assert.That(invalidContent, Is.Not.Null, "The fixture must remain a recognized PNG with invalid content.");
+                "png" => CreateTruncatedPngBytes(),
+                "jpg" => [0xFF, 0xD8, 0xFF, 0xE1, 0x00, 0x10, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00],
+                _ => throw new ArgumentOutOfRangeException(nameof(extension)),
+            };
 
             string token = await Pipeline.LoginAsync();
             Pipeline.SetBearer(token);
@@ -66,18 +66,35 @@ namespace Cotton.Server.IntegrationTests
             NodeDto root = await Pipeline.GetRootNodeAsync();
             NodeFileManifestDto createdFile = await Pipeline.UploadAndCreateFileAsync(
                 root.Id,
-                "corrupt.png",
-                "image/png",
+                $"corrupt.{extension}",
+                ResolveContentType($"corrupt.{extension}")!,
                 corruptImage);
+            await Pipeline.UpdateFileManifestAsync(createdFile.Id, manifest => manifest.Metadata = new()
+            {
+                ["custom.label"] = "Keep",
+                ["image.width"] = "old",
+            });
+            NodeFileManifestDto healthy = await Pipeline.UploadAndCreateFileAsync(root.Id, "healthy.png", "image/png",
+                CreateGradientPngBytes(32, 24));
 
             await Pipeline.ExecuteExtractFileMetadataJobAsync();
 
             FileManifestMetadataState processedState = await Pipeline.GetFileManifestMetadataStateAsync(createdFile.Id);
-            Assert.That(processedState.Metadata, Is.Null);
+            Assert.That(processedState.Metadata, Is.Not.Null);
+            Dictionary<string, string> processedMetadata = processedState.Metadata!;
+            Assert.Multiple(() =>
+            {
+                Assert.That(FileContentMetadataDictionary.HasCurrentVersion(processedMetadata), Is.True);
+                Assert.That(processedMetadata[FileContentMetadataKeys.ExtractionError], Is.EqualTo("Image metadata is truncated."));
+                Assert.That(processedMetadata["custom.label"], Is.EqualTo("Keep"));
+                Assert.That(processedMetadata, Does.Not.ContainKey("image.width"));
+            });
+            Assert.That((await Pipeline.GetFileManifestMetadataStateAsync(healthy.Id)).Metadata,
+                Does.ContainKey(FileContentMetadataKeys.ImageWidth));
 
             await Pipeline.ExecuteExtractFileMetadataJobAsync();
             FileManifestMetadataState repeatedState = await Pipeline.GetFileManifestMetadataStateAsync(createdFile.Id);
-            Assert.That(repeatedState.Metadata, Is.Null);
+            Assert.That(repeatedState.Metadata, Is.EquivalentTo(processedMetadata));
         }
 
         [Test]
