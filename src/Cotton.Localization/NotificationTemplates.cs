@@ -340,6 +340,10 @@ namespace Cotton.Localization
         public static string DatabaseRestoreFallbackContent(string skippedBackupIds) =>
             $"\n\nRestored an earlier generation because newer backups were unavailable or failed integrity checks. Skipped backup IDs: {skippedBackupIds}.";
 
+        public static string DatabaseRestoreVectorUnavailableContent =>
+            "\n\nVector search was enabled in the backup, but the pgvector package is unavailable on this PostgreSQL server. "
+            + "The database was restored successfully without vector search. Install pgvector and enable vector search in the server settings to rebuild the index.";
+
         public static string DatabaseIntegrityFailureTitle => "Database integrity issue detected";
 
         public static string DatabaseIntegrityFailureContent(

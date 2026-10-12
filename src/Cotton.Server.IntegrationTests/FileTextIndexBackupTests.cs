@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Services.Search;
+using Cotton.Server.Extensions;
 using Cotton.TextExtraction;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Models;
@@ -37,7 +38,7 @@ namespace Cotton.Server.IntegrationTests
             {
                 await CreateDumpService(CurrentDatabaseName).DumpToFileAsync(dumpPath);
                 await restored.Database.EnsureCreatedAsync();
-                await CreateDumpService(restoreDatabase).RestoreFromFileAsync(dumpPath);
+                Models.DatabaseBackup.PostgresRestoreResult result = await CreateDumpService(restoreDatabase).RestoreFromFileAsync(dumpPath);
                 await restored.Database.OpenConnectionAsync();
                 await ((NpgsqlConnection)restored.Database.GetDbConnection()).ReloadTypesAsync();
 
@@ -48,6 +49,14 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(await restored.NodeFiles.CountAsync(), Is.EqualTo(1));
                 Assert.That(await restored.Chunks.CountAsync(), Is.EqualTo(1));
                 PostgresIndexStatus index = await restored.Database.GetIndexStatusAsync(
+                    VectorIndexDefinition.Expected.SchemaName, VectorIndexDefinition.Expected.TableName,
+                    VectorIndexDefinition.Expected.IndexName);
+                Assert.That(index.Exists, Is.False);
+                Assert.That(result.HadVectorExtension, Is.True);
+                Assert.That(result.HadVectorIndex, Is.True);
+                await restored.Database.EnsurePostgresExtensionAsync(VectorIndexDefinition.ExtensionName, CancellationToken.None);
+                await restored.Database.CreateVectorCosineHnswIndexConcurrentlyAsync(VectorIndexDefinition.Expected);
+                index = await restored.Database.GetIndexStatusAsync(
                     VectorIndexDefinition.Expected.SchemaName, VectorIndexDefinition.Expected.TableName,
                     VectorIndexDefinition.Expected.IndexName);
                 Assert.That(VectorIndexDefinition.IsReady(index), Is.True);

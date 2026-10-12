@@ -62,11 +62,13 @@ Restore follows this sequence:
 3. Stream manifest chunks in order through the storage pipeline into a temporary dump.
 4. Verify the rebuilt dump's total byte count and SHA-256 hash.
 5. If a manifest or dump chunk is missing, damaged, or fails verification, log the skipped backup and try the preceding entry. No database restore is attempted until a complete dump has passed verification.
-6. Ensure required PostgreSQL extensions, then run `pg_restore` in a single transaction with ownership and privilege restoration disabled.
-7. Apply pending migrations, refresh provider type information, and notify administrators. The notification identifies the restored backup and any skipped newer backups.
+6. Ensure required PostgreSQL extensions, exclude the optional vector extension and managed HNSW index from the archive's restore list, then run `pg_restore` in a single transaction with ownership and privilege restoration disabled. Other schema objects, indexes, and data are restored normally.
+7. Apply pending migrations and restore the previous vector configuration when the pgvector package is available. Index preparation uses the existing background job. Refresh provider type information and notify administrators. The notification identifies the restored backup, any skipped newer backups, and whether vector search could not be restored because pgvector is unavailable.
 8. Remove the temporary dump in `finally`.
 
 If all retained candidates are invalid, startup stops. An unreadable pointer, cancellation, local I/O failure, or PostgreSQL restore failure also stops the operation. Database execution failures do not trigger another restore attempt against a modified database.
+
+A backup created with pgvector can be restored to PostgreSQL without that package. The archive retains its original vector configuration so it can be re-enabled on a server that supports it. When pgvector is unavailable, the database restore succeeds without vector search and administrators receive a warning. Install pgvector and enable vector search in the server settings to prepare the index later.
 
 On its first eligible run after startup, the text indexing job checks whether `file_embeddings` is empty. If so, it clears the manifests' text indexing versions and errors in batches of 500 before resuming indexing. The check runs once per process so documents without extractable text are not retried every minute. Regeneration requires global indexing to be enabled, the vector extension and index to be ready, and the computation service to be available.
 

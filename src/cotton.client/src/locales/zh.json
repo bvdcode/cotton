@@ -1465,7 +1465,10 @@
       "databaseRestoreCompleted": {
         "title": "数据库已自动恢复",
         "content": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}",
-        "contentWithFallback": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}\n\n已跳过不可用或损坏的备份：{{skippedBackupIds}}。已恢复较早的备份。"
+        "contentWithFallback": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}\n\n已跳过不可用或损坏的备份：{{skippedBackupIds}}。已恢复较早的备份。",
+        "vectorUnavailable": "备份中已启用向量搜索，但此 PostgreSQL 服务器未提供 pgvector 软件包。数据库已成功恢复，向量搜索暂未启用。请安装 pgvector 并在服务器设置中启用向量搜索，以重建索引。",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "检测到数据库完整性问题",

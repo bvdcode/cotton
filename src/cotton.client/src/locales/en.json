@@ -1253,7 +1253,10 @@
       "databaseRestoreCompleted": {
         "title": "Database restored automatically",
         "content": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
-        "contentWithFallback": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nUnavailable or damaged backups were skipped: {{skippedBackupIds}}. An earlier backup was restored."
+        "contentWithFallback": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nUnavailable or damaged backups were skipped: {{skippedBackupIds}}. An earlier backup was restored.",
+        "vectorUnavailable": "Vector search was enabled in the backup, but the pgvector package is unavailable on this PostgreSQL server. The database was restored successfully without vector search. Install pgvector and enable vector search in the server settings to rebuild the index.",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "Database integrity issue detected",

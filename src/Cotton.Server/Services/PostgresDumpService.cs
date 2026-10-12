@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Abstractions;
+using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Server.Services.Search;
 using System.Diagnostics;
 using System.Globalization;
@@ -29,40 +30,13 @@ namespace Cotton.Server.Services
             DbSettings settings = ReadDbSettings();
             ProcessStartInfo processStartInfo = CreateProcessStartInfo(settings, outputFilePath);
 
-            using Process process = new Process { StartInfo = processStartInfo };
             _logger.LogInformation("Creating PostgreSQL dump to {OutputFilePath}.", outputFilePath);
-
-            if (!process.Start())
-            {
-                throw new InvalidOperationException("Failed to start pg_dump process.");
-            }
-
-            Task<string> stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-
-            try
-            {
-                await process.WaitForExitAsync(cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                TryKillProcess(process);
-                throw;
-            }
-
-            string stderr = await stderrTask;
-            string stdout = await stdoutTask;
-
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException(
-                    $"pg_dump failed with exit code {process.ExitCode}. stderr: {stderr}. stdout: {stdout}");
-            }
+            await ExecuteAsync(processStartInfo, cancellationToken);
 
             _logger.LogInformation("PostgreSQL dump created at {OutputFilePath}.", outputFilePath);
         }
 
-        public async Task RestoreFromFileAsync(string inputFilePath, CancellationToken cancellationToken = default)
+        public async Task<PostgresRestoreResult> RestoreFromFileAsync(string inputFilePath, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(inputFilePath);
 
@@ -72,14 +46,49 @@ namespace Cotton.Server.Services
             }
 
             DbSettings settings = ReadDbSettings();
-            ProcessStartInfo processStartInfo = CreateRestoreProcessStartInfo(settings, inputFilePath);
+            ProcessStartInfo listStartInfo = new()
+            {
+                FileName = "pg_restore",
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            listStartInfo.ArgumentList.Add("--list");
+            listStartInfo.ArgumentList.Add(inputFilePath);
+            PostgresRestoreList restoreList = PostgresRestoreList.Parse(await ExecuteAsync(listStartInfo, cancellationToken));
+            string listPath = Path.GetTempFileName();
+            try
+            {
+                await File.WriteAllTextAsync(listPath, restoreList.Content, cancellationToken);
+                ProcessStartInfo processStartInfo = CreateRestoreProcessStartInfo(settings, inputFilePath);
+                processStartInfo.ArgumentList.Add("--use-list");
+                processStartInfo.ArgumentList.Add(listPath);
+                _logger.LogInformation("Restoring PostgreSQL database from {InputFilePath}.", inputFilePath);
+                await ExecuteAsync(processStartInfo, cancellationToken);
+                _logger.LogInformation("PostgreSQL database restored successfully from {InputFilePath}.", inputFilePath);
+                return restoreList.Result;
+            }
+            finally
+            {
+                try
+                {
+                    File.Delete(listPath);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    _logger.LogWarning(ex, "Failed to delete the temporary database restore list at {ListPath}.", listPath);
+                }
+            }
+        }
 
+        private async Task<string> ExecuteAsync(ProcessStartInfo processStartInfo, CancellationToken cancellationToken)
+        {
             using Process process = new Process { StartInfo = processStartInfo };
-            _logger.LogInformation("Restoring PostgreSQL database from {InputFilePath}.", inputFilePath);
 
             if (!process.Start())
             {
-                throw new InvalidOperationException("Failed to start pg_restore process.");
+                throw new InvalidOperationException($"Failed to start {processStartInfo.FileName} process.");
             }
 
             Task<string> stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
@@ -101,10 +110,10 @@ namespace Cotton.Server.Services
             if (process.ExitCode != 0)
             {
                 throw new InvalidOperationException(
-                    $"pg_restore failed with exit code {process.ExitCode}. stderr: {stderr}. stdout: {stdout}");
+                    $"{processStartInfo.FileName} failed with exit code {process.ExitCode}. stderr: {stderr}. stdout: {stdout}");
             }
 
-            _logger.LogInformation("PostgreSQL database restored successfully from {InputFilePath}.", inputFilePath);
+            return stdout;
         }
 
         private static ProcessStartInfo CreateProcessStartInfo(DbSettings settings, string outputFilePath)

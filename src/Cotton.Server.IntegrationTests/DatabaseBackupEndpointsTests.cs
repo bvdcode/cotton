@@ -2,7 +2,9 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Auth;
+using Cotton.Server.Extensions;
 using Cotton.Server.Models.DatabaseBackup;
+using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http.Headers;
 
@@ -38,15 +40,26 @@ namespace Cotton.Server.IntegrationTests
             });
         }
 
-        [TestCase(false)]
-        [TestCase(true)]
-        public async Task CreateAndRestore_PreservesHistory_AndNotifiesAdmins(bool missingLatest)
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        [TestCase(true, true)]
+        public async Task CreateAndRestore_PreservesHistory_AndNotifiesAdmins(bool missingLatest, bool withVector)
         {
             string executable = OperatingSystem.IsWindows() ? "pg_dump.exe" : "pg_dump";
             if (!(Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator)
                 .Any(directory => File.Exists(Path.Combine(directory, executable))))
             {
                 Assert.Ignore("PostgreSQL dump tools must be available on PATH.");
+            }
+            if (withVector)
+            {
+                if (!await DbContext.Database.IsExtensionAvailableAsync(Services.Search.VectorIndexDefinition.ExtensionName))
+                {
+                    Assert.Ignore("The PostgreSQL test server does not have the pgvector package.");
+                }
+                await DbContext.Database.EnsurePostgresExtensionAsync(Services.Search.VectorIndexDefinition.ExtensionName, default);
+                await DbContext.Database.CreateVectorCosineHnswIndexConcurrentlyAsync(Services.Search.VectorIndexDefinition.Expected);
             }
             string token = await IssueTokenAsync();
             AuthenticationHeaderValue? adminAuthorization = _client!.DefaultRequestHeaders.Authorization;
@@ -68,10 +81,10 @@ namespace Cotton.Server.IntegrationTests
             _client.DefaultRequestHeaders.Authorization = adminAuthorization;
             LatestDatabaseBackupDto[] history = (await _client.GetFromJsonAsync<LatestDatabaseBackupDto[]>(Route))!;
             Assert.That(history.Select(item => item.BackupId), Is.EqualTo(completed.Select(item => item.BackupId)));
-            await VerifyRestoreAsync(completed, missingLatest);
+            await VerifyRestoreAsync(completed, missingLatest, withVector);
         }
 
-        private async Task VerifyRestoreAsync(List<LatestDatabaseBackupDto> completed, bool missingLatest)
+        private async Task VerifyRestoreAsync(List<LatestDatabaseBackupDto> completed, bool missingLatest, bool withVector)
         {
             await using AsyncServiceScope scope = _customFactory!.Services.CreateAsyncScope();
             IStoragePipeline storage = scope.ServiceProvider.GetRequiredService<IStoragePipeline>();
@@ -82,21 +95,31 @@ namespace Cotton.Server.IntegrationTests
                 await storage.DeleteAsync(pointer.LatestManifestStorageKey);
             }
             string databaseName = $"cotton_backup_restore_tests_{Guid.NewGuid():N}";
-            NpgsqlConnectionStringBuilder connection = new(DbContext.Database.GetConnectionString()) { Database = databaseName };
+            string restoreHost = Environment.GetEnvironmentVariable("COTTON_RESTORE_TEST_PG_HOST") ?? TestPostgresHost;
+            int restorePort = int.Parse(Environment.GetEnvironmentVariable("COTTON_RESTORE_TEST_PG_PORT") ?? TestPostgresPort.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            string restoreUsername = Environment.GetEnvironmentVariable("COTTON_RESTORE_TEST_PG_USERNAME") ?? TestPostgresUsername;
+            string restorePassword = Environment.GetEnvironmentVariable("COTTON_RESTORE_TEST_PG_PASSWORD") ?? TestPostgresPassword;
+            NpgsqlConnectionStringBuilder connection = new(DbContext.Database.GetConnectionString())
+            {
+                Database = databaseName, Host = restoreHost, Port = restorePort,
+                Username = restoreUsername, Password = restorePassword
+            };
             await using CottonDbContext restored = new(new DbContextOptionsBuilder<CottonDbContext>().UseNpgsql(connection.ConnectionString).Options);
             IConfiguration configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["COTTON_RESTORE_DATABASE_IF_EMPTY"] = "true",
-                ["DatabaseSettings:Host"] = TestPostgresHost,
-                ["DatabaseSettings:Port"] = TestPostgresPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["DatabaseSettings:Username"] = TestPostgresUsername,
-                ["DatabaseSettings:Password"] = TestPostgresPassword,
+                ["DatabaseSettings:Host"] = restoreHost,
+                ["DatabaseSettings:Port"] = restorePort.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["DatabaseSettings:Username"] = restoreUsername,
+                ["DatabaseSettings:Password"] = restorePassword,
                 ["DatabaseSettings:Database"] = databaseName,
             }).Build();
             RecordingNotificationsProvider notifications = new();
+            await using ServiceProvider restoreServices = VectorRestoreTestServices.Create(restored);
             DatabaseBackupRestorePreparation preparation = new(manifests, storage, NullLogger<DatabaseBackupRestorePreparation>.Instance);
             DatabaseAutoRestoreService restore = new(configuration, restored, preparation,
                 new PostgresDumpService(configuration, NullLogger<PostgresDumpService>.Instance), manifests, notifications,
+                restoreServices.GetRequiredService<EasyExtensions.Mediator.IMediator>(),
                 NullLogger<DatabaseAutoRestoreService>.Instance);
             try
             {
@@ -108,9 +131,22 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(priority, Is.EqualTo(NotificationPriority.High));
                 Assert.That(metadata!["backupId"], Is.EqualTo(completed[missingLatest ? 1 : 0].BackupId));
                 Assert.That(metadata["skippedBackupIds"], Is.EqualTo(missingLatest ? completed[0].BackupId : ""));
-                Assert.That(metadata["i18n.contentKey"], Is.EqualTo(missingLatest
-                    ? NotificationTemplateKeys.DatabaseRestoreCompletedWithFallbackContent
-                    : NotificationTemplateKeys.DatabaseRestoreCompletedContent));
+                bool vectorUnavailable = withVector && !await restored.Database.IsExtensionAvailableAsync(Services.Search.VectorIndexDefinition.ExtensionName);
+                string contentKey = (missingLatest, vectorUnavailable) switch
+                {
+                    (false, false) => NotificationTemplateKeys.DatabaseRestoreCompletedContent,
+                    (true, false) => NotificationTemplateKeys.DatabaseRestoreCompletedWithFallbackContent,
+                    (false, true) => NotificationTemplateKeys.DatabaseRestoreCompletedWithoutVectorContent,
+                    (true, true) => NotificationTemplateKeys.DatabaseRestoreCompletedWithFallbackWithoutVectorContent
+                };
+                Assert.That(metadata["i18n.contentKey"], Is.EqualTo(contentKey));
+                VectorSearchRestoreStatus expectedStatus = (withVector, vectorUnavailable) switch
+                {
+                    (false, false) or (false, true) => VectorSearchRestoreStatus.NotEnabled,
+                    (true, false) => VectorSearchRestoreStatus.Enabled,
+                    (true, true) => VectorSearchRestoreStatus.PackageMissing
+                };
+                Assert.That(metadata["vectorSearchStatus"], Is.EqualTo(expectedStatus.ToString()));
             }
             finally
             {

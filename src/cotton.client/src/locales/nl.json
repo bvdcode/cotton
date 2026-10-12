@@ -1457,7 +1457,10 @@
       "databaseRestoreCompleted": {
         "title": "Database automatisch hersteld",
         "content": "Automatisch databaseherstel is succesvol voltooid.\n\nBackup-ID: {{backupId}}\nBrondatabase: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup gemaakt (UTC): {{backupCreatedUtc}} UTC\nBackup gemaakt ({{serverTimezone}}): {{backupCreatedLocal}}\nHerstel voltooid (UTC): {{restoreCompletedUtcDisplay}} UTC\nHerstel voltooid ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
-        "contentWithFallback": "Automatisch databaseherstel is succesvol voltooid.\n\nBackup-ID: {{backupId}}\nBrondatabase: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup gemaakt (UTC): {{backupCreatedUtc}} UTC\nBackup gemaakt ({{serverTimezone}}): {{backupCreatedLocal}}\nHerstel voltooid (UTC): {{restoreCompletedUtcDisplay}} UTC\nHerstel voltooid ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nNiet-beschikbare of beschadigde back-ups overgeslagen: {{skippedBackupIds}}. Een eerdere back-up is hersteld."
+        "contentWithFallback": "Automatisch databaseherstel is succesvol voltooid.\n\nBackup-ID: {{backupId}}\nBrondatabase: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup gemaakt (UTC): {{backupCreatedUtc}} UTC\nBackup gemaakt ({{serverTimezone}}): {{backupCreatedLocal}}\nHerstel voltooid (UTC): {{restoreCompletedUtcDisplay}} UTC\nHerstel voltooid ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nNiet-beschikbare of beschadigde back-ups overgeslagen: {{skippedBackupIds}}. Een eerdere back-up is hersteld.",
+        "vectorUnavailable": "Vectorzoeken was ingeschakeld in de back-up, maar het pakket pgvector is niet beschikbaar op deze PostgreSQL-server. De database is succesvol hersteld zonder vectorzoeken. Installeer pgvector en schakel vectorzoeken in de serverinstellingen in om de index opnieuw op te bouwen.",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "Probleem met database-integriteit gedetecteerd",

@@ -6,8 +6,10 @@ using Cotton.Database.Models.Enums;
 using Cotton.Localization;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
+using Cotton.Server.Handlers.Server;
 using Cotton.Server.Models.DatabaseBackup;
 using EasyExtensions.Models.Enums;
+using EasyExtensions.Mediator;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Data;
@@ -21,6 +23,7 @@ namespace Cotton.Server.Services
         IPostgresDumpService postgresDump,
         IDatabaseBackupManifestService backupManifestService,
         INotificationsProvider notificationsProvider,
+        IMediator mediator,
         ILogger<DatabaseAutoRestoreService> logger)
     {
         private const string RestoreEnvKey = "COTTON_RESTORE_DATABASE_IF_EMPTY";
@@ -54,11 +57,13 @@ namespace Cotton.Server.Services
                     backup.Manifest.BackupId, backup.Manifest.CreatedAtUtc);
                 await EnsurePostgresExtensionsForRestoreAsync(cancellationToken);
                 await ReloadPostgresTypesAsync(cancellationToken);
-                await postgresDump.RestoreFromFileAsync(dumpPath, cancellationToken);
+                PostgresRestoreResult restore = await postgresDump.RestoreFromFileAsync(dumpPath, cancellationToken);
                 await ReloadPostgresTypesAsync(cancellationToken);
                 await dbContext.Database.MigrateAsync(cancellationToken);
                 await ReloadPostgresTypesAsync(cancellationToken);
-                await NotifyAdminsAboutRestoreAsync(prepared, cancellationToken);
+                VectorSearchRestoreStatus vectorStatus = await mediator.Send(new RestoreVectorSearchRequest(restore), cancellationToken);
+                await ReloadPostgresTypesAsync(cancellationToken);
+                await NotifyAdminsAboutRestoreAsync(prepared, vectorStatus, cancellationToken);
                 logger.LogInformation(
                     "Automatic database restore finished successfully. BackupId={BackupId}",
                     backup.Manifest.BackupId);
@@ -161,7 +166,8 @@ namespace Cotton.Server.Services
             }
         }
 
-        private async Task NotifyAdminsAboutRestoreAsync(PreparedDatabaseBackup prepared, CancellationToken cancellationToken)
+        private async Task NotifyAdminsAboutRestoreAsync(
+            PreparedDatabaseBackup prepared, VectorSearchRestoreStatus vectorStatus, CancellationToken cancellationToken)
         {
             ResolvedBackupManifest backup = prepared.Backup;
             List<Guid> adminIds = await dbContext.Users
@@ -196,6 +202,10 @@ namespace Cotton.Server.Services
             {
                 content += NotificationTemplates.DatabaseRestoreFallbackContent(string.Join(", ", prepared.SkippedBackupIds));
             }
+            if (vectorStatus == VectorSearchRestoreStatus.PackageMissing)
+            {
+                content += NotificationTemplates.DatabaseRestoreVectorUnavailableContent;
+            }
 
             Dictionary<string, string> metadata = new()
             {
@@ -213,13 +223,19 @@ namespace Cotton.Server.Services
                 ["sourcePort"] = backup.Manifest.SourcePort,
                 ["serverTimezone"] = serverTimeZone.Id,
                 ["manifestStorageKey"] = backup.ManifestStorageKey,
-                ["skippedBackupIds"] = string.Join(", ", prepared.SkippedBackupIds)
+                ["skippedBackupIds"] = string.Join(", ", prepared.SkippedBackupIds),
+                ["vectorSearchStatus"] = vectorStatus.ToString()
+            };
+            string contentKey = (prepared.SkippedBackupIds.Count > 0, vectorStatus == VectorSearchRestoreStatus.PackageMissing) switch
+            {
+                (false, false) => NotificationTemplateKeys.DatabaseRestoreCompletedContent,
+                (true, false) => NotificationTemplateKeys.DatabaseRestoreCompletedWithFallbackContent,
+                (false, true) => NotificationTemplateKeys.DatabaseRestoreCompletedWithoutVectorContent,
+                (true, true) => NotificationTemplateKeys.DatabaseRestoreCompletedWithFallbackWithoutVectorContent
             };
             Dictionary<string, string> templateMetadata = NotificationTemplateMetadata.Create(
                 NotificationTemplateKeys.DatabaseRestoreCompletedTitle,
-                prepared.SkippedBackupIds.Count > 0
-                    ? NotificationTemplateKeys.DatabaseRestoreCompletedWithFallbackContent
-                    : NotificationTemplateKeys.DatabaseRestoreCompletedContent,
+                contentKey,
                 metadata);
 
             foreach (Guid adminId in adminIds)

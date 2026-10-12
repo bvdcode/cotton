@@ -1457,7 +1457,10 @@
       "databaseRestoreCompleted": {
         "title": "Databáze byla automaticky obnovena",
         "content": "Automatická obnova databáze byla úspěšně dokončena.\n\nID zálohy: {{backupId}}\nZdrojová databáze: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nZáloha vytvořena (UTC): {{backupCreatedUtc}} UTC\nZáloha vytvořena ({{serverTimezone}}): {{backupCreatedLocal}}\nObnova dokončena (UTC): {{restoreCompletedUtcDisplay}} UTC\nObnova dokončena ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
-        "contentWithFallback": "Automatická obnova databáze byla úspěšně dokončena.\n\nID zálohy: {{backupId}}\nZdrojová databáze: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nZáloha vytvořena (UTC): {{backupCreatedUtc}} UTC\nZáloha vytvořena ({{serverTimezone}}): {{backupCreatedLocal}}\nObnova dokončena (UTC): {{restoreCompletedUtcDisplay}} UTC\nObnova dokončena ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nPřeskočeny nedostupné nebo poškozené zálohy: {{skippedBackupIds}}. Byla obnovena starší záloha."
+        "contentWithFallback": "Automatická obnova databáze byla úspěšně dokončena.\n\nID zálohy: {{backupId}}\nZdrojová databáze: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nZáloha vytvořena (UTC): {{backupCreatedUtc}} UTC\nZáloha vytvořena ({{serverTimezone}}): {{backupCreatedLocal}}\nObnova dokončena (UTC): {{restoreCompletedUtcDisplay}} UTC\nObnova dokončena ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nPřeskočeny nedostupné nebo poškozené zálohy: {{skippedBackupIds}}. Byla obnovena starší záloha.",
+        "vectorUnavailable": "V záloze bylo zapnuté vektorové vyhledávání, ale na tomto serveru PostgreSQL není dostupný balíček pgvector. Databáze byla úspěšně obnovena bez vektorového vyhledávání. Nainstalujte pgvector a zapněte vektorové vyhledávání v nastavení serveru, aby se index vytvořil znovu.",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "Zjištěn problém s integritou databáze",

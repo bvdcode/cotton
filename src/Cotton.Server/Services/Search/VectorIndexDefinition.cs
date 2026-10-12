@@ -7,6 +7,7 @@ namespace Cotton.Server.Services.Search
 {
     public static class VectorIndexDefinition
     {
+        public const string ExtensionName = "vector";
         public const int Version = 1;
         public const int Dimensions = 1024;
         public const string ModelId = "BAAI/bge-m3";

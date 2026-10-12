@@ -15,6 +15,7 @@ namespace Cotton.Server.Handlers.Server
 {
     public class EnsureVectorExtensionRequest : IRequest
     {
+        public bool PrepareIndex { get; init; } = true;
     }
 
     public class EnsureVectorExtensionRequestHandler(
@@ -51,6 +52,11 @@ namespace Cotton.Server.Handlers.Server
             }
 
             logger.LogInformation("The vector extension is enabled in the current database.");
+
+            if (!request.PrepareIndex)
+            {
+                return;
+            }
 
             try
             {
