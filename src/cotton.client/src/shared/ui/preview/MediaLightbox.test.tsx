@@ -78,6 +78,9 @@ vi.mock("../../store/userPreferencesStore", () => ({
   selectGalleryPreferPreview: false,
   useUserPreferencesStore: () => false,
 }));
+vi.mock("./useGalleryMetadata", () => ({
+  useGalleryMetadata: () => ({ button: null, controls: null, visible: false }),
+}));
 vi.mock("./useMediaLightboxUrls", () => ({
   useMediaLightboxUrls: ({ items }: { items: MediaItem[] }) => ({
     slides: items.map((item) =>

@@ -95,6 +95,15 @@ export interface RestoreOptions {
 const nodeListSchema = z.array(nodeDtoSchema);
 
 export const nodesApi = {
+  copyNode: async (
+    nodeId: Guid,
+    request: MoveNodeRequest,
+  ): Promise<NodeDto> => {
+    const url = `/layouts/nodes/${nodeId}/copy`;
+    const response = await httpClient.post<JsonValue>(url, request);
+    return parseValidated(url, response.data, nodeDtoSchema);
+  },
+
   getNode: (nodeId: Guid): Promise<NodeDto> =>
     getValidated(`/layouts/nodes/${nodeId}`, nodeDtoSchema),
 

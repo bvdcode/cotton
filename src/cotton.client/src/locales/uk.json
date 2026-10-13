@@ -1462,7 +1462,11 @@
       },
       "databaseRestoreCompleted": {
         "title": "Базу даних автоматично відновлено",
-        "content": "Автоматичне відновлення бази даних успішно завершено.\n\nID резервної копії: {{backupId}}\nВихідна база даних: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nРезервну копію створено (UTC): {{backupCreatedUtc}} UTC\nРезервну копію створено ({{serverTimezone}}): {{backupCreatedLocal}}\nВідновлення завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВідновлення завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Автоматичне відновлення бази даних успішно завершено.\n\nID резервної копії: {{backupId}}\nВихідна база даних: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nРезервну копію створено (UTC): {{backupCreatedUtc}} UTC\nРезервну копію створено ({{serverTimezone}}): {{backupCreatedLocal}}\nВідновлення завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВідновлення завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Автоматичне відновлення бази даних успішно завершено.\n\nID резервної копії: {{backupId}}\nВихідна база даних: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nРезервну копію створено (UTC): {{backupCreatedUtc}} UTC\nРезервну копію створено ({{serverTimezone}}): {{backupCreatedLocal}}\nВідновлення завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВідновлення завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nПропущено недоступні або пошкоджені копії: {{skippedBackupIds}}. Відновлено попередню копію.",
+        "vectorUnavailable": "У резервній копії був увімкнений векторний пошук, але на цьому сервері PostgreSQL немає пакета pgvector. Базу успішно відновлено без векторного пошуку. Установіть pgvector і ввімкніть векторний пошук у налаштуваннях сервера, щоб перебудувати індекс.",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "Виявлено проблему цілісності бази даних",
@@ -1533,7 +1537,8 @@
       "copied": "Скопійовано!",
       "reload": "Перезавантажити",
       "retry": "Повторити",
-      "versions": "Версії"
+      "versions": "Версії",
+      "copy": "Копіювати"
     },
     "errors": {
       "unexpectedTitle": "Не вдалося відобразити сторінку",
@@ -1738,6 +1743,11 @@
       "description": "Налаштування інтерфейсу та персоналізації.",
       "gallerySmoothTransitions": "Плавні переходи в галереї",
       "galleryPreferPreview": "Показувати оригінали замість прев'ю",
+      "galleryMetadataPosition": {
+        "label": "Сторона панелі метаданих",
+        "left": "Ліворуч",
+        "right": "Праворуч"
+      },
       "themeMode": {
         "label": "Тема",
         "light": "Світла",
@@ -2495,6 +2505,7 @@
       "folderNamePlaceholder": "Назва теки",
       "goToFolder": "Перейти до теки",
       "goUp": "Вгору",
+      "goUpHoldHint": "Вгору; утримуйте для переходу до кореневої папки",
       "dropFiles": "Перетягніть файли для вивантаження",
       "switchToTilesView": "Перемкнути на плитки",
       "switchToListView": "Перемкнути на список",
@@ -2572,6 +2583,34 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Інформація",
+        "dimensions": "Роздільна здатність",
+        "duration": "Тривалість",
+        "seconds": "{{value}} с",
+        "format": "Формат",
+        "title": "Назва",
+        "artist": "Виконавець",
+        "album": "Альбом",
+        "albumArtist": "Виконавець альбому",
+        "track": "Доріжка",
+        "disc": "Диск",
+        "date": "Дата",
+        "year": "Рік",
+        "genre": "Жанр",
+        "audioCodec": "Аудіокодек",
+        "videoCodec": "Відеокодек",
+        "cameraMake": "Виробник",
+        "cameraModel": "Камера",
+        "lens": "Об’єктив",
+        "exposureTime": "Витримка",
+        "aperture": "Діафрагма",
+        "iso": "ISO",
+        "dateTaken": "Дата зйомки",
+        "focalLength": "Фокусна відстань",
+        "moreDetails": "Докладніше",
+        "lessDetails": "Згорнути подробиці"
+      },
       "actions": {
         "edit": "Редагувати",
         "save": "Зберегти",
@@ -2722,9 +2761,20 @@
       "restoreConfirmDescription": "Поточний вміст файлу буде збережено як нову версію, після чого версія {{version}} стане поточною.",
       "deleteConfirmTitle": "Видалити цю версію?",
       "deleteConfirmDescription": "Версію {{version}} буде видалено. Поточний файл не зміниться."
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Готово до копіювання: {{count}}",
+        "copied": "Скопійовано: {{count}}",
+        "failed": "Не вдалося скопіювати: {{count}}"
+      }
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Переміщення",
+      "copy": "Копіювання"
+    },
     "title": "Завдання",
     "error": "Помилка",
     "errors": {
@@ -2816,7 +2866,7 @@
     },
     "restore": {
       "action": "Відновити",
-      "inProgress": "Відновлення {{current}} з {{total}}: {{name}}",
+      "inProgress": "Відновлення елементів: {{total}}...",
       "failed": "Не вдалося відновити «{{name}}»",
       "notRestorable": "Елемент неможливо відновити.",
       "rootFolder": "кореневу теку",
@@ -3254,16 +3304,16 @@
     },
     "databaseBackup": {
       "title": "Резервне копіювання бази даних",
-      "description": "Останній маніфест резервної копії з сервера.",
+      "description": "Збережені дампи бази даних і доступ для зовнішнього резервного копіювання.",
       "actions": {
         "refresh": "Оновити",
         "trigger": "Запустити резервне копіювання",
-        "triggering": "Запуск..."
+        "triggering": "Створення копії…"
       },
       "state": {
         "loading": "Завантаження інформації про резервні копії...",
         "empty": "Резервних копій ще не знайдено.",
-        "triggerSuccess": "Завдання резервного копіювання запущено.",
+        "triggerSuccess": "Резервну копію збережено.",
         "restoreIfEmptyHint": "Якщо база даних втрачена і ви хочете, щоб вона відновлювалася автоматично, встановіть COTTON_RESTORE_DATABASE_IF_EMPTY=true у середовищі контейнера. Для цього база даних має бути порожньою, без жодних таблиць."
       },
       "fields": {
@@ -3280,6 +3330,24 @@
       "errors": {
         "loadFailed": "Не вдалося завантажити інформацію про резервні копії.",
         "triggerFailed": "Не вдалося запустити резервне копіювання."
+      },
+      "history": {
+        "title": "Історія резервних копій",
+        "retention": "Зберігаються всі копії за останні 7 днів і щонайменше 3 найновіші копії.",
+        "latest": "Остання"
+      },
+      "access": {
+        "title": "Доступ для зовнішнього резервного копіювання",
+        "description": "Токен дозволяє лише створення резервних копій бази даних. Збережіть його у засобі резервного копіювання. Він діє до зміни master key; новий токен не скасовує попередні.",
+        "request": "Надішліть {{endpoint}} із заголовком {{header}}. Успішна відповідь означає, що дамп збережено.",
+        "token": "Токен резервного копіювання",
+        "generate": "Створити токен",
+        "copy": "Копіювати токен",
+        "copied": "Скопійовано",
+        "failed": "Не вдалося створити токен.",
+        "copyFailed": "Не вдалося скопіювати. Виділіть і скопіюйте токен вручну.",
+        "curlExample": "Приклад curl",
+        "copyCommand": "Копіювати команду"
       }
     },
     "storageStatistics": {

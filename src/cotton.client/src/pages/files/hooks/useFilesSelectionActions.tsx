@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import {
   ContentCut,
+  ContentCopy,
   ContentPaste,
   Delete,
   Download,
@@ -13,7 +14,6 @@ import type { FileSelectionState } from "@shared/hooks/useFileSelection";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import { downloadArchive } from "@shared/utils/fileHandlers";
 import { shareFolder } from "@shared/utils/shareFolder";
-import { deleteFolder } from "@shared/store/nodesActions";
 import type { PageHeaderProps } from "../components/PageHeader";
 import { buildSelectionArchiveRequest } from "../filesPageModel";
 import { useDeleteSelectedItems } from "./useDeleteSelectedItems";
@@ -24,6 +24,7 @@ interface UseFilesSelectionActionsOptions {
   currentFolderName?: string | null;
   fileSelection: FileSelectionState;
   handleCutSelection: () => void;
+  handleCopySelection: () => void;
   handlePasteHere: () => void;
   loading: boolean;
   nodeId: string | null;
@@ -37,14 +38,8 @@ interface UseFilesSelectionActionsOptions {
 
 interface FilesSelectionActions {
   customActionItems: PageHeaderProps["customActionItems"];
-  handleDownloadFolder: (
-    folderId: string,
-    folderName: string,
-  ) => Promise<void>;
-  handleShareFolder: (
-    folderId: string,
-    folderName: string,
-  ) => Promise<void>;
+  handleDownloadFolder: (folderId: string, folderName: string) => Promise<void>;
+  handleShareFolder: (folderId: string, folderName: string) => Promise<void>;
 }
 
 export const useFilesSelectionActions = ({
@@ -54,6 +49,7 @@ export const useFilesSelectionActions = ({
   currentFolderName,
   fileSelection,
   handleCutSelection,
+  handleCopySelection,
   handlePasteHere,
   loading,
   nodeId,
@@ -109,9 +105,9 @@ export const useFilesSelectionActions = ({
     tiles,
     confirm,
     t,
-    deleteFolder,
     optimisticDeleteFile,
     reloadCurrentNode,
+    showToast,
   });
 
   const handleShareCurrentFolder = useCallback(() => {
@@ -125,13 +121,13 @@ export const useFilesSelectionActions = ({
   const customActionItems = useMemo(() => {
     const items: NonNullable<PageHeaderProps["customActionItems"]> = [];
 
-    if (!fileSelection.selectionMode && activeCurrentNode) {
+    if (!fileSelection.selectionMode && nodeId) {
       items.push({
         key: "share-current-folder",
         icon: <ShareIcon />,
         title: t("actions.share", { ns: "common" }),
         onClick: handleShareCurrentFolder,
-        disabled: loading,
+        disabled: loading || !activeCurrentNode,
       });
     }
 
@@ -144,6 +140,13 @@ export const useFilesSelectionActions = ({
           onClick: () => {
             void handleDownloadSelection();
           },
+          disabled: loading,
+        },
+        {
+          key: "copy-selected",
+          icon: <ContentCopy />,
+          title: t("actions.copy", { ns: "common" }),
+          onClick: handleCopySelection,
           disabled: loading,
         },
         {
@@ -186,6 +189,7 @@ export const useFilesSelectionActions = ({
     fileSelection.selectedCount,
     fileSelection.selectionMode,
     handleCutSelection,
+    handleCopySelection,
     handleDeleteSelected,
     handleDownloadSelection,
     handlePasteHere,

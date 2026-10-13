@@ -1,5 +1,6 @@
 import {
   ContentCut,
+  ContentCopy,
   Delete,
   Download,
   Edit,
@@ -23,6 +24,7 @@ import { getFolderIcon } from "@shared/utils/icons";
 
 interface FolderCardProps {
   folder: NodeDto;
+  cornerAdornment?: React.ReactNode;
   isRenaming: boolean;
   renamingName: string;
   onRenamingNameChange: (name: string) => void;
@@ -34,6 +36,7 @@ interface FolderCardProps {
   onDownload?: () => void;
   onShare?: () => void;
   onCut?: () => void;
+  onCopy?: () => void;
   onTogglePin?: () => void;
   onShowInfo?: () => void;
   isPinned?: boolean;
@@ -51,6 +54,7 @@ type FolderAction = NonNullable<
 type FolderActionOptions = Pick<
   FolderCardProps,
   | "onCut"
+  | "onCopy"
   | "onDelete"
   | "onDownload"
   | "onRestore"
@@ -84,6 +88,13 @@ const buildFolderActions = (options: FolderActionOptions): FolderAction[] => {
   addPinAction(actions, options);
   addShareAction(actions, options);
   addRenameAction(actions, options);
+  if (options.onCopy) {
+    actions.push({
+      icon: <ContentCopy />,
+      onClick: options.onCopy,
+      tooltip: options.t("common:actions.copy"),
+    });
+  }
   addCutAction(actions, options);
   addEncryptionPolicyAction(actions, options);
   addRestoreAction(actions, options);
@@ -207,6 +218,7 @@ const addDeleteAction = (
 
 export const FolderCard = ({
   folder,
+  cornerAdornment,
   isRenaming,
   renamingName,
   onRenamingNameChange,
@@ -218,6 +230,7 @@ export const FolderCard = ({
   onDownload,
   onShare,
   onCut,
+  onCopy,
   onTogglePin,
   onShowInfo,
   isPinned = false,
@@ -231,8 +244,6 @@ export const FolderCard = ({
   const explicitEncryptionPolicyEnabled =
     encryptionPolicy?.explicitEnabled ??
     isFolderEncryptionPolicyEnabled(folder.metadata);
-  const effectiveEncryptionPolicyEnabled =
-    encryptionPolicy?.effectiveEnabled ?? explicitEncryptionPolicyEnabled;
   const encryptionPolicyInherited = encryptionPolicy?.inheritedEnabled ?? false;
 
   const actions = useMemo(
@@ -241,6 +252,7 @@ export const FolderCard = ({
         encryptionPolicyInherited,
         explicitEncryptionPolicyEnabled,
         onCut,
+        onCopy,
         onDelete,
         onDownload,
         onRestore,
@@ -257,6 +269,7 @@ export const FolderCard = ({
       encryptionPolicyInherited,
       explicitEncryptionPolicyEnabled,
       onCut,
+      onCopy,
       onDelete,
       onDownload,
       onRestore,
@@ -276,14 +289,7 @@ export const FolderCard = ({
       icon={getFolderIcon()}
       renamingIcon={getFolderIcon()}
       title={folder.name}
-      cornerAdornment={
-        effectiveEncryptionPolicyEnabled ? (
-          <LockOutlined
-            fontSize="small"
-            titleAccess={t("common:clientEncryption.folderPolicyEnabledHint")}
-          />
-        ) : undefined
-      }
+      cornerAdornment={cornerAdornment}
       subtitle={new Date(folder.createdAt).toLocaleDateString()}
       onClick={onClick}
       variant={variant}

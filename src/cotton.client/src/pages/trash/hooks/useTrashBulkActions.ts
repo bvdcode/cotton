@@ -1,7 +1,7 @@
 import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useCallback, useState } from "react";
-import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
-import { filesApi } from "../../../shared/api/filesApi";
+import type { NodeContentDto } from "../../../shared/api/nodesApi";
+import { batchItemsApi, toBatchItem } from "../../../shared/api/batchItemsApi";
 import type { ConfirmResult, ConfirmOptions } from "material-ui-confirm";
 import type { TFunction } from "i18next";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
@@ -12,7 +12,7 @@ import { taskManager } from "@shared/tasks";
 type ConfirmFn = (options?: ConfirmOptions) => Promise<ConfirmResult>;
 
 type TrashDeleteTarget = {
-  kind: "node" | "file";
+  kind: "folder" | "file";
   id: string;
   diagnosticsLabel: string;
 };
@@ -42,10 +42,14 @@ const dedupeTargets = (targets: TrashDeleteTarget[]): TrashDeleteTarget[] => {
 const collectTrashWrapperIds = (content: NodeContentDto): string[] => {
   const wrapperIds = new Set<string>();
   for (const node of content.nodes ?? []) {
-    if (node.parentId) wrapperIds.add(node.parentId);
+    if (node.parentId) {
+      wrapperIds.add(node.parentId);
+    }
   }
   for (const file of content.files ?? []) {
-    if (file.nodeId) wrapperIds.add(file.nodeId);
+    if (file.nodeId) {
+      wrapperIds.add(file.nodeId);
+    }
   }
   return [...wrapperIds];
 };
@@ -56,7 +60,7 @@ const buildEmptyTrashTargets = (
 ): TrashDeleteTarget[] => {
   if (isTrashRoot) {
     return collectTrashWrapperIds(content).map((id) => ({
-      kind: "node",
+      kind: "folder",
       id,
       diagnosticsLabel: "trash wrapper",
     }));
@@ -64,7 +68,7 @@ const buildEmptyTrashTargets = (
 
   return [
     ...(content.nodes ?? []).map((node) => ({
-      kind: "node" as const,
+      kind: "folder" as const,
       id: node.id,
       diagnosticsLabel: "folder",
     })),
@@ -86,27 +90,16 @@ const buildSelectedTrashTargets = (
 
     if (wrapperId) {
       return {
-        kind: "node",
+        kind: "folder",
         id: wrapperId,
         diagnosticsLabel: "trash wrapper",
       };
     }
 
-    return tile.kind === "folder"
-      ? { kind: "node", id: tile.node.id, diagnosticsLabel: "folder" }
-      : { kind: "file", id: tile.file.id, diagnosticsLabel: "file" };
+    return { kind: tile.kind, id: itemId, diagnosticsLabel: tile.kind };
   });
 
   return dedupeTargets(targets);
-};
-
-const deleteTrashTarget = async (target: TrashDeleteTarget): Promise<void> => {
-  if (target.kind === "node") {
-    await nodesApi.deleteNode(target.id, true);
-    return;
-  }
-
-  await filesApi.deleteFile(target.id, true);
 };
 
 const runTrashDeleteTask = async (args: {
@@ -123,35 +116,35 @@ const runTrashDeleteTask = async (args: {
     bytesTotal: targets.length,
   });
 
-  let processed = 0;
-  let failed = 0;
   task.update({ status: "running" });
 
-  for (const target of targets) {
-    try {
-      await deleteTrashTarget(target);
-    } catch (error) {
-      failed += 1;
+  try {
+    const results = await batchItemsApi.delete(
+      targets.map((target) => toBatchItem(target.id, target.kind)),
+      true,
+    );
+    const deleted = targets.filter((target, index) => {
+      const result = results[index];
+      if (result?.id === target.id && result.deleted) {
+        return true;
+      }
+
       reportClientError(
-        "Failed to delete " + target.diagnosticsLabel + " " + target.id + ":",
-        error,
+        "Failed to delete " + target.diagnosticsLabel + " " + target.id,
       );
-    } finally {
-      processed += 1;
-      task.update({
-        status: "running",
-        bytesCompleted: processed,
-      });
+      return false;
+    }).length;
+    task.update({ bytesCompleted: deleted });
+    if (deleted === targets.length) {
+      task.complete();
+      return;
     }
+  } catch (error) {
+    reportClientError("Failed to delete trash items", error);
   }
 
-  if (failed > 0) {
-    task.update({ bytesCompleted: targets.length, progress01: 1 });
-    task.fail({ message: failureMessage });
-    return;
-  }
-
-  task.complete();
+  task.update({ bytesCompleted: targets.length, progress01: 1 });
+  task.fail({ message: failureMessage });
 };
 
 type UseTrashBulkActionsParams = {
@@ -206,10 +199,14 @@ export const useTrashBulkActions = ({
   );
 
   const handleEmptyTrash = useCallback(async () => {
-    if (!content || deletingTrash) return;
+    if (!content || deletingTrash) {
+      return;
+    }
 
     const targets = buildEmptyTrashTargets(content, isTrashRoot);
-    if (targets.length === 0) return;
+    if (targets.length === 0) {
+      return;
+    }
 
     try {
       const result = await confirm({
@@ -220,7 +217,9 @@ export const useTrashBulkActions = ({
         ...destructiveConfirmOptions,
       });
 
-      if (!isConfirmed(result)) return;
+      if (!isConfirmed(result)) {
+        return;
+      }
 
       startDeleteTask({
         targets,
@@ -232,9 +231,14 @@ export const useTrashBulkActions = ({
   }, [confirm, content, deletingTrash, isTrashRoot, startDeleteTask, t]);
 
   const handleDeleteSelected = useCallback(async () => {
-    if (!nodeId || deletingTrash) return;
-    if (!fileSelection.selectionMode) return;
-    if (fileSelection.selectedCount <= 0) return;
+    if (
+      !nodeId ||
+      deletingTrash ||
+      !fileSelection.selectionMode ||
+      fileSelection.selectedCount <= 0
+    ) {
+      return;
+    }
 
     const selected = fileSelection.selectedIds;
     const selectedTiles = tiles.filter((tile) => {
@@ -242,13 +246,17 @@ export const useTrashBulkActions = ({
       return selected.has(id);
     });
 
-    if (selectedTiles.length === 0) return;
+    if (selectedTiles.length === 0) {
+      return;
+    }
 
     const targets = buildSelectedTrashTargets(
       selectedTiles,
       resolveWrapperNodeId,
     );
-    if (targets.length === 0) return;
+    if (targets.length === 0) {
+      return;
+    }
 
     const result = await confirm({
       title: t("deleteSelectedForever.confirmTitle", {
@@ -263,7 +271,9 @@ export const useTrashBulkActions = ({
       ...destructiveConfirmOptions,
     });
 
-    if (!isConfirmed(result)) return;
+    if (!isConfirmed(result)) {
+      return;
+    }
 
     startDeleteTask({
       targets,

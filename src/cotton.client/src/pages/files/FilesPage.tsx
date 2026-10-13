@@ -24,6 +24,7 @@ import {
   useUserPreferencesStore,
 } from "../../shared/store/userPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
+import { usePinnedFolders } from "@shared/dashboard/usePinnedFolders";
 import { useFileMoveController } from "./hooks/useFileMoveController";
 import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
 import { useFilesContentOperations } from "./hooks/useFilesContentOperations";
@@ -47,6 +48,7 @@ import {
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
+  const pinnedFolders = usePinnedFolders();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
@@ -218,7 +220,7 @@ export const FilesPage: React.FC = () => {
     selectedIds: fileSelection.selectedIds,
     selectedCount: fileSelection.selectedCount,
     goUpParentId,
-    onItemsCut: fileSelection.deselectAll,
+    onClipboardSet: fileSelection.deselectAll,
     showToast,
     t,
   });
@@ -249,6 +251,7 @@ export const FilesPage: React.FC = () => {
     currentFolderName: currentNode?.name,
     fileSelection,
     handleCutSelection: move.handleCutSelection,
+    handleCopySelection: move.handleCopySelection,
     handlePasteHere: move.handlePasteHere,
     loading,
     nodeId,
@@ -279,6 +282,7 @@ export const FilesPage: React.FC = () => {
             loading={loading}
             move={move}
             nodeId={nodeId}
+            pinnedFolders={pinnedFolders}
             onGoHome={encryption.goHome}
             onGoUp={handleGoUp}
             selectionActions={selectionActions}
@@ -300,6 +304,7 @@ export const FilesPage: React.FC = () => {
           pagination={folderPagination}
           onLoadMore={loadMore}
           move={move}
+          pinnedFolders={pinnedFolders}
           nodeId={nodeId}
           onNavigateBack={handleGoUp}
           selectionActions={selectionActions}

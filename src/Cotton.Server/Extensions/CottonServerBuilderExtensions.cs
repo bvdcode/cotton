@@ -134,7 +134,9 @@ namespace Cotton.Server.Extensions
                 .AddScoped<DownloadTokenExpirationService>()
                 .AddScoped<IPostgresDumpService, PostgresDumpService>()
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
+                .AddSingleton<DatabaseBackupGate>()
                 .AddScoped<DatabaseAutoRestoreService>()
+                .AddScoped<DatabaseBackupRestorePreparation>()
                 .AddScoped<FileManifestService>()
                 .AddSingleton<UserStorageQuotaCache>()
                 .AddSingleton<UserStorageQuotaMutationGate>()
@@ -192,6 +194,7 @@ namespace Cotton.Server.Extensions
                 .AddWebDavAuth()
                 .AddJwt();
             builder.Services.AddSessionAuthentication();
+            builder.Services.AddDatabaseBackupAuthentication();
             builder.Services.AddEndpointRateLimiting();
             builder.Services.AddHostedService<AppVersionTrackerService>();
 

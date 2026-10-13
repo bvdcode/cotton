@@ -33,7 +33,10 @@ namespace Cotton.TextExtraction
                     cancellationToken.ThrowIfCancellationRequested();
                     string relationshipId = sheet.Id?.Value
                         ?? throw new FileFormatException("A worksheet has no relationship id.");
-                    WorksheetPart worksheetPart = (WorksheetPart)workbookPart.GetPartById(relationshipId);
+                    if (workbookPart.GetPartById(relationshipId) is not WorksheetPart worksheetPart)
+                    {
+                        continue;
+                    }
                     text.AppendNormalized(sheet.Name?.Value);
                     text.AppendLineBreak();
                     if (text.IsTruncated)

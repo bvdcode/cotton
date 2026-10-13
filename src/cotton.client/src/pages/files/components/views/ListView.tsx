@@ -134,6 +134,7 @@ export const ListView: React.FC<IFileListView> = ({
           versions: t("common:actions.versions"),
           share: t("common:actions.share"),
           cut: t("move.cut"),
+          copy: t("common:actions.copy"),
           encryptedFile: t("common:clientEncryption.fileEncryptedHint"),
           encryptedFolder: t("common:clientEncryption.folderPolicyEnabledHint"),
           enableEncryptionPolicy: t("clientEncryption.enablePolicy"),

@@ -1,4 +1,3 @@
-import { Box, Typography } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode } from "react";
 import { FileSystemItemCard } from "./FileSystemItemCard";
@@ -45,108 +44,37 @@ export const RenamableItemCard = ({
   onCancelRename,
   placeholder,
 }: RenamableItemCardProps) => {
-  if (!isRenaming) {
-    return (
-      <FileSystemItemCard
-        icon={icon}
-        title={title}
-        titleAdornment={titleAdornment}
-        cornerAdornment={cornerAdornment}
-        subtitle={subtitle}
-        onClick={onClick}
-        actions={actions}
-        iconContainerSx={iconContainerSx}
-        sx={sx}
-        variant={variant}
-      />
-    );
-  }
-
   return (
-    <Box
-      sx={{
-        border: "1px solid",
-        borderColor: "primary.main",
-        borderRadius: 1,
-        ...(variant === "squareTile" && {
-          aspectRatio: "1 / 1",
-          display: "flex",
-          flexDirection: "column",
-        }),
-        p: {
-          xs: 0.5,
-          sm: 0.75,
-          md: 0.5,
+    <FileSystemItemCard
+      icon={isRenaming ? (renamingIcon ?? icon) : icon}
+      title={title}
+      titleContent={
+        isRenaming ? (
+          <InlineRenameField
+            value={renamingValue}
+            onChange={onRenamingValueChange}
+            onConfirm={onConfirmRename}
+            onCancel={onCancelRename}
+            placeholder={placeholder}
+          />
+        ) : undefined
+      }
+      titleAdornment={titleAdornment}
+      cornerAdornment={cornerAdornment}
+      subtitle={subtitle}
+      onClick={isRenaming ? undefined : onClick}
+      actions={isRenaming ? undefined : actions}
+      iconContainerSx={iconContainerSx}
+      sx={[
+        {
+          ...(isRenaming && {
+            borderColor: "primary.main",
+            bgcolor: "action.hover",
+          }),
         },
-        bgcolor: "action.hover",
-        overflow: "hidden",
-        ...sx,
-      }}
-    >
-      <Box
-        sx={{
-          width: "100%",
-          ...(variant === "squareTile"
-            ? { flex: 1, minHeight: 0 }
-            : { aspectRatio: "1 / 1" }),
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 1.5,
-          overflow: "hidden",
-        }}
-      >
-        <Box
-          sx={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            "& > svg": {
-              width: "70%",
-              height: "70%",
-            },
-            ...iconContainerSx,
-          }}
-        >
-          {renamingIcon ?? icon}
-        </Box>
-      </Box>
-
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.5,
-        }}
-      >
-        <InlineRenameField
-          value={renamingValue}
-          onChange={onRenamingValueChange}
-          onConfirm={onConfirmRename}
-          onCancel={onCancelRename}
-          placeholder={placeholder}
-        />
-      </Box>
-
-      {subtitle && (
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          display="block"
-          noWrap
-          title={subtitle}
-          sx={{
-            mt: 0.5,
-            fontSize: { xs: "0.7rem", md: "0.75rem" },
-            lineHeight: 1.4,
-          }}
-        >
-          {subtitle}
-        </Typography>
-      )}
-    </Box>
+        ...(Array.isArray(sx) ? sx : [sx ?? {}]),
+      ]}
+      variant={variant}
+    />
   );
 };

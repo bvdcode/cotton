@@ -64,6 +64,7 @@ export const useTilesKeyboard = (options: {
   tiles: IFileListView["tiles"];
   selectedIds: IFileListView["selectedIds"];
   columns: number;
+  leadingItemCount: number;
   containerRef: React.RefObject<HTMLDivElement | null>;
   shouldVirtualize: boolean;
   folderOperations: IFileListView["folderOperations"];
@@ -75,6 +76,7 @@ export const useTilesKeyboard = (options: {
     tiles,
     selectedIds,
     columns,
+    leadingItemCount,
     containerRef,
     shouldVirtualize,
     folderOperations,
@@ -147,7 +149,7 @@ export const useTilesKeyboard = (options: {
 
       if (shouldVirtualize) {
         virtuosoRef.current?.scrollToIndex({
-          index: Math.floor(nextIndex / columns),
+          index: Math.floor((nextIndex + leadingItemCount) / columns),
           align: "center",
           behavior: "auto",
         });
@@ -190,7 +192,14 @@ export const useTilesKeyboard = (options: {
       cancelPendingFocus();
       focusAnimationFrameRef.current = window.requestAnimationFrame(tryFocus);
     },
-    [cancelPendingFocus, columns, containerRef, shouldVirtualize, tiles.length],
+    [
+      cancelPendingFocus,
+      columns,
+      containerRef,
+      leadingItemCount,
+      shouldVirtualize,
+      tiles.length,
+    ],
   );
 
   const focusTileByIndex = useCallback(

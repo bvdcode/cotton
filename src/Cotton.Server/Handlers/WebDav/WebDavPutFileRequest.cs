@@ -423,6 +423,7 @@ namespace Cotton.Server.Handlers.WebDav
                 request.UserId);
 
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
+            await _scheduler.TriggerJobAsync<GenerateFileEmbeddingsJob>();
             await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
 
             if (created)

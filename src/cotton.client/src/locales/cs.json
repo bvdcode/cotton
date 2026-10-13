@@ -1456,7 +1456,11 @@
       },
       "databaseRestoreCompleted": {
         "title": "Databáze byla automaticky obnovena",
-        "content": "Automatická obnova databáze byla úspěšně dokončena.\n\nID zálohy: {{backupId}}\nZdrojová databáze: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nZáloha vytvořena (UTC): {{backupCreatedUtc}} UTC\nZáloha vytvořena ({{serverTimezone}}): {{backupCreatedLocal}}\nObnova dokončena (UTC): {{restoreCompletedUtcDisplay}} UTC\nObnova dokončena ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Automatická obnova databáze byla úspěšně dokončena.\n\nID zálohy: {{backupId}}\nZdrojová databáze: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nZáloha vytvořena (UTC): {{backupCreatedUtc}} UTC\nZáloha vytvořena ({{serverTimezone}}): {{backupCreatedLocal}}\nObnova dokončena (UTC): {{restoreCompletedUtcDisplay}} UTC\nObnova dokončena ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Automatická obnova databáze byla úspěšně dokončena.\n\nID zálohy: {{backupId}}\nZdrojová databáze: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nZáloha vytvořena (UTC): {{backupCreatedUtc}} UTC\nZáloha vytvořena ({{serverTimezone}}): {{backupCreatedLocal}}\nObnova dokončena (UTC): {{restoreCompletedUtcDisplay}} UTC\nObnova dokončena ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nPřeskočeny nedostupné nebo poškozené zálohy: {{skippedBackupIds}}. Byla obnovena starší záloha.",
+        "vectorUnavailable": "V záloze bylo zapnuté vektorové vyhledávání, ale na tomto serveru PostgreSQL není dostupný balíček pgvector. Databáze byla úspěšně obnovena bez vektorového vyhledávání. Nainstalujte pgvector a zapněte vektorové vyhledávání v nastavení serveru, aby se index vytvořil znovu.",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "Zjištěn problém s integritou databáze",
@@ -1527,7 +1531,8 @@
       "copied": "Zkopírováno!",
       "reload": "Obnovit",
       "retry": "Zkusit znovu",
-      "versions": "Verze"
+      "versions": "Verze",
+      "copy": "Kopírovat"
     },
     "errors": {
       "unexpectedTitle": "Stránku se nepodařilo zobrazit",
@@ -1732,6 +1737,11 @@
       "description": "Předvolby uživatelského rozhraní a personalizace.",
       "gallerySmoothTransitions": "Plynulé přechody v galerii",
       "galleryPreferPreview": "Zobrazovat originály místo náhledů",
+      "galleryMetadataPosition": {
+        "label": "Strana panelu metadat",
+        "left": "Vlevo",
+        "right": "Vpravo"
+      },
       "themeMode": {
         "label": "Motiv",
         "light": "Světlý",
@@ -2497,6 +2507,7 @@
       "folderNamePlaceholder": "Název složky",
       "goToFolder": "Přejít do složky",
       "goUp": "O úroveň výš",
+      "goUpHoldHint": "O úroveň výš; podržením přejdete do kořenové složky",
       "dropFiles": "Přetáhněte soubory k nahrání",
       "switchToTilesView": "Přepnout na dlaždice",
       "switchToListView": "Přepnout na seznam",
@@ -2578,6 +2589,34 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Informace",
+        "dimensions": "Rozměry",
+        "duration": "Délka",
+        "seconds": "{{value}} s",
+        "format": "Formát",
+        "title": "Název",
+        "artist": "Interpret",
+        "album": "Album",
+        "albumArtist": "Interpret alba",
+        "track": "Stopa",
+        "disc": "Disk",
+        "date": "Datum",
+        "year": "Rok",
+        "genre": "Žánr",
+        "audioCodec": "Zvukový kodek",
+        "videoCodec": "Video kodek",
+        "cameraMake": "Výrobce",
+        "cameraModel": "Fotoaparát",
+        "lens": "Objektiv",
+        "exposureTime": "Expoziční čas",
+        "aperture": "Clona",
+        "iso": "ISO",
+        "dateTaken": "Datum pořízení",
+        "focalLength": "Ohnisková vzdálenost",
+        "moreDetails": "Více podrobností",
+        "lessDetails": "Méně podrobností"
+      },
       "actions": {
         "edit": "Upravit",
         "save": "Uložit",
@@ -2746,9 +2785,20 @@
       "restoreConfirmDescription": "Aktuální obsah souboru bude uložen jako nová verze a poté se verze {{version}} stane aktuální.",
       "deleteConfirmTitle": "Odstranit tuto verzi?",
       "deleteConfirmDescription": "Verze {{version}} bude odstraněna. Aktuální soubor se nezmění."
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Připraveno ke kopírování: {{count}}",
+        "copied": "Zkopírováno: {{count}}",
+        "failed": "Nepodařilo se zkopírovat: {{count}}"
+      }
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Přesouvání",
+      "copy": "Kopírování"
+    },
     "title": "Úlohy",
     "error": "Chyba",
     "errors": {
@@ -2842,7 +2892,7 @@
     },
     "restore": {
       "action": "Obnovit",
-      "inProgress": "Obnovování {{current}} z {{total}}: {{name}}",
+      "inProgress": "Obnovování {{total}} položek...",
       "failed": "Obnovení \"{{name}}\" se nezdařilo",
       "notRestorable": "Položku nelze obnovit.",
       "rootFolder": "kořenovou složku",
@@ -3280,16 +3330,16 @@
     },
     "databaseBackup": {
       "title": "Záloha databáze",
-      "description": "Nejnovější manifest zálohy ze serveru.",
+      "description": "Uložené zálohy databáze a přístup pro externí nástroje.",
       "actions": {
         "refresh": "Obnovit",
         "trigger": "Spustit zálohu",
-        "triggering": "Spouštění..."
+        "triggering": "Vytváření zálohy…"
       },
       "state": {
         "loading": "Načítání informací o záloze...",
         "empty": "Zatím nebyly nalezeny žádné zálohy.",
-        "triggerSuccess": "Úloha zálohování byla spuštěna.",
+        "triggerSuccess": "Záloha byla uložena.",
         "restoreIfEmptyHint": "Pokud bude databáze ztracena a chcete, aby se obnovila automaticky, nastavte v prostředí kontejneru COTTON_RESTORE_DATABASE_IF_EMPTY=true. Aby to fungovalo, musí být databáze prázdná, bez jakýchkoli tabulek."
       },
       "fields": {
@@ -3306,6 +3356,24 @@
       "errors": {
         "loadFailed": "Načtení informací o záloze se nezdařilo.",
         "triggerFailed": "Spuštění zálohy se nezdařilo."
+      },
+      "history": {
+        "title": "Historie záloh",
+        "retention": "Uchovávají se všechny zálohy za posledních 7 dní a alespoň 3 nejnovější zálohy.",
+        "latest": "Nejnovější"
+      },
+      "access": {
+        "title": "Přístup pro externí zálohování",
+        "description": "Tento token umožňuje pouze vytváření záloh databáze. Uložte jej do zálohovacího nástroje. Platí do změny hlavního klíče; nový token nezneplatní předchozí tokeny.",
+        "request": "Odešlete {{endpoint}} s hlavičkou {{header}}. Úspěšná odpověď potvrzuje uložení dumpu.",
+        "token": "Zálohovací token",
+        "generate": "Vytvořit token",
+        "copy": "Kopírovat token",
+        "copied": "Zkopírováno",
+        "failed": "Token se nepodařilo vytvořit.",
+        "copyFailed": "Kopírování selhalo. Vyberte a zkopírujte token ručně.",
+        "curlExample": "Příklad curl",
+        "copyCommand": "Kopírovat příkaz"
       }
     },
     "storageStatistics": {

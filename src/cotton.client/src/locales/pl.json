@@ -1459,7 +1459,11 @@
       },
       "databaseRestoreCompleted": {
         "title": "Baza danych została automatycznie przywrócona",
-        "content": "Automatyczne przywracanie bazy danych zakończyło się pomyślnie.\n\nID kopii zapasowej: {{backupId}}\nBaza źródłowa: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nKopia utworzona (UTC): {{backupCreatedUtc}} UTC\nKopia utworzona ({{serverTimezone}}): {{backupCreatedLocal}}\nPrzywracanie zakończone (UTC): {{restoreCompletedUtcDisplay}} UTC\nPrzywracanie zakończone ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Automatyczne przywracanie bazy danych zakończyło się pomyślnie.\n\nID kopii zapasowej: {{backupId}}\nBaza źródłowa: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nKopia utworzona (UTC): {{backupCreatedUtc}} UTC\nKopia utworzona ({{serverTimezone}}): {{backupCreatedLocal}}\nPrzywracanie zakończone (UTC): {{restoreCompletedUtcDisplay}} UTC\nPrzywracanie zakończone ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Automatyczne przywracanie bazy danych zakończyło się pomyślnie.\n\nID kopii zapasowej: {{backupId}}\nBaza źródłowa: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nKopia utworzona (UTC): {{backupCreatedUtc}} UTC\nKopia utworzona ({{serverTimezone}}): {{backupCreatedLocal}}\nPrzywracanie zakończone (UTC): {{restoreCompletedUtcDisplay}} UTC\nPrzywracanie zakończone ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nPominięto niedostępne lub uszkodzone kopie: {{skippedBackupIds}}. Przywrócono wcześniejszą kopię.",
+        "vectorUnavailable": "W kopii zapasowej było włączone wyszukiwanie wektorowe, ale pakiet pgvector jest niedostępny na tym serwerze PostgreSQL. Baza danych została pomyślnie przywrócona bez wyszukiwania wektorowego. Zainstaluj pgvector i włącz wyszukiwanie wektorowe w ustawieniach serwera, aby odbudować indeks.",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "Wykryto problem integralności bazy danych",
@@ -1530,7 +1534,8 @@
       "copied": "Skopiowano!",
       "reload": "Odśwież",
       "retry": "Spróbuj ponownie",
-      "versions": "Wersje"
+      "versions": "Wersje",
+      "copy": "Kopiuj"
     },
     "errors": {
       "unexpectedTitle": "Nie udało się wyświetlić strony",
@@ -1735,6 +1740,11 @@
       "description": "Preferencje interfejsu i personalizacja.",
       "gallerySmoothTransitions": "Płynne przejścia w galerii",
       "galleryPreferPreview": "Pokazuj oryginały zamiast podglądów",
+      "galleryMetadataPosition": {
+        "label": "Strona panelu metadanych",
+        "left": "Po lewej",
+        "right": "Po prawej"
+      },
       "themeMode": {
         "label": "Motyw",
         "light": "Jasny",
@@ -2500,6 +2510,7 @@
       "folderNamePlaceholder": "Nazwa folderu",
       "goToFolder": "Przejdź do folderu",
       "goUp": "Wyżej",
+      "goUpHoldHint": "Wyżej; przytrzymaj, aby przejść do folderu głównego",
       "dropFiles": "Upuść pliki, aby przesłać",
       "switchToTilesView": "Przełącz na kafelki",
       "switchToListView": "Przełącz na widok listy",
@@ -2581,6 +2592,34 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Informacje",
+        "dimensions": "Wymiary",
+        "duration": "Czas trwania",
+        "seconds": "{{value}} s",
+        "format": "Format",
+        "title": "Tytuł",
+        "artist": "Wykonawca",
+        "album": "Album",
+        "albumArtist": "Wykonawca albumu",
+        "track": "Ścieżka",
+        "disc": "Płyta",
+        "date": "Data",
+        "year": "Rok",
+        "genre": "Gatunek",
+        "audioCodec": "Kodek audio",
+        "videoCodec": "Kodek wideo",
+        "cameraMake": "Producent",
+        "cameraModel": "Aparat",
+        "lens": "Obiektyw",
+        "exposureTime": "Czas ekspozycji",
+        "aperture": "Przysłona",
+        "iso": "ISO",
+        "dateTaken": "Data wykonania",
+        "focalLength": "Ogniskowa",
+        "moreDetails": "Więcej szczegółów",
+        "lessDetails": "Mniej szczegółów"
+      },
       "actions": {
         "edit": "Edytuj",
         "save": "Zapisz",
@@ -2749,9 +2788,20 @@
       "restoreConfirmDescription": "Bieżąca zawartość pliku zostanie zapisana jako nowa wersja, a następnie wersja {{version}} stanie się bieżącą.",
       "deleteConfirmTitle": "Usunąć tę wersję?",
       "deleteConfirmDescription": "Wersja {{version}} zostanie usunięta. Bieżący plik nie zostanie zmieniony."
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Gotowe do skopiowania: {{count}}",
+        "copied": "Skopiowano: {{count}}",
+        "failed": "Nie udało się skopiować: {{count}}"
+      }
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Przenoszenie",
+      "copy": "Kopiowanie"
+    },
     "title": "Zadania",
     "error": "Błąd",
     "errors": {
@@ -2845,7 +2895,7 @@
     },
     "restore": {
       "action": "Przywróć",
-      "inProgress": "Przywracanie {{current}} z {{total}}: {{name}}",
+      "inProgress": "Przywracanie {{total}} elementów...",
       "failed": "Nie udało się przywrócić \"{{name}}\"",
       "notRestorable": "Elementu nie można przywrócić.",
       "rootFolder": "folder główny",
@@ -3283,16 +3333,16 @@
     },
     "databaseBackup": {
       "title": "Kopia zapasowa bazy danych",
-      "description": "Najnowszy manifest kopii zapasowej z serwera.",
+      "description": "Zapisane kopie bazy danych i dostęp dla zewnętrznych narzędzi.",
       "actions": {
         "refresh": "Odśwież",
         "trigger": "Uruchom kopię zapasową",
-        "triggering": "Uruchamianie..."
+        "triggering": "Tworzenie kopii…"
       },
       "state": {
         "loading": "Ładowanie informacji o kopii zapasowej...",
         "empty": "Nie znaleziono jeszcze żadnych kopii zapasowych.",
-        "triggerSuccess": "Zadanie kopii zapasowej zostało uruchomione.",
+        "triggerSuccess": "Kopia została zapisana.",
         "restoreIfEmptyHint": "Jeśli baza danych zostanie utracona i chcesz, aby została automatycznie przywrócona, ustaw COTTON_RESTORE_DATABASE_IF_EMPTY=true w środowisku kontenera. Aby to zadziałało, baza danych musi być pusta, bez żadnych tabel."
       },
       "fields": {
@@ -3309,6 +3359,24 @@
       "errors": {
         "loadFailed": "Nie udało się załadować informacji o kopii zapasowej.",
         "triggerFailed": "Nie udało się uruchomić kopii zapasowej."
+      },
+      "history": {
+        "title": "Historia kopii",
+        "retention": "Przechowywane są wszystkie kopie z ostatnich 7 dni oraz co najmniej 3 najnowsze kopie.",
+        "latest": "Najnowsza"
+      },
+      "access": {
+        "title": "Dostęp dla zewnętrznych kopii",
+        "description": "Ten token pozwala tylko tworzyć kopie bazy danych. Zapisz go w narzędziu do kopii. Działa do zmiany klucza głównego; nowy token nie unieważnia poprzednich.",
+        "request": "Wyślij {{endpoint}} z nagłówkiem {{header}}. Pomyślna odpowiedź oznacza, że zrzut został zapisany.",
+        "token": "Token kopii",
+        "generate": "Utwórz token",
+        "copy": "Kopiuj token",
+        "copied": "Skopiowano",
+        "failed": "Nie udało się utworzyć tokenu.",
+        "copyFailed": "Nie udało się skopiować. Zaznacz i skopiuj token ręcznie.",
+        "curlExample": "Przykład curl",
+        "copyCommand": "Kopiuj polecenie"
       }
     },
     "storageStatistics": {

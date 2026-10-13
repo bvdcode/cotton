@@ -294,17 +294,33 @@ describe("admin mutations", () => {
   });
 
   it("invalidates latest database backup after triggering a backup", async () => {
-    vi.spyOn(adminApi, "triggerDatabaseBackup").mockResolvedValue();
+    vi.spyOn(adminApi, "triggerDatabaseBackup").mockResolvedValue({
+      backupId: "backup-2",
+      createdAtUtc: "2026-10-09T12:00:00Z",
+      pointerUpdatedAtUtc: "2026-10-09T12:00:01Z",
+      dumpSizeBytes: 1024,
+      chunkCount: 1,
+      dumpContentHash: "hash",
+      sourceDatabase: "cotton",
+      sourceHost: "localhost",
+      sourcePort: 5432,
+    });
     const queryClient = createQueryClient();
     queryClient.setQueryData(queryKeys.admin.latestDbBackup(), {
       backupId: "backup-1",
     });
+    queryClient.setQueryData(queryKeys.admin.databaseBackupHistory(), []);
 
     const { result } = renderHook(() => useTriggerDatabaseBackupMutation(), {
       wrapper: createWrapper(queryClient),
     });
 
     await result.current.mutateAsync();
+
+    expect(
+      queryClient.getQueryState(queryKeys.admin.databaseBackupHistory())
+        ?.isInvalidated,
+    ).toBe(true);
 
     expect(
       queryClient

@@ -122,7 +122,7 @@ describe("UploadManager task facade", () => {
     mocks.uploadFileToNode.mockReset();
   });
 
-  it("uses transmitted bytes rather than optimistic progress for speed", async () => {
+  it("uses effective upload progress for speed", async () => {
     const taskManager = createManager();
     let finishUpload!: () => void;
     const uploadFinished = new Promise<void>((resolve) => {
@@ -154,7 +154,7 @@ describe("UploadManager task facade", () => {
     expect(taskManager.getSnapshot().tasks[0]).toMatchObject({
       bytesCompleted: 512,
       progress01: 0.5,
-      speedBytesPerSec: 512,
+      speedBytesPerSec: 2048,
       status: "running",
     });
 

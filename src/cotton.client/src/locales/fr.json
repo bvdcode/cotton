@@ -1455,7 +1455,11 @@
       },
       "databaseRestoreCompleted": {
         "title": "Base de données restaurée automatiquement",
-        "content": "La restauration automatique de la base de données s’est terminée avec succès.\n\nID de sauvegarde : {{backupId}}\nBase source : {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nSauvegarde créée (UTC) : {{backupCreatedUtc}} UTC\nSauvegarde créée ({{serverTimezone}}) : {{backupCreatedLocal}}\nRestauration terminée (UTC) : {{restoreCompletedUtcDisplay}} UTC\nRestauration terminée ({{serverTimezone}}) : {{restoreCompletedLocalDisplay}}"
+        "content": "La restauration automatique de la base de données s’est terminée avec succès.\n\nID de sauvegarde : {{backupId}}\nBase source : {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nSauvegarde créée (UTC) : {{backupCreatedUtc}} UTC\nSauvegarde créée ({{serverTimezone}}) : {{backupCreatedLocal}}\nRestauration terminée (UTC) : {{restoreCompletedUtcDisplay}} UTC\nRestauration terminée ({{serverTimezone}}) : {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "La restauration automatique de la base de données s’est terminée avec succès.\n\nID de sauvegarde : {{backupId}}\nBase source : {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nSauvegarde créée (UTC) : {{backupCreatedUtc}} UTC\nSauvegarde créée ({{serverTimezone}}) : {{backupCreatedLocal}}\nRestauration terminée (UTC) : {{restoreCompletedUtcDisplay}} UTC\nRestauration terminée ({{serverTimezone}}) : {{restoreCompletedLocalDisplay}}\n\nSauvegardes indisponibles ou endommagées ignorées : {{skippedBackupIds}}. Une sauvegarde antérieure a été restaurée.",
+        "vectorUnavailable": "La recherche vectorielle était activée dans la sauvegarde, mais le paquet pgvector est indisponible sur ce serveur PostgreSQL. La base de données a été restaurée avec succès sans recherche vectorielle. Installez pgvector et activez la recherche vectorielle dans les paramètres du serveur pour reconstruire l’index.",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "Problème d’intégrité de base de données détecté",
@@ -1526,7 +1530,8 @@
       "copied": "Copié !",
       "reload": "Recharger",
       "retry": "Réessayer",
-      "versions": "Versions"
+      "versions": "Versions",
+      "copy": "Copier"
     },
     "errors": {
       "unexpectedTitle": "Impossible d’afficher cette page",
@@ -1731,6 +1736,11 @@
       "description": "Préférences de l'interface et personnalisation.",
       "gallerySmoothTransitions": "Transitions fluides dans la galerie",
       "galleryPreferPreview": "Afficher les originaux au lieu des aperçus",
+      "galleryMetadataPosition": {
+        "label": "Côté du panneau de métadonnées",
+        "left": "À gauche",
+        "right": "À droite"
+      },
       "themeMode": {
         "label": "Thème",
         "light": "Clair",
@@ -2488,6 +2498,7 @@
       "folderNamePlaceholder": "Nom du dossier",
       "goToFolder": "Aller au dossier",
       "goUp": "Remonter",
+      "goUpHoldHint": "Remonter ; maintenir pour aller au dossier racine",
       "dropFiles": "Déposez les fichiers pour les téléverser",
       "switchToTilesView": "Passer en vue tuiles",
       "switchToListView": "Passer en vue liste",
@@ -2561,6 +2572,34 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Informations",
+        "dimensions": "Dimensions",
+        "duration": "Durée",
+        "seconds": "{{value}} s",
+        "format": "Format",
+        "title": "Titre",
+        "artist": "Artiste",
+        "album": "Album",
+        "albumArtist": "Artiste de l’album",
+        "track": "Piste",
+        "disc": "Disque",
+        "date": "Date",
+        "year": "Année",
+        "genre": "Genre",
+        "audioCodec": "Codec audio",
+        "videoCodec": "Codec vidéo",
+        "cameraMake": "Fabricant",
+        "cameraModel": "Appareil photo",
+        "lens": "Objectif",
+        "exposureTime": "Temps de pose",
+        "aperture": "Ouverture",
+        "iso": "ISO",
+        "dateTaken": "Date de prise de vue",
+        "focalLength": "Longueur focale",
+        "moreDetails": "Plus de détails",
+        "lessDetails": "Moins de détails"
+      },
       "actions": {
         "edit": "Modifier",
         "save": "Enregistrer",
@@ -2711,9 +2750,20 @@
       "restoreConfirmDescription": "Le contenu actuel du fichier sera enregistré comme une nouvelle version, puis la version {{version}} deviendra la version actuelle.",
       "deleteConfirmTitle": "Supprimer cette version ?",
       "deleteConfirmDescription": "La version {{version}} sera supprimée. Le fichier actuel ne sera pas modifié."
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Prêts à copier : {{count}}",
+        "copied": "Copiés : {{count}}",
+        "failed": "Échec de la copie : {{count}}"
+      }
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Déplacement",
+      "copy": "Copie"
+    },
     "title": "Tâches",
     "error": "Erreur",
     "errors": {
@@ -2801,7 +2851,7 @@
     },
     "restore": {
       "action": "Restaurer",
-      "inProgress": "Restauration de {{current}} sur {{total}} : {{name}}",
+      "inProgress": "Restauration de {{total}} éléments...",
       "failed": "Échec de la restauration de « {{name}} »",
       "notRestorable": "L'élément ne peut pas être restauré.",
       "rootFolder": "le dossier racine",
@@ -3239,16 +3289,16 @@
     },
     "databaseBackup": {
       "title": "Sauvegarde de la base de données",
-      "description": "Dernier manifeste de sauvegarde provenant du serveur.",
+      "description": "Sauvegardes de la base de données et accès aux outils externes.",
       "actions": {
         "refresh": "Actualiser",
         "trigger": "Déclencher la sauvegarde",
-        "triggering": "Déclenchement en cours..."
+        "triggering": "Création de la sauvegarde…"
       },
       "state": {
         "loading": "Chargement des informations de sauvegarde...",
         "empty": "Aucune sauvegarde trouvée pour le moment.",
-        "triggerSuccess": "La tâche de sauvegarde a été déclenchée.",
+        "triggerSuccess": "Sauvegarde enregistrée.",
         "restoreIfEmptyHint": "Si la base de données est perdue et que vous souhaitez qu'elle se restaure automatiquement, définissez COTTON_RESTORE_DATABASE_IF_EMPTY=true dans l'environnement du conteneur. La base de données doit être vide, sans aucune table, pour que cela fonctionne."
       },
       "fields": {
@@ -3265,6 +3315,24 @@
       "errors": {
         "loadFailed": "Échec du chargement des informations de sauvegarde.",
         "triggerFailed": "Échec du déclenchement de la sauvegarde."
+      },
+      "history": {
+        "title": "Historique des sauvegardes",
+        "retention": "Toutes les sauvegardes des 7 derniers jours et au moins les 3 plus récentes sont conservées.",
+        "latest": "La plus récente"
+      },
+      "access": {
+        "title": "Accès aux outils de sauvegarde externes",
+        "description": "Ce jeton permet uniquement de créer des sauvegardes de la base de données. Enregistrez-le dans votre outil de sauvegarde. Il reste valide tant que la clé principale ne change pas ; un nouveau jeton ne révoque pas les précédents.",
+        "request": "Envoyez {{endpoint}} avec l’en-tête {{header}}. Une réponse réussie confirme que le dump est enregistré.",
+        "token": "Jeton de sauvegarde",
+        "generate": "Créer un jeton",
+        "copy": "Copier le jeton",
+        "copied": "Copié",
+        "failed": "Impossible de créer le jeton.",
+        "copyFailed": "Échec de la copie. Sélectionnez et copiez le jeton manuellement.",
+        "curlExample": "Exemple curl",
+        "copyCommand": "Copier la commande"
       }
     },
     "storageStatistics": {

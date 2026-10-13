@@ -1464,7 +1464,11 @@
       },
       "databaseRestoreCompleted": {
         "title": "数据库已自动恢复",
-        "content": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}"
+        "content": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "数据库自动恢复已成功完成。\n\n备份 ID：{{backupId}}\n源数据库：{{sourceDatabase}}（{{sourceHost}}:{{sourcePort}}）\n\n备份创建时间（UTC）：{{backupCreatedUtc}} UTC\n备份创建时间（{{serverTimezone}}）：{{backupCreatedLocal}}\n恢复完成时间（UTC）：{{restoreCompletedUtcDisplay}} UTC\n恢复完成时间（{{serverTimezone}}）：{{restoreCompletedLocalDisplay}}\n\n已跳过不可用或损坏的备份：{{skippedBackupIds}}。已恢复较早的备份。",
+        "vectorUnavailable": "备份中已启用向量搜索，但此 PostgreSQL 服务器未提供 pgvector 软件包。数据库已成功恢复，向量搜索暂未启用。请安装 pgvector 并在服务器设置中启用向量搜索，以重建索引。",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "检测到数据库完整性问题",
@@ -1535,7 +1539,8 @@
       "copied": "已复制！",
       "reload": "刷新",
       "retry": "重试",
-      "versions": "版本"
+      "versions": "版本",
+      "copy": "复制"
     },
     "errors": {
       "unexpectedTitle": "无法显示此页面",
@@ -1738,6 +1743,11 @@
       "description": "界面偏好与个性化设置。",
       "gallerySmoothTransitions": "图库平滑过渡",
       "galleryPreferPreview": "显示原图而非预览图",
+      "galleryMetadataPosition": {
+        "label": "元数据面板位置",
+        "left": "左侧",
+        "right": "右侧"
+      },
       "themeMode": {
         "label": "主题",
         "light": "浅色",
@@ -2497,6 +2507,7 @@
       "folderNamePlaceholder": "文件夹名称",
       "goToFolder": "前往文件夹",
       "goUp": "上一级",
+      "goUpHoldHint": "上一级；长按前往根目录",
       "dropFiles": "拖放文件以上传",
       "switchToTilesView": "切换为平铺视图",
       "switchToListView": "切换为列表视图",
@@ -2570,6 +2581,34 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "信息",
+        "dimensions": "分辨率",
+        "duration": "时长",
+        "seconds": "{{value}} 秒",
+        "format": "格式",
+        "title": "标题",
+        "artist": "艺术家",
+        "album": "专辑",
+        "albumArtist": "专辑艺术家",
+        "track": "音轨",
+        "disc": "光盘",
+        "date": "日期",
+        "year": "年份",
+        "genre": "流派",
+        "audioCodec": "音频编解码器",
+        "videoCodec": "视频编解码器",
+        "cameraMake": "制造商",
+        "cameraModel": "相机",
+        "lens": "镜头",
+        "exposureTime": "快门速度",
+        "aperture": "光圈",
+        "iso": "ISO",
+        "dateTaken": "拍摄时间",
+        "focalLength": "焦距",
+        "moreDetails": "更多详情",
+        "lessDetails": "收起详情"
+      },
       "actions": {
         "edit": "编辑",
         "save": "保存",
@@ -2720,9 +2759,20 @@
       "restoreConfirmDescription": "当前文件内容将保存为新版本，然后版本 {{version}} 将成为当前版本。",
       "deleteConfirmTitle": "删除此版本？",
       "deleteConfirmDescription": "版本 {{version}} 将被删除。当前文件不会更改。"
+    },
+    "copy": {
+      "toasts": {
+        "ready": "准备复制：{{count}}",
+        "copied": "已复制：{{count}}",
+        "failed": "无法复制：{{count}}"
+      }
     }
   },
   "tasks": {
+    "operations": {
+      "move": "移动",
+      "copy": "复制"
+    },
     "title": "任务",
     "error": "错误",
     "errors": {
@@ -2810,7 +2860,7 @@
     },
     "restore": {
       "action": "还原",
-      "inProgress": "正在还原第 {{current}} 项，共 {{total}} 项：{{name}}",
+      "inProgress": "正在还原 {{total}} 个项目……",
       "failed": "还原 \"{{name}}\" 失败",
       "notRestorable": "该项目无法还原。",
       "rootFolder": "根文件夹",
@@ -3248,16 +3298,16 @@
     },
     "databaseBackup": {
       "title": "数据库备份",
-      "description": "服务器上的最新备份清单。",
+      "description": "已保存的数据库备份和外部备份工具访问权限。",
       "actions": {
         "refresh": "刷新",
         "trigger": "触发备份",
-        "triggering": "正在触发……"
+        "triggering": "正在创建备份…"
       },
       "state": {
         "loading": "正在加载备份信息……",
         "empty": "尚未找到任何备份。",
-        "triggerSuccess": "备份任务已触发。",
+        "triggerSuccess": "备份已保存。",
         "restoreIfEmptyHint": "如果数据库丢失且希望自动还原，请在容器环境中设置 COTTON_RESTORE_DATABASE_IF_EMPTY=true。数据库必须为空且不含任何表才能生效。"
       },
       "fields": {
@@ -3274,6 +3324,24 @@
       "errors": {
         "loadFailed": "加载备份信息失败。",
         "triggerFailed": "触发备份失败。"
+      },
+      "history": {
+        "title": "备份历史",
+        "retention": "保留最近 7 天的所有备份，且至少保留最新的 3 个备份。",
+        "latest": "最新"
+      },
+      "access": {
+        "title": "外部备份工具访问",
+        "description": "此令牌仅允许创建数据库备份。请将其保存在备份工具中。只要主密钥不变，令牌就始终有效；签发新令牌不会撤销现有令牌。",
+        "request": "使用 {{header}} 请求头发送 {{endpoint}}。成功响应表示转储已保存。",
+        "token": "备份令牌",
+        "generate": "生成令牌",
+        "copy": "复制令牌",
+        "copied": "已复制",
+        "failed": "无法生成令牌。",
+        "copyFailed": "无法复制。请手动选择并复制令牌。",
+        "curlExample": "curl 示例",
+        "copyCommand": "复制命令"
       }
     },
     "storageStatistics": {

@@ -34,6 +34,7 @@ export interface ColumnOptions {
     versions: string;
     share: string;
     cut: string;
+    copy: string;
     encryptedFile: string;
     encryptedFolder: string;
     enableEncryptionPolicy: string;
@@ -67,6 +68,7 @@ export interface ColumnOptions {
     onDelete?: (id: string, name: string) => void;
     onDownload?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
+    onCopy?: (id: string) => void;
     onCut?: (id: string) => void;
     onToggleEncryptionPolicy?: (id: string, currentlyEnabled: boolean) => void;
     onTogglePin?: (id: string) => void;
@@ -84,6 +86,7 @@ export interface ColumnOptions {
     onDownload?: (id: string, name: string) => void;
     onVersions?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
+    onCopy?: (id: string) => void;
     onCut?: (id: string) => void;
     onDelete?: (id: string, name: string) => void;
   };

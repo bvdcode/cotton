@@ -1,4 +1,3 @@
-import type { UploadProgressSnapshot } from "./types";
 import { RollingBytesPerSecondEstimator } from "./RollingBytesPerSecondEstimator";
 import { uploadConfig } from "./config";
 import type { UploadTaskInternal } from "./UploadManager";
@@ -7,7 +6,7 @@ import type { UploadExecutionState } from "./UploadTaskRunner";
 export class UploadProgressTracker {
   private overallBytesTotal = 0;
   private overallBytesUploaded = 0;
-  private overallBytesTransferredForSpeed = 0;
+  private overallBytesProcessedForSpeed = 0;
   private readonly overallEstimator = new RollingBytesPerSecondEstimator({
     windowMs: 2000,
     minDurationMs: 300,
@@ -26,8 +25,9 @@ export class UploadProgressTracker {
   beginBatch(): void {
     this.overallBytesTotal = 0;
     this.overallBytesUploaded = 0;
-    this.overallBytesTransferredForSpeed = 0;
+    this.overallBytesProcessedForSpeed = 0;
     this.overallEstimator.reset();
+    this.overallEstimator.update(0);
   }
 
   addFile(size: number): void {
@@ -36,9 +36,8 @@ export class UploadProgressTracker {
 
   recount(tasks: UploadTaskInternal[]): void {
     this.countTasks(tasks);
-    this.overallBytesTransferredForSpeed = tasks.reduce(
-      (sum, task) =>
-        sum + (task._bytesTransferredForSpeed ?? task.bytesUploaded),
+    this.overallBytesProcessedForSpeed = tasks.reduce(
+      (sum, task) => sum + (task._bytesProcessedForSpeed ?? task.bytesUploaded),
       0,
     );
     this.overallEstimator.reset();
@@ -68,7 +67,6 @@ export class UploadProgressTracker {
     task: UploadTaskInternal,
     state: UploadExecutionState,
     bytesUploaded: number,
-    snapshot?: UploadProgressSnapshot,
   ): void {
     const previousBytesUploaded = task.bytesUploaded;
     task.bytesUploaded = Math.min(task.bytesTotal, Math.max(0, bytesUploaded));
@@ -76,7 +74,7 @@ export class UploadProgressTracker {
       task.bytesTotal > 0 ? task.bytesUploaded / task.bytesTotal : 1;
 
     const now = Date.now();
-    this.updateSpeed(task, state, snapshot, now);
+    this.updateSpeed(task, state, now);
     const delta = task.bytesUploaded - previousBytesUploaded;
     if (delta !== 0) {
       this.overallBytesUploaded += delta;
@@ -99,7 +97,6 @@ export class UploadProgressTracker {
   private updateSpeed(
     task: UploadTaskInternal,
     state: UploadExecutionState,
-    snapshot: UploadProgressSnapshot | undefined,
     now: number,
   ): void {
     if (task.bytesUploaded > 0) {
@@ -107,31 +104,37 @@ export class UploadProgressTracker {
       this.onProgress(task, now);
     }
 
-    const previousSpeedBytes = task._bytesTransferredForSpeed ?? 0;
-    const nextSpeedBytes = Math.max(
-      previousSpeedBytes,
-      snapshot ? snapshot.bytesTransmitted : task.bytesUploaded,
-    );
+    const previousSpeedBytes = task._bytesProcessedForSpeed ?? 0;
+    const nextSpeedBytes = Math.max(previousSpeedBytes, task.bytesUploaded);
     const speedDelta = nextSpeedBytes - previousSpeedBytes;
     if (speedDelta <= 0) {
       return;
     }
 
-    task._bytesTransferredForSpeed = nextSpeedBytes;
+    task._bytesProcessedForSpeed = nextSpeedBytes;
     const taskRate = state.taskEstimator.update(nextSpeedBytes, now);
     task.uploadSpeedBytesPerSec =
       taskRate.rollingBytesPerSec > 0
         ? taskRate.rollingBytesPerSec
         : taskRate.averageBytesPerSec;
-    this.overallBytesTransferredForSpeed += speedDelta;
-    this.overallEstimator.update(this.overallBytesTransferredForSpeed, now);
+    this.overallBytesProcessedForSpeed += speedDelta;
+    this.overallEstimator.update(this.overallBytesProcessedForSpeed, now);
   }
 
   complete(task: UploadTaskInternal, previousBytesUploaded: number): void {
     const finalizeDelta = task.bytesUploaded - previousBytesUploaded;
     if (finalizeDelta > 0) {
       this.overallBytesUploaded += finalizeDelta;
-      this.overallEstimator.update(this.overallBytesUploaded, Date.now());
+      const speedDelta = Math.max(
+        0,
+        task.bytesUploaded - (task._bytesProcessedForSpeed ?? 0),
+      );
+      task._bytesProcessedForSpeed = task.bytesUploaded;
+      this.overallBytesProcessedForSpeed += speedDelta;
+      this.overallEstimator.update(
+        this.overallBytesProcessedForSpeed,
+        Date.now(),
+      );
     }
   }
 }

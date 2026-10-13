@@ -194,7 +194,7 @@ namespace Cotton.Server.IntegrationTests
             public Task<Stream> ReadAsync(string uid) => throw new NotImplementedException();
             public Task<long> WriteAsync(
                 string uid,
-                Stream stream) => throw new NotImplementedException();
+                Stream stream, bool overwrite = false) => throw new NotImplementedException();
             public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => throw new NotImplementedException();
 
             public IAsyncEnumerable<string> ListKeysByPrefixAsync(char prefix, CancellationToken ct = default) =>

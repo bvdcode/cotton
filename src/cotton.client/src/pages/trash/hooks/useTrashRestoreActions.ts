@@ -7,9 +7,13 @@ import {
   type MutableRefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { filesApi } from "../../../shared/api/filesApi";
 import {
-  nodesApi,
+  batchItemsApi,
+  RESTORE_BATCH_SIZE,
+  toBatchItem,
+  type BatchItemResult,
+} from "../../../shared/api/batchItemsApi";
+import {
   type RestoreConflictKind,
   type RestoreOutcomeDto,
 } from "../../../shared/api/nodesApi";
@@ -69,7 +73,11 @@ export type PromptDecision = {
 export type RestoreProgress = {
   current: number;
   total: number;
-  itemName: string;
+};
+
+type PendingRestore = {
+  item: RestorableItem;
+  options: RestoreOptions;
 };
 
 type UseTrashRestoreActionsParams = {
@@ -90,8 +98,8 @@ export const useTrashRestoreActions = ({
   const [progress, setProgress] = useState<RestoreProgress>({
     current: 0,
     total: 0,
-    itemName: "",
   });
+  const [requestInFlight, setRequestInFlight] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
   const stickyConfirm = useRef<PromptDecision["action"] | null>(null);
@@ -145,17 +153,6 @@ export const useTrashRestoreActions = ({
     [tiles],
   );
 
-  const callRestore = useCallback(
-    (
-      item: RestorableItem,
-      options: { createMissingParents: boolean; overwrite: boolean },
-    ) =>
-      item.kind === "folder"
-        ? nodesApi.restoreNode(item.id, options)
-        : filesApi.restoreFile(item.id, options),
-    [],
-  );
-
   const requestStickyDecision = useCallback(
     async (
       sticky: MutableRefObject<PromptDecision["action"] | null>,
@@ -204,14 +201,14 @@ export const useTrashRestoreActions = ({
     ): Promise<RestoreOutcomeDecision> => {
       const action = await requestStickyDecision(stickyParentMissing, item, {
         kind: "parentMissing",
-        missingPath: outcome.missingPath ?? "",
+        missingPath: getRestorePath(item) || outcome.missingPath || "",
       });
 
       return action === "skip"
         ? { done: true, result: "skipped" }
         : { done: false, options: { ...options, createMissingParents: true } };
     },
-    [requestStickyDecision],
+    [getRestorePath, requestStickyDecision],
   );
 
   const handleConflictOutcome = useCallback(
@@ -259,44 +256,6 @@ export const useTrashRestoreActions = ({
     [handleConflictOutcome, handleParentMissingOutcome, t],
   );
 
-  const restoreSingle = useCallback(
-    async (item: RestorableItem): Promise<RestoreSingleResult> => {
-      const confirmed = await confirmRestore(item, getRestorePath(item));
-      if (confirmed) {
-        return confirmed;
-      }
-
-      let options: RestoreOptions = {
-        createMissingParents: false,
-        overwrite: false,
-      };
-      for (let attempt = 0; attempt < maxPromptHops; attempt += 1) {
-        try {
-          const outcome = await callRestore(item, options);
-          const decision = await handleRestoreOutcome(item, outcome, options);
-          if (decision.done) {
-            return decision.result;
-          }
-          options = decision.options;
-        } catch (error) {
-          reportClientError("Restore call failed", error);
-          reportRestoreFailure(item);
-          return "failed";
-        }
-      }
-
-      reportRestoreFailure(item);
-      return "failed";
-    },
-    [
-      callRestore,
-      confirmRestore,
-      getRestorePath,
-      handleRestoreOutcome,
-      reportRestoreFailure,
-    ],
-  );
-
   const restoreItems = useCallback(
     async (items: RestorableItem[]) => {
       if (items.length === 0 || restoreInFlight.current) {
@@ -309,30 +268,102 @@ export const useTrashRestoreActions = ({
       stickyConflict.current = null;
       setErrors([]);
       setRestoring(true);
+      setProgress({ current: 0, total: items.length });
 
       try {
-        for (let i = 0; i < items.length; i += 1) {
-          const item = items[i];
-          setProgress({
-            current: i + 1,
-            total: items.length,
-            itemName: item.name,
+        let completed = 0;
+        let pending: PendingRestore[] = [];
+        for (const item of items) {
+          const confirmed = await confirmRestore(item, getRestorePath(item));
+          if (confirmed) {
+            completed += 1;
+            setProgress({ current: completed, total: items.length });
+            continue;
+          }
+
+          pending.push({
+            item,
+            options: { createMissingParents: false, overwrite: false },
           });
-          await restoreSingle(item);
+        }
+
+        for (
+          let attempt = 0;
+          attempt < maxPromptHops && pending.length > 0;
+          attempt += 1
+        ) {
+          const retry: PendingRestore[] = [];
+          for (
+            let offset = 0;
+            offset < pending.length;
+            offset += RESTORE_BATCH_SIZE
+          ) {
+            const batch = pending.slice(offset, offset + RESTORE_BATCH_SIZE);
+            let results: BatchItemResult[];
+            try {
+              setRequestInFlight(true);
+              results = await batchItemsApi.restore(
+                batch.map(({ item, options }) => ({
+                  ...toBatchItem(item.id, item.kind),
+                  ...options,
+                })),
+              );
+            } catch (error) {
+              reportClientError("Restore batch failed", error);
+              batch.forEach(({ item }) => reportRestoreFailure(item));
+              completed += batch.length;
+              setProgress({ current: completed, total: items.length });
+              continue;
+            } finally {
+              setRequestInFlight(false);
+            }
+            for (const [index, entry] of batch.entries()) {
+              const result = results[index];
+              if (
+                result?.id !== entry.item.id ||
+                result.failed ||
+                !result.restoreOutcome
+              ) {
+                reportRestoreFailure(entry.item);
+                completed += 1;
+              } else {
+                const decision = await handleRestoreOutcome(
+                  entry.item,
+                  result.restoreOutcome,
+                  entry.options,
+                );
+                if (decision.done) {
+                  completed += 1;
+                } else {
+                  retry.push({ item: entry.item, options: decision.options });
+                }
+              }
+              setProgress({ current: completed, total: items.length });
+            }
+          }
+          pending = retry;
+        }
+
+        for (const { item } of pending) {
+          reportRestoreFailure(item);
         }
       } finally {
         restoreInFlight.current = false;
         setRestoring(false);
-        setProgress({
-          current: items.length,
-          total: items.length,
-          itemName: "",
-        });
+        setRequestInFlight(false);
+        setProgress({ current: items.length, total: items.length });
         fileSelection.deselectAll();
         await refreshContent();
       }
     },
-    [fileSelection, refreshContent, restoreSingle],
+    [
+      confirmRestore,
+      fileSelection,
+      getRestorePath,
+      handleRestoreOutcome,
+      refreshContent,
+      reportRestoreFailure,
+    ],
   );
 
   const restoreSelected = useCallback(async () => {
@@ -346,11 +377,10 @@ export const useTrashRestoreActions = ({
         const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
         return selected.has(id);
       })
-      .map(
-        (tile): RestorableItem =>
-          tile.kind === "folder"
-            ? { id: tile.node.id, kind: "folder", name: tile.node.name }
-            : { id: tile.file.id, kind: "file", name: tile.file.name },
+      .map((tile): RestorableItem =>
+        tile.kind === "folder"
+          ? { id: tile.node.id, kind: "folder", name: tile.node.name }
+          : { id: tile.file.id, kind: "file", name: tile.file.name },
       );
 
     await restoreItems(items);
@@ -366,6 +396,7 @@ export const useTrashRestoreActions = ({
   return useMemo(
     () => ({
       restoring,
+      requestInFlight,
       progress,
       errors,
       activePrompt,
@@ -382,6 +413,7 @@ export const useTrashRestoreActions = ({
       restoreItem,
       restoreSelected,
       restoring,
+      requestInFlight,
     ],
   );
 };

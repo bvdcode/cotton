@@ -1,6 +1,6 @@
 import { reportClientError } from "@shared/utils/clientDiagnostics";
 import * as React from "react";
-import { filesApi } from "../../../shared/api/filesApi";
+import { batchItemsApi, toBatchItem } from "../../../shared/api/batchItemsApi";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import type { FileSelectionState } from "@shared/hooks/useFileSelection";
 import { destructiveConfirmOptions } from "@shared/ui/confirmOptions";
@@ -28,9 +28,9 @@ interface UseDeleteSelectedItemsArgs {
   tiles: FileSystemTile[];
   confirm: ConfirmFn;
   t: TranslationFn;
-  deleteFolder: (folderId: string, parentId?: string) => Promise<boolean>;
   optimisticDeleteFile: (nodeId: string, fileId: string) => void;
   reloadCurrentNode: () => void;
+  showToast: (message: string, variant?: "info" | "error") => void;
 }
 
 export const useDeleteSelectedItems = ({
@@ -39,14 +39,18 @@ export const useDeleteSelectedItems = ({
   tiles,
   confirm,
   t,
-  deleteFolder,
   optimisticDeleteFile,
   reloadCurrentNode,
+  showToast,
 }: UseDeleteSelectedItemsArgs) => {
   return React.useCallback(async () => {
-    if (!nodeId) return;
-    if (!fileSelection.selectionMode) return;
-    if (fileSelection.selectedCount <= 0) return;
+    if (
+      !nodeId ||
+      !fileSelection.selectionMode ||
+      fileSelection.selectedCount <= 0
+    ) {
+      return;
+    }
 
     const selected = fileSelection.selectedIds;
     const selectedTiles = tiles.filter((tile) => {
@@ -54,7 +58,9 @@ export const useDeleteSelectedItems = ({
       return selected.has(id);
     });
 
-    if (selectedTiles.length === 0) return;
+    if (selectedTiles.length === 0) {
+      return;
+    }
 
     const result = await confirm({
       title: t("deleteSelected.confirmTitle", {
@@ -67,24 +73,35 @@ export const useDeleteSelectedItems = ({
       ...destructiveConfirmOptions,
     });
 
-    if (!result.confirmed) return;
+    if (!result.confirmed) {
+      return;
+    }
 
-    for (const tile of selectedTiles) {
-      if (tile.kind === "folder") {
-        try {
-          await deleteFolder(tile.node.id, nodeId);
-        } catch (error) {
-          reportClientError("Failed to delete selected folder", error);
+    try {
+      const results = await batchItemsApi.delete(
+        selectedTiles.map((tile) =>
+          toBatchItem(
+            tile.kind === "folder" ? tile.node.id : tile.file.id,
+            tile.kind,
+          ),
+        ),
+        false,
+      );
+      for (const [index, tile] of selectedTiles.entries()) {
+        const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
+        if (results[index]?.id !== id || !results[index].deleted) {
+          reportClientError("Failed to delete selected item", id);
+          showToast(t("errors.deleteFailed", { ns: "tasks" }), "error");
+          continue;
         }
-        continue;
-      }
 
-      try {
-        optimisticDeleteFile(nodeId, tile.file.id);
-        await filesApi.deleteFile(tile.file.id);
-      } catch (error) {
-        reportClientError("Failed to delete selected file", error);
+        if (tile.kind === "file") {
+          optimisticDeleteFile(nodeId, tile.file.id);
+        }
       }
+    } catch (error) {
+      reportClientError("Failed to delete selected items", error);
+      showToast(t("errors.deleteFailed", { ns: "tasks" }), "error");
     }
 
     fileSelection.deselectAll();
@@ -92,11 +109,11 @@ export const useDeleteSelectedItems = ({
     reloadCurrentNode();
   }, [
     confirm,
-    deleteFolder,
     fileSelection,
     nodeId,
     optimisticDeleteFile,
     reloadCurrentNode,
+    showToast,
     t,
     tiles,
   ]);

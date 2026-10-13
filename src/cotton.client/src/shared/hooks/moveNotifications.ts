@@ -1,6 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { toast } from "@shared/ui/notifications";
-import type { MoveClipboardItem } from "../store/moveClipboardStore";
+import type {
+  FileTransferOperation,
+  MoveClipboardItem,
+} from "../store/moveClipboardStore";
 import type { MoveTranslation } from "./useMoveOperations";
 import { showActionToast } from "../ui/ActionToast";
 import { useVault } from "../crypto";
@@ -8,6 +11,15 @@ import { fetchServerSettings } from "../api/queries/serverSettings";
 import { queryClient } from "../api/queries/queryClient";
 import { decryptExistingFileWithTask } from "../tasks";
 import { refreshNodeContent } from "../store/nodesActions";
+
+export const getTransferToastKeys = (operation: FileTransferOperation) => {
+  switch (operation) {
+    case "move":
+      return { success: "move.toasts.moved", failure: "move.toasts.failed" };
+    case "copy":
+      return { success: "copy.toasts.copied", failure: "copy.toasts.failed" };
+  }
+};
 
 export const offerDecryptForMovedFiles = (options: {
   files: ReadonlyArray<MoveClipboardItem>;
@@ -39,6 +51,7 @@ export const offerDecryptForMovedFiles = (options: {
 };
 
 export const showMoveOutcomeToasts = (options: {
+  operation?: FileTransferOperation;
   encryptionFailedCount: number;
   encryptionScanIncomplete: boolean;
   failed: ReadonlyArray<MoveClipboardItem>;
@@ -47,9 +60,10 @@ export const showMoveOutcomeToasts = (options: {
   targetParentId: string;
   t: MoveTranslation;
 }): void => {
+  const keys = getTransferToastKeys(options.operation ?? "move");
   if (options.succeeded.length > 0) {
     toast.success(
-      options.t("move.toasts.moved", {
+      options.t(keys.success, {
         ns: "files",
         count: options.succeeded.length,
       }),
@@ -62,7 +76,7 @@ export const showMoveOutcomeToasts = (options: {
   if (options.failed.length > 0) {
     toast.error(
       options.lastErrorMessage ??
-        options.t("move.toasts.failed", {
+        options.t(keys.failure, {
           ns: "files",
           count: options.failed.length,
         }),

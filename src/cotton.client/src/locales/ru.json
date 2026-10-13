@@ -1608,7 +1608,8 @@
       "pause": "Пауза",
       "copied": "Скопировано!",
       "reload": "Перезагрузить",
-      "retry": "Повторить"
+      "retry": "Повторить",
+      "copy": "Копировать"
     },
     "errors": {
       "unexpectedTitle": "Не удалось отобразить страницу",
@@ -1813,6 +1814,11 @@
       "description": "Настройки отображения и поведения интерфейса.",
       "gallerySmoothTransitions": "Плавная прокрутка в галерее",
       "galleryPreferPreview": "Загружать оригиналы (выкл/вкл)",
+      "galleryMetadataPosition": {
+        "label": "Сторона панели метаданных",
+        "left": "Слева",
+        "right": "Справа"
+      },
       "themeMode": {
         "label": "Тема",
         "light": "Светлая",
@@ -2578,6 +2584,7 @@
       "folderNamePlaceholder": "Название папки",
       "goToFolder": "Перейти в папку",
       "goUp": "Вверх",
+      "goUpHoldHint": "Вверх; удерживайте для перехода в корневую папку",
       "dropFiles": "Перетащите файлы для загрузки",
       "switchToTilesView": "Переключиться на плитки",
       "switchToListView": "Переключиться на список",
@@ -2674,6 +2681,34 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Информация",
+        "dimensions": "Разрешение",
+        "duration": "Длительность",
+        "seconds": "{{value}} с",
+        "format": "Формат",
+        "title": "Название",
+        "artist": "Исполнитель",
+        "album": "Альбом",
+        "albumArtist": "Исполнитель альбома",
+        "track": "Дорожка",
+        "disc": "Диск",
+        "date": "Дата",
+        "year": "Год",
+        "genre": "Жанр",
+        "audioCodec": "Аудиокодек",
+        "videoCodec": "Видеокодек",
+        "cameraMake": "Производитель",
+        "cameraModel": "Камера",
+        "lens": "Объектив",
+        "exposureTime": "Выдержка",
+        "aperture": "Диафрагма",
+        "iso": "ISO",
+        "dateTaken": "Дата съёмки",
+        "focalLength": "Фокусное расстояние",
+        "moreDetails": "Подробнее",
+        "lessDetails": "Скрыть подробности"
+      },
       "actions": {
         "edit": "Редактировать",
         "save": "Сохранить",
@@ -2827,9 +2862,20 @@
         "decryptExistingFailed_other": "Не удалось расшифровать {{count}} файлов. Проверьте панель задач.",
         "decryptExistingScanIncomplete": "Просканирована только часть дерева папок. Некоторые зашифрованные файлы могли остаться. После завершения этой пачки снова запустите расшифровку из папки."
       }
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Готово к копированию: {{count}}",
+        "copied": "Скопировано: {{count}}",
+        "failed": "Не удалось скопировать: {{count}}"
+      }
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Перемещение",
+      "copy": "Копирование"
+    },
     "title": "Задачи",
     "error": "Ошибка",
     "errors": {
@@ -2923,7 +2969,7 @@
     },
     "restore": {
       "action": "Восстановить",
-      "inProgress": "Восстановление {{current}} из {{total}}: {{name}}",
+      "inProgress": "Восстановление элементов: {{total}}...",
       "failed": "Не удалось восстановить \"{{name}}\"",
       "notRestorable": "Элемент нельзя восстановить.",
       "rootFolder": "корневую папку",
@@ -3110,16 +3156,16 @@
     },
     "databaseBackup": {
       "title": "Бэкап базы данных",
-      "description": "Информация о последнем бэкапе из манифеста сервера.",
+      "description": "Сохранённые дампы базы данных и доступ для внешнего бэкапера.",
       "actions": {
         "refresh": "Обновить",
         "trigger": "Запустить бэкап",
-        "triggering": "Запуск..."
+        "triggering": "Создание бэкапа…"
       },
       "state": {
         "loading": "Загрузка информации о бэкапе...",
         "empty": "Бэкапы пока не найдены.",
-        "triggerSuccess": "Задача бэкапа успешно запущена.",
+        "triggerSuccess": "Бэкап успешно сохранён.",
         "restoreIfEmptyHint": "Если база данных потеряна и вы хотите, чтобы она восстановилась автоматически, установите COTTON_RESTORE_DATABASE_IF_EMPTY=true в окружении контейнера. База должна быть пустой и без таблиц, чтобы это сработало."
       },
       "fields": {
@@ -3136,6 +3182,24 @@
       "errors": {
         "loadFailed": "Не удалось загрузить информацию о бэкапе.",
         "triggerFailed": "Не удалось запустить бэкап."
+      },
+      "history": {
+        "title": "История бэкапов",
+        "retention": "Хранятся все бэкапы за последние 7 дней и как минимум 3 самых новых бэкапа.",
+        "latest": "Последний"
+      },
+      "access": {
+        "title": "Доступ для внешнего бэкапера",
+        "description": "Токен разрешает только создание бэкапов базы данных. Сохраните его у бэкапера. Он действует до смены master key; выпуск нового токена не отменяет предыдущие.",
+        "request": "Отправьте {{endpoint}} с заголовком {{header}}. Успешный ответ означает, что дамп сохранён.",
+        "token": "Токен бэкапера",
+        "generate": "Создать токен",
+        "copy": "Скопировать токен",
+        "copied": "Скопировано",
+        "failed": "Не удалось создать токен.",
+        "copyFailed": "Не удалось скопировать. Выделите и скопируйте токен вручную.",
+        "curlExample": "Пример curl",
+        "copyCommand": "Копировать команду"
       }
     },
     "storageStatistics": {
@@ -3786,7 +3850,11 @@
       },
       "databaseRestoreCompleted": {
         "title": "База данных восстановлена автоматически",
-        "content": "Автоматическое восстановление базы данных успешно завершено.\n\nID бэкапа: {{backupId}}\nИсходная база: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nБэкап создан (UTC): {{backupCreatedUtc}} UTC\nБэкап создан ({{serverTimezone}}): {{backupCreatedLocal}}\nВосстановление завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВосстановление завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Автоматическое восстановление базы данных успешно завершено.\n\nID бэкапа: {{backupId}}\nИсходная база: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nБэкап создан (UTC): {{backupCreatedUtc}} UTC\nБэкап создан ({{serverTimezone}}): {{backupCreatedLocal}}\nВосстановление завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВосстановление завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Автоматическое восстановление базы данных успешно завершено.\n\nID бэкапа: {{backupId}}\nИсходная база: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nБэкап создан (UTC): {{backupCreatedUtc}} UTC\nБэкап создан ({{serverTimezone}}): {{backupCreatedLocal}}\nВосстановление завершено (UTC): {{restoreCompletedUtcDisplay}} UTC\nВосстановление завершено ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nПропущены недоступные или повреждённые бэкапы: {{skippedBackupIds}}. Восстановлен более ранний бэкап.",
+        "vectorUnavailable": "В резервной копии был включён векторный поиск, но на этом сервере PostgreSQL отсутствует пакет pgvector. База успешно восстановлена без векторного поиска. Установите pgvector и включите векторный поиск в настройках сервера, чтобы пересоздать индекс.",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "Обнаружена проблема целостности базы данных",

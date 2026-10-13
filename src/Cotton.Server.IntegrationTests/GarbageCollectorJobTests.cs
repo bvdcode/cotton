@@ -153,6 +153,7 @@ namespace Cotton.Server.IntegrationTests
                 storage,
                 DbContext,
                 usage,
+                new DatabaseBackupGate(),
                 settingsProvider,
                 NullLogger<GarbageCollectorJob>.Instance);
 
@@ -220,6 +221,7 @@ namespace Cotton.Server.IntegrationTests
                 storage,
                 DbContext,
                 usage,
+                new DatabaseBackupGate(),
                 settingsProvider,
                 NullLogger<GarbageCollectorJob>.Instance);
 
@@ -428,12 +430,5 @@ namespace Cotton.Server.IntegrationTests
             return Hasher.HashData(Encoding.UTF8.GetBytes(value));
         }
 
-        private class StaticBackupManifestService(ResolvedBackupManifest? _latestBackup) : IDatabaseBackupManifestService
-        {
-            public Task<ResolvedBackupManifest?> TryGetLatestManifestAsync(CancellationToken cancellationToken = default)
-            {
-                return Task.FromResult(_latestBackup);
-            }
-        }
     }
 }

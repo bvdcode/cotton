@@ -37,6 +37,10 @@ Version downloads use expiring download tokens and the same authorization, integ
 
 Normal deletion is a soft delete. The item is moved into the trash domain and records enough metadata to attempt restoration to its original parent.
 
+The browser submits selected deletions with `POST /api/v1/items/delete`. The server loads and applies the set in one transaction, including retained file versions for permanent deletion. Selected descendants already covered by a selected folder are processed once. Missing, unowned, root, and protected version-container entries are reported as failed without preventing deletion of valid entries. A database failure rolls back the applied set.
+
+Restoration uses `POST /api/v1/items/restore` in batches of at most 25 entries. Each entry retains its own restore outcome and transaction. The browser resolves missing-parent and name-conflict outcomes, then retries only the affected entries. Delete and restore requests have no client deadline; infrastructure request deadlines still apply.
+
 Restoration validates that:
 
 - the caller still owns the item and destination;

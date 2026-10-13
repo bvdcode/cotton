@@ -10,7 +10,7 @@ using System.Text;
 namespace Cotton.Storage.Tests.Pipelines
 {
     [TestFixture]
-    public class FileStoragePipelineTests
+    public partial class FileStoragePipelineTests
     {
         private class FakeStorageBackend : IStorageBackend
         {
@@ -47,7 +47,7 @@ namespace Cotton.Storage.Tests.Pipelines
 
             public async Task<long> WriteAsync(
                 string uid,
-                Stream stream)
+                Stream stream, bool overwrite = false)
             {
                 MemoryStream ms = new MemoryStream();
                 await stream.CopyToAsync(ms);

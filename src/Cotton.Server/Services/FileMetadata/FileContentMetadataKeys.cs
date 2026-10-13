@@ -5,7 +5,9 @@ namespace Cotton.Server.Services.FileMetadata
 {
     internal static class FileContentMetadataKeys
     {
-        public const string ExtractionProcessed = "contentMetadata.extractionProcessed";
+        public const string ExtractionVersion = "metadataExtractorVersion";
+        public const string CurrentExtractionVersion = "2";
+        public const string ExtractionError = "contentMetadata.extractionError";
 
         public const string ImageWidth = "image.width";
         public const string ImageHeight = "image.height";

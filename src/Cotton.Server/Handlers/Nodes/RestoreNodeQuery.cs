@@ -78,7 +78,7 @@ namespace Cotton.Server.Handlers.Nodes
             string originalParentPath = TrashRestoreCoordinator.GetOriginalParentPath(node.Metadata);
             try
             {
-                RestoreParentOutcome parentOutcome = await ResolveRestoreParentAsync(request, originalParentPath, ct);
+                RestoreParentOutcome parentOutcome = await ResolveRestoreParentAsync(request, originalParentPath, node.Metadata, ct);
                 if (parentOutcome.Failure is not null)
                 {
                     await tx.RollbackAsync(ct);
@@ -170,13 +170,14 @@ namespace Cotton.Server.Handlers.Nodes
         private async Task<RestoreParentOutcome> ResolveRestoreParentAsync(
             RestoreNodeQuery request,
             string originalParentPath,
+            Dictionary<string, string>? metadata,
             CancellationToken ct)
         {
             TrashRestoreCoordinator.ParentResolution resolution = await _restore.ResolveOrCreateParentAsync(
                 request.UserId,
                 originalParentPath,
                 request.CreateMissingParents,
-                ct);
+                ct, metadata);
 
             if (resolution.InvalidPathReason is not null)
             {

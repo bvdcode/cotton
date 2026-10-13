@@ -11,10 +11,16 @@ namespace Cotton.Server.Services
 {
     public class NodeSubtreeService(CottonDbContext _dbContext)
     {
-        public async Task<HashSet<Guid>> CollectSubtreeIdsAsync(Guid userId, Guid rootId, CancellationToken ct)
+        public Task<HashSet<Guid>> CollectSubtreeIdsAsync(Guid userId, Guid rootId, CancellationToken ct)
         {
-            HashSet<Guid> visited = new HashSet<Guid> { rootId };
-            List<Guid> frontier = new List<Guid> { rootId };
+            return CollectSubtreeIdsAsync(userId, [rootId], ct);
+        }
+
+        public async Task<HashSet<Guid>> CollectSubtreeIdsAsync(
+            Guid userId, IReadOnlyCollection<Guid> rootIds, CancellationToken ct)
+        {
+            HashSet<Guid> visited = new(rootIds);
+            List<Guid> frontier = new(visited);
 
             while (frontier.Count > 0)
             {

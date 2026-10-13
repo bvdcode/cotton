@@ -26,6 +26,7 @@ type UseMediaLightboxRenderOptions = {
   handleSlideImageError: (slide: Slide) => void;
   hlsErrorText: string;
   hlsNoticeText: string;
+  metadataControls: React.ReactNode;
   setActiveVideoElementForFile: SetActiveVideoElementForFile;
 };
 
@@ -34,10 +35,12 @@ export const useMediaLightboxRender = ({
   handleSlideImageError,
   hlsErrorText,
   hlsNoticeText,
+  metadataControls,
   setActiveVideoElementForFile,
 }: UseMediaLightboxRenderOptions) =>
   React.useMemo(
     () => ({
+      controls: () => metadataControls,
       buttonZoom: () => null,
       iconZoomIn: () => null,
       iconZoomOut: () => null,
@@ -83,6 +86,7 @@ export const useMediaLightboxRender = ({
       handleSlideImageError,
       hlsErrorText,
       hlsNoticeText,
+      metadataControls,
       setActiveVideoElementForFile,
     ],
   );

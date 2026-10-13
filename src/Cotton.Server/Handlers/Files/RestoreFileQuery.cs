@@ -134,7 +134,7 @@ namespace Cotton.Server.Handlers.Files
             IDbContextTransaction tx,
             CancellationToken ct)
         {
-            RestoreParentOutcome parentOutcome = await ResolveRestoreParentAsync(request, originalParentPath, tx, ct);
+            RestoreParentOutcome parentOutcome = await ResolveRestoreParentAsync(request, originalParentPath, nodeFile.Metadata, tx, ct);
             if (parentOutcome.Failure is not null)
             {
                 return parentOutcome.Failure;
@@ -173,6 +173,7 @@ namespace Cotton.Server.Handlers.Files
         private async Task<RestoreParentOutcome> ResolveRestoreParentAsync(
             RestoreFileQuery request,
             string originalParentPath,
+            Dictionary<string, string>? metadata,
             IDbContextTransaction tx,
             CancellationToken ct)
         {
@@ -180,7 +181,7 @@ namespace Cotton.Server.Handlers.Files
                 request.UserId,
                 originalParentPath,
                 request.CreateMissingParents,
-                ct);
+                ct, metadata);
             if (resolution.InvalidPathReason is not null)
             {
                 await tx.RollbackAsync(ct);

@@ -1252,7 +1252,11 @@
       },
       "databaseRestoreCompleted": {
         "title": "Database restored automatically",
-        "content": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "Automatic database restore completed successfully.\n\nBackup ID: {{backupId}}\nSource database: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nBackup created (UTC): {{backupCreatedUtc}} UTC\nBackup created ({{serverTimezone}}): {{backupCreatedLocal}}\nRestore completed (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestore completed ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nUnavailable or damaged backups were skipped: {{skippedBackupIds}}. An earlier backup was restored.",
+        "vectorUnavailable": "Vector search was enabled in the backup, but the pgvector package is unavailable on this PostgreSQL server. The database was restored successfully without vector search. Install pgvector and enable vector search in the server settings to rebuild the index.",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "Database integrity issue detected",
@@ -1323,7 +1327,8 @@
       "pause": "Pause",
       "copied": "Copied!",
       "reload": "Reload",
-      "retry": "Retry"
+      "retry": "Retry",
+      "copy": "Copy"
     },
     "errors": {
       "unexpectedTitle": "Unable to display this page",
@@ -1528,6 +1533,11 @@
       "description": "UI preferences and personalization.",
       "gallerySmoothTransitions": "Smooth transitions in gallery",
       "galleryPreferPreview": "Show originals instead of previews",
+      "galleryMetadataPosition": {
+        "label": "Metadata panel side",
+        "left": "Left",
+        "right": "Right"
+      },
       "themeMode": {
         "label": "Theme",
         "light": "Light",
@@ -2285,6 +2295,7 @@
       "folderNamePlaceholder": "Folder name",
       "goToFolder": "Go to folder",
       "goUp": "Go up",
+      "goUpHoldHint": "Go up; hold to go to the root folder",
       "dropFiles": "Drop files to upload",
       "switchToTilesView": "Switch to tiles",
       "switchToListView": "Switch to list view",
@@ -2373,6 +2384,34 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Information",
+        "dimensions": "Dimensions",
+        "duration": "Duration",
+        "seconds": "{{value}} s",
+        "format": "Format",
+        "title": "Title",
+        "artist": "Artist",
+        "album": "Album",
+        "albumArtist": "Album artist",
+        "track": "Track",
+        "disc": "Disc",
+        "date": "Date",
+        "year": "Year",
+        "genre": "Genre",
+        "audioCodec": "Audio codec",
+        "videoCodec": "Video codec",
+        "cameraMake": "Manufacturer",
+        "cameraModel": "Camera",
+        "lens": "Lens",
+        "exposureTime": "Shutter speed",
+        "aperture": "Aperture",
+        "iso": "ISO",
+        "dateTaken": "Date taken",
+        "focalLength": "Focal length",
+        "moreDetails": "More details",
+        "lessDetails": "Fewer details"
+      },
       "actions": {
         "edit": "Edit",
         "save": "Save",
@@ -2508,9 +2547,20 @@
         "decryptExistingFailed_other": "Could not decrypt {{count}} files. Check the task panel.",
         "decryptExistingScanIncomplete": "Only part of the folder tree was scanned. Some encrypted files may remain; run decryption again from the folder after this batch finishes."
       }
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Ready to copy: {{count}}",
+        "copied": "Copied: {{count}}",
+        "failed": "Could not copy: {{count}}"
+      }
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Moving",
+      "copy": "Copying"
+    },
     "title": "Tasks",
     "error": "Error",
     "errors": {
@@ -2598,7 +2648,7 @@
     },
     "restore": {
       "action": "Restore",
-      "inProgress": "Restoring {{current}} of {{total}}: {{name}}",
+      "inProgress": "Restoring {{total}} items...",
       "failed": "Failed to restore \"{{name}}\"",
       "notRestorable": "Item cannot be restored.",
       "rootFolder": "the root folder",
@@ -3036,16 +3086,16 @@
     },
     "databaseBackup": {
       "title": "Database backup",
-      "description": "Latest backup manifest from the server.",
+      "description": "Saved database backups and external backup access.",
       "actions": {
         "refresh": "Refresh",
         "trigger": "Trigger backup",
-        "triggering": "Triggering..."
+        "triggering": "Creating backup…"
       },
       "state": {
         "loading": "Loading backup info...",
         "empty": "No backups found yet.",
-        "triggerSuccess": "Backup job was triggered.",
+        "triggerSuccess": "Backup saved successfully.",
         "restoreIfEmptyHint": "If the database is lost and you want it to restore automatically, set COTTON_RESTORE_DATABASE_IF_EMPTY=true in the container environment. Database must be empty without any tables for this to work."
       },
       "fields": {
@@ -3062,6 +3112,24 @@
       "errors": {
         "loadFailed": "Failed to load backup information.",
         "triggerFailed": "Failed to trigger backup."
+      },
+      "history": {
+        "title": "Backup history",
+        "retention": "All backups from the last 7 days and at least the 3 newest backups are retained.",
+        "latest": "Latest"
+      },
+      "access": {
+        "title": "External backup access",
+        "description": "This token only allows creating database backups. Save it in your backup tool. It remains valid while the master key is unchanged; issuing another token does not revoke existing tokens.",
+        "request": "Send {{endpoint}} with the {{header}} header. A successful response means the dump has been saved.",
+        "token": "Backup token",
+        "generate": "Generate token",
+        "copy": "Copy token",
+        "copied": "Copied",
+        "failed": "Failed to generate a token.",
+        "copyFailed": "Could not copy. Select and copy the token manually.",
+        "curlExample": "curl example",
+        "copyCommand": "Copy command"
       }
     },
     "storageStatistics": {

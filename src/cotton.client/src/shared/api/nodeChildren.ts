@@ -14,7 +14,22 @@ export async function fetchAllNodeChildren(
   nodeId: string,
   options?: { nodeType?: string; depth?: number },
 ): Promise<NodeResponse> {
-  const firstPage = await fetchNodeChildren(nodeId, { ...options, page: 1 });
+  return readAllPages(nodeId, options, fetchNodeChildren);
+}
+
+export async function fetchAllRawNodeChildren(
+  nodeId: string,
+  options?: { nodeType?: string; depth?: number },
+): Promise<NodeResponse> {
+  return readAllPages(nodeId, options, nodesApi.getChildren);
+}
+
+async function readAllPages(
+  nodeId: string,
+  options: { nodeType?: string; depth?: number } | undefined,
+  readPage: typeof fetchNodeChildren,
+): Promise<NodeResponse> {
+  const firstPage = await readPage(nodeId, { ...options, page: 1 });
   const content = {
     ...firstPage.content,
     nodes: [...firstPage.content.nodes],
@@ -23,7 +38,7 @@ export async function fetchAllNodeChildren(
 
   let page = 2;
   while (content.nodes.length + content.files.length < firstPage.totalCount) {
-    const response = await fetchNodeChildren(nodeId, { ...options, page });
+    const response = await readPage(nodeId, { ...options, page });
     if (
       response.content.nodes.length === 0 &&
       response.content.files.length === 0

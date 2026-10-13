@@ -9,5 +9,6 @@ namespace Cotton.Previews
         string? AudioCodec,
         int? Width,
         int? Height,
-        IReadOnlyDictionary<string, string> Tags);
+        IReadOnlyDictionary<string, string> Tags,
+        IReadOnlyDictionary<string, string> Properties);
 }

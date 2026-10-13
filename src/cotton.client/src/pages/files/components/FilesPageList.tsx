@@ -5,7 +5,10 @@ import { InterfaceLayoutType } from "@shared/api/layoutsApi";
 import type { NodeContentDto } from "@shared/api/nodesApi";
 import type { FileSelectionState } from "@shared/hooks/useFileSelection";
 import type { useFilesLayout } from "@shared/hooks/useFilesLayout";
-import type { FileSystemTile, PaginationProps } from "@shared/types/FileListViewTypes";
+import type {
+  FileSystemTile,
+  PaginationProps,
+} from "@shared/types/FileListViewTypes";
 import {
   buildFileOperations,
   buildFolderOperations,
@@ -18,11 +21,12 @@ import type { useFilesEncryptionController } from "../hooks/useFilesEncryptionCo
 import type { useFilesSelectionActions } from "../hooks/useFilesSelectionActions";
 import { FileListViewFactory } from "./views";
 import { FileVersionsDialog } from "./FileVersionsDialog";
-import { usePinnedFolders } from "@shared/dashboard/usePinnedFolders";
+import type { usePinnedFolders } from "@shared/dashboard/usePinnedFolders";
 import type { NodeDto } from "@shared/api/layoutsApi";
 import { FolderInfoDialog } from "./FolderInfoDialog";
 
 interface FilesPageListProps {
+  pinnedFolders: ReturnType<typeof usePinnedFolders>;
   content: NodeContentDto | undefined;
   contentOperations: ReturnType<typeof useFilesContentOperations>;
   encryption: ReturnType<typeof useFilesEncryptionController>;
@@ -42,6 +46,7 @@ interface FilesPageListProps {
 }
 
 export const FilesPageList: React.FC<FilesPageListProps> = ({
+  pinnedFolders,
   content,
   contentOperations,
   encryption,
@@ -65,7 +70,6 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
     name: string;
   } | null>(null);
   const [infoFolder, setInfoFolder] = useState<NodeDto | null>(null);
-  const pinnedFolders = usePinnedFolders();
 
   const handleOpenVersions = useCallback((fileId: string, fileName: string) => {
     setVersionDialogFile({ id: fileId, name: fileName });
@@ -104,12 +108,14 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
       pinnedFolders.isPinned,
     ),
     onShowInfo: setInfoFolder,
+    onCopy: move.handleCopyFolder,
   };
   const fileOperations = buildFileOperations(contentOperations.fileOps, {
     onDownload: fileListLogic.interaction.handleDownloadFile,
     onVersions: handleOpenVersions,
     onShare: fileListLogic.interaction.handleShareFile,
     onCut: move.handleCutFile,
+    onCopy: move.handleCopyFile,
     onClick: fileListLogic.interaction.handleFileClick,
     onMediaClick: fileListLogic.interaction.handleMediaClick,
   });
@@ -174,7 +180,10 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
         onClose={handleCloseVersions}
         onRestored={handleVersionsChanged}
       />
-      <FolderInfoDialog folder={infoFolder} onClose={() => setInfoFolder(null)} />
+      <FolderInfoDialog
+        folder={infoFolder}
+        onClose={() => setInfoFolder(null)}
+      />
     </>
   );
 };

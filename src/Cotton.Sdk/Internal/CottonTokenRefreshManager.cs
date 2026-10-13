@@ -122,8 +122,9 @@ namespace Cotton.Sdk.Internal
                 throw new CottonTokenRefreshException(exception);
             }
 
-            await tokenStore.SaveAsync(refreshed, cancellationToken).ConfigureAwait(false);
+            await tokenStore.SaveAsync(refreshed, CancellationToken.None).ConfigureAwait(false);
             _coordinator.RecordRotation(currentRefreshToken, refreshed.RefreshToken);
+            cancellationToken.ThrowIfCancellationRequested();
             return refreshed;
         }
 

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System;
+using System.Collections.Generic;
 
 namespace Cotton.Files
 {
@@ -24,5 +25,10 @@ namespace Cotton.Files
         /// Gets or sets whether an existing file with the destination name is moved to trash.
         /// </summary>
         public bool Overwrite { get; set; }
+
+        /// <summary>
+        /// Gets or sets metadata changes saved together with the move.
+        /// </summary>
+        public Dictionary<string, string?>? Metadata { get; set; }
     }
 }

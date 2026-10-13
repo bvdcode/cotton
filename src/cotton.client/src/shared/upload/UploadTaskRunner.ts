@@ -4,7 +4,7 @@ import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
 import { RollingBytesPerSecondEstimator } from "./RollingBytesPerSecondEstimator";
 import { uploadFileToNode } from "./uploadFileToNode";
-import type { UploadProgressSnapshot, UploadServerParams } from "./types";
+import type { UploadServerParams } from "./types";
 import type { UploadTaskInternal } from "./UploadManager";
 
 export interface UploadExecutionState {
@@ -23,7 +23,6 @@ interface UploadTaskRunnerCallbacks {
     task: UploadTaskInternal,
     state: UploadExecutionState,
     bytesUploaded: number,
-    snapshot?: UploadProgressSnapshot,
   ) => void;
   onComplete: (
     task: UploadTaskInternal,
@@ -81,7 +80,7 @@ export class UploadTaskRunner {
     task._startedAt = Date.now();
     task._sawProgress = false;
     task._laneProbeConsumed = false;
-    task._bytesTransferredForSpeed = 0;
+    task._bytesProcessedForSpeed = 0;
 
     const state: UploadExecutionState = {
       encryptionTask: null,
@@ -92,6 +91,7 @@ export class UploadTaskRunner {
         minDurationMs: 250,
       }),
     };
+    state.taskEstimator.update(0, task._startedAt);
 
     task._laneProbeTimeout = setTimeout(() => {
       this.maybeOpenLaneForHeadOfLine(task, Date.now());
@@ -129,8 +129,8 @@ export class UploadTaskRunner {
           state.encryptionTaskFinished = true;
           state.encryptionTask?.complete();
         },
-        onProgress: (bytesUploaded, snapshot) =>
-          this.callbacks.onProgress(task, state, bytesUploaded, snapshot),
+        onProgress: (bytesUploaded) =>
+          this.callbacks.onProgress(task, state, bytesUploaded),
         onFinalizing: () => {
           task.status = "finalizing";
           this.callbacks.onStatusChange();

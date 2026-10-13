@@ -13,11 +13,6 @@ namespace Cotton.Previews
         private const string FfprobePathEnvironmentVariable = "COTTON_FFPROBE_PATH";
         private const string FfmpegDirectoryEnvironmentVariable = "COTTON_FFMPEG_DIR";
         private const string CacheDirectoryName = "cotton-ffmpeg";
-        private const string MediaMetadataShowEntries =
-            "format=duration:" +
-            "format_tags=title,artist,album,album_artist,albumartist,album artist,composer,performer," +
-            "track,tracknumber,track_number,disc,discnumber,disc_number,date,creation_time,year,genre:" +
-            "stream=codec_name,codec_type,width,height";
 
         private static readonly SemaphoreSlim DownloadGate = new(1, 1);
         private static string? _ffmpegPath;
@@ -119,10 +114,7 @@ namespace Cotton.Previews
             MediaMetadataProbeLimits? limits = null)
         {
             MediaMetadataProbeLimits effectiveLimits = limits ?? MediaMetadataProbeLimits.Default;
-            IReadOnlyCollection<string> arguments = CreateProbeArguments(
-                "json",
-                MediaMetadataShowEntries,
-                url);
+            IReadOnlyCollection<string> arguments = CreateProbeArguments("json", MediaMetadataFields.ShowEntries, url);
 
             string? raw = await RunFfprobeAsync(
                 arguments,

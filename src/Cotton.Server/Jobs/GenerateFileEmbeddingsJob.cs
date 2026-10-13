@@ -26,13 +26,14 @@ namespace Cotton.Server.Jobs
     {
         private const int BatchSize = 32;
         private const int MaxItemsPerRun = 256;
+        private static readonly TimeSpan UploadPauseCheckInterval = TimeSpan.FromSeconds(5);
 
         public async Task Execute(IJobExecutionContext context)
         {
             CancellationToken cancellationToken = context?.CancellationToken ?? CancellationToken.None;
             try
             {
-                if (!settings.GetServerSettings().AllowGlobalIndexing || perf.IsUploading()
+                if (!await WaitForUploadPauseAsync(cancellationToken)
                     || !await dbContext.Database.IsExtensionInstalledAsync("vector", cancellationToken))
                 {
                     return;
@@ -61,6 +62,10 @@ namespace Cotton.Server.Jobs
             string[] contentTypes = extractors.GetSupportedContentTypes();
             for (int processed = 0; processed < MaxItemsPerRun;)
             {
+                if (!await WaitForUploadPauseAsync(cancellationToken))
+                {
+                    return;
+                }
                 List<Guid> ids = await FileTextIndexQuery.Pending(dbContext, contentTypes)
                     .OrderBy(manifest => manifest.CreatedAt).ThenBy(manifest => manifest.Id)
                     .Select(manifest => manifest.Id).Take(Math.Min(BatchSize, MaxItemsPerRun - processed))
@@ -77,13 +82,27 @@ namespace Cotton.Server.Jobs
                         return;
                     }
                 }
-                if (!settings.GetServerSettings().AllowGlobalIndexing || perf.IsUploading())
+                if (!settings.GetServerSettings().AllowGlobalIndexing)
                 {
                     return;
                 }
                 await ProcessBatchAsync(ids, cancellationToken);
                 processed += ids.Count;
             }
+        }
+
+        private async Task<bool> WaitForUploadPauseAsync(CancellationToken cancellationToken)
+        {
+            if (settings.GetServerSettings().AllowGlobalIndexing && perf.IsUploading())
+            {
+                logger.LogInformation("Upload in progress, waiting before indexing file text.");
+                do
+                {
+                    await Task.Delay(UploadPauseCheckInterval, cancellationToken);
+                }
+                while (settings.GetServerSettings().AllowGlobalIndexing && perf.IsUploading());
+            }
+            return settings.GetServerSettings().AllowGlobalIndexing;
         }
 
         private async Task ProcessBatchAsync(List<Guid> ids, CancellationToken cancellationToken)

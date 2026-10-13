@@ -144,7 +144,7 @@ namespace Cotton.Server.IntegrationTests
 
             public async Task<long> WriteAsync(
                 string uid,
-                Stream stream)
+                Stream stream, bool overwrite = false)
             {
                 using MemoryStream destination = new();
                 await stream.CopyToAsync(destination);

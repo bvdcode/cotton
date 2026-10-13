@@ -212,7 +212,11 @@ describe("adminApi database backups", () => {
 
     await adminApi.triggerDatabaseBackup();
 
-    expect(patch).toHaveBeenCalledWith("server/database-backup/trigger");
+    expect(patch).toHaveBeenCalledWith(
+      "server/database-backup/trigger",
+      undefined,
+      { timeout: 0 },
+    );
   });
 });
 

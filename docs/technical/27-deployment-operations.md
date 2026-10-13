@@ -23,7 +23,7 @@ The official container listens on port `8080` and includes the PostgreSQL and me
 | `COTTON_PG_USERNAME` | `postgres` | PostgreSQL user. |
 | `COTTON_PG_PASSWORD` | `postgres` | PostgreSQL password. Use a deployment secret in production. |
 | `COTTON_MASTER_KEY` | unset | Optional non-interactive 32-character root key. |
-| `COTTON_RESTORE_DATABASE_IF_EMPTY` | `false` | Restore the latest storage backup into an empty database. |
+| `COTTON_RESTORE_DATABASE_IF_EMPTY` | `false` | Restore the newest complete retained storage backup into an empty database. |
 | `COTTON_PUBLIC_INSTANCE` | `false` | Enable explicit public/demo behavior. |
 | `COTTON_PROCESS_HARDENING` | image default `true` | Request Linux non-dumpable process state. |
 | `COTTON_STORAGE_PATH` | `/app/files` | Entrypoint path used for permission preparation. |

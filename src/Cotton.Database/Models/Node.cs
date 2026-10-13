@@ -45,6 +45,20 @@ namespace Cotton.Database.Models
             ParentId = parent.Id;
         }
 
+        public Node CopyTo(Node parent, string name)
+        {
+            Node copy = new()
+            {
+                OwnerId = parent.OwnerId,
+                LayoutId = parent.LayoutId,
+                Type = parent.Type,
+                Metadata = Metadata is null ? null : new(Metadata),
+            };
+            copy.SetParent(parent);
+            copy.SetName(name);
+            return copy;
+        }
+
         public void SetParent(Node parent, NodeType nodeType)
         {
             EnsureParentMatches(parent, nodeType);

@@ -11,6 +11,8 @@ namespace Cotton.Server.IntegrationTests.Common
     {
         public bool ThrowOnEmail { get; set; }
 
+        public List<(Guid UserId, NotificationPriority Priority, Dictionary<string, string>? Metadata)> Notifications { get; } = [];
+
         public List<(
             Guid UserId,
             EmailTemplate Template,
@@ -51,6 +53,7 @@ namespace Cotton.Server.IntegrationTests.Common
             NotificationPriority priority = NotificationPriority.None,
             Dictionary<string, string>? metadata = null)
         {
+            Notifications.Add((userId, priority, metadata));
             return Task.CompletedTask;
         }
     }

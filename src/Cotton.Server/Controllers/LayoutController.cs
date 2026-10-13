@@ -23,6 +23,15 @@ namespace Cotton.Server.Controllers
     public class LayoutController(IMediator _mediator) : ControllerBase
     {
         [Authorize]
+        [HttpPost("nodes/{nodeId:guid}/copy")]
+        public async Task<IActionResult> CopyNode(Guid nodeId, [FromBody] CopyItemRequestDto request)
+        {
+            NodeDto copy = await _mediator.Send(new CopyNodeCommand(
+                User.GetUserId(), nodeId, request.ParentId, request.Name), HttpContext.RequestAborted);
+            return Ok(copy);
+        }
+
+        [Authorize]
         [HttpGet("{layoutId:guid}/recent")]
         public async Task<IActionResult> GetRecentNodes([FromRoute] Guid layoutId,
             [FromQuery] int count = 10,

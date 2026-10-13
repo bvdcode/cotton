@@ -28,7 +28,7 @@ namespace Cotton.Server.Handlers.Nodes
     public class DeleteNodeQueryHandler(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
-        ILayoutNavigator _navigator,
+        IMediator _mediator,
         NodeSubtreeService _subtree,
         ILogger<DeleteNodeQueryHandler> _logger,
         UserStorageQuotaService _quota,
@@ -78,17 +78,9 @@ namespace Cotton.Server.Handlers.Nodes
                 throw new EntityNotFoundException(nameof(Node), "Folder is not available to move to trash.");
             }
 
-            string? originalParentPath = await _navigator.GetNodePathFromRootAsync(
-                command.UserId,
-                node.ParentId.Value,
-                node.Type,
-                ct);
-            if (originalParentPath is not null)
-            {
-                node.Metadata = TrashRestoreCoordinator.SetOriginalParentPath(
-                    node.Metadata,
-                    originalParentPath);
-            }
+            IReadOnlyList<TrashParent> parents = await _mediator.Send(
+                new CaptureTrashParentsQuery(command.UserId, node.ParentId.Value), ct);
+            node.Metadata = TrashParentMetadata.Write(node.Metadata, parents);
 
             Node trashItem = await _layouts.CreateTrashItemAsync(command.UserId, ct);
             _syncChanges.StageFolderChange(SyncChangeKind.FolderDeleted, node, node.ParentId.Value);

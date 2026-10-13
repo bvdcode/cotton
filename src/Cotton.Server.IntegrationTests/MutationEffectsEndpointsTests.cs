@@ -109,7 +109,7 @@ namespace Cotton.Server.IntegrationTests
             updateNodeMetadata.EnsureSuccessStatusCode();
 
             NodeFileManifestDto file = await CreateFileAsync(node.Id, "effects.txt", "initial");
-            Assert.That(await GetTriggerCountAsync(scheduler), Is.EqualTo(initialTriggerCount + 3));
+            Assert.That(await GetTriggerCountAsync(scheduler), Is.EqualTo(initialTriggerCount + 4));
 
             using HttpResponseMessage renameFile = await client.PatchAsJsonAsync(
                 $"/api/v1/files/{file.Id}/rename",
@@ -132,7 +132,7 @@ namespace Cotton.Server.IntegrationTests
                     NodeId = node.Id,
                 });
             updateFile.EnsureSuccessStatusCode();
-            Assert.That(await GetTriggerCountAsync(scheduler), Is.EqualTo(initialTriggerCount + 6));
+            Assert.That(await GetTriggerCountAsync(scheduler), Is.EqualTo(initialTriggerCount + 8));
 
             using HttpResponseMessage deleteFile = await client.DeleteAsync($"/api/v1/files/{file.Id}");
             deleteFile.EnsureSuccessStatusCode();

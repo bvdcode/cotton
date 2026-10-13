@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Services;
+using Cotton.Server.Handlers.Nodes;
 using Cotton.Topology.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
@@ -31,7 +32,7 @@ namespace Cotton.Server.Handlers.Files
     public class DeleteFileQueryHandler(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
-        ILayoutNavigator _navigator,
+        IMediator _mediator,
         ILogger<DeleteFileQueryHandler> _logger,
         UserStorageQuotaService _quota,
         ISyncChangeRecorder _syncChanges,
@@ -117,17 +118,9 @@ namespace Cotton.Server.Handlers.Files
 
             EnsureETagPrecondition(command, nodeFile);
 
-            string? originalParentPath = await _navigator.GetNodePathFromRootAsync(
-                command.UserId,
-                nodeFile.NodeId,
-                NodeType.Default,
-                ct);
-            if (originalParentPath is not null)
-            {
-                nodeFile.Metadata = TrashRestoreCoordinator.SetOriginalParentPath(
-                    nodeFile.Metadata,
-                    originalParentPath);
-            }
+            IReadOnlyList<TrashParent> parents = await _mediator.Send(
+                new CaptureTrashParentsQuery(command.UserId, nodeFile.NodeId), ct);
+            nodeFile.Metadata = TrashParentMetadata.Write(nodeFile.Metadata, parents);
 
             Node trashItem = await _layouts.CreateTrashItemAsync(command.UserId, ct);
             _syncChanges.StageFileChange(SyncChangeKind.FileDeleted, nodeFile, nodeFile.Node.LayoutId);

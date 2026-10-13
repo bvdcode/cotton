@@ -81,17 +81,18 @@ export const TrashPageContent: React.FC<TrashPageContentProps> = ({
         {children}
       </Box>
 
-      {restore.restoring && (
-        <Dialog open disableEscapeKeyDown>
+      {restore.restoring && restore.activePrompt === null && (
+        <Dialog open disableEscapeKeyDown maxWidth="xs" fullWidth>
           <DialogTitle>
             {t("restore.inProgress", {
-              current: restore.progress.current,
               total: restore.progress.total,
-              name: restore.progress.itemName,
             })}
           </DialogTitle>
           <DialogContent>
-            <LinearProgress variant="determinate" value={progressPercent} />
+            <LinearProgress
+              variant={restore.requestInFlight ? "indeterminate" : "determinate"}
+              value={progressPercent}
+            />
           </DialogContent>
         </Dialog>
       )}

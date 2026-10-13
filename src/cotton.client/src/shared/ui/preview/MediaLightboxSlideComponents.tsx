@@ -1,4 +1,5 @@
 import React from "react";
+import { Box } from "@mui/material";
 import type { Slide } from "yet-another-react-lightbox";
 import type {
   SlideHlsVideo,
@@ -9,6 +10,8 @@ import {
   isSlideWithTitle,
 } from "@shared/types/mediaLightbox";
 import { HlsVideoSlide } from "./HlsVideoSlide";
+import { darkTheme } from "../../theme";
+import { formatBytes } from "../../utils/formatBytes";
 
 type SetActiveVideoElementForFile = (
   fileId: string,
@@ -55,6 +58,7 @@ export const HlsVideoLightboxSlide = ({
 };
 
 export const MediaLightboxSlideHeader = ({ slide }: { slide: Slide }) => {
+  const source = isSlideWithTitle(slide) ? slide : undefined;
   const maybeTitle = isSlideWithTitle(slide) ? slide.title : undefined;
   const title = typeof maybeTitle === "string" ? maybeTitle : "";
   const parts = title
@@ -63,11 +67,16 @@ export const MediaLightboxSlideHeader = ({ slide }: { slide: Slide }) => {
     .filter((p: string) => p.length > 0);
 
   const counter = parts[0] ?? "";
-  const size = parts.length >= 3 ? (parts[1] ?? "") : "";
-  const name = parts.length >= 2 ? (parts[parts.length - 1] ?? "") : "";
+  const size =
+    source?.sizeBytes !== undefined ? formatBytes(source.sizeBytes) : "";
+  const name = source?.fileName ?? "";
 
   return (
-    <div className="media-lightbox__header" aria-label={title}>
+    <Box
+      className="media-lightbox__header"
+      aria-label={title}
+      sx={{ color: darkTheme.palette.text.primary }}
+    >
       <span className="media-lightbox__counter">{counter}</span>
       <span className="media-lightbox__meta">
         {size ? (
@@ -87,7 +96,7 @@ export const MediaLightboxSlideHeader = ({ slide }: { slide: Slide }) => {
           </>
         ) : null}
       </span>
-    </div>
+    </Box>
   );
 };
 

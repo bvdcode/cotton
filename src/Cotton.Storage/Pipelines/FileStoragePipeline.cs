@@ -62,7 +62,7 @@ namespace Cotton.Storage.Pipelines
                 {
                     _logger.LogWarning("No storage processors are registered. Writing the stream directly to the backend.");
                 }
-                if (orderedProcessors.Length > 0
+                if (context?.Overwrite != true && orderedProcessors.Length > 0
                     && await backend.ExistsAsync(uid).ConfigureAwait(false))
                 {
                     _logger.LogDebug("File {Uid} deduplicated, skipping processor pipeline", uid);
@@ -81,7 +81,7 @@ namespace Cotton.Storage.Pipelines
                 {
                     throw new InvalidOperationException($"No registered processor produced a valid stream to write for UID {uid}");
                 }
-                return await backend.WriteAsync(uid, currentStream);
+                return await backend.WriteAsync(uid, currentStream, context?.Overwrite == true);
             }
             finally
             {

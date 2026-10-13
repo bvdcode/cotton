@@ -42,7 +42,7 @@ namespace Cotton.Benchmark.Infrastructure
 
         public async Task<long> WriteAsync(
             string uid,
-            Stream stream)
+            Stream stream, bool overwrite = false)
         {
             using MemoryStream ms = new MemoryStream();
             await stream.CopyToAsync(ms);

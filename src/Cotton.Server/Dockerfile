@@ -35,9 +35,7 @@ RUN set -eux \
 
 FROM with-node AS build
 ARG BUILD_CONFIGURATION=Release
-ARG BUILD_VERSION=dev
 WORKDIR /src
-ENV APP_VERSION=$BUILD_VERSION
 COPY ["Directory.Build.props", "./"]
 COPY ["Cotton.Server/Cotton.Server.csproj", "Cotton.Server/"]
 COPY ["cotton.client/cotton.client.esproj", "cotton.client/"]
@@ -61,8 +59,6 @@ RUN --mount=type=secret,id=sixlabors_license,target=/src/sixlabors.lic,required=
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-ARG BUILD_VERSION=dev
-ENV APP_VERSION=$BUILD_VERSION
 RUN --mount=type=secret,id=sixlabors_license,target=/src/sixlabors.lic,required=false \
     dotnet publish "./Cotton.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false \
     && rm -f /app/publish/sixlabors.lic

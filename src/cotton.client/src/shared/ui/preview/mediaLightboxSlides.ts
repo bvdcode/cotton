@@ -55,14 +55,19 @@ export function buildSlidesFromItems(
     const title = buildTitle(position, item);
     const signedUrl = signedUrls[item.id] ?? null;
     const displayUrl = displayUrls[item.id] ?? null;
+    const fileInfo = {
+      fileId: item.id,
+      fileName: item.name,
+      metadata: item.metadata,
+      sizeBytes: item.sizeBytes,
+    };
 
     if (item.kind === "image") {
       const isLoading = !displayUrl && !item.previewUrl;
       const src = displayUrl || item.previewUrl || TRANSPARENT_PLACEHOLDER;
 
       return {
-        fileId: item.id,
-        fileName: item.name,
+        ...fileInfo,
         type: "image",
         src,
         thumbnail: item.previewUrl || undefined,
@@ -77,8 +82,7 @@ export function buildSlidesFromItems(
     const poster = item.previewUrl || undefined;
     if (!signedUrl) {
       return {
-        fileId: item.id,
-        fileName: item.name,
+        ...fileInfo,
         type: "image",
         src: poster || TRANSPARENT_PLACEHOLDER,
         width: item.width,
@@ -92,8 +96,7 @@ export function buildSlidesFromItems(
     if (item.requiresTranscoding) {
       if (item.id !== currentItemId) {
         return {
-          fileId: item.id,
-          fileName: item.name,
+          ...fileInfo,
           type: "image",
           src: poster || TRANSPARENT_PLACEHOLDER,
           width: item.width,
@@ -105,8 +108,7 @@ export function buildSlidesFromItems(
       }
 
       return {
-        fileId: item.id,
-        fileName: item.name,
+        ...fileInfo,
         type: HLS_VIDEO_SLIDE_TYPE,
         src: signedUrl,
         poster,
@@ -119,8 +121,7 @@ export function buildSlidesFromItems(
     }
 
     return {
-      fileId: item.id,
-      fileName: item.name,
+      ...fileInfo,
       type: "video",
       poster,
       width: item.width,

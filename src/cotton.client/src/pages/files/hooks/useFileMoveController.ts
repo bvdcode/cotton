@@ -9,6 +9,7 @@ import {
 import {
   useMoveClipboardStore,
   type MoveClipboardItem,
+  type FileTransferOperation,
 } from "../../../shared/store/moveClipboardStore";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import { getSystemKeyboardShortcut } from "@shared/utils/keyboardShortcuts";
@@ -45,7 +46,7 @@ export interface UseFileMoveControllerArgs {
   selectedIds: ReadonlySet<string>;
   selectedCount: number;
   goUpParentId: string | null;
-  onItemsCut?: () => void;
+  onClipboardSet?: () => void;
   showToast: (message: string) => void;
   t: TFunction;
 }
@@ -54,6 +55,9 @@ export interface UseFileMoveControllerResult {
   moveSupport: MoveSupport | undefined;
   clipboardCount: number;
   handleCutSelection: () => void;
+  handleCopySelection: () => void;
+  handleCopyFolder: (folderId: string) => void;
+  handleCopyFile: (fileId: string) => void;
   handlePasteHere: () => void;
   handleCutFolder: (folderId: string) => void;
   handleCutFile: (fileId: string) => void;
@@ -69,7 +73,7 @@ export interface UseFileMoveControllerResult {
 /**
  * Page-level controller that owns all move-feature glue for FilesPage:
  * clipboard population from the current selection or single-tile actions,
- * Ctrl+X / Ctrl+V hotkeys, and drop handlers for go-up and breadcrumb targets.
+ * Ctrl+C / Ctrl+X / Ctrl+V hotkeys, and drop handlers for go-up and breadcrumb targets.
  * Returns thin handlers the page composes into its toolbar and layout.
  */
 export const useFileMoveController = ({
@@ -78,7 +82,7 @@ export const useFileMoveController = ({
   selectedIds,
   selectedCount,
   goUpParentId,
-  onItemsCut,
+  onClipboardSet,
   showToast,
   t,
 }: UseFileMoveControllerArgs): UseFileMoveControllerResult => {
@@ -87,10 +91,15 @@ export const useFileMoveController = ({
     confirmConflict: conflictDialog.showConflictDialog,
   });
   const clipboardItems = useMoveClipboardStore((s) => s.items);
-  const cutItemIds = useMemo(
-    () => new Set(clipboardItems.map((c) => c.id)),
-    [clipboardItems],
-  );
+  const operation = useMoveClipboardStore((s) => s.operation);
+  const cutItemIds = useMemo(() => {
+    switch (operation) {
+      case "move":
+        return new Set(clipboardItems.map((item) => item.id));
+      case "copy":
+        return new Set<string>();
+    }
+  }, [clipboardItems, operation]);
 
   const buildClipboardItemsFromIds = useCallback(
     (ids: Iterable<string>): MoveClipboardItem[] => {
@@ -153,38 +162,65 @@ export const useFileMoveController = ({
     [buildClipboardItemsFromIds],
   );
 
-  const cutItems = useCallback(
-    (items: ReadonlyArray<MoveClipboardItem>): boolean => {
+  const setClipboardItems = useCallback(
+    (
+      items: ReadonlyArray<MoveClipboardItem>,
+      operation: FileTransferOperation,
+    ): boolean => {
       if (items.length === 0) return false;
-
-      moveOps.cutItems(items);
-      onItemsCut?.();
-      showToast(t("move.toasts.cut", { ns: "files", count: items.length }));
+      switch (operation) {
+        case "move":
+          moveOps.cutItems(items);
+          showToast(t("move.toasts.cut", { ns: "files", count: items.length }));
+          break;
+        case "copy":
+          moveOps.copyItems(items);
+          showToast(
+            t("copy.toasts.ready", { ns: "files", count: items.length }),
+          );
+          break;
+      }
+      onClipboardSet?.();
       return true;
     },
-    [moveOps, onItemsCut, showToast, t],
+    [moveOps, onClipboardSet, showToast, t],
   );
 
   const handleCutSelection = useCallback(() => {
     if (selectedCount === 0) return;
     const items = buildClipboardItemsFromIds(selectedIds);
-    cutItems(items);
-  }, [buildClipboardItemsFromIds, cutItems, selectedCount, selectedIds]);
+    setClipboardItems(items, "move");
+  }, [
+    buildClipboardItemsFromIds,
+    setClipboardItems,
+    selectedCount,
+    selectedIds,
+  ]);
 
-  const handleCutKeyboardTarget = useCallback(
-    (target: EventTarget | null): boolean => {
+  const handleCopySelection = useCallback(() => {
+    setClipboardItems(buildClipboardItemsFromIds(selectedIds), "copy");
+  }, [buildClipboardItemsFromIds, setClipboardItems, selectedIds]);
+
+  const handleClipboardKeyboardTarget = useCallback(
+    (target: EventTarget | null, operation: FileTransferOperation): boolean => {
       if (selectedCount > 0) {
-        return cutItems(buildClipboardItemsFromIds(selectedIds));
+        return setClipboardItems(
+          buildClipboardItemsFromIds(selectedIds),
+          operation,
+        );
       }
 
       const focusedItemId = resolveFocusedItemId(target);
       if (!focusedItemId) return false;
 
-      return cutItems(buildClipboardItemsFromIds([focusedItemId]));
+      return setClipboardItems(
+        buildClipboardItemsFromIds([focusedItemId]),
+        operation,
+      );
     },
     [
       buildClipboardItemsFromIds,
-      cutItems,
+      setClipboardItems,
       resolveFocusedItemId,
       selectedCount,
       selectedIds,
@@ -204,8 +240,6 @@ export const useFileMoveController = ({
     [moveOps],
   );
 
-  // Ctrl+X / Ctrl+V — skip when focus is in an editable element so the user
-  // can still cut/paste text in inputs/textareas/contenteditable.
   useEffect(() => {
     const isEditableTarget = (target: EventTarget | null): boolean => {
       if (!(target instanceof HTMLElement)) return false;
@@ -215,24 +249,42 @@ export const useFileMoveController = ({
     };
 
     const handler = (event: KeyboardEvent) => {
-      const shortcut = getSystemKeyboardShortcut(event, ["cut", "paste"]);
+      const shortcut = getSystemKeyboardShortcut(event, [
+        "cut",
+        "copy",
+        "paste",
+      ]);
       if (!shortcut) return;
       if (isEditableTarget(event.target)) return;
 
-      if (shortcut === "cut") {
-        if (!handleCutKeyboardTarget(event.target)) return;
-        event.preventDefault();
-      } else {
-        if (clipboardItems.length === 0) return;
-        if (!nodeId) return;
-        event.preventDefault();
-        handlePasteHere();
+      switch (shortcut) {
+        case "cut":
+          if (handleClipboardKeyboardTarget(event.target, "move")) {
+            event.preventDefault();
+          }
+          break;
+        case "copy":
+          if (handleClipboardKeyboardTarget(event.target, "copy")) {
+            event.preventDefault();
+          }
+          break;
+        case "paste":
+          if (clipboardItems.length > 0 && nodeId) {
+            event.preventDefault();
+            handlePasteHere();
+          }
+          break;
       }
     };
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [clipboardItems.length, handleCutKeyboardTarget, handlePasteHere, nodeId]);
+  }, [
+    clipboardItems.length,
+    handleClipboardKeyboardTarget,
+    handlePasteHere,
+    nodeId,
+  ]);
 
   const [goUpDropActive, setGoUpDropActive] = useState(false);
 
@@ -301,42 +353,17 @@ export const useFileMoveController = ({
     };
   }, [cutItemIds, handleMoveItems, nodeId]);
 
-  const handleCutFolder = useCallback(
-    (folderId: string) => {
-      if (!nodeId) return;
-      moveOps.cutItems([
-        { id: folderId, kind: "folder", sourceParentId: nodeId },
-      ]);
-      onItemsCut?.();
-      showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
+  const handleCutItem = useCallback(
+    (id: string) => {
+      setClipboardItems(buildClipboardItemsFromIds([id]), "move");
     },
-    [moveOps, nodeId, onItemsCut, showToast, t],
+    [buildClipboardItemsFromIds, setClipboardItems],
   );
-
-  const handleCutFile = useCallback(
-    (fileId: string) => {
-      if (!nodeId) return;
-      const tile = tiles.find(
-        (item) => item.kind === "file" && item.file.id === fileId,
-      );
-      if (!tile || tile.kind !== "file") return;
-      moveOps.cutItems([
-        {
-          id: fileId,
-          kind: "file",
-          sourceParentId: nodeId,
-          file: {
-            name: tile.file.name,
-            contentType: tile.file.contentType,
-            sizeBytes: tile.file.sizeBytes,
-            metadata: "metadata" in tile.file ? tile.file.metadata : {},
-          },
-        },
-      ]);
-      onItemsCut?.();
-      showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
+  const handleCopyItem = useCallback(
+    (id: string) => {
+      setClipboardItems(buildClipboardItemsFromIds([id]), "copy");
     },
-    [moveOps, nodeId, onItemsCut, showToast, t, tiles],
+    [buildClipboardItemsFromIds, setClipboardItems],
   );
 
   return {
@@ -344,8 +371,11 @@ export const useFileMoveController = ({
     clipboardCount: clipboardItems.length,
     handleCutSelection,
     handlePasteHere,
-    handleCutFolder,
-    handleCutFile,
+    handleCutFolder: handleCutItem,
+    handleCutFile: handleCutItem,
+    handleCopyFile: handleCopyItem,
+    handleCopyFolder: handleCopyItem,
+    handleCopySelection,
     goUpDropHandlers,
     breadcrumbsDropHandlers,
     conflictDialog: {

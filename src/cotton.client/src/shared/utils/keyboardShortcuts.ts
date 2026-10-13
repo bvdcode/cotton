@@ -7,6 +7,7 @@ interface KeyboardShortcutEvent {
 }
 
 export const SYSTEM_KEYBOARD_SHORTCUTS = {
+  copy: { code: "KeyC", key: "c" },
   cut: { code: "KeyX", key: "x" },
   paste: { code: "KeyV", key: "v" },
   search: { code: "KeyF", key: "f" },

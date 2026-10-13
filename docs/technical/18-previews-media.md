@@ -28,6 +28,18 @@ An unsupported or corrupt individual file records a preview-generation failure a
 
 Temporary files used by generators that require filesystem paths are removed in `finally`. RAW generation creates a bounded temporary copy to scan and decode embedded images. Other plaintext media is streamed from encrypted storage rather than materialized as one complete temp file.
 
+## Content metadata
+
+Extracted content metadata is stored in `file_manifests.metadata` as a flat string dictionary. `metadataExtractorVersion` records the extraction version, currently `"1"`. The extraction job runs every 15 minutes and processes up to 500 eligible manifests whose version differs from the current version. Legacy processed flags and image dimensions do not prevent reprocessing. Successful reprocessing replaces the extracted `image.*` and `media.*` keys while retaining custom metadata. The extraction endpoint applies the same version check.
+
+Image extraction includes every directory and tag exposed by the metadata reader, including EXIF, GPS, XMP, IPTC, ICC and manufacturer tags. HEIC, HEIF, AVIF and supported camera RAW files use the same extraction pipeline. Keys include the directory name, its zero-based occurrence, tag name and numeric identifier, for example `image.Exif IFD0.0.tags.Make.271`. Repeated directories and array elements retain separate keys. GPS also includes decimal `image.GPS.0.latitude` and `image.GPS.0.longitude` values. XMP properties retain their paths and the XMP packet is retained separately.
+
+Tag values preserve numeric precision and rational numerators and denominators. Binary values use base64 with an adjacent `.encoding` key. Strings containing a zero byte use JSON string escaping with `.encoding = "json"`, because PostgreSQL text cannot store zero bytes. Periods and tildes within source key segments are escaped as `~1` and `~0` respectively; zero bytes use `~2`. Image input is copied asynchronously to a temporary file that is deleted when extraction ends; the synchronous metadata parser reads that local copy.
+
+Audio and video extraction retains the ffprobe format, streams, programs and chapters. Examples include `media.format.tags.location`, `media.streams.0.codec_name`, `media.streams.1.tags.language` and `media.chapters.0.tags.title`. Stream side data, dispositions, frame rates, codec parameters and arbitrary tags are retained. Only the probe's temporary source address (`format.filename`) is excluded. The existing summary keys used by audio playback remain available. Probe output is bounded to 4 MiB; exceeding the limit fails extraction rather than storing a truncated result. Unavailable probes and infrastructure errors do not record the current extraction version.
+
+Supported metadata depends on the source format and the reader's understanding of it. Reader diagnostics are retained under each image directory's `errors` keys; proprietary data may remain binary rather than decoded.
+
 ## Serving previews
 
 Preview URLs use encrypted references to immutable content hashes. The preview endpoint verifies the owning row and storage reference before opening the blob.

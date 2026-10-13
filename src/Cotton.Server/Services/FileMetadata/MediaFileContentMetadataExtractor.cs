@@ -61,7 +61,7 @@ namespace Cotton.Server.Services.FileMetadata
                 throw new FileMetadataUnavailableException("ffprobe did not produce valid media metadata.");
             }
 
-            Dictionary<string, string> result = new(StringComparer.Ordinal);
+            Dictionary<string, string> result = new(metadata.Properties, StringComparer.Ordinal);
             AddNumber(result, FileContentMetadataKeys.MediaDurationSeconds, metadata.DurationSeconds);
             AddValue(result, FileContentMetadataKeys.MediaAudioCodec, metadata.AudioCodec);
             AddValue(result, FileContentMetadataKeys.MediaVideoCodec, metadata.VideoCodec);

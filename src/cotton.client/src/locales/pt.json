@@ -1458,7 +1458,11 @@
       },
       "databaseRestoreCompleted": {
         "title": "Base de dados restaurada automaticamente",
-        "content": "A restauração automática da base de dados foi concluída com sucesso.\n\nID da cópia: {{backupId}}\nBase de dados de origem: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nCópia criada (UTC): {{backupCreatedUtc}} UTC\nCópia criada ({{serverTimezone}}): {{backupCreatedLocal}}\nRestauração concluída (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestauração concluída ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}"
+        "content": "A restauração automática da base de dados foi concluída com sucesso.\n\nID da cópia: {{backupId}}\nBase de dados de origem: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nCópia criada (UTC): {{backupCreatedUtc}} UTC\nCópia criada ({{serverTimezone}}): {{backupCreatedLocal}}\nRestauração concluída (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestauração concluída ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}",
+        "contentWithFallback": "A restauração automática da base de dados foi concluída com sucesso.\n\nID da cópia: {{backupId}}\nBase de dados de origem: {{sourceDatabase}} ({{sourceHost}}:{{sourcePort}})\n\nCópia criada (UTC): {{backupCreatedUtc}} UTC\nCópia criada ({{serverTimezone}}): {{backupCreatedLocal}}\nRestauração concluída (UTC): {{restoreCompletedUtcDisplay}} UTC\nRestauração concluída ({{serverTimezone}}): {{restoreCompletedLocalDisplay}}\n\nBackups indisponíveis ou danificados foram ignorados: {{skippedBackupIds}}. Um backup anterior foi restaurado.",
+        "vectorUnavailable": "A pesquisa vetorial estava ativada na cópia de segurança, mas o pacote pgvector não está disponível neste servidor PostgreSQL. A base de dados foi restaurada com sucesso sem pesquisa vetorial. Instale o pgvector e ative a pesquisa vetorial nas definições do servidor para reconstruir o índice.",
+        "contentWithoutVector": "$t(notifications:server.databaseRestoreCompleted.content)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)",
+        "contentWithFallbackWithoutVector": "$t(notifications:server.databaseRestoreCompleted.contentWithFallback)\n\n$t(notifications:server.databaseRestoreCompleted.vectorUnavailable)"
       },
       "databaseIntegrityFailure": {
         "title": "Problema de integridade do banco de dados detectado",
@@ -1529,7 +1533,8 @@
       "copied": "Copiado!",
       "reload": "Recarregar",
       "retry": "Tentar novamente",
-      "versions": "Versões"
+      "versions": "Versões",
+      "copy": "Copiar"
     },
     "errors": {
       "unexpectedTitle": "Não foi possível exibir esta página",
@@ -1732,6 +1737,11 @@
       "description": "Preferências de interface e personalização.",
       "gallerySmoothTransitions": "Transições suaves na galeria",
       "galleryPreferPreview": "Mostrar originais em vez de prévias",
+      "galleryMetadataPosition": {
+        "label": "Lado do painel de metadados",
+        "left": "Esquerda",
+        "right": "Direita"
+      },
       "themeMode": {
         "label": "Tema",
         "light": "Claro",
@@ -2491,6 +2501,7 @@
       "folderNamePlaceholder": "Nome da pasta",
       "goToFolder": "Ir para a pasta",
       "goUp": "Subir um nível",
+      "goUpHoldHint": "Subir um nível; mantenha pressionado para ir à pasta raiz",
       "dropFiles": "Solte os arquivos para enviar",
       "switchToTilesView": "Alternar para blocos",
       "switchToListView": "Alternar para visualização em lista",
@@ -2564,6 +2575,34 @@
       }
     },
     "preview": {
+      "metadata": {
+        "label": "Informações",
+        "dimensions": "Dimensões",
+        "duration": "Duração",
+        "seconds": "{{value}} s",
+        "format": "Formato",
+        "title": "Título",
+        "artist": "Artista",
+        "album": "Álbum",
+        "albumArtist": "Artista do álbum",
+        "track": "Faixa",
+        "disc": "Disco",
+        "date": "Data",
+        "year": "Ano",
+        "genre": "Género",
+        "audioCodec": "Codec de áudio",
+        "videoCodec": "Codec de vídeo",
+        "cameraMake": "Fabricante",
+        "cameraModel": "Câmara",
+        "lens": "Objetiva",
+        "exposureTime": "Tempo de exposição",
+        "aperture": "Abertura",
+        "iso": "ISO",
+        "dateTaken": "Data da captura",
+        "focalLength": "Distância focal",
+        "moreDetails": "Mais detalhes",
+        "lessDetails": "Menos detalhes"
+      },
       "actions": {
         "edit": "Editar",
         "save": "Salvar",
@@ -2714,9 +2753,20 @@
       "restoreConfirmDescription": "O conteúdo atual do ficheiro será guardado como uma nova versão e, em seguida, a versão {{version}} passará a ser a atual.",
       "deleteConfirmTitle": "Eliminar esta versão?",
       "deleteConfirmDescription": "A versão {{version}} será eliminada. O ficheiro atual não será alterado."
+    },
+    "copy": {
+      "toasts": {
+        "ready": "Prontos para copiar: {{count}}",
+        "copied": "Copiados: {{count}}",
+        "failed": "Não foi possível copiar: {{count}}"
+      }
     }
   },
   "tasks": {
+    "operations": {
+      "move": "Movendo",
+      "copy": "Copiando"
+    },
     "title": "Tarefas",
     "error": "Erro",
     "errors": {
@@ -2804,7 +2854,7 @@
     },
     "restore": {
       "action": "Restaurar",
-      "inProgress": "Restaurando {{current}} de {{total}}: {{name}}",
+      "inProgress": "Restaurando {{total}} itens...",
       "failed": "Falha ao restaurar \"{{name}}\"",
       "notRestorable": "O item não pode ser restaurado.",
       "rootFolder": "a pasta raiz",
@@ -3242,16 +3292,16 @@
     },
     "databaseBackup": {
       "title": "Backup do banco de dados",
-      "description": "Último manifesto de backup do servidor.",
+      "description": "Backups salvos do banco de dados e acesso para ferramentas externas.",
       "actions": {
         "refresh": "Atualizar",
         "trigger": "Executar backup",
-        "triggering": "Executando..."
+        "triggering": "Criando backup…"
       },
       "state": {
         "loading": "Carregando informações de backup...",
         "empty": "Nenhum backup encontrado ainda.",
-        "triggerSuccess": "A tarefa de backup foi acionada.",
+        "triggerSuccess": "Backup salvo.",
         "restoreIfEmptyHint": "Se o banco de dados for perdido e você quiser que ele seja restaurado automaticamente, defina COTTON_RESTORE_DATABASE_IF_EMPTY=true no ambiente do container. O banco de dados precisa estar vazio, sem nenhuma tabela, para que isso funcione."
       },
       "fields": {
@@ -3268,6 +3318,24 @@
       "errors": {
         "loadFailed": "Falha ao carregar as informações de backup.",
         "triggerFailed": "Falha ao acionar o backup."
+      },
+      "history": {
+        "title": "Histórico de backups",
+        "retention": "São mantidos todos os backups dos últimos 7 dias e pelo menos os 3 mais recentes.",
+        "latest": "Mais recente"
+      },
+      "access": {
+        "title": "Acesso para backups externos",
+        "description": "Este token permite apenas criar backups do banco de dados. Salve-o na sua ferramenta de backup. Ele permanece válido enquanto a chave mestra não mudar; um novo token não revoga os anteriores.",
+        "request": "Envie {{endpoint}} com o cabeçalho {{header}}. Uma resposta bem-sucedida confirma que o dump foi salvo.",
+        "token": "Token de backup",
+        "generate": "Criar token",
+        "copy": "Copiar token",
+        "copied": "Copiado",
+        "failed": "Não foi possível criar o token.",
+        "copyFailed": "Não foi possível copiar. Selecione e copie o token manualmente.",
+        "curlExample": "Exemplo de curl",
+        "copyCommand": "Copiar comando"
       }
     },
     "storageStatistics": {
