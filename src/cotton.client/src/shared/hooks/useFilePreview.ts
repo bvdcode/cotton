@@ -1,5 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { getFileTypeInfo } from "@shared/utils/fileTypes";
+import {
+  getFileExtension,
+  getFileTypeInfo,
+  isRawImageFile,
+} from "@shared/utils/fileTypes";
 import type { FileType } from "@shared/utils/fileTypes";
 import { previewConfig } from "../config/previewConfig";
 import type { NodeFileManifestDto } from "../api/nodesApi";
@@ -53,14 +57,23 @@ export const useFilePreview = () => {
     ) => {
       const typeInfo = getFileTypeInfo(fileName, contentType);
       const encrypted = file ? isFileEncrypted(file.metadata) : false;
-      const textPreviewLimit = encrypted
+      const inlinePreviewLimit = encrypted
         ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
         : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
       let fileType = typeInfo.type;
+      const readableImage =
+        encrypted &&
+        fileType === "image" &&
+        !isRawImageFile(fileName, contentType) &&
+        !["heic", "heif"].includes(getFileExtension(fileName));
       if (
-        (fileType !== "pdf" && fileType !== "text" && fileType !== "model") ||
-        (encrypted && fileType !== "text") ||
-        (fileType === "text" && (fileSizeBytes ?? 0) > textPreviewLimit)
+        (fileType !== "pdf" &&
+          fileType !== "text" &&
+          fileType !== "model" &&
+          !readableImage) ||
+        (encrypted && fileType !== "text" && !readableImage) ||
+        ((fileType === "text" || readableImage) &&
+          (fileSizeBytes ?? 0) > inlinePreviewLimit)
       ) {
         fileType = "other";
       }
