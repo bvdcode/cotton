@@ -13,6 +13,8 @@ interface AudioPreviewProps {
   nodeFileId: string;
   fileName: string;
   playlist?: ReadonlyArray<AudioPlaylistItem> | null;
+  sourceUrl?: string;
+  onError?: () => void;
 }
 
 const EXPIRE_AFTER_MINUTES = 60 * 24;
@@ -36,6 +38,8 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
   nodeFileId,
   fileName,
   playlist,
+  sourceUrl,
+  onError,
 }) => {
   const urlCacheRef = React.useRef<Map<string, string>>(new Map());
 
@@ -71,6 +75,11 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
     let cancelled = false;
 
     const resolve = async () => {
+      if (sourceUrl) {
+        setSrc(sourceUrl);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
 
       const cached = urlCacheRef.current.get(currentItem.id);
@@ -107,7 +116,7 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [currentItem.id, currentItem.name]);
+  }, [currentItem.id, currentItem.name, sourceUrl]);
 
   const hasPlaylist = effectivePlaylist.length > 1;
 
@@ -193,6 +202,7 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
           onClickNext={hasPlaylist ? handleNext : undefined}
           onEnded={handleEnded}
           preload="metadata"
+          onError={onError}
         />
       )}
     </Box>

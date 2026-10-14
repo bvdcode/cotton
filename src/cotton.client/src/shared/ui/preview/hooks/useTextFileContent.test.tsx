@@ -74,7 +74,7 @@ describe("useTextFileContent", () => {
     expect(mocks.getReadableFileUrl).not.toHaveBeenCalled();
   });
 
-  it("loads encrypted text through the readable-file decrypt pipeline", async () => {
+  it("reads an already decrypted URL without downloading or decrypting again", async () => {
     const sourceFile = createFile({ metadata: { encrypted: "true" } });
     mocks.isFileEncrypted.mockReturnValue(true);
     mocks.getReadableFileUrl.mockResolvedValue({
@@ -84,14 +84,20 @@ describe("useTextFileContent", () => {
     });
 
     const { result } = renderHook(() =>
-      useTextFileContent(sourceFile.id, sourceFile.sizeBytes, sourceFile),
+      useTextFileContent(
+        sourceFile.id,
+        sourceFile.sizeBytes,
+        sourceFile,
+        "blob:decrypted-text",
+      ),
     );
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.content).toBe("hello");
-    expect(mocks.getReadableFileUrl).toHaveBeenCalledWith(sourceFile);
+    expect(fetch).toHaveBeenCalledWith("blob:decrypted-text");
+    expect(mocks.getReadableFileUrl).not.toHaveBeenCalled();
     expect(mocks.getDownloadLink).not.toHaveBeenCalled();
-    expect(mocks.revoke).toHaveBeenCalledOnce();
+    expect(mocks.revoke).not.toHaveBeenCalled();
   });
 });

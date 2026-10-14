@@ -6,9 +6,7 @@ import { useTranslation } from "react-i18next";
 import { previewConfig } from "../../../config/previewConfig";
 import {
   CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES,
-  getReadableFileUrl,
   isFileEncrypted,
-  type ReadableFileHandle,
 } from "../../../crypto";
 import { formatBytes } from "../../../utils/formatBytes";
 
@@ -16,6 +14,7 @@ export const useTextFileContent = (
   nodeFileId: Guid,
   fileSizeBytes: number | null,
   sourceFile?: NodeFileManifestDto | null,
+  previewUrl?: string,
 ) => {
   const { t } = useTranslation(["files"]);
   const [content, setContent] = useState<string | undefined>(undefined);
@@ -27,8 +26,6 @@ export const useTextFileContent = (
     let cancelled = false;
 
     const loadContent = async () => {
-      let readableFile: ReadableFileHandle | null = null;
-
       try {
         setLoading(true);
         setError(null);
@@ -55,9 +52,7 @@ export const useTextFileContent = (
         }
 
         const downloadUrl =
-          encrypted && sourceFile
-            ? (readableFile = await getReadableFileUrl(sourceFile)).url
-            : await filesApi.getDownloadLink(nodeFileId);
+          previewUrl ?? (await filesApi.getDownloadLink(nodeFileId));
         const response = await fetch(downloadUrl);
 
         if (!response.ok) {
@@ -84,8 +79,6 @@ export const useTextFileContent = (
           );
           setLoading(false);
         }
-      } finally {
-        readableFile?.revoke();
       }
     };
 
@@ -94,7 +87,7 @@ export const useTextFileContent = (
     return () => {
       cancelled = true;
     };
-  }, [nodeFileId, fileSizeBytes, sourceFile, t]);
+  }, [nodeFileId, fileSizeBytes, sourceFile, previewUrl, t]);
 
   return {
     content,

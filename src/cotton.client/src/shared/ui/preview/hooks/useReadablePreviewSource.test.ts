@@ -7,7 +7,7 @@ import {
 } from "../../../crypto/downloadDecrypt";
 import { generateMasterKey } from "../../../crypto/keys";
 import { useVault } from "../../../crypto/vault";
-import { useImagePreviewSource } from "./useImagePreviewSource";
+import { useReadablePreviewSource } from "./useReadablePreviewSource";
 
 vi.mock("../../../crypto/downloadDecrypt", () => ({
   getReadableFileUrl: vi.fn(),
@@ -38,12 +38,12 @@ afterEach(() => {
   useVault.getState().lock();
 });
 
-describe("encrypted image source", () => {
-  it("loads the readable image once and releases it on unmount", async () => {
+describe("encrypted preview source", () => {
+  it("loads the readable file once and releases it on unmount", async () => {
     const readable = handle();
     load.mockResolvedValue(readable);
     const { result, rerender, unmount } = renderHook(() =>
-      useImagePreviewSource(file),
+      useReadablePreviewSource(file),
     );
     expect(result.current.url).toBeNull();
     await waitFor(() => expect(result.current.url).toBe(readable.url));
@@ -55,7 +55,7 @@ describe("encrypted image source", () => {
 
   it("does not fetch while locked", () => {
     useVault.getState().lock();
-    const { result } = renderHook(() => useImagePreviewSource(file));
+    const { result } = renderHook(() => useReadablePreviewSource(file));
     expect(result.current.failed).toBe(true);
     expect(load).not.toHaveBeenCalled();
   });
@@ -68,7 +68,7 @@ describe("encrypted image source", () => {
         finish = resolve;
       }),
     );
-    const { unmount } = renderHook(() => useImagePreviewSource(file));
+    const { unmount } = renderHook(() => useReadablePreviewSource(file));
     unmount();
     await act(async () => {
       finish(readable);
@@ -79,7 +79,7 @@ describe("encrypted image source", () => {
   it("hides and releases the plaintext when the vault locks", async () => {
     const readable = handle();
     load.mockResolvedValue(readable);
-    const { result } = renderHook(() => useImagePreviewSource(file));
+    const { result } = renderHook(() => useReadablePreviewSource(file));
     await waitFor(() => expect(result.current.url).toBe(readable.url));
     act(() => useVault.getState().lock());
     expect(result.current.url).toBeNull();
@@ -95,7 +95,7 @@ describe("encrypted image source", () => {
         finish = resolve;
       }),
     );
-    const { result } = renderHook(() => useImagePreviewSource(file));
+    const { result } = renderHook(() => useReadablePreviewSource(file));
     act(() => useVault.getState().lock());
     await act(async () => {
       finish(readable);
@@ -110,7 +110,7 @@ describe("encrypted image source", () => {
       .mockResolvedValueOnce(readable)
       .mockReturnValueOnce(new Promise(() => {}));
     const { result, rerender } = renderHook(
-      ({ source }) => useImagePreviewSource(source),
+      ({ source }) => useReadablePreviewSource(source),
       { initialProps: { source: file } },
     );
     await waitFor(() => expect(result.current.url).toBe(readable.url));
@@ -119,18 +119,18 @@ describe("encrypted image source", () => {
     expect(readable.revoke).toHaveBeenCalledOnce();
   });
 
-  it("reports decryption failure without returning an image URL", async () => {
+  it("reports decryption failure without returning a preview URL", async () => {
     load.mockRejectedValue(new Error("Invalid authentication tag"));
-    const { result } = renderHook(() => useImagePreviewSource(file));
+    const { result } = renderHook(() => useReadablePreviewSource(file));
     await waitFor(() => expect(result.current.failed).toBe(true));
     expect(result.current.url).toBeNull();
   });
 
-  it("allows the viewer to handle unsupported image data", async () => {
+  it("allows the viewer to handle unsupported media data", async () => {
     load.mockResolvedValue(handle());
-    const { result } = renderHook(() => useImagePreviewSource(file));
+    const { result } = renderHook(() => useReadablePreviewSource(file));
     await waitFor(() => expect(result.current.url).not.toBeNull());
-    act(() => result.current.onImageError());
+    act(() => result.current.onSourceError());
     expect(result.current.failed).toBe(true);
     expect(result.current.url).toBeNull();
   });

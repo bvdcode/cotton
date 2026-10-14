@@ -7,19 +7,22 @@ import {
 import { useVault } from "../../../crypto/vault";
 import { reportClientError } from "../../../utils/clientDiagnostics";
 
-interface ImagePreviewState {
+interface ReadablePreviewState {
   source: symbol;
   url: string | null;
   failed: boolean;
 }
 
-export function useImagePreviewSource(file: NodeFileManifestDto | null) {
+export function useReadablePreviewSource(file: NodeFileManifestDto | null) {
   const masterKey = useVault((state) => state.masterKey);
-  const source = useMemo(() => Symbol(), [file, masterKey]);
-  const [state, setState] = useState<ImagePreviewState | null>(null);
+  const source = useMemo(
+    () => (file && masterKey ? Symbol() : null),
+    [file, masterKey],
+  );
+  const [state, setState] = useState<ReadablePreviewState | null>(null);
 
   useEffect(() => {
-    if (!file || !masterKey) {
+    if (!file || !masterKey || source === null) {
       return;
     }
     let active = true;
@@ -36,7 +39,7 @@ export function useImagePreviewSource(file: NodeFileManifestDto | null) {
       },
       (error: Error) => {
         if (active) {
-          reportClientError("Failed to load encrypted image", error);
+          reportClientError("Failed to load encrypted preview", error);
           setState({ source, url: null, failed: true });
         }
       },
@@ -52,8 +55,8 @@ export function useImagePreviewSource(file: NodeFileManifestDto | null) {
   return {
     url: current ? state.url : null,
     failed: !masterKey || (current && state.failed),
-    onImageError: () => {
-      if (file && masterKey) {
+    onSourceError: () => {
+      if (source !== null) {
         setState({ source, url: null, failed: true });
       }
     },

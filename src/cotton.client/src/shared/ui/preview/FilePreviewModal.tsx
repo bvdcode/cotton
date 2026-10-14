@@ -20,7 +20,7 @@ import {
 } from "./modelPalette";
 import type { FileType } from "@shared/utils/fileTypes";
 import type { NodeFileManifestDto } from "../../api/nodesApi";
-import { FilePreviewBody, type FilePreviewSource } from "./FilePreviewBody";
+import { FilePreviewBody } from "./FilePreviewBody";
 
 interface FilePreviewModalProps {
   isOpen: boolean;
@@ -38,7 +38,7 @@ type ModelPreviewControls = ReturnType<typeof useModelPreviewControls>;
 
 /**
  * Shared file preview modal component
- * Displays PDF, Text, or Model preview based on file type
+ * Displays a supported file using its readable source.
  */
 export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   isOpen,
@@ -54,10 +54,6 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   const isModel = fileType === "model";
   const defaultModelColor = useDefaultModelColor();
   const paletteColors = useModelPaletteColors();
-  const fileSource = React.useMemo<FilePreviewSource | null>(
-    () => (fileId ? { kind: "fileId", fileId } : null),
-    [fileId],
-  );
   const modelControls = useModelPreviewControls({
     stateKey: getModelControlsKey(isOpen, isModel, fileId, defaultModelColor),
     defaultMaterialColor: defaultModelColor,
@@ -86,7 +82,6 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
         fileType={fileType}
         fileSizeBytes={fileSizeBytes}
         sourceFile={file}
-        fileSource={fileSource}
         modelControls={modelControls}
         onSaved={onSaved}
         onDownload={onDownload}

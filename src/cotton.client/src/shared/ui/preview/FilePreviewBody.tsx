@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Box, CircularProgress } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import type { NodeFileManifestDto } from "../../api/nodesApi";
@@ -10,13 +11,14 @@ import {
   isFileEncrypted,
 } from "../../crypto";
 import type { useModelPreviewControls } from "./hooks/useModelPreviewControls";
-import { useImagePreviewSource } from "./hooks/useImagePreviewSource";
+import { useReadablePreviewSource } from "./hooks/useReadablePreviewSource";
 import { PdfPreview } from "./PdfPreview";
 import { TextPreview } from "./TextPreview";
 import { ModelPreview } from "./ModelPreview";
+import type { ModelPreviewSource } from "./modelPreviewTypes";
+import { AudioPreview } from "./AudioPreview";
 import { FilePreviewUnavailable } from "./FilePreviewUnavailable";
 
-export type FilePreviewSource = { kind: "fileId"; fileId: string };
 type ModelPreviewControls = ReturnType<typeof useModelPreviewControls>;
 
 type FilePreviewBodyProps = {
@@ -25,7 +27,6 @@ type FilePreviewBodyProps = {
   fileType: FileType | null;
   fileSizeBytes: number | null;
   sourceFile?: NodeFileManifestDto | null;
-  fileSource: FilePreviewSource | null;
   modelControls: ModelPreviewControls;
   onSaved?: () => void;
   onDownload: (fileId: string, fileName: string) => Promise<void>;
@@ -37,102 +38,169 @@ export const FilePreviewBody = ({
   fileType,
   fileSizeBytes,
   sourceFile,
-  fileSource,
   modelControls,
   onSaved,
   onDownload,
 }: FilePreviewBodyProps) => {
   const { t } = useTranslation("files");
-  const image = useImagePreviewSource(
-    fileType === "image" ? (sourceFile ?? null) : null,
+  const encrypted = sourceFile ? isFileEncrypted(sourceFile.metadata) : false;
+  const readable = useReadablePreviewSource(
+    encrypted && fileType !== "other" && fileType !== null
+      ? (sourceFile ?? null)
+      : null,
   );
-  const textPreviewLimit =
-    sourceFile && isFileEncrypted(sourceFile.metadata)
-      ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
-      : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
-  const oversizedText =
-    getFileTypeInfo(fileName, sourceFile?.contentType).type === "text" &&
-    (fileSizeBytes ?? 0) > textPreviewLimit;
-  return (
-    <>
-      {fileType === "image" && (
+  const fileSource = useMemo<ModelPreviewSource>(() => {
+    if (readable.url) {
+      return { kind: "url", url: readable.url };
+    }
+    return { kind: "fileId", fileId };
+  }, [fileId, readable.url]);
+  const pdfSource = useMemo(() => {
+    switch (fileSource.kind) {
+      case "fileId":
+        return fileSource;
+      case "url":
+        return { kind: "objectUrl" as const, url: fileSource.url };
+    }
+  }, [fileSource]);
+  const download = () => {
+    void onDownload(fileId, fileName);
+  };
+
+  if (fileType === "other") {
+    const originalType = getFileTypeInfo(
+      fileName,
+      sourceFile?.contentType,
+    ).type;
+    let limit: number | null = null;
+    if (encrypted) {
+      limit = CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES;
+      if (originalType === "pdf") {
+        limit = previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES;
+      }
+    } else if (originalType === "text") {
+      limit = previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
+    }
+    return (
+      <FilePreviewUnavailable
+        message={
+          limit !== null && (fileSizeBytes ?? 0) > limit
+            ? t("preview.errors.fileTooLarge", {
+                size: formatBytes(fileSizeBytes ?? 0),
+                maxSize: formatBytes(limit),
+              })
+            : undefined
+        }
+        onDownload={download}
+      />
+    );
+  }
+
+  if (encrypted && (readable.failed || !readable.url)) {
+    return (
+      <Box
+        display="flex"
+        flex={1}
+        minHeight={0}
+        alignItems="center"
+        justifyContent="center"
+      >
+        {readable.failed ? (
+          <FilePreviewUnavailable
+            message={t("preview.errors.loadFailed", { error: "" })}
+            onDownload={download}
+          />
+        ) : (
+          <CircularProgress />
+        )}
+      </Box>
+    );
+  }
+
+  switch (fileType) {
+    case "image":
+      return (
         <Box
-          display="flex"
-          flex={1}
+          component="img"
+          src={readable.url ?? undefined}
+          alt={fileName}
+          width="100%"
+          height="100%"
           minHeight={0}
-          alignItems="center"
-          justifyContent="center"
-        >
-          {image.failed ? (
-            <FilePreviewUnavailable
-              message={t("preview.errors.loadFailed", { error: "" })}
-              onDownload={() => {
-                void onDownload(fileId, fileName);
-              }}
-            />
-          ) : image.url ? (
-            <Box
-              component="img"
-              src={image.url}
-              alt={fileName}
-              width="100%"
-              height="100%"
-              minHeight={0}
-              sx={{ objectFit: "contain" }}
-              onError={image.onImageError}
-            />
-          ) : (
-            <CircularProgress />
-          )}
-        </Box>
-      )}
-      {fileType === "other" && (
-        <FilePreviewUnavailable
-          message={
-            oversizedText
-              ? t("preview.errors.fileTooLarge", {
-                  size: formatBytes(fileSizeBytes ?? 0),
-                  maxSize: formatBytes(textPreviewLimit),
-                })
-              : undefined
-          }
-          onDownload={() => {
-            void onDownload(fileId, fileName);
-          }}
+          sx={{ objectFit: "contain" }}
+          onError={readable.onSourceError}
         />
-      )}
-      {fileType === "pdf" && fileSource && (
+      );
+    case "video":
+      return (
+        <Box
+          component="video"
+          src={readable.url ?? undefined}
+          controls
+          playsInline
+          autoPlay
+          preload="metadata"
+          width="100%"
+          height="100%"
+          minHeight={0}
+          sx={{ objectFit: "contain" }}
+          onError={readable.onSourceError}
+        />
+      );
+    case "audio":
+      return (
+        <Box display="flex" flex={1} alignItems="center" px={3}>
+          <AudioPreview
+            nodeFileId={fileId}
+            fileName={fileName}
+            sourceUrl={readable.url ?? undefined}
+            onError={readable.onSourceError}
+          />
+        </Box>
+      );
+    case "pdf":
+      return (
         <PdfPreview
-          source={fileSource}
+          source={pdfSource}
           fileName={fileName}
           fileSizeBytes={fileSizeBytes}
         />
-      )}
-      {fileType === "text" && (
+      );
+    case "text":
+      return (
         <TextPreview
+          key={readable.url ?? fileId}
           nodeFileId={fileId}
           fileName={fileName}
           fileSizeBytes={fileSizeBytes}
           sourceFile={sourceFile}
+          previewUrl={readable.url ?? undefined}
           onSaved={onSaved}
         />
-      )}
-      {fileType === "model" && fileSource && (
+      );
+    case "model":
+      return (
         <ModelPreviewBody
           fileName={fileName}
           fileSizeBytes={fileSizeBytes}
           fileSource={fileSource}
+          contentType={sourceFile?.contentType}
           modelControls={modelControls}
         />
-      )}
-    </>
-  );
+      );
+    case "document":
+    case "archive":
+      return <FilePreviewUnavailable onDownload={download} />;
+    case null:
+      return null;
+  }
 };
 
 type ModelPreviewBodyProps = {
   fileName: string;
   fileSizeBytes: number | null;
-  fileSource: FilePreviewSource;
+  fileSource: ModelPreviewSource;
+  contentType?: string | null;
   modelControls: ModelPreviewControls;
 };
 
@@ -140,20 +208,15 @@ const ModelPreviewBody = ({
   fileName,
   fileSizeBytes,
   fileSource,
+  contentType,
   modelControls,
 }: ModelPreviewBodyProps) => (
-  <Box
-    sx={{
-      display: "flex",
-      flex: 1,
-      flexDirection: "column",
-      minHeight: 0,
-    }}
-  >
-    <Box sx={{ flex: 1, minHeight: 0 }}>
+  <Box display="flex" flex={1} flexDirection="column" minHeight={0}>
+    <Box flex={1} minHeight={0}>
       <ModelPreview
         source={fileSource}
         fileName={fileName}
+        contentType={contentType}
         fileSizeBytes={fileSizeBytes}
         materialColor={modelControls.materialColor}
         autoAlignToken={modelControls.autoAlignToken}

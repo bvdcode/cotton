@@ -19,6 +19,7 @@ interface TextPreviewProps {
   fileName: string;
   fileSizeBytes: number | null;
   sourceFile?: NodeFileManifestDto | null;
+  previewUrl?: string;
   onSaved?: () => void;
 }
 
@@ -27,6 +28,7 @@ export function TextPreview({
   fileName,
   fileSizeBytes,
   sourceFile,
+  previewUrl,
   onSaved,
 }: TextPreviewProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -39,7 +41,7 @@ export function TextPreview({
     loading,
     error: loadError,
     isFileTooLarge,
-  } = useTextFileContent(nodeFileId, fileSizeBytes, sourceFile);
+  } = useTextFileContent(nodeFileId, fileSizeBytes, sourceFile, previewUrl);
 
   const {
     saving,
