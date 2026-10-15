@@ -48,6 +48,9 @@ describe("FileConflictDialog", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "conflicts.overwrite" }),
     );
+    fireEvent.click(
+      screen.getByRole("button", { name: "conflicts.overwriteAll" }),
+    );
 
     expect(onResolve.mock.calls).toEqual([
       [ConflictAction.Cancel],
@@ -55,6 +58,7 @@ describe("FileConflictDialog", () => {
       [ConflictAction.SkipAll],
       [ConflictAction.Rename],
       [ConflictAction.Overwrite],
+      [ConflictAction.OverwriteAll],
     ]);
   });
 
@@ -63,6 +67,9 @@ describe("FileConflictDialog", () => {
 
     expect(
       screen.queryByRole("button", { name: "conflicts.overwrite" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "conflicts.overwriteAll" }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", {

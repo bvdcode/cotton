@@ -2533,7 +2533,8 @@
       "rename": "{{newName}} verwenden",
       "overwrite": "Ersetzen",
       "skip": "Überspringen",
-      "skipAll": "Alle überspringen"
+      "skipAll": "Alle überspringen",
+      "overwriteAll": "Alle ersetzen"
     },
     "deleteFolder": {
       "confirmTitle": "Ordner \"{{name}}\" löschen?",

@@ -20,6 +20,49 @@ const createContent = (
 });
 
 describe("resolveUploadConflicts", () => {
+  it("replaces every existing file after one replace-all decision", async () => {
+    const files = [new File(["a"], "a.jpg"), new File(["b"], "b.jpg")];
+    const confirm = vi.fn(async () => ConflictAction.OverwriteAll);
+
+    const result = await resolveUploadConflicts(
+      files,
+      createContent([
+        { id: "a", name: "a.jpg" },
+        { id: "b", name: "b.jpg" },
+      ]),
+      confirm,
+    );
+
+    expect(result.files).toEqual([
+      { file: files[0], replaceNodeFileId: "a" },
+      { file: files[1], replaceNodeFileId: "b" },
+    ]);
+    expect(confirm).toHaveBeenCalledOnce();
+  });
+
+  it("still prompts when a replacement target was already used in this upload", async () => {
+    const first = new File(["a"], "a.jpg");
+    const second = new File(["b"], "a.jpg");
+    const confirm = vi
+      .fn()
+      .mockResolvedValueOnce(ConflictAction.OverwriteAll)
+      .mockResolvedValueOnce(ConflictAction.Rename);
+
+    const result = await resolveUploadConflicts(
+      [first, second],
+      createContent([{ id: "a", name: "a.jpg" }]),
+      confirm,
+    );
+
+    expect(result.files[0]).toEqual({ file: first, replaceNodeFileId: "a" });
+    expect(result.files[1]?.file.name).toBe("a (1).jpg");
+    expect(result.files[1]?.replaceNodeFileId).toBeUndefined();
+    expect(confirm).toHaveBeenLastCalledWith({
+      newName: "a (1).jpg",
+      canOverwrite: false,
+    });
+  });
+
   it("normalizes names before resolving conflicts", async () => {
     const file = new File(["new"], " image_028.jpg", { type: "image/jpeg" });
     const confirmConflict = vi.fn(async () => ConflictAction.Overwrite);

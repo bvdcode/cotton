@@ -2550,7 +2550,8 @@
       "rename": "Použít {{newName}}",
       "overwrite": "Nahradit",
       "skip": "Přeskočit",
-      "skipAll": "Přeskočit vše"
+      "skipAll": "Přeskočit vše",
+      "overwriteAll": "Nahradit vše"
     },
     "deleteFolder": {
       "confirmTitle": "Smazat složku \"{{name}}\"?",

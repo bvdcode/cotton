@@ -4,6 +4,7 @@ import { type NodeFileManifestDto } from "../../../shared/api/nodesApi";
 import { lookupUploadNames } from "../utils/lookupUploadNames";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 import { ConflictAction } from "../../../shared/types/nameConflict";
+import { createConflictResolver } from "../../../shared/types/createConflictResolver";
 import { resolveUploadConflicts } from "../utils/uploadConflicts";
 import { showActionToast } from "../../../shared/ui/ActionToast";
 import { toast } from "../../../shared/ui/notifications";
@@ -83,9 +84,7 @@ export const useFileUpload = (
         decision.encrypt,
       );
 
-      const confirmConflict = async (
-        prompt: Parameters<typeof showConflictDialog>[0],
-      ): Promise<ConflictAction> => {
+      const confirmConflict = createConflictResolver(async (prompt) => {
         if (skipAllConflictsRef.current) {
           return ConflictAction.SkipAll;
         }
@@ -95,7 +94,7 @@ export const useFileUpload = (
           skipAllConflictsRef.current = true;
         }
         return action;
-      };
+      });
 
       const result = await resolveUploadConflicts(
         list,
@@ -153,9 +152,7 @@ export const useFileUpload = (
 
       let totalEnqueued = 0;
 
-      const confirmConflict = async (
-        prompt: Parameters<typeof showConflictDialog>[0],
-      ): Promise<ConflictAction> => {
+      const confirmConflict = createConflictResolver(async (prompt) => {
         if (skipAllConflictsRef.current) {
           return ConflictAction.SkipAll;
         }
@@ -165,7 +162,7 @@ export const useFileUpload = (
           skipAllConflictsRef.current = true;
         }
         return action;
-      };
+      });
 
       const folderResolver = new DroppedFolderResolver(
         nodeId,

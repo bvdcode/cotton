@@ -1,4 +1,5 @@
 import { FolderTransferNames } from "../move/FolderTransferNames";
+import { createConflictResolver } from "../types/createConflictResolver";
 import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { toast } from "@shared/ui/notifications";
 import type { NodeFileManifestDto } from "../api/nodesApi";
@@ -71,6 +72,7 @@ export const moveCandidatesToTarget = async (options: {
   const movedFilesToOfferDecrypt: MoveClipboardItem[] = [];
   let lastErrorMessage: string | null = null;
   let skipAllConflicts = false;
+  const confirmConflict = createConflictResolver(options.confirmConflict);
 
   // Serial loop: the server's collision/cycle checks are pre-update reads,
   // so concurrent moves can still race in the small window before the unique
@@ -80,7 +82,7 @@ export const moveCandidatesToTarget = async (options: {
     const item = options.candidates[index];
     const outcome = await moveItemWithConflictResolution({
       operation: options.operation,
-      confirmConflict: options.confirmConflict,
+      confirmConflict,
       item,
       skipAllConflicts,
       targetParentId: options.targetParentId,

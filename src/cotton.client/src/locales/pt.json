@@ -2540,7 +2540,8 @@
       "rename": "Usar {{newName}}",
       "overwrite": "Substituir",
       "skip": "Ignorar",
-      "skipAll": "Ignorar tudo"
+      "skipAll": "Ignorar tudo",
+      "overwriteAll": "Substituir tudo"
     },
     "deleteFolder": {
       "confirmTitle": "Excluir a pasta \"{{name}}\"?",

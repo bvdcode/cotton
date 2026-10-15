@@ -222,6 +222,7 @@ export const moveItemWithConflictResolution = async (options: {
           overwrite = false;
           break;
         case ConflictAction.Overwrite:
+        case ConflictAction.OverwriteAll:
           name = conflictingName;
           overwrite = true;
           break;

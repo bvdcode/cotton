@@ -2537,7 +2537,8 @@
       "rename": "Utiliser {{newName}}",
       "overwrite": "Remplacer",
       "skip": "Ignorer",
-      "skipAll": "Tout ignorer"
+      "skipAll": "Tout ignorer",
+      "overwriteAll": "Tout remplacer"
     },
     "deleteFolder": {
       "confirmTitle": "Supprimer le dossier « {{name}} » ?",

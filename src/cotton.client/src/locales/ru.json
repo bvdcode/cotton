@@ -2627,7 +2627,8 @@
       "rename": "Использовать {{newName}}",
       "overwrite": "Заменить",
       "skip": "Пропустить",
-      "skipAll": "Пропустить все"
+      "skipAll": "Пропустить все",
+      "overwriteAll": "Заменить все"
     },
     "deleteFolder": {
       "confirmTitle": "Удалить папку \"{{name}}\"?",

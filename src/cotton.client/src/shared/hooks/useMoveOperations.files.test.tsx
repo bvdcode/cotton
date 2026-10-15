@@ -309,6 +309,38 @@ describe("useMoveOperations", () => {
     expect(mocks.toastError).not.toHaveBeenCalled();
   });
 
+  it("replaces all conflicting files in one paste after one confirmation", async () => {
+    const other: MoveClipboardItem = {
+      ...plainFileItem,
+      id: "another-file",
+      file: { ...plainFileItem.file!, name: "other.txt" },
+    };
+    useMoveClipboardStore.getState().setItems([plainFileItem, other]);
+    mocks.moveFile
+      .mockRejectedValueOnce(createNameConflictError())
+      .mockResolvedValueOnce(makeMovedFileDto(plainFileItem))
+      .mockRejectedValueOnce(createNameConflictError())
+      .mockResolvedValueOnce(makeMovedFileDto(other));
+    mocks.confirmConflict.mockResolvedValueOnce(ConflictAction.OverwriteAll);
+
+    const { result } = renderHook(() =>
+      useMoveOperations({ confirmConflict: mocks.confirmConflict }),
+    );
+
+    await act(async () => {
+      await result.current.pasteInto(targetParentId);
+    });
+
+    expect(mocks.confirmConflict).toHaveBeenCalledOnce();
+    expect(mocks.moveFile).toHaveBeenNthCalledWith(4, other.id, {
+      parentId: targetParentId,
+      name: "other.txt",
+      overwrite: true,
+    });
+    expect(useMoveClipboardStore.getState().items).toEqual([]);
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
   it("keeps a skipped conflicting file in the cut clipboard", async () => {
     useMoveClipboardStore.getState().setItems([plainFileItem]);
     mocks.moveFile.mockRejectedValueOnce(createNameConflictError());

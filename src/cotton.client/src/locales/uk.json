@@ -2544,7 +2544,8 @@
       "rename": "Використати {{newName}}",
       "overwrite": "Замінити",
       "skip": "Пропустити",
-      "skipAll": "Пропустити всі"
+      "skipAll": "Пропустити всі",
+      "overwriteAll": "Замінити всі"
     },
     "deleteFolder": {
       "confirmTitle": "Видалити теку «{{name}}»?",

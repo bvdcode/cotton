@@ -2334,7 +2334,8 @@
       "rename": "Use {{newName}}",
       "overwrite": "Replace",
       "skip": "Skip",
-      "skipAll": "Skip all"
+      "skipAll": "Skip all",
+      "overwriteAll": "Replace all"
     },
     "deleteFolder": {
       "confirmTitle": "Delete folder \"{{name}}\"?",

@@ -1,5 +1,6 @@
 export const ConflictAction = {
   Overwrite: "overwrite",
+  OverwriteAll: "overwriteAll",
   Rename: "rename",
   Skip: "skip",
   SkipAll: "skipAll",

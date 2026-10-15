@@ -2546,7 +2546,8 @@
       "rename": "使用 {{newName}}",
       "overwrite": "替换",
       "skip": "跳过",
-      "skipAll": "全部跳过"
+      "skipAll": "全部跳过",
+      "overwriteAll": "全部替换"
     },
     "deleteFolder": {
       "confirmTitle": "删除文件夹 \"{{name}}\"？",

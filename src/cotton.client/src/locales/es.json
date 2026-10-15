@@ -2536,7 +2536,8 @@
       "rename": "Usar {{newName}}",
       "overwrite": "Reemplazar",
       "skip": "Omitir",
-      "skipAll": "Omitir todo"
+      "skipAll": "Omitir todo",
+      "overwriteAll": "Reemplazar todo"
     },
     "deleteFolder": {
       "confirmTitle": "¿Eliminar la carpeta \"{{name}}\"?",

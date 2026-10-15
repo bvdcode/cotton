@@ -2553,7 +2553,8 @@
       "rename": "Użyj {{newName}}",
       "overwrite": "Zastąp",
       "skip": "Pomiń",
-      "skipAll": "Pomiń wszystko"
+      "skipAll": "Pomiń wszystko",
+      "overwriteAll": "Zastąp wszystko"
     },
     "deleteFolder": {
       "confirmTitle": "Usunąć folder \"{{name}}\"?",

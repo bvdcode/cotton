@@ -1,5 +1,6 @@
 import type { SiblingNameLookupDto } from "../../../shared/api/nodesApi";
 import type { UploadFileQueueItem } from "../../../shared/upload/types";
+import { createConflictResolver } from "../../../shared/types/createConflictResolver";
 import {
   ConflictAction,
   type NameConflictPrompt,
@@ -40,6 +41,7 @@ export async function resolveUploadConflicts(
 
   const resolved: UploadFileQueueItem[] = [];
   const replacedFileIds = new Set<string>();
+  const resolveConflict = createConflictResolver(confirmConflict);
   let skipAllConflicts = false;
 
   for (const sourceFile of files) {
@@ -67,7 +69,7 @@ export async function resolveUploadConflicts(
     const canOverwrite = Boolean(
       existingFile && !replacedFileIds.has(existingFile.id),
     );
-    const action = await confirmConflict({ newName, canOverwrite });
+    const action = await resolveConflict({ newName, canOverwrite });
 
     if (action === ConflictAction.Cancel) {
       return { files: [], cancelled: true };
