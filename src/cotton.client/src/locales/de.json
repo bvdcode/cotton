@@ -2405,6 +2405,10 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Die geteilten Dateien konnten nicht empfangen werden. Bitte teilen Sie sie erneut.",
+      "uploadFailed": "Das Hochladen der geteilten Dateien konnte nicht gestartet werden. Laden Sie die Seite neu, um es erneut zu versuchen."
+    },
     "folderInfo": {
       "action": "Informationen",
       "title": "{{name}}",

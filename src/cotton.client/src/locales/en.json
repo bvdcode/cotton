@@ -2206,6 +2206,10 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Could not receive the shared files. Please share them again.",
+      "uploadFailed": "Could not start uploading the shared files. Reload this page to try again."
+    },
     "title": "Files",
     "folderInfo": {
       "action": "Information",

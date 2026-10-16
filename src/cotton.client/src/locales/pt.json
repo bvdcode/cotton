@@ -2412,6 +2412,10 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Não foi possível receber os arquivos compartilhados. Compartilhe-os novamente.",
+      "uploadFailed": "Não foi possível iniciar o envio dos arquivos compartilhados. Recarregue esta página para tentar novamente."
+    },
     "folderInfo": {
       "action": "Informações",
       "title": "{{name}}",

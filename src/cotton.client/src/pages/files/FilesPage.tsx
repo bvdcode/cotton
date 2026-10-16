@@ -28,6 +28,7 @@ import { usePinnedFolders } from "@shared/dashboard/usePinnedFolders";
 import { useFileMoveController } from "./hooks/useFileMoveController";
 import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
 import { useFilesContentOperations } from "./hooks/useFilesContentOperations";
+import { useSharedFileUpload } from "./hooks/useSharedFileUpload";
 import { useFilesEncryptionController } from "./hooks/useFilesEncryptionController";
 import { useFilesSelectionActions } from "./hooks/useFilesSelectionActions";
 import { FilesPageContent } from "./components/FilesPageContent";
@@ -242,6 +243,12 @@ export const FilesPage: React.FC = () => {
     reloadCurrentNode,
     showToast,
     t,
+  });
+
+  useSharedFileUpload({
+    ready: !routeNodeId && currentNode?.id === nodeId && !loading && !error,
+    encryptionRequired: encryption.currentFolderEncryptionPolicy.effectiveEnabled,
+    upload: contentOperations.fileUpload.handleUploadFiles,
   });
 
   const selectionActions = useFilesSelectionActions({

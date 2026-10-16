@@ -2410,6 +2410,10 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "De gedeelde bestanden konden niet worden ontvangen. Deel ze opnieuw.",
+      "uploadFailed": "Het uploaden van de gedeelde bestanden kon niet worden gestart. Vernieuw deze pagina om het opnieuw te proberen."
+    },
     "folderInfo": {
       "action": "Informatie",
       "title": "{{name}}",

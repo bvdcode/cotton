@@ -2408,6 +2408,10 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "No se pudieron recibir los archivos compartidos. Compártelos de nuevo.",
+      "uploadFailed": "No se pudo iniciar la subida de los archivos compartidos. Recarga esta página para volver a intentarlo."
+    },
     "folderInfo": {
       "action": "Información",
       "title": "{{name}}",

@@ -2,6 +2,10 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { fileURLToPath, URL } from "node:url";
+import {
+  SHARE_TARGET_FILE_FIELD,
+  SHARE_TARGET_PATH,
+} from "./src/shared/pwa/shareTargetConfig";
 
 // https://vite.dev/config/
 export default defineConfig(() => {
@@ -44,24 +48,14 @@ export default defineConfig(() => {
     plugins: [
       react(),
       VitePWA({
+        strategies: "injectManifest",
+        srcDir: "src",
+        filename: "sw.ts",
         registerType: "prompt",
         injectRegister: false,
         includeAssets: ["/favicon.ico", "/assets/icons/icon.svg"],
-        workbox: {
+        injectManifest: {
           sourcemap: true,
-          cleanupOutdatedCaches: true,
-          // Important: share links (/s/:token) are served by the backend and may
-          // respond with a file (e.g. ?view=download). In some browsers (Firefox)
-          // a download click is a navigation request, and Workbox's default
-          // navigate fallback can incorrectly serve index.html instead of the file.
-          // Denylist /s/* from navigate fallback so it always hits the network.
-          navigateFallbackDenylist: [
-            /^\/s\//,
-            /^\/api\//,
-            /^\/files\//,
-            /^\/chunks\//,
-            /^\/preview\//,
-          ],
           maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         },
         manifest: {
@@ -73,6 +67,14 @@ export default defineConfig(() => {
           lang: "en-US",
           scope: "/",
           start_url: "/",
+          share_target: {
+            action: SHARE_TARGET_PATH,
+            method: "POST",
+            enctype: "multipart/form-data",
+            params: {
+              files: [{ name: SHARE_TARGET_FILE_FIELD, accept: ["*/*"] }],
+            },
+          },
           display: "standalone",
           background_color: "#2c2d2e",
           theme_color: "#c6ff00",

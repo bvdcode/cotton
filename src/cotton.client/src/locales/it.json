@@ -2411,6 +2411,10 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Impossibile ricevere i file condivisi. Condividili di nuovo.",
+      "uploadFailed": "Impossibile avviare il caricamento dei file condivisi. Ricarica questa pagina per riprovare."
+    },
     "folderInfo": {
       "action": "Informazioni",
       "title": "{{name}}",

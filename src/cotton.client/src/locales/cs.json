@@ -2410,6 +2410,10 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Sdílené soubory se nepodařilo přijmout. Sdílejte je znovu.",
+      "uploadFailed": "Nahrávání sdílených souborů se nepodařilo spustit. Obnovte stránku a zkuste to znovu."
+    },
     "folderInfo": {
       "action": "Informace",
       "title": "{{name}}",

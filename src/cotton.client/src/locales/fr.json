@@ -2409,6 +2409,10 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Impossible de recevoir les fichiers partagés. Partagez-les à nouveau.",
+      "uploadFailed": "Impossible de démarrer le téléversement des fichiers partagés. Actualisez cette page pour réessayer."
+    },
     "folderInfo": {
       "action": "Informations",
       "title": "{{name}}",

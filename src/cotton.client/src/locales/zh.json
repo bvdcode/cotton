@@ -2418,6 +2418,10 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "无法接收分享的文件。请重新分享。",
+      "uploadFailed": "无法开始上传分享的文件。请刷新此页面重试。"
+    },
     "folderInfo": {
       "action": "信息",
       "title": "{{name}}",
