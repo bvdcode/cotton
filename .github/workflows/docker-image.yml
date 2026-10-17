@@ -216,8 +216,8 @@ jobs:
         if: needs.publish-main.outputs.CommitsSinceVersionSource > 0
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ needs.publish-main.outputs.Version }}
-          name: Release ${{ needs.publish-main.outputs.Version }}
+          tag: v${{ needs.publish-main.outputs.Version }}
+          name: Cotton Cloud ${{ needs.publish-main.outputs.Version }}
           body: ${{ github.event.head_commit.message }}
           artifacts: "nupkg/*"
           token: ${{ secrets.GITHUB_TOKEN }}
