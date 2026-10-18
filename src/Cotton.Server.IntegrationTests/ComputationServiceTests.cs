@@ -289,11 +289,35 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(_handler.Addresses, Is.Empty);
         }
 
-        [Test]
-        public async Task HttpFailure_IsReportedAsUnavailable()
+        [TestCase(HttpStatusCode.BadGateway, ComputationError.Unreachable, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.ServiceUnavailable, ComputationError.Unreachable, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.InternalServerError, ComputationError.Unreachable, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.Unauthorized, ComputationError.AccessDenied, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.Forbidden, ComputationError.AccessDenied, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.RequestTimeout, ComputationError.Timeout, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.GatewayTimeout, ComputationError.Timeout, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.BadGateway, ComputationError.Unreachable, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.ServiceUnavailable, ComputationError.Unreachable, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.InternalServerError, ComputationError.Unreachable, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.Unauthorized, ComputationError.AccessDenied, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.Forbidden, ComputationError.AccessDenied, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.RequestTimeout, ComputationError.Timeout, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.GatewayTimeout, ComputationError.Timeout, ComputionMode.Remote)]
+        public async Task HttpFailure_PreservesReason(
+            HttpStatusCode statusCode, ComputationError expectedError,
+            ComputionMode mode)
         {
-            _handler.StatusCode = HttpStatusCode.ServiceUnavailable;
-            Assert.That((await _service.GetStatusAsync()).Error, Is.EqualTo(ComputationError.Unreachable));
+            if (mode == ComputionMode.Cloud)
+            {
+                ConfigureCloud(telemetry: true);
+            }
+            _handler.StatusCode = statusCode;
+            ComputationStatus status = await _service.GetStatusAsync();
+            Assert.Multiple(() =>
+            {
+                Assert.That(status.IsReady, Is.False);
+                Assert.That(status.Error, Is.EqualTo(expectedError));
+            });
         }
 
         [Test]
