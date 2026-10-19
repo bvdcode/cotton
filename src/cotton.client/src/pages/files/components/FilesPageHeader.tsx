@@ -9,7 +9,9 @@ import type { useFileMoveController } from "../hooks/useFileMoveController";
 import type { useFilesContentOperations } from "../hooks/useFilesContentOperations";
 import type { useFilesSelectionActions } from "../hooks/useFilesSelectionActions";
 import { PageHeader, type PageHeaderActionItem } from "./PageHeader";
-import { Star, StarBorder } from "@mui/icons-material";
+import { CircularProgress } from "@mui/material";
+import { useFolderSizes } from "../hooks/useFolderSizes";
+import { CalculateOutlined, Star, StarBorder } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { usePinnedFolders } from "@shared/dashboard/usePinnedFolders";
 
@@ -51,6 +53,7 @@ export const FilesPageHeader: React.FC<FilesPageHeaderProps> = ({
   viewMode,
 }) => {
   const { t } = useTranslation("home");
+  const folderSizes = useFolderSizes(nodeId);
   const isPinned = nodeId !== null && pinnedFolders.isPinned(nodeId);
   const actions: PageHeaderActionItem[] = [];
   if (nodeId) {
@@ -65,6 +68,23 @@ export const FilesPageHeader: React.FC<FilesPageHeaderProps> = ({
       onClick: () => pinnedFolders.togglePinned(nodeId),
       disabled: loading,
       active: isPinned,
+    });
+  }
+  if (nodeId && stats.folders > 0) {
+    actions.push({
+      key: "calculate-folder-sizes",
+      icon: folderSizes.isCalculating ? (
+        <CircularProgress size={24} color="inherit" />
+      ) : (
+        <CalculateOutlined />
+      ),
+      title: t(
+        folderSizes.isCalculating
+          ? "files:folderSizes.calculating"
+          : "files:folderSizes.calculate",
+      ),
+      onClick: folderSizes.calculate,
+      disabled: loading || folderSizes.isCalculating,
     });
   }
   const handleSelectAll = useCallback(

@@ -2413,6 +2413,11 @@
       "receiveFailed": "Impossible de recevoir les fichiers partagés. Partagez-les à nouveau.",
       "uploadFailed": "Impossible de démarrer le téléversement des fichiers partagés. Actualisez cette page pour réessayer."
     },
+    "folderSizes": {
+      "calculate": "Calculer la taille des dossiers",
+      "calculating": "Calcul de la taille des dossiers…",
+      "failed": "Impossible de calculer la taille de tous les dossiers. Réessayez."
+    },
     "folderInfo": {
       "action": "Informations",
       "title": "{{name}}",

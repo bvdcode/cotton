@@ -2414,6 +2414,11 @@
       "receiveFailed": "Sdílené soubory se nepodařilo přijmout. Sdílejte je znovu.",
       "uploadFailed": "Nahrávání sdílených souborů se nepodařilo spustit. Obnovte stránku a zkuste to znovu."
     },
+    "folderSizes": {
+      "calculate": "Spočítat velikosti složek",
+      "calculating": "Počítání velikostí složek…",
+      "failed": "Nepodařilo se spočítat velikosti všech složek. Zkuste to znovu."
+    },
     "folderInfo": {
       "action": "Informace",
       "title": "{{name}}",

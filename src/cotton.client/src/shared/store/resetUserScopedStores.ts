@@ -10,6 +10,7 @@ import { clearLayoutsCaches } from "../api/queries/layouts";
 import { clearAdminCaches } from "../api/queries/admin";
 import { clearAudioCaches } from "../api/queries/audio";
 import { clearTrashCaches } from "../api/queries/trash";
+import { clearFolderInfoCache } from "../api/queries/folderInfo";
 import { queryClient } from "../api/queries/queryClient";
 import { useVault } from "../crypto";
 
@@ -56,6 +57,7 @@ export const resetUserScopedStores = (nextUserId: string | null): void => {
   clearAdminCaches(queryClient);
   clearAudioCaches(queryClient);
   clearTrashCaches(queryClient);
+  clearFolderInfoCache(queryClient);
   useUserPreferencesStore.getState().reset();
   useAudioPlayerStore.getState().reset();
   useSetupStatusStore.getState().reset();

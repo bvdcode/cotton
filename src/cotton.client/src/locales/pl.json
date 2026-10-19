@@ -2417,6 +2417,11 @@
       "receiveFailed": "Nie udało się odebrać udostępnionych plików. Udostępnij je ponownie.",
       "uploadFailed": "Nie udało się rozpocząć przesyłania udostępnionych plików. Odśwież stronę, aby spróbować ponownie."
     },
+    "folderSizes": {
+      "calculate": "Oblicz rozmiary folderów",
+      "calculating": "Obliczanie rozmiarów folderów…",
+      "failed": "Nie udało się obliczyć rozmiarów wszystkich folderów. Spróbuj ponownie."
+    },
     "folderInfo": {
       "action": "Informacje",
       "title": "{{name}}",

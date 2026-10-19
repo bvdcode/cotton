@@ -69,7 +69,7 @@ it.each([InterfaceLayoutType.List, InterfaceLayoutType.Tiles])(
         queryKeys.nodeChildren.overview(
           "folder-1",
           "user-1",
-          layout === InterfaceLayoutType.List ? 100 : 1000,
+          layout === InterfaceLayoutType.List ? 100 : 10000,
         ),
       )?.content.files[0].name,
     ).toBe("opaque-id");

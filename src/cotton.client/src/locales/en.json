@@ -2211,6 +2211,11 @@
       "uploadFailed": "Could not start uploading the shared files. Reload this page to try again."
     },
     "title": "Files",
+    "folderSizes": {
+      "calculate": "Calculate folder sizes",
+      "calculating": "Calculating folder sizes…",
+      "failed": "Could not calculate all folder sizes. Try again."
+    },
     "folderInfo": {
       "action": "Information",
       "title": "{{name}}",

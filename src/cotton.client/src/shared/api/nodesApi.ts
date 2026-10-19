@@ -107,9 +107,14 @@ export const nodesApi = {
   getNode: (nodeId: Guid): Promise<NodeDto> =>
     getValidated(`/layouts/nodes/${nodeId}`, nodeDtoSchema),
 
-  getFolderStats: (nodeId: Guid, recursive = false): Promise<FolderStatsDto> =>
+  getFolderStats: (
+    nodeId: Guid,
+    recursive = false,
+    signal?: AbortSignal,
+  ): Promise<FolderStatsDto> =>
     getValidated(`/layouts/nodes/${nodeId}/stats`, folderStatsSchema, {
       params: { recursive },
+      signal,
     }),
 
   lookupSiblingNames,
@@ -131,12 +136,14 @@ export const nodesApi = {
       depth?: number;
       includeStats?: boolean;
       listing?: DirectoryListingOptions;
+      signal?: AbortSignal;
     },
   ): Promise<NodeResponse> => {
     const requestedPage = options?.page ?? 1;
     const requestedPageSize = options?.pageSize ?? 1000;
     const url = `/layouts/nodes/${nodeId}/children`;
     const response = await httpClient.get<JsonValue>(url, {
+      signal: options?.signal,
       paramsSerializer: { indexes: null },
       params: {
         page: requestedPage,

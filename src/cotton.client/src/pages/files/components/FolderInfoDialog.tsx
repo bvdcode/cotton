@@ -12,8 +12,7 @@ import {
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "@shared/api/layoutsApi";
-import { nodesApi } from "@shared/api/nodesApi";
-import { queryKeys } from "@shared/api/queries/queryKeys";
+import { folderInfoOptions } from "@shared/api/queries/folderInfo";
 import { useAuthStore } from "@shared/store/authStore";
 import { formatBytes } from "@shared/utils/formatBytes";
 
@@ -31,8 +30,7 @@ export const FolderInfoDialog = ({ folder, onClose }: FolderInfoDialogProps) => 
   const folderId = folder?.id;
   const userId = useAuthStore((state) => state.user?.id ?? "");
   const { data, isPending, isFetching, isError, refetch } = useQuery({
-    queryKey: queryKeys.nodeChildren.folderInfo(folderId ?? "", userId),
-    queryFn: () => nodesApi.getFolderStats(folderId ?? "", true),
+    ...folderInfoOptions(folderId ?? "", userId),
     enabled: folderId !== undefined && userId.length > 0,
     staleTime: 0,
     refetchOnMount: "always",

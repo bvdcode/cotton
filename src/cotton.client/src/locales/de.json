@@ -2409,6 +2409,11 @@
       "receiveFailed": "Die geteilten Dateien konnten nicht empfangen werden. Bitte teilen Sie sie erneut.",
       "uploadFailed": "Das Hochladen der geteilten Dateien konnte nicht gestartet werden. Laden Sie die Seite neu, um es erneut zu versuchen."
     },
+    "folderSizes": {
+      "calculate": "Ordnergrößen berechnen",
+      "calculating": "Ordnergrößen werden berechnet…",
+      "failed": "Die Größen konnten nicht für alle Ordner berechnet werden. Versuchen Sie es erneut."
+    },
     "folderInfo": {
       "action": "Informationen",
       "title": "{{name}}",

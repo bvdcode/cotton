@@ -51,7 +51,7 @@ describe("FolderInfoDialog", () => {
     renderDialog(folder);
     expect(screen.getByText("folderInfo.calculating")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("folderInfo.files3")).toBeInTheDocument());
-    expect(mocks.getFolderStats).toHaveBeenCalledWith("folder-1", true);
+    expect(mocks.getFolderStats).toHaveBeenCalledWith("folder-1", true, expect.any(AbortSignal));
     expect(screen.getByText("folderInfo.folders2")).toBeInTheDocument();
   });
 

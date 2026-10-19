@@ -16,7 +16,7 @@ import { useDecryptedFolderContent } from "../../../shared/crypto/useDecryptedFo
 import { useFolderListControls } from "./useFolderListControls";
 
 const LIST_PAGE_SIZE = 100;
-const TILE_PAGE_SIZE = 1000;
+const TILE_PAGE_SIZE = 10_000;
 
 export const useFolderListing = (
   nodeId: string | null,
