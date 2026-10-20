@@ -26,11 +26,11 @@ namespace Cotton.Server.IntegrationTests.Abstractions
 
             NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
             {
-                Host = "localhost",
-                Port = 5432,
-                Database = DatabaseName,
-                Username = "postgres",
-                Password = "postgres"
+                Host = TestPostgresHost,
+                Port = TestPostgresPort,
+                Database = CurrentDatabaseName,
+                Username = TestPostgresUsername,
+                Password = TestPostgresPassword
             };
             Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {

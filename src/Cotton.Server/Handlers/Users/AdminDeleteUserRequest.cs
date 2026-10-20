@@ -29,6 +29,8 @@ namespace Cotton.Server.Handlers.Users
         SessionAccessTokenRevocationStore _sessionRevocations)
         : IRequestHandler<AdminDeleteUserRequest>
     {
+        private const int EmbeddingDeleteBatchSize = 10000;
+
         public async Task Handle(AdminDeleteUserRequest request, CancellationToken cancellationToken)
         {
             if (request.AdminUserId == request.UserId)
@@ -181,6 +183,29 @@ namespace Cotton.Server.Handlers.Users
                 .ExecuteDeleteAsync(cancellationToken);
         }
 
+        private async Task DeleteOrphanedEmbeddingsAsync(
+            List<Guid> manifestIds,
+            CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                List<Guid> embeddingIds = await _dbContext.FileEmbeddings
+                    .Where(embedding => manifestIds.Contains(embedding.FileManifestId))
+                    .OrderBy(embedding => embedding.Id)
+                    .Select(embedding => embedding.Id)
+                    .Take(EmbeddingDeleteBatchSize)
+                    .ToListAsync(cancellationToken);
+                if (embeddingIds.Count == 0)
+                {
+                    return;
+                }
+
+                await _dbContext.FileEmbeddings
+                    .Where(embedding => embeddingIds.Contains(embedding.Id))
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+        }
+
         private async Task DeleteOrphanedManifestsAsync(
             List<Guid> candidateManifestIds,
             CancellationToken cancellationToken)
@@ -200,6 +225,7 @@ namespace Cotton.Server.Handlers.Users
                 return;
             }
 
+            await DeleteOrphanedEmbeddingsAsync(orphanManifestIds, cancellationToken);
             await _dbContext.FileManifestChunks
                 .Where(x => orphanManifestIds.Contains(x.FileManifestId))
                 .ExecuteDeleteAsync(cancellationToken);

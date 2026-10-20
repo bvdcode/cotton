@@ -7,8 +7,11 @@ namespace Cotton.Server.IntegrationTests
 {
     public class UserDeletionTests : UserManagementTestBase
     {
-        [Test]
-        public async Task Admin_DeleteUser_DeletesAccountAndAllRelatedDatabaseRecords()
+        private const int EmbeddingCount = 10001;
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task Admin_DeleteUser_DeletesOwnedRecordsAndPreservesSharedContent(bool sharedManifest)
         {
             string adminToken = await LoginAsync();
             SetBearer(adminToken);
@@ -30,10 +33,11 @@ namespace Cotton.Server.IntegrationTests
                 Guid ProviderId) fixture = await SeedUserDeletionFixtureAsync(created.Id);
 
             SetBearer(adminToken);
+            Guid? sharedFileId = sharedManifest ? await ShareManifestAsync(fixture.ManifestId) : null;
             HttpResponseMessage deleteResponse = await _client!.DeleteAsync($"/api/v1/users/{created.Id}");
 
             Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
-            await AssertUserDeletionFixtureRemovedAsync(created.Id, fixture);
+            await AssertUserDeletionFixtureRemovedAsync(created.Id, fixture, sharedFileId);
 
             SetBearer(userToken);
             HttpResponseMessage revokedSessionResponse = await _client.GetAsync("/api/v1/users/me");
@@ -133,6 +137,13 @@ namespace Cotton.Server.IntegrationTests
             dbContext.FileManifests.Add(manifest);
             dbContext.FileManifestChunks.Add(manifestChunk);
             dbContext.NodeFiles.Add(nodeFile);
+            dbContext.FileEmbeddings.AddRange(Enumerable.Range(0, EmbeddingCount).Select(index => new FileEmbedding
+            {
+                FileManifest = manifest,
+                FragmentIndex = index,
+                IndexVersion = 1,
+                Embedding = [0.1f, 0.2f, 0.3f],
+            }));
             await dbContext.SaveChangesAsync();
 
             OidcProvider provider = new()
@@ -222,6 +233,27 @@ namespace Cotton.Server.IntegrationTests
                 provider.Id);
         }
 
+        private async Task<Guid> ShareManifestAsync(Guid manifestId)
+        {
+            UserDto other = await CreateUserAsync("remaininguser", "remaining.user@example.com");
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            Layout layout = new() { OwnerId = other.Id, IsActive = true };
+            Node root = new() { OwnerId = other.Id, Layout = layout, Type = NodeType.Default };
+            root.SetName("root");
+            NodeFile file = new()
+            {
+                OwnerId = other.Id,
+                Node = root,
+                FileManifestId = manifestId,
+                OriginalNodeFileId = Guid.NewGuid(),
+            };
+            file.SetName("shared.txt");
+            dbContext.NodeFiles.Add(file);
+            await dbContext.SaveChangesAsync();
+            return file.Id;
+        }
+
         private async Task AssertUserDeletionFixtureRemovedAsync(
             Guid userId,
             (
@@ -232,7 +264,8 @@ namespace Cotton.Server.IntegrationTests
                 Guid ManifestId,
                 Guid ManifestChunkId,
                 byte[] ChunkHash,
-                Guid ProviderId) fixture)
+                Guid ProviderId) fixture,
+            Guid? sharedFileId)
         {
             await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
             CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
@@ -245,6 +278,11 @@ namespace Cotton.Server.IntegrationTests
             bool manifestExists = await dbContext.FileManifests.AnyAsync(x => x.Id == fixture.ManifestId);
             bool manifestChunkExists = await dbContext.FileManifestChunks.AnyAsync(
                 x => x.Id == fixture.ManifestChunkId);
+            int embeddings = await dbContext.FileEmbeddings.CountAsync(x => x.FileManifestId == fixture.ManifestId);
+            if (sharedFileId is Guid fileId)
+            {
+                Assert.That(await dbContext.NodeFiles.AnyAsync(x => x.Id == fileId), Is.True);
+            }
             bool chunkExists = await dbContext.Chunks.AnyAsync(x => x.Hash == fixture.ChunkHash);
             bool providerExists = await dbContext.OidcProviders.AnyAsync(x => x.Id == fixture.ProviderId);
             int downloadTokens = await dbContext.DownloadTokens.CountAsync(x => x.CreatedByUserId == userId);
@@ -267,8 +305,9 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(layoutExists, Is.False);
                 Assert.That(nodeExists, Is.False);
                 Assert.That(nodeFileExists, Is.False);
-                Assert.That(manifestExists, Is.False);
-                Assert.That(manifestChunkExists, Is.False);
+                Assert.That(manifestExists, Is.EqualTo(sharedFileId.HasValue));
+                Assert.That(manifestChunkExists, Is.EqualTo(sharedFileId.HasValue));
+                Assert.That(embeddings, Is.EqualTo(sharedFileId.HasValue ? EmbeddingCount : 0));
                 Assert.That(chunkExists, Is.True);
                 Assert.That(providerExists, Is.True);
                 Assert.That(downloadTokens, Is.Zero);
