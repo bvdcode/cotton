@@ -9,6 +9,7 @@ import { createFile, createFolder } from "../../../test/fileFixtures";
 import { ConflictAction } from "../../../shared/types/nameConflict";
 import { lookupUploadNames } from "./lookupUploadNames";
 import { resolveUploadConflicts } from "./uploadConflicts";
+import { encryptFolderName } from "../../../shared/crypto/folderDisplayMeta";
 
 afterEach(() => {
   useVault.getState().lock();
@@ -64,4 +65,38 @@ it("rejects an encrypted lookup while locked", async () => {
     lookupUploadNames("folder-1", ["private"], true),
   ).rejects.toThrow();
   expect(get).not.toHaveBeenCalled();
+});
+
+it("finds encrypted folder names in a plain parent on a later page", async () => {
+  useVault.getState().unlock(await generateMasterKey(), {
+    persistToSession: false,
+  });
+  const existing = createFolder({
+    id: "existing",
+    name: "opaque-name",
+    metadata: { en: await encryptFolderName("Photos") },
+  });
+  const get = vi
+    .spyOn(nodesApi, "getChildren")
+    .mockImplementation(async (_, options) => ({
+      content: {
+        ...createFolder(),
+        nodes:
+          options?.page === 1 ? [createFolder({ name: "Other" })] : [existing],
+        files: [],
+      },
+      totalCount: 2,
+    }));
+  const lookup = vi.spyOn(nodesApi, "lookupSiblingNames").mockResolvedValue({
+    nodes: [],
+    files: [],
+    takenNameKeys: [],
+  });
+
+  const matches = await lookupUploadNames("folder-1", ["photos"], false);
+
+  expect(matches.takenNameKeys).toContain("photos");
+  expect(matches.nodes).toContainEqual({ ...existing, name: "Photos" });
+  expect(get).toHaveBeenCalledTimes(2);
+  expect(lookup).not.toHaveBeenCalled();
 });

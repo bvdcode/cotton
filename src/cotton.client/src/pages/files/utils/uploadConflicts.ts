@@ -1,4 +1,9 @@
-import type { SiblingNameLookupDto } from "../../../shared/api/nodesApi";
+import type {
+  FileNameMatchDto,
+  NodeFileManifestDto,
+  SiblingNameLookupDto,
+} from "../../../shared/api/nodesApi";
+import { isFileEncrypted } from "../../../shared/crypto/metadataFlags";
 import type { UploadFileQueueItem } from "../../../shared/upload/types";
 import { createConflictResolver } from "../../../shared/types/createConflictResolver";
 import {
@@ -10,6 +15,12 @@ import {
   nextAvailableName,
   normalizeFileName,
 } from "../../../shared/utils/fileNameUtils";
+
+interface UploadConflictContent extends SiblingNameLookupDto {
+  files: Array<
+    FileNameMatchDto & { metadata?: NodeFileManifestDto["metadata"] }
+  >;
+}
 
 export interface ConflictResult {
   files: UploadFileQueueItem[];
@@ -27,7 +38,7 @@ export interface ConflictResult {
  */
 export async function resolveUploadConflicts(
   files: File[],
-  content: SiblingNameLookupDto,
+  content: UploadConflictContent,
   confirmConflict: (prompt: NameConflictPrompt) => Promise<ConflictAction>,
 ): Promise<ConflictResult> {
   const filesByNameKey = new Map(
@@ -86,7 +97,14 @@ export async function resolveUploadConflicts(
 
     if (action === ConflictAction.Overwrite && existingFile && canOverwrite) {
       replacedFileIds.add(existingFile.id);
-      resolved.push({ file, replaceNodeFileId: existingFile.id });
+      const replacement: UploadFileQueueItem = {
+        file,
+        replaceNodeFileId: existingFile.id,
+      };
+      if (isFileEncrypted(existingFile.metadata)) {
+        replacement.encrypt = true;
+      }
+      resolved.push(replacement);
       continue;
     }
 

@@ -15,6 +15,7 @@ export interface UploadFileToNodeOptions {
 export interface UploadFileQueueItem {
   file: File;
   replaceNodeFileId?: string | null;
+  encrypt?: boolean;
 }
 
 export interface UploadProgressSnapshot {
