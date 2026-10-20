@@ -13,6 +13,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="EasyExtensions.Analyzers" Version="3.0.84">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Update="THIRD_PARTY_NOTICES.txt;Licenses\*.txt" CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>
 

@@ -8,6 +8,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="EasyExtensions.Analyzers" Version="3.0.84">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
 		<ProjectReference Include="..\Cotton.ContentTypes\Cotton.ContentTypes.csproj" />
 		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />

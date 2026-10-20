@@ -7,6 +7,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="EasyExtensions.Analyzers" Version="3.0.84">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\Cotton.ContentTypes\Cotton.ContentTypes.csproj" />
 		<PackageReference Include="Docnet.Core" Version="2.6.0" />
 		<PackageReference Include="EasyExtensions.Fonts" Version="3.0.81" />
