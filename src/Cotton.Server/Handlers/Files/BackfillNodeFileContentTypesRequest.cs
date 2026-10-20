@@ -17,8 +17,6 @@ namespace Cotton.Server.Handlers.Files
 
     public class BackfillNodeFileContentTypesRequestHandler(
         CottonDbContext dbContext,
-        IDatabaseIntegrityVerifier verifier,
-        IDatabaseIntegrityProtector protector,
         IDatabaseIntegrityDescriptorRegistry descriptors,
         ILogger<BackfillNodeFileContentTypesRequestHandler> logger)
         : IRequestHandler<BackfillNodeFileContentTypesRequest, int>
@@ -53,31 +51,21 @@ namespace Cotton.Server.Handlers.Files
 
                 foreach (NodeFile file in files)
                 {
-                    verifier.RequireValid(dbContext, file, "content-type.backfill");
-                    byte[] originalMac = dbContext.Entry(file)
-                        .Property<byte[]?>(DatabaseIntegrityColumns.MacProperty).CurrentValue!;
-                    string originalContentType = file.ContentType;
-                    string contentType = originalContentType == string.Empty
-                        ? FileContentTypeResolver.ResolveFromFileName(file.Name)
-                        : originalContentType;
-                    dbContext.Entry(file).Property(entity => entity.ContentType).CurrentValue = contentType;
-                    byte[] mac = protector.Sign(file, descriptor);
-                    int affected = await dbContext.NodeFiles
-                        .Where(entity => entity.Id == file.Id && entity.ContentType == originalContentType
-                            && EF.Property<byte[]?>(entity, DatabaseIntegrityColumns.MacProperty) == originalMac)
-                        .ExecuteUpdateAsync(setters => setters
-                            .SetProperty(entity => entity.ContentType, contentType)
-                            .SetProperty(entity => EF.Property<int?>(entity, DatabaseIntegrityColumns.VersionProperty), descriptor.SchemaVersion)
-                            .SetProperty(entity => EF.Property<byte[]?>(entity, DatabaseIntegrityColumns.MacProperty), mac), cancellationToken);
-                    if (affected != 1)
+                    if (file.ContentType == string.Empty)
                     {
-                        throw new DbUpdateConcurrencyException("The node file changed while its content type was being backfilled.");
+                        dbContext.Entry(file).Property(entity => entity.ContentType).CurrentValue =
+                            FileContentTypeResolver.ResolveFromFileName(file.Name);
                     }
-                    updated += affected;
-                    dbContext.Entry(file).State = EntityState.Detached;
+                    dbContext.Entry(file).Property(entity => entity.ContentType).IsModified = true;
                 }
 
+                await dbContext.SaveChangesAsync(cancellationToken);
+                updated += files.Count;
                 afterId = files[^1].Id;
+                foreach (NodeFile file in files)
+                {
+                    dbContext.Entry(file).State = EntityState.Detached;
+                }
                 logger.LogInformation(
                     "Node file preparation batch completed. Updated {BatchCount} files, {TotalCount} total in {ElapsedSeconds:F1}s",
                     files.Count, updated, stopwatch.Elapsed.TotalSeconds);

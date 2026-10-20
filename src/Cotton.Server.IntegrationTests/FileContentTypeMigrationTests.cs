@@ -77,7 +77,7 @@ namespace Cotton.Server.IntegrationTests
                     Is.EqualTo(NodeFileIntegrityDescriptor.LatestVersion));
                 var dates = originalDates.Single(originalFile => originalFile.Id == file.Id);
                 Assert.That(file.CreatedAt, Is.EqualTo(dates.CreatedAt));
-                Assert.That(file.UpdatedAt, Is.EqualTo(dates.UpdatedAt));
+                Assert.That(file.UpdatedAt, Is.GreaterThan(dates.UpdatedAt));
             }
 
             IMediator mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
