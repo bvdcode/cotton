@@ -80,7 +80,7 @@ namespace Cotton.Crypto.Tests
 
         // 12. Wrong magic in chunk-header
         [Test]
-        public void Decrypt_WrongMagic_FailsFast()
+        public async Task Decrypt_WrongMagic_FailsFast()
         {
             byte[] key = Key();
             AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 12, threads: 1);
@@ -98,12 +98,12 @@ namespace Cotton.Crypto.Tests
             bytes[fileHeaderLen + 3] ^= 0xFF;
             using MemoryStream tampered = new MemoryStream(bytes, writable: false);
             using MemoryStream outDec = new MemoryStream();
-            Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
+            await Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
         }
 
         // 13. StrictLengthCheck
         [Test]
-        public void StrictLengthCheck_HeaderMismatch()
+        public async Task StrictLengthCheck_HeaderMismatch()
         {
             byte[] key = Key();
             AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 13, threads: 1, strictLengthCheck: true);
@@ -123,12 +123,12 @@ namespace Cotton.Crypto.Tests
             SetTotal(L - 1);
             using MemoryStream tamperedMinus = new MemoryStream(bytes, writable: false);
             using MemoryStream outDec1 = new MemoryStream();
-            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tamperedMinus, outDec1));
+            await Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tamperedMinus, outDec1));
             // L+1
             SetTotal(L + 1);
             using MemoryStream tamperedPlus = new MemoryStream(bytes, writable: false);
             using MemoryStream outDec2 = new MemoryStream();
-            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tamperedPlus, outDec2));
+            await Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tamperedPlus, outDec2));
             // Exactly L passes
             SetTotal(L);
             using MemoryStream ok = new MemoryStream(bytes, writable: false);

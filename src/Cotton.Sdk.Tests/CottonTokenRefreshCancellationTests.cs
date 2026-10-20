@@ -21,7 +21,7 @@ namespace Cotton.Sdk.Tests
             using HttpClient httpClient = new(handler);
             await using CottonCloudClient client = CreateClient(httpClient, store);
 
-            Assert.CatchAsync<OperationCanceledException>(async () =>
+            await Assert.CatchAsync<OperationCanceledException>(async () =>
             {
                 if (directRefresh)
                 {
@@ -60,7 +60,7 @@ namespace Cotton.Sdk.Tests
             await using CottonCloudClient client = CreateClient(httpClient, store);
             await cancellation.CancelAsync();
 
-            Assert.CatchAsync<OperationCanceledException>(async () =>
+            await Assert.CatchAsync<OperationCanceledException>(async () =>
             {
                 if (directRefresh)
                 {

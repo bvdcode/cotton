@@ -149,7 +149,7 @@ namespace Cotton.Storage.Tests.Streams
 
             // Act & Assert
             await stream.DisposeAsync();
-            Assert.DoesNotThrowAsync(async () => await stream.DisposeAsync());
+            await Assert.DoesNotThrowAsync(async () => await stream.DisposeAsync());
         }
 
         [Test]

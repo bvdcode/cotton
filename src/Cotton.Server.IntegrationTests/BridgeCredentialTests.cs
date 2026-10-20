@@ -37,7 +37,7 @@ namespace Cotton.Server.IntegrationTests
 
         [TestCase(false, true)]
         [TestCase(true, false)]
-        public void Registration_RequiresTelemetryConsentAndInitializedInstance(bool telemetry, bool initialized)
+        public async Task Registration_RequiresTelemetryConsentAndInitializedInstance(bool telemetry, bool initialized)
         {
             CottonServerSettings entity = new()
             {
@@ -48,7 +48,7 @@ namespace Cotton.Server.IntegrationTests
             cache.GetOrAdd(() => ServerSettingsSnapshot.FromEntity(entity));
             using CottonDbContext database = CreateDatabase();
             GetBridgeCredentialRequestHandler handler = new(new SettingsProvider(database, cache), cache);
-            Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await handler.Handle(new GetBridgeCredentialRequest(), CancellationToken.None));
         }
 

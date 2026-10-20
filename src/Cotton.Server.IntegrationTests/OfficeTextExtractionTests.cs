@@ -146,7 +146,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void SpreadsheetExtractor_RejectsOversizedSharedStringTable()
+        public async Task SpreadsheetExtractor_RejectsOversizedSharedStringTable()
         {
             using MemoryStream source = new();
             using (SpreadsheetDocument document = SpreadsheetDocument.Create(
@@ -176,7 +176,7 @@ namespace Cotton.Server.IntegrationTests
             }
             source.Position = 0;
 
-            FileTextExtractionException? error = Assert.ThrowsAsync<FileTextExtractionException>(async () =>
+            FileTextExtractionException? error = await Assert.ThrowsAsync<FileTextExtractionException>(async () =>
                 await new SpreadsheetTextExtractor(NullLogger<SpreadsheetTextExtractor>.Instance)
                     .ExtractAsync(source));
 
@@ -184,22 +184,22 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void Extractors_InvalidPackagesReportUnreadableContent()
+        public async Task Extractors_InvalidPackagesReportUnreadableContent()
         {
             byte[] invalidPackage = [1, 2, 3, 4];
             using MemoryStream word = new(invalidPackage);
             using MemoryStream presentation = new(invalidPackage);
             using MemoryStream spreadsheet = new(invalidPackage);
 
-            Assert.Multiple(() =>
+            await Assert.MultipleAsync(async () =>
             {
-                Assert.ThrowsAsync<FileTextExtractionException>(async () =>
+                await Assert.ThrowsAsync<FileTextExtractionException>(async () =>
                     await new WordDocumentTextExtractor(NullLogger<WordDocumentTextExtractor>.Instance)
                         .ExtractAsync(word));
-                Assert.ThrowsAsync<FileTextExtractionException>(async () =>
+                await Assert.ThrowsAsync<FileTextExtractionException>(async () =>
                     await new PresentationTextExtractor(NullLogger<PresentationTextExtractor>.Instance)
                         .ExtractAsync(presentation));
-                Assert.ThrowsAsync<FileTextExtractionException>(async () =>
+                await Assert.ThrowsAsync<FileTextExtractionException>(async () =>
                     await new SpreadsheetTextExtractor(NullLogger<SpreadsheetTextExtractor>.Instance)
                         .ExtractAsync(spreadsheet));
             });

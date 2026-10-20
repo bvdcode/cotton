@@ -56,7 +56,7 @@ namespace Cotton.Server.IntegrationTests
             }
             else
             {
-                Exception? result = Assert.CatchAsync(() => handler.Handle(request, CancellationToken.None));
+                Exception? result = await Assert.CatchAsync(() => handler.Handle(request, CancellationToken.None));
                 Assert.That(result, Is.SameAs(cause));
                 Assert.That(logger.Exceptions, Is.Empty);
             }

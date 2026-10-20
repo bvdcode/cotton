@@ -51,11 +51,11 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
-        public void GeneratePreviewWebPAsync_UnknownSignature_StillRejectsInvalidHeic()
+        public async Task GeneratePreviewWebPAsync_UnknownSignature_StillRejectsInvalidHeic()
         {
             using MemoryStream stream = new("invalid image data"u8.ToArray());
 
-            Assert.ThrowsAsync<HeifException>(() => new HeicPreviewGenerator().GeneratePreviewWebPAsync(stream, 32));
+            await Assert.ThrowsAsync<HeifException>(() => new HeicPreviewGenerator().GeneratePreviewWebPAsync(stream, 32));
         }
     }
 }

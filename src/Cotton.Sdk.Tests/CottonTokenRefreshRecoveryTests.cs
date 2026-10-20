@@ -26,7 +26,7 @@ namespace Cotton.Sdk.Tests
             using HttpClient httpClient = new(handler);
             await using CottonCloudClient client = CreateClient(httpClient, store);
 
-            CottonTokenRefreshException? failure = Assert.ThrowsAsync<CottonTokenRefreshException>(
+            CottonTokenRefreshException? failure = await Assert.ThrowsAsync<CottonTokenRefreshException>(
                 async () => await client.Auth.MeAsync());
             TokenPairDto? retained = await store.GetAsync();
             Assert.Multiple(() =>
@@ -68,7 +68,7 @@ namespace Cotton.Sdk.Tests
             using HttpClient httpClient = new(handler);
             await using CottonCloudClient client = CreateClient(httpClient, store);
 
-            Assert.ThrowsAsync<CottonTokenRefreshException>(
+            await Assert.ThrowsAsync<CottonTokenRefreshException>(
                 async () => await client.Auth.MeAsync());
 
             Assert.That(await store.GetAsync(), Is.Not.Null);
@@ -96,7 +96,7 @@ namespace Cotton.Sdk.Tests
             using HttpClient httpClient = new(handler);
             await using CottonCloudClient client = CreateClient(httpClient, store);
 
-            CottonTokenRefreshException? failure = Assert.ThrowsAsync<CottonTokenRefreshException>(async () =>
+            CottonTokenRefreshException? failure = await Assert.ThrowsAsync<CottonTokenRefreshException>(async () =>
             {
                 if (directRefresh)
                 {
@@ -137,7 +137,7 @@ namespace Cotton.Sdk.Tests
             using HttpClient httpClient = new(handler);
             await using CottonCloudClient client = CreateClient(httpClient, store);
 
-            Assert.ThrowsAsync<CottonTokenRefreshException>(
+            await Assert.ThrowsAsync<CottonTokenRefreshException>(
                 async () => await client.Auth.MeAsync());
 
             Assert.That(await store.GetAsync(), Is.Not.Null);
@@ -154,7 +154,7 @@ namespace Cotton.Sdk.Tests
             using HttpClient httpClient = new(handler);
             await using CottonCloudClient client = CreateClient(httpClient, store);
 
-            Assert.ThrowsAsync<CottonTokenRefreshException>(
+            await Assert.ThrowsAsync<CottonTokenRefreshException>(
                 async () => await client.Auth.MeAsync());
             TokenPairDto? retained = await store.GetAsync();
 
@@ -177,7 +177,7 @@ namespace Cotton.Sdk.Tests
             using HttpClient httpClient = new(handler);
             await using CottonCloudClient client = CreateClient(httpClient, store);
 
-            Assert.ThrowsAsync<OperationCanceledException>(
+            await Assert.ThrowsAsync<OperationCanceledException>(
                 async () => await client.Auth.MeAsync(cancellation.Token));
             Assert.That((await store.GetAsync())?.RefreshToken, Is.EqualTo("old-refresh"));
             Assert.That(handler.Requests, Has.Count.EqualTo(2));
@@ -193,7 +193,7 @@ namespace Cotton.Sdk.Tests
             using HttpClient httpClient = new(handler);
             await using CottonCloudClient client = CreateClient(httpClient, store);
 
-            Assert.ThrowsAsync<CottonTokenRefreshException>(async () => await client.Auth.MeAsync());
+            await Assert.ThrowsAsync<CottonTokenRefreshException>(async () => await client.Auth.MeAsync());
             Assert.That((await store.GetAsync())?.AccessToken, Is.EqualTo("old-access"));
             Assert.That(handler.Requests, Has.Count.EqualTo(1));
         }

@@ -83,7 +83,7 @@ namespace Cotton.Server.IntegrationTests
             }
             _db.ChangeTracker.Clear();
             _worker.FailingEmbeddingCall = 2;
-            Assert.ThrowsAsync<HttpRequestException>(() => _services.GetRequiredService<IMediator>()
+            await Assert.ThrowsAsync<HttpRequestException>(() => _services.GetRequiredService<IMediator>()
                 .Send(new IndexFileTextRequest(ids), CancellationToken.None));
             _db.ChangeTracker.Clear();
             Assert.That(await _db.FileEmbeddings.AnyAsync(), Is.False);
@@ -98,7 +98,7 @@ namespace Cotton.Server.IntegrationTests
             Guid[] ids = [first.Id, second.Id];
             _db.ChangeTracker.Clear();
             _failure.Enabled = true;
-            Assert.ThrowsAsync<DbUpdateException>(() => _services.GetRequiredService<IMediator>()
+            await Assert.ThrowsAsync<DbUpdateException>(() => _services.GetRequiredService<IMediator>()
                 .Send(new IndexFileTextRequest(ids), CancellationToken.None));
             _failure.Enabled = false;
             _db.ChangeTracker.Clear();

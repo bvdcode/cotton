@@ -61,7 +61,7 @@ namespace Cotton.Server.IntegrationTests
             await using AsyncServiceScope scope = services.CreateAsyncScope();
             DefaultHttpContext context = CreateContext(scope.ServiceProvider, CancellationToken.None);
 
-            OperationCanceledException? actual = Assert.ThrowsAsync<OperationCanceledException>(
+            OperationCanceledException? actual = await Assert.ThrowsAsync<OperationCanceledException>(
                 async () => await context.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme));
 
             Assert.Multiple(() =>
@@ -91,7 +91,7 @@ namespace Cotton.Server.IntegrationTests
             await using AsyncServiceScope scope = services.CreateAsyncScope();
             DefaultHttpContext context = CreateContext(scope.ServiceProvider, requestCancellation.Token);
 
-            InvalidOperationException? actual = Assert.ThrowsAsync<InvalidOperationException>(
+            InvalidOperationException? actual = await Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await context.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme));
 
             Assert.Multiple(() =>

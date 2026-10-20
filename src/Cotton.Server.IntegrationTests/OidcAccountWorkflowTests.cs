@@ -60,7 +60,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(previousEmail, Is.EqualTo("previous@example.test"));
                 Assert.That(linked.Email, Is.EqualTo(claims.Email));
             });
-            Assert.ThrowsAsync<BadRequestException<UserExternalIdentity>>(
+            await Assert.ThrowsAsync<BadRequestException<UserExternalIdentity>>(
                 async () => await mediator.Send(new LinkOidcIdentityRequest(other.Id, provider, claims)));
             Assert.That(await db.UserExternalIdentities.CountAsync(), Is.EqualTo(1));
         }
@@ -77,7 +77,7 @@ namespace Cotton.Server.IntegrationTests
             await db.SaveChangesAsync();
             int usersBefore = await db.Users.CountAsync();
 
-            Assert.ThrowsAsync<BadRequestException<OidcProvider>>(
+            await Assert.ThrowsAsync<BadRequestException<OidcProvider>>(
                 async () => await mediator.Send(new ResolveOidcUserRequest(provider, CreateClaims("blocked"))));
 
             Assert.That(await db.Users.CountAsync(), Is.EqualTo(usersBefore));

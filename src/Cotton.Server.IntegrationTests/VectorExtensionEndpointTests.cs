@@ -285,7 +285,7 @@ namespace Cotton.Server.IntegrationTests
                 await DbContext.Database.EnsureCreatedAsync();
                 if (sqlState is not null)
                 {
-                    Assert.ThrowsAsync<PostgresException>(() => job.Execute(context));
+                    await Assert.ThrowsAsync<PostgresException>(() => job.Execute(context));
                 }
                 else
                 {

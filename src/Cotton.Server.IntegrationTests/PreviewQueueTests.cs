@@ -100,7 +100,7 @@ namespace Cotton.Server.IntegrationTests
             using CancellationTokenSource cancellation = new CancellationTokenSource();
             await cancellation.CancelAsync();
 
-            Assert.ThrowsAsync<OperationCanceledException>(() => renderer.RenderAsync(manifest, cancellation.Token));
+            await Assert.ThrowsAsync<OperationCanceledException>(() => renderer.RenderAsync(manifest, cancellation.Token));
             Assert.That(manifest.PreviewGenerationError, Is.Null);
         }
 
@@ -117,7 +117,7 @@ namespace Cotton.Server.IntegrationTests
             CallbackStoragePipeline storage = new(scope.ServiceProvider.GetRequiredService<IStoragePipeline>(),
                 _ => throw new OutOfMemoryException());
 
-            Assert.ThrowsAsync<OutOfMemoryException>(() => PreviewTestPipeline.ExecutePreviewWithStorageAsync(scope.ServiceProvider, storage));
+            await Assert.ThrowsAsync<OutOfMemoryException>(() => PreviewTestPipeline.ExecutePreviewWithStorageAsync(scope.ServiceProvider, storage));
             dbContext.ChangeTracker.Clear();
             FileManifest manifest = await PreviewTestPipeline.LoadFileManifestAsync(dbContext, file.Id);
             Assert.That(manifest.PreviewGenerationError, Is.Null);
@@ -141,7 +141,7 @@ namespace Cotton.Server.IntegrationTests
             CallbackStoragePipeline storage = new(scope.ServiceProvider.GetRequiredService<IStoragePipeline>(),
                 _ => Task.CompletedTask, _ => throw new OutOfMemoryException());
 
-            Assert.ThrowsAsync<OutOfMemoryException>(() => PreviewTestPipeline.ExecutePreviewWithStorageAsync(scope.ServiceProvider, storage));
+            await Assert.ThrowsAsync<OutOfMemoryException>(() => PreviewTestPipeline.ExecutePreviewWithStorageAsync(scope.ServiceProvider, storage));
             dbContext.ChangeTracker.Clear();
             FileManifest manifest = await PreviewTestPipeline.LoadFileManifestAsync(dbContext, file.Id);
             Assert.That(manifest.PreviewGenerationError, Is.Null);

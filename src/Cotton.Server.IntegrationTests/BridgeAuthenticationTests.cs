@@ -45,13 +45,13 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("https://example.test/api/v1/lookup")]
         [TestCase("http://bridge.cottoncloud.dev/api/v1/lookup")]
         [TestCase("https://bridge.cottoncloud.dev/unrelated")]
-        public void Credentials_AreNeverSentToAnotherDestination(string url)
+        public async Task Credentials_AreNeverSentToAnotherDestination(string url)
         {
             BridgeTestCredentialProvider credentials = new();
             using BridgeTestTransport transport = new();
             using BridgeAuthenticationHandler handler = new(credentials) { InnerHandler = transport };
             using HttpClient client = new(handler);
-            Assert.ThrowsAsync<InvalidOperationException>(async () => await client.GetAsync(url));
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await client.GetAsync(url));
             Assert.That(transport.Requests, Is.Empty);
             Assert.That(credentials.Calls, Is.Zero);
         }
@@ -75,7 +75,7 @@ namespace Cotton.Server.IntegrationTests
             using BridgeTestTransport transport = new() { Status = HttpStatusCode.ServiceUnavailable };
             await using ServiceProvider services = CreateServices(transport);
             BridgeCredentialProvider provider = services.GetRequiredService<BridgeCredentialProvider>();
-            Assert.ThrowsAsync<HttpRequestException>(async () => await provider.GetAsync(CancellationToken.None));
+            await Assert.ThrowsAsync<HttpRequestException>(async () => await provider.GetAsync(CancellationToken.None));
             transport.Status = HttpStatusCode.NoContent;
             await provider.GetAsync(CancellationToken.None);
             Assert.That(transport.Requests.Count, Is.EqualTo(2));

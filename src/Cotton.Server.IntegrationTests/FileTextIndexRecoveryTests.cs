@@ -67,7 +67,7 @@ namespace Cotton.Server.IntegrationTests
             _db.ChangeTracker.Clear();
             _failure.Enabled = true;
 
-            Assert.ThrowsAsync<DbUpdateException>(RecoverAsync);
+            await Assert.ThrowsAsync<DbUpdateException>(RecoverAsync);
 
             _failure.Enabled = false;
             Assert.That((await _db.FileManifests.AsNoTracking().SingleAsync()).TextIndexVersion, Is.EqualTo(VectorIndexDefinition.Version));

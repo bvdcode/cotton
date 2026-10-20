@@ -431,11 +431,11 @@ namespace Cotton.Storage.Tests.Backends
             }
 
             // Assert
-            Assert.DoesNotThrowAsync(() => Task.WhenAll(tasks));
+            await Assert.DoesNotThrowAsync(() => Task.WhenAll(tasks));
 
             foreach (string? uid in uids)
             {
-                Assert.DoesNotThrowAsync(async () =>
+                await Assert.DoesNotThrowAsync(async () =>
                 {
                     await using Stream stream = await _backend.ReadAsync(uid);
                     MemoryStream result = new MemoryStream();

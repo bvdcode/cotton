@@ -8,7 +8,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="EasyExtensions.Analyzers" Version="3.0.84">
+		<PackageReference Include="EasyExtensions.Analyzers" Version="3.0.90">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -20,9 +20,9 @@
 		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
 		<ProjectReference Include="..\Cotton.Shared\Cotton.csproj" />
 		<ProjectReference Include="..\Cotton.Validators\Cotton.Validators.csproj" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="3.0.81" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="3.0.81" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="3.0.90" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="3.0.90" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>

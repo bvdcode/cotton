@@ -38,7 +38,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void EnsureCanAcceptWriteAsync_WhenBackendDoesNotReportCapacity_DoesNotBlock()
+        public async Task EnsureCanAcceptWriteAsync_WhenBackendDoesNotReportCapacity_DoesNotBlock()
         {
             RecordingNotificationsProvider notifications = new RecordingNotificationsProvider();
             StoragePressureGuard guard = CreateGuard(
@@ -50,7 +50,7 @@ namespace Cotton.Server.IntegrationTests
                     MinFreeBytes = long.MaxValue,
                 });
 
-            Assert.DoesNotThrowAsync(async () => await guard.EnsureCanAcceptWriteAsync(long.MaxValue));
+            await Assert.DoesNotThrowAsync(async () => await guard.EnsureCanAcceptWriteAsync(long.MaxValue));
             Assert.That(notifications.Sent, Is.Empty);
         }
 
@@ -76,7 +76,7 @@ namespace Cotton.Server.IntegrationTests
                     MinFreeBytes = 100,
                 });
 
-            StoragePressureException? ex = Assert.ThrowsAsync<StoragePressureException>(
+            StoragePressureException? ex = await Assert.ThrowsAsync<StoragePressureException>(
                 async () => await guard.EnsureCanAcceptWriteAsync(1));
 
             Assert.That(ex, Is.Not.Null);
@@ -137,7 +137,7 @@ namespace Cotton.Server.IntegrationTests
 
             await guard.EnsureCanAcceptWriteAsync(60);
 
-            Assert.ThrowsAsync<StoragePressureException>(
+            await Assert.ThrowsAsync<StoragePressureException>(
                 async () => await guard.EnsureCanAcceptWriteAsync(50));
             Assert.That(backend.SnapshotReads, Is.EqualTo(1));
         }

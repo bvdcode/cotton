@@ -60,12 +60,12 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void Extract_InvalidEpubReportsUnreadableContent()
+        public async Task Extract_InvalidEpubReportsUnreadableContent()
         {
             using MemoryStream source = new([1, 2, 3, 4]);
             EpubTextExtractor extractor = new(NullLogger<EpubTextExtractor>.Instance);
 
-            Assert.ThrowsAsync<FileTextExtractionException>(async () => await extractor.ExtractAsync(source));
+            await Assert.ThrowsAsync<FileTextExtractionException>(async () => await extractor.ExtractAsync(source));
         }
 
         private static MemoryStream CreateEpub()

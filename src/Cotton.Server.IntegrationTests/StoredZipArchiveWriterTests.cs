@@ -79,7 +79,7 @@ namespace Cotton.Server.IntegrationTests
                 new[] { cancelledEntry }.ToAsyncEnumerable(),
                 cancellation.Token);
             await cancellation.CancelAsync();
-            Assert.CatchAsync<OperationCanceledException>(
+            await Assert.CatchAsync<OperationCanceledException>(
                 async () => await cancelledWrite.WaitAsync(TimeSpan.FromSeconds(1)));
             Assert.That(cancelledOpened.Task.IsCompleted, Is.False);
 
@@ -111,7 +111,7 @@ namespace Cotton.Server.IntegrationTests
             using MemoryStream failingDestination = new();
             using MemoryStream followerDestination = new();
 
-            Assert.ThrowsAsync<IOException>(
+            await Assert.ThrowsAsync<IOException>(
                 async () => await writer.WriteAsync(
                     failingDestination,
                     new[] { failingEntry }.ToAsyncEnumerable(),

@@ -22,12 +22,12 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
-        public void GeneratePreviewWebPAsync_StlInvalidContent_Throws()
+        public async Task GeneratePreviewWebPAsync_StlInvalidContent_Throws()
         {
             StlThumbPreviewGenerator generator = new();
             using MemoryStream stream = new MemoryStream(Array.Empty<byte>());
 
-            InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            InvalidOperationException? exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await generator.GeneratePreviewWebPAsync(stream, size: 128));
 
             Assert.That(exception?.Message, Does.Contain("Failed to render .stl preview with f3d"));
@@ -69,14 +69,14 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
-        public void GeneratePreviewWebPAsync_ThreeMfWithoutThumbnailAndInvalidModel_Throws()
+        public async Task GeneratePreviewWebPAsync_ThreeMfWithoutThumbnailAndInvalidModel_Throws()
         {
             string[] existingModels = Directory.GetFiles(Path.GetTempPath(), "cotton-model-*.3mf");
             StlThumbPreviewGenerator generator = StlThumbPreviewGenerator.CreateThreeMfGenerator();
             byte[] threeMf = CreateThreeMfWithoutThumbnailWithInvalidModelBytes();
             using MemoryStream stream = new MemoryStream(threeMf);
 
-            InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            InvalidOperationException? exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await generator.GeneratePreviewWebPAsync(stream, size: 128));
 
             Assert.That(exception?.Message, Does.Contain("Failed to render .3mf preview with f3d"));

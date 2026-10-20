@@ -66,7 +66,7 @@ namespace Cotton.Server.IntegrationTests
             using AesGcmStreamCipher cipher = StreamCipherFactory.Create(wrongSettings);
             MasterKeyStartupValidator validator = CreateValidator(backend, cipher, wrongSettings);
 
-            MasterKeyValidationException? exception = Assert.ThrowsAsync<MasterKeyValidationException>(
+            MasterKeyValidationException? exception = await Assert.ThrowsAsync<MasterKeyValidationException>(
                 async () => await validator.ValidateAsync());
 
             Assert.That(exception!.Message, Does.Contain("does not match"));
@@ -101,7 +101,7 @@ namespace Cotton.Server.IntegrationTests
             using AesGcmStreamCipher wrongCipher = StreamCipherFactory.Create(wrongSettings);
             MasterKeyStartupValidator validator = CreateValidator(backend, wrongCipher, wrongSettings);
 
-            MasterKeyValidationException? exception = Assert.ThrowsAsync<MasterKeyValidationException>(
+            MasterKeyValidationException? exception = await Assert.ThrowsAsync<MasterKeyValidationException>(
                 async () => await validator.ValidateAsync());
             Assert.That(exception!.Message, Does.Contain("does not match"));
             Assert.That(
@@ -121,7 +121,7 @@ namespace Cotton.Server.IntegrationTests
             await StoreEncryptedObjectAsync(backend, cipher, "abcdef", [4, 5, 6]);
             MasterKeyStartupValidator validator = CreateValidator(backend, cipher, settings);
 
-            MasterKeyValidationException? exception = Assert.ThrowsAsync<MasterKeyValidationException>(
+            MasterKeyValidationException? exception = await Assert.ThrowsAsync<MasterKeyValidationException>(
                 async () => await validator.ValidateAsync());
 
             Assert.That(exception!.Message, Does.Contain("corrupted"));
@@ -167,7 +167,7 @@ namespace Cotton.Server.IntegrationTests
             using AesGcmStreamCipher wrongCipher = StreamCipherFactory.Create(wrongSettings);
             MasterKeyStartupValidator validator = CreateValidator(backend, wrongCipher, wrongSettings);
 
-            Assert.ThrowsAsync<MasterKeyValidationException>(async () => await validator.ValidateAsync());
+            await Assert.ThrowsAsync<MasterKeyValidationException>(async () => await validator.ValidateAsync());
             Assert.That(
                 await backend.ExistsAsync(MasterKeySentinelStore.SentinelStorageKey),
                 Is.False);
@@ -189,7 +189,7 @@ namespace Cotton.Server.IntegrationTests
             using AesGcmStreamCipher wrongCipher = StreamCipherFactory.Create(wrongSettings);
             MasterKeyValidator wrongKeyValidator = CreateValidatorCore(wrongCipher, wrongSettings);
 
-            MasterKeyValidationException? exception = Assert.ThrowsAsync<MasterKeyValidationException>(
+            MasterKeyValidationException? exception = await Assert.ThrowsAsync<MasterKeyValidationException>(
                 async () => await wrongKeyValidator.ValidateAsync(
                     backend,
                     encryptedConfigurationValidated: true));

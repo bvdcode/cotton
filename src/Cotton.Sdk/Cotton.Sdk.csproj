@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="EasyExtensions.Analyzers" Version="3.0.84">
+    <PackageReference Include="EasyExtensions.Analyzers" Version="3.0.90">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

@@ -76,7 +76,7 @@ namespace Cotton.Crypto.Tests
         }
 
         [Test]
-        public void Operations_AfterDispose_ThrowObjectDisposedException()
+        public async Task Operations_AfterDispose_ThrowObjectDisposedException()
         {
             AesGcmStreamCipher cipher = CreateCipher(ValidMasterKey());
             cipher.Dispose();
@@ -84,31 +84,31 @@ namespace Cotton.Crypto.Tests
             using MemoryStream input = new([]);
             using MemoryStream output = new();
 
-            Assert.ThrowsAsync<ObjectDisposedException>(async () => await cipher.EncryptAsync(input, output));
-            Assert.ThrowsAsync<ObjectDisposedException>(async () => await cipher.DecryptAsync(input, output));
+            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await cipher.EncryptAsync(input, output));
+            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await cipher.DecryptAsync(input, output));
             Assert.Throws<ObjectDisposedException>(() => cipher.EncryptAsync(input));
             Assert.Throws<ObjectDisposedException>(() => cipher.DecryptAsync(input));
             Assert.DoesNotThrow(cipher.Dispose);
         }
 
         [Test]
-        public void Encrypt_InvalidChunkSize_Throws_BelowMin()
+        public async Task Encrypt_InvalidChunkSize_Throws_BelowMin()
         {
             byte[] mk = ValidMasterKey();
             AesGcmStreamCipher cipher = CreateCipher(mk);
             using MemoryStream input = new MemoryStream(CreateRandomBytes(1024));
             using MemoryStream output = new MemoryStream();
-            Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await cipher.EncryptAsync(input, output, MinChunkSize - 1));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await cipher.EncryptAsync(input, output, MinChunkSize - 1));
         }
 
         [Test]
-        public void Encrypt_InvalidChunkSize_Throws_AboveMax()
+        public async Task Encrypt_InvalidChunkSize_Throws_AboveMax()
         {
             byte[] mk = ValidMasterKey();
             AesGcmStreamCipher cipher = CreateCipher(mk);
             using MemoryStream input = new MemoryStream(CreateRandomBytes(1024));
             using MemoryStream output = new MemoryStream();
-            Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await cipher.EncryptAsync(input, output, MaxChunkSize + 1));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await cipher.EncryptAsync(input, output, MaxChunkSize + 1));
         }
 
         [Test]
@@ -215,11 +215,11 @@ namespace Cotton.Crypto.Tests
 
             using MemoryStream tampered = new MemoryStream(bytes, writable: false);
             using MemoryStream output = new MemoryStream();
-            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, output));
+            await Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, output));
         }
 
         [Test]
-        public void Encrypt_Cancellation_Throws()
+        public async Task Encrypt_Cancellation_Throws()
         {
             byte[] mk = ValidMasterKey();
             AesGcmStreamCipher cipher = CreateCipher(mk);
@@ -230,7 +230,7 @@ namespace Cotton.Crypto.Tests
             using CancellationTokenSource cts = new CancellationTokenSource();
             cts.Cancel();
 
-            Assert.ThrowsAsync<TaskCanceledException>(async () => await cipher.EncryptAsync(input, output, chunkSize: 65_536, ct: cts.Token));
+            await Assert.ThrowsAsync<TaskCanceledException>(async () => await cipher.EncryptAsync(input, output, chunkSize: 65_536, ct: cts.Token));
         }
     }
 }

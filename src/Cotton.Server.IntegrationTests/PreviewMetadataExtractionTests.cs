@@ -159,7 +159,7 @@ namespace Cotton.Server.IntegrationTests
             await previewContext.SaveChangesAsync();
 
             hashManifest.ComputedContentHash = computedHash;
-            DbUpdateConcurrencyException? conflict = Assert.ThrowsAsync<DbUpdateConcurrencyException>(
+            DbUpdateConcurrencyException? conflict = await Assert.ThrowsAsync<DbUpdateConcurrencyException>(
                 async () => await hashContext.SaveChangesAsync());
             Assert.That(conflict, Is.Not.Null);
 

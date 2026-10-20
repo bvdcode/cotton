@@ -90,7 +90,7 @@ namespace Cotton.Server.IntegrationTests
             ArchiveDownloadTicket ticket = new(ownerId, "files.zip", [file.Id], [], false);
             await using ArchiveDownloadPlan plan = new();
 
-            Assert.ThrowsAsync<DatabaseIntegrityException>(() => mediator.Send(new PrepareArchiveDownloadRequest(ticket, plan)));
+            await Assert.ThrowsAsync<DatabaseIntegrityException>(() => mediator.Send(new PrepareArchiveDownloadRequest(ticket, plan)));
             Assert.That(plan.EntryCount, Is.Zero);
         }
 
@@ -140,7 +140,7 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(download.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/zip"));
             await using Stream body = await download.Content.ReadAsStreamAsync();
             using MemoryStream received = new();
-            Assert.CatchAsync<IOException>(async () => await body.CopyToAsync(received));
+            await Assert.CatchAsync<IOException>(async () => await body.CopyToAsync(received));
             Assert.That(received.Length, Is.LessThan(download.Content.Headers.ContentLength!.Value));
         }
     }

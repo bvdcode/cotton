@@ -150,7 +150,7 @@ namespace Cotton.Sdk.Tests
         {
             CottonCloudClient client = await CreateAuthorizedClientAsync(new QueuedHttpMessageHandler());
 
-            Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
                 () => client.Notifications.GetNotificationsAsync(page, pageSize));
         }
 
@@ -159,7 +159,7 @@ namespace Cotton.Sdk.Tests
         {
             CottonCloudClient client = await CreateAuthorizedClientAsync(new QueuedHttpMessageHandler());
 
-            Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
                 () => client.Notifications.GetNotificationBatchAsync(detailLimit: 0));
         }
 
@@ -170,7 +170,7 @@ namespace Cotton.Sdk.Tests
             using CancellationTokenSource cancellation = new();
             await cancellation.CancelAsync();
 
-            Assert.CatchAsync<OperationCanceledException>(
+            await Assert.CatchAsync<OperationCanceledException>(
                 () => client.Notifications.GetNotificationBatchAsync(cancellationToken: cancellation.Token));
         }
 

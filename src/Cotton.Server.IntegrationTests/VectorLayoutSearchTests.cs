@@ -101,7 +101,7 @@ namespace Cotton.Server.IntegrationTests
         {
             AddFile("report.pdf", [Direction(1, 0)]);
             await DbContext.SaveChangesAsync();
-            Assert.ThrowsAsync<WebApiException>(() => Search());
+            await Assert.ThrowsAsync<WebApiException>(() => Search());
             Assert.That(_worker.InfoCalls + _worker.EmbedCalls, Is.Zero);
         }
 
@@ -131,7 +131,7 @@ namespace Cotton.Server.IntegrationTests
             AddFile("report.pdf", [Direction(1, 0)]);
             await PrepareIndex();
             _worker.StatusCode = HttpStatusCode.ServiceUnavailable;
-            Assert.ThrowsAsync<HttpRequestException>(() => Search());
+            await Assert.ThrowsAsync<HttpRequestException>(() => Search());
         }
         private ServiceProvider _services = null!;
         private TeiTestHandler _worker = null!;

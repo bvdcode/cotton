@@ -241,12 +241,12 @@ namespace Cotton.Server.IntegrationTests
         [TestCase(768, 0, false, ComputationError.InvalidDimensions)]
         [TestCase(1024, -1, false, ComputationError.InvalidVectors)]
         [TestCase(1024, 0, true, ComputationError.InvalidVectors)]
-        public void Embeddings_ValidateEveryResponse(int dimensions, int offset, bool zero, ComputationError error)
+        public async Task Embeddings_ValidateEveryResponse(int dimensions, int offset, bool zero, ComputationError error)
         {
             _handler.Dimensions = dimensions;
             _handler.CountOffset = offset;
             _handler.ZeroVectors = zero;
-            ComputationException? exception = Assert.ThrowsAsync<ComputationException>(
+            ComputationException? exception = await Assert.ThrowsAsync<ComputationException>(
                 async () => await _service.GetTextEmbeddingsAsync(["text"]));
             Assert.That(exception!.Error, Is.EqualTo(error));
         }
@@ -328,11 +328,11 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void CallerCancellation_IsPropagated()
+        public async Task CallerCancellation_IsPropagated()
         {
             using CancellationTokenSource source = new();
             source.Cancel();
-            Assert.CatchAsync<OperationCanceledException>(
+            await Assert.CatchAsync<OperationCanceledException>(
                 async () => await _service.GetStatusAsync(cancellationToken: source.Token));
         }
         [TestCase(1, 1_048_576)]

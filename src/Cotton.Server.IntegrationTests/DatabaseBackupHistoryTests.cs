@@ -94,7 +94,7 @@ namespace Cotton.Server.IntegrationTests
             ResolvedBackupManifest backup = await PublishAsync("unavailable", [8], DateTime.UtcNow);
             await _storage.DeleteAsync(backup.ManifestStorageKey);
             DatabaseBackupRestorePreparation preparation = new(Manifests, _storage, NullLogger<DatabaseBackupRestorePreparation>.Instance);
-            Assert.ThrowsAsync<InvalidOperationException>(() => preparation.PrepareAsync(backup.Pointer, "unused.dump", default));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => preparation.PrepareAsync(backup.Pointer, "unused.dump", default));
         }
 
         [Test]
@@ -104,7 +104,7 @@ namespace Cotton.Server.IntegrationTests
             using CancellationTokenSource cancellation = new();
             await cancellation.CancelAsync();
             DatabaseBackupRestorePreparation preparation = new(Manifests, _storage, NullLogger<DatabaseBackupRestorePreparation>.Instance);
-            Assert.CatchAsync<OperationCanceledException>(() => preparation.PrepareAsync(backup.Pointer, "unused.dump", cancellation.Token));
+            await Assert.CatchAsync<OperationCanceledException>(() => preparation.PrepareAsync(backup.Pointer, "unused.dump", cancellation.Token));
         }
 
         [Test]
@@ -115,7 +115,7 @@ namespace Cotton.Server.IntegrationTests
             using CancellationTokenSource cancellation = new();
             Task canceledWait = gate.WaitAsync(cancellation.Token);
             await cancellation.CancelAsync();
-            Assert.CatchAsync<OperationCanceledException>(() => canceledWait);
+            await Assert.CatchAsync<OperationCanceledException>(() => canceledWait);
             Task next = gate.WaitAsync(default);
             Assert.That(next.IsCompleted, Is.False);
             gate.Release();

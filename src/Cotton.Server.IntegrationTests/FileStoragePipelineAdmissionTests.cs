@@ -43,7 +43,7 @@ namespace Cotton.Server.IntegrationTests
                     cancellationToken: cancellation.Token);
                 await cancellation.CancelAsync();
 
-                Assert.CatchAsync<OperationCanceledException>(
+                await Assert.CatchAsync<OperationCanceledException>(
                     async () => await cancelledWrite.WaitAsync(TimeSpan.FromSeconds(1)));
                 Assert.That(processor.HasEntered("cancelled"), Is.False);
 

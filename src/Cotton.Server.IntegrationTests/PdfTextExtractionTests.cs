@@ -49,19 +49,19 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void Extract_InvalidPdf_ReportsUnreadableContent()
+        public async Task Extract_InvalidPdf_ReportsUnreadableContent()
         {
             using MemoryStream source = new(Encoding.UTF8.GetBytes("not a PDF"));
-            Assert.ThrowsAsync<FileTextExtractionException>(async () => await CreateExtractor().ExtractAsync(source));
+            await Assert.ThrowsAsync<FileTextExtractionException>(async () => await CreateExtractor().ExtractAsync(source));
         }
 
         [Test]
-        public void Extract_Cancellation_IsPropagated()
+        public async Task Extract_Cancellation_IsPropagated()
         {
             using MemoryStream source = new(PdfTestDocument.Create("Cancelled"));
             using CancellationTokenSource cancellation = new();
             cancellation.Cancel();
-            Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await Assert.ThrowsAsync<OperationCanceledException>(async () =>
                 await CreateExtractor().ExtractAsync(source, cancellationToken: cancellation.Token));
         }
 

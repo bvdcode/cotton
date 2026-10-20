@@ -108,7 +108,7 @@ namespace Cotton.Server.IntegrationTests
             await using AsyncServiceScope secondScope = secondServices.CreateAsyncScope();
             CottonDbContext secondDbContext = secondScope.ServiceProvider.GetRequiredService<CottonDbContext>();
 
-            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () =>
+            await Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () =>
                 await secondDbContext.ServerSettings
                     .Where(settingsRow => settingsRow.InstanceId == instanceId)
                     .Select(settingsRow => settingsRow.SmtpPasswordEncrypted)

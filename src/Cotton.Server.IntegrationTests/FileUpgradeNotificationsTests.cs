@@ -89,7 +89,7 @@ namespace Cotton.Server.IntegrationTests
             db.ChangeTracker.Clear();
 
             PrepareUpgradeTo06Job job = ActivatorUtilities.CreateInstance<PrepareUpgradeTo06Job>(scope.ServiceProvider);
-            Assert.ThrowsAsync<DatabaseIntegrityException>(() => job.Execute(null!));
+            await Assert.ThrowsAsync<DatabaseIntegrityException>(() => job.Execute(null!));
             string title = NotificationTemplates.UpgradePreparationCompletedTitle("0.6");
             Assert.That(await db.Notifications.AnyAsync(notification => notification.Title == title), Is.False);
         }
@@ -127,7 +127,7 @@ namespace Cotton.Server.IntegrationTests
             string title = NotificationTemplates.UpgradePreparationCompletedTitle("0.6");
             if (tampered)
             {
-                Assert.ThrowsAsync<DatabaseIntegrityException>(() => job.Execute(null!));
+                await Assert.ThrowsAsync<DatabaseIntegrityException>(() => job.Execute(null!));
                 Assert.That(await db.Notifications.AnyAsync(notification => notification.Title == title), Is.False);
                 Assert.That(await db.FileManifests.Where(entry => entry.Id == manifest.Id)
                     .Select(entry => entry.SmallFilePreviewHash).SingleAsync(), Is.Not.Null);

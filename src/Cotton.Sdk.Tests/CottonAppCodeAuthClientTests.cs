@@ -153,12 +153,12 @@ namespace Cotton.Sdk.Tests
         }
 
         [Test]
-        public void PollAppCodeAsync_RejectsBlankPollToken()
+        public async Task PollAppCodeAsync_RejectsBlankPollToken()
         {
             QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             CottonCloudClient client = CreateClient(handler, new InMemoryCottonTokenStore());
 
-            Assert.ThrowsAsync<ArgumentException>(async () => await client.Auth.PollAppCodeAsync(" "));
+            await Assert.ThrowsAsync<ArgumentException>(async () => await client.Auth.PollAppCodeAsync(" "));
             Assert.That(handler.Requests, Is.Empty);
         }
 

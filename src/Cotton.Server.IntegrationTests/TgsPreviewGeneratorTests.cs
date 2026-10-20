@@ -32,10 +32,10 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void GeneratePreview_InvalidGzipIsRejected()
+        public async Task GeneratePreview_InvalidGzipIsRejected()
         {
             using MemoryStream source = new("not a sticker"u8.ToArray());
-            Assert.ThrowsAsync<InvalidDataException>(async () =>
+            await Assert.ThrowsAsync<InvalidDataException>(async () =>
                 await new TgsPreviewGenerator().GeneratePreviewWebPAsync(source, 200));
         }
 
@@ -44,7 +44,7 @@ namespace Cotton.Server.IntegrationTests
         {
             byte[] bytes = await TgsTestDocument.CreateAsync(new string('x', (8 * 1024 * 1024) + 1));
             using MemoryStream source = new(bytes);
-            Assert.ThrowsAsync<InvalidDataException>(async () =>
+            await Assert.ThrowsAsync<InvalidDataException>(async () =>
                 await new TgsPreviewGenerator().GeneratePreviewWebPAsync(source, 200));
         }
     }

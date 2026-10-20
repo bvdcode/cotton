@@ -47,7 +47,7 @@ namespace Cotton.Server.IntegrationTests
             try
             {
                 await File.WriteAllTextAsync(archive, "invalid archive");
-                Assert.ThrowsAsync<InvalidOperationException>(() => CreateDumpService().RestoreFromFileAsync(archive));
+                await Assert.ThrowsAsync<InvalidOperationException>(() => CreateDumpService().RestoreFromFileAsync(archive));
                 Assert.That(await DbContext.FileEmbeddings.AnyAsync(), Is.False);
             }
             finally
@@ -61,7 +61,7 @@ namespace Cotton.Server.IntegrationTests
         {
             using CancellationTokenSource cancellation = new();
             await cancellation.CancelAsync();
-            Assert.CatchAsync<OperationCanceledException>(() => CreateDumpService().RestoreFromFileAsync(
+            await Assert.CatchAsync<OperationCanceledException>(() => CreateDumpService().RestoreFromFileAsync(
                 Path.Combine(TestContext.CurrentContext.TestDirectory, "Fixtures", "vector-backup.dump"), cancellation.Token));
             Assert.That(await DbContext.FileEmbeddings.AnyAsync(), Is.False);
         }

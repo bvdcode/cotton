@@ -45,21 +45,21 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void Extract_InvalidNotebookReportsUnreadableContent()
+        public async Task Extract_InvalidNotebookReportsUnreadableContent()
         {
             using MemoryStream source = new(Encoding.UTF8.GetBytes("{}"));
             JupyterNotebookTextExtractor extractor = new(NullLogger<JupyterNotebookTextExtractor>.Instance);
 
-            Assert.ThrowsAsync<FileTextExtractionException>(async () => await extractor.ExtractAsync(source));
+            await Assert.ThrowsAsync<FileTextExtractionException>(async () => await extractor.ExtractAsync(source));
         }
 
         [Test]
-        public void Extract_InvalidCellSourceReportsUnreadableContent()
+        public async Task Extract_InvalidCellSourceReportsUnreadableContent()
         {
             using MemoryStream source = new(Encoding.UTF8.GetBytes("{\"cells\":[{\"source\":[42]}]}"));
             JupyterNotebookTextExtractor extractor = new(NullLogger<JupyterNotebookTextExtractor>.Instance);
 
-            Assert.ThrowsAsync<FileTextExtractionException>(async () => await extractor.ExtractAsync(source));
+            await Assert.ThrowsAsync<FileTextExtractionException>(async () => await extractor.ExtractAsync(source));
         }
     }
 }

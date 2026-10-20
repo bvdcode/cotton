@@ -55,7 +55,7 @@ namespace Cotton.Server.IntegrationTests
                     .AsTask();
                 await cancellation.CancelAsync();
 
-                Assert.CatchAsync<OperationCanceledException>(
+                await Assert.CatchAsync<OperationCanceledException>(
                     async () => await cancelled.WaitAsync(TimeSpan.FromSeconds(1)));
             }
 
@@ -108,7 +108,7 @@ namespace Cotton.Server.IntegrationTests
                     .AsTask();
                 await cancellation.CancelAsync();
 
-                Assert.CatchAsync<OperationCanceledException>(
+                await Assert.CatchAsync<OperationCanceledException>(
                     async () => await cancelled.WaitAsync(TimeSpan.FromSeconds(1)));
                 Assert.That(coordinator.SegmentGateCount, Is.EqualTo(1));
             }
@@ -155,7 +155,7 @@ namespace Cotton.Server.IntegrationTests
                     .AsTask();
                 await cancellation.CancelAsync();
 
-                Assert.CatchAsync<OperationCanceledException>(
+                await Assert.CatchAsync<OperationCanceledException>(
                     async () => await cancelled.WaitAsync(TimeSpan.FromSeconds(1)));
             }
 
@@ -212,7 +212,7 @@ namespace Cotton.Server.IntegrationTests
                     .AsTask();
                 await cancellation.CancelAsync();
 
-                Assert.CatchAsync<OperationCanceledException>(
+                await Assert.CatchAsync<OperationCanceledException>(
                     async () => await cancelled.WaitAsync(TimeSpan.FromSeconds(1)));
                 Assert.That(coordinator.ProbeManifestGateCount, Is.EqualTo(1));
             }
