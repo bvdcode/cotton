@@ -166,7 +166,7 @@ const applyTransferToCache = (
   switch (operation) {
     case "move":
       store.moveFileInCache(moved.file, item.sourceParentId, targetParentId);
-      return item;
+      return { ...item, id: moved.file.id, file: moved.file };
     case "copy":
       store.upsertFileInCache(targetParentId, moved.file);
       return {
