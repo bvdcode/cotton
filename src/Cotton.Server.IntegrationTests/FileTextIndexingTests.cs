@@ -15,7 +15,6 @@ namespace Cotton.Server.IntegrationTests
 {
     public class FileTextIndexingTests : FileTextIndexingTestBase
     {
-
         [TestCase("application/pdf", "document.bin")]
         [TestCase("application/octet-stream", "document.PDF")]
         public async Task Index_StoresAllFragmentsOnce_ForSharedManifest(string mime, string name)

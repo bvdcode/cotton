@@ -121,7 +121,6 @@ namespace Cotton.Server.Services
             }
         }
 
-
         private static string BuildDumpFilePath(string backupId)
         {
             string directory = Path.Combine(Path.GetTempPath(), "cotton", "db-restore");

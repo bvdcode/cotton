@@ -34,18 +34,7 @@ namespace Cotton.Server.Handlers.Files
 
             if (request.SkipTrash)
             {
-                Guid[] versionNodes = await _db.NodeFiles.AsNoTracking()
-                    .Where(x => x.OwnerId == request.UserId && subtreeIds.Contains(x.NodeId)
-                        && x.OriginalNodeFileId != Guid.Empty && x.Id != x.OriginalNodeFileId)
-                    .Select(x => x.NodeId).Distinct().ToArrayAsync(ct);
-                foreach (Guid nodeId in versionNodes)
-                {
-                    foreach (Guid ancestorId in Ancestors(tree, nodeId))
-                    {
-                        selectedFolders.Remove(ancestorId);
-                    }
-                }
-                subtreeIds = Descendants(tree.Values, selectedFolders.Keys);
+                subtreeIds = await FilterVersionFoldersAsync(request.UserId, selectedFolders, tree, subtreeIds, ct);
             }
 
             List<NodeFile> files = await _db.NodeFiles.Include(x => x.Node).Include(x => x.FileManifest)
@@ -57,25 +46,7 @@ namespace Cotton.Server.Handlers.Files
 
             if (request.SkipTrash)
             {
-                Guid[] lineages = [.. files.Select(FileVersionService.GetLineageId).Distinct()];
-                List<NodeFile> versions = await _db.NodeFiles.Include(x => x.Node).Include(x => x.FileManifest)
-                    .Where(x => x.OwnerId == request.UserId && lineages.Contains(x.OriginalNodeFileId)
-                        && x.Id != x.OriginalNodeFileId)
-                    .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(ct);
-                HashSet<Guid> removedLineages = [.. files.Where(x => !FileVersionService.IsHistoricalVersion(x))
-                    .Select(FileVersionService.GetLineageId)];
-                foreach (IGrouping<Guid, NodeFile> lineage in versions.GroupBy(x => x.OriginalNodeFileId))
-                {
-                    if (removedLineages.Contains(lineage.Key))
-                    {
-                        continue;
-                    }
-                    NodeFile original = lineage.First();
-                    validFileIds.Remove(original.Id);
-                    files.RemoveAll(x => x.Id == original.Id);
-                }
-                files = files.Concat(versions.Where(x => removedLineages.Contains(x.OriginalNodeFileId)))
-                    .DistinctBy(x => x.Id).ToList();
+                files = await IncludeFileVersionsAsync(request.UserId, files, validFileIds, ct);
             }
             else
             {
@@ -86,6 +57,48 @@ namespace Cotton.Server.Handlers.Files
                 .Any(selectedFolders.ContainsKey)).ToList();
             return new DeletionBatch(roots, files, tree.Values.Where(x => subtreeIds.Contains(x.Id)).ToList(),
                 selectedFolders.Keys.ToHashSet(), validFileIds);
+        }
+
+        private async Task<HashSet<Guid>> FilterVersionFoldersAsync(
+            Guid userId, Dictionary<Guid, Node> selectedFolders, Dictionary<Guid, Node> tree,
+            HashSet<Guid> subtreeIds, CancellationToken ct)
+        {
+            Guid[] versionNodes = await _db.NodeFiles.AsNoTracking()
+                .Where(x => x.OwnerId == userId && subtreeIds.Contains(x.NodeId)
+                    && x.OriginalNodeFileId != Guid.Empty && x.Id != x.OriginalNodeFileId)
+                .Select(x => x.NodeId).Distinct().ToArrayAsync(ct);
+            foreach (Guid nodeId in versionNodes)
+            {
+                foreach (Guid ancestorId in Ancestors(tree, nodeId))
+                {
+                    selectedFolders.Remove(ancestorId);
+                }
+            }
+            return Descendants(tree.Values, selectedFolders.Keys);
+        }
+
+        private async Task<List<NodeFile>> IncludeFileVersionsAsync(
+            Guid userId, List<NodeFile> files, HashSet<Guid> validFileIds, CancellationToken ct)
+        {
+            Guid[] lineages = [.. files.Select(FileVersionService.GetLineageId).Distinct()];
+            List<NodeFile> versions = await _db.NodeFiles.Include(x => x.Node).Include(x => x.FileManifest)
+                .Where(x => x.OwnerId == userId && lineages.Contains(x.OriginalNodeFileId)
+                    && x.Id != x.OriginalNodeFileId)
+                .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(ct);
+            HashSet<Guid> removedLineages = [.. files.Where(x => !FileVersionService.IsHistoricalVersion(x))
+                .Select(FileVersionService.GetLineageId)];
+            foreach (IGrouping<Guid, NodeFile> lineage in versions.GroupBy(x => x.OriginalNodeFileId))
+            {
+                if (removedLineages.Contains(lineage.Key))
+                {
+                    continue;
+                }
+                NodeFile original = lineage.First();
+                validFileIds.Remove(original.Id);
+                files.RemoveAll(x => x.Id == original.Id);
+            }
+            return files.Concat(versions.Where(x => removedLineages.Contains(x.OriginalNodeFileId)))
+                .DistinctBy(x => x.Id).ToList();
         }
 
         private static IEnumerable<Guid> Ancestors(IReadOnlyDictionary<Guid, Node> tree, Guid? id)

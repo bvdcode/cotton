@@ -12,7 +12,6 @@ namespace Cotton.Server.IntegrationTests
 {
     public class AuthSmokeTests : AuthEndpointTestBase
     {
-
         [Test]
         public async Task Login_Returns_Auth_Session()
         {

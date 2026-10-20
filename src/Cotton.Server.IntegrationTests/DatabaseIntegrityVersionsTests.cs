@@ -7,7 +7,6 @@ namespace Cotton.Server.IntegrationTests
 {
     public class DatabaseIntegrityVersionsTests
     {
-
         [Test]
         public void FileManifestDescriptor_PreservesReleaseSignature()
         {

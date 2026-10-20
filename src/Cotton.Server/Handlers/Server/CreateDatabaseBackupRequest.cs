@@ -191,6 +191,5 @@ namespace Cotton.Server.Handlers.Server
             string? value = _configuration[key];
             return string.IsNullOrWhiteSpace(value) ? fallbackValue : value;
         }
-
     }
 }
