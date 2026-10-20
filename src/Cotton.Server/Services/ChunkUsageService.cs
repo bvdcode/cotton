@@ -57,7 +57,7 @@ namespace Cotton.Server.Services
         public async Task<int> ClearGcSchedulesForReferencedChunksAsync(CancellationToken ct)
         {
             return await WhereReferencedByDatabase(_dbContext.Chunks)
-                .CancelGarbageCollectionAsync(ct);
+                .SetGarbageCollectionScheduleAsync(null, ct);
         }
 
         public async Task<int> ClearGcSchedulesForProtectedChunksAsync(
@@ -70,7 +70,7 @@ namespace Cotton.Server.Services
             {
                 cleared += await _dbContext.Chunks
                     .Where(chunk => batch.Contains(chunk.Hash))
-                    .CancelGarbageCollectionAsync(ct);
+                    .SetGarbageCollectionScheduleAsync(null, ct);
             }
 
             return cleared;
@@ -80,7 +80,7 @@ namespace Cotton.Server.Services
         {
             return await _dbContext.Chunks
                 .Where(chunk => chunk.Hash == chunkHash)
-                .CancelGarbageCollectionAsync(ct);
+                .SetGarbageCollectionScheduleAsync(null, ct);
         }
 
         public async Task<HashSet<string>> GetProtectedStorageKeysAsync(CancellationToken ct)

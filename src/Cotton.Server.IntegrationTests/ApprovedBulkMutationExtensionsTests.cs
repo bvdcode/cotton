@@ -19,6 +19,7 @@ namespace Cotton.Server.IntegrationTests
         [SetUp]
         public async Task CreateDatabase()
         {
+            DbContext.ChangeTracker.Clear();
             await DbContext.Database.EnsureDeletedAsync();
             await DbContext.Database.EnsureCreatedAsync();
         }
@@ -39,8 +40,9 @@ namespace Cotton.Server.IntegrationTests
                 "The contract must use the real descriptor with protected fields, not an empty signature payload.");
         }
 
-        [Test]
-        public async Task ScheduleGarbageCollection_PreservesScopeExistingDatesAndSignatures()
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task SetGarbageCollectionSchedule_PreservesScopeExistingDatesAndSignatures(bool clearSchedule)
         {
             DateTime existingDeadline = new(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             DateTime newDeadline = existingDeadline.AddDays(7);
@@ -48,7 +50,9 @@ namespace Cotton.Server.IntegrationTests
             Chunk alreadyScheduled = CreateChunk("already-scheduled");
             alreadyScheduled.GCScheduledAfter = existingDeadline;
             Chunk excluded = CreateChunk("excluded");
-            Chunk[] chunks = [target, alreadyScheduled, excluded];
+            Chunk excludedScheduled = CreateChunk("excluded-scheduled");
+            excludedScheduled.GCScheduledAfter = existingDeadline;
+            Chunk[] chunks = [target, alreadyScheduled, excluded, excludedScheduled];
             using DatabaseIntegrityKeyProvider keyProvider = new(new CottonEncryptionSettings
             {
                 MasterEncryptionKey = Convert.ToBase64String(SHA256.HashData("gc-scheduling-contract"u8))
@@ -72,8 +76,10 @@ namespace Cotton.Server.IntegrationTests
 
             byte[][] selectedHashes = [target.Hash, alreadyScheduled.Hash];
             IQueryable<Chunk> selected = DbContext.Chunks.Where(chunk => selectedHashes.Contains(chunk.Hash));
-            int updated = await selected.ScheduleGarbageCollectionAsync(newDeadline, CancellationToken.None);
-            int repeated = await selected.ScheduleGarbageCollectionAsync(newDeadline.AddDays(1), CancellationToken.None);
+            DateTime? schedule = clearSchedule ? null : newDeadline;
+            DateTime? repeatSchedule = clearSchedule ? null : newDeadline.AddDays(1);
+            int updated = await selected.SetGarbageCollectionScheduleAsync(schedule, CancellationToken.None);
+            int repeated = await selected.SetGarbageCollectionScheduleAsync(repeatSchedule, CancellationToken.None);
 
             List<Chunk> actual = await DbContext.Chunks.ToListAsync();
             Assert.Multiple(() =>
@@ -81,9 +87,11 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(updated, Is.EqualTo(1));
                 Assert.That(repeated, Is.Zero);
                 Assert.That(actual, Has.Count.EqualTo(chunks.Length));
-                Assert.That(actual.Single(chunk => chunk.Hash.SequenceEqual(target.Hash)).GCScheduledAfter, Is.EqualTo(newDeadline));
-                Assert.That(actual.Single(chunk => chunk.Hash.SequenceEqual(alreadyScheduled.Hash)).GCScheduledAfter, Is.EqualTo(existingDeadline));
+                Assert.That(actual.Single(chunk => chunk.Hash.SequenceEqual(target.Hash)).GCScheduledAfter, Is.EqualTo(schedule));
+                Assert.That(actual.Single(chunk => chunk.Hash.SequenceEqual(alreadyScheduled.Hash)).GCScheduledAfter,
+                    Is.EqualTo(clearSchedule ? null : (DateTime?)existingDeadline));
                 Assert.That(actual.Single(chunk => chunk.Hash.SequenceEqual(excluded.Hash)).GCScheduledAfter, Is.Null);
+                Assert.That(actual.Single(chunk => chunk.Hash.SequenceEqual(excludedScheduled.Hash)).GCScheduledAfter, Is.EqualTo(existingDeadline));
                 foreach (Chunk chunk in actual)
                 {
                     string key = Convert.ToHexString(chunk.Hash);

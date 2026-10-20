@@ -148,7 +148,7 @@ namespace Cotton.Server.Services
                             fileManifest.Id == fileManifestId
                             && (fileManifest.SmallFilePreviewHash == chunk.Hash
                                 || fileManifest.LargeFilePreviewHash == chunk.Hash)))
-                .CancelGarbageCollectionAsync(cancellationToken);
+                .SetGarbageCollectionScheduleAsync(null, cancellationToken);
         }
 
         private async Task<bool> UserOwnsManifestChunksAsync(

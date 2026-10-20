@@ -19,18 +19,25 @@ namespace Cotton.Server.Extensions
 #pragma warning disable EEX0015
     internal static class ApprovedBulkMutationExtensions
     {
-        public static Task<int> ScheduleGarbageCollectionAsync(
+        public static Task<int> SetGarbageCollectionScheduleAsync(
             this IQueryable<Chunk> query,
-            DateTime deleteAfter,
+            DateTime? deleteAfter,
             CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(query);
 
-            return query
-                .Where(chunk => chunk.GCScheduledAfter == null)
-                .ExecuteUpdateAsync(
-                    update => update.SetProperty(chunk => chunk.GCScheduledAfter, deleteAfter),
-                    cancellationToken);
+            if (deleteAfter.HasValue)
+            {
+                query = query.Where(chunk => chunk.GCScheduledAfter == null);
+            }
+            else
+            {
+                query = query.Where(chunk => chunk.GCScheduledAfter != null);
+            }
+
+            return query.ExecuteUpdateAsync(
+                update => update.SetProperty(chunk => chunk.GCScheduledAfter, deleteAfter),
+                cancellationToken);
         }
     }
 #pragma warning restore EEX0015

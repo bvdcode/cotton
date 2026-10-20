@@ -189,7 +189,7 @@ namespace Cotton.Server.Jobs
 
                 int updated = await _dbContext.Chunks
                     .Where(chunk => candidateHashes.Contains(chunk.Hash))
-                    .ScheduleGarbageCollectionAsync(deleteAfter, ct);
+                    .SetGarbageCollectionScheduleAsync(deleteAfter, ct);
 
                 totalScheduled += updated;
 
@@ -258,7 +258,7 @@ namespace Cotton.Server.Jobs
             {
                 await _dbContext.Chunks
                     .Where(chunk => protectedHashesToClear.Contains(chunk.Hash))
-                    .CancelGarbageCollectionAsync(ct);
+                    .SetGarbageCollectionScheduleAsync(null, ct);
             }
 
             if (reservedHashes.Count == 0)
@@ -349,7 +349,7 @@ namespace Cotton.Server.Jobs
             {
                 await _dbContext.Chunks
                     .Where(chunk => nowReferencedHashes.Contains(chunk.Hash))
-                    .CancelGarbageCollectionAsync(ct);
+                    .SetGarbageCollectionScheduleAsync(null, ct);
             }
 
             HashSet<string> referencedUids = nowReferencedHashes
