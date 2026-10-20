@@ -8,20 +8,6 @@ namespace Cotton.Server.Extensions
 {
     internal static class ChunkGarbageCollectionQueryExtensions
     {
-        public static Task<int> ScheduleGarbageCollectionAsync(
-            this IQueryable<Chunk> query,
-            DateTime deleteAfter,
-            CancellationToken cancellationToken)
-        {
-            ArgumentNullException.ThrowIfNull(query);
-
-            return query
-                .Where(chunk => chunk.GCScheduledAfter == null)
-                .ExecuteUpdateAsync(
-                    update => update.SetProperty(chunk => chunk.GCScheduledAfter, deleteAfter),
-                    cancellationToken);
-        }
-
         public static Task<int> CancelGarbageCollectionAsync(
             this IQueryable<Chunk> query,
             CancellationToken cancellationToken)

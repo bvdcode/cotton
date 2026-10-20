@@ -23,4 +23,9 @@
 	<ItemGroup>
 		<None Update="Fixtures\vector-backup.dump" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
+	<ItemGroup>
+		<None Include="..\Cotton.Server\Extensions\ApprovedBulkMutationExtensions.cs"
+			Link="ApprovalContracts\ApprovedBulkMutationExtensions.cs"
+			CopyToOutputDirectory="Always" CopyToPublishDirectory="Never" />
+	</ItemGroup>
 </Project>
