@@ -292,65 +292,71 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
   return (
     <Box
-      width="100%"
-      position="relative"
-      sx={(theme) => ({
-        "& .rhap_container": {
-          backgroundColor: "transparent",
-          boxShadow: "none",
-          padding: 0,
+      sx={[
+        {
+          width: "100%",
+          position: "relative",
         },
-        "& .rhap_time": {
-          color: theme.palette.text.secondary,
-        },
-        "& .rhap_progress-indicator": {
-          backgroundColor: theme.palette.primary.main,
-        },
-        "& .rhap_progress-filled": {
-          backgroundColor: theme.palette.primary.main,
-        },
-        "& .rhap_volume-indicator": {
-          backgroundColor: theme.palette.primary.main,
-        },
-        "& .rhap_volume-filled": {
-          backgroundColor: theme.palette.primary.main,
-        },
-        "& .rhap_main-controls-button, & .rhap_volume-button": {
-          color: theme.palette.text.primary,
-        },
-        "& .rhap_repeat-button, & .rhap_forward-button, & .rhap_rewind-button":
-          {
+        (theme) => ({
+          "& .rhap_container": {
+            backgroundColor: "transparent",
+            boxShadow: "none",
+            padding: 0,
+          },
+          "& .rhap_time": {
+            color: theme.palette.text.secondary,
+          },
+          "& .rhap_progress-indicator": {
+            backgroundColor: theme.palette.primary.main,
+          },
+          "& .rhap_progress-filled": {
+            backgroundColor: theme.palette.primary.main,
+          },
+          "& .rhap_volume-indicator": {
+            backgroundColor: theme.palette.primary.main,
+          },
+          "& .rhap_volume-filled": {
+            backgroundColor: theme.palette.primary.main,
+          },
+          "& .rhap_main-controls-button, & .rhap_volume-button": {
             color: theme.palette.text.primary,
           },
-        "& .rhap_button-clear": {
-          WebkitTapHighlightColor: "transparent",
-        },
-        "& .rhap_button-clear:focus, & .rhap_button-clear:focus-visible": {
-          outline: "none",
-          boxShadow: "none",
-        },
-        "& .rhap_progress-indicator:focus, & .rhap_progress-indicator:focus-visible":
-          {
+          "& .rhap_repeat-button, & .rhap_forward-button, & .rhap_rewind-button":
+            {
+              color: theme.palette.text.primary,
+            },
+          "& .rhap_button-clear": {
+            WebkitTapHighlightColor: "transparent",
+          },
+          "& .rhap_button-clear:focus, & .rhap_button-clear:focus-visible": {
             outline: "none",
             boxShadow: "none",
           },
-        "& .ctn-shuffle-button": {
-          color: theme.palette.text.secondary,
-        },
-        "& .ctn-shuffle-button.ctn-shuffle-active": {
-          color: theme.palette.primary.main,
-        },
-      })}
+          "& .rhap_progress-indicator:focus, & .rhap_progress-indicator:focus-visible":
+            {
+              outline: "none",
+              boxShadow: "none",
+            },
+          "& .ctn-shuffle-button": {
+            color: theme.palette.text.secondary,
+          },
+          "& .ctn-shuffle-button.ctn-shuffle-active": {
+            color: theme.palette.primary.main,
+          },
+        }),
+      ]}
     >
       {loading && (
         <Box
-          position="absolute"
-          top={8}
-          right={8}
-          zIndex={1}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            zIndex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
           <LinearProgress />
         </Box>

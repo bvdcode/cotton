@@ -274,7 +274,13 @@ export const PdfPreview = ({
             p: 3,
           }}
         >
-          <Typography variant="body1" color="text.secondary" align="center">
+          <Typography
+            variant="body1"
+            align="center"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("preview.errors.pdfTooLarge", {
               ns: "files",
               size: formatBytes(fileSizeBytes ?? 0),
@@ -298,7 +304,12 @@ export const PdfPreview = ({
           }}
         >
           <CircularProgress />
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {loadingStage === "link"
               ? t("preview.pdf.loading.link", { ns: "files" })
               : loadingStage === "download"
@@ -320,7 +331,13 @@ export const PdfPreview = ({
           <Typography variant="body1" color="error">
             {error}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mt: 1,
+            }}
+          >
             {fileName}
           </Typography>
         </Box>

@@ -131,8 +131,8 @@ export function OptionCard({
       <Box>
         <Typography
           variant="subtitle1"
-          fontWeight={700}
           sx={{
+            fontWeight: 700,
             fontSize: { xs: "0.875rem", sm: "0.9rem", md: "1rem" },
             lineHeight: 1.3,
             mb: { xs: 0.4, sm: 0.5, md: 0.6 },
@@ -143,8 +143,8 @@ export function OptionCard({
         {description ? (
           <Typography
             variant="body2"
-            color="text.secondary"
             sx={{
+              color: "text.secondary",
               fontSize: { xs: "0.75rem", sm: "0.8rem", md: "0.875rem" },
               lineHeight: 1.4,
             }}

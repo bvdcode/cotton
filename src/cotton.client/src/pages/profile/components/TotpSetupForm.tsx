@@ -46,41 +46,53 @@ export const TotpSetupForm = ({
   }, [totpSetup.otpAuthUri]);
 
   return (
-    <Box mt={3}>
+    <Box
+      sx={{
+        mt: 3,
+      }}
+    >
       <Divider sx={{ mb: 3 }} />
 
       <Stack spacing={2.5}>
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={{ xs: 3, md: 4 }}
-          alignItems={{ xs: "stretch", md: "flex-start" }}
+          sx={{
+            alignItems: { xs: "stretch", md: "flex-start" },
+          }}
         >
           <Stack
             spacing={2}
-            alignItems={{ xs: "center", md: "flex-start" }}
-            flex={1}
+            sx={{
+              alignItems: { xs: "center", md: "flex-start" },
+              flex: 1,
+            }}
           >
             <Box
-              display="flex"
-              justifyContent={{ xs: "center", md: "flex-start" }}
-              width="100%"
+              sx={{
+                display: "flex",
+                justifyContent: { xs: "center", md: "flex-start" },
+                width: "100%",
+              }}
             >
               <Box
-                width="100%"
-                p={2}
-                borderRadius={2}
-                display="inline-flex"
-                bgcolor={theme.palette.common.white}
-                border="1px solid"
-                borderColor="divider"
-                sx={{ justifyContent: "center" }}
+                sx={{
+                  width: "100%",
+                  p: 2,
+                  borderRadius: 2,
+                  display: "inline-flex",
+                  bgcolor: theme.palette.common.white,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  justifyContent: "center",
+                }}
               >
                 <Box
                   component="img"
                   src={qrCodeImageUrl}
                   alt={t("totp.setup.qrTitle")}
-                  width="100%"
                   sx={{
+                    width: "100%",
                     height: "auto",
                     display: "block",
                     imageRendering: "pixelated",
@@ -90,17 +102,19 @@ export const TotpSetupForm = ({
             </Box>
 
             <Box
-              width="100%"
-              display="flex"
-              flexDirection="row"
-              alignItems="center"
-              justifyContent="space-between"
-              gap={1}
-              border="1px solid"
-              borderColor="divider"
-              borderRadius={1}
-              bgcolor="background.default"
-              p={1}
+              sx={{
+                width: "100%",
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 1,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                bgcolor: "background.default",
+                p: 1,
+              }}
             >
               <Typography
                 component="code"
@@ -121,22 +135,41 @@ export const TotpSetupForm = ({
 
           <Stack
             spacing={2}
-            flex={1}
-            alignItems={{ xs: "center", md: "flex-start" }}
+            sx={{
+              flex: 1,
+              alignItems: { xs: "center", md: "flex-start" },
+            }}
           >
-            <Box width="100%">
-              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+            <Box
+              sx={{
+                width: "100%",
+              }}
+            >
+              <Typography
+                variant="subtitle2"
+                gutterBottom
+                sx={{
+                  fontWeight: 600,
+                }}
+              >
                 {t("totp.confirm.title")}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("totp.confirm.caption")}
               </Typography>
             </Box>
 
             <Box
-              width="100%"
-              display="flex"
-              justifyContent={{ xs: "center", md: "flex-start" }}
+              sx={{
+                width: "100%",
+                display: "flex",
+                justifyContent: { xs: "center", md: "flex-start" },
+              }}
             >
               <OneTimeCodeInput
                 value={totpCode}
@@ -148,9 +181,11 @@ export const TotpSetupForm = ({
             </Box>
 
             <Box
-              width="100%"
-              display="flex"
-              justifyContent={{ xs: "center", md: "flex-start" }}
+              sx={{
+                width: "100%",
+                display: "flex",
+                justifyContent: { xs: "center", md: "flex-start" },
+              }}
             >
               <Button
                 fullWidth

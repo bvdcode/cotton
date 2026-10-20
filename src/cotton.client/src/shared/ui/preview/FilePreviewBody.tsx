@@ -99,11 +99,13 @@ export const FilePreviewBody = ({
   if (encrypted && (readable.failed || !readable.url)) {
     return (
       <Box
-        display="flex"
-        flex={1}
-        minHeight={0}
-        alignItems="center"
-        justifyContent="center"
+        sx={{
+          display: "flex",
+          flex: 1,
+          minHeight: 0,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
         {readable.failed ? (
           <FilePreviewUnavailable
@@ -124,11 +126,13 @@ export const FilePreviewBody = ({
           component="img"
           src={readable.url ?? undefined}
           alt={fileName}
-          width="100%"
-          height="100%"
-          minHeight={0}
-          sx={{ objectFit: "contain" }}
           onError={readable.onSourceError}
+          sx={{
+            width: "100%",
+            height: "100%",
+            minHeight: 0,
+            objectFit: "contain",
+          }}
         />
       );
     case "video":
@@ -140,16 +144,25 @@ export const FilePreviewBody = ({
           playsInline
           autoPlay
           preload="metadata"
-          width="100%"
-          height="100%"
-          minHeight={0}
-          sx={{ objectFit: "contain" }}
           onError={readable.onSourceError}
+          sx={{
+            width: "100%",
+            height: "100%",
+            minHeight: 0,
+            objectFit: "contain",
+          }}
         />
       );
     case "audio":
       return (
-        <Box display="flex" flex={1} alignItems="center" px={3}>
+        <Box
+          sx={{
+            display: "flex",
+            flex: 1,
+            alignItems: "center",
+            px: 3,
+          }}
+        >
           <AudioPreview
             nodeFileId={fileId}
             fileName={fileName}
@@ -211,8 +224,20 @@ const ModelPreviewBody = ({
   contentType,
   modelControls,
 }: ModelPreviewBodyProps) => (
-  <Box display="flex" flex={1} flexDirection="column" minHeight={0}>
-    <Box flex={1} minHeight={0}>
+  <Box
+    sx={{
+      display: "flex",
+      flex: 1,
+      flexDirection: "column",
+      minHeight: 0,
+    }}
+  >
+    <Box
+      sx={{
+        flex: 1,
+        minHeight: 0,
+      }}
+    >
       <ModelPreview
         source={fileSource}
         fileName={fileName}

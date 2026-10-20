@@ -297,14 +297,16 @@ export const GeoIpLookupSetting = ({
           }}
           disabled={disabled}
           fullWidth
-          SelectProps={{
-            inputProps: {
-              "aria-label": t("settings.general.fields.geoIpLookupMode"),
+          slotProps={{
+            select: {
+              inputProps: {
+                "aria-label": t("settings.general.fields.geoIpLookupMode"),
+              },
+              renderValue: (selected) =>
+                typeof selected === "string" && isGeoIpLookupMode(selected)
+                  ? t(`settings.general.geoIpLookupMode.${selected}`)
+                  : "",
             },
-            renderValue: (selected) =>
-              typeof selected === "string" && isGeoIpLookupMode(selected)
-                ? t(`settings.general.geoIpLookupMode.${selected}`)
-                : "",
           }}
         >
           {geoIpOptions.map((option) => (
@@ -320,8 +322,11 @@ export const GeoIpLookupSetting = ({
                 </Typography>
                 <Typography
                   variant="caption"
-                  color="text.secondary"
-                  sx={{ whiteSpace: "normal", lineHeight: 1.35 }}
+                  sx={{
+                    color: "text.secondary",
+                    whiteSpace: "normal",
+                    lineHeight: 1.35,
+                  }}
                 >
                   {t(`settings.general.geoIpLookupModeDescription.${option}`)}
                 </Typography>

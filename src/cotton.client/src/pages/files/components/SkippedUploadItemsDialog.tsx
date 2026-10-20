@@ -32,7 +32,13 @@ export const SkippedUploadItemsDialog: React.FC<
         {t("uploadDrop.skippedDialog.title", { ns: "files" })}
       </DialogTitle>
       <DialogContent dividers>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 2,
+          }}
+        >
           {t("uploadDrop.skippedDialog.description", {
             ns: "files",
             count: total,
@@ -45,9 +51,11 @@ export const SkippedUploadItemsDialog: React.FC<
               <ListItem key={`${item}-${index}`} disableGutters>
                 <ListItemText
                   primary={item}
-                  primaryTypographyProps={{
-                    variant: "body2",
-                    sx: { overflowWrap: "anywhere", wordBreak: "break-word" },
+                  slotProps={{
+                    primary: {
+                      variant: "body2",
+                      sx: { overflowWrap: "anywhere", wordBreak: "break-word" },
+                    },
                   }}
                 />
               </ListItem>

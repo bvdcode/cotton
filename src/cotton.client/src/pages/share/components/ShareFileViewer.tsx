@@ -59,19 +59,28 @@ const ShareEncryptedFileNotice: React.FC<ShareEncryptedFileNoticeProps> = ({
 
   return (
     <Box
-      width="100%"
-      height="100%"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      p={2}
+      sx={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        p: 2,
+      }}
     >
-      <Stack alignItems="center" spacing={1} maxWidth={520} textAlign="center">
+      <Stack
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          maxWidth: 520,
+          textAlign: "center",
+        }}
+      >
         <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
           sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             color: "warning.main",
             "& > svg": { width: 64, height: 64 },
           }}
@@ -79,26 +88,44 @@ const ShareEncryptedFileNotice: React.FC<ShareEncryptedFileNoticeProps> = ({
           <LockOutlined />
         </Box>
 
-        <Typography variant="h6" color="text.primary">
+        <Typography
+          variant="h6"
+          sx={{
+            color: "text.primary",
+          }}
+        >
           {t("encryptedFile.title", { ns: "share" })}
         </Typography>
 
-        <Typography color="text.secondary">
+        <Typography
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("encryptedFile.description", { ns: "share" })}
         </Typography>
 
         {fileName && (
           <Typography
-            color="text.primary"
             variant="body2"
-            sx={{ mt: 1, maxWidth: "100%", overflowWrap: "anywhere" }}
+            sx={{
+              color: "text.primary",
+              mt: 1,
+              maxWidth: "100%",
+              overflowWrap: "anywhere",
+            }}
           >
             {fileName}
           </Typography>
         )}
 
         {contentLength !== null && (
-          <Typography color="text.secondary" variant="caption">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {formatBytes(contentLength)}
           </Typography>
         )}
@@ -131,20 +158,22 @@ const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
 
   return (
     <Box
-      width="100%"
-      height="100%"
-      display="flex"
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-      p={2}
-      gap={2}
+      sx={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        p: 2,
+        gap: 2,
+      }}
     >
       <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
         sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           width: hasSmallPreviewIcon ? 200 : { xs: 72, sm: 88 },
           height: hasSmallPreviewIcon ? 200 : { xs: 72, sm: 88 },
           "& > svg": { width: { xs: 64, sm: 80 }, height: { xs: 64, sm: 80 } },
@@ -171,10 +200,10 @@ const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
 
       {fileName && (
         <Typography
-          color="text.primary"
           variant="h6"
           align="center"
           sx={{
+            color: "text.primary",
             maxWidth: "min(760px, 100%)",
             overflowWrap: "anywhere",
           }}
@@ -184,7 +213,11 @@ const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
       )}
 
       {!hasSmallPreviewIcon && (
-        <Typography color="text.secondary">
+        <Typography
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("unsupported", { ns: "share" })}
         </Typography>
       )}
@@ -237,7 +270,12 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
 
   if (fileTypeInfo.type === "pdf") {
     return (
-      <Box width="100%" height="100%">
+      <Box
+        sx={{
+          width: "100%",
+          height: "100%",
+        }}
+      >
         <PdfPreview
           source={{
             kind: "url",
@@ -253,7 +291,12 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
 
   if (fileTypeInfo.type === "model") {
     return (
-      <Box width="100%" height="100%">
+      <Box
+        sx={{
+          width: "100%",
+          height: "100%",
+        }}
+      >
         <ModelPreview
           source={{
             kind: "url",

@@ -33,14 +33,21 @@ export const HomePage: React.FC = () => {
       : null;
   return (
     <Box
-      pt={{
-        xs: 1,
-        md: 3,
+      sx={{
+        pt: {
+          xs: 1,
+          md: 3,
+        },
+
+        width: "100%",
       }}
-      width="100%"
     >
       {error && (
-        <Box mb={2}>
+        <Box
+          sx={{
+            mb: 2,
+          }}
+        >
           <Alert severity="error">{error}</Alert>
         </Box>
       )}
@@ -54,7 +61,13 @@ export const HomePage: React.FC = () => {
         translate={t}
       />
 
-      <Box display="flex" justifyContent="center" mt={2}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          mt: 2,
+        }}
+      >
         <Button
           variant={customizing ? "contained" : "outlined"}
           startIcon={customizing ? <Done /> : <DashboardCustomize />}

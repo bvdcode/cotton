@@ -46,7 +46,11 @@ export const UploadTaskList: React.FC<UploadTaskListProps> = ({
 }) => {
   const renderItem = useCallback((index: number, task: AppTask) => {
     return (
-      <Box px={1.5}>
+      <Box
+        sx={{
+          px: 1.5,
+        }}
+      >
         <UploadTaskRow task={task} showDivider={index > 0} />
       </Box>
     );

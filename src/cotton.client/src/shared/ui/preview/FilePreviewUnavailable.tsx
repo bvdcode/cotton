@@ -14,13 +14,15 @@ export function FilePreviewUnavailable({
   const { t } = useTranslation(["share", "common"]);
   return (
     <Box
-      display="flex"
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-      flex={1}
-      gap={2}
-      p={3}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        flex: 1,
+        gap: 2,
+        p: 3,
+      }}
     >
       <Typography align="center">
         {message ?? t("share:unsupported")}

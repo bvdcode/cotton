@@ -85,8 +85,19 @@ export const DatabaseBackupAccess = () => {
     `  '${new URL("/api/v1/server/database-backup", window.location.origin).href}'`,
   ].join("\n");
   return (
-    <Stack spacing={2} alignItems="flex-start">
-      <Stack direction="row" spacing={1} alignItems="center">
+    <Stack
+      spacing={2}
+      sx={{
+        alignItems: "flex-start",
+      }}
+    >
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <Typography variant="h6">{t("databaseBackup.access.title")}</Typography>
         <HelpButton
           title={t("databaseBackup.access.title")}
@@ -125,7 +136,12 @@ export const DatabaseBackupAccess = () => {
           {t("databaseBackup.access.token")}
         </DialogTitle>
         <DialogContent>
-          <Stack spacing={2} pt={1}>
+          <Stack
+            spacing={2}
+            sx={{
+              pt: 1,
+            }}
+          >
             {error && <Alert severity="error">{error}</Alert>}
             <TextField
               label={t("databaseBackup.access.token")}

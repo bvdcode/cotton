@@ -136,11 +136,13 @@ const CardActionsMenu = ({
     anchorOrigin={{ vertical: "top", horizontal: "right" }}
     transformOrigin={{ vertical: "bottom", horizontal: "right" }}
     disablePortal={false}
-    PaperProps={{
-      variant: "outlined",
-      sx: {
-        bgcolor: "background.default",
-        borderColor: "divider",
+    slotProps={{
+      paper: {
+        variant: "outlined",
+        sx: {
+          bgcolor: "background.default",
+          borderColor: "divider",
+        },
       },
     }}
   >

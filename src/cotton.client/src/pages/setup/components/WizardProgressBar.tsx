@@ -11,7 +11,12 @@ export function WizardProgressBar({
   const theme = useTheme();
   return (
     <Stack spacing={0.5}>
-      <Typography variant="body2" color="text.secondary">
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+        }}
+      >
         {progress}% · {step}/{total}
       </Typography>
       <Box

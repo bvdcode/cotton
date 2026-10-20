@@ -44,10 +44,20 @@ const DetailRows = ({
             flexWrap: "wrap",
           }}
         >
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {row.label}
           </Typography>
-          <Typography variant="body2" fontWeight={600}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+            }}
+          >
             {row.value}
           </Typography>
         </Box>
@@ -115,8 +125,10 @@ export const StartupBlockedPage = ({
                 </Typography>
                 <Typography
                   variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 0.75 }}
+                  sx={{
+                    color: "text.secondary",
+                    mt: 0.75,
+                  }}
                 >
                   {t("caption")}
                 </Typography>

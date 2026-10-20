@@ -114,10 +114,12 @@ const CreateUserDialogContent: React.FC<CreateUserDialogContentProps> = ({
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{
-        sx: {
-          width: "100%",
-          maxWidth: 680,
+      slotProps={{
+        paper: {
+          sx: {
+            width: "100%",
+            maxWidth: 680,
+          },
         },
       }}
     >
@@ -216,7 +218,13 @@ const CreateUserDialogContent: React.FC<CreateUserDialogContentProps> = ({
           disabled={!canCreate}
         >
           {createLoading ? (
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <CircularProgress size={16} color="inherit" />
               <span>{t("users.create.creating")}</span>
             </Stack>

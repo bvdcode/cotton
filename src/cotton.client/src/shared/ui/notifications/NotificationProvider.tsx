@@ -88,8 +88,8 @@ const ThemedNotificationContent = forwardRef<
         <Stack
           direction="row"
           spacing={1.25}
-          alignItems="center"
           sx={{
+            alignItems: "center",
             px: 1.5,
             py: 1.25,
             boxShadow: `inset 4px 0 0 ${tone.main}`,

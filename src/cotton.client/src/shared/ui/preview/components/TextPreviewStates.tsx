@@ -15,10 +15,12 @@ export const TextPreviewLoading: React.FC<TextPreviewLoadingProps> = ({
 
   return (
     <Box
-      display="flex"
-      justifyContent="center"
-      alignItems="center"
-      minHeight={400}
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: 400,
+      }}
     >
       <CircularProgress />
     </Box>
@@ -43,7 +45,11 @@ export const TextPreviewError: React.FC<TextPreviewErrorProps> = ({
   if (!error) return null;
 
   return (
-    <Box p={3}>
+    <Box
+      sx={{
+        p: 3,
+      }}
+    >
       <Alert
         severity="error"
         action={

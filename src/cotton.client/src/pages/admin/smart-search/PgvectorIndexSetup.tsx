@@ -43,12 +43,31 @@ export const PgvectorIndexSetup = ({
 
   return (
     <Stack spacing={1.5}>
-      <Stack direction="row" flexWrap="wrap" alignItems="center" gap={3}>
-        <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack
+        direction="row"
+        sx={{
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 3,
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Typography>{t("smartSearch.extension")}</Typography>
           <Chip size="small" label={t("smartSearch.enabled")} />
         </Stack>
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Typography>{t("smartSearch.index.title")}</Typography>
           <Chip
             size="small"
@@ -63,7 +82,12 @@ export const PgvectorIndexSetup = ({
         </Stack>
         <Typography>
           {t("smartSearch.vectorCount")}{" "}
-          <Typography component="span" fontWeight={600}>
+          <Typography
+            component="span"
+            sx={{
+              fontWeight: 600,
+            }}
+          >
             {new Intl.NumberFormat(i18n.language).format(status.vectorCount)}
           </Typography>
         </Typography>

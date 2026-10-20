@@ -167,18 +167,26 @@ export const TilesView: React.FC<IFileListView> = ({
   if (!loading && !isCreatingFolder && tiles.length === 0 && emptyStateText) {
     return (
       <Box
-        flex={1}
-        minHeight={240}
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-        justifyContent="center"
-        textAlign="center"
-        gap={1.5}
-        sx={{ color: "text.secondary" }}
+        sx={{
+          flex: 1,
+          minHeight: 240,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          gap: 1.5,
+          color: "text.secondary",
+        }}
       >
         <FolderOpenOutlinedIcon sx={{ fontSize: 56, opacity: 0.4 }} />
-        <Typography variant="h6" color="text.secondary" fontWeight={500}>
+        <Typography
+          variant="h6"
+          sx={{
+            color: "text.secondary",
+            fontWeight: 500,
+          }}
+        >
           {emptyStateText}
         </Typography>
       </Box>
@@ -188,11 +196,13 @@ export const TilesView: React.FC<IFileListView> = ({
   return (
     <Box
       ref={containerRef}
-      position="relative"
-      pb={{ xs: 1, sm: 2 }}
       onPointerDownCapture={handlePointerDownCapture}
       onFocusCapture={handleFocusCapture}
       onKeyDownCapture={handleKeyDownCapture}
+      sx={{
+        position: "relative",
+        pb: { xs: 1, sm: 2 },
+      }}
     >
       {loading && tiles.length === 0 && (
         <Box

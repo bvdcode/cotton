@@ -5,8 +5,6 @@ import {
   Divider,
   IconButton,
   LinearProgress,
-  List,
-  ListItemButton,
   Paper,
   Snackbar,
   Tooltip,
@@ -31,6 +29,7 @@ import {
   selectAudioPlayerShuffleEnabled,
   useAudioPlayerStore,
 } from "../../shared/store/audioPlayerStore";
+import { AudioPlayerQueue } from "./AudioPlayerQueue";
 import { AudioPlayer } from "../../shared/ui/AudioPlayer";
 import { AudioLyricsView } from "../../shared/ui/AudioLyricsView";
 import { useAudioLyricsPlayback } from "./useAudioLyricsPlayback";
@@ -66,6 +65,17 @@ export const AudioPlayerBar: React.FC = () => {
     [],
   );
   const [queueOpen, setQueueOpen] = React.useState<boolean>(false);
+
+  const queueLabel = t(
+    queueOpen
+      ? "audioPlayer:actions.hideQueue"
+      : "audioPlayer:actions.showQueue",
+  );
+  const lyricsLabel = t(
+    lyricsOpen
+      ? "audioPlayer:actions.hideLyrics"
+      : "audioPlayer:actions.showLyrics",
+  );
 
   const paperRef = useAudioPlayerBarOffset(open);
 
@@ -166,81 +176,96 @@ export const AudioPlayerBar: React.FC = () => {
           overflow: "hidden",
         }}
       >
-        <Box display="flex" alignItems="center" gap={1} px={2} pt={1}>
-          <Box display="flex" alignItems="center" gap={1} flex={1} minWidth={0}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            px: 2,
+            pt: 1,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
             {currentPreviewUrl && !coverFailed ? (
               <Box
                 component="img"
                 src={currentPreviewUrl}
                 alt=""
                 onError={() => setFailedCoverPreviewUrl(currentPreviewUrl)}
-                width={28}
-                height={28}
-                borderRadius={0.5}
-                flexShrink={0}
-                sx={{ objectFit: "cover" }}
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 0.5,
+                  flexShrink: 0,
+                  objectFit: "cover",
+                }}
               />
             ) : null}
 
-            <Box display="flex" flexDirection="column" flex={1} minWidth={0}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
               <Typography variant="subtitle2" noWrap>
                 {currentDisplayTitle}
               </Typography>
               {currentDisplaySubtitle ? (
-                <Typography variant="caption" color="text.secondary" noWrap>
+                <Typography
+                  variant="caption"
+                  noWrap
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {currentDisplaySubtitle}
                 </Typography>
               ) : null}
             </Box>
 
             {positionLabel && (
-              <Typography variant="caption" color="text.secondary" noWrap>
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {positionLabel}
               </Typography>
             )}
           </Box>
 
-          <Tooltip
-            title={
-              queueOpen
-                ? t("audioPlayer:actions.hideQueue")
-                : t("audioPlayer:actions.showQueue")
-            }
-            arrow
-          >
+          <Tooltip title={queueLabel} arrow>
             <span>
               <IconButton
                 size="small"
                 onClick={() => setQueueOpen((prev) => !prev)}
                 color={queueOpen ? "primary" : "default"}
-                aria-label={
-                  queueOpen
-                    ? t("audioPlayer:actions.hideQueue")
-                    : t("audioPlayer:actions.showQueue")
-                }
+                aria-label={queueLabel}
               >
                 <QueueMusic fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
 
-          <Tooltip
-            title={
-              lyricsOpen
-                ? t("audioPlayer:actions.hideLyrics")
-                : t("audioPlayer:actions.showLyrics")
-            }
-            arrow
-          >
+          <Tooltip title={lyricsLabel} arrow>
             <span>
               <IconButton
                 size="small"
                 onClick={() => toggleLyricsOpen()}
-                aria-label={
-                  lyricsOpen
-                    ? t("audioPlayer:actions.hideLyrics")
-                    : t("audioPlayer:actions.showLyrics")
-                }
+                aria-label={lyricsLabel}
                 color={lyricsOpen ? "primary" : "default"}
               >
                 <Subtitles fontSize="small" />
@@ -278,15 +303,30 @@ export const AudioPlayerBar: React.FC = () => {
 
         <Collapse in={effectiveLyricsOpen} timeout="auto" unmountOnExit>
           <Divider sx={{ mt: 1 }} />
-          <Box px={2} py={1.25}>
+          <Box
+            sx={{
+              px: 2,
+              py: 1.25,
+            }}
+          >
             {!currentItem?.nodeId ? (
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("audioPlayer:lyrics.unavailable")}
               </Typography>
             ) : lyricsStatus === "loading" ? (
               <LinearProgress />
             ) : lyricsLines.length > 0 ? (
-              <Box position="relative" height={lyricsViewHeightPx}>
+              <Box
+                sx={{
+                  position: "relative",
+                  height: lyricsViewHeightPx,
+                }}
+              >
                 <AudioLyricsView
                   lines={lyricsLines}
                   activeIndex={
@@ -297,21 +337,25 @@ export const AudioPlayerBar: React.FC = () => {
 
                 {lyricsPlayback.countdown !== null ? (
                   <Box
-                    position="absolute"
-                    top={0}
-                    left={0}
-                    right={0}
-                    bottom={0}
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    sx={{ pointerEvents: "none" }}
+                    sx={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      pointerEvents: "none",
+                    }}
                   >
                     <Typography
                       variant="h4"
-                      fontWeight={800}
-                      textAlign="center"
-                      sx={{ opacity: 0.8 }}
+                      sx={{
+                        fontWeight: 800,
+                        textAlign: "center",
+                        opacity: 0.8,
+                      }}
                     >
                       {lyricsPlayback.countdown}
                     </Typography>
@@ -319,88 +363,43 @@ export const AudioPlayerBar: React.FC = () => {
                 ) : null}
               </Box>
             ) : lyricsStatus === "error" ? (
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("audioPlayer:lyrics.loadFailed")}
               </Typography>
             ) : (
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("audioPlayer:lyrics.notFound")}
               </Typography>
             )}
           </Box>
         </Collapse>
 
-        <Collapse in={queueOpen} timeout="auto" unmountOnExit>
-          <Divider sx={{ mt: 1 }} />
-          <Box maxHeight={{ xs: 220, sm: 300 }} overflow="auto">
-            <List dense disablePadding>
-              {playlist.map((item) => {
-                const title = getAudioDisplayTitle(item);
-                const subtitle = getAudioDisplaySubtitle(item);
+        <AudioPlayerQueue
+          open={queueOpen}
+          playlist={playlist}
+          currentFileId={currentFileId}
+          onSelect={(item) => {
+            setCurrentTrack(item);
+            setQueueOpen(false);
+          }}
+        />
 
-                return (
-                  <ListItemButton
-                    key={item.id}
-                    selected={item.id === currentFileId}
-                    onClick={() => {
-                      setCurrentTrack(item);
-                      setQueueOpen(false);
-                    }}
-                    sx={{
-                      "&.Mui-selected": {
-                        bgcolor: "action.hover",
-                      },
-                      "&.Mui-selected:hover": {
-                        bgcolor: "action.selected",
-                      },
-                    }}
-                  >
-                    <Box
-                      display="flex"
-                      alignItems="center"
-                      gap={2}
-                      width="100%"
-                      minWidth={0}
-                    >
-                      <Box
-                        display="flex"
-                        flexDirection="column"
-                        flex={1}
-                        minWidth={0}
-                      >
-                        <Typography variant="body2" noWrap>
-                          {title}
-                        </Typography>
-                        {subtitle ? (
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            noWrap
-                          >
-                            {subtitle}
-                          </Typography>
-                        ) : null}
-                      </Box>
-
-                      {item.folderPath ? (
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          noWrap
-                          sx={{ maxWidth: "45%" }}
-                        >
-                          {item.folderPath}
-                        </Typography>
-                      ) : null}
-                    </Box>
-                  </ListItemButton>
-                );
-              })}
-            </List>
-          </Box>
-        </Collapse>
-
-        <Box px={2} pb={1}>
+        <Box
+          sx={{
+            px: 2,
+            pb: 1,
+          }}
+        >
           <AudioPlayer
             currentFileId={currentFileId}
             currentFileName={currentFileName}

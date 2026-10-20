@@ -129,7 +129,13 @@ const ModelHeaderActions = ({ modelControls }: ModelHeaderActionsProps) => {
   const { t } = useTranslation(["files"]);
 
   return (
-    <Stack direction="row" spacing={0.5} alignItems="center">
+    <Stack
+      direction="row"
+      spacing={0.5}
+      sx={{
+        alignItems: "center",
+      }}
+    >
       <Tooltip
         title={t("preview.model.actions.cycleLighting", {
           preset: t("preview.model.lighting." + modelControls.lightingPreset),

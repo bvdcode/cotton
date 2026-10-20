@@ -21,7 +21,10 @@ interface FolderInfoDialogProps {
   onClose: () => void;
 }
 
-export const FolderInfoDialog = ({ folder, onClose }: FolderInfoDialogProps) => {
+export const FolderInfoDialog = ({
+  folder,
+  onClose,
+}: FolderInfoDialogProps) => {
   const { t, i18n } = useTranslation(["files", "common"]);
   const dateFormatter = new Intl.DateTimeFormat(i18n.resolvedLanguage, {
     dateStyle: "medium",
@@ -43,20 +46,33 @@ export const FolderInfoDialog = ({ folder, onClose }: FolderInfoDialogProps) => 
         {folder && (
           <Stack spacing={1.5}>
             <Typography>
-              {t("folderInfo.created", { date: dateFormatter.format(new Date(folder.createdAt)) })}
+              {t("folderInfo.created", {
+                date: dateFormatter.format(new Date(folder.createdAt)),
+              })}
             </Typography>
             <Typography>
-              {t("folderInfo.modified", { date: dateFormatter.format(new Date(folder.updatedAt)) })}
+              {t("folderInfo.modified", {
+                date: dateFormatter.format(new Date(folder.updatedAt)),
+              })}
             </Typography>
             {(isPending || isFetching) && (
-              <Box display="flex" alignItems="center" gap={1} py={2}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  py: 2,
+                }}
+              >
                 <CircularProgress size={20} />
                 <Typography>{t("folderInfo.calculating")}</Typography>
               </Box>
             )}
             {isError && (
               <Stack spacing={1}>
-                <Typography color="error">{t("folderInfo.loadFailed")}</Typography>
+                <Typography color="error">
+                  {t("folderInfo.loadFailed")}
+                </Typography>
                 <Button onClick={() => void refetch()} variant="outlined">
                   {t("common:actions.retry")}
                 </Button>
@@ -64,8 +80,12 @@ export const FolderInfoDialog = ({ folder, onClose }: FolderInfoDialogProps) => 
             )}
             {data && !isError && !isFetching && (
               <>
-                <Typography>{t("folderInfo.folders", { count: data.folders })}</Typography>
-                <Typography>{t("folderInfo.files", { count: data.files })}</Typography>
+                <Typography>
+                  {t("folderInfo.folders", { count: data.folders })}
+                </Typography>
+                <Typography>
+                  {t("folderInfo.files", { count: data.files })}
+                </Typography>
                 <Typography>
                   {t("folderInfo.size", { size: formatBytes(data.sizeBytes) })}
                 </Typography>

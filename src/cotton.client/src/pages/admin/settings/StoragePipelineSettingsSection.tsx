@@ -74,7 +74,9 @@ export const StoragePipelineSettingsSection = ({
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={2}
-          alignItems={{ xs: "stretch", sm: "flex-start" }}
+          sx={{
+            alignItems: { xs: "stretch", sm: "flex-start" },
+          }}
         >
           <TextField
             label={t("storageSettings.pipeline.fields.compressionLevel")}
@@ -87,12 +89,14 @@ export const StoragePipelineSettingsSection = ({
               max: settings.maxCompressionLevel,
             })}
             type="number"
-            inputProps={{
-              min: settings.minCompressionLevel,
-              max: settings.maxCompressionLevel,
-              step: 1,
-            }}
             fullWidth
+            slotProps={{
+              htmlInput: {
+                min: settings.minCompressionLevel,
+                max: settings.maxCompressionLevel,
+                step: 1,
+              },
+            }}
           />
           <SettingsSaveButton
             changed={compressionLevelChanged}

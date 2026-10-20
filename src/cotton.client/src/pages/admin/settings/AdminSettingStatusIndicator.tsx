@@ -1,5 +1,5 @@
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlined";
 import { Box, CircularProgress } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import type { SaveStatus } from "./useAutoSavedSetting";

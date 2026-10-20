@@ -36,7 +36,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   }, [disabled]);
 
   return (
-    <Box role="search" display="flex" gap={1} my={3} alignItems="center">
+    <Box
+      role="search"
+      sx={{
+        display: "flex",
+        gap: 1,
+        my: 3,
+        alignItems: "center",
+      }}
+    >
       <TextField
         fullWidth
         autoFocus

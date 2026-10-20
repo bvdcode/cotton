@@ -1,7 +1,7 @@
 import { Alert, Box, Chip, Paper, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import BuildOutlinedIcon from "@mui/icons-material/BuildOutlined";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import type { TFunction } from "i18next";
@@ -103,7 +103,13 @@ const SecurityRiskCard = ({ warning, t }: SecurityRiskCardProps) => {
         })}
       >
         <SeverityIcon severity={warning.severity} />
-        <Typography variant="subtitle2" fontWeight={700} color="inherit">
+        <Typography
+          variant="subtitle2"
+          sx={{
+            fontWeight: 700,
+            color: "inherit",
+          }}
+        >
           {getSeverityLabel(warning.severity, t)}
         </Typography>
         <Chip

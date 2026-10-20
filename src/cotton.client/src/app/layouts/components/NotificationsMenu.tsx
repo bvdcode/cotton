@@ -179,16 +179,28 @@ export const NotificationsMenu = () => {
         slotProps={{ paper: { elevation: 3, sx: menuPaperSx } }}
       >
         <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          px={2}
-          py={1}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            px: 2,
+            py: 1,
+          }}
         >
-          <Typography variant="subtitle2" fontWeight={700}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {t("title")}
           </Typography>
-          <Box display="flex" gap={0.5}>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 0.5,
+            }}
+          >
             <Tooltip
               title={showOnlyUnread ? t("showAll") : t("showOnlyUnread")}
             >
@@ -247,8 +259,10 @@ export const NotificationsMenu = () => {
                         description: rendered.content ? (
                           <Typography
                             variant="body2"
-                            color="text.secondary"
-                            sx={{ whiteSpace: "pre-line" }}
+                            sx={{
+                              color: "text.secondary",
+                              whiteSpace: "pre-line",
+                            }}
                           >
                             {rendered.content}
                           </Typography>
@@ -280,23 +294,33 @@ export const NotificationsMenu = () => {
                   <ListItemText
                     primary={
                       <Box
-                        display="flex"
-                        alignItems="center"
-                        gap={1}
-                        minWidth={0}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          minWidth: 0,
+                        }}
                       >
                         <Typography
                           variant="body2"
                           noWrap
-                          fontWeight={n.readAt ? 400 : 600}
+                          sx={{
+                            fontWeight: n.readAt ? 400 : 600,
+                          }}
                         >
                           {rendered.title}
                         </Typography>
-                        <Box flex={1} />
+                        <Box
+                          sx={{
+                            flex: 1,
+                          }}
+                        />
                         <Typography
                           variant="caption"
-                          color="text.secondary"
                           noWrap
+                          sx={{
+                            color: "text.secondary",
+                          }}
                         >
                           {formatTimeAgo(n.createdAt, t)}
                         </Typography>
@@ -306,8 +330,8 @@ export const NotificationsMenu = () => {
                       rendered.content ? (
                         <Typography
                           variant="caption"
-                          color="text.secondary"
                           sx={{
+                            color: "text.secondary",
                             display: "-webkit-box",
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: "vertical",
@@ -325,10 +349,12 @@ export const NotificationsMenu = () => {
           ) : notificationsPending ? (
             <ListItem sx={{ px: 2, py: 1.5 }}>
               <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                width="100%"
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "100%",
+                }}
               >
                 <CircularProgress size={18} />
               </Box>
@@ -337,7 +363,12 @@ export const NotificationsMenu = () => {
             <ListItem sx={{ px: 2 }}>
               <ListItemText
                 primary={
-                  <Typography variant="body2" fontStyle="italic">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontStyle: "italic",
+                    }}
+                  >
                     {t("notifications.empty")}
                   </Typography>
                 }

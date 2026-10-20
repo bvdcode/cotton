@@ -120,7 +120,13 @@ export const AdminStorageSettingsPage = () => {
   return (
     <Stack>
       <AdminPageSurface>
-        <Stack p={3} spacing={3} divider={<Divider flexItem />}>
+        <Stack
+          spacing={3}
+          divider={<Divider flexItem />}
+          sx={{
+            p: 3,
+          }}
+        >
           <AdminPageHeader
             title={t("storageSettings.title")}
             description={t("storageSettings.description")}
@@ -153,9 +159,7 @@ export const AdminStorageSettingsPage = () => {
           {developerSettingsUnlocked && (
             <StoragePipelineSettingsSection
               chunkSizeBytes={storagePipeline.chunkSizeBytes}
-              compressionLevelChanged={
-                storagePipeline.compressionLevelChanged
-              }
+              compressionLevelChanged={storagePipeline.compressionLevelChanged}
               compressionLevelInput={storagePipeline.compressionLevelInput}
               disabled={storagePipeline.disabled}
               onChunkSizeChange={(next) =>
@@ -176,9 +180,7 @@ export const AdminStorageSettingsPage = () => {
               pipelineStatus={storagePipeline.pipelineStatus}
               settings={storagePipeline.settings}
               sectionStatus={storagePipeline.sectionStatus}
-              supportedChunkSizeBytes={
-                storagePipeline.supportedChunkSizeBytes
-              }
+              supportedChunkSizeBytes={storagePipeline.supportedChunkSizeBytes}
             />
           )}
 

@@ -274,9 +274,11 @@ export const TrustedProxyIpAddressSetting = () => {
         <Stack
           direction="row"
           spacing={1}
-          justifyContent="flex-end"
           useFlexGap
-          flexWrap="wrap"
+          sx={{
+            justifyContent: "flex-end",
+            flexWrap: "wrap",
+          }}
         >
           <Button
             variant={directConnection ? "contained" : "outlined"}

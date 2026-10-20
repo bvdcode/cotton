@@ -43,28 +43,32 @@ export const ShareHeaderBar: React.FC<ShareHeaderBarProps> = ({
 
   return (
     <Box
-      position="sticky"
-      top={0}
-      zIndex={1}
-      bgcolor="background.default"
-      display="flex"
-      alignItems="center"
-      justifyContent="space-between"
-      gap={2}
-      px={{ xs: 2, sm: 3 }}
-      py={0.75}
-      minWidth={0}
-      borderBottom={1}
-      borderColor="divider"
-      sx={{ minHeight: 48 }}
+      sx={{
+        position: "sticky",
+        top: 0,
+        zIndex: 1,
+        bgcolor: "background.default",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 2,
+        px: { xs: 2, sm: 3 },
+        py: 0.75,
+        minWidth: 0,
+        borderBottom: 1,
+        borderColor: "divider",
+        minHeight: 48,
+      }}
     >
       <Box
-        display="flex"
-        alignItems="center"
-        gap={1}
-        minWidth={0}
-        flex={1}
-        overflow="hidden"
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          minWidth: 0,
+          flex: 1,
+          overflow: "hidden",
+        }}
       >
         <Avatar
           src="/assets/icons/icon.svg"
@@ -81,7 +85,14 @@ export const ShareHeaderBar: React.FC<ShareHeaderBarProps> = ({
         </Typography>
       </Box>
 
-      <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          flexShrink: 0,
+        }}
+      >
         {shareIconOnly ? (
           <Tooltip title={shareTitle} disableInteractive>
             <IconButton

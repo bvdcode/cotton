@@ -62,20 +62,40 @@ export const SettingsSection = ({
       <Stack
         direction="row"
         spacing={1}
-        alignItems="flex-start"
-        justifyContent="space-between"
+        sx={{
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+        }}
       >
-        <Stack direction="column" spacing={0.25} minWidth={0} flex={1}>
-          <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
+        <Stack
+          direction="column"
+          spacing={0.25}
+          sx={{
+            minWidth: 0,
+            flex: 1,
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "center",
+              minWidth: 0,
+            }}
+          >
             <Typography
               variant="subtitle1"
-              fontWeight={700}
               color={highlightVisible ? "primary.main" : "text.primary"}
-              sx={(theme) => ({
-                transition: theme.transitions.create("color", {
-                  duration: theme.transitions.duration.shorter,
+              sx={[
+                {
+                  fontWeight: 700,
+                },
+                (theme) => ({
+                  transition: theme.transitions.create("color", {
+                    duration: theme.transitions.duration.shorter,
+                  }),
                 }),
-              })}
+              ]}
             >
               {title}
             </Typography>
@@ -83,7 +103,12 @@ export const SettingsSection = ({
             <AdminSettingStatusIndicator status={status} />
           </Stack>
           {description && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {description}
             </Typography>
           )}

@@ -1,6 +1,6 @@
 import { Box, Chip, Stack, Tooltip, Typography } from "@mui/material";
 import { GridActionsCellItem, type GridColDef } from "@mui/x-data-grid";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -28,11 +28,29 @@ export const useOidcProviderColumns = ({
         flex: 1,
         minWidth: 160,
         renderCell: (params) => (
-          <Stack spacing={0} justifyContent="center" height="100%" minWidth={0}>
-            <Typography fontWeight={600} noWrap>
+          <Stack
+            spacing={0}
+            sx={{
+              justifyContent: "center",
+              height: "100%",
+              minWidth: 0,
+            }}
+          >
+            <Typography
+              noWrap
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {params.row.name}
             </Typography>
-            <Typography variant="body2" color="text.secondary" noWrap>
+            <Typography
+              variant="body2"
+              noWrap
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {params.row.slug}
             </Typography>
           </Stack>
@@ -49,7 +67,13 @@ export const useOidcProviderColumns = ({
         headerName: t("identityProviders.columns.status"),
         width: 140,
         renderCell: (params) => (
-          <Box height="100%" display="flex" alignItems="center">
+          <Box
+            sx={{
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
             <Chip
               size="small"
               color={params.row.isEnabled ? "success" : "default"}
@@ -67,7 +91,13 @@ export const useOidcProviderColumns = ({
         headerName: t("identityProviders.columns.accountCreation"),
         width: 150,
         renderCell: (params) => (
-          <Box height="100%" display="flex" alignItems="center">
+          <Box
+            sx={{
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
             <Chip
               size="small"
               variant="outlined"

@@ -38,7 +38,12 @@ export const SecurityScoreSummary = ({
         severity={level.color}
         icon={level.color === "success" ? <CheckCircleIcon /> : undefined}
       >
-        <Typography variant="subtitle2" fontWeight={700}>
+        <Typography
+          variant="subtitle2"
+          sx={{
+            fontWeight: 700,
+          }}
+        >
           {diagnostics.securityScore}/{diagnostics.maxSecurityScore} -{" "}
           {level.title}
         </Typography>
@@ -53,8 +58,11 @@ export const SecurityScoreSummary = ({
         />
         <Typography
           variant="body2"
-          color="text.secondary"
-          sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}
+          sx={{
+            color: "text.secondary",
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+          }}
         >
           {diagnostics.securityScore} / {diagnostics.maxSecurityScore}
         </Typography>
@@ -182,8 +190,10 @@ export const SecurityPassedSection = ({
             {cpuDescriptor && (
               <Typography
                 variant="caption"
-                color="text.secondary"
-                sx={{ fontVariantNumeric: "tabular-nums" }}
+                sx={{
+                  color: "text.secondary",
+                  fontVariantNumeric: "tabular-nums",
+                }}
               >
                 {cpuDescriptor}
               </Typography>

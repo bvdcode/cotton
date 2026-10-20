@@ -197,16 +197,24 @@ const UnlockHeader = (): React.ReactElement => {
 
   return (
     <Box
-      display="flex"
-      justifyContent="space-between"
-      alignItems="center"
-      sx={{ mb: 3 }}
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        mb: 3,
+      }}
     >
       <Box>
         <Typography variant="h4" component="h1">
           {t("title")}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mt: 0.75,
+          }}
+        >
           {t("caption")}
         </Typography>
       </Box>

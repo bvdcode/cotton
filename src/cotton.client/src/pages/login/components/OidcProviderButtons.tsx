@@ -35,9 +35,19 @@ export const OidcProviderButtons = ({
 
   if (providersQuery.isLoading) {
     return (
-      <Stack alignItems="center" spacing={1}>
+      <Stack
+        spacing={1}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <CircularProgress size={18} />
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("oidc.loading")}
         </Typography>
       </Stack>

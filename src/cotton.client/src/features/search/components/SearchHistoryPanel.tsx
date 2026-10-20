@@ -40,12 +40,20 @@ export const SearchHistoryPanel = ({
     <Box sx={{ minWidth: 0 }}>
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        gap={1}
-        sx={{ px: compact ? 0.5 : 1, py: compact ? 0.5 : 1 }}
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1,
+          px: compact ? 0.5 : 1,
+          py: compact ? 0.5 : 1,
+        }}
       >
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography
+          variant="subtitle2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("history.title")}
         </Typography>
         <Button
@@ -97,9 +105,11 @@ export const SearchHistoryPanel = ({
                 </ListItemIcon>
                 <ListItemText
                   primary={entry.query}
-                  primaryTypographyProps={{
-                    noWrap: true,
-                    sx: { fontWeight: 500 },
+                  slotProps={{
+                    primary: {
+                      noWrap: true,
+                      sx: { fontWeight: 500 },
+                    },
                   }}
                 />
               </ListItemButton>

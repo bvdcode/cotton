@@ -155,11 +155,15 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
             return (
               <Typography
                 key={crumb.id}
-                color="text.primary"
                 noWrap
                 title={crumb.name}
                 {...(dropProps ?? {})}
-                sx={dropSx}
+                sx={[
+                  {
+                    color: "text.primary",
+                  },
+                  ...(Array.isArray(dropSx) ? dropSx : [dropSx]),
+                ]}
               >
                 {crumb.name}
               </Typography>

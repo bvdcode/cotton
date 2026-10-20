@@ -275,9 +275,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
               >
                 <Box
                   component="span"
-                  display="inline-flex"
-                  flexShrink={0}
                   aria-hidden={!isVisible}
+                  sx={{
+                    display: "inline-flex",
+                    flexShrink: 0,
+                  }}
                 >
                   <Tooltip
                     title={
@@ -388,9 +390,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             >
               {statsSummary && (
                 <Typography
-                  color="text.secondary"
                   noWrap
                   sx={{
+                    color: "text.secondary",
                     fontSize: "0.875rem",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
@@ -403,9 +405,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
               {selectionMode && selectedCount > 0 && (
                 <Typography
-                  color="text.secondary"
                   noWrap
                   sx={{
+                    color: "text.secondary",
                     fontSize: "0.875rem",
                     whiteSpace: "nowrap",
                     flexShrink: 0,

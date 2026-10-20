@@ -17,7 +17,13 @@ export const TwoFactorFields = ({
   disabled,
 }: TwoFactorFieldsProps) => (
   <Stack spacing={2.5}>
-    <Typography variant="body2" color="text.secondary" align="center">
+    <Typography
+      variant="body2"
+      align="center"
+      sx={{
+        color: "text.secondary",
+      }}
+    >
       {caption}
     </Typography>
     <OneTimeCodeInput

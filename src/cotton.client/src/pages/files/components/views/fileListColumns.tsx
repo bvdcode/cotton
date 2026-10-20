@@ -238,7 +238,12 @@ export const createSizeColumn = (
     if (params.row.sizeBytes == null) {
       return (
         <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {options.labels.placeholder}
           </Typography>
         </Box>
@@ -246,7 +251,12 @@ export const createSizeColumn = (
     }
     return (
       <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {formatBytes(params.row.sizeBytes)}
         </Typography>
       </Box>
@@ -267,7 +277,12 @@ export const createLocationColumn = (
     if (!value) {
       return (
         <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {options.labels.placeholder}
           </Typography>
         </Box>
@@ -319,10 +334,13 @@ export const createLocationColumn = (
         ) : (
           <Typography
             variant="body2"
-            color="text.secondary"
             noWrap
-            sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
             title={value}
+            sx={{
+              color: "text.secondary",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
           >
             {value}
           </Typography>

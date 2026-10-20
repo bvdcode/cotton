@@ -54,7 +54,12 @@ export const AdminDatabaseBackupPage = () => {
 
   return (
     <AdminPageSurface>
-      <Stack p={3} spacing={3}>
+      <Stack
+        spacing={3}
+        sx={{
+          p: 3,
+        }}
+      >
         <AdminPageHeader
           title={t("databaseBackup.title")}
           description={t("databaseBackup.description")}
@@ -79,7 +84,13 @@ export const AdminDatabaseBackupPage = () => {
                 disabled={isTriggering}
               >
                 {isTriggering ? (
-                  <Stack direction="row" spacing={1} alignItems="center">
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: "center",
+                    }}
+                  >
                     <CircularProgress
                       size={16}
                       color="inherit"
@@ -103,7 +114,11 @@ export const AdminDatabaseBackupPage = () => {
           <Alert severity="error">{triggerErrorMessage}</Alert>
         )}
 
-        <Stack minHeight={4}>
+        <Stack
+          sx={{
+            minHeight: 4,
+          }}
+        >
           <LinearProgress
             aria-label={t("databaseBackup.state.loading")}
             aria-hidden={!isLoading}

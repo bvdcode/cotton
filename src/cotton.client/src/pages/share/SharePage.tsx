@@ -245,26 +245,34 @@ export const SharePage: React.FC = () => {
 
   return (
     <Box
-      width="100%"
-      height="100%"
-      alignSelf="stretch"
-      display="flex"
-      flexDirection="column"
-      flex={1}
-      minHeight={0}
-      minWidth={0}
+      sx={{
+        width: "100%",
+        height: "100%",
+        alignSelf: "stretch",
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        minHeight: 0,
+        minWidth: 0,
+      }}
     >
       {viewState.kind === "loading" && (
         <Box
-          flex={1}
-          minHeight={0}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          gap={2}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 2,
+          }}
         >
           <CircularProgress size={20} />
-          <Typography color="text.secondary">
+          <Typography
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("loading", { ns: "share" })}
           </Typography>
         </Box>
@@ -272,12 +280,14 @@ export const SharePage: React.FC = () => {
 
       {viewState.kind === "file-error" && (
         <Box
-          flex={1}
-          minHeight={0}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          p={2}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            p: 2,
+          }}
         >
           <Paper
             sx={{ p: 4, maxWidth: 420, width: "100%", textAlign: "center" }}
@@ -335,12 +345,14 @@ export const SharePage: React.FC = () => {
           />
 
           <Box
-            flex={1}
-            minHeight={0}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            overflow="hidden"
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+            }}
           >
             <ShareFileViewer
               token={viewState.token}

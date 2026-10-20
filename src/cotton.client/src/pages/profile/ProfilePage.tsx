@@ -32,19 +32,29 @@ export const SettingsPage = () => {
 
   return (
     <Box
-      pt={{
-        xs: 1,
-        md: 3,
+      sx={{
+        pt: {
+          xs: 1,
+          md: 3,
+        },
+
+        pb: {
+          xs: 2,
+          md: 3,
+        },
+
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
       }}
-      pb={{
-        xs: 2,
-        md: 3,
-      }}
-      width="100%"
-      display="flex"
-      justifyContent="center"
     >
-      <Stack spacing={{ xs: 2, sm: 3 }} width="100%" maxWidth={800}>
+      <Stack
+        spacing={{ xs: 2, sm: 3 }}
+        sx={{
+          width: "100%",
+          maxWidth: 800,
+        }}
+      >
         <UserInfoCard user={user} onUserUpdate={handleUserUpdate} />
         <EditProfileCard user={user} onUserUpdate={handleUserUpdate} />
         <AppearanceSettingsCard />

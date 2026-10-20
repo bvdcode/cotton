@@ -35,15 +35,19 @@ export const FileConflictDialog = ({
     <Dialog
       open={open}
       onClose={() => onResolve(ConflictAction.Cancel)}
-      TransitionProps={{ onExited }}
       fullWidth
       maxWidth="sm"
+      slotProps={{
+        transition: { onExited },
+      }}
     >
       <DialogTitle>{t("conflicts.title", { ns: "files" })}</DialogTitle>
       <DialogContent>
         <DialogContentText
-          color="text.primary"
-          sx={{ overflowWrap: "anywhere" }}
+          sx={{
+            color: "text.primary",
+            overflowWrap: "anywhere",
+          }}
         >
           {t(
             canOverwrite
@@ -65,10 +69,11 @@ export const FileConflictDialog = ({
         }}
       >
         <Box
-          display="flex"
-          flexWrap="wrap"
-          gap={1}
           sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 1,
+
             "& > button": {
               flexGrow: 1,
               minWidth: "max-content",
@@ -124,39 +129,63 @@ export const FileConflictDialog = ({
           >
             <Box
               component="span"
-              display="inline-flex"
-              minWidth={0}
-              sx={{ whiteSpace: "pre" }}
+              sx={{
+                display: "inline-flex",
+                minWidth: 0,
+                whiteSpace: "pre",
+              }}
             >
-              <Box component="span" flexShrink={0}>
+              <Box
+                component="span"
+                sx={{
+                  flexShrink: 0,
+                }}
+              >
                 {renameLabel.slice(0, renameNameOffset)}
               </Box>
               <Box
                 component="span"
-                display="inline-flex"
-                minWidth={0}
-                sx={{ textTransform: "none" }}
+                sx={{
+                  display: "inline-flex",
+                  minWidth: 0,
+                  textTransform: "none",
+                }}
               >
                 <Box
                   component="span"
-                  minWidth={0}
-                  sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+                  sx={{
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
                 >
                   {renameCharacters.slice(0, renameMiddle).join("")}
                 </Box>
                 <Box
                   component="span"
-                  display="flex"
-                  justifyContent="flex-end"
-                  minWidth={0}
-                  overflow="hidden"
+                  sx={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    minWidth: 0,
+                    overflow: "hidden",
+                  }}
                 >
-                  <Box component="span" flexShrink={0}>
+                  <Box
+                    component="span"
+                    sx={{
+                      flexShrink: 0,
+                    }}
+                  >
                     {renameCharacters.slice(renameMiddle).join("")}
                   </Box>
                 </Box>
               </Box>
-              <Box component="span" flexShrink={0}>
+              <Box
+                component="span"
+                sx={{
+                  flexShrink: 0,
+                }}
+              >
                 {renameLabel.slice(renameNameOffset + newName.length)}
               </Box>
             </Box>

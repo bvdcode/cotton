@@ -39,12 +39,19 @@ export const SessionItem = ({
       {getDeviceIcon(session.device)}
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            mb: 0.5,
+          }}
+        >
           <Tooltip title={session.userAgent || ""} arrow>
             <Typography
               variant="body1"
-              fontWeight={500}
               sx={{
+                fontWeight: 500,
                 cursor: "help",
                 width: "fit-content",
                 overflow: "hidden",
@@ -72,20 +79,32 @@ export const SessionItem = ({
           direction={{ xs: "column", sm: "row" }}
           spacing={{ xs: 0.1, sm: 1.5 }}
         >
-          <Typography variant="caption" color="text.secondary" noWrap>
+          <Typography
+            variant="caption"
+            noWrap
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {formatTimeAgo(session.lastSeenAt, t)} |{" "}
             {t("sessions.elapsed", {
               duration: formatDuration(session.totalSessionDuration, t),
             })}
           </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap>
+          <Typography
+            variant="caption"
+            noWrap
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {formatLocation(session)}
           </Typography>
           {session.ipAddress && (
             <Typography
               variant="caption"
-              color="text.secondary"
               sx={{
+                color: "text.secondary",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",

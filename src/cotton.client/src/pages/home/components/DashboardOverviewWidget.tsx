@@ -24,27 +24,42 @@ export const DashboardOverviewWidget = ({
     : null;
 
   return (
-    <Stack height="100%" justifyContent="space-between" gap={1.25}>
+    <Stack
+      sx={{
+        height: "100%",
+        justifyContent: "space-between",
+        gap: 1.25,
+      }}
+    >
       <Stack
         direction="row"
-        alignItems="flex-start"
-        justifyContent="space-between"
-        columnGap={1.5}
-        rowGap={1}
-        flexWrap="wrap"
+        sx={{
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          columnGap: 1.5,
+          rowGap: 1,
+          flexWrap: "wrap",
+        }}
       >
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          alignItems={{ xs: "flex-start", sm: "baseline" }}
-          gap={{ xs: 0, sm: 1 }}
-          flexWrap="wrap"
-          flexShrink={0}
+          sx={{
+            alignItems: { xs: "flex-start", sm: "baseline" },
+            gap: { xs: 0, sm: 1 },
+            flexWrap: "wrap",
+            flexShrink: 0,
+          }}
         >
           <Typography variant="h4">
             {stats ? formatBytes(stats.sizeBytes) : t("common:placeholder")}
           </Typography>
           {quota?.quotaBytes && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("dashboard.overview.ofQuota", {
                 quota: formatBytes(quota.quotaBytes),
               })}
@@ -54,17 +69,24 @@ export const DashboardOverviewWidget = ({
 
         <Stack
           direction="row"
-          justifyContent="flex-end"
-          gap={2}
-          flexWrap="nowrap"
-          flexShrink={0}
-          ml="auto"
+          sx={{
+            justifyContent: "flex-end",
+            gap: 2,
+            flexWrap: "nowrap",
+            flexShrink: 0,
+            ml: "auto",
+          }}
         >
           <Stack>
             <Typography variant="subtitle1">
               {stats?.fileCount.toLocaleString() ?? t("common:placeholder")}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("cards.files.title")}
             </Typography>
           </Stack>
@@ -72,7 +94,12 @@ export const DashboardOverviewWidget = ({
             <Typography variant="subtitle1">
               {stats?.nodeCount.toLocaleString() ?? t("common:placeholder")}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("cards.folders.title")}
             </Typography>
           </Stack>
@@ -82,7 +109,12 @@ export const DashboardOverviewWidget = ({
                 <Typography variant="subtitle1">
                   {formatBytes(quota.availableBytes)}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {t("dashboard.overview.available")}
                 </Typography>
               </Stack>

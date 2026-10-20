@@ -12,7 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 import {
-  CheckCircleOutline,
+  CheckCircleOutlined,
   Close,
   LoginOutlined,
   RadioButtonChecked,
@@ -133,7 +133,7 @@ export const AppCodeApprovalPage = () => {
       {state.kind === "approved" && (
         <FinalState
           severity="success"
-          icon={<CheckCircleOutline color="success" />}
+          icon={<CheckCircleOutlined color="success" />}
           title={t("approved.title")}
           message={t("approved.message")}
         />
@@ -154,9 +154,22 @@ const LoadingState = () => {
   const { t } = useTranslation("appCodeApproval");
 
   return (
-    <Box display="flex" alignItems="center" gap={2} mt={3}>
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 2,
+        mt: 3,
+      }}
+    >
       <CircularProgress size={24} />
-      <Typography color="text.secondary">{t("loading")}</Typography>
+      <Typography
+        sx={{
+          color: "text.secondary",
+        }}
+      >
+        {t("loading")}
+      </Typography>
     </Box>
   );
 };
@@ -207,19 +220,38 @@ const ApprovalState = ({
   return (
     <Stack spacing={{ xs: 2, sm: 3 }} sx={{ mt: { xs: 2, sm: 3 } }}>
       <Stack spacing={0.75}>
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
           <LoginOutlined color="primary" />
           <Typography variant="h6" component="h2">
             {details.applicationName}
           </Typography>
         </Box>
-        <Typography color="text.secondary">{version}</Typography>
+        <Typography
+          sx={{
+            color: "text.secondary",
+          }}
+        >
+          {version}
+        </Typography>
       </Stack>
 
       <Divider />
 
       <Box>
-        <Box display="flex" alignItems="center" gap={1} mb={1}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            mb: 1,
+          }}
+        >
           <VerifiedUserOutlined color="primary" fontSize="small" />
           <Typography variant="subtitle1">{t("access.title")}</Typography>
         </Box>
@@ -248,7 +280,7 @@ const ApprovalState = ({
         </Button>
         <Button
           variant="contained"
-          startIcon={<CheckCircleOutline />}
+          startIcon={<CheckCircleOutlined />}
           onClick={onApprove}
           disabled={submitting}
           fullWidth
@@ -269,7 +301,13 @@ type FinalStateProps = {
 
 const FinalState = ({ icon, message, severity, title }: FinalStateProps) => (
   <Alert severity={severity} icon={icon} sx={{ mt: 3, alignItems: "center" }}>
-    <Typography fontWeight={600}>{title}</Typography>
+    <Typography
+      sx={{
+        fontWeight: 600,
+      }}
+    >
+      {title}
+    </Typography>
     <Typography variant="body2">{message}</Typography>
   </Alert>
 );

@@ -18,9 +18,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 
 type ChangePasswordStatus =
-  | { kind: "idle" }
-  | { kind: "success" }
-  | { kind: "error"; message: string };
+  { kind: "idle" } | { kind: "success" } | { kind: "error"; message: string };
 
 type PasswordInputFieldProps = {
   label: string;
@@ -136,7 +134,12 @@ export const ChangePasswordCard = () => {
       title={t("password.title")}
       description={t("password.description")}
     >
-      <Stack spacing={2} paddingY={2}>
+      <Stack
+        spacing={2}
+        sx={{
+          paddingY: 2,
+        }}
+      >
         {status.kind === "success" && (
           <Alert severity="success">{t("password.success")}</Alert>
         )}
@@ -179,14 +182,26 @@ export const ChangePasswordCard = () => {
           disabled={loading}
         />
 
-        <Stack direction="row" justifyContent="flex-end" spacing={1}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            justifyContent: "flex-end",
+          }}
+        >
           <Button
             variant="contained"
             onClick={handleSubmit}
             disabled={!canSubmit}
           >
             {loading ? (
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <CircularProgress size={16} />
                 <span>{t("password.saving")}</span>
               </Stack>

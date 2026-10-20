@@ -92,7 +92,12 @@ export const AdminUsersPage = () => {
     <>
       <AdminPageSurface fullHeight>
         {loadState.kind === "error" && (
-          <Box px={3} pb={2}>
+          <Box
+            sx={{
+              px: 3,
+              pb: 2,
+            }}
+          >
             <Alert severity="error">{loadState.message}</Alert>
           </Box>
         )}

@@ -142,13 +142,15 @@ export const AdminLayoutPage = () => {
 
   return (
     <Box
-      pt={{ xs: 1, md: 3 }}
-      pb={{ xs: 0, md: 2 }}
-      width="100%"
-      display="flex"
-      flexDirection="column"
-      height="100%"
-      minHeight={0}
+      sx={{
+        pt: { xs: 1, md: 3 },
+        pb: { xs: 0, md: 2 },
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+      }}
     >
       <MobileAdminNavigation
         sections={sections}
@@ -158,25 +160,32 @@ export const AdminLayoutPage = () => {
       />
 
       <Box
-        display="grid"
-        flex={1}
-        minHeight={0}
-        sx={(theme) => ({
-          width: {
-            xs: "100%",
-            md: `min(
+        sx={[
+          {
+            display: "grid",
+            flex: 1,
+            minHeight: 0,
+          },
+          (theme) => ({
+            width: {
+              xs: "100%",
+              md: `min(
               100%,
               calc(${navWidth}px + ${theme.spacing(2)} + ${ADMIN_PAGE_SURFACE_WIDTH}px)
             )`,
-          },
-          mx: { md: "auto" },
-          gridTemplateColumns: {
-            xs: "minmax(0, 1fr)",
-            md: `${navWidth}px minmax(0, 1fr)`,
-          },
-          gap: 2,
-          transition: theme.transitions.create(["width", "grid-template-columns"]),
-        })}
+            },
+            mx: { md: "auto" },
+            gridTemplateColumns: {
+              xs: "minmax(0, 1fr)",
+              md: `${navWidth}px minmax(0, 1fr)`,
+            },
+            gap: 2,
+            transition: theme.transitions.create([
+              "width",
+              "grid-template-columns",
+            ]),
+          }),
+        ]}
       >
         <DesktopAdminNavigation
           sections={sections}
@@ -187,12 +196,15 @@ export const AdminLayoutPage = () => {
         />
 
         <Box
-          sx={{ overflowY: "auto", overflowX: "hidden" }}
-          minHeight={0}
-          minWidth={0}
-          display="flex"
-          flexDirection="column"
-          alignSelf="stretch"
+          sx={{
+            minHeight: 0,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignSelf: "stretch",
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
         >
           <Outlet />
         </Box>

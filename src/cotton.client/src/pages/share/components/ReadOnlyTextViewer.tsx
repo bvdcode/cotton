@@ -42,7 +42,14 @@ export const ReadOnlyTextViewer: React.FC<ReadOnlyTextViewerProps> = ({
 
   if (isMarkdown) {
     return (
-      <Box width="100%" height="100%" minHeight={0} minWidth={0}>
+      <Box
+        sx={{
+          width: "100%",
+          height: "100%",
+          minHeight: 0,
+          minWidth: 0,
+        }}
+      >
         <MarkdownEditor
           value={textContent}
           onChange={handleReadOnlyChange}
@@ -60,7 +67,14 @@ export const ReadOnlyTextViewer: React.FC<ReadOnlyTextViewerProps> = ({
   const shouldUseCodeEditor = monacoLanguage !== "plaintext";
 
   return (
-    <Box width="100%" height="100%" minHeight={0} minWidth={0}>
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+        minHeight: 0,
+        minWidth: 0,
+      }}
+    >
       {shouldUseCodeEditor ? (
         <CodeEditor
           value={textContent}

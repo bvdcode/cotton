@@ -54,8 +54,8 @@ export const NotFoundPage = () => {
         </Typography>
         <Typography
           variant="body1"
-          color="text.secondary"
           sx={{
+            color: "text.secondary",
             mb: 4,
             fontSize: "1.1rem",
           }}

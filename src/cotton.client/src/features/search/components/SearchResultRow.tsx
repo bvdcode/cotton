@@ -48,9 +48,7 @@ const renderPreview = (
 
   const previewHash = row.file.previewHashEncryptedHex;
   const previewUrl =
-    previewHash && !previewFailed
-      ? buildPreviewUrl(previewHash)
-      : null;
+    previewHash && !previewFailed ? buildPreviewUrl(previewHash) : null;
 
   if (previewUrl) {
     return (
@@ -150,9 +148,11 @@ const SearchResultRowImpl = ({
       <Stack
         direction="row"
         spacing={1.25}
-        alignItems="center"
-        width="100%"
-        minWidth={0}
+        sx={{
+          alignItems: "center",
+          width: "100%",
+          minWidth: 0,
+        }}
       >
         <Box
           sx={{
@@ -170,20 +170,30 @@ const SearchResultRowImpl = ({
           {renderPreview(row, previewFailed, onPreviewError)}
         </Box>
 
-        <Stack spacing={0.25} minWidth={0} flex={1}>
+        <Stack
+          spacing={0.25}
+          sx={{
+            minWidth: 0,
+            flex: 1,
+          }}
+        >
           <Typography
             variant="body2"
-            fontWeight={700}
             noWrap
             title={text.title}
+            sx={{
+              fontWeight: 700,
+            }}
           >
             {text.title}
           </Typography>
           <Typography
             variant="caption"
-            color="text.secondary"
             noWrap
             title={text.meta}
+            sx={{
+              color: "text.secondary",
+            }}
           >
             {text.meta}
           </Typography>

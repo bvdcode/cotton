@@ -97,17 +97,34 @@ export const GcTimelineChart = ({ timeline, bucket }: GcTimelineChartProps) => {
 
   return (
     <Box sx={{ p: 1 }}>
-      <Stack p={2} spacing={2}>
+      <Stack
+        spacing={2}
+        sx={{
+          p: 2,
+        }}
+      >
         <Stack
           direction={{ xs: "column", md: "row" }}
-          justifyContent="space-between"
-          alignItems={{ xs: "flex-start", md: "center" }}
           spacing={0.5}
+          sx={{
+            justifyContent: "space-between",
+            alignItems: { xs: "flex-start", md: "center" },
+          }}
         >
-          <Typography variant="subtitle1" fontWeight={700}>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {t("storageStatistics.timeline.title")}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {formatDateTime(timeline.from)} - {formatDateTime(timeline.to)}
           </Typography>
         </Stack>
@@ -151,15 +168,23 @@ export const GcTimelineChart = ({ timeline, bucket }: GcTimelineChartProps) => {
                   return (
                     <Stack
                       key={point.bucketStartUtc}
-                      alignItems="center"
                       spacing={0.5}
-                      minWidth={0}
+                      sx={{
+                        alignItems: "center",
+                        minWidth: 0,
+                      }}
                     >
                       <Typography variant="caption" noWrap>
                         {formatBytes(point.sizeBytes)}
                       </Typography>
 
-                      <Box height={28} display="flex" alignItems="center">
+                      <Box
+                        sx={{
+                          height: 28,
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
                         <Box
                           sx={{
                             width: dotSize,
@@ -175,15 +200,19 @@ export const GcTimelineChart = ({ timeline, bucket }: GcTimelineChartProps) => {
 
                       <Typography
                         variant="caption"
-                        color="text.secondary"
                         noWrap
+                        sx={{
+                          color: "text.secondary",
+                        }}
                       >
                         {formatSlotLabel(point.bucketStartUtc, bucket)}
                       </Typography>
                       <Typography
                         variant="caption"
-                        color="text.secondary"
                         noWrap
+                        sx={{
+                          color: "text.secondary",
+                        }}
                       >
                         {formatCount(point.chunkCount)}
                       </Typography>

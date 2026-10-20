@@ -107,7 +107,12 @@ const EditUserDialogContent: React.FC<EditUserDialogContentProps> = ({
     <Dialog open onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>{t("users.edit.title")}</DialogTitle>
       <DialogContent>
-        <Stack spacing={2} pt={1}>
+        <Stack
+          spacing={2}
+          sx={{
+            pt: 1,
+          }}
+        >
           {error && <Alert severity="error">{error}</Alert>}
 
           <TextField
@@ -151,7 +156,13 @@ const EditUserDialogContent: React.FC<EditUserDialogContentProps> = ({
         </Button>
         <Button variant="contained" onClick={handleSave} disabled={!canSave}>
           {saving ? (
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <CircularProgress size={16} color="inherit" />
               <span>{t("users.edit.saving")}</span>
             </Stack>

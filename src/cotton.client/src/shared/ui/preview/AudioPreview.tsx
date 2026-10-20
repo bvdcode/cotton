@@ -153,40 +153,51 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
 
   return (
     <Box
-      width="100%"
-      sx={(theme) => ({
-        // Theme the 3rd-party player without hardcoding colors.
-        "& .rhap_container": {
-          backgroundColor: "transparent",
-          boxShadow: "none",
-          padding: 0,
+      sx={[
+        {
+          width: "100%",
         },
-        "& .rhap_time": {
-          color: theme.palette.text.secondary,
-        },
-        "& .rhap_progress-indicator": {
-          backgroundColor: theme.palette.primary.main,
-        },
-        "& .rhap_progress-filled": {
-          backgroundColor: theme.palette.primary.main,
-        },
-        "& .rhap_volume-indicator": {
-          backgroundColor: theme.palette.primary.main,
-        },
-        "& .rhap_volume-filled": {
-          backgroundColor: theme.palette.primary.main,
-        },
-        "& .rhap_main-controls-button, & .rhap_volume-button": {
-          color: theme.palette.text.primary,
-        },
-        "& .rhap_repeat-button, & .rhap_forward-button, & .rhap_rewind-button":
-          {
+        (theme) => ({
+          // Theme the 3rd-party player without hardcoding colors.
+          "& .rhap_container": {
+            backgroundColor: "transparent",
+            boxShadow: "none",
+            padding: 0,
+          },
+          "& .rhap_time": {
+            color: theme.palette.text.secondary,
+          },
+          "& .rhap_progress-indicator": {
+            backgroundColor: theme.palette.primary.main,
+          },
+          "& .rhap_progress-filled": {
+            backgroundColor: theme.palette.primary.main,
+          },
+          "& .rhap_volume-indicator": {
+            backgroundColor: theme.palette.primary.main,
+          },
+          "& .rhap_volume-filled": {
+            backgroundColor: theme.palette.primary.main,
+          },
+          "& .rhap_main-controls-button, & .rhap_volume-button": {
             color: theme.palette.text.primary,
           },
-      })}
+          "& .rhap_repeat-button, & .rhap_forward-button, & .rhap_rewind-button":
+            {
+              color: theme.palette.text.primary,
+            },
+        }),
+      ]}
     >
       {loading && (
-        <Box display="flex" alignItems="center" justifyContent="center" py={1}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            py: 1,
+          }}
+        >
           <CircularProgress size={18} />
         </Box>
       )}

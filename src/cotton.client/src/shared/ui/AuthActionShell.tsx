@@ -44,12 +44,18 @@ export const AuthActionShell = ({
       }}
     >
       <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        gap={1.5}
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 1.5,
+        }}
       >
-        <Typography variant="h4" component="h1" sx={{ flex: 1, minWidth: 0 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}
+        >
           {title}
         </Typography>
         <Avatar

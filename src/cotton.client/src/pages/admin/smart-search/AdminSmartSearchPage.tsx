@@ -75,9 +75,10 @@ export const AdminSmartSearchPage = () => {
   return (
     <AdminPageSurface>
       <Stack
-        p={{ xs: 2, sm: 3 }}
         spacing={2}
         sx={{
+          p: { xs: 2, sm: 3 },
+
           "& .MuiInputLabel-root.Mui-focused:not(.Mui-error)": {
             color: "text.primary",
           },
@@ -85,24 +86,36 @@ export const AdminSmartSearchPage = () => {
       >
         <Stack
           direction="row"
-          justifyContent="space-between"
-          alignItems="center"
           spacing={1}
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
         >
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            alignItems={{ sm: "baseline" }}
-            gap={{ xs: 0.5, sm: 2 }}
-            minWidth={0}
+            sx={{
+              alignItems: { sm: "baseline" },
+              gap: { xs: 0.5, sm: 2 },
+              minWidth: 0,
+            }}
           >
-            <Typography component="h1" variant="h5" fontWeight={700}>
+            <Typography
+              component="h1"
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+              }}
+            >
               {t("smartSearch.title")}
             </Typography>
             {status && (
               <Typography
                 variant="body2"
-                color="text.secondary"
-                sx={{ overflowWrap: "anywhere" }}
+                sx={{
+                  color: "text.secondary",
+                  overflowWrap: "anywhere",
+                }}
               >
                 {t("smartSearch.database", {
                   version: status.postgresMajorVersion,
@@ -111,7 +124,13 @@ export const AdminSmartSearchPage = () => {
               </Typography>
             )}
           </Stack>
-          <Stack direction="row" spacing={0.5} flexShrink={0}>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              flexShrink: 0,
+            }}
+          >
             <Tooltip title={t("smartSearch.actions.triggerIndexing")}>
               <span>
                 <IconButton

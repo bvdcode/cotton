@@ -110,7 +110,12 @@ export const ClientEncryptionCard = ({
         title={t("clientEncryption.sectionTitle")}
         description={t("clientEncryption.description")}
       >
-        <Stack spacing={2} paddingY={2}>
+        <Stack
+          spacing={2}
+          sx={{
+            paddingY: 2,
+          }}
+        >
           {status === "invalid" && (
             <Alert severity="error">
               {t("clientEncryption.invalidEnvelope")}
@@ -132,16 +137,20 @@ export const ClientEncryptionCard = ({
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 spacing={2}
-                alignItems={{ xs: "flex-start", sm: "center" }}
-                justifyContent="space-between"
+                sx={{
+                  alignItems: { xs: "flex-start", sm: "center" },
+                  justifyContent: "space-between",
+                }}
               >
                 <Stack
                   direction="row"
                   spacing={1}
-                  alignItems="center"
-                  flexWrap="wrap"
                   useFlexGap
-                  minWidth={0}
+                  sx={{
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    minWidth: 0,
+                  }}
                 >
                   {statusChip}
                   <FormControlLabel
@@ -175,7 +184,12 @@ export const ClientEncryptionCard = ({
                 )}
               </Stack>
               {statusHint && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {statusHint}
                 </Typography>
               )}

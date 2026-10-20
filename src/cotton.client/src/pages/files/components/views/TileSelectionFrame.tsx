@@ -59,7 +59,6 @@ export const TileFrame = ({
   selectionCheckbox: React.ReactNode;
 }): React.ReactElement => (
   <Box
-    position="relative"
     draggable={draggable && !isRenaming}
     onDragStart={(event) => {
       onMoveDragStart?.(event);
@@ -75,8 +74,10 @@ export const TileFrame = ({
     }}
     {...longPressHandlers}
     sx={{
+      position: "relative",
       opacity: dimmed ? 0.45 : 1,
       transition: "opacity 120ms ease-out, box-shadow 120ms ease-out",
+
       ...(dropActive && {
         outline: "2px solid",
         outlineColor: "primary.main",

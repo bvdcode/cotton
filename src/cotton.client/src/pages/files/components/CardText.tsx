@@ -97,8 +97,8 @@ export const CardText = ({
       <Typography
         component="div"
         variant="body2"
-        fontWeight={500}
         sx={{
+          fontWeight: 500,
           flex: 1,
           minWidth: 0,
           fontSize: { xs: "0.8rem", md: "0.85rem" },
@@ -119,12 +119,12 @@ export const CardText = ({
     {(subtitle || subtitleEnd || variant === "squareTile") && (
       <Typography
         variant="caption"
-        color="text.secondary"
         component="div"
-        display="flex"
-        justifyContent="space-between"
-        columnGap={0.5}
         sx={{
+          color: "text.secondary",
+          display: "flex",
+          justifyContent: "space-between",
+          columnGap: 0.5,
           fontSize: { xs: "0.7rem", md: "0.75rem" },
           lineHeight: 1.4,
           minHeight: "1.4em",
@@ -132,10 +132,10 @@ export const CardText = ({
       >
         <Box
           component="span"
-          flex={1}
-          minWidth={0}
           title={subtitle}
           sx={{
+            flex: 1,
+            minWidth: 0,
             overflow: "hidden",
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
@@ -144,7 +144,14 @@ export const CardText = ({
           {subtitle}
         </Box>
         {subtitleEnd && (
-          <Box component="span" flexShrink={0} ml="auto" title={subtitleEnd}>
+          <Box
+            component="span"
+            title={subtitleEnd}
+            sx={{
+              flexShrink: 0,
+              ml: "auto",
+            }}
+          >
             {subtitleEnd}
           </Box>
         )}

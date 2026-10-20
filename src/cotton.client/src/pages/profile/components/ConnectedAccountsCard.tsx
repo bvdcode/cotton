@@ -106,7 +106,12 @@ export const ConnectedAccountsCard = () => {
       description={t("connectedAccounts.description")}
       count={links.length}
     >
-      <Stack spacing={2} paddingY={2}>
+      <Stack
+        spacing={2}
+        sx={{
+          paddingY: 2,
+        }}
+      >
         {loadFailed && (
           <Alert severity="error">
             {t("connectedAccounts.errors.loadFailed")}
@@ -115,9 +120,20 @@ export const ConnectedAccountsCard = () => {
         {error && <Alert severity="error">{error}</Alert>}
 
         {loading ? (
-          <Box display="flex" alignItems="center" gap={1.5}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+            }}
+          >
             <CircularProgress size={18} />
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("connectedAccounts.loading")}
             </Typography>
           </Box>
@@ -139,7 +155,13 @@ export const ConnectedAccountsCard = () => {
             )}
 
             {linkableProviders.length > 0 && (
-              <Stack direction="row" flexWrap="wrap" gap={1}>
+              <Stack
+                direction="row"
+                sx={{
+                  flexWrap: "wrap",
+                  gap: 1,
+                }}
+              >
                 {linkableProviders.map((provider) => {
                   const linking = linkingSlug === provider.slug;
                   return (
@@ -193,14 +215,30 @@ const ConnectedAccountRow = ({
       {identity.providerName.slice(0, 1).toUpperCase()}
     </Avatar>
     <Box sx={{ flex: 1, minWidth: 0 }}>
-      <Typography fontWeight={600} noWrap>
+      <Typography
+        noWrap
+        sx={{
+          fontWeight: 600,
+        }}
+      >
         {identity.providerName}
       </Typography>
-      <Typography variant="body2" color="text.secondary" noWrap>
+      <Typography
+        variant="body2"
+        noWrap
+        sx={{
+          color: "text.secondary",
+        }}
+      >
         {identity.email ?? identity.displayName ?? identity.providerSlug}
       </Typography>
       {identity.lastUsedAt && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {formatDateTime(identity.lastUsedAt)}
         </Typography>
       )}

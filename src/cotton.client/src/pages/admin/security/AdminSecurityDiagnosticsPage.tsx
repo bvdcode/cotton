@@ -51,7 +51,13 @@ export const AdminSecurityDiagnosticsPage = () => {
   return (
     <Stack>
       <AdminPageSurface>
-        <Stack p={3} spacing={3} divider={<Divider flexItem />}>
+        <Stack
+          spacing={3}
+          divider={<Divider flexItem />}
+          sx={{
+            p: 3,
+          }}
+        >
           <AdminPageHeader
             title={t("securityDiagnostics.title")}
             description={t("securityDiagnostics.description")}

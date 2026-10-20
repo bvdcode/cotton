@@ -89,8 +89,8 @@ export function OnboardingPage() {
 
       <Stack
         spacing={6}
-        alignItems="center"
         sx={{
+          alignItems: "center",
           zIndex: 1,
           maxWidth: 600,
           px: 3,
@@ -166,7 +166,12 @@ export function OnboardingPage() {
               <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
                 {t(`features.${feature.key}.title`)}
               </Typography>
-              <Typography variant="body1" color="text.secondary">
+              <Typography
+                variant="body1"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t(`features.${feature.key}.description`)}
               </Typography>
             </Box>

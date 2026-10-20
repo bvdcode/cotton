@@ -55,10 +55,12 @@ export function WizardHeader() {
       >
         <Stack spacing={{ xs: 0.5, sm: 0.5 }} sx={{ flex: 1, minWidth: 0 }}>
           <Box
-            display="flex"
-            gap={{ xs: 1.5, sm: 2 }}
-            alignItems="center"
-            sx={{ flexWrap: "nowrap" }}
+            sx={{
+              display: "flex",
+              gap: { xs: 1.5, sm: 2 },
+              alignItems: "center",
+              flexWrap: "nowrap",
+            }}
           >
             <Avatar
               src="/assets/icons/icon.svg"
@@ -67,8 +69,8 @@ export function WizardHeader() {
             />
             <Typography
               variant="h4"
-              fontWeight={800}
               sx={{
+                fontWeight: 800,
                 fontSize: { xs: "1.25rem", sm: "1.5rem", md: "2rem" },
                 lineHeight: 1.2,
               }}
@@ -78,8 +80,8 @@ export function WizardHeader() {
           </Box>
           <Typography
             variant="body1"
-            color="text.secondary"
             sx={{
+              color: "text.secondary",
               fontSize: { xs: "0.875rem", sm: "1rem" },
               display: { xs: "none", sm: "block" },
             }}

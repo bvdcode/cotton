@@ -39,7 +39,11 @@ export function RequireAuth({ children }: Props) {
         title={t("errors.serverUnavailableTitle")}
       >
         <Stack spacing={3} sx={{ mt: 2.5 }}>
-          <Typography color="text.secondary">
+          <Typography
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("errors.serverUnavailableDescription")}
           </Typography>
           <Button variant="contained" onClick={() => void restoreSession()}>
