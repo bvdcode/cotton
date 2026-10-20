@@ -111,18 +111,14 @@ export const SearchPage: React.FC = () => {
   });
 
   const {
-    previewState,
-    closePreview,
+    previewProps,
+    lightboxProps,
     handleFileClick,
     handleDownloadFile,
     handleShareFile,
     lightboxOpen,
-    lightboxIndex,
     mediaItems,
-    getSignedMediaUrl,
-    getDownloadUrl,
     handleMediaClick,
-    setLightboxOpen,
   } = fileListLogic.interaction;
 
   const { tiles } = fileListLogic;
@@ -296,27 +292,12 @@ export const SearchPage: React.FC = () => {
         </Box>
       )}
 
-      <FilePreviewModal
-        isOpen={previewState.isOpen}
-        fileId={previewState.fileId}
-        fileName={previewState.fileName}
-        fileType={previewState.fileType}
-        fileSizeBytes={previewState.fileSizeBytes}
-        file={previewState.file}
-        onClose={closePreview}
-        onDownload={handleDownloadFile}
-      />
+      <FilePreviewModal {...previewProps} />
 
       {lightboxOpen && mediaItems.length > 0 && (
         <MediaLightbox
-          open={lightboxOpen}
-          initialIndex={lightboxIndex}
-          items={mediaItems}
-          getSignedMediaUrl={getSignedMediaUrl}
-          getDownloadUrl={getDownloadUrl}
-          onShare={handleShareFile}
+          {...lightboxProps}
           smoothTransitions={smoothGalleryTransitions}
-          onClose={() => setLightboxOpen(false)}
         />
       )}
     </Box>

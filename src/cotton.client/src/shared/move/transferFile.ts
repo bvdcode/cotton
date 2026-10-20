@@ -23,53 +23,23 @@ export async function transferFile(
   names: FolderTransferNames,
 ): Promise<NodeFileManifestDto> {
   const request: MoveFileRequest = { parentId: targetParentId };
-  let displayName = name ?? item.file?.name;
-  if (isFileEncrypted(item.file?.metadata)) {
-    if (!item.file) {
-      throw new Error("File metadata is missing from the transfer item.");
-    }
-    const key = requireMasterKey();
-    const meta = await readFileDisplayMeta(item.file);
-    displayName = name ?? meta.name;
-    const existingName = await names.check(
-      displayName,
-      operation === "move" ? item.id : undefined,
-      overwrite,
-    );
-    if (existingName !== undefined) {
-      request.name = existingName;
-    } else if (operation === "copy") {
-      request.name = createOpaqueServerFileName();
-    }
-    if (name !== undefined) {
-      request.metadata = {
-        [DISPLAY_META_KEY]: await encryptDisplayMeta({
-          ...meta,
-          name: displayName,
-        }),
-      };
-    }
-    if (requireMasterKey() !== key) {
-      throw new Error(
-        "The encryption key changed while preparing the file transfer.",
-      );
-    }
-  } else {
-    if (useVault.getState().isUnlocked && displayName !== undefined) {
-      const existingName = await names.check(
-        displayName,
-        operation === "move" ? item.id : undefined,
+  const displayName = isFileEncrypted(item.file?.metadata)
+    ? await prepareEncryptedTransfer(
+        item,
+        request,
+        name,
         overwrite,
-        false,
+        operation,
+        names,
+      )
+    : await preparePlainTransfer(
+        item,
+        request,
+        name,
+        overwrite,
+        operation,
+        names,
       );
-      if (existingName !== undefined) {
-        request.name = existingName;
-      }
-    }
-    if (name !== undefined) {
-      request.name = name;
-    }
-  }
   if (overwrite) {
     request.overwrite = true;
   }
@@ -90,4 +60,82 @@ export async function transferFile(
     isFileEncrypted(file.metadata),
   );
   return file;
+}
+
+async function prepareEncryptedTransfer(
+  item: MoveClipboardItem,
+  request: MoveFileRequest,
+  name: string | undefined,
+  overwrite: boolean,
+  operation: FileTransferOperation,
+  names: FolderTransferNames,
+): Promise<string> {
+  if (!item.file) {
+    throw new Error("File metadata is missing from the transfer item.");
+  }
+  const key = requireMasterKey();
+  const meta = await readFileDisplayMeta(item.file);
+  const displayName = name ?? meta.name;
+  const existingName = await names.check(
+    displayName,
+    getSourceFileId(item, operation),
+    overwrite,
+  );
+  if (existingName !== undefined) {
+    request.name = existingName;
+  } else if (operation === "copy") {
+    request.name = createOpaqueServerFileName();
+  }
+  if (name !== undefined) {
+    request.metadata = {
+      [DISPLAY_META_KEY]: await encryptDisplayMeta({
+        ...meta,
+        name: displayName,
+      }),
+    };
+  }
+  if (requireMasterKey() !== key) {
+    throw new Error(
+      "The encryption key changed while preparing the file transfer.",
+    );
+  }
+  return displayName;
+}
+
+async function preparePlainTransfer(
+  item: MoveClipboardItem,
+  request: MoveFileRequest,
+  name: string | undefined,
+  overwrite: boolean,
+  operation: FileTransferOperation,
+  names: FolderTransferNames,
+): Promise<string | undefined> {
+  const displayName = name ?? item.file?.name;
+  if (useVault.getState().isUnlocked && displayName !== undefined) {
+    const existingName = await names.check(
+      displayName,
+      getSourceFileId(item, operation),
+      overwrite,
+      false,
+    );
+    if (existingName !== undefined) {
+      request.name = existingName;
+    }
+  }
+  if (name !== undefined) {
+    request.name = name;
+  }
+  return displayName;
+}
+
+function getSourceFileId(
+  item: MoveClipboardItem,
+  operation: FileTransferOperation,
+): string | undefined {
+  switch (operation) {
+    case "move":
+      return item.id;
+    case "copy":
+      return undefined;
+  }
 }
