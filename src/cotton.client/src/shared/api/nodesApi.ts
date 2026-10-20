@@ -93,6 +93,7 @@ export interface RestoreOptions {
 }
 
 const nodeListSchema = z.array(nodeDtoSchema);
+const NODE_COPY_TIMEOUT_MS = 10 * 60_000;
 
 export const nodesApi = {
   copyNode: async (
@@ -100,7 +101,9 @@ export const nodesApi = {
     request: MoveNodeRequest,
   ): Promise<NodeDto> => {
     const url = `/layouts/nodes/${nodeId}/copy`;
-    const response = await httpClient.post<JsonValue>(url, request);
+    const response = await httpClient.post<JsonValue>(url, request, {
+      timeout: NODE_COPY_TIMEOUT_MS,
+    });
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
