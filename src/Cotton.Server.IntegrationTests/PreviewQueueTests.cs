@@ -65,17 +65,17 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task PreviewQueue_EncryptedAlias_DoesNotSupplyCandidates()
+        public async Task PreviewQueue_SupportedAlias_IgnoresClientEncryptionMetadata()
         {
             Pipeline.SetBearer(await Pipeline.LoginAsync());
             NodeDto root = await Pipeline.GetRootNodeAsync();
             byte[] bytes = CreateGradientPngBytes(48, 32);
             NodeFileManifestDto opaque = await Pipeline.UploadAndCreateFileAsync(root.Id, "opaque", "image/png", bytes);
-            NodeFileManifestDto encrypted = await Pipeline.UploadAndCreateFileAsync(root.Id, "encrypted.png", "image/png", bytes);
+            NodeFileManifestDto alias = await Pipeline.UploadAndCreateFileAsync(root.Id, "photo.png", "image/png", bytes);
             await using (AsyncServiceScope scope = _factory!.Services.CreateAsyncScope())
             {
                 CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-                NodeFile file = await dbContext.NodeFiles.SingleAsync(file => file.Id == encrypted.Id);
+                NodeFile file = await dbContext.NodeFiles.SingleAsync(file => file.Id == alias.Id);
                 file.Metadata = new Dictionary<string, string> { ["isClientEncrypted"] = "true" };
                 await dbContext.SaveChangesAsync();
             }
@@ -83,8 +83,46 @@ namespace Cotton.Server.IntegrationTests
             await Pipeline.ExecuteGeneratePreviewJobAsync();
 
             FileManifestPreviewState result = await Pipeline.GetFileManifestByNodeFileIdAsync(opaque.Id);
-            Assert.That(result.SmallFilePreviewHash, Is.Null);
-            Assert.That(result.PreviewGenerationError, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.SmallFilePreviewHash, Is.Not.Null);
+                Assert.That(result.PreviewGenerationError, Is.Null);
+            });
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task PreviewQueue_UnsupportedType_SkipsContentWithoutInspectingMetadata(bool markedEncrypted)
+        {
+            Pipeline.SetBearer(await Pipeline.LoginAsync());
+            NodeDto root = await Pipeline.GetRootNodeAsync();
+            NodeFileManifestDto uploaded = await Pipeline.UploadAndCreateFileAsync(
+                root.Id, Guid.NewGuid().ToString(), "application/octet-stream", "Opaque content"u8.ToArray());
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            NodeFile file = await dbContext.NodeFiles.SingleAsync(file => file.Id == uploaded.Id);
+            if (markedEncrypted)
+            {
+                file.Metadata = new Dictionary<string, string> { ["isClientEncrypted"] = "true" };
+                await dbContext.SaveChangesAsync();
+            }
+            Assert.That(file.ContentType, Is.EqualTo("application/octet-stream"));
+            dbContext.ChangeTracker.Clear();
+            CallbackStoragePipeline storage = new(scope.ServiceProvider.GetRequiredService<IStoragePipeline>(),
+                _ => throw new InvalidOperationException("Unsupported content must not be read."));
+
+            await PreviewTestPipeline.ExecutePreviewWithStorageAsync(scope.ServiceProvider, storage);
+            await PreviewTestPipeline.ExecutePreviewWithStorageAsync(scope.ServiceProvider, storage);
+
+            FileManifestPreviewState result = await Pipeline.GetFileManifestByNodeFileIdAsync(uploaded.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(storage.ReadCount, Is.Zero);
+                Assert.That(storage.WriteCount, Is.Zero);
+                Assert.That(result.SmallFilePreviewHash, Is.Null);
+                Assert.That(result.PreviewGenerationError, Is.EqualTo("No preview generator matches the file names."));
+            });
+            Assert.That(await Pipeline.GetPendingPreviewIdsAsync(), Does.Not.Contain(uploaded.FileManifestId));
         }
 
         [Test]
