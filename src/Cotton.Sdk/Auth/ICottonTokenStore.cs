@@ -8,6 +8,11 @@ namespace Cotton.Sdk.Auth
     /// <summary>
     /// Persists Cotton access and refresh tokens for SDK requests.
     /// </summary>
+    /// <remarks>
+    /// Share one instance between SDK clients using the same server and account. The SDK coordinates
+    /// refresh, sign-in persistence and logout per store instance within the process. Implementations
+    /// must support concurrent reads and persist a complete pair before SaveAsync completes.
+    /// </remarks>
     public interface ICottonTokenStore
     {
         /// <summary>

@@ -35,7 +35,7 @@ namespace Cotton.Sdk.Internal
             _options = options;
             _logger = logger ?? NullLogger<CottonHttpTransport>.Instance;
             _sender = new CottonHttpSender(_httpClient, _logger);
-            _tokenRefreshManager = new CottonTokenRefreshManager(tokenStore, SendRefreshRequestAsync, _logger);
+            _tokenRefreshManager = new CottonTokenRefreshManager(tokenStore, SendRefreshRequestAsync, SendLogoutRequestAsync, _logger);
             if (_httpClient.BaseAddress is null)
             {
                 _httpClient.BaseAddress = options.BaseAddress;
@@ -338,15 +338,25 @@ namespace Cotton.Sdk.Internal
             return _tokenRefreshManager.SaveAsync(tokens, cancellationToken);
         }
 
-        internal Task ClearTokenPairAsync(CancellationToken cancellationToken)
+        internal Task LogoutAsync(string? refreshToken, CancellationToken cancellationToken)
         {
-            return _tokenRefreshManager.ClearAsync(cancellationToken);
+            return _tokenRefreshManager.LogoutAsync(refreshToken, cancellationToken);
+        }
+
+        private Task SendLogoutRequestAsync(string? refreshToken, CancellationToken cancellationToken)
+        {
+            string path = string.IsNullOrWhiteSpace(refreshToken)
+                ? Routes.V1.Auth + "/logout"
+                : Routes.V1.Auth + "/logout?refreshToken=" + Uri.EscapeDataString(refreshToken);
+            return SendNoContentAsync(HttpMethod.Post, path, authorize: false, cancellationToken: cancellationToken);
         }
 
         private async Task<TokenPairDto> SendRefreshRequestAsync(
             string refreshToken,
             CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            using CancellationTokenSource refreshDeadline = new(_httpClient.Timeout);
             string path = Routes.V1.Auth + "/refresh?refreshToken=" + Uri.EscapeDataString(refreshToken);
             using HttpRequestMessage request = new(
                 HttpMethod.Post,
@@ -356,12 +366,12 @@ namespace Cotton.Sdk.Internal
                 request,
                 HttpMethod.Post,
                 path,
-                cancellationToken).ConfigureAwait(false);
+                refreshDeadline.Token).ConfigureAwait(false);
             return await ReadRequiredJsonAsync<TokenPairDto>(
                 response,
                 HttpMethod.Post,
                 path,
-                cancellationToken).ConfigureAwait(false);
+                refreshDeadline.Token).ConfigureAwait(false);
         }
 
         private async Task RefreshAndLogRetryAsync(

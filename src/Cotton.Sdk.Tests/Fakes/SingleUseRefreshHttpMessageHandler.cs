@@ -8,6 +8,10 @@ namespace Cotton.Sdk.Tests.Fakes
 {
     internal class SingleUseRefreshHttpMessageHandler : HttpMessageHandler
     {
+        public CancellationTokenSource? CancelDuringResponse { get; set; }
+
+        public bool StallRefreshResponse { get; set; }
+
         public int RefreshCount { get; private set; }
 
         public int RejectedRefreshCount { get; private set; }
@@ -33,6 +37,15 @@ namespace Cotton.Sdk.Tests.Fakes
                 RefreshCount++;
                 if (RefreshCount == 1 && path.EndsWith("=old-refresh", StringComparison.Ordinal))
                 {
+                    if (CancelDuringResponse is not null)
+                    {
+                        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                        {
+                            Content = new StreamContent(new CancelingRefreshStream(
+                                CancelDuringResponse, StallRefreshResponse)),
+                        });
+                    }
+
                     return Task.FromResult(CreateJsonResponse(HttpStatusCode.OK, new
                     {
                         accessToken = "new-access",

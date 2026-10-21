@@ -14,12 +14,10 @@ namespace Cotton.Sdk.Auth
     public class CottonAuthClient : ICottonAuthClient
     {
         private readonly CottonHttpTransport _transport;
-        private readonly ICottonTokenStore _tokenStore;
 
-        internal CottonAuthClient(CottonHttpTransport transport, ICottonTokenStore tokenStore)
+        internal CottonAuthClient(CottonHttpTransport transport)
         {
             _transport = transport;
-            _tokenStore = tokenStore;
         }
 
         /// <summary>
@@ -148,43 +146,17 @@ namespace Cotton.Sdk.Auth
         /// <summary>
         /// Refreshes an access token using a stored or explicit refresh token.
         /// </summary>
-        public async Task<TokenPairDto> RefreshAsync(string? refreshToken = null, CancellationToken cancellationToken = default)
+        public Task<TokenPairDto> RefreshAsync(string? refreshToken = null, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(refreshToken))
-            {
-                TokenPairDto? stored = await _tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
-                refreshToken = stored?.RefreshToken;
-            }
-
-            return await _transport.RefreshTokenAsync(refreshToken, cancellationToken).ConfigureAwait(false);
+            return _transport.RefreshTokenAsync(refreshToken, cancellationToken);
         }
 
         /// <summary>
         /// Revokes a refresh token and clears the token store.
         /// </summary>
-        public async Task LogoutAsync(string? refreshToken = null, CancellationToken cancellationToken = default)
+        public Task LogoutAsync(string? refreshToken = null, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(refreshToken))
-            {
-                TokenPairDto? stored = await _tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
-                refreshToken = stored?.RefreshToken;
-            }
-
-            string path = string.IsNullOrWhiteSpace(refreshToken)
-                ? Routes.V1.Auth + "/logout"
-                : Routes.V1.Auth + "/logout?refreshToken=" + Uri.EscapeDataString(refreshToken);
-            try
-            {
-                await _transport.SendNoContentAsync(
-                    HttpMethod.Post,
-                    path,
-                    authorize: false,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                await _transport.ClearTokenPairAsync(cancellationToken).ConfigureAwait(false);
-            }
+            return _transport.LogoutAsync(refreshToken, cancellationToken);
         }
 
         /// <summary>

@@ -144,12 +144,17 @@ namespace Cotton.Sdk.Tests
             Assert.That(handler.Requests, Has.Count.EqualTo(2));
         }
 
-        [Test]
-        public async Task IncompleteSuccessfulRefreshPreservesExistingPair()
+        [TestCase(null, "new-refresh")]
+        [TestCase("", "new-refresh")]
+        [TestCase(" ", "new-refresh")]
+        [TestCase("new-access", null)]
+        [TestCase("new-access", "")]
+        [TestCase("new-access", " ")]
+        public async Task IncompleteSuccessfulRefreshPreservesExistingPair(string? accessToken, string? refreshToken)
         {
             QueuedHttpMessageHandler handler = new();
             handler.Enqueue(HttpStatusCode.Unauthorized);
-            handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "new-access" });
+            handler.EnqueueJson(HttpStatusCode.OK, new { accessToken, refreshToken });
             InMemoryCottonTokenStore store = await CreateStoreAsync();
             using HttpClient httpClient = new(handler);
             await using CottonCloudClient client = CreateClient(httpClient, store);
@@ -196,6 +201,41 @@ namespace Cotton.Sdk.Tests
             await Assert.ThrowsAsync<CottonTokenRefreshException>(async () => await client.Auth.MeAsync());
             Assert.That((await store.GetAsync())?.AccessToken, Is.EqualTo("old-access"));
             Assert.That(handler.Requests, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public async Task UnauthorizedRetryDoesNotStartAnotherRotation()
+        {
+            QueuedHttpMessageHandler handler = new();
+            handler.Enqueue(HttpStatusCode.Unauthorized);
+            handler.EnqueueJson(HttpStatusCode.OK, new { accessToken = "new-access", refreshToken = "new-refresh" });
+            handler.Enqueue(HttpStatusCode.Unauthorized);
+            InMemoryCottonTokenStore store = await CreateStoreAsync();
+            using HttpClient httpClient = new(handler);
+            await using CottonCloudClient client = CreateClient(httpClient, store);
+
+            CottonApiException? failure = await Assert.ThrowsAsync<CottonApiException>(async () => await client.Auth.MeAsync());
+
+            Assert.That(failure?.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+            Assert.That(handler.Requests, Has.Count.EqualTo(3));
+            Assert.That((await store.GetAsync())?.RefreshToken, Is.EqualTo("new-refresh"));
+        }
+
+        [TestCase("")]
+        [TestCase("null")]
+        [TestCase("{broken")]
+        public async Task InvalidSuccessfulRefreshDoesNotClearOrReplayCredentials(string responseBody)
+        {
+            QueuedHttpMessageHandler handler = new();
+            handler.Enqueue(HttpStatusCode.OK, responseBody);
+            InMemoryCottonTokenStore store = await CreateStoreAsync();
+            using HttpClient httpClient = new(handler);
+            await using CottonCloudClient client = CreateClient(httpClient, store);
+
+            await Assert.ThrowsAsync<CottonTokenRefreshException>(async () => await client.Auth.RefreshAsync());
+
+            Assert.That(handler.Requests, Has.Count.EqualTo(1));
+            Assert.That((await store.GetAsync())?.RefreshToken, Is.EqualTo("old-refresh"));
         }
 
         private static async Task<InMemoryCottonTokenStore> CreateStoreAsync()
