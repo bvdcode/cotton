@@ -33,6 +33,19 @@ namespace Cotton.Server.Extensions
                 .ExecuteDeleteAsync(cancellationToken);
         }
 
+        public static Task<int> DeleteFileManifestChunksAsync(
+            this DbSet<FileManifestChunk> manifestChunks,
+            IReadOnlyCollection<Guid> manifestIds,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(manifestChunks);
+            ArgumentNullException.ThrowIfNull(manifestIds);
+
+            return manifestChunks
+                .Where(chunk => manifestIds.Contains(chunk.FileManifestId))
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+
         public static Task<int> DeleteExpiredSyncChangesAsync(
             this DbSet<SyncChange> changes,
             DateTime cutoff,

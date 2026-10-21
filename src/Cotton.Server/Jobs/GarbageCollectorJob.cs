@@ -106,9 +106,7 @@ namespace Cotton.Server.Jobs
             {
                 await _dbContext.FileEmbeddings.DeleteFileEmbeddingsAsync(manifestIds, ct);
 
-                await _dbContext.FileManifestChunks
-                    .Where(m => manifestIds.Contains(m.FileManifestId))
-                    .ExecuteDeleteAsync(ct);
+                await _dbContext.FileManifestChunks.DeleteFileManifestChunksAsync(manifestIds, ct);
 
                 int deletedManifests = await _dbContext.FileManifests
                     .Where(fm => manifestIds.Contains(fm.Id) && !fm.NodeFiles.Any())
