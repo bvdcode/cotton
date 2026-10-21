@@ -2,8 +2,8 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Server.Extensions;
 using EasyExtensions.Quartz.Attributes;
-using Microsoft.EntityFrameworkCore;
 using Quartz;
 
 namespace Cotton.Server.Jobs
@@ -13,7 +13,7 @@ namespace Cotton.Server.Jobs
         CottonDbContext _dbContext,
         ILogger<SyncChangeRetentionJob> _logger) : IJob
     {
-        private static readonly TimeSpan RetentionPeriod = TimeSpan.FromDays(365);
+        private static readonly TimeSpan RetentionPeriod = TimeSpan.FromDays(30);
 
         public async Task Execute(IJobExecutionContext context)
         {
@@ -31,13 +31,7 @@ namespace Cotton.Server.Jobs
 
         internal Task<int> DeleteExpiredChangesAsync(DateTime cutoff, CancellationToken cancellationToken)
         {
-            return _dbContext.SyncChanges
-                .Where(x => x.CreatedAt < cutoff)
-                .Where(x => _dbContext.SyncChanges.Any(newerExpired =>
-                    newerExpired.OwnerId == x.OwnerId
-                    && newerExpired.CreatedAt < cutoff
-                    && newerExpired.Id > x.Id))
-                .ExecuteDeleteAsync(cancellationToken);
+            return _dbContext.SyncChanges.DeleteExpiredSyncChangesAsync(cutoff, cancellationToken);
         }
     }
 }

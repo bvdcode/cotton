@@ -87,7 +87,7 @@ namespace Cotton.Server.IntegrationTests
             await SignInAsync();
             Guid ownerId = await GetUserIdAsync(Username);
 
-            DateTime cutoff = DateTime.UtcNow.AddDays(-365);
+            DateTime cutoff = DateTime.UtcNow.AddDays(-30);
             long oldestExpiredId = await AddSyncChangeAsync(ownerId, "oldest-expired");
             long markerId = await AddSyncChangeAsync(ownerId, "cursor-marker");
             await SetSyncChangeCreatedAtAsync(oldestExpiredId, cutoff.AddDays(-2));
