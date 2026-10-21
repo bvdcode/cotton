@@ -20,6 +20,19 @@ namespace Cotton.Server.Extensions
 #pragma warning disable EEX0015
     internal static class ApprovedBulkMutationExtensions
     {
+        public static Task<int> DeleteFileEmbeddingsAsync(
+            this DbSet<FileEmbedding> embeddings,
+            IReadOnlyCollection<Guid> manifestIds,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(embeddings);
+            ArgumentNullException.ThrowIfNull(manifestIds);
+
+            return embeddings
+                .Where(embedding => manifestIds.Contains(embedding.FileManifestId))
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+
         public static Task<int> DeleteExpiredSyncChangesAsync(
             this DbSet<SyncChange> changes,
             DateTime cutoff,

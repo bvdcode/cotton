@@ -104,9 +104,7 @@ namespace Cotton.Server.Jobs
             await using IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(ct);
             try
             {
-                await _dbContext.FileEmbeddings
-                    .Where(embedding => manifestIds.Contains(embedding.FileManifestId))
-                    .ExecuteDeleteAsync(ct);
+                await _dbContext.FileEmbeddings.DeleteFileEmbeddingsAsync(manifestIds, ct);
 
                 await _dbContext.FileManifestChunks
                     .Where(m => manifestIds.Contains(m.FileManifestId))
