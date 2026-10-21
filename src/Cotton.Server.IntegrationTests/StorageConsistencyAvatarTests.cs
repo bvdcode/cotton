@@ -23,6 +23,7 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task RunOnce_ClearsMissingAvatarsThroughTrackingAndPreservesSignatures()
         {
+            await RecreateDatabaseAsync();
             CottonEncryptionSettings settings = new()
             {
                 MasterEncryptionKey = Convert.ToBase64String(SHA256.HashData("avatar-cleanup-contract"u8))
@@ -34,11 +35,9 @@ namespace Cotton.Server.IntegrationTests
                 new DatabaseIntegrityDescriptorRegistry([descriptor, new ChunkIntegrityDescriptor()]),
                 NullDatabaseIntegrityFailureReporter.Instance);
             DbContextOptionsBuilder<CottonDbContext> options = new();
-            options.UseNpgsql(DbContext.Database.GetConnectionString());
+            options.UseNpgsql(TestDataSource);
             options.AddInterceptors(new DatabaseIntegritySaveChangesInterceptor(signer));
             await using CottonDbContext context = new(options.Options);
-            await context.Database.EnsureDeletedAsync();
-            await context.Database.EnsureCreatedAsync();
 
             byte[] missingHash = SHA256.HashData("missing-avatar"u8);
             byte[] existingHash = SHA256.HashData("existing-avatar"u8);
@@ -65,7 +64,7 @@ namespace Cotton.Server.IntegrationTests
             ChunkUsageService usage = new(context, storage, new StaticBackupManifestService(null),
                 new DatabaseBackupKeyProvider(settings), NullLogger<ChunkUsageService>.Instance);
             ServiceCollection services = new();
-            services.AddDbContext<CottonDbContext>(builder => builder.UseNpgsql(context.Database.GetConnectionString()));
+            services.AddDbContext<CottonDbContext>(builder => builder.UseNpgsql(TestDataSource));
             await using ServiceProvider provider = services.BuildServiceProvider();
             StorageConsistencyJob job = new(storage, context, new NoopNotificationsProvider(), usage,
                 NullLogger<StorageConsistencyJob>.Instance, provider.GetRequiredService<IServiceScopeFactory>());

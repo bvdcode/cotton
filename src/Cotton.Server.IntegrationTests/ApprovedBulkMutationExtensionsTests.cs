@@ -19,9 +19,7 @@ namespace Cotton.Server.IntegrationTests
         [SetUp]
         public async Task CreateDatabase()
         {
-            DbContext.ChangeTracker.Clear();
-            await DbContext.Database.EnsureDeletedAsync();
-            await DbContext.Database.EnsureCreatedAsync();
+            await RecreateDatabaseAsync();
         }
 
         [Test]

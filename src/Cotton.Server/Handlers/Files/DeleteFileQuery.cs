@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Extensions;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
@@ -76,9 +77,7 @@ namespace Cotton.Server.Handlers.Files
                 : null;
 
             long removedVersionBytes = await _versions.DeleteLineageVersionsAsync(command.UserId, nodeFile.Id, ct);
-            await _dbContext.DownloadTokens
-                .Where(t => t.CreatedByUserId == command.UserId && t.NodeFileId == nodeFile.Id)
-                .ExecuteDeleteAsync(ct);
+            await _dbContext.DownloadTokens.DeleteUserDownloadTokensForFileAsync(command.UserId, nodeFile.Id, ct);
             long removedBytes = nodeFile.FileManifest.SizeBytes + removedVersionBytes;
             if (nodeFile.Node.Type == NodeType.Default)
             {

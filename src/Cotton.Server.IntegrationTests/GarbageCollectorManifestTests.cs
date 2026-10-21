@@ -31,8 +31,7 @@ namespace Cotton.Server.IntegrationTests
         [OneTimeSetUp]
         public async Task CreateDatabase()
         {
-            await DbContext.Database.EnsureDeletedAsync();
-            await DbContext.Database.EnsureCreatedAsync();
+            await RecreateDatabaseAsync();
             _keys = new(new CottonEncryptionSettings
             {
                 MasterEncryptionKey = Convert.ToBase64String(SHA256.HashData("manifest-garbage-collection"u8))
@@ -162,7 +161,7 @@ namespace Cotton.Server.IntegrationTests
         {
             DatabaseIntegrityChangeSigner signer = new(_protector, _descriptors, NullDatabaseIntegrityFailureReporter.Instance);
             DbContextOptionsBuilder<CottonDbContext> options = new();
-            options.UseNpgsql(DbContext.Database.GetConnectionString());
+            options.UseNpgsql(TestDataSource);
             options.AddInterceptors(new DatabaseIntegritySaveChangesInterceptor(signer));
             options.AddInterceptors(interceptors);
             return new(options.Options);

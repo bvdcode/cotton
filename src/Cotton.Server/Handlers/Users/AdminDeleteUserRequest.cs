@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Extensions;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -108,9 +109,7 @@ namespace Cotton.Server.Handlers.Users
                 await DeleteUserFileTreeAsync(userId, cancellationToken);
                 await DeleteOrphanedManifestsAsync(candidateManifestIds, cancellationToken);
 
-                int deletedUsers = await _dbContext.Users
-                    .Where(x => x.Id == userId)
-                    .ExecuteDeleteAsync(cancellationToken);
+                int deletedUsers = await _dbContext.Users.DeleteUserAsync(userId, cancellationToken);
                 if (deletedUsers != 1)
                 {
                     throw new InvalidOperationException("The user account changed while it was being deleted.");
@@ -132,55 +131,31 @@ namespace Cotton.Server.Handlers.Users
 
         private async Task DeleteDirectUserRecordsAsync(Guid userId, CancellationToken cancellationToken)
         {
-            await _dbContext.DownloadTokens
-                .Where(x => x.CreatedByUserId == userId || x.NodeFile.OwnerId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.NodeShareTokens
-                .Where(x => x.CreatedByUserId == userId || x.Node.OwnerId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.Notifications
-                .Where(x => x.UserId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.UserPasskeyCredentials
-                .Where(x => x.UserId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.UserExternalIdentities
-                .Where(x => x.UserId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.OidcLoginStates
-                .Where(x => x.LinkUserId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.RefreshTokens
-                .Where(x => x.UserId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.SyncChanges
-                .Where(x => x.OwnerId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.ChunkOwnerships
-                .Where(x => x.OwnerId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
+            await _dbContext.DownloadTokens.DeleteDownloadTokensForUserAsync(userId, cancellationToken);
+            await _dbContext.NodeShareTokens.DeleteNodeShareTokensForUserAsync(userId, cancellationToken);
+            await _dbContext.Notifications.DeleteNotificationsForUserAsync(userId, cancellationToken);
+            await _dbContext.UserPasskeyCredentials.DeletePasskeysForUserAsync(userId, cancellationToken);
+            await _dbContext.UserExternalIdentities.DeleteExternalIdentitiesForUserAsync(userId, cancellationToken);
+            await _dbContext.OidcLoginStates.DeleteOidcStatesForUserAsync(userId, cancellationToken);
+            await _dbContext.RefreshTokens.DeleteRefreshTokensForUserAsync(userId, cancellationToken);
+            await _dbContext.SyncChanges.DeleteSyncChangesForUserAsync(userId, cancellationToken);
+            await _dbContext.ChunkOwnerships.DeleteChunkOwnershipsForUserAsync(userId, cancellationToken);
         }
 
         private async Task DeleteUserFileTreeAsync(Guid userId, CancellationToken cancellationToken)
         {
-            await _dbContext.NodeFiles
-                .Where(x => x.OwnerId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
+            await _dbContext.NodeFiles.DeleteNodeFilesForUserAsync(userId, cancellationToken);
 
             while (await _dbContext.Nodes.AnyAsync(x => x.OwnerId == userId, cancellationToken))
             {
-                int deletedNodes = await _dbContext.Nodes
-                    .Where(x => x.OwnerId == userId && !x.Children.Any())
-                    .ExecuteDeleteAsync(cancellationToken);
+                int deletedNodes = await _dbContext.Nodes.DeleteLeafNodesForUserAsync(userId, cancellationToken);
                 if (deletedNodes == 0)
                 {
                     throw new InvalidOperationException("The user folder tree contains unresolved references.");
                 }
             }
 
-            await _dbContext.UserLayouts
-                .Where(x => x.OwnerId == userId)
-                .ExecuteDeleteAsync(cancellationToken);
+            await _dbContext.UserLayouts.DeleteLayoutsForUserAsync(userId, cancellationToken);
         }
 
         private async Task DeleteOrphanedEmbeddingsAsync(
@@ -200,9 +175,7 @@ namespace Cotton.Server.Handlers.Users
                     return;
                 }
 
-                await _dbContext.FileEmbeddings
-                    .Where(embedding => embeddingIds.Contains(embedding.Id))
-                    .ExecuteDeleteAsync(cancellationToken);
+                await _dbContext.FileEmbeddings.DeleteFileEmbeddingsByIdAsync(embeddingIds, cancellationToken);
             }
         }
 
@@ -226,12 +199,8 @@ namespace Cotton.Server.Handlers.Users
             }
 
             await DeleteOrphanedEmbeddingsAsync(orphanManifestIds, cancellationToken);
-            await _dbContext.FileManifestChunks
-                .Where(x => orphanManifestIds.Contains(x.FileManifestId))
-                .ExecuteDeleteAsync(cancellationToken);
-            int deletedManifests = await _dbContext.FileManifests
-                .Where(x => orphanManifestIds.Contains(x.Id) && !x.NodeFiles.Any())
-                .ExecuteDeleteAsync(cancellationToken);
+            await _dbContext.FileManifestChunks.DeleteFileManifestChunksAsync(orphanManifestIds, cancellationToken);
+            int deletedManifests = await _dbContext.FileManifests.DeleteOrphanedFileManifestsAsync(orphanManifestIds, cancellationToken);
             if (deletedManifests != orphanManifestIds.Count)
             {
                 throw new InvalidOperationException("A file manifest became referenced while the account was being deleted.");

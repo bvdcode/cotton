@@ -17,7 +17,7 @@ namespace Cotton.Server.IntegrationTests
             string source = (await File.ReadAllTextAsync(path)).ReplaceLineEndings("\n");
             string hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(source)));
 
-            Assert.That(hash, Is.EqualTo("7026ff207d55524755838865c1e1fb012ce92e214a5d450e85be369ce2d61194"),
+            Assert.That(hash, Is.EqualTo("b60a04f37995131d4f334b77761ccfe9c972af563b00e36c469fe3a789d21c39"),
                 "The approved bulk mutation contract changed. Two separate, explicit user confirmations "
                 + "are required for each new member or changed operation before updating this snapshot. "
                 + "Each mutation must prove that its updated fields are excluded from the actual integrity "

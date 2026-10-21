@@ -386,9 +386,7 @@ namespace Cotton.Server.Jobs
                 {
                     await _dbContext.ChunkOwnerships.DeleteChunkOwnershipsAsync(eligibleHashes, ct);
 
-                    dbDeleted = await _dbContext.Chunks
-                        .Where(c => eligibleHashes.Contains(c.Hash))
-                        .ExecuteDeleteAsync(ct);
+                    dbDeleted = await _dbContext.Chunks.DeleteChunksAsync(eligibleHashes, ct);
 
                     await transaction.CommitAsync(ct);
                 }

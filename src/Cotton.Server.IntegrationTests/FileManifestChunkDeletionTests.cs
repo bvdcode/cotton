@@ -21,8 +21,7 @@ namespace Cotton.Server.IntegrationTests
         [OneTimeSetUp]
         public async Task CreateDatabase()
         {
-            await DbContext.Database.EnsureDeletedAsync();
-            await DbContext.Database.EnsureCreatedAsync();
+            await RecreateDatabaseAsync();
         }
 
         [SetUp]
@@ -52,7 +51,7 @@ namespace Cotton.Server.IntegrationTests
             DatabaseIntegrityDescriptorRegistry descriptors = new([manifestDescriptor, linkDescriptor, chunkDescriptor]);
             DatabaseIntegrityChangeSigner signer = new(protector, descriptors, NullDatabaseIntegrityFailureReporter.Instance);
             DbContextOptionsBuilder<CottonDbContext> options = new();
-            options.UseNpgsql(DbContext.Database.GetConnectionString());
+            options.UseNpgsql(TestDataSource);
             options.AddInterceptors(new DatabaseIntegritySaveChangesInterceptor(signer));
             await using CottonDbContext context = new(options.Options);
             FileManifest[] manifests = [CreateManifest(), CreateManifest(), CreateManifest()];
