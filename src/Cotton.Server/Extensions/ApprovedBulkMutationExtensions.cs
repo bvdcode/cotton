@@ -46,6 +46,19 @@ namespace Cotton.Server.Extensions
                 .ExecuteDeleteAsync(cancellationToken);
         }
 
+        public static Task<int> DeleteChunkOwnershipsAsync(
+            this DbSet<ChunkOwnership> ownerships,
+            IReadOnlyCollection<byte[]> chunkHashes,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(ownerships);
+            ArgumentNullException.ThrowIfNull(chunkHashes);
+
+            return ownerships
+                .Where(ownership => chunkHashes.Contains(ownership.ChunkHash))
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+
         public static Task<int> DeleteExpiredSyncChangesAsync(
             this DbSet<SyncChange> changes,
             DateTime cutoff,
