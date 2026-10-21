@@ -1,6 +1,8 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using System.Collections.Generic;
+
 namespace Cotton.Nodes
 {
     /// <summary>
@@ -12,5 +14,8 @@ namespace Cotton.Nodes
         /// Gets or sets the new display name.
         /// </summary>
         public string Name { get; set; } = string.Empty;
+
+        /// <summary>Metadata changes stored with the name; null values remove keys.</summary>
+        public Dictionary<string, string?>? Metadata { get; set; }
     }
 }

@@ -27,7 +27,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> CopyNode(Guid nodeId, [FromBody] CopyItemRequestDto request)
         {
             NodeDto copy = await _mediator.Send(new CopyNodeCommand(
-                User.GetUserId(), nodeId, request.ParentId, request.Name), HttpContext.RequestAborted);
+                User.GetUserId(), nodeId, request.ParentId, request.Name, request.Metadata), HttpContext.RequestAborted);
             return Ok(copy);
         }
 
@@ -115,6 +115,7 @@ namespace Cotton.Server.Controllers
                 NodeId = nodeId,
                 ParentId = request.ParentId,
                 Name = request.Name,
+                Metadata = request.Metadata,
                 UserId = User.GetUserId(),
             };
             NodeDto dto = await _mediator.Send(command);
@@ -129,7 +130,7 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             RenameNodeResult result = await _mediator.Send(
-                new RenameNodeRequest(userId, nodeId, request.Name),
+                new RenameNodeRequest(userId, nodeId, request.Name, request.Metadata),
                 HttpContext.RequestAborted);
             if (result.Status != RenameNodeStatus.Renamed)
             {
@@ -225,7 +226,7 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             CreateNodeResult result = await _mediator.Send(
-                new CreateNodeRequest(userId, request.ParentId, request.Name),
+                new CreateNodeRequest(userId, request.ParentId, request.Name, request.Metadata),
                 HttpContext.RequestAborted);
             if (result.Status != CreateNodeStatus.Created)
             {

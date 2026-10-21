@@ -18,7 +18,8 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Nodes
 {
-    public record CopyNodeCommand(Guid UserId, Guid NodeId, Guid ParentId, string? Name) : IRequest<NodeDto>;
+    public record CopyNodeCommand(Guid UserId, Guid NodeId, Guid ParentId, string? Name,
+        Dictionary<string, string?>? Metadata = null) : IRequest<NodeDto>;
 
     public class CopyNodeCommandHandler(
         CottonDbContext _dbContext,
@@ -44,6 +45,7 @@ namespace Cotton.Server.Handlers.Nodes
                 Node parent = await _mediator.Send(new PrepareCopyDestinationRequest(
                     request.UserId, source.LayoutId, request.ParentId, request.Name ?? source.Name), ct);
                 copy = source.CopyTo(parent, request.Name ?? source.Name);
+                copy.Metadata = NodeMetadataPatch.Apply(copy.Metadata, request.Metadata);
                 _dbContext.Nodes.Add(copy);
                 _syncChanges.StageFolderChange(SyncChangeKind.FolderCreated, copy, parent.Id);
                 await SaveBatchAsync(ct);

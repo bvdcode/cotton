@@ -20,7 +20,8 @@ namespace Cotton.Server.Handlers.Nodes
     public record RenameNodeRequest(
         Guid UserId,
         Guid NodeId,
-        string Name) : IRequest<RenameNodeResult>;
+        string Name,
+        Dictionary<string, string?>? Metadata = null) : IRequest<RenameNodeResult>;
 
     public class RenameNodeRequestHandler(
         CottonDbContext _dbContext,
@@ -81,6 +82,7 @@ namespace Cotton.Server.Handlers.Nodes
                 }
 
                 node.SetName(request.Name);
+                node.Metadata = NodeMetadataPatch.Apply(node.Metadata, request.Metadata);
                 if (node.ParentId.HasValue)
                 {
                     _syncChanges.StageFolderChange(

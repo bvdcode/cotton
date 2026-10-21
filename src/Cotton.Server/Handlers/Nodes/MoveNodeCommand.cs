@@ -30,6 +30,8 @@ namespace Cotton.Server.Handlers.Nodes
 
         public string? Name { get; set; }
 
+        public Dictionary<string, string?>? Metadata { get; set; }
+
         public Guid UserId { get; set; }
     }
 
@@ -67,6 +69,7 @@ namespace Cotton.Server.Handlers.Nodes
                 cancellationToken);
 
             Guid oldParentId = node.ParentId!.Value;
+            node.Metadata = NodeMetadataPatch.Apply(node.Metadata, request.Metadata);
             await MoveNodeAsync(node, targetParent, destinationName, oldParentId, cancellationToken);
             await tx.CommitAsync(cancellationToken);
 
