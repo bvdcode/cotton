@@ -4,6 +4,7 @@
 using Cotton.Crypto;
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Services.DatabaseIntegrity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Security.Cryptography;
@@ -44,7 +45,7 @@ namespace Cotton.Server.Services
 
                 Interlocked.Increment(ref _recoveredValueCount);
                 _logger.LogWarning(
-                    "Recovered a database setting encrypted by the obsolete zero-key defect.");
+                    "Recovered a protected database value encrypted by the obsolete zero-key defect.");
                 return plaintext;
             }
         }
@@ -64,22 +65,35 @@ namespace Cotton.Server.Services
             settings ??= await dbContext.ServerSettings
                 .OrderByDescending(x => x.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
+            List<OidcProvider> providers = await dbContext.OidcProviders
+                .Where(x => x.ClientSecretEncrypted != null)
+                .ToListAsync(cancellationToken);
             Volatile.Write(ref _enabled, 0);
             int recoveredValueCount = Interlocked.Exchange(ref _recoveredValueCount, 0);
-            if (settings is null || recoveredValueCount == 0)
+            if (recoveredValueCount == 0)
             {
                 return;
             }
 
-            EntityEntry<CottonServerSettings> entry = dbContext.Entry(settings);
-            MarkModifiedWhenPresent(entry.Property(x => x.CloudServicesTokenEncrypted));
-            MarkModifiedWhenPresent(entry.Property(x => x.OidcClientSecretEncrypted));
-            MarkModifiedWhenPresent(entry.Property(x => x.S3SecretAccessKeyEncrypted));
-            MarkModifiedWhenPresent(entry.Property(x => x.SmtpPasswordEncrypted));
+            IDatabaseIntegrityVerifier integrity = scopedServices.GetRequiredService<IDatabaseIntegrityVerifier>();
+            foreach (OidcProvider provider in providers)
+            {
+                integrity.RequireValid(dbContext, provider, "startup.oidc-secret-recovery");
+                dbContext.Entry(provider).Property(x => x.ClientSecretEncrypted).IsModified = true;
+            }
+
+            if (settings is not null)
+            {
+                EntityEntry<CottonServerSettings> entry = dbContext.Entry(settings);
+                MarkModifiedWhenPresent(entry.Property(x => x.CloudServicesTokenEncrypted));
+                MarkModifiedWhenPresent(entry.Property(x => x.OidcClientSecretEncrypted));
+                MarkModifiedWhenPresent(entry.Property(x => x.S3SecretAccessKeyEncrypted));
+                MarkModifiedWhenPresent(entry.Property(x => x.SmtpPasswordEncrypted));
+            }
 
             await dbContext.SaveChangesAsync(cancellationToken);
             _logger.LogWarning(
-                "Re-encrypted {RecoveredValueCount} recovered database settings with the configured master key.",
+                "Re-encrypted {RecoveredValueCount} recovered database values with the configured master key.",
                 recoveredValueCount);
         }
 
@@ -102,7 +116,7 @@ namespace Cotton.Server.Services
                 or InvalidDataException
                 or EndOfStreamException)
             {
-                _logger.LogDebug(ex, "The database setting is not recoverable with the obsolete zero key.");
+                _logger.LogDebug(ex, "The protected database value is not recoverable with the obsolete zero key.");
                 plaintext = string.Empty;
                 return false;
             }
