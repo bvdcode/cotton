@@ -28,6 +28,7 @@ export interface LayoutStatsDto {
 }
 
 export interface LayoutSearchResultDto {
+  ancestors?: NodeDto[];
   nodes: NodeDto[];
   files: NodeFileManifestDto[];
   nodePaths: Record<string, string>;
@@ -106,15 +107,7 @@ export const layoutsApi = {
     const headerRaw = response.headers["x-total-count"];
     const totalCount = headerRaw ? parseInt(headerRaw, 10) : 0;
 
-    const files = await applyDisplayMetaToFiles(response.data.files);
-
-    return {
-      data:
-        files === response.data.files
-          ? response.data
-          : { ...response.data, files },
-      totalCount,
-    };
+    return { data: response.data, totalCount };
   },
   getNodeShareLink: async (
     nodeId: Guid,

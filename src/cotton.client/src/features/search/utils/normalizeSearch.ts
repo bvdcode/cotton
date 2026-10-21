@@ -32,9 +32,18 @@ export const mergeSearchResults = (
   previous: LayoutSearchResultDto | null,
   next: LayoutSearchResultDto,
 ): LayoutSearchResultDto => {
-  if (!previous) return next;
+  if (!previous) {
+    return next;
+  }
 
   return {
+    ancestors: [
+      ...new Map(
+        [...(previous.ancestors ?? []), ...(next.ancestors ?? [])].map(
+          (node) => [node.id, node],
+        ),
+      ).values(),
+    ],
     nodes: [...(previous.nodes ?? []), ...(next.nodes ?? [])],
     files: [...(previous.files ?? []), ...(next.files ?? [])],
     nodePaths: {

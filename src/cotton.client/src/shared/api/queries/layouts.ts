@@ -1,3 +1,4 @@
+import { useDecryptedNodes } from "../../crypto/useDecryptedNodes";
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { layoutsApi, type LayoutStatsDto, type NodeDto } from "../layoutsApi";
 import type { NodeFileManifestDto } from "../nodesApi";
@@ -64,12 +65,17 @@ export const useRecentFilesQuery = (
 export const usePinnedFoldersQuery = (
   nodeIds: readonly string[],
   enabled = true,
-) =>
-  useQuery<NodeDto[]>({
+) => {
+  const query = useQuery<NodeDto[]>({
     queryKey: queryKeys.layouts.pinnedFolders(nodeIds),
     queryFn: () => layoutsApi.resolveOwnedNodes(nodeIds),
     enabled: enabled && nodeIds.length > 0,
   });
+  const nodes = useDecryptedNodes(query.data ?? EMPTY_NODES);
+  return { ...query, data: query.data ? nodes : undefined };
+};
+
+const EMPTY_NODES: NodeDto[] = [];
 
 export const clearLayoutsCaches = (queryClient: QueryClient): void => {
   queryClient.removeQueries({ queryKey: queryKeys.layouts.all() });

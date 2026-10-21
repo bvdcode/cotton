@@ -1,4 +1,11 @@
 import {
+  hasEncryptedFolderName,
+  readFolderName,
+  applyDisplayMetaToNodes,
+} from "../crypto/folderDisplayMeta";
+import { prepareFolderName } from "../crypto/folderNameOperations";
+import { useVault } from "../crypto/vault";
+import {
   FolderTransferNames,
   DisplayNameConflictError,
 } from "./FolderTransferNames";
@@ -44,14 +51,14 @@ const getMoveItemName = async (item: MoveClipboardItem): Promise<string> => {
   }
 
   const node = await nodesApi.getNode(item.id);
-  return node.name;
+  return readFolderName(node);
 };
 
 const getTargetNames = async (targetParentId: string): Promise<Set<string>> => {
   const { content } = await fetchAllNodeChildren(targetParentId);
   const taken = new Set<string>();
 
-  for (const node of content?.nodes ?? []) {
+  for (const node of await applyDisplayMetaToNodes(content.nodes)) {
     taken.add(getFileNameKey(node.name));
   }
   for (const file of content?.files ?? []) {
@@ -86,25 +93,50 @@ const moveSingleItem = async (
   name: string | undefined,
   overwrite: boolean,
   operation: FileTransferOperation,
+  encryptFolders: boolean,
   folderNames: FolderTransferNames,
 ): Promise<MoveSingleItemResult> => {
   if (item.kind === "folder") {
+    const source = await nodesApi.getNode(item.id);
+    const sourceEncrypted = hasEncryptedFolderName(source.metadata);
+    const encrypted =
+      sourceEncrypted || (operation === "copy" && encryptFolders);
     const request: MoveNodeRequest = { parentId: targetParentId };
-    if (name !== undefined) {
+    const displayName = name ?? (await readFolderName(source));
+    if (encrypted || useVault.getState().isUnlocked) {
+      await folderNames.check(
+        displayName,
+        operation === "move" ? item.id : undefined,
+      );
+    }
+    if (encrypted && (operation === "copy" || name !== undefined)) {
+      Object.assign(
+        request,
+        await prepareFolderName(source, displayName, true),
+      );
+      if (operation === "copy") {
+        request.name = crypto.randomUUID();
+      }
+    } else if (name !== undefined) {
       request.name = name;
     }
+    let folder: NodeDto;
     switch (operation) {
       case "move":
-        return {
-          kind: "folder",
-          folder: await nodesApi.moveNode(item.id, request),
-        };
+        folder = await nodesApi.moveNode(item.id, request);
+        break;
       case "copy":
-        return {
-          kind: "folder",
-          folder: await nodesApi.copyNode(item.id, request),
-        };
+        folder = await nodesApi.copyNode(item.id, request);
+        break;
     }
+    folderNames.record(
+      displayName,
+      folder.id,
+      "Folder",
+      folder.name,
+      encrypted,
+    );
+    return { kind: "folder", folder };
   }
 
   return {
@@ -122,6 +154,7 @@ const moveSingleItem = async (
 
 interface MoveConflictOptions {
   operation?: FileTransferOperation;
+  encryptFolders?: boolean;
   folderNames?: FolderTransferNames;
   confirmConflict: MoveConflictResolver;
   item: MoveClipboardItem;
@@ -158,6 +191,7 @@ export const moveItemWithConflictResolution = async (
         state.name,
         state.overwrite,
         options.operation ?? "move",
+        options.encryptFolders ?? false,
         folderNames,
       );
       return { kind: "moved", moved };

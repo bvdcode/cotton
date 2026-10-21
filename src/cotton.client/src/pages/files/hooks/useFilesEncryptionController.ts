@@ -21,6 +21,7 @@ import {
 } from "../filesPageModel";
 import { useFolderClientEncryptionActions } from "./useFolderClientEncryptionActions";
 import { useFolderEncryptionPolicy } from "./useFolderEncryptionPolicy";
+import { hasEncryptedFolderName } from "@shared/crypto/folderDisplayMeta";
 
 interface UseFilesEncryptionControllerOptions {
   activeCurrentNode: NodeDto | null;
@@ -85,10 +86,7 @@ export const useFilesEncryptionController = ({
   );
   const getChildFolderEncryptionPolicyState = useCallback(
     (folder: NodeDto) =>
-      getFolderEncryptionPolicyState(
-        folder,
-        childFolderEncryptionAncestors,
-      ),
+      getFolderEncryptionPolicyState(folder, childFolderEncryptionAncestors),
     [childFolderEncryptionAncestors],
   );
 
@@ -109,18 +107,21 @@ export const useFilesEncryptionController = ({
     useFolderEncryptionPolicy({ onToast: showToast });
 
   const currentFolderRequiresUnlock = shouldPromptForCurrentFolderUnlock({
-    clientEncryptionEnabled: currentFolderEncryptionPolicy.effectiveEnabled,
+    clientEncryptionEnabled:
+      currentFolderEncryptionPolicy.effectiveEnabled ||
+      hasEncryptedFolderName(activeCurrentNode?.metadata),
     currentNodeId: activeCurrentNode?.id,
     isVaultUnlocked,
     nodeId,
   });
-  const activeUnlockPrompt = useMemo<ClientEncryptionUnlockPrompt | null>(() => {
-    if (currentFolderRequiresUnlock && clientEncryptionEnvelope) {
-      return { kind: "current" };
-    }
+  const activeUnlockPrompt =
+    useMemo<ClientEncryptionUnlockPrompt | null>(() => {
+      if (currentFolderRequiresUnlock && clientEncryptionEnvelope) {
+        return { kind: "current" };
+      }
 
-    return unlockPrompt;
-  }, [clientEncryptionEnvelope, currentFolderRequiresUnlock, unlockPrompt]);
+      return unlockPrompt;
+    }, [clientEncryptionEnvelope, currentFolderRequiresUnlock, unlockPrompt]);
 
   const goHome = useCallback(() => navigate("/files"), [navigate]);
 
@@ -141,7 +142,8 @@ export const useFilesEncryptionController = ({
 
   const ensureCurrentFolderUnlocked = useCallback((): boolean => {
     if (
-      !currentFolderEncryptionPolicy.effectiveEnabled ||
+      (!currentFolderEncryptionPolicy.effectiveEnabled &&
+        !hasEncryptedFolderName(activeCurrentNode?.metadata)) ||
       isVaultUnlocked
     ) {
       return true;
@@ -155,6 +157,7 @@ export const useFilesEncryptionController = ({
     setUnlockPrompt({ kind: "current" });
     return false;
   }, [
+    activeCurrentNode?.metadata,
     clientEncryptionEnvelope,
     currentFolderEncryptionPolicy.effectiveEnabled,
     isVaultUnlocked,
@@ -235,7 +238,8 @@ export const useFilesEncryptionController = ({
       );
       const requiresUnlock =
         targetFolder &&
-        getChildFolderEncryptionPolicyState(targetFolder).effectiveEnabled &&
+        (getChildFolderEncryptionPolicyState(targetFolder).effectiveEnabled ||
+          hasEncryptedFolderName(targetFolder.metadata)) &&
         !isVaultUnlocked;
 
       if (!requiresUnlock) {
@@ -292,12 +296,7 @@ export const useFilesEncryptionController = ({
       case undefined:
         return;
     }
-  }, [
-    activeUnlockPrompt,
-    decryptEncryptedFiles,
-    encryptPlainFiles,
-    navigate,
-  ]);
+  }, [activeUnlockPrompt, decryptEncryptedFiles, encryptPlainFiles, navigate]);
 
   return {
     activeUnlockPrompt,

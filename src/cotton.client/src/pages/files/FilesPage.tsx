@@ -1,3 +1,7 @@
+import {
+  useDecryptedNode,
+  useDecryptedNodes,
+} from "../../shared/crypto/useDecryptedNodes";
 import React, { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@shared/ui/notifications";
@@ -55,13 +59,15 @@ export const FilesPage: React.FC = () => {
   const params = useParams<{ nodeId?: string }>();
 
   const {
-    currentNode,
-    ancestors,
+    currentNode: rawCurrentNode,
+    ancestors: rawAncestors,
     rootNodeId,
     loading: nodeLoading,
     error: nodeError,
     optimisticDeleteFile,
   } = useNodesStore();
+  const currentNode = useDecryptedNode(rawCurrentNode);
+  const ancestors = useDecryptedNodes(rawAncestors);
 
   const routeNodeId = params.nodeId;
   const { layoutType, setLayoutType, tilesSize, viewMode, cycleViewMode } =
@@ -246,7 +252,8 @@ export const FilesPage: React.FC = () => {
 
   useSharedFileUpload({
     ready: !routeNodeId && currentNode?.id === nodeId && !loading && !error,
-    encryptionRequired: encryption.currentFolderEncryptionPolicy.effectiveEnabled,
+    encryptionRequired:
+      encryption.currentFolderEncryptionPolicy.effectiveEnabled,
     upload: contentOperations.fileUpload.handleUploadFiles,
   });
 

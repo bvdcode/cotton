@@ -86,6 +86,7 @@ export const moveCandidatesToTarget = async (options: {
       item,
       skipAllConflicts,
       targetParentId: options.targetParentId,
+      encryptFolders: options.targetEncryptsNewFiles,
       folderNames,
     });
 

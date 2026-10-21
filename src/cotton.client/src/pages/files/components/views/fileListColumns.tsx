@@ -1,3 +1,4 @@
+import { hasEncryptedFolderName } from "@shared/crypto/folderDisplayMeta";
 import React from "react";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import {
@@ -185,8 +186,9 @@ export const createNameColumn = (
       row.type === "file" && isFileEncrypted(row.metadata)
         ? options.labels.encryptedFile
         : row.type === "folder" &&
-            (row.encryptionPolicy?.effectiveEnabled ??
-              isFolderEncryptionPolicyEnabled(row.metadata))
+            ((row.encryptionPolicy?.effectiveEnabled ??
+              isFolderEncryptionPolicyEnabled(row.metadata)) ||
+              hasEncryptedFolderName(row.metadata))
           ? options.labels.encryptedFolder
           : null;
 

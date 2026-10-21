@@ -37,6 +37,29 @@ afterEach(() => {
 });
 
 describe("folder listing", () => {
+  it("disables name operations when encrypted folder names remain without an encryption policy", async () => {
+    vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
+      content: {
+        ...createFolder(),
+        nodes: [createFolder({ metadata: { en: "opaque" } })],
+        files: [],
+        stats: {
+          folders: 1,
+          files: 0,
+
+          sizeBytes: 0,
+        },
+      },
+      totalCount: 1,
+    });
+    const { result } = renderHook(
+      () =>
+        useFolderListing("folder-1", "user-1", InterfaceLayoutType.List, false),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.pagination?.query?.namesEnabled).toBe(false);
+  });
   it("shows a single list page while keeping totals for the whole folder", async () => {
     const get = vi
       .spyOn(nodesApi, "getChildren")

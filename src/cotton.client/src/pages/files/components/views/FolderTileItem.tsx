@@ -3,6 +3,7 @@ import { LockOutlined, Star } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { FolderCard } from "../FolderCard";
 import { isFolderEncryptionPolicyEnabled } from "../../../../shared/crypto";
+import { hasEncryptedFolderName } from "@shared/crypto/folderDisplayMeta";
 import type {
   FileSystemTile,
   FolderOperations,
@@ -52,7 +53,8 @@ export const FolderTileItem = ({
     folderEncryptionPolicy?.explicitEnabled ??
     isFolderEncryptionPolicyEnabled(tile.node.metadata);
   const effectiveEncryption =
-    folderEncryptionPolicy?.effectiveEnabled ?? folderEncrypted;
+    (folderEncryptionPolicy?.effectiveEnabled ?? folderEncrypted) ||
+    hasEncryptedFolderName(tile.node.metadata);
   const isPinned = folderOperations.isPinned?.(tile.node.id) ?? false;
 
   return (

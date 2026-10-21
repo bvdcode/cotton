@@ -59,15 +59,18 @@ export interface FolderStatsDto {
 export interface CreateNodeRequest {
   parentId: Guid;
   name: string;
+  metadata?: Record<string, string>;
 }
 
 export interface RenameNodeRequest {
   name: string;
+  metadata?: Record<string, string | null>;
 }
 
 export interface MoveNodeRequest {
   parentId: Guid;
   name?: string;
+  metadata?: Record<string, string | null>;
 }
 
 export type RestoreStatus =

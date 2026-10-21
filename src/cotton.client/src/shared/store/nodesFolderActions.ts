@@ -1,11 +1,17 @@
+import {
+  createNamedFolder,
+  getChildEncryptionPolicy,
+  prepareFolderName,
+} from "../crypto/folderNameOperations";
+import { hasEncryptedFolderName } from "../crypto/folderDisplayMeta";
+import { lookupDisplayNames } from "../crypto/lookupDisplayNames";
+import { useVault } from "../crypto/vault";
+import { getFileNameKey } from "../utils/fileNameUtils";
 import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { isAxiosError } from "../api/httpClient";
 import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import type { NodeDto } from "../api/layoutsApi";
-import {
-  FOLDER_ENCRYPTION_POLICY_KEY,
-  getFolderEncryptionPolicyStateFromParentResolver,
-} from "../crypto";
+import { getFolderEncryptionPolicyStateFromParentResolver } from "../crypto";
 import { translateError } from "../i18n/translateError";
 import { useNodesStore } from "./nodesStore";
 import { refreshNodeContent } from "./nodesContent";
@@ -41,6 +47,27 @@ function findCachedNodeById(
   return null;
 }
 
+async function resolveParentPolicy(parentId: string): Promise<boolean> {
+  const state = useNodesStore.getState();
+  const parent = findCachedNodeById(state, parentId);
+  if (!parent) {
+    return getChildEncryptionPolicy(parentId);
+  }
+  let complete = true;
+  const policy = getFolderEncryptionPolicyStateFromParentResolver(
+    parent,
+    (id) => {
+      const ancestor = findCachedNodeById(state, id);
+      complete &&= ancestor !== null;
+      return ancestor;
+    },
+  );
+  if (policy.effectiveEnabled || complete) {
+    return policy.effectiveEnabled;
+  }
+  return getChildEncryptionPolicy(parentId);
+}
+
 export const createFolder = async (
   parentNodeId: string,
   name: string,
@@ -52,22 +79,22 @@ export const createFolder = async (
   useNodesStore.setState({ loading: true, error: null });
 
   try {
-    const created = await nodesApi.createNode({
-      parentId: parentNodeId,
-      name: trimmed,
-    });
-    const stateAfterCreate = useNodesStore.getState();
-    const parentNode = findCachedNodeById(stateAfterCreate, parentNodeId);
-    const parentPolicyEnabled = parentNode
-      ? getFolderEncryptionPolicyStateFromParentResolver(parentNode, (id) =>
-          findCachedNodeById(stateAfterCreate, id),
-        ).effectiveEnabled
-      : false;
-    const folder = parentPolicyEnabled
-      ? await nodesApi.updateNodeMetadata(created.id, {
-          [FOLDER_ENCRYPTION_POLICY_KEY]: "true",
-        })
-      : created;
+    const parentPolicyEnabled = await resolveParentPolicy(parentNodeId);
+    if (parentPolicyEnabled || useVault.getState().isUnlocked) {
+      const lookup = await lookupDisplayNames(parentNodeId, [trimmed], true);
+      if (lookup.takenNameKeys.includes(getFileNameKey(trimmed))) {
+        useNodesStore.setState({
+          loading: false,
+          error: tFileError("errors.duplicateFolderName"),
+        });
+        return null;
+      }
+    }
+    const folder = await createNamedFolder(
+      parentNodeId,
+      trimmed,
+      parentPolicyEnabled,
+    );
 
     useNodesStore.setState((prev) => {
       const existing = prev.contentByNodeId[parentNodeId];
@@ -158,7 +185,31 @@ export const renameFolder = async (
   useNodesStore.setState({ loading: true, error: null });
 
   try {
-    const updated = await nodesApi.renameNode(nodeId, { name: trimmed });
+    const node =
+      findCachedNodeById(useNodesStore.getState(), nodeId) ??
+      (await nodesApi.getNode(nodeId));
+    const encrypted =
+      hasEncryptedFolderName(node.metadata) ||
+      Boolean(node.parentId && (await resolveParentPolicy(node.parentId)));
+    if (node.parentId && (encrypted || useVault.getState().isUnlocked)) {
+      const lookup = await lookupDisplayNames(node.parentId, [trimmed], true);
+      const conflict = [...lookup.nodes, ...lookup.files].some(
+        (item) =>
+          item.id !== nodeId &&
+          getFileNameKey(item.name) === getFileNameKey(trimmed),
+      );
+      if (conflict) {
+        useNodesStore.setState({
+          loading: false,
+          error: tFileError("errors.duplicateFolderName"),
+        });
+        return false;
+      }
+    }
+    const updated = await nodesApi.renameNode(
+      nodeId,
+      await prepareFolderName(node, trimmed, encrypted),
+    );
 
     if (parentNodeId) {
       useNodesStore.setState((prev) => {

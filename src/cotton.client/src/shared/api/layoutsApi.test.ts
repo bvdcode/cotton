@@ -127,7 +127,7 @@ describe("layoutsApi reads", () => {
     });
   });
 
-  it("decorates encrypted search result file names when the vault is unlocked", async () => {
+  it("keeps encrypted search results in server form while the vault is unlocked", async () => {
     useVault.getState().unlock(await generateMasterKey());
     const encryptedMeta = await encryptDisplayMeta({
       name: "private.pdf",
@@ -160,10 +160,10 @@ describe("layoutsApi reads", () => {
 
     const result = await layoutsApi.search({ layoutId, query: "private" });
 
-    expect(result.data.files[0]).toMatchObject({
-      name: "private.pdf",
-      contentType: "application/pdf",
-    });
+    expect(result.data.files[0]?.name).not.toBe("private.pdf");
+    expect(result.data.files[0]?.metadata?.[DISPLAY_META_KEY]).toBe(
+      encryptedMeta,
+    );
   });
 
   it("defaults search total-count to zero when header is missing", async () => {

@@ -1,3 +1,5 @@
+import { useDisplayProjection } from "../../../shared/crypto/useDisplayProjection";
+import { projectSearchResult } from "../../../shared/crypto/searchDisplayMeta";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   layoutsApi,
@@ -221,11 +223,15 @@ export const useSearchPagination = ({
     searchData.loadingMore,
   ]);
 
+  const displayResults = useDisplayProjection(
+    searchData.results,
+    projectSearchResult,
+  );
   return {
     deep,
     toggleDeep,
     debouncedQuery,
-    results: searchData.results,
+    results: displayResults,
     totalCount: searchData.totalCount,
     loadingInitial: searchData.loadingInitial,
     loadingMore: searchData.loadingMore,
