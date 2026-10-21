@@ -1,3 +1,4 @@
+import { useFolderEncryptionPresence } from "./useFolderEncryptionPresence";
 import { useFolderTiles, TILE_PAGE_SIZE } from "./useFolderTiles";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
@@ -56,8 +57,16 @@ export const useFolderListing = (
     enabled,
   });
 
-  const namesEnabled =
-    !folderPolicyEnabled && overview.data?.content.stats?.encryptedFiles === 0;
+  const encryptedNames = useFolderEncryptionPresence({
+    nodeId,
+    match: "encrypted-names",
+    enabled:
+      enabled && isList && !folderPolicyEnabled && overview.data !== undefined,
+    firstPage: overview.data
+      ? { response: overview.data, pageSize }
+      : undefined,
+  });
+  const namesEnabled = !folderPolicyEnabled && encryptedNames === false;
   const controls = useFolderListControls(nodeId, namesEnabled);
   const { page, listing } = controls;
   const defaultListing = Object.keys(listing).length === 0;
@@ -96,7 +105,6 @@ export const useFolderListing = (
   const stats: FolderStatsDto = overview.data?.content.stats ?? {
     folders: 0,
     files: 0,
-    encryptedFiles: 0,
     sizeBytes: 0,
   };
   const error =

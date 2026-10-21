@@ -9,7 +9,11 @@ import { queryClient } from "../../../shared/api/queries/queryClient";
 import { useFolderListing } from "./useFolderListing";
 
 const files = Array.from({ length: 101 }, (_, index) =>
-  createFile({ id: `file-${index}`, name: `file-${index}.txt` }),
+  createFile({
+    id: `file-${index}`,
+    name: `file-${index}.txt`,
+    metadata: index === 0 ? { isClientEncrypted: "true" } : {},
+  }),
 );
 
 const response = (page: number): NodeResponse => ({
@@ -17,10 +21,7 @@ const response = (page: number): NodeResponse => ({
     ...createFolder({ id: "folder-1" }),
     nodes: [],
     files: page === 1 ? files.slice(0, 100) : files.slice(100),
-    stats:
-      page === 1
-        ? { folders: 0, files: 101, encryptedFiles: 1, sizeBytes: 101 }
-        : null,
+    stats: page === 1 ? { folders: 0, files: 101, sizeBytes: 101 } : null,
   },
   totalCount: 101,
 });
@@ -51,7 +52,7 @@ describe("folder listing", () => {
     expect(result.current.stats).toEqual({
       folders: 0,
       files: 101,
-      encryptedFiles: 1,
+
       sizeBytes: 101,
     });
     expect(result.current.pagination?.totalCount).toBe(101);
@@ -96,7 +97,7 @@ describe("folder listing", () => {
           stats: {
             folders: 0,
             files: 10001,
-            encryptedFiles: 0,
+
             sizeBytes: 10001,
           },
         },
@@ -138,9 +139,12 @@ describe("folder listing", () => {
       .mockImplementation(async (_, options) => ({
         content: {
           ...createFolder(),
-          nodes: folders.slice(0, options?.pageSize),
+          nodes: folders.slice(
+            ((options?.page ?? 1) - 1) * (options?.pageSize ?? 100),
+            (options?.page ?? 1) * (options?.pageSize ?? 100),
+          ),
           files: [],
-          stats: { folders: 638, files: 0, encryptedFiles: 0, sizeBytes: 0 },
+          stats: { folders: 638, files: 0, sizeBytes: 0 },
         },
         totalCount: 638,
       }));
@@ -166,11 +170,19 @@ describe("folder listing", () => {
       expect(result.current.content?.nodes).toHaveLength(100),
     );
     expect(result.current.pagination?.model?.pageSize).toBe(100);
+    await waitFor(() =>
+      expect(result.current.pagination?.query?.namesEnabled).toBe(true),
+    );
+    expect(
+      get.mock.calls.filter(([, options]) => options?.signal),
+    ).toHaveLength(6);
     rerender(InterfaceLayoutType.Tiles);
     await waitFor(() =>
       expect(result.current.content?.nodes).toHaveLength(638),
     );
-    expect(get).toHaveBeenCalledTimes(2);
+    expect(
+      get.mock.calls.filter(([, options]) => !options?.signal),
+    ).toHaveLength(2);
     expect(result.current.loadMore).toBeUndefined();
   });
 });

@@ -57,7 +57,7 @@ afterEach(() => {
 
 describe("nodesApi reads", () => {
   it("requests recursive folder statistics separately from the listing", async () => {
-    const stats = { folders: 2, files: 3, encryptedFiles: 0, sizeBytes: 1024 };
+    const stats = { folders: 2, files: 3, sizeBytes: 1024 };
     const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: stats });
 
     await expect(nodesApi.getFolderStats(nodeId, true)).resolves.toEqual(stats);

@@ -176,7 +176,6 @@ export const FilesPage: React.FC = () => {
     activeCurrentNode,
     ancestors,
     content,
-    stats,
     nodeId,
     showToast,
   });

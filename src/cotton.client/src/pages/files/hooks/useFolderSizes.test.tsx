@@ -21,7 +21,6 @@ const stats = (sizeBytes: number) => ({
   sizeBytes,
   folders: 0,
   files: 1,
-  encryptedFiles: 0,
 });
 const listing = (ids: string[], totalCount = ids.length): NodeResponse => ({
   content: {

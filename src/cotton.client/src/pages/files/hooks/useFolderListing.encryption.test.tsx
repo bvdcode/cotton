@@ -45,7 +45,7 @@ it.each([InterfaceLayoutType.List, InterfaceLayoutType.Tiles])(
             metadata: { en, isClientEncrypted: "true" },
           }),
         ],
-        stats: { folders: 0, files: 1, encryptedFiles: 1, sizeBytes: 10 },
+        stats: { folders: 0, files: 1, sizeBytes: 10 },
       },
       totalCount: 1,
     };

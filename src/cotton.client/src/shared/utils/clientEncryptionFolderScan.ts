@@ -1,3 +1,4 @@
+import { readFolderPages } from "./folderPages";
 import type { NodeDto } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import { fetchNodeChildren } from "../api/nodeChildren";
@@ -5,7 +6,6 @@ import { isFileEncrypted } from "../crypto/metadataFlags";
 
 export const CLIENT_ENCRYPTION_FOLDER_SCAN_MAX_FILES = 500;
 export const CLIENT_ENCRYPTION_FOLDER_SCAN_MAX_FOLDERS = 250;
-const CLIENT_ENCRYPTION_FOLDER_SCAN_PAGE_SIZE = 250;
 
 export interface ClientEncryptionFolderScanResult {
   folders: NodeDto[];
@@ -138,26 +138,17 @@ async function scanNextFolder(
   }
 
   state.scannedFolders += 1;
-  let page = 1;
-  let seenChildren = 0;
-
-  while (state.files.length < limits.maxFiles) {
-    const response = await fetchNodeChildren(nodeId, {
-      page,
-      pageSize: CLIENT_ENCRYPTION_FOLDER_SCAN_PAGE_SIZE,
-    });
-    const childCount =
-      response.content.nodes.length + response.content.files.length;
-    seenChildren += childCount;
-
+  for await (const response of readFolderPages(
+    nodeId,
+    undefined,
+    undefined,
+    fetchNodeChildren,
+  )) {
     enqueueChildFolders(state, limits, response.content.nodes);
     collectMatchingFiles(state, limits, response.content.files, predicate);
-
-    if (isLastFolderPage(childCount, seenChildren, response.totalCount)) {
+    if (state.files.length >= limits.maxFiles) {
       return;
     }
-
-    page += 1;
   }
 }
 
@@ -196,9 +187,3 @@ const collectMatchingFiles = (
     }
   }
 };
-
-const isLastFolderPage = (
-  childCount: number,
-  seenChildren: number,
-  totalCount: number,
-): boolean => childCount === 0 || seenChildren >= totalCount;

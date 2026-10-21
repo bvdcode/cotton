@@ -38,14 +38,11 @@ namespace Cotton.Server.Handlers.Nodes
             int fileCount = await files.CountAsync(ct);
             long sizeBytes = await files.SumAsync(
                 file => (long?)file.FileManifest.SizeBytes, ct) ?? 0L;
-            int encryptedFiles = await files.CountAsync(
-                file => CottonDbContext.GetHstoreValue(file.Metadata, "isClientEncrypted") == "true", ct);
 
             return new FolderStatsDto
             {
                 Folders = folders,
                 Files = fileCount,
-                EncryptedFiles = encryptedFiles,
                 SizeBytes = sizeBytes,
             };
         }

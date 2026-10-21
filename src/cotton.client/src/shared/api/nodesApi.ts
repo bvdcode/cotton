@@ -53,7 +53,6 @@ export interface SiblingNameLookupDto {
 export interface FolderStatsDto {
   folders: number;
   files: number;
-  encryptedFiles: number;
   sizeBytes: number;
 }
 

@@ -1,8 +1,9 @@
+import { useFolderEncryptionPresence } from "./useFolderEncryptionPresence";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "@shared/api/layoutsApi";
-import type { FolderStatsDto, NodeContentDto } from "@shared/api/nodesApi";
+import type { NodeContentDto } from "@shared/api/nodesApi";
 import {
   getFolderEncryptionPolicyState,
   readEnvelopeFromPreferences,
@@ -25,7 +26,6 @@ interface UseFilesEncryptionControllerOptions {
   activeCurrentNode: NodeDto | null;
   ancestors: NodeDto[];
   content: NodeContentDto | undefined;
-  stats?: FolderStatsDto;
   nodeId: string | null;
   showToast: (message: string, variant?: "info" | "error") => void;
 }
@@ -54,7 +54,6 @@ export const useFilesEncryptionController = ({
   activeCurrentNode,
   ancestors,
   content,
-  stats,
   nodeId,
   showToast,
 }: UseFilesEncryptionControllerOptions): FilesEncryptionController => {
@@ -96,16 +95,13 @@ export const useFilesEncryptionController = ({
   const {
     decryptEncryptedFiles,
     encryptPlainFiles,
-    encryptedFilesCount,
     folderPolicyEnabled,
     isDecryptingEncryptedFiles,
     isEncryptingPlainFiles,
-    plainFilesCount,
   } = useFolderClientEncryptionActions({
     nodeId,
     currentNode: activeCurrentNode,
     content,
-    stats,
     folderPolicyEnabled: currentFolderEncryptionPolicy.effectiveEnabled,
     onToast: showToast,
   });
@@ -196,33 +192,37 @@ export const useFilesEncryptionController = ({
     ],
   );
 
+  const hasMatchingFiles = useFolderEncryptionPresence({
+    nodeId,
+    match: folderPolicyEnabled ? "plain-files" : "encrypted-files",
+    enabled:
+      activeCurrentNode?.id === nodeId &&
+      content?.id === nodeId &&
+      Boolean(clientEncryptionEnvelope),
+    knownFiles: content?.id === nodeId ? content.files : undefined,
+  });
   const folderEncryptionPrompt = useMemo(
     () =>
       buildFolderEncryptionPrompt({
         decryptEncryptedFiles: () =>
           runFolderClientEncryptionAction("decrypt-existing"),
-        encryptedFilesCount,
-        encryptedFilesMessage: t("clientEncryption.encryptedFilesRemain.toast", {
-          count: encryptedFilesCount,
-        }),
+        hasEncryptedFiles: !folderPolicyEnabled && hasMatchingFiles === true,
+        encryptedFilesMessage: t("clientEncryption.encryptedFilesRemain.title"),
         encryptedFilesAction: t("clientEncryption.encryptedFilesRemain.action"),
         encryptPlainFiles: () =>
           runFolderClientEncryptionAction("encrypt-existing"),
         folderPolicyEnabled,
         isDecryptingEncryptedFiles,
         isEncryptingPlainFiles,
-        plainFilesCount,
-        plainFilesMessage: t("clientEncryption.mixedPlain.toast", {
-          count: plainFilesCount,
-        }),
+        hasPlainFiles: folderPolicyEnabled && hasMatchingFiles === true,
+        plainFilesMessage: t("clientEncryption.mixedPlain.title"),
         plainFilesAction: t("clientEncryption.mixedPlain.action"),
       }),
     [
-      encryptedFilesCount,
+      hasMatchingFiles,
       folderPolicyEnabled,
       isDecryptingEncryptedFiles,
       isEncryptingPlainFiles,
-      plainFilesCount,
       runFolderClientEncryptionAction,
       t,
     ],

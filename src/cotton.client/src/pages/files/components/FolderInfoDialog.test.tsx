@@ -43,7 +43,7 @@ const renderDialog = (selectedFolder: NodeDto | null) => {
 describe("FolderInfoDialog", () => {
   it("starts the recursive request only after the folder is selected", async () => {
     mocks.getFolderStats.mockReset();
-    mocks.getFolderStats.mockResolvedValue({ folders: 2, files: 3, encryptedFiles: 0, sizeBytes: 1024 });
+    mocks.getFolderStats.mockResolvedValue({ folders: 2, files: 3, sizeBytes: 1024 });
 
     renderDialog(null);
     expect(mocks.getFolderStats).not.toHaveBeenCalled();
@@ -58,7 +58,7 @@ describe("FolderInfoDialog", () => {
   it("offers retry if counting fails", async () => {
     mocks.getFolderStats.mockReset();
     mocks.getFolderStats.mockRejectedValueOnce(new Error("offline"));
-    mocks.getFolderStats.mockResolvedValueOnce({ folders: 0, files: 0, encryptedFiles: 0, sizeBytes: 0 });
+    mocks.getFolderStats.mockResolvedValueOnce({ folders: 0, files: 0, sizeBytes: 0 });
 
     renderDialog(folder);
     await waitFor(() => expect(screen.getByText("folderInfo.loadFailed")).toBeInTheDocument());

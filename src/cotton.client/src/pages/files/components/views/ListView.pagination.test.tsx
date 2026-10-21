@@ -61,8 +61,18 @@ it("keeps the requested page after the grid processes its controlled sort and fi
     content: {
       ...createFolder(),
       nodes: [],
-      files: [createFile({ name: `page-${options?.page}.txt` })],
-      stats: { folders: 0, files: 201, encryptedFiles: 0, sizeBytes: 201 },
+      files: Array.from(
+        { length: Math.min(100, 201 - ((options?.page ?? 1) - 1) * 100) },
+        (_, index) =>
+          createFile({
+            id: `file-${options?.page}-${index}`,
+            name:
+              index === 0
+                ? `page-${options?.page}.txt`
+                : `file-${options?.page}-${index}.txt`,
+          }),
+      ),
+      stats: { folders: 0, files: 201, sizeBytes: 201 },
     },
   }));
   render(
