@@ -56,6 +56,10 @@ namespace Cotton.Server.IntegrationTests
 
             NodeDto exactFolder = await CreateNodeAsync(root!.Id, "demo");
             NodeDto fileParent = await CreateNodeAsync(root.Id, "file-parent");
+            Dictionary<string, string> parentMetadata = new() { ["display-label"] = "opaque-value" };
+            using HttpResponseMessage metadataResponse = await _client.PatchAsJsonAsync(
+                $"/api/v1/layouts/nodes/{fileParent.Id}/metadata", parentMetadata);
+            metadataResponse.EnsureSuccessStatusCode();
             NodeFileManifestDto exactFile = await CreateFileAsync(fileParent.Id, "demo", "file exact");
             NodeDto prefixFolder = await CreateNodeAsync(root.Id, "demo archive");
             NodeDto substringFolder = await CreateNodeAsync(root.Id, "old demo backup");
@@ -68,6 +72,12 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(firstPage.Files.Single().Id, Is.EqualTo(exactFile.Id));
                 Assert.That(firstPage.NodePaths[exactFolder.Id], Is.EqualTo($"/{root.Name}/demo"));
                 Assert.That(firstPage.FilePaths[exactFile.Id], Is.EqualTo($"/{root.Name}/file-parent/demo"));
+                Assert.That(firstPage.Ancestors.Select(node => node.Id),
+                    Does.Contain(root.Id).And.Contain(fileParent.Id));
+                Assert.That(firstPage.Ancestors.Single(node => node.Id == fileParent.Id).Metadata,
+                    Is.EquivalentTo(parentMetadata));
+                Assert.That(firstPage.Ancestors.Select(node => node.Id),
+                    Does.Not.Contain(prefixFolder.Id).And.Not.Contain(substringFolder.Id));
             });
 
             (SearchResultDto secondPage, int secondPageTotal) = await SearchAsync(root.LayoutId, "demo", page: 2, pageSize: 2);
@@ -80,6 +90,7 @@ namespace Cotton.Server.IntegrationTests
                     prefixFolder.Id,
                     substringFolder.Id,
                 }));
+                Assert.That(secondPage.Ancestors.Select(node => node.Id), Does.Not.Contain(fileParent.Id));
             });
         }
 

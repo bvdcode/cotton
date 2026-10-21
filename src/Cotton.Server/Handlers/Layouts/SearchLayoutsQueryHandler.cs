@@ -61,7 +61,7 @@ namespace Cotton.Server.Handlers.Layouts
             }
 
             var (nodes, files) = await LoadHitModelsAsync(hits, cancellationToken);
-            var (nodePaths, filePaths) = await ResolvePathsAsync(
+            var (nodePaths, filePaths, ancestors) = await ResolvePathsAsync(
                 request.UserId,
                 request.LayoutId,
                 hits,
@@ -73,6 +73,7 @@ namespace Cotton.Server.Handlers.Layouts
                 Files = files,
                 NodePaths = nodePaths,
                 FilePaths = filePaths,
+                Ancestors = ancestors,
             }, totalCount);
         }
 
@@ -251,7 +252,7 @@ namespace Cotton.Server.Handlers.Layouts
                 .ToList();
         }
 
-        private async Task<(Dictionary<Guid, string> NodePaths, Dictionary<Guid, string> FilePaths)> ResolvePathsAsync(
+        private async Task<(Dictionary<Guid, string> NodePaths, Dictionary<Guid, string> FilePaths, List<NodeDto> Ancestors)> ResolvePathsAsync(
             Guid userId,
             Guid layoutId,
             IReadOnlyList<LayoutSearchHit> hits,
@@ -273,13 +274,18 @@ namespace Cotton.Server.Handlers.Layouts
 
             if (allNodeIdsNeededForPaths.Count == 0)
             {
-                return ([], []);
+                return ([], [], []);
             }
 
-            Dictionary<Guid, string> allNodePaths = await NodeHierarchy.ResolvePathsAsync(
+            ResolvedNodePaths resolved = await NodeHierarchy.ResolvePathsWithAncestorsAsync(
                 _dbContext.Nodes.AccessibleTo(userId).Where(node => node.LayoutId == layoutId),
                 allNodeIdsNeededForPaths,
                 cancellationToken);
+
+            Dictionary<Guid, string> allNodePaths = resolved.Paths;
+            List<NodeDto> ancestors = await _dbContext.Nodes.AsNoTracking().AccessibleTo(userId)
+                .Where(node => node.LayoutId == layoutId && resolved.AncestorIds.Contains(node.Id))
+                .ProjectToType<NodeDto>().ToListAsync(cancellationToken);
 
             Dictionary<Guid, string> nodePaths = new(resultNodeIds.Count);
             foreach (Guid nodeId in resultNodeIds)
@@ -299,7 +305,7 @@ namespace Cotton.Server.Handlers.Layouts
                 filePaths[hit.Id] = CombinePath(parentPath, hit.Name);
             }
 
-            return (nodePaths, filePaths);
+            return (nodePaths, filePaths, ancestors);
         }
 
         private static string CombinePath(string parentPath, string name)
