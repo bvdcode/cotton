@@ -101,6 +101,7 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
+            List<FileManifest> manifests = [];
             await using IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(ct);
             try
             {
@@ -108,31 +109,40 @@ namespace Cotton.Server.Jobs
 
                 await _dbContext.FileManifestChunks.DeleteFileManifestChunksAsync(manifestIds, ct);
 
-                int deletedManifests = await _dbContext.FileManifests
+                manifests = await _dbContext.FileManifests
                     .Where(fm => manifestIds.Contains(fm.Id) && !fm.NodeFiles.Any())
-                    .ExecuteDeleteAsync(ct);
+                    .ToListAsync(ct);
 
-                if (deletedManifests != manifestIds.Count)
+                if (manifests.Count != manifestIds.Count)
                 {
                     await transaction.RollbackAsync(ct);
                     _logger.LogWarning(
                         "Skipped orphaned file manifest cleanup because {ReferencedCount} of {TotalCount} candidates became referenced during garbage collection.",
-                        manifestIds.Count - deletedManifests,
+                        manifestIds.Count - manifests.Count,
                         manifestIds.Count);
                     return;
                 }
 
+                _dbContext.FileManifests.RemoveRange(manifests);
+                await _dbContext.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
 
-                if (deletedManifests != 0)
-                {
-                    _logger.LogInformation("Removed {Count} orphaned file manifests.", deletedManifests);
-                }
+                _logger.LogInformation("Removed {Count} orphaned file manifests.", manifests.Count);
             }
             catch (DbUpdateException ex)
             {
                 await transaction.RollbackAsync(ct);
                 _logger.LogWarning(ex, "Skipped orphaned file manifest cleanup because a candidate became referenced during garbage collection.");
+            }
+            finally
+            {
+                foreach (FileManifest manifest in manifests)
+                {
+                    if (_dbContext.Entry(manifest).State == EntityState.Deleted)
+                    {
+                        _dbContext.Entry(manifest).State = EntityState.Detached;
+                    }
+                }
             }
         }
 
