@@ -85,17 +85,17 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void Extract_InvalidChatExport_ThrowsExtractionException()
+        public async Task Extract_InvalidChatExport_ThrowsExtractionException()
         {
             using MemoryStream source = new(Encoding.UTF8.GetBytes(
                 "<title>ChatGPT Data Export</title><script>var jsonData = [{ invalid }];</script>"));
 
-            Assert.ThrowsAsync<FileTextExtractionException>(
+            await Assert.ThrowsAsync<FileTextExtractionException>(
                 async () => await new HtmlTextExtractor().ExtractAsync(source));
         }
 
         [Test]
-        public void Extract_ChatExportWithCyclicParent_ThrowsExtractionException()
+        public async Task Extract_ChatExportWithCyclicParent_ThrowsExtractionException()
         {
             const string Html = """
                 <title>ChatGPT Data Export</title><script>var jsonData = [{
@@ -108,7 +108,7 @@ namespace Cotton.Server.IntegrationTests
                 """;
             using MemoryStream source = new(Encoding.UTF8.GetBytes(Html));
 
-            Assert.ThrowsAsync<FileTextExtractionException>(
+            await Assert.ThrowsAsync<FileTextExtractionException>(
                 async () => await new HtmlTextExtractor().ExtractAsync(source));
         }
 

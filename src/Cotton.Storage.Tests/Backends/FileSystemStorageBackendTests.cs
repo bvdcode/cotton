@@ -137,7 +137,7 @@ namespace Cotton.Storage.Tests.Backends
             await _backend.DeleteAsync(uid);
 
             // Act & Assert
-            Assert.ThrowsAsync<FileNotFoundException>(() => _backend.ReadAsync(uid));
+            await Assert.ThrowsAsync<FileNotFoundException>(() => _backend.ReadAsync(uid));
         }
 
         [Test]
@@ -231,7 +231,7 @@ namespace Cotton.Storage.Tests.Backends
             string uid = "deadbeef"; // valid hex UID
 
             // Act & Assert
-            Assert.ThrowsAsync<FileNotFoundException>(() => _backend.ReadAsync(uid));
+            await Assert.ThrowsAsync<FileNotFoundException>(() => _backend.ReadAsync(uid));
         }
 
         [Test]
@@ -242,7 +242,7 @@ namespace Cotton.Storage.Tests.Backends
             byte[] data = Encoding.UTF8.GetBytes("Test");
 
             // Act & Assert
-            Assert.ThrowsAsync<ArgumentException>(() => _backend.WriteAsync(uid, new MemoryStream(data)));
+            await Assert.ThrowsAsync<ArgumentException>(() => _backend.WriteAsync(uid, new MemoryStream(data)));
         }
 
         [Test]
@@ -302,11 +302,11 @@ namespace Cotton.Storage.Tests.Backends
             }
 
             // Assert
-            Assert.DoesNotThrowAsync(() => Task.WhenAll(tasks));
+            await Assert.DoesNotThrowAsync(() => Task.WhenAll(tasks));
 
             foreach (string? uid in uids)
             {
-                Assert.DoesNotThrowAsync(async () => await _backend.ReadAsync(uid));
+                await Assert.DoesNotThrowAsync(async () => await _backend.ReadAsync(uid));
             }
         }
 
@@ -326,7 +326,7 @@ namespace Cotton.Storage.Tests.Backends
                 .ToArray();
 
             // Act & Assert
-            Assert.DoesNotThrowAsync(() => Task.WhenAll(tasks));
+            await Assert.DoesNotThrowAsync(() => Task.WhenAll(tasks));
 
             await using Stream readStream = await _backend.ReadAsync(uid);
             MemoryStream result = new MemoryStream();

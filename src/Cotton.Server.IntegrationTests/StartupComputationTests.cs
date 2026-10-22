@@ -7,7 +7,6 @@ namespace Cotton.Server.IntegrationTests
     [FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
     public class StartupComputationTests : StartupLifecycleTestBase
     {
-
         [Test]
         public async Task RemoteRunnerValidation_SavesModeAndUrlTogether_AndCachesDimensions()
         {

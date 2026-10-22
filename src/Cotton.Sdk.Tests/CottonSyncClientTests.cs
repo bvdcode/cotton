@@ -64,7 +64,7 @@ namespace Cotton.Sdk.Tests
             QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
-            Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.Sync.GetChangesAsync(-1));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.Sync.GetChangesAsync(-1));
         }
 
         [TestCase(0)]
@@ -74,7 +74,7 @@ namespace Cotton.Sdk.Tests
             QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
-            Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.Sync.GetChangesAsync(0, limit));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.Sync.GetChangesAsync(0, limit));
         }
 
         [Test]
@@ -87,7 +87,7 @@ namespace Cotton.Sdk.Tests
             });
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
 
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            CottonApiException? exception = await Assert.ThrowsAsync<CottonApiException>(
                 async () => await client.Sync.GetChangesAsync(0, 10));
 
             Assert.Multiple(() =>

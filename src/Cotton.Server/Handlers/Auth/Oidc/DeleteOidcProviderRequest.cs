@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Extensions;
 using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -28,12 +29,8 @@ namespace Cotton.Server.Handlers.Auth.Oidc
                 ?? throw new EntityNotFoundException<OidcProvider>("Sign-in provider not found.");
             _integrity.RequireValid(_dbContext, provider, "oidc.admin-delete");
 
-            await _dbContext.OidcLoginStates
-                .Where(state => state.ProviderId == providerId)
-                .ExecuteDeleteAsync(ct);
-            await _dbContext.UserExternalIdentities
-                .Where(identity => identity.ProviderId == providerId)
-                .ExecuteDeleteAsync(ct);
+            await _dbContext.OidcLoginStates.DeleteOidcStatesForProviderAsync(providerId, ct);
+            await _dbContext.UserExternalIdentities.DeleteExternalIdentitiesForProviderAsync(providerId, ct);
 
             _dbContext.OidcProviders.Remove(provider);
             await _dbContext.SaveChangesAsync(ct);

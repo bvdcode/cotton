@@ -33,10 +33,12 @@ export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
 
   return (
     <Box
-      height={lineHeightPx * VISIBLE_LINES}
-      overflow="hidden"
-      position="relative"
-      width="100%"
+      sx={{
+        height: lineHeightPx * VISIBLE_LINES,
+        overflow: "hidden",
+        position: "relative",
+        width: "100%",
+      }}
     >
       <Box
         sx={{
@@ -53,19 +55,21 @@ export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
           return (
             <Box
               key={`${line.timeSeconds}-${idx}`}
-              height={lineHeightPx}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
+              sx={{
+                height: lineHeightPx,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
               <Typography
                 variant={activeAndPlaying ? "h6" : "body2"}
-                fontWeight={activeAndPlaying ? 800 : isActive ? 500 : 400}
                 color={activeAndPlaying ? "text.primary" : "text.secondary"}
                 noWrap={!isActive}
-                width="100%"
-                textAlign="center"
                 sx={{
+                  fontWeight: activeAndPlaying ? 800 : isActive ? 500 : 400,
+                  width: "100%",
+                  textAlign: "center",
                   px: 1,
                   opacity: baseOpacity,
                   lineHeight: 1.1,
@@ -73,6 +77,7 @@ export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
                   overflow: "hidden",
                   textOverflow: isActive ? "clip" : "ellipsis",
                   display: "block",
+
                   ...(activeAndPlaying
                     ? {
                         fontSize: { xs: "1.15rem", sm: "1.25rem" },

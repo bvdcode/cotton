@@ -27,18 +27,28 @@ export const FileConflictDialog = ({
 }: FileConflictDialogProps) => {
   const { t } = useTranslation(["files", "common"]);
   const renameLabel = t("conflicts.rename", { ns: "files", newName });
+  const renameNameOffset = renameLabel.indexOf(newName);
+  const renameCharacters = Array.from(newName);
+  const renameMiddle = Math.ceil(renameCharacters.length / 2);
 
   return (
     <Dialog
       open={open}
       onClose={() => onResolve(ConflictAction.Cancel)}
-      TransitionProps={{ onExited }}
       fullWidth
       maxWidth="sm"
+      slotProps={{
+        transition: { onExited },
+      }}
     >
       <DialogTitle>{t("conflicts.title", { ns: "files" })}</DialogTitle>
       <DialogContent>
-        <DialogContentText sx={{ overflowWrap: "anywhere" }}>
+        <DialogContentText
+          sx={{
+            color: "text.primary",
+            overflowWrap: "anywhere",
+          }}
+        >
           {t(
             canOverwrite
               ? "conflicts.overwriteDescription"
@@ -51,7 +61,7 @@ export const FileConflictDialog = ({
         disableSpacing
         sx={{
           alignItems: "stretch",
-          flexDirection: { xs: "column", md: "row" },
+          flexDirection: "column",
           gap: 1,
           px: { xs: 2, sm: 3 },
           pb: { xs: 2, sm: 3 },
@@ -60,66 +70,142 @@ export const FileConflictDialog = ({
       >
         <Box
           sx={{
-            display: "grid",
-            flexShrink: 0,
+            display: "flex",
+            flexWrap: "wrap",
             gap: 1,
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-            width: { xs: "100%", md: "auto" },
+
             "& > button": {
-              minWidth: 0,
+              flexGrow: 1,
+              minWidth: "max-content",
               px: 1,
-              whiteSpace: { xs: "normal", md: "nowrap" },
+              whiteSpace: "normal",
             },
           }}
         >
-          <Button onClick={() => onResolve(ConflictAction.Cancel)}>
+          <Button
+            color="inherit"
+            onClick={() => onResolve(ConflictAction.Cancel)}
+          >
             {t("common:actions.cancel")}
           </Button>
-          <Button onClick={() => onResolve(ConflictAction.Skip)}>
+          <Button
+            color="inherit"
+            onClick={() => onResolve(ConflictAction.Skip)}
+          >
             {t("conflicts.skip", { ns: "files" })}
           </Button>
-          <Button onClick={() => onResolve(ConflictAction.SkipAll)}>
+          <Button
+            color="inherit"
+            onClick={() => onResolve(ConflictAction.SkipAll)}
+          >
             {t("conflicts.skipAll", { ns: "files" })}
           </Button>
         </Box>
         <Box
           sx={{
             display: "grid",
-            flex: { md: 1 },
             gap: 1,
             gridTemplateColumns: canOverwrite
-              ? "minmax(0, 1fr) auto"
+              ? {
+                  xs: "repeat(2, minmax(0, 1fr))",
+                  sm: "minmax(0, 1fr) auto auto",
+                }
               : "minmax(0, 1fr)",
             minWidth: 0,
-            width: { xs: "100%", md: "auto" },
           }}
         >
           <Button
+            aria-label={renameLabel}
+            color={canOverwrite ? "inherit" : "primary"}
             fullWidth
             onClick={() => onResolve(ConflictAction.Rename)}
-            sx={{ minWidth: 0, overflow: "hidden" }}
+            sx={{
+              gridColumn: { xs: "1 / -1", sm: "auto" },
+              minWidth: 0,
+              overflow: "hidden",
+            }}
             title={renameLabel}
             variant={canOverwrite ? "outlined" : "contained"}
           >
             <Box
               component="span"
               sx={{
+                display: "inline-flex",
                 minWidth: 0,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                whiteSpace: "pre",
               }}
             >
-              {renameLabel}
+              <Box
+                component="span"
+                sx={{
+                  flexShrink: 0,
+                }}
+              >
+                {renameLabel.slice(0, renameNameOffset)}
+              </Box>
+              <Box
+                component="span"
+                sx={{
+                  display: "inline-flex",
+                  minWidth: 0,
+                  textTransform: "none",
+                }}
+              >
+                <Box
+                  component="span"
+                  sx={{
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {renameCharacters.slice(0, renameMiddle).join("")}
+                </Box>
+                <Box
+                  component="span"
+                  sx={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    minWidth: 0,
+                    overflow: "hidden",
+                  }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      flexShrink: 0,
+                    }}
+                  >
+                    {renameCharacters.slice(renameMiddle).join("")}
+                  </Box>
+                </Box>
+              </Box>
+              <Box
+                component="span"
+                sx={{
+                  flexShrink: 0,
+                }}
+              >
+                {renameLabel.slice(renameNameOffset + newName.length)}
+              </Box>
             </Box>
           </Button>
           {canOverwrite && (
-            <Button
-              onClick={() => onResolve(ConflictAction.Overwrite)}
-              variant="contained"
-            >
-              {t("conflicts.overwrite", { ns: "files" })}
-            </Button>
+            <>
+              <Button
+                color="inherit"
+                onClick={() => onResolve(ConflictAction.Overwrite)}
+                variant="outlined"
+              >
+                {t("conflicts.overwrite", { ns: "files" })}
+              </Button>
+              <Button
+                onClick={() => onResolve(ConflictAction.OverwriteAll)}
+                variant="contained"
+              >
+                {t("conflicts.overwriteAll", { ns: "files" })}
+              </Button>
+            </>
           )}
         </Box>
       </DialogActions>

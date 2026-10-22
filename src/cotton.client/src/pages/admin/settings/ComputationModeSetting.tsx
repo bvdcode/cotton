@@ -53,12 +53,14 @@ export const ComputationModeSetting = () => {
           value={mode}
           disabled={disabled}
           fullWidth
-          SelectProps={{
-            inputProps: {
-              "aria-label": t("settings.general.fields.computionMode"),
+          onChange={(event) => selectMode(event.target.value)}
+          slotProps={{
+            select: {
+              inputProps: {
+                "aria-label": t("settings.general.fields.computionMode"),
+              },
             },
           }}
-          onChange={(event) => selectMode(event.target.value)}
         >
           {computionOptions.map((option) => (
             <MenuItem key={option} value={option}>
@@ -70,8 +72,10 @@ export const ComputationModeSetting = () => {
           <>
             <Stack
               direction={{ xs: "column", sm: "row" }}
-              alignItems="flex-start"
-              gap={1.5}
+              sx={{
+                alignItems: "flex-start",
+                gap: 1.5,
+              }}
             >
               <TextField
                 label={t("settings.general.fields.remoteComputationRunnerUrl")}
@@ -104,7 +108,13 @@ export const ComputationModeSetting = () => {
           </>
         )}
         {!save.isError && savedService?.isReady && savedService.info && (
-          <Typography variant="body2" color="text.secondary" role="status">
+          <Typography
+            variant="body2"
+            role="status"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t(getConnectedComputationKey(mode), {
               model: savedService.info.modelId,
               dimensions: savedService.dimensions,

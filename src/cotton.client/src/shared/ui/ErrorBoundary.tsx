@@ -55,7 +55,14 @@ class ErrorBoundaryImpl extends Component<Props, State> {
     }
 
     return (
-      <Box px={1} py={{ xs: 2, sm: 4 }} display="flex" justifyContent="center">
+      <Box
+        sx={{
+          px: 1,
+          py: { xs: 2, sm: 4 },
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
         <Card
           role="alert"
           variant="outlined"
@@ -67,7 +74,12 @@ class ErrorBoundaryImpl extends Component<Props, State> {
                 <Typography component="h2" variant="h6" gutterBottom>
                   {t("common:errors.unexpectedTitle")}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {t("common:errors.unexpectedDescription")}
                 </Typography>
               </Box>

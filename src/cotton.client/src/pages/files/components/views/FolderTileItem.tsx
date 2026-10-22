@@ -3,6 +3,7 @@ import { LockOutlined, Star } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { FolderCard } from "../FolderCard";
 import { isFolderEncryptionPolicyEnabled } from "../../../../shared/crypto";
+import { hasEncryptedFolderName } from "@shared/crypto/folderDisplayMeta";
 import type {
   FileSystemTile,
   FolderOperations,
@@ -52,7 +53,8 @@ export const FolderTileItem = ({
     folderEncryptionPolicy?.explicitEnabled ??
     isFolderEncryptionPolicyEnabled(tile.node.metadata);
   const effectiveEncryption =
-    folderEncryptionPolicy?.effectiveEnabled ?? folderEncrypted;
+    (folderEncryptionPolicy?.effectiveEnabled ?? folderEncrypted) ||
+    hasEncryptedFolderName(tile.node.metadata);
   const isPinned = folderOperations.isPinned?.(tile.node.id) ?? false;
 
   return (
@@ -98,62 +100,47 @@ export const FolderTileItem = ({
         onRenamingNameChange={folderOperations.onRenamingNameChange}
         onConfirmRename={folderOperations.onConfirmRename}
         onCancelRename={folderOperations.onCancelRename}
-        onStartRename={
-          folderOperations.onStartRename
-            ? () =>
-                folderOperations.onStartRename?.(tile.node.id, tile.node.name)
-            : undefined
-        }
-        onDelete={
-          folderOperations.onDelete
-            ? () => folderOperations.onDelete?.(tile.node.id, tile.node.name)
-            : undefined
-        }
-        onDownload={
-          folderOperations.onDownload
-            ? () => folderOperations.onDownload?.(tile.node.id, tile.node.name)
-            : undefined
-        }
-        onShare={
-          folderOperations.onShare
-            ? () => folderOperations.onShare?.(tile.node.id, tile.node.name)
-            : undefined
-        }
-        onCopy={
-          folderOperations.onCopy
-            ? () => folderOperations.onCopy?.(tile.node.id)
-            : undefined
-        }
-        onCut={
-          folderOperations.onCut
-            ? () => folderOperations.onCut?.(tile.node.id)
-            : undefined
-        }
-        onTogglePin={
-          folderOperations.onTogglePin
-            ? () => folderOperations.onTogglePin?.(tile.node.id)
-            : undefined
-        }
-        onShowInfo={
-          folderOperations.onShowInfo
-            ? () => folderOperations.onShowInfo?.(tile.node)
-            : undefined
-        }
+        onStartRename={folderOperations.onStartRename?.bind(
+          folderOperations,
+          tile.node.id,
+          tile.node.name,
+        )}
+        onDelete={folderOperations.onDelete?.bind(
+          folderOperations,
+          tile.node.id,
+          tile.node.name,
+        )}
+        onDownload={folderOperations.onDownload?.bind(
+          folderOperations,
+          tile.node.id,
+          tile.node.name,
+        )}
+        onShare={folderOperations.onShare?.bind(
+          folderOperations,
+          tile.node.id,
+          tile.node.name,
+        )}
+        onCopy={folderOperations.onCopy?.bind(folderOperations, tile.node.id)}
+        onCut={folderOperations.onCut?.bind(folderOperations, tile.node.id)}
+        onTogglePin={folderOperations.onTogglePin?.bind(
+          folderOperations,
+          tile.node.id,
+        )}
+        onShowInfo={folderOperations.onShowInfo?.bind(
+          folderOperations,
+          tile.node,
+        )}
         isPinned={isPinned}
-        onToggleEncryptionPolicy={
-          folderOperations.onToggleEncryptionPolicy
-            ? () =>
-                folderOperations.onToggleEncryptionPolicy?.(
-                  tile.node.id,
-                  folderEncrypted,
-                )
-            : undefined
-        }
-        onRestore={
-          folderOperations.onRestore
-            ? () => folderOperations.onRestore?.(tile.node.id, tile.node.name)
-            : undefined
-        }
+        onToggleEncryptionPolicy={folderOperations.onToggleEncryptionPolicy?.bind(
+          folderOperations,
+          tile.node.id,
+          folderEncrypted,
+        )}
+        onRestore={folderOperations.onRestore?.bind(
+          folderOperations,
+          tile.node.id,
+          tile.node.name,
+        )}
         onClick={(event) => {
           const shiftKey = getShiftKey(event);
 

@@ -2411,6 +2411,15 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Impossibile ricevere i file condivisi. Condividili di nuovo.",
+      "uploadFailed": "Impossibile avviare il caricamento dei file condivisi. Ricarica questa pagina per riprovare."
+    },
+    "folderSizes": {
+      "calculate": "Calcola le dimensioni delle cartelle",
+      "calculating": "Calcolo delle dimensioni delle cartelle…",
+      "failed": "Impossibile calcolare le dimensioni di tutte le cartelle. Riprova."
+    },
     "folderInfo": {
       "action": "Informazioni",
       "title": "{{name}}",
@@ -2539,7 +2548,8 @@
       "rename": "Usa {{newName}}",
       "overwrite": "Sostituisci",
       "skip": "Salta",
-      "skipAll": "Salta tutto"
+      "skipAll": "Salta tutto",
+      "overwriteAll": "Sostituisci tutto"
     },
     "deleteFolder": {
       "confirmTitle": "Eliminare la cartella \"{{name}}\"?",
@@ -3155,12 +3165,13 @@
           "validateAndSave": "Verifica e salva",
           "connected": "Connesso · {{model}} · {{dimensions}} dimensioni · {{tokens}} token",
           "cloudConnected": "Cotton Bridge autorizzato · calcolo cloud disponibile · {{model}} · {{dimensions}} dimensioni",
-          "cloudUnavailable": "Cotton Bridge non ha potuto autorizzare questo server o fornire il calcolo cloud. Riprova.",
+          "cloudUnavailable": "I calcoli cloud di Cotton Bridge non sono disponibili. Riprova più tardi.",
           "errors": {
             "NotConfigured": "L’URL del runner non è configurato.",
             "UnsupportedMode": "Gli embedding di testo non sono ancora disponibili in questa modalità.",
             "InvalidUrl": "Inserisci un URL di base HTTP o HTTPS senza credenziali, parametri o frammenti.",
             "Unreachable": "Impossibile connettersi al runner. Verifica indirizzo e disponibilità.",
+            "AccessDenied": "Il servizio di vettorizzazione ha negato l’accesso. Verifica l’autorizzazione del server.",
             "Timeout": "Il runner non ha risposto in tempo. Riprova.",
             "InvalidResponse": "Il runner ha restituito una risposta non valida.",
             "NotEmbeddingModel": "Questo server non supporta gli embedding di testo.",

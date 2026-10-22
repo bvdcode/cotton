@@ -101,8 +101,7 @@ const OidcProviderFormDialogContent = ({
       onClose();
     } catch (error) {
       setError(
-        getApiErrorMessage(error) ??
-          t("identityProviders.errors.saveFailed"),
+        getApiErrorMessage(error) ?? t("identityProviders.errors.saveFailed"),
       );
     }
   };
@@ -145,7 +144,13 @@ const OidcProviderFormDialogContent = ({
           disabled={!canSave || saving}
         >
           {saving ? (
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <CircularProgress color="inherit" size={16} />
               <span>{t("identityProviders.actions.saving")}</span>
             </Stack>

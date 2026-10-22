@@ -31,8 +31,19 @@ export const DatabaseBackupHistory = ({ backups }: Props) => {
     }).format(date);
   };
   return (
-    <Stack spacing={1} minWidth={0}>
-      <Stack direction="row" spacing={1} alignItems="center">
+    <Stack
+      spacing={1}
+      sx={{
+        minWidth: 0,
+      }}
+    >
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <Typography variant="h6">
           {t("databaseBackup.history.title")}
         </Typography>
@@ -58,13 +69,20 @@ export const DatabaseBackupHistory = ({ backups }: Props) => {
               aria-controls={`backup-${backup.backupId}-details`}
               id={`backup-${backup.backupId}-header`}
             >
-              <Stack spacing={0.5} minWidth={0}>
+              <Stack
+                spacing={0.5}
+                sx={{
+                  minWidth: 0,
+                }}
+              >
                 <Stack
                   direction="row"
                   spacing={1}
                   useFlexGap
-                  flexWrap="wrap"
-                  alignItems="center"
+                  sx={{
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                  }}
                 >
                   <Typography>{formatDateTime(backup.createdAtUtc)}</Typography>
                   {index === 0 && (
@@ -74,7 +92,12 @@ export const DatabaseBackupHistory = ({ backups }: Props) => {
                     />
                   )}
                 </Stack>
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {formatBytes(backup.dumpSizeBytes)} ·{" "}
                   {t("databaseBackup.fields.chunkCount")}: {backup.chunkCount}
                 </Typography>
@@ -102,8 +125,18 @@ export const DatabaseBackupHistory = ({ backups }: Props) => {
                   ["sourceHost", backup.sourceHost],
                   ["sourcePort", String(backup.sourcePort)],
                 ].map(([field, value]) => (
-                  <Box key={field} minWidth={0}>
-                    <Typography variant="caption" color="text.secondary">
+                  <Box
+                    key={field}
+                    sx={{
+                      minWidth: 0,
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "text.secondary",
+                      }}
+                    >
                       {t(`databaseBackup.fields.${field}`)}
                     </Typography>
                     <Typography

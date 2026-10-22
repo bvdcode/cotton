@@ -17,17 +17,42 @@ export const AdminPageHeader = ({
   <Stack
     direction={{ xs: "column", md: "row" }}
     spacing={1}
-    justifyContent="space-between"
-    alignItems={{ xs: "stretch", md: "center" }}
+    sx={{
+      justifyContent: "space-between",
+      alignItems: { xs: "stretch", md: "center" },
+    }}
   >
-    <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0}>
+    <Stack
+      direction="row"
+      spacing={1.5}
+      sx={{
+        alignItems: "center",
+        minWidth: 0,
+      }}
+    >
       {icon}
-      <Stack spacing={0.5} minWidth={0}>
-        <Typography component="h1" variant="h5" fontWeight={700}>
+      <Stack
+        spacing={0.5}
+        sx={{
+          minWidth: 0,
+        }}
+      >
+        <Typography
+          component="h1"
+          variant="h5"
+          sx={{
+            fontWeight: 700,
+          }}
+        >
           {title}
         </Typography>
         {description && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {description}
           </Typography>
         )}

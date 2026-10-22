@@ -45,18 +45,25 @@ export const AdminGeoIpLookupModeField = ({
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={1}
-        alignItems={{ xs: "flex-start", sm: "baseline" }}
-        justifyContent="space-between"
-        sx={{ minHeight: 24 }}
+        sx={{
+          alignItems: { xs: "flex-start", sm: "baseline" },
+          justifyContent: "space-between",
+          minHeight: 24,
+        }}
       >
-        <Typography variant="subtitle2" fontWeight={700}>
+        <Typography
+          variant="subtitle2"
+          sx={{
+            fontWeight: 700,
+          }}
+        >
           {label}
         </Typography>
         <Tooltip title={getDescription(value)} placement="top">
           <Typography
             variant="caption"
-            color="text.secondary"
             sx={{
+              color: "text.secondary",
               textAlign: { xs: "left", sm: "right" },
               maxWidth: { xs: "100%", sm: "66%" },
               overflow: "hidden",
@@ -82,10 +89,12 @@ export const AdminGeoIpLookupModeField = ({
           disabled={disabled || loading}
           renderValue={getLabel}
           MenuProps={{
-            PaperProps: {
-              sx: {
-                width: menuWidth ? `${menuWidth}px` : undefined,
-                maxWidth: "100%",
+            slotProps: {
+              paper: {
+                sx: {
+                  width: menuWidth ? `${menuWidth}px` : undefined,
+                  maxWidth: "100%",
+                },
               },
             },
           }}
@@ -97,12 +106,20 @@ export const AdminGeoIpLookupModeField = ({
               disabled={!telemetryEnabled && option === "CottonCloud"}
               sx={{ alignItems: "flex-start" }}
             >
-              <Stack spacing={0.25} py={0.25}>
+              <Stack
+                spacing={0.25}
+                sx={{
+                  py: 0.25,
+                }}
+              >
                 <Typography variant="body2">{getLabel(option)}</Typography>
                 <Typography
                   variant="caption"
-                  color="text.secondary"
-                  sx={{ lineHeight: 1.35, whiteSpace: "normal" }}
+                  sx={{
+                    color: "text.secondary",
+                    lineHeight: 1.35,
+                    whiteSpace: "normal",
+                  }}
                 >
                   {getDescription(option)}
                 </Typography>

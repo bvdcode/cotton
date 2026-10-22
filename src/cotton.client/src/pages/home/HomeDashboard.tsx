@@ -66,9 +66,11 @@ export const HomeDashboard = ({
 
   return (
     <Box
-      display="grid"
-      gap={2}
-      gridTemplateColumns={{ xs: "1fr", md: "repeat(12, minmax(0, 1fr))" }}
+      sx={{
+        display: "grid",
+        gap: 2,
+        gridTemplateColumns: { xs: "1fr", md: "repeat(12, minmax(0, 1fr))" },
+      }}
     >
       {dashboard.layout.order.map((widgetId, index) => (
         <DashboardWidgetFrame

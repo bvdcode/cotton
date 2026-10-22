@@ -227,7 +227,7 @@ const FileTileItem = ({
   longPressHandlers: TileLongPressHandlers;
   onMoveDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
 }): React.ReactElement => {
-  const { t } = useTranslation(["common"]);
+  const { t, i18n } = useTranslation(["common"]);
   const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType, {
     requiresVideoTranscoding: tile.file.requiresVideoTranscoding ?? false,
   });
@@ -288,7 +288,10 @@ const FileTileItem = ({
             />
           ) : undefined
         }
-        subtitle={formatBytes(tile.file.sizeBytes)}
+        subtitle={new Date(tile.file.createdAt).toLocaleDateString(
+          i18n?.resolvedLanguage,
+        )}
+        subtitleEnd={formatBytes(tile.file.sizeBytes)}
         onClick={fileClick}
         iconContainerSx={iconContainerSx}
         actions={buildFileTileActions({

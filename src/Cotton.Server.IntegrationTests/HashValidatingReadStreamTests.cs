@@ -30,7 +30,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void HashMismatch_ThrowsBeforeTheFinalBytesArePublished()
+        public async Task HashMismatch_ThrowsBeforeTheFinalBytesArePublished()
         {
             byte[] content = RandomNumberGenerator.GetBytes(128 * 1024);
             byte[] differentContent = content.ToArray();
@@ -39,7 +39,7 @@ namespace Cotton.Server.IntegrationTests
             using HashValidatingReadStream stream = new(inner, content.Length, SHA256.HashData(differentContent));
             using MemoryStream destination = new();
 
-            InvalidDataException? exception = Assert.ThrowsAsync<InvalidDataException>(
+            InvalidDataException? exception = await Assert.ThrowsAsync<InvalidDataException>(
                 async () => await stream.CopyToAsync(destination));
 
             Assert.Multiple(() =>
@@ -51,26 +51,26 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void ShortContent_ThrowsUnexpectedLength()
+        public async Task ShortContent_ThrowsUnexpectedLength()
         {
             byte[] content = RandomNumberGenerator.GetBytes(64 * 1024);
             using MemoryStream inner = new(content);
             using HashValidatingReadStream stream = new(inner, content.Length + 1, SHA256.HashData(content));
 
-            InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            InvalidOperationException? exception = await Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await stream.CopyToAsync(Stream.Null));
 
             Assert.That(exception?.Message, Is.EqualTo("Unexpected stream length."));
         }
 
         [Test]
-        public void LongContent_ThrowsUnexpectedLength()
+        public async Task LongContent_ThrowsUnexpectedLength()
         {
             byte[] content = RandomNumberGenerator.GetBytes(64 * 1024);
             using MemoryStream inner = new(content);
             using HashValidatingReadStream stream = new(inner, content.Length - 1, SHA256.HashData(content));
 
-            InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            InvalidOperationException? exception = await Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await stream.CopyToAsync(Stream.Null));
 
             Assert.That(exception?.Message, Is.EqualTo("Unexpected stream length."));
@@ -88,7 +88,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void Cancellation_StopsReadingAndLeavesInnerStreamOpen()
+        public async Task Cancellation_StopsReadingAndLeavesInnerStreamOpen()
         {
             byte[] content = RandomNumberGenerator.GetBytes(64 * 1024);
             using MemoryStream inner = new(content);
@@ -100,7 +100,7 @@ namespace Cotton.Server.IntegrationTests
                 SHA256.HashData(content),
                 cancellation.Token);
 
-            Assert.ThrowsAsync<OperationCanceledException>(
+            await Assert.ThrowsAsync<OperationCanceledException>(
                 async () => await stream.CopyToAsync(Stream.Null));
             Assert.Multiple(() =>
             {

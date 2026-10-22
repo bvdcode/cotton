@@ -52,7 +52,12 @@ export const PgvectorDockerSetup = ({
 
   return (
     <Stack spacing={1.5}>
-      <Stack direction={{ xs: "column", sm: "row" }} gap={1.5}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        sx={{
+          gap: 1.5,
+        }}
+      >
         {environmentControl}
         <TextField
           size="small"
@@ -91,19 +96,33 @@ export const PgvectorDockerSetup = ({
         </Stack>
       )}
       {result.kind === "ready" && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("smartSearch.installation.imageAbout")}{" "}
           {t("smartSearch.installation.dockerApply")}
         </Typography>
       )}
-      <Stack direction="row" flexWrap="wrap" alignItems="center" gap={2}>
+      <Stack
+        direction="row"
+        sx={{
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 2,
+        }}
+      >
         {action}
         <Link
           href={`${PGVECTOR_DOCUMENTATION}#docker`}
           target="_blank"
           rel="noreferrer"
           variant="body2"
-          color="text.primary"
+          sx={{
+            color: "text.primary",
+          }}
         >
           {t("smartSearch.installation.docs")}
         </Link>

@@ -35,20 +35,22 @@ export const FilesPageContent: React.FC<FilesPageContentProps> = ({
         label={t("actions.dropFiles")}
       />
       <Box
-        width="100%"
         onDragEnter={fileUpload.handleDragEnter}
         onDragOver={fileUpload.handleDragOver}
         onDragLeave={fileUpload.handleDragLeave}
         onDrop={fileUpload.handleDrop}
         sx={{
+          width: "100%",
           position: "relative",
           display: "flex",
           flexDirection: "column",
           flex: 1,
+
           ...(layoutType === InterfaceLayoutType.List && {
             minHeight: 0,
             overflow: "hidden",
           }),
+
           ...(unlockDialogOpen && {
             filter: "blur(4px)",
             pointerEvents: "none",
@@ -59,7 +61,12 @@ export const FilesPageContent: React.FC<FilesPageContentProps> = ({
       >
         {header}
         {error && (
-          <Box mb={1} px={1}>
+          <Box
+            sx={{
+              mb: 1,
+              px: 1,
+            }}
+          >
             <Alert severity="error">{error}</Alert>
           </Box>
         )}

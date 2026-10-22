@@ -71,14 +71,14 @@ describe("filesPageModel", () => {
     const decrypt = vi.fn();
     const prompt = buildFolderEncryptionPrompt({
       decryptEncryptedFiles: decrypt,
-      encryptedFilesCount: 0,
+      hasEncryptedFiles: false,
       encryptedFilesMessage: "decrypt message",
       encryptedFilesAction: "decrypt",
       encryptPlainFiles: encrypt,
       folderPolicyEnabled: true,
       isDecryptingEncryptedFiles: false,
       isEncryptingPlainFiles: false,
-      plainFilesCount: 2,
+      hasPlainFiles: true,
       plainFilesMessage: "encrypt message",
       plainFilesAction: "encrypt",
     });

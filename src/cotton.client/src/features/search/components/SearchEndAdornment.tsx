@@ -42,9 +42,11 @@ export const SearchEndAdornment = ({
   return (
     <Typography
       variant="caption"
-      color="text.secondary"
       noWrap
-      sx={{ px: 0.5 }}
+      sx={{
+        color: "text.secondary",
+        px: 0.5,
+      }}
     >
       {resultsCountText}
     </Typography>

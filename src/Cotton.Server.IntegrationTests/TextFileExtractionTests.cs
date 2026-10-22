@@ -61,12 +61,12 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void Extract_InvalidEncodingReportsUnreadableContent()
+        public async Task Extract_InvalidEncodingReportsUnreadableContent()
         {
             using MemoryStream source = new([0xC3, 0x28]);
             TextFileExtractor extractor = new(NullLogger<TextFileExtractor>.Instance);
 
-            Assert.ThrowsAsync<FileTextExtractionException>(async () => await extractor.ExtractAsync(source));
+            await Assert.ThrowsAsync<FileTextExtractionException>(async () => await extractor.ExtractAsync(source));
         }
     }
 }

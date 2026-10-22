@@ -64,24 +64,27 @@ export const simplifyObjectGeometry = async (
 
   const modifier = new SimplifyModifier();
 
+  const meshes: THREE.Mesh[] = [];
   object.traverse((node) => {
-    if (!(node instanceof THREE.Mesh) || node instanceof THREE.SkinnedMesh) {
-      return;
+    if (node instanceof THREE.Mesh && !(node instanceof THREE.SkinnedMesh)) {
+      meshes.push(node);
     }
+  });
 
+  for (const node of meshes) {
     const geometry = node.geometry;
     if (!(geometry instanceof THREE.BufferGeometry)) {
-      return;
+      continue;
     }
 
     const position = geometry.getAttribute("position");
     if (!position) {
-      return;
+      continue;
     }
 
     const currentVertexCount = position.count;
     if (currentVertexCount <= LOW_QUALITY_TARGET_MAX_VERTICES) {
-      return;
+      continue;
     }
 
     const targetVertexCount = Math.max(
@@ -94,11 +97,11 @@ export const simplifyObjectGeometry = async (
 
     const verticesToRemove = currentVertexCount - targetVertexCount;
     if (verticesToRemove <= 0) {
-      return;
+      continue;
     }
 
     try {
-      const simplified = modifier.modify(geometry, verticesToRemove);
+      const simplified = await modifier.modify(geometry, verticesToRemove);
       simplified.computeVertexNormals();
 
       geometry.dispose();
@@ -106,7 +109,7 @@ export const simplifyObjectGeometry = async (
     } catch {
       // Keep original geometry if simplification fails for a specific mesh.
     }
-  });
+  }
 };
 
 const loadModelObject = async (

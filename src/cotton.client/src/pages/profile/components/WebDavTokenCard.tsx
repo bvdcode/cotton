@@ -36,10 +36,22 @@ const ReadonlyField = ({
 }: ReadonlyFieldProps) => {
   return (
     <Stack>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 0.5,
+        }}
+      >
         {label}
       </Typography>
-      <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
           {value}
         </Box>
@@ -154,7 +166,12 @@ export const WebDavTokenCard = () => {
               onCopy={handleCopy}
             />
           )}
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("webdav.cardHelp")}
           </Typography>
         </Stack>
@@ -182,10 +199,12 @@ export const WebDavTokenCard = () => {
 
         <Accordion
           disableGutters
-          TransitionProps={{ mountOnEnter: true, unmountOnExit: false }}
           sx={{
             boxShadow: "none",
             "&:before": { display: "none" },
+          }}
+          slotProps={{
+            transition: { mountOnEnter: true, unmountOnExit: false },
           }}
         >
           <AccordionSummary
@@ -199,7 +218,12 @@ export const WebDavTokenCard = () => {
               },
             }}
           >
-            <Typography variant="body2" fontWeight={500}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 500,
+              }}
+            >
               {t("webdav.examples.title")}
             </Typography>
           </AccordionSummary>
@@ -208,11 +232,26 @@ export const WebDavTokenCard = () => {
             <Stack spacing={0} divider={<Divider />}>
               {examples.map((example) => (
                 <Stack key={example.id} spacing={0.5} sx={{ py: 1.5 }}>
-                  <Box display="flex" justifyContent="space-between">
-                    <Typography variant="body2" fontWeight={600}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                      }}
+                    >
                       {t(`webdav.examples.${example.id}.title`)}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "text.secondary",
+                      }}
+                    >
                       {t(`webdav.examples.${example.id}.caption`)}
                     </Typography>
                   </Box>

@@ -113,7 +113,12 @@ export const AdminIdentityProvidersPage = () => {
     >
       <AdminPageSurface fullHeight>
         {(providersQuery.isError || pageError) && (
-          <Box p={2} pb={0}>
+          <Box
+            sx={{
+              p: 2,
+              pb: 0,
+            }}
+          >
             <Alert severity="error">
               {pageError ?? t("identityProviders.errors.loadFailed")}
             </Alert>

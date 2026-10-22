@@ -429,6 +429,5 @@ namespace Cotton.Server.IntegrationTests
         {
             return Hasher.HashData(Encoding.UTF8.GetBytes(value));
         }
-
     }
 }

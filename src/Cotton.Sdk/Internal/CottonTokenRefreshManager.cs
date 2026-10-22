@@ -11,6 +11,7 @@ namespace Cotton.Sdk.Internal
     internal class CottonTokenRefreshManager(
         ICottonTokenStore tokenStore,
         Func<string, CancellationToken, Task<TokenPairDto>> refreshToken,
+        Func<string?, CancellationToken, Task> revokeToken,
         ILogger logger)
     {
         private readonly CottonTokenRefreshCoordinator _coordinator = CottonTokenRefreshCoordinator.Get(tokenStore);
@@ -45,16 +46,29 @@ namespace Cotton.Sdk.Internal
             string? requestedRefreshToken,
             CancellationToken cancellationToken)
         {
+            bool useStoredToken = string.IsNullOrWhiteSpace(requestedRefreshToken);
+            TokenPairDto? observed = null;
+            if (useStoredToken)
+            {
+                observed = await tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             await _coordinator.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 TokenPairDto? stored = await tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
-                string? effectiveRefreshToken = string.IsNullOrWhiteSpace(requestedRefreshToken)
+                string? effectiveRefreshToken = useStoredToken
                     ? stored?.RefreshToken
                     : requestedRefreshToken;
                 if (string.IsNullOrWhiteSpace(effectiveRefreshToken))
                 {
                     throw new InvalidOperationException("A refresh token is required.");
+                }
+
+                if (stored is not null && useStoredToken
+                    && !string.Equals(observed?.RefreshToken, stored.RefreshToken, StringComparison.Ordinal))
+                {
+                    return stored;
                 }
 
                 if (stored is not null
@@ -86,13 +100,28 @@ namespace Cotton.Sdk.Internal
             }
         }
 
-        public async Task ClearAsync(CancellationToken cancellationToken)
+        public async Task LogoutAsync(string? requestedRefreshToken, CancellationToken cancellationToken)
         {
             await _coordinator.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                await tokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
-                _coordinator.ResetRotation();
+                TokenPairDto? stored = await tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
+                string? effectiveRefreshToken = requestedRefreshToken;
+                if (string.IsNullOrWhiteSpace(effectiveRefreshToken)
+                    || _coordinator.WasRotated(effectiveRefreshToken, stored?.RefreshToken))
+                {
+                    effectiveRefreshToken = stored?.RefreshToken;
+                }
+
+                try
+                {
+                    await revokeToken(effectiveRefreshToken, cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    await tokenStore.ClearAsync(CancellationToken.None).ConfigureAwait(false);
+                    _coordinator.ResetRotation();
+                }
             }
             finally
             {

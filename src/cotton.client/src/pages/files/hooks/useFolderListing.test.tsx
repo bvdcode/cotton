@@ -9,7 +9,11 @@ import { queryClient } from "../../../shared/api/queries/queryClient";
 import { useFolderListing } from "./useFolderListing";
 
 const files = Array.from({ length: 101 }, (_, index) =>
-  createFile({ id: `file-${index}`, name: `file-${index}.txt` }),
+  createFile({
+    id: `file-${index}`,
+    name: `file-${index}.txt`,
+    metadata: index === 0 ? { isClientEncrypted: "true" } : {},
+  }),
 );
 
 const response = (page: number): NodeResponse => ({
@@ -17,10 +21,7 @@ const response = (page: number): NodeResponse => ({
     ...createFolder({ id: "folder-1" }),
     nodes: [],
     files: page === 1 ? files.slice(0, 100) : files.slice(100),
-    stats:
-      page === 1
-        ? { folders: 0, files: 101, encryptedFiles: 1, sizeBytes: 101 }
-        : null,
+    stats: page === 1 ? { folders: 0, files: 101, sizeBytes: 101 } : null,
   },
   totalCount: 101,
 });
@@ -36,6 +37,29 @@ afterEach(() => {
 });
 
 describe("folder listing", () => {
+  it("disables name operations when encrypted folder names remain without an encryption policy", async () => {
+    vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
+      content: {
+        ...createFolder(),
+        nodes: [createFolder({ metadata: { en: "opaque" } })],
+        files: [],
+        stats: {
+          folders: 1,
+          files: 0,
+
+          sizeBytes: 0,
+        },
+      },
+      totalCount: 1,
+    });
+    const { result } = renderHook(
+      () =>
+        useFolderListing("folder-1", "user-1", InterfaceLayoutType.List, false),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.pagination?.query?.namesEnabled).toBe(false);
+  });
   it("shows a single list page while keeping totals for the whole folder", async () => {
     const get = vi
       .spyOn(nodesApi, "getChildren")
@@ -51,7 +75,7 @@ describe("folder listing", () => {
     expect(result.current.stats).toEqual({
       folders: 0,
       files: 101,
-      encryptedFiles: 1,
+
       sizeBytes: 101,
     });
     expect(result.current.pagination?.totalCount).toBe(101);
@@ -80,7 +104,7 @@ describe("folder listing", () => {
   });
 
   it("loads another tile page only when requested", async () => {
-    const tileFiles = Array.from({ length: 1001 }, (_, index) =>
+    const tileFiles = Array.from({ length: 10001 }, (_, index) =>
       createFile({ id: `tile-${index}` }),
     );
     const get = vi
@@ -91,16 +115,16 @@ describe("folder listing", () => {
           nodes: [],
           files:
             options?.page === 1
-              ? tileFiles.slice(0, 1000)
-              : tileFiles.slice(1000),
+              ? tileFiles.slice(0, 10000)
+              : tileFiles.slice(10000),
           stats: {
             folders: 0,
-            files: 1001,
-            encryptedFiles: 0,
-            sizeBytes: 1001,
+            files: 10001,
+
+            sizeBytes: 10001,
           },
         },
-        totalCount: 1001,
+        totalCount: 10001,
       }));
     const { result } = renderHook(
       () => useFolderListing("folder-1", "user-1", InterfaceLayoutType.Tiles),
@@ -108,24 +132,24 @@ describe("folder listing", () => {
     );
 
     await waitFor(() =>
-      expect(result.current.content?.files).toHaveLength(1000),
+      expect(result.current.content?.files).toHaveLength(10000),
     );
     expect(get).toHaveBeenCalledTimes(1);
     act(() => result.current.loadMore?.());
     await waitFor(() =>
-      expect(result.current.content?.files).toHaveLength(1001),
+      expect(result.current.content?.files).toHaveLength(10001),
     );
     expect(result.current.loadMore).toBeUndefined();
     expect(get).toHaveBeenCalledTimes(2);
-    expect(result.current.stats.sizeBytes).toBe(1001);
+    expect(result.current.stats.sizeBytes).toBe(10001);
     expect(get).toHaveBeenNthCalledWith(1, "folder-1", {
       page: 1,
-      pageSize: 1000,
+      pageSize: 10000,
       includeStats: true,
     });
     expect(get).toHaveBeenNthCalledWith(2, "folder-1", {
       page: 2,
-      pageSize: 1000,
+      pageSize: 10000,
     });
   });
 
@@ -138,9 +162,12 @@ describe("folder listing", () => {
       .mockImplementation(async (_, options) => ({
         content: {
           ...createFolder(),
-          nodes: folders.slice(0, options?.pageSize),
+          nodes: folders.slice(
+            ((options?.page ?? 1) - 1) * (options?.pageSize ?? 100),
+            (options?.page ?? 1) * (options?.pageSize ?? 100),
+          ),
           files: [],
-          stats: { folders: 638, files: 0, encryptedFiles: 0, sizeBytes: 0 },
+          stats: { folders: 638, files: 0, sizeBytes: 0 },
         },
         totalCount: 638,
       }));
@@ -157,7 +184,7 @@ describe("folder listing", () => {
     expect(result.current.loadMore).toBeUndefined();
     expect(get).toHaveBeenCalledExactlyOnceWith("folder-1", {
       page: 1,
-      pageSize: 1000,
+      pageSize: 10000,
       includeStats: true,
     });
 
@@ -166,11 +193,19 @@ describe("folder listing", () => {
       expect(result.current.content?.nodes).toHaveLength(100),
     );
     expect(result.current.pagination?.model?.pageSize).toBe(100);
+    await waitFor(() =>
+      expect(result.current.pagination?.query?.namesEnabled).toBe(true),
+    );
+    expect(
+      get.mock.calls.filter(([, options]) => options?.signal),
+    ).toHaveLength(6);
     rerender(InterfaceLayoutType.Tiles);
     await waitFor(() =>
       expect(result.current.content?.nodes).toHaveLength(638),
     );
-    expect(get).toHaveBeenCalledTimes(2);
+    expect(
+      get.mock.calls.filter(([, options]) => !options?.signal),
+    ).toHaveLength(2);
     expect(result.current.loadMore).toBeUndefined();
   });
 });

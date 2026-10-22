@@ -1,3 +1,6 @@
+import type { ComponentProps } from "react";
+import type { FilePreviewModal } from "../ui/preview/FilePreviewModal";
+import type { MediaLightboxProps } from "../types/mediaLightbox";
 import * as React from "react";
 import { toast } from "@shared/ui/notifications";
 import { useTranslation } from "react-i18next";
@@ -23,6 +26,8 @@ interface UseFileInteractionHandlersArgs {
 }
 
 interface UseFileInteractionHandlersResult {
+  previewProps: ComponentProps<typeof FilePreviewModal>;
+  lightboxProps: MediaLightboxProps;
   previewState: ReturnType<typeof useFilePreview>["previewState"];
   closePreview: ReturnType<typeof useFilePreview>["closePreview"];
   handleFileClick: (
@@ -194,6 +199,20 @@ export const useFileInteractionHandlers = ({
   );
 
   return {
+    previewProps: {
+      ...previewState,
+      onClose: closePreview,
+      onDownload: handleDownloadFile,
+    },
+    lightboxProps: {
+      open: lightboxOpen,
+      initialIndex: lightboxIndex,
+      items: mediaItems,
+      getSignedMediaUrl,
+      getDownloadUrl,
+      onShare: handleShareFile,
+      onClose: () => setLightboxOpen(false),
+    },
     previewState,
     closePreview,
     handleFileClick,

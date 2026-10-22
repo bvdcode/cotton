@@ -35,16 +35,16 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void Extract_InvalidPackageReportsUnreadableContent()
+        public async Task Extract_InvalidPackageReportsUnreadableContent()
         {
             using MemoryStream source = new(Encoding.UTF8.GetBytes("not a package"));
             OpenDocumentTextExtractor extractor = new(NullLogger<OpenDocumentTextExtractor>.Instance);
 
-            Assert.ThrowsAsync<FileTextExtractionException>(async () => await extractor.ExtractAsync(source));
+            await Assert.ThrowsAsync<FileTextExtractionException>(async () => await extractor.ExtractAsync(source));
         }
 
         [Test]
-        public void Extract_CompressedOversizedXmlReportsUnreadableContent()
+        public async Task Extract_CompressedOversizedXmlReportsUnreadableContent()
         {
             using MemoryStream source = new();
             using (ZipArchive archive = new(source, ZipArchiveMode.Create, leaveOpen: true))
@@ -58,7 +58,7 @@ namespace Cotton.Server.IntegrationTests
             source.Position = 0;
             OpenDocumentTextExtractor extractor = new(NullLogger<OpenDocumentTextExtractor>.Instance);
 
-            FileTextExtractionException? error = Assert.ThrowsAsync<FileTextExtractionException>(
+            FileTextExtractionException? error = await Assert.ThrowsAsync<FileTextExtractionException>(
                 async () => await extractor.ExtractAsync(source));
             Assert.That(error?.InnerException?.Message, Does.Contain("size limit"));
         }

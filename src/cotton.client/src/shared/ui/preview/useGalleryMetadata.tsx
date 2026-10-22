@@ -103,9 +103,21 @@ export const useGalleryMetadata = (
     },
   };
   const renderEntries = (values: GalleryMetadataEntry[]) => (
-    <Box component="dl" margin={0}>
+    <Box
+      component="dl"
+      sx={{
+        margin: 0,
+      }}
+    >
       {values.map((entry) => (
-        <Box key={entry.key} display="flex" gap={2} paddingY={0.5}>
+        <Box
+          key={entry.key}
+          sx={{
+            display: "flex",
+            gap: 2,
+            paddingY: 0.5,
+          }}
+        >
           <Typography
             component="dt"
             variant="body2"
@@ -137,10 +149,12 @@ export const useGalleryMetadata = (
   const content = (
     <Stack
       spacing={1.5}
-      padding={2}
-      flex={1}
-      minHeight={0}
-      sx={
+      sx={[
+        {
+          padding: 2,
+          flex: 1,
+          minHeight: 0,
+        },
         !isTouchDevice
           ? (theme) => ({
               backgroundColor: alpha(theme.palette.background.paper, 0.68),
@@ -149,14 +163,16 @@ export const useGalleryMetadata = (
                 backgroundColor: alpha(theme.palette.background.paper, 0.9),
               },
             })
-          : undefined
-      }
+          : false,
+      ]}
     >
       {isTouchDevice && (
         <Stack
           direction="row"
-          alignItems="center"
-          justifyContent="space-between"
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
         >
           <Typography
             variant="subtitle1"
@@ -175,10 +191,12 @@ export const useGalleryMetadata = (
       )}
       <Stack
         spacing={1.5}
-        flex="0 1 auto"
-        minHeight={0}
-        overflow="auto"
         tabIndex={0}
+        sx={{
+          flex: "0 1 auto",
+          minHeight: 0,
+          overflow: "auto",
+        }}
       >
         <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
           {item.name}

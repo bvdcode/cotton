@@ -44,7 +44,6 @@ export const ProfileAccordionCard = ({
     <Accordion
       disableGutters
       defaultExpanded={defaultExpanded}
-      TransitionProps={{ mountOnEnter: true, unmountOnExit: false }}
       sx={[
         {
           borderRadius: 1,
@@ -52,6 +51,9 @@ export const ProfileAccordionCard = ({
         },
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
+      slotProps={{
+        transition: { mountOnEnter: true, unmountOnExit: false },
+      }}
     >
       <AccordionSummary
         expandIcon={<ExpandMoreIcon />}
@@ -98,8 +100,10 @@ export const ProfileAccordionCard = ({
               {icon}
               <Typography
                 variant="h6"
-                fontWeight={600}
-                sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
+                sx={{
+                  fontWeight: 600,
+                  fontSize: { xs: "1rem", sm: "1.25rem" },
+                }}
               >
                 {title}
               </Typography>
@@ -108,8 +112,11 @@ export const ProfileAccordionCard = ({
             {description && (
               <Typography
                 variant="body2"
-                color="text.secondary"
-                sx={{ fontSize: "0.9rem", mt: 0.5 }}
+                sx={{
+                  color: "text.secondary",
+                  fontSize: "0.9rem",
+                  mt: 0.5,
+                }}
               >
                 {description}
               </Typography>
@@ -119,8 +126,10 @@ export const ProfileAccordionCard = ({
           {typeof count === "number" && (
             <Typography
               variant="body2"
-              color="text.secondary"
-              sx={{ whiteSpace: "nowrap" }}
+              sx={{
+                color: "text.secondary",
+                whiteSpace: "nowrap",
+              }}
             >
               {count}
             </Typography>

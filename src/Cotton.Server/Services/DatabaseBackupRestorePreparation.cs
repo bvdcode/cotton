@@ -86,6 +86,5 @@ namespace Cotton.Server.Services
                 throw new InvalidDataException("Restored dump size does not match backup manifest size.");
             }
         }
-
     }
 }

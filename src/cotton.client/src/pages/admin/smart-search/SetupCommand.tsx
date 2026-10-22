@@ -23,18 +23,21 @@ export const SetupCommand = ({ command }: { command: string }) => {
   return (
     <Stack
       direction="row"
-      alignItems="center"
       spacing={1}
-      px={1.5}
-      py={1}
-      sx={{ bgcolor: "action.hover", borderRadius: 1 }}
+      sx={{
+        alignItems: "center",
+        px: 1.5,
+        py: 1,
+        bgcolor: "action.hover",
+        borderRadius: 1,
+      }}
     >
       <Box
         component="pre"
-        m={0}
-        flex={1}
-        minWidth={0}
         sx={{
+          m: 0,
+          flex: 1,
+          minWidth: 0,
           whiteSpace: "pre-wrap",
           overflowWrap: "anywhere",
           fontSize: "0.875rem",

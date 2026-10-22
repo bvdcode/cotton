@@ -105,7 +105,7 @@ namespace Cotton.Server.IntegrationTests
             await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
             ExtractFileManifestMetadataRequestHandler handler = CreateHandler(scope, extractor);
 
-            Assert.ThrowsAsync<OperationCanceledException>(async () => await handler.Handle(
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await handler.Handle(
                 new ExtractFileManifestMetadataRequest { FileManifestId = file.FileManifestId }, cancellation.Token));
 
             Assert.That((await Pipeline.GetFileManifestMetadataStateAsync(file.Id)).Metadata, Is.Null);

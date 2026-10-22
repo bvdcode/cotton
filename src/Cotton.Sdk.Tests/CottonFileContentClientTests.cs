@@ -85,7 +85,7 @@ namespace Cotton.Sdk.Tests
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
             using MemoryStream destination = new MemoryStream();
 
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
+            CottonApiException? exception = await Assert.ThrowsAsync<CottonApiException>(async () =>
                 await client.Files.DownloadContentRangeAsync(
                     Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
                     destination,
@@ -118,7 +118,7 @@ namespace Cotton.Sdk.Tests
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
             using MemoryStream destination = new MemoryStream();
 
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
+            CottonApiException? exception = await Assert.ThrowsAsync<CottonApiException>(async () =>
                 await client.Files.DownloadContentRangeAsync(
                     Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
                     destination,
@@ -139,13 +139,13 @@ namespace Cotton.Sdk.Tests
             CottonCloudClient client = await CreateAuthorizedClientAsync(new QueuedHttpMessageHandler());
             using MemoryStream destination = new MemoryStream();
 
-            Assert.Multiple(() =>
+            await Assert.MultipleAsync(async () =>
             {
-                Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
+                await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
                     await client.Files.DownloadContentRangeAsync(Guid.NewGuid(), destination, offset: -1, length: 1));
-                Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
+                await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
                     await client.Files.DownloadContentRangeAsync(Guid.NewGuid(), destination, offset: 0, length: 0));
-                Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
+                await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
                     await client.Files.DownloadContentRangeAsync(Guid.NewGuid(), destination, long.MaxValue, length: 2));
             });
         }
@@ -195,7 +195,7 @@ namespace Cotton.Sdk.Tests
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
             using MemoryStream destination = new();
 
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
+            CottonApiException? exception = await Assert.ThrowsAsync<CottonApiException>(async () =>
                 await client.Files.DownloadContentChunkAsync(Guid.NewGuid(), 0, destination));
 
             Assert.That(exception!.Message, Does.Contain("invalid chunk count"));
@@ -218,7 +218,7 @@ namespace Cotton.Sdk.Tests
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
             using MemoryStream destination = new();
 
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
+            CottonApiException? exception = await Assert.ThrowsAsync<CottonApiException>(async () =>
                 await client.Files.DownloadContentChunkAsync(Guid.NewGuid(), 0, destination));
 
             Assert.That(exception!.Message, Does.Contain("no valid ETag"));
@@ -242,7 +242,7 @@ namespace Cotton.Sdk.Tests
             CottonCloudClient client = await CreateAuthorizedClientAsync(handler);
             using MemoryStream destination = new();
 
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(async () =>
+            CottonApiException? exception = await Assert.ThrowsAsync<CottonApiException>(async () =>
                 await client.Files.DownloadContentChunkAsync(
                     Guid.NewGuid(),
                     0,

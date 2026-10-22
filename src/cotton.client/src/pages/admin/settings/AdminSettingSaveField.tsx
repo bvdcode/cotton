@@ -1,5 +1,5 @@
 import SaveIcon from "@mui/icons-material/Save";
-import { HelpOutline } from "@mui/icons-material";
+import { HelpOutlined } from "@mui/icons-material";
 import {
   Box,
   CircularProgress,
@@ -35,7 +35,12 @@ export const AdminSettingSaveField = ({
       ...(Array.isArray(sx) ? sx : [sx]),
     ]}
   >
-    <Box flex={1} minWidth={0}>
+    <Box
+      sx={{
+        flex: 1,
+        minWidth: 0,
+      }}
+    >
       {children}
     </Box>
     {help && (
@@ -49,7 +54,7 @@ export const AdminSettingSaveField = ({
             cursor: "help",
           }}
         >
-          <HelpOutline fontSize="small" />
+          <HelpOutlined fontSize="small" />
         </Box>
       </Tooltip>
     )}

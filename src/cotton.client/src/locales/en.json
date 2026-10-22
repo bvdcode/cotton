@@ -2206,7 +2206,16 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Could not receive the shared files. Please share them again.",
+      "uploadFailed": "Could not start uploading the shared files. Reload this page to try again."
+    },
     "title": "Files",
+    "folderSizes": {
+      "calculate": "Calculate folder sizes",
+      "calculating": "Calculating folder sizes…",
+      "failed": "Could not calculate all folder sizes. Try again."
+    },
     "folderInfo": {
       "action": "Information",
       "title": "{{name}}",
@@ -2334,7 +2343,8 @@
       "rename": "Use {{newName}}",
       "overwrite": "Replace",
       "skip": "Skip",
-      "skipAll": "Skip all"
+      "skipAll": "Skip all",
+      "overwriteAll": "Replace all"
     },
     "deleteFolder": {
       "confirmTitle": "Delete folder \"{{name}}\"?",
@@ -2950,12 +2960,13 @@
           "validateAndSave": "Validate and save",
           "connected": "Connected · {{model}} · {{dimensions}} dimensions · {{tokens}} tokens",
           "cloudConnected": "Cotton Bridge authorized · cloud computations available · {{model}} · {{dimensions}} dimensions",
-          "cloudUnavailable": "Cotton Bridge could not authorize this server or provide cloud computations. Try again.",
+          "cloudUnavailable": "Cotton Bridge cloud computations are unavailable. Try again later.",
           "errors": {
             "NotConfigured": "Runner URL is not configured.",
             "UnsupportedMode": "Text embeddings are not available in this computation mode yet.",
             "InvalidUrl": "Enter an HTTP or HTTPS base URL without credentials, a query, or a fragment.",
             "Unreachable": "Cannot connect to the runner. Check its address and availability.",
+            "AccessDenied": "The embedding service denied access. Check the server authorization.",
             "Timeout": "The runner did not respond in time. Try again.",
             "InvalidResponse": "The runner returned an invalid response.",
             "NotEmbeddingModel": "This server does not provide text embeddings.",

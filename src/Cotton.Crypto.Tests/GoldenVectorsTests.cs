@@ -26,7 +26,7 @@ namespace Cotton.Crypto.Tests
         }
 
         [Test]
-        public void Shared_Ctn1Vector_ReportsRequiredTransitionVersion()
+        public async Task Shared_Ctn1Vector_ReportsRequiredTransitionVersion()
         {
             SharedContainerVectors vectors = LoadSharedContainerVectors();
             using AesGcmStreamCipher cipher = new AesGcmStreamCipher(vectors.MasterKey, keyId: 1, threads: 1);
@@ -34,7 +34,7 @@ namespace Cotton.Crypto.Tests
             using MemoryStream output = new MemoryStream();
 
 #pragma warning disable CS0618 // OBSOLETE TRANSITION: pin the operator-facing CTN1 cutover error.
-            Ctn1NotSupportedException? exception = Assert.ThrowsAsync<Ctn1NotSupportedException>(
+            Ctn1NotSupportedException? exception = await Assert.ThrowsAsync<Ctn1NotSupportedException>(
                 async () => await cipher.DecryptAsync(input, output));
 #pragma warning restore CS0618
 

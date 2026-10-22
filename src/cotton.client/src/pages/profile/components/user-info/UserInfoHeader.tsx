@@ -110,7 +110,9 @@ export const UserInfoHeader = ({
     <Stack
       direction={{ xs: "column", sm: "row" }}
       spacing={2.5}
-      alignItems={{ xs: "center", sm: "flex-start" }}
+      sx={{
+        alignItems: { xs: "center", sm: "flex-start" },
+      }}
     >
       <AvatarUploadControl
         alt={title}
@@ -122,15 +124,34 @@ export const UserInfoHeader = ({
         onFileSelected={onAvatarFileSelected}
       />
 
-      <Box minWidth={0} flex={1} textAlign={{ xs: "center", sm: "left" }}>
+      <Box
+        sx={{
+          minWidth: 0,
+          flex: 1,
+          textAlign: { xs: "center", sm: "left" },
+        }}
+      >
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={{ xs: 0.75, sm: 1 }}
-          alignItems={{ xs: "center", sm: "center" }}
-          justifyContent={{ sm: "space-between" }}
+          sx={{
+            alignItems: { xs: "center", sm: "center" },
+            justifyContent: { sm: "space-between" },
+          }}
         >
-          <Box flexGrow={1} minWidth={0}>
-            <Typography variant="h5" fontWeight={800} height="100%">
+          <Box
+            sx={{
+              flexGrow: 1,
+              minWidth: 0,
+            }}
+          >
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 800,
+                height: "100%",
+              }}
+            >
               {title}
             </Typography>
           </Box>
@@ -138,9 +159,11 @@ export const UserInfoHeader = ({
           <Stack
             direction="row"
             spacing={1}
-            flexWrap="wrap"
             useFlexGap
-            justifyContent={{ xs: "center", sm: "flex-end" }}
+            sx={{
+              flexWrap: "wrap",
+              justifyContent: { xs: "center", sm: "flex-end" },
+            }}
           >
             <Chip size="small" label={`@${username}`} />
             <Chip
@@ -160,11 +183,12 @@ export const UserInfoHeader = ({
         <Stack
           direction={{ xs: "row", sm: "column" }}
           spacing={{ xs: 1.5, sm: 0.5 }}
-          alignItems={{ xs: "center", sm: "flex-start" }}
-          justifyContent={{ xs: "center", sm: "flex-start" }}
-          mt={0.5}
           sx={{
+            alignItems: { xs: "center", sm: "flex-start" },
+            justifyContent: { xs: "center", sm: "flex-start" },
+            mt: 0.5,
             minWidth: 0,
+
             "& > *": {
               minWidth: 0,
             },
@@ -172,15 +196,23 @@ export const UserInfoHeader = ({
         >
           {birthDateValue && (
             <Box
-              display="flex"
-              alignItems="center"
-              gap={0.5}
-              sx={{ order: { xs: 1, sm: 2 }, minWidth: 0 }}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5,
+                order: { xs: 1, sm: 2 },
+                minWidth: 0,
+              }}
             >
               <Tooltip title={t("fields.birthDate")} placement="left">
                 <Cake fontSize="small" />
               </Tooltip>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 <Box
                   component="span"
                   sx={{ display: { xs: "inline", sm: "none" } }}
@@ -201,20 +233,25 @@ export const UserInfoHeader = ({
             <Stack
               direction="row"
               spacing={1}
-              alignItems="center"
-              justifyContent={{ xs: "center", sm: "flex-start" }}
-              flexWrap={{ xs: "nowrap", sm: "wrap" }}
               useFlexGap
-              sx={{ order: { xs: 2, sm: 1 }, minWidth: 0 }}
+              sx={{
+                alignItems: "center",
+                justifyContent: { xs: "center", sm: "flex-start" },
+                flexWrap: { xs: "nowrap", sm: "wrap" },
+                order: { xs: 2, sm: 1 },
+                minWidth: 0,
+              }}
             >
               <Tooltip title={t("fields.email")} placement="left">
                 <Email fontSize="small" />
               </Tooltip>
               <Typography
                 variant="body2"
-                color="text.secondary"
                 noWrap
-                sx={{ minWidth: 0 }}
+                sx={{
+                  color: "text.secondary",
+                  minWidth: 0,
+                }}
               >
                 {email}
               </Typography>

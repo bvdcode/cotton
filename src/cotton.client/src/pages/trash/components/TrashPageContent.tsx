@@ -51,12 +51,13 @@ export const TrashPageContent: React.FC<TrashPageContentProps> = ({
   return (
     <>
       <Box
-        width="100%"
         sx={{
+          width: "100%",
           position: "relative",
           display: "flex",
           flexDirection: "column",
           flex: 1,
+
           ...(layoutType === InterfaceLayoutType.List && {
             minHeight: 0,
             overflow: "hidden",
@@ -65,12 +66,22 @@ export const TrashPageContent: React.FC<TrashPageContentProps> = ({
       >
         {header}
         {loadError && (
-          <Box mb={1} px={1}>
+          <Box
+            sx={{
+              mb: 1,
+              px: 1,
+            }}
+          >
             <Alert severity="error">{loadError}</Alert>
           </Box>
         )}
         {restore.errors.length > 0 && (
-          <Box mb={1} px={1}>
+          <Box
+            sx={{
+              mb: 1,
+              px: 1,
+            }}
+          >
             <Alert severity="warning" onClose={restore.clearErrors}>
               <Box sx={{ whiteSpace: "pre-line" }}>
                 {restore.errors.join("\n")}
@@ -82,7 +93,7 @@ export const TrashPageContent: React.FC<TrashPageContentProps> = ({
       </Box>
 
       {restore.restoring && restore.activePrompt === null && (
-        <Dialog open disableEscapeKeyDown maxWidth="xs" fullWidth>
+        <Dialog open maxWidth="xs" fullWidth>
           <DialogTitle>
             {t("restore.inProgress", {
               total: restore.progress.total,
@@ -90,7 +101,9 @@ export const TrashPageContent: React.FC<TrashPageContentProps> = ({
           </DialogTitle>
           <DialogContent>
             <LinearProgress
-              variant={restore.requestInFlight ? "indeterminate" : "determinate"}
+              variant={
+                restore.requestInFlight ? "indeterminate" : "determinate"
+              }
               value={progressPercent}
             />
           </DialogContent>

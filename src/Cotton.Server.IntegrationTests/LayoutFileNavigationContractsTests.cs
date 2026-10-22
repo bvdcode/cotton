@@ -7,6 +7,7 @@ using Cotton.Server.Services.WebDav;
 using Cotton.Topology.Abstractions;
 using EasyExtensions.Mediator;
 using System.Xml.Linq;
+using System.Text.Json;
 
 namespace Cotton.Server.IntegrationTests
 {
@@ -159,6 +160,9 @@ namespace Cotton.Server.IntegrationTests
                 $"/api/v1/layouts/nodes/{folder.Id}/children?page=1&pageSize=2&includeStats=true");
             first.EnsureSuccessStatusCode();
             NodeContentDto firstPage = (await first.Content.ReadFromJsonAsync<NodeContentDto>())!;
+            using JsonDocument firstJson = JsonDocument.Parse(await first.Content.ReadAsStringAsync());
+            string[] statsFields = firstJson.RootElement.GetProperty("stats").EnumerateObject()
+                .Select(property => property.Name).ToArray();
             using HttpResponseMessage second = await _client.GetAsync(
                 $"/api/v1/layouts/nodes/{folder.Id}/children?page=2&pageSize=2");
             second.EnsureSuccessStatusCode();
@@ -166,10 +170,10 @@ namespace Cotton.Server.IntegrationTests
 
             Assert.Multiple(() =>
             {
+                Assert.That(statsFields, Is.EquivalentTo(new[] { "folders", "files", "sizeBytes" }));
                 Assert.That(firstPage.Stats, Is.Not.Null);
                 Assert.That(firstPage.Stats!.Folders, Is.EqualTo(2));
                 Assert.That(firstPage.Stats.Files, Is.EqualTo(2));
-                Assert.That(firstPage.Stats.EncryptedFiles, Is.EqualTo(1));
                 Assert.That(firstPage.Stats.SizeBytes, Is.EqualTo("direct contents".Length + "ciphertext".Length));
                 Assert.That(first.Headers.GetValues("X-Total-Count").Single(), Is.EqualTo("4"));
                 Assert.That(firstPage.Nodes, Has.Count.EqualTo(2));

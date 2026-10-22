@@ -26,7 +26,7 @@ namespace Cotton.Server.IntegrationTests
 
             await cancellationTokenSource.CancelAsync();
 
-            Assert.ThrowsAsync<TaskCanceledException>(async () => await delayedTask);
+            await Assert.ThrowsAsync<TaskCanceledException>(async () => await delayedTask);
             Task subsequentTask = JobStartupDelays.WaitOnceAsync(
                 TimeSpan.FromMinutes(1),
                 ref pending,

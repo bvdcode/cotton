@@ -43,7 +43,7 @@ namespace Cotton.Server.IntegrationTests
             _db.ChangeTracker.Clear();
             _failure.Enabled = true;
 
-            Assert.ThrowsAsync<DbUpdateException>(() => IndexAsync(id));
+            await Assert.ThrowsAsync<DbUpdateException>(() => IndexAsync(id));
             _failure.Enabled = false;
             _db.ChangeTracker.Clear();
             FileManifest pending = await _db.FileManifests.SingleAsync();

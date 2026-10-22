@@ -52,7 +52,7 @@ export const getComputationErrorKey = (
   if (failure === null) {
     return "settings.errors.saveFailed";
   }
-  if (mode === "Cloud") {
+  if (mode === "Cloud" && failure === "Unreachable") {
     return "settings.general.remoteRunner.cloudUnavailable";
   }
   return `settings.general.remoteRunner.errors.${failure}`;

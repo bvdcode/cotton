@@ -29,7 +29,13 @@ export const PgvectorActivation = ({
     <Stack spacing={1.5}>
       {error && <Alert severity="error">{error}</Alert>}
       {!permissionDenied && (
-        <Stack direction="row" flexWrap="wrap" gap={1}>
+        <Stack
+          direction="row"
+          sx={{
+            flexWrap: "wrap",
+            gap: 1,
+          }}
+        >
           <Button
             variant="contained"
             loading={pending}
@@ -64,10 +70,17 @@ export const PgvectorActivation = ({
           </Typography>
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            alignItems={{ xs: "stretch", sm: "center" }}
-            gap={1.5}
+            sx={{
+              alignItems: { xs: "stretch", sm: "center" },
+              gap: 1.5,
+            }}
           >
-            <Box flex={1} minWidth={0}>
+            <Box
+              sx={{
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
               <SetupCommand command={ENABLE_VECTOR_SQL} />
             </Box>
             <Button

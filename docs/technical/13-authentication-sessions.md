@@ -10,6 +10,20 @@ The server validates both the token cryptography and the current session state. 
 
 Refresh rotation replaces the presented refresh credential rather than extending it in place. Reuse of an invalidated credential is rejected. Expired session rows are removed later by retention work but grant no access after expiry.
 
+## .NET SDK session coordination
+
+Clients for the same server and account share one `ICottonTokenStore` instance. The SDK serializes token rotation, sign-in persistence and logout through that instance. A waiting request reuses a completed rotation. An implicit refresh rechecks the store after waiting, so a completed logout cannot be undone by a stale token snapshot.
+
+Caller cancellation prevents a refresh from starting or cancels waiting for another operation. Once the refresh request starts, the SDK completes response reading and saves the complete replacement pair before reporting caller cancellation. The configured `HttpClient.Timeout` bounds the request and response read; an explicitly infinite timeout remains infinite. Token persistence is awaited without the caller's cancellation token.
+
+Logout waits for an active rotation and revokes the replacement token. Once the logout request starts, local credentials are cleared even if that request fails or is canceled. A sign-in whose credentials are saved afterward remains signed in. Cancellation while waiting to start logout leaves the session unchanged.
+
+Refresh failures preserve stored credentials and propagate the original failure through `CottonTokenRefreshException`. The SDK does not automatically replay a failed refresh. After a successful refresh, the original authorized request is retried at most once. Persistent storage failures are reported to the caller; a custom token store owns durable, complete-pair persistence and concurrency-safe reads.
+
+Automated SDK tests cover cancellation before dispatch, during response reading and persistence, finite response deadlines, parallel clients, canceled waiters, rejected and malformed responses, persistence failure, retry bounds, and overlapping refresh/sign-in/logout operations.
+
+These guarantees apply to a running process with an available response and working storage. A terminated process or a lost response after the server commits a rotation can still leave the old credential on disk. Recovering that case requires an explicit server protocol for recovering the same rotation result; the SDK cannot reconstruct a lost token. Sharing storage through different store instances or different processes also requires coordination outside this in-process lock. Dispose clients only after their active operations finish.
+
 ## Password login
 
 Password login:

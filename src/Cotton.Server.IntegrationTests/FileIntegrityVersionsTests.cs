@@ -36,7 +36,7 @@ namespace Cotton.Server.IntegrationTests
             await dbContext.SaveChangesAsync();
             stale.SetName("stale.pdf");
             stale.FileManifest.Metadata = new Dictionary<string, string> { ["label"] = "Stale" };
-            Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => staleContext.SaveChangesAsync());
+            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => staleContext.SaveChangesAsync());
 
             dbContext.ChangeTracker.Clear();
             NodeFile stored = await dbContext.NodeFiles.Include(entity => entity.FileManifest).SingleAsync(entity => entity.Id == created.Id);
@@ -81,7 +81,7 @@ namespace Cotton.Server.IntegrationTests
             IMediator mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
             if (tampered)
             {
-                Assert.ThrowsAsync<DatabaseIntegrityException>(() =>
+                await Assert.ThrowsAsync<DatabaseIntegrityException>(() =>
                     mediator.Send(new BackfillNodeFileContentTypesRequest(), CancellationToken.None));
                 Assert.That(await dbContext.NodeFiles.Where(entity => entity.Id == created.Id)
                     .Select(entity => entity.ContentType).SingleAsync(), Is.EqualTo(initialType));

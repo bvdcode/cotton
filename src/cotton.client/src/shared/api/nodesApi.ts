@@ -53,22 +53,24 @@ export interface SiblingNameLookupDto {
 export interface FolderStatsDto {
   folders: number;
   files: number;
-  encryptedFiles: number;
   sizeBytes: number;
 }
 
 export interface CreateNodeRequest {
   parentId: Guid;
   name: string;
+  metadata?: Record<string, string>;
 }
 
 export interface RenameNodeRequest {
   name: string;
+  metadata?: Record<string, string | null>;
 }
 
 export interface MoveNodeRequest {
   parentId: Guid;
   name?: string;
+  metadata?: Record<string, string | null>;
 }
 
 export type RestoreStatus =
@@ -93,6 +95,7 @@ export interface RestoreOptions {
 }
 
 const nodeListSchema = z.array(nodeDtoSchema);
+const NODE_COPY_TIMEOUT_MS = 10 * 60_000;
 
 export const nodesApi = {
   copyNode: async (
@@ -100,16 +103,23 @@ export const nodesApi = {
     request: MoveNodeRequest,
   ): Promise<NodeDto> => {
     const url = `/layouts/nodes/${nodeId}/copy`;
-    const response = await httpClient.post<JsonValue>(url, request);
+    const response = await httpClient.post<JsonValue>(url, request, {
+      timeout: NODE_COPY_TIMEOUT_MS,
+    });
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
   getNode: (nodeId: Guid): Promise<NodeDto> =>
     getValidated(`/layouts/nodes/${nodeId}`, nodeDtoSchema),
 
-  getFolderStats: (nodeId: Guid, recursive = false): Promise<FolderStatsDto> =>
+  getFolderStats: (
+    nodeId: Guid,
+    recursive = false,
+    signal?: AbortSignal,
+  ): Promise<FolderStatsDto> =>
     getValidated(`/layouts/nodes/${nodeId}/stats`, folderStatsSchema, {
       params: { recursive },
+      signal,
     }),
 
   lookupSiblingNames,
@@ -131,12 +141,14 @@ export const nodesApi = {
       depth?: number;
       includeStats?: boolean;
       listing?: DirectoryListingOptions;
+      signal?: AbortSignal;
     },
   ): Promise<NodeResponse> => {
     const requestedPage = options?.page ?? 1;
     const requestedPageSize = options?.pageSize ?? 1000;
     const url = `/layouts/nodes/${nodeId}/children`;
     const response = await httpClient.get<JsonValue>(url, {
+      signal: options?.signal,
       paramsSerializer: { indexes: null },
       params: {
         page: requestedPage,

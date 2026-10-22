@@ -12,7 +12,7 @@ namespace Cotton.Server.IntegrationTests
     public class PasskeyRegistrationHandlerTests
     {
         [Test]
-        public void Registration_InvalidCredentialRetainsDiagnosticCause()
+        public async Task Registration_InvalidCredentialRetainsDiagnosticCause()
         {
             Fido2VerificationException cause = new("Invalid attestation");
             using MemoryCache cache = new(new MemoryCacheOptions());
@@ -20,7 +20,7 @@ namespace Cotton.Server.IntegrationTests
             FinishPasskeyRegistrationRequest request = CreateRequest(cache);
             FinishPasskeyRegistrationRequestHandler handler = new(null!, cache, new FailingPasskeyClient(cause), null!, null!, logger);
 
-            Assert.ThrowsAsync<BadRequestException<UserPasskeyCredential>>(() => handler.Handle(request, CancellationToken.None));
+            await Assert.ThrowsAsync<BadRequestException<UserPasskeyCredential>>(() => handler.Handle(request, CancellationToken.None));
             Assert.That(logger.Exceptions, Is.EqualTo(new[] { cause }));
             Assert.That(cache.TryGetValue(PasskeyChallenges.RegistrationCacheKey(request.Credential.RequestId), out _), Is.False);
         }
@@ -28,7 +28,7 @@ namespace Cotton.Server.IntegrationTests
         [TestCase("database")]
         [TestCase("io")]
         [TestCase("cancellation")]
-        public void Registration_TechnicalFailuresAreNotInvalidCredentials(string failure)
+        public async Task Registration_TechnicalFailuresAreNotInvalidCredentials(string failure)
         {
             Exception cause = failure switch
             {
@@ -42,7 +42,7 @@ namespace Cotton.Server.IntegrationTests
             FinishPasskeyRegistrationRequest request = CreateRequest(cache);
             FinishPasskeyRegistrationRequestHandler handler = new(null!, cache, new FailingPasskeyClient(cause), null!, null!, logger);
 
-            Exception? result = Assert.CatchAsync(() => handler.Handle(request, CancellationToken.None));
+            Exception? result = await Assert.CatchAsync(() => handler.Handle(request, CancellationToken.None));
             Assert.That(result, Is.SameAs(cause));
             Assert.That(logger.Exceptions, Is.Empty);
         }

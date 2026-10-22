@@ -66,7 +66,12 @@ export const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
   };
 
   return (
-    <Box width="100%" height="100%">
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+      }}
+    >
       <MediaLightbox
         items={[item]}
         open={lightboxOpen}
@@ -80,11 +85,13 @@ export const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
 
       {!lightboxOpen && (
         <Box
-          width="100%"
-          height="100%"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
+          sx={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
           <Container
             maxWidth="lg"

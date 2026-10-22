@@ -2405,6 +2405,15 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Die geteilten Dateien konnten nicht empfangen werden. Bitte teilen Sie sie erneut.",
+      "uploadFailed": "Das Hochladen der geteilten Dateien konnte nicht gestartet werden. Laden Sie die Seite neu, um es erneut zu versuchen."
+    },
+    "folderSizes": {
+      "calculate": "Ordnergrößen berechnen",
+      "calculating": "Ordnergrößen werden berechnet…",
+      "failed": "Die Größen konnten nicht für alle Ordner berechnet werden. Versuchen Sie es erneut."
+    },
     "folderInfo": {
       "action": "Informationen",
       "title": "{{name}}",
@@ -2533,7 +2542,8 @@
       "rename": "{{newName}} verwenden",
       "overwrite": "Ersetzen",
       "skip": "Überspringen",
-      "skipAll": "Alle überspringen"
+      "skipAll": "Alle überspringen",
+      "overwriteAll": "Alle ersetzen"
     },
     "deleteFolder": {
       "confirmTitle": "Ordner \"{{name}}\" löschen?",
@@ -3149,12 +3159,13 @@
           "validateAndSave": "Prüfen und speichern",
           "connected": "Verbunden · {{model}} · {{dimensions}} Dimensionen · {{tokens}} Token",
           "cloudConnected": "Cotton Bridge autorisiert · Cloud-Berechnungen verfügbar · {{model}} · {{dimensions}} Dimensionen",
-          "cloudUnavailable": "Cotton Bridge konnte diesen Server nicht autorisieren oder Cloud-Berechnungen bereitstellen. Versuchen Sie es erneut.",
+          "cloudUnavailable": "Die Cloud-Berechnungen von Cotton Bridge sind nicht verfügbar. Versuchen Sie es später erneut.",
           "errors": {
             "NotConfigured": "Die Runner-URL ist nicht konfiguriert.",
             "UnsupportedMode": "Text-Embeddings sind in diesem Berechnungsmodus noch nicht verfügbar.",
             "InvalidUrl": "Geben Sie eine HTTP- oder HTTPS-Basis-URL ohne Zugangsdaten, Abfrage oder Fragment ein.",
             "Unreachable": "Der Runner ist nicht erreichbar. Prüfen Sie Adresse und Verfügbarkeit.",
+            "AccessDenied": "Der Embedding-Dienst hat den Zugriff verweigert. Prüfen Sie die Autorisierung des Servers.",
             "Timeout": "Der Runner hat nicht rechtzeitig geantwortet. Versuchen Sie es erneut.",
             "InvalidResponse": "Der Runner hat eine ungültige Antwort geliefert.",
             "NotEmbeddingModel": "Dieser Server unterstützt keine Text-Embeddings.",

@@ -16,7 +16,7 @@ namespace Cotton.Server.IntegrationTests
     public class FileManifestMetadataPersistenceTests
     {
         [Test]
-        public void SaveManifestMetadataAsync_MapsConcurrencyConflict()
+        public async Task SaveManifestMetadataAsync_MapsConcurrencyConflict()
         {
             DbContextOptionsBuilder<CottonDbContext> optionsBuilder = new();
             using ConcurrencyThrowingCottonDbContext dbContext = new(optionsBuilder.Options);
@@ -28,7 +28,7 @@ namespace Cotton.Server.IntegrationTests
                 NullLogger<ExtractFileManifestMetadataRequestHandler>.Instance);
             FileManifest manifest = new();
 
-            WebApiException? exception = Assert.ThrowsAsync<WebApiException>(
+            WebApiException? exception = await Assert.ThrowsAsync<WebApiException>(
                 async () => await handler.SaveManifestMetadataAsync(
                     manifest,
                     CancellationToken.None));

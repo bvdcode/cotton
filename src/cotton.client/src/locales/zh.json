@@ -2418,6 +2418,15 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "无法接收分享的文件。请重新分享。",
+      "uploadFailed": "无法开始上传分享的文件。请刷新此页面重试。"
+    },
+    "folderSizes": {
+      "calculate": "计算文件夹大小",
+      "calculating": "正在计算文件夹大小…",
+      "failed": "无法计算所有文件夹的大小。请重试。"
+    },
     "folderInfo": {
       "action": "信息",
       "title": "{{name}}",
@@ -2546,7 +2555,8 @@
       "rename": "使用 {{newName}}",
       "overwrite": "替换",
       "skip": "跳过",
-      "skipAll": "全部跳过"
+      "skipAll": "全部跳过",
+      "overwriteAll": "全部替换"
     },
     "deleteFolder": {
       "confirmTitle": "删除文件夹 \"{{name}}\"？",
@@ -3162,12 +3172,13 @@
           "validateAndSave": "验证并保存",
           "connected": "已连接 · {{model}} · {{dimensions}} 维 · {{tokens}} 个词元",
           "cloudConnected": "Cotton Bridge 已授权 · 云计算可用 · {{model}} · {{dimensions}} 维",
-          "cloudUnavailable": "Cotton Bridge 无法授权此服务器或提供云计算。请重试。",
+          "cloudUnavailable": "Cotton Bridge 云计算暂不可用。请稍后重试。",
           "errors": {
             "NotConfigured": "尚未配置运行器地址。",
             "UnsupportedMode": "此计算模式暂不支持文本嵌入。",
             "InvalidUrl": "请输入不含凭据、查询参数或片段的 HTTP 或 HTTPS 基础地址。",
             "Unreachable": "无法连接运行器。请检查地址和服务可用性。",
+            "AccessDenied": "向量化服务拒绝访问。请检查服务器授权。",
             "Timeout": "运行器响应超时，请重试。",
             "InvalidResponse": "运行器返回了无效响应。",
             "NotEmbeddingModel": "此服务器不支持文本嵌入。",

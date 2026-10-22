@@ -45,10 +45,12 @@ export const CodeEditor: React.FC<IEditorProps> = ({
         }}
         loading={
           <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            height="100%"
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+            }}
           >
             <CircularProgress />
           </Box>

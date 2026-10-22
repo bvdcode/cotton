@@ -1,7 +1,13 @@
+import {
+  useDecryptedNode,
+  useDecryptedNodes,
+} from "../../crypto/useDecryptedNodes";
+import { useDisplayProjection } from "../../crypto/useDisplayProjection";
+import { projectTrashContent } from "../../crypto/trashDisplayMeta";
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { layoutsApi, type NodeDto } from "../layoutsApi";
 import { nodesApi, type NodeResponse } from "../nodesApi";
-import { fetchAllNodeChildren, fetchNodeChildren } from "../nodeChildren";
+import { fetchAllRawNodeChildren } from "../nodeChildren";
 import { queryKeys } from "./queryKeys";
 
 interface TrashNodeMeta {
@@ -22,7 +28,7 @@ export const useTrashNodeMetaQuery = (
 ) => {
   const { isRoot = false, enabled = true } = options;
 
-  return useQuery<TrashNodeMeta>({
+  const query = useQuery<TrashNodeMeta>({
     queryKey: queryKeys.trash.meta(nodeId ?? ""),
     queryFn: async () => {
       if (!nodeId) {
@@ -39,7 +45,15 @@ export const useTrashNodeMetaQuery = (
     },
     enabled: enabled && !!nodeId,
   });
+  const node = useDecryptedNode(query.data?.node ?? null);
+  const ancestors = useDecryptedNodes(query.data?.ancestors ?? EMPTY_NODES);
+  return {
+    ...query,
+    data: query.data && node ? { node, ancestors } : undefined,
+  };
 };
+
+const EMPTY_NODES: NodeDto[] = [];
 
 export const useTrashChildrenQuery = (options: {
   nodeId: string | null | undefined;
@@ -51,7 +65,7 @@ export const useTrashChildrenQuery = (options: {
   const { nodeId, isRoot, page = 1, pageSize, enabled = true } = options;
   const depth = isRoot ? 1 : 0;
 
-  return useQuery<NodeResponse>({
+  const query = useQuery<NodeResponse>({
     queryKey:
       pageSize === undefined
         ? queryKeys.trash.children.complete(nodeId ?? "", depth)
@@ -65,9 +79,9 @@ export const useTrashChildrenQuery = (options: {
         throw new Error("Trash children query requires a node id");
       }
       if (pageSize === undefined) {
-        return fetchAllNodeChildren(nodeId, { nodeType: "trash", depth });
+        return fetchAllRawNodeChildren(nodeId, { nodeType: "trash", depth });
       }
-      return fetchNodeChildren(nodeId, {
+      return nodesApi.getChildren(nodeId, {
         nodeType: "trash",
         page,
         pageSize,
@@ -76,6 +90,14 @@ export const useTrashChildrenQuery = (options: {
     },
     enabled: enabled && !!nodeId,
   });
+  const content = useDisplayProjection(
+    query.data?.content,
+    projectTrashContent,
+  );
+  return {
+    ...query,
+    data: query.data && content ? { ...query.data, content } : undefined,
+  };
 };
 
 export const invalidateTrashChildren = (

@@ -111,18 +111,14 @@ export const SearchPage: React.FC = () => {
   });
 
   const {
-    previewState,
-    closePreview,
+    previewProps,
+    lightboxProps,
     handleFileClick,
     handleDownloadFile,
     handleShareFile,
     lightboxOpen,
-    lightboxIndex,
     mediaItems,
-    getSignedMediaUrl,
-    getDownloadUrl,
     handleMediaClick,
-    setLightboxOpen,
   } = fileListLogic.interaction;
 
   const { tiles } = fileListLogic;
@@ -170,9 +166,14 @@ export const SearchPage: React.FC = () => {
 
   return (
     <Box
-      pb={1}
-      width="100%"
-      sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
+      sx={{
+        pb: 1,
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        minHeight: 0,
+      }}
     >
       <SearchBar
         value={query}
@@ -184,17 +185,21 @@ export const SearchPage: React.FC = () => {
       />
 
       {error && (
-        <Box mb={2}>
+        <Box
+          sx={{
+            mb: 2,
+          }}
+        >
           <Alert severity="error">{t(error, { ns: "search" })}</Alert>
         </Box>
       )}
 
       {!loading && showSearchHistory && (
         <Box
-          width="100%"
-          maxWidth={760}
-          mx="auto"
           sx={{
+            width: "100%",
+            maxWidth: 760,
+            mx: "auto",
             border: 1,
             borderColor: "divider",
             borderRadius: 1,
@@ -216,18 +221,24 @@ export const SearchPage: React.FC = () => {
         !results &&
         !showSearchHistory && (
           <Box
-            flex={1}
-            minHeight={0}
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            justifyContent="center"
-            textAlign="center"
-            gap={1.5}
-            sx={{ color: "text.secondary" }}
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              gap: 1.5,
+              color: "text.secondary",
+            }}
           >
             <SearchIcon sx={{ fontSize: 48, opacity: 0.5 }} />
-            <Typography color="text.secondary">
+            <Typography
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("enterQueryHint", { ns: "search" })}
             </Typography>
           </Box>
@@ -281,27 +292,12 @@ export const SearchPage: React.FC = () => {
         </Box>
       )}
 
-      <FilePreviewModal
-        isOpen={previewState.isOpen}
-        fileId={previewState.fileId}
-        fileName={previewState.fileName}
-        fileType={previewState.fileType}
-        fileSizeBytes={previewState.fileSizeBytes}
-        file={previewState.file}
-        onClose={closePreview}
-        onDownload={handleDownloadFile}
-      />
+      <FilePreviewModal {...previewProps} />
 
       {lightboxOpen && mediaItems.length > 0 && (
         <MediaLightbox
-          open={lightboxOpen}
-          initialIndex={lightboxIndex}
-          items={mediaItems}
-          getSignedMediaUrl={getSignedMediaUrl}
-          getDownloadUrl={getDownloadUrl}
-          onShare={handleShareFile}
+          {...lightboxProps}
           smoothTransitions={smoothGalleryTransitions}
-          onClose={() => setLightboxOpen(false)}
         />
       )}
     </Box>

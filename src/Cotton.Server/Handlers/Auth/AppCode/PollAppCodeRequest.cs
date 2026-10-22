@@ -24,15 +24,7 @@ namespace Cotton.Server.Handlers.Auth.AppCode
                 return new AppCodePollResult(AppCodePollStatus.NotFound);
             }
 
-            if (state.Status == AppCodeRequestStatus.Pending && !AppCodeRequestGuard.IsExpired(state))
-            {
-                TimeSpan remaining = state.ExpiresAt - DateTime.UtcNow;
-                TimeSpan wait = remaining <= LongPollTimeout ? remaining : LongPollTimeout;
-                if (wait > TimeSpan.Zero)
-                {
-                    await Task.WhenAny(state.Completion.Task, Task.Delay(wait, cancellationToken));
-                }
-            }
+            await WaitForDecisionAsync(state, cancellationToken);
 
             await state.Gate.WaitAsync(cancellationToken);
             try
@@ -63,6 +55,19 @@ namespace Cotton.Server.Handlers.Auth.AppCode
             finally
             {
                 state.Gate.Release();
+            }
+        }
+
+        private static async Task WaitForDecisionAsync(AppCodeRequestState state, CancellationToken cancellationToken)
+        {
+            if (state.Status == AppCodeRequestStatus.Pending && !AppCodeRequestGuard.IsExpired(state))
+            {
+                TimeSpan remaining = state.ExpiresAt - DateTime.UtcNow;
+                TimeSpan wait = remaining <= LongPollTimeout ? remaining : LongPollTimeout;
+                if (wait > TimeSpan.Zero)
+                {
+                    await Task.WhenAny(state.Completion.Task, Task.Delay(wait, cancellationToken));
+                }
             }
         }
     }

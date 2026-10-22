@@ -10,26 +10,30 @@ interface LoaderProps {
 const Loader: React.FC<LoaderProps> = ({ overlay, title, caption }) => {
   return (
     <Box
-      display="flex"
-      height="100%"
-      width="100%"
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
       sx={{
+        display: "flex",
+        height: "100%",
+        width: "100%",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
         top: 0,
         left: 0,
         opacity: 1,
         zIndex: (theme) => (overlay ? theme.zIndex.modal - 1 : "auto"),
+
         backgroundColor: (theme) =>
           overlay
             ? alpha(theme.palette.background.default, 0.85)
             : theme.palette.background.default,
+
         position: overlay ? "fixed" : "static",
         pointerEvents: overlay ? "none" : "auto",
+
         // Only the full-screen overlay fades in; inline route fallbacks render
         // immediately so a fast lazy-chunk load never flashes a blank frame.
         animation: overlay ? "fadeIn 0.3s ease-in forwards" : undefined,
+
         "@keyframes fadeIn": {
           from: {
             opacity: 0,
@@ -47,7 +51,12 @@ const Loader: React.FC<LoaderProps> = ({ overlay, title, caption }) => {
         </Typography>
       )}
       {caption && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {caption}
         </Typography>
       )}

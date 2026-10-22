@@ -13,7 +13,7 @@ namespace Cotton.Crypto.Tests
 
         // 16. Truncated inside chunk => CryptographicException
         [Test]
-        public void Decrypt_TruncatedInsideChunk_MapsToCrypto()
+        public async Task Decrypt_TruncatedInsideChunk_MapsToCrypto()
         {
             byte[] key = Key();
             AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 21, threads: 1);
@@ -28,12 +28,12 @@ namespace Cotton.Crypto.Tests
             int cut = headerLen + chunkHdrLen + (AesGcmStreamCipher.MinChunkSize / 2);
             using MemoryStream truncated = new MemoryStream(bytes.AsSpan(0, cut).ToArray(), writable: false);
             using MemoryStream outDec = new MemoryStream();
-            Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated, outDec));
+            await Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated, outDec));
         }
 
         // 17. Corrupt chunkHeader.Length => InvalidDataException
         [Test]
-        public void Decrypt_CorruptChunkHeaderLength_FailsBeforeAEAD()
+        public async Task Decrypt_CorruptChunkHeaderLength_FailsBeforeAEAD()
         {
             byte[] key = Key();
             AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 22, threads: 1);
@@ -48,12 +48,12 @@ namespace Cotton.Crypto.Tests
             BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(fileHeaderLen + 4, 4), len - 8);
             using MemoryStream tampered = new MemoryStream(bytes, writable: false);
             using MemoryStream outDec = new MemoryStream();
-            Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
+            await Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
         }
 
         // 18. Duplicate and far out-of-order
         [Test]
-        public void Encrypt_Consumer_OrderDiagnostics()
+        public async Task Encrypt_Consumer_OrderDiagnostics()
         {
             // Construct minimal fake sequence to hit consumer paths is non-trivial, so run real encrypt with small window
             byte[] key = Key();
@@ -74,7 +74,7 @@ namespace Cotton.Crypto.Tests
             dup.Write(bytes, terminalHeaderOffset, ch);
             dup.Position = 0;
             using MemoryStream outDec = new MemoryStream();
-            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(dup, outDec));
+            await Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(dup, outDec));
         }
     }
 }

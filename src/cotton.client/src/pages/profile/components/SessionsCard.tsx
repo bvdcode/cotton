@@ -97,7 +97,13 @@ export const SessionsCard = () => {
           {error}
         </Alert>
       ) : sessions.length === 0 ? (
-        <Typography color="text.secondary" sx={{ py: 2, textAlign: "center" }}>
+        <Typography
+          sx={{
+            color: "text.secondary",
+            py: 2,
+            textAlign: "center",
+          }}
+        >
           {t("sessions.noActiveSessions")}
         </Typography>
       ) : (

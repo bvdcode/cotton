@@ -294,7 +294,7 @@ namespace Cotton.Storage.Tests.Pipelines
         }
 
         [Test]
-        public void Pipeline_ProcessorReturnsStreamNull_ThrowsInvalidOperationException()
+        public async Task Pipeline_ProcessorReturnsStreamNull_ThrowsInvalidOperationException()
         {
             // Arrange
             FakeStorageBackend backend = new FakeStorageBackend();
@@ -316,13 +316,13 @@ namespace Cotton.Storage.Tests.Pipelines
             backend.WriteAsync("test-uid", new MemoryStream(data)).Wait();
 
             // Act & Assert
-            InvalidOperationException? ex = Assert.ThrowsAsync<InvalidOperationException>(
+            InvalidOperationException? ex = await Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await pipeline.ReadAsync("test-uid"));
             Assert.That(ex.Message, Does.Contain("Stream.Null"));
         }
 
         [Test]
-        public void Pipeline_ProcessorReturnsStreamNullOnWrite_ThrowsInvalidOperationException()
+        public async Task Pipeline_ProcessorReturnsStreamNullOnWrite_ThrowsInvalidOperationException()
         {
             // Arrange
             FakeStorageBackend backend = new FakeStorageBackend();
@@ -343,7 +343,7 @@ namespace Cotton.Storage.Tests.Pipelines
             byte[] data = Encoding.UTF8.GetBytes("Test");
 
             // Act & Assert
-            InvalidOperationException? ex = Assert.ThrowsAsync<InvalidOperationException>(
+            InvalidOperationException? ex = await Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await pipeline.WriteAsync("test-uid", new MemoryStream(data)));
             Assert.That(ex.Message, Does.Contain("No registered processor produced a valid stream"));
         }

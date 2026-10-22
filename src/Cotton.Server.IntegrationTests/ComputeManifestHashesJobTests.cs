@@ -27,7 +27,7 @@ namespace Cotton.Server.IntegrationTests
                 Guid.NewGuid(),
                 "mismatched.bin");
 
-            Assert.ThrowsAsync<InvalidOperationException>(
+            await Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await job.ReportHashMismatchAsync(
                     manifestId,
                     [target],

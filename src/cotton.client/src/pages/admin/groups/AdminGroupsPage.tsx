@@ -9,7 +9,12 @@ export const AdminGroupsPage = () => {
   return (
     <Stack>
       <AdminPageSurface>
-        <Stack p={3} spacing={2}>
+        <Stack
+          spacing={2}
+          sx={{
+            p: 3,
+          }}
+        >
           <AdminPageHeader
             title={t("groups.title")}
             description={t("groups.description")}

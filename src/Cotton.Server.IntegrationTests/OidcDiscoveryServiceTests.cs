@@ -15,26 +15,26 @@ namespace Cotton.Server.IntegrationTests
         private const string Issuer = "https://identity.example.com/application/o/cotton";
 
         [Test]
-        public void Discovery_ConnectionFailurePreservesOriginalCause()
+        public async Task Discovery_ConnectionFailurePreservesOriginalCause()
         {
             HttpRequestException cause = new("Connection refused");
             using HttpClient httpClient = new(new FailingHttpMessageHandler(cause));
             OidcDiscoveryService discovery = new(httpClient);
 
-            Exception? result = Assert.CatchAsync(() => discovery.GetConfigurationAsync(CreateProvider(), CancellationToken.None));
+            Exception? result = await Assert.CatchAsync(() => discovery.GetConfigurationAsync(CreateProvider(), CancellationToken.None));
 
             Assert.That(result, Is.Not.InstanceOf<BadRequestException<OidcProvider>>());
             Assert.That(result!.GetBaseException(), Is.SameAs(cause));
         }
 
         [Test]
-        public void Discovery_UnexpectedFailurePreservesOriginalCause()
+        public async Task Discovery_UnexpectedFailurePreservesOriginalCause()
         {
             InvalidOperationException cause = new("Invalid transport configuration");
             using HttpClient httpClient = new(new FailingHttpMessageHandler(cause));
             OidcDiscoveryService discovery = new(httpClient);
 
-            Exception? result = Assert.CatchAsync(() => discovery.GetConfigurationAsync(CreateProvider(), CancellationToken.None));
+            Exception? result = await Assert.CatchAsync(() => discovery.GetConfigurationAsync(CreateProvider(), CancellationToken.None));
 
             Assert.That(result!.GetBaseException(), Is.SameAs(cause));
         }

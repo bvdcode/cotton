@@ -145,13 +145,10 @@ namespace Cotton.Server.Handlers.Nodes
             CancellationToken ct)
         {
             long sizeBytes = await files.SumAsync(file => (long?)file.FileManifest.SizeBytes, ct) ?? 0L;
-            int encryptedFiles = await files.CountAsync(
-                file => CottonDbContext.GetHstoreValue(file.Metadata, "isClientEncrypted") == "true", ct);
             return new FolderStatsDto
             {
                 Folders = filtered ? await nodes.CountAsync(ct) : nodeCount,
                 Files = filtered ? await files.CountAsync(ct) : fileCount,
-                EncryptedFiles = encryptedFiles,
                 SizeBytes = sizeBytes,
             };
         }

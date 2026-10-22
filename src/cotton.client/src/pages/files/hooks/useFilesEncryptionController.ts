@@ -1,8 +1,9 @@
+import { useFolderEncryptionPresence } from "./useFolderEncryptionPresence";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "@shared/api/layoutsApi";
-import type { FolderStatsDto, NodeContentDto } from "@shared/api/nodesApi";
+import type { NodeContentDto } from "@shared/api/nodesApi";
 import {
   getFolderEncryptionPolicyState,
   readEnvelopeFromPreferences,
@@ -20,12 +21,12 @@ import {
 } from "../filesPageModel";
 import { useFolderClientEncryptionActions } from "./useFolderClientEncryptionActions";
 import { useFolderEncryptionPolicy } from "./useFolderEncryptionPolicy";
+import { hasEncryptedFolderName } from "@shared/crypto/folderDisplayMeta";
 
 interface UseFilesEncryptionControllerOptions {
   activeCurrentNode: NodeDto | null;
   ancestors: NodeDto[];
   content: NodeContentDto | undefined;
-  stats?: FolderStatsDto;
   nodeId: string | null;
   showToast: (message: string, variant?: "info" | "error") => void;
 }
@@ -54,7 +55,6 @@ export const useFilesEncryptionController = ({
   activeCurrentNode,
   ancestors,
   content,
-  stats,
   nodeId,
   showToast,
 }: UseFilesEncryptionControllerOptions): FilesEncryptionController => {
@@ -86,26 +86,20 @@ export const useFilesEncryptionController = ({
   );
   const getChildFolderEncryptionPolicyState = useCallback(
     (folder: NodeDto) =>
-      getFolderEncryptionPolicyState(
-        folder,
-        childFolderEncryptionAncestors,
-      ),
+      getFolderEncryptionPolicyState(folder, childFolderEncryptionAncestors),
     [childFolderEncryptionAncestors],
   );
 
   const {
     decryptEncryptedFiles,
     encryptPlainFiles,
-    encryptedFilesCount,
     folderPolicyEnabled,
     isDecryptingEncryptedFiles,
     isEncryptingPlainFiles,
-    plainFilesCount,
   } = useFolderClientEncryptionActions({
     nodeId,
     currentNode: activeCurrentNode,
     content,
-    stats,
     folderPolicyEnabled: currentFolderEncryptionPolicy.effectiveEnabled,
     onToast: showToast,
   });
@@ -113,18 +107,21 @@ export const useFilesEncryptionController = ({
     useFolderEncryptionPolicy({ onToast: showToast });
 
   const currentFolderRequiresUnlock = shouldPromptForCurrentFolderUnlock({
-    clientEncryptionEnabled: currentFolderEncryptionPolicy.effectiveEnabled,
+    clientEncryptionEnabled:
+      currentFolderEncryptionPolicy.effectiveEnabled ||
+      hasEncryptedFolderName(activeCurrentNode?.metadata),
     currentNodeId: activeCurrentNode?.id,
     isVaultUnlocked,
     nodeId,
   });
-  const activeUnlockPrompt = useMemo<ClientEncryptionUnlockPrompt | null>(() => {
-    if (currentFolderRequiresUnlock && clientEncryptionEnvelope) {
-      return { kind: "current" };
-    }
+  const activeUnlockPrompt =
+    useMemo<ClientEncryptionUnlockPrompt | null>(() => {
+      if (currentFolderRequiresUnlock && clientEncryptionEnvelope) {
+        return { kind: "current" };
+      }
 
-    return unlockPrompt;
-  }, [clientEncryptionEnvelope, currentFolderRequiresUnlock, unlockPrompt]);
+      return unlockPrompt;
+    }, [clientEncryptionEnvelope, currentFolderRequiresUnlock, unlockPrompt]);
 
   const goHome = useCallback(() => navigate("/files"), [navigate]);
 
@@ -145,7 +142,8 @@ export const useFilesEncryptionController = ({
 
   const ensureCurrentFolderUnlocked = useCallback((): boolean => {
     if (
-      !currentFolderEncryptionPolicy.effectiveEnabled ||
+      (!currentFolderEncryptionPolicy.effectiveEnabled &&
+        !hasEncryptedFolderName(activeCurrentNode?.metadata)) ||
       isVaultUnlocked
     ) {
       return true;
@@ -159,6 +157,7 @@ export const useFilesEncryptionController = ({
     setUnlockPrompt({ kind: "current" });
     return false;
   }, [
+    activeCurrentNode?.metadata,
     clientEncryptionEnvelope,
     currentFolderEncryptionPolicy.effectiveEnabled,
     isVaultUnlocked,
@@ -196,33 +195,37 @@ export const useFilesEncryptionController = ({
     ],
   );
 
+  const hasMatchingFiles = useFolderEncryptionPresence({
+    nodeId,
+    match: folderPolicyEnabled ? "plain-files" : "encrypted-files",
+    enabled:
+      activeCurrentNode?.id === nodeId &&
+      content?.id === nodeId &&
+      Boolean(clientEncryptionEnvelope),
+    knownFiles: content?.id === nodeId ? content.files : undefined,
+  });
   const folderEncryptionPrompt = useMemo(
     () =>
       buildFolderEncryptionPrompt({
         decryptEncryptedFiles: () =>
           runFolderClientEncryptionAction("decrypt-existing"),
-        encryptedFilesCount,
-        encryptedFilesMessage: t("clientEncryption.encryptedFilesRemain.toast", {
-          count: encryptedFilesCount,
-        }),
+        hasEncryptedFiles: !folderPolicyEnabled && hasMatchingFiles === true,
+        encryptedFilesMessage: t("clientEncryption.encryptedFilesRemain.title"),
         encryptedFilesAction: t("clientEncryption.encryptedFilesRemain.action"),
         encryptPlainFiles: () =>
           runFolderClientEncryptionAction("encrypt-existing"),
         folderPolicyEnabled,
         isDecryptingEncryptedFiles,
         isEncryptingPlainFiles,
-        plainFilesCount,
-        plainFilesMessage: t("clientEncryption.mixedPlain.toast", {
-          count: plainFilesCount,
-        }),
+        hasPlainFiles: folderPolicyEnabled && hasMatchingFiles === true,
+        plainFilesMessage: t("clientEncryption.mixedPlain.title"),
         plainFilesAction: t("clientEncryption.mixedPlain.action"),
       }),
     [
-      encryptedFilesCount,
+      hasMatchingFiles,
       folderPolicyEnabled,
       isDecryptingEncryptedFiles,
       isEncryptingPlainFiles,
-      plainFilesCount,
       runFolderClientEncryptionAction,
       t,
     ],
@@ -235,7 +238,8 @@ export const useFilesEncryptionController = ({
       );
       const requiresUnlock =
         targetFolder &&
-        getChildFolderEncryptionPolicyState(targetFolder).effectiveEnabled &&
+        (getChildFolderEncryptionPolicyState(targetFolder).effectiveEnabled ||
+          hasEncryptedFolderName(targetFolder.metadata)) &&
         !isVaultUnlocked;
 
       if (!requiresUnlock) {
@@ -292,12 +296,7 @@ export const useFilesEncryptionController = ({
       case undefined:
         return;
     }
-  }, [
-    activeUnlockPrompt,
-    decryptEncryptedFiles,
-    encryptPlainFiles,
-    navigate,
-  ]);
+  }, [activeUnlockPrompt, decryptEncryptedFiles, encryptPlainFiles, navigate]);
 
   return {
     activeUnlockPrompt,

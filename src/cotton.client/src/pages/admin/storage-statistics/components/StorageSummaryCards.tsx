@@ -73,13 +73,30 @@ export const StorageSummaryCards = ({ timeline }: StorageSummaryCardsProps) => {
       {cards.map((card) => (
         <Box key={card.id} sx={{ p: 1, minWidth: 0 }}>
           <Stack spacing={0.5}>
-            <Typography variant="caption" color="text.secondary" noWrap>
+            <Typography
+              variant="caption"
+              noWrap
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {card.label}
             </Typography>
-            <Typography variant="h6" fontWeight={700}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 700,
+              }}
+            >
               {card.value}
             </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
+            <Typography
+              variant="caption"
+              noWrap
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {card.extra}
             </Typography>
           </Stack>

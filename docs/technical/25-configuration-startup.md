@@ -50,7 +50,7 @@ Existing unreadable evidence is never overwritten with a new sentinel. A wrong k
 
 A new instance receives one settings row with product defaults. Existing instances load their row through the normal provider. Sensitive S3, SMTP, OIDC, and cloud credentials are encrypted before persistence.
 
-The narrow legacy zero-key recovery for encrypted server settings is isolated and marked obsolete. During startup settings materialization it tries the obsolete key only after normal authenticated decryption fails; if recovery succeeds, populated encrypted settings are rewritten with the active key before the fallback is disabled. It is not a general fallback for arbitrary encrypted data or normal runtime reads.
+The narrow legacy zero-key recovery for encrypted server settings and OIDC provider client secrets is isolated and marked obsolete for removal after the 0.5 upgrade window. During startup it tries the obsolete key only after normal authenticated decryption fails. OIDC provider integrity signatures must verify before recovered secrets are rewritten with the active key. Recovery is disabled before startup completes; normal runtime reads accept only the active key. It is not a general fallback for arbitrary encrypted data.
 
 Server settings themselves are not database-integrity signed.
 

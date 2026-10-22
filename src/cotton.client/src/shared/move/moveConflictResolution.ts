@@ -1,4 +1,11 @@
 import {
+  hasEncryptedFolderName,
+  readFolderName,
+  applyDisplayMetaToNodes,
+} from "../crypto/folderDisplayMeta";
+import { prepareFolderName } from "../crypto/folderNameOperations";
+import { useVault } from "../crypto/vault";
+import {
   FolderTransferNames,
   DisplayNameConflictError,
 } from "./FolderTransferNames";
@@ -44,14 +51,14 @@ const getMoveItemName = async (item: MoveClipboardItem): Promise<string> => {
   }
 
   const node = await nodesApi.getNode(item.id);
-  return node.name;
+  return readFolderName(node);
 };
 
 const getTargetNames = async (targetParentId: string): Promise<Set<string>> => {
   const { content } = await fetchAllNodeChildren(targetParentId);
   const taken = new Set<string>();
 
-  for (const node of content?.nodes ?? []) {
+  for (const node of await applyDisplayMetaToNodes(content.nodes)) {
     taken.add(getFileNameKey(node.name));
   }
   for (const file of content?.files ?? []) {
@@ -86,25 +93,50 @@ const moveSingleItem = async (
   name: string | undefined,
   overwrite: boolean,
   operation: FileTransferOperation,
+  encryptFolders: boolean,
   folderNames: FolderTransferNames,
 ): Promise<MoveSingleItemResult> => {
   if (item.kind === "folder") {
+    const source = await nodesApi.getNode(item.id);
+    const sourceEncrypted = hasEncryptedFolderName(source.metadata);
+    const encrypted =
+      sourceEncrypted || (operation === "copy" && encryptFolders);
     const request: MoveNodeRequest = { parentId: targetParentId };
-    if (name !== undefined) {
+    const displayName = name ?? (await readFolderName(source));
+    if (encrypted || useVault.getState().isUnlocked) {
+      await folderNames.check(
+        displayName,
+        operation === "move" ? item.id : undefined,
+      );
+    }
+    if (encrypted && (operation === "copy" || name !== undefined)) {
+      Object.assign(
+        request,
+        await prepareFolderName(source, displayName, true),
+      );
+      if (operation === "copy") {
+        request.name = crypto.randomUUID();
+      }
+    } else if (name !== undefined) {
       request.name = name;
     }
+    let folder: NodeDto;
     switch (operation) {
       case "move":
-        return {
-          kind: "folder",
-          folder: await nodesApi.moveNode(item.id, request),
-        };
+        folder = await nodesApi.moveNode(item.id, request);
+        break;
       case "copy":
-        return {
-          kind: "folder",
-          folder: await nodesApi.copyNode(item.id, request),
-        };
+        folder = await nodesApi.copyNode(item.id, request);
+        break;
     }
+    folderNames.record(
+      displayName,
+      folder.id,
+      "Folder",
+      folder.name,
+      encrypted,
+    );
+    return { kind: "folder", folder };
   }
 
   return {
@@ -120,112 +152,156 @@ const moveSingleItem = async (
   };
 };
 
-export const moveItemWithConflictResolution = async (options: {
+interface MoveConflictOptions {
   operation?: FileTransferOperation;
+  encryptFolders?: boolean;
   folderNames?: FolderTransferNames;
   confirmConflict: MoveConflictResolver;
   item: MoveClipboardItem;
   skipAllConflicts: boolean;
   targetParentId: string;
-}): Promise<MoveItemOutcome> => {
+}
+
+interface MoveConflictState {
+  name: string | undefined;
+  overwrite: boolean;
+  rejectedNames: Set<string>;
+  targetNames: Set<string> | null;
+}
+
+type ConflictResolution = MoveItemOutcome | { kind: "retry" };
+
+export const moveItemWithConflictResolution = async (
+  options: MoveConflictOptions,
+): Promise<MoveItemOutcome> => {
   const folderNames =
     options.folderNames ?? new FolderTransferNames(options.targetParentId);
-  let name: string | undefined;
-  let overwrite = false;
-  const rejectedNames = new Set<string>();
-  let targetNames: Set<string> | null = null;
+  const state: MoveConflictState = {
+    name: undefined,
+    overwrite: false,
+    rejectedNames: new Set<string>(),
+    targetNames: null,
+  };
 
   while (true) {
     try {
       const moved = await moveSingleItem(
         options.item,
         options.targetParentId,
-        name,
-        overwrite,
+        state.name,
+        state.overwrite,
         options.operation ?? "move",
+        options.encryptFolders ?? false,
         folderNames,
       );
       return { kind: "moved", moved };
     } catch (error) {
-      if (
-        !(error instanceof DisplayNameConflictError) &&
-        (!isAxiosError(error) || error.response?.status !== 409 || overwrite)
-      ) {
-        return {
-          kind: "failed",
-          error: error instanceof Error ? error : new Error("Move failed."),
-        };
-      }
-
-      if (options.skipAllConflicts) {
-        return { kind: "skipped", skipAll: true };
-      }
-
-      let originalName: string;
-      try {
-        originalName = await getMoveItemName(options.item);
-      } catch (nameError) {
-        return {
-          kind: "failed",
-          error:
-            nameError instanceof Error
-              ? nameError
-              : new Error("Could not determine the item name."),
-        };
-      }
-
-      const conflictKind = getMoveConflictKind(error);
-      try {
-        targetNames ??=
-          error instanceof DisplayNameConflictError
-            ? await folderNames.takenNameKeys()
-            : await getTargetNames(options.targetParentId);
-      } catch (loadError) {
-        return {
-          kind: "failed",
-          error:
-            loadError instanceof Error
-              ? loadError
-              : new Error("Could not load target folder."),
-        };
-      }
-      const conflictingName = name ?? originalName;
-      const conflictingNameKey = getFileNameKey(conflictingName);
-      rejectedNames.add(conflictingNameKey);
-      for (const rejectedName of rejectedNames) {
-        targetNames.add(rejectedName);
-      }
-
-      const newName = nextAvailableName(originalName, targetNames);
-      const action = await options.confirmConflict({
-        newName,
-        canOverwrite:
-          options.item.kind === "file" &&
-          conflictKind === "File" &&
-          (!(error instanceof DisplayNameConflictError) ||
-            error.canOverwrite) &&
-          !(
-            options.operation === "copy" &&
-            options.item.sourceParentId === options.targetParentId
-          ),
-      });
-
-      switch (action) {
-        case ConflictAction.Cancel:
-          return { kind: "cancelled" };
-        case ConflictAction.Skip:
-          return { kind: "skipped", skipAll: false };
-        case ConflictAction.SkipAll:
-          return { kind: "skipped", skipAll: true };
-        case ConflictAction.Rename:
-          name = newName;
-          overwrite = false;
-          break;
-        case ConflictAction.Overwrite:
-          name = conflictingName;
-          overwrite = true;
-          break;
+      const resolution = await resolveMoveConflict(
+        options,
+        error,
+        state,
+        folderNames,
+      );
+      if (resolution.kind !== "retry") {
+        return resolution;
       }
     }
   }
 };
+
+async function resolveMoveConflict<T>(
+  options: MoveConflictOptions,
+  error: T,
+  state: MoveConflictState,
+  folderNames: FolderTransferNames,
+): Promise<ConflictResolution> {
+  if (!isRetryableConflict(error, state.overwrite)) {
+    return {
+      kind: "failed",
+      error: error instanceof Error ? error : new Error("Move failed."),
+    };
+  }
+
+  if (options.skipAllConflicts) {
+    return { kind: "skipped", skipAll: true };
+  }
+
+  let originalName: string;
+  try {
+    originalName = await getMoveItemName(options.item);
+  } catch (nameError) {
+    return {
+      kind: "failed",
+      error:
+        nameError instanceof Error
+          ? nameError
+          : new Error("Could not determine the item name."),
+    };
+  }
+
+  try {
+    state.targetNames ??=
+      error instanceof DisplayNameConflictError
+        ? await folderNames.takenNameKeys()
+        : await getTargetNames(options.targetParentId);
+  } catch (loadError) {
+    return {
+      kind: "failed",
+      error:
+        loadError instanceof Error
+          ? loadError
+          : new Error("Could not load target folder."),
+    };
+  }
+  const conflictingName = state.name ?? originalName;
+  state.rejectedNames.add(getFileNameKey(conflictingName));
+  for (const rejectedName of state.rejectedNames) {
+    state.targetNames.add(rejectedName);
+  }
+
+  const newName = nextAvailableName(originalName, state.targetNames);
+  const action = await options.confirmConflict({
+    newName,
+    canOverwrite: canOverwriteConflict(options, error),
+  });
+
+  switch (action) {
+    case ConflictAction.Cancel:
+      return { kind: "cancelled" };
+    case ConflictAction.Skip:
+      return { kind: "skipped", skipAll: false };
+    case ConflictAction.SkipAll:
+      return { kind: "skipped", skipAll: true };
+    case ConflictAction.Rename:
+      state.name = newName;
+      state.overwrite = false;
+      return { kind: "retry" };
+    case ConflictAction.Overwrite:
+    case ConflictAction.OverwriteAll:
+      state.name = conflictingName;
+      state.overwrite = true;
+      return { kind: "retry" };
+  }
+}
+
+function isRetryableConflict<T>(error: T, overwrite: boolean): boolean {
+  return (
+    error instanceof DisplayNameConflictError ||
+    (isAxiosError(error) && error.response?.status === 409 && !overwrite)
+  );
+}
+
+function canOverwriteConflict<T>(
+  options: MoveConflictOptions,
+  error: T,
+): boolean {
+  return (
+    options.item.kind === "file" &&
+    getMoveConflictKind(error) === "File" &&
+    (!(error instanceof DisplayNameConflictError) || error.canOverwrite) &&
+    !(
+      options.operation === "copy" &&
+      options.item.sourceParentId === options.targetParentId
+    )
+  );
+}

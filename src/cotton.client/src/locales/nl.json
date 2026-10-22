@@ -2410,6 +2410,15 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "De gedeelde bestanden konden niet worden ontvangen. Deel ze opnieuw.",
+      "uploadFailed": "Het uploaden van de gedeelde bestanden kon niet worden gestart. Vernieuw deze pagina om het opnieuw te proberen."
+    },
+    "folderSizes": {
+      "calculate": "Mapgroottes berekenen",
+      "calculating": "Mapgroottes worden berekend…",
+      "failed": "Niet alle mapgroottes konden worden berekend. Probeer het opnieuw."
+    },
     "folderInfo": {
       "action": "Informatie",
       "title": "{{name}}",
@@ -2538,7 +2547,8 @@
       "rename": "{{newName}} gebruiken",
       "overwrite": "Vervangen",
       "skip": "Overslaan",
-      "skipAll": "Alles overslaan"
+      "skipAll": "Alles overslaan",
+      "overwriteAll": "Alles vervangen"
     },
     "deleteFolder": {
       "confirmTitle": "Map \"{{name}}\" verwijderen?",
@@ -3154,12 +3164,13 @@
           "validateAndSave": "Controleren en opslaan",
           "connected": "Verbonden · {{model}} · {{dimensions}} dimensies · {{tokens}} tokens",
           "cloudConnected": "Cotton Bridge geautoriseerd · cloudberekeningen beschikbaar · {{model}} · {{dimensions}} dimensies",
-          "cloudUnavailable": "Cotton Bridge kon deze server niet autoriseren of cloudberekeningen leveren. Probeer het opnieuw.",
+          "cloudUnavailable": "De cloudberekeningen van Cotton Bridge zijn niet beschikbaar. Probeer het later opnieuw.",
           "errors": {
             "NotConfigured": "De runner-URL is niet ingesteld.",
             "UnsupportedMode": "Tekstembeddings zijn nog niet beschikbaar in deze rekenmodus.",
             "InvalidUrl": "Voer een HTTP- of HTTPS-basis-URL in zonder inloggegevens, query of fragment.",
             "Unreachable": "Kan geen verbinding maken met de runner. Controleer het adres en de beschikbaarheid.",
+            "AccessDenied": "De embeddingdienst heeft de toegang geweigerd. Controleer de autorisatie van de server.",
             "Timeout": "De runner reageerde niet op tijd. Probeer het opnieuw.",
             "InvalidResponse": "De runner gaf een ongeldig antwoord.",
             "NotEmbeddingModel": "Deze server ondersteunt geen tekstembeddings.",

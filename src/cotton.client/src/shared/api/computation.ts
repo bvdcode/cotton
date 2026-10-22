@@ -13,6 +13,7 @@ export const computationErrorSchema = z.enum([
   "InvalidDimensions",
   "InvalidVectors",
   "InvalidInput",
+  "AccessDenied",
 ]);
 
 export type ComputationError = z.infer<typeof computationErrorSchema>;

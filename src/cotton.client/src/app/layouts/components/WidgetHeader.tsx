@@ -27,11 +27,11 @@ export const WidgetHeader: React.FC<WidgetHeaderProps> = ({
 }) => {
   return (
     <Box
-      display="flex"
-      alignItems="center"
-      justifyContent="space-between"
-      mb={isCollapsed ? 0 : 1}
       sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        mb: isCollapsed ? 0 : 1,
         position: "relative",
         zIndex: 1,
         borderRadius: isCollapsed ? 2 : 0,
@@ -59,8 +59,8 @@ export const WidgetHeader: React.FC<WidgetHeaderProps> = ({
       )}
       <Typography
         variant="subtitle1"
-        fontWeight={600}
         sx={{
+          fontWeight: 600,
           position: "relative",
           zIndex: 1,
           color: "text.primary",
@@ -68,7 +68,14 @@ export const WidgetHeader: React.FC<WidgetHeaderProps> = ({
       >
         {title}
       </Typography>
-      <Box display="flex" gap={0.5} sx={{ position: "relative", zIndex: 1 }}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: 0.5,
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
         <IconButton
           size="small"
           onClick={onToggleCollapse}

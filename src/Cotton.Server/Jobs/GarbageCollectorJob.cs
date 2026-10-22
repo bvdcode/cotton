@@ -101,46 +101,48 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
+            List<FileManifest> manifests = [];
             await using IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(ct);
             try
             {
-                await _dbContext.DownloadTokens
-                    .Where(dt => manifestIds.Contains(dt.NodeFile.FileManifestId))
-                    .ExecuteDeleteAsync(ct);
+                await _dbContext.FileEmbeddings.DeleteFileEmbeddingsAsync(manifestIds, ct);
 
-                await _dbContext.FileEmbeddings
-                    .Where(embedding => manifestIds.Contains(embedding.FileManifestId))
-                    .ExecuteDeleteAsync(ct);
+                await _dbContext.FileManifestChunks.DeleteFileManifestChunksAsync(manifestIds, ct);
 
-                await _dbContext.FileManifestChunks
-                    .Where(m => manifestIds.Contains(m.FileManifestId))
-                    .ExecuteDeleteAsync(ct);
-
-                int deletedManifests = await _dbContext.FileManifests
+                manifests = await _dbContext.FileManifests
                     .Where(fm => manifestIds.Contains(fm.Id) && !fm.NodeFiles.Any())
-                    .ExecuteDeleteAsync(ct);
+                    .ToListAsync(ct);
 
-                if (deletedManifests != manifestIds.Count)
+                if (manifests.Count != manifestIds.Count)
                 {
                     await transaction.RollbackAsync(ct);
                     _logger.LogWarning(
                         "Skipped orphaned file manifest cleanup because {ReferencedCount} of {TotalCount} candidates became referenced during garbage collection.",
-                        manifestIds.Count - deletedManifests,
+                        manifestIds.Count - manifests.Count,
                         manifestIds.Count);
                     return;
                 }
 
+                _dbContext.FileManifests.RemoveRange(manifests);
+                await _dbContext.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
 
-                if (deletedManifests != 0)
-                {
-                    _logger.LogInformation("Removed {Count} orphaned file manifests.", deletedManifests);
-                }
+                _logger.LogInformation("Removed {Count} orphaned file manifests.", manifests.Count);
             }
             catch (DbUpdateException ex)
             {
                 await transaction.RollbackAsync(ct);
                 _logger.LogWarning(ex, "Skipped orphaned file manifest cleanup because a candidate became referenced during garbage collection.");
+            }
+            finally
+            {
+                foreach (FileManifest manifest in manifests)
+                {
+                    if (_dbContext.Entry(manifest).State == EntityState.Deleted)
+                    {
+                        _dbContext.Entry(manifest).State = EntityState.Detached;
+                    }
+                }
             }
         }
 
@@ -193,7 +195,7 @@ namespace Cotton.Server.Jobs
 
                 int updated = await _dbContext.Chunks
                     .Where(chunk => candidateHashes.Contains(chunk.Hash))
-                    .ScheduleGarbageCollectionAsync(deleteAfter, ct);
+                    .SetGarbageCollectionScheduleAsync(deleteAfter, ct);
 
                 totalScheduled += updated;
 
@@ -262,7 +264,7 @@ namespace Cotton.Server.Jobs
             {
                 await _dbContext.Chunks
                     .Where(chunk => protectedHashesToClear.Contains(chunk.Hash))
-                    .CancelGarbageCollectionAsync(ct);
+                    .SetGarbageCollectionScheduleAsync(null, ct);
             }
 
             if (reservedHashes.Count == 0)
@@ -353,7 +355,7 @@ namespace Cotton.Server.Jobs
             {
                 await _dbContext.Chunks
                     .Where(chunk => nowReferencedHashes.Contains(chunk.Hash))
-                    .CancelGarbageCollectionAsync(ct);
+                    .SetGarbageCollectionScheduleAsync(null, ct);
             }
 
             HashSet<string> referencedUids = nowReferencedHashes
@@ -382,13 +384,9 @@ namespace Cotton.Server.Jobs
             {
                 try
                 {
-                    await _dbContext.ChunkOwnerships
-                        .Where(o => eligibleHashes.Contains(o.ChunkHash))
-                        .ExecuteDeleteAsync(ct);
+                    await _dbContext.ChunkOwnerships.DeleteChunkOwnershipsAsync(eligibleHashes, ct);
 
-                    dbDeleted = await _dbContext.Chunks
-                        .Where(c => eligibleHashes.Contains(c.Hash))
-                        .ExecuteDeleteAsync(ct);
+                    dbDeleted = await _dbContext.Chunks.DeleteChunksAsync(eligibleHashes, ct);
 
                     await transaction.CommitAsync(ct);
                 }

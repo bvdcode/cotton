@@ -32,11 +32,21 @@ namespace Cotton.Sdk.Auth
         /// <summary>
         /// Refreshes the current access token.
         /// </summary>
+        /// <remarks>
+        /// Cancellation can stop waiting for another session operation or prevent a refresh from starting.
+        /// Once sent, refresh completes the response read and token persistence before reporting caller
+        /// cancellation. The HTTP client's timeout bounds the request and response read.
+        /// </remarks>
         Task<TokenPairDto> RefreshAsync(string? refreshToken = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Revokes the current refresh token and clears local tokens.
         /// </summary>
+        /// <remarks>
+        /// Waits for an active refresh before selecting the token to revoke. Once the logout request
+        /// starts, local tokens are cleared even if the request fails or the caller cancels it.
+        /// Cancellation while waiting leaves the session unchanged.
+        /// </remarks>
         Task LogoutAsync(string? refreshToken = null, CancellationToken cancellationToken = default);
 
         /// <summary>

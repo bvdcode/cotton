@@ -18,6 +18,7 @@ namespace Cotton.Server.Models.Computation
         IncompatibleModel,
         InvalidDimensions,
         InvalidVectors,
-        InvalidInput
+        InvalidInput,
+        AccessDenied
     }
 }

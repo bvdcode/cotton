@@ -46,7 +46,7 @@ namespace Cotton.Previews.Tests
                     MediaMetadataProbeLimits.DefaultMaxTagValueBytes,
                     MediaMetadataProbeLimits.DefaultMaxTotalTagBytes);
 
-                FfprobeOutputLimitExceededException? exception = Assert.ThrowsAsync<FfprobeOutputLimitExceededException>(
+                FfprobeOutputLimitExceededException? exception = await Assert.ThrowsAsync<FfprobeOutputLimitExceededException>(
                     async () => await FfmpegBinary.TryGetMediaMetadataAsync(
                         server.Url,
                         timeout: TimeSpan.FromSeconds(15),
@@ -80,7 +80,7 @@ namespace Cotton.Previews.Tests
             await stream.ReadStarted.WaitAsync(TimeSpan.FromSeconds(5));
             await cancellation.CancelAsync();
 
-            Assert.ThrowsAsync<OperationCanceledException>(async () => await probeTask);
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await probeTask);
         }
 
         [Test]

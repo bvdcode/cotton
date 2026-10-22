@@ -112,8 +112,18 @@ export const PasswordStep = ({
   return (
     <>
       <DialogContent dividers>
-        <Stack spacing={2} pt={0.5}>
-          <Typography variant="body2" color="text.secondary">
+        <Stack
+          spacing={2}
+          sx={{
+            pt: 0.5,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("clientEncryption.setupDialog.passwordHint")}
           </Typography>
           <TextField
@@ -239,7 +249,13 @@ export const PhraseStep = ({
             {t("clientEncryption.setupDialog.phraseWarning")}
           </Alert>
           <RecoveryPhraseGrid words={phraseWords} />
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <Button
               size="small"
               startIcon={<ContentCopyIcon fontSize="small" />}
@@ -323,8 +339,11 @@ const RecoveryPhraseGrid = ({ words }: RecoveryPhraseGridProps) => (
       >
         <Typography
           variant="caption"
-          color="text.secondary"
-          sx={{ minWidth: 24, fontFamily: "monospace" }}
+          sx={{
+            color: "text.secondary",
+            minWidth: 24,
+            fontFamily: "monospace",
+          }}
         >
           {index + 1}.
         </Typography>
@@ -355,7 +374,13 @@ const PendingActionLabel = ({
   }
 
   return (
-    <Stack direction="row" spacing={1} alignItems="center">
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        alignItems: "center",
+      }}
+    >
       <CircularProgress size={16} />
       <span>{pendingLabel}</span>
     </Stack>

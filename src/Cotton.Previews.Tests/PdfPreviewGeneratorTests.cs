@@ -32,12 +32,12 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
-        public void GeneratePreviewWebPAsync_InvalidSize_ThrowsArgumentOutOfRangeException()
+        public async Task GeneratePreviewWebPAsync_InvalidSize_ThrowsArgumentOutOfRangeException()
         {
             byte[] pdfBytes = CreateSinglePagePdfBytes("PDF preview invalid size");
             using MemoryStream stream = new MemoryStream(pdfBytes);
 
-            Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
                 await _generator.GeneratePreviewWebPAsync(stream, size: 0));
         }
 

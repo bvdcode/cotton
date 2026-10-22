@@ -103,7 +103,12 @@ export const ClientEncryptionUnlockForm = ({
   return (
     <>
       <DialogContent dividers>
-        <Stack spacing={2} pt={0.5}>
+        <Stack
+          spacing={2}
+          sx={{
+            pt: 0.5,
+          }}
+        >
           {mode === "password" ? (
             <TextField
               label={t("clientEncryption.unlockDialog.passwordLabel")}
@@ -185,7 +190,13 @@ export const ClientEncryptionUnlockForm = ({
           onClick={handleSubmit}
         >
           {pending ? (
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <CircularProgress size={16} />
               <span>{t("clientEncryption.unlockDialog.unlocking")}</span>
             </Stack>

@@ -2413,6 +2413,15 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Nie udało się odebrać udostępnionych plików. Udostępnij je ponownie.",
+      "uploadFailed": "Nie udało się rozpocząć przesyłania udostępnionych plików. Odśwież stronę, aby spróbować ponownie."
+    },
+    "folderSizes": {
+      "calculate": "Oblicz rozmiary folderów",
+      "calculating": "Obliczanie rozmiarów folderów…",
+      "failed": "Nie udało się obliczyć rozmiarów wszystkich folderów. Spróbuj ponownie."
+    },
     "folderInfo": {
       "action": "Informacje",
       "title": "{{name}}",
@@ -2553,7 +2562,8 @@
       "rename": "Użyj {{newName}}",
       "overwrite": "Zastąp",
       "skip": "Pomiń",
-      "skipAll": "Pomiń wszystko"
+      "skipAll": "Pomiń wszystko",
+      "overwriteAll": "Zastąp wszystko"
     },
     "deleteFolder": {
       "confirmTitle": "Usunąć folder \"{{name}}\"?",
@@ -3197,12 +3207,13 @@
           "validateAndSave": "Sprawdź i zapisz",
           "connected": "Połączono · {{model}} · {{dimensions}} wymiary · {{tokens}} tokenów",
           "cloudConnected": "Cotton Bridge autoryzowany · obliczenia w chmurze dostępne · {{model}} · {{dimensions}} wymiarów",
-          "cloudUnavailable": "Cotton Bridge nie zdołał autoryzować tego serwera ani udostępnić obliczeń w chmurze. Spróbuj ponownie.",
+          "cloudUnavailable": "Obliczenia w chmurze Cotton Bridge są niedostępne. Spróbuj ponownie później.",
           "errors": {
             "NotConfigured": "Adres runnera nie jest skonfigurowany.",
             "UnsupportedMode": "Embeddingi tekstu nie są jeszcze dostępne w tym trybie.",
             "InvalidUrl": "Podaj bazowy adres HTTP lub HTTPS bez danych logowania, parametrów i fragmentu.",
             "Unreachable": "Nie można połączyć się z runnerem. Sprawdź adres i dostępność.",
+            "AccessDenied": "Usługa wektoryzacji odmówiła dostępu. Sprawdź autoryzację serwera.",
             "Timeout": "Runner nie odpowiedział na czas. Spróbuj ponownie.",
             "InvalidResponse": "Runner zwrócił nieprawidłową odpowiedź.",
             "NotEmbeddingModel": "Ten serwer nie obsługuje embeddingów tekstu.",

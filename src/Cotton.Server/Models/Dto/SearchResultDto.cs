@@ -10,6 +10,8 @@ namespace Cotton.Server.Models.Dto
     {
         public IEnumerable<NodeDto> Nodes { get; set; } = [];
 
+        public IReadOnlyList<NodeDto> Ancestors { get; set; } = [];
+
         public IEnumerable<NodeFileManifestDto> Files { get; set; } = [];
 
         public IDictionary<Guid, string> NodePaths { get; set; } = new Dictionary<Guid, string>();

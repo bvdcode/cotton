@@ -79,7 +79,7 @@ namespace Cotton.Server.IntegrationTests
                 Task second = writer.WriteAsync(Stream.Null, Second(), cancellation.Token);
                 Assert.That(secondStarted.Task.IsCompleted, Is.False);
                 await cancellation.CancelAsync();
-                Assert.CatchAsync<OperationCanceledException>(async () => await second);
+                await Assert.CatchAsync<OperationCanceledException>(async () => await second);
                 Assert.That(secondStarted.Task.IsCompleted, Is.False);
             }
             finally

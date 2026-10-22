@@ -187,7 +187,13 @@ export const AdminNotificationsSettingsPage = () => {
   return (
     <Stack>
       <AdminPageSurface>
-        <Stack p={3} spacing={3} divider={<Divider flexItem />}>
+        <Stack
+          spacing={3}
+          divider={<Divider flexItem />}
+          sx={{
+            p: 3,
+          }}
+        >
           <AdminPageHeader
             title={t("notificationsSettings.title")}
             description={t("notificationsSettings.description")}

@@ -2408,6 +2408,15 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "No se pudieron recibir los archivos compartidos. Compártelos de nuevo.",
+      "uploadFailed": "No se pudo iniciar la subida de los archivos compartidos. Recarga esta página para volver a intentarlo."
+    },
+    "folderSizes": {
+      "calculate": "Calcular tamaños de carpetas",
+      "calculating": "Calculando tamaños de carpetas…",
+      "failed": "No se pudieron calcular los tamaños de todas las carpetas. Inténtalo de nuevo."
+    },
     "folderInfo": {
       "action": "Información",
       "title": "{{name}}",
@@ -2536,7 +2545,8 @@
       "rename": "Usar {{newName}}",
       "overwrite": "Reemplazar",
       "skip": "Omitir",
-      "skipAll": "Omitir todo"
+      "skipAll": "Omitir todo",
+      "overwriteAll": "Reemplazar todo"
     },
     "deleteFolder": {
       "confirmTitle": "¿Eliminar la carpeta \"{{name}}\"?",
@@ -3455,12 +3465,13 @@
           "validateAndSave": "Validar y guardar",
           "connected": "Conectado · {{model}} · {{dimensions}} dimensiones · {{tokens}} tokens",
           "cloudConnected": "Cotton Bridge autorizado · cómputo en la nube disponible · {{model}} · {{dimensions}} dimensiones",
-          "cloudUnavailable": "Cotton Bridge no pudo autorizar este servidor ni proporcionar cómputo en la nube. Inténtalo de nuevo.",
+          "cloudUnavailable": "Los cálculos en la nube de Cotton Bridge no están disponibles. Inténtalo más tarde.",
           "errors": {
             "NotConfigured": "La URL del ejecutor no está configurada.",
             "UnsupportedMode": "Los embeddings de texto aún no están disponibles en este modo.",
             "InvalidUrl": "Introduce una URL base HTTP o HTTPS sin credenciales, parámetros ni fragmento.",
             "Unreachable": "No se puede conectar con el ejecutor. Comprueba su dirección y disponibilidad.",
+            "AccessDenied": "El servicio de vectorización denegó el acceso. Comprueba la autorización del servidor.",
             "Timeout": "El ejecutor no respondió a tiempo. Inténtalo de nuevo.",
             "InvalidResponse": "El ejecutor devolvió una respuesta no válida.",
             "NotEmbeddingModel": "Este servidor no ofrece embeddings de texto.",

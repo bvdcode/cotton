@@ -95,7 +95,12 @@ export const TextPreviewToolbar: React.FC<TextPreviewToolbarProps> = ({
             disabled={saving}
           />
 
-          <Box display="flex" gap={1}>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+            }}
+          >
             {mode === EditorMode.Code && (
               <LanguageSelector
                 currentLanguage={language}

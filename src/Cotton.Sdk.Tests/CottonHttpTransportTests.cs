@@ -189,7 +189,7 @@ namespace Cotton.Sdk.Tests
                 BaseAddress = new Uri("https://cotton.test"),
             });
 
-            Assert.ThrowsAsync<CottonTokenRefreshException>(async () => await client.Settings.GetAsync());
+            await Assert.ThrowsAsync<CottonTokenRefreshException>(async () => await client.Settings.GetAsync());
             TokenPairDto? stored = await store.GetAsync();
 
             Assert.Multiple(() =>
@@ -286,7 +286,7 @@ namespace Cotton.Sdk.Tests
         }
 
         [Test]
-        public void SendJsonAsync_ReportsInvalidJsonResponseWithContentPreview()
+        public async Task SendJsonAsync_ReportsInvalidJsonResponseWithContentPreview()
         {
             QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(_ => new HttpResponseMessage(HttpStatusCode.OK)
@@ -298,7 +298,7 @@ namespace Cotton.Sdk.Tests
                 BaseAddress = new Uri("https://cotton.test"),
             });
 
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            CottonApiException? exception = await Assert.ThrowsAsync<CottonApiException>(
                 async () => await client.Settings.GetAsync());
 
             Assert.Multiple(() =>
@@ -313,7 +313,7 @@ namespace Cotton.Sdk.Tests
         }
 
         [Test]
-        public void SendPagedJsonAsync_RequiresTotalCountHeader()
+        public async Task SendPagedJsonAsync_RequiresTotalCountHeader()
         {
             QueuedHttpMessageHandler handler = new();
             handler.EnqueueJson(HttpStatusCode.OK, Array.Empty<object>());
@@ -322,7 +322,7 @@ namespace Cotton.Sdk.Tests
                 new InMemoryCottonTokenStore(),
                 new CottonSdkOptions { BaseAddress = new Uri("https://cotton.test") });
 
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            CottonApiException? exception = await Assert.ThrowsAsync<CottonApiException>(
                 async () => await client.Notifications.GetNotificationsAsync());
 
             Assert.That(exception?.Message, Does.Contain("required X-Total-Count response header"));
@@ -331,7 +331,7 @@ namespace Cotton.Sdk.Tests
         [TestCase("invalid")]
         [TestCase("-1")]
         [TestCase("2147483648")]
-        public void SendPagedJsonAsync_RejectsInvalidTotalCountHeader(string totalCount)
+        public async Task SendPagedJsonAsync_RejectsInvalidTotalCountHeader(string totalCount)
         {
             QueuedHttpMessageHandler handler = new();
             handler.EnqueueJson(
@@ -343,14 +343,14 @@ namespace Cotton.Sdk.Tests
                 new InMemoryCottonTokenStore(),
                 new CottonSdkOptions { BaseAddress = new Uri("https://cotton.test") });
 
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            CottonApiException? exception = await Assert.ThrowsAsync<CottonApiException>(
                 async () => await client.Notifications.GetNotificationsAsync());
 
             Assert.That(exception?.Message, Does.Contain("invalid X-Total-Count response header"));
         }
 
         [Test]
-        public void SendPagedJsonAsync_RejectsDuplicateTotalCountHeaders()
+        public async Task SendPagedJsonAsync_RejectsDuplicateTotalCountHeaders()
         {
             QueuedHttpMessageHandler handler = new();
             handler.Enqueue(_ =>
@@ -367,14 +367,14 @@ namespace Cotton.Sdk.Tests
                 new InMemoryCottonTokenStore(),
                 new CottonSdkOptions { BaseAddress = new Uri("https://cotton.test") });
 
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            CottonApiException? exception = await Assert.ThrowsAsync<CottonApiException>(
                 async () => await client.Notifications.GetNotificationsAsync());
 
             Assert.That(exception?.Message, Does.Contain("invalid X-Total-Count response header"));
         }
 
         [Test]
-        public void SendNoContentAsync_IncludesFailureResponsePreview()
+        public async Task SendNoContentAsync_IncludesFailureResponsePreview()
         {
             QueuedHttpMessageHandler handler = new QueuedHttpMessageHandler();
             handler.Enqueue(HttpStatusCode.BadRequest, "Validation failed for remote folder.");
@@ -383,7 +383,7 @@ namespace Cotton.Sdk.Tests
                 BaseAddress = new Uri("https://cotton.test"),
             });
 
-            CottonApiException? exception = Assert.ThrowsAsync<CottonApiException>(
+            CottonApiException? exception = await Assert.ThrowsAsync<CottonApiException>(
                 async () => await client.Nodes.DeleteAsync(Guid.NewGuid()));
 
             Assert.Multiple(() =>
@@ -421,7 +421,7 @@ namespace Cotton.Sdk.Tests
             await client.DisposeAsync();
             await client.DisposeAsync();
 
-            Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
                 await client.Settings.GetAsync());
         }
 

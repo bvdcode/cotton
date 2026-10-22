@@ -29,6 +29,5 @@ namespace Cotton.Previews
             }
             target[key] = value;
         }
-
     }
 }

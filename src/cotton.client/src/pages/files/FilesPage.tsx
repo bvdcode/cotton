@@ -1,3 +1,7 @@
+import {
+  useDecryptedNode,
+  useDecryptedNodes,
+} from "../../shared/crypto/useDecryptedNodes";
 import React, { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@shared/ui/notifications";
@@ -28,6 +32,7 @@ import { usePinnedFolders } from "@shared/dashboard/usePinnedFolders";
 import { useFileMoveController } from "./hooks/useFileMoveController";
 import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
 import { useFilesContentOperations } from "./hooks/useFilesContentOperations";
+import { useSharedFileUpload } from "./hooks/useSharedFileUpload";
 import { useFilesEncryptionController } from "./hooks/useFilesEncryptionController";
 import { useFilesSelectionActions } from "./hooks/useFilesSelectionActions";
 import { FilesPageContent } from "./components/FilesPageContent";
@@ -54,13 +59,15 @@ export const FilesPage: React.FC = () => {
   const params = useParams<{ nodeId?: string }>();
 
   const {
-    currentNode,
-    ancestors,
+    currentNode: rawCurrentNode,
+    ancestors: rawAncestors,
     rootNodeId,
     loading: nodeLoading,
     error: nodeError,
     optimisticDeleteFile,
   } = useNodesStore();
+  const currentNode = useDecryptedNode(rawCurrentNode);
+  const ancestors = useDecryptedNodes(rawAncestors);
 
   const routeNodeId = params.nodeId;
   const { layoutType, setLayoutType, tilesSize, viewMode, cycleViewMode } =
@@ -175,7 +182,6 @@ export const FilesPage: React.FC = () => {
     activeCurrentNode,
     ancestors,
     content,
-    stats,
     nodeId,
     showToast,
   });
@@ -242,6 +248,13 @@ export const FilesPage: React.FC = () => {
     reloadCurrentNode,
     showToast,
     t,
+  });
+
+  useSharedFileUpload({
+    ready: !routeNodeId && currentNode?.id === nodeId && !loading && !error,
+    encryptionRequired:
+      encryption.currentFolderEncryptionPolicy.effectiveEnabled,
+    upload: contentOperations.fileUpload.handleUploadFiles,
   });
 
   const selectionActions = useFilesSelectionActions({

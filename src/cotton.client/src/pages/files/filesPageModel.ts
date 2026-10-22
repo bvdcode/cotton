@@ -123,20 +123,20 @@ export const shouldRenderFilesList = <TContent,>(
 
 export const buildFolderEncryptionPrompt = (options: {
   decryptEncryptedFiles: () => void;
-  encryptedFilesCount: number;
+  hasEncryptedFiles: boolean;
   encryptedFilesMessage: string;
   encryptedFilesAction: string;
   encryptPlainFiles: () => void;
   folderPolicyEnabled: boolean;
   isDecryptingEncryptedFiles: boolean;
   isEncryptingPlainFiles: boolean;
-  plainFilesCount: number;
+  hasPlainFiles: boolean;
   plainFilesMessage: string;
   plainFilesAction: string;
 }): FolderEncryptionPromptModel | null => {
   if (
     options.folderPolicyEnabled &&
-    options.plainFilesCount > 0 &&
+    options.hasPlainFiles &&
     !options.isEncryptingPlainFiles
   ) {
     return {
@@ -152,7 +152,7 @@ export const buildFolderEncryptionPrompt = (options: {
 
   if (
     !options.folderPolicyEnabled &&
-    options.encryptedFilesCount > 0 &&
+    options.hasEncryptedFiles &&
     !options.isDecryptingEncryptedFiles
   ) {
     return {

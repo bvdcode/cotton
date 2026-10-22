@@ -46,7 +46,7 @@ namespace Cotton.Server.Services
         public bool Validate(string token)
         {
             int byteLength = NonceSize + TagSize + Permission.Length;
-            int encodedLength = (byteLength * 8 + 5) / 6;
+            int encodedLength = ((byteLength * 8) + 5) / 6;
             if (token.Length != Prefix.Length + encodedLength || !token.StartsWith(Prefix, StringComparison.Ordinal))
             {
                 return false;

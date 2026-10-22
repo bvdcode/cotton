@@ -128,10 +128,12 @@ const LoginHeader = ({ form }: LoginHeaderProps) => {
 
   return (
     <Box
-      display="flex"
-      justifyContent="space-between"
-      alignItems="center"
-      sx={{ mb: 3 }}
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        mb: 3,
+      }}
     >
       <Typography variant="h4" component="h1">
         {form.requiresTwoFactor ? t("twoFactor.title") : t("title")}

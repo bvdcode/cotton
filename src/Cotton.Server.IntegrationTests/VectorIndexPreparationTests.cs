@@ -130,7 +130,7 @@ namespace Cotton.Server.IntegrationTests
             };
             DbContext.FileEmbeddings.Add(embedding);
             await DbContext.SaveChangesAsync();
-            Assert.ThrowsAsync<PostgresException>(() => Send(new BuildVectorIndexRequest()));
+            await Assert.ThrowsAsync<PostgresException>(() => Send(new BuildVectorIndexRequest()));
             PostgresIndexStatus failed = await Send(new GetVectorIndexMetadataQuery());
             Assert.That(failed.Exists, Is.True);
             Assert.That(VectorIndexDefinition.IsReady(failed), Is.False);

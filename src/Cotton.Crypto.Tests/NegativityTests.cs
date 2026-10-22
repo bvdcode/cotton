@@ -40,7 +40,7 @@ namespace Cotton.Crypto.Tests
         }
 
         [Test]
-        public void Tamper_FileHeader_KeyId_ShouldFailEarly()
+        public async Task Tamper_FileHeader_KeyId_ShouldFailEarly()
         {
             AesGcmStreamCipher cipher = new AesGcmStreamCipher(ValidMasterKey(), keyId: 12);
             byte[] data = [.. Enumerable.Range(0, MinChunk + 5_000).Select(i => (byte)(i & 0xFF))];
@@ -54,11 +54,11 @@ namespace Cotton.Crypto.Tests
 
             using MemoryStream tampered = new MemoryStream(bytes, writable: false);
             using MemoryStream outDec = new MemoryStream();
-            Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
+            await Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
         }
 
         [Test]
-        public void Tamper_FileHeader_EncryptedKey_ShouldFail()
+        public async Task Tamper_FileHeader_EncryptedKey_ShouldFail()
         {
             AesGcmStreamCipher cipher = new AesGcmStreamCipher(ValidMasterKey(), keyId: 13);
             byte[] data = [.. Enumerable.Range(0, MinChunk + 1).Select(i => (byte)(i & 0xFF))];
@@ -72,7 +72,7 @@ namespace Cotton.Crypto.Tests
 
             using MemoryStream tampered = new MemoryStream(bytes, writable: false);
             using MemoryStream outDec = new MemoryStream();
-            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
+            await Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
         }
 
         [Test]
@@ -95,7 +95,7 @@ namespace Cotton.Crypto.Tests
 
             using MemoryStream tampered = new MemoryStream(bytes, writable: false);
             using MemoryStream outDec = new MemoryStream();
-            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
+            await Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
             Assert.That(outDec.Length, Is.EqualTo(0));
         }
 
@@ -116,14 +116,14 @@ namespace Cotton.Crypto.Tests
             int cut = chunks[0].cipherOffset + (int)(chunks[0].hdr.PlaintextLength / 2);
             using MemoryStream truncated1 = new MemoryStream(full.AsSpan(0, cut).ToArray(), writable: false);
             using MemoryStream dec1 = new MemoryStream();
-            Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated1, dec1));
+            await Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated1, dec1));
 
             // Truncate mid-file-header
             int fileHeaderLen = 4 + 4 + 8 + 4 + 4 + NonceSize + TagSize + 32;
             int cut2 = fileHeaderLen / 2;
             using MemoryStream truncated2 = new MemoryStream(full.AsSpan(0, cut2).ToArray(), writable: false);
             using MemoryStream dec2 = new MemoryStream();
-            Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated2, dec2));
+            await Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated2, dec2));
         }
 
         [Test]
@@ -145,7 +145,7 @@ namespace Cotton.Crypto.Tests
             int endMarkerStart = chunks[^1].cipherOffset - headerLen;
             using MemoryStream truncated = new MemoryStream(full.AsSpan(0, endMarkerStart).ToArray(), writable: false);
             using MemoryStream dec = new MemoryStream();
-            Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated, dec));
+            await Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated, dec));
         }
 
         [Test]
@@ -168,7 +168,7 @@ namespace Cotton.Crypto.Tests
 
             using MemoryStream tampered = new MemoryStream(bytes, writable: false);
             using MemoryStream dec = new MemoryStream();
-            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, dec));
+            await Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, dec));
         }
     }
 }

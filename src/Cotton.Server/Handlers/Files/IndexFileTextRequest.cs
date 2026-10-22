@@ -51,8 +51,7 @@ namespace Cotton.Server.Handlers.Files
             for (int fileIndex = 0; fileIndex < files.Count; fileIndex++)
             {
                 (FileManifest manifest, string? error) = files[fileIndex];
-                await dbContext.FileEmbeddings.Where(embedding => embedding.FileManifestId == manifest.Id)
-                    .ExecuteDeleteAsync(cancellationToken);
+                await dbContext.FileEmbeddings.DeleteFileEmbeddingsAsync(manifest.Id, cancellationToken);
                 for (int fragment = 0; fragment < vectors[fileIndex].Length; fragment++)
                 {
                     dbContext.FileEmbeddings.Add(new FileEmbedding

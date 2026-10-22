@@ -21,7 +21,8 @@ namespace Cotton.Server.Handlers.Nodes
     public record CreateNodeRequest(
         Guid UserId,
         Guid ParentId,
-        string Name) : IRequest<CreateNodeResult>;
+        string Name,
+        Dictionary<string, string>? Metadata = null) : IRequest<CreateNodeResult>;
 
     public class CreateNodeRequestHandler(
         CottonDbContext _dbContext,
@@ -97,6 +98,8 @@ namespace Cotton.Server.Handlers.Nodes
                     OwnerId = request.UserId,
                     Type = NodeType.Default,
                     LayoutId = layout.Id,
+                    Metadata = NodeMetadataPatch.Apply(null,
+                        request.Metadata?.ToDictionary(x => x.Key, x => (string?)x.Value)),
                 };
                 node.SetParent(parentNode);
                 node.SetName(request.Name);

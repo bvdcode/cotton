@@ -15,7 +15,6 @@ namespace Cotton.Server.IntegrationTests
 {
     public class FileTextIndexingTests : FileTextIndexingTestBase
     {
-
         [TestCase("application/pdf", "document.bin")]
         [TestCase("application/octet-stream", "document.PDF")]
         public async Task Index_StoresAllFragmentsOnce_ForSharedManifest(string mime, string name)
@@ -72,7 +71,7 @@ namespace Cotton.Server.IntegrationTests
             Guid id = manifest.Id;
             _db.ChangeTracker.Clear();
             _worker.StatusCode = HttpStatusCode.ServiceUnavailable;
-            Assert.ThrowsAsync<HttpRequestException>(() => IndexAsync(id));
+            await Assert.ThrowsAsync<HttpRequestException>(() => IndexAsync(id));
             _db.ChangeTracker.Clear();
             Assert.That((await _db.FileManifests.SingleAsync()).TextIndexVersion, Is.Zero);
             Assert.That(await _db.FileEmbeddings.AnyAsync(), Is.False);
@@ -86,7 +85,7 @@ namespace Cotton.Server.IntegrationTests
         {
             FileManifest manifest = await AddFileAsync("invalid-vectors.pdf", PdfTextExtractor.ContentType, PdfTestDocument.Create("Invalid vectors"));
             _worker.Dimensions = 768;
-            Assert.ThrowsAsync<ComputationException>(() => IndexAsync(manifest.Id));
+            await Assert.ThrowsAsync<ComputationException>(() => IndexAsync(manifest.Id));
             _db.ChangeTracker.Clear();
             Assert.That(await _db.FileEmbeddings.AnyAsync(), Is.False);
             Assert.That((await _db.FileManifests.SingleAsync()).TextIndexVersion, Is.Zero);
@@ -103,7 +102,7 @@ namespace Cotton.Server.IntegrationTests
             Guid previousId = previous.Id;
             _db.ChangeTracker.Clear();
             _failure.Enabled = true;
-            Assert.ThrowsAsync<DbUpdateException>(() => IndexAsync(id));
+            await Assert.ThrowsAsync<DbUpdateException>(() => IndexAsync(id));
             _failure.Enabled = false;
             _db.ChangeTracker.Clear();
             Assert.That((await _db.FileManifests.SingleAsync()).TextIndexVersion, Is.Zero);
@@ -121,7 +120,7 @@ namespace Cotton.Server.IntegrationTests
             FileManifest manifest = await AddFileAsync("batch.pdf", PdfTextExtractor.ContentType,
                 PdfTestDocument.Create("This document needs several embedding batches, which must be stored together."));
             _worker.FailingEmbeddingCall = 2;
-            Assert.ThrowsAsync<HttpRequestException>(() => IndexAsync(manifest.Id));
+            await Assert.ThrowsAsync<HttpRequestException>(() => IndexAsync(manifest.Id));
             _db.ChangeTracker.Clear();
             Assert.That(_worker.EmbedCalls, Is.EqualTo(2));
             Assert.That(await _db.FileEmbeddings.AnyAsync(), Is.False);
@@ -135,7 +134,7 @@ namespace Cotton.Server.IntegrationTests
                 PdfTestDocument.Create("This document needs several embedding batches and is cancelled during inference."));
             using CancellationTokenSource cancellation = new();
             _worker.EmbeddingRequested = () => cancellation.Cancel();
-            Assert.CatchAsync<OperationCanceledException>(() => _services.GetRequiredService<IMediator>()
+            await Assert.CatchAsync<OperationCanceledException>(() => _services.GetRequiredService<IMediator>()
                 .Send(new IndexFileTextRequest(manifest.Id), cancellation.Token));
             _db.ChangeTracker.Clear();
             Assert.That(await _db.FileEmbeddings.AnyAsync(), Is.False);

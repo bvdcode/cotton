@@ -2410,6 +2410,15 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Sdílené soubory se nepodařilo přijmout. Sdílejte je znovu.",
+      "uploadFailed": "Nahrávání sdílených souborů se nepodařilo spustit. Obnovte stránku a zkuste to znovu."
+    },
+    "folderSizes": {
+      "calculate": "Spočítat velikosti složek",
+      "calculating": "Počítání velikostí složek…",
+      "failed": "Nepodařilo se spočítat velikosti všech složek. Zkuste to znovu."
+    },
     "folderInfo": {
       "action": "Informace",
       "title": "{{name}}",
@@ -2550,7 +2559,8 @@
       "rename": "Použít {{newName}}",
       "overwrite": "Nahradit",
       "skip": "Přeskočit",
-      "skipAll": "Přeskočit vše"
+      "skipAll": "Přeskočit vše",
+      "overwriteAll": "Nahradit vše"
     },
     "deleteFolder": {
       "confirmTitle": "Smazat složku \"{{name}}\"?",
@@ -3194,12 +3204,13 @@
           "validateAndSave": "Ověřit a uložit",
           "connected": "Připojeno · {{model}} · {{dimensions}} rozměrů · {{tokens}} tokenů",
           "cloudConnected": "Cotton Bridge autorizován · cloudové výpočty jsou dostupné · {{model}} · {{dimensions}} rozměrů",
-          "cloudUnavailable": "Cotton Bridge nemohl tento server autorizovat nebo poskytnout cloudové výpočty. Zkuste to znovu.",
+          "cloudUnavailable": "Cloudové výpočty Cotton Bridge nejsou dostupné. Zkuste to znovu později.",
           "errors": {
             "NotConfigured": "Adresa runneru není nastavena.",
             "UnsupportedMode": "Textové embeddingy zatím nejsou v tomto režimu dostupné.",
             "InvalidUrl": "Zadejte základní adresu HTTP nebo HTTPS bez přihlašovacích údajů, parametrů a fragmentu.",
             "Unreachable": "Nelze se připojit k runneru. Zkontrolujte adresu a dostupnost.",
+            "AccessDenied": "Vektorizační služba odmítla přístup. Zkontrolujte autorizaci serveru.",
             "Timeout": "Runner neodpověděl včas. Zkuste to znovu.",
             "InvalidResponse": "Runner vrátil neplatnou odpověď.",
             "NotEmbeddingModel": "Tento server nepodporuje textové embeddingy.",

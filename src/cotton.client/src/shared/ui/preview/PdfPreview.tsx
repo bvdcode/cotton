@@ -1,7 +1,6 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { filesApi } from "../../api/filesApi";
 import { previewConfig } from "../../config/previewConfig";
 import { formatBytes } from "../../utils/formatBytes";
 import "pdfjs-dist/web/pdf_viewer.css";
@@ -12,51 +11,17 @@ import {
 } from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorker from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 
-type PdfPreviewSource =
-  | {
-      kind: "fileId";
-      fileId: string;
-    }
-  | {
-      kind: "url";
-      /**
-       * Cache key for blob URLs.
-       * Use a stable, unique id (e.g. share token) to avoid re-downloading on reopen.
-       */
-      cacheKey: string;
-      /**
-       * Returns a URL that can be fetched as a PDF for preview (should be inline-capable).
-       * For share links it should usually be `/s/:token?view=inline`.
-       */
-      getPreviewUrl: () => Promise<string>;
-    };
+import {
+  type PdfPreviewSource,
+  getCachedPdfUrl,
+  createPdfPreviewUrl,
+  resolvePdfPreviewUrl,
+} from "./pdfPreviewSource";
 
 interface PdfPreviewProps {
   source: PdfPreviewSource;
   fileName: string;
   fileSizeBytes?: number | null;
-}
-
-// Blob URL cache for PDFs
-const blobUrlCache = new Map<string, string>();
-
-function getCacheKey(source: PdfPreviewSource): string {
-  return source.kind === "fileId" ? source.fileId : source.cacheKey;
-}
-
-async function resolvePdfPreviewUrl(source: PdfPreviewSource): Promise<string> {
-  if (source.kind === "url") {
-    return source.getPreviewUrl();
-  }
-
-  const downloadUrl = await filesApi.getDownloadLink(source.fileId, 60 * 24);
-
-  const fullUrl = downloadUrl.startsWith("http")
-    ? downloadUrl
-    : `${window.location.origin}${downloadUrl}`;
-
-  // Backend supports inline PDF rendering with `download=false`.
-  return fullUrl + (fullUrl.includes("?") ? "&" : "?") + "download=false";
 }
 
 export const PdfPreview = ({
@@ -74,8 +39,7 @@ export const PdfPreview = ({
     fileSizeBytes > previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES;
   const maxMB = previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES / (1024 * 1024);
 
-  const cacheKey = getCacheKey(source);
-  const cachedBlobUrl = blobUrlCache.get(cacheKey);
+  const cachedBlobUrl = getCachedPdfUrl(source);
   const [blobUrl, setBlobUrl] = useState<string | null>(cachedBlobUrl ?? null);
   const [loading, setLoading] = useState(!cachedBlobUrl);
   const [loadingStage, setLoadingStage] = useState<
@@ -101,13 +65,17 @@ export const PdfPreview = ({
         setLoadingStage("link");
         const previewUrl = await resolvePdfPreviewUrl(source);
 
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
 
         // Step 2: Fetch as blob to avoid SPA routing intercept.
         setLoadingStage("download");
         const response = await fetch(previewUrl);
 
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
 
         if (!response.ok) {
           throw new Error(t("preview.errors.downloadFailed", { ns: "files" }));
@@ -116,9 +84,10 @@ export const PdfPreview = ({
         // Step 3: Create blob URL
         // Blob URLs are not intercepted by React Router and work in iframe
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-
-        blobUrlCache.set(cacheKey, url);
+        if (cancelled) {
+          return;
+        }
+        const url = createPdfPreviewUrl(source, blob);
         setBlobUrl(url);
         setPdfBlob(blob);
         setLoading(false);
@@ -135,13 +104,14 @@ export const PdfPreview = ({
     return () => {
       cancelled = true;
     };
-  }, [blobUrl, cacheKey, isTooLarge, pdfBlob, shouldUsePdfJs, source, t]);
+  }, [blobUrl, isTooLarge, pdfBlob, shouldUsePdfJs, source, t]);
 
   useEffect(() => {
     if (isTooLarge) return;
     if (!shouldUsePdfJs || !pdfBlob) return;
 
     let cancelled = false;
+    let loadingTask: ReturnType<typeof getDocument> | null = null;
 
     const renderPdf = async () => {
       setRendering(true);
@@ -151,9 +121,15 @@ export const PdfPreview = ({
       try {
         GlobalWorkerOptions.workerSrc = pdfWorker;
         const data = await pdfBlob.arrayBuffer();
-        const pdf = await getDocument({ data }).promise;
+        if (cancelled) {
+          return;
+        }
+        loadingTask = getDocument({ data });
+        const pdf = await loadingTask.promise;
 
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
 
         const container = renderContainerRef.current;
         if (!container) {
@@ -178,7 +154,9 @@ export const PdfPreview = ({
 
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
           const page = await pdf.getPage(pageNumber);
-          if (cancelled) return;
+          if (cancelled) {
+            return;
+          }
 
           const viewport = page.getViewport({ scale: 1 });
           const scale = availableWidth / viewport.width;
@@ -224,11 +202,15 @@ export const PdfPreview = ({
           });
           await renderTask.promise;
 
-          if (cancelled) return;
+          if (cancelled) {
+            return;
+          }
 
           // Text layer enables selection/copy.
           const textContent = await page.getTextContent();
-          if (cancelled) return;
+          if (cancelled) {
+            return;
+          }
           const textLayer = new TextLayer({
             textContentSource: textContent,
             container: textLayerDiv,
@@ -236,7 +218,9 @@ export const PdfPreview = ({
           });
           await textLayer.render();
 
-          if (cancelled) return;
+          if (cancelled) {
+            return;
+          }
         }
 
         setRendering(false);
@@ -252,6 +236,7 @@ export const PdfPreview = ({
 
     return () => {
       cancelled = true;
+      void loadingTask?.destroy();
     };
   }, [isTooLarge, pdfBlob, shouldUsePdfJs, t]);
 
@@ -289,7 +274,13 @@ export const PdfPreview = ({
             p: 3,
           }}
         >
-          <Typography variant="body1" color="text.secondary" align="center">
+          <Typography
+            variant="body1"
+            align="center"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("preview.errors.pdfTooLarge", {
               ns: "files",
               size: formatBytes(fileSizeBytes ?? 0),
@@ -313,7 +304,12 @@ export const PdfPreview = ({
           }}
         >
           <CircularProgress />
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {loadingStage === "link"
               ? t("preview.pdf.loading.link", { ns: "files" })
               : loadingStage === "download"
@@ -335,7 +331,13 @@ export const PdfPreview = ({
           <Typography variant="body1" color="error">
             {error}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mt: 1,
+            }}
+          >
             {fileName}
           </Typography>
         </Box>

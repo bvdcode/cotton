@@ -61,13 +61,35 @@ export const EnabledTotpContent = ({
   const { t } = useTranslation("profile");
 
   return (
-    <Stack spacing={2} paddingY={2}>
+    <Stack
+      spacing={2}
+      sx={{
+        paddingY: 2,
+      }}
+    >
       {enabledAt && (
-        <Box display="flex" justifyContent="space-between" gap={2}>
-          <Typography variant="body2" color="text.secondary">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 2,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("fields.totpEnabledAt")}
           </Typography>
-          <Typography variant="body2" fontWeight={600} textAlign="right">
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              textAlign: "right",
+            }}
+          >
             {formatDateTime(enabledAt)}
           </Typography>
         </Box>
@@ -120,7 +142,12 @@ export const DisabledTotpContent = ({
   const { t } = useTranslation("profile");
 
   return (
-    <Stack spacing={2} paddingY={2}>
+    <Stack
+      spacing={2}
+      sx={{
+        paddingY: 2,
+      }}
+    >
       <Box>
         <Button
           fullWidth
@@ -185,8 +212,18 @@ export const DisableTotpDialog = ({
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>{t("totp.disable.dialogTitle")}</DialogTitle>
       <DialogContent>
-        <Stack spacing={2} pt={1}>
-          <Typography variant="body2" color="text.secondary">
+        <Stack
+          spacing={2}
+          sx={{
+            pt: 1,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("totp.disable.dialogDescription")}
           </Typography>
           <TextField

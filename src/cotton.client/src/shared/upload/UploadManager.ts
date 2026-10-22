@@ -256,7 +256,7 @@ export class UploadManager {
         progress01: 0,
         status: "queued",
         _file: file.file,
-        _encrypt: options?.encrypt ?? false,
+        _encrypt: file.encrypt === true || options?.encrypt === true,
         _replaceNodeFileId: file.replaceNodeFileId,
         _onFileUploaded: options?.onFileUploaded,
       });

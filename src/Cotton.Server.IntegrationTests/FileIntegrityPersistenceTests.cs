@@ -30,7 +30,7 @@ namespace Cotton.Server.IntegrationTests
             file.FileManifest.ProposedContentHash = await dbContext.FileManifests.Where(entity => entity.Id == other.FileManifestId)
                 .Select(entity => entity.ProposedContentHash).SingleAsync();
 
-            DbUpdateException? failure = Assert.ThrowsAsync<DbUpdateException>(() => dbContext.SaveChangesAsync());
+            DbUpdateException? failure = await Assert.ThrowsAsync<DbUpdateException>(() => dbContext.SaveChangesAsync());
             Assert.That(failure!.InnerException, Is.InstanceOf<PostgresException>());
             Assert.That(((PostgresException)failure.InnerException!).SqlState, Is.EqualTo(PostgresErrorCodes.UniqueViolation));
             await using (AsyncServiceScope verificationScope = _factory.Services.CreateAsyncScope())

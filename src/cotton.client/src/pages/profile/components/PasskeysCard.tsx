@@ -16,7 +16,7 @@ import {
   useTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import KeyOutlinedIcon from "@mui/icons-material/KeyOutlined";
 import PhonelinkLockOutlinedIcon from "@mui/icons-material/PhonelinkLockOutlined";
@@ -219,7 +219,12 @@ export const PasskeysCard = () => {
         description={t("passkeys.description")}
         count={credentials.length}
       >
-        <Stack spacing={2} paddingY={2}>
+        <Stack
+          spacing={2}
+          sx={{
+            paddingY: 2,
+          }}
+        >
           <Box>
             <Button
               variant="contained"
@@ -240,9 +245,20 @@ export const PasskeysCard = () => {
           {error && <Alert severity="error">{error}</Alert>}
 
           {loading ? (
-            <Box display="flex" alignItems="center" gap={1.5}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+              }}
+            >
               <CircularProgress size={18} />
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("passkeys.loading")}
               </Typography>
             </Box>
@@ -273,10 +289,22 @@ export const PasskeysCard = () => {
                   >
                     <PhonelinkLockOutlinedIcon color="action" />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography fontWeight={600} noWrap title={title}>
+                      <Typography
+                        noWrap
+                        title={title}
+                        sx={{
+                          fontWeight: 600,
+                        }}
+                      >
                         {title}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" noWrap>
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{
+                          color: "text.secondary",
+                        }}
+                      >
                         {credential.lastUsedAt
                           ? t("passkeys.lastUsed", {
                               date: formatDateTime(credential.lastUsedAt),
@@ -341,11 +369,18 @@ export const PasskeysCard = () => {
           }}
         >
           <DialogContent>
-            <Stack spacing={2} pt={1}>
+            <Stack
+              spacing={2}
+              sx={{
+                pt: 1,
+              }}
+            >
               <Typography
                 id="passkey-rename-dialog-description"
                 variant="body2"
-                color="text.secondary"
+                sx={{
+                  color: "text.secondary",
+                }}
               >
                 {t("passkeys.rename.description")}
               </Typography>

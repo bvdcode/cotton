@@ -19,17 +19,35 @@ export function QuestionHeader({
     <Stack
       spacing={0.4}
       direction="row"
-      alignItems="center"
-      justifyContent="space-between"
+      sx={{
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
     >
       <Stack spacing={0.4}>
-        <Stack direction="row" spacing={0.5} alignItems="center">
-          <Typography variant="h6" fontWeight={700}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{
+            alignItems: "center",
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {title}
           </Typography>
           {extraHeader}
         </Stack>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {subtitle}
         </Typography>
       </Stack>

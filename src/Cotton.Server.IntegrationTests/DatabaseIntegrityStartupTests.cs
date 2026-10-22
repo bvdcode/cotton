@@ -10,13 +10,13 @@ namespace Cotton.Server.IntegrationTests
     public class DatabaseIntegrityStartupTests
     {
         [Test]
-        public void StartupCheck_RejectsDescriptorAndModelMismatch()
+        public async Task StartupCheck_RejectsDescriptorAndModelMismatch()
         {
             using CottonDbContext dbContext = CreateDbContext();
             DatabaseIntegrityDescriptorRegistry descriptors = new([new NodeFileIntegrityDescriptor()]);
             DatabaseIntegrityStartupCheck check = new(dbContext, descriptors);
 
-            InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            InvalidOperationException? exception = await Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await check.ValidateAsync(CancellationToken.None));
 
             Assert.That(exception!.Message, Does.Contain("Missing descriptors"));

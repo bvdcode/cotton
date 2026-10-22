@@ -51,7 +51,12 @@ export const DashboardRecentFilesWidget = ({
 
   if (query.isPending && files.length === 0) {
     return (
-      <Box display="grid" gap={0.75}>
+      <Box
+        sx={{
+          display: "grid",
+          gap: 0.75,
+        }}
+      >
         {Array.from({ length: SKELETON_COUNT }, (_, index) => (
           <Skeleton key={index} variant="rounded" height={52} />
         ))}
@@ -70,7 +75,12 @@ export const DashboardRecentFilesWidget = ({
 
   if (files.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+        }}
+      >
         {t("dashboard.recent.empty")}
       </Typography>
     );
@@ -79,9 +89,12 @@ export const DashboardRecentFilesWidget = ({
   return (
     <>
       <Box
-        display="grid"
-        gridTemplateColumns="repeat(auto-fit, minmax(min(100%, 240px), 1fr))"
-        gap={1}
+        sx={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
+          gap: 1,
+        }}
       >
         {files.map((file) => (
           <RecentFileCard

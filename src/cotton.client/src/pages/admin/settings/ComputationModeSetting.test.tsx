@@ -157,11 +157,16 @@ describe("ComputationModeSetting", () => {
     ).toBeInTheDocument();
   });
 
-  it("reports when Cotton Bridge cannot be validated", async () => {
+  it.each([
+    ["Unreachable", "cloudUnavailable"],
+    ["AccessDenied", "errors.AccessDenied"],
+    ["Timeout", "errors.Timeout"],
+    ["IncompatibleModel", "errors.IncompatibleModel"],
+  ])("reports %s when Cotton Bridge cannot be validated", async (code, key) => {
     settingsApi.setComputionMode.mockRejectedValueOnce(
       Object.assign(new Error("unavailable"), {
         isAxiosError: true,
-        response: { data: { code: "Unreachable" } },
+        response: { data: { code } },
       }),
     );
     renderSetting();
@@ -170,12 +175,35 @@ describe("ComputationModeSetting", () => {
     await chooseMode("Cloud");
 
     expect(
-      await screen.findByText("settings.general.remoteRunner.cloudUnavailable"),
+      await screen.findByText(`settings.general.remoteRunner.${key}`),
     ).toBeInTheDocument();
     expect(screen.getByRole("combobox")).toHaveTextContent(
       "settings.general.computionMode.Local",
     );
   });
+
+  it.each([
+    ["Unreachable", "cloudUnavailable"],
+    ["AccessDenied", "errors.AccessDenied"],
+    ["Timeout", "errors.Timeout"],
+  ] as const)(
+    "shows %s for an already configured cloud service",
+    async (code, key) => {
+      settingsApi.getComputionMode.mockResolvedValue("Cloud");
+      settingsApi.getComputationStatus.mockResolvedValue({
+        isReady: false,
+        info: null,
+        dimensions: null,
+        error: code,
+      } satisfies ComputationStatus);
+
+      renderSetting();
+
+      expect(
+        await screen.findByText(`settings.general.remoteRunner.${key}`),
+      ).toBeInTheDocument();
+    },
+  );
 
   it("keeps a rejected URL editable and shows a translated failure", async () => {
     settingsApi.getComputionMode.mockResolvedValue("Remote");

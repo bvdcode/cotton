@@ -20,6 +20,8 @@ import {
   type FolderEncryptionPolicyState,
 } from "../../../shared/crypto";
 import { RenamableItemCard } from "./RenamableItemCard";
+import { useCachedFolderSize } from "@shared/api/queries/folderInfo";
+import { formatBytes } from "@shared/utils/formatBytes";
 import { getFolderIcon } from "@shared/utils/icons";
 
 interface FolderCardProps {
@@ -240,7 +242,8 @@ export const FolderCard = ({
   variant = "default",
   readOnly = false,
 }: FolderCardProps) => {
-  const { t } = useTranslation(["files", "common"]);
+  const { t, i18n } = useTranslation(["files", "common"]);
+  const size = useCachedFolderSize(folder.id);
   const explicitEncryptionPolicyEnabled =
     encryptionPolicy?.explicitEnabled ??
     isFolderEncryptionPolicyEnabled(folder.metadata);
@@ -290,7 +293,10 @@ export const FolderCard = ({
       renamingIcon={getFolderIcon()}
       title={folder.name}
       cornerAdornment={cornerAdornment}
-      subtitle={new Date(folder.createdAt).toLocaleDateString()}
+      subtitle={new Date(folder.createdAt).toLocaleDateString(
+        i18n?.resolvedLanguage,
+      )}
+      subtitleEnd={size === undefined ? undefined : formatBytes(size)}
       onClick={onClick}
       variant={variant}
       actions={actions}

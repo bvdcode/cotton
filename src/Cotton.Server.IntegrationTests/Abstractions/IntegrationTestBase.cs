@@ -9,6 +9,8 @@ namespace Cotton.Server.IntegrationTests.Abstractions
 {
     public abstract class IntegrationTestBase : IDisposable
     {
+        private NpgsqlDataSource? _testDataSource;
+
         public const string DatabaseName = "cotton_dev_tests";
         protected string CurrentDatabaseName { get; }
         protected CottonDbContext DbContext { get; private set; }
@@ -39,6 +41,26 @@ namespace Cotton.Server.IntegrationTests.Abstractions
             DbContext = new(optionsBuilder.Options);
         }
 
+        protected NpgsqlDataSource TestDataSource => _testDataSource
+            ?? throw new InvalidOperationException("Recreate the test database before creating additional contexts.");
+
+        protected async Task RecreateDatabaseAsync()
+        {
+            DbContext.ChangeTracker.Clear();
+            await DbContext.Database.EnsureDeletedAsync();
+            await DbContext.Database.EnsureCreatedAsync();
+            string connectionString = DbContext.Database.GetConnectionString()!;
+            await DbContext.DisposeAsync();
+            if (_testDataSource is not null)
+            {
+                await _testDataSource.DisposeAsync();
+            }
+            _testDataSource = NpgsqlDataSource.Create(connectionString);
+            DbContextOptionsBuilder<CottonDbContext> options = new();
+            options.UseNpgsql(_testDataSource);
+            DbContext = new(options.Options);
+        }
+
         protected static string TestPostgresHost => GetTestSetting("COTTON_TEST_PG_HOST", "localhost");
 
         protected static int TestPostgresPort
@@ -59,6 +81,7 @@ namespace Cotton.Server.IntegrationTests.Abstractions
         public void Dispose()
         {
             DbContext?.Dispose();
+            _testDataSource?.Dispose();
             GC.SuppressFinalize(this);
         }
     }

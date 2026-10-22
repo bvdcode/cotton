@@ -70,7 +70,12 @@ export const AdminStorageStatisticsPage = () => {
   return (
     <Stack spacing={2}>
       <AdminPageSurface>
-        <Stack p={3} spacing={3}>
+        <Stack
+          spacing={3}
+          sx={{
+            p: 3,
+          }}
+        >
           <AdminPageHeader
             title={t("storageStatistics.title")}
             description={t("storageStatistics.description")}
@@ -132,7 +137,11 @@ export const AdminStorageStatisticsPage = () => {
             <Alert severity="error">{triggerErrorMessage}</Alert>
           )}
 
-          <Box minHeight={4}>
+          <Box
+            sx={{
+              minHeight: 4,
+            }}
+          >
             <LinearProgress
               sx={{
                 opacity: isLoading ? 1 : 0,

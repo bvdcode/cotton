@@ -5,7 +5,6 @@ import { fetchServerSettings } from "../../../shared/api/queries/serverSettings"
 import { queryClient } from "../../../shared/api/queries/queryClient";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import type {
-  FolderStatsDto,
   NodeContentDto,
   NodeFileManifestDto,
 } from "../../../shared/api/nodesApi";
@@ -32,7 +31,6 @@ interface UseFolderClientEncryptionActionsOptions {
   nodeId: string | null;
   currentNode: NodeDto | null;
   content: NodeContentDto | undefined;
-  stats?: FolderStatsDto;
   folderPolicyEnabled?: boolean;
   onToast: (message: string, variant?: ToastVariant) => void;
 }
@@ -41,7 +39,6 @@ export const useFolderClientEncryptionActions = ({
   nodeId,
   currentNode,
   content,
-  stats,
   folderPolicyEnabled: providedFolderPolicyEnabled,
   onToast,
 }: UseFolderClientEncryptionActionsOptions) => {
@@ -72,13 +69,8 @@ export const useFolderClientEncryptionActions = ({
       [],
     [activeContent?.files],
   );
-  const encryptedFilesCount = stats?.encryptedFiles ?? encryptedFiles.length;
-  const plainFilesCount = folderPolicyEnabled
-    ? (stats ? stats.files - stats.encryptedFiles : plainFiles.length)
-    : 0;
-
   const encryptPlainFiles = useCallback(async (): Promise<void> => {
-    if (!nodeId || !activeNode || plainFilesCount === 0) {
+    if (!nodeId || !activeNode) {
       return;
     }
 
@@ -178,10 +170,10 @@ export const useFolderClientEncryptionActions = ({
         "error",
       );
     }
-  }, [activeNode, nodeId, onToast, plainFiles, plainFilesCount, t]);
+  }, [activeNode, nodeId, onToast, plainFiles, t]);
 
   const decryptEncryptedFiles = useCallback(async (): Promise<void> => {
-    if (!nodeId || !activeNode || encryptedFilesCount === 0) {
+    if (!nodeId || !activeNode) {
       return;
     }
 
@@ -281,14 +273,12 @@ export const useFolderClientEncryptionActions = ({
         "error",
       );
     }
-  }, [activeNode, encryptedFiles, encryptedFilesCount, nodeId, onToast, t]);
+  }, [activeNode, encryptedFiles, nodeId, onToast, t]);
 
   return {
     folderPolicyEnabled,
     plainFiles,
     encryptedFiles,
-    plainFilesCount,
-    encryptedFilesCount,
     isEncryptingPlainFiles,
     isDecryptingEncryptedFiles,
     encryptPlainFiles,

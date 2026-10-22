@@ -124,18 +124,14 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   );
 
   const {
-    previewState,
-    closePreview,
+    previewProps,
+    lightboxProps,
     handleFileClick,
     handleDownloadFile,
     handleShareFile,
     lightboxOpen,
-    lightboxIndex,
     mediaItems,
-    getSignedMediaUrl,
-    getDownloadUrl,
     handleMediaClick,
-    setLightboxOpen,
   } = useFileInteractionHandlers({ sortedFiles });
 
   const openFile = useCallback(
@@ -390,27 +386,12 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
         </DialogContent>
       </Dialog>
 
-      <FilePreviewModal
-        isOpen={previewState.isOpen}
-        fileId={previewState.fileId}
-        fileName={previewState.fileName}
-        fileType={previewState.fileType}
-        fileSizeBytes={previewState.fileSizeBytes}
-        file={previewState.file}
-        onClose={closePreview}
-        onDownload={handleDownloadFile}
-      />
+      <FilePreviewModal {...previewProps} />
 
       {lightboxOpen && mediaItems.length > 0 && (
         <MediaLightbox
-          open={lightboxOpen}
-          initialIndex={lightboxIndex}
-          items={mediaItems}
-          getSignedMediaUrl={getSignedMediaUrl}
-          getDownloadUrl={getDownloadUrl}
-          onShare={handleShareFile}
+          {...lightboxProps}
           smoothTransitions={smoothGalleryTransitions}
-          onClose={() => setLightboxOpen(false)}
         />
       )}
     </>

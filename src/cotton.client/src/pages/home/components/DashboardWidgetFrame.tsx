@@ -83,21 +83,31 @@ export const DashboardWidgetFrame = ({
       >
         <Stack
           direction="row"
-          alignItems="center"
-          flexWrap="wrap"
-          mb={1}
-          gap={0.5}
+          sx={{
+            alignItems: "center",
+            flexWrap: "wrap",
+            mb: 1,
+            gap: 0.5,
+          }}
         >
-          <Typography variant="overline" color="text.secondary" flex={1}>
+          <Typography
+            variant="overline"
+            sx={{
+              color: "text.secondary",
+              flex: 1,
+            }}
+          >
             {title}
           </Typography>
           {customizing && (
             <Stack
               direction="row"
-              alignItems="center"
-              gap={0.25}
-              flexShrink={0}
-              ml="auto"
+              sx={{
+                alignItems: "center",
+                gap: 0.25,
+                flexShrink: 0,
+                ml: "auto",
+              }}
             >
               <ToggleButtonGroup
                 exclusive
@@ -160,7 +170,12 @@ export const DashboardWidgetFrame = ({
             </Stack>
           )}
         </Stack>
-        <Box flex={1} minHeight={0}>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+          }}
+        >
           {children}
         </Box>
       </CardContent>

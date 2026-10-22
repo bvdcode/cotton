@@ -29,6 +29,9 @@ import {
 } from "./nodesActions";
 import { resetNodesActionsInternals } from "./nodesActionInternals";
 import { useNodesStore } from "./nodesStore";
+import { generateMasterKey } from "../crypto/keys";
+import { useVault } from "../crypto/vault";
+import { readFolderName } from "../crypto/folderDisplayMeta";
 
 const makeNode = (id: string, name: string): NodeDto => ({
   id,
@@ -86,6 +89,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  useVault.getState().lock();
   resetStore();
 });
 
@@ -148,7 +152,9 @@ describe("createFolder", () => {
     vi.mocked(nodesApi.createNode).mockRejectedValue(nameConflictError());
 
     expect(await createFolder("parent-1", "Drafts")).toBeNull();
-    expect(useNodesStore.getState().error).toBe("A folder with this name already exists");
+    expect(useNodesStore.getState().error).toBe(
+      "A folder with this name already exists",
+    );
   });
 
   it("adds the new folder to the parent cache on success", async () => {
@@ -172,32 +178,40 @@ describe("createFolder", () => {
   });
 
   it("inherits the parent client-side encryption policy", async () => {
+    useVault.getState().unlock(await generateMasterKey());
     const encryptedParent = {
       ...makeNode("parent-1", "Vault"),
       metadata: { isClientEncryptionEnabled: "true" },
     };
     useNodesStore.setState({ currentNode: encryptedParent });
     seedFolder("parent-1", []);
-    const created = makeNode("b", "Private");
-    const encryptedCreated = {
-      ...created,
-      metadata: { isClientEncryptionEnabled: "true" },
-    };
-    vi.mocked(nodesApi.createNode).mockResolvedValue(created);
-    vi.mocked(nodesApi.updateNodeMetadata).mockResolvedValue(encryptedCreated);
+    vi.mocked(nodesApi.getChildren).mockResolvedValueOnce({
+      content: { ...encryptedParent, nodes: [], files: [] },
+      totalCount: 0,
+    });
+    vi.mocked(nodesApi.createNode).mockImplementation(async (request) => ({
+      ...makeNode("b", request.name),
+      metadata: request.metadata ?? {},
+    }));
 
     const result = await createFolder("parent-1", "Private");
 
-    expect(result).toEqual(encryptedCreated);
-    expect(nodesApi.updateNodeMetadata).toHaveBeenCalledWith("b", {
-      isClientEncryptionEnabled: "true",
-    });
+    expect(result).not.toBeNull();
+    expect(result?.name).not.toBe("Private");
+    expect(await readFolderName(result!)).toBe("Private");
+    expect(result?.metadata?.isClientEncryptionEnabled).toBe("true");
+    expect(nodesApi.createNode).toHaveBeenCalledOnce();
+    expect(nodesApi.updateNodeMetadata).not.toHaveBeenCalled();
     expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.nodes[0]?.metadata,
-    ).toEqual({ isClientEncryptionEnabled: "true" });
+      JSON.stringify(vi.mocked(nodesApi.createNode).mock.calls),
+    ).not.toContain("Private");
+    expect(
+      useNodesStore.getState().contentByNodeId["parent-1"]?.nodes[0]?.name,
+    ).toBe(result?.name);
   });
 
   it("inherits an ancestor client-side encryption policy", async () => {
+    useVault.getState().unlock(await generateMasterKey());
     const vault = {
       ...makeNode("vault", "Vault"),
       parentId: null,
@@ -210,20 +224,21 @@ describe("createFolder", () => {
     };
     useNodesStore.setState({ ancestors: [vault], currentNode: parent });
     seedFolder("parent-1", []);
-    const created = makeNode("b", "Private");
-    const encryptedCreated = {
-      ...created,
-      metadata: { isClientEncryptionEnabled: "true" },
-    };
-    vi.mocked(nodesApi.createNode).mockResolvedValue(created);
-    vi.mocked(nodesApi.updateNodeMetadata).mockResolvedValue(encryptedCreated);
+    vi.mocked(nodesApi.getChildren).mockResolvedValueOnce({
+      content: { ...parent, nodes: [], files: [] },
+      totalCount: 0,
+    });
+    vi.mocked(nodesApi.createNode).mockImplementation(async (request) => ({
+      ...makeNode("b", request.name),
+      metadata: request.metadata ?? {},
+    }));
 
     const result = await createFolder("parent-1", "Private");
 
-    expect(result).toEqual(encryptedCreated);
-    expect(nodesApi.updateNodeMetadata).toHaveBeenCalledWith("b", {
-      isClientEncryptionEnabled: "true",
-    });
+    expect(await readFolderName(result!)).toBe("Private");
+    expect(result?.name).not.toBe("Private");
+    expect(result?.metadata?.isClientEncryptionEnabled).toBe("true");
+    expect(nodesApi.updateNodeMetadata).not.toHaveBeenCalled();
   });
 
   it("does not patch metadata for folders created under plain parents", async () => {
@@ -324,7 +339,9 @@ describe("renameFolder", () => {
     vi.mocked(nodesApi.renameNode).mockRejectedValue(nameConflictError());
 
     expect(await renameFolder("a", "Photos", "parent-1")).toBe(false);
-    expect(useNodesStore.getState().error).toBe("A folder with this name already exists");
+    expect(useNodesStore.getState().error).toBe(
+      "A folder with this name already exists",
+    );
   });
 
   it("allows renaming a folder to its own current name", async () => {

@@ -26,9 +26,9 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
-        public void RunAsync_NonZeroExit_ReportsProcessFailure()
+        public async Task RunAsync_NonZeroExit_ReportsProcessFailure()
         {
-            InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(
+            InvalidOperationException? exception = await Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await FfmpegProcessRunner.RunAsync(
                     "-hide_banner -loglevel error -i cotton-input-that-does-not-exist -f null -",
                     Stream.Null,
@@ -43,9 +43,9 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
-        public void RunAsync_Timeout_ReportsTimeout()
+        public async Task RunAsync_Timeout_ReportsTimeout()
         {
-            TimeoutException? exception = Assert.ThrowsAsync<TimeoutException>(
+            TimeoutException? exception = await Assert.ThrowsAsync<TimeoutException>(
                 async () => await FfmpegProcessRunner.RunAsync(
                     "-hide_banner -loglevel quiet -re -f lavfi -i anullsrc=r=8000:cl=mono -t 30 -f null -",
                     Stream.Null,
@@ -56,12 +56,12 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
-        public void RunAsync_OutputFailure_PreservesOriginalException()
+        public async Task RunAsync_OutputFailure_PreservesOriginalException()
         {
             MemoryStream output = new();
             output.Dispose();
 
-            Assert.ThrowsAsync<ObjectDisposedException>(
+            await Assert.ThrowsAsync<ObjectDisposedException>(
                 async () => await FfmpegProcessRunner.RunAsync(
                     CreatePngArguments(),
                     output,

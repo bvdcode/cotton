@@ -307,13 +307,19 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   if (loading) {
     return (
       <Box
-        flex={1}
-        minHeight={0}
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
-        <Typography color="text.secondary">
+        <Typography
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("loading", { ns: "share" })}
         </Typography>
       </Box>
@@ -323,12 +329,14 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   if (loadError) {
     return (
       <Box
-        flex={1}
-        minHeight={0}
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        p={2}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          p: 2,
+        }}
       >
         <Alert severity="error">{loadError}</Alert>
       </Box>
@@ -339,12 +347,14 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
 
   return (
     <Box
-      flex={1}
-      minHeight={0}
-      overflow="auto"
-      px={{ xs: 2, sm: 3 }}
-      pt={0}
-      pb={2}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflow: "auto",
+        px: { xs: 2, sm: 3 },
+        pt: 0,
+        pb: 2,
+      }}
     >
       <PageHeader
         loading={loading}

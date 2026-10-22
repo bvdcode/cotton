@@ -1,5 +1,5 @@
 import React from "react";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlined";
 import {
   Box,
   Divider,
@@ -49,10 +49,10 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
         </Typography>
         <Typography
           variant="caption"
-          color="text.secondary"
           noWrap
           title={task.scopeLabel}
           sx={{
+            color: "text.secondary",
             display: "block",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -70,22 +70,42 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
         sx={{ mt: 0.5 }}
       />
 
-      <Box display="flex" justifyContent="space-between" mt={0.5}>
-        <Typography variant="caption" color="text.secondary">
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          mt: 0.5,
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {shouldShowSpeed
             ? `${formatBytes(task.speedBytesPerSec ?? 0)}/s`
             : t(`status.${task.status}`)}
         </Typography>
-        <Box display="flex" alignItems="center" gap={0.5} minWidth={0}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.5,
+            minWidth: 0,
+          }}
+        >
           {errorDetails && (
             <Tooltip title={errorDetails} arrow>
               <Box
                 component="span"
-                display="inline-flex"
-                color="error.main"
                 tabIndex={0}
                 aria-label={errorDetails}
-                sx={{ cursor: "help" }}
+                sx={{
+                  display: "inline-flex",
+                  color: "error.main",
+                  cursor: "help",
+                }}
               >
                 <ErrorOutlineIcon sx={{ fontSize: "1rem" }} />
               </Box>

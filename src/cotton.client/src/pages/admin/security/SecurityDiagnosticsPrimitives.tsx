@@ -30,7 +30,12 @@ export const DiagnosticsRow = ({
       alignItems: "center",
     }}
   >
-    <Typography variant="body2" color="text.secondary">
+    <Typography
+      variant="body2"
+      sx={{
+        color: "text.secondary",
+      }}
+    >
       {label}
     </Typography>
     <Box>
@@ -49,7 +54,12 @@ export const DiagnosticsSection = ({
   children,
 }: DiagnosticsSectionProps) => (
   <Stack spacing={1.5}>
-    <Typography variant="subtitle1" fontWeight={700}>
+    <Typography
+      variant="subtitle1"
+      sx={{
+        fontWeight: 700,
+      }}
+    >
       {title}
     </Typography>
     <Stack spacing={1}>{children}</Stack>
@@ -65,9 +75,13 @@ export const RiskLabeledBlock = ({ label, text }: RiskLabeledBlockProps) => (
   <Box>
     <Typography
       variant="caption"
-      color="text.secondary"
-      fontWeight={700}
-      sx={{ display: "block", textTransform: "uppercase", letterSpacing: 0.4 }}
+      sx={{
+        color: "text.secondary",
+        fontWeight: 700,
+        display: "block",
+        textTransform: "uppercase",
+        letterSpacing: 0.4,
+      }}
     >
       {label}
     </Typography>
@@ -103,7 +117,13 @@ export const PositiveCard = ({ title, code, children }: PositiveCardProps) => (
       })}
     >
       <CheckCircleIcon fontSize="small" />
-      <Typography variant="subtitle2" fontWeight={700} color="inherit">
+      <Typography
+        variant="subtitle2"
+        sx={{
+          fontWeight: 700,
+          color: "inherit",
+        }}
+      >
         {title}
       </Typography>
       {code && (

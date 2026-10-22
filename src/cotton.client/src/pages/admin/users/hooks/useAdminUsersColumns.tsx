@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { GridActionsCellItem, type GridColDef } from "@mui/x-data-grid";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import type { AdminUserDto } from "../../../../shared/api/adminApi";
@@ -126,11 +126,13 @@ export const useAdminUsersColumns = ({
         width: 60,
         renderCell: (params) => (
           <Box
-            height="100%"
-            width="100%"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
+            sx={{
+              height: "100%",
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
             {params.row.isTotpEnabled ? (
               <CheckCircleIcon sx={{ color: "success.main" }} />
@@ -156,11 +158,13 @@ export const useAdminUsersColumns = ({
         headerAlign: "right",
         renderCell: (params) => (
           <Box
-            height="100%"
-            width="100%"
-            display="flex"
-            alignItems="center"
-            justifyContent="flex-end"
+            sx={{
+              height: "100%",
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+            }}
           >
             {storageUsageLoading ? (
               <CircularProgress
@@ -171,8 +175,10 @@ export const useAdminUsersColumns = ({
             ) : (
               <Typography
                 variant="body2"
-                fontWeight={600}
-                sx={{ fontVariantNumeric: "tabular-nums" }}
+                sx={{
+                  fontWeight: 600,
+                  fontVariantNumeric: "tabular-nums",
+                }}
               >
                 {formatStorageBytes(params.row.storageUsedBytes)}
               </Typography>

@@ -230,12 +230,23 @@ export const UserMenu = () => {
           },
         }}
       >
-        <Box px={2} py={1.5}>
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+          }}
+        >
           <Typography variant="subtitle2" noWrap>
             {displayName}
           </Typography>
           {caption && caption !== displayName && (
-            <Typography variant="body2" color="text.primary" noWrap>
+            <Typography
+              variant="body2"
+              noWrap
+              sx={{
+                color: "text.primary",
+              }}
+            >
               {caption}
             </Typography>
           )}
@@ -285,8 +296,19 @@ export const UserMenu = () => {
 
         {showStorageQuota && <Divider />}
         {showStorageQuota && (
-          <Box px={2} py={1.25}>
-            <Typography variant="caption" color="text.secondary" noWrap>
+          <Box
+            sx={{
+              px: 2,
+              py: 1.25,
+            }}
+          >
+            <Typography
+              variant="caption"
+              noWrap
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {storageQuotaText}
             </Typography>
             {storageQuotaPercent !== null ? (
@@ -308,14 +330,16 @@ export const UserMenu = () => {
 
         <Divider />
         <Box
-          px={2}
-          py={0.5}
           sx={{
+            px: 2,
+            py: 0.5,
             display: "flex",
             alignItems: "center",
+
             justifyContent: serverSettings?.version
               ? "space-between"
               : "center",
+
             gap: 1.5,
           }}
         >

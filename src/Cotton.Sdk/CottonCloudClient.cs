@@ -67,7 +67,7 @@ namespace Cotton.Sdk
                 tokenStore,
                 resolvedOptions,
                 resolvedLoggerFactory.CreateLogger<CottonHttpTransport>());
-            Auth = new CottonAuthClient(transport, tokenStore);
+            Auth = new CottonAuthClient(transport);
             Settings = new CottonSettingsClient(transport);
             Chunks = new CottonChunkClient(transport);
             Files = new CottonFileClient(transport);

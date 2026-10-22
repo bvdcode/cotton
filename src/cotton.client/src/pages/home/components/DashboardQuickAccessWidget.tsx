@@ -1,4 +1,4 @@
-import { DeleteOutline, FolderOpen, Search } from "@mui/icons-material";
+import { DeleteOutlined, FolderOpen, Search } from "@mui/icons-material";
 import { Box, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -21,10 +21,12 @@ export const DashboardQuickAccessWidget = () => {
 
   return (
     <Box
-      display="grid"
-      gridTemplateColumns="repeat(3, minmax(0, 1fr))"
-      gap={1}
-      width="100%"
+      sx={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+        gap: 1,
+        width: "100%",
+      }}
     >
       <Button
         variant="contained"
@@ -44,7 +46,7 @@ export const DashboardQuickAccessWidget = () => {
       </Button>
       <Button
         variant="outlined"
-        startIcon={<DeleteOutline />}
+        startIcon={<DeleteOutlined />}
         onClick={() => navigate("/trash")}
         sx={buttonSx}
       >

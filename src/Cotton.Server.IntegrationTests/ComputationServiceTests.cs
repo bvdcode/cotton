@@ -241,12 +241,12 @@ namespace Cotton.Server.IntegrationTests
         [TestCase(768, 0, false, ComputationError.InvalidDimensions)]
         [TestCase(1024, -1, false, ComputationError.InvalidVectors)]
         [TestCase(1024, 0, true, ComputationError.InvalidVectors)]
-        public void Embeddings_ValidateEveryResponse(int dimensions, int offset, bool zero, ComputationError error)
+        public async Task Embeddings_ValidateEveryResponse(int dimensions, int offset, bool zero, ComputationError error)
         {
             _handler.Dimensions = dimensions;
             _handler.CountOffset = offset;
             _handler.ZeroVectors = zero;
-            ComputationException? exception = Assert.ThrowsAsync<ComputationException>(
+            ComputationException? exception = await Assert.ThrowsAsync<ComputationException>(
                 async () => await _service.GetTextEmbeddingsAsync(["text"]));
             Assert.That(exception!.Error, Is.EqualTo(error));
         }
@@ -289,11 +289,35 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(_handler.Addresses, Is.Empty);
         }
 
-        [Test]
-        public async Task HttpFailure_IsReportedAsUnavailable()
+        [TestCase(HttpStatusCode.BadGateway, ComputationError.Unreachable, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.ServiceUnavailable, ComputationError.Unreachable, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.InternalServerError, ComputationError.Unreachable, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.Unauthorized, ComputationError.AccessDenied, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.Forbidden, ComputationError.AccessDenied, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.RequestTimeout, ComputationError.Timeout, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.GatewayTimeout, ComputationError.Timeout, ComputionMode.Cloud)]
+        [TestCase(HttpStatusCode.BadGateway, ComputationError.Unreachable, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.ServiceUnavailable, ComputationError.Unreachable, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.InternalServerError, ComputationError.Unreachable, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.Unauthorized, ComputationError.AccessDenied, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.Forbidden, ComputationError.AccessDenied, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.RequestTimeout, ComputationError.Timeout, ComputionMode.Remote)]
+        [TestCase(HttpStatusCode.GatewayTimeout, ComputationError.Timeout, ComputionMode.Remote)]
+        public async Task HttpFailure_PreservesReason(
+            HttpStatusCode statusCode, ComputationError expectedError,
+            ComputionMode mode)
         {
-            _handler.StatusCode = HttpStatusCode.ServiceUnavailable;
-            Assert.That((await _service.GetStatusAsync()).Error, Is.EqualTo(ComputationError.Unreachable));
+            if (mode == ComputionMode.Cloud)
+            {
+                ConfigureCloud(telemetry: true);
+            }
+            _handler.StatusCode = statusCode;
+            ComputationStatus status = await _service.GetStatusAsync();
+            Assert.Multiple(() =>
+            {
+                Assert.That(status.IsReady, Is.False);
+                Assert.That(status.Error, Is.EqualTo(expectedError));
+            });
         }
 
         [Test]
@@ -304,11 +328,11 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void CallerCancellation_IsPropagated()
+        public async Task CallerCancellation_IsPropagated()
         {
             using CancellationTokenSource source = new();
             source.Cancel();
-            Assert.CatchAsync<OperationCanceledException>(
+            await Assert.CatchAsync<OperationCanceledException>(
                 async () => await _service.GetStatusAsync(cancellationToken: source.Token));
         }
         [TestCase(1, 1_048_576)]

@@ -10,8 +10,7 @@ namespace Cotton.Server.Services.Previews
     {
         public static IQueryable<NodeFile> AvailableFiles(CottonDbContext dbContext)
         {
-            return dbContext.NodeFiles.Where(file => file.Node.Layout.IsActive
-                && (CottonDbContext.GetHstoreValue(file.Metadata, "isClientEncrypted") ?? "false") != "true");
+            return dbContext.NodeFiles.Where(file => file.Node.Layout.IsActive);
         }
     }
 }

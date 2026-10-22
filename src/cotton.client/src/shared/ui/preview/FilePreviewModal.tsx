@@ -20,17 +20,7 @@ import {
 } from "./modelPalette";
 import type { FileType } from "@shared/utils/fileTypes";
 import type { NodeFileManifestDto } from "../../api/nodesApi";
-import { PdfPreview } from "./PdfPreview";
-import { TextPreview } from "./TextPreview";
-import { ModelPreview } from "./ModelPreview";
-import { FilePreviewUnavailable } from "./FilePreviewUnavailable";
-import { getFileTypeInfo } from "@shared/utils/fileTypes";
-import { previewConfig } from "../../config/previewConfig";
-import { formatBytes } from "../../utils/formatBytes";
-import {
-  CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES,
-  isFileEncrypted,
-} from "../../crypto";
+import { FilePreviewBody } from "./FilePreviewBody";
 
 interface FilePreviewModalProps {
   isOpen: boolean;
@@ -44,16 +34,11 @@ interface FilePreviewModalProps {
   onSaved?: () => void;
 }
 
-type FilePreviewSource = {
-  kind: "fileId";
-  fileId: string;
-};
-
 type ModelPreviewControls = ReturnType<typeof useModelPreviewControls>;
 
 /**
  * Shared file preview modal component
- * Displays PDF, Text, or Model preview based on file type
+ * Displays a supported file using its readable source.
  */
 export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   isOpen,
@@ -69,10 +54,6 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   const isModel = fileType === "model";
   const defaultModelColor = useDefaultModelColor();
   const paletteColors = useModelPaletteColors();
-  const fileSource = React.useMemo<FilePreviewSource | null>(
-    () => (fileId ? { kind: "fileId", fileId } : null),
-    [fileId],
-  );
   const modelControls = useModelPreviewControls({
     stateKey: getModelControlsKey(isOpen, isModel, fileId, defaultModelColor),
     defaultMaterialColor: defaultModelColor,
@@ -101,7 +82,6 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
         fileType={fileType}
         fileSizeBytes={fileSizeBytes}
         sourceFile={file}
-        fileSource={fileSource}
         modelControls={modelControls}
         onSaved={onSaved}
         onDownload={onDownload}
@@ -149,7 +129,13 @@ const ModelHeaderActions = ({ modelControls }: ModelHeaderActionsProps) => {
   const { t } = useTranslation(["files"]);
 
   return (
-    <Stack direction="row" spacing={0.5} alignItems="center">
+    <Stack
+      direction="row"
+      spacing={0.5}
+      sx={{
+        alignItems: "center",
+      }}
+    >
       <Tooltip
         title={t("preview.model.actions.cycleLighting", {
           preset: t("preview.model.lighting." + modelControls.lightingPreset),
@@ -211,120 +197,6 @@ const ModelHeaderActions = ({ modelControls }: ModelHeaderActionsProps) => {
     </Stack>
   );
 };
-
-type FilePreviewBodyProps = {
-  fileId: string;
-  fileName: string;
-  fileType: FileType | null;
-  fileSizeBytes: number | null;
-  sourceFile?: NodeFileManifestDto | null;
-  fileSource: FilePreviewSource | null;
-  modelControls: ModelPreviewControls;
-  onSaved?: () => void;
-  onDownload: (fileId: string, fileName: string) => Promise<void>;
-};
-
-const FilePreviewBody = ({
-  fileId,
-  fileName,
-  fileType,
-  fileSizeBytes,
-  sourceFile,
-  fileSource,
-  modelControls,
-  onSaved,
-  onDownload,
-}: FilePreviewBodyProps) => {
-  const { t } = useTranslation("files");
-  const textPreviewLimit =
-    sourceFile && isFileEncrypted(sourceFile.metadata)
-      ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
-      : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
-  const oversizedText =
-    getFileTypeInfo(fileName, sourceFile?.contentType).type === "text" &&
-    (fileSizeBytes ?? 0) > textPreviewLimit;
-  return (
-    <>
-      {fileType === "other" && (
-        <FilePreviewUnavailable
-          message={
-            oversizedText
-              ? t("preview.errors.fileTooLarge", {
-                  size: formatBytes(fileSizeBytes ?? 0),
-                  maxSize: formatBytes(textPreviewLimit),
-                })
-              : undefined
-          }
-          onDownload={() => {
-            void onDownload(fileId, fileName);
-          }}
-        />
-      )}
-      {fileType === "pdf" && fileSource && (
-        <PdfPreview
-          source={fileSource}
-          fileName={fileName}
-          fileSizeBytes={fileSizeBytes}
-        />
-      )}
-      {fileType === "text" && (
-        <TextPreview
-          nodeFileId={fileId}
-          fileName={fileName}
-          fileSizeBytes={fileSizeBytes}
-          sourceFile={sourceFile}
-          onSaved={onSaved}
-        />
-      )}
-      {fileType === "model" && fileSource && (
-        <ModelPreviewBody
-          fileName={fileName}
-          fileSizeBytes={fileSizeBytes}
-          fileSource={fileSource}
-          modelControls={modelControls}
-        />
-      )}
-    </>
-  );
-};
-
-type ModelPreviewBodyProps = {
-  fileName: string;
-  fileSizeBytes: number | null;
-  fileSource: FilePreviewSource;
-  modelControls: ModelPreviewControls;
-};
-
-const ModelPreviewBody = ({
-  fileName,
-  fileSizeBytes,
-  fileSource,
-  modelControls,
-}: ModelPreviewBodyProps) => (
-  <Box
-    sx={{
-      display: "flex",
-      flex: 1,
-      flexDirection: "column",
-      minHeight: 0,
-    }}
-  >
-    <Box sx={{ flex: 1, minHeight: 0 }}>
-      <ModelPreview
-        source={fileSource}
-        fileName={fileName}
-        fileSizeBytes={fileSizeBytes}
-        materialColor={modelControls.materialColor}
-        autoAlignToken={modelControls.autoAlignToken}
-        autoOrientToken={modelControls.autoOrientToken}
-        flipToken={modelControls.flipToken}
-        lightingPreset={modelControls.lightingPreset}
-        shadowsEnabled={modelControls.shadowsEnabled}
-        surfacePreset={modelControls.surfacePreset}
-      />
-    </Box>
-  </Box>
-);
 
 type ModelPalettePopoverProps = {
   paletteColors: PaletteColor[];

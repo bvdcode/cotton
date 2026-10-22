@@ -164,6 +164,16 @@ export function getGalleryMetadataEntries(
       });
     }
   }
+  entries.push(...getExifMetadataEntries(metadata, t, language));
+  return entries;
+}
+
+function getExifMetadataEntries(
+  metadata: Record<string, string>,
+  t: TFunction<"files">,
+  language: string,
+): GalleryMetadataEntry[] {
+  const entries: GalleryMetadataEntry[] = [];
   for (const [key, raw] of Object.entries(metadata)) {
     const match =
       /^image\.([^.]+)\.\d+\.tags\.([^.]+)\.(-?\d+)\.description$/.exec(key);

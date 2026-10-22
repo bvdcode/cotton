@@ -79,7 +79,12 @@ const DeleteUserDialogContent: React.FC<DeleteUserDialogContentProps> = ({
     <Dialog open onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>{t("users.delete.title")}</DialogTitle>
       <DialogContent>
-        <Stack spacing={2} pt={1}>
+        <Stack
+          spacing={2}
+          sx={{
+            pt: 1,
+          }}
+        >
           {error && <Alert severity="error">{error}</Alert>}
           <Alert severity="warning">{t("users.delete.warning")}</Alert>
           <Typography>
@@ -107,7 +112,13 @@ const DeleteUserDialogContent: React.FC<DeleteUserDialogContentProps> = ({
           disabled={!canDelete}
         >
           {deleting ? (
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <CircularProgress size={16} color="inherit" />
               <span>{t("users.delete.deleting")}</span>
             </Stack>

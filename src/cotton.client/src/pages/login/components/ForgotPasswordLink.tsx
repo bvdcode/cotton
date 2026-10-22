@@ -13,18 +13,24 @@ export const ForgotPasswordLink = ({
   label,
 }: ForgotPasswordLinkProps) => (
   <Box
-    display="flex"
-    justifyContent="center"
-    alignItems="center"
-    sx={{ mt: 1.5, textAlign: "center" }}
+    sx={{
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      mt: 1.5,
+      textAlign: "center",
+    }}
   >
     <Link
       href="https://github.com/bvdcode/cotton"
       target="_blank"
       rel="noopener"
       underline="hover"
-      color="text.secondary"
-      sx={{ display: "flex", alignItems: "center" }}
+      sx={{
+        color: "text.secondary",
+        display: "flex",
+        alignItems: "center",
+      }}
     >
       <GitHub fontSize="small" sx={{ mr: 0.5 }} />
     </Link>
@@ -35,8 +41,8 @@ export const ForgotPasswordLink = ({
       variant="caption"
       onClick={onClick}
       underline="hover"
-      color="text.secondary"
       sx={{
+        color: "text.secondary",
         pointerEvents: disabled ? "none" : "auto",
         opacity: disabled ? 0.5 : 1,
       }}

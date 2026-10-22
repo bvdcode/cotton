@@ -6,6 +6,7 @@ using Cotton.Server.Providers;
 using Cotton.Server.Services.Computation;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
+using System.Net;
 using System.Text.Json;
 
 namespace Cotton.Server.Handlers.Computation
@@ -48,8 +49,14 @@ namespace Cotton.Server.Handlers.Computation
             }
             catch (HttpRequestException ex)
             {
-                logger.LogWarning(ex, "Text embedding service is unavailable.");
-                return new ComputationStatus(info, null, ComputationError.Unreachable);
+                ComputationError error = ex.StatusCode switch
+                {
+                    HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => ComputationError.AccessDenied,
+                    HttpStatusCode.RequestTimeout or HttpStatusCode.GatewayTimeout => ComputationError.Timeout,
+                    _ => ComputationError.Unreachable,
+                };
+                logger.LogWarning(ex, "Text embedding service request failed: {Code}", error);
+                return new ComputationStatus(info, null, error);
             }
             catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
             {

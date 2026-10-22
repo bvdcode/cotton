@@ -11,7 +11,7 @@ import Slideshow from "yet-another-react-lightbox/plugins/slideshow";
 import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
 import Share from "yet-another-react-lightbox/plugins/share";
 import "yet-another-react-lightbox/plugins/thumbnails.css";
-import { DeleteOutline as DeleteIcon } from "@mui/icons-material";
+import { DeleteOutlined as DeleteIcon } from "@mui/icons-material";
 import type { MediaLightboxProps } from "@shared/types/mediaLightbox";
 import { useMediaLightboxUrls } from "./useMediaLightboxUrls";
 import { stopLightboxMediaPlayback } from "./mediaLightboxPlayback";

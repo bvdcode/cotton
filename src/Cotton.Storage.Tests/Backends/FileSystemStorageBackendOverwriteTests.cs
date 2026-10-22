@@ -28,7 +28,7 @@ namespace Cotton.Storage.Tests.Backends
             await _backend.WriteAsync(key, new MemoryStream([1, 2, 3]));
             MemoryStream disposed = new([4, 5]);
             await disposed.DisposeAsync();
-            Assert.ThrowsAsync<ObjectDisposedException>(() => _backend.WriteAsync(key, disposed, overwrite: true));
+            await Assert.ThrowsAsync<ObjectDisposedException>(() => _backend.WriteAsync(key, disposed, overwrite: true));
             await using Stream reader = await _backend.ReadAsync(key);
             using MemoryStream content = new();
             await reader.CopyToAsync(content);

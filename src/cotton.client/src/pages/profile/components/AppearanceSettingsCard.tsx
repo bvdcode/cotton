@@ -74,7 +74,12 @@ export const AppearanceSettingsCard = () => {
       title={t("appearance.title")}
       description={t("appearance.description")}
     >
-      <Stack spacing={2} paddingY={2}>
+      <Stack
+        spacing={2}
+        sx={{
+          paddingY: 2,
+        }}
+      >
         <Box>
           <ToggleButtonGroup
             fullWidth

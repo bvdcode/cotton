@@ -37,7 +37,6 @@ export const nodeFileManifestSchema = baseDtoSchema.extend({
 export const folderStatsSchema = z.object({
   folders: z.number(),
   files: z.number(),
-  encryptedFiles: z.number(),
   sizeBytes: z.number(),
 });
 

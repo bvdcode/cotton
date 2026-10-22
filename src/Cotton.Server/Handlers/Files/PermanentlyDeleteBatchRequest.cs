@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Extensions;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
@@ -25,8 +26,8 @@ namespace Cotton.Server.Handlers.Files
             Guid[] fileIds = [.. batch.Files.Select(x => x.Id)];
             Guid[] wrapperIds = [.. batch.Files.Where(x => x.Node.Type == NodeType.Trash && !subtreeIds.Contains(x.NodeId))
                 .Select(x => x.NodeId).Distinct()];
-            await _db.NodeShareTokens.Where(x => subtreeIds.Contains(x.NodeId)).ExecuteDeleteAsync(ct);
-            await _db.DownloadTokens.Where(x => fileIds.Contains(x.NodeFileId)).ExecuteDeleteAsync(ct);
+            await _db.NodeShareTokens.DeleteNodeShareTokensForNodesAsync(subtreeIds, ct);
+            await _db.DownloadTokens.DeleteDownloadTokensForFilesAsync(fileIds, ct);
             foreach (Node folder in batch.Folders.Where(x => x.Type == NodeType.Default))
             {
                 _sync.StageFolderChange(SyncChangeKind.FolderDeleted, folder, folder.ParentId!.Value);
@@ -47,7 +48,7 @@ namespace Cotton.Server.Handlers.Files
             if (emptyWrappers.Count > 0)
             {
                 Guid[] emptyIds = [.. emptyWrappers.Select(x => x.Id)];
-                await _db.NodeShareTokens.Where(x => emptyIds.Contains(x.NodeId)).ExecuteDeleteAsync(ct);
+                await _db.NodeShareTokens.DeleteNodeShareTokensForNodesAsync(emptyIds, ct);
                 _db.Nodes.RemoveRange(emptyWrappers);
                 await _db.SaveChangesAsync(ct);
             }

@@ -1,3 +1,5 @@
+import { useDisplayProjection } from "../../../shared/crypto/useDisplayProjection";
+import { projectSearchResult } from "../../../shared/crypto/searchDisplayMeta";
 import { useCallback, useEffect, useState } from "react";
 import {
   layoutsApi,
@@ -50,11 +52,7 @@ export function useLayoutSearch(
   const [completedKey, setCompletedKey] = useState("");
 
   const trimmedQuery = query.trim();
-  const {
-    deep,
-    toggleDeep: toggleMode,
-    enableDeep,
-  } = useDeepSearchMode();
+  const { deep, toggleDeep: toggleMode, enableDeep } = useDeepSearchMode();
   const canSearch = Boolean(layoutId && trimmedQuery);
   const requestKey = JSON.stringify([
     layoutId,
@@ -133,6 +131,7 @@ export function useLayoutSearch(
     trimmedQuery,
   ]);
 
+  const displayResults = useDisplayProjection(results, projectSearchResult);
   const hasActiveResults = canSearch && completedKey === requestKey;
 
   return {
@@ -144,7 +143,7 @@ export function useLayoutSearch(
     totalCount: hasActiveResults ? totalCount : 0,
     loading: canSearch && (loading || !hasActiveResults),
     error: hasActiveResults ? error : null,
-    results: hasActiveResults ? results : null,
+    results: hasActiveResults ? displayResults : null,
     completedQuery: hasActiveResults && !error ? trimmedQuery : "",
     setQuery,
     setPage,

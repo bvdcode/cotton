@@ -11,12 +11,22 @@ import { useFolderListing } from "./useFolderListing";
 const wrapper = ({ children }: PropsWithChildren) => (
   <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 );
-const response = (encryptedFiles = 0): NodeResponse => ({
+const response = (encryptedFiles = 0, page = 1): NodeResponse => ({
   content: {
     ...createFolder(),
     nodes: [],
-    files: [createFile()],
-    stats: { files: 201, folders: 0, sizeBytes: 12345, encryptedFiles },
+    files: Array.from(
+      { length: Math.min(100, 201 - (page - 1) * 100) },
+      (_, index) =>
+        createFile({
+          id: `file-${page}-${index}`,
+          metadata:
+            encryptedFiles > 0 && index === 0
+              ? { isClientEncrypted: "true" }
+              : {},
+        }),
+    ),
+    stats: { files: 201, folders: 0, sizeBytes: 12345 },
   },
   totalCount: 201,
 });
@@ -30,7 +40,7 @@ it("requests ordering and filtering before pagination and keeps unfiltered folde
   const get = vi
     .spyOn(nodesApi, "getChildren")
     .mockImplementation(async (_, options) => ({
-      ...response(),
+      ...response(0, options?.page),
       totalCount: options?.listing?.filterValue ? 1 : 201,
     }));
   const { result } = renderHook(

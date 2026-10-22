@@ -195,7 +195,12 @@ export const FileVersionsDialog: React.FC<FileVersionsDialogProps> = ({
         ) : null}
 
         {!loading && !error && versions.length === 0 ? (
-          <Typography color="text.secondary" sx={{ py: 2 }}>
+          <Typography
+            sx={{
+              color: "text.secondary",
+              py: 2,
+            }}
+          >
             {t("fileVersions.empty", { ns: "files" })}
           </Typography>
         ) : null}
@@ -312,7 +317,13 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
             spacing={1}
             sx={{ alignItems: "center", pr: 12 }}
           >
-            <Typography component="span" fontWeight={600} noWrap>
+            <Typography
+              component="span"
+              noWrap
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {t("fileVersions.versionLabel", {
                 ns: "files",
                 version: version.versionNumber,
@@ -332,18 +343,32 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
             ) : null}
           </Stack>
         }
-        primaryTypographyProps={{ component: "div" }}
         secondary={
           <Stack spacing={0.25} sx={{ mt: 0.75, pr: 12 }}>
-            <Typography color="text.secondary" component="span" variant="body2">
+            <Typography
+              component="span"
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {createdAt}
             </Typography>
-            <Typography color="text.secondary" component="span" variant="body2">
+            <Typography
+              component="span"
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {formatBytes(version.sizeBytes)} / {version.contentType}
             </Typography>
           </Stack>
         }
-        secondaryTypographyProps={{ component: "div" }}
+        slotProps={{
+          primary: { component: "div" },
+          secondary: { component: "div" },
+        }}
       />
     </ListItem>
   );

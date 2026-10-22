@@ -43,17 +43,19 @@ export const darkTheme = createTheme({
     },
     MuiAlert: {
       styleOverrides: {
-        standardInfo: {
-          backgroundColor: "rgba(33, 150, 243, 0.15)",
-        },
-        standardSuccess: {
-          backgroundColor: "rgba(76, 175, 80, 0.15)",
-        },
-        standardWarning: {
-          backgroundColor: "rgba(255, 152, 0, 0.15)",
-        },
-        standardError: {
-          backgroundColor: "rgba(244, 67, 54, 0.15)",
+        standard: {
+          "&.MuiAlert-colorInfo": {
+            backgroundColor: "rgba(33, 150, 243, 0.15)",
+          },
+          "&.MuiAlert-colorSuccess": {
+            backgroundColor: "rgba(76, 175, 80, 0.15)",
+          },
+          "&.MuiAlert-colorWarning": {
+            backgroundColor: "rgba(255, 152, 0, 0.15)",
+          },
+          "&.MuiAlert-colorError": {
+            backgroundColor: "rgba(244, 67, 54, 0.15)",
+          },
         },
       },
     },

@@ -14,6 +14,7 @@ import { useMoveOperations } from "./useMoveOperations";
 const mocks = vi.hoisted(() => ({
   moveFile: vi.fn(),
   moveNode: vi.fn(),
+  renameNode: vi.fn(),
   confirmConflict: vi.fn(),
   getChildren: vi.fn(),
   getNode: vi.fn(),
@@ -49,6 +50,7 @@ vi.mock("../api/filesApi", () => ({
 vi.mock("../api/nodesApi", () => ({
   nodesApi: {
     moveNode: mocks.moveNode,
+    renameNode: mocks.renameNode,
     getChildren: mocks.getChildren,
     getNode: mocks.getNode,
     getAncestors: mocks.getAncestors,
@@ -193,61 +195,69 @@ describe("useMoveOperations", () => {
       sourceParentId,
     };
     const nestedNodeId = "55555555-5555-4555-8555-555555555555";
-    mocks.getChildren
-      .mockResolvedValueOnce({
-        content: {
-          id: folderItem.id,
-          createdAt: "2026-05-17T00:00:00Z",
-          updatedAt: "2026-05-17T00:00:00Z",
-          nodes: [
-            {
-              id: nestedNodeId,
-              createdAt: "2026-05-17T00:00:00Z",
-              updatedAt: "2026-05-17T00:00:00Z",
-              layoutId: "layout-1",
-              parentId: folderItem.id,
-              name: "Nested",
-              metadata: {},
-            },
-          ],
-          files: [
-            {
-              id: "66666666-6666-4666-8666-666666666666",
-              createdAt: "2026-05-17T00:00:00Z",
-              updatedAt: "2026-05-17T00:00:00Z",
-              nodeId: folderItem.id,
-              ownerId: "user-1",
-              name: "root-plain.txt",
-              contentType: "text/plain",
-              sizeBytes: 12,
-              metadata: {},
-            },
-          ],
-        },
-        totalCount: 2,
-      })
-      .mockResolvedValueOnce({
-        content: {
-          id: nestedNodeId,
-          createdAt: "2026-05-17T00:00:00Z",
-          updatedAt: "2026-05-17T00:00:00Z",
-          nodes: [],
-          files: [
-            {
-              id: "77777777-7777-4777-8777-777777777777",
-              createdAt: "2026-05-17T00:00:00Z",
-              updatedAt: "2026-05-17T00:00:00Z",
-              nodeId: nestedNodeId,
-              ownerId: "user-1",
-              name: "nested-plain.txt",
-              contentType: "text/plain",
-              sizeBytes: 34,
-              metadata: {},
-            },
-          ],
-        },
-        totalCount: 1,
-      });
+    const movedFolderResponse = {
+      content: {
+        id: folderItem.id,
+        createdAt: "2026-05-17T00:00:00Z",
+        updatedAt: "2026-05-17T00:00:00Z",
+        nodes: [
+          {
+            id: nestedNodeId,
+            createdAt: "2026-05-17T00:00:00Z",
+            updatedAt: "2026-05-17T00:00:00Z",
+            layoutId: "layout-1",
+            parentId: folderItem.id,
+            name: "Nested",
+            metadata: {},
+          },
+        ],
+        files: [
+          {
+            id: "66666666-6666-4666-8666-666666666666",
+            createdAt: "2026-05-17T00:00:00Z",
+            updatedAt: "2026-05-17T00:00:00Z",
+            nodeId: folderItem.id,
+            ownerId: "user-1",
+            name: "root-plain.txt",
+            contentType: "text/plain",
+            sizeBytes: 12,
+            metadata: {},
+          },
+        ],
+      },
+      totalCount: 2,
+    };
+    const nestedResponse = {
+      content: {
+        id: nestedNodeId,
+        createdAt: "2026-05-17T00:00:00Z",
+        updatedAt: "2026-05-17T00:00:00Z",
+        nodes: [],
+        files: [
+          {
+            id: "77777777-7777-4777-8777-777777777777",
+            createdAt: "2026-05-17T00:00:00Z",
+            updatedAt: "2026-05-17T00:00:00Z",
+            nodeId: nestedNodeId,
+            ownerId: "user-1",
+            name: "nested-plain.txt",
+            contentType: "text/plain",
+            sizeBytes: 34,
+            metadata: {},
+          },
+        ],
+      },
+      totalCount: 1,
+    };
+    mocks.getChildren.mockImplementation(async (id: string) => {
+      if (id === folderItem.id) {
+        return movedFolderResponse;
+      }
+      if (id === nestedNodeId) {
+        return nestedResponse;
+      }
+      return makeEmptyChildrenResponse(id);
+    });
     useMoveClipboardStore.getState().setItems([folderItem]);
 
     const { result } = renderHook(() =>
@@ -261,6 +271,7 @@ describe("useMoveOperations", () => {
     expect(mocks.moveNode).toHaveBeenCalledWith(folderItem.id, {
       parentId: targetParentId,
     });
+    expect(mocks.renameNode).not.toHaveBeenCalled();
     expect(mocks.getChildren).toHaveBeenCalledWith(folderItem.id, {
       page: 1,
       pageSize: 250,
@@ -308,16 +319,20 @@ describe("useMoveOperations", () => {
       sizeBytes: 12,
       metadata: {},
     }));
-    mocks.getChildren.mockResolvedValueOnce({
-      content: {
-        id: folderItem.id,
-        createdAt: "2026-05-17T00:00:00Z",
-        updatedAt: "2026-05-17T00:00:00Z",
-        nodes: [],
-        files,
-      },
-      totalCount: files.length,
-    });
+    mocks.getChildren.mockImplementation(async (id: string) =>
+      id === folderItem.id
+        ? {
+            content: {
+              id: folderItem.id,
+              createdAt: "2026-05-17T00:00:00Z",
+              updatedAt: "2026-05-17T00:00:00Z",
+              nodes: [],
+              files,
+            },
+            totalCount: files.length,
+          }
+        : makeEmptyChildrenResponse(id),
+    );
     useMoveClipboardStore.getState().setItems([folderItem]);
 
     const { result } = renderHook(() =>

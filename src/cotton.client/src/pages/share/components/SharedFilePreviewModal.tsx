@@ -57,7 +57,13 @@ const SharedModelHeaderActions = ({
   const { t } = useTranslation(["files"]);
 
   return (
-    <Stack direction="row" spacing={0.5} alignItems="center">
+    <Stack
+      direction="row"
+      spacing={0.5}
+      sx={{
+        alignItems: "center",
+      }}
+    >
       <Tooltip
         title={t("preview.model.actions.cycleLighting", {
           ns: "files",
@@ -162,7 +168,11 @@ const SharedTextPreviewBody = ({
           }}
         >
           <CircularProgress size={20} />
-          <Typography color="text.secondary">
+          <Typography
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("loading", { ns: "share" })}
           </Typography>
         </Box>

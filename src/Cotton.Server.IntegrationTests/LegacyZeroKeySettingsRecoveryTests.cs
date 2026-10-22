@@ -4,11 +4,14 @@
 using Cotton.Autoconfig.Extensions;
 using Cotton.Crypto;
 using Cotton.Database;
+using Cotton.Database.Integrity;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.Services;
+using Cotton.Server.Services.DatabaseIntegrity;
+using Cotton.Server.Services.DatabaseIntegrity.Descriptors;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,7 +21,7 @@ using System.Security.Cryptography;
 namespace Cotton.Server.IntegrationTests
 {
     [NonParallelizable]
-    public class LegacyZeroKeySettingsRecoveryTests : IntegrationTestBase
+    public partial class LegacyZeroKeySettingsRecoveryTests : IntegrationTestBase
     {
         [SetUp]
         public void SetUp()
@@ -57,11 +60,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(recovered.S3SecretAccessKeyEncrypted, Is.EqualTo("s3-secret"));
             }
 
-#pragma warning disable CS0618 // TEMPORARY 0.5 RECOVERY: remove with the recovery service.
-            LegacyZeroKeySettingsRecovery recovery = currentServices
-                .GetRequiredService<LegacyZeroKeySettingsRecovery>();
-            await recovery.RepairAsync(currentScope.ServiceProvider);
-#pragma warning restore CS0618
+            await RepairAsync(currentServices, currentScope.ServiceProvider);
 
             await using ServiceProvider normalOnlyServices = CreateServiceProvider(
                 currentSettings,
@@ -93,7 +92,8 @@ namespace Cotton.Server.IntegrationTests
 
         private ServiceProvider CreateServiceProvider(
             CottonEncryptionSettings settings,
-            bool includeRecovery = true)
+            bool includeRecovery = true,
+            CottonEncryptionSettings? integritySettings = null)
         {
             string connectionString = DbContext.Database.GetConnectionString()
                 ?? throw new InvalidOperationException("Test database connection string is not configured.");
@@ -110,12 +110,30 @@ namespace Cotton.Server.IntegrationTests
                 services.AddSingleton<IDatabaseFieldProtector>(sp =>
                     sp.GetRequiredService<DatabaseFieldProtector>());
             }
-            services.AddDbContext<CottonDbContext>(options => options.UseNpgsql(connectionString));
+            services.AddSingleton(_ => new DatabaseIntegrityKeyProvider(integritySettings ?? settings));
+            services.AddSingleton<IDatabaseIntegrityProtector, DatabaseIntegrityProtector>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, OidcProviderIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptorRegistry, DatabaseIntegrityDescriptorRegistry>();
+            services.AddSingleton<IDatabaseIntegrityFailureReporter>(NullDatabaseIntegrityFailureReporter.Instance);
+            services.AddScoped<IDatabaseIntegrityVerifier, DatabaseIntegrityVerifier>();
+            services.AddScoped<IDatabaseIntegrityChangeSigner, DatabaseIntegrityChangeSigner>();
+            services.AddScoped<DatabaseIntegritySaveChangesInterceptor>();
+            services.AddDbContext<CottonDbContext>((sp, options) => options
+                .UseNpgsql(connectionString)
+                .AddInterceptors(sp.GetRequiredService<DatabaseIntegritySaveChangesInterceptor>()));
             return services.BuildServiceProvider(new ServiceProviderOptions
             {
                 ValidateOnBuild = true,
                 ValidateScopes = true,
             });
+        }
+
+        private static async Task RepairAsync(IServiceProvider services, IServiceProvider scopedServices)
+        {
+#pragma warning disable CS0618 // TEMPORARY 0.5 RECOVERY: remove with the recovery service.
+            LegacyZeroKeySettingsRecovery recovery = services.GetRequiredService<LegacyZeroKeySettingsRecovery>();
+            await recovery.RepairAsync(scopedServices);
+#pragma warning restore CS0618
         }
 
         private static CottonEncryptionSettings CreateLegacySettings(

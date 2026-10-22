@@ -63,14 +63,6 @@ export const OneTimeCodeInput = ({
           disabled={disabled}
           variant="outlined"
           size="small"
-          inputProps={{
-            inputMode: "numeric",
-            pattern: "[0-9]*",
-            maxLength: 1,
-            "aria-label": inputAriaLabel
-              ? `${inputAriaLabel} ${i + 1}`
-              : undefined,
-          }}
           sx={{
             flex: 1,
             minWidth: 0,
@@ -114,6 +106,16 @@ export const OneTimeCodeInput = ({
             onChange(pasted);
             const nextIndex = Math.min(pasted.length, length - 1);
             moveFocus(nextIndex);
+          }}
+          slotProps={{
+            htmlInput: {
+              inputMode: "numeric",
+              pattern: "[0-9]*",
+              maxLength: 1,
+              "aria-label": inputAriaLabel
+                ? `${inputAriaLabel} ${i + 1}`
+                : undefined,
+            },
           }}
         />
       ))}

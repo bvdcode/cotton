@@ -1,6 +1,8 @@
-import { nodesApi, type SiblingNameLookupDto } from "../../../shared/api/nodesApi";
+import { createNamedFolder } from "../../../shared/crypto/folderNameOperations";
+import { applyDisplayMetaToNode } from "../../../shared/crypto/folderDisplayMeta";
+import { lookupDisplayNames } from "../../../shared/crypto/lookupDisplayNames";
+import { type SiblingNameLookupDto } from "../../../shared/api/nodesApi";
 import {
-  FOLDER_ENCRYPTION_POLICY_KEY,
   isFolderEncryptionPolicyEnabled,
   useVault,
 } from "../../../shared/crypto";
@@ -14,7 +16,10 @@ interface FolderBucket {
 }
 
 export class DroppedFolderResolver {
-  private readonly folderByKey = new Map<string, { id: string; name: string }>();
+  private readonly folderByKey = new Map<
+    string,
+    { id: string; name: string }
+  >();
   private readonly lookupByNodeId = new Map<string, SiblingNameLookupDto>();
   private readonly requestedChildrenByPath = new Map<string, Set<string>>();
   private readonly policyEnabledByNodeId: Map<string, boolean>;
@@ -59,9 +64,10 @@ export class DroppedFolderResolver {
       return cached;
     }
     const names = this.requestedChildrenByPath.get(pathKey);
-    const lookup = await nodesApi.lookupSiblingNames(
+    const lookup = await lookupDisplayNames(
       id,
       names ? [...names] : [desiredName],
+      this.policyEnabledByNodeId.get(id) ?? this.isPolicyEnabledForNode(id),
     );
     this.lookupByNodeId.set(id, lookup);
     return lookup;
@@ -73,10 +79,11 @@ export class DroppedFolderResolver {
     lookup: SiblingNameLookupDto,
   ): Promise<string> {
     if (lookup.takenNameKeys.length === 0) {
-      const expanded = await nodesApi.lookupSiblingNames(
+      const expanded = await lookupDisplayNames(
         parentId,
         [baseName],
-        true,
+        this.policyEnabledByNodeId.get(parentId) ??
+          this.isPolicyEnabledForNode(parentId),
       );
       lookup.takenNameKeys = expanded.takenNameKeys;
     }
@@ -137,25 +144,21 @@ export class DroppedFolderResolver {
       ? await this.findAvailableFolderName(parentId, desiredName, lookup)
       : desiredName;
 
-    const created = await nodesApi.createNode({
-      parentId,
-      name: nameToCreate,
-    });
     const parentPolicyEnabled =
       this.policyEnabledByNodeId.get(parentId) ??
       this.isPolicyEnabledForNode(parentId);
-    const folder = parentPolicyEnabled
-      ? await nodesApi.updateNodeMetadata(created.id, {
-          [FOLDER_ENCRYPTION_POLICY_KEY]: "true",
-        })
-      : created;
+    const folder = await createNamedFolder(
+      parentId,
+      nameToCreate,
+      parentPolicyEnabled,
+    );
     this.policyEnabledByNodeId.set(folder.id, parentPolicyEnabled);
-    lookup.nodes.push(folder);
+    lookup.nodes.push(await applyDisplayMetaToNode(folder));
     useNodesStore.getState().addFolderToCache(parentId, folder);
-    this.folderByKey.set(key, { id: folder.id, name: folder.name });
+    this.folderByKey.set(key, { id: folder.id, name: nameToCreate });
     this.folderByKey.set(`${parentId}::${getFileNameKey(nameToCreate)}`, {
       id: folder.id,
-      name: folder.name,
+      name: nameToCreate,
     });
 
     return { id: folder.id, name: nameToCreate };
@@ -192,7 +195,8 @@ export class DroppedFolderResolver {
     const filesByTarget = new Map<string, FolderBucket>();
     this.requestedChildrenByPath.clear();
     for (const item of dropped) {
-      const parts = item.relativePath.replace(/^\\+|^\/+/, "")
+      const parts = item.relativePath
+        .replace(/^\\+|^\/+/, "")
         .split(/[\\/]+/)
         .filter((part) => part.length > 0);
       parts.pop();
@@ -202,8 +206,8 @@ export class DroppedFolderResolver {
         if (segment.length === 0) {
           continue;
         }
-        const names = this.requestedChildrenByPath.get(parentPathKey)
-          ?? new Set<string>();
+        const names =
+          this.requestedChildrenByPath.get(parentPathKey) ?? new Set<string>();
         names.add(segment);
         this.requestedChildrenByPath.set(parentPathKey, names);
         parentPathKey += `/${getFileNameKey(segment)}`;

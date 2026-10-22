@@ -39,18 +39,34 @@ export const DashboardPinnedFoldersWidget = ({
     return (
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="center"
-        textAlign="center"
-        minHeight={PINNED_FOLDER_HEIGHT}
-        gap={1}
+        sx={{
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          minHeight: PINNED_FOLDER_HEIGHT,
+          gap: 1,
+        }}
       >
         <PushPin color="action" />
-        <Box minWidth={0}>
-          <Typography variant="body2" color="text.secondary">
+        <Box
+          sx={{
+            minWidth: 0,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("dashboard.pinnedFolders.empty")}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("dashboard.pinnedFolders.emptyHint")}
           </Typography>
         </Box>
@@ -64,8 +80,18 @@ export const DashboardPinnedFoldersWidget = ({
 
   if (isError && folders.length === 0) {
     return (
-      <Box minHeight={PINNED_FOLDER_HEIGHT} display="flex" alignItems="center">
-        <Box width="100%">
+      <Box
+        sx={{
+          minHeight: PINNED_FOLDER_HEIGHT,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <Box
+          sx={{
+            width: "100%",
+          }}
+        >
           <DashboardQueryError
             message={t("dashboard.pinnedFolders.loadFailed")}
             onRetry={onRetry}
@@ -77,12 +103,20 @@ export const DashboardPinnedFoldersWidget = ({
 
   return (
     <Box
-      display="grid"
-      gridTemplateColumns="repeat(auto-fill, minmax(min(100%, 240px), 1fr))"
-      gap={1}
+      sx={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))",
+        gap: 1,
+      }}
     >
       {folders.map((folder) => (
-        <Box key={folder.id} position="relative" minWidth={0}>
+        <Box
+          key={folder.id}
+          sx={{
+            position: "relative",
+            minWidth: 0,
+          }}
+        >
           <CardActionArea
             onClick={() => navigate(`/files/${folder.id}`)}
             sx={{
@@ -96,27 +130,40 @@ export const DashboardPinnedFoldersWidget = ({
           >
             <Stack
               direction="row"
-              alignItems="center"
-              gap={1.5}
-              px={1}
-              py={0.75}
-              pr={5}
+              sx={{
+                alignItems: "center",
+                gap: 1.5,
+                px: 1,
+                py: 0.75,
+                pr: 5,
+              }}
             >
               <Box
-                width={PINNED_FOLDER_ICON_SIZE}
-                height={PINNED_FOLDER_ICON_SIZE}
-                flexShrink={0}
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
+                sx={{
+                  width: PINNED_FOLDER_ICON_SIZE,
+                  height: PINNED_FOLDER_ICON_SIZE,
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 <Folder color="primary" sx={{ fontSize: 28 }} />
               </Box>
-              <Box minWidth={0}>
+              <Box
+                sx={{
+                  minWidth: 0,
+                }}
+              >
                 <Typography variant="body2" noWrap>
                   {folder.name}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {t("dashboard.pinnedFolders.folder")}
                 </Typography>
               </Box>

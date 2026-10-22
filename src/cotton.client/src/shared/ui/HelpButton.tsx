@@ -1,5 +1,5 @@
 import { IconButton, Tooltip } from "@mui/material";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutlined";
 import { useConfirm } from "material-ui-confirm";
 import { useTranslation } from "react-i18next";
 import type { MouseEvent, ReactNode } from "react";

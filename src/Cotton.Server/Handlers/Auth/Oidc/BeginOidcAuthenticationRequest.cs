@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Extensions;
 using Cotton.Server.Providers;
 using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -99,9 +100,7 @@ namespace Cotton.Server.Handlers.Auth.Oidc
 
         private Task CleanupExpiredStatesAsync(CancellationToken ct)
         {
-            return _dbContext.OidcLoginStates
-                .Where(x => x.ExpiresAt < DateTime.UtcNow)
-                .ExecuteDeleteAsync(ct);
+            return _dbContext.OidcLoginStates.DeleteExpiredOidcStatesAsync(ct);
         }
     }
 }

@@ -156,7 +156,7 @@ namespace Cotton.Server.Handlers.Archives
                 if (lastName is not null)
                 {
                     query = query.Where(file => string.Compare(file.NameKey, lastName) > 0
-                        || file.NameKey == lastName && file.Id.CompareTo(lastId) > 0);
+                        || (file.NameKey == lastName && file.Id.CompareTo(lastId) > 0));
                 }
                 var page = await query.OrderBy(file => file.NameKey).ThenBy(file => file.Id)
                     .Take(ArchiveDownloadLimits.BatchSize).Select(file => new { file.Id, file.NameKey }).ToListAsync(ct);

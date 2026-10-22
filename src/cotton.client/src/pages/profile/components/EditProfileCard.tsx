@@ -118,12 +118,23 @@ export const EditProfileCard = ({
       title={t("editProfile.title")}
       description={t("editProfile.description")}
     >
-      <Stack spacing={2} paddingY={2}>
+      <Stack
+        spacing={2}
+        sx={{
+          paddingY: 2,
+        }}
+      >
         {emailChanged && (
           <Alert severity="warning">{t("editProfile.emailWarning")}</Alert>
         )}
 
-        <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} gap={2}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            gap: 2,
+          }}
+        >
           <TextField
             label={t("fields.username")}
             value={username}
@@ -149,13 +160,17 @@ export const EditProfileCard = ({
         </Box>
 
         <Box
-          display="grid"
-          gridTemplateColumns={{
-            xs: "minmax(132px, 0.85fr) minmax(0, 1.15fr)",
-            sm: "repeat(2, minmax(0, 1fr))",
+          sx={{
+            display: "grid",
+
+            gridTemplateColumns: {
+              xs: "minmax(132px, 0.85fr) minmax(0, 1.15fr)",
+              sm: "repeat(2, minmax(0, 1fr))",
+            },
+
+            gap: 2,
+            alignItems: "center",
           }}
-          gap={2}
-          alignItems="center"
         >
           <TextField
             label={t("editProfile.birthDate")}

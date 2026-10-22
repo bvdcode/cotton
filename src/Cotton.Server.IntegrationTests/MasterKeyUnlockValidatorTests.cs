@@ -71,7 +71,7 @@ namespace Cotton.Server.IntegrationTests
             await sentinel.ValidateOrInitializeAsync(CreateSettings(CorrectRootKey));
             MasterKeyUnlockValidator validator = CreateValidator();
 
-            MasterKeyValidationException? exception = Assert.ThrowsAsync<MasterKeyValidationException>(
+            MasterKeyValidationException? exception = await Assert.ThrowsAsync<MasterKeyValidationException>(
                 async () => await validator.ValidateAsync(CreateSettings(WrongRootKey)));
 
             Assert.That(exception!.Message, Does.Contain("does not match"));
@@ -84,7 +84,7 @@ namespace Cotton.Server.IntegrationTests
             await DbContext.SaveChangesAsync();
             MasterKeyUnlockValidator validator = CreateValidator();
 
-            MasterKeyValidationException? exception = Assert.ThrowsAsync<MasterKeyValidationException>(
+            MasterKeyValidationException? exception = await Assert.ThrowsAsync<MasterKeyValidationException>(
                 async () => await validator.ValidateAsync(CreateSettings(CorrectRootKey)));
 
             Assert.That(exception!.Message, Does.Contain("no integrity evidence"));
@@ -111,7 +111,7 @@ namespace Cotton.Server.IntegrationTests
             await protectedDbContext.SaveChangesAsync();
             MasterKeyUnlockValidator validator = CreateValidator();
 
-            MasterKeyValidationException? exception = Assert.ThrowsAsync<MasterKeyValidationException>(
+            MasterKeyValidationException? exception = await Assert.ThrowsAsync<MasterKeyValidationException>(
                 async () => await validator.ValidateAsync(CreateSettings(WrongRootKey)));
 
             Assert.That(exception!.Message, Does.Contain("encrypted S3 configuration"));
@@ -135,7 +135,7 @@ namespace Cotton.Server.IntegrationTests
             await protectedDbContext.SaveChangesAsync();
             MasterKeyUnlockValidator validator = CreateValidator();
 
-            Exception? exception = Assert.CatchAsync<Exception>(
+            Exception? exception = await Assert.CatchAsync<Exception>(
                 async () => await validator.ValidateAsync(settings));
 
             using (Assert.EnterMultipleScope())

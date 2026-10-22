@@ -48,7 +48,13 @@ export const SearchResultsContent = ({
           textAlign: "center",
         }}
       >
-        <Typography color="text.secondary">{emptyText}</Typography>
+        <Typography
+          sx={{
+            color: "text.secondary",
+          }}
+        >
+          {emptyText}
+        </Typography>
       </Box>
     );
   }

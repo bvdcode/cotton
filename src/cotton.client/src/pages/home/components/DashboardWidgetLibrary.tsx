@@ -16,17 +16,38 @@ export const DashboardWidgetLibrary = ({
   const { t } = useTranslation("home");
 
   return (
-    <Stack mt={3} gap={1}>
+    <Stack
+      sx={{
+        mt: 3,
+        gap: 1,
+      }}
+    >
       <Divider />
-      <Typography variant="subtitle1" mt={1}>
+      <Typography
+        variant="subtitle1"
+        sx={{
+          mt: 1,
+        }}
+      >
         {t("dashboard.library.title")}
       </Typography>
       {hiddenWidgetIds.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("dashboard.library.empty")}
         </Typography>
       ) : (
-        <Stack direction="row" flexWrap="wrap" gap={1}>
+        <Stack
+          direction="row"
+          sx={{
+            flexWrap: "wrap",
+            gap: 1,
+          }}
+        >
           {hiddenWidgetIds.map((widgetId) => (
             <Button
               key={widgetId}

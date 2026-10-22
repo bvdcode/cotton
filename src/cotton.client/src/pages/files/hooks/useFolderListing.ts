@@ -1,13 +1,13 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useFolderEncryptionPresence } from "./useFolderEncryptionPresence";
+import { useFolderTiles, TILE_PAGE_SIZE } from "./useFolderTiles";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
 import {
   nodesApi,
   type FolderStatsDto,
-  type NodeContentDto,
   type NodeResponse,
 } from "../../../shared/api/nodesApi";
-import { queryClient } from "../../../shared/api/queries/queryClient";
 import { queryKeys } from "../../../shared/api/queries/queryKeys";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
 import { translateError } from "../../../shared/i18n/translateError";
@@ -16,7 +16,6 @@ import { useDecryptedFolderContent } from "../../../shared/crypto/useDecryptedFo
 import { useFolderListControls } from "./useFolderListControls";
 
 const LIST_PAGE_SIZE = 100;
-const TILE_PAGE_SIZE = 1000;
 
 export const useFolderListing = (
   nodeId: string | null,
@@ -58,8 +57,16 @@ export const useFolderListing = (
     enabled,
   });
 
-  const namesEnabled =
-    !folderPolicyEnabled && overview.data?.content.stats?.encryptedFiles === 0;
+  const encryptedNames = useFolderEncryptionPresence({
+    nodeId,
+    match: "encrypted-names",
+    enabled:
+      enabled && isList && !folderPolicyEnabled && overview.data !== undefined,
+    firstPage: overview.data
+      ? { response: overview.data, pageSize }
+      : undefined,
+  });
+  const namesEnabled = !folderPolicyEnabled && encryptedNames === false;
   const controls = useFolderListControls(nodeId, namesEnabled);
   const { page, listing } = controls;
   const defaultListing = Object.keys(listing).length === 0;
@@ -84,60 +91,20 @@ export const useFolderListing = (
     enabled: enabled && isList && (page > 0 || !defaultListing),
   });
 
-  const tiles = useInfiniteQuery({
-    queryKey: queryKeys.nodeChildren.tiles(queryNodeId, queryUserId),
-    queryFn: ({ pageParam }) =>
-      pageParam === 1
-        ? queryClient.fetchQuery({
-            queryKey: queryKeys.nodeChildren.overview(
-              queryNodeId,
-              queryUserId,
-              TILE_PAGE_SIZE,
-            ),
-            queryFn: () => fetchOverview(TILE_PAGE_SIZE),
-          })
-        : nodesApi.getChildren(queryNodeId, {
-            page: pageParam,
-            pageSize: TILE_PAGE_SIZE,
-          }),
-    initialPageParam: 1,
-    getNextPageParam: (last, pages) => {
-      const loaded = pages.reduce(
-        (count, item) =>
-          count + item.content.nodes.length + item.content.files.length,
-        0,
-      );
-      if (
-        loaded >= pages[0].totalCount ||
-        last.content.nodes.length + last.content.files.length === 0
-      ) {
-        return undefined;
-      }
-      return pages.length + 1;
-    },
-    enabled: enabled && !isList,
-  });
-
-  const tileContent = useMemo<NodeContentDto | undefined>(() => {
-    const pages = tiles.data?.pages;
-    if (!pages || pages.length === 0) {
-      return undefined;
-    }
-    return {
-      ...pages[0].content,
-      nodes: pages.flatMap((item) => item.content.nodes),
-      files: pages.flatMap((item) => item.content.files),
-    };
-  }, [tiles.data]);
+  const tiles = useFolderTiles(
+    queryNodeId,
+    queryUserId,
+    enabled && !isList,
+    fetchOverview,
+  );
 
   const activePage = page === 0 && defaultListing ? overview : listPage;
   const content = useDecryptedFolderContent(
-    isList ? activePage.data?.content : tileContent,
+    isList ? activePage.data?.content : tiles.content,
   );
   const stats: FolderStatsDto = overview.data?.content.stats ?? {
     folders: 0,
     files: 0,
-    encryptedFiles: 0,
     sizeBytes: 0,
   };
   const error =
@@ -162,12 +129,6 @@ export const useFolderListing = (
       }
     : undefined;
 
-  const loadMore = useCallback(() => {
-    if (tiles.hasNextPage && !tiles.isFetchingNextPage) {
-      void tiles.fetchNextPage();
-    }
-  }, [tiles]);
-
   return {
     content,
     stats,
@@ -176,7 +137,7 @@ export const useFolderListing = (
       overview.isPending || (isList ? activePage.isPending : tiles.isPending),
     error,
     pagination: paginationProps,
-    loadMore: !isList && tiles.hasNextPage ? loadMore : undefined,
+    loadMore: !isList && tiles.hasNextPage ? tiles.loadMore : undefined,
     refresh,
   };
 };

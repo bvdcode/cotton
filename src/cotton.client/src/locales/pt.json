@@ -2412,6 +2412,15 @@
     }
   },
   "files": {
+    "shareTarget": {
+      "receiveFailed": "Não foi possível receber os arquivos compartilhados. Compartilhe-os novamente.",
+      "uploadFailed": "Não foi possível iniciar o envio dos arquivos compartilhados. Recarregue esta página para tentar novamente."
+    },
+    "folderSizes": {
+      "calculate": "Calcular tamanhos das pastas",
+      "calculating": "Calculando tamanhos das pastas…",
+      "failed": "Não foi possível calcular os tamanhos de todas as pastas. Tente novamente."
+    },
     "folderInfo": {
       "action": "Informações",
       "title": "{{name}}",
@@ -2540,7 +2549,8 @@
       "rename": "Usar {{newName}}",
       "overwrite": "Substituir",
       "skip": "Ignorar",
-      "skipAll": "Ignorar tudo"
+      "skipAll": "Ignorar tudo",
+      "overwriteAll": "Substituir tudo"
     },
     "deleteFolder": {
       "confirmTitle": "Excluir a pasta \"{{name}}\"?",
@@ -3156,12 +3166,13 @@
           "validateAndSave": "Validar e guardar",
           "connected": "Ligado · {{model}} · {{dimensions}} dimensões · {{tokens}} tokens",
           "cloudConnected": "Cotton Bridge autorizado · computação na nuvem disponível · {{model}} · {{dimensions}} dimensões",
-          "cloudUnavailable": "O Cotton Bridge não conseguiu autorizar este servidor nem fornecer computação na nuvem. Tente novamente.",
+          "cloudUnavailable": "A computação na nuvem do Cotton Bridge está indisponível. Tente novamente mais tarde.",
           "errors": {
             "NotConfigured": "O URL do executor não está configurado.",
             "UnsupportedMode": "Os embeddings de texto ainda não estão disponíveis neste modo.",
             "InvalidUrl": "Introduza um URL base HTTP ou HTTPS sem credenciais, parâmetros ou fragmento.",
             "Unreachable": "Não foi possível ligar ao executor. Verifique o endereço e a disponibilidade.",
+            "AccessDenied": "O serviço de vetorização negou o acesso. Verifique a autorização do servidor.",
             "Timeout": "O executor não respondeu a tempo. Tente novamente.",
             "InvalidResponse": "O executor devolveu uma resposta inválida.",
             "NotEmbeddingModel": "Este servidor não fornece embeddings de texto.",

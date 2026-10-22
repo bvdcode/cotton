@@ -31,7 +31,7 @@ namespace Cotton.Crypto.Tests
         }
 
         [Test]
-        public void Encrypt_Cancellation_MidPipeline_NoLeaks()
+        public async Task Encrypt_Cancellation_MidPipeline_NoLeaks()
         {
             byte[] key = Key();
             AesGcmStreamCipher cipher = new AesGcmStreamCipher(key, keyId: 5, threads: 2);
@@ -45,14 +45,14 @@ namespace Cotton.Crypto.Tests
             // cancel after small delay to let pipeline spin up
             Task.Delay(30).ContinueWith(_ => cts.Cancel());
 
-            Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
+            await Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
             long after = GC.GetAllocatedBytesForCurrentThread();
             // Not a strict zero-alloc, but ensure we didn't balloon allocations by > 10MB due to leaks
             Assert.That(after - before, Is.LessThan(10L * 1024 * 1024));
         }
 
         [Test]
-        public void Decrypt_Cancellation_MidPipeline_NoLeaks()
+        public async Task Decrypt_Cancellation_MidPipeline_NoLeaks()
         {
             byte[] key = Key();
             AesGcmStreamCipher enc = new AesGcmStreamCipher(key, keyId: 6, threads: 2);
@@ -71,7 +71,7 @@ namespace Cotton.Crypto.Tests
             // Kick off decryption; request cancellation soon after to interrupt mid-pipeline
             Task task = dec.DecryptAsync(ciphertext, slowOut, ct: cts.Token);
             cts.CancelAfter(50);
-            Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
+            await Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
             long after = GC.GetAllocatedBytesForCurrentThread();
             Assert.That(after - before, Is.LessThan(10L * 1024 * 1024));
         }

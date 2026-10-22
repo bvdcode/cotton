@@ -187,18 +187,21 @@ namespace Cotton.Server.Jobs
 
         private async Task ClearMissingAvatarReferencesAsync(byte[] chunkHash, CancellationToken ct)
         {
-            bool referencedByAvatar = await _dbContext.Users
-                .AnyAsync(u => u.AvatarHash == chunkHash, ct);
-            if (!referencedByAvatar)
+            List<User> users = await _dbContext.Users
+                .Where(user => user.AvatarHash == chunkHash)
+                .ToListAsync(ct);
+            if (users.Count == 0)
             {
                 return;
             }
 
-            await _dbContext.Users
-                .Where(u => u.AvatarHash == chunkHash)
-                .ExecuteUpdateAsync(u => u
-                    .SetProperty(x => x.AvatarHash, (byte[]?)null)
-                    .SetProperty(x => x.AvatarHashEncrypted, (byte[]?)null), ct);
+            foreach (User user in users)
+            {
+                user.AvatarHash = null;
+                user.AvatarHashEncrypted = null;
+            }
+
+            await _dbContext.SaveChangesAsync(ct);
         }
 
         private async Task NotifyMissingFileDataOwnersAsync(byte[] chunkHash, CancellationToken ct)

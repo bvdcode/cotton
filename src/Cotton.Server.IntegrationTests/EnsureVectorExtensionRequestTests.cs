@@ -62,12 +62,12 @@ namespace Cotton.Server.IntegrationTests
         [TestCase(PostgresErrorCodes.InsufficientPrivilege, "pgvector_permission_denied")]
         [TestCase(PostgresErrorCodes.FeatureNotSupported, "pgvector_package_missing")]
         [TestCase(PostgresErrorCodes.UndefinedFile, "pgvector_package_missing")]
-        public void Handle_ReportsConfigurationFailures(string sqlState, string expectedCode)
+        public async Task Handle_ReportsConfigurationFailures(string sqlState, string expectedCode)
         {
             using CottonDbContext context = CreateContext();
             GetExecutor(context).Failure = new PostgresException("test failure", "ERROR", "ERROR", sqlState);
 
-            WebApiException? exception = Assert.ThrowsAsync<WebApiException>(() =>
+            WebApiException? exception = await Assert.ThrowsAsync<WebApiException>(() =>
                 CreateHandler(context).Handle(new EnsureVectorExtensionRequest(), CancellationToken.None));
 
             Assert.That(exception!.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
@@ -76,26 +76,26 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void Handle_DoesNotMaskUnexpectedDatabaseErrors()
+        public async Task Handle_DoesNotMaskUnexpectedDatabaseErrors()
         {
             using CottonDbContext context = CreateContext();
             PostgresException failure = new("test failure", "ERROR", "ERROR", PostgresErrorCodes.ConnectionFailure);
             GetExecutor(context).Failure = failure;
 
-            PostgresException? exception = Assert.ThrowsAsync<PostgresException>(() =>
+            PostgresException? exception = await Assert.ThrowsAsync<PostgresException>(() =>
                 CreateHandler(context).Handle(new EnsureVectorExtensionRequest(), CancellationToken.None));
 
             Assert.That(exception, Is.SameAs(failure));
         }
 
         [Test]
-        public void Handle_RespectsCancellation()
+        public async Task Handle_RespectsCancellation()
         {
             using CottonDbContext context = CreateContext();
             using CancellationTokenSource cancellation = new();
             cancellation.Cancel();
 
-            Assert.ThrowsAsync<OperationCanceledException>(() =>
+            await Assert.ThrowsAsync<OperationCanceledException>(() =>
                 CreateHandler(context).Handle(new EnsureVectorExtensionRequest(), cancellation.Token));
             Assert.That(GetExecutor(context).Commands, Is.Empty);
         }

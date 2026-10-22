@@ -111,8 +111,7 @@ export const DefaultUserStorageSettings = ({
     string | null
   >(null);
   const [quotaInvalid, setQuotaInvalid] = useState(false);
-  const [localQuotaStatus, setLocalQuotaStatus] =
-    useState<SaveStatus>("idle");
+  const [localQuotaStatus, setLocalQuotaStatus] = useState<SaveStatus>("idle");
   const [templateInputOverride, setTemplateInputOverride] = useState<
     string | null
   >(null);
@@ -125,8 +124,7 @@ export const DefaultUserStorageSettings = ({
   const quotaInput = quotaInputOverride ?? loadedQuotaInput;
   const savedQuotaInput = savedQuotaInputOverride ?? loadedQuotaInput;
   const templateInput = templateInputOverride ?? loadedTemplateInput;
-  const savedTemplateInput =
-    savedTemplateInputOverride ?? loadedTemplateInput;
+  const savedTemplateInput = savedTemplateInputOverride ?? loadedTemplateInput;
   const quotaStatus = resolveStatus(
     loadFailed,
     defaultUserQuotaBytes,
@@ -235,7 +233,9 @@ export const DefaultUserStorageSettings = ({
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={2}
-          alignItems={{ xs: "stretch", sm: "flex-start" }}
+          sx={{
+            alignItems: { xs: "stretch", sm: "flex-start" },
+          }}
         >
           <TextField
             label={t("storageSettings.quota.fields.defaultUserQuotaGiB")}
@@ -255,8 +255,10 @@ export const DefaultUserStorageSettings = ({
                 : t("storageSettings.quota.help")
             }
             type="number"
-            inputProps={{ min: 0, step: 0.25 }}
             fullWidth
+            slotProps={{
+              htmlInput: { min: 0, step: 0.25 },
+            }}
           />
           <SettingsSaveButton
             changed={quotaInput !== savedQuotaInput}
@@ -276,7 +278,9 @@ export const DefaultUserStorageSettings = ({
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={2}
-          alignItems={{ xs: "stretch", sm: "flex-start" }}
+          sx={{
+            alignItems: { xs: "stretch", sm: "flex-start" },
+          }}
         >
           <TextField
             label={t("storageSettings.template.fields.nodeId")}

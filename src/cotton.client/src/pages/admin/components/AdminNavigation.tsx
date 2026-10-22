@@ -120,9 +120,11 @@ export const DesktopAdminNavigation = ({
     <Box
       component="nav"
       aria-label={navigationLabel}
-      overflow="auto"
-      flex={1}
-      sx={{ overflowX: "hidden" }}
+      sx={{
+        overflow: "auto",
+        flex: 1,
+        overflowX: "hidden",
+      }}
     >
       <List sx={{ py: 1 }}>
         {sections.map((section, sectionIndex) => (
@@ -157,10 +159,12 @@ export const DesktopAdminNavigation = ({
     </Box>
     <Divider />
     <Box
-      display="flex"
-      justifyContent="flex-end"
-      px={1.5}
-      py={0.5}
+      sx={{
+        display: "flex",
+        justifyContent: "flex-end",
+        px: 1.5,
+        py: 0.5,
+      }}
     >
       <IconButton aria-label={toggleLabel} onClick={onToggle}>
         {expanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}

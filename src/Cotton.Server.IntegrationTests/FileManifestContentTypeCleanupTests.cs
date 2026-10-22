@@ -79,7 +79,7 @@ namespace Cotton.Server.IntegrationTests
             dbContext.ChangeTracker.Clear();
 
             IMediator mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            Assert.ThrowsAsync<DatabaseIntegrityException>(() =>
+            await Assert.ThrowsAsync<DatabaseIntegrityException>(() =>
                 mediator.Send(new ClearFileManifestContentTypesRequest(), CancellationToken.None));
 
             dbContext.ChangeTracker.Clear();

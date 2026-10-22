@@ -32,7 +32,13 @@ export const AdminPrivacySettingsPage = () => {
   return (
     <Stack>
       <AdminPageSurface>
-        <Stack p={3} spacing={3} divider={<Divider flexItem />}>
+        <Stack
+          spacing={3}
+          divider={<Divider flexItem />}
+          sx={{
+            p: 3,
+          }}
+        >
           <AdminPageHeader
             title={t("settings.privacy.title")}
             description={t("settings.privacy.description")}

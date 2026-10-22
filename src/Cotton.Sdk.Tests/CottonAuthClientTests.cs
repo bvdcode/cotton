@@ -172,7 +172,7 @@ namespace Cotton.Sdk.Tests
             await store.SaveAsync(new TokenPairDto { AccessToken = "access", RefreshToken = "revoked" });
             CottonCloudClient client = CreateClient(handler, store);
 
-            Assert.ThrowsAsync<CottonApiException>(async () => await client.Auth.LogoutAsync());
+            await Assert.ThrowsAsync<CottonApiException>(async () => await client.Auth.LogoutAsync());
 
             TokenPairDto? stored = await store.GetAsync();
             Assert.Multiple(() =>

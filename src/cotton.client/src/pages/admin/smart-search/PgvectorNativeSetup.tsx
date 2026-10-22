@@ -68,7 +68,12 @@ export const PgvectorNativeSetup = ({
 
   return (
     <Stack spacing={1.5}>
-      <Stack direction={{ xs: "column", sm: "row" }} gap={1.5}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        sx={{
+          gap: 1.5,
+        }}
+      >
         {environmentControl}
         <TextField
           select
@@ -113,7 +118,14 @@ export const PgvectorNativeSetup = ({
           })}
         </Typography>
       )}
-      <Stack direction="row" flexWrap="wrap" alignItems="center" gap={2}>
+      <Stack
+        direction="row"
+        sx={{
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 2,
+        }}
+      >
         {action}
         {repository && (
           <Link
@@ -121,7 +133,9 @@ export const PgvectorNativeSetup = ({
             target="_blank"
             rel="noreferrer"
             variant="body2"
-            color="text.primary"
+            sx={{
+              color: "text.primary",
+            }}
           >
             {t("smartSearch.installation.repository")}
           </Link>
@@ -131,7 +145,9 @@ export const PgvectorNativeSetup = ({
           target="_blank"
           rel="noreferrer"
           variant="body2"
-          color="text.primary"
+          sx={{
+            color: "text.primary",
+          }}
         >
           {t("smartSearch.installation.docs")}
         </Link>

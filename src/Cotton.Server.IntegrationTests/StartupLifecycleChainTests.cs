@@ -10,7 +10,6 @@ namespace Cotton.Server.IntegrationTests
     [FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
     public class StartupLifecycleChainTests : StartupLifecycleTestBase
     {
-
         [Test]
         public async Task Startup_OnCleanDatabase_AppliesMigrations_AndCreatesInitialAdminWithinWindow()
         {

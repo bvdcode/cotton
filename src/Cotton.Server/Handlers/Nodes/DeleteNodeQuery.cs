@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Extensions;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
@@ -133,13 +134,9 @@ namespace Cotton.Server.Handlers.Nodes
 
             await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(ct);
 
-            await _dbContext.NodeShareTokens
-                .Where(token => nodeIds.Contains(token.NodeId))
-                .ExecuteDeleteAsync(ct);
+            await _dbContext.NodeShareTokens.DeleteNodeShareTokensForNodesAsync(nodeIds, ct);
 
-            await _dbContext.DownloadTokens
-                .Where(t => t.CreatedByUserId == command.UserId && nodeIds.Contains(t.NodeFile.NodeId))
-                .ExecuteDeleteAsync(ct);
+            await _dbContext.DownloadTokens.DeleteUserDownloadTokensForNodesAsync(command.UserId, nodeIds, ct);
 
             List<NodeFile> nodeFiles = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)

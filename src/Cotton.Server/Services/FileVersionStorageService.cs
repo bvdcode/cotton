@@ -24,9 +24,10 @@ namespace Cotton.Server.Services
             Guid[] versionIds = [.. versions.Select(x => x.Id)];
             Guid[] wrapperNodeIds = [.. versions.Select(x => x.NodeId).Distinct()];
 
-            await _dbContext.DownloadTokens
+            List<DownloadToken> downloadTokens = await _dbContext.DownloadTokens
                 .Where(x => x.CreatedByUserId == userId && versionIds.Contains(x.NodeFileId))
-                .ExecuteDeleteAsync(ct);
+                .ToListAsync(ct);
+            _dbContext.DownloadTokens.RemoveRange(downloadTokens);
 
             _dbContext.NodeFiles.RemoveRange(versions);
             await _dbContext.SaveChangesAsync(ct);
