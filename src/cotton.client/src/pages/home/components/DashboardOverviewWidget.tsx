@@ -34,23 +34,15 @@ export const DashboardOverviewWidget = ({
       <Stack
         direction="row"
         sx={{
-          alignItems: "flex-start",
+          alignItems: "baseline",
           justifyContent: "space-between",
           columnGap: 1.5,
           rowGap: 1,
           flexWrap: "wrap",
         }}
       >
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          sx={{
-            alignItems: { xs: "flex-start", sm: "baseline" },
-            gap: { xs: 0, sm: 1 },
-            flexWrap: "wrap",
-            flexShrink: 0,
-          }}
-        >
-          <Typography variant="h4">
+        <Stack>
+          <Typography variant="h5">
             {stats ? formatBytes(stats.sizeBytes) : t("common:placeholder")}
           </Typography>
           {quota?.quotaBytes && (
@@ -67,59 +59,48 @@ export const DashboardOverviewWidget = ({
           )}
         </Stack>
 
-        <Stack
-          direction="row"
-          sx={{
-            justifyContent: "flex-end",
-            gap: 2,
-            flexWrap: "nowrap",
-            flexShrink: 0,
-            ml: "auto",
-          }}
-        >
-          <Stack>
-            <Typography variant="subtitle1">
-              {stats?.fileCount.toLocaleString() ?? t("common:placeholder")}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-              }}
-            >
-              {t("cards.files.title")}
-            </Typography>
-          </Stack>
-          <Stack>
-            <Typography variant="subtitle1">
-              {stats?.nodeCount.toLocaleString() ?? t("common:placeholder")}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-              }}
-            >
-              {t("cards.folders.title")}
-            </Typography>
-          </Stack>
-          {quota?.availableBytes !== null &&
-            quota?.availableBytes !== undefined && (
-              <Stack>
-                <Typography variant="subtitle1">
-                  {formatBytes(quota.availableBytes)}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: "text.secondary",
-                  }}
-                >
-                  {t("dashboard.overview.available")}
-                </Typography>
-              </Stack>
-            )}
+        <Stack>
+          <Typography variant="subtitle1">
+            {stats?.fileCount.toLocaleString() ?? t("common:placeholder")}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
+            {t("cards.files.title")}
+          </Typography>
         </Stack>
+        <Stack>
+          <Typography variant="subtitle1">
+            {stats?.nodeCount.toLocaleString() ?? t("common:placeholder")}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
+            {t("cards.folders.title")}
+          </Typography>
+        </Stack>
+        {quota?.availableBytes !== null &&
+          quota?.availableBytes !== undefined && (
+            <Stack>
+              <Typography variant="subtitle1">
+                {formatBytes(quota.availableBytes)}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
+                {t("dashboard.overview.available")}
+              </Typography>
+            </Stack>
+          )}
       </Stack>
 
       {quotaPercent !== null && (
