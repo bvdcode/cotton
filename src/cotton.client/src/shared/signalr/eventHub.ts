@@ -11,6 +11,8 @@ import {
   refreshAccessToken,
 } from "../api/httpClient";
 import { getRefreshEnabled, useAuthStore } from "../store/authStore";
+import { reportClientWarning } from "../utils/clientDiagnostics";
+import { getHubRetryDelay, waitForHubRetry } from "./hubRetry";
 import type { JsonValue } from "../types/json";
 import {
   HUB_METHODS,
@@ -25,32 +27,52 @@ class EventHubService {
   private connection: HubConnection | null = null;
   private listeners = new Map<HubMethod, Set<HubEventCallback>>();
   private connectionListeners = new Set<HubConnectionCallback>();
-  private started = false;
+  private startController: AbortController | null = null;
   private startPromise: Promise<void> | null = null;
 
   async start(): Promise<void> {
+    if (this.startPromise) {
+      return this.startPromise;
+    }
     if (
-      this.started &&
-      this.connection?.state === HubConnectionState.Connected
+      this.connection?.state === HubConnectionState.Connected ||
+      this.connection?.state === HubConnectionState.Reconnecting
     ) {
       return;
     }
 
-    if (this.startPromise) {
-      return this.startPromise;
-    }
-
-    this.startPromise = this.initConnection();
+    const controller = new AbortController();
+    this.startController = controller;
+    const promise = this.connectUntilStarted(controller.signal);
+    this.startPromise = promise;
     try {
-      await this.startPromise;
+      await promise;
     } finally {
-      this.startPromise = null;
+      if (this.startPromise === promise) {
+        this.startPromise = null;
+        this.startController = null;
+      }
     }
   }
 
-  private async initConnection(): Promise<void> {
-    this.dispose();
+  private async connectUntilStarted(signal: AbortSignal): Promise<void> {
+    let attempts = 0;
+    while (!signal.aborted && getRefreshEnabled()) {
+      try {
+        await this.initConnection(signal);
+        return;
+      } catch (error) {
+        if (signal.aborted) {
+          return;
+        }
+        reportClientWarning("Failed to connect to event hub", error);
+      }
+      await waitForHubRetry(getHubRetryDelay(attempts), signal);
+      attempts += 1;
+    }
+  }
 
+  private async initConnection(signal: AbortSignal): Promise<void> {
     const accessTokenFactory = async (): Promise<string> => {
       const token = getAccessToken();
       if (token) {
@@ -70,11 +92,8 @@ class EventHubService {
     };
 
     const reconnectPolicy = {
-      nextRetryDelayInMilliseconds: (ctx: { previousRetryCount: number }) => {
-        if (ctx.previousRetryCount < 5) return 1000;
-        if (ctx.previousRetryCount < 15) return 5000;
-        return 30000;
-      },
+      nextRetryDelayInMilliseconds: (ctx: { previousRetryCount: number }) =>
+        getRefreshEnabled() ? getHubRetryDelay(ctx.previousRetryCount) : null,
     };
 
     const attemptSpecs: Array<
@@ -89,49 +108,61 @@ class EventHubService {
     let lastError: Error | null = null;
 
     for (const [transport, skipNegotiation] of attemptSpecs) {
+      if (signal.aborted) {
+        return;
+      }
+      const connection = new HubConnectionBuilder()
+        .withUrl("/api/v1/hub/events", {
+          accessTokenFactory,
+          transport,
+          skipNegotiation,
+        })
+        .withAutomaticReconnect(reconnectPolicy)
+        .configureLogging(LogLevel.Warning)
+        .build();
+      this.connection = connection;
       try {
-        this.connection = new HubConnectionBuilder()
-          .withUrl("/api/v1/hub/events", {
-            accessTokenFactory,
-            transport,
-            skipNegotiation,
-          })
-          .withAutomaticReconnect(reconnectPolicy)
-          .configureLogging(LogLevel.Warning)
-          .build();
-
         // Registering no-op handlers prevents SignalR warnings on pages
         // that don't subscribe to file-related events.
         for (const method of SILENCED_HUB_METHODS) {
-          this.connection.on(method, () => {
+          connection.on(method, () => {
             // no-op
           });
         }
 
-        this.connection.on(HUB_METHODS.SessionRevoked, () => {
+        connection.on(HUB_METHODS.SessionRevoked, () => {
+          if (signal.aborted || this.connection !== connection) {
+            return;
+          }
           clearAccessToken();
           useAuthStore.getState().logoutLocal();
           this.dispose();
         });
 
-        this.connection.onreconnected(() => {
+        connection.onreconnected(() => {
+          if (signal.aborted || this.connection !== connection) {
+            return;
+          }
           this.resubscribeAll();
           this.notifyConnected();
         });
 
         for (const [method, callbacks] of this.listeners) {
           for (const cb of callbacks) {
-            this.connection.on(method, cb);
+            connection.on(method, cb);
           }
         }
 
-        await this.connection.start();
-        this.started = true;
+        await connection.start();
+        if (signal.aborted) {
+          await this.stopConnection(connection);
+          return;
+        }
         this.notifyConnected();
         return;
       } catch (e) {
         lastError = e instanceof Error ? e : new Error("Failed to start hub");
-        this.dispose();
+        await this.stopConnection(connection);
       }
     }
 
@@ -177,7 +208,9 @@ class EventHubService {
   }
 
   private resubscribeAll(): void {
-    if (!this.connection) return;
+    if (!this.connection) {
+      return;
+    }
     for (const [method, callbacks] of this.listeners) {
       for (const cb of callbacks) {
         this.connection.off(method, cb);
@@ -186,13 +219,24 @@ class EventHubService {
     }
   }
 
-  dispose(): void {
-    if (this.connection) {
-      this.connection.stop();
+  private async stopConnection(connection: HubConnection): Promise<void> {
+    if (this.connection === connection) {
       this.connection = null;
     }
-    this.started = false;
+    try {
+      await connection.stop();
+    } catch (error) {
+      reportClientWarning("Failed to stop event hub connection", error);
+    }
+  }
+
+  dispose(): void {
+    this.startController?.abort();
+    this.startController = null;
     this.startPromise = null;
+    if (this.connection) {
+      void this.stopConnection(this.connection);
+    }
   }
 }
 
