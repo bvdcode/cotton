@@ -9,6 +9,8 @@ import {
   type ReadableFileHandle,
 } from "../../crypto/downloadDecrypt";
 import { FilePreviewModal } from "./FilePreviewModal";
+import { previewConfig } from "../../config/previewConfig";
+import { CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES } from "../../crypto";
 
 const viewers = vi.hoisted(() => ({
   pdf: vi.fn(),
@@ -188,3 +190,59 @@ it("keeps ordinary PDF previews independent of the vault", () => {
   );
   expect(load).not.toHaveBeenCalled();
 });
+
+it.each([
+  {
+    name: "large.txt",
+    encrypted: false,
+    size: previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES + 1,
+    tooLarge: true,
+  },
+  {
+    name: "large.txt",
+    encrypted: true,
+    size: previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES + 1,
+    tooLarge: false,
+  },
+  {
+    name: "large.txt",
+    encrypted: true,
+    size: CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES + 1,
+    tooLarge: true,
+  },
+  {
+    name: "large.pdf",
+    encrypted: true,
+    size: previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES + 1,
+    tooLarge: true,
+  },
+  {
+    name: "limit.pdf",
+    encrypted: true,
+    size: previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES,
+    tooLarge: false,
+  },
+  { name: "unknown.txt", encrypted: true, size: null, tooLarge: false },
+])(
+  "preserves preview size restrictions for $name (encrypted: $encrypted, size: $size)",
+  ({ name, encrypted, size, tooLarge }) => {
+    render(
+      <FilePreviewModal
+        {...base}
+        isOpen
+        file={
+          encrypted
+            ? { ...file, contentType: "application/octet-stream" }
+            : null
+        }
+        fileName={name}
+        fileType="other"
+        fileSizeBytes={size}
+      />,
+    );
+    expect(screen.queryByText("preview.errors.fileTooLarge") !== null).toBe(
+      tooLarge,
+    );
+    expect(load).not.toHaveBeenCalled();
+  },
+);
