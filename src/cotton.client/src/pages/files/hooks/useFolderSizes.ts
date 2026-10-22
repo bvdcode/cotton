@@ -6,7 +6,10 @@ import {
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { nodesApi, type NodeResponse } from "@shared/api/nodesApi";
-import { folderInfoOptions } from "@shared/api/queries/folderInfo";
+import {
+  FOLDER_SIZE_STALE_TIME,
+  folderInfoOptions,
+} from "@shared/api/queries/folderInfo";
 import { FOLDER_PAGE_SIZE } from "@shared/api/queries/folderPageSize";
 import { queryKeys } from "@shared/api/queries/queryKeys";
 import { useAuthStore } from "@shared/store/authStore";
@@ -27,6 +30,7 @@ const getFolderPage = async (
     if (
       overview?.data &&
       !overview.isInvalidated &&
+      Date.now() - overview.dataUpdatedAt < FOLDER_SIZE_STALE_TIME &&
       overview.fetchStatus === "idle"
     ) {
       return overview.data;
@@ -96,7 +100,7 @@ export const useFolderSizes = (nodeId: string | null, enabled = true) => {
       return calculateFolderSizes(client, nodeId!, userId, signal, onProgress);
     },
     enabled: enabled && Boolean(nodeId && userId),
-    staleTime: Infinity,
+    staleTime: FOLDER_SIZE_STALE_TIME,
     gcTime: Infinity,
     retry: false,
   });
@@ -113,11 +117,7 @@ export const useFolderSizes = (nodeId: string | null, enabled = true) => {
       ? progress.sizeBytes
       : 0;
   return {
-    sizeBytes: enabled
-      ? calculation.isFetching || calculation.isError
-        ? progressBytes
-        : (calculation.data ?? 0)
-      : 0,
+    sizeBytes: enabled ? (calculation.data ?? progressBytes) : 0,
     isCalculating: calculation.isFetching,
   };
 };

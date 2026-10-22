@@ -7,6 +7,7 @@ import { queryClient } from "@shared/api/queries/queryClient";
 import { queryKeys } from "@shared/api/queries/queryKeys";
 import {
   clearFolderInfoCache,
+  FOLDER_SIZE_STALE_TIME,
   invalidateFolderInfoCache,
   useCachedFolderSize,
 } from "@shared/api/queries/folderInfo";
@@ -42,6 +43,51 @@ afterEach(() => {
 });
 
 describe("folder size calculation", () => {
+  it("shows the cached total while refreshing expired sizes on reopening", async () => {
+    const children = vi
+      .spyOn(nodesApi, "getChildren")
+      .mockResolvedValue(listing(["one"]));
+    const getStats = vi
+      .spyOn(nodesApi, "getFolderStats")
+      .mockResolvedValue(stats(10));
+    const first = renderHook(() => useFolderSizes("parent"), { wrapper });
+    await waitFor(() => expect(first.result.current.sizeBytes).toBe(10));
+    first.unmount();
+
+    const fresh = renderHook(() => useFolderSizes("parent"), { wrapper });
+    expect(fresh.result.current.sizeBytes).toBe(10);
+    expect(getStats).toHaveBeenCalledTimes(1);
+    fresh.unmount();
+
+    const expiredAt = Date.now() - FOLDER_SIZE_STALE_TIME - 1;
+    queryClient.setQueryData(
+      queryKeys.nodeChildren.folderInfo("one", "user"),
+      stats(10),
+      { updatedAt: expiredAt },
+    );
+    queryClient.setQueryData(
+      queryKeys.nodeChildren.folderSizes("parent", "user"),
+      10,
+      { updatedAt: expiredAt },
+    );
+    let complete: ((value: ReturnType<typeof stats>) => void) | undefined;
+    getStats.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+    const reopened = renderHook(() => useFolderSizes("parent"), { wrapper });
+    expect(reopened.result.current.sizeBytes).toBe(10);
+    await waitFor(() => expect(getStats).toHaveBeenCalledTimes(2));
+    expect(children).toHaveBeenCalledTimes(2);
+    expect(reopened.result.current.sizeBytes).toBe(10);
+    await act(async () => {
+      complete?.(stats(25));
+    });
+    await waitFor(() => expect(reopened.result.current.sizeBytes).toBe(25));
+  });
+
   it("automatically publishes zero sizes to the memory cache", async () => {
     vi.spyOn(nodesApi, "getChildren").mockResolvedValue(listing(["empty"]));
     const getStats = vi
