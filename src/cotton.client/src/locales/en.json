@@ -2212,7 +2212,6 @@
     },
     "title": "Files",
     "folderSizes": {
-      "calculate": "Calculate folder sizes",
       "calculating": "Calculating folder sizes…",
       "failed": "Could not calculate all folder sizes. Try again."
     },

@@ -2413,7 +2413,6 @@
       "uploadFailed": "No se pudo iniciar la subida de los archivos compartidos. Recarga esta página para volver a intentarlo."
     },
     "folderSizes": {
-      "calculate": "Calcular tamaños de carpetas",
       "calculating": "Calculando tamaños de carpetas…",
       "failed": "No se pudieron calcular los tamaños de todas las carpetas. Inténtalo de nuevo."
     },

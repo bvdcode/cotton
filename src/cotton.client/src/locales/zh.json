@@ -2423,7 +2423,6 @@
       "uploadFailed": "无法开始上传分享的文件。请刷新此页面重试。"
     },
     "folderSizes": {
-      "calculate": "计算文件夹大小",
       "calculating": "正在计算文件夹大小…",
       "failed": "无法计算所有文件夹的大小。请重试。"
     },

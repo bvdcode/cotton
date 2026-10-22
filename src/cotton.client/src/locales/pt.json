@@ -2417,7 +2417,6 @@
       "uploadFailed": "Não foi possível iniciar o envio dos arquivos compartilhados. Recarregue esta página para tentar novamente."
     },
     "folderSizes": {
-      "calculate": "Calcular tamanhos das pastas",
       "calculating": "Calculando tamanhos das pastas…",
       "failed": "Não foi possível calcular os tamanhos de todas as pastas. Tente novamente."
     },

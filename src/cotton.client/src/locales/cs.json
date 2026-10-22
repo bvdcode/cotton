@@ -2415,7 +2415,6 @@
       "uploadFailed": "Nahrávání sdílených souborů se nepodařilo spustit. Obnovte stránku a zkuste to znovu."
     },
     "folderSizes": {
-      "calculate": "Spočítat velikosti složek",
       "calculating": "Počítání velikostí složek…",
       "failed": "Nepodařilo se spočítat velikosti všech složek. Zkuste to znovu."
     },

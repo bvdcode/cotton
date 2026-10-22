@@ -7,6 +7,7 @@ import { queryClient } from "@shared/api/queries/queryClient";
 import { queryKeys } from "@shared/api/queries/queryKeys";
 import {
   clearFolderInfoCache,
+  invalidateFolderInfoCache,
   useCachedFolderSize,
 } from "@shared/api/queries/folderInfo";
 import { createFolder } from "../../../test/fileFixtures";
@@ -41,10 +42,8 @@ afterEach(() => {
 });
 
 describe("folder size calculation", () => {
-  it("does no work on mount and publishes zero sizes to the memory cache after a click", async () => {
-    const children = vi
-      .spyOn(nodesApi, "getChildren")
-      .mockResolvedValue(listing(["empty"]));
+  it("automatically publishes zero sizes to the memory cache", async () => {
+    vi.spyOn(nodesApi, "getChildren").mockResolvedValue(listing(["empty"]));
     const getStats = vi
       .spyOn(nodesApi, "getFolderStats")
       .mockResolvedValue(stats(0));
@@ -56,9 +55,6 @@ describe("folder size calculation", () => {
       { wrapper },
     );
     expect(result.current.size).toBeUndefined();
-    expect(children).not.toHaveBeenCalled();
-    expect(getStats).not.toHaveBeenCalled();
-    act(() => result.current.run.calculate());
     await waitFor(() => expect(result.current.size).toBe(0));
     expect(getStats).toHaveBeenCalledWith(
       "empty",
@@ -68,11 +64,11 @@ describe("folder size calculation", () => {
   });
 
   it("reads every folder page and stops before pages containing only files", async () => {
-    const firstIds = Array.from({ length: 10_000 }, (_, i) => `folder-${i}`);
+    const firstIds = Array.from({ length: 25_000 }, (_, i) => `folder-${i}`);
     const children = vi
       .spyOn(nodesApi, "getChildren")
-      .mockResolvedValueOnce(listing(firstIds, 50_000))
-      .mockResolvedValueOnce(listing(["last"], 50_000));
+      .mockResolvedValueOnce(listing(firstIds, 75_000))
+      .mockResolvedValueOnce(listing(["last"], 75_000));
     const getStats = vi
       .spyOn(nodesApi, "getFolderStats")
       .mockResolvedValue(stats(42));
@@ -86,17 +82,17 @@ describe("folder size calculation", () => {
     expect(children).toHaveBeenCalledTimes(2);
     expect(children).toHaveBeenLastCalledWith("parent", {
       page: 2,
-      pageSize: 10_000,
+      pageSize: 25_000,
       signal: expect.any(AbortSignal),
     });
-    expect(getStats).toHaveBeenCalledTimes(10_001);
+    expect(getStats).toHaveBeenCalledTimes(25_001);
     expect(
       client.getQueryData(queryKeys.nodeChildren.folderInfo("last", "user")),
     ).toEqual(stats(42));
     client.clear();
   });
 
-  it("runs requests one at a time and refreshes cached sizes on a repeated calculation", async () => {
+  it("runs requests sequentially, publishes partial sums and reuses cached sizes", async () => {
     vi.spyOn(nodesApi, "getChildren").mockResolvedValue(
       listing(["one", "two"]),
     );
@@ -111,18 +107,27 @@ describe("folder size calculation", () => {
       )
       .mockResolvedValue(stats(2));
     const signal = new AbortController().signal;
-    const run = calculateFolderSizes(queryClient, "parent", "user", signal);
+    const progress = vi.fn();
+    const run = calculateFolderSizes(
+      queryClient,
+      "parent",
+      "user",
+      signal,
+      progress,
+    );
     await waitFor(() => expect(getStats).toHaveBeenCalledTimes(1));
     finishFirst?.();
-    await run;
+    expect(progress).not.toHaveBeenCalled();
+    await expect(run).resolves.toBe(3);
+    expect(progress.mock.calls).toEqual([[1], [3]]);
     expect(getStats).toHaveBeenCalledTimes(2);
     await calculateFolderSizes(queryClient, "parent", "user", signal);
-    expect(getStats).toHaveBeenCalledTimes(4);
+    expect(getStats).toHaveBeenCalledTimes(2);
     expect(
       queryClient.getQueryData(
         queryKeys.nodeChildren.folderInfo("one", "user"),
       ),
-    ).toEqual(stats(2));
+    ).toEqual(stats(1));
   });
 
   it("stops on errors and leaves an uncalculated folder without a size", async () => {
@@ -152,9 +157,9 @@ describe("folder size calculation", () => {
   it.each(["navigation", "unmount"])(
     "cancels the active request on %s",
     async (exit) => {
-      vi.spyOn(nodesApi, "getChildren").mockResolvedValue(
-        listing(["one", "two"]),
-      );
+      vi.spyOn(nodesApi, "getChildren")
+        .mockResolvedValueOnce(listing(["one", "two"]))
+        .mockResolvedValue(listing([]));
       let requestSignal: AbortSignal | undefined;
       const getStats = vi
         .spyOn(nodesApi, "getFolderStats")
@@ -173,7 +178,6 @@ describe("folder size calculation", () => {
           initialProps: { id: "parent" },
         },
       );
-      act(() => result.current.calculate());
       await waitFor(() => expect(getStats).toHaveBeenCalledTimes(1));
       if (exit === "navigation") {
         rerender({ id: "another-parent" });
@@ -185,6 +189,141 @@ describe("folder size calculation", () => {
       expect(getStats).toHaveBeenCalledTimes(1);
     },
   );
+
+  it("shows progress, reuses a completed total on return and recalculates after content changes", async () => {
+    const children = vi
+      .spyOn(nodesApi, "getChildren")
+      .mockResolvedValue(listing(["one", "two"]));
+    let finishSecond: (() => void) | undefined;
+    const getStats = vi
+      .spyOn(nodesApi, "getFolderStats")
+      .mockResolvedValueOnce(stats(10))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishSecond = () => resolve(stats(20));
+          }),
+      )
+      .mockResolvedValue(stats(50));
+    const { result, rerender } = renderHook(({ id }) => useFolderSizes(id), {
+      wrapper,
+      initialProps: { id: "parent" as string | null },
+    });
+    await waitFor(() => expect(result.current.sizeBytes).toBe(10));
+    expect(result.current.isCalculating).toBe(true);
+    await act(async () => finishSecond?.());
+    await waitFor(() => expect(result.current.isCalculating).toBe(false));
+    expect(result.current.sizeBytes).toBe(30);
+    rerender({ id: null });
+    expect(result.current.sizeBytes).toBe(0);
+    rerender({ id: "parent" });
+    expect(result.current.sizeBytes).toBe(30);
+    expect(result.current.isCalculating).toBe(false);
+    expect(children).toHaveBeenCalledTimes(1);
+    expect(getStats).toHaveBeenCalledTimes(2);
+    await act(async () => invalidateFolderInfoCache(queryClient));
+    await waitFor(() => expect(result.current.sizeBytes).toBe(100));
+    expect(getStats).toHaveBeenCalledTimes(4);
+  });
+
+  it("reuses the directory overview already loaded for tiles", async () => {
+    queryClient.setQueryData(
+      queryKeys.nodeChildren.overview("parent", "user", 25_000),
+      listing(["one", "two"]),
+    );
+    const children = vi.spyOn(nodesApi, "getChildren");
+    vi.spyOn(nodesApi, "getFolderStats").mockResolvedValue(stats(10));
+    const { result } = renderHook(() => useFolderSizes("parent"), { wrapper });
+    await waitFor(() => expect(result.current.sizeBytes).toBe(20));
+    expect(children).not.toHaveBeenCalled();
+  });
+
+  it("does not reuse an invalidated overview after the directory changes", async () => {
+    const key = queryKeys.nodeChildren.overview("parent", "user", 25_000);
+    queryClient.setQueryData(key, listing(["removed"]));
+    await queryClient.invalidateQueries({ queryKey: key, refetchType: "none" });
+    vi.spyOn(nodesApi, "getChildren").mockResolvedValue(listing(["added"]));
+    const getStats = vi
+      .spyOn(nodesApi, "getFolderStats")
+      .mockResolvedValue(stats(25));
+    const { result } = renderHook(() => useFolderSizes("parent"), { wrapper });
+    await waitFor(() => expect(result.current.sizeBytes).toBe(25));
+    expect(getStats).toHaveBeenCalledExactlyOnceWith(
+      "added",
+      true,
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("waits for directory contents before starting", async () => {
+    const children = vi
+      .spyOn(nodesApi, "getChildren")
+      .mockResolvedValue(listing([]));
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useFolderSizes("parent", enabled),
+      {
+        wrapper,
+        initialProps: { enabled: false },
+      },
+    );
+    expect(children).not.toHaveBeenCalled();
+    expect(result.current.isCalculating).toBe(false);
+    rerender({ enabled: true });
+    await waitFor(() => expect(children).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.isCalculating).toBe(false));
+  });
+
+  it("cancels the folder listing before statistics requests start", async () => {
+    let requestSignal: AbortSignal | undefined;
+    vi.spyOn(nodesApi, "getChildren").mockImplementation((_id, options) => {
+      requestSignal = options?.signal;
+      return new Promise((_resolve, reject) =>
+        requestSignal?.addEventListener("abort", () =>
+          reject(new Error("cancelled")),
+        ),
+      );
+    });
+    const getStats = vi.spyOn(nodesApi, "getFolderStats");
+    const { unmount } = renderHook(() => useFolderSizes("parent"), { wrapper });
+    await waitFor(() => expect(requestSignal).toBeDefined());
+    unmount();
+    expect(requestSignal?.aborted).toBe(true);
+    expect(getStats).not.toHaveBeenCalled();
+  });
+
+  it("resumes an interrupted folder after a quick return without caching a partial total", async () => {
+    vi.spyOn(nodesApi, "getChildren").mockResolvedValue(
+      listing(["one", "two"]),
+    );
+    const getStats = vi
+      .spyOn(nodesApi, "getFolderStats")
+      .mockResolvedValueOnce(stats(10))
+      .mockImplementationOnce(
+        (_id, _recursive, signal) =>
+          new Promise((_resolve, reject) => {
+            signal?.addEventListener("abort", () =>
+              reject(new Error("cancelled")),
+            );
+          }),
+      )
+      .mockResolvedValue(stats(20));
+    const { result, rerender } = renderHook(({ id }) => useFolderSizes(id), {
+      wrapper,
+      initialProps: { id: "parent" as string | null },
+    });
+    await waitFor(() => expect(result.current.sizeBytes).toBe(10));
+    await waitFor(() => expect(getStats).toHaveBeenCalledTimes(2));
+    rerender({ id: null });
+    expect(
+      queryClient.getQueryData(
+        queryKeys.nodeChildren.folderSizes("parent", "user"),
+      ),
+    ).toBeUndefined();
+    rerender({ id: "parent" });
+    await waitFor(() => expect(result.current.isCalculating).toBe(false));
+    expect(result.current.sizeBytes).toBe(30);
+    expect(getStats).toHaveBeenCalledTimes(3);
+  });
 
   it("separates users and clears stored sizes when the session changes", () => {
     queryClient.setQueryData(

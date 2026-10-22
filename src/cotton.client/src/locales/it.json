@@ -2416,7 +2416,6 @@
       "uploadFailed": "Impossibile avviare il caricamento dei file condivisi. Ricarica questa pagina per riprovare."
     },
     "folderSizes": {
-      "calculate": "Calcola le dimensioni delle cartelle",
       "calculating": "Calcolo delle dimensioni delle cartelle…",
       "failed": "Impossibile calcolare le dimensioni di tutte le cartelle. Riprova."
     },

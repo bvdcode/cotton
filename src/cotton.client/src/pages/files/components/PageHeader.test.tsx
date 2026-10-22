@@ -176,3 +176,21 @@ describe("PageHeader", () => {
     ).toBeDisabled();
   });
 });
+
+it("marks only the changing size as busy and clears that state on completion", () => {
+  const { rerender } = render(
+    <PageHeader
+      {...defaultProps}
+      stats={{ folders: 2, files: 3, sizeBytes: 1024 }}
+      isSizeCalculating
+    />,
+  );
+  expect(screen.getByText("1.00 KB")).toHaveAttribute("aria-busy", "true");
+  rerender(
+    <PageHeader
+      {...defaultProps}
+      stats={{ folders: 2, files: 3, sizeBytes: 2048 }}
+    />,
+  );
+  expect(screen.getByText("2.00 KB")).toHaveAttribute("aria-busy", "false");
+});

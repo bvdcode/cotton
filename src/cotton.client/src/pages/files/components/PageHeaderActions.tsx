@@ -11,7 +11,6 @@ import {
 } from "@mui/icons-material";
 import type { useTranslation } from "react-i18next";
 import type { PageHeaderProps, PageHeaderActionItem } from "./PageHeader";
-import { formatBytes } from "../../../shared/utils/formatBytes";
 
 type PageHeaderActionFactoryOptions = Pick<
   PageHeaderProps,
@@ -245,10 +244,6 @@ export const buildStatsSummary = (
 
   if (stats.files > 0) {
     parts.push(t("stats.files", { ns: statsNamespace, count: stats.files }));
-  }
-
-  if (stats.sizeBytes > 0) {
-    parts.push(formatBytes(stats.sizeBytes));
   }
 
   if (parts.length === 0) {

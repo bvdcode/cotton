@@ -38,6 +38,8 @@ export const queryKeys = {
       [...queryKeys.nodeChildren.all(nodeId), userId, "tiles"] as const,
     folderInfo: (nodeId: string, userId: string) =>
       [...queryKeys.nodeChildren.all(nodeId), userId, "folderInfo"] as const,
+    folderSizes: (nodeId: string, userId: string) =>
+      [...queryKeys.nodeChildren.all(nodeId), userId, "folderSizes"] as const,
   },
   notifications: {
     all: () => notificationsRoot,

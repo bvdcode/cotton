@@ -2415,7 +2415,6 @@
       "uploadFailed": "Het uploaden van de gedeelde bestanden kon niet worden gestart. Vernieuw deze pagina om het opnieuw te proberen."
     },
     "folderSizes": {
-      "calculate": "Mapgroottes berekenen",
       "calculating": "Mapgroottes worden berekend…",
       "failed": "Niet alle mapgroottes konden worden berekend. Probeer het opnieuw."
     },
