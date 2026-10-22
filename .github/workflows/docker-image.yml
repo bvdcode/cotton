@@ -19,45 +19,8 @@ concurrency:
   cancel-in-progress: ${{ github.ref == 'refs/heads/develop' }}
 
 jobs:
-  changes:
-    name: Select checks
-    runs-on: ubuntu-latest
-    outputs:
-      frontend: ${{ steps.select.outputs.frontend }}
-      backend: ${{ steps.select.outputs.backend }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Select checks for changed paths
-        id: select
-        env:
-          BASE_SHA: ${{ github.event.before }}
-        run: |
-          frontend=false
-          backend=false
-          if [[ "$GITHUB_REF" == 'refs/heads/main' || "$GITHUB_EVENT_NAME" == 'workflow_dispatch' || "$BASE_SHA" == '0000000000000000000000000000000000000000' ]]; then
-            frontend=true
-            backend=true
-          else
-            git diff --name-only --no-renames -z "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files"
-            while IFS= read -r -d '' file; do
-              case "$file" in
-                src/cotton.client/*) frontend=true ;;
-                src/*) backend=true ;;
-                .github/workflows/*|GitVersion.yml) frontend=true; backend=true ;;
-              esac
-            done < "$RUNNER_TEMP/changed-files"
-          fi
-          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
-          echo "backend=$backend" >> "$GITHUB_OUTPUT"
-          printf 'Frontend checks: %s\nBackend checks: %s\n' "$frontend" "$backend" >> "$GITHUB_STEP_SUMMARY"
-
   frontend:
     name: Frontend checks
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -89,8 +52,6 @@ jobs:
 
   backend:
     name: Backend tests
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     env:
       SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
@@ -180,6 +141,7 @@ jobs:
 
   publish-develop:
     name: Publish develop
+    needs: [frontend, backend]
     if: github.ref == 'refs/heads/develop'
     uses: ./.github/workflows/publish-artifacts.yml
     permissions:
