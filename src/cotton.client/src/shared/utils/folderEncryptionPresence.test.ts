@@ -14,6 +14,66 @@ const page = (
 afterEach(() => vi.restoreAllMocks());
 
 describe("folder encryption presence", () => {
+  it("does not offer to decrypt an independently encrypted child folder", async () => {
+    const get = vi
+      .spyOn(nodesApi, "getChildren")
+      .mockImplementation(async (id) => {
+        if (id === "home") {
+          return page(
+            id,
+            [],
+            [
+              createFolder({
+                id: "vault",
+                metadata: { isClientEncryptionEnabled: "true" },
+              }),
+            ],
+          );
+        }
+        return page(id, [
+          createFile({ metadata: { isClientEncrypted: "true" } }),
+        ]);
+      });
+
+    expect(
+      await findFolderEncryptionMatch(
+        "home",
+        "encrypted-files",
+        new AbortController().signal,
+      ),
+    ).toBe(false);
+    expect(get.mock.calls.map(([id]) => id)).toEqual(["home"]);
+  });
+
+  it("still finds plain files inside encrypted child folders", async () => {
+    const get = vi
+      .spyOn(nodesApi, "getChildren")
+      .mockImplementation(async (id) => {
+        if (id === "root") {
+          return page(
+            id,
+            [],
+            [
+              createFolder({
+                id: "child",
+                metadata: { isClientEncryptionEnabled: "true" },
+              }),
+            ],
+          );
+        }
+        return page(id, [createFile()]);
+      });
+
+    expect(
+      await findFolderEncryptionMatch(
+        "root",
+        "plain-files",
+        new AbortController().signal,
+      ),
+    ).toBe(true);
+    expect(get.mock.calls.map(([id]) => id)).toEqual(["root", "child"]);
+  });
+
   it("finds a nested file without reading content or converting folder names", async () => {
     const get = vi
       .spyOn(nodesApi, "getChildren")
