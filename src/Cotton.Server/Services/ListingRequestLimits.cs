@@ -7,7 +7,7 @@ namespace Cotton.Server.Services
 {
     public static class ListingRequestLimits
     {
-        public const int MaxPageSize = 10_000;
+        public const int MaxPageSize = 25_000;
         public const int MaxRecentCount = 1000;
         public const int MaxDepth = 32;
         public const int MaxTraversedNodes = 50_000;

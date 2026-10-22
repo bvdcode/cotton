@@ -104,7 +104,7 @@ describe("folder listing", () => {
   });
 
   it("loads another tile page only when requested", async () => {
-    const tileFiles = Array.from({ length: 10001 }, (_, index) =>
+    const tileFiles = Array.from({ length: 25001 }, (_, index) =>
       createFile({ id: `tile-${index}` }),
     );
     const get = vi
@@ -115,16 +115,16 @@ describe("folder listing", () => {
           nodes: [],
           files:
             options?.page === 1
-              ? tileFiles.slice(0, 10000)
-              : tileFiles.slice(10000),
+              ? tileFiles.slice(0, 25000)
+              : tileFiles.slice(25000),
           stats: {
             folders: 0,
-            files: 10001,
+            files: 25001,
 
-            sizeBytes: 10001,
+            sizeBytes: 25001,
           },
         },
-        totalCount: 10001,
+        totalCount: 25001,
       }));
     const { result } = renderHook(
       () => useFolderListing("folder-1", "user-1", InterfaceLayoutType.Tiles),
@@ -132,24 +132,24 @@ describe("folder listing", () => {
     );
 
     await waitFor(() =>
-      expect(result.current.content?.files).toHaveLength(10000),
+      expect(result.current.content?.files).toHaveLength(25000),
     );
     expect(get).toHaveBeenCalledTimes(1);
     act(() => result.current.loadMore?.());
     await waitFor(() =>
-      expect(result.current.content?.files).toHaveLength(10001),
+      expect(result.current.content?.files).toHaveLength(25001),
     );
     expect(result.current.loadMore).toBeUndefined();
     expect(get).toHaveBeenCalledTimes(2);
-    expect(result.current.stats.sizeBytes).toBe(10001);
+    expect(result.current.stats.sizeBytes).toBe(25001);
     expect(get).toHaveBeenNthCalledWith(1, "folder-1", {
       page: 1,
-      pageSize: 10000,
+      pageSize: 25000,
       includeStats: true,
     });
     expect(get).toHaveBeenNthCalledWith(2, "folder-1", {
       page: 2,
-      pageSize: 10000,
+      pageSize: 25000,
     });
   });
 
@@ -184,7 +184,7 @@ describe("folder listing", () => {
     expect(result.current.loadMore).toBeUndefined();
     expect(get).toHaveBeenCalledExactlyOnceWith("folder-1", {
       page: 1,
-      pageSize: 10000,
+      pageSize: 25000,
       includeStats: true,
     });
 
