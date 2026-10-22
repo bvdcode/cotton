@@ -18,18 +18,8 @@ vi.mock("../../../shared/store/nodesActions", () => ({
 }));
 
 vi.mock("../../../shared/utils/clientEncryptionFolderScan", () => ({
-  collectEncryptedFilesInFoldersForClientEncryption: vi.fn(async () => ({
-    folders: [],
-    files: [],
-    scannedFolders: 0,
-    truncated: false,
-  })),
-  collectPlainFilesInFoldersForClientEncryption: vi.fn(async () => ({
-    folders: [],
-    files: [],
-    scannedFolders: 0,
-    truncated: false,
-  })),
+  collectEncryptedFilesInFoldersForClientEncryption: vi.fn(),
+  collectPlainFilesInFoldersForClientEncryption: vi.fn(),
 }));
 
 vi.mock("../../../shared/tasks", () => ({
@@ -64,7 +54,13 @@ const makeFile = (
   id: string,
   metadata: Record<string, string> = {},
 ): NodeFileManifestDto =>
-  createFile({ id, nodeId: "node-1", name: `${id}.txt`, sizeBytes: 100, metadata });
+  createFile({
+    id,
+    nodeId: "node-1",
+    name: `${id}.txt`,
+    sizeBytes: 100,
+    metadata,
+  });
 
 const makeContent = (files: NodeFileManifestDto[]): NodeContentDto => ({
   id: "node-1",
@@ -189,6 +185,12 @@ describe("useFolderClientEncryptionActions", () => {
     });
     const onToast = vi.fn();
     const content = makeContent([makeFile("a"), makeFile("b")]);
+    vi.mocked(collectPlainFilesInFoldersForClientEncryption).mockResolvedValue({
+      folders: [],
+      files: content.files,
+      scannedFolders: 1,
+      truncated: false,
+    });
 
     const { result } = renderHook(() =>
       useFolderClientEncryptionActions({
@@ -252,6 +254,14 @@ describe("useFolderClientEncryptionActions", () => {
       makeFile("encrypted-a", { isClientEncrypted: "true" }),
       makeFile("encrypted-b", { isClientEncrypted: "true" }),
     ]);
+    vi.mocked(
+      collectEncryptedFilesInFoldersForClientEncryption,
+    ).mockResolvedValue({
+      folders: [],
+      files: content.files,
+      scannedFolders: 1,
+      truncated: false,
+    });
 
     const { result } = renderHook(() =>
       useFolderClientEncryptionActions({
