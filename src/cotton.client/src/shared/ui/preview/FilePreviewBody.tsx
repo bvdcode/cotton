@@ -1,17 +1,14 @@
-import { useMemo } from "react";
 import { Box, CircularProgress } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import type { NodeFileManifestDto } from "../../api/nodesApi";
 import type { FileType } from "../../utils/fileTypes";
 import { getFileTypeInfo } from "../../utils/fileTypes";
 import { previewConfig } from "../../config/previewConfig";
 import { formatBytes } from "../../utils/formatBytes";
-import {
-  CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES,
-  isFileEncrypted,
-} from "../../crypto";
+import { CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES } from "../../crypto";
 import type { useModelPreviewControls } from "./hooks/useModelPreviewControls";
-import { useReadablePreviewSource } from "./hooks/useReadablePreviewSource";
+import { useFilePreviewSources } from "./hooks/useFilePreviewSources";
 import { PdfPreview } from "./PdfPreview";
 import { TextPreview } from "./TextPreview";
 import { ModelPreview } from "./ModelPreview";
@@ -43,54 +40,26 @@ export const FilePreviewBody = ({
   onDownload,
 }: FilePreviewBodyProps) => {
   const { t } = useTranslation("files");
-  const encrypted = sourceFile ? isFileEncrypted(sourceFile.metadata) : false;
-  const readable = useReadablePreviewSource(
-    encrypted && fileType !== "other" && fileType !== null
-      ? (sourceFile ?? null)
-      : null,
+  const { encrypted, readable, fileSource, pdfSource } = useFilePreviewSources(
+    fileId,
+    fileType,
+    sourceFile,
   );
-  const fileSource = useMemo<ModelPreviewSource>(() => {
-    if (readable.url) {
-      return { kind: "url", url: readable.url };
-    }
-    return { kind: "fileId", fileId };
-  }, [fileId, readable.url]);
-  const pdfSource = useMemo(() => {
-    switch (fileSource.kind) {
-      case "fileId":
-        return fileSource;
-      case "url":
-        return { kind: "objectUrl" as const, url: fileSource.url };
-    }
-  }, [fileSource]);
+  const sourceUrl = readable.url ?? undefined;
   const download = () => {
     void onDownload(fileId, fileName);
   };
 
   if (fileType === "other") {
-    const originalType = getFileTypeInfo(
-      fileName,
-      sourceFile?.contentType,
-    ).type;
-    let limit: number | null = null;
-    if (encrypted) {
-      limit = CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES;
-      if (originalType === "pdf") {
-        limit = previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES;
-      }
-    } else if (originalType === "text") {
-      limit = previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
-    }
     return (
       <FilePreviewUnavailable
-        message={
-          limit !== null && (fileSizeBytes ?? 0) > limit
-            ? t("preview.errors.fileTooLarge", {
-                size: formatBytes(fileSizeBytes ?? 0),
-                maxSize: formatBytes(limit),
-              })
-            : undefined
-        }
+        message={getUnavailablePreviewMessage(
+          fileName,
+          sourceFile?.contentType,
+          fileSizeBytes,
+          encrypted,
+          t,
+        )}
         onDownload={download}
       />
     );
@@ -124,7 +93,7 @@ export const FilePreviewBody = ({
       return (
         <Box
           component="img"
-          src={readable.url ?? undefined}
+          src={sourceUrl}
           alt={fileName}
           onError={readable.onSourceError}
           sx={{
@@ -139,7 +108,7 @@ export const FilePreviewBody = ({
       return (
         <Box
           component="video"
-          src={readable.url ?? undefined}
+          src={sourceUrl}
           controls
           playsInline
           autoPlay
@@ -166,7 +135,7 @@ export const FilePreviewBody = ({
           <AudioPreview
             nodeFileId={fileId}
             fileName={fileName}
-            sourceUrl={readable.url ?? undefined}
+            sourceUrl={sourceUrl}
             onError={readable.onSourceError}
           />
         </Box>
@@ -187,7 +156,7 @@ export const FilePreviewBody = ({
           fileName={fileName}
           fileSizeBytes={fileSizeBytes}
           sourceFile={sourceFile}
-          previewUrl={readable.url ?? undefined}
+          previewUrl={sourceUrl}
           onSaved={onSaved}
         />
       );
@@ -254,3 +223,30 @@ const ModelPreviewBody = ({
     </Box>
   </Box>
 );
+
+function getUnavailablePreviewMessage(
+  fileName: string,
+  contentType: string | null | undefined,
+  fileSizeBytes: number | null,
+  encrypted: boolean,
+  t: TFunction<"files">,
+): string | undefined {
+  const originalType = getFileTypeInfo(fileName, contentType).type;
+  let limit: number | null = null;
+  if (encrypted) {
+    limit = CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES;
+    if (originalType === "pdf") {
+      limit = previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES;
+    }
+  } else if (originalType === "text") {
+    limit = previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
+  }
+  const size = fileSizeBytes ?? 0;
+  if (limit !== null && size > limit) {
+    return t("preview.errors.fileTooLarge", {
+      size: formatBytes(size),
+      maxSize: formatBytes(limit),
+    });
+  }
+  return undefined;
+}

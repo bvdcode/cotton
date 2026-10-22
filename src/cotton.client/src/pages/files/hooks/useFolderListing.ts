@@ -1,4 +1,3 @@
-import { useFolderEncryptionPresence } from "./useFolderEncryptionPresence";
 import { useFolderTiles, TILE_PAGE_SIZE } from "./useFolderTiles";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
@@ -11,11 +10,8 @@ import {
 import { queryKeys } from "../../../shared/api/queries/queryKeys";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
 import { translateError } from "../../../shared/i18n/translateError";
-import type { PaginationProps } from "../../../shared/types/FileListViewTypes";
 import { useDecryptedFolderContent } from "../../../shared/crypto/useDecryptedFolderContent";
-import { useFolderListControls } from "./useFolderListControls";
-
-const LIST_PAGE_SIZE = 100;
+import { useFolderListPage, LIST_PAGE_SIZE } from "./useFolderListPage";
 
 export const useFolderListing = (
   nodeId: string | null,
@@ -57,38 +53,13 @@ export const useFolderListing = (
     enabled,
   });
 
-  const encryptedNames = useFolderEncryptionPresence({
+  const list = useFolderListPage({
     nodeId,
-    match: "encrypted-names",
-    enabled:
-      enabled && isList && !folderPolicyEnabled && overview.data !== undefined,
-    firstPage: overview.data
-      ? { response: overview.data, pageSize }
-      : undefined,
-  });
-  const namesEnabled = !folderPolicyEnabled && encryptedNames === false;
-  const controls = useFolderListControls(nodeId, namesEnabled);
-  const { page, listing } = controls;
-  const defaultListing = Object.keys(listing).length === 0;
-
-  const listPage = useQuery({
-    placeholderData: (previous, query) =>
-      query?.queryKey[1] === queryNodeId && query.queryKey[2] === queryUserId
-        ? previous
-        : undefined,
-    queryKey: queryKeys.nodeChildren.page(
-      queryNodeId,
-      queryUserId,
-      page,
-      listing,
-    ),
-    queryFn: () =>
-      nodesApi.getChildren(queryNodeId, {
-        page: page + 1,
-        pageSize: LIST_PAGE_SIZE,
-        ...(defaultListing ? {} : { listing }),
-      }),
-    enabled: enabled && isList && (page > 0 || !defaultListing),
+    userId,
+    enabled: enabled && isList,
+    folderPolicyEnabled,
+    overview,
+    pageSize,
   });
 
   const tiles = useFolderTiles(
@@ -98,17 +69,15 @@ export const useFolderListing = (
     fetchOverview,
   );
 
-  const activePage = page === 0 && defaultListing ? overview : listPage;
-  const content = useDecryptedFolderContent(
-    isList ? activePage.data?.content : tiles.content,
-  );
+  const activeListing = isList ? list : tiles;
+  const content = useDecryptedFolderContent(activeListing.content);
   const stats: FolderStatsDto = overview.data?.content.stats ?? {
     folders: 0,
     files: 0,
     sizeBytes: 0,
   };
   const error =
-    overview.isError || (isList ? activePage.isError : tiles.isError)
+    overview.isError || activeListing.isError
       ? translateError("files", "errors.loadContentsFailed")
       : null;
 
@@ -118,25 +87,13 @@ export const useFolderListing = (
     }
   }, [nodeId]);
 
-  const paginationProps: PaginationProps | undefined = isList
-    ? {
-        query: controls.query,
-        model: { page, pageSize: LIST_PAGE_SIZE },
-        totalCount:
-          activePage.data?.totalCount ?? overview.data?.totalCount ?? 0,
-        loading: activePage.isFetching,
-        onPaginationModelChange: (model) => controls.setPage(model.page),
-      }
-    : undefined;
-
   return {
     content,
     stats,
     totalCount: overview.data?.totalCount ?? null,
-    loading:
-      overview.isPending || (isList ? activePage.isPending : tiles.isPending),
+    loading: overview.isPending || activeListing.isPending,
     error,
-    pagination: paginationProps,
+    pagination: isList ? list.pagination : undefined,
     loadMore: !isList && tiles.hasNextPage ? tiles.loadMore : undefined,
     refresh,
   };
