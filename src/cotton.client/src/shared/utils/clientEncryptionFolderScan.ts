@@ -2,7 +2,10 @@ import { readFolderPages } from "./folderPages";
 import type { NodeDto } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import { fetchNodeChildren } from "../api/nodeChildren";
-import { isFileEncrypted } from "../crypto/metadataFlags";
+import {
+  isFileEncrypted,
+  isFolderEncryptionPolicyEnabled,
+} from "../crypto/metadataFlags";
 
 export const CLIENT_ENCRYPTION_FOLDER_SCAN_MAX_FILES = 500;
 export const CLIENT_ENCRYPTION_FOLDER_SCAN_MAX_FOLDERS = 250;
@@ -15,6 +18,7 @@ export interface ClientEncryptionFolderScanResult {
 }
 
 type FilePredicate = (file: NodeFileManifestDto) => boolean;
+type FolderPredicate = (folder: NodeDto) => boolean;
 
 interface ScanOptions {
   maxFiles?: number;
@@ -53,6 +57,7 @@ export const collectEncryptedFilesInFoldersForClientEncryption = (
     rootNodeIds,
     (file) => isFileEncrypted(file.metadata),
     options,
+    (folder) => !isFolderEncryptionPolicyEnabled(folder.metadata),
   );
 
 export const collectFoldersInFoldersForClientEncryption = (
@@ -65,12 +70,13 @@ async function collectFilesInFolders(
   rootNodeIds: ReadonlyArray<string>,
   predicate: FilePredicate,
   options: ScanOptions,
+  includeFolder: FolderPredicate = () => true,
 ): Promise<ClientEncryptionFolderScanResult> {
   const limits = resolveScanLimits(options);
   const state = createScanState(rootNodeIds);
 
   while (state.queue.length > 0 && !isScanLimitReached(state, limits)) {
-    await scanNextFolder(state, limits, predicate);
+    await scanNextFolder(state, limits, predicate, includeFolder);
   }
 
   if (state.queue.length > 0 || isScanLimitReached(state, limits)) {
@@ -131,6 +137,7 @@ async function scanNextFolder(
   state: ScanState,
   limits: ScanLimits,
   predicate: FilePredicate,
+  includeFolder: FolderPredicate,
 ): Promise<void> {
   const nodeId = state.queue.shift();
   if (!nodeId) {
@@ -144,7 +151,11 @@ async function scanNextFolder(
     undefined,
     fetchNodeChildren,
   )) {
-    enqueueChildFolders(state, limits, response.content.nodes);
+    enqueueChildFolders(
+      state,
+      limits,
+      response.content.nodes.filter(includeFolder),
+    );
     collectMatchingFiles(state, limits, response.content.files, predicate);
     if (state.files.length >= limits.maxFiles) {
       return;

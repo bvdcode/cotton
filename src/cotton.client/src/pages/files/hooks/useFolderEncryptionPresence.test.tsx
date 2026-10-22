@@ -36,6 +36,57 @@ it("uses a visible match without another request", () => {
   expect(get).not.toHaveBeenCalled();
 });
 
+it("excludes a protected child until its encryption policy is disabled", async () => {
+  let policyEnabled = true;
+  const get = vi
+    .spyOn(nodesApi, "getChildren")
+    .mockImplementation(async (id) => {
+      if (id === "root") {
+        return {
+          content: {
+            ...createFolder({ id }),
+            files: [],
+            nodes: [
+              createFolder({
+                id: "vault",
+                metadata: { isClientEncryptionEnabled: String(policyEnabled) },
+              }),
+            ],
+          },
+          totalCount: 1,
+        };
+      }
+      return {
+        content: {
+          ...createFolder({ id }),
+          files: [createFile({ metadata: { isClientEncrypted: "true" } })],
+          nodes: [],
+        },
+        totalCount: 1,
+      };
+    });
+  const { result } = renderHook(
+    () =>
+      useFolderEncryptionPresence({
+        nodeId: "root",
+        match: "encrypted-files",
+        enabled: true,
+        knownFiles: [],
+      }),
+    { wrapper },
+  );
+
+  await waitFor(() => expect(result.current).toBe(false));
+  expect(get.mock.calls.map(([id]) => id)).toEqual(["root"]);
+
+  policyEnabled = false;
+  await act(() =>
+    client.invalidateQueries({ queryKey: queryKeys.nodeChildren.all("root") }),
+  );
+  await waitFor(() => expect(result.current).toBe(true));
+  expect(get.mock.calls.map(([id]) => id)).toEqual(["root", "root", "vault"]);
+});
+
 it("cancels the previous folder on navigation and the current folder on unmount", async () => {
   const signals: AbortSignal[] = [];
   vi.spyOn(nodesApi, "getChildren").mockImplementation(

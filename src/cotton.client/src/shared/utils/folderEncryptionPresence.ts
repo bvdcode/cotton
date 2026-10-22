@@ -1,6 +1,10 @@
+import type { NodeDto } from "../api/layoutsApi";
 import type { NodeContentDto, NodeFileManifestDto } from "../api/nodesApi";
 import { hasEncryptedFolderName } from "../crypto/folderDisplayMeta";
-import { isFileEncrypted } from "../crypto/metadataFlags";
+import {
+  isFileEncrypted,
+  isFolderEncryptionPolicyEnabled,
+} from "../crypto/metadataFlags";
 import { readFolderPages, type FolderScanPage } from "./folderPages";
 
 export type FolderEncryptionMatch =
@@ -30,20 +34,28 @@ export function matchesFolderPage(
   );
 }
 
+function shouldScanChildFolder(
+  node: NodeDto,
+  match: FolderEncryptionMatch,
+): boolean {
+  switch (match) {
+    case "plain-files":
+      return true;
+    case "encrypted-files":
+      return !isFolderEncryptionPolicyEnabled(node.metadata);
+    case "encrypted-names":
+      return false;
+  }
+}
+
 export async function findFolderEncryptionMatch(
   nodeId: string,
   match: FolderEncryptionMatch,
   signal: AbortSignal,
   firstPage?: FolderScanPage,
 ): Promise<boolean> {
-  const recursive = match !== "encrypted-names";
-  const pending = [nodeId];
-  const visited = new Set(pending);
-  while (pending.length > 0) {
-    const current = pending.shift();
-    if (!current) {
-      break;
-    }
+  const folders = new Set([nodeId]);
+  for (const current of folders) {
     for await (const response of readFolderPages(
       current,
       signal,
@@ -52,13 +64,11 @@ export async function findFolderEncryptionMatch(
       if (matchesFolderPage(response.content, match)) {
         return true;
       }
-      if (recursive) {
-        for (const node of response.content.nodes) {
-          if (!visited.has(node.id)) {
-            visited.add(node.id);
-            pending.push(node.id);
-          }
-        }
+      const children = response.content.nodes.filter((node) =>
+        shouldScanChildFolder(node, match),
+      );
+      for (const node of children) {
+        folders.add(node.id);
       }
     }
   }
