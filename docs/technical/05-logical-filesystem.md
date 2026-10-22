@@ -67,6 +67,10 @@ Read-heavy operations do not acquire mutation locks unless they must coordinate 
 
 Layout endpoints return paged payloads where appropriate and expose total counts through `X-Total-Count`. Public routes and WebDAV reuse the same logical topology but add their own authorization boundaries.
 
+`PATCH /api/v1/layouts/nodes/{nodeId}/metadata/bulk?includeDescendants=true` applies a dictionary of string fields, such as `{"category":"archive"}`, to the selected folder and its visible descendants. Other metadata fields remain unchanged. Omitting `includeDescendants` updates only the selected folder. Null values and empty or whitespace-only keys are rejected.
+
+The operation is restricted to the caller's folders within the same layout. It processes the tree in batches inside one transaction, without a total folder-count limit. Tracked saves update integrity signatures; a failed save rolls back all batches. The response contains the updated folders, and metadata notifications are sent after commit. The existing single-folder metadata endpoint continues to return one folder.
+
 ## Related sections
 
 - [Data model and persistence](03-data-model.md)

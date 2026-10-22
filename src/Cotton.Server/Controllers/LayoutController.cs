@@ -147,6 +147,28 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPatch("nodes/{nodeId:guid}/metadata/bulk")]
+        [ProducesResponseType<IReadOnlyList<NodeDto>>(StatusCodes.Status200OK)]
+        [ProducesResponseType<CottonResult>(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType<CottonResult>(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> BulkUpdateLayoutNodeMetadata(
+            [FromRoute] Guid nodeId,
+            [FromBody] Dictionary<string, string?>? patch,
+            [FromQuery] bool includeDescendants = false)
+        {
+            UpdateNodeMetadataResult result = await _mediator.Send(
+                new UpdateNodeMetadataRequest(User.GetUserId(), nodeId, patch, includeDescendants),
+                HttpContext.RequestAborted);
+            return result.Status switch
+            {
+                UpdateNodeMetadataStatus.Updated => Ok(result.Nodes),
+                UpdateNodeMetadataStatus.InvalidPatch => CottonResult.BadRequest(result.Error!),
+                UpdateNodeMetadataStatus.NodeNotFound => CottonResult.NotFound(result.Error!),
+                _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+            };
+        }
+
+        [Authorize]
         [HttpGet("nodes/{nodeId:guid}")]
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
         {
@@ -185,7 +207,7 @@ namespace Cotton.Server.Controllers
                 };
             }
 
-            return Ok(result.Node!);
+            return Ok(result.Nodes!.Single());
         }
 
         [Authorize]

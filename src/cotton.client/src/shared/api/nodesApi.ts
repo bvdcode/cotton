@@ -206,6 +206,18 @@ export const nodesApi = {
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
+  bulkUpdateNodeMetadata: async (
+    nodeId: Guid,
+    patch: Record<string, string>,
+    includeDescendants: boolean,
+  ): Promise<NodeDto[]> => {
+    const url = `/layouts/nodes/${nodeId}/metadata/bulk`;
+    const response = await httpClient.patch<JsonValue>(url, patch, {
+      params: { includeDescendants },
+    });
+    return parseValidated(url, response.data, nodeListSchema);
+  },
+
   restoreNode: async (
     nodeId: Guid,
     options: RestoreOptions = {},
