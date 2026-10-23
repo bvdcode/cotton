@@ -2698,7 +2698,10 @@
         "modelLoadFailed": "加载 3D 模型失败",
         "modelUnsupportedType": "此 3D 文件格式不支持在浏览器中预览",
         "pdfTooLarge": "PDF 文件过大，无法预览（{{size}}）。最大允许大小为 {{maxSize}}。请下载文件后查看。",
-        "fileTooLarge": "文件过大，无法预览（{{size}}）。文本预览的最大大小为 {{maxSize}}。请下载文件后查看。"
+        "fileTooLarge": "文件过大，无法预览（{{size}}）。预览的最大大小为 {{maxSize}}。请下载文件后查看。"
+      },
+      "office": {
+        "truncated": "显示此工作表的前 {{rows}} 行和 {{columns}} 列。"
       }
     },
     "actionsTitle": "操作",

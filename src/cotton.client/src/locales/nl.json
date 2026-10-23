@@ -2690,7 +2690,10 @@
         "modelLoadFailed": "Laden van het 3D-model mislukt",
         "modelUnsupportedType": "Deze 3D-bestandsindeling wordt niet ondersteund voor voorvertoning in de browser",
         "pdfTooLarge": "PDF is te groot voor voorvertoning ({{size}}). De maximale grootte is {{maxSize}}. Download het bestand om het te bekijken.",
-        "fileTooLarge": "Bestand is te groot voor voorvertoning ({{size}}). De maximale grootte voor tekstvoorvertoning is {{maxSize}}. Download het bestand om het te bekijken."
+        "fileTooLarge": "Bestand is te groot voor voorvertoning ({{size}}). De maximale grootte voor voorvertoning is {{maxSize}}. Download het bestand om het te bekijken."
+      },
+      "office": {
+        "truncated": "De eerste {{rows}} rijen en {{columns}} kolommen van dit werkblad worden weergegeven."
       }
     },
     "actionsTitle": "Acties",

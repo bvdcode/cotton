@@ -2706,7 +2706,10 @@
         "modelLoadFailed": "Načtení 3D modelu se nezdařilo",
         "modelUnsupportedType": "Tento formát 3D souboru není pro náhled v prohlížeči podporován",
         "pdfTooLarge": "PDF je pro náhled příliš velké ({{size}}). Maximální velikost je {{maxSize}}. Pro zobrazení jej prosím stáhněte.",
-        "fileTooLarge": "Soubor je pro náhled příliš velký ({{size}}). Maximální velikost pro textový náhled je {{maxSize}}. Pro zobrazení jej prosím stáhněte."
+        "fileTooLarge": "Soubor je pro náhled příliš velký ({{size}}). Maximální velikost pro náhled je {{maxSize}}. Pro zobrazení jej prosím stáhněte."
+      },
+      "office": {
+        "truncated": "Zobrazeno prvních {{rows}} řádků a {{columns}} sloupců tohoto listu."
       }
     },
     "actionsTitle": "Akce",

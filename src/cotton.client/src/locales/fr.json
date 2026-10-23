@@ -2689,7 +2689,10 @@
         "modelLoadFailed": "Échec du chargement du modèle 3D",
         "modelUnsupportedType": "Ce format de fichier 3D n'est pas pris en charge pour l'aperçu dans le navigateur",
         "pdfTooLarge": "Le PDF est trop volumineux pour l'aperçu ({{size}}). La taille maximale est de {{maxSize}}. Veuillez télécharger le fichier pour le consulter.",
-        "fileTooLarge": "Le fichier est trop volumineux pour l'aperçu ({{size}}). La taille maximale pour l'aperçu texte est de {{maxSize}}. Veuillez télécharger le fichier pour le consulter."
+        "fileTooLarge": "Le fichier est trop volumineux pour l'aperçu ({{size}}). La taille maximale pour l'aperçu est de {{maxSize}}. Veuillez télécharger le fichier pour le consulter."
+      },
+      "office": {
+        "truncated": "Affichage des {{rows}} premières lignes et {{columns}} premières colonnes de cette feuille."
       }
     },
     "actionsTitle": "Actions",

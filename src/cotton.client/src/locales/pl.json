@@ -2709,7 +2709,10 @@
         "modelLoadFailed": "Nie udało się załadować modelu 3D",
         "modelUnsupportedType": "Ten format pliku 3D nie jest obsługiwany w podglądzie w przeglądarce",
         "pdfTooLarge": "PDF jest zbyt duży, aby wyświetlić podgląd ({{size}}). Maksymalny rozmiar to {{maxSize}}. Aby go wyświetlić, należy pobrać plik.",
-        "fileTooLarge": "Plik jest zbyt duży, aby wyświetlić podgląd ({{size}}). Maksymalny rozmiar podglądu tekstowego to {{maxSize}}. Aby go wyświetlić, należy pobrać plik."
+        "fileTooLarge": "Plik jest zbyt duży, aby wyświetlić podgląd ({{size}}). Maksymalny rozmiar podglądu to {{maxSize}}. Aby go wyświetlić, należy pobrać plik."
+      },
+      "office": {
+        "truncated": "Wyświetlono pierwsze {{rows}} wierszy i {{columns}} kolumn tego arkusza."
       }
     },
     "actionsTitle": "Akcje",

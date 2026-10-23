@@ -34,9 +34,9 @@ const gridLocales = {
 const isGridLocale = (value: string): value is keyof typeof gridLocales =>
   Object.hasOwn(gridLocales, value);
 
-export const getAdminDataGridLocaleText = (
+export const getDataGridLocaleText = (
   language: string,
-  noRowsLabel: string,
+  noRowsLabel?: string,
 ): Partial<GridLocaleText> => {
   const languageCode = language.toLowerCase().split("-")[0];
   const localization = isGridLocale(languageCode)
@@ -45,18 +45,18 @@ export const getAdminDataGridLocaleText = (
 
   return {
     ...localization.components.MuiDataGrid.defaultProps.localeText,
-    noRowsLabel,
+    ...(noRowsLabel === undefined ? {} : { noRowsLabel }),
   };
 };
 
-export const useAdminDataGridLocaleText = (
-  noRowsLabel: string,
+export const useDataGridLocaleText = (
+  noRowsLabel?: string,
 ): Partial<GridLocaleText> => {
   const { i18n } = useTranslation();
   const language = i18n.resolvedLanguage ?? i18n.language;
 
   return useMemo(
-    () => getAdminDataGridLocaleText(language, noRowsLabel),
+    () => getDataGridLocaleText(language, noRowsLabel),
     [language, noRowsLabel],
   );
 };

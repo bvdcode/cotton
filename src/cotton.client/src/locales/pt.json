@@ -2692,7 +2692,10 @@
         "modelLoadFailed": "Falha ao carregar o modelo 3D",
         "modelUnsupportedType": "Este formato de arquivo 3D não é suportado para visualização no navegador",
         "pdfTooLarge": "O PDF é grande demais para visualizar ({{size}}). O tamanho máximo é {{maxSize}}. Baixe o arquivo para visualizá-lo.",
-        "fileTooLarge": "O arquivo é grande demais para visualizar ({{size}}). O tamanho máximo para visualização de texto é {{maxSize}}. Baixe o arquivo para visualizá-lo."
+        "fileTooLarge": "O arquivo é grande demais para visualizar ({{size}}). O tamanho máximo para visualização é {{maxSize}}. Baixe o arquivo para visualizá-lo."
+      },
+      "office": {
+        "truncated": "São apresentadas as primeiras {{rows}} linhas e {{columns}} colunas desta folha."
       }
     },
     "actionsTitle": "Ações",

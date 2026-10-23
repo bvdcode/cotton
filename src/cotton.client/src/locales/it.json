@@ -2691,7 +2691,10 @@
         "modelLoadFailed": "Impossibile caricare il modello 3D",
         "modelUnsupportedType": "Questo formato di file 3D non è supportato per l'anteprima nel browser",
         "pdfTooLarge": "Il PDF è troppo grande per l'anteprima ({{size}}). La dimensione massima è {{maxSize}}. Scarichi il file per visualizzarlo.",
-        "fileTooLarge": "Il file è troppo grande per l'anteprima ({{size}}). La dimensione massima per l'anteprima del testo è {{maxSize}}. Scarichi il file per visualizzarlo."
+        "fileTooLarge": "Il file è troppo grande per l'anteprima ({{size}}). La dimensione massima per l'anteprima è {{maxSize}}. Scarichi il file per visualizzarlo."
+      },
+      "office": {
+        "truncated": "Sono visualizzate le prime {{rows}} righe e {{columns}} colonne di questo foglio."
       }
     },
     "actionsTitle": "Azioni",

@@ -2685,7 +2685,10 @@
         "modelLoadFailed": "3D-Modell konnte nicht geladen werden",
         "modelUnsupportedType": "Dieses 3D-Dateiformat wird für die Vorschau im Browser nicht unterstützt",
         "pdfTooLarge": "PDF ist zu groß für die Vorschau ({{size}}). Maximale Größe: {{maxSize}}. Bitte lade die Datei zur Ansicht herunter.",
-        "fileTooLarge": "Datei ist zu groß für die Vorschau ({{size}}). Maximale Größe für die Textvorschau: {{maxSize}}. Bitte lade die Datei zur Ansicht herunter."
+        "fileTooLarge": "Datei ist zu groß für die Vorschau ({{size}}). Maximale Größe für die Vorschau: {{maxSize}}. Bitte lade die Datei zur Ansicht herunter."
+      },
+      "office": {
+        "truncated": "Die ersten {{rows}} Zeilen und {{columns}} Spalten dieses Blatts werden angezeigt."
       }
     },
     "actionsTitle": "Aktionen",

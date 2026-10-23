@@ -2501,7 +2501,10 @@
         "modelLoadFailed": "Failed to load 3D model",
         "modelUnsupportedType": "This 3D file format is not supported for in-browser preview",
         "pdfTooLarge": "PDF is too large to preview ({{size}}). Maximum size is {{maxSize}}. Please download the file to view it.",
-        "fileTooLarge": "File is too large to preview ({{size}}). Maximum size for text preview is {{maxSize}}. Please download the file to view it."
+        "fileTooLarge": "File is too large to preview ({{size}}). Maximum size for preview is {{maxSize}}. Please download the file to view it."
+      },
+      "office": {
+        "truncated": "Showing the first {{rows}} rows and {{columns}} columns of this sheet."
       }
     },
     "actionsTitle": "Actions",

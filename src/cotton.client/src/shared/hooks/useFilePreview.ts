@@ -67,9 +67,12 @@ export const useFilePreview = () => {
         (fileType !== "pdf" &&
           fileType !== "text" &&
           fileType !== "model" &&
+          fileType !== "office" &&
           !readableMedia) ||
         ((fileType === "text" || encrypted) &&
           (fileSizeBytes ?? 0) > inlinePreviewLimit) ||
+        (fileType === "office" &&
+          (fileSizeBytes ?? 0) > previewConfig.MAX_OFFICE_PREVIEW_SIZE_BYTES) ||
         (encrypted &&
           fileType === "pdf" &&
           (fileSizeBytes ?? 0) > previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES)
