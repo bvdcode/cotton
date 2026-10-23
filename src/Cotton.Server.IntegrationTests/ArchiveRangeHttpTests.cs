@@ -9,8 +9,9 @@ namespace Cotton.Server.IntegrationTests
     [NonParallelizable]
     public class ArchiveRangeHttpTests : FileEndpointTestBase
     {
-        [Test]
-        public async Task ParallelDownloads_WithColdChecksums_ReconstructArchive()
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task ParallelDownloads_WithColdChecksums_ReconstructArchive(bool openEnded)
         {
             ArchiveDownloadLinkDto link = await CreateArchiveAsync();
             using HttpRequestMessage headRequest = new(HttpMethod.Head, link.Url);
@@ -23,15 +24,18 @@ namespace Cotton.Server.IntegrationTests
             {
                 long start = index * partSize;
                 long end = Math.Min(size - 1, start + partSize - 1);
-                using HttpResponseMessage part = await GetRangeAsync(link.Url, $"bytes={start}-{end}", head.Headers.ETag!.ToString());
+                string range = openEnded ? $"bytes={start}-" : $"bytes={start}-{end}";
+                using HttpResponseMessage part = await GetRangeAsync(link.Url, range, head.Headers.ETag!.ToString());
                 Assert.Multiple(() =>
                 {
                     Assert.That(part.StatusCode, Is.EqualTo(HttpStatusCode.PartialContent));
                     Assert.That(part.Content.Headers.ContentRange?.From, Is.EqualTo(start));
-                    Assert.That(part.Content.Headers.ContentRange?.To, Is.EqualTo(end));
+                    Assert.That(part.Content.Headers.ContentRange?.To, Is.EqualTo(openEnded ? size - 1 : end));
                     Assert.That(part.Headers.ETag, Is.EqualTo(head.Headers.ETag));
                 });
-                return await part.Content.ReadAsByteArrayAsync();
+                byte[] bytes = await part.Content.ReadAsByteArrayAsync();
+                Assert.That(bytes.Length, Is.EqualTo((openEnded ? size - 1 : end) - start + 1));
+                return bytes.AsSpan(0, checked((int)(end - start + 1))).ToArray();
             }).ToArray();
             byte[][] parts = await Task.WhenAll(downloads);
             byte[] combined = parts.SelectMany(part => part).ToArray();

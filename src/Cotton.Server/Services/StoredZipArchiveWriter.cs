@@ -3,6 +3,7 @@
 
 using Cotton.Server.Models.Configuration;
 using Microsoft.Extensions.Options;
+using System.Buffers.Binary;
 
 namespace Cotton.Server.Services
 {
@@ -43,12 +44,14 @@ namespace Cotton.Server.Services
             await using ArchiveRangeWriteStream output = new(destination, start, length);
             await using FileStream centralDirectory = ArchiveTemporaryFile.Create();
             bool includeCentralDirectory = output.End > centralDirectoryOffset;
+            bool hasSkippedFiles = false;
             StoredZipLengthCalculator layout = new();
             await foreach (StoredZipSourceEntry entry in entries.WithCancellation(cancellationToken))
             {
                 ZipEntryPlan plan = layout.AddEntry(entry);
                 ArchiveCrcState state = _checksums.Get(archiveIdentity, plan.LocalHeaderOffset);
-                uint crc = await StoredZipEntryWriter.WriteAsync(output, entry, plan, state, includeCentralDirectory, cancellationToken);
+                uint crc = await StoredZipEntryWriter.WriteAsync(output, entry, plan, state, cancellationToken);
+                hasSkippedFiles |= !entry.IsDirectory && layout.CentralDirectoryOffset <= start;
                 if (output.Completed)
                 {
                     return;
@@ -60,6 +63,12 @@ namespace Cotton.Server.Services
                 }
             }
 
+            if (includeCentralDirectory && hasSkippedFiles)
+            {
+                await output.FlushAsync(cancellationToken);
+                await CompleteCentralDirectoryAsync(centralDirectory, entries, output,
+                    layout.CentralDirectoryOffset, archiveIdentity, cancellationToken);
+            }
             await centralDirectory.FlushAsync(cancellationToken);
             long skip = Math.Clamp(start - output.Position, 0, centralDirectory.Length);
             centralDirectory.Position = skip;
@@ -70,6 +79,32 @@ namespace Cotton.Server.Services
                 await StoredZipHeaders.WriteZip64EndAsync(output, layout.EntryCount, layout, cancellationToken);
             }
             await StoredZipHeaders.WriteEndOfCentralDirectoryAsync(output, layout.EntryCount, layout, cancellationToken);
+        }
+
+        private async Task CompleteCentralDirectoryAsync(
+            FileStream centralDirectory, IAsyncEnumerable<StoredZipSourceEntry> entries,
+            ArchiveRangeWriteStream output, long directoryStart, string? archiveIdentity, CancellationToken cancellationToken)
+        {
+            StoredZipLengthCalculator layout = new();
+            byte[] checksumBytes = new byte[sizeof(uint)];
+            await foreach (StoredZipSourceEntry entry in entries.WithCancellation(cancellationToken))
+            {
+                long centralEntryOffset = layout.CentralDirectoryLength;
+                ZipEntryPlan plan = layout.AddEntry(entry);
+                if (layout.CentralDirectoryOffset > output.Start)
+                {
+                    break;
+                }
+                long checksumOffset = centralEntryOffset + StoredZipHeaders.CentralDirectoryChecksumOffset;
+                if (!entry.IsDirectory && output.Includes(directoryStart + checksumOffset, sizeof(uint)))
+                {
+                    ArchiveCrcState state = _checksums.Get(archiveIdentity, plan.LocalHeaderOffset);
+                    uint checksum = await StoredZipEntryWriter.GetChecksumAsync(entry, state, cancellationToken);
+                    BinaryPrimitives.WriteUInt32LittleEndian(checksumBytes, checksum);
+                    centralDirectory.Position = checksumOffset;
+                    await centralDirectory.WriteAsync(checksumBytes, cancellationToken);
+                }
+            }
         }
 
         public void Dispose()
