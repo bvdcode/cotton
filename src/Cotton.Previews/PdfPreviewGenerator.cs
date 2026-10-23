@@ -6,10 +6,11 @@ using Docnet.Core.Models;
 using Docnet.Core.Readers;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Cotton.Previews
 {
-    public class PdfPreviewGenerator : IPreviewGenerator
+    public class PdfPreviewGenerator(Color? backgroundColor = null) : IPreviewGenerator
     {
         public string Id => "pdf";
 
@@ -42,6 +43,10 @@ namespace Cotton.Previews
             // BGRA (4 bytes per pixel)
             byte[] bgra = pageReader.GetImage();
             using Image<Bgra32> image = Image.LoadPixelData<Bgra32>(bgra, width, height);
+            if (backgroundColor is Color background)
+            {
+                image.Mutate(context => context.BackgroundColor(background));
+            }
             return await ImagePreviewGenerator.EncodeMaxResizedWebpAsync(image, size).ConfigureAwait(false);
         }
 

@@ -51,7 +51,7 @@ namespace Cotton.Previews
             }
 
             MemoryStream copy = new MemoryStream();
-            await AndroidPackageArchiveReader
+            await PreviewStream
                 .CopyBoundedAsync(stream, copy, MaxNonSeekablePackageBytes)
                 .ConfigureAwait(false);
             copy.Position = 0;

@@ -32,5 +32,9 @@
     <ProjectReference Include="..\Cotton.Previews\Cotton.Previews.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Fixtures\Office\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
 

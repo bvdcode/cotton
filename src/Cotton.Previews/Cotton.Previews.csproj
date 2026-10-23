@@ -11,6 +11,8 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="ExcelDataReader" Version="3.9.0" />
+		<PackageReference Include="Lokad.OoxPdf" Version="0.1.5" />
 	</ItemGroup>
 
 	<ItemGroup>
