@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using System.Buffers;
 using Cotton.Server.Models.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace Cotton.Server.Services
 {
-    public class StoredZipArchiveWriter
+    public class StoredZipArchiveWriter : IDisposable
     {
         private readonly SemaphoreSlim _streamGate;
+        private readonly ArchiveCrcCache _checksums = new();
 
         public StoredZipArchiveWriter(IOptions<ResourceConcurrencyOptions> options)
         {
@@ -18,95 +18,65 @@ namespace Cotton.Server.Services
             _streamGate = new SemaphoreSlim(options.Value.ArchiveStreams, options.Value.ArchiveStreams);
         }
 
+        internal async Task<IAsyncDisposable> AcquireAsync(CancellationToken cancellationToken)
+        {
+            await _streamGate.WaitAsync(cancellationToken);
+            return new AsyncGateLease(() => _streamGate.Release());
+        }
+
         public async Task WriteAsync(
             Stream destination,
             IAsyncEnumerable<StoredZipSourceEntry> entries,
             CancellationToken cancellationToken = default)
         {
+            await using IAsyncDisposable lease = await AcquireAsync(cancellationToken);
+            await WriteRangeAsync(destination, entries, 0, long.MaxValue, 0, null, cancellationToken);
+        }
+
+        internal async Task WriteRangeAsync(
+            Stream destination, IAsyncEnumerable<StoredZipSourceEntry> entries,
+            long start, long length, long centralDirectoryOffset, string? archiveIdentity,
+            CancellationToken cancellationToken)
+        {
             ArgumentNullException.ThrowIfNull(destination);
             ArgumentNullException.ThrowIfNull(entries);
-            await _streamGate.WaitAsync(cancellationToken);
-            try
+            await using ArchiveRangeWriteStream output = new(destination, start, length);
+            await using FileStream centralDirectory = ArchiveTemporaryFile.Create();
+            bool includeCentralDirectory = output.End > centralDirectoryOffset;
+            StoredZipLengthCalculator layout = new();
+            await foreach (StoredZipSourceEntry entry in entries.WithCancellation(cancellationToken))
             {
-                await using FileStream centralDirectory = ArchiveTemporaryFile.Create();
-                StoredZipLengthCalculator layout = new();
-                await foreach (StoredZipSourceEntry entry in entries.WithCancellation(cancellationToken))
+                ZipEntryPlan plan = layout.AddEntry(entry);
+                ArchiveCrcState state = _checksums.Get(archiveIdentity, plan.LocalHeaderOffset);
+                uint crc = await StoredZipEntryWriter.WriteAsync(output, entry, plan, state, includeCentralDirectory, cancellationToken);
+                if (output.Completed)
                 {
-                    ZipEntryPlan plan = layout.AddEntry(entry);
-                    uint crc = await WriteLocalEntryAsync(destination, entry, plan, cancellationToken);
+                    return;
+                }
+                if (includeCentralDirectory)
+                {
                     await StoredZipHeaders.WriteCentralDirectoryEntryAsync(
                         centralDirectory, new WrittenZipEntry(plan, crc), cancellationToken);
                 }
+            }
 
-                await centralDirectory.FlushAsync(cancellationToken);
-                centralDirectory.Position = 0;
-                await centralDirectory.CopyToAsync(destination, cancellationToken);
-                if (layout.NeedsZip64End)
-                {
-                    await StoredZipHeaders.WriteZip64EndAsync(destination, layout.EntryCount, layout, cancellationToken);
-                }
-                await StoredZipHeaders.WriteEndOfCentralDirectoryAsync(destination, layout.EntryCount, layout, cancellationToken);
-            }
-            finally
+            await centralDirectory.FlushAsync(cancellationToken);
+            long skip = Math.Clamp(start - output.Position, 0, centralDirectory.Length);
+            centralDirectory.Position = skip;
+            output.Advance(skip);
+            await centralDirectory.CopyToAsync(output, cancellationToken);
+            if (layout.NeedsZip64End)
             {
-                _streamGate.Release();
+                await StoredZipHeaders.WriteZip64EndAsync(output, layout.EntryCount, layout, cancellationToken);
             }
+            await StoredZipHeaders.WriteEndOfCentralDirectoryAsync(output, layout.EntryCount, layout, cancellationToken);
         }
 
-        private static async Task<uint> WriteLocalEntryAsync(
-            Stream destination,
-            StoredZipSourceEntry entry,
-            ZipEntryPlan plan,
-            CancellationToken cancellationToken)
+        public void Dispose()
         {
-            ushort flags = StoredZipHeaders.Utf8Flag;
-            if (!entry.IsDirectory)
-            {
-                flags |= StoredZipHeaders.DataDescriptorFlag;
-            }
-
-            ushort versionNeeded = plan.UsesZip64DataDescriptor ? StoredZipHeaders.VersionZip64 : StoredZipHeaders.VersionStore;
-            await StoredZipHeaders.WriteLocalHeaderAsync(destination, plan, flags, versionNeeded, cancellationToken);
-
-            if (entry.IsDirectory)
-            {
-                return 0;
-            }
-
-            Crc32Accumulator crc = new();
-            long bytesWritten = 0;
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(128 * 1024);
-            try
-            {
-                await using Stream source = await entry.OpenReadAsync(cancellationToken).ConfigureAwait(false);
-                while (true)
-                {
-                    int read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
-                        .ConfigureAwait(false);
-                    if (read == 0)
-                    {
-                        break;
-                    }
-
-                    crc.Append(buffer.AsSpan(0, read));
-                    await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-                    bytesWritten += read;
-                }
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buffer);
-            }
-
-            if (bytesWritten != entry.SizeBytes)
-            {
-                throw new InvalidOperationException(
-                    $"Archive entry '{entry.Path}' expected {entry.SizeBytes} bytes but streamed {bytesWritten} bytes.");
-            }
-
-            await StoredZipHeaders.WriteDataDescriptorAsync(destination, crc.Value, entry.SizeBytes, plan.UsesZip64DataDescriptor, cancellationToken)
-                .ConfigureAwait(false);
-            return crc.Value;
+            _checksums.Dispose();
+            _streamGate.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

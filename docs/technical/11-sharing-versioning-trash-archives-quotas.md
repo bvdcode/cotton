@@ -61,6 +61,10 @@ Archive tickets are high-entropy, expire automatically, and are held in process 
 
 Entry paths are normalized and uniquified so repeated names cannot produce ambiguous ZIP entries. The response declares its exact content length and disables transformation by intermediaries.
 
+Archive downloads support `HEAD` and HTTP byte ranges through the standard ASP.NET Core file-result header processing. A strong ETag identifies the ordered ZIP paths and immutable chunk references; a renewed ticket for unchanged content has the same ETag. Clients should send it as `If-Range` when resuming. If the selected contents change, the server returns the complete new representation instead of a partial response for the old ETag.
+
+Range downloads seek directly into file content. A bounded in-memory cache retains CRC32 prefix checkpoints for up to 100,000 archive entries, with a one-day sliding expiration. Warm resumes skip completed files and continue checksum calculation from the saved prefix. After a restart, cache eviction, or a first request for a later range, missing ZIP checksums require reading the corresponding source data; those skipped bytes are not transmitted. A new ticket can renew expired access, but does not restore a previous folder snapshot. No complete ZIP is staged on disk.
+
 Concurrent uploads, renames, moves, and deletions do not change the prepared archive's paths or content references. If referenced chunk data becomes unavailable during streaming, the response fails instead of silently omitting entries or changing its declared length.
 
 ## Logical quota

@@ -3,10 +3,10 @@
 
 namespace Cotton.Server.Services
 {
-    internal class Crc32Accumulator
+    internal class Crc32Accumulator(uint checksum = 0)
     {
         private static readonly uint[] Table = BuildTable();
-        private uint _state = 0xFFFFFFFFu;
+        private uint _state = ~checksum;
 
         public uint Value => ~_state;
 
