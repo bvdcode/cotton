@@ -356,18 +356,26 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                           ? t("files:folderSizes.calculating")
                           : undefined
                       }
-                      sx={{
-                        fontVariantNumeric: "tabular-nums",
-                        color: "text.primary",
-                        animation:
-                          isSizeCalculating && !reducedMotion
-                            ? "folder-size-pulse 1.5s ease-in-out infinite"
-                            : "none",
-                        "@keyframes folder-size-pulse": {
-                          "0%, 100%": { opacity: 1 },
-                          "50%": { opacity: 0.75 },
+                      sx={[
+                        {
+                          fontVariantNumeric: "tabular-nums",
+                          color: "text.primary",
+                          "--folder-size-pulse-opacity": 0.7,
+                          animation:
+                            isSizeCalculating && !reducedMotion
+                              ? "folder-size-pulse 1s ease-in-out infinite"
+                              : "none",
+                          "@keyframes folder-size-pulse": {
+                            "0%, 100%": { opacity: 1 },
+                            "50%": {
+                              opacity: "var(--folder-size-pulse-opacity)",
+                            },
+                          },
                         },
-                      }}
+                        theme.applyStyles("dark", {
+                          "--folder-size-pulse-opacity": 0.55,
+                        }),
+                      ]}
                     >
                       {formatBytes(stats.sizeBytes)}
                     </Box>
