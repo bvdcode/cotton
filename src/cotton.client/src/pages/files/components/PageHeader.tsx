@@ -64,7 +64,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const nextViewTitleKey = getNextFileBrowserViewTitleKey(viewMode);
   const actionsContainerRef = React.useRef<HTMLDivElement | null>(null);
-  const goUpLongPressHandlers = useLongPress(onHomeClick, loading || !canGoUp);
+  const goUpHold = useLongPress(onHomeClick, loading || !canGoUp);
   const actionButtonRefs = React.useRef<
     Record<string, HTMLButtonElement | null>
   >({});
@@ -95,6 +95,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   );
 
   const actionTabs = buildPageHeaderActions({
+    homeReady: goUpHold.ready,
+    iconTransitionDuration: reducedMotion
+      ? 0
+      : theme.transitions.duration.shortest,
     canGoUp,
     customActionItems,
     primaryActionItems,
@@ -238,14 +242,16 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                         ref={(el) => {
                           actionButtonRefs.current[action.key] = el;
                         }}
-                        aria-label={action.title}
+                        aria-label={
+                          action.key === "go-up" && goUpHold.ready
+                            ? t("routes:home")
+                            : action.title
+                        }
                         aria-pressed={action.active}
                         color={action.color ?? "primary"}
                         disabled={action.disabled || !isVisible}
                         onClick={action.onClick}
-                        {...(action.key === "go-up"
-                          ? goUpLongPressHandlers
-                          : {})}
+                        {...(action.key === "go-up" ? goUpHold.handlers : {})}
                         onDragOver={action.onDragOver}
                         onDragLeave={action.onDragLeave}
                         onDrop={action.onDrop}

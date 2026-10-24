@@ -12,6 +12,7 @@ import { TileItem } from "./TileItem";
 import { useTileDragAndDrop } from "./hooks/useTileDragAndDrop";
 import { useTileGridLayout } from "./hooks/useTileGridLayout";
 import { useTilesKeyboard } from "./useTilesKeyboard";
+import { useTileMovement } from "./hooks/useTileMovement";
 
 const VIRTUALIZATION_THRESHOLD = 80;
 
@@ -76,6 +77,8 @@ export const TilesView: React.FC<IFileListView> = ({
     readOnly,
     onNavigateBack,
   });
+
+  useTileMovement(containerRef, orderedIds, leadingItemCount);
 
   useEffect(() => {
     if (isCreatingFolder) {

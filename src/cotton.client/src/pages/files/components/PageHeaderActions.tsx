@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
+import { Box, Grow } from "@mui/material";
 import {
   ArrowUpward,
+  Home,
   CheckBox,
   CheckBoxOutlineBlank,
   CreateNewFolder,
@@ -36,6 +38,8 @@ type PageHeaderActionFactoryOptions = Pick<
   | "showUpload"
   | "showViewModeToggle"
 > & {
+  homeReady?: boolean;
+  iconTransitionDuration?: number;
   nextViewTitleKey: string;
   t: ReturnType<typeof useTranslation>["t"];
   viewIcon: ReactElement;
@@ -51,6 +55,8 @@ export const buildPageHeaderActions = (
       options.onGoUp,
       options.t,
       options.goUpDropHandlers,
+      options.homeReady,
+      options.iconTransitionDuration,
     ),
   ];
   actions.push(...(options.primaryActionItems ?? []));
@@ -95,9 +101,20 @@ const createGoUpAction = (
   onGoUp: () => void,
   t: ReturnType<typeof useTranslation>["t"],
   goUpDropHandlers: PageHeaderProps["goUpDropHandlers"],
+  homeReady = false,
+  transitionDuration?: number,
 ): PageHeaderActionItem => ({
   key: "go-up",
-  icon: <ArrowUpward />,
+  icon: (
+    <Box sx={{ display: "inline-flex", position: "relative" }}>
+      <Grow in={!homeReady} timeout={transitionDuration}>
+        <ArrowUpward />
+      </Grow>
+      <Grow in={homeReady} timeout={transitionDuration}>
+        <Home sx={{ position: "absolute", inset: 0 }} />
+      </Grow>
+    </Box>
+  ),
   title: t("actions.goUp"),
   onClick: onGoUp,
   disabled: loading || !canGoUp,
