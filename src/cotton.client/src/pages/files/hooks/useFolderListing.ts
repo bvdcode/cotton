@@ -1,4 +1,4 @@
-import { useFolderTiles, TILE_PAGE_SIZE } from "./useFolderTiles";
+import { useFolderTiles } from "./useFolderTiles";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
@@ -11,7 +11,8 @@ import { queryKeys } from "../../../shared/api/queries/queryKeys";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
 import { translateError } from "../../../shared/i18n/translateError";
 import { useDecryptedFolderContent } from "../../../shared/crypto/useDecryptedFolderContent";
-import { useFolderListPage, LIST_PAGE_SIZE } from "./useFolderListPage";
+import { useFolderListPage } from "./useFolderListPage";
+import { FOLDER_PAGE_SIZE } from "@shared/api/queries/folderPageSize";
 
 export const useFolderListing = (
   nodeId: string | null,
@@ -21,7 +22,7 @@ export const useFolderListing = (
 ) => {
   const enabled = nodeId !== null && userId !== null;
   const isList = layoutType === InterfaceLayoutType.List;
-  const pageSize = isList ? LIST_PAGE_SIZE : TILE_PAGE_SIZE;
+  const pageSize = FOLDER_PAGE_SIZE;
   const queryNodeId = nodeId ?? "";
   const queryUserId = userId ?? "";
 

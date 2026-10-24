@@ -11,20 +11,18 @@ import { useFolderListing } from "./useFolderListing";
 const wrapper = ({ children }: PropsWithChildren) => (
   <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 );
-const response = (encryptedFiles = 0, page = 1): NodeResponse => ({
+const response = (encryptedFiles = 0): NodeResponse => ({
   content: {
     ...createFolder(),
     nodes: [],
-    files: Array.from(
-      { length: Math.min(100, 201 - (page - 1) * 100) },
-      (_, index) =>
-        createFile({
-          id: `file-${page}-${index}`,
-          metadata:
-            encryptedFiles > 0 && index === 0
-              ? { isClientEncrypted: "true" }
-              : {},
-        }),
+    files: Array.from({ length: 201 }, (_, index) =>
+      createFile({
+        id: `file-${index}`,
+        metadata:
+          encryptedFiles > 0 && index === 0
+            ? { isClientEncrypted: "true" }
+            : {},
+      }),
     ),
     stats: { files: 201, folders: 0, sizeBytes: 12345 },
   },
@@ -40,7 +38,7 @@ it("requests ordering and filtering before pagination and keeps unfiltered folde
   const get = vi
     .spyOn(nodesApi, "getChildren")
     .mockImplementation(async (_, options) => ({
-      ...response(0, options?.page),
+      ...response(0),
       totalCount: options?.listing?.filterValue ? 1 : 201,
     }));
   const { result } = renderHook(
@@ -56,12 +54,8 @@ it("requests ordering and filtering before pagination and keeps unfiltered folde
       pageSize: 100,
     }),
   );
-  await waitFor(() =>
-    expect(get).toHaveBeenLastCalledWith("folder-1", {
-      page: 2,
-      pageSize: 100,
-    }),
-  );
+  expect(result.current.content?.files[0].id).toBe("file-100");
+  expect(get).toHaveBeenCalledTimes(1);
   act(() =>
     result.current.pagination?.query?.onSortModelChange([
       { field: "name", sort: "desc" },
@@ -70,7 +64,8 @@ it("requests ordering and filtering before pagination and keeps unfiltered folde
   await waitFor(() =>
     expect(get).toHaveBeenLastCalledWith("folder-1", {
       page: 1,
-      pageSize: 100,
+      pageSize: 25000,
+      signal: expect.any(AbortSignal),
       listing: { sortBy: "Name", descending: true },
     }),
   );
@@ -82,7 +77,8 @@ it("requests ordering and filtering before pagination and keeps unfiltered folde
   await waitFor(() => expect(result.current.pagination?.totalCount).toBe(1));
   expect(get).toHaveBeenLastCalledWith("folder-1", {
     page: 1,
-    pageSize: 100,
+    pageSize: 25000,
+    signal: expect.any(AbortSignal),
     listing: {
       sortBy: "Name",
       descending: true,
@@ -103,7 +99,7 @@ it.each([
   async ({ policy, encrypted }) => {
     const get = vi
       .spyOn(nodesApi, "getChildren")
-      .mockResolvedValue({ ...response(encrypted), totalCount: 100 });
+      .mockResolvedValue(response(encrypted));
     const { result } = renderHook(
       () =>
         useFolderListing(

@@ -66,11 +66,7 @@ it.each([InterfaceLayoutType.List, InterfaceLayoutType.Tiles])(
     );
     expect(
       queryClient.getQueryData<NodeResponse>(
-        queryKeys.nodeChildren.overview(
-          "folder-1",
-          "user-1",
-          layout === InterfaceLayoutType.List ? 100 : 25000,
-        ),
+        queryKeys.nodeChildren.overview("folder-1", "user-1", 25000),
       )?.content.files[0].name,
     ).toBe("opaque-id");
     expect(get).toHaveBeenCalledTimes(1);

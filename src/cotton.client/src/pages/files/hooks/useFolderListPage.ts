@@ -1,5 +1,10 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { nodesApi, type NodeResponse } from "../../../shared/api/nodesApi";
+import { useMemo } from "react";
+import {
+  nodesApi,
+  type NodeContentDto,
+  type NodeResponse,
+} from "../../../shared/api/nodesApi";
 import { queryKeys } from "../../../shared/api/queries/queryKeys";
 import type { PaginationProps } from "../../../shared/types/FileListViewTypes";
 import { useFolderEncryptedNames } from "./useFolderEncryptedNames";
@@ -38,6 +43,7 @@ export function useFolderListPage({
   const namesEnabled = !folderPolicyEnabled && encryptedNames === false;
   const controls = useFolderListControls(nodeId, namesEnabled);
   const { page, listing } = controls;
+  const batch = Math.floor((page * LIST_PAGE_SIZE) / FOLDER_PAGE_SIZE);
   const defaultListing = Object.keys(listing).length === 0;
   const needsCalculatedSizes =
     listing.sortBy === "SizeBytes" || listing.filterBy === "SizeBytes";
@@ -51,7 +57,7 @@ export function useFolderListPage({
     enabled: enabled && needsCalculatedSizes,
   });
 
-  const listPage = useQuery({
+  const listPage = useQuery<NodeResponse>({
     placeholderData: (previous, query) =>
       query?.queryKey[1] === queryNodeId && query.queryKey[2] === queryUserId
         ? previous
@@ -59,25 +65,33 @@ export function useFolderListPage({
     queryKey: queryKeys.nodeChildren.page(
       queryNodeId,
       queryUserId,
-      page,
+      batch,
       listing,
     ),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       nodesApi.getChildren(queryNodeId, {
-        page: page + 1,
-        pageSize: LIST_PAGE_SIZE,
+        page: batch + 1,
+        pageSize: FOLDER_PAGE_SIZE,
+        signal,
         ...(defaultListing ? {} : { listing }),
       }),
-    enabled: enabled && !needsCalculatedSizes && (page > 0 || !defaultListing),
+    enabled: enabled && !needsCalculatedSizes && (batch > 0 || !defaultListing),
   });
 
   const activePage = needsCalculatedSizes
     ? complete
-    : page === 0 && defaultListing
+    : batch === 0 && defaultListing
       ? overview
       : listPage;
+  const content = useMemo(() => {
+    const loaded = activePage.data?.content;
+    if (!loaded || needsCalculatedSizes) {
+      return loaded;
+    }
+    return sliceListPage(loaded, (page * LIST_PAGE_SIZE) % FOLDER_PAGE_SIZE);
+  }, [activePage.data?.content, needsCalculatedSizes, page]);
   return {
-    content: activePage.data?.content,
+    content,
     isError: activePage.isError,
     isPending: activePage.isPending,
     pagination: {
@@ -98,5 +112,20 @@ function getPagination(
     totalCount: activePage.data?.totalCount ?? overview.data?.totalCount ?? 0,
     loading: activePage.isFetching,
     onPaginationModelChange: (model) => controls.setPage(model.page),
+  };
+}
+
+function sliceListPage(
+  content: NodeContentDto,
+  offset: number,
+): NodeContentDto {
+  const end = offset + LIST_PAGE_SIZE;
+  return {
+    ...content,
+    nodes: content.nodes.slice(offset, end),
+    files: content.files.slice(
+      Math.max(0, offset - content.nodes.length),
+      Math.max(0, end - content.nodes.length),
+    ),
   };
 }
