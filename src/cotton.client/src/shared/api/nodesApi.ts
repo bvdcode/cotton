@@ -124,6 +124,19 @@ export const nodesApi = {
 
   lookupSiblingNames,
 
+  getChildFolderStats: (
+    nodeId: Guid,
+    options?: { nodeType?: string; depth?: number; signal?: AbortSignal },
+  ): Promise<Record<string, FolderStatsDto>> =>
+    getValidated(
+      `/layouts/nodes/${nodeId}/children/stats`,
+      z.record(z.string(), folderStatsSchema),
+      {
+        params: { nodeType: options?.nodeType, depth: options?.depth },
+        signal: options?.signal,
+      },
+    ),
+
   getAncestors: async (
     nodeId: Guid,
     options?: { nodeType?: string },

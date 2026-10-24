@@ -323,6 +323,19 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpGet("nodes/{nodeId:guid}/children/stats")]
+        public async Task<IActionResult> GetChildFolderStats(
+            [FromRoute] Guid nodeId,
+            [FromQuery] NodeType nodeType = NodeType.Default,
+            [FromQuery] int depth = 0)
+        {
+            Dictionary<Guid, FolderStatsDto> result = await _mediator.Send(
+                new GetChildFolderStatsQuery(User.GetUserId(), nodeId, nodeType, depth),
+                HttpContext.RequestAborted);
+            return Ok(result);
+        }
+
+        [Authorize]
         [HttpGet("nodes/{nodeId:guid}/stats")]
         public async Task<IActionResult> GetFolderStats(
             [FromRoute] Guid nodeId,

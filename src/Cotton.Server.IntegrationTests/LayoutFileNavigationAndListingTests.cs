@@ -90,6 +90,36 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task GetChildFolderStats_ReturnsRecursiveTotalsAndRequiresAuthentication()
+        {
+            string token = await LoginAsync();
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            NodeDto root = (await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver"))!;
+            NodeDto parent = await CreateNodeAsync(root.Id, "batch-statistics");
+            NodeDto child = await CreateNodeAsync(parent.Id, "child");
+            NodeDto nested = await CreateNodeAsync(child.Id, "nested");
+            NodeDto empty = await CreateNodeAsync(parent.Id, "empty");
+            await UploadTextFileAsync(parent.Id, "direct.txt", "excluded");
+            await UploadTextFileAsync(child.Id, "first.txt", "hello");
+            await UploadTextFileAsync(nested.Id, "second.txt", "world");
+
+            string path = $"/api/v1/layouts/nodes/{parent.Id}/children/stats";
+            Dictionary<Guid, FolderStatsDto>? totals = await _client.GetFromJsonAsync<Dictionary<Guid, FolderStatsDto>>(path);
+            Assert.That(totals, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(totals!.Keys, Is.EquivalentTo(new[] { child.Id, empty.Id }));
+                Assert.That(totals[child.Id].SizeBytes, Is.EqualTo(10));
+                Assert.That(totals[child.Id].Files, Is.EqualTo(2));
+                Assert.That(totals[child.Id].Folders, Is.EqualTo(1));
+                Assert.That(totals[empty.Id].SizeBytes, Is.Zero);
+            });
+            _client.DefaultRequestHeaders.Authorization = null;
+            using HttpResponseMessage unauthenticated = await _client.GetAsync(path);
+            Assert.That(unauthenticated.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.Unauthorized));
+        }
+
+        [Test]
         public async Task GetChildren_PaginatesFilesInNameOrderAndPreservesTotalCount()
         {
             string token = await LoginAsync();

@@ -9,7 +9,7 @@ import { queryKeys } from "./queryKeys";
 import { queryClient } from "./queryClient";
 import { useAuthStore } from "../../store/authStore";
 
-export const FOLDER_SIZE_STALE_TIME = 60_000;
+export const FOLDER_SIZE_STALE_TIME = 10 * 60_000;
 
 export const folderInfoOptions = (
   nodeId: string,
