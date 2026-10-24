@@ -4,6 +4,8 @@ import { queryKeys } from "../../../shared/api/queries/queryKeys";
 import type { PaginationProps } from "../../../shared/types/FileListViewTypes";
 import { useFolderEncryptionPresence } from "./useFolderEncryptionPresence";
 import { useFolderListControls } from "./useFolderListControls";
+import { fetchAllRawNodeChildren } from "@shared/api/nodeChildren";
+import { FOLDER_PAGE_SIZE } from "@shared/api/queries/folderPageSize";
 
 export const LIST_PAGE_SIZE = 100;
 
@@ -38,6 +40,17 @@ export function useFolderListPage({
   const controls = useFolderListControls(nodeId, namesEnabled);
   const { page, listing } = controls;
   const defaultListing = Object.keys(listing).length === 0;
+  const needsCalculatedSizes =
+    listing.sortBy === "SizeBytes" || listing.filterBy === "SizeBytes";
+  const complete = useQuery({
+    queryKey: queryKeys.nodeChildren.complete(queryNodeId, queryUserId),
+    queryFn: ({ signal }) =>
+      fetchAllRawNodeChildren(queryNodeId, {
+        signal,
+        pageSize: FOLDER_PAGE_SIZE,
+      }),
+    enabled: enabled && needsCalculatedSizes,
+  });
 
   const listPage = useQuery({
     placeholderData: (previous, query) =>
@@ -56,15 +69,22 @@ export function useFolderListPage({
         pageSize: LIST_PAGE_SIZE,
         ...(defaultListing ? {} : { listing }),
       }),
-    enabled: enabled && (page > 0 || !defaultListing),
+    enabled: enabled && !needsCalculatedSizes && (page > 0 || !defaultListing),
   });
 
-  const activePage = page === 0 && defaultListing ? overview : listPage;
+  const activePage = needsCalculatedSizes
+    ? complete
+    : page === 0 && defaultListing
+      ? overview
+      : listPage;
   return {
     content: activePage.data?.content,
     isError: activePage.isError,
     isPending: activePage.isPending,
-    pagination: getPagination(controls, activePage, overview),
+    pagination: {
+      ...getPagination(controls, activePage, overview),
+      mode: needsCalculatedSizes ? ("client" as const) : ("server" as const),
+    },
   };
 }
 

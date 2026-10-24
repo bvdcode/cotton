@@ -27,6 +27,7 @@ import {
 import { buildPreviewUrl } from "@shared/api/previewUrl";
 import { createActionsColumn } from "./fileListActionColumn";
 import type { ColumnOptions, FileListRow } from "./fileListColumnTypes";
+import { createSizeComparator } from "./sizeComparator";
 
 export { createActionsColumn } from "./fileListActionColumn";
 export type { FileListRow } from "./fileListColumnTypes";
@@ -230,12 +231,13 @@ export const createNameColumn = (
 });
 
 export const createSizeColumn = (
-  options: Pick<ColumnOptions, "labels">,
+  options: Pick<ColumnOptions, "labels" | "folderIds">,
 ): GridColDef<FileListRow> => ({
   field: "sizeBytes",
   type: "number",
   headerName: options.labels.size,
-  width: 70,
+  width: 130,
+  getSortComparator: createSizeComparator(options.folderIds ?? []),
   renderCell: (params) => {
     if (params.row.sizeBytes == null) {
       return (

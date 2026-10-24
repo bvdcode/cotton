@@ -99,11 +99,11 @@ it.each([
   { policy: true, encrypted: 0 },
   { policy: false, encrypted: 1 },
 ])(
-  "disables name operations while keeping size queries: %j",
+  "disables name operations and loads the complete listing for size sorting: %j",
   async ({ policy, encrypted }) => {
     const get = vi
       .spyOn(nodesApi, "getChildren")
-      .mockResolvedValue(response(encrypted));
+      .mockResolvedValue({ ...response(encrypted), totalCount: 100 });
     const { result } = renderHook(
       () =>
         useFolderListing(
@@ -130,9 +130,10 @@ it.each([
     await waitFor(() =>
       expect(get).toHaveBeenLastCalledWith("folder-1", {
         page: 1,
-        pageSize: 100,
-        listing: { sortBy: "SizeBytes", descending: true },
+        pageSize: 25_000,
+        signal: expect.any(AbortSignal),
       }),
     );
+    expect(result.current.pagination?.mode).toBe("client");
   },
 );

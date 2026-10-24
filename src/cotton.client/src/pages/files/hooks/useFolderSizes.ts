@@ -16,14 +16,20 @@ import { useAuthStore } from "@shared/store/authStore";
 import { toast } from "@shared/ui/notifications";
 import { reportClientError } from "@shared/utils/clientDiagnostics";
 
+interface FolderListingScope {
+  nodeType: string;
+  depth: number;
+}
+
 const getFolderPage = async (
   client: QueryClient,
   parentId: string,
   userId: string,
   page: number,
   signal: AbortSignal,
+  scope?: FolderListingScope,
 ): Promise<NodeResponse> => {
-  if (page === 1) {
+  if (page === 1 && !scope) {
     const overview = client.getQueryState<NodeResponse>(
       queryKeys.nodeChildren.overview(parentId, userId, FOLDER_PAGE_SIZE),
     );
@@ -37,6 +43,7 @@ const getFolderPage = async (
     }
   }
   return nodesApi.getChildren(parentId, {
+    ...scope,
     page,
     pageSize: FOLDER_PAGE_SIZE,
     signal,
@@ -49,6 +56,7 @@ export const calculateFolderSizes = async (
   userId: string,
   signal: AbortSignal,
   onProgress: (sizeBytes: number) => void = () => {},
+  scope?: FolderListingScope,
 ): Promise<number> => {
   let page = 1;
   let sizeBytes = 0;
@@ -61,6 +69,7 @@ export const calculateFolderSizes = async (
       userId,
       page,
       signal,
+      scope,
     );
     for (const folder of content.nodes) {
       signal.throwIfAborted();
@@ -86,18 +95,31 @@ export const calculateFolderSizes = async (
   }
 };
 
-export const useFolderSizes = (nodeId: string | null, enabled = true) => {
+export const useFolderSizes = (
+  nodeId: string | null,
+  enabled = true,
+  scope?: FolderListingScope,
+) => {
   const { t } = useTranslation("files");
   const client = useQueryClient();
   const userId = useAuthStore((state) => state.user?.id ?? "");
   const [progress, setProgress] = useState({ nodeId, userId, sizeBytes: 0 });
   const calculation = useQuery({
-    queryKey: queryKeys.nodeChildren.folderSizes(nodeId ?? "", userId),
+    queryKey: scope
+      ? [...queryKeys.nodeChildren.folderSizes(nodeId ?? "", userId), scope]
+      : queryKeys.nodeChildren.folderSizes(nodeId ?? "", userId),
     queryFn: ({ signal }) => {
       const onProgress = (sizeBytes: number) =>
         setProgress({ nodeId, userId, sizeBytes });
       onProgress(0);
-      return calculateFolderSizes(client, nodeId!, userId, signal, onProgress);
+      return calculateFolderSizes(
+        client,
+        nodeId!,
+        userId,
+        signal,
+        onProgress,
+        scope,
+      );
     },
     enabled: enabled && Boolean(nodeId && userId),
     staleTime: FOLDER_SIZE_STALE_TIME,

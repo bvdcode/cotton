@@ -9,6 +9,7 @@ import { layoutsApi, type NodeDto } from "../layoutsApi";
 import { nodesApi, type NodeResponse } from "../nodesApi";
 import { fetchAllRawNodeChildren } from "../nodeChildren";
 import { queryKeys } from "./queryKeys";
+import { FOLDER_PAGE_SIZE } from "./folderPageSize";
 
 interface TrashNodeMeta {
   node: NodeDto;
@@ -74,18 +75,24 @@ export const useTrashChildrenQuery = (options: {
             pageSize,
             depth,
           }),
-    queryFn: () => {
+    queryFn: ({ signal }) => {
       if (!nodeId) {
         throw new Error("Trash children query requires a node id");
       }
       if (pageSize === undefined) {
-        return fetchAllRawNodeChildren(nodeId, { nodeType: "trash", depth });
+        return fetchAllRawNodeChildren(nodeId, {
+          nodeType: "trash",
+          depth,
+          signal,
+          pageSize: FOLDER_PAGE_SIZE,
+        });
       }
       return nodesApi.getChildren(nodeId, {
         nodeType: "trash",
         page,
         pageSize,
         depth,
+        signal,
       });
     },
     enabled: enabled && !!nodeId,

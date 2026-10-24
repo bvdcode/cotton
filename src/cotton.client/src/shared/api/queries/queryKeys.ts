@@ -36,6 +36,8 @@ export const queryKeys = {
       ] as const,
     tiles: (nodeId: string, userId: string) =>
       [...queryKeys.nodeChildren.all(nodeId), userId, "tiles"] as const,
+    complete: (nodeId: string, userId: string) =>
+      [...queryKeys.nodeChildren.all(nodeId), userId, "complete"] as const,
     folderInfo: (nodeId: string, userId: string) =>
       [...queryKeys.nodeChildren.all(nodeId), userId, "folderInfo"] as const,
     folderSizes: (nodeId: string, userId: string) =>

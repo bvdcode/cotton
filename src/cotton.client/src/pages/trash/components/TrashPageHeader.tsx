@@ -8,8 +8,11 @@ import type { FileBrowserViewMode } from "@shared/utils/viewMode";
 import type { useTrashBulkActions, useTrashRestoreActions } from "../hooks";
 import { calculateFolderStats } from "../../files/utils/nodeUtils";
 import { PageHeader } from "../../files/components";
+import { useFolderSizes } from "../../files/hooks/useFolderSizes";
 
 interface TrashPageHeaderProps {
+  nodeId: string | null;
+  isRoot: boolean;
   actionsLoading: boolean;
   breadcrumbs: React.ComponentProps<typeof PageHeader>["breadcrumbs"];
   bulkActions: ReturnType<typeof useTrashBulkActions>;
@@ -26,6 +29,8 @@ interface TrashPageHeaderProps {
 }
 
 export const TrashPageHeader: React.FC<TrashPageHeaderProps> = ({
+  nodeId,
+  isRoot,
   actionsLoading,
   breadcrumbs,
   bulkActions,
@@ -47,6 +52,10 @@ export const TrashPageHeader: React.FC<TrashPageHeaderProps> = ({
     () => calculateFolderStats(content?.nodes, content?.files),
     [content?.files, content?.nodes],
   );
+  const folderSizes = useFolderSizes(nodeId, !loading && stats.folders > 0, {
+    nodeType: "trash",
+    depth: isRoot ? 1 : 0,
+  });
   const customActionItems = useMemo(() => {
     const actionsDisabled = actionsLoading || restoring || deletingTrash;
 
@@ -110,7 +119,8 @@ export const TrashPageHeader: React.FC<TrashPageHeaderProps> = ({
       loading={loading}
       breadcrumbs={breadcrumbs}
       onNavigateBreadcrumb={onNavigateBreadcrumb}
-      stats={stats}
+      stats={{ ...stats, sizeBytes: stats.sizeBytes + folderSizes.sizeBytes }}
+      isSizeCalculating={folderSizes.isCalculating}
       viewMode={viewMode}
       canGoUp={breadcrumbs.length > 1}
       onGoUp={onGoUp}
