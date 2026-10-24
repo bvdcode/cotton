@@ -2,7 +2,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { nodesApi, type NodeResponse } from "../../../shared/api/nodesApi";
 import { queryKeys } from "../../../shared/api/queries/queryKeys";
 import type { PaginationProps } from "../../../shared/types/FileListViewTypes";
-import { useFolderEncryptionPresence } from "./useFolderEncryptionPresence";
+import { useFolderEncryptedNames } from "./useFolderEncryptedNames";
 import { useFolderListControls } from "./useFolderListControls";
 import { fetchAllRawNodeChildren } from "@shared/api/nodeChildren";
 import { FOLDER_PAGE_SIZE } from "@shared/api/queries/folderPageSize";
@@ -28,9 +28,8 @@ export function useFolderListPage({
 }: FolderListPageOptions) {
   const queryNodeId = nodeId ?? "";
   const queryUserId = userId ?? "";
-  const encryptedNames = useFolderEncryptionPresence({
+  const encryptedNames = useFolderEncryptedNames({
     nodeId,
-    match: "encrypted-names",
     enabled: enabled && !folderPolicyEnabled && overview.data !== undefined,
     firstPage: overview.data
       ? { response: overview.data, pageSize }
