@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <None Update="Fixtures\Office\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\Heic\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -12,7 +12,7 @@ namespace Cotton.Previews
     /// </summary>
     /// <remarks>
     /// SVG previews encode through SkiaSharp (lossy) and do not use this type; every
-    /// other generator, including HEIC (decoded via libheif into an ImageSharp image),
+    /// other generator, including HEIC (decoded into an ImageSharp image),
     /// routes here.
     /// </remarks>
     public static class PreviewImageEncoder
