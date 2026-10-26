@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using SixLabors.ImageSharp;
@@ -8,35 +8,32 @@ using System.Text;
 
 namespace Cotton.Previews.Tests
 {
-    public class StlThumbPreviewGeneratorTests
+    public class MeshPreviewGeneratorTests
     {
         [Test]
         public void MeshGenerators_ReportCurrentPreviewVersion()
         {
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(new StlThumbPreviewGenerator().Version, Is.EqualTo(9));
-                Assert.That(StlThumbPreviewGenerator.CreateObjGenerator().Version, Is.EqualTo(9));
-                Assert.That(StlThumbPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(9));
+                Assert.That(new MeshPreviewGenerator().Version, Is.EqualTo(10));
+                Assert.That(MeshPreviewGenerator.CreateObjGenerator().Version, Is.EqualTo(10));
+                Assert.That(MeshPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(10));
             }
         }
 
         [Test]
         public async Task GeneratePreviewWebPAsync_StlInvalidContent_Throws()
         {
-            StlThumbPreviewGenerator generator = new();
+            MeshPreviewGenerator generator = new();
             using MemoryStream stream = new MemoryStream(Array.Empty<byte>());
 
-            InvalidOperationException? exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-                await generator.GeneratePreviewWebPAsync(stream, size: 128));
-
-            Assert.That(exception?.Message, Does.Contain("Failed to render .stl preview with f3d"));
+            await Assert.ThrowsAsync<InvalidDataException>(() => generator.GeneratePreviewWebPAsync(stream, size: 128));
         }
 
         [Test]
         public async Task GeneratePreviewWebPAsync_StlValidModel_RendersWebP()
         {
-            StlThumbPreviewGenerator generator = new();
+            MeshPreviewGenerator generator = new();
             using MemoryStream stream = new MemoryStream(CreateValidAsciiStlBytes());
 
             byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 128);
@@ -53,7 +50,7 @@ namespace Cotton.Previews.Tests
         [Test]
         public async Task GeneratePreviewWebPAsync_ThreeMfWithEmbeddedThumbnail_UsesEmbeddedImage()
         {
-            StlThumbPreviewGenerator generator = StlThumbPreviewGenerator.CreateThreeMfGenerator();
+            MeshPreviewGenerator generator = MeshPreviewGenerator.CreateThreeMfGenerator();
             byte[] threeMf = CreateThreeMfWithThumbnailBytes(width: 1200, height: 600);
             using MemoryStream stream = new MemoryStream(threeMf);
 
@@ -71,17 +68,119 @@ namespace Cotton.Previews.Tests
         [Test]
         public async Task GeneratePreviewWebPAsync_ThreeMfWithoutThumbnailAndInvalidModel_Throws()
         {
-            string[] existingModels = Directory.GetFiles(Path.GetTempPath(), "cotton-model-*.3mf");
-            StlThumbPreviewGenerator generator = StlThumbPreviewGenerator.CreateThreeMfGenerator();
-            byte[] threeMf = CreateThreeMfWithoutThumbnailWithInvalidModelBytes();
+            MeshPreviewGenerator generator = MeshPreviewGenerator.CreateThreeMfGenerator();
+            byte[] threeMf = CreateThreeMfWithoutThumbnailBytes("not-a-valid-3mf-model");
             using MemoryStream stream = new MemoryStream(threeMf);
 
-            InvalidOperationException? exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-                await generator.GeneratePreviewWebPAsync(stream, size: 128));
-
-            Assert.That(exception?.Message, Does.Contain("Failed to render .3mf preview with f3d"));
-            Assert.That(Directory.GetFiles(Path.GetTempPath(), "cotton-model-*.3mf").Except(existingModels), Is.Empty);
+            await Assert.ThrowsAsync<InvalidDataException>(() => generator.GeneratePreviewWebPAsync(stream, size: 128));
         }
+
+        [TestCase("stl")]
+        [TestCase("obj")]
+        [TestCase("3mf")]
+        public async Task GeneratePreviewWebPAsync_NonSeekableModel_RendersGeometryAndLeavesSourceOpen(string format)
+        {
+            IPreviewGenerator generator;
+            byte[] model;
+            switch (format)
+            {
+                case "stl":
+                    generator = new MeshPreviewGenerator();
+                    model = CreateValidAsciiStlBytes();
+                    break;
+                case "obj":
+                    generator = MeshPreviewGenerator.CreateObjGenerator();
+                    model = Encoding.ASCII.GetBytes("v 0 0 0\nv 1 0 0\nv 0 1 0\nv 0 0 1\nf 1 3 2\nf 1 2 4\nf 2 3 4\nf 3 1 4\n");
+                    break;
+                case "3mf":
+                    generator = MeshPreviewGenerator.CreateThreeMfGenerator();
+                    model = CreateThreeMfWithoutThumbnailBytes(ValidThreeMfModel);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(format));
+            }
+
+            using MemoryStream compressed = new();
+            await using (GZipStream encoder = new(compressed, CompressionMode.Compress, leaveOpen: true))
+            {
+                await encoder.WriteAsync(model);
+            }
+            compressed.Position = 0;
+            await using GZipStream source = new(compressed, CompressionMode.Decompress);
+
+            byte[] preview = await generator.GeneratePreviewWebPAsync(source, 128);
+
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+            int visiblePixels = 0;
+            int accentPixels = 0;
+            for (int y = 0; y < image.Height; y++)
+            {
+                for (int x = 0; x < image.Width; x++)
+                {
+                    Rgba32 pixel = image[x, y];
+                    if (pixel.A > 128)
+                    {
+                        visiblePixels++;
+                        if (pixel.G > pixel.R && pixel.R > pixel.B)
+                        {
+                            accentPixels++;
+                        }
+                    }
+                }
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(image.Size, Is.EqualTo(new Size(128, 128)));
+                Assert.That(image[0, 0].A, Is.Zero);
+                Assert.That(visiblePixels, Is.GreaterThan(1000));
+                Assert.That(accentPixels, Is.GreaterThan(visiblePixels / 2));
+                Assert.That(source.CanRead, Is.True);
+            });
+        }
+
+        [Test]
+        public async Task GeneratePreviewWebPAsync_SeekableModel_RewindsInput()
+        {
+            using MemoryStream source = new(CreateValidAsciiStlBytes());
+            source.Position = source.Length;
+
+            byte[] preview = await new MeshPreviewGenerator().GeneratePreviewWebPAsync(source, 128);
+
+            AssertWebpSignature(preview);
+            Assert.That(source.CanRead, Is.True);
+        }
+
+        [Test]
+        public async Task GeneratePreviewWebPAsync_ObjInvalidContent_Throws()
+        {
+            using MemoryStream source = new(Encoding.ASCII.GetBytes("not an OBJ model"));
+
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                MeshPreviewGenerator.CreateObjGenerator().GeneratePreviewWebPAsync(source, 128));
+        }
+
+        private const string ValidThreeMfModel = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
+              <resources>
+                <object id="1" type="model"><mesh>
+                  <vertices>
+                    <vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/>
+                    <vertex x="0" y="1" z="0"/><vertex x="0" y="0" z="1"/>
+                  </vertices>
+                  <triangles>
+                    <triangle v1="0" v2="2" v3="1"/><triangle v1="0" v2="1" v3="3"/>
+                    <triangle v1="1" v2="2" v3="3"/><triangle v1="2" v2="0" v3="3"/>
+                  </triangles>
+                </mesh></object>
+                <object id="2" type="model"><components>
+                  <component objectid="1" transform="1 0 0 0 1 0 0 0 1 3 0 0"/>
+                </components></object>
+              </resources>
+              <build><item objectid="2"/></build>
+            </model>
+            """;
 
         private static byte[] CreateValidAsciiStlBytes()
         {
@@ -168,7 +267,7 @@ namespace Cotton.Previews.Tests
             return output.ToArray();
         }
 
-        private static byte[] CreateThreeMfWithoutThumbnailWithInvalidModelBytes()
+        private static byte[] CreateThreeMfWithoutThumbnailBytes(string modelContent)
         {
             using MemoryStream output = new MemoryStream();
             using (ZipArchive archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
@@ -194,7 +293,7 @@ namespace Cotton.Previews.Tests
                 </Relationships>
                 """);
 
-                WriteTextEntry(archive, "3D/3dmodel.model", "not-a-valid-3mf-model");
+                WriteTextEntry(archive, "3D/3dmodel.model", modelContent);
             }
 
             return output.ToArray();

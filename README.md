@@ -36,7 +36,7 @@ A storage server with desktop/mobile clients, content-addressed files, streaming
 
 Cotton Cloud is a self-hosted file cloud designed to stay fast, storage-efficient, and predictable as your dataset grows. It is built around its own **content-addressed storage engine**, **streaming AES-GCM encryption**, and a git-like model that separates **content** ("what" a file is) from **layout** ("where" it appears) — which keeps navigation, restore, sharing, and background maintenance practical instead of fragile.
 
-The server is one cohesive **ASP.NET Core + EF Core** runtime on **Kestrel**: web engine, storage pipeline, crypto core, compression, and most preview/image processing run in managed .NET. External process tooling is deliberately narrow — **FFmpeg/ffprobe** for audio/video preview frames, and **f3d/Xvfb** for 3D model thumbnails. The frontend is a **React/TypeScript/Vite** SPA.
+The server is one cohesive **ASP.NET Core + EF Core** runtime on **Kestrel**: web engine, storage pipeline, crypto core, compression, and most preview/image processing run in managed .NET. **Render.NET.Mesh** renders STL, OBJ, and 3MF thumbnails on the CPU without an external renderer or display server. **FFmpeg/ffprobe** provides audio/video preview frames. The frontend is a **React/TypeScript/Vite** SPA.
 
 Cotton is an actively developing, beta-stage open-source project. The core is deliberate and cohesive, but like any storage system it still needs broader real-world mileage. Treat it as a normal maturity curve.
 

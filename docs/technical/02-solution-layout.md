@@ -44,7 +44,7 @@ npm run lint
 npm run i18n:check
 ```
 
-Some preview tests require external tools such as FFmpeg or f3d. Missing optional executables are environment failures, not evidence that application behavior is broken; CI and release gates must state which external tools they provide.
+Audio/video preview tests require FFmpeg and ffprobe. 3D model preview tests use managed Render.NET.Mesh rendering and require no external renderer or display server.
 
 ## Build and packaging boundaries
 
