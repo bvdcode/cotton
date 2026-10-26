@@ -3,7 +3,7 @@
 
 using System.Globalization;
 using System.Text;
-using EasyExtensions.Fonts.Resources;
+using EasyExtensions.Drawing.Helpers;
 using ExcelDataReader;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
@@ -26,7 +26,7 @@ namespace Cotton.Previews
         private const int ColumnWidth = 96;
         private const int LeftMargin = 48;
         private const int TopMargin = 60;
-        private static readonly FontFamily FontFamily = LoadFont();
+        private static readonly FontFamily FontFamily = FontHelpers.GetAnyFont().Family;
 
         static SpreadsheetPreviewGenerator()
         {
@@ -120,13 +120,6 @@ namespace Cotton.Previews
                 text = text[..^1];
             }
             return text;
-        }
-
-        private static FontFamily LoadFont()
-        {
-            FontCollection collection = new();
-            using MemoryStream font = new(StaticFonts.GetFontBytes(StaticFontName.Arial), writable: false);
-            return collection.Add(font);
         }
     }
 }

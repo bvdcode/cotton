@@ -18,6 +18,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Cotton.ContentTypes\Cotton.ContentTypes.csproj" />
 		<PackageReference Include="Docnet.Core" Version="2.6.0" />
+		<PackageReference Include="EasyExtensions.Drawing" Version="3.0.92" />
 		<PackageReference Include="EasyExtensions.Fonts" Version="3.0.92" />
 		<PackageReference Include="Heic.NET" Version="0.1.2" />
 		<PackageReference Include="MetadataExtractor" Version="2.9.3" />

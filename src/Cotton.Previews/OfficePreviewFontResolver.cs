@@ -8,13 +8,13 @@ namespace Cotton.Previews
 {
     internal class OfficePreviewFontResolver : IFontResolver
     {
-        private static readonly MemoryFontProgramSource Arial = new("Arial", StaticFonts.GetFontBytes(StaticFontName.Arial));
+        private static readonly MemoryFontProgramSource Tuffy = new("Tuffy", StaticFonts.GetFontBytes(StaticFontName.Tuffy));
 
         public FontFaceResolution Resolve(FontRequest request)
         {
-            bool substituted = !request.FamilyName.Equals("Arial", StringComparison.OrdinalIgnoreCase)
+            bool substituted = !request.FamilyName.Equals("Tuffy", StringComparison.OrdinalIgnoreCase)
                 || request.Bold || request.Italic;
-            return new FontFaceResolution(request.FamilyName, "Arial", new FontStyleKey(), Arial, substituted);
+            return new FontFaceResolution(request.FamilyName, "Tuffy", new FontStyleKey(), Tuffy, substituted);
         }
     }
 }
