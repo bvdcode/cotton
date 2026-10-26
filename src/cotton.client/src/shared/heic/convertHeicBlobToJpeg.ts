@@ -1,10 +1,22 @@
-import { HeicDecoderClient } from "./HeicDecoderClient";
+import { HeicDecoder, type HeicImage } from "heic-net";
+import { reportClientError } from "../utils/clientDiagnostics";
 
-const decoder = new HeicDecoderClient();
+const decoder = new HeicDecoder({
+  assetsUrl: new URL(
+    `${import.meta.env.BASE_URL}heic/`,
+    window.location.origin,
+  ),
+});
 const JPEG_QUALITY = 0.92;
 
 export const convertHeicBlobToJpeg = async (blob: Blob): Promise<Blob> => {
-  const image = await decoder.decode(blob);
+  let image: HeicImage;
+  try {
+    image = await decoder.decode(blob);
+  } catch (error) {
+    reportClientError("HEIC image decoding failed.", error);
+    throw error;
+  }
   const canvas = document.createElement("canvas");
   canvas.width = image.width;
   canvas.height = image.height;
@@ -12,8 +24,11 @@ export const convertHeicBlobToJpeg = async (blob: Blob): Promise<Blob> => {
   if (!context) {
     throw new Error("The browser could not create an image canvas.");
   }
-  const pixels = new Uint8ClampedArray(image.pixels);
-  context.putImageData(new ImageData(pixels, image.width, image.height), 0, 0);
+  context.putImageData(
+    new ImageData(image.pixels, image.width, image.height),
+    0,
+    0,
+  );
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (converted) => {

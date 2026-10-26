@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HeicDecoderClient } from "./HeicDecoderClient";
+import { HeicDecoder } from "heic-net";
 import { convertHeicBlobToJpeg } from "./convertHeicBlobToJpeg";
 
 describe("convertHeicBlobToJpeg", () => {
@@ -10,9 +10,9 @@ describe("convertHeicBlobToJpeg", () => {
 
   it("encodes decoded RGBA pixels at the existing JPEG quality and releases the canvas", async () => {
     const source = new Blob(["HEIC"]);
-    const pixels = new Uint8Array([10, 20, 30, 255]).buffer;
+    const pixels = new Uint8ClampedArray([10, 20, 30, 255]);
     const image = { width: 1, height: 1, pixels };
-    vi.spyOn(HeicDecoderClient.prototype, "decode").mockResolvedValue(image);
+    vi.spyOn(HeicDecoder.prototype, "decode").mockResolvedValue(image);
     const converted = new Blob(["JPEG"], { type: "image/jpeg" });
     const canvas = document.createElement("canvas");
     const putImageData = vi.fn();
@@ -58,7 +58,7 @@ describe("convertHeicBlobToJpeg", () => {
   });
 
   it("propagates an invalid HEIC error before creating a canvas", async () => {
-    vi.spyOn(HeicDecoderClient.prototype, "decode").mockRejectedValue(
+    vi.spyOn(HeicDecoder.prototype, "decode").mockRejectedValue(
       new Error("Invalid HEIC"),
     );
     const createCanvas = vi.spyOn(document, "createElement");

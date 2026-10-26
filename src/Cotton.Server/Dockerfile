@@ -25,10 +25,9 @@ EXPOSE 8080
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS with-node
-RUN dotnet workload install wasm-tools --skip-manifest-update
 RUN set -eux \
 	&& apt-get update \
-	&& apt-get install -y --no-install-recommends curl ca-certificates gnupg python3 \
+	&& apt-get install -y --no-install-recommends curl ca-certificates gnupg \
 	&& curl -fsSL https://deb.nodesource.com/setup_26.x | bash - \
 	&& apt-get install -y --no-install-recommends nodejs \
 	&& apt-get purge -y --auto-remove gnupg \

@@ -6,7 +6,7 @@
   "scripts": {
     "predev": "npm run build:heic",
     "dev": "vite",
-    "build:heic": "node scripts/build-heic.mjs",
+    "build:heic": "heic-net-assets public/heic",
     "build": "npm run build:heic && npm run lint && tsc -b && vite build",
     "lint": "eslint . && node scripts/check-viewport-units.mjs",
     "preview": "vite preview",
@@ -35,6 +35,7 @@
     "axios": "^1.20.0",
     "docx-preview": "0.4.1",
     "hash-wasm": "^4.12.0",
+    "heic-net": "0.1.7",
     "hls.js": "^1.7.3",
     "i18next": "^26.5.3",
     "i18next-browser-languagedetector": "^8.2.1",
