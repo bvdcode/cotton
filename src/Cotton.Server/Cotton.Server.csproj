@@ -13,7 +13,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="EasyExtensions.Analyzers" Version="3.0.90">
+		<PackageReference Include="EasyExtensions.Analyzers" Version="3.0.92">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -26,8 +26,8 @@
 	<ItemGroup>
 		<PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
 		<Folder Include="wwwroot\" />
-		<PackageReference Include="EasyExtensions.Clients" Version="3.0.90" />
-		<PackageReference Include="EasyExtensions.Mediator" Version="3.0.90" />
+		<PackageReference Include="EasyExtensions.Clients" Version="3.0.92" />
+		<PackageReference Include="EasyExtensions.Mediator" Version="3.0.92" />
 		<PackageReference Include="Fido2" Version="4.3.1" />
 		<PackageReference Include="Microsoft.AspNetCore.SpaProxy">
 			<Version>10.0.13</Version>
@@ -57,11 +57,11 @@
 		<ProjectReference Include="..\Cotton.Database\Cotton.Database.csproj" />
 		<ProjectReference Include="..\Cotton.Autoconfig\Cotton.Autoconfig.csproj" />
 		<ProjectReference Include="..\Cotton.Validators\Cotton.Validators.csproj" />
-		<PackageReference Include="EasyExtensions" Version="3.0.90" />
-		<PackageReference Include="EasyExtensions.Quartz" Version="3.0.90" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="3.0.90" />
-		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="3.0.90" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="3.0.90" />
+		<PackageReference Include="EasyExtensions" Version="3.0.92" />
+		<PackageReference Include="EasyExtensions.Quartz" Version="3.0.92" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="3.0.92" />
+		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="3.0.92" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="3.0.92" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
 	</ItemGroup>
 
