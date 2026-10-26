@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { fileURLToPath, URL } from "node:url";
+import { readFileSync } from "node:fs";
 import {
   SHARE_TARGET_FILE_FIELD,
   SHARE_TARGET_PATH,
@@ -50,6 +51,19 @@ export default defineConfig(() => {
       format: "es" as const,
     },
     plugins: [
+      {
+        name: "spreadsheet-license",
+        generateBundle() {
+          this.emitFile({
+            type: "asset",
+            fileName: "Licenses/xlsx.txt",
+            source: readFileSync(
+              new URL("./LICENSE", import.meta.resolve("xlsx")),
+              "utf8",
+            ),
+          });
+        },
+      },
       react(),
       VitePWA({
         strategies: "injectManifest",
@@ -57,6 +71,14 @@ export default defineConfig(() => {
         filename: "sw.ts",
         registerType: "prompt",
         injectRegister: false,
+        integration: {
+          configureCustomSWViteBuild(config) {
+            config.build = {
+              ...config.build,
+              license: { fileName: "Licenses/service-worker.txt" },
+            };
+          },
+        },
         includeAssets: ["/favicon.ico", "/assets/icons/icon.svg"],
         injectManifest: {
           sourcemap: true,
