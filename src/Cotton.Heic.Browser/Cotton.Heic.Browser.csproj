@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WasmEnableHotReload>false</WasmEnableHotReload>
+    <RunAOTCompilation>true</RunAOTCompilation>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="EasyExtensions.Analyzers" Version="3.0.90" PrivateAssets="all" />
+    <PackageReference Include="Heic.NET" Version="0.1.4" GeneratePathProperty="true" />
+  </ItemGroup>
+  <Target Name="PublishDecoderLicenses" AfterTargets="Publish">
+    <ItemGroup>
+      <_RuntimeLicense Include="@(ResolvedRuntimePack -> '%(PackageDirectory)/LICENSE.TXT')" />
+      <_RuntimeLicense Include="@(ResolvedRuntimePack -> '%(PackageDirectory)/THIRD-PARTY-NOTICES.TXT')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_RuntimeLicense)" DestinationFolder="$(PublishDir)wwwroot/Licenses/dotnet" />
+    <Copy SourceFiles="$(PkgHeic_NET)/LICENSE" DestinationFiles="$(PublishDir)wwwroot/Licenses/Heic.NET.txt" />
+  </Target>
+</Project>
