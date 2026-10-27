@@ -15,7 +15,7 @@ namespace Cotton.Previews
         private static readonly PdfPreviewGenerator PdfGenerator = new(Color.White);
 
         public string Id => "office-" + inputKind.ToString().ToLowerInvariant();
-        public int Version => 0;
+        public int Version => 1;
         public int Priority => 0;
         public IEnumerable<string> SupportedContentTypes => [contentType];
 

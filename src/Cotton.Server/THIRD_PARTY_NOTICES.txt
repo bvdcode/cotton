@@ -1,4 +1,14 @@
-Third-party notices for camera RAW preview metadata
+Third-party notices
+
+Managed PDF previews and text extraction
+Render.NET.Pdf 0.3.7, Render.NET.Jpeg2000 0.3.7 and Render.NET 0.3.7
+Source: https://github.com/bvdcode/Render.NET
+License text: Licenses/Render.NET-LICENSE.txt
+Dependency and font notices: Licenses/Render.NET.Pdf-THIRD-PARTY-NOTICES.txt
+These notices cover PdfPig 0.1.16, PdfPig.Filters.Jbig2.PdfboxJbig2 0.1.16.2,
+StbImageSharp 2.30.16, and the bundled PDF substitution fonts.
+
+Camera RAW preview metadata
 
 MetadataExtractor 2.9.3
 Copyright 2002-2019 Drew Noakes and contributors

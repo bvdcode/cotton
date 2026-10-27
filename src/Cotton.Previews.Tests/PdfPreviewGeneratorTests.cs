@@ -3,6 +3,7 @@
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.IO.Compression;
 using System.Text;
 
 namespace Cotton.Previews.Tests
@@ -17,18 +18,103 @@ namespace Cotton.Previews.Tests
             _generator = new PdfPreviewGenerator();
         }
 
-        [Test]
-        public async Task GeneratePreviewWebPAsync_ValidSinglePagePdf_ProducesWebpWithinRequestedBounds()
+        [TestCase(200)]
+        [TestCase(2560)]
+        public async Task GeneratePreviewWebPAsync_ValidSinglePagePdf_RendersAtRequestedResolution(int size)
         {
             byte[] pdfBytes = CreateSinglePagePdfBytes("PDF preview test");
             using MemoryStream stream = new MemoryStream(pdfBytes);
 
-            byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
+            byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size);
 
             AssertWebpSignature(preview);
             using Image<Rgba32> image = Image.Load<Rgba32>(preview);
 
-            Assert.That(Math.Max(image.Width, image.Height), Is.LessThanOrEqualTo(200));
+            Assert.Multiple(() =>
+            {
+                Assert.That(Math.Max(image.Width, image.Height), Is.EqualTo(size));
+                Assert.That(image[0, 0].A, Is.Zero);
+                Assert.That(CountVisiblePixels(image), Is.GreaterThan(50));
+                Assert.That(stream.CanRead, Is.True);
+            });
+        }
+
+        [Test]
+        public async Task GeneratePreviewWebPAsync_ExplicitBackground_ProducesOpaquePage()
+        {
+            using MemoryStream stream = new(CreateSinglePagePdfBytes("Opaque PDF"));
+
+            byte[] preview = await new PdfPreviewGenerator(Color.White).GeneratePreviewWebPAsync(stream, 200);
+
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+            Assert.That(image[0, 0], Is.EqualTo(new Rgba32(255, 255, 255, 255)));
+        }
+
+        [Test]
+        public async Task GeneratePreviewWebPAsync_MultiplePages_RendersFirstPage()
+        {
+            string path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Fixtures", "Pdf", "graphics.pdf");
+            await using FileStream source = File.OpenRead(path);
+
+            byte[] preview = await _generator.GeneratePreviewWebPAsync(source, 200);
+
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+            Rgba32 red = image[20, 180];
+            Rgba32 blue = image[50, 150];
+            Assert.Multiple(() =>
+            {
+                Assert.That(red.R, Is.GreaterThan(220));
+                Assert.That(red.B, Is.LessThan(30));
+                Assert.That(blue.B, Is.GreaterThan(220));
+                Assert.That(blue.R, Is.LessThan(30));
+            });
+        }
+
+        [Test]
+        public async Task GeneratePreviewWebPAsync_NonSeekablePdf_RendersAndLeavesSourceOpen()
+        {
+            using MemoryStream compressed = new();
+            await using (GZipStream encoder = new(compressed, CompressionMode.Compress, leaveOpen: true))
+            {
+                await encoder.WriteAsync(CreateSinglePagePdfBytes("Streamed PDF"));
+            }
+            compressed.Position = 0;
+            await using GZipStream source = new(compressed, CompressionMode.Decompress);
+
+            byte[] preview = await _generator.GeneratePreviewWebPAsync(source, 200);
+
+            AssertWebpSignature(preview);
+            Assert.That(source.CanRead, Is.True);
+        }
+
+        [TestCase("compatibility.pdf")]
+        [TestCase("scan-codecs.pdf")]
+        [TestCase("scan-globals.pdf")]
+        public async Task GeneratePreviewWebPAsync_SupportedPdfFeatures_RenderVisibleContent(string fileName)
+        {
+            string path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Fixtures", "Pdf", fileName);
+            await using FileStream source = File.OpenRead(path);
+
+            byte[] preview = await _generator.GeneratePreviewWebPAsync(source, 200);
+
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+            Assert.Multiple(() =>
+            {
+                Assert.That(Math.Max(image.Width, image.Height), Is.LessThanOrEqualTo(200));
+                Assert.That(CountVisiblePixels(image), Is.GreaterThan(100));
+                Assert.That(source.CanRead, Is.True);
+            });
+        }
+
+        [Test]
+        public async Task GeneratePreviewWebPAsync_UnsupportedFeatures_ThrowsWithoutPartialPreview()
+        {
+            string path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Fixtures", "Pdf", "unsupported.pdf");
+            await using FileStream source = File.OpenRead(path);
+
+            await Assert.ThrowsAsync<NotSupportedException>(() => _generator.GeneratePreviewWebPAsync(source, 200));
+
+            Assert.That(source.CanRead, Is.True);
         }
 
         [Test]
@@ -106,6 +192,22 @@ namespace Cotton.Previews.Tests
             Assert.That(imageBytes.Length, Is.GreaterThanOrEqualTo(12));
             Assert.That(Encoding.ASCII.GetString(imageBytes, 0, 4), Is.EqualTo("RIFF"));
             Assert.That(Encoding.ASCII.GetString(imageBytes, 8, 4), Is.EqualTo("WEBP"));
+        }
+
+        private static int CountVisiblePixels(Image<Rgba32> image)
+        {
+            int count = 0;
+            for (int y = 0; y < image.Height; y++)
+            {
+                for (int x = 0; x < image.Width; x++)
+                {
+                    if (image[x, y].A > 128)
+                    {
+                        count++;
+                    }
+                }
+            }
+            return count;
         }
     }
 }

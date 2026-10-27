@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Docnet.Core;
-using Docnet.Core.Exceptions;
-using Docnet.Core.Models;
-using Docnet.Core.Readers;
 using Microsoft.Extensions.Logging;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.Core;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
+using UglyToad.PdfPig.Exceptions;
 
 namespace Cotton.TextExtraction
 {
@@ -27,17 +28,16 @@ namespace Cotton.TextExtraction
                     await source.CopyToAsync(file, cancellationToken);
                 }
 
-                using IDocReader document = DocLib.Instance.GetDocReader(path, new PageDimensions(1));
-                int pageCount = document.GetPageCount();
-                for (int pageIndex = 0; pageIndex < pageCount && !text.IsTruncated; pageIndex++)
+                using PdfDocument document = PdfDocument.Open(path);
+                for (int pageNumber = 1; pageNumber <= document.NumberOfPages && !text.IsTruncated; pageNumber++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    using IPageReader page = document.GetPageReader(pageIndex);
-                    text.AppendSeparated(page.GetText());
+                    Page page = document.GetPage(pageNumber);
+                    text.AppendSeparated(ContentOrderTextExtractor.GetText(page));
                     text.AppendLineBreak();
                 }
             }
-            catch (DocnetException ex)
+            catch (Exception ex) when (ex is PdfDocumentFormatException or PdfDocumentEncryptedException)
             {
                 logger.LogWarning(ex, "Unable to extract PDF text.");
                 throw new FileTextExtractionException("Unable to read PDF text.", ex);
