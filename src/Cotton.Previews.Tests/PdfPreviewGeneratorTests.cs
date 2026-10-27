@@ -5,6 +5,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System.IO.Compression;
 using System.Text;
+using static Cotton.Previews.Tests.PreviewImageAssertions;
 
 namespace Cotton.Previews.Tests
 {
@@ -194,20 +195,5 @@ namespace Cotton.Previews.Tests
             Assert.That(Encoding.ASCII.GetString(imageBytes, 8, 4), Is.EqualTo("WEBP"));
         }
 
-        private static int CountVisiblePixels(Image<Rgba32> image)
-        {
-            int count = 0;
-            for (int y = 0; y < image.Height; y++)
-            {
-                for (int x = 0; x < image.Width; x++)
-                {
-                    if (image[x, y].A > 128)
-                    {
-                        count++;
-                    }
-                }
-            }
-            return count;
-        }
     }
 }

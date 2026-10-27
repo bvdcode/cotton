@@ -10,6 +10,8 @@ Supported generator families include images, HEIC, camera RAW files, documents, 
 
 PDF previews render the first page with managed Render.NET.Pdf and encode it through ImageSharp. Word and PowerPoint previews use the same renderer after conversion to PDF. Unsupported page features fail preview generation rather than producing a partial page. PDF and Office generator versions are `1`. PDF text extraction uses PdfPig; neither path requires PDFium or Docnet.
 
+SVG and SVGZ previews use managed Render.NET.Svg. TGS posters use Render.NET.Tgs. Both encode WebP through ImageSharp, keep a transparent background and reject unsupported features instead of rendering partial content. Their generator versions are `2`. SVG input and expanded SVGZ are limited to 16 MiB; both renderers have a 20-second cancellation timeout. Neither path requires SkiaSharp, Skottie or HarfBuzzSharp.
+
 Camera RAW previews find embedded JPEG images in CR2, CR3, NEF, NRW, ARW, DNG, RAF, ORF, RW2, PEF, and SRW files. The small preview uses the smallest embedded image with enough pixels; the large preview uses the largest. The source file's orientation is applied before encoding both results as WebP. The RAW sensor data is not developed; files without a usable embedded JPEG cannot produce a preview. Source size, JPEG candidates, and decoded pixel count are bounded.
 
 Files named as HEIC or HEIF are checked for JPEG, PNG, GIF, BMP, WebP and TIFF signatures in memory. A matching signature uses the ordinary image generator; other inputs use the HEIF decoder.

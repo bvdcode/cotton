@@ -1,17 +1,22 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using SkiaSharp;
-using Svg.Skia;
+using Render.NET.Svg;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using System.IO.Compression;
+using PixelBuffer = Render.NET.PixelBuffer;
 
 namespace Cotton.Previews
 {
     public class SvgPreviewGenerator : IPreviewGenerator
     {
+        private const int RenderTimeoutSeconds = 20;
+        private const int MaxSupersampledSize = 2048;
+
         public string Id => "svg";
 
-        public int Version => 1;
+        public int Version => 2;
 
         public int Priority => 0;
 
@@ -26,76 +31,36 @@ namespace Cotton.Previews
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
-            using MemoryStream svgContent = await ReadSvgContentAsync(stream).ConfigureAwait(false);
-            using SKSvg svg = new SKSvg();
-            svg.Load(svgContent);
-
-            SKPicture? picture = svg.Picture ?? throw new InvalidOperationException("Unable to parse SVG image.");
-            SKRect bounds = picture.CullRect;
-            if (bounds.Width <= 0 || bounds.Height <= 0)
+            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(RenderTimeoutSeconds));
+            SvgDocument document = await ReadDocumentAsync(stream, timeout.Token).ConfigureAwait(false);
+            double scale = size / Math.Max(document.Width, document.Height);
+            PixelBuffer pixels = SvgRenderer.Render(document, new SvgRenderOptions
             {
-                throw new InvalidOperationException("SVG image has invalid dimensions.");
-            }
-
-            float scale = Math.Min(size / bounds.Width, size / bounds.Height);
-            int targetWidth = Math.Max(1, (int)Math.Round(bounds.Width * scale));
-            int targetHeight = Math.Max(1, (int)Math.Round(bounds.Height * scale));
-
-            using SKSurface surface = SKSurface.Create(new SKImageInfo(targetWidth, targetHeight, SKColorType.Rgba8888, SKAlphaType.Premul));
-            SKCanvas canvas = surface.Canvas;
-            canvas.Clear(SKColors.Transparent);
-            canvas.Scale(scale);
-            canvas.Translate(-bounds.Left, -bounds.Top);
-            canvas.DrawPicture(picture);
-            canvas.Flush();
-
-            using SKImage image = surface.Snapshot();
-            using SKData data = image.Encode(SKEncodedImageFormat.Webp, quality: 90);
-
-            return data.ToArray();
+                Width = Math.Max(1, (int)Math.Round(document.Width * scale)),
+                Height = Math.Max(1, (int)Math.Round(document.Height * scale)),
+                Supersampling = size <= MaxSupersampledSize ? 2 : 1,
+            }, timeout.Token);
+            using Image<Rgba32> image = Image.LoadPixelData<Rgba32>(pixels.Pixels.Span, pixels.Width, pixels.Height);
+            return await ImagePreviewGenerator.EncodeMaxResizedWebpAsync(image, size).ConfigureAwait(false);
         }
 
-        private static async Task<MemoryStream> ReadSvgContentAsync(Stream stream)
+        private static async Task<SvgDocument> ReadDocumentAsync(Stream stream, CancellationToken cancellationToken)
         {
             if (stream.CanSeek)
             {
                 stream.Position = 0;
             }
 
-            MemoryStream source = new MemoryStream();
-            await stream.CopyToAsync(source).ConfigureAwait(false);
-            source.Position = 0;
-
-            if (!LooksLikeGZip(source))
+            SvgReaderOptions options = new();
+            using MemoryStream source = new();
+            await PreviewStream.CopyBoundedAsync(stream, source, options.MaximumInputBytes, cancellationToken).ConfigureAwait(false);
+            if (source.Length >= 2 && source.GetBuffer()[0] == 0x1F && source.GetBuffer()[1] == 0x8B)
             {
-                return source;
+                using GZipStream gzip = new(source, CompressionMode.Decompress, leaveOpen: true);
+                return await SvgReader.ReadAsync(gzip, options, cancellationToken).ConfigureAwait(false);
             }
 
-            MemoryStream decompressed = new MemoryStream();
-            source.Position = 0;
-            using (GZipStream gzip = new GZipStream(source, CompressionMode.Decompress, leaveOpen: true))
-            {
-                await gzip.CopyToAsync(decompressed).ConfigureAwait(false);
-            }
-
-            await source.DisposeAsync().ConfigureAwait(false);
-            decompressed.Position = 0;
-            return decompressed;
-        }
-
-        private static bool LooksLikeGZip(MemoryStream stream)
-        {
-            if (stream.Length < 2)
-            {
-                return false;
-            }
-
-            long originalPosition = stream.Position;
-            stream.Position = 0;
-            int b1 = stream.ReadByte();
-            int b2 = stream.ReadByte();
-            stream.Position = originalPosition;
-            return b1 == 0x1F && b2 == 0x8B;
+            return await SvgReader.ReadAsync(source, options, cancellationToken).ConfigureAwait(false);
         }
     }
 }

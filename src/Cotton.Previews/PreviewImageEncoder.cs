@@ -10,11 +10,6 @@ namespace Cotton.Previews
     /// All ImageSharp-based preview generators must route through here so the
     /// lossy/lossless policy and quality settings live in one place.
     /// </summary>
-    /// <remarks>
-    /// SVG previews encode through SkiaSharp (lossy) and do not use this type; every
-    /// other generator, including HEIC (decoded into an ImageSharp image),
-    /// routes here.
-    /// </remarks>
     public static class PreviewImageEncoder
     {
         public const int SmallPreviewQuality = 75;
