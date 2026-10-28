@@ -7,32 +7,46 @@ import { queryKeys } from "./queryKeys";
 function createSizeStore(ids: readonly string[], userId: string) {
   const included = new Set(ids);
   let snapshot = new Map<string, number>();
-  const synchronize = (id: string) => {
-    const size = queryClient.getQueryData<FolderStatsDto>(
-      queryKeys.nodeChildren.folderInfo(id, userId),
-    )?.sizeBytes;
-    if (snapshot.get(id) === size) {
+  const synchronize = (changedIds: Iterable<string>) => {
+    let next: Map<string, number> | undefined;
+    for (const id of changedIds) {
+      const size = queryClient.getQueryData<FolderStatsDto>(
+        queryKeys.nodeChildren.folderInfo(id, userId),
+      )?.sizeBytes;
+      if (snapshot.get(id) === size) {
+        continue;
+      }
+      next ??= new Map(snapshot);
+      if (size === undefined) {
+        next.delete(id);
+      } else {
+        next.set(id, size);
+      }
+    }
+    if (!next) {
       return false;
     }
-    snapshot = new Map(snapshot);
-    if (size === undefined) {
-      snapshot.delete(id);
-    } else {
-      snapshot.set(id, size);
-    }
+    snapshot = next;
     return true;
   };
-  for (const id of included) {
-    const size = queryClient.getQueryData<FolderStatsDto>(
-      queryKeys.nodeChildren.folderInfo(id, userId),
-    )?.sizeBytes;
-    if (size !== undefined) {
-      snapshot.set(id, size);
-    }
-  }
+  synchronize(included);
   return {
     getSnapshot: () => snapshot,
     subscribe: (notify: () => void) => {
+      const pending = new Set<string>();
+      let active = true;
+      let scheduled = false;
+      const flush = () => {
+        scheduled = false;
+        if (!active) {
+          return;
+        }
+        const changed = synchronize(pending);
+        pending.clear();
+        if (changed) {
+          notify();
+        }
+      };
       const unsubscribe = queryClient.getQueryCache().subscribe(({ query }) => {
         const key = query.queryKey;
         const id = key[1];
@@ -41,16 +55,21 @@ function createSizeStore(ids: readonly string[], userId: string) {
           key[2] === userId &&
           key[3] === "folderInfo" &&
           typeof id === "string" &&
-          included.has(id) &&
-          synchronize(id)
+          included.has(id)
         ) {
-          notify();
+          pending.add(id);
+          if (!scheduled) {
+            scheduled = true;
+            queueMicrotask(flush);
+          }
         }
       });
-      for (const id of included) {
-        synchronize(id);
-      }
-      return unsubscribe;
+      synchronize(included);
+      return () => {
+        active = false;
+        pending.clear();
+        unsubscribe();
+      };
     },
   };
 }

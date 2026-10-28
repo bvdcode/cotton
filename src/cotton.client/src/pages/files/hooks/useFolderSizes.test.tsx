@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { nodesApi, type FolderStatsDto } from "@shared/api/nodesApi";
 import { queryClient } from "@shared/api/queries/queryClient";
 import { queryKeys } from "@shared/api/queries/queryKeys";
+import { useCachedFolderSizes } from "@shared/api/queries/useCachedFolderSizes";
 import {
   clearFolderInfoCache,
   FOLDER_SIZE_STALE_TIME,
@@ -29,6 +30,36 @@ afterEach(() => {
 });
 
 describe("batched folder sizes", () => {
+  it("publishes one complete snapshot for a batch without mutating the previous one", async () => {
+    const ids = Array.from({ length: 1_000 }, (_, index) => `folder-${index}`);
+    const folders = Object.fromEntries(
+      ids.map((id, index) => [id, stats(index)]),
+    );
+    vi.spyOn(nodesApi, "getChildFolderStats").mockResolvedValue(folders);
+    const observed = new Set<ReadonlyMap<string, number>>();
+    const { result } = renderHook(() => {
+      const sizes = useCachedFolderSizes(ids);
+      observed.add(sizes);
+      return sizes;
+    });
+    const previous = result.current;
+
+    await act(async () => {
+      await calculateFolderSizes(
+        queryClient,
+        "parent",
+        "user",
+        new AbortController().signal,
+      );
+    });
+
+    expect(result.current).toEqual(
+      new Map(ids.map((id, index) => [id, index])),
+    );
+    expect(observed.size).toBe(2);
+    expect(previous.size).toBe(0);
+  });
+
   it("fetches all sizes once without reading listings or individual folder stats", async () => {
     const children = vi.spyOn(nodesApi, "getChildren");
     const individual = vi.spyOn(nodesApi, "getFolderStats");
