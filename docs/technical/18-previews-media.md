@@ -6,9 +6,25 @@ Previews and media playback are derived views of stored file content. Failure to
 
 The recurring preview job selects eligible manifests that do not have a current preview result. It skips empty files and active uploads, opens the file through the normal storage pipeline, chooses a generator by content type, and stores the resulting WebP bytes as content-addressed data. A maintenance job clears previously stored preview data for the empty-content manifest using its indexed content hash.
 
-Supported generator families include images, HEIC, camera RAW files, documents, text, audio, video, and selected 3D formats. Generator availability depends on the runtime libraries and external binaries present in the deployment.
+Image, document, vector, sticker, and 3D preview generators use managed .NET libraries. Audio and video generators use FFmpeg/ffprobe. The official container includes the required media binaries; other deployments must provide them.
+
+| Source | Processing path |
+| --- | --- |
+| Raster images | ImageSharp decoding, resizing, and WebP encoding. |
+| HEIC/HEIF | Heic.NET decoding, then ImageSharp. |
+| Camera RAW | MetadataExtractor locates an embedded JPEG, then ImageSharp decodes it. |
+| PDF | Render.NET.Pdf renders the first page, then ImageSharp encodes it. |
+| Word (`.docx`) and PowerPoint (`.pptx`) | OoxPDF converts to PDF, then the PDF generator renders the first page or slide. |
+| Excel (`.xls`, `.xlsx`) | ExcelDataReader reads cells; ImageSharp draws a worksheet grid. |
+| SVG/SVGZ | Render.NET.Svg renders to pixels, then ImageSharp encodes them. |
+| Telegram TGS | Render.NET.Tgs renders a static poster, then ImageSharp encodes it. |
+| STL, OBJ, 3MF | Render.NET.Mesh renders geometry on the CPU; 3MF can use an embedded thumbnail. |
+| Plain text | ImageSharp draws text with bundled fonts. |
+| Audio and video | FFmpeg/ffprobe extracts artwork, frames, and media information. |
 
 PDF previews render the first page with managed Render.NET.Pdf and encode it through ImageSharp. Word and PowerPoint previews use the same renderer after conversion to PDF. Unsupported page features fail preview generation rather than producing a partial page. PDF and Office generator versions are `1`. PDF text extraction uses PdfPig; neither path requires PDFium or Docnet.
+
+Office thumbnails are derived summaries, not a full Office layout engine. Word and PowerPoint conversion uses the bundled Tuffy font. The current OoxPDF converter can omit text in standard PowerPoint placeholders. Spreadsheet thumbnails show up to six columns and fourteen rows from the first worksheet; they do not reproduce workbook formatting, charts, or pagination.
 
 SVG and SVGZ previews use managed Render.NET.Svg. TGS posters use Render.NET.Tgs. Both encode WebP through ImageSharp, keep a transparent background and reject unsupported features instead of rendering partial content. Their generator versions are `2`. SVG input and expanded SVGZ are limited to 16 MiB; both renderers have a 20-second cancellation timeout. Neither path requires SkiaSharp, Skottie or HarfBuzzSharp.
 
@@ -34,15 +50,15 @@ Temporary files used by generators that require filesystem paths are removed in 
 
 ## Content metadata
 
-Extracted content metadata is stored in `file_manifests.metadata` as a flat string dictionary. `metadataExtractorVersion` records the extraction version, currently `"1"`. The extraction job runs every 15 minutes and processes up to 500 eligible manifests whose version differs from the current version. Legacy processed flags and image dimensions do not prevent reprocessing. Successful reprocessing replaces the extracted `image.*` and `media.*` keys while retaining custom metadata. The extraction endpoint applies the same version check.
+Extracted content metadata is stored in `file_manifests.metadata` as a flat string dictionary. `metadataExtractorVersion` records the extraction version, currently `"2"`. The extraction job runs every 15 minutes and processes up to 500 eligible manifests whose version differs from the current version. Legacy processed flags and image dimensions do not prevent reprocessing. Reprocessing replaces the extractor-owned `contentMetadata.*`, `image.*`, and `media.*` keys while retaining custom metadata outside those namespaces. This also removes oversized fields from earlier extraction versions as files are processed. The extraction endpoint applies the same version check.
 
-Image extraction includes every directory and tag exposed by the metadata reader, including EXIF, GPS, XMP, IPTC, ICC and manufacturer tags. HEIC, HEIF, AVIF and supported camera RAW files use the same extraction pipeline. Keys include the directory name, its zero-based occurrence, tag name and numeric identifier, for example `image.Exif IFD0.0.tags.Make.271`. Repeated directories and array elements retain separate keys. GPS also includes decimal `image.GPS.0.latitude` and `image.GPS.0.longitude` values. XMP properties retain their paths and the XMP packet is retained separately.
+Image extraction retains a selected set of useful fields: dimensions, format, camera and lens make/model, orientation, capture dates, exposure, aperture, ISO, exposure bias, flash, focal length, white balance, and GPS coordinates/altitude. HEIC, HEIF, AVIF and supported camera RAW files use the same extraction pipeline. Keys preserve the existing directory/tag shape, for example `image.Exif IFD0.0.tags.Make.271`; duplicate tags from repeated directories are stored once. GPS also includes decimal `image.GPS.0.latitude` and `image.GPS.0.longitude` values. XMP packets, ICC profiles, manufacturer data blocks, embedded thumbnails, copyright tags, and parser diagnostics are excluded.
 
-Tag values preserve numeric precision and rational numerators and denominators. Binary values use base64 with an adjacent `.encoding` key. Strings containing a zero byte use JSON string escaping with `.encoding = "json"`, because PostgreSQL text cannot store zero bytes. Periods and tildes within source key segments are escaped as `~1` and `~0` respectively; zero bytes use `~2`. Image input is copied asynchronously to a temporary file that is deleted when extraction ends; the synchronous metadata parser reads that local copy.
+Selected tag values preserve numeric precision and rational numerators and denominators. Text values longer than 1,024 characters are omitted. Strings containing a zero byte use JSON string escaping with `.encoding = "json"`, because PostgreSQL text cannot store zero bytes. Periods and tildes within source key segments are escaped as `~1` and `~0` respectively; zero bytes use `~2`. Image input is copied asynchronously to a temporary file that is deleted when extraction ends; the synchronous metadata parser reads that local copy. If formatting a selected tag's description fails, its value and the other tags remain available and the failure is logged.
 
-Audio and video extraction retains the ffprobe format, streams, programs and chapters. Examples include `media.format.tags.location`, `media.streams.0.codec_name`, `media.streams.1.tags.language` and `media.chapters.0.tags.title`. Stream side data, dispositions, frame rates, codec parameters and arbitrary tags are retained. Only the probe's temporary source address (`format.filename`) is excluded. The existing summary keys used by audio playback remain available. Probe output is bounded to 4 MiB; exceeding the limit fails extraction rather than storing a truncated result. Unavailable probes and infrastructure errors do not record the current extraction version.
+Audio and video extraction requests an explicit ffprobe field list: duration, container and codecs, dimensions, frame rate, rotation, pixel/color information, audio sample rate/channels, bitrate, language, dates, location, and selected title/artist/album/track/disc/genre tags. Examples include `media.format.tags.location`, `media.streams.0.codec_name` and `media.streams.1.tags.language`. Programs, chapters, arbitrary tags, and unrelated side data are excluded. The summary keys used by audio playback remain available. Probe output is bounded to 4 MiB; exceeding the limit fails extraction rather than storing a truncated result. Unavailable probes and infrastructure errors do not record the current extraction version.
 
-Supported metadata depends on the source format and the reader's understanding of it. Reader diagnostics are retained under each image directory's `errors` keys; proprietary data may remain binary rather than decoded.
+Supported metadata depends on the source format and the reader's understanding of it. Extraction keeps the selected fields that are present; it does not preserve the complete source metadata tree.
 
 ## Serving previews
 
@@ -64,7 +80,7 @@ Shutdown drains active handlers for a bounded time, cancels the accept loop, and
 
 ## External binaries
 
-Administrators may provide explicit `ffmpeg` and `ffprobe` executable paths through configuration. Otherwise the runtime resolves or provisions supported binaries according to the packaged media configuration. An explicit invalid path is an error; it is not silently replaced with a different binary.
+Administrators may provide explicit executable paths through `COTTON_FFMPEG_PATH` and `COTTON_FFPROBE_PATH`. Otherwise the runtime resolves `ffmpeg` and `ffprobe` on `PATH`. The official container installs them as system packages; Cotton does not download binaries at runtime. An explicit invalid path is an error; it is not silently replaced with a different binary.
 
 Every external process has a bounded lifetime or request cancellation, captures diagnostic output, and kills the process tree on timeout or cancellation.
 

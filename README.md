@@ -36,7 +36,7 @@ A storage server with desktop/mobile clients, content-addressed files, streaming
 
 Cotton Cloud is a self-hosted file cloud designed to stay fast, storage-efficient, and predictable as your dataset grows. It is built around its own **content-addressed storage engine**, **streaming AES-GCM encryption**, and a git-like model that separates **content** ("what" a file is) from **layout** ("where" it appears) — which keeps navigation, restore, sharing, and background maintenance practical instead of fragile.
 
-The server is one cohesive **ASP.NET Core + EF Core** runtime on **Kestrel**: web engine, storage pipeline, crypto core, compression, and most preview/image processing run in managed .NET. **Render.NET.Mesh** renders STL, OBJ, and 3MF thumbnails on the CPU without an external renderer or display server. **FFmpeg/ffprobe** provides audio/video preview frames. The frontend is a **React/TypeScript/Vite** SPA.
+The server is one cohesive **ASP.NET Core + EF Core** runtime on **Kestrel**: storage, encryption, compression, document and image rendering, and passkey verification are implemented in managed .NET. The frontend is a **React/TypeScript/Vite** SPA. **FFmpeg/ffprobe** handles audio/video processing.
 
 Cotton is an actively developing, beta-stage open-source project. The core is deliberate and cohesive, but like any storage system it still needs broader real-world mileage. Treat it as a normal maturity curve.
 
@@ -88,10 +88,31 @@ A file should not become an opaque blob you are afraid to touch once it enters t
 
 ---
 
+## Managed .NET, From Storage To Previews
+
+**The published server has no native binaries supplied by third-party NuGet packages.** Document rendering, image processing, 3D thumbnails, and passkey verification run in the application through managed libraries.
+
+| Capability | Implementation |
+| --- | --- |
+| Raster images, resizing, and WebP encoding | SixLabors.ImageSharp |
+| HEIC/HEIF decoding | Heic.NET |
+| PDF thumbnails and searchable text | Render.NET.Pdf and PdfPig |
+| Word and PowerPoint thumbnails | OoxPDF → Render.NET.Pdf → ImageSharp |
+| Excel thumbnails | ExcelDataReader and an ImageSharp worksheet grid |
+| SVG/SVGZ and Telegram TGS posters | Render.NET.Svg and Render.NET.Tgs |
+| STL, OBJ, and 3MF thumbnails | Render.NET.Mesh, rendered on the CPU |
+| Passkeys/WebAuthn | EasyExtensions.Passkeys |
+
+These rendering paths run without a separate renderer service, display server, or GPU. Supported document features and preview limits are described in [Previews and Media Processing](docs/technical/18-previews-media.md).
+
+The external tool boundary is explicit: **FFmpeg/ffprobe** supplies audio/video probing, cover and frame extraction, waveforms, and HLS transcoding; **PostgreSQL client tools** supply database dump and restore. The container also uses `gosu` to select its runtime user. The .NET runtime and its operating-system cryptography remain platform dependencies; see [Deployment and Operations](docs/technical/27-deployment-operations.md).
+
+---
+
 ## Feature Highlights
 
 - **Storage:** content-addressed chunks + manifests, deduplication, inline compression, streaming AES-GCM encryption, filesystem or S3-compatible backends.
-- **Large files & media:** stream, seek, and partially download without reassembly; previews for images, SVG, HEIC, PDF, text, audio, video, and 3D models (STL/OBJ/3MF); adaptive HLS for video.
+- **Large files & media:** stream, seek, and partially download without reassembly; previews for images, HEIC, embedded camera RAW images, SVG, TGS, PDF, Office documents, text, audio, video, and 3D models (STL/OBJ/3MF); adaptive HLS for video.
 - **Uploads:** browser chunk-first uploads (hashing in a Web Worker, parallel chunks, missing-chunk retry) and a streaming **WebDAV** path for clients like rclone (PROPFIND exposes `quota-used-bytes`/`quota-available-bytes`).
 - **Versions, sharing & archives:** file version history (inspect/restore/prune), expiring share links with share pages and previews, native OS/browser share, and stored-ZIP folder downloads (ZIP64, UTF-8 names, known content length).
 - **Accounts & auth:** password + TOTP, passkeys/WebAuthn, OIDC SSO, session inspection (device/IP/location) with per-session revocation, public/demo instances with per-browser credentials, default quotas, and a default onboarding template folder.
@@ -297,7 +318,8 @@ Writes flow through the storage pipeline **compression → crypto → backend** 
 - `src/Cotton.Storage` — storage pipeline, processors (compression/crypto), filesystem & S3 backends, seekable read streams.
 - `src/Cotton.Crypto` — in-repo streaming AES-GCM cipher (`AesGcmStreamCipher`) and HKDF key derivation (`KeyDerivation`).
 - `src/Cotton.Topology` — layout/tree manipulation services.
-- `src/Cotton.Previews` — image/SVG/HEIC/RAW, PDF, text, audio, video, and 3D-model preview generators.
+- `src/Cotton.Previews` — image/SVG/HEIC/RAW, TGS, PDF, Office, text, audio, video, and 3D-model preview generators.
+- `src/Cotton.TextExtraction` — document text extraction for search, including PDF through PdfPig.
 - `src/Cotton.Autoconfig` — master-key derivation, environment scrubbing, unlock/bootstrap configuration.
 - `src/Cotton.Validators` — name/username validation (`NameValidator`, `NameKey` generation).
 - `src/Cotton.Localization` — server-side notification templates.

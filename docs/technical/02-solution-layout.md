@@ -12,6 +12,7 @@ Cotton is a modular monolith: one deployable server composes focused libraries a
 | Cotton.Crypto | Streaming authenticated encryption and key derivation. |
 | Cotton.Topology | Logical layout traversal and path resolution. |
 | Cotton.Previews | Preview generation for supported media and document formats. |
+| Cotton.TextExtraction | Text extraction from supported documents for search indexing. |
 | Cotton.Validators | Shared validation and normalized-name rules. |
 | Cotton.Autoconfig | Master-key startup and browser-unlock bootstrap. |
 | Cotton.Localization | Server-side notification text. |
@@ -44,7 +45,7 @@ npm run lint
 npm run i18n:check
 ```
 
-Audio/video preview tests require FFmpeg and ffprobe. 3D model preview tests use managed Render.NET.Mesh rendering and require no external renderer or display server.
+Audio/video preview tests require FFmpeg and ffprobe. Image, HEIC, PDF, Office, SVG, TGS, and 3D preview tests use managed libraries. They require no external renderer, display server, or GPU. Passkey verification tests use EasyExtensions.Passkeys and stored COSE public-key fixtures.
 
 ## Build and packaging boundaries
 
@@ -52,6 +53,7 @@ Audio/video preview tests require FFmpeg and ffprobe. 3D model preview tests use
 - Database migrations are produced and owned by the database project but applied by the server startup path.
 - The shared SDK is packaged separately from the application image.
 - Benchmark and diagnostic projects are not part of the production runtime.
+- The published server's third-party NuGet dependencies contain no native runtime binaries. FFmpeg/ffprobe and PostgreSQL client tools are installed separately in the runtime image; see [Deployment and Operations](27-deployment-operations.md).
 - Test projects may use real PostgreSQL and external storage endpoints; their prerequisites must be explicit.
 
 ## Continuous integration expectations
