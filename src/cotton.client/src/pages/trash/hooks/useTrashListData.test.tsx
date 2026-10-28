@@ -14,6 +14,7 @@ afterEach(() => {
 it("provides the entire trash listing for sorting before client pagination", async () => {
   const get = vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
     content: {
+      node: createFolder(),
       ...createFolder(),
       nodes: [],
       files: Array.from({ length: 201 }, (_, i) =>

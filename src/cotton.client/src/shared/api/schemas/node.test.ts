@@ -61,6 +61,13 @@ describe("node api schemas", () => {
   it("validates node content envelopes", () => {
     const parsed = nodeContentSchema.parse({
       ...baseDto,
+      node: {
+        ...baseDto,
+        layoutId: "layout-id",
+        parentId: null,
+        name: "Current folder",
+        metadata: { color: "green" },
+      },
       nodes: [
         {
           ...baseDto,
@@ -75,6 +82,14 @@ describe("node api schemas", () => {
     });
 
     expect(parsed.nodes[0].metadata).toEqual({ color: "blue" });
+    expect(parsed.node.name).toBe("Current folder");
+    expect(parsed.node.metadata).toEqual({ color: "green" });
+  });
+
+  it("rejects a listing without the requested node metadata", () => {
+    expect(
+      nodeContentSchema.safeParse({ ...baseDto, nodes: [], files: [] }).success,
+    ).toBe(false);
   });
 
   it("validates restore outcomes with restored files", () => {

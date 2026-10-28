@@ -9,6 +9,7 @@ import { invalidateTrashChildren, useTrashChildrenQuery } from "./trash";
 
 const page = (count: number): NodeResponse => ({
   content: {
+    node: createFolder(),
     ...createFolder(),
     nodes: [],
     files: Array.from({ length: count }, (_, index) =>

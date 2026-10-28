@@ -7,6 +7,7 @@ import { updateFolderFilePreview } from "./folderPreviews";
 
 const page = (fileId: string): NodeResponse => ({
   content: {
+    node: createFolder(),
     ...createFolder(),
     nodes: [],
     files: [createFile({ id: fileId })],

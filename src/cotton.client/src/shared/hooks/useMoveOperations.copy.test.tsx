@@ -1,3 +1,4 @@
+import { createFolder } from "../../test/fileFixtures";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ENCRYPTED_FLAG_KEY, generateMasterKey, useVault } from "../crypto";
@@ -81,6 +82,7 @@ const item: MoveClipboardItem = {
   file: original,
 };
 const emptyContent = {
+  node: createFolder({ id: "empty" }),
   id: "empty",
   createdAt: "2026-01-01",
   updatedAt: "2026-01-01",

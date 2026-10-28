@@ -18,6 +18,7 @@ const files = Array.from({ length: 101 }, (_, index) =>
 
 const response = (): NodeResponse => ({
   content: {
+    node: createFolder({ id: "folder-1" }),
     ...createFolder({ id: "folder-1" }),
     nodes: [],
     files,
@@ -40,6 +41,7 @@ describe("folder listing", () => {
   it("disables name operations when encrypted folder names remain without an encryption policy", async () => {
     vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
       content: {
+        node: createFolder(),
         ...createFolder(),
         nodes: [createFolder({ metadata: { en: "opaque" } })],
         files: [],
@@ -104,6 +106,7 @@ describe("folder listing", () => {
       .spyOn(nodesApi, "getChildren")
       .mockImplementation(async (_, options) => ({
         content: {
+          node: createFolder(),
           ...createFolder(),
           nodes: [],
           files:
@@ -154,6 +157,7 @@ describe("folder listing", () => {
       .spyOn(nodesApi, "getChildren")
       .mockImplementation(async (_, options) => ({
         content: {
+          node: createFolder(),
           ...createFolder(),
           nodes: folders.slice(
             ((options?.page ?? 1) - 1) * (options?.pageSize ?? 100),
@@ -205,6 +209,7 @@ describe("folder listing", () => {
       .spyOn(nodesApi, "getChildren")
       .mockImplementation(async (_, options) => ({
         content: {
+          node: createFolder(),
           ...createFolder(),
           nodes: [],
           files:
@@ -272,6 +277,7 @@ describe("folder listing", () => {
     );
     const get = vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
       content: {
+        node: createFolder(),
         ...createFolder(),
         nodes: folders,
         files: pageFiles,
@@ -317,6 +323,7 @@ describe("folder listing", () => {
       .spyOn(nodesApi, "getChildren")
       .mockImplementation(async (_, options) => ({
         content: {
+          node: createFolder(),
           ...createFolder(),
           nodes: [],
           files: options?.listing?.descending

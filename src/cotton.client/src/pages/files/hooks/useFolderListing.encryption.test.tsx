@@ -36,6 +36,7 @@ it.each([InterfaceLayoutType.List, InterfaceLayoutType.Tiles])(
     useVault.getState().lock();
     const response: NodeResponse = {
       content: {
+        node: createFolder({ id: "folder-1" }),
         ...createFolder({ id: "folder-1" }),
         nodes: [],
         files: [

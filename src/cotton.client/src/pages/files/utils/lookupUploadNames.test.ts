@@ -33,6 +33,7 @@ it("finds an encrypted replacement on a later page without sending the clear nam
     .spyOn(nodesApi, "getChildren")
     .mockImplementation(async (_, options) => ({
       content: {
+        node: createFolder(),
         ...createFolder(),
         nodes: [],
         files:
@@ -80,6 +81,7 @@ it("finds encrypted folder names in a plain parent on a later page", async () =>
     .spyOn(nodesApi, "getChildren")
     .mockImplementation(async (_, options) => ({
       content: {
+        node: createFolder(),
         ...createFolder(),
         nodes:
           options?.page === 1 ? [createFolder({ name: "Other" })] : [existing],

@@ -35,6 +35,7 @@ export interface NodeResponse {
 }
 
 export interface NodeContentDto extends BaseDto {
+  node: NodeDto;
   nodes: NodeDto[];
   files: NodeFileManifestDto[];
   stats?: FolderStatsDto | null;

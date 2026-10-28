@@ -39,6 +39,7 @@ afterEach(() => {
 it("opens a large directory without reading any children for encryption notices", async () => {
   const root = createFolder({ id: "root" });
   const content: NodeContentDto = {
+    node: root,
     ...root,
     nodes: Array.from({ length: 1_000 }, (_, index) =>
       createFolder({ id: `child-${index}`, parentId: root.id }),
@@ -51,7 +52,12 @@ it("opens a large directory without reading any children for encryption notices"
       const page =
         id === root.id
           ? content
-          : { ...createFolder({ id }), nodes: [], files: [] };
+          : {
+              node: createFolder({ id }),
+              ...createFolder({ id }),
+              nodes: [],
+              files: [],
+            };
       return {
         content: page,
         totalCount: page.nodes.length + page.files.length,
@@ -84,7 +90,12 @@ it.each([
       id: "root",
       metadata: { isClientEncryptionEnabled: String(policy) },
     });
-    const empty: NodeContentDto = { ...root, nodes: [], files: [] };
+    const empty: NodeContentDto = {
+      node: root,
+      ...root,
+      nodes: [],
+      files: [],
+    };
     const get = vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
       content: empty,
       totalCount: 0,
@@ -125,6 +136,7 @@ it("does not use stale files while navigating to another folder", () => {
         activeCurrentNode: createFolder({ id: "current" }),
         ancestors: [],
         content: {
+          node: createFolder({ id: "previous" }),
           ...createFolder({ id: "previous" }),
           nodes: [],
           files: [createFile({ metadata: { isClientEncrypted: "true" } })],

@@ -1,3 +1,4 @@
+import { createFolder } from "../../test/fileFixtures";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./nodesActionInternals", () => ({
@@ -50,6 +51,7 @@ const seedParent = (
   files: NodeFileManifestDto[],
 ) => {
   const content: NodeContentDto = {
+    node: createFolder({ id: parentId }),
     id: parentId,
     createdAt: "",
     updatedAt: "",
@@ -299,7 +301,14 @@ describe("reset", () => {
       currentNode: makeNode("a", "Drafts"),
       ancestors: [makeNode("p", "Parent")],
       contentByNodeId: {
-        a: { id: "a", createdAt: "", updatedAt: "", nodes: [], files: [] },
+        a: {
+          node: createFolder({ id: "a" }),
+          id: "a",
+          createdAt: "",
+          updatedAt: "",
+          nodes: [],
+          files: [],
+        },
       },
       loading: true,
       error: "boom",

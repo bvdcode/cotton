@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { nodesApi } from "../../../shared/api/nodesApi";
 import { FOLDER_ENCRYPTION_POLICY_KEY } from "../../../shared/crypto";
 import { useNodesStore } from "../../../shared/store/nodesStore";
+import { queryClient } from "@shared/api/queries/queryClient";
+import { updateFolderOverviewNodes } from "@shared/api/queries/folderOverview";
 
 interface UseFolderEncryptionPolicyOptions {
   onToast: (message: string, variant?: "info" | "error") => void;
@@ -26,6 +28,13 @@ export const useFolderEncryptionPolicy = ({
         const store = useNodesStore.getState();
         for (const updatedNode of updatedNodes) {
           store.updateNode(updatedNode);
+        }
+        if (store.cacheOwnerUserId) {
+          updateFolderOverviewNodes(
+            queryClient,
+            updatedNodes,
+            store.cacheOwnerUserId,
+          );
         }
         onToast(
           nextEnabled

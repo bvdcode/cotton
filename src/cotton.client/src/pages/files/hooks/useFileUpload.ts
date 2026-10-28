@@ -19,6 +19,7 @@ import type {
 import { getAllFilesFromItems, type DroppedFile } from "./scanDroppedFiles";
 import { DroppedFolderResolver } from "./DroppedFolderResolver";
 import { emptySkippedItemsDialog } from "./fileUploadTypes";
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 
 type UploadToastVariant = "info" | "error";
 
@@ -70,7 +71,7 @@ export const useFileUpload = (
       const list = Array.isArray(files) ? files : Array.from(files);
       if (list.length === 0) return;
 
-      const decision = decideEncrypt(nodeId);
+      const decision = await decideEncrypt(nodeId);
       if (decision.vaultLocked) {
         onToast?.(t("uploadDrop.toasts.vaultLocked", { ns: "files" }), "error");
         return;
@@ -132,13 +133,13 @@ export const useFileUpload = (
       if (!nodeId) return;
       if (dropped.length === 0) return;
 
-      const rootPolicyEnabled = isPolicyEnabledForNode(nodeId);
-      const rootDecision = decideEncrypt(nodeId);
+      const rootDecision = await decideEncrypt(nodeId);
       if (rootDecision.vaultLocked) {
         onToast?.(t("uploadDrop.toasts.vaultLocked", { ns: "files" }), "error");
         return;
       }
 
+      const rootPolicyEnabled = rootDecision.encrypt;
       setDropPreparation((prev) => ({
         ...prev,
         active: true,
@@ -262,7 +263,10 @@ export const useFileUpload = (
       if (!(e.target instanceof HTMLInputElement)) return;
       const files = e.target.files;
       if (files && files.length > 0) {
-        void handleUploadFiles(Array.from(files));
+        void handleUploadFiles(Array.from(files)).catch((error) => {
+          reportClientError("Failed to prepare file upload", error);
+          onToast?.(t("uploadDrop.errors.dropFailed"), "error");
+        });
       }
     };
     input.click();

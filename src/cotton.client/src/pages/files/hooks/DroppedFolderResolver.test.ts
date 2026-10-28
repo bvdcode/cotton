@@ -113,7 +113,12 @@ it("reuses an encrypted folder's visible name under a plain parent", async () =>
     },
   });
   const get = vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
-    content: { ...parent, nodes: [existing], files: [] },
+    content: {
+      node: parent,
+      ...parent,
+      nodes: [existing],
+      files: [],
+    },
     totalCount: 1,
   });
   const create = vi

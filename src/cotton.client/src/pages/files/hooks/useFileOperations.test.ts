@@ -1,3 +1,4 @@
+import { createFolder } from "../../../test/fileFixtures";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -45,7 +46,11 @@ vi.mock("../../../shared/crypto", () => ({
 }));
 
 vi.mock("../../../shared/hooks/useFileRenameDeleteOperations", () => ({
-  useFileRenameDeleteOperations: (options: Parameters<typeof import("../../../shared/hooks/useFileRenameDeleteOperations").useFileRenameDeleteOperations>[0]) => {
+  useFileRenameDeleteOperations: (
+    options: Parameters<
+      typeof import("../../../shared/hooks/useFileRenameDeleteOperations").useFileRenameDeleteOperations
+    >[0],
+  ) => {
     mocks.renameDeleteOptions = options;
     return {};
   },
@@ -69,6 +74,7 @@ const currentNode = {
 };
 
 const makeContent = (fileMetadata: Record<string, string>) => ({
+  node: createFolder({ id: "node-1" }),
   id: "node-1",
   createdAt: "2026-05-17T00:00:00Z",
   updatedAt: "2026-05-17T00:00:00Z",

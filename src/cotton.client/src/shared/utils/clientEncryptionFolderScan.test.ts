@@ -12,7 +12,12 @@ const page = (
   files: NodeResponse["content"]["files"] = [],
   nodes: NodeResponse["content"]["nodes"] = [],
 ): NodeResponse => ({
-  content: { ...createFolder({ id }), files, nodes },
+  content: {
+    node: createFolder({ id }),
+    ...createFolder({ id }),
+    files,
+    nodes,
+  },
   totalCount: files.length + nodes.length,
 });
 

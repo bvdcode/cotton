@@ -11,6 +11,9 @@ vi.mock("../../../shared/api/nodesApi", () => ({
 import { nodesApi } from "../../../shared/api/nodesApi";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 import { useFolderEncryptionPolicy } from "./useFolderEncryptionPolicy";
+import { queryClient } from "@shared/api/queries/queryClient";
+import { folderOverviewOptions } from "@shared/api/queries/folderOverview";
+import type { NodeResponse } from "@shared/api/nodesApi";
 
 const makeNode = (id: string, parentId: string | null = null): NodeDto => ({
   id,
@@ -28,7 +31,44 @@ describe("useFolderEncryptionPolicy", () => {
   });
 
   afterEach(() => {
+    queryClient.clear();
+    useNodesStore.getState().reset(null);
     vi.restoreAllMocks();
+  });
+
+  it("updates cached folder metadata without replacing its children or another account's data", async () => {
+    const node = makeNode("folder");
+    const content = {
+      ...node,
+      node,
+      nodes: [makeNode("child", node.id)],
+      files: [],
+    };
+    const page: NodeResponse = { content, totalCount: 1 };
+    const ownKey = folderOverviewOptions(node.id, "owner").queryKey;
+    const otherKey = folderOverviewOptions(node.id, "other").queryKey;
+    queryClient.setQueryData(ownKey, page);
+    queryClient.setQueryData(otherKey, page);
+    useNodesStore.setState({ cacheOwnerUserId: "owner" });
+    const updated = {
+      ...node,
+      metadata: { isClientEncryptionEnabled: "true" },
+    };
+    vi.mocked(nodesApi.bulkUpdateNodeMetadata).mockResolvedValue([updated]);
+    const { result } = renderHook(() =>
+      useFolderEncryptionPolicy({ onToast: vi.fn() }),
+    );
+    await act(async () => {
+      await result.current.toggleFolderEncryptionPolicy(node.id, false);
+    });
+    expect(
+      queryClient.getQueryData<NodeResponse>(ownKey)?.content.node,
+    ).toEqual(updated);
+    expect(queryClient.getQueryData<NodeResponse>(ownKey)?.content.nodes).toBe(
+      content.nodes,
+    );
+    expect(queryClient.getQueryData(otherKey)).toEqual(page);
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(2);
   });
 
   it("updates the selected folder policy and every affected descendant", async () => {

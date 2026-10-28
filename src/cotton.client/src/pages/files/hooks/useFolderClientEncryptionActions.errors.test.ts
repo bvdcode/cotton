@@ -85,7 +85,12 @@ describe.each(cases)(
         useFolderClientEncryptionActions({
           nodeId: node.id,
           currentNode: node,
-          content: { ...node, files: [file], nodes: [] },
+          content: {
+            node: node,
+            ...node,
+            files: [file],
+            nodes: [],
+          },
           onToast,
         }),
       );

@@ -13,6 +13,7 @@ const wrapper = ({ children }: PropsWithChildren) => (
 );
 const response = (encryptedFiles = 0): NodeResponse => ({
   content: {
+    node: createFolder(),
     ...createFolder(),
     nodes: [],
     files: Array.from({ length: 201 }, (_, index) =>

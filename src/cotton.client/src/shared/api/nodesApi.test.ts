@@ -43,6 +43,7 @@ const makeNode = (id = nodeId) => ({
 });
 
 const makeContent = (files: JsonValue[] = []) => ({
+  node: makeNode(),
   id: nodeId,
   createdAt: "2026-05-17T00:00:00Z",
   updatedAt: "2026-05-17T00:00:00Z",

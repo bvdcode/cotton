@@ -66,6 +66,7 @@ it("keeps the requested page after the grid processes its controlled sort and fi
   const get = vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
     totalCount: 201,
     content: {
+      node: createFolder(),
       ...createFolder(),
       nodes: [],
       files: Array.from({ length: 201 }, (_, index) =>
@@ -117,6 +118,7 @@ it("sorts the complete directory and reorders folders as their sizes arrive", as
     .mockImplementation(async (_, options) => ({
       totalCount: 105,
       content: {
+        node: createFolder(),
         ...createFolder(),
         nodes: folders,
         files: options?.pageSize === 25_000 ? files : files.slice(0, 97),

@@ -36,7 +36,7 @@ it.each([
           enabled: true,
           firstPage: {
             response: {
-              content: { ...createFolder(), ...items },
+              content: { ...createFolder(), node: createFolder(), ...items },
               totalCount: 100,
             },
             pageSize: 1,
@@ -58,7 +58,12 @@ it("does not read child folders when the current listing is complete", () => {
         enabled: true,
         firstPage: {
           response: {
-            content: { ...createFolder(), nodes: [createFolder()], files: [] },
+            content: {
+              node: createFolder(),
+              ...createFolder(),
+              nodes: [createFolder()],
+              files: [],
+            },
             totalCount: 1,
           },
           pageSize: 100,
@@ -75,6 +80,7 @@ it.each([true, false])(
   async (encrypted) => {
     const get = vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
       content: {
+        node: createFolder(),
         ...createFolder(),
         nodes: [],
         files: [
@@ -87,6 +93,7 @@ it.each([true, false])(
     });
     const firstPage: NodeResponse = {
       content: {
+        node: createFolder(),
         ...createFolder(),
         nodes: [createFolder({ id: "child" })],
         files: [],

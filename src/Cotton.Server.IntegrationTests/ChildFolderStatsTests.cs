@@ -98,6 +98,45 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(result, Is.Empty);
         }
 
+        [TestCase(NodeType.Default, 0)]
+        [TestCase(NodeType.Default, 1)]
+        [TestCase(NodeType.Trash, 0)]
+        [TestCase(NodeType.Trash, 1)]
+        public async Task ListingIncludesRequestedNodeMetadataEvenOnEmptyPages(NodeType type, int depth)
+        {
+            Node root = CreateRoot(type);
+            root.Metadata = new Dictionary<string, string> { ["color"] = "blue" };
+            await DbContext.SaveChangesAsync();
+            await DbContext.Entry(root).ReloadAsync();
+            GetChildrenQueryHandler listing = new(new StorageLayoutService(DbContext), DbContext);
+            var empty = await listing.Handle(new(root.OwnerId, root.Id, type, 1, 100, depth), CancellationToken.None);
+            Assert.Multiple(() =>
+            {
+                Assert.That(empty.Payload.Node.Id, Is.EqualTo(root.Id));
+                Assert.That(empty.Payload.Node.LayoutId, Is.EqualTo(root.LayoutId));
+                Assert.That(empty.Payload.Node.ParentId, Is.EqualTo(root.ParentId));
+                Assert.That(empty.Payload.Node.Name, Is.EqualTo(root.Name));
+                Assert.That(empty.Payload.Node.CreatedAt, Is.EqualTo(root.CreatedAt));
+                Assert.That(empty.Payload.Node.UpdatedAt, Is.EqualTo(root.UpdatedAt));
+                Assert.That(empty.Payload.Node.Metadata["color"], Is.EqualTo("blue"));
+            });
+            Assert.That(empty.Payload.Nodes, Is.Empty);
+
+            CreateChild(root, "child");
+            root.Metadata["color"] = "green";
+            await DbContext.SaveChangesAsync();
+            var populated = await listing.Handle(new(root.OwnerId, root.Id, type, 1, 100, depth), CancellationToken.None);
+            var beyondLastPage = await listing.Handle(new(root.OwnerId, root.Id, type, 2, 100, depth), CancellationToken.None);
+            Assert.Multiple(() =>
+            {
+                Assert.That(populated.Payload.Node.Id, Is.EqualTo(root.Id));
+                Assert.That(populated.Payload.Node.Metadata["color"], Is.EqualTo("green"));
+                Assert.That(beyondLastPage.Payload.Node.Id, Is.EqualTo(root.Id));
+                Assert.That(beyondLastPage.Payload.Node.Metadata["color"], Is.EqualTo("green"));
+                Assert.That(beyondLastPage.Payload.Nodes, Is.Empty);
+            });
+        }
+
         [TestCase(-1)]
         [TestCase(33)]
         public async Task RejectsInvalidDepth(int depth)

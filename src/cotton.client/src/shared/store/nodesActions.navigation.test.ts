@@ -9,7 +9,12 @@ import { useNodesStore } from "./nodesStore";
 const parent = createFolder({ id: "parent", parentId: null });
 const child = createFolder({ id: "child", parentId: parent.id });
 const response: NodeResponse = {
-  content: { ...parent, nodes: [child], files: [] },
+  content: {
+    node: parent,
+    ...parent,
+    nodes: [child],
+    files: [],
+  },
   totalCount: 1,
 };
 beforeEach(() => {

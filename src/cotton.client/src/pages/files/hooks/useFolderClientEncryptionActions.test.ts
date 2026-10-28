@@ -63,9 +63,8 @@ const makeFile = (
   });
 
 const makeContent = (files: NodeFileManifestDto[]): NodeContentDto => ({
-  id: "node-1",
-  createdAt: "2026-05-17T00:00:00Z",
-  updatedAt: "2026-05-17T00:00:00Z",
+  ...makeNode(),
+  node: makeNode(),
   nodes: [],
   files,
 });

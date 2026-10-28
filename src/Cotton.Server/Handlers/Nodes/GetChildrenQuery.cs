@@ -67,6 +67,7 @@ namespace Cotton.Server.Handlers.Nodes
             {
                 return new(new NodeContentDto
                 {
+                    Node = parentNode.Adapt<NodeDto>(),
                     Nodes = [],
                     Files = [],
                     Id = request.NodeId,
@@ -106,6 +107,7 @@ namespace Cotton.Server.Handlers.Nodes
 
             return new(new NodeContentDto
             {
+                Node = parentNode.Adapt<NodeDto>(),
                 Nodes = nodes,
                 Files = files,
                 Id = request.NodeId,
@@ -193,6 +195,7 @@ namespace Cotton.Server.Handlers.Nodes
 
             return new(new NodeContentDto
             {
+                Node = parentNode.Adapt<NodeDto>(),
                 Nodes = nodes,
                 Files = files,
                 Id = request.NodeId,
