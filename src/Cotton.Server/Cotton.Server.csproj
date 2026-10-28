@@ -28,7 +28,7 @@
 		<Folder Include="wwwroot\" />
 		<PackageReference Include="EasyExtensions.Clients" Version="3.0.92" />
 		<PackageReference Include="EasyExtensions.Mediator" Version="3.0.92" />
-		<PackageReference Include="Fido2" Version="4.3.1" />
+		<PackageReference Include="EasyExtensions.Passkeys" Version="3.0.93" />
 		<PackageReference Include="Microsoft.AspNetCore.SpaProxy">
 			<Version>10.0.13</Version>
 		</PackageReference>

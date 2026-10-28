@@ -10,8 +10,8 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services.Passkeys;
 using EasyExtensions.AspNetCore.Exceptions;
-using Fido2NetLib;
-using Fido2NetLib.Objects;
+using EasyExtensions.Passkeys;
+using EasyExtensions.Passkeys.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using EasyExtensions.Mediator;
@@ -24,7 +24,7 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
     public class FinishPasskeyRegistrationRequestHandler(
         CottonDbContext _dbContext,
         IMemoryCache _cache,
-        IPasskeyClientFactory _factory,
+        IPasskeyServerFactory _factory,
         SettingsProvider _settings,
         INotificationsProvider _notifications,
         ILogger<FinishPasskeyRegistrationRequestHandler> _logger)
@@ -42,38 +42,32 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
             }
 
             _cache.Remove(PasskeyChallenges.RegistrationCacheKey(request.RequestId));
-            AuthenticatorAttestationRawResponse attestation = PasskeyProtocolMapper.ToAttestationResponse(request.Credential);
-            IFido2 fido = await _factory.CreateAsync(ct);
-            RegisteredPublicKeyCredential result;
+            IPasskeyServer server = await _factory.CreateAsync(ct);
+            RegistrationResult result;
             try
             {
-                result = await fido.MakeNewCredentialAsync(
-                    new MakeNewCredentialParams
-                    {
-                        AttestationResponse = attestation,
-                        OriginalOptions = state.Options,
-                        IsCredentialIdUniqueToUserCallback = async (args, token) =>
-                        {
-                            return !await _dbContext.UserPasskeyCredentials
-                                .AnyAsync(x => x.CredentialId == args.CredentialId, token);
-                        }
-                    },
-                    ct);
+                RegistrationResponse attestation = PasskeyProtocolMapper.ToAttestationResponse(request.Credential);
+                result = server.VerifyRegistration(attestation, state.Options);
             }
-            catch (Fido2VerificationException ex)
+            catch (Exception ex) when (PasskeyVerificationErrors.IsInvalidResponse(ex))
             {
                 _logger.LogWarning(ex, "Passkey registration verification failed for user {UserId}.", userId);
                 throw new BadRequestException<UserPasskeyCredential>("Passkey registration could not be verified");
+            }
+
+            if (await _dbContext.UserPasskeyCredentials.AnyAsync(x => x.CredentialId == result.CredentialId, ct))
+            {
+                throw new BadRequestException<UserPasskeyCredential>("Passkey is already registered");
             }
 
             string[] transports = PasskeyProtocolMapper.NormalizeTransports(result.Transports);
             UserPasskeyCredential credential = new UserPasskeyCredential
             {
                 UserId = userId,
-                CredentialId = result.Id,
-                PublicKey = result.PublicKey,
-                UserHandle = result.User.Id,
-                SignatureCounter = result.SignCount,
+                CredentialId = result.CredentialId,
+                PublicKey = result.CosePublicKey,
+                UserHandle = result.UserHandle,
+                SignatureCounter = result.SignatureCounter,
                 Label = PasskeyLabelNormalizer.Normalize(request.Label ?? state.Label),
                 Transports = transports,
                 AaGuid = result.AaGuid,

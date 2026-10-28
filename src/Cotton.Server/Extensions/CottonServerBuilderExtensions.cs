@@ -126,7 +126,7 @@ namespace Cotton.Server.Extensions
                 .AddScoped<ServerSettingsValidator>()
                 .AddScoped<SecurityDiagnosticsService>()
                 .AddScoped<StoragePipelineProbeService>()
-                .AddScoped<IPasskeyClientFactory, PasskeyClientFactory>()
+                .AddScoped<IPasskeyServerFactory, PasskeyServerFactory>()
                 .AddScoped<AuthSessionIssuer>()
                 .AddScoped(sp => new OidcDiscoveryService(sp.GetRequiredService<IHttpClientFactory>().CreateClient(OidcDiscoveryService.HttpClientName)))
                 .AddScoped<RefreshTokenRevocationService>()
