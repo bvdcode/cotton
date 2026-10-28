@@ -8,9 +8,11 @@
 
 # Cotton Cloud
 
-### Self-hosted file cloud for fast, predictable day-to-day storage
+### Self-hosted file cloud. 100% .NET.
 
-A storage server with desktop/mobile clients, content-addressed files, streaming AES-GCM encryption, and a clean UI for real use.
+Content-addressed storage, streaming AES-GCM encryption, deduplication, and rich previews — with desktop and mobile clients.
+
+**HEIC, PDF, Office, SVG, TGS, 3D, and passkeys — built in.**
 
 <p>
   <a href="#quick-start"><img alt="Docker" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Docker&color=2496ED&logo=docker&logoColor=white"></a>
@@ -36,7 +38,7 @@ A storage server with desktop/mobile clients, content-addressed files, streaming
 
 Cotton Cloud is a self-hosted file cloud designed to stay fast, storage-efficient, and predictable as your dataset grows. It is built around its own **content-addressed storage engine**, **streaming AES-GCM encryption**, and a git-like model that separates **content** ("what" a file is) from **layout** ("where" it appears) — which keeps navigation, restore, sharing, and background maintenance practical instead of fragile.
 
-The server is one cohesive **ASP.NET Core + EF Core** runtime on **Kestrel**: storage, encryption, compression, document and image rendering, and passkey verification are implemented in managed .NET. The frontend is a **React/TypeScript/Vite** SPA. **FFmpeg/ffprobe** handles audio/video processing.
+The server is one cohesive **ASP.NET Core + EF Core** runtime on **Kestrel**: storage, encryption, compression, document and image rendering, and passkey verification are implemented in managed .NET. The frontend is a **React/TypeScript/Vite** SPA.
 
 Cotton is an actively developing, beta-stage open-source project. The core is deliberate and cohesive, but like any storage system it still needs broader real-world mileage. Treat it as a normal maturity curve.
 
@@ -104,8 +106,6 @@ A file should not become an opaque blob you are afraid to touch once it enters t
 | Passkeys/WebAuthn | EasyExtensions.Passkeys |
 
 These rendering paths run without a separate renderer service, display server, or GPU. Supported document features and preview limits are described in [Previews and Media Processing](docs/technical/18-previews-media.md).
-
-The external tool boundary is explicit: **FFmpeg/ffprobe** supplies audio/video probing, cover and frame extraction, waveforms, and HLS transcoding; **PostgreSQL client tools** supply database dump and restore. The container also uses `gosu` to select its runtime user. The .NET runtime and its operating-system cryptography remain platform dependencies; see [Deployment and Operations](docs/technical/27-deployment-operations.md).
 
 ---
 
@@ -347,6 +347,8 @@ Writes flow through the storage pipeline **compression → crypto → backend** 
 
 - License: MIT (see [LICENSE](LICENSE)).
 - The "Cotton" name and marks are reserved; forks should use distinct names/marks.
+
+FFmpeg is shipped as a third-party utility for audio/video processing.
 
 ---
 
