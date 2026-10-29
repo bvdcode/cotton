@@ -15,9 +15,9 @@ namespace Cotton.Previews.Tests
         {
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(new MeshPreviewGenerator().Version, Is.EqualTo(10));
-                Assert.That(MeshPreviewGenerator.CreateObjGenerator().Version, Is.EqualTo(10));
-                Assert.That(MeshPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(10));
+                Assert.That(new MeshPreviewGenerator().Version, Is.EqualTo(11));
+                Assert.That(MeshPreviewGenerator.CreateObjGenerator().Version, Is.EqualTo(11));
+                Assert.That(MeshPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(11));
             }
         }
 

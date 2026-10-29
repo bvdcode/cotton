@@ -135,6 +135,29 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
+        public async Task GeneratePreviewWebPAsync_ExternalDoctype_RendersWithoutLoadingDtd()
+        {
+            using MemoryStream source = new(Encoding.UTF8.GetBytes("""
+                <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "https://does-not-exist.invalid/svg.dtd">
+                <svg xmlns="http://www.w3.org/2000/svg" width="200" height="100">
+                  <rect width="200" height="100" fill="green" />
+                </svg>
+                """));
+
+            byte[] preview = await _generator.GeneratePreviewWebPAsync(source, 200);
+
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+            Assert.Multiple(() =>
+            {
+                Assert.That(image.Width, Is.EqualTo(200));
+                Assert.That(image.Height, Is.EqualTo(100));
+                Assert.That(image[100, 50].G, Is.GreaterThan(100));
+                Assert.That(image[100, 50].R, Is.LessThan(15));
+                Assert.That(source.CanRead, Is.True);
+            });
+        }
+
+        [Test]
         public async Task GeneratePreviewWebPAsync_ExternalEntity_IsRejected()
         {
             using MemoryStream source = new(Encoding.UTF8.GetBytes("""

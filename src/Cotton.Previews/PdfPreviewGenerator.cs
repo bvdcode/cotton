@@ -16,7 +16,7 @@ namespace Cotton.Previews
 
         public string Id => "pdf";
 
-        public int Version => 1;
+        public int Version => 2;
 
         public int Priority => 0;
 

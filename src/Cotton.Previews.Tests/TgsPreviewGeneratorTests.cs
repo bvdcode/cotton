@@ -25,11 +25,18 @@ namespace Cotton.Previews.Tests
             }
             """;
 
-        [TestCase(200)]
-        [TestCase(2560)]
-        public async Task GeneratePreviewWebPAsync_NonSquareAnimation_RendersCenteredMiddleFrame(int size)
+        [TestCase(200, false)]
+        [TestCase(2560, false)]
+        [TestCase(200, true)]
+        [TestCase(2560, true)]
+        public async Task GeneratePreviewWebPAsync_NonSquareAnimation_RendersCenteredMiddleFrame(int size, bool withExpression)
         {
-            using MemoryStream source = new(await CompressAsync(Encoding.UTF8.GetBytes(Animation)));
+            string animation = Animation;
+            if (withExpression)
+            {
+                animation = animation.Replace("\"k\":[0,0]", "\"k\":[0,0],\"x\":\"throw new Error('Must not execute')\"", StringComparison.Ordinal);
+            }
+            using MemoryStream source = new(await CompressAsync(Encoding.UTF8.GetBytes(animation)));
 
             byte[] preview = await new TgsPreviewGenerator().GeneratePreviewWebPAsync(source, size);
 

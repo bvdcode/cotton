@@ -16,7 +16,7 @@ namespace Cotton.Previews
 
         public string Id => "svg";
 
-        public int Version => 2;
+        public int Version => 3;
 
         public int Priority => 0;
 

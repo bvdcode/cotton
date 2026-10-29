@@ -51,6 +51,36 @@ namespace Cotton.Previews.Tests
             Assert.That(image[0, 0], Is.EqualTo(new Rgba32(255, 255, 255, 255)));
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task GeneratePreviewWebPAsync_OptionalContent_RespectsDefaultVisibility(bool visible)
+        {
+            const string content = "1 0 0 rg 0 0 50 100 re f /OC /Layer BDC 0 1 0 rg 50 0 150 100 re f EMC";
+            string state = visible ? "ON" : "OFF";
+            string[] objects =
+            [
+                $"<< /Type /Catalog /Pages 2 0 R /OCProperties << /OCGs [5 0 R] /D << /BaseState /{state} >> >> >>",
+                "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Resources << /Properties << /Layer 5 0 R >> >> /Contents 4 0 R >>",
+                $"<< /Length {Encoding.ASCII.GetByteCount(content)} >>\nstream\n{content}\nendstream",
+                "<< /Type /OCG /Name (Preview layer) >>",
+            ];
+            using MemoryStream source = new(CreatePdfBytes(objects));
+
+            byte[] preview = await new PdfPreviewGenerator(Color.White).GeneratePreviewWebPAsync(source, 200);
+
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+            Rgba32 layer = image[100, 50];
+            Assert.Multiple(() =>
+            {
+                Assert.That(image[25, 50].R, Is.GreaterThan(240));
+                Assert.That(image[25, 50].G, Is.LessThan(15));
+                Assert.That(layer.G, Is.GreaterThan(240));
+                Assert.That(layer.R, visible ? Is.LessThan(15) : Is.GreaterThan(240));
+                Assert.That(layer.B, visible ? Is.LessThan(15) : Is.GreaterThan(240));
+            });
+        }
+
         [Test]
         public async Task GeneratePreviewWebPAsync_MultiplePages_RendersFirstPage()
         {
@@ -156,6 +186,11 @@ namespace Cotton.Previews.Tests
                 "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
             ];
 
+            return CreatePdfBytes(objects);
+        }
+
+        private static byte[] CreatePdfBytes(string[] objects)
+        {
             using MemoryStream ms = new MemoryStream();
             List<long> offsets = new List<long> { 0 };
 

@@ -1,20 +1,22 @@
 Third-party notices
 
 Managed PDF previews and text extraction
-Render.NET.Pdf 0.3.7, Render.NET.Jpeg2000 0.3.7 and Render.NET 0.3.19
+Render.NET.Pdf, Render.NET.Jbig2, Render.NET.Jpeg2000 and Render.NET 0.3.20
 Source: https://github.com/bvdcode/Render.NET
 License text: Licenses/Render.NET-LICENSE.txt
 Dependency and font notices: Licenses/Render.NET.Pdf-THIRD-PARTY-NOTICES.txt
-These notices cover PdfPig 0.1.16, PdfPig.Filters.Jbig2.PdfboxJbig2 0.1.16.2,
-StbImageSharp 2.30.16, and the bundled PDF substitution fonts.
+These notices cover PdfPig 0.1.16, StbImageSharp 2.30.16,
+and the bundled PDF substitution fonts.
 
 Managed SVG and Telegram sticker previews
-Render.NET.Svg 0.3.19 and Render.NET.Tgs 0.3.19
+Render.NET.Svg and Render.NET.Tgs 0.3.20
 Source: https://github.com/bvdcode/Render.NET
 License text: Licenses/Render.NET-LICENSE.txt
 Bundled font provenance: Licenses/Render.NET.Svg-FONT-NOTICES.txt
 Aileron by Sora Sagano and Canada 1500 by Raymond Larabie are CC0-1.0 fonts.
 The SVG renderer embeds these fonts for Latin and Cyrillic text.
+Dependency notices: Licenses/Render.NET.Tgs-THIRD-PARTY-NOTICES.txt
+These notices cover Jint 4.17.0 and Acornima 1.7.0.
 
 Camera RAW preview metadata
 

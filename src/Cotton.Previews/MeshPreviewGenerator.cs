@@ -19,7 +19,7 @@ namespace Cotton.Previews
 
         public string Id { get; }
 
-        public int Version => 10;
+        public int Version => 11;
 
         public int Priority => 0;
 
