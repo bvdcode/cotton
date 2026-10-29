@@ -215,9 +215,8 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     (row: Extract<SearchRow, { kind: "file" }>) => {
       recordActiveSearchHistory();
       void handleDownloadFile(row.file.id, row.file.name);
-      onClose();
     },
-    [handleDownloadFile, onClose, recordActiveSearchHistory],
+    [handleDownloadFile, recordActiveSearchHistory],
   );
 
   const handleSelectSearchHistory = useCallback(
