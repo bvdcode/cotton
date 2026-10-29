@@ -18,7 +18,7 @@ vi.mock("../../shared/api/layoutsApi", () => ({
 }));
 
 vi.mock("../../shared/api/queries/layouts", () => ({
-  useRootNodeQuery: () => ({ data: { layoutId: "layout-1" } }),
+  useRootNodeQuery: () => ({ data: { id: "root", layoutId: "layout-1" } }),
 }));
 
 vi.mock("@shared/hooks/useFileInteractionHandlers", () => ({
@@ -74,13 +74,55 @@ describe("SearchModal downloads", () => {
   });
 
   it.each([
+    { path: "/files/folder-1", currentNodeId: "folder-1" },
+    { path: "/files", currentNodeId: "root" },
+    { path: "/", currentNodeId: undefined },
+    { path: "/trash", currentNodeId: undefined },
+  ])(
+    "searches with the folder context from $path",
+    async ({ path, currentNodeId }) => {
+      mocks.search.mockResolvedValue({
+        data: {
+          orderedIds: [file.id],
+          nodes: [],
+          files: [file],
+          nodePaths: {},
+          filePaths: {},
+        },
+        totalCount: 1,
+      });
+      render(
+        <I18nextProvider i18n={translations}>
+          <MemoryRouter initialEntries={[path]}>
+            <SearchModal open onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nextProvider>,
+      );
+      fireEvent.change(screen.getByRole("textbox"), {
+        target: { value: "report" },
+      });
+      await waitFor(() => {
+        expect(mocks.search).toHaveBeenCalledWith(
+          expect.objectContaining({ currentNodeId, query: "report" }),
+        );
+      });
+    },
+  );
+
+  it.each([
     { name: "report.pdf", contentType: "application/pdf" },
     { name: "report.zip", contentType: "application/zip" },
   ])("keeps the search open when downloading $name", async (overrides) => {
     const resultFile = { ...file, ...overrides };
     const onClose = vi.fn();
     mocks.search.mockResolvedValue({
-      data: { nodes: [], files: [resultFile], nodePaths: {}, filePaths: {} },
+      data: {
+        orderedIds: [resultFile.id],
+        nodes: [],
+        files: [resultFile],
+        nodePaths: {},
+        filePaths: {},
+      },
       totalCount: 1,
     });
 

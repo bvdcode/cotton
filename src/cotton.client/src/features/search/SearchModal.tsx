@@ -11,7 +11,7 @@ import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { Search } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useMatch, useNavigate } from "react-router-dom";
 import { useRootNodeQuery } from "../../shared/api/queries/layouts";
 import { useSearchFileList } from "../../shared/hooks/useFileListSource";
 import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
@@ -46,6 +46,10 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const rootNode = useRootNodeQuery().data ?? null;
+  const filesRoute = useMatch("/files/:nodeId?");
+  const currentNodeId = filesRoute
+    ? (filesRoute.params.nodeId ?? rootNode?.id)
+    : undefined;
   const [failedPreviews, setFailedPreviews] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
 
@@ -63,7 +67,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     loadNextPage,
     deep,
     toggleDeep,
-  } = useSearchPagination({ trimmedQuery, layoutId });
+  } = useSearchPagination({ trimmedQuery, layoutId, currentNodeId });
 
   const hasSearchQuery = debouncedQuery.length > 0;
   const matchedDictionaryRows = useDictionaryMatch(debouncedQuery);

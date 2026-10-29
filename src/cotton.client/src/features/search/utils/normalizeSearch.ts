@@ -37,6 +37,7 @@ export const mergeSearchResults = (
   }
 
   return {
+    orderedIds: [...previous.orderedIds, ...next.orderedIds],
     ancestors: [
       ...new Map(
         [...(previous.ancestors ?? []), ...(next.ancestors ?? [])].map(

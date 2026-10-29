@@ -5,6 +5,7 @@ import type { NodeDto } from "../../api/layoutsApi";
 import type { NodeFileManifestDto } from "../../api/nodesApi";
 
 interface SearchResults {
+  orderedIds: string[];
   nodes?: NodeDto[];
   files?: NodeFileManifestDto[];
   nodePaths?: Record<string, string>;
@@ -64,7 +65,7 @@ export const useSearchFileList = ({
     const folders = results.nodes ?? [];
     const files = results.files ?? [];
 
-    return [
+    const content: FileSystemTile[] = [
       ...folders.map(
         (node) =>
           ({
@@ -93,6 +94,19 @@ export const useSearchFileList = ({
         } as const;
       }),
     ];
+
+    const orderById = new Map(
+      results.orderedIds.map((id, index) => [id, index]),
+    );
+    const getOrder = (tile: FileSystemTile): number => {
+      switch (tile.kind) {
+        case "folder":
+          return orderById.get(tile.node.id)!;
+        case "file":
+          return orderById.get(tile.file.id)!;
+      }
+    };
+    return content.sort((left, right) => getOrder(left) - getOrder(right));
   }, [results, hasQuery, rootNodeName]);
 
   return {

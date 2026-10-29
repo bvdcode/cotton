@@ -9,7 +9,7 @@ vi.mock("../../../shared/api/layoutsApi", () => ({
 }));
 
 const response = (totalCount = 0): LayoutSearchResult => ({
-  data: { nodes: [], files: [], nodePaths: {}, filePaths: {} },
+  data: { orderedIds: [], nodes: [], files: [], nodePaths: {}, filePaths: {} },
   totalCount,
 });
 const flush = async () => {

@@ -11,6 +11,8 @@ namespace Cotton.Server.Services.Search
 
         public Guid NodeIdForPath { get; set; }
 
+        public Guid? ParentNodeId { get; set; }
+
         public string Name { get; set; } = string.Empty;
 
         public string NameKey { get; set; } = string.Empty;
