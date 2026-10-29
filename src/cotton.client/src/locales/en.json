@@ -2336,6 +2336,8 @@
       "confirmDescription": "Selected items will be moved to Trash and can be restored later."
     },
     "conflicts": {
+      "merge": "Merge",
+      "mergeDescription": "A folder with this name already exists. Merge their contents, or use {{newName}} instead?",
       "title": "Name conflict",
       "description": "An item with this name already exists in this folder. Use {{newName}} instead?",
       "overwriteDescription": "An item with this name already exists in this folder. Replace it, or use {{newName}} instead?",

@@ -205,6 +205,16 @@ describe("nodesApi mutations", () => {
     });
   });
 
+  it("requests conditional cleanup without changing ordinary deletion parameters", async () => {
+    const del = vi.spyOn(httpClient, "delete").mockResolvedValue({});
+
+    await nodesApi.deleteNode(nodeId, false, true);
+
+    expect(del).toHaveBeenCalledWith(`/layouts/nodes/${nodeId}`, {
+      params: { onlyIfEmpty: true },
+    });
+  });
+
   it("renames, moves, and restores nodes through the expected endpoints", async () => {
     const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
       data: makeNode(),

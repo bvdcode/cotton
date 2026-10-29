@@ -2542,6 +2542,8 @@
       "confirmDescription": "Os itens selecionados serão movidos para a Lixeira e poderão ser restaurados depois."
     },
     "conflicts": {
+      "merge": "Mesclar",
+      "mergeDescription": "Já existe uma pasta com este nome. Mesclar o conteúdo ou usar {{newName}}?",
       "title": "Conflito de nomes",
       "description": "Já existe um item com este nome nesta pasta. Usar {{newName}} em vez disso?",
       "overwriteDescription": "Já existe um item com este nome nesta pasta. Substituí-lo ou usar {{newName}} em vez disso?",

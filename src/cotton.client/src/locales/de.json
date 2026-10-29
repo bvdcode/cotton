@@ -2535,6 +2535,8 @@
       "confirmDescription": "Ausgewählte Elemente werden in den Papierkorb verschoben und können später wiederhergestellt werden."
     },
     "conflicts": {
+      "merge": "Zusammenführen",
+      "mergeDescription": "Ein Ordner mit diesem Namen existiert bereits. Inhalte zusammenführen oder {{newName}} verwenden?",
       "title": "Namenskonflikt",
       "description": "Ein Element mit diesem Namen ist in diesem Ordner bereits vorhanden. Stattdessen {{newName}} verwenden?",
       "overwriteDescription": "Ein Element mit diesem Namen ist in diesem Ordner bereits vorhanden. Ersetzen oder stattdessen {{newName}} verwenden?",

@@ -17,13 +17,15 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Nodes
 {
-    public class DeleteNodeQuery(Guid userId, Guid nodeId, bool skipTrash) : IRequest<Guid>
+    public class DeleteNodeQuery(Guid userId, Guid nodeId, bool skipTrash, bool onlyIfEmpty = false) : IRequest<Guid>
     {
         public Guid UserId { get; } = userId;
 
         public Guid NodeId { get; } = nodeId;
 
         public bool SkipTrash { get; } = skipTrash;
+
+        public bool OnlyIfEmpty { get; } = onlyIfEmpty;
     }
 
     public class DeleteNodeQueryHandler(
@@ -40,6 +42,10 @@ namespace Cotton.Server.Handlers.Nodes
     {
         public async Task<Guid> Handle(DeleteNodeQuery request, CancellationToken ct)
         {
+            if (request.OnlyIfEmpty && request.SkipTrash)
+            {
+                throw new BadRequestException<Node>("Empty-folder cleanup must use the trash.");
+            }
             Node node = await _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(cancellationToken: ct)
@@ -77,6 +83,13 @@ namespace Cotton.Server.Handlers.Nodes
             if (node.ParentId is null || node.Type != NodeType.Default)
             {
                 throw new EntityNotFoundException(nameof(Node), "Folder is not available to move to trash.");
+            }
+
+            if (command.OnlyIfEmpty &&
+                (await _dbContext.Nodes.AnyAsync(x => x.ParentId == node.Id, ct) ||
+                 await _dbContext.NodeFiles.AnyAsync(x => x.NodeId == node.Id, ct)))
+            {
+                throw new DuplicateException("Folder is no longer empty.");
             }
 
             IReadOnlyList<TrashParent> parents = await _mediator.Send(

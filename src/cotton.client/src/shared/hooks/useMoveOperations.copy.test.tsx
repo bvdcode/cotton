@@ -222,10 +222,12 @@ describe("copy and paste", () => {
     const { result } = renderOperations();
     act(() => result.current.copyItems([item]));
     await act(() => result.current.pasteInto(original.nodeId));
-    expect(mocks.confirm).toHaveBeenCalledWith({
-      newName: "original (1).txt",
-      canOverwrite: false,
-    });
+    expect(mocks.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newName: "original (1).txt",
+        canOverwrite: false,
+      }),
+    );
     expect(mocks.copyFile).toHaveBeenLastCalledWith(original.id, {
       parentId: original.nodeId,
       name: "original (1).txt",

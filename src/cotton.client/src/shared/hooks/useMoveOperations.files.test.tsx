@@ -241,10 +241,12 @@ describe("useMoveOperations", () => {
       await result.current.pasteInto(targetParentId);
     });
 
-    expect(mocks.confirmConflict).toHaveBeenCalledWith({
-      newName: "plain (1).txt",
-      canOverwrite: true,
-    });
+    expect(mocks.confirmConflict).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newName: "plain (1).txt",
+        canOverwrite: true,
+      }),
+    );
     expect(mocks.moveFile).toHaveBeenNthCalledWith(1, plainFileItem.id, {
       parentId: targetParentId,
     });
@@ -285,10 +287,12 @@ describe("useMoveOperations", () => {
     });
 
     expect(mocks.getChildren).toHaveBeenCalledWith(targetParentId, { page: 1 });
-    expect(mocks.confirmConflict).toHaveBeenCalledWith({
-      newName: "plain (2).txt",
-      canOverwrite: true,
-    });
+    expect(mocks.confirmConflict).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newName: "plain (2).txt",
+        canOverwrite: true,
+      }),
+    );
     expect(mocks.moveFile).toHaveBeenNthCalledWith(2, plainFileItem.id, {
       parentId: targetParentId,
       name: "plain (2).txt",
@@ -380,9 +384,11 @@ describe("useMoveOperations", () => {
       await result.current.pasteInto(targetParentId);
     });
 
-    expect(mocks.confirmConflict).toHaveBeenCalledWith({
-      newName: "plain (1).txt",
-      canOverwrite: false,
-    });
+    expect(mocks.confirmConflict).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newName: "plain (1).txt",
+        canOverwrite: false,
+      }),
+    );
   });
 });

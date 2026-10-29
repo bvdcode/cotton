@@ -2538,6 +2538,8 @@
       "confirmDescription": "Los elementos seleccionados se moverán a la papelera y podrán restaurarse más tarde."
     },
     "conflicts": {
+      "merge": "Combinar",
+      "mergeDescription": "Ya existe una carpeta con este nombre. ¿Combinar su contenido o usar {{newName}}?",
       "title": "Conflicto de nombres",
       "description": "Ya existe un elemento con este nombre en esta carpeta. ¿Usar {{newName}} en su lugar?",
       "overwriteDescription": "Ya existe un elemento con este nombre en esta carpeta. ¿Reemplazarlo o usar {{newName}} en su lugar?",

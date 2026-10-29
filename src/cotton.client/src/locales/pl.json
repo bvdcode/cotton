@@ -2555,6 +2555,8 @@
       "confirmDescription": "Zaznaczone elementy zostaną przeniesione do Kosza i będzie można je przywrócić później."
     },
     "conflicts": {
+      "merge": "Scal",
+      "mergeDescription": "Folder o tej nazwie już istnieje. Scalić zawartość czy użyć nazwy {{newName}}?",
       "title": "Konflikt nazw",
       "description": "Element o tej nazwie już istnieje w tym folderze. Użyć zamiast niej nazwy {{newName}}?",
       "overwriteDescription": "Element o tej nazwie już istnieje w tym folderze. Zastąpić go czy użyć nazwy {{newName}}?",

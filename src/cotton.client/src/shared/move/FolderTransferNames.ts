@@ -117,4 +117,11 @@ export class FolderTransferNames {
   async takenNameKeys(): Promise<Set<string>> {
     return new Set((await this.load()).keys());
   }
+
+  async findFolderId(name: string): Promise<string | undefined> {
+    const entry = (await this.load()).get(getFileNameKey(name));
+    if (entry?.kind === "Folder") {
+      return entry.id;
+    }
+  }
 }

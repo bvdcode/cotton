@@ -214,10 +214,11 @@ namespace Cotton.Server.Controllers
         [HttpDelete("nodes/{nodeId:guid}")]
         public async Task<IActionResult> DeleteLayoutNode(
             [FromRoute] Guid nodeId,
-            [FromQuery] bool skipTrash = false)
+            [FromQuery] bool skipTrash = false,
+            [FromQuery] bool onlyIfEmpty = false)
         {
             Guid userId = User.GetUserId();
-            DeleteNodeRequest request = new(userId, nodeId, skipTrash);
+            DeleteNodeRequest request = new(userId, nodeId, skipTrash, onlyIfEmpty);
             await _mediator.Send(
                 request,
                 HttpContext.RequestAborted);

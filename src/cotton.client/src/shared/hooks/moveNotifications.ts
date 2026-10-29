@@ -151,7 +151,7 @@ async function decryptMovedEncryptedFiles(options: {
           sizeBytes: item.file.sizeBytes,
           metadata: item.file.metadata,
         },
-        targetNodeId: targetParentId,
+        targetNodeId: item.sourceParentId,
         scopeLabel: targetNodeName,
         server: {
           maxChunkSizeBytes: settings.maxChunkSizeBytes,
@@ -164,7 +164,12 @@ async function decryptMovedEncryptedFiles(options: {
     }
   }
 
-  void refreshNodeContent(targetParentId);
+  for (const id of new Set([
+    targetParentId,
+    ...files.map((item) => item.sourceParentId),
+  ])) {
+    void refreshNodeContent(id);
+  }
 
   if (decryptedCount > 0) {
     toast.success(

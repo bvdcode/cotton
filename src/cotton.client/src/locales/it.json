@@ -2541,6 +2541,8 @@
       "confirmDescription": "Gli elementi selezionati verranno spostati nel Cestino e potranno essere ripristinati in seguito."
     },
     "conflicts": {
+      "merge": "Unisci",
+      "mergeDescription": "Esiste già una cartella con questo nome. Unire i contenuti o usare {{newName}}?",
       "title": "Conflitto di nomi",
       "description": "In questa cartella esiste già un elemento con questo nome. Usare invece {{newName}}?",
       "overwriteDescription": "In questa cartella esiste già un elemento con questo nome. Sostituirlo o usare invece {{newName}}?",

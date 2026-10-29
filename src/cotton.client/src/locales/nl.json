@@ -2540,6 +2540,8 @@
       "confirmDescription": "Geselecteerde items worden naar de prullenbak verplaatst en kunnen later worden hersteld."
     },
     "conflicts": {
+      "merge": "Samenvoegen",
+      "mergeDescription": "Er bestaat al een map met deze naam. De inhoud samenvoegen of {{newName}} gebruiken?",
       "title": "Naamconflict",
       "description": "Er bestaat al een item met deze naam in deze map. In plaats daarvan {{newName}} gebruiken?",
       "overwriteDescription": "Er bestaat al een item met deze naam in deze map. Vervangen of in plaats daarvan {{newName}} gebruiken?",

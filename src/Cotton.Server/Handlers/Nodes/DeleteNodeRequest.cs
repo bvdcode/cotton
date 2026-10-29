@@ -10,7 +10,8 @@ namespace Cotton.Server.Handlers.Nodes
     public record DeleteNodeRequest(
         Guid UserId,
         Guid NodeId,
-        bool SkipTrash) : IRequest<Guid>;
+        bool SkipTrash,
+        bool OnlyIfEmpty = false) : IRequest<Guid>;
 
     public class DeleteNodeRequestHandler(
         IMediator _mediator,
@@ -20,7 +21,7 @@ namespace Cotton.Server.Handlers.Nodes
         public async Task<Guid> Handle(DeleteNodeRequest request, CancellationToken ct)
         {
             Guid parentNodeId = await _mediator.Send(
-                new DeleteNodeQuery(request.UserId, request.NodeId, request.SkipTrash),
+                new DeleteNodeQuery(request.UserId, request.NodeId, request.SkipTrash, request.OnlyIfEmpty),
                 ct);
             await _notifications.NotifyNodeDeletedAsync(
                 request.UserId,

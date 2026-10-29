@@ -2552,6 +2552,8 @@
       "confirmDescription": "Vybrané položky budou přesunuty do koše a lze je později obnovit."
     },
     "conflicts": {
+      "merge": "Sloučit",
+      "mergeDescription": "Složka s tímto názvem již existuje. Sloučit jejich obsah, nebo použít název {{newName}}?",
       "title": "Konflikt názvů",
       "description": "V této složce již existuje položka s tímto názvem. Použít místo něj {{newName}}?",
       "overwriteDescription": "V této složce již existuje položka s tímto názvem. Nahradit ji, nebo místo ní použít {{newName}}?",

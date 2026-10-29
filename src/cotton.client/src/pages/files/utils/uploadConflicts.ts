@@ -40,6 +40,7 @@ export async function resolveUploadConflicts(
   files: File[],
   content: UploadConflictContent,
   confirmConflict: (prompt: NameConflictPrompt) => Promise<ConflictAction>,
+  remainingItems = 0,
 ): Promise<ConflictResult> {
   const filesByNameKey = new Map(
     content.files.map((file) => [getFileNameKey(file.name), file]),
@@ -55,7 +56,7 @@ export async function resolveUploadConflicts(
   const resolveConflict = createConflictResolver(confirmConflict);
   let skipAllConflicts = false;
 
-  for (const sourceFile of files) {
+  for (const [index, sourceFile] of files.entries()) {
     const normalizedName = normalizeFileName(sourceFile.name);
     const file =
       normalizedName === sourceFile.name
@@ -80,7 +81,12 @@ export async function resolveUploadConflicts(
     const canOverwrite = Boolean(
       existingFile && !replacedFileIds.has(existingFile.id),
     );
-    const action = await resolveConflict({ newName, canOverwrite });
+    const action = await resolveConflict({
+      newName,
+      canOverwrite,
+      canMerge: false,
+      canApplyToAll: index < files.length - 1 || remainingItems > 0,
+    });
 
     if (action === ConflictAction.Cancel) {
       return { files: [], cancelled: true };

@@ -187,9 +187,20 @@ export const nodesApi = {
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
-  deleteNode: async (nodeId: Guid, skipTrash = false): Promise<void> => {
+  deleteNode: async (
+    nodeId: Guid,
+    skipTrash = false,
+    onlyIfEmpty = false,
+  ): Promise<void> => {
+    const params: Record<string, boolean> = {};
+    if (skipTrash) {
+      params.skipTrash = true;
+    }
+    if (onlyIfEmpty) {
+      params.onlyIfEmpty = true;
+    }
     await httpClient.delete(`/layouts/nodes/${nodeId}`, {
-      params: skipTrash ? { skipTrash: true } : undefined,
+      params: Object.keys(params).length > 0 ? params : undefined,
     });
   },
 

@@ -2539,6 +2539,8 @@
       "confirmDescription": "Les éléments sélectionnés seront déplacés vers la corbeille et pourront être restaurés ultérieurement."
     },
     "conflicts": {
+      "merge": "Fusionner",
+      "mergeDescription": "Un dossier porte déjà ce nom. Fusionner leur contenu ou utiliser {{newName}} ?",
       "title": "Conflit de noms",
       "description": "Un élément portant ce nom existe déjà dans ce dossier. Utiliser plutôt {{newName}} ?",
       "overwriteDescription": "Un élément portant ce nom existe déjà dans ce dossier. Le remplacer ou utiliser plutôt {{newName}} ?",
