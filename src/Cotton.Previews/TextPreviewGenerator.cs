@@ -141,7 +141,7 @@ namespace Cotton.Previews
 
         private static FontFamily LoadFontFamily()
         {
-            byte[] bytes = StaticFonts.GetFontBytes(StaticFontName.Y224);
+            byte[] bytes = StaticFonts.GetFontBytes(StaticFontName.Consola);
             FontCollection collection = new FontCollection();
             using MemoryStream fontStream = new MemoryStream(bytes, writable: false);
             return collection.Add(fontStream);

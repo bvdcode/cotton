@@ -38,7 +38,6 @@ export type MoveSingleItemResult =
 
 export type MoveItemOutcome =
   | { kind: "moved"; moved: MoveSingleItemResult }
-  | { kind: "merge"; targetId: string }
   | { kind: "failed"; error: Error }
   | { kind: "skipped"; skipAll: boolean }
   | { kind: "cancelled" };
@@ -55,21 +54,19 @@ const getMoveItemName = async (item: MoveClipboardItem): Promise<string> => {
   return readFolderName(node);
 };
 
-const getTargetNames = async (targetParentId: string) => {
+const getTargetNames = async (targetParentId: string): Promise<Set<string>> => {
   const { content } = await fetchAllNodeChildren(targetParentId);
   const taken = new Set<string>();
-  const folders = new Map<string, string>();
 
   for (const node of await applyDisplayMetaToNodes(content.nodes)) {
     taken.add(getFileNameKey(node.name));
-    folders.set(getFileNameKey(node.name), node.id);
   }
   for (const file of content?.files ?? []) {
     const nameKey = getFileNameKey(file.name);
     taken.add(nameKey);
   }
 
-  return { taken, folders };
+  return taken;
 };
 
 const getMoveConflictKind = <T>(error: T): RestoreConflictKind | null => {
@@ -163,7 +160,6 @@ interface MoveConflictOptions {
   item: MoveClipboardItem;
   skipAllConflicts: boolean;
   targetParentId: string;
-  hasMoreItems?: boolean;
 }
 
 interface MoveConflictState {
@@ -171,7 +167,6 @@ interface MoveConflictState {
   overwrite: boolean;
   rejectedNames: Set<string>;
   targetNames: Set<string> | null;
-  targetFolders: Map<string, string>;
 }
 
 type ConflictResolution = MoveItemOutcome | { kind: "retry" };
@@ -186,7 +181,6 @@ export const moveItemWithConflictResolution = async (
     overwrite: false,
     rejectedNames: new Set<string>(),
     targetNames: null,
-    targetFolders: new Map(),
   };
 
   while (true) {
@@ -246,15 +240,10 @@ async function resolveMoveConflict<T>(
   }
 
   try {
-    if (state.targetNames === null) {
-      if (error instanceof DisplayNameConflictError) {
-        state.targetNames = await folderNames.takenNameKeys();
-      } else {
-        const names = await getTargetNames(options.targetParentId);
-        state.targetNames = names.taken;
-        state.targetFolders = names.folders;
-      }
-    }
+    state.targetNames ??=
+      error instanceof DisplayNameConflictError
+        ? await folderNames.takenNameKeys()
+        : await getTargetNames(options.targetParentId);
   } catch (loadError) {
     return {
       kind: "failed",
@@ -271,29 +260,12 @@ async function resolveMoveConflict<T>(
   }
 
   const newName = nextAvailableName(originalName, state.targetNames);
-  const targetId =
-    options.item.kind === "folder" && getMoveConflictKind(error) === "Folder"
-      ? error instanceof DisplayNameConflictError
-        ? await folderNames.findFolderId(conflictingName)
-        : state.targetFolders.get(getFileNameKey(conflictingName))
-      : undefined;
-  const canMerge = targetId !== undefined && targetId !== options.item.id;
   const action = await options.confirmConflict({
     newName,
     canOverwrite: canOverwriteConflict(options, error),
-    canMerge,
-    canApplyToAll: options.hasMoreItems === true,
   });
 
   switch (action) {
-    case ConflictAction.Merge:
-      if (!canMerge || targetId === undefined) {
-        return {
-          kind: "failed",
-          error: new Error("No matching destination folder to merge."),
-        };
-      }
-      return { kind: "merge", targetId };
     case ConflictAction.Cancel:
       return { kind: "cancelled" };
     case ConflictAction.Skip:

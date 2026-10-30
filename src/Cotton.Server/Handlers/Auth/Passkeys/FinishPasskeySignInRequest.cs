@@ -8,8 +8,8 @@ using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.Passkeys;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Exceptions;
-using EasyExtensions.Passkeys;
-using EasyExtensions.Passkeys.Models;
+using Fido2NetLib;
+using Fido2NetLib.Objects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using EasyExtensions.Mediator;
@@ -25,7 +25,7 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
     public class FinishPasskeySignInRequestHandler(
         CottonDbContext _dbContext,
         IMemoryCache _cache,
-        IPasskeyServerFactory _factory,
+        IPasskeyClientFactory _factory,
         IDatabaseIntegrityVerifier _integrity,
         AuthSessionIssuer _sessionIssuer,
         ILogger<FinishPasskeySignInRequestHandler> _logger)
@@ -41,17 +41,10 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
             }
 
             _cache.Remove(PasskeyChallenges.AssertionCacheKey(request.RequestId));
-            AuthenticationResponse assertion;
-            try
-            {
-                assertion = PasskeyProtocolMapper.ToAssertionResponse(request.Credential);
-            }
-            catch (Exception ex) when (PasskeyVerificationErrors.IsInvalidResponse(ex))
-            {
-                _logger.LogWarning(ex, "Passkey assertion response could not be decoded.");
-                return new ApiProblemResult(StatusCodes.Status401Unauthorized, "Invalid passkey", "unauthorized");
-            }
-            byte[] credentialId = assertion.RawId;
+            AuthenticatorAssertionRawResponse assertion = PasskeyProtocolMapper.ToAssertionResponse(request.Credential);
+            byte[] credentialId = assertion.RawId.Length > 0
+                ? assertion.RawId
+                : PasskeyProtocolMapper.DecodeBrowserBuffer(request.Credential.Id);
 
             UserPasskeyCredential? credential = await _dbContext.UserPasskeyCredentials
                 .Include(x => x.User)
@@ -68,21 +61,35 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
                 return new ApiProblemResult(StatusCodes.Status401Unauthorized, "Invalid passkey", "unauthorized");
             }
 
-            IPasskeyServer server = await _factory.CreateAsync(ct);
-            AuthenticationResult result;
+            IFido2 fido = await _factory.CreateAsync(ct);
+            VerifyAssertionResult result;
             try
             {
-                result = server.VerifyAuthentication(assertion, state.Options,
-                    new StoredCredential(credential.CredentialId, credential.PublicKey, credential.UserHandle,
-                        PasskeyProtocolMapper.ToSignatureCounter(credential.SignatureCounter), credential.IsBackupEligible));
+                result = await fido.MakeAssertionAsync(
+                    new MakeAssertionParams
+                    {
+                        AssertionResponse = assertion,
+                        OriginalOptions = state.Options,
+                        StoredPublicKey = credential.PublicKey,
+                        StoredSignatureCounter = PasskeyProtocolMapper.ToSignatureCounter(credential.SignatureCounter),
+                        IsUserHandleOwnerOfCredentialIdCallback = async (args, token) =>
+                        {
+                            return await _dbContext.UserPasskeyCredentials.AnyAsync(
+                                x => x.CredentialId == args.CredentialId
+                                    && x.UserId == credential.UserId
+                                    && (args.UserHandle.Length == 0 || x.UserHandle == args.UserHandle),
+                                token);
+                        }
+                    },
+                    ct);
             }
-            catch (Exception ex) when (PasskeyVerificationErrors.IsInvalidResponse(ex))
+            catch (Fido2VerificationException ex)
             {
                 _logger.LogWarning(ex, "Passkey assertion verification failed for credential {CredentialId}.", credential.Id);
                 return new ApiProblemResult(StatusCodes.Status401Unauthorized, "Invalid passkey", "unauthorized");
             }
 
-            credential.SignatureCounter = result.SignatureCounter;
+            credential.SignatureCounter = result.SignCount;
             credential.IsBackedUp = result.IsBackedUp;
             credential.LastUsedAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(ct);

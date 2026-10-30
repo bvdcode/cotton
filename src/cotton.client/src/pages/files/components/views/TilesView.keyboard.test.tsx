@@ -123,23 +123,6 @@ afterEach(() => {
 });
 
 describe("TilesView keyboard behavior", () => {
-  it("focuses the first matching name without opening it", () => {
-    const { fileOperations } = renderTilesView({
-      tiles: [
-        makeFileTile("one", "Archive.txt"),
-        makeFileTile("two", "Фото.jpg"),
-      ],
-    });
-    fireEvent.keyDown(document.body, { key: "ф" });
-    expect(
-      document.activeElement
-        ?.closest("[data-tile-id]")
-        ?.getAttribute("data-tile-id"),
-    ).toBe("two");
-    expect(fileOperations.onClick).not.toHaveBeenCalled();
-    expect(fileOperations.onMediaClick).not.toHaveBeenCalled();
-  });
-
   it("opens the first folder on Enter from document context", () => {
     const { folderOperations } = renderTilesView({
       tiles: [makeFolderTile("folder-1")],

@@ -1,14 +1,4 @@
-import {
-  act,
-  cleanup,
-  render,
-  renderHook,
-  waitFor,
-} from "@testing-library/react";
-import type {
-  LayoutSearchResult,
-  layoutsApi,
-} from "../../../shared/api/layoutsApi";
+import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   useSearchPagination,
@@ -16,7 +6,7 @@ import {
 } from "./useSearchPagination";
 
 const mocks = vi.hoisted(() => ({
-  search: vi.fn<typeof layoutsApi.search>(),
+  search: vi.fn(),
 }));
 
 vi.mock("../../../shared/api/layoutsApi", () => ({
@@ -74,76 +64,5 @@ describe("useSearchPagination", () => {
     expect(firstDebouncedRender?.state.loadingInitial).toBe(true);
     expect(firstDebouncedRender?.state.results).toBeNull();
     expect(firstDebouncedRender?.state.totalCount).toBe(0);
-  });
-
-  it("restarts pagination when the folder changes and ignores the old folder response", async () => {
-    const response = (id: string): LayoutSearchResult => ({
-      data: {
-        orderedIds: [id],
-        nodes: [
-          {
-            id,
-            name: id,
-            parentId: "folder-1",
-            layoutId: "layout-1",
-            metadata: {},
-            createdAt: "",
-            updatedAt: "",
-          },
-        ],
-        files: [],
-        nodePaths: {},
-        filePaths: {},
-      },
-      totalCount: 2,
-    });
-    let finishOldPage: (value: LayoutSearchResult) => void = () => {};
-    mocks.search
-      .mockResolvedValueOnce(response("old-first"))
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            finishOldPage = resolve;
-          }),
-      )
-      .mockResolvedValueOnce(response("new-first"));
-
-    const { result, rerender } = renderHook(
-      ({ currentNodeId }) =>
-        useSearchPagination({
-          layoutId: "layout-1",
-          trimmedQuery: "report",
-          currentNodeId,
-        }),
-      { initialProps: { currentNodeId: "folder-1" } },
-    );
-    await waitFor(() =>
-      expect(result.current.results?.nodes[0].id).toBe("old-first"),
-    );
-    act(() => result.current.loadNextPage());
-    expect(mocks.search).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        currentNodeId: "folder-1",
-        page: 2,
-      }),
-    );
-    const oldSignal = mocks.search.mock.lastCall?.[0].signal;
-
-    rerender({ currentNodeId: "folder-2" });
-    await waitFor(() =>
-      expect(result.current.results?.nodes[0].id).toBe("new-first"),
-    );
-    expect(mocks.search).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        currentNodeId: "folder-2",
-        page: 1,
-      }),
-    );
-    expect(oldSignal?.aborted).toBe(true);
-
-    await act(async () => finishOldPage(response("old-second")));
-    expect(result.current.results?.nodes.map((node) => node.id)).toEqual([
-      "new-first",
-    ]);
   });
 });

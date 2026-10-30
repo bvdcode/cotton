@@ -8,8 +8,6 @@ namespace Cotton.Server.Models.Dto
 {
     public class SearchResultDto
     {
-        public IReadOnlyList<Guid> OrderedIds { get; set; } = [];
-
         public IEnumerable<NodeDto> Nodes { get; set; } = [];
 
         public IReadOnlyList<NodeDto> Ancestors { get; set; } = [];

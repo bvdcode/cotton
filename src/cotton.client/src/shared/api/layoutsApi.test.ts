@@ -91,13 +91,7 @@ describe("layoutsApi reads", () => {
 
   it("searches with query and pagination and reads total-count", async () => {
     const get = vi.spyOn(httpClient, "get").mockResolvedValue({
-      data: {
-        orderedIds: [],
-        nodes: [],
-        files: [],
-        nodePaths: {},
-        filePaths: {},
-      },
+      data: { nodes: [], files: [], nodePaths: {}, filePaths: {} },
       headers: { "x-total-count": "17" },
     });
 
@@ -109,27 +103,15 @@ describe("layoutsApi reads", () => {
     });
 
     expect(get).toHaveBeenCalledWith(`/layouts/${layoutId}/search`, {
-      params: {
-        query: "thing",
-        page: 2,
-        pageSize: 50,
-        deep: false,
-        currentNodeId: undefined,
-      },
+      params: { query: "thing", page: 2, pageSize: 50, deep: false },
       signal: undefined,
     });
     expect(result.totalCount).toBe(17);
   });
 
-  it("forwards folder context, deep mode and cancellation while trimming the query", async () => {
+  it("forwards deep mode and cancellation while trimming the query", async () => {
     const get = vi.spyOn(httpClient, "get").mockResolvedValue({
-      data: {
-        orderedIds: [],
-        nodes: [],
-        files: [],
-        nodePaths: {},
-        filePaths: {},
-      },
+      data: { nodes: [], files: [], nodePaths: {}, filePaths: {} },
       headers: { "x-total-count": "0" },
     });
     const controller = new AbortController();
@@ -137,17 +119,10 @@ describe("layoutsApi reads", () => {
       layoutId,
       query: "  report  ",
       deep: true,
-      currentNodeId: nodeId,
       signal: controller.signal,
     });
     expect(get).toHaveBeenCalledWith(`/layouts/${layoutId}/search`, {
-      params: {
-        query: "report",
-        page: 1,
-        pageSize: 20,
-        deep: true,
-        currentNodeId: nodeId,
-      },
+      params: { query: "report", page: 1, pageSize: 20, deep: true },
       signal: controller.signal,
     });
   });
@@ -160,7 +135,6 @@ describe("layoutsApi reads", () => {
     });
     vi.spyOn(httpClient, "get").mockResolvedValue({
       data: {
-        orderedIds: ["file-1"],
         nodes: [],
         files: [
           {
@@ -194,13 +168,7 @@ describe("layoutsApi reads", () => {
 
   it("defaults search total-count to zero when header is missing", async () => {
     vi.spyOn(httpClient, "get").mockResolvedValue({
-      data: {
-        orderedIds: [],
-        nodes: [],
-        files: [],
-        nodePaths: {},
-        filePaths: {},
-      },
+      data: { nodes: [], files: [], nodePaths: {}, filePaths: {} },
       headers: {},
     });
 

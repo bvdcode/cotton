@@ -109,7 +109,6 @@ const getPreviewLayout = (fileType: FileType | null): "header" | "overlay" => {
     case "pdf":
     case "model":
     case "document":
-    case "office":
     case "archive":
     case "other":
       return "header";

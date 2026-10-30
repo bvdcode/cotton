@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Globalization;
+using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
 {
@@ -10,19 +11,64 @@ namespace Cotton.Previews
     {
         private const string FfmpegPathEnvironmentVariable = "COTTON_FFMPEG_PATH";
         private const string FfprobePathEnvironmentVariable = "COTTON_FFPROBE_PATH";
+        private const string FfmpegDirectoryEnvironmentVariable = "COTTON_FFMPEG_DIR";
+        private const string CacheDirectoryName = "cotton-ffmpeg";
+
+        private static readonly SemaphoreSlim DownloadGate = new(1, 1);
+        private static string? _ffmpegPath;
+        private static string? _ffprobePath;
 
         public static string GetFfmpegPath() =>
-            ResolveRequiredExecutable(FfmpegPathEnvironmentVariable, GetExecutableName("ffmpeg"));
+            _ffmpegPath ?? ResolveExistingExecutable(FfmpegPathEnvironmentVariable, GetExecutableName("ffmpeg")) ?? GetDownloadedExecutablePath("ffmpeg");
 
         public static string GetFfprobePath() =>
-            ResolveRequiredExecutable(FfprobePathEnvironmentVariable, GetExecutableName("ffprobe"));
+            _ffprobePath ?? ResolveExistingExecutable(FfprobePathEnvironmentVariable, GetExecutableName("ffprobe")) ?? GetDownloadedExecutablePath("ffprobe");
 
-        public static Task EnsureAvailableAsync(CancellationToken cancellationToken = default)
+        public static async Task EnsureAvailableAsync(CancellationToken cancellationToken = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            _ = GetFfmpegPath();
-            _ = GetFfprobePath();
-            return Task.CompletedTask;
+            if (TryResolveInstalledBinaries(out string ffmpegPath, out string ffprobePath))
+            {
+                _ffmpegPath = ffmpegPath;
+                _ffprobePath = ffprobePath;
+                return;
+            }
+
+            await DownloadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (TryResolveInstalledBinaries(out ffmpegPath, out ffprobePath))
+                {
+                    _ffmpegPath = ffmpegPath;
+                    _ffprobePath = ffprobePath;
+                    return;
+                }
+
+                string downloadDirectory = GetDownloadDirectory();
+                Directory.CreateDirectory(downloadDirectory);
+
+                await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official, downloadDirectory).ConfigureAwait(false);
+
+                ffmpegPath = Path.Combine(downloadDirectory, GetExecutableName("ffmpeg"));
+                ffprobePath = Path.Combine(downloadDirectory, GetExecutableName("ffprobe"));
+
+                if (!File.Exists(ffmpegPath) || !File.Exists(ffprobePath))
+                {
+                    throw new FileNotFoundException($"ffmpeg download did not produce both expected binaries in '{downloadDirectory}'.");
+                }
+
+                if (Environment.OSVersion.Platform == PlatformID.Unix)
+                {
+                    await ChmodExecutableAsync(ffmpegPath, cancellationToken).ConfigureAwait(false);
+                    await ChmodExecutableAsync(ffprobePath, cancellationToken).ConfigureAwait(false);
+                }
+
+                _ffmpegPath = ffmpegPath;
+                _ffprobePath = ffprobePath;
+            }
+            finally
+            {
+                DownloadGate.Release();
+            }
         }
 
         public static async Task<double?> TryGetDurationSecondsAsync(
@@ -101,11 +147,22 @@ namespace Cotton.Previews
             ];
         }
 
-        private static string ResolveRequiredExecutable(string environmentVariable, string executableName)
+        private static bool TryResolveInstalledBinaries(out string ffmpegPath, out string ffprobePath)
         {
-            return ResolveConfiguredExecutable(environmentVariable, executableName)
-                ?? throw new FileNotFoundException(
-                    $"{executableName} was not found. Install FFmpeg and add it to PATH, or set {environmentVariable} to its executable path.");
+            ffmpegPath = string.Empty;
+            ffprobePath = string.Empty;
+
+            string? resolvedFfmpeg = ResolveConfiguredExecutable(FfmpegPathEnvironmentVariable, GetExecutableName("ffmpeg"));
+            string? resolvedFfprobe = ResolveConfiguredExecutable(FfprobePathEnvironmentVariable, GetExecutableName("ffprobe"));
+
+            if (resolvedFfmpeg is null || resolvedFfprobe is null)
+            {
+                return false;
+            }
+
+            ffmpegPath = resolvedFfmpeg;
+            ffprobePath = resolvedFfprobe;
+            return true;
         }
 
         private static string? ResolveConfiguredExecutable(string environmentVariable, string executableName)
@@ -129,6 +186,18 @@ namespace Cotton.Previews
             }
 
             throw new FileNotFoundException($"{environmentVariable} points to '{trimmed}', but that executable was not found.");
+        }
+
+        private static string? ResolveExistingExecutable(string environmentVariable, string executableName)
+        {
+            try
+            {
+                return ResolveConfiguredExecutable(environmentVariable, executableName);
+            }
+            catch (FileNotFoundException)
+            {
+                return null;
+            }
         }
 
         private static string? FindExecutableOnPath(string executableName)
@@ -156,8 +225,47 @@ namespace Cotton.Previews
             return null;
         }
 
+        private static string GetDownloadedExecutablePath(string baseName) =>
+            Path.Combine(GetDownloadDirectory(), GetExecutableName(baseName));
+
+        private static string GetDownloadDirectory()
+        {
+            string? configured = Environment.GetEnvironmentVariable(FfmpegDirectoryEnvironmentVariable);
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured.Trim();
+            }
+
+            string? localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (!string.IsNullOrWhiteSpace(localAppData))
+            {
+                return Path.Combine(localAppData, CacheDirectoryName);
+            }
+
+            return Path.Combine(Path.GetTempPath(), CacheDirectoryName);
+        }
+
         private static string GetExecutableName(string baseName) =>
             Environment.OSVersion.Platform == PlatformID.Win32NT ? $"{baseName}.exe" : baseName;
+
+        private static async Task ChmodExecutableAsync(string path, CancellationToken cancellationToken)
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = "chmod",
+                ArgumentList = { "+x", path },
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+
+            using Process process = new Process { StartInfo = startInfo };
+            if (process.Start())
+            {
+                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
 
         private static async Task<string?> RunFfprobeAsync(
             IReadOnlyCollection<string> arguments,

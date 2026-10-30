@@ -5,7 +5,6 @@ using System.Buffers.Binary;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using Lokad.OoxPdf;
 
 namespace Cotton.Previews
 {
@@ -20,14 +19,11 @@ namespace Cotton.Previews
         private static readonly IPreviewGenerator[] Generators =
         [
             new PdfPreviewGenerator(),
-            new OfficePreviewGenerator(OoxPdfInputKind.Docx, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-            new SpreadsheetPreviewGenerator(),
-            new OfficePreviewGenerator(OoxPdfInputKind.Pptx, "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
             new HeicPreviewGenerator(),
             new RawPreviewGenerator(),
-            new MeshPreviewGenerator(),
-            MeshPreviewGenerator.CreateObjGenerator(),
-            MeshPreviewGenerator.CreateThreeMfGenerator(),
+            new StlThumbPreviewGenerator(),
+            StlThumbPreviewGenerator.CreateObjGenerator(),
+            StlThumbPreviewGenerator.CreateThreeMfGenerator(),
             new TextPreviewGenerator(),
             new AudioPreviewGenerator(),
             new VideoPreviewGenerator(),

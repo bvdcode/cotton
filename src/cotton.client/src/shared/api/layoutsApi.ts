@@ -28,7 +28,6 @@ export interface LayoutStatsDto {
 }
 
 export interface LayoutSearchResultDto {
-  orderedIds: Guid[];
   ancestors?: NodeDto[];
   nodes: NodeDto[];
   files: NodeFileManifestDto[];
@@ -86,7 +85,6 @@ export const layoutsApi = {
     page?: number;
     pageSize?: number;
     deep?: boolean;
-    currentNodeId?: Guid;
     signal?: AbortSignal;
   }): Promise<LayoutSearchResult> => {
     const {
@@ -95,14 +93,13 @@ export const layoutsApi = {
       page = 1,
       pageSize = 20,
       deep = false,
-      currentNodeId,
       signal,
     } = options;
 
     const response = await httpClient.get<LayoutSearchResultDto>(
       `/layouts/${layoutId}/search`,
       {
-        params: { query: query.trim(), page, pageSize, deep, currentNodeId },
+        params: { query: query.trim(), page, pageSize, deep },
         signal,
       },
     );

@@ -2415,6 +2415,7 @@
       "uploadFailed": "Nahrávání sdílených souborů se nepodařilo spustit. Obnovte stránku a zkuste to znovu."
     },
     "folderSizes": {
+      "calculate": "Spočítat velikosti složek",
       "calculating": "Počítání velikostí složek…",
       "failed": "Nepodařilo se spočítat velikosti všech složek. Zkuste to znovu."
     },
@@ -2552,8 +2553,6 @@
       "confirmDescription": "Vybrané položky budou přesunuty do koše a lze je později obnovit."
     },
     "conflicts": {
-      "merge": "Sloučit",
-      "mergeDescription": "Složka s tímto názvem již existuje. Sloučit jejich obsah, nebo použít název {{newName}}?",
       "title": "Konflikt názvů",
       "description": "V této složce již existuje položka s tímto názvem. Použít místo něj {{newName}}?",
       "overwriteDescription": "V této složce již existuje položka s tímto názvem. Nahradit ji, nebo místo ní použít {{newName}}?",
@@ -2708,10 +2707,7 @@
         "modelLoadFailed": "Načtení 3D modelu se nezdařilo",
         "modelUnsupportedType": "Tento formát 3D souboru není pro náhled v prohlížeči podporován",
         "pdfTooLarge": "PDF je pro náhled příliš velké ({{size}}). Maximální velikost je {{maxSize}}. Pro zobrazení jej prosím stáhněte.",
-        "fileTooLarge": "Soubor je pro náhled příliš velký ({{size}}). Maximální velikost pro náhled je {{maxSize}}. Pro zobrazení jej prosím stáhněte."
-      },
-      "office": {
-        "truncated": "Zobrazeno prvních {{rows}} řádků a {{columns}} sloupců tohoto listu."
+        "fileTooLarge": "Soubor je pro náhled příliš velký ({{size}}). Maximální velikost pro textový náhled je {{maxSize}}. Pro zobrazení jej prosím stáhněte."
       }
     },
     "actionsTitle": "Akce",

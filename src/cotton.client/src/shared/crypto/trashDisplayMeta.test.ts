@@ -26,12 +26,7 @@ it("projects saved trash paths without changing their raw snapshots", async () =
       originalParentsV1: JSON.stringify([root, parent]),
     },
   });
-  const source = {
-    node: root,
-    ...root,
-    nodes: [child],
-    files: [],
-  };
+  const source = { ...root, nodes: [child], files: [] };
   const display = await projectTrashContent(source);
   expect(display?.nodes[0].name).toBe("Archive");
   expect(display?.nodes[0].metadata?.originalParentPath).toBe("Documents");

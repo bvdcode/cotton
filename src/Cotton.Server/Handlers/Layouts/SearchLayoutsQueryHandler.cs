@@ -7,7 +7,6 @@ using Cotton.Files;
 using Cotton.Nodes;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Services;
 using Cotton.Server.Services.Search;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Mediator;
@@ -21,7 +20,6 @@ namespace Cotton.Server.Handlers.Layouts
     public class SearchLayoutsQueryHandler(
         CottonDbContext _dbContext,
         IEnumerable<ILayoutSearchProvider> _providers,
-        NodeSubtreeService _subtree,
         IMediator _mediator)
         : IRequestHandler<SearchLayoutsQuery, PagedResult<SearchResultDto>>
     {
@@ -76,7 +74,6 @@ namespace Cotton.Server.Handlers.Layouts
                 NodePaths = nodePaths,
                 FilePaths = filePaths,
                 Ancestors = ancestors,
-                OrderedIds = hits.Select(hit => hit.Id).ToArray(),
             }, totalCount);
         }
 
@@ -100,11 +97,7 @@ namespace Cotton.Server.Handlers.Layouts
             }
 
             int skip = checked((request.Page - 1) * request.PageSize);
-            Guid[] priorityNodeIds = request.CurrentNodeId is Guid currentNodeId
-                ? [.. await _subtree.CollectSubtreeIdsAsync(request.UserId, currentNodeId, cancellationToken)]
-                : [];
-            List<LayoutSearchHit> hits = await LoadPagedHitsAsync(
-                hitsQuery, priorityNodeIds, skip, request.PageSize, cancellationToken);
+            List<LayoutSearchHit> hits = await LoadPagedHitsAsync(hitsQuery, skip, request.PageSize, cancellationToken);
             if (transaction is not null)
             {
                 await transaction.CommitAsync(cancellationToken);
@@ -155,14 +148,12 @@ namespace Cotton.Server.Handlers.Layouts
 
         private static async Task<List<LayoutSearchHit>> LoadPagedHitsAsync(
             IQueryable<LayoutSearchHit> hitsQuery,
-            Guid[] priorityNodeIds,
             int skip,
             int pageSize,
             CancellationToken cancellationToken)
         {
             return await hitsQuery
-                .OrderByDescending(hit => hit.ParentNodeId.HasValue && priorityNodeIds.Contains(hit.ParentNodeId.Value))
-                .ThenByDescending(hit => hit.Score)
+                .OrderByDescending(hit => hit.Score)
                 .ThenBy(hit => hit.Kind)
                 .ThenBy(hit => hit.NameKey)
                 .ThenBy(hit => hit.Id)

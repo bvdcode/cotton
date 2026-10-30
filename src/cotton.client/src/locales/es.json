@@ -2413,6 +2413,7 @@
       "uploadFailed": "No se pudo iniciar la subida de los archivos compartidos. Recarga esta página para volver a intentarlo."
     },
     "folderSizes": {
+      "calculate": "Calcular tamaños de carpetas",
       "calculating": "Calculando tamaños de carpetas…",
       "failed": "No se pudieron calcular los tamaños de todas las carpetas. Inténtalo de nuevo."
     },
@@ -2538,8 +2539,6 @@
       "confirmDescription": "Los elementos seleccionados se moverán a la papelera y podrán restaurarse más tarde."
     },
     "conflicts": {
-      "merge": "Combinar",
-      "mergeDescription": "Ya existe una carpeta con este nombre. ¿Combinar su contenido o usar {{newName}}?",
       "title": "Conflicto de nombres",
       "description": "Ya existe un elemento con este nombre en esta carpeta. ¿Usar {{newName}} en su lugar?",
       "overwriteDescription": "Ya existe un elemento con este nombre en esta carpeta. ¿Reemplazarlo o usar {{newName}} en su lugar?",
@@ -2690,10 +2689,7 @@
         "modelLoadFailed": "No se pudo cargar el modelo 3D",
         "modelUnsupportedType": "Este formato de archivo 3D no es compatible con la vista previa en el navegador",
         "pdfTooLarge": "El PDF es demasiado grande para la vista previa ({{size}}). El tamaño máximo es {{maxSize}}. Descarga el archivo para verlo.",
-        "fileTooLarge": "El archivo es demasiado grande para la vista previa ({{size}}). El tamaño máximo para la vista previa es {{maxSize}}. Descarga el archivo para verlo."
-      },
-      "office": {
-        "truncated": "Se muestran las primeras {{rows}} filas y {{columns}} columnas de esta hoja."
+        "fileTooLarge": "El archivo es demasiado grande para la vista previa ({{size}}). El tamaño máximo para la vista previa de texto es {{maxSize}}. Descarga el archivo para verlo."
       }
     },
     "actionsTitle": "Acciones",

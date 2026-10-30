@@ -3,7 +3,6 @@
 
 using Cotton.Server.Models;
 using Cotton.Server.Services.Search;
-using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using Cotton.Server.Extensions;
@@ -29,19 +28,6 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(result.Payload.Files.Single().Id, Is.EqualTo(file.Id));
             Assert.That(_worker.InfoCalls + _worker.EmbedCalls, Is.Zero);
             Assert.That(await DbContext.Database.IsExtensionInstalledAsync("vector"), Is.False);
-        }
-
-        [Test]
-        public async Task OrdinarySearch_CurrentFolderFilePrecedesRootNodeWithNullParent()
-        {
-            NodeFile local = AddFile("old files.txt", []);
-            await DbContext.SaveChangesAsync();
-
-            PagedResult<SearchResultDto> result = await Search(
-                deep: false, query: "files", pageSize: 1, currentNodeId: _folder.Id);
-
-            Assert.That(result.TotalCount, Is.EqualTo(2));
-            Assert.That(result.Payload.Files.Single().Id, Is.EqualTo(local.Id));
         }
 
         [Test]
@@ -79,38 +65,6 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task DeepSearch_CurrentFolderPriorityPreservesRelevanceAndDeduplication()
-        {
-            Node current = CreateFolder(_folder.Owner, _folder.Layout);
-            current.SetName("current");
-            current.Parent = _folder;
-            Node nested = current;
-            for (int depth = 0; depth < 4; depth++)
-            {
-                Node child = CreateFolder(_folder.Owner, _folder.Layout);
-                child.SetName($"level-{depth}");
-                child.Parent = nested;
-                nested = child;
-            }
-            NodeFile global = AddFile("global.pdf", [Direction(1, 0)]);
-            NodeFile localNear = AddFile("local-near.pdf", [Direction(0.8f, 0.6f), Direction(0, 1)], nested);
-            NodeFile localFar = AddFile("local-far.pdf", [Direction(0.6f, 0.8f)], current);
-            await PrepareIndex();
-
-            PagedResult<SearchResultDto> first = await Search(pageSize: 2, currentNodeId: current.Id);
-            PagedResult<SearchResultDto> second = await Search(page: 2, pageSize: 2, currentNodeId: current.Id);
-            PagedResult<SearchResultDto> ordinary = await Search(pageSize: 1);
-            Assert.Multiple(() =>
-            {
-                Assert.That(first.TotalCount, Is.EqualTo(3));
-                Assert.That(first.Payload.Files.Select(file => file.Id), Is.EqualTo(new[] { localNear.Id, localFar.Id }));
-                Assert.That(first.Payload.OrderedIds, Is.EqualTo(new[] { localNear.Id, localFar.Id }));
-                Assert.That(second.Payload.Files.Single().Id, Is.EqualTo(global.Id));
-                Assert.That(ordinary.Payload.Files.Single().Id, Is.EqualTo(global.Id));
-            });
-        }
-
-        [Test]
         public async Task DeepSearch_RestrictsOwnerLayoutTrashHistoryAndIndexVersion()
         {
             NodeFile visible = AddFile("visible.pdf", [Direction(0.8f, 0.6f)]);
@@ -127,8 +81,6 @@ namespace Cotton.Server.IntegrationTests
             PagedResult<SearchResultDto> result = await Search();
             Assert.That(result.TotalCount, Is.EqualTo(1));
             Assert.That(result.Payload.Files.Single().Id, Is.EqualTo(visible.Id));
-            PagedResult<SearchResultDto> foreignFolder = await Search(currentNodeId: otherOwner.Id);
-            Assert.That(foreignFolder.Payload.Files.Single().Id, Is.EqualTo(visible.Id));
         }
 
         [Test]
@@ -210,7 +162,6 @@ namespace Cotton.Server.IntegrationTests
             services.AddComputationServices();
             services.AddHttpClient(TeiClient.RemoteClientName).ConfigurePrimaryHttpMessageHandler(() => _worker);
             services.AddLayoutSearchProviders();
-            services.AddScoped<NodeSubtreeService>();
             services.AddTransient<IRequestHandler<GetComputationServiceInfoQuery, ComputationServiceInfo>, GetComputationServiceInfoQueryHandler>();
             services.AddTransient<IRequestHandler<GetTextEmbeddingsRequest, float[][]>, GetTextEmbeddingsRequestHandler>();
             services.AddTransient<IRequestHandler<GetVectorIndexMetadataQuery, PostgresIndexStatus>, GetVectorIndexMetadataQueryHandler>();
@@ -281,11 +232,10 @@ namespace Cotton.Server.IntegrationTests
             await DbContext.Database.CreateVectorCosineHnswIndexConcurrentlyAsync(VectorIndexDefinition.Expected);
         }
 
-        private Task<PagedResult<SearchResultDto>> Search(
-            bool deep = true, int page = 1, int pageSize = 20, string query = "report", Guid? currentNodeId = null)
+        private Task<PagedResult<SearchResultDto>> Search(bool deep = true, int page = 1, int pageSize = 20, string query = "report")
         {
             return _services.GetRequiredService<IMediator>().Send(
-                new SearchLayoutsQuery(_folder.OwnerId, _folder.LayoutId, query, page, pageSize, deep, currentNodeId));
+                new SearchLayoutsQuery(_folder.OwnerId, _folder.LayoutId, query, page, pageSize, deep));
         }
     }
 }

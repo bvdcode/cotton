@@ -1,4 +1,3 @@
-import { createFolder } from "../../test/fileFixtures";
 import { generateMasterKey } from "@shared/crypto/keys";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -112,7 +111,6 @@ const makeMovedFileDto = (item: MoveClipboardItem) => ({
 
 const makeEmptyChildrenResponse = (id = "empty") => ({
   content: {
-    node: createFolder({ id: id }),
     id,
     createdAt: "2026-05-17T00:00:00Z",
     updatedAt: "2026-05-17T00:00:00Z",
@@ -143,7 +141,6 @@ describe("useMoveOperations", () => {
       error: null,
       contentByNodeId: {
         [sourceParentId]: {
-          node: createFolder({ id: sourceParentId }),
           id: sourceParentId,
           createdAt: "2026-05-17T00:00:00Z",
           updatedAt: "2026-05-17T00:00:00Z",
@@ -151,7 +148,6 @@ describe("useMoveOperations", () => {
           files: [],
         },
         root: {
-          node: createFolder({ id: "root" }),
           id: "root",
           createdAt: "2026-05-17T00:00:00Z",
           updatedAt: "2026-05-17T00:00:00Z",
@@ -241,12 +237,10 @@ describe("useMoveOperations", () => {
       await result.current.pasteInto(targetParentId);
     });
 
-    expect(mocks.confirmConflict).toHaveBeenCalledWith(
-      expect.objectContaining({
-        newName: "plain (1).txt",
-        canOverwrite: true,
-      }),
-    );
+    expect(mocks.confirmConflict).toHaveBeenCalledWith({
+      newName: "plain (1).txt",
+      canOverwrite: true,
+    });
     expect(mocks.moveFile).toHaveBeenNthCalledWith(1, plainFileItem.id, {
       parentId: targetParentId,
     });
@@ -267,11 +261,7 @@ describe("useMoveOperations", () => {
         ...makeEmptyChildrenResponse(targetParentId).content,
         files: [
           makeMovedFileDto(plainFileItem),
-          {
-            ...makeMovedFileDto(plainFileItem),
-            id: "another-file",
-            name: "plain (1).txt",
-          },
+          { ...makeMovedFileDto(plainFileItem), id: "another-file", name: "plain (1).txt" },
         ],
       },
       totalCount: 2,
@@ -287,12 +277,10 @@ describe("useMoveOperations", () => {
     });
 
     expect(mocks.getChildren).toHaveBeenCalledWith(targetParentId, { page: 1 });
-    expect(mocks.confirmConflict).toHaveBeenCalledWith(
-      expect.objectContaining({
-        newName: "plain (2).txt",
-        canOverwrite: true,
-      }),
-    );
+    expect(mocks.confirmConflict).toHaveBeenCalledWith({
+      newName: "plain (2).txt",
+      canOverwrite: true,
+    });
     expect(mocks.moveFile).toHaveBeenNthCalledWith(2, plainFileItem.id, {
       parentId: targetParentId,
       name: "plain (2).txt",
@@ -384,11 +372,9 @@ describe("useMoveOperations", () => {
       await result.current.pasteInto(targetParentId);
     });
 
-    expect(mocks.confirmConflict).toHaveBeenCalledWith(
-      expect.objectContaining({
-        newName: "plain (1).txt",
-        canOverwrite: false,
-      }),
-    );
+    expect(mocks.confirmConflict).toHaveBeenCalledWith({
+      newName: "plain (1).txt",
+      canOverwrite: false,
+    });
   });
 });

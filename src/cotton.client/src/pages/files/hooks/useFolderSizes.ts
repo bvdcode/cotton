@@ -1,75 +1,87 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
-  notifyManager,
-  useQuery,
+  useMutation,
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { nodesApi } from "@shared/api/nodesApi";
-import { FOLDER_SIZE_STALE_TIME } from "@shared/api/queries/folderInfo";
-import { queryKeys } from "@shared/api/queries/queryKeys";
+import { folderInfoOptions } from "@shared/api/queries/folderInfo";
 import { useAuthStore } from "@shared/store/authStore";
 import { toast } from "@shared/ui/notifications";
 import { reportClientError } from "@shared/utils/clientDiagnostics";
 
-interface FolderListingScope {
-  nodeType: string;
-  depth: number;
-}
+const FOLDER_LIST_PAGE_SIZE = 10_000;
 
 export const calculateFolderSizes = async (
   client: QueryClient,
   parentId: string,
   userId: string,
   signal: AbortSignal,
-  scope?: FolderListingScope,
-): Promise<number> => {
-  signal.throwIfAborted();
-  const folders = await nodesApi.getChildFolderStats(parentId, {
-    ...scope,
-    signal,
-  });
-  signal.throwIfAborted();
-  let sizeBytes = 0;
-  notifyManager.batch(() => {
-    for (const [id, stats] of Object.entries(folders)) {
-      client.setQueryData(queryKeys.nodeChildren.folderInfo(id, userId), stats);
-      sizeBytes += stats.sizeBytes;
+): Promise<void> => {
+  let page = 1;
+  const calculated = new Set<string>();
+  while (!signal.aborted) {
+    const { content, totalCount } = await nodesApi.getChildren(parentId, {
+      page,
+      pageSize: FOLDER_LIST_PAGE_SIZE,
+      signal,
+    });
+    for (const folder of content.nodes) {
+      signal.throwIfAborted();
+      if (calculated.has(folder.id)) {
+        continue;
+      }
+      await client.fetchQuery({
+        ...folderInfoOptions(folder.id, userId, signal),
+        staleTime: 0,
+      });
+      calculated.add(folder.id);
     }
-  });
-  return sizeBytes;
+    // The default directory listing returns folders before files.
+    if (
+      content.nodes.length < FOLDER_LIST_PAGE_SIZE ||
+      page * FOLDER_LIST_PAGE_SIZE >= totalCount
+    ) {
+      return;
+    }
+    page += 1;
+  }
 };
 
-export const useFolderSizes = (
-  nodeId: string | null,
-  enabled = true,
-  scope?: FolderListingScope,
-) => {
+export const useFolderSizes = (nodeId: string | null) => {
   const { t } = useTranslation("files");
   const client = useQueryClient();
-  const userId = useAuthStore((state) => state.user?.id ?? "");
-  const calculation = useQuery({
-    queryKey: scope
-      ? [...queryKeys.nodeChildren.folderSizes(nodeId ?? "", userId), scope]
-      : queryKeys.nodeChildren.folderSizes(nodeId ?? "", userId),
-    queryFn: ({ signal }) =>
-      calculateFolderSizes(client, nodeId!, userId, signal, scope),
-    enabled: enabled && Boolean(nodeId && userId),
-    staleTime: FOLDER_SIZE_STALE_TIME,
-    gcTime: Infinity,
-    retry: false,
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const controller = useRef<AbortController | null>(null);
+  useEffect(() => () => controller.current?.abort(), [nodeId, userId]);
+
+  const calculation = useMutation({
+    mutationFn: async () => {
+      if (!nodeId || !userId) {
+        return;
+      }
+      const run = new AbortController();
+      controller.current = run;
+      try {
+        await calculateFolderSizes(client, nodeId, userId, run.signal);
+      } catch (error) {
+        if (run.signal.aborted) {
+          return;
+        }
+        reportClientError("Failed to calculate folder sizes", error);
+        throw error;
+      }
+    },
+    onError: () => toast.error(t("folderSizes.failed")),
   });
 
-  useEffect(() => {
-    if (calculation.error) {
-      reportClientError("Failed to calculate folder sizes", calculation.error);
-      toast.error(t("folderSizes.failed"));
-    }
-  }, [calculation.error, t]);
-
   return {
-    sizeBytes: enabled ? (calculation.data ?? 0) : 0,
-    isCalculating: calculation.isFetching,
+    calculate: () => {
+      if (!calculation.isPending) {
+        calculation.mutate();
+      }
+    },
+    isCalculating: calculation.isPending,
   };
 };

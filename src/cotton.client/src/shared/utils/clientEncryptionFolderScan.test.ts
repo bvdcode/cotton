@@ -4,6 +4,7 @@ import type { NodeResponse } from "../api/nodesApi";
 import { createFile, createFolder } from "../../test/fileFixtures";
 import {
   collectEncryptedFilesInFoldersForClientEncryption,
+  collectFoldersInFoldersForClientEncryption,
   collectPlainFilesInFoldersForClientEncryption,
 } from "./clientEncryptionFolderScan";
 
@@ -12,12 +13,7 @@ const page = (
   files: NodeResponse["content"]["files"] = [],
   nodes: NodeResponse["content"]["nodes"] = [],
 ): NodeResponse => ({
-  content: {
-    node: createFolder({ id }),
-    ...createFolder({ id }),
-    files,
-    nodes,
-  },
+  content: { ...createFolder({ id }), files, nodes },
   totalCount: files.length + nodes.length,
 });
 
@@ -114,7 +110,7 @@ describe("client encryption folder scan", () => {
     ]);
   });
 
-  it("keeps encrypted child folders in encryption scans", async () => {
+  it("keeps encrypted child folders in encryption and policy scans", async () => {
     const plain = createFile({ nodeId: "vault" });
     vi.spyOn(nodeChildren, "fetchNodeChildren").mockImplementation(
       async (id) => {
@@ -130,5 +126,9 @@ describe("client encryption folder scan", () => {
     ]);
     expect(encryption.files).toEqual([plain]);
     expect(encryption.folders).toEqual([vault]);
+
+    const policy = await collectFoldersInFoldersForClientEncryption(["home"]);
+    expect(policy.folders).toEqual([vault]);
+    expect(policy.files).toEqual([]);
   });
 });

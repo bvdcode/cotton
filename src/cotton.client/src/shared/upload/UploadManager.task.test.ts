@@ -1,4 +1,3 @@
-import { createFolder } from "../../test/fileFixtures";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getRecentClientDiagnostics } from "../utils/clientDiagnostics";
 
@@ -75,7 +74,6 @@ const makeFileDto = (
 
 const seedParent = (nodeId: string, files: NodeFileManifestDto[]) => {
   const content: NodeContentDto = {
-    node: createFolder({ id: nodeId }),
     id: nodeId,
     createdAt: "",
     updatedAt: "",

@@ -1,4 +1,3 @@
-import { createFolder } from "../../test/fileFixtures";
 import { generateMasterKey } from "@shared/crypto/keys";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -114,7 +113,6 @@ const makeMovedFileDto = (item: MoveClipboardItem) => ({
 
 const makeEmptyChildrenResponse = (id = "empty") => ({
   content: {
-    node: createFolder({ id: id }),
     id,
     createdAt: "2026-05-17T00:00:00Z",
     updatedAt: "2026-05-17T00:00:00Z",
@@ -137,7 +135,6 @@ describe("useMoveOperations", () => {
       error: null,
       contentByNodeId: {
         [sourceParentId]: {
-          node: createFolder({ id: sourceParentId }),
           id: sourceParentId,
           createdAt: "2026-05-17T00:00:00Z",
           updatedAt: "2026-05-17T00:00:00Z",
@@ -145,7 +142,6 @@ describe("useMoveOperations", () => {
           files: [],
         },
         root: {
-          node: createFolder({ id: "root" }),
           id: "root",
           createdAt: "2026-05-17T00:00:00Z",
           updatedAt: "2026-05-17T00:00:00Z",
@@ -201,7 +197,6 @@ describe("useMoveOperations", () => {
     const nestedNodeId = "55555555-5555-4555-8555-555555555555";
     const movedFolderResponse = {
       content: {
-        node: createFolder({ id: folderItem.id }),
         id: folderItem.id,
         createdAt: "2026-05-17T00:00:00Z",
         updatedAt: "2026-05-17T00:00:00Z",
@@ -234,7 +229,6 @@ describe("useMoveOperations", () => {
     };
     const nestedResponse = {
       content: {
-        node: createFolder({ id: nestedNodeId }),
         id: nestedNodeId,
         createdAt: "2026-05-17T00:00:00Z",
         updatedAt: "2026-05-17T00:00:00Z",
@@ -329,7 +323,6 @@ describe("useMoveOperations", () => {
       id === folderItem.id
         ? {
             content: {
-              node: createFolder({ id: folderItem.id }),
               id: folderItem.id,
               createdAt: "2026-05-17T00:00:00Z",
               updatedAt: "2026-05-17T00:00:00Z",

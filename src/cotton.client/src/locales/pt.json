@@ -2417,6 +2417,7 @@
       "uploadFailed": "Não foi possível iniciar o envio dos arquivos compartilhados. Recarregue esta página para tentar novamente."
     },
     "folderSizes": {
+      "calculate": "Calcular tamanhos das pastas",
       "calculating": "Calculando tamanhos das pastas…",
       "failed": "Não foi possível calcular os tamanhos de todas as pastas. Tente novamente."
     },
@@ -2542,8 +2543,6 @@
       "confirmDescription": "Os itens selecionados serão movidos para a Lixeira e poderão ser restaurados depois."
     },
     "conflicts": {
-      "merge": "Mesclar",
-      "mergeDescription": "Já existe uma pasta com este nome. Mesclar o conteúdo ou usar {{newName}}?",
       "title": "Conflito de nomes",
       "description": "Já existe um item com este nome nesta pasta. Usar {{newName}} em vez disso?",
       "overwriteDescription": "Já existe um item com este nome nesta pasta. Substituí-lo ou usar {{newName}} em vez disso?",
@@ -2694,10 +2693,7 @@
         "modelLoadFailed": "Falha ao carregar o modelo 3D",
         "modelUnsupportedType": "Este formato de arquivo 3D não é suportado para visualização no navegador",
         "pdfTooLarge": "O PDF é grande demais para visualizar ({{size}}). O tamanho máximo é {{maxSize}}. Baixe o arquivo para visualizá-lo.",
-        "fileTooLarge": "O arquivo é grande demais para visualizar ({{size}}). O tamanho máximo para visualização é {{maxSize}}. Baixe o arquivo para visualizá-lo."
-      },
-      "office": {
-        "truncated": "São apresentadas as primeiras {{rows}} linhas e {{columns}} colunas desta folha."
+        "fileTooLarge": "O arquivo é grande demais para visualizar ({{size}}). O tamanho máximo para visualização de texto é {{maxSize}}. Baixe o arquivo para visualizá-lo."
       }
     },
     "actionsTitle": "Ações",

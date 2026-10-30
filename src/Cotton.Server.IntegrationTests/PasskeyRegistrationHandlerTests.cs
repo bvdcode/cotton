@@ -4,42 +4,21 @@
 using Cotton.Server.Handlers.Auth.Passkeys;
 using Cotton.Server.Services.Passkeys;
 using EasyExtensions.AspNetCore.Exceptions;
-using EasyExtensions.Passkeys;
-using EasyExtensions.Passkeys.Models;
-using System.Formats.Asn1;
-using System.Formats.Cbor;
+using Fido2NetLib;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.IntegrationTests
 {
     public class PasskeyRegistrationHandlerTests
     {
-        [TestCase("protocol")]
-        [TestCase("base64")]
-        [TestCase("json")]
-        [TestCase("cbor")]
-        [TestCase("asn")]
-        [TestCase("signature")]
-        [TestCase("cbor-type")]
-        [TestCase("overflow")]
-        public async Task Registration_InvalidCredentialRetainsDiagnosticCause(string failure)
+        [Test]
+        public async Task Registration_InvalidCredentialRetainsDiagnosticCause()
         {
-            Exception cause = failure switch
-            {
-                "protocol" => new PasskeyVerificationException("Invalid attestation"),
-                "base64" => new FormatException("Invalid base64url"),
-                "json" => new JsonException("Invalid client data"),
-                "cbor" => new CborContentException("Invalid attestation"),
-                "asn" => new AsnContentException("Invalid certificate"),
-                "signature" => new CryptographicException("Invalid signature"),
-                "cbor-type" => new InvalidOperationException("Invalid CBOR value type"),
-                "overflow" => new OverflowException("Invalid CBOR integer"),
-                _ => throw new ArgumentOutOfRangeException(nameof(failure)),
-            };
+            Fido2VerificationException cause = new("Invalid attestation");
             using MemoryCache cache = new(new MemoryCacheOptions());
             ExceptionRecordingLogger<FinishPasskeyRegistrationRequestHandler> logger = new();
             FinishPasskeyRegistrationRequest request = CreateRequest(cache);
-            FinishPasskeyRegistrationRequestHandler handler = new(null!, cache, new FailingPasskeyServer(cause), null!, null!, logger);
+            FinishPasskeyRegistrationRequestHandler handler = new(null!, cache, new FailingPasskeyClient(cause), null!, null!, logger);
 
             await Assert.ThrowsAsync<BadRequestException<UserPasskeyCredential>>(() => handler.Handle(request, CancellationToken.None));
             Assert.That(logger.Exceptions, Is.EqualTo(new[] { cause }));
@@ -61,7 +40,7 @@ namespace Cotton.Server.IntegrationTests
             using MemoryCache cache = new(new MemoryCacheOptions());
             ExceptionRecordingLogger<FinishPasskeyRegistrationRequestHandler> logger = new();
             FinishPasskeyRegistrationRequest request = CreateRequest(cache);
-            FinishPasskeyRegistrationRequestHandler handler = new(null!, cache, new FailingPasskeyServer(cause), null!, null!, logger);
+            FinishPasskeyRegistrationRequestHandler handler = new(null!, cache, new FailingPasskeyClient(cause), null!, null!, logger);
 
             Exception? result = await Assert.CatchAsync(() => handler.Handle(request, CancellationToken.None));
             Assert.That(result, Is.SameAs(cause));
@@ -73,9 +52,13 @@ namespace Cotton.Server.IntegrationTests
             Guid userId = Guid.NewGuid();
             string requestId = PasskeyChallenges.CreateRequestId();
             cache.Set(PasskeyChallenges.RegistrationCacheKey(requestId),
-                new PasskeyRegistrationState(userId, null,
-                    new PasskeyServer(new PasskeyServerOptions("cotton.example", "Cotton", ["https://cotton.example"]))
-                        .CreateRegistrationOptions(new PasskeyUser(userId.ToByteArray(), "user", "User"))));
+                new PasskeyRegistrationState(userId, null, new CredentialCreateOptions
+                {
+                    Rp = new("cotton.example", "Cotton"),
+                    User = new Fido2User { Id = userId.ToByteArray(), Name = "user", DisplayName = "User" },
+                    Challenge = [1, 2, 3],
+                    PubKeyCredParams = [],
+                }));
             return new(userId, new FinishPasskeyRegistrationRequestDto
             {
                 RequestId = requestId,

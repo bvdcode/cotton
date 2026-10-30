@@ -2,24 +2,20 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.ContentTypes;
-using Render.NET.Svg;
-using Render.NET.Tgs;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
+using SkiaSharp.Skottie;
 using System.IO.Compression;
-using PixelBuffer = Render.NET.PixelBuffer;
+using System.Text.Json;
 
 namespace Cotton.Previews
 {
     public class TgsPreviewGenerator : IPreviewGenerator
     {
         private const int MaxJsonBytes = 8 * 1024 * 1024;
-        private const int RenderTimeoutSeconds = 20;
-        private const int MaxSupersampledSize = 2048;
 
         public string Id => "tgs";
 
-        public int Version => 3;
+        public int Version => 1;
 
         public int Priority => 0;
 
@@ -29,7 +25,6 @@ namespace Cotton.Previews
         {
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
-            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(RenderTimeoutSeconds));
 
             if (stream.CanSeek)
             {
@@ -37,20 +32,46 @@ namespace Cotton.Previews
             }
 
             using GZipStream gzip = new(stream, CompressionMode.Decompress, leaveOpen: true);
-            TgsDocument document = await TgsReader.ReadAsync(gzip, new TgsReaderOptions
+            using MemoryStream json = new();
+            byte[] buffer = new byte[8192];
+            while (true)
             {
-                MaximumInputBytes = MaxJsonBytes,
-                MaximumJsonBytes = MaxJsonBytes,
-            }, timeout.Token).ConfigureAwait(false);
-            double frame = document.InPoint + (document.OutPoint - document.InPoint) * 0.5;
-            PixelBuffer pixels = TgsRenderer.RenderFrame(document, frame, new SvgRenderOptions
+                int count = await gzip.ReadAsync(buffer).ConfigureAwait(false);
+                if (count == 0)
+                {
+                    break;
+                }
+                if (json.Length + count > MaxJsonBytes)
+                {
+                    throw new InvalidDataException("The TGS animation exceeds the supported size.");
+                }
+                await json.WriteAsync(buffer.AsMemory(0, count)).ConfigureAwait(false);
+            }
+
+            using JsonDocument document = JsonDocument.Parse(json.GetBuffer().AsMemory(0, (int)json.Length));
+            using Animation animation = Animation.Parse(JsonSerializer.Serialize(document.RootElement))
+                ?? throw new InvalidDataException("The TGS animation is invalid.");
+            if (animation.Size.Width <= 0 || animation.Size.Height <= 0)
             {
-                Width = size,
-                Height = size,
-                Supersampling = size <= MaxSupersampledSize ? 2 : 1,
-            }, timeout.Token);
-            using Image<Rgba32> image = Image.LoadPixelData<Rgba32>(pixels.Pixels.Span, pixels.Width, pixels.Height);
-            return await ImagePreviewGenerator.EncodeMaxResizedWebpAsync(image, size).ConfigureAwait(false);
+                throw new InvalidDataException("The TGS animation has invalid dimensions.");
+            }
+
+            using SKSurface surface = SKSurface.Create(new SKImageInfo(size, size, SKColorType.Rgba8888, SKAlphaType.Premul))
+                ?? throw new InvalidOperationException("Unable to create a TGS preview surface.");
+            SKCanvas canvas = surface.Canvas;
+            canvas.Clear(SKColors.Transparent);
+            float scale = Math.Min(size / animation.Size.Width, size / animation.Size.Height);
+            float width = animation.Size.Width * scale;
+            float height = animation.Size.Height * scale;
+            SKRect bounds = new((size - width) / 2, (size - height) / 2,
+                (size + width) / 2, (size + height) / 2);
+            animation.Seek(0.5);
+            animation.Render(canvas, bounds);
+            canvas.Flush();
+
+            using SKImage image = surface.Snapshot();
+            using SKData data = image.Encode(SKEncodedImageFormat.Webp, quality: 90);
+            return data.ToArray();
         }
     }
 }

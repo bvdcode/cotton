@@ -14,7 +14,7 @@ import { AdminPageSurface } from "../components/AdminPageSurface";
 import { OidcProviderFormDialog } from "./OidcProviderFormDialog";
 import { OidcProvidersGridToolbar } from "./OidcProvidersGridToolbar";
 import { useOidcProviderColumns } from "./useOidcProviderColumns";
-import { useDataGridLocaleText } from "@shared/hooks/useDataGridLocaleText";
+import { useAdminDataGridLocaleText } from "../components/useAdminDataGridLocaleText";
 
 type ColumnVisibilityTarget = "desktop" | "mobile";
 
@@ -42,7 +42,7 @@ export const AdminIdentityProvidersPage = () => {
   const [pageError, setPageError] = useState<string | null>(null);
 
   const providers = providersQuery.data ?? [];
-  const localeText = useDataGridLocaleText(t("identityProviders.empty"));
+  const localeText = useAdminDataGridLocaleText(t("identityProviders.empty"));
 
   const handleDelete = async (provider: OidcProviderDto) => {
     const result = await confirm({

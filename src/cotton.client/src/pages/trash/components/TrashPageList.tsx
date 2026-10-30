@@ -55,7 +55,6 @@ export const TrashPageList: React.FC<TrashPageListProps> = ({
     listError,
     listLoading,
     listTotalCount,
-    paginationModel,
   } = listData;
   const folderOperationAdapter = useMemo<FolderOperations>(
     () => ({
@@ -101,20 +100,12 @@ export const TrashPageList: React.FC<TrashPageListProps> = ({
     () =>
       layoutType === InterfaceLayoutType.List
         ? {
-            mode: "client" as const,
-            model: paginationModel,
             totalCount: listTotalCount,
             loading: listLoading,
             onPaginationModelChange: handlePaginationModelChange,
           }
         : undefined,
-    [
-      handlePaginationModelChange,
-      layoutType,
-      listLoading,
-      listTotalCount,
-      paginationModel,
-    ],
+    [handlePaginationModelChange, layoutType, listLoading, listTotalCount],
   );
   const handleToggleItem = useCallback(
     (

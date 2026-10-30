@@ -4,7 +4,7 @@ import {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from "axios";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { uploadBlobToChunks } from "./uploadBlobToChunks";
 
 interface Deferred<T> {
@@ -92,7 +92,6 @@ const createResponseError = (status: number): AxiosError => {
 };
 
 describe("uploadBlobToChunks", () => {
-  afterEach(() => vi.useRealTimers());
   beforeEach(() => {
     vi.clearAllMocks();
     let hashIndex = 0;
@@ -103,58 +102,6 @@ describe("uploadBlobToChunks", () => {
     });
     mocks.chunkExists.mockResolvedValue(true);
     mocks.uploadChunk.mockResolvedValue(undefined);
-  });
-
-  it("recovers after a minute-long gateway timeout without reuploading a stored chunk", async () => {
-    vi.useFakeTimers();
-    const worker = createWorker();
-    const chunkBytes = 128 * 1024;
-    const onProgress = vi.fn();
-    mocks.acquire.mockResolvedValue(worker);
-    mocks.chunkExists.mockResolvedValueOnce(false).mockResolvedValue(true);
-    mocks.uploadChunk.mockImplementationOnce(
-      ({
-        onProgress: reportProgress,
-      }: {
-        onProgress: (bytes: number) => void;
-      }) => {
-        reportProgress(chunkBytes);
-        return new Promise<void>((_resolve, reject) => {
-          setTimeout(() => reject(createResponseError(504)), 60000);
-        });
-      },
-    );
-
-    const upload = uploadBlobToChunks({
-      blob: new Blob([new Uint8Array(chunkBytes)]),
-      fileName: "gateway-timeout.bin",
-      server: {
-        maxChunkSizeBytes: chunkBytes,
-        supportedHashAlgorithm: "sha256",
-      },
-      client: { concurrency: 1 },
-      onProgress,
-    });
-
-    await vi.waitFor(() => expect(mocks.uploadChunk).toHaveBeenCalledOnce());
-    const progressBeforeTimeout = onProgress.mock.calls.length;
-    await vi.advanceTimersByTimeAsync(59000);
-    expect(onProgress).toHaveBeenCalledTimes(progressBeforeTimeout);
-    expect(mocks.chunkExists).toHaveBeenCalledOnce();
-
-    await vi.advanceTimersByTimeAsync(1250);
-    await expect(upload).resolves.toEqual({
-      chunkHashes: ["chunk-0"],
-      fileHash: "file-hash",
-    });
-    expect(mocks.chunkExists).toHaveBeenCalledTimes(2);
-    expect(mocks.uploadChunk).toHaveBeenCalledOnce();
-    expect(mocks.hashBuffer).toHaveBeenCalledOnce();
-    expect(onProgress).toHaveBeenLastCalledWith(
-      chunkBytes,
-      expect.objectContaining({ bytesConfirmed: chunkBytes }),
-    );
-    expect(mocks.release).toHaveBeenCalledWith(worker);
   });
 
   it("rehashes retry segments without restarting the whole-file hash", async () => {

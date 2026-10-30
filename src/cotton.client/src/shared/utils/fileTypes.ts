@@ -4,7 +4,6 @@
 
 import { isCodePreviewFileName } from "./codeFileTypes";
 import { resolveModelFormat } from "./modelFormats";
-import { resolveOfficeFormat } from "./officeFormats";
 
 export type FileType =
   | "image"
@@ -14,7 +13,6 @@ export type FileType =
   | "audio"
   | "text"
   | "document"
-  | "office"
   | "archive"
   | "other";
 
@@ -93,7 +91,6 @@ const TEXT_EXTENSIONS = [
 const DOCUMENT_EXTENSIONS = ["doc", "docx", "rtf", "odt"];
 const ARCHIVE_EXTENSIONS = ["zip", "rar", "7z", "tar", "gz"];
 const PREVIEWABLE_FILE_TYPES = new Set<FileType>([
-  "office",
   "image",
   "model",
   "pdf",
@@ -254,10 +251,6 @@ export const getFileTypeInfo = (
 
   if (SVG_EXTENSIONS.includes(ext)) {
     return toFileTypeInfo("image");
-  }
-
-  if (resolveOfficeFormat(fileName, contentType)) {
-    return toFileTypeInfo("office");
   }
 
   const contentTypeMatch = getFileTypeFromContentType(contentType ?? undefined);

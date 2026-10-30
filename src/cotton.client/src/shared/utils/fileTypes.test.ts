@@ -119,8 +119,8 @@ describe("getFileTypeInfo", () => {
     });
   });
 
-  it("keeps unsupported documents and archives non-previewable", () => {
-    expect(getFileTypeInfo("report.doc")).toMatchObject({
+  it("classifies documents and archives as non-previewable", () => {
+    expect(getFileTypeInfo("report.docx")).toMatchObject({
       type: "document",
       supportsPreview: false,
     });

@@ -58,8 +58,6 @@ The task manager queues normal workload instead of relying on server `429` respo
 
 When effective folder policy requires client encryption, encryption happens before hashing and upload. The server stores and streams the encrypted representation and cannot decrypt the user's original content or display metadata.
 
-The browser updates the open folder's metadata from its listing response. Upload preparation waits for an in-progress listing refresh before choosing encryption and reuses the completed response without another request. A failed refresh stops preparation instead of using stale folder policy; a newer local metadata update is retained.
-
 Moving plaintext content into an encrypted-policy folder may schedule explicit encryption tasks. Moving encrypted content out does not silently decrypt it. Recursive scans are bounded and report when they could not inspect the complete subtree.
 
 The vault must be unlocked for transformations that require the client key. A failed transformation does not leave the UI claiming the file was converted successfully.

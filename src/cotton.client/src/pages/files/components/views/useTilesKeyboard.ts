@@ -8,7 +8,6 @@ import React, {
 import type { VirtuosoHandle } from "react-virtuoso";
 import type { IFileListView } from "@shared/types/FileListViewTypes";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
-import { useNameNavigation } from "@shared/hooks/useNameNavigation";
 
 const FOCUS_RETRY_LIMIT = 8;
 
@@ -212,18 +211,6 @@ export const useTilesKeyboard = (options: {
       focusTileDom(nextIndex, options);
     },
     [focusTileDom, tiles.length],
-  );
-
-  useNameNavigation(
-    containerRef,
-    useCallback(
-      () =>
-        tiles.map((tile) =>
-          tile.kind === "folder" ? tile.node.name : tile.file.name,
-        ),
-      [tiles],
-    ),
-    focusTileByIndex,
   );
 
   const resolveCurrentIndex = useCallback(

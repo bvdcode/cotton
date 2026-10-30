@@ -15,7 +15,6 @@ import { ModelPreview } from "./ModelPreview";
 import type { ModelPreviewSource } from "./modelPreviewTypes";
 import { AudioPreview } from "./AudioPreview";
 import { FilePreviewUnavailable } from "./FilePreviewUnavailable";
-import { OfficePreview } from "./office/OfficePreview";
 
 type ModelPreviewControls = ReturnType<typeof useModelPreviewControls>;
 
@@ -90,15 +89,6 @@ export const FilePreviewBody = ({
   }
 
   switch (fileType) {
-    case "office":
-      return (
-        <OfficePreview
-          source={fileSource}
-          fileName={fileName}
-          contentType={sourceFile?.contentType}
-          fileSizeBytes={fileSizeBytes}
-        />
-      );
     case "image":
       return (
         <Box
@@ -252,9 +242,6 @@ function getUnavailablePreviewMessage(
     limit = previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
   }
   const size = fileSizeBytes ?? 0;
-  if (originalType === "office") {
-    limit = previewConfig.MAX_OFFICE_PREVIEW_SIZE_BYTES;
-  }
   if (limit !== null && size > limit) {
     return t("preview.errors.fileTooLarge", {
       size: formatBytes(size),

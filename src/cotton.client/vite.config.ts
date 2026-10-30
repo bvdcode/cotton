@@ -44,10 +44,6 @@ export default defineConfig(() => {
     },
     build: {
       chunkSizeWarningLimit: 10 * 1024,
-      license: { fileName: "THIRD_PARTY_LICENSES.txt" },
-    },
-    worker: {
-      format: "es" as const,
     },
     plugins: [
       react(),
@@ -61,7 +57,6 @@ export default defineConfig(() => {
         injectManifest: {
           sourcemap: true,
           maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-          globIgnores: ["heic/**"],
         },
         manifest: {
           id: "/",

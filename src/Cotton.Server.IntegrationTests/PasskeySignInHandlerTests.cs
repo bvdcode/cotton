@@ -4,7 +4,7 @@
 using Cotton.Server.Handlers.Auth.Passkeys;
 using Cotton.Server.Models.Results;
 using Cotton.Server.Services.Passkeys;
-using EasyExtensions.Passkeys;
+using Fido2NetLib;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.AspNetCore.Mvc;
 
@@ -34,7 +34,7 @@ namespace Cotton.Server.IntegrationTests
             db.ChangeTracker.Clear();
             Exception cause = failure switch
             {
-                "invalid" => new PasskeyVerificationException("Invalid assertion"),
+                "invalid" => new Fido2VerificationException("Invalid assertion"),
                 "database" => new DbUpdateException("Database unavailable"),
                 "io" => new IOException("Read failed"),
                 "cancellation" => new OperationCanceledException(),
@@ -44,7 +44,7 @@ namespace Cotton.Server.IntegrationTests
             FinishPasskeySignInRequest request = CreateRequest(cache, login.User.Id);
             ExceptionRecordingLogger<FinishPasskeySignInRequestHandler> logger = new();
             FinishPasskeySignInRequestHandler handler = new(
-                db, cache, new FailingPasskeyServer(cause),
+                db, cache, new FailingPasskeyClient(cause),
                 scope.ServiceProvider.GetRequiredService<IDatabaseIntegrityVerifier>(),
                 scope.ServiceProvider.GetRequiredService<AuthSessionIssuer>(), logger);
 
@@ -75,9 +75,7 @@ namespace Cotton.Server.IntegrationTests
         {
             string requestId = PasskeyChallenges.CreateRequestId();
             cache.Set(PasskeyChallenges.AssertionCacheKey(requestId),
-                new PasskeyAssertionState(userId,
-                    new PasskeyServer(new PasskeyServerOptions("cotton.example", "Cotton", ["https://cotton.example"]))
-                        .CreateAuthenticationOptions()));
+                new PasskeyAssertionState(userId, new AssertionOptions { Challenge = [1, 2, 3] }));
             return new(new FinishPasskeyAssertionRequestDto
             {
                 RequestId = requestId,

@@ -16,13 +16,12 @@ const files = Array.from({ length: 101 }, (_, index) =>
   }),
 );
 
-const response = (): NodeResponse => ({
+const response = (page: number): NodeResponse => ({
   content: {
-    node: createFolder({ id: "folder-1" }),
     ...createFolder({ id: "folder-1" }),
     nodes: [],
-    files,
-    stats: { folders: 0, files: 101, sizeBytes: 101 },
+    files: page === 1 ? files.slice(0, 100) : files.slice(100),
+    stats: page === 1 ? { folders: 0, files: 101, sizeBytes: 101 } : null,
   },
   totalCount: 101,
 });
@@ -41,7 +40,6 @@ describe("folder listing", () => {
   it("disables name operations when encrypted folder names remain without an encryption policy", async () => {
     vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
       content: {
-        node: createFolder(),
         ...createFolder(),
         nodes: [createFolder({ metadata: { en: "opaque" } })],
         files: [],
@@ -63,7 +61,9 @@ describe("folder listing", () => {
     expect(result.current.pagination?.query?.namesEnabled).toBe(false);
   });
   it("shows a single list page while keeping totals for the whole folder", async () => {
-    const get = vi.spyOn(nodesApi, "getChildren").mockResolvedValue(response());
+    const get = vi
+      .spyOn(nodesApi, "getChildren")
+      .mockImplementation(async (_, options) => response(options?.page ?? 1));
     const { result } = renderHook(
       () => useFolderListing("folder-1", "user-1", InterfaceLayoutType.List),
       { wrapper },
@@ -91,36 +91,40 @@ describe("folder listing", () => {
     );
     expect(result.current.content?.files).toHaveLength(1);
     expect(result.current.stats.sizeBytes).toBe(101);
-    expect(get).toHaveBeenCalledExactlyOnceWith("folder-1", {
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(get).toHaveBeenNthCalledWith(1, "folder-1", {
       page: 1,
-      pageSize: 25000,
+      pageSize: 100,
       includeStats: true,
+    });
+    expect(get).toHaveBeenNthCalledWith(2, "folder-1", {
+      page: 2,
+      pageSize: 100,
     });
   });
 
   it("loads another tile page only when requested", async () => {
-    const tileFiles = Array.from({ length: 25001 }, (_, index) =>
+    const tileFiles = Array.from({ length: 10001 }, (_, index) =>
       createFile({ id: `tile-${index}` }),
     );
     const get = vi
       .spyOn(nodesApi, "getChildren")
       .mockImplementation(async (_, options) => ({
         content: {
-          node: createFolder(),
           ...createFolder(),
           nodes: [],
           files:
             options?.page === 1
-              ? tileFiles.slice(0, 25000)
-              : tileFiles.slice(25000),
+              ? tileFiles.slice(0, 10000)
+              : tileFiles.slice(10000),
           stats: {
             folders: 0,
-            files: 25001,
+            files: 10001,
 
-            sizeBytes: 25001,
+            sizeBytes: 10001,
           },
         },
-        totalCount: 25001,
+        totalCount: 10001,
       }));
     const { result } = renderHook(
       () => useFolderListing("folder-1", "user-1", InterfaceLayoutType.Tiles),
@@ -128,28 +132,28 @@ describe("folder listing", () => {
     );
 
     await waitFor(() =>
-      expect(result.current.content?.files).toHaveLength(25000),
+      expect(result.current.content?.files).toHaveLength(10000),
     );
     expect(get).toHaveBeenCalledTimes(1);
     act(() => result.current.loadMore?.());
     await waitFor(() =>
-      expect(result.current.content?.files).toHaveLength(25001),
+      expect(result.current.content?.files).toHaveLength(10001),
     );
     expect(result.current.loadMore).toBeUndefined();
     expect(get).toHaveBeenCalledTimes(2);
-    expect(result.current.stats.sizeBytes).toBe(25001);
+    expect(result.current.stats.sizeBytes).toBe(10001);
     expect(get).toHaveBeenNthCalledWith(1, "folder-1", {
       page: 1,
-      pageSize: 25000,
+      pageSize: 10000,
       includeStats: true,
     });
     expect(get).toHaveBeenNthCalledWith(2, "folder-1", {
       page: 2,
-      pageSize: 25000,
+      pageSize: 10000,
     });
   });
 
-  it("shares a single batch between tiles and table pages without extra name scans", async () => {
+  it("loads 638 folders in one tile request and keeps table pages separate", async () => {
     const folders = Array.from({ length: 638 }, (_, index) =>
       createFolder({ id: `child-${index}` }),
     );
@@ -157,7 +161,6 @@ describe("folder listing", () => {
       .spyOn(nodesApi, "getChildren")
       .mockImplementation(async (_, options) => ({
         content: {
-          node: createFolder(),
           ...createFolder(),
           nodes: folders.slice(
             ((options?.page ?? 1) - 1) * (options?.pageSize ?? 100),
@@ -181,7 +184,7 @@ describe("folder listing", () => {
     expect(result.current.loadMore).toBeUndefined();
     expect(get).toHaveBeenCalledExactlyOnceWith("folder-1", {
       page: 1,
-      pageSize: 25000,
+      pageSize: 10000,
       includeStats: true,
     });
 
@@ -193,174 +196,16 @@ describe("folder listing", () => {
     await waitFor(() =>
       expect(result.current.pagination?.query?.namesEnabled).toBe(true),
     );
-    expect(get).toHaveBeenCalledTimes(1);
+    expect(
+      get.mock.calls.filter(([, options]) => options?.signal),
+    ).toHaveLength(6);
     rerender(InterfaceLayoutType.Tiles);
     await waitFor(() =>
       expect(result.current.content?.nodes).toHaveLength(638),
     );
-    expect(get).toHaveBeenCalledTimes(1);
+    expect(
+      get.mock.calls.filter(([, options]) => !options?.signal),
+    ).toHaveLength(2);
     expect(result.current.loadMore).toBeUndefined();
-  });
-  it("fetches the next batch only after the first 250 table pages", async () => {
-    const batchFiles = Array.from({ length: 25001 }, (_, index) =>
-      createFile({ id: `item-${index}` }),
-    );
-    const get = vi
-      .spyOn(nodesApi, "getChildren")
-      .mockImplementation(async (_, options) => ({
-        content: {
-          node: createFolder(),
-          ...createFolder(),
-          nodes: [],
-          files:
-            options?.page === 1
-              ? batchFiles.slice(0, 25000)
-              : batchFiles.slice(25000),
-          stats: { folders: 0, files: 25001, sizeBytes: 25001 },
-        },
-        totalCount: 25001,
-      }));
-    const { result } = renderHook(
-      () =>
-        useFolderListing("folder-1", "user-1", InterfaceLayoutType.List, true),
-      { wrapper },
-    );
-    await waitFor(() =>
-      expect(result.current.content?.files).toHaveLength(100),
-    );
-    act(() =>
-      result.current.pagination?.onPaginationModelChange({
-        page: 249,
-        pageSize: 100,
-      }),
-    );
-    expect(result.current.content?.files[0].id).toBe("item-24900");
-    expect(get).toHaveBeenCalledTimes(1);
-    act(() =>
-      result.current.pagination?.onPaginationModelChange({
-        page: 250,
-        pageSize: 100,
-      }),
-    );
-    await waitFor(() =>
-      expect(result.current.content?.files[0]?.id).toBe("item-25000"),
-    );
-    expect(result.current.content?.files).toHaveLength(1);
-    expect(get).toHaveBeenNthCalledWith(2, "folder-1", {
-      page: 2,
-      pageSize: 25000,
-      signal: expect.any(AbortSignal),
-    });
-    act(() =>
-      result.current.pagination?.onPaginationModelChange({
-        page: 0,
-        pageSize: 100,
-      }),
-    );
-    expect(result.current.content?.files[0].id).toBe("item-0");
-    act(() =>
-      result.current.pagination?.onPaginationModelChange({
-        page: 250,
-        pageSize: 100,
-      }),
-    );
-    expect(result.current.content?.files[0].id).toBe("item-25000");
-    expect(get).toHaveBeenCalledTimes(2);
-  });
-
-  it("slices the folder/file boundary without losing or duplicating rows", async () => {
-    const folders = Array.from({ length: 155 }, (_, index) =>
-      createFolder({ id: `child-${index}` }),
-    );
-    const pageFiles = Array.from({ length: 51 }, (_, index) =>
-      createFile({ id: `item-${index}` }),
-    );
-    const get = vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
-      content: {
-        node: createFolder(),
-        ...createFolder(),
-        nodes: folders,
-        files: pageFiles,
-        stats: { folders: 155, files: 51, sizeBytes: 51 },
-      },
-      totalCount: 206,
-    });
-    const { result } = renderHook(
-      () => useFolderListing("folder-1", "user-1", InterfaceLayoutType.List),
-      { wrapper },
-    );
-    await waitFor(() =>
-      expect(result.current.content?.nodes).toHaveLength(100),
-    );
-    expect(result.current.content?.files).toHaveLength(0);
-    act(() =>
-      result.current.pagination?.onPaginationModelChange({
-        page: 1,
-        pageSize: 100,
-      }),
-    );
-    expect(result.current.content?.nodes).toHaveLength(55);
-    expect(result.current.content?.nodes[0].id).toBe("child-100");
-    expect(result.current.content?.files).toHaveLength(45);
-    act(() =>
-      result.current.pagination?.onPaginationModelChange({
-        page: 2,
-        pageSize: 100,
-      }),
-    );
-    expect(result.current.content?.nodes).toHaveLength(0);
-    expect(result.current.content?.files.map((file) => file.id)).toEqual(
-      pageFiles.slice(45).map((file) => file.id),
-    );
-    expect(get).toHaveBeenCalledTimes(1);
-  });
-
-  it("requests sorting for the whole folder once and pages the ordered batch locally", async () => {
-    const sortedFiles = Array.from({ length: 205 }, (_, index) =>
-      createFile({ id: `ordered-${index}` }),
-    );
-    const get = vi
-      .spyOn(nodesApi, "getChildren")
-      .mockImplementation(async (_, options) => ({
-        content: {
-          node: createFolder(),
-          ...createFolder(),
-          nodes: [],
-          files: options?.listing?.descending
-            ? [...sortedFiles].reverse()
-            : sortedFiles,
-          stats: { folders: 0, files: 205, sizeBytes: 205 },
-        },
-        totalCount: 205,
-      }));
-    const { result } = renderHook(
-      () => useFolderListing("folder-1", "user-1", InterfaceLayoutType.List),
-      { wrapper },
-    );
-    await waitFor(() =>
-      expect(result.current.pagination?.query?.namesEnabled).toBe(true),
-    );
-    act(() =>
-      result.current.pagination?.query?.onSortModelChange([
-        { field: "name", sort: "desc" },
-      ]),
-    );
-    await waitFor(() =>
-      expect(result.current.content?.files[0]?.id).toBe("ordered-204"),
-    );
-    act(() =>
-      result.current.pagination?.onPaginationModelChange({
-        page: 1,
-        pageSize: 100,
-      }),
-    );
-    expect(result.current.content?.files[0].id).toBe("ordered-104");
-    expect(get).toHaveBeenCalledTimes(2);
-    expect(get).toHaveBeenLastCalledWith("folder-1", {
-      page: 1,
-      pageSize: 25000,
-      signal: expect.any(AbortSignal),
-      listing: { sortBy: "Name", descending: true },
-    });
   });
 });

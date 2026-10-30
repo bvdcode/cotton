@@ -7,9 +7,8 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.Passkeys;
 using EasyExtensions.AspNetCore.Exceptions;
-using EasyExtensions.Passkeys;
-using EasyExtensions.Passkeys.Models;
-using System.Text.Json;
+using Fido2NetLib;
+using Fido2NetLib.Objects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using EasyExtensions.Mediator;
@@ -22,7 +21,7 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
     public class BeginPasskeyRegistrationRequestHandler(
         CottonDbContext _dbContext,
         IMemoryCache _cache,
-        IPasskeyServerFactory _factory,
+        IPasskeyClientFactory _factory,
         IDatabaseIntegrityVerifier _integrity)
         : IRequestHandler<BeginPasskeyRegistrationRequest, PasskeyRegistrationOptionsResponseDto>
     {
@@ -40,12 +39,25 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
                 .Select(x => new { x.CredentialId, x.Transports })
                 .ToListAsync(ct);
 
-            IPasskeyServer server = await _factory.CreateAsync(ct);
-            RegistrationOptions options = server.CreateRegistrationOptions(
-                new PasskeyUser(user.Id.ToByteArray(), user.Username, PasskeyProtocolMapper.GetDisplayName(user)),
-                existingCredentials
+            IFido2 fido = await _factory.CreateAsync(ct);
+            CredentialCreateOptions options = fido.RequestNewCredential(new RequestNewCredentialParams
+            {
+                User = new Fido2User
+                {
+                    Id = user.Id.ToByteArray(),
+                    Name = user.Username,
+                    DisplayName = PasskeyProtocolMapper.GetDisplayName(user)
+                },
+                ExcludeCredentials = existingCredentials
                     .Select(x => PasskeyProtocolMapper.CreateCredentialDescriptor(x.CredentialId, x.Transports))
-                    .ToArray());
+                    .ToArray(),
+                AuthenticatorSelection = new AuthenticatorSelection
+                {
+                    ResidentKey = ResidentKeyRequirement.Required,
+                    UserVerification = UserVerificationRequirement.Required
+                },
+                AttestationPreference = AttestationConveyancePreference.Direct
+            });
             string requestId = PasskeyChallenges.CreateRequestId();
             _cache.Set(
                 PasskeyChallenges.RegistrationCacheKey(requestId),
@@ -55,7 +67,7 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
             return new()
             {
                 RequestId = requestId,
-                Options = JsonSerializer.Deserialize<JsonElement>(PasskeyJson.Serialize(options))
+                Options = options
             };
         }
     }

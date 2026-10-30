@@ -55,12 +55,7 @@ describe("folder name mutations", () => {
       metadata: { en: await encryptFolderName("Documents") },
     });
     const get = vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
-      content: {
-        node: parent,
-        ...parent,
-        nodes: [existing],
-        files: [],
-      },
+      content: { ...parent, nodes: [existing], files: [] },
       totalCount: 1,
     });
     const names = new FolderTransferNames(parent.id);

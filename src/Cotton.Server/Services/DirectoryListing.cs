@@ -2,9 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
-using Cotton.Database;
 using Cotton.Nodes;
-using Cotton.Topology;
 using Cotton.Server.Models.Requests;
 using EasyExtensions.Models.Dto;
 using Mapster;
@@ -14,41 +12,6 @@ namespace Cotton.Server.Services
 {
     public static class DirectoryListing
     {
-        public static async Task<List<Guid>> ResolveParentIdsAsync(
-            NodeDirectory directory, Guid rootId, int depth, CancellationToken cancellationToken)
-        {
-            ListingRequestLimits.ValidateDepth(depth);
-            List<Guid> parents = [rootId];
-            int traversed = 0;
-            for (int level = 0; level < depth && parents.Count > 0; level++)
-            {
-                int remaining = ListingRequestLimits.MaxTraversedNodes - traversed;
-                parents = await directory.GetNodes(parents).AsNoTracking()
-                    .Select(node => node.Id).Take(remaining + 1).ToListAsync(cancellationToken);
-                traversed += parents.Count;
-                if (traversed > ListingRequestLimits.MaxTraversedNodes)
-                {
-                    throw new EasyExtensions.AspNetCore.Exceptions.BadRequestException(
-                        $"Folder traversal exceeds {ListingRequestLimits.MaxTraversedNodes} nodes.");
-                }
-            }
-            return parents;
-        }
-
-        public static IQueryable<Node> HideVersionOnlyTrashWrappers(
-            IQueryable<Node> nodes, CottonDbContext database, Guid userId)
-        {
-            return nodes.Where(node =>
-                database.Nodes.Any(child => child.ParentId == node.Id && child.OwnerId == userId)
-                || database.NodeFiles.Any(file => file.NodeId == node.Id
-                    && file.OwnerId == userId
-                    && (file.OriginalNodeFileId == Guid.Empty || file.Id == file.OriginalNodeFileId))
-                || !database.NodeFiles.Any(file => file.NodeId == node.Id
-                    && file.OwnerId == userId
-                    && file.OriginalNodeFileId != Guid.Empty
-                    && file.Id != file.OriginalNodeFileId));
-        }
-
         public static async Task<(List<NodeDto> Nodes, List<TFile> Files, int NodeCount, int FileCount)> ReadPageAsync<TFile>(
             IQueryable<Node> nodesQuery,
             IQueryable<NodeFile> filesQuery,

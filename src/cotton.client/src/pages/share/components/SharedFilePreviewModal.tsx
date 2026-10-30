@@ -26,7 +26,6 @@ import {
   useModelPaletteColors,
 } from "@shared/ui/preview/modelPalette";
 import type { FileType } from "@shared/utils/fileTypes";
-import { OfficePreview } from "@shared/ui/preview/office/OfficePreview";
 import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
 import { ReadOnlyTextViewer } from "./ReadOnlyTextViewer";
 import { FilePreviewUnavailable } from "@shared/ui/preview/FilePreviewUnavailable";
@@ -309,7 +308,6 @@ const SharedModelPalette = ({
 };
 
 const isSupportedSharedPreviewType = (fileType: FileType | null): boolean =>
-  fileType === "office" ||
   fileType === "pdf" ||
   fileType === "text" ||
   fileType === "model" ||
@@ -352,7 +350,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     return null;
   }
 
-  const headerLayout = fileType === "pdf" || fileType === "office" || isModel || fileType === "other";
+  const headerLayout = fileType === "pdf" || isModel || fileType === "other";
 
   return (
     <PreviewModal
@@ -369,14 +367,6 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     >
       {fileType === "other" && (
         <FilePreviewUnavailable onDownload={onDownload} />
-      )}
-      {fileType === "office" && (
-        <OfficePreview
-          source={{ kind: "url", url: sharedFoldersApi.buildFileContentUrl(token, fileId, "inline") }}
-          fileName={fileName}
-          contentType={contentType}
-          fileSizeBytes={fileSizeBytes}
-        />
       )}
       {fileType === "pdf" && (
         <PdfPreview

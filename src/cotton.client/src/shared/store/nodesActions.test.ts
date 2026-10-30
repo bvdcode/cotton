@@ -51,7 +51,6 @@ const nameConflictError = () =>
 
 const seedFolder = (parentId: string, nodes: NodeDto[]) => {
   const content: NodeContentDto = {
-    node: makeNode(parentId, "Parent"),
     id: parentId,
     createdAt: "2026-05-13T00:00:00Z",
     updatedAt: "2026-05-13T00:00:00Z",
@@ -105,7 +104,6 @@ describe("loadNode", () => {
     vi.mocked(nodesApi.getAncestors).mockResolvedValue([]);
     vi.mocked(nodesApi.getChildren).mockResolvedValue({
       content: {
-        node: fresh,
         id: "folder-1",
         createdAt: "2026-05-13T00:00:00Z",
         updatedAt: "2026-05-13T00:00:00Z",
@@ -188,12 +186,7 @@ describe("createFolder", () => {
     useNodesStore.setState({ currentNode: encryptedParent });
     seedFolder("parent-1", []);
     vi.mocked(nodesApi.getChildren).mockResolvedValueOnce({
-      content: {
-        node: encryptedParent,
-        ...encryptedParent,
-        nodes: [],
-        files: [],
-      },
+      content: { ...encryptedParent, nodes: [], files: [] },
       totalCount: 0,
     });
     vi.mocked(nodesApi.createNode).mockImplementation(async (request) => ({
@@ -232,12 +225,7 @@ describe("createFolder", () => {
     useNodesStore.setState({ ancestors: [vault], currentNode: parent });
     seedFolder("parent-1", []);
     vi.mocked(nodesApi.getChildren).mockResolvedValueOnce({
-      content: {
-        node: parent,
-        ...parent,
-        nodes: [],
-        files: [],
-      },
+      content: { ...parent, nodes: [], files: [] },
       totalCount: 0,
     });
     vi.mocked(nodesApi.createNode).mockImplementation(async (request) => ({

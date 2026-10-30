@@ -14,12 +14,9 @@ namespace Cotton.Server.Handlers.Layouts
         string query,
         int page,
         int pageSize,
-        bool deep = false,
-        Guid? currentNodeId = null) : IRequest<PagedResult<SearchResultDto>>
+        bool deep = false) : IRequest<PagedResult<SearchResultDto>>
     {
         public bool Deep { get; } = deep;
-
-        public Guid? CurrentNodeId { get; } = currentNodeId;
 
         public Guid UserId { get; } = userId;
 

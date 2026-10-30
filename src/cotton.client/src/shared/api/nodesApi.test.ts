@@ -43,7 +43,6 @@ const makeNode = (id = nodeId) => ({
 });
 
 const makeContent = (files: JsonValue[] = []) => ({
-  node: makeNode(),
   id: nodeId,
   createdAt: "2026-05-17T00:00:00Z",
   updatedAt: "2026-05-17T00:00:00Z",
@@ -202,16 +201,6 @@ describe("nodesApi mutations", () => {
     await nodesApi.deleteNode(nodeId, true);
     expect(del).toHaveBeenLastCalledWith(`/layouts/nodes/${nodeId}`, {
       params: { skipTrash: true },
-    });
-  });
-
-  it("requests conditional cleanup without changing ordinary deletion parameters", async () => {
-    const del = vi.spyOn(httpClient, "delete").mockResolvedValue({});
-
-    await nodesApi.deleteNode(nodeId, false, true);
-
-    expect(del).toHaveBeenCalledWith(`/layouts/nodes/${nodeId}`, {
-      params: { onlyIfEmpty: true },
     });
   });
 

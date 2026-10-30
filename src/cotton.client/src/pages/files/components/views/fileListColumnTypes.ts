@@ -19,7 +19,6 @@ export interface FileListRow {
 }
 
 export interface ColumnOptions {
-  folderIds?: readonly string[];
   readOnly?: boolean;
   labels: {
     name: string;

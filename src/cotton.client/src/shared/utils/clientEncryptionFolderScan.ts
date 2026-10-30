@@ -60,6 +60,12 @@ export const collectEncryptedFilesInFoldersForClientEncryption = (
     (folder) => !isFolderEncryptionPolicyEnabled(folder.metadata),
   );
 
+export const collectFoldersInFoldersForClientEncryption = (
+  rootNodeIds: ReadonlyArray<string>,
+  options: ScanOptions = {},
+): Promise<ClientEncryptionFolderScanResult> =>
+  collectFilesInFolders(rootNodeIds, () => false, options);
+
 async function collectFilesInFolders(
   rootNodeIds: ReadonlyArray<string>,
   predicate: FilePredicate,

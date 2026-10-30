@@ -8,14 +8,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="EasyExtensions.Analyzers" Version="3.0.92">
+		<PackageReference Include="EasyExtensions.Analyzers" Version="3.0.90">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="EasyExtensions" Version="3.0.92" />
+		<PackageReference Include="EasyExtensions" Version="3.0.90" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.13" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.13" />
 		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />

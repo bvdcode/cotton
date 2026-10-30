@@ -2416,6 +2416,7 @@
       "uploadFailed": "Impossibile avviare il caricamento dei file condivisi. Ricarica questa pagina per riprovare."
     },
     "folderSizes": {
+      "calculate": "Calcola le dimensioni delle cartelle",
       "calculating": "Calcolo delle dimensioni delle cartelle…",
       "failed": "Impossibile calcolare le dimensioni di tutte le cartelle. Riprova."
     },
@@ -2541,8 +2542,6 @@
       "confirmDescription": "Gli elementi selezionati verranno spostati nel Cestino e potranno essere ripristinati in seguito."
     },
     "conflicts": {
-      "merge": "Unisci",
-      "mergeDescription": "Esiste già una cartella con questo nome. Unire i contenuti o usare {{newName}}?",
       "title": "Conflitto di nomi",
       "description": "In questa cartella esiste già un elemento con questo nome. Usare invece {{newName}}?",
       "overwriteDescription": "In questa cartella esiste già un elemento con questo nome. Sostituirlo o usare invece {{newName}}?",
@@ -2693,10 +2692,7 @@
         "modelLoadFailed": "Impossibile caricare il modello 3D",
         "modelUnsupportedType": "Questo formato di file 3D non è supportato per l'anteprima nel browser",
         "pdfTooLarge": "Il PDF è troppo grande per l'anteprima ({{size}}). La dimensione massima è {{maxSize}}. Scarichi il file per visualizzarlo.",
-        "fileTooLarge": "Il file è troppo grande per l'anteprima ({{size}}). La dimensione massima per l'anteprima è {{maxSize}}. Scarichi il file per visualizzarlo."
-      },
-      "office": {
-        "truncated": "Sono visualizzate le prime {{rows}} righe e {{columns}} colonne di questo foglio."
+        "fileTooLarge": "Il file è troppo grande per l'anteprima ({{size}}). La dimensione massima per l'anteprima del testo è {{maxSize}}. Scarichi il file per visualizzarlo."
       }
     },
     "actionsTitle": "Azioni",

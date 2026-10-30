@@ -1,3 +1,4 @@
+import { useFolderEncryptionPresence } from "./useFolderEncryptionPresence";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -93,8 +94,6 @@ export const useFilesEncryptionController = ({
     decryptEncryptedFiles,
     encryptPlainFiles,
     folderPolicyEnabled,
-    plainFiles,
-    encryptedFiles,
     isDecryptingEncryptedFiles,
     isEncryptingPlainFiles,
   } = useFolderClientEncryptionActions({
@@ -196,10 +195,15 @@ export const useFilesEncryptionController = ({
     ],
   );
 
-  const hasMatchingFiles =
-    activeCurrentNode?.id === nodeId &&
-    Boolean(clientEncryptionEnvelope) &&
-    (folderPolicyEnabled ? plainFiles.length > 0 : encryptedFiles.length > 0);
+  const hasMatchingFiles = useFolderEncryptionPresence({
+    nodeId,
+    match: folderPolicyEnabled ? "plain-files" : "encrypted-files",
+    enabled:
+      activeCurrentNode?.id === nodeId &&
+      content?.id === nodeId &&
+      Boolean(clientEncryptionEnvelope),
+    knownFiles: content?.id === nodeId ? content.files : undefined,
+  });
   const folderEncryptionPrompt = useMemo(
     () =>
       buildFolderEncryptionPrompt({

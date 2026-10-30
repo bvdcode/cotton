@@ -27,7 +27,6 @@ export const createConflictResolver = (
       case ConflictAction.Cancel:
       case ConflictAction.Skip:
       case ConflictAction.Rename:
-      case ConflictAction.Merge:
       case ConflictAction.Overwrite:
         return action;
     }

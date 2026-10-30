@@ -35,7 +35,6 @@ export interface NodeResponse {
 }
 
 export interface NodeContentDto extends BaseDto {
-  node: NodeDto;
   nodes: NodeDto[];
   files: NodeFileManifestDto[];
   stats?: FolderStatsDto | null;
@@ -125,19 +124,6 @@ export const nodesApi = {
 
   lookupSiblingNames,
 
-  getChildFolderStats: (
-    nodeId: Guid,
-    options?: { nodeType?: string; depth?: number; signal?: AbortSignal },
-  ): Promise<Record<string, FolderStatsDto>> =>
-    getValidated(
-      `/layouts/nodes/${nodeId}/children/stats`,
-      z.record(z.string(), folderStatsSchema),
-      {
-        params: { nodeType: options?.nodeType, depth: options?.depth },
-        signal: options?.signal,
-      },
-    ),
-
   getAncestors: async (
     nodeId: Guid,
     options?: { nodeType?: string },
@@ -187,20 +173,9 @@ export const nodesApi = {
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
-  deleteNode: async (
-    nodeId: Guid,
-    skipTrash = false,
-    onlyIfEmpty = false,
-  ): Promise<void> => {
-    const params: Record<string, boolean> = {};
-    if (skipTrash) {
-      params.skipTrash = true;
-    }
-    if (onlyIfEmpty) {
-      params.onlyIfEmpty = true;
-    }
+  deleteNode: async (nodeId: Guid, skipTrash = false): Promise<void> => {
     await httpClient.delete(`/layouts/nodes/${nodeId}`, {
-      params: Object.keys(params).length > 0 ? params : undefined,
+      params: skipTrash ? { skipTrash: true } : undefined,
     });
   },
 
@@ -229,18 +204,6 @@ export const nodesApi = {
     const url = `/layouts/nodes/${nodeId}/metadata`;
     const response = await httpClient.patch<JsonValue>(url, patch);
     return parseValidated(url, response.data, nodeDtoSchema);
-  },
-
-  bulkUpdateNodeMetadata: async (
-    nodeId: Guid,
-    patch: Record<string, string>,
-    includeDescendants: boolean,
-  ): Promise<NodeDto[]> => {
-    const url = `/layouts/nodes/${nodeId}/metadata/bulk`;
-    const response = await httpClient.patch<JsonValue>(url, patch, {
-      params: { includeDescendants },
-    });
-    return parseValidated(url, response.data, nodeListSchema);
   },
 
   restoreNode: async (

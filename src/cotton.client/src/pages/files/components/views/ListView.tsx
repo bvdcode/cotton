@@ -1,10 +1,6 @@
 import React, { useMemo } from "react";
 import { Box } from "@mui/material";
-import {
-  DataGrid,
-  useGridApiRef,
-  gridVisibleRowsSelector,
-} from "@mui/x-data-grid";
+import { DataGrid } from "@mui/x-data-grid";
 import type {
   GridRowParams,
   GridRowsProp,
@@ -16,8 +12,6 @@ import type { IFileListView } from "@shared/types/FileListViewTypes";
 import { createFileListColumns, type FileListRow } from "./fileListColumns";
 import Loader from "../../../../shared/ui/Loader";
 import { useListMoveDragAndDrop } from "./useListMoveDragAndDrop";
-import { useCachedFolderSizes } from "@shared/api/queries/useCachedFolderSizes";
-import { useNameNavigation } from "@shared/hooks/useNameNavigation";
 
 export const ListView: React.FC<IFileListView> = ({
   tiles,
@@ -47,14 +41,6 @@ export const ListView: React.FC<IFileListView> = ({
   );
   const getFolderEncryptionPolicyState =
     folderOperations.getEncryptionPolicyState;
-  const folderIds = useMemo(
-    () =>
-      tiles.flatMap((tile) => (tile.kind === "folder" ? [tile.node.id] : [])),
-    [tiles],
-  );
-  const folderSizes = useCachedFolderSizes(folderIds);
-  const apiRef = useGridApiRef();
-  const paginationMode = pagination?.mode ?? (pagination ? "server" : "client");
 
   const rows: GridRowsProp<FileListRow> = useMemo(() => {
     const baseRows: FileListRow[] = tiles.map((tile) => {
@@ -64,7 +50,7 @@ export const ListView: React.FC<IFileListView> = ({
           type: "folder",
           name: tile.node.name,
           location: tile.path ?? null,
-          sizeBytes: folderSizes.get(tile.node.id) ?? null,
+          sizeBytes: null,
           metadata: tile.node.metadata,
           encryptionPolicy: getFolderEncryptionPolicyState?.(tile.node),
           tile,
@@ -97,13 +83,7 @@ export const ListView: React.FC<IFileListView> = ({
       },
       ...baseRows,
     ];
-  }, [
-    tiles,
-    isCreatingFolder,
-    newFolderName,
-    getFolderEncryptionPolicyState,
-    folderSizes,
-  ]);
+  }, [tiles, isCreatingFolder, newFolderName, getFolderEncryptionPolicyState]);
 
   const orderedIds = useMemo(
     () => rows.filter((r) => r.type !== "new-folder").map((r) => String(r.id)),
@@ -136,27 +116,6 @@ export const ListView: React.FC<IFileListView> = ({
     fileOperations,
   });
 
-  useNameNavigation(
-    containerRef,
-    React.useCallback(
-      () =>
-        gridVisibleRowsSelector(apiRef).rows.map(
-          ({ id }) => rowsById.get(String(id))?.name ?? "",
-        ),
-      [apiRef, rowsById],
-    ),
-    React.useCallback(
-      (index: number) => {
-        const id = gridVisibleRowsSelector(apiRef).rows[index]?.id;
-        if (id !== undefined) {
-          apiRef.current?.scrollToIndexes({ rowIndex: index });
-          apiRef.current?.setCellFocus(id, "name");
-        }
-      },
-      [apiRef],
-    ),
-  );
-
   const columns = useMemo(
     () =>
       createFileListColumns({
@@ -184,7 +143,6 @@ export const ListView: React.FC<IFileListView> = ({
           unpin: t("home:dashboard.pinnedFolders.unpin"),
           info: t("folderInfo.action"),
         },
-        folderIds,
         newFolderName,
         onNewFolderNameChange,
         onConfirmNewFolder,
@@ -204,7 +162,6 @@ export const ListView: React.FC<IFileListView> = ({
       ),
     [
       t,
-      folderIds,
       readOnly,
       newFolderName,
       onNewFolderNameChange,
@@ -325,8 +282,6 @@ export const ListView: React.FC<IFileListView> = ({
         </Box>
       )}
       <DataGrid
-        key={paginationMode}
-        apiRef={apiRef}
         sx={{
           height: autoHeight ? "auto" : "100%",
           "& .MuiDataGrid-row.Mui-selected": {
@@ -337,11 +292,6 @@ export const ListView: React.FC<IFileListView> = ({
           },
           "& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within": {
             outline: "none",
-          },
-          "& .MuiDataGrid-cell:focus-visible": {
-            outline: "2px solid",
-            outlineColor: "text.primary",
-            outlineOffset: -2,
           },
         }}
         getRowClassName={moveSupport ? getRowClassName : undefined}
@@ -359,9 +309,9 @@ export const ListView: React.FC<IFileListView> = ({
         disableRowSelectionOnClick
         onRowClick={handleRowClick}
         hideFooter={false}
-        paginationMode={paginationMode}
-        sortingMode={pagination?.query ? paginationMode : "client"}
-        filterMode={pagination?.query ? paginationMode : "client"}
+        paginationMode={pagination ? "server" : "client"}
+        sortingMode={pagination?.query ? "server" : "client"}
+        filterMode={pagination?.query ? "server" : "client"}
         sortModel={pagination?.query?.sortModel}
         filterModel={pagination?.query?.filterModel}
         onSortModelChange={pagination?.query?.onSortModelChange}
@@ -380,9 +330,7 @@ export const ListView: React.FC<IFileListView> = ({
           });
         }}
         pageSizeOptions={[100]}
-        rowCount={
-          paginationMode === "server" ? pagination?.totalCount : undefined
-        }
+        rowCount={pagination ? pagination.totalCount : rows.length}
         loading={pagination?.loading}
         autoHeight={autoHeight}
       />

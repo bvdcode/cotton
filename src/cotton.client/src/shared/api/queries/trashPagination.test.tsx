@@ -9,7 +9,6 @@ import { invalidateTrashChildren, useTrashChildrenQuery } from "./trash";
 
 const page = (count: number): NodeResponse => ({
   content: {
-    node: createFolder(),
     ...createFolder(),
     nodes: [],
     files: Array.from({ length: count }, (_, index) =>
@@ -56,15 +55,11 @@ describe("trash pagination", () => {
       nodeType: "trash",
       depth: 1,
       page: 1,
-      pageSize: 25_000,
-      signal: expect.any(AbortSignal),
     });
     expect(get).toHaveBeenNthCalledWith(2, "trash", {
       nodeType: "trash",
       depth: 1,
       page: 2,
-      pageSize: 25_000,
-      signal: expect.any(AbortSignal),
     });
     unmount();
 
@@ -76,7 +71,7 @@ describe("trash pagination", () => {
     client.clear();
   });
 
-  it("requests only the selected page when explicit pagination is requested", async () => {
+  it("requests only the selected page for the table", async () => {
     const get = vi.spyOn(nodesApi, "getChildren").mockResolvedValue(page(100));
     const { client, wrapper } = createProvider();
     const { result, unmount } = renderHook(
@@ -97,7 +92,6 @@ describe("trash pagination", () => {
       depth: 0,
       page: 3,
       pageSize: 100,
-      signal: expect.any(AbortSignal),
     });
     expect(result.current.data?.totalCount).toBe(1001);
     unmount();

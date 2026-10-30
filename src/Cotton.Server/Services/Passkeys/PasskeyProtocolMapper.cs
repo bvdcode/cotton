@@ -3,7 +3,8 @@
 
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
-using EasyExtensions.Passkeys.Models;
+using Fido2NetLib;
+using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace Cotton.Server.Services.Passkeys
@@ -40,41 +41,60 @@ namespace Cotton.Server.Services.Passkeys
                 ?? PasskeyAuthenticatorResolver.ResolveDisplayName(credential.AaGuid, credential.Transports);
         }
 
-        public static RegistrationResponse ToAttestationResponse(
+        public static AuthenticatorAttestationRawResponse ToAttestationResponse(
             PasskeyAttestationCredentialDto credential)
         {
-            return new RegistrationResponse(credential.Id, DecodeBrowserBuffer(credential.RawId), credential.Type,
-                new AttestationResponse(DecodeBrowserBuffer(credential.Response.ClientDataJson),
-                    DecodeBrowserBuffer(credential.Response.AttestationObject))
-                {
-                    Transports = ParseTransports(credential.Transports),
-                });
-        }
-
-        public static AuthenticationResponse ToAssertionResponse(PasskeyAssertionCredentialDto credential)
-        {
-            return new AuthenticationResponse(credential.Id, DecodeBrowserBuffer(credential.RawId), credential.Type,
-                new AssertionResponse(DecodeBrowserBuffer(credential.Response.ClientDataJson),
-                    DecodeBrowserBuffer(credential.Response.AuthenticatorData), DecodeBrowserBuffer(credential.Response.Signature))
-                {
-                    UserHandle = credential.Response.UserHandle is null
-                        ? null
-                        : DecodeBrowserBuffer(credential.Response.UserHandle),
-                });
-        }
-
-        public static CredentialDescriptor CreateCredentialDescriptor(byte[] credentialId, string[] transports)
-        {
-            return new CredentialDescriptor(credentialId)
+            return new AuthenticatorAttestationRawResponse
             {
-                Transports = ParseTransports(transports),
+                Id = credential.Id,
+                RawId = DecodeBrowserBuffer(credential.RawId),
+                Type = PublicKeyCredentialType.PublicKey,
+                Response = new()
+                {
+                    AttestationObject = DecodeBrowserBuffer(credential.Response.AttestationObject),
+                    ClientDataJson = DecodeBrowserBuffer(credential.Response.ClientDataJson),
+                    Transports = ParseTransports(credential.Transports),
+                },
             };
+        }
+
+        public static AuthenticatorAssertionRawResponse ToAssertionResponse(
+            PasskeyAssertionCredentialDto credential)
+        {
+            return new AuthenticatorAssertionRawResponse
+            {
+                Id = credential.Id,
+                RawId = DecodeBrowserBuffer(credential.RawId),
+                Type = PublicKeyCredentialType.PublicKey,
+                Response = new()
+                {
+                    AuthenticatorData = DecodeBrowserBuffer(credential.Response.AuthenticatorData),
+                    ClientDataJson = DecodeBrowserBuffer(credential.Response.ClientDataJson),
+                    Signature = DecodeBrowserBuffer(credential.Response.Signature),
+                    UserHandle = string.IsNullOrEmpty(credential.Response.UserHandle)
+                        ? []
+                        : DecodeBrowserBuffer(credential.Response.UserHandle),
+                },
+            };
+        }
+
+        public static PublicKeyCredentialDescriptor CreateCredentialDescriptor(
+            byte[] credentialId,
+            string[] transports)
+        {
+            AuthenticatorTransport[] parsedTransports = ParseTransports(transports);
+            return parsedTransports.Length == 0
+                ? new PublicKeyCredentialDescriptor(credentialId)
+                : new PublicKeyCredentialDescriptor(
+                    PublicKeyCredentialType.PublicKey,
+                    credentialId,
+                    parsedTransports);
         }
 
         public static string[] NormalizeTransports(IEnumerable<AuthenticatorTransport>? transports)
         {
             return transports?
-                .Select(FormatTransport)
+                .Select(transport => transport.ToString().ToLowerInvariant())
                 .Distinct()
                 .Order()
                 .ToArray() ?? [];
@@ -103,34 +123,13 @@ namespace Cotton.Server.Services.Passkeys
             }
 
             return transports
-                .Select(value => value?.ToLowerInvariant() switch
-                {
-                    "usb" => AuthenticatorTransport.Usb,
-                    "nfc" => AuthenticatorTransport.Nfc,
-                    "ble" => AuthenticatorTransport.Ble,
-                    "internal" => AuthenticatorTransport.Internal,
-                    "hybrid" => AuthenticatorTransport.Hybrid,
-                    "smart-card" => AuthenticatorTransport.SmartCard,
-                    _ => (AuthenticatorTransport?)null,
-                })
+                .Select(value => Enum.TryParse(value, ignoreCase: true, out AuthenticatorTransport transport)
+                    ? transport
+                    : (AuthenticatorTransport?)null)
                 .Where(transport => transport.HasValue)
                 .Select(transport => transport!.Value)
                 .Distinct()
                 .ToArray();
-        }
-
-        private static string FormatTransport(AuthenticatorTransport transport)
-        {
-            return transport switch
-            {
-                AuthenticatorTransport.Usb => "usb",
-                AuthenticatorTransport.Nfc => "nfc",
-                AuthenticatorTransport.Ble => "ble",
-                AuthenticatorTransport.Internal => "internal",
-                AuthenticatorTransport.Hybrid => "hybrid",
-                AuthenticatorTransport.SmartCard => "smart-card",
-                _ => throw new ArgumentOutOfRangeException(nameof(transport)),
-            };
         }
     }
 }

@@ -78,8 +78,36 @@ namespace Cotton.Previews
 
             await using Stream entryStream = await entry.OpenAsync().ConfigureAwait(false);
             MemoryStream output = new MemoryStream((int)Math.Min(entry.Length, int.MaxValue));
-            await PreviewStream.CopyBoundedAsync(entryStream, output, maxBytes).ConfigureAwait(false);
+            await CopyBoundedAsync(entryStream, output, maxBytes).ConfigureAwait(false);
             return output.ToArray();
+        }
+
+        public static async Task CopyBoundedAsync(Stream source, Stream destination, long maxBytes)
+        {
+            byte[] buffer = new byte[81920];
+            long total = 0;
+            while (true)
+            {
+                int read = await source.ReadAsync(buffer).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    break;
+                }
+
+                total += read;
+                if (total > maxBytes)
+                {
+                    throw new InvalidDataException(
+                        "Android package preview source exceeds the supported preview scan limit.");
+                }
+
+                await destination.WriteAsync(buffer.AsMemory(0, read)).ConfigureAwait(false);
+            }
+
+            if (destination.CanSeek)
+            {
+                destination.Position = 0;
+            }
         }
 
         private static (int Width, int Height)? TryIdentifyImageDimensions(byte[]? imageBytes)

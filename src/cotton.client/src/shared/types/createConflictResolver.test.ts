@@ -2,18 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { createConflictResolver } from "./createConflictResolver";
 import { ConflictAction } from "./nameConflict";
 
-const filePrompt = {
-  newName: "report (1).txt",
-  canOverwrite: true,
-  canMerge: false,
-  canApplyToAll: true,
-};
-const folderPrompt = {
-  newName: "folder (1)",
-  canOverwrite: false,
-  canMerge: true,
-  canApplyToAll: true,
-};
+const filePrompt = { newName: "report (1).txt", canOverwrite: true };
+const folderPrompt = { newName: "folder (1)", canOverwrite: false };
 
 describe("createConflictResolver", () => {
   it("replaces remaining files without prompting again", async () => {
@@ -62,7 +52,6 @@ describe("createConflictResolver", () => {
   it.each([
     ConflictAction.Overwrite,
     ConflictAction.Rename,
-    ConflictAction.Merge,
     ConflictAction.Skip,
     ConflictAction.Cancel,
   ])("does not remember an individual %s decision", async (action) => {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using LibHeifSharp;
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.Exif.Makernotes;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,7 @@ using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.Metadata.Profiles.Iptc;
 using SixLabors.ImageSharp.Metadata.Profiles.Xmp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Buffers.Binary;
 
@@ -52,14 +54,26 @@ namespace Cotton.Previews.Tests
         [Test]
         public async Task ReadAsync_Heic_PreservesPhotographyGpsAndDimensionsWithoutXmp()
         {
-            using FileStream stream = File.OpenRead(Path.Combine(TestContext.CurrentContext.TestDirectory,
-                "Fixtures", "Heic", "photography.heic"));
+            const int size = 32;
+            using HeifContext context = new();
+            using HeifEncoder encoder = context.GetEncoder(HeifCompressionFormat.Hevc);
+            using HeifImage image = new(size, size, HeifColorspace.Rgb, HeifChroma.InterleavedRgb24);
+            image.AddPlane(HeifChannel.Interleaved, size, size, 8);
+            HeifPlaneData plane = image.GetPlane(HeifChannel.Interleaved);
+            byte[] pixels = new byte[plane.Stride * size];
+            Marshal.Copy(pixels, 0, plane.Scan0, pixels.Length);
+            using HeifImageHandle handle = context.EncodeImageAndReturnHandle(image, encoder, new HeifEncodingOptions());
+            context.AddExifMetadata(handle, CreateExif().ToByteArray());
+            context.AddXmpMetadata(handle, Encoding.UTF8.GetBytes(Xmp));
+            using MemoryStream stream = new();
+            context.WriteToStream(stream);
+            stream.Position = 0;
 
             IReadOnlyDictionary<string, string> metadata = await ImageContentMetadataReader.ReadAsync(stream, NullLogger.Instance, CancellationToken.None);
 
             AssertCommonMetadata(metadata);
-            Assert.That(metadata["image.width"], Is.EqualTo("64"));
-            Assert.That(metadata["image.height"], Is.EqualTo("48"));
+            Assert.That(metadata["image.width"], Is.EqualTo(size.ToString()));
+            Assert.That(metadata["image.height"], Is.EqualTo(size.ToString()));
         }
 
         [Test]

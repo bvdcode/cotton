@@ -8,13 +8,12 @@ import {
   DialogTitle,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import {
-  ConflictAction,
-  type NameConflictPrompt,
-} from "../../../shared/types/nameConflict";
+import { ConflictAction } from "../../../shared/types/nameConflict";
 
-interface FileConflictDialogProps extends NameConflictPrompt {
+interface FileConflictDialogProps {
   open: boolean;
+  newName: string;
+  canOverwrite: boolean;
   onResolve: (resolution: ConflictAction) => void;
   onExited: () => void;
 }
@@ -23,8 +22,6 @@ export const FileConflictDialog = ({
   open,
   newName,
   canOverwrite,
-  canMerge,
-  canApplyToAll,
   onResolve,
   onExited,
 }: FileConflictDialogProps) => {
@@ -33,16 +30,6 @@ export const FileConflictDialog = ({
   const renameNameOffset = renameLabel.indexOf(newName);
   const renameCharacters = Array.from(newName);
   const renameMiddle = Math.ceil(renameCharacters.length / 2);
-  const hasPrimaryAction = canOverwrite || canMerge;
-  const primaryActionCount =
-    Number(canMerge) +
-    Number(canOverwrite) +
-    Number(canOverwrite && canApplyToAll);
-  const descriptionKey = canMerge
-    ? "conflicts.mergeDescription"
-    : canOverwrite
-      ? "conflicts.overwriteDescription"
-      : "conflicts.description";
 
   return (
     <Dialog
@@ -62,7 +49,12 @@ export const FileConflictDialog = ({
             overflowWrap: "anywhere",
           }}
         >
-          {t(descriptionKey, { ns: "files", newName })}
+          {t(
+            canOverwrite
+              ? "conflicts.overwriteDescription"
+              : "conflicts.description",
+            { ns: "files", newName },
+          )}
         </DialogContentText>
       </DialogContent>
       <DialogActions
@@ -102,23 +94,21 @@ export const FileConflictDialog = ({
           >
             {t("conflicts.skip", { ns: "files" })}
           </Button>
-          {canApplyToAll && (
-            <Button
-              color="inherit"
-              onClick={() => onResolve(ConflictAction.SkipAll)}
-            >
-              {t("conflicts.skipAll", { ns: "files" })}
-            </Button>
-          )}
+          <Button
+            color="inherit"
+            onClick={() => onResolve(ConflictAction.SkipAll)}
+          >
+            {t("conflicts.skipAll", { ns: "files" })}
+          </Button>
         </Box>
         <Box
           sx={{
             display: "grid",
             gap: 1,
-            gridTemplateColumns: hasPrimaryAction
+            gridTemplateColumns: canOverwrite
               ? {
-                  xs: `repeat(${primaryActionCount}, minmax(0, 1fr))`,
-                  sm: `minmax(0, 1fr) repeat(${primaryActionCount}, auto)`,
+                  xs: "repeat(2, minmax(0, 1fr))",
+                  sm: "minmax(0, 1fr) auto auto",
                 }
               : "minmax(0, 1fr)",
             minWidth: 0,
@@ -126,7 +116,7 @@ export const FileConflictDialog = ({
         >
           <Button
             aria-label={renameLabel}
-            color={hasPrimaryAction ? "inherit" : "primary"}
+            color={canOverwrite ? "inherit" : "primary"}
             fullWidth
             onClick={() => onResolve(ConflictAction.Rename)}
             sx={{
@@ -135,7 +125,7 @@ export const FileConflictDialog = ({
               overflow: "hidden",
             }}
             title={renameLabel}
-            variant={hasPrimaryAction ? "outlined" : "contained"}
+            variant={canOverwrite ? "outlined" : "contained"}
           >
             <Box
               component="span"
@@ -200,31 +190,21 @@ export const FileConflictDialog = ({
               </Box>
             </Box>
           </Button>
-          {canMerge && (
-            <Button
-              variant="contained"
-              onClick={() => onResolve(ConflictAction.Merge)}
-            >
-              {t("conflicts.merge", { ns: "files" })}
-            </Button>
-          )}
           {canOverwrite && (
             <>
               <Button
                 color="inherit"
                 onClick={() => onResolve(ConflictAction.Overwrite)}
-                variant={canApplyToAll ? "outlined" : "contained"}
+                variant="outlined"
               >
                 {t("conflicts.overwrite", { ns: "files" })}
               </Button>
-              {canApplyToAll && (
-                <Button
-                  onClick={() => onResolve(ConflictAction.OverwriteAll)}
-                  variant="contained"
-                >
-                  {t("conflicts.overwriteAll", { ns: "files" })}
-                </Button>
-              )}
+              <Button
+                onClick={() => onResolve(ConflictAction.OverwriteAll)}
+                variant="contained"
+              >
+                {t("conflicts.overwriteAll", { ns: "files" })}
+              </Button>
             </>
           )}
         </Box>

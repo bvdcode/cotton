@@ -14,7 +14,7 @@ const response = (
   pageFiles = files.slice(0, 1000),
   totalCount = files.length,
 ) => ({
-  data: { ...folder, node: folder, nodes: [], files: pageFiles },
+  data: { ...folder, nodes: [], files: pageFiles },
   headers: { "x-total-count": String(totalCount) },
 });
 
@@ -70,7 +70,7 @@ describe("folder listing pagination", () => {
     );
     const first = {
       ...response(files.slice(0, 1), 1001),
-      data: { ...folder, node: folder, nodes, files: files.slice(0, 1) },
+      data: { ...folder, nodes, files: files.slice(0, 1) },
     };
     const get = vi
       .spyOn(httpClient, "get")

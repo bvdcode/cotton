@@ -95,50 +95,6 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task Search_CurrentFolderPrioritizesEntireSubtreeBeforePaging()
-        {
-            string token = await LoginAsync();
-            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            NodeDto root = (await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver"))!;
-            NodeDto current = await CreateNodeAsync(root.Id, "current");
-            NodeDto nested = await CreateNodeAsync(current.Id, "nested");
-            NodeDto deep = await CreateNodeAsync(nested.Id, "deep");
-            NodeDto other = await CreateNodeAsync(root.Id, "current-copy");
-            NodeDto globalFolder = await CreateNodeAsync(root.Id, "report");
-            NodeFileManifestDto globalFile = await CreateFileAsync(other.Id, "report", "global");
-            NodeFileManifestDto nestedFile = await CreateFileAsync(deep.Id, "report.txt", "nested");
-            NodeDto localFolder = await CreateNodeAsync(current.Id, "report archive");
-            NodeDto nestedFolder = await CreateNodeAsync(deep.Id, "report notes");
-            NodeFileManifestDto localExact = await CreateFileAsync(current.Id, "report", "exact");
-            NodeFileManifestDto localPartial = await CreateFileAsync(current.Id, "old report.txt", "partial");
-
-            (SearchResultDto first, int total) = await SearchAsync(
-                root.LayoutId, "report", pageSize: 5, currentNodeId: current.Id);
-            (SearchResultDto second, int secondTotal) = await SearchAsync(
-                root.LayoutId, "report", page: 2, pageSize: 5, currentNodeId: current.Id);
-            (SearchResultDto ordinary, _) = await SearchAsync(root.LayoutId, "report", pageSize: 1);
-            (SearchResultDto unknownFolder, _) = await SearchAsync(
-                root.LayoutId, "report", pageSize: 1, currentNodeId: Guid.NewGuid());
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(total, Is.EqualTo(7));
-                Assert.That(secondTotal, Is.EqualTo(total));
-                Assert.That(first.Nodes.Select(node => node.Id), Is.EqualTo(new[] { localFolder.Id, nestedFolder.Id }));
-                Assert.That(first.Files.Select(file => file.Id), Is.EqualTo(new[] { localExact.Id, nestedFile.Id, localPartial.Id }));
-                Assert.That(first.OrderedIds, Is.EqualTo(new[]
-                {
-                    localExact.Id, localFolder.Id, nestedFolder.Id, nestedFile.Id, localPartial.Id,
-                }));
-                Assert.That(second.Nodes.Select(node => node.Id), Is.EqualTo(new[] { globalFolder.Id }));
-                Assert.That(second.Files.Select(file => file.Id), Is.EqualTo(new[] { globalFile.Id }));
-                Assert.That(second.OrderedIds, Is.EqualTo(new[] { globalFolder.Id, globalFile.Id }));
-                Assert.That(ordinary.Nodes.Single().Id, Is.EqualTo(globalFolder.Id));
-                Assert.That(unknownFolder.Nodes.Single().Id, Is.EqualTo(globalFolder.Id));
-            });
-        }
-
-        [Test]
         public async Task Search_DoesNotReturnTrashedNodesOrFiles()
         {
             string token = await LoginAsync();
@@ -245,11 +201,10 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         }
 
-        private async Task<(SearchResultDto Result, int TotalCount)> SearchAsync(
-            Guid layoutId, string query, int page = 1, int pageSize = 20, Guid? currentNodeId = null)
+        private async Task<(SearchResultDto Result, int TotalCount)> SearchAsync(Guid layoutId, string query, int page = 1, int pageSize = 20)
         {
             HttpResponseMessage response = await _client!.GetAsync(
-                $"/api/v1/layouts/{layoutId}/search?query={Uri.EscapeDataString(query)}&page={page}&pageSize={pageSize}&currentNodeId={currentNodeId}");
+                $"/api/v1/layouts/{layoutId}/search?query={Uri.EscapeDataString(query)}&page={page}&pageSize={pageSize}");
             response.EnsureSuccessStatusCode();
             SearchResultDto result = (await response.Content.ReadFromJsonAsync<SearchResultDto>())!;
             int totalCount = int.Parse(response.Headers.GetValues("X-Total-Count").Single());

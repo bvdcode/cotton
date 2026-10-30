@@ -47,7 +47,6 @@ export const InlineRenameField: React.FC<InlineRenameFieldProps> = ({
       value={value}
       placeholder={placeholder}
       onChange={(event) => onChange(event.target.value)}
-      onFocus={(event) => event.target.select()}
       onKeyDown={handleKeyDown}
       onBlur={() => {
         void onConfirm();

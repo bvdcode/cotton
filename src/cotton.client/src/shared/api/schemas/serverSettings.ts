@@ -1,6 +1,22 @@
 import { z } from "zod";
 import { GUID_PATTERN } from "../../utils/guid";
 
+const makeEnumSchema = <T extends string>(values: readonly T[], fallback: T) =>
+  z.unknown().transform((value): T => {
+    if (typeof value === "number" && Number.isInteger(value)) {
+      return values[value] ?? fallback;
+    }
+
+    if (typeof value !== "string") {
+      return fallback;
+    }
+
+    const match = values.find(
+      (entry) => entry.toLowerCase() === value.toLowerCase(),
+    );
+    return match ?? fallback;
+  });
+
 const nullableStringSchema = z.string().nullable().optional();
 const configStringSchema = nullableStringSchema.transform(
   (value) => value ?? "",
@@ -36,12 +52,18 @@ export type StorageSpaceMode = (typeof storageSpaceModeValues)[number];
 export type GeoIpLookupMode = (typeof geoIpLookupModeValues)[number];
 export type ServerUsage = (typeof serverUsageValues)[number];
 
-export const storageTypeSchema = z.enum(storageTypeValues);
-export const emailModeSchema = z.enum(emailModeValues);
-export const computionModeSchema = z.enum(computionModeValues);
-export const storageSpaceModeSchema = z.enum(storageSpaceModeValues);
-export const geoIpLookupModeSchema = z.enum(geoIpLookupModeValues);
-export const serverUsageSchema = z.enum(serverUsageValues);
+export const storageTypeSchema = makeEnumSchema(storageTypeValues, "Local");
+export const emailModeSchema = makeEnumSchema(emailModeValues, "None");
+export const computionModeSchema = makeEnumSchema(computionModeValues, "Local");
+export const storageSpaceModeSchema = makeEnumSchema(
+  storageSpaceModeValues,
+  "Optimal",
+);
+export const geoIpLookupModeSchema = makeEnumSchema(
+  geoIpLookupModeValues,
+  "Disabled",
+);
+export const serverUsageSchema = makeEnumSchema(serverUsageValues, "Other");
 
 export const publicServerInfoSchema = z.object({
   canCreateInitialAdmin: z.boolean(),
@@ -174,8 +196,15 @@ export const allowGlobalIndexingSchema = z
   .transform((value) => value.allowGlobalIndexing);
 
 export const serverUsageListSchema = z
-  .object({ serverUsage: z.array(serverUsageSchema) })
-  .transform((value) => value.serverUsage);
+  .object({ serverUsage: z.array(z.unknown()).optional() })
+  .transform((value): ServerUsage[] => {
+    const raw = value.serverUsage;
+    if (!Array.isArray(raw) || raw.length === 0) {
+      return ["Other"];
+    }
+
+    return raw.map((entry) => serverUsageSchema.parse(entry));
+  });
 
 export const timezoneSchema = z
   .object({ timezone: nullableStringSchema })
@@ -245,8 +274,8 @@ export type TrustedProxyVerificationResult = z.infer<
 >;
 
 export const storageSpaceModeResponseSchema = z
-  .object({ storageSpaceMode: storageSpaceModeSchema })
-  .transform((value) => value.storageSpaceMode);
+  .object({ storageSpaceMode: z.unknown().optional() })
+  .transform((value) => storageSpaceModeSchema.parse(value.storageSpaceMode));
 
 export const defaultUserStorageQuotaBytesSchema = z
   .object({
@@ -270,20 +299,20 @@ export const defaultUserTemplateNodeIdSchema = z
   .transform((value) => value.defaultUserTemplateNodeId ?? null);
 
 export const computionModeResponseSchema = z
-  .object({ computionMode: computionModeSchema })
-  .transform((value) => value.computionMode);
+  .object({ computionMode: z.unknown().optional() })
+  .transform((value) => computionModeSchema.parse(value.computionMode));
 
 export const storageTypeResponseSchema = z
-  .object({ storageType: storageTypeSchema })
-  .transform((value) => value.storageType);
+  .object({ storageType: z.unknown().optional() })
+  .transform((value) => storageTypeSchema.parse(value.storageType));
 
 export const emailModeResponseSchema = z
-  .object({ emailMode: emailModeSchema })
-  .transform((value) => value.emailMode);
+  .object({ emailMode: z.unknown().optional() })
+  .transform((value) => emailModeSchema.parse(value.emailMode));
 
 export const geoIpLookupModeResponseSchema = z
-  .object({ geoIpLookupMode: geoIpLookupModeSchema })
-  .transform((value) => value.geoIpLookupMode);
+  .object({ geoIpLookupMode: z.unknown().optional() })
+  .transform((value) => geoIpLookupModeSchema.parse(value.geoIpLookupMode));
 
 export const customGeoIpLookupUrlSchema = z
   .object({ customGeoIpLookupUrl: nullableStringSchema })

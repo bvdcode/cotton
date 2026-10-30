@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { MouseEvent, PointerEvent } from "react";
 
 const HOLD_DELAY_MS = 500;
@@ -8,9 +8,8 @@ export const useLongPress = (onLongPress: () => void, disabled = false) => {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const start = useRef<{ id: number; x: number; y: number } | null>(null);
   const held = useRef(false);
-  const [ready, setReady] = useState(false);
 
-  const clear = useCallback(() => {
+  const cancel = useCallback(() => {
     if (timer.current !== null) {
       clearTimeout(timer.current);
       timer.current = null;
@@ -18,23 +17,14 @@ export const useLongPress = (onLongPress: () => void, disabled = false) => {
     start.current = null;
   }, []);
 
-  const cancel = useCallback(() => {
-    clear();
-    setReady(false);
-  }, [clear]);
-
-  if (disabled && ready) {
-    setReady(false);
-  }
-
   useEffect(() => {
     if (disabled) {
-      clear();
+      cancel();
     }
-    return clear;
-  }, [clear, disabled]);
+    return cancel;
+  }, [cancel, disabled, onLongPress]);
 
-  const handlers = {
+  return {
     onPointerDown: (event: PointerEvent<HTMLButtonElement>) => {
       cancel();
       held.current = false;
@@ -48,8 +38,8 @@ export const useLongPress = (onLongPress: () => void, disabled = false) => {
       };
       timer.current = setTimeout(() => {
         held.current = true;
-        timer.current = null;
-        setReady(true);
+        cancel();
+        onLongPress();
       }, HOLD_DELAY_MS);
     },
     onPointerMove: (event: PointerEvent<HTMLButtonElement>) => {
@@ -63,14 +53,7 @@ export const useLongPress = (onLongPress: () => void, disabled = false) => {
         cancel();
       }
     },
-    onPointerUp: (event: PointerEvent<HTMLButtonElement>) => {
-      const activate =
-        !disabled && held.current && start.current?.id === event.pointerId;
-      cancel();
-      if (activate) {
-        onLongPress();
-      }
-    },
+    onPointerUp: cancel,
     onPointerCancel: cancel,
     onPointerLeave: cancel,
     onClickCapture: (event: MouseEvent<HTMLButtonElement>) => {
@@ -84,5 +67,4 @@ export const useLongPress = (onLongPress: () => void, disabled = false) => {
       event.preventDefault();
     },
   };
-  return { handlers, ready };
 };

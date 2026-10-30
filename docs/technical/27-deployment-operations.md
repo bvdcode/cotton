@@ -8,25 +8,10 @@ Cotton runs as one ASP.NET Core application serving the API, SignalR hub, and bu
 - PostgreSQL reachable from the application;
 - a persistent `/app/files` volume for local storage;
 - `pg_dump` and `pg_restore` compatible with the database server;
-- `ffmpeg` and `ffprobe` for audio/video processing.
+- `ffmpeg` and `ffprobe` for media features;
+- optional format-specific preview tools for the formats an operator chooses to support.
 
-The official container listens on port `8080` and includes PostgreSQL 18 client tools, FFmpeg/ffprobe, and `gosu` for dropping privileges to the configured runtime user.
-
-## Managed libraries and system dependencies
-
-The published server's third-party NuGet dependency graph contains no native runtime binaries. ImageSharp handles raster processing and WebP encoding; Heic.NET decodes HEIC/HEIF; Render.NET handles PDF, SVG, TGS, and 3D rendering; PdfPig extracts PDF text; EasyExtensions.Passkeys verifies WebAuthn responses. Office thumbnails use managed OoxPDF conversion or ExcelDataReader and ImageSharp. These paths require no renderer service, display server, GPU, LibreOffice, PDFium, Skia, or libsodium installation.
-
-The remaining operating-system integrations have distinct roles:
-
-| Dependency | Role |
-| --- | --- |
-| `ffmpeg` / `ffprobe` | Audio/video probing, cover and frame extraction, waveform generation, and HLS transcoding. |
-| `pg_dump` / `pg_restore` | Database backup and restore. |
-| `gosu` | Container entrypoint switches to the configured runtime user. |
-| Linux `libc` | Process hardening requests non-dumpable state. |
-| .NET runtime and OS providers | Runtime services, TLS, and platform cryptography. |
-
-Managed application libraries do not make the process independent of the operating system: the .NET runtime and cryptographic APIs still use platform facilities. See [Previews and Media Processing](18-previews-media.md) for format limits and [Passkeys and OIDC](14-passkeys-oidc.md) for authentication behavior.
+The official container listens on port `8080` and includes the PostgreSQL and media tools used by built-in jobs.
 
 ## Bootstrap environment
 
@@ -76,7 +61,7 @@ For local storage:
 
 - persist `/app/files`;
 - provide sufficient free space and inode capacity;
-- keep temporary storage writable for backups, RAW preview generation, and image metadata extraction.
+- keep temporary storage writable for backups and format-specific preview tools.
 
 For S3-compatible storage:
 

@@ -6,9 +6,8 @@ using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Server.Services.Passkeys;
-using EasyExtensions.Passkeys;
-using EasyExtensions.Passkeys.Models;
-using System.Text.Json;
+using Fido2NetLib;
+using Fido2NetLib.Objects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using EasyExtensions.Mediator;
@@ -21,7 +20,7 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
     public class BeginPasskeySignInRequestHandler(
         CottonDbContext _dbContext,
         IMemoryCache _cache,
-        IPasskeyServerFactory _factory,
+        IPasskeyClientFactory _factory,
         IDatabaseIntegrityVerifier _integrity)
         : IRequestHandler<BeginPasskeySignInRequest, PasskeyAssertionOptionsResponseDto>
     {
@@ -29,7 +28,7 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
         {
             string? username = command.Username;
             Guid? scopedUserId = null;
-            CredentialDescriptor[] allowedCredentials = [];
+            PublicKeyCredentialDescriptor[] allowedCredentials = [];
 
             string? normalizedUsername = username?.Trim();
             if (!string.IsNullOrEmpty(normalizedUsername))
@@ -52,8 +51,12 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
                 }
             }
 
-            IPasskeyServer server = await _factory.CreateAsync(ct);
-            AuthenticationOptions options = server.CreateAuthenticationOptions(allowedCredentials);
+            IFido2 fido = await _factory.CreateAsync(ct);
+            AssertionOptions options = fido.GetAssertionOptions(new GetAssertionOptionsParams
+            {
+                AllowedCredentials = allowedCredentials,
+                UserVerification = UserVerificationRequirement.Required
+            });
 
             string requestId = PasskeyChallenges.CreateRequestId();
             _cache.Set(PasskeyChallenges.AssertionCacheKey(requestId), new PasskeyAssertionState(scopedUserId, options), PasskeyChallenges.OptionsLifetime);
@@ -61,7 +64,7 @@ namespace Cotton.Server.Handlers.Auth.Passkeys
             return new()
             {
                 RequestId = requestId,
-                Options = JsonSerializer.Deserialize<JsonElement>(PasskeyJson.Serialize(options))
+                Options = options
             };
         }
     }

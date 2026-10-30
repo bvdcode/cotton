@@ -8,8 +8,6 @@ The .NET solution contains focused unit and integration projects for cryptograph
 
 The frontend uses Vitest and Testing Library for models, API modules, hooks, and user-visible component behavior.
 
-Managed preview suites cover output dimensions, transparency, visible content, non-seekable inputs, and invalid or unsupported files across the relevant generators. Passkey suites cover registration and assertion HTTP flows, invalid responses, credential/account binding, and existing ES256, RS256, and Ed25519 COSE public keys. These checks verify the server and browser contracts; physical authenticator behavior requires testing with a browser and device.
-
 The standard local verification commands are:
 
 ```text

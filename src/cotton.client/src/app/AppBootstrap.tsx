@@ -15,14 +15,12 @@ import {
   useUserPreferencesStore,
 } from "../shared/store/userPreferencesStore";
 import { useUserPreferencesRealtimeEvents } from "../shared/store/useUserPreferencesRealtimeEvents";
-import { useFolderSizeInvalidation } from "../shared/api/queries/useFolderSizeInvalidation";
 
 export const AppBootstrap = () => {
   useEventHub();
   useUserPreferencesRealtimeEvents();
 
   const { isAuthenticated } = useAuth();
-  useFolderSizeInvalidation(isAuthenticated);
   const preferredLanguage = useUserPreferencesStore(selectUiLanguage);
   const preferencesLoaded = useUserPreferencesStore((state) => state.loaded);
   const lockClientEncryptionOnRefresh = useUserPreferencesStore(

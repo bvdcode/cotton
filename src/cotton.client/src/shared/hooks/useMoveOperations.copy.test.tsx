@@ -1,4 +1,3 @@
-import { createFolder } from "../../test/fileFixtures";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ENCRYPTED_FLAG_KEY, generateMasterKey, useVault } from "../crypto";
@@ -82,7 +81,6 @@ const item: MoveClipboardItem = {
   file: original,
 };
 const emptyContent = {
-  node: createFolder({ id: "empty" }),
   id: "empty",
   createdAt: "2026-01-01",
   updatedAt: "2026-01-01",
@@ -222,12 +220,10 @@ describe("copy and paste", () => {
     const { result } = renderOperations();
     act(() => result.current.copyItems([item]));
     await act(() => result.current.pasteInto(original.nodeId));
-    expect(mocks.confirm).toHaveBeenCalledWith(
-      expect.objectContaining({
-        newName: "original (1).txt",
-        canOverwrite: false,
-      }),
-    );
+    expect(mocks.confirm).toHaveBeenCalledWith({
+      newName: "original (1).txt",
+      canOverwrite: false,
+    });
     expect(mocks.copyFile).toHaveBeenLastCalledWith(original.id, {
       parentId: original.nodeId,
       name: "original (1).txt",

@@ -6,9 +6,6 @@ import {
   useVault,
 } from "../../../shared/crypto";
 import { useNodesStore } from "../../../shared/store/nodesStore";
-import { useAuthStore } from "@shared/store/authStore";
-import { queryClient } from "@shared/api/queries/queryClient";
-import { ensureFolderOverview } from "@shared/api/queries/folderOverview";
 
 export const useUploadEncryptionPolicy = () => {
   const isPolicyEnabledForNode = useMemo(
@@ -27,44 +24,15 @@ export const useUploadEncryptionPolicy = () => {
 
   const decideEncrypt = useMemo(
     () =>
-      async (
-        targetNodeId: string,
-      ): Promise<{ encrypt: boolean; vaultLocked: boolean }> => {
-        const userId = useAuthStore.getState().user?.id;
-        if (!userId || useNodesStore.getState().cacheOwnerUserId !== userId) {
-          throw new Error("Folder metadata requires the current account");
-        }
-        const { content } = await ensureFolderOverview(
-          queryClient,
-          targetNodeId,
-          userId,
-        );
-        const state = useNodesStore.getState();
-        if (
-          useAuthStore.getState().user?.id !== userId ||
-          state.cacheOwnerUserId !== userId
-        ) {
-          throw new Error("The account changed while loading folder metadata");
-        }
-        const cached = findNodeById(state, targetNodeId);
-        const target =
-          cached &&
-          Date.parse(cached.updatedAt) > Date.parse(content.node.updatedAt)
-            ? cached
-            : content.node;
-        state.updateNode(target);
-        const policy = getFolderEncryptionPolicyStateFromParentResolver(
-          target,
-          (id) => findNodeById(state, id),
-        );
-        if (!policy.effectiveEnabled) {
+      (targetNodeId: string): { encrypt: boolean; vaultLocked: boolean } => {
+        if (!isPolicyEnabledForNode(targetNodeId)) {
           return { encrypt: false, vaultLocked: false };
         }
 
         const vaultUnlocked = useVault.getState().isUnlocked;
         return { encrypt: vaultUnlocked, vaultLocked: !vaultUnlocked };
       },
-    [],
+    [isPolicyEnabledForNode],
   );
 
   return { isPolicyEnabledForNode, decideEncrypt };

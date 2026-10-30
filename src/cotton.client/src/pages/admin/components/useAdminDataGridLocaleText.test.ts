@@ -1,10 +1,10 @@
 import { enUS, ruRU } from "@mui/x-data-grid/locales";
 import { describe, expect, it } from "vitest";
-import { getDataGridLocaleText } from "@shared/hooks/useDataGridLocaleText";
+import { getAdminDataGridLocaleText } from "./useAdminDataGridLocaleText";
 
-describe("getDataGridLocaleText", () => {
+describe("getAdminDataGridLocaleText", () => {
   it("uses the matching grid locale and the page-specific empty text", () => {
-    const localeText = getDataGridLocaleText("ru-RU", "Нет пользователей");
+    const localeText = getAdminDataGridLocaleText("ru-RU", "Нет пользователей");
 
     expect(localeText.toolbarColumns).toBe(
       ruRU.components.MuiDataGrid.defaultProps.localeText.toolbarColumns,
@@ -13,7 +13,7 @@ describe("getDataGridLocaleText", () => {
   });
 
   it("falls back to English for an unsupported language", () => {
-    const localeText = getDataGridLocaleText("unsupported", "Empty");
+    const localeText = getAdminDataGridLocaleText("unsupported", "Empty");
 
     expect(localeText.toolbarColumns).toBe(
       enUS.components.MuiDataGrid.defaultProps.localeText.toolbarColumns,

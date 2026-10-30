@@ -60,21 +60,41 @@ namespace Cotton.Server.Handlers.Nodes
                     && x.Type == request.NodeType)
                 .SingleOrDefaultAsync(cancellationToken: ct)
                     ?? throw new EntityNotFoundException(nameof(Node), "Folder not found in the requested layout.");
+            // Resolve the set of parent IDs whose children should be returned.
+            // depth == 0: direct children of parentNode (default).
+            // depth == N: skip N intermediate levels and return their descendants.
+            // We materialize each level into a list to avoid deeply nested IQueryable<T>
+            // expression trees that cause EF Core's ExpressionTreeFuncletizer to stack-overflow.
             NodeDirectory directory = new(_dbContext, parentNode);
-            List<Guid> currentParentIds = await DirectoryListing.ResolveParentIdsAsync(
-                directory, parentNode.Id, request.Depth, ct);
-            if (currentParentIds.Count == 0)
+            List<Guid> currentParentIds = [parentNode.Id];
+            int traversedNodes = 0;
+
+            for (int i = 0; i < request.Depth; i++)
             {
-                return new(new NodeContentDto
+                int remaining = ListingRequestLimits.MaxTraversedNodes - traversedNodes;
+                currentParentIds = await directory.GetNodes(currentParentIds).AsNoTracking()
+                    .Select(x => x.Id)
+                    .Take(remaining + 1)
+                    .ToListAsync(cancellationToken: ct);
+
+                traversedNodes += currentParentIds.Count;
+                if (traversedNodes > ListingRequestLimits.MaxTraversedNodes)
                 {
-                    Node = parentNode.Adapt<NodeDto>(),
-                    Nodes = [],
-                    Files = [],
-                    Id = request.NodeId,
-                    CreatedAt = parentNode.CreatedAt,
-                    UpdatedAt = parentNode.UpdatedAt,
-                    Stats = request.IncludeStats ? new FolderStatsDto() : null,
-                }, 0);
+                    throw new BadRequestException($"Folder traversal exceeds {ListingRequestLimits.MaxTraversedNodes} nodes.");
+                }
+
+                if (currentParentIds.Count == 0)
+                {
+                    return new(new NodeContentDto
+                    {
+                        Nodes = [],
+                        Files = [],
+                        Id = request.NodeId,
+                        CreatedAt = parentNode.CreatedAt,
+                        UpdatedAt = parentNode.UpdatedAt,
+                        Stats = request.IncludeStats ? new FolderStatsDto() : null,
+                    }, 0);
+                }
             }
 
             IQueryable<Node> nodesBaseQuery = directory.GetNodes(currentParentIds).AsNoTracking();
@@ -82,7 +102,7 @@ namespace Cotton.Server.Handlers.Nodes
 
             if (request.NodeType == NodeType.Trash)
             {
-                nodesBaseQuery = DirectoryListing.HideVersionOnlyTrashWrappers(nodesBaseQuery, _dbContext, request.UserId);
+                nodesBaseQuery = HideVersionOnlyTrashWrappers(nodesBaseQuery, request.UserId);
                 filesBaseQuery = filesBaseQuery
                     .Where(x => x.OriginalNodeFileId == Guid.Empty || x.Id == x.OriginalNodeFileId);
 
@@ -107,7 +127,6 @@ namespace Cotton.Server.Handlers.Nodes
 
             return new(new NodeContentDto
             {
-                Node = parentNode.Adapt<NodeDto>(),
                 Nodes = nodes,
                 Files = files,
                 Id = request.NodeId,
@@ -195,7 +214,6 @@ namespace Cotton.Server.Handlers.Nodes
 
             return new(new NodeContentDto
             {
-                Node = parentNode.Adapt<NodeDto>(),
                 Nodes = nodes,
                 Files = files,
                 Id = request.NodeId,
@@ -215,5 +233,17 @@ namespace Cotton.Server.Handlers.Nodes
             public string NameKey { get; init; } = string.Empty;
         }
 
+        private IQueryable<Node> HideVersionOnlyTrashWrappers(IQueryable<Node> nodesQuery, Guid userId)
+        {
+            return nodesQuery.Where(node =>
+                _dbContext.Nodes.Any(child => child.ParentId == node.Id && child.OwnerId == userId)
+                || _dbContext.NodeFiles.Any(file => file.NodeId == node.Id
+                    && file.OwnerId == userId
+                    && (file.OriginalNodeFileId == Guid.Empty || file.Id == file.OriginalNodeFileId))
+                || !_dbContext.NodeFiles.Any(file => file.NodeId == node.Id
+                    && file.OwnerId == userId
+                    && file.OriginalNodeFileId != Guid.Empty
+                    && file.Id != file.OriginalNodeFileId));
+        }
     }
 }

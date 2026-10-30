@@ -11,10 +11,9 @@ export interface MoveOutcome {
 }
 
 export interface MoveExecutionResult extends MoveOutcome {
-  movedFilesToEncrypt: MoveClipboardItem[];
-  movedFilesToOfferDecrypt: MoveClipboardItem[];
-  movedFoldersToEncrypt: MoveClipboardItem[];
-  sourceParents: Set<string>;
+  movedFilesToEncrypt: ReadonlyArray<MoveClipboardItem>;
+  movedFilesToOfferDecrypt: ReadonlyArray<MoveClipboardItem>;
+  sourceParents: ReadonlySet<string>;
 }
 
 export interface UseMoveOperationsOptions {

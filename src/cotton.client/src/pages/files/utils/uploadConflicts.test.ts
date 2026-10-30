@@ -2,10 +2,7 @@ import { createFile, createFolder } from "../../../test/fileFixtures";
 import { describe, expect, it, vi } from "vitest";
 import type { SiblingNameLookupDto } from "../../../shared/api/nodesApi";
 import { getFileNameKey } from "../../../shared/utils/fileNameUtils";
-import {
-  ConflictAction,
-  type NameConflictPrompt,
-} from "../../../shared/types/nameConflict";
+import { ConflictAction } from "../../../shared/types/nameConflict";
 import { resolveUploadConflicts } from "./uploadConflicts";
 
 const createContent = (
@@ -23,38 +20,6 @@ const createContent = (
 });
 
 describe("resolveUploadConflicts", () => {
-  it("offers actions for all only while more files remain", async () => {
-    const files = [new File(["a"], "a.jpg"), new File(["b"], "b.jpg")];
-    const confirm = vi.fn<
-      (prompt: NameConflictPrompt) => Promise<ConflictAction>
-    >(async () => ConflictAction.Skip);
-    await resolveUploadConflicts(
-      files,
-      createContent([
-        { id: "a", name: "a.jpg" },
-        { id: "b", name: "b.jpg" },
-      ]),
-      confirm,
-    );
-    expect(confirm.mock.calls.map(([prompt]) => prompt.canApplyToAll)).toEqual([
-      true,
-      false,
-    ]);
-    expect(confirm.mock.calls.every(([prompt]) => !prompt.canMerge)).toBe(true);
-  });
-
-  it("keeps actions for all when another dropped-folder group remains", async () => {
-    const confirm = vi.fn(async () => ConflictAction.Skip);
-    await resolveUploadConflicts(
-      [new File(["a"], "a.jpg")],
-      createContent([{ id: "a", name: "a.jpg" }]),
-      confirm,
-      1,
-    );
-    expect(confirm).toHaveBeenCalledWith(
-      expect.objectContaining({ canApplyToAll: true, canMerge: false }),
-    );
-  });
   it("replaces every existing file after one replace-all decision", async () => {
     const files = [new File(["a"], "a.jpg"), new File(["b"], "b.jpg")];
     const confirm = vi.fn(async () => ConflictAction.OverwriteAll);
@@ -92,12 +57,10 @@ describe("resolveUploadConflicts", () => {
     expect(result.files[0]).toEqual({ file: first, replaceNodeFileId: "a" });
     expect(result.files[1]?.file.name).toBe("a (1).jpg");
     expect(result.files[1]?.replaceNodeFileId).toBeUndefined();
-    expect(confirm).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        newName: "a (1).jpg",
-        canOverwrite: false,
-      }),
-    );
+    expect(confirm).toHaveBeenLastCalledWith({
+      newName: "a (1).jpg",
+      canOverwrite: false,
+    });
   });
 
   it("normalizes names before resolving conflicts", async () => {
@@ -113,12 +76,10 @@ describe("resolveUploadConflicts", () => {
     expect(result.files).toHaveLength(1);
     expect(result.files[0]?.file.name).toBe("image_028.jpg");
     expect(result.files[0]?.replaceNodeFileId).toBe("file-1");
-    expect(confirmConflict).toHaveBeenCalledWith(
-      expect.objectContaining({
-        newName: "image_028 (1).jpg",
-        canOverwrite: true,
-      }),
-    );
+    expect(confirmConflict).toHaveBeenCalledWith({
+      newName: "image_028 (1).jpg",
+      canOverwrite: true,
+    });
   });
 
   it("sends normalized names when no conflict exists", async () => {
@@ -144,12 +105,10 @@ describe("resolveUploadConflicts", () => {
     );
 
     expect(result.files[0]?.file.name).toBe("École (1).txt");
-    expect(confirmConflict).toHaveBeenCalledWith(
-      expect.objectContaining({
-        newName: "École (1).txt",
-        canOverwrite: false,
-      }),
-    );
+    expect(confirmConflict).toHaveBeenCalledWith({
+      newName: "École (1).txt",
+      canOverwrite: false,
+    });
   });
 
   it("matches the server name key for contextual Unicode casing", async () => {
@@ -163,12 +122,10 @@ describe("resolveUploadConflicts", () => {
     );
 
     expect(result.files[0]?.replaceNodeFileId).toBe("file-1");
-    expect(confirmConflict).toHaveBeenCalledWith(
-      expect.objectContaining({
-        newName: "οσ (1)",
-        canOverwrite: true,
-      }),
-    );
+    expect(confirmConflict).toHaveBeenCalledWith({
+      newName: "οσ (1)",
+      canOverwrite: true,
+    });
   });
 
   it("returns a replacement target when the user overwrites an existing file", async () => {
@@ -183,12 +140,10 @@ describe("resolveUploadConflicts", () => {
 
     expect(result.cancelled).toBe(false);
     expect(result.files).toEqual([{ file, replaceNodeFileId: "file-1" }]);
-    expect(confirmConflict).toHaveBeenCalledWith(
-      expect.objectContaining({
-        newName: "report (1).txt",
-        canOverwrite: true,
-      }),
-    );
+    expect(confirmConflict).toHaveBeenCalledWith({
+      newName: "report (1).txt",
+      canOverwrite: true,
+    });
   });
 
   it("renames instead of overwriting folder conflicts", async () => {
@@ -205,11 +160,9 @@ describe("resolveUploadConflicts", () => {
     expect(result.files).toHaveLength(1);
     expect(result.files[0]?.replaceNodeFileId).toBeUndefined();
     expect(result.files[0]?.file.name).toBe("report (1).txt");
-    expect(confirmConflict).toHaveBeenCalledWith(
-      expect.objectContaining({
-        newName: "report (1).txt",
-        canOverwrite: false,
-      }),
-    );
+    expect(confirmConflict).toHaveBeenCalledWith({
+      newName: "report (1).txt",
+      canOverwrite: false,
+    });
   });
 });

@@ -5,8 +5,7 @@ using Cotton.ContentTypes;
 using Cotton.Previews;
 using Cotton.Server.IntegrationTests.Common;
 using NUnit.Framework;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 
 namespace Cotton.Server.IntegrationTests
 {
@@ -18,7 +17,7 @@ namespace Cotton.Server.IntegrationTests
             using MemoryStream source = new(await TgsTestDocument.CreateAsync());
             TgsPreviewGenerator generator = new();
             byte[] image = await generator.GeneratePreviewWebPAsync(source, 200);
-            using Image<Rgba32> bitmap = Image.Load<Rgba32>(image);
+            using SKBitmap bitmap = SKBitmap.Decode(image)!;
 
             Assert.Multiple(() =>
             {
@@ -26,8 +25,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(image.AsSpan(0, 4).ToArray(), Is.EqualTo("RIFF"u8.ToArray()));
                 Assert.That(bitmap.Width, Is.EqualTo(200));
                 Assert.That(bitmap.Height, Is.EqualTo(200));
-                Assert.That(bitmap[100, 100].R, Is.GreaterThan(200));
-                Assert.That(bitmap[100, 100].A, Is.EqualTo(255));
+                Assert.That(bitmap.GetPixel(100, 100).Red, Is.GreaterThan(200));
+                Assert.That(bitmap.GetPixel(100, 100).Alpha, Is.EqualTo(255));
                 Assert.That(source.CanRead, Is.True);
             });
         }

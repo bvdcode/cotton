@@ -32,13 +32,5 @@
     <ProjectReference Include="..\Cotton.Previews\Cotton.Previews.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="Fixtures\Office\*" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="Fixtures\Heic\*" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="Fixtures\Pdf\*" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="Fixtures\Svg\*;Fixtures\Tgs\*" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\cotton.client\public\assets\icons\icon*.svg" Link="Fixtures\Svg\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
 </Project>
 

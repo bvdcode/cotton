@@ -3,7 +3,6 @@ import { Box, Stack, Typography } from "@mui/material";
 import { LockOutlined } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
-import { OfficePreview } from "@shared/ui/preview/office/OfficePreview";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { ModelPreview, PdfPreview } from "@shared/ui/preview";
 import { getFileIcon } from "@shared/utils/icons";
@@ -266,19 +265,6 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
         contentLength={contentLength}
         onShareLink={onShareLink}
       />
-    );
-  }
-
-  if (fileTypeInfo.type === "office") {
-    return (
-      <Box sx={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <OfficePreview
-          source={{ kind: "url", url: inlineUrl }}
-          fileName={fileName ?? title}
-          contentType={contentType}
-          fileSizeBytes={contentLength}
-        />
-      </Box>
     );
   }
 

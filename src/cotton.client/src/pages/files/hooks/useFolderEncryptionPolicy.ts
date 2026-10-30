@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import type { NodeDto } from "../../../shared/api/layoutsApi";
 import { nodesApi } from "../../../shared/api/nodesApi";
 import { FOLDER_ENCRYPTION_POLICY_KEY } from "../../../shared/crypto";
 import { useNodesStore } from "../../../shared/store/nodesStore";
-import { queryClient } from "@shared/api/queries/queryClient";
-import { updateFolderOverviewNodes } from "@shared/api/queries/folderOverview";
+import { collectFoldersInFoldersForClientEncryption } from "../../../shared/utils/clientEncryptionFolderScan";
 
 interface UseFolderEncryptionPolicyOptions {
   onToast: (message: string, variant?: "info" | "error") => void;
@@ -20,21 +20,13 @@ export const useFolderEncryptionPolicy = ({
       const nextEnabled = !currentlyEnabled;
 
       try {
-        const updatedNodes = await nodesApi.bulkUpdateNodeMetadata(
+        const updatedNodes = await updateFolderEncryptionPolicyTree(
           folderId,
-          { [FOLDER_ENCRYPTION_POLICY_KEY]: String(nextEnabled) },
-          true,
+          nextEnabled,
         );
         const store = useNodesStore.getState();
         for (const updatedNode of updatedNodes) {
           store.updateNode(updatedNode);
-        }
-        if (store.cacheOwnerUserId) {
-          updateFolderOverviewNodes(
-            queryClient,
-            updatedNodes,
-            store.cacheOwnerUserId,
-          );
         }
         onToast(
           nextEnabled
@@ -49,4 +41,30 @@ export const useFolderEncryptionPolicy = ({
   );
 
   return { toggleFolderEncryptionPolicy };
+};
+
+const updateFolderEncryptionPolicyTree = async (
+  folderId: string,
+  nextEnabled: boolean,
+): Promise<NodeDto[]> => {
+  const value = String(nextEnabled);
+  const scan = await collectFoldersInFoldersForClientEncryption([folderId]);
+  const foldersToUpdate = [
+    folderId,
+    ...scan.folders
+      .filter(
+        (folder) => folder.metadata?.[FOLDER_ENCRYPTION_POLICY_KEY] !== value,
+      )
+      .map((folder) => folder.id),
+  ];
+  const updatedNodes: NodeDto[] = [];
+
+  for (const nodeId of foldersToUpdate) {
+    const updatedNode = await nodesApi.updateNodeMetadata(nodeId, {
+      [FOLDER_ENCRYPTION_POLICY_KEY]: value,
+    });
+    updatedNodes.push(updatedNode);
+  }
+
+  return updatedNodes;
 };

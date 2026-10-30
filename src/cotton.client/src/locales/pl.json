@@ -2418,6 +2418,7 @@
       "uploadFailed": "Nie udało się rozpocząć przesyłania udostępnionych plików. Odśwież stronę, aby spróbować ponownie."
     },
     "folderSizes": {
+      "calculate": "Oblicz rozmiary folderów",
       "calculating": "Obliczanie rozmiarów folderów…",
       "failed": "Nie udało się obliczyć rozmiarów wszystkich folderów. Spróbuj ponownie."
     },
@@ -2555,8 +2556,6 @@
       "confirmDescription": "Zaznaczone elementy zostaną przeniesione do Kosza i będzie można je przywrócić później."
     },
     "conflicts": {
-      "merge": "Scal",
-      "mergeDescription": "Folder o tej nazwie już istnieje. Scalić zawartość czy użyć nazwy {{newName}}?",
       "title": "Konflikt nazw",
       "description": "Element o tej nazwie już istnieje w tym folderze. Użyć zamiast niej nazwy {{newName}}?",
       "overwriteDescription": "Element o tej nazwie już istnieje w tym folderze. Zastąpić go czy użyć nazwy {{newName}}?",
@@ -2711,10 +2710,7 @@
         "modelLoadFailed": "Nie udało się załadować modelu 3D",
         "modelUnsupportedType": "Ten format pliku 3D nie jest obsługiwany w podglądzie w przeglądarce",
         "pdfTooLarge": "PDF jest zbyt duży, aby wyświetlić podgląd ({{size}}). Maksymalny rozmiar to {{maxSize}}. Aby go wyświetlić, należy pobrać plik.",
-        "fileTooLarge": "Plik jest zbyt duży, aby wyświetlić podgląd ({{size}}). Maksymalny rozmiar podglądu to {{maxSize}}. Aby go wyświetlić, należy pobrać plik."
-      },
-      "office": {
-        "truncated": "Wyświetlono pierwsze {{rows}} wierszy i {{columns}} kolumn tego arkusza."
+        "fileTooLarge": "Plik jest zbyt duży, aby wyświetlić podgląd ({{size}}). Maksymalny rozmiar podglądu tekstowego to {{maxSize}}. Aby go wyświetlić, należy pobrać plik."
       }
     },
     "actionsTitle": "Akcje",

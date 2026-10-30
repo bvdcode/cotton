@@ -5,7 +5,6 @@ using Cotton.Server.IntegrationTests.Common;
 using Cotton.TextExtraction;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
-using System.IO.Compression;
 using System.Text;
 
 namespace Cotton.Server.IntegrationTests
@@ -38,26 +37,6 @@ namespace Cotton.Server.IntegrationTests
             Assert.Multiple(() =>
             {
                 Assert.That(text, Is.EqualTo($"First page{Environment.NewLine}Second page"));
-                Assert.That(source.CanRead, Is.True);
-            });
-        }
-
-        [Test]
-        public async Task Extract_NonSeekablePdf_ReadsTextAndKeepsSourceOpen()
-        {
-            using MemoryStream compressed = new();
-            await using (GZipStream encoder = new(compressed, CompressionMode.Compress, leaveOpen: true))
-            {
-                await encoder.WriteAsync(PdfTestDocument.Create("Streamed page"));
-            }
-            compressed.Position = 0;
-            await using GZipStream source = new(compressed, CompressionMode.Decompress);
-
-            TextExtractionResult result = await CreateExtractor().ExtractAsync(source);
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(result.Text, Is.EqualTo("Streamed page"));
                 Assert.That(source.CanRead, Is.True);
             });
         }

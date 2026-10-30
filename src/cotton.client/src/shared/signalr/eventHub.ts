@@ -11,8 +11,6 @@ import {
   refreshAccessToken,
 } from "../api/httpClient";
 import { getRefreshEnabled, useAuthStore } from "../store/authStore";
-import { reportClientWarning } from "../utils/clientDiagnostics";
-import { getHubRetryDelay, waitForHubRetry } from "./hubRetry";
 import type { JsonValue } from "../types/json";
 import {
   HUB_METHODS,
@@ -27,52 +25,32 @@ class EventHubService {
   private connection: HubConnection | null = null;
   private listeners = new Map<HubMethod, Set<HubEventCallback>>();
   private connectionListeners = new Set<HubConnectionCallback>();
-  private startController: AbortController | null = null;
+  private started = false;
   private startPromise: Promise<void> | null = null;
 
   async start(): Promise<void> {
-    if (this.startPromise) {
-      return this.startPromise;
-    }
     if (
-      this.connection?.state === HubConnectionState.Connected ||
-      this.connection?.state === HubConnectionState.Reconnecting
+      this.started &&
+      this.connection?.state === HubConnectionState.Connected
     ) {
       return;
     }
 
-    const controller = new AbortController();
-    this.startController = controller;
-    const promise = this.connectUntilStarted(controller.signal);
-    this.startPromise = promise;
+    if (this.startPromise) {
+      return this.startPromise;
+    }
+
+    this.startPromise = this.initConnection();
     try {
-      await promise;
+      await this.startPromise;
     } finally {
-      if (this.startPromise === promise) {
-        this.startPromise = null;
-        this.startController = null;
-      }
+      this.startPromise = null;
     }
   }
 
-  private async connectUntilStarted(signal: AbortSignal): Promise<void> {
-    let attempts = 0;
-    while (!signal.aborted && getRefreshEnabled()) {
-      try {
-        await this.initConnection(signal);
-        return;
-      } catch (error) {
-        if (signal.aborted) {
-          return;
-        }
-        reportClientWarning("Failed to connect to event hub", error);
-      }
-      await waitForHubRetry(getHubRetryDelay(attempts), signal);
-      attempts += 1;
-    }
-  }
+  private async initConnection(): Promise<void> {
+    this.dispose();
 
-  private async initConnection(signal: AbortSignal): Promise<void> {
     const accessTokenFactory = async (): Promise<string> => {
       const token = getAccessToken();
       if (token) {
@@ -92,8 +70,11 @@ class EventHubService {
     };
 
     const reconnectPolicy = {
-      nextRetryDelayInMilliseconds: (ctx: { previousRetryCount: number }) =>
-        getRefreshEnabled() ? getHubRetryDelay(ctx.previousRetryCount) : null,
+      nextRetryDelayInMilliseconds: (ctx: { previousRetryCount: number }) => {
+        if (ctx.previousRetryCount < 5) return 1000;
+        if (ctx.previousRetryCount < 15) return 5000;
+        return 30000;
+      },
     };
 
     const attemptSpecs: Array<
@@ -108,61 +89,49 @@ class EventHubService {
     let lastError: Error | null = null;
 
     for (const [transport, skipNegotiation] of attemptSpecs) {
-      if (signal.aborted) {
-        return;
-      }
-      const connection = new HubConnectionBuilder()
-        .withUrl("/api/v1/hub/events", {
-          accessTokenFactory,
-          transport,
-          skipNegotiation,
-        })
-        .withAutomaticReconnect(reconnectPolicy)
-        .configureLogging(LogLevel.Warning)
-        .build();
-      this.connection = connection;
       try {
+        this.connection = new HubConnectionBuilder()
+          .withUrl("/api/v1/hub/events", {
+            accessTokenFactory,
+            transport,
+            skipNegotiation,
+          })
+          .withAutomaticReconnect(reconnectPolicy)
+          .configureLogging(LogLevel.Warning)
+          .build();
+
         // Registering no-op handlers prevents SignalR warnings on pages
         // that don't subscribe to file-related events.
         for (const method of SILENCED_HUB_METHODS) {
-          connection.on(method, () => {
+          this.connection.on(method, () => {
             // no-op
           });
         }
 
-        connection.on(HUB_METHODS.SessionRevoked, () => {
-          if (signal.aborted || this.connection !== connection) {
-            return;
-          }
+        this.connection.on(HUB_METHODS.SessionRevoked, () => {
           clearAccessToken();
           useAuthStore.getState().logoutLocal();
           this.dispose();
         });
 
-        connection.onreconnected(() => {
-          if (signal.aborted || this.connection !== connection) {
-            return;
-          }
+        this.connection.onreconnected(() => {
           this.resubscribeAll();
           this.notifyConnected();
         });
 
         for (const [method, callbacks] of this.listeners) {
           for (const cb of callbacks) {
-            connection.on(method, cb);
+            this.connection.on(method, cb);
           }
         }
 
-        await connection.start();
-        if (signal.aborted) {
-          await this.stopConnection(connection);
-          return;
-        }
+        await this.connection.start();
+        this.started = true;
         this.notifyConnected();
         return;
       } catch (e) {
         lastError = e instanceof Error ? e : new Error("Failed to start hub");
-        await this.stopConnection(connection);
+        this.dispose();
       }
     }
 
@@ -208,9 +177,7 @@ class EventHubService {
   }
 
   private resubscribeAll(): void {
-    if (!this.connection) {
-      return;
-    }
+    if (!this.connection) return;
     for (const [method, callbacks] of this.listeners) {
       for (const cb of callbacks) {
         this.connection.off(method, cb);
@@ -219,24 +186,13 @@ class EventHubService {
     }
   }
 
-  private async stopConnection(connection: HubConnection): Promise<void> {
-    if (this.connection === connection) {
+  dispose(): void {
+    if (this.connection) {
+      this.connection.stop();
       this.connection = null;
     }
-    try {
-      await connection.stop();
-    } catch (error) {
-      reportClientWarning("Failed to stop event hub connection", error);
-    }
-  }
-
-  dispose(): void {
-    this.startController?.abort();
-    this.startController = null;
+    this.started = false;
     this.startPromise = null;
-    if (this.connection) {
-      void this.stopConnection(this.connection);
-    }
   }
 }
 

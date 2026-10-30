@@ -29,7 +29,9 @@ export function useUserPreferencesRealtimeEvents(): void {
       return;
     }
 
-    void eventHub.start();
+    eventHub.start().catch(() => {
+      // connection will retry automatically
+    });
 
     const unsubscribe = eventHub.on(
       HUB_METHODS.PreferencesUpdated,
