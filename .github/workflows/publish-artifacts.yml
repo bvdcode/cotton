@@ -20,7 +20,7 @@ jobs:
     name: Build and Publish Artifacts
     runs-on: ubuntu-latest
     outputs:
-      Version: ${{ steps.gitversion.outputs.SemVer }}
+      Version: ${{ steps.gitversion.outputs.MajorMinorPatch }}
       CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}
     permissions:
       contents: read
@@ -35,16 +35,16 @@ jobs:
           fetch-depth: 0
 
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v3.1.11
+        uses: GitTools/actions/gitversion/setup@v4.7.0
         with:
-          versionSpec: 5.x
+          versionSpec: 6.8.2
 
       - name: Determine Version
-        uses: gittools/actions/gitversion/execute@v3.1.11
+        uses: GitTools/actions/gitversion/execute@v4.7.0
         id: gitversion # step id used as reference for output values
       - name: Display GitVersion outputs
         run: |
-          echo "Version: ${{ steps.gitversion.outputs.SemVer }}"
+          echo "Version: ${{ steps.gitversion.outputs.MajorMinorPatch }}"
           echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}"
 
       - name: Setup .NET
@@ -63,11 +63,11 @@ jobs:
 
       - name: Pack shared NuGet package
         if: github.ref == 'refs/heads/main'
-        run: dotnet pack src/Cotton.Shared/Cotton.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.gitversion.outputs.SemVer }}'
+        run: dotnet pack src/Cotton.Shared/Cotton.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.gitversion.outputs.MajorMinorPatch }}'
 
       - name: Pack SDK NuGet package
         if: github.ref == 'refs/heads/main'
-        run: dotnet pack src/Cotton.Sdk/Cotton.Sdk.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.gitversion.outputs.SemVer }}'
+        run: dotnet pack src/Cotton.Sdk/Cotton.Sdk.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.gitversion.outputs.MajorMinorPatch }}'
 
       - name: Upload NuGet package artifact
         if: github.ref == 'refs/heads/main'
@@ -113,7 +113,7 @@ jobs:
           tags: |
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/develop' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ steps.gitversion.outputs.SemVer }},enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ steps.gitversion.outputs.MajorMinorPatch }},enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -124,7 +124,7 @@ jobs:
           labels: ${{ steps.image.outputs.labels }}
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
           build-args: |
-            BUILD_VERSION=${{ steps.gitversion.outputs.SemVer }}
+            BUILD_VERSION=${{ steps.gitversion.outputs.MajorMinorPatch }}
           secret-files: |
             sixlabors_license=/tmp/sixlabors.lic
           cache-from: type=gha,scope=cotton-${{ github.ref_name }}
