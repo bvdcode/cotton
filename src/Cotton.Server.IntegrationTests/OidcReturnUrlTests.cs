@@ -6,6 +6,7 @@ using Cotton.Server.Handlers.Auth.Oidc;
 using Cotton.Server.IntegrationTests.Helpers;
 using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace Cotton.Server.IntegrationTests
@@ -76,7 +77,11 @@ namespace Cotton.Server.IntegrationTests
             await app.StartAsync();
             using HttpClient client = app.GetTestClient();
 
-            using HttpResponseMessage response = await client.GetAsync("/api/v1/auth/oidc/callback?state=state&code=code");
+            DefaultHttpContext browserContext = new();
+            OidcBrowserCorrelation.Create(browserContext.Response, "state", DateTime.UtcNow.AddMinutes(10));
+            using HttpRequestMessage request = new(HttpMethod.Get, "/api/v1/auth/oidc/callback?state=state&code=code");
+            request.Headers.Add("Cookie", browserContext.Response.Headers.SetCookie.ToString().Split(';', 2)[0]);
+            using HttpResponseMessage response = await client.SendAsync(request);
 
             Assert.Multiple(() =>
             {

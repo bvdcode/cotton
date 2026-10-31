@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Auth;
+using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Handlers.Auth.Oidc;
@@ -68,9 +69,9 @@ namespace Cotton.Server.Controllers
             [FromBody] OidcAuthorizationRequestDto? request,
             CancellationToken cancellationToken)
         {
-            string authorizationUrl = await mediator.Send(new BeginOidcAuthenticationRequest(
+            OidcAuthorizationResult authorization = await mediator.Send(new BeginOidcAuthenticationRequest(
                 providerSlug, request?.ReturnUrl, request?.TrustDevice ?? false), cancellationToken);
-            return Ok(new OidcAuthorizationUrlDto { AuthorizationUrl = authorizationUrl });
+            return CreateAuthorizationResponse(authorization);
         }
 
         [Authorize]
@@ -81,9 +82,9 @@ namespace Cotton.Server.Controllers
             [FromBody] OidcAuthorizationRequestDto? request,
             CancellationToken cancellationToken)
         {
-            string authorizationUrl = await mediator.Send(new BeginOidcAuthenticationRequest(
+            OidcAuthorizationResult authorization = await mediator.Send(new BeginOidcAuthenticationRequest(
                 providerSlug, request?.ReturnUrl, false, User.GetUserId()), cancellationToken);
-            return Ok(new OidcAuthorizationUrlDto { AuthorizationUrl = authorizationUrl });
+            return CreateAuthorizationResponse(authorization);
         }
 
         [EnableRateLimiting(AuthRateLimitPolicies.Interactive)]
@@ -94,17 +95,24 @@ namespace Cotton.Server.Controllers
             [FromQuery] string? error,
             CancellationToken cancellationToken)
         {
-            if (!string.IsNullOrWhiteSpace(error))
-            {
-                return Redirect("/login?oidc=cancelled");
-            }
-
-            if (string.IsNullOrWhiteSpace(state) || string.IsNullOrWhiteSpace(code))
+            if (string.IsNullOrWhiteSpace(state)
+                || (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(error)))
             {
                 return BadRequest("OIDC callback is missing state or code.");
             }
 
-            string returnUrl = await mediator.Send(new CompleteOidcAuthenticationRequest(state.Trim(), code.Trim()), cancellationToken);
+            string normalizedState = state.Trim();
+            if (!OidcBrowserCorrelation.ValidateAndClear(HttpContext, normalizedState))
+            {
+                return BadRequest("OIDC sign-in correlation failed. Start sign-in again.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                return LocalRedirect("/login?oidc=cancelled");
+            }
+
+            string returnUrl = await mediator.Send(new CompleteOidcAuthenticationRequest(normalizedState, code!.Trim()), cancellationToken);
             return LocalRedirect(OidcProtocol.NormalizeReturnUrl(returnUrl));
         }
 
@@ -123,6 +131,12 @@ namespace Cotton.Server.Controllers
         {
             await mediator.Send(new UnlinkOidcIdentityRequest(User.GetUserId(), identityId), cancellationToken);
             return NoContent();
+        }
+
+        private ActionResult<OidcAuthorizationUrlDto> CreateAuthorizationResponse(OidcAuthorizationResult authorization)
+        {
+            OidcBrowserCorrelation.Create(Response, authorization.State, authorization.ExpiresAt);
+            return Ok(new OidcAuthorizationUrlDto { AuthorizationUrl = authorization.AuthorizationUrl });
         }
     }
 }
