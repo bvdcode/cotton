@@ -33,6 +33,7 @@ namespace Cotton.Server.Services
             IWebHostEnvironment environment = app.Services.GetRequiredService<IWebHostEnvironment>();
             MasterKeyUnlockValidator unlockValidator = new(loggerFactory);
 
+            app.UseFrameProtection();
             app.UseDefaultFiles();
             app.Use(async (context, next) =>
             {

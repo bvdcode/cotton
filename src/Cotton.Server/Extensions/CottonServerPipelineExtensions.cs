@@ -10,6 +10,7 @@ namespace Cotton.Server.Extensions
     {
         public static WebApplication UseCottonServer(this WebApplication app)
         {
+            app.UseFrameProtection();
             app.UseSearchEngineExclusion();
             app.UseExceptionHandler();
             app.UseDefaultFiles();
