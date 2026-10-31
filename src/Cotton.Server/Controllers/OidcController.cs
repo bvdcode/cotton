@@ -5,6 +5,7 @@ using Cotton.Server.Auth;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Handlers.Auth.Oidc;
+using Cotton.Server.Services;
 using EasyExtensions.Mediator;
 using EasyExtensions;
 using EasyExtensions.Models.Enums;
@@ -104,7 +105,7 @@ namespace Cotton.Server.Controllers
             }
 
             string returnUrl = await mediator.Send(new CompleteOidcAuthenticationRequest(state.Trim(), code.Trim()), cancellationToken);
-            return Redirect(returnUrl);
+            return LocalRedirect(OidcProtocol.NormalizeReturnUrl(returnUrl));
         }
 
         [Authorize]

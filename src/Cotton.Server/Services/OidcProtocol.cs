@@ -3,6 +3,7 @@
 
 using Cotton.Database.Models;
 using EasyExtensions.AspNetCore.Exceptions;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
@@ -109,7 +110,7 @@ namespace Cotton.Server.Services
         public static string NormalizeReturnUrl(string? returnUrl)
         {
             string trimmed = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl.Trim();
-            return trimmed.StartsWith('/') && !trimmed.StartsWith("//", StringComparison.Ordinal)
+            return trimmed.StartsWith('/') && RedirectHttpResult.IsLocalUrl(trimmed)
                 ? trimmed
                 : "/";
         }
