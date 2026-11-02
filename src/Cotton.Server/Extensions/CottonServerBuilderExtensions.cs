@@ -131,7 +131,6 @@ namespace Cotton.Server.Extensions
                 .AddScoped(sp => new OidcDiscoveryService(sp.GetRequiredService<IHttpClientFactory>().CreateClient(OidcDiscoveryService.HttpClientName)))
                 .AddScoped<RefreshTokenRevocationService>()
                 .AddScoped<SessionRevocationNotifier>()
-                .AddScoped<DownloadTokenExpirationService>()
                 .AddScoped<IPostgresDumpService, PostgresDumpService>()
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
                 .AddSingleton<DatabaseBackupGate>()

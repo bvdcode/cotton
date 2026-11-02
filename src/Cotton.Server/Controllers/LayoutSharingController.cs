@@ -9,6 +9,7 @@ using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
@@ -33,14 +34,14 @@ namespace Cotton.Server.Controllers
         [HttpGet("nodes/{nodeId:guid}/share-link")]
         public async Task<IActionResult> GetNodeShareLink(
             [FromRoute] Guid nodeId,
-            [FromQuery] int expireAfterMinutes = 1440,
+            [FromQuery] ShareLinkExpirationOptions expiration,
             [FromQuery] string? customToken = "")
         {
             Guid userId = User.GetUserId();
             CreateNodeShareLinkRequest request = new(
                 userId,
                 nodeId,
-                expireAfterMinutes,
+                expiration.ExpireAfterMinutes,
                 customToken);
             CreateNodeShareLinkResult result = await _mediator.Send(
                 request,

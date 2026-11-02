@@ -1761,7 +1761,9 @@
         "year": "Jahr",
         "threeMonths": "3 Monate",
         "tenYears": "10 Jahre",
-        "oneDay": "Ein Tag"
+        "oneDay": "Ein Tag",
+        "threeYears": "3 Jahre",
+        "never": "Unbegrenzt"
       },
       "invalidateAll": "Alle Freigabelinks zurückziehen",
       "invalidating": "Wird zurückgezogen...",
@@ -1770,9 +1772,13 @@
       "invalidateConfirmDescription": "Alle aktiven Freigabelinks werden sofort ungültig. Das kann nicht rückgängig gemacht werden.",
       "errors": {
         "invalidateFailed": "Freigabelinks konnten nicht zurückgezogen werden."
-      }
+      },
+      "neverExpiresWarning": "Neue Freigabelinks laufen nie ab.",
+      "neverExpiresDescription": "Verwenden Sie diese Option mit Bedacht: Ungenutzte Links laufen nie ab. Widerrufen Sie Links manuell und prüfen Sie regelmäßig, welche aktiv bleiben sollen.",
+      "dismissWarning": "Ausblenden"
     },
     "totp": {
+      "adminWarning": "Ihr Konto hat Administratorrechte und ist unzureichend geschützt, da die Zwei-Faktor-Authentifizierung deaktiviert ist.",
       "enabled": "2FA aktiviert",
       "disabled": "2FA deaktiviert",
       "sectionTitle": "Zwei-Faktor-Authentifizierung",
@@ -2565,6 +2571,7 @@
       "fileNamePlaceholder": "Dateiname"
     },
     "share": {
+      "expirationNotice": "Gültigkeit des Freigabelinks: {{duration}}. Den Standard für neue Links können Sie in Ihrem Profil ändern.",
       "copied": "Freigabelink kopiert: {{name}}",
       "shared": "Wird geteilt: {{name}}",
       "folderCopied": "Ordnerlink kopiert: {{name}}",

@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Extensions;
+using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -16,16 +17,16 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.Auth.Oidc
 {
-    public record BeginOidcAuthenticationRequest(string ProviderSlug, string? ReturnUrl, bool TrustDevice, Guid? LinkUserId = null) : IRequest<string>;
+    public record BeginOidcAuthenticationRequest(string ProviderSlug, string? ReturnUrl, bool TrustDevice, Guid? LinkUserId = null) : IRequest<OidcAuthorizationResult>;
 
     public class BeginOidcAuthenticationRequestHandler(
         CottonDbContext _dbContext,
         OidcDiscoveryService _discovery,
         SettingsProvider _settings,
         IDatabaseIntegrityVerifier _integrity)
-        : IRequestHandler<BeginOidcAuthenticationRequest, string>
+        : IRequestHandler<BeginOidcAuthenticationRequest, OidcAuthorizationResult>
     {
-        public async Task<string> Handle(BeginOidcAuthenticationRequest command, CancellationToken ct)
+        public async Task<OidcAuthorizationResult> Handle(BeginOidcAuthenticationRequest command, CancellationToken ct)
         {
             string providerSlug = command.ProviderSlug;
             string? returnUrl = command.ReturnUrl;
@@ -70,7 +71,10 @@ namespace Cotton.Server.Handlers.Auth.Oidc
                 ["code_challenge_method"] = CodeChallengeMethod
             };
 
-            return QueryHelpers.AddQueryString(configuration.AuthorizationEndpoint, parameters);
+            return new OidcAuthorizationResult(
+                QueryHelpers.AddQueryString(configuration.AuthorizationEndpoint, parameters),
+                state,
+                loginState.ExpiresAt);
         }
 
         private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(10);

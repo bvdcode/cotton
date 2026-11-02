@@ -11,33 +11,13 @@ import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import {
   selectShareLinkExpireAfterMinutes,
+  selectShareLinkNeverExpiresWarningDismissed,
   useUserPreferencesStore,
   USER_PREFERENCE_KEYS,
 } from "../../../shared/store/userPreferencesStore";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 import { authApi } from "../../../shared/api/authApi";
-
-const MINUTES_IN_DAY = 60 * 24;
-
-type PresetKey = "oneDay" | "week" | "month" | "threeMonths" | "year";
-
-type Preset = {
-  key: PresetKey;
-  minutes: number;
-};
-
-const presets: Preset[] = [
-  { key: "oneDay", minutes: MINUTES_IN_DAY },
-  { key: "week", minutes: MINUTES_IN_DAY * 7 },
-  { key: "month", minutes: MINUTES_IN_DAY * 30 },
-  { key: "threeMonths", minutes: MINUTES_IN_DAY * 90 },
-  { key: "year", minutes: MINUTES_IN_DAY * 365 },
-];
-
-const findPreset = (minutes: number): PresetKey | null => {
-  const found = presets.find((p) => p.minutes === minutes);
-  return found ? found.key : null;
-};
+import { shareLinkExpirationPresets } from "../../../shared/utils/shareLinkExpiration";
 
 export const ShareLinkSettingsCard = () => {
   const { t } = useTranslation("profile");
@@ -47,13 +27,21 @@ export const ShareLinkSettingsCard = () => {
     selectShareLinkExpireAfterMinutes,
   );
   const updatePreferences = useUserPreferencesStore((s) => s.updatePreferences);
+  const setExpiration = useUserPreferencesStore(
+    (s) => s.setShareLinkExpireAfterMinutes,
+  );
+  const warningDismissed = useUserPreferencesStore(
+    selectShareLinkNeverExpiresWarningDismissed,
+  );
 
   const [invalidating, setInvalidating] = useState(false);
   const [invalidated, setInvalidated] = useState(false);
   const [invalidateError, setInvalidateError] = useState("");
 
   const selectedPreset = useMemo(
-    () => findPreset(expireAfterMinutes),
+    () =>
+      shareLinkExpirationPresets.find((p) => p.minutes === expireAfterMinutes)
+        ?.key ?? null,
     [expireAfterMinutes],
   );
 
@@ -86,6 +74,11 @@ export const ShareLinkSettingsCard = () => {
       icon={<LinkIcon color="primary" />}
       title={t("shareLinks.title")}
       description={t("shareLinks.description")}
+      warning={
+        expireAfterMinutes === null
+          ? t("shareLinks.neverExpiresWarning")
+          : undefined
+      }
     >
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
         <Box
@@ -101,13 +94,18 @@ export const ShareLinkSettingsCard = () => {
             exclusive
             size="small"
             value={selectedPreset}
-            onChange={(_, value: PresetKey | null) => {
-              if (!value) return;
-              const preset = presets.find((p) => p.key === value);
-              if (!preset) return;
-              void updatePreferences({
-                [USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes]: `${preset.minutes}`,
-              });
+            aria-label={t("shareLinks.description")}
+            onChange={(_, value: string | null) => {
+              if (!value) {
+                return;
+              }
+              const preset = shareLinkExpirationPresets.find(
+                (p) => p.key === value,
+              );
+              if (!preset) {
+                return;
+              }
+              setExpiration(preset.minutes);
             }}
             sx={{
               width: { xs: "100%", sm: "auto" },
@@ -118,21 +116,11 @@ export const ShareLinkSettingsCard = () => {
               },
             }}
           >
-            <ToggleButton value="oneDay">
-              {t("shareLinks.presets.oneDay")}
-            </ToggleButton>
-            <ToggleButton value="week">
-              {t("shareLinks.presets.week")}
-            </ToggleButton>
-            <ToggleButton value="month">
-              {t("shareLinks.presets.month")}
-            </ToggleButton>
-            <ToggleButton value="threeMonths">
-              {t("shareLinks.presets.threeMonths")}
-            </ToggleButton>
-            <ToggleButton value="year">
-              {t("shareLinks.presets.year")}
-            </ToggleButton>
+            {shareLinkExpirationPresets.map((preset) => (
+              <ToggleButton key={preset.key} value={preset.key}>
+                {t(`shareLinks.presets.${preset.key}`)}
+              </ToggleButton>
+            ))}
           </ToggleButtonGroup>
 
           <Button
@@ -152,6 +140,27 @@ export const ShareLinkSettingsCard = () => {
           <Alert severity="success">{t("shareLinks.invalidated")}</Alert>
         )}
         {invalidateError && <Alert severity="error">{invalidateError}</Alert>}
+        {expireAfterMinutes === null && !warningDismissed && (
+          <Alert
+            severity="warning"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() =>
+                  void updatePreferences({
+                    [USER_PREFERENCE_KEYS.shareLinkNeverExpiresWarningDismissed]:
+                      "true",
+                  })
+                }
+              >
+                {t("shareLinks.dismissWarning")}
+              </Button>
+            }
+          >
+            {t("shareLinks.neverExpiresDescription")}
+          </Alert>
+        )}
       </Box>
     </ProfileAccordionCard>
   );

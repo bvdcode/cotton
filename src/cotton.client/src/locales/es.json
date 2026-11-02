@@ -1764,7 +1764,9 @@
         "year": "Año",
         "threeMonths": "3 meses",
         "tenYears": "10 años",
-        "oneDay": "Un día"
+        "oneDay": "Un día",
+        "threeYears": "3 años",
+        "never": "Sin caducidad"
       },
       "invalidateAll": "Invalidar todos los enlaces",
       "invalidating": "Invalidando...",
@@ -1773,9 +1775,13 @@
       "invalidateConfirmDescription": "Todos los enlaces activos dejarán de funcionar inmediatamente. No se puede deshacer.",
       "errors": {
         "invalidateFailed": "No se pudieron invalidar los enlaces."
-      }
+      },
+      "neverExpiresWarning": "Los nuevos enlaces compartidos nunca caducan.",
+      "neverExpiresDescription": "Use esta opción con cuidado: los enlaces sin uso nunca caducan. Revóquelos manualmente y revise periódicamente cuáles deben seguir activos.",
+      "dismissWarning": "Ocultar"
     },
     "totp": {
+      "adminWarning": "Su cuenta tiene permisos de administrador y está poco protegida porque la autenticación de dos factores está desactivada.",
       "enabled": "2FA activada",
       "disabled": "2FA desactivada",
       "sectionTitle": "Autenticación de dos factores",
@@ -2568,6 +2574,7 @@
       "fileNamePlaceholder": "Nombre del archivo"
     },
     "share": {
+      "expirationNotice": "Validez del enlace: {{duration}}. Puede cambiar el plazo predeterminado de los nuevos enlaces en su perfil.",
       "copied": "Enlace para compartir copiado: {{name}}",
       "shared": "Compartiendo: {{name}}",
       "folderCopied": "Enlace de carpeta copiado: {{name}}",

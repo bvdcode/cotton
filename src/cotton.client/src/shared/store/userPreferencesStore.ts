@@ -21,6 +21,9 @@ export const USER_PREFERENCE_KEYS = {
   notificationsShowOnlyUnread: "notificationsShowOnlyUnread",
 
   shareLinkExpireAfterMinutes: "shareLinkExpireAfterMinutes",
+  shareLinkNeverExpiresWarningDismissed:
+    "shareLinkNeverExpiresWarningDismissed",
+  shareLinkExpirationNoticeShown: "shareLinkExpirationNoticeShown",
 
   gallerySmoothTransitions: "gallerySmoothTransitions",
   galleryPreferPreview: "galleryPreferPreview",
@@ -89,7 +92,7 @@ interface UserPreferencesState {
   setNotificationSoundEnabled: (enabled: boolean) => void;
   setNotificationsShowOnlyUnread: (showOnlyUnread: boolean) => void;
 
-  setShareLinkExpireAfterMinutes: (expireAfterMinutes: number) => void;
+  setShareLinkExpireAfterMinutes: (expireAfterMinutes: number | null) => void;
 
   setGallerySmoothTransitions: (enabled: boolean) => void;
   setGalleryPreferPreview: (enabled: boolean) => void;
@@ -194,8 +197,12 @@ export const useUserPreferencesStore = create<UserPreferencesState>()((
     },
 
     setShareLinkExpireAfterMinutes: (expireAfterMinutes) => {
+      if (selectShareLinkExpireAfterMinutes(get()) === expireAfterMinutes) {
+        return;
+      }
       void get().updatePreferences({
         [USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes]: `${expireAfterMinutes}`,
+        [USER_PREFERENCE_KEYS.shareLinkNeverExpiresWarningDismissed]: "false",
       });
     },
 
@@ -277,11 +284,21 @@ export const selectNotificationsShowOnlyUnread = (
 
 export const selectShareLinkExpireAfterMinutes = (
   state: UserPreferencesState,
-): number => {
+): number | null => {
   const raw =
     state.preferences[USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes];
+  if (raw === "null") {
+    return null;
+  }
   return parseIntPreference(raw) ?? DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES;
 };
+
+export const selectShareLinkNeverExpiresWarningDismissed = (
+  state: UserPreferencesState,
+): boolean =>
+  state.preferences[
+    USER_PREFERENCE_KEYS.shareLinkNeverExpiresWarningDismissed
+  ] === "true";
 
 export const selectGallerySmoothTransitions = (
   state: UserPreferencesState,

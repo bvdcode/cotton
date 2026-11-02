@@ -1772,7 +1772,9 @@
         "year": "一年",
         "threeMonths": "3 个月",
         "tenYears": "10 年",
-        "oneDay": "一天"
+        "oneDay": "一天",
+        "threeYears": "3年",
+        "never": "永久有效"
       },
       "invalidateAll": "使所有分享链接失效",
       "invalidating": "正在使其失效……",
@@ -1781,9 +1783,13 @@
       "invalidateConfirmDescription": "所有有效的分享链接将立即停止工作。此操作无法撤销。",
       "errors": {
         "invalidateFailed": "使分享链接失效时出错。"
-      }
+      },
+      "neverExpiresWarning": "新建的分享链接永不过期。",
+      "neverExpiresDescription": "请谨慎使用此选项：不再使用的链接也不会过期。请手动撤销链接，并定期检查哪些链接应保持有效。",
+      "dismissWarning": "不再提示"
     },
     "totp": {
+      "adminWarning": "您的账户拥有管理员权限，但由于未启用双重验证，保护不足。",
       "enabled": "2FA 已启用",
       "disabled": "2FA 已禁用",
       "sectionTitle": "双重认证",
@@ -2578,6 +2584,7 @@
       "fileNamePlaceholder": "文件名"
     },
     "share": {
+      "expirationNotice": "分享链接有效期：{{duration}}。您可以在个人资料中更改新链接的默认有效期。",
       "copied": "分享链接已复制：{{name}}",
       "shared": "正在分享：{{name}}",
       "folderCopied": "文件夹链接已复制：{{name}}",

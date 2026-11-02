@@ -26,6 +26,7 @@ namespace Cotton.Server.Services.Startup
                 blocker.Kind,
                 blocker.Message);
 
+            app.UseFrameProtection();
             app.UseDefaultFiles();
             app.Use(async (context, next) =>
             {

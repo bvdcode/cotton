@@ -6,10 +6,12 @@ import {
   Box,
   Divider,
   Typography,
+  Tooltip,
   type SxProps,
   type Theme,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 
 type ProfileAccordionCardProps = {
   id: string;
@@ -17,6 +19,7 @@ type ProfileAccordionCardProps = {
   icon: ReactElement;
   title: ReactNode;
   description?: ReactNode;
+  warning?: string;
   count?: number;
   children: ReactNode;
   defaultExpanded?: boolean;
@@ -32,6 +35,7 @@ export const ProfileAccordionCard = ({
   icon,
   title,
   description,
+  warning,
   count,
   children,
   defaultExpanded,
@@ -133,6 +137,19 @@ export const ProfileAccordionCard = ({
             >
               {count}
             </Typography>
+          )}
+          {warning && (
+            <Tooltip title={warning} arrow>
+              <Box
+                component="span"
+                role="img"
+                aria-label={warning}
+                tabIndex={0}
+                sx={{ display: "inline-flex", flexShrink: 0, mr: 1 }}
+              >
+                <WarningAmberRoundedIcon color="warning" fontSize="small" />
+              </Box>
+            </Tooltip>
           )}
         </Box>
       </AccordionSummary>

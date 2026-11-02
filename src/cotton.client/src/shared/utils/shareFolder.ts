@@ -7,6 +7,7 @@ import {
 } from "../store/userPreferencesStore";
 import { shareLinks } from "./shareLinks";
 import { shareLinkAction } from "./shareLinkAction";
+import { showShareLinkExpirationNotice } from "./shareLinkExpirationNotice";
 
 const buildShareMessage = (folderName: string, t: TFunction): string =>
   t("share.folderMessage", { ns: "files", name: folderName });
@@ -43,6 +44,9 @@ export const shareFolder = async (
       url,
     });
 
+    if (outcome.kind === "shared" || outcome.kind === "copied") {
+      showShareLinkExpirationNotice(expireAfterMinutes, t);
+    }
     switch (outcome.kind) {
       case "shared":
         return;

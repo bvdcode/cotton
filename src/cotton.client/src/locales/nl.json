@@ -1764,7 +1764,9 @@
         "year": "Jaar",
         "threeMonths": "3 maanden",
         "tenYears": "10 jaar",
-        "oneDay": "Eén dag"
+        "oneDay": "Eén dag",
+        "threeYears": "3 jaar",
+        "never": "Onbeperkt"
       },
       "invalidateAll": "Alle deellinks ongeldig maken",
       "invalidating": "Bezig met ongeldig maken...",
@@ -1773,9 +1775,13 @@
       "invalidateConfirmDescription": "Alle actieve deellinks worden direct onbruikbaar. Dit kan niet ongedaan worden gemaakt.",
       "errors": {
         "invalidateFailed": "Deellinks ongeldig maken mislukt."
-      }
+      },
+      "neverExpiresWarning": "Nieuwe deellinks verlopen nooit.",
+      "neverExpiresDescription": "Gebruik deze optie zorgvuldig: ongebruikte links verlopen nooit. Trek links handmatig in en controleer regelmatig welke actief moeten blijven.",
+      "dismissWarning": "Verbergen"
     },
     "totp": {
+      "adminWarning": "Uw account heeft beheerdersrechten en is onvoldoende beveiligd omdat tweefactorauthenticatie is uitgeschakeld.",
       "enabled": "2FA ingeschakeld",
       "disabled": "2FA uitgeschakeld",
       "sectionTitle": "Tweestapsverificatie",
@@ -2570,6 +2576,7 @@
       "fileNamePlaceholder": "Bestandsnaam"
     },
     "share": {
+      "expirationNotice": "Geldigheidsduur van de deellink: {{duration}}. U kunt de standaardduur voor nieuwe links in uw profiel wijzigen.",
       "copied": "Deellink gekopieerd: {{name}}",
       "shared": "Bezig met delen: {{name}}",
       "folderCopied": "Maplink gekopieerd: {{name}}",

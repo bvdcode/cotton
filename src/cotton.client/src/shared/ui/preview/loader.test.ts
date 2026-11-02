@@ -6,8 +6,28 @@ import {
   Mesh,
   SkinnedMesh,
 } from "three";
-import { SimplifyModifier } from "three/examples/jsm/modifiers/SimplifyModifier.js";
 import { simplifyObjectGeometry } from "./loader";
+
+const { modifyGeometry } = vi.hoisted(() => ({
+  modifyGeometry:
+    vi.fn<
+      (
+        geometry: BufferGeometry,
+        count: number,
+      ) => BufferGeometry | Promise<BufferGeometry>
+    >(),
+}));
+
+vi.mock("three/examples/jsm/modifiers/SimplifyModifier.js", () => ({
+  SimplifyModifier: class {
+    modify(
+      geometry: BufferGeometry,
+      count: number,
+    ): BufferGeometry | Promise<BufferGeometry> {
+      return modifyGeometry(geometry, count);
+    }
+  },
+}));
 
 const createLargeMesh = (): Mesh => {
   const geometry = new BufferGeometry();
@@ -18,7 +38,10 @@ const createLargeMesh = (): Mesh => {
   return new Mesh(geometry);
 };
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  modifyGeometry.mockReset();
+});
 
 describe("simplifyObjectGeometry", () => {
   it("waits for asynchronous simplification before replacing and disposing geometry", async () => {
@@ -32,7 +55,7 @@ describe("simplifyObjectGeometry", () => {
     const pending = new Promise<BufferGeometry>((resolve) => {
       finish = resolve;
     });
-    vi.spyOn(SimplifyModifier.prototype, "modify").mockReturnValue(pending);
+    modifyGeometry.mockReturnValue(pending);
 
     const operation = simplifyObjectGeometry(mesh, "reduced");
     expect(mesh.geometry).toBe(original);
@@ -53,7 +76,7 @@ describe("simplifyObjectGeometry", () => {
     const root = new Group();
     root.add(first, second);
     const dispose = vi.spyOn(original, "dispose");
-    vi.spyOn(SimplifyModifier.prototype, "modify")
+    modifyGeometry
       .mockRejectedValueOnce(new Error("Invalid mesh"))
       .mockResolvedValueOnce(simplified);
 
@@ -67,11 +90,10 @@ describe("simplifyObjectGeometry", () => {
   it("leaves normal-quality and skinned meshes unchanged", async () => {
     const mesh = createLargeMesh();
     const skinned = new SkinnedMesh(mesh.geometry);
-    const modify = vi.spyOn(SimplifyModifier.prototype, "modify");
 
     await simplifyObjectGeometry(mesh, "normal");
     await simplifyObjectGeometry(skinned, "reduced");
 
-    expect(modify).not.toHaveBeenCalled();
+    expect(modifyGeometry).not.toHaveBeenCalled();
   });
 });
