@@ -18,6 +18,8 @@ export const formatShareLinkExpiration = (
   t: TFunction,
 ): string => {
   const preset = shareLinkExpirationPresets.find((p) => p.minutes === minutes);
-  if (preset) return t(`profile:shareLinks.presets.${preset.key}`);
+  if (preset) {
+    return t(`profile:shareLinks.presets.${preset.key}`);
+  }
   return t("common:time.durationMinutes", { count: minutes ?? 0 });
 };

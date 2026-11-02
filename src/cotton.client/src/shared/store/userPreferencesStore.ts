@@ -197,8 +197,9 @@ export const useUserPreferencesStore = create<UserPreferencesState>()((
     },
 
     setShareLinkExpireAfterMinutes: (expireAfterMinutes) => {
-      if (selectShareLinkExpireAfterMinutes(get()) === expireAfterMinutes)
+      if (selectShareLinkExpireAfterMinutes(get()) === expireAfterMinutes) {
         return;
+      }
       void get().updatePreferences({
         [USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes]: `${expireAfterMinutes}`,
         [USER_PREFERENCE_KEYS.shareLinkNeverExpiresWarningDismissed]: "false",
@@ -286,7 +287,9 @@ export const selectShareLinkExpireAfterMinutes = (
 ): number | null => {
   const raw =
     state.preferences[USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes];
-  if (raw === "null") return null;
+  if (raw === "null") {
+    return null;
+  }
   return parseIntPreference(raw) ?? DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES;
 };
 

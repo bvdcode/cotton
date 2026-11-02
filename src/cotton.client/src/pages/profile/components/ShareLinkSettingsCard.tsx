@@ -96,11 +96,15 @@ export const ShareLinkSettingsCard = () => {
             value={selectedPreset}
             aria-label={t("shareLinks.description")}
             onChange={(_, value: string | null) => {
-              if (!value) return;
+              if (!value) {
+                return;
+              }
               const preset = shareLinkExpirationPresets.find(
                 (p) => p.key === value,
               );
-              if (!preset) return;
+              if (!preset) {
+                return;
+              }
               setExpiration(preset.minutes);
             }}
             sx={{
