@@ -10,6 +10,7 @@ using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Models;
+using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using Cotton.Storage.Abstractions;
@@ -32,7 +33,6 @@ namespace Cotton.Server.Controllers
         CottonDbContext _dbContext,
         IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
-        PublicShareTokenGenerator _publicShareTokens,
         PublicShareLookupFailureLimiter _publicShareLookupFailures) : ControllerBase
     {
         [HttpGet("/s/{token}")]
@@ -84,59 +84,25 @@ namespace Cotton.Server.Controllers
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download-link")]
         public async Task<IActionResult> DownloadFile(
             [FromRoute] Guid nodeFileId,
-            [FromQuery] int? expireAfterMinutes = null,
+            [FromQuery] ShareLinkExpirationOptions expiration,
             [FromQuery] string? customToken = "",
             [FromQuery] bool deleteAfterUse = false)
         {
-            // An omitted parameter keeps the legacy default; an explicit empty value means no expiration.
-            if (!Request.Query.ContainsKey(nameof(expireAfterMinutes)))
+            CreateFileShareLinkRequest request = new(
+                User.GetUserId(),
+                nodeFileId,
+                expiration.ExpireAfterMinutes,
+                customToken,
+                deleteAfterUse);
+            CreateFileShareLinkResult result = await _mediator.Send(request, HttpContext.RequestAborted);
+            return result.Status switch
             {
-                expireAfterMinutes = 1440;
-            }
-
-            const int maxExpireMinutes = 60 * 24 * 365 * 10;
-            if (expireAfterMinutes is int minutes)
-            {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(minutes, maxExpireMinutes, nameof(expireAfterMinutes));
-                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(minutes, nameof(expireAfterMinutes));
-            }
-
-            if (!string.IsNullOrWhiteSpace(customToken))
-            {
-                bool exists = await ShareTokenExistsAsync(customToken);
-                if (exists)
-                {
-                    return this.ApiConflict("The custom token is already in use. Please choose a different one.");
-                }
-            }
-
-            Guid userId = User.GetUserId();
-            NodeFile? nodeFile = await _dbContext.NodeFiles
-                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .SingleOrDefaultAsync();
-            if (nodeFile is null || nodeFile.Node.Type != NodeType.Default)
-            {
-                return CottonResult.NotFound("Node file not found");
-            }
-
-            DownloadToken newToken = new()
-            {
-                FileName = nodeFile.Name,
-                DeleteAfterUse = deleteAfterUse,
-                CreatedByUserId = userId,
-                NodeFileId = nodeFile.Id,
-                ExpiresAt = expireAfterMinutes.HasValue ? DateTime.UtcNow.AddMinutes(expireAfterMinutes.Value) : null,
-                Token = !string.IsNullOrWhiteSpace(customToken)
-                    ? customToken
-                    : await _publicShareTokens.CreateUniqueAsync(HttpContext.RequestAborted),
+                CreateFileShareLinkStatus.Created => Ok(result.Link),
+                CreateFileShareLinkStatus.FileNotFound => CottonResult.NotFound("Node file not found"),
+                CreateFileShareLinkStatus.TokenConflict => this.ApiConflict(
+                    "The custom token is already in use. Please choose a different one."),
+                _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
             };
-            await _dbContext.DownloadTokens.AddAsync(newToken);
-            await _dbContext.SaveChangesAsync();
-            string link = Routes.V1.Files + $"/{nodeFileId}/download?token={newToken.Token}";
-            return Ok(link);
         }
 
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download")]
@@ -179,12 +145,6 @@ namespace Cotton.Server.Controllers
             return servesPreview
                 ? ServeLargePreview(nodeFile)
                 : ServeTokenFileDownload(nodeFile, downloadToken, download);
-        }
-
-        private async Task<bool> ShareTokenExistsAsync(string token)
-        {
-            return await _dbContext.DownloadTokens.AnyAsync(x => x.Token == token)
-                || await _dbContext.NodeShareTokens.AnyAsync(x => x.Token == token);
         }
 
         private Task<NodeFile?> LoadDownloadNodeFileAsync(Guid nodeFileId)

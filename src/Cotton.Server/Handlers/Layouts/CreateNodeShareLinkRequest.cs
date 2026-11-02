@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Models;
 using Cotton.Server.Services;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -22,22 +23,11 @@ namespace Cotton.Server.Handlers.Layouts
         PublicShareTokenGenerator _publicShareTokens)
         : IRequestHandler<CreateNodeShareLinkRequest, CreateNodeShareLinkResult>
     {
-        private const int MaxExpireMinutes = 60 * 24 * 365 * 10;
-
         public async Task<CreateNodeShareLinkResult> Handle(
             CreateNodeShareLinkRequest request,
             CancellationToken ct)
         {
-            if (request.ExpireAfterMinutes is int minutes)
-            {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(
-                    minutes,
-                    MaxExpireMinutes,
-                    nameof(request.ExpireAfterMinutes));
-                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(
-                    minutes,
-                    nameof(request.ExpireAfterMinutes));
-            }
+            DateTime? expiresAt = ShareLinkExpiration.FromMinutes(request.ExpireAfterMinutes);
 
             Node? node = await _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId
@@ -75,9 +65,7 @@ namespace Cotton.Server.Handlers.Layouts
                 Name = node.Name,
                 NodeId = node.Id,
                 CreatedByUserId = request.UserId,
-                ExpiresAt = request.ExpireAfterMinutes.HasValue
-                    ? DateTime.UtcNow.AddMinutes(request.ExpireAfterMinutes.Value)
-                    : null,
+                ExpiresAt = expiresAt,
                 Token = token,
             };
 
