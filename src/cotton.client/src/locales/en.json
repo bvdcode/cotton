@@ -1562,7 +1562,9 @@
         "year": "Year",
         "threeMonths": "3 months",
         "tenYears": "10 years",
-        "oneDay": "One day"
+        "oneDay": "One day",
+        "threeYears": "3 years",
+        "never": "Never"
       },
       "invalidateAll": "Invalidate all share links",
       "invalidating": "Invalidating...",
@@ -1571,9 +1573,13 @@
       "invalidateConfirmDescription": "All active share links will stop working immediately. This cannot be undone.",
       "errors": {
         "invalidateFailed": "Failed to invalidate share links."
-      }
+      },
+      "neverExpiresWarning": "New share links never expire.",
+      "neverExpiresDescription": "Use this option carefully: unused links never expire. Revoke links manually and regularly review which ones should remain active.",
+      "dismissWarning": "Dismiss"
     },
     "totp": {
+      "adminWarning": "Your account has administrator access and is poorly protected because two-factor authentication is disabled.",
       "enabled": "2FA enabled",
       "disabled": "2FA disabled",
       "sectionTitle": "Two-factor authentication",
@@ -2381,6 +2387,7 @@
       "fileNamePlaceholder": "File name"
     },
     "share": {
+      "expirationNotice": "Share link expiration: {{duration}}. You can change the default for new links in your profile.",
       "copied": "Share link copied: {{name}}",
       "shared": "Sharing: {{name}}",
       "folderCopied": "Folder link copied: {{name}}",

@@ -84,13 +84,22 @@ namespace Cotton.Server.Controllers
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download-link")]
         public async Task<IActionResult> DownloadFile(
             [FromRoute] Guid nodeFileId,
-            [FromQuery] int expireAfterMinutes = 1440,
+            [FromQuery] int? expireAfterMinutes = null,
             [FromQuery] string? customToken = "",
             [FromQuery] bool deleteAfterUse = false)
         {
-            const int maxExpireMinutes = 60 * 24 * 365;
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(expireAfterMinutes, maxExpireMinutes, nameof(expireAfterMinutes));
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expireAfterMinutes, nameof(expireAfterMinutes));
+            // An omitted parameter keeps the legacy default; an explicit empty value means no expiration.
+            if (!Request.Query.ContainsKey(nameof(expireAfterMinutes)))
+            {
+                expireAfterMinutes = 1440;
+            }
+
+            const int maxExpireMinutes = 60 * 24 * 365 * 10;
+            if (expireAfterMinutes is int minutes)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(minutes, maxExpireMinutes, nameof(expireAfterMinutes));
+                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(minutes, nameof(expireAfterMinutes));
+            }
 
             if (!string.IsNullOrWhiteSpace(customToken))
             {
@@ -119,7 +128,7 @@ namespace Cotton.Server.Controllers
                 DeleteAfterUse = deleteAfterUse,
                 CreatedByUserId = userId,
                 NodeFileId = nodeFile.Id,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
+                ExpiresAt = expireAfterMinutes.HasValue ? DateTime.UtcNow.AddMinutes(expireAfterMinutes.Value) : null,
                 Token = !string.IsNullOrWhiteSpace(customToken)
                     ? customToken
                     : await _publicShareTokens.CreateUniqueAsync(HttpContext.RequestAborted),

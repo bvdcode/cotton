@@ -76,7 +76,7 @@ export const filesApi = {
 
   getDownloadLink: async (
     nodeFileId: Guid,
-    expireAfterMinutes = 1440,
+    expireAfterMinutes: number | null = 1440,
   ): Promise<string> => {
     const key = `${nodeFileId}:${expireAfterMinutes}`;
     const existing = downloadLinkInFlight.get(key);
@@ -86,7 +86,8 @@ export const filesApi = {
 
     const promise = httpClient
       .get<string>(`files/${nodeFileId}/download-link`, {
-        params: { expireAfterMinutes },
+        // An empty query value binds to null; Axios omits literal null values.
+        params: { expireAfterMinutes: expireAfterMinutes ?? "" },
       })
       .then((r) => r.data)
       .finally(() => {

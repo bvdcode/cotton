@@ -1766,7 +1766,9 @@
         "year": "Rok",
         "threeMonths": "3 měsíce",
         "tenYears": "10 let",
-        "oneDay": "Jeden den"
+        "oneDay": "Jeden den",
+        "threeYears": "3 roky",
+        "never": "Bez omezení"
       },
       "invalidateAll": "Zneplatnit všechny odkazy ke sdílení",
       "invalidating": "Probíhá zneplatňování...",
@@ -1775,9 +1777,13 @@
       "invalidateConfirmDescription": "Všechny aktivní odkazy ke sdílení okamžitě přestanou fungovat. Tuto akci nelze vrátit.",
       "errors": {
         "invalidateFailed": "Zneplatnění odkazů ke sdílení se nezdařilo."
-      }
+      },
+      "neverExpiresWarning": "Nové odkazy ke sdílení nikdy nevyprší.",
+      "neverExpiresDescription": "Používejte tuto možnost opatrně: nepoužívané odkazy nikdy nevyprší. Rušte je ručně a pravidelně kontrolujte, které mají zůstat aktivní.",
+      "dismissWarning": "Skrýt"
     },
     "totp": {
+      "adminWarning": "Váš účet má oprávnění správce a je nedostatečně chráněn, protože dvoufaktorové ověřování je vypnuté.",
       "enabled": "2FA zapnuto",
       "disabled": "2FA vypnuto",
       "sectionTitle": "Dvoufaktorové ověření",
@@ -2586,6 +2592,7 @@
       "fileNamePlaceholder": "Název souboru"
     },
     "share": {
+      "expirationNotice": "Platnost odkazu: {{duration}}. Výchozí dobu platnosti nových odkazů můžete změnit ve svém profilu.",
       "copied": "Odkaz ke sdílení zkopírován: {{name}}",
       "shared": "Sdílení: {{name}}",
       "folderCopied": "Odkaz na složku zkopírován: {{name}}",

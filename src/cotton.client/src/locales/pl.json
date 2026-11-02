@@ -1769,7 +1769,9 @@
         "year": "Rok",
         "threeMonths": "3 miesiące",
         "tenYears": "10 lat",
-        "oneDay": "Jeden dzień"
+        "oneDay": "Jeden dzień",
+        "threeYears": "3 lata",
+        "never": "Bezterminowo"
       },
       "invalidateAll": "Unieważnij wszystkie linki udostępniania",
       "invalidating": "Unieważnianie...",
@@ -1778,9 +1780,13 @@
       "invalidateConfirmDescription": "Wszystkie aktywne linki udostępniania natychmiast przestaną działać. Tej operacji nie można cofnąć.",
       "errors": {
         "invalidateFailed": "Nie udało się unieważnić linków udostępniania."
-      }
+      },
+      "neverExpiresWarning": "Nowe linki udostępniania nigdy nie wygasają.",
+      "neverExpiresDescription": "Używaj tej opcji ostrożnie: nieużywane linki nigdy nie wygasają. Unieważniaj je ręcznie i regularnie sprawdzaj, które powinny pozostać aktywne.",
+      "dismissWarning": "Ukryj"
     },
     "totp": {
+      "adminWarning": "Twoje konto ma uprawnienia administratora i jest słabo chronione, ponieważ uwierzytelnianie dwuskładnikowe jest wyłączone.",
       "enabled": "2FA włączone",
       "disabled": "2FA wyłączone",
       "sectionTitle": "Uwierzytelnianie dwuskładnikowe",
@@ -2589,6 +2595,7 @@
       "fileNamePlaceholder": "Nazwa pliku"
     },
     "share": {
+      "expirationNotice": "Ważność linku: {{duration}}. Domyślny okres dla nowych linków możesz zmienić w swoim profilu.",
       "copied": "Skopiowano link udostępniania: {{name}}",
       "shared": "Udostępnianie: {{name}}",
       "folderCopied": "Skopiowano link do folderu: {{name}}",

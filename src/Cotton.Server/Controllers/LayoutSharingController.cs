@@ -33,9 +33,15 @@ namespace Cotton.Server.Controllers
         [HttpGet("nodes/{nodeId:guid}/share-link")]
         public async Task<IActionResult> GetNodeShareLink(
             [FromRoute] Guid nodeId,
-            [FromQuery] int expireAfterMinutes = 1440,
+            [FromQuery] int? expireAfterMinutes = null,
             [FromQuery] string? customToken = "")
         {
+            // An omitted parameter keeps the legacy default; an explicit empty value means no expiration.
+            if (!Request.Query.ContainsKey(nameof(expireAfterMinutes)))
+            {
+                expireAfterMinutes = 1440;
+            }
+
             Guid userId = User.GetUserId();
             CreateNodeShareLinkRequest request = new(
                 userId,

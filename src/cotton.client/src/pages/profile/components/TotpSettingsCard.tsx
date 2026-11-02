@@ -6,7 +6,7 @@ import {
 } from "../../../shared/api/httpClient";
 import { totpApi, type TotpSetup } from "../../../shared/api/totpApi";
 import { authApi } from "../../../shared/api/authApi";
-import type { User } from "../../../features/auth/types";
+import { UserRole, type User } from "../../../features/auth/types";
 import {
   TotpStatusIcon,
   EnabledTotpContent,
@@ -131,6 +131,11 @@ export const TotpSettingsCard = ({
         icon={<TotpStatusIcon enabled={totpEnabled} />}
         title={t("totp.sectionTitle")}
         description={description}
+        warning={
+          user.role === UserRole.Admin && !totpEnabled
+            ? t("totp.adminWarning")
+            : undefined
+        }
       >
         {totpEnabled ? (
           <EnabledTotpContent

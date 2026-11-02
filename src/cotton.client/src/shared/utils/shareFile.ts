@@ -7,6 +7,7 @@ import {
 } from "../store/userPreferencesStore";
 import { shareLinks } from "./shareLinks";
 import { shareLinkAction } from "./shareLinkAction";
+import { showShareLinkExpirationNotice } from "./shareLinkExpirationNotice";
 
 /**
  * Builds a formatted share text for a file.
@@ -53,6 +54,9 @@ export const shareFile = async (
       url,
     });
 
+    if (outcome.kind === "shared" || outcome.kind === "copied") {
+      showShareLinkExpirationNotice(expireAfterMinutes, t);
+    }
     switch (outcome.kind) {
       case "shared":
         return;

@@ -27,10 +27,33 @@ namespace Cotton.Server.Services
                     .ToListAsync(cancellationToken);
                 if (tokens.Count == 0)
                 {
-                    return expired;
+                    break;
                 }
 
                 foreach (DownloadToken token in tokens)
+                {
+                    token.ExpiresAt = expiresAt;
+                }
+
+                expired += tokens.Count;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                _dbContext.ChangeTracker.Clear();
+            }
+
+            while (true)
+            {
+                List<NodeShareToken> tokens = await _dbContext.NodeShareTokens
+                    .Where(x => x.CreatedByUserId == userId
+                        && (x.ExpiresAt == null || x.ExpiresAt > expiresAt))
+                    .OrderBy(x => x.Id)
+                    .Take(BatchSize)
+                    .ToListAsync(cancellationToken);
+                if (tokens.Count == 0)
+                {
+                    return expired;
+                }
+
+                foreach (NodeShareToken token in tokens)
                 {
                     token.ExpiresAt = expiresAt;
                 }
