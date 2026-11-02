@@ -20,7 +20,7 @@ jobs:
     name: Build and Publish Artifacts
     runs-on: ubuntu-latest
     outputs:
-      Version: ${{ steps.gitversion.outputs.MajorMinorPatch }}
+      Version: ${{ steps.version.outputs.Version }}
       CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}
     permissions:
       contents: read
@@ -42,9 +42,18 @@ jobs:
       - name: Determine Version
         uses: GitTools/actions/gitversion/execute@v4.7.0
         id: gitversion # step id used as reference for output values
-      - name: Display GitVersion outputs
+      - name: Set artifact version
+        id: version
+        env:
+          VERSION_CORE: ${{ steps.gitversion.outputs.MajorMinorPatch }}
+          PRERELEASE_LABEL: ${{ steps.gitversion.outputs.PreReleaseLabel }}
         run: |
-          echo "Version: ${{ steps.gitversion.outputs.MajorMinorPatch }}"
+          artifact_version="$VERSION_CORE"
+          if [ -n "$PRERELEASE_LABEL" ]; then
+            artifact_version="${artifact_version}-${PRERELEASE_LABEL}"
+          fi
+          echo "Version=$artifact_version" >> "$GITHUB_OUTPUT"
+          echo "Version: $artifact_version"
           echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}"
 
       - name: Setup .NET
@@ -63,11 +72,11 @@ jobs:
 
       - name: Pack shared NuGet package
         if: github.ref == 'refs/heads/main'
-        run: dotnet pack src/Cotton.Shared/Cotton.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.gitversion.outputs.MajorMinorPatch }}'
+        run: dotnet pack src/Cotton.Shared/Cotton.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.version.outputs.Version }}'
 
       - name: Pack SDK NuGet package
         if: github.ref == 'refs/heads/main'
-        run: dotnet pack src/Cotton.Sdk/Cotton.Sdk.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.gitversion.outputs.MajorMinorPatch }}'
+        run: dotnet pack src/Cotton.Sdk/Cotton.Sdk.csproj --configuration Release --no-build --output nupkg -p:Version='${{ steps.version.outputs.Version }}'
 
       - name: Upload NuGet package artifact
         if: github.ref == 'refs/heads/main'
@@ -113,7 +122,7 @@ jobs:
           tags: |
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/develop' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ steps.gitversion.outputs.MajorMinorPatch }},enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ steps.version.outputs.Version }},enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -124,7 +133,7 @@ jobs:
           labels: ${{ steps.image.outputs.labels }}
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
           build-args: |
-            BUILD_VERSION=${{ steps.gitversion.outputs.MajorMinorPatch }}
+            BUILD_VERSION=${{ steps.version.outputs.Version }}
           secret-files: |
             sixlabors_license=/tmp/sixlabors.lic
           cache-from: type=gha,scope=cotton-${{ github.ref_name }}
