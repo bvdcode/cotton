@@ -1,17 +1,17 @@
-import { useFolderTiles, TILE_PAGE_SIZE } from "./useFolderTiles";
+import { useFolderTiles } from "./useFolderTiles";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
+import type { FolderStatsDto } from "../../../shared/api/nodesApi";
 import {
-  nodesApi,
-  type FolderStatsDto,
-  type NodeResponse,
-} from "../../../shared/api/nodesApi";
-import { queryKeys } from "../../../shared/api/queries/queryKeys";
+  fetchFolderOverview,
+  folderOverviewOptions,
+} from "@shared/api/queries/folderOverview";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
 import { translateError } from "../../../shared/i18n/translateError";
 import { useDecryptedFolderContent } from "../../../shared/crypto/useDecryptedFolderContent";
-import { useFolderListPage, LIST_PAGE_SIZE } from "./useFolderListPage";
+import { useFolderListPage } from "./useFolderListPage";
+import { FOLDER_PAGE_SIZE } from "@shared/api/queries/folderPageSize";
 
 export const useFolderListing = (
   nodeId: string | null,
@@ -21,35 +21,18 @@ export const useFolderListing = (
 ) => {
   const enabled = nodeId !== null && userId !== null;
   const isList = layoutType === InterfaceLayoutType.List;
-  const pageSize = isList ? LIST_PAGE_SIZE : TILE_PAGE_SIZE;
+  const pageSize = FOLDER_PAGE_SIZE;
   const queryNodeId = nodeId ?? "";
   const queryUserId = userId ?? "";
 
   const fetchOverview = useCallback(
-    async (requestedPageSize: number): Promise<NodeResponse> => {
-      if (!nodeId) {
-        throw new Error("Folder id is required");
-      }
-      const response = await nodesApi.getChildren(nodeId, {
-        page: 1,
-        pageSize: requestedPageSize,
-        includeStats: true,
-      });
-      if (!response.content.stats) {
-        throw new Error("Folder statistics are missing");
-      }
-      return response;
-    },
-    [nodeId],
+    (requestedPageSize: number) =>
+      fetchFolderOverview(queryNodeId, requestedPageSize),
+    [queryNodeId],
   );
 
   const overview = useQuery({
-    queryKey: queryKeys.nodeChildren.overview(
-      queryNodeId,
-      queryUserId,
-      pageSize,
-    ),
-    queryFn: () => fetchOverview(pageSize),
+    ...folderOverviewOptions(queryNodeId, queryUserId),
     enabled,
   });
 
@@ -88,6 +71,10 @@ export const useFolderListing = (
   }, [nodeId]);
 
   return {
+    node:
+      overview.isSuccess && !overview.isFetching
+        ? overview.data.content.node
+        : undefined,
     content,
     stats,
     totalCount: overview.data?.totalCount ?? null,

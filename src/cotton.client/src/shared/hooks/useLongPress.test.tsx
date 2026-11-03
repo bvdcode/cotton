@@ -28,10 +28,10 @@ function HoldButton({
   onClick: () => void;
   disabled?: boolean;
 }) {
-  const handlers = useLongPress(onHold, disabled);
+  const { handlers, ready } = useLongPress(onHold, disabled);
   return (
     <button {...handlers} onClick={onClick}>
-      Up
+      {ready ? "Home" : "Up"}
     </button>
   );
 }
@@ -48,6 +48,19 @@ afterEach(() => {
 });
 
 describe("useLongPress", () => {
+  it("resets the armed icon and cancels navigation when the pointer leaves", () => {
+    const onHold = vi.fn();
+    render(<HoldButton onHold={onHold} onClick={vi.fn()} />);
+    const button = screen.getByRole("button");
+    fireEvent.pointerDown(button, { button: 0 });
+    act(() => vi.advanceTimersByTime(500));
+    expect(button).toHaveTextContent("Home");
+    fireEvent.pointerLeave(button);
+    fireEvent.pointerUp(button);
+    expect(button).toHaveTextContent("Up");
+    expect(onHold).not.toHaveBeenCalled();
+  });
+
   it("preserves short and keyboard clicks, and suppresses the click after a hold", () => {
     const onHold = vi.fn();
     const onClick = vi.fn();
@@ -62,7 +75,10 @@ describe("useLongPress", () => {
 
     fireEvent.pointerDown(button, { button: 0, clientX: 20, clientY: 20 });
     act(() => vi.advanceTimersByTime(600));
+    expect(button).toHaveTextContent("Home");
+    expect(onHold).not.toHaveBeenCalled();
     fireEvent.pointerUp(button);
+    expect(button).toHaveTextContent("Up");
     fireEvent.click(button, { detail: 1 });
     expect(onHold).toHaveBeenCalledTimes(1);
     expect(onClick).toHaveBeenCalledTimes(1);

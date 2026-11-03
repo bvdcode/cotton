@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
+import { Box, Grow } from "@mui/material";
 import {
   ArrowUpward,
+  Home,
   CheckBox,
   CheckBoxOutlineBlank,
   CreateNewFolder,
@@ -11,7 +13,6 @@ import {
 } from "@mui/icons-material";
 import type { useTranslation } from "react-i18next";
 import type { PageHeaderProps, PageHeaderActionItem } from "./PageHeader";
-import { formatBytes } from "../../../shared/utils/formatBytes";
 
 type PageHeaderActionFactoryOptions = Pick<
   PageHeaderProps,
@@ -37,6 +38,8 @@ type PageHeaderActionFactoryOptions = Pick<
   | "showUpload"
   | "showViewModeToggle"
 > & {
+  homeReady?: boolean;
+  iconTransitionDuration?: number;
   nextViewTitleKey: string;
   t: ReturnType<typeof useTranslation>["t"];
   viewIcon: ReactElement;
@@ -52,6 +55,8 @@ export const buildPageHeaderActions = (
       options.onGoUp,
       options.t,
       options.goUpDropHandlers,
+      options.homeReady,
+      options.iconTransitionDuration,
     ),
   ];
   actions.push(...(options.primaryActionItems ?? []));
@@ -96,9 +101,20 @@ const createGoUpAction = (
   onGoUp: () => void,
   t: ReturnType<typeof useTranslation>["t"],
   goUpDropHandlers: PageHeaderProps["goUpDropHandlers"],
+  homeReady = false,
+  transitionDuration?: number,
 ): PageHeaderActionItem => ({
   key: "go-up",
-  icon: <ArrowUpward />,
+  icon: (
+    <Box sx={{ display: "inline-flex", position: "relative" }}>
+      <Grow in={!homeReady} timeout={transitionDuration}>
+        <ArrowUpward />
+      </Grow>
+      <Grow in={homeReady} timeout={transitionDuration}>
+        <Home sx={{ position: "absolute", inset: 0 }} />
+      </Grow>
+    </Box>
+  ),
   title: t("actions.goUp"),
   onClick: onGoUp,
   disabled: loading || !canGoUp,
@@ -245,10 +261,6 @@ export const buildStatsSummary = (
 
   if (stats.files > 0) {
     parts.push(t("stats.files", { ns: statsNamespace, count: stats.files }));
-  }
-
-  if (stats.sizeBytes > 0) {
-    parts.push(formatBytes(stats.sizeBytes));
   }
 
   if (parts.length === 0) {

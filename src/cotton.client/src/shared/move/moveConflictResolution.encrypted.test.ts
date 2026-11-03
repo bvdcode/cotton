@@ -111,10 +111,12 @@ describe("encrypted file name conflicts", () => {
       confirmConflict: confirm,
     });
 
-    expect(confirm).toHaveBeenCalledWith({
-      newName: "report (2).txt",
-      canOverwrite: false,
-    });
+    expect(confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newName: "report (2).txt",
+        canOverwrite: false,
+      }),
+    );
     expect(mocks.copy).toHaveBeenCalledOnce();
     const request: MoveFileRequest = mocks.copy.mock.calls[0][1];
     expect(request.name).toMatch(/^[a-f0-9-]{36}$/);
@@ -265,10 +267,12 @@ describe("encrypted file name conflicts", () => {
       skipAllConflicts: false,
       confirmConflict: confirm,
     });
-    expect(confirm).toHaveBeenCalledWith({
-      newName: "report (2).txt",
-      canOverwrite: false,
-    });
+    expect(confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newName: "report (2).txt",
+        canOverwrite: false,
+      }),
+    );
   });
 
   it("does not transfer encrypted files while the key is locked", async () => {
@@ -305,10 +309,12 @@ describe("encrypted file name conflicts", () => {
       skipAllConflicts: false,
       confirmConflict: confirm,
     });
-    expect(confirm).toHaveBeenCalledWith({
-      newName: "report (1).txt",
-      canOverwrite: false,
-    });
+    expect(confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newName: "report (1).txt",
+        canOverwrite: false,
+      }),
+    );
     expect(mocks.copy).toHaveBeenCalledWith(
       file.id,
       expect.objectContaining({
@@ -340,10 +346,12 @@ describe("encrypted file name conflicts", () => {
         confirmConflict: confirm,
       });
 
-      expect(confirm).toHaveBeenCalledWith({
-        newName: "report (1).txt",
-        canOverwrite: false,
-      });
+      expect(confirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newName: "report (1).txt",
+          canOverwrite: false,
+        }),
+      );
       expect(send).toHaveBeenCalledOnce();
       expect(send).toHaveBeenCalledWith(file.id, {
         parentId: "target",
@@ -371,10 +379,12 @@ describe("encrypted file name conflicts", () => {
       confirmConflict: confirm,
     });
 
-    expect(confirm).toHaveBeenCalledWith({
-      newName: "report (1).txt",
-      canOverwrite: true,
-    });
+    expect(confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newName: "report (1).txt",
+        canOverwrite: true,
+      }),
+    );
     expect(mocks.copy).toHaveBeenCalledWith(file.id, {
       parentId: "target",
       name: "report.txt",

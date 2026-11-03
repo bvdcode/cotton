@@ -41,6 +41,7 @@ export const folderStatsSchema = z.object({
 });
 
 export const nodeContentSchema = baseDtoSchema.extend({
+  node: nodeDtoSchema,
   nodes: z.array(nodeDtoSchema),
   files: z.array(nodeFileManifestSchema),
   stats: folderStatsSchema.nullable().optional(),

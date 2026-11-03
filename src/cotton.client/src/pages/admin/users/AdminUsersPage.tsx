@@ -12,7 +12,7 @@ import { AdminPageSurface } from "../components/AdminPageSurface";
 import { UsersGridToolbar } from "./components/UsersGridToolbar";
 import { useAdminUsersColumns } from "./hooks/useAdminUsersColumns";
 import { useAdminUsersData } from "./hooks/useAdminUsersData";
-import { useAdminDataGridLocaleText } from "../components/useAdminDataGridLocaleText";
+import { useDataGridLocaleText } from "@shared/hooks/useDataGridLocaleText";
 
 type ColumnVisibilityTarget = "desktop" | "mobile";
 
@@ -46,7 +46,7 @@ export const AdminUsersPage = () => {
   const isLoading = loadState.kind === "loading";
   const createLabel = t("users.create.button");
   const refreshLabel = t("users.refresh");
-  const localeText = useAdminDataGridLocaleText(t("users.empty"));
+  const localeText = useDataGridLocaleText(t("users.empty"));
 
   const columns = useAdminUsersColumns({
     storageUsageLoading,

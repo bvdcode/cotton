@@ -3,8 +3,7 @@ import { useTranslation } from "react-i18next";
 import { type NodeFileManifestDto } from "../../../shared/api/nodesApi";
 import { lookupUploadNames } from "../utils/lookupUploadNames";
 import { uploadManager } from "../../../shared/upload/UploadManager";
-import { ConflictAction } from "../../../shared/types/nameConflict";
-import { createConflictResolver } from "../../../shared/types/createConflictResolver";
+import { createUploadConflictResolver } from "./createUploadConflictResolver";
 import { resolveUploadConflicts } from "../utils/uploadConflicts";
 import { showActionToast } from "../../../shared/ui/ActionToast";
 import { toast } from "../../../shared/ui/notifications";
@@ -19,6 +18,7 @@ import type {
 import { getAllFilesFromItems, type DroppedFile } from "./scanDroppedFiles";
 import { DroppedFolderResolver } from "./DroppedFolderResolver";
 import { emptySkippedItemsDialog } from "./fileUploadTypes";
+import { reportClientError } from "@shared/utils/clientDiagnostics";
 
 type UploadToastVariant = "info" | "error";
 
@@ -70,7 +70,7 @@ export const useFileUpload = (
       const list = Array.isArray(files) ? files : Array.from(files);
       if (list.length === 0) return;
 
-      const decision = decideEncrypt(nodeId);
+      const decision = await decideEncrypt(nodeId);
       if (decision.vaultLocked) {
         onToast?.(t("uploadDrop.toasts.vaultLocked", { ns: "files" }), "error");
         return;
@@ -84,17 +84,10 @@ export const useFileUpload = (
         decision.encrypt,
       );
 
-      const confirmConflict = createConflictResolver(async (prompt) => {
-        if (skipAllConflictsRef.current) {
-          return ConflictAction.SkipAll;
-        }
-
-        const action = await showConflictDialog(prompt);
-        if (action === ConflictAction.SkipAll) {
-          skipAllConflictsRef.current = true;
-        }
-        return action;
-      });
+      const confirmConflict = createUploadConflictResolver(
+        skipAllConflictsRef,
+        showConflictDialog,
+      );
 
       const result = await resolveUploadConflicts(
         list,
@@ -132,13 +125,13 @@ export const useFileUpload = (
       if (!nodeId) return;
       if (dropped.length === 0) return;
 
-      const rootPolicyEnabled = isPolicyEnabledForNode(nodeId);
-      const rootDecision = decideEncrypt(nodeId);
+      const rootDecision = await decideEncrypt(nodeId);
       if (rootDecision.vaultLocked) {
         onToast?.(t("uploadDrop.toasts.vaultLocked", { ns: "files" }), "error");
         return;
       }
 
+      const rootPolicyEnabled = rootDecision.encrypt;
       setDropPreparation((prev) => ({
         ...prev,
         active: true,
@@ -152,17 +145,10 @@ export const useFileUpload = (
 
       let totalEnqueued = 0;
 
-      const confirmConflict = createConflictResolver(async (prompt) => {
-        if (skipAllConflictsRef.current) {
-          return ConflictAction.SkipAll;
-        }
-
-        const action = await showConflictDialog(prompt);
-        if (action === ConflictAction.SkipAll) {
-          skipAllConflictsRef.current = true;
-        }
-        return action;
-      });
+      const confirmConflict = createUploadConflictResolver(
+        skipAllConflictsRef,
+        showConflictDialog,
+      );
 
       const folderResolver = new DroppedFolderResolver(
         nodeId,
@@ -200,7 +186,9 @@ export const useFileUpload = (
         processed: dropped.length,
       }));
 
+      let remainingItems = dropped.length;
       for (const [targetNodeId, bucket] of filesByTarget) {
+        remainingItems -= bucket.files.length;
         const decision = folderResolver.decideEncryption(targetNodeId);
         if (decision.vaultLocked) {
           onToast?.(
@@ -218,6 +206,7 @@ export const useFileUpload = (
           bucket.files,
           contentForCheck,
           confirmConflict,
+          remainingItems,
         );
         if (result.cancelled) return;
         if (result.files.length === 0) continue;
@@ -262,7 +251,10 @@ export const useFileUpload = (
       if (!(e.target instanceof HTMLInputElement)) return;
       const files = e.target.files;
       if (files && files.length > 0) {
-        void handleUploadFiles(Array.from(files));
+        void handleUploadFiles(Array.from(files)).catch((error) => {
+          reportClientError("Failed to prepare file upload", error);
+          onToast?.(t("uploadDrop.errors.dropFailed"), "error");
+        });
       }
     };
     input.click();

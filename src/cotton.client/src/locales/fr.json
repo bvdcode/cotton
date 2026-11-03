@@ -2420,7 +2420,6 @@
       "uploadFailed": "Impossible de démarrer le téléversement des fichiers partagés. Actualisez cette page pour réessayer."
     },
     "folderSizes": {
-      "calculate": "Calculer la taille des dossiers",
       "calculating": "Calcul de la taille des dossiers…",
       "failed": "Impossible de calculer la taille de tous les dossiers. Réessayez."
     },
@@ -2546,6 +2545,8 @@
       "confirmDescription": "Les éléments sélectionnés seront déplacés vers la corbeille et pourront être restaurés ultérieurement."
     },
     "conflicts": {
+      "merge": "Fusionner",
+      "mergeDescription": "Un dossier porte déjà ce nom. Fusionner leur contenu ou utiliser {{newName}} ?",
       "title": "Conflit de noms",
       "description": "Un élément portant ce nom existe déjà dans ce dossier. Utiliser plutôt {{newName}} ?",
       "overwriteDescription": "Un élément portant ce nom existe déjà dans ce dossier. Le remplacer ou utiliser plutôt {{newName}} ?",
@@ -2697,7 +2698,10 @@
         "modelLoadFailed": "Échec du chargement du modèle 3D",
         "modelUnsupportedType": "Ce format de fichier 3D n'est pas pris en charge pour l'aperçu dans le navigateur",
         "pdfTooLarge": "Le PDF est trop volumineux pour l'aperçu ({{size}}). La taille maximale est de {{maxSize}}. Veuillez télécharger le fichier pour le consulter.",
-        "fileTooLarge": "Le fichier est trop volumineux pour l'aperçu ({{size}}). La taille maximale pour l'aperçu texte est de {{maxSize}}. Veuillez télécharger le fichier pour le consulter."
+        "fileTooLarge": "Le fichier est trop volumineux pour l'aperçu ({{size}}). La taille maximale pour l'aperçu est de {{maxSize}}. Veuillez télécharger le fichier pour le consulter."
+      },
+      "office": {
+        "truncated": "Affichage des {{rows}} premières lignes et {{columns}} premières colonnes de cette feuille."
       }
     },
     "actionsTitle": "Actions",

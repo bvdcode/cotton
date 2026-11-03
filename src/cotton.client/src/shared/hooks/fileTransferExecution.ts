@@ -1,5 +1,4 @@
-import { FolderTransferNames } from "../move/FolderTransferNames";
-import { createConflictResolver } from "../types/createConflictResolver";
+import { FolderTransfer } from "../move/FolderTransfer";
 import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { toast } from "@shared/ui/notifications";
 import type { NodeFileManifestDto } from "../api/nodesApi";
@@ -10,19 +9,10 @@ import type {
   MoveClipboardItem,
   FileTransferOperation,
 } from "../store/moveClipboardStore";
-import { useNodesStore } from "../store/nodesStore";
 import { useVault } from "../crypto";
 import { encryptExistingFileWithTask } from "../tasks";
 import { collectPlainFilesInFoldersForClientEncryption } from "../utils/clientEncryptionFolderScan";
-import {
-  moveItemWithConflictResolution,
-  type MoveSingleItemResult,
-} from "../move/moveConflictResolution";
-import {
-  extractErrorMessage,
-  needsEncryptionAfterMove,
-  needsDecryptionAfterMove,
-} from "./moveState";
+import { extractErrorMessage } from "./moveState";
 import { normalizeDragId } from "./moveDragPayload";
 import type {
   MoveExecutionResult,
@@ -63,142 +53,54 @@ export const moveCandidatesToTarget = async (options: {
   targetEncryptsNewFiles: boolean;
   targetParentId: string;
   onProgress?: (processed: number) => void;
+  prepareEncryptedTarget?: () => Promise<void>;
 }): Promise<MoveExecutionResult> => {
-  const sourceParents = new Set<string>();
+  const transfer = new FolderTransfer(
+    options.operation,
+    options.confirmConflict,
+    options.prepareEncryptedTarget,
+  );
   const succeeded: MoveClipboardItem[] = [];
   const failed: MoveClipboardItem[] = [];
   const notMoved: MoveClipboardItem[] = [];
-  const movedFilesToEncrypt: MoveClipboardItem[] = [];
-  const movedFilesToOfferDecrypt: MoveClipboardItem[] = [];
   let lastErrorMessage: string | null = null;
-  let skipAllConflicts = false;
-  const confirmConflict = createConflictResolver(options.confirmConflict);
-
-  // Serial loop: the server's collision/cycle checks are pre-update reads,
-  // so concurrent moves can still race in the small window before the unique
-  // index throws. Serial keeps the multi-item UX deterministic.
-  const folderNames = new FolderTransferNames(options.targetParentId);
-  for (let index = 0; index < options.candidates.length; index += 1) {
-    const item = options.candidates[index];
-    const outcome = await moveItemWithConflictResolution({
-      operation: options.operation,
-      confirmConflict,
+  for (const [index, item] of options.candidates.entries()) {
+    const outcome = await transfer.execute(
       item,
-      skipAllConflicts,
-      targetParentId: options.targetParentId,
-      encryptFolders: options.targetEncryptsNewFiles,
-      folderNames,
-    });
-
+      options.targetParentId,
+      options.targetEncryptsNewFiles,
+      index < options.candidates.length - 1,
+    );
     switch (outcome.kind) {
-      case "moved": {
-        const transferred = applyTransferToCache(
-          item,
-          outcome.moved,
-          options.targetParentId,
-          options.operation,
-        );
-        if (options.operation === "move") {
-          sourceParents.add(item.sourceParentId);
-        }
-        succeeded.push(transferred);
-        collectMovedEncryptionFollowups({
-          item: transferred,
-          movedFilesToEncrypt,
-          movedFilesToOfferDecrypt,
-          targetEncryptsNewFiles: options.targetEncryptsNewFiles,
-        });
+      case "completed":
+        succeeded.push(outcome.item);
         break;
-      }
       case "failed":
         failed.push(item);
         notMoved.push(item);
         lastErrorMessage =
           extractErrorMessage(outcome.error) ?? lastErrorMessage;
         reportClientError(
-          "Failed to move " + item.kind + " " + item.id,
+          "Failed to transfer " + item.kind + " " + item.id,
           outcome.error,
         );
         break;
       case "skipped":
         notMoved.push(item);
-        skipAllConflicts ||= outcome.skipAll;
         break;
       case "cancelled":
         notMoved.push(...options.candidates.slice(index));
-        index = options.candidates.length;
-        break;
+        return {
+          ...transfer.result,
+          succeeded,
+          failed,
+          notMoved,
+          lastErrorMessage,
+        };
     }
-    options.onProgress?.(Math.min(index + 1, options.candidates.length));
+    options.onProgress?.(index + 1);
   }
-
-  return {
-    failed,
-    lastErrorMessage,
-    movedFilesToEncrypt,
-    movedFilesToOfferDecrypt,
-    notMoved,
-    sourceParents,
-    succeeded,
-  };
-};
-
-const applyTransferToCache = (
-  item: MoveClipboardItem,
-  moved: MoveSingleItemResult,
-  targetParentId: string,
-  operation: FileTransferOperation,
-): MoveClipboardItem => {
-  const store = useNodesStore.getState();
-  if (moved.kind === "folder") {
-    switch (operation) {
-      case "move":
-        store.moveFolderInCache(
-          moved.folder,
-          item.sourceParentId,
-          targetParentId,
-        );
-        return item;
-      case "copy":
-        store.addFolderToCache(targetParentId, moved.folder);
-        return { ...item, id: moved.folder.id, sourceParentId: targetParentId };
-    }
-  }
-  switch (operation) {
-    case "move":
-      store.moveFileInCache(moved.file, item.sourceParentId, targetParentId);
-      return { ...item, id: moved.file.id, file: moved.file };
-    case "copy":
-      store.upsertFileInCache(targetParentId, moved.file);
-      return {
-        ...item,
-        id: moved.file.id,
-        sourceParentId: targetParentId,
-        file: moved.file,
-      };
-  }
-};
-
-const collectMovedEncryptionFollowups = (options: {
-  item: MoveClipboardItem;
-  movedFilesToEncrypt: MoveClipboardItem[];
-  movedFilesToOfferDecrypt: MoveClipboardItem[];
-  targetEncryptsNewFiles: boolean;
-}): void => {
-  if (
-    options.targetEncryptsNewFiles &&
-    needsEncryptionAfterMove(options.item)
-  ) {
-    options.movedFilesToEncrypt.push(options.item);
-    return;
-  }
-
-  if (
-    !options.targetEncryptsNewFiles &&
-    needsDecryptionAfterMove(options.item)
-  ) {
-    options.movedFilesToOfferDecrypt.push(options.item);
-  }
+  return { ...transfer.result, succeeded, failed, notMoved, lastErrorMessage };
 };
 
 export const refreshMovedParents = (

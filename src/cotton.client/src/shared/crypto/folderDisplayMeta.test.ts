@@ -81,6 +81,7 @@ describe("encrypted folder names", () => {
       name: "Report",
     });
     const source = {
+      orderedIds: [child.id],
       nodes: [child],
       files: [],
       ancestors: [root, parent],

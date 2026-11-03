@@ -72,6 +72,7 @@ namespace Cotton.Server.Handlers.Layouts
                        Kind = LayoutSearchHitKind.File,
                        Id = file.Id,
                        NodeIdForPath = file.NodeId,
+                       ParentNodeId = file.NodeId,
                        Name = file.Name,
                        NameKey = file.NameKey,
                        Score = 1 - embedding.Distance,

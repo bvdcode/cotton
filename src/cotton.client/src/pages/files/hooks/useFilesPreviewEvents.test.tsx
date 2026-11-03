@@ -33,7 +33,12 @@ describe("preview generated events", () => {
     const client = new QueryClient();
     const key = queryKeys.nodeChildren.overview("folder-1", "user-1", 1000);
     client.setQueryData<NodeResponse>(key, {
-      content: { ...createFolder(), nodes: [], files: [createFile()] },
+      content: {
+        node: createFolder(),
+        ...createFolder(),
+        nodes: [],
+        files: [createFile()],
+      },
       totalCount: 1,
     });
     const onInvalidate = vi.fn();

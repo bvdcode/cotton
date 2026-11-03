@@ -128,9 +128,10 @@ export const useMoveOperations = ({
         candidates.some(
           (item) => item.kind === "folder" || needsEncryptionAfterMove(item),
         );
-      const encryptionServerSettings = await loadEncryptionServerSettings(
+      let encryptionServerSettings = await loadEncryptionServerSettings(
         hasMoveEncryptionFollowups,
       );
+      let encryptionSettingsRequested = hasMoveEncryptionFollowups;
       if (
         operation === "copy" &&
         hasMoveEncryptionFollowups &&
@@ -157,16 +158,27 @@ export const useMoveOperations = ({
         targetEncryptsNewFiles,
         targetParentId,
         onProgress,
+        prepareEncryptedTarget: async () => {
+          if (!encryptionSettingsRequested) {
+            encryptionSettingsRequested = true;
+            encryptionServerSettings = await loadEncryptionServerSettings(true);
+          }
+          if (operation === "copy" && !encryptionServerSettings) {
+            throw new Error(
+              "Server settings are required before copying into an encrypted folder.",
+            );
+          }
+        },
       });
 
       refreshMovedParents(result.sourceParents, targetParentId);
 
       const directEncryptionCandidates = result.movedFilesToEncrypt
-        .map((item) => toDirectEncryptionCandidate(item, targetParentId))
+        .map((item) => toDirectEncryptionCandidate(item, item.sourceParentId))
         .filter((item): item is EncryptionCandidate => item !== null);
       const nestedEncryptionCandidateScan = encryptionServerSettings
         ? await collectMovedFolderEncryptionCandidates(
-            result.succeeded.filter((item) => item.kind === "folder"),
+            result.movedFoldersToEncrypt,
           )
         : { candidates: [], incomplete: false };
       const encryptionFailedCount = await encryptMovedFiles({

@@ -93,17 +93,13 @@ export const FilesPageOverlays: React.FC<FilesPageOverlaysProps> = ({
       )}
 
       <FileConflictDialog
-        open={fileUpload.conflictDialog.state.open}
-        newName={fileUpload.conflictDialog.state.newName}
-        canOverwrite={fileUpload.conflictDialog.state.canOverwrite}
+        {...fileUpload.conflictDialog.state}
         onResolve={fileUpload.conflictDialog.onResolve}
         onExited={fileUpload.conflictDialog.onExited}
       />
 
       <FileConflictDialog
-        open={move.conflictDialog.state.open}
-        newName={move.conflictDialog.state.newName}
-        canOverwrite={move.conflictDialog.state.canOverwrite}
+        {...move.conflictDialog.state}
         onResolve={move.conflictDialog.onResolve}
         onExited={move.conflictDialog.onExited}
       />

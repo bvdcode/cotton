@@ -7,8 +7,9 @@ import {
 } from "@shared/api/nodesApi";
 import { queryClient } from "@shared/api/queries/queryClient";
 import { queryKeys } from "@shared/api/queries/queryKeys";
+import { FOLDER_PAGE_SIZE } from "@shared/api/queries/folderPageSize";
 
-export const TILE_PAGE_SIZE = 10_000;
+export const TILE_PAGE_SIZE = FOLDER_PAGE_SIZE;
 
 export function useFolderTiles(
   queryNodeId: string,

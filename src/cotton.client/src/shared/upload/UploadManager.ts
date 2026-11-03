@@ -425,6 +425,7 @@ export class UploadManager {
   }
 
   destroy(): void {
+    this.progress.destroy();
     if (this.pruneIntervalId) {
       clearInterval(this.pruneIntervalId);
       this.pruneIntervalId = null;

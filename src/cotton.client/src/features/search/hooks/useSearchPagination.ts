@@ -14,6 +14,7 @@ const SEARCH_DEBOUNCE_MS = 260;
 interface UseSearchPaginationOptions {
   trimmedQuery: string;
   layoutId: string | undefined;
+  currentNodeId?: string;
 }
 
 export interface SearchPaginationState {
@@ -48,16 +49,10 @@ const createEmptySearchDataState = (key: string): SearchDataState => ({
   error: null,
 });
 
-const buildSearchKey = (
-  layoutId: string | undefined,
-  query: string,
-): string => {
-  return layoutId && query ? layoutId + "\u0000" + query : "";
-};
-
 export const useSearchPagination = ({
   trimmedQuery,
   layoutId,
+  currentNodeId,
 }: UseSearchPaginationOptions): SearchPaginationState => {
   const searchGenerationRef = useRef(0);
   const requestedPageRef = useRef(0);
@@ -69,10 +64,10 @@ export const useSearchPagination = ({
     trimmedQuery === debouncedQueryValue ? debouncedQueryValue : "";
   const activeSearchKey = useMemo(
     () =>
-      debouncedQuery
-        ? buildSearchKey(layoutId, debouncedQuery) + "\u0000" + deep
+      layoutId && debouncedQuery
+        ? JSON.stringify([layoutId, currentNodeId, debouncedQuery, deep])
         : "",
-    [debouncedQuery, deep, layoutId],
+    [currentNodeId, debouncedQuery, deep, layoutId],
   );
   const [searchDataState, setSearchDataState] = useState<SearchDataState>(() =>
     createEmptySearchDataState(activeSearchKey),
@@ -129,6 +124,7 @@ export const useSearchPagination = ({
           page: pageToLoad,
           pageSize: SEARCH_PAGE_SIZE,
           deep,
+          currentNodeId,
           signal,
         });
 
@@ -173,7 +169,14 @@ export const useSearchPagination = ({
         });
       }
     },
-    [activeSearchKey, debouncedQuery, deep, enableDeep, layoutId],
+    [
+      activeSearchKey,
+      currentNodeId,
+      debouncedQuery,
+      deep,
+      enableDeep,
+      layoutId,
+    ],
   );
 
   useEffect(() => {

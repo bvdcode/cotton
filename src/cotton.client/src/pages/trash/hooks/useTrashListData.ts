@@ -41,8 +41,6 @@ export const useTrashListData = ({
   const query = useTrashChildrenQuery({
     nodeId,
     isRoot,
-    page: effectivePagination.page + 1,
-    pageSize: effectivePagination.pageSize,
     enabled: isListLayout && !!nodeId,
   });
 
@@ -62,6 +60,10 @@ export const useTrashListData = ({
   }, [isListLayout, nodeId, queryClient]);
 
   return {
+    paginationModel: {
+      page: effectivePagination.page,
+      pageSize: effectivePagination.pageSize,
+    },
     listTotalCount: query.data?.totalCount ?? 0,
     listLoading: query.isFetching,
     listError: query.isError ? loadErrorText : null,

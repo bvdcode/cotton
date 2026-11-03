@@ -1,5 +1,4 @@
 import React from "react";
-import type { ReactElement } from "react";
 import {
   Box,
   Fade,
@@ -18,77 +17,14 @@ import { FileBreadcrumbs } from "./FileBreadcrumbs";
 import {
   getNextFileBrowserViewTitleKey,
   getTilesIconScale,
-  type FileBrowserViewMode,
 } from "@shared/utils/viewMode";
 import { useOverflowActionKeys } from "../hooks/useOverflowActionKeys";
 import { useTransitionActionItems } from "../hooks/useTransitionActionItems";
 import { useLongPress } from "@shared/hooks/useLongPress";
-import type {
-  FileBreadcrumb,
-  FileListStats,
-} from "../../../shared/types/FileListViewTypes";
+import { formatBytes } from "@shared/utils/formatBytes";
 
-export interface PageHeaderActionItem {
-  key: string;
-  icon: ReactElement;
-  title: string;
-  onClick: (event?: React.MouseEvent<HTMLElement>) => void;
-  disabled?: boolean;
-  color?: "primary" | "secondary" | "error";
-  active?: boolean;
-  /** Optional DnD drop target handlers (e.g. Up button accepts move drop). */
-  onDragOver?: (event: React.DragEvent<HTMLElement>) => void;
-  onDragLeave?: (event: React.DragEvent<HTMLElement>) => void;
-  onDrop?: (event: React.DragEvent<HTMLElement>) => void;
-  dropActive?: boolean;
-}
-
-export interface PageHeaderProps {
-  loading: boolean;
-  breadcrumbs: FileBreadcrumb[];
-  onNavigateBreadcrumb?: (breadcrumbIndex: number) => void;
-  stats: FileListStats;
-  viewMode: FileBrowserViewMode;
-  canGoUp: boolean;
-  onGoUp: () => void;
-  onHomeClick: () => void;
-  onViewModeCycle: () => void;
-  showViewModeToggle?: boolean;
-  statsNamespace?: string;
-
-  // Optional actions
-  showUpload?: boolean;
-  showNewFile?: boolean;
-  showNewFolder?: boolean;
-  onUploadClick?: () => void;
-  onNewFileClick?: () => void;
-  onNewFolderClick?: () => void;
-  isCreatingFile?: boolean;
-  isCreatingFolder?: boolean;
-
-  // Selection mode
-  selectionMode?: boolean;
-  selectedCount?: number;
-  onToggleSelectionMode?: () => void;
-  onSelectAll?: () => void;
-  onDeselectAll?: () => void;
-
-  // Custom actions rendered in overflow-aware action bar
-  customActionItems?: PageHeaderActionItem[];
-  primaryActionItems?: PageHeaderActionItem[];
-
-  /** Optional drop handlers for breadcrumbs (move drag target). */
-  breadcrumbsDropHandlers?: React.ComponentProps<
-    typeof FileBreadcrumbs
-  >["dropHandlers"];
-  /** Optional drop handlers attached to the "Go up" action. */
-  goUpDropHandlers?: {
-    onDragOver: (event: React.DragEvent<HTMLElement>) => void;
-    onDragLeave: (event: React.DragEvent<HTMLElement>) => void;
-    onDrop: (event: React.DragEvent<HTMLElement>) => void;
-    active: boolean;
-  };
-}
+import type { PageHeaderActionItem, PageHeaderProps } from "./PageHeaderTypes";
+export type { PageHeaderActionItem, PageHeaderProps } from "./PageHeaderTypes";
 
 import { buildPageHeaderActions, buildStatsSummary } from "./PageHeaderActions";
 
@@ -97,6 +33,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   breadcrumbs,
   onNavigateBreadcrumb,
   stats,
+  isSizeCalculating = false,
   viewMode,
   canGoUp,
   onGoUp,
@@ -127,7 +64,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const nextViewTitleKey = getNextFileBrowserViewTitleKey(viewMode);
   const actionsContainerRef = React.useRef<HTMLDivElement | null>(null);
-  const goUpLongPressHandlers = useLongPress(onHomeClick, loading || !canGoUp);
+  const goUpHold = useLongPress(onHomeClick, loading || !canGoUp);
   const actionButtonRefs = React.useRef<
     Record<string, HTMLButtonElement | null>
   >({});
@@ -138,8 +75,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     () => buildStatsSummary(stats, statsNamespace, t),
     [stats, statsNamespace, t],
   );
+  const showSize =
+    stats.sizeBytes > 0 || stats.folders > 0 || isSizeCalculating;
   const showHeaderMeta =
-    Boolean(statsSummary) || (selectionMode && selectedCount > 0);
+    Boolean(statsSummary) || showSize || (selectionMode && selectedCount > 0);
 
   const viewIcon = React.useMemo(
     () =>
@@ -156,6 +95,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   );
 
   const actionTabs = buildPageHeaderActions({
+    homeReady: goUpHold.ready,
+    iconTransitionDuration: reducedMotion
+      ? 0
+      : theme.transitions.duration.shortest,
     canGoUp,
     customActionItems,
     primaryActionItems,
@@ -299,14 +242,16 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                         ref={(el) => {
                           actionButtonRefs.current[action.key] = el;
                         }}
-                        aria-label={action.title}
+                        aria-label={
+                          action.key === "go-up" && goUpHold.ready
+                            ? t("routes:home")
+                            : action.title
+                        }
                         aria-pressed={action.active}
                         color={action.color ?? "primary"}
                         disabled={action.disabled || !isVisible}
                         onClick={action.onClick}
-                        {...(action.key === "go-up"
-                          ? goUpLongPressHandlers
-                          : {})}
+                        {...(action.key === "go-up" ? goUpHold.handlers : {})}
                         onDragOver={action.onDragOver}
                         onDragLeave={action.onDragLeave}
                         onDrop={action.onDrop}
@@ -381,14 +326,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           {showHeaderMeta && (
             <Box
               sx={{
-                display: { xs: "none", md: "flex" },
+                display: "flex",
                 alignItems: "center",
                 gap: 1,
                 flexShrink: 0,
                 minWidth: 0,
               }}
             >
-              {statsSummary && (
+              {(statsSummary || showSize) && (
                 <Typography
                   noWrap
                   sx={{
@@ -399,7 +344,48 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                     textOverflow: "ellipsis",
                   }}
                 >
-                  {statsSummary}
+                  <Box
+                    component="span"
+                    sx={{ display: { xs: "none", md: "inline" } }}
+                  >
+                    {statsSummary}
+                    {statsSummary &&
+                      showSize &&
+                      t("stats.separator", { ns: statsNamespace })}
+                  </Box>
+                  {showSize && (
+                    <Box
+                      component="span"
+                      aria-busy={isSizeCalculating}
+                      title={
+                        isSizeCalculating
+                          ? t("files:folderSizes.calculating")
+                          : undefined
+                      }
+                      sx={[
+                        {
+                          fontVariantNumeric: "tabular-nums",
+                          color: "text.primary",
+                          "--folder-size-pulse-opacity": 0.7,
+                          animation:
+                            isSizeCalculating && !reducedMotion
+                              ? "folder-size-pulse 1s ease-in-out infinite"
+                              : "none",
+                          "@keyframes folder-size-pulse": {
+                            "0%, 100%": { opacity: 1 },
+                            "50%": {
+                              opacity: "var(--folder-size-pulse-opacity)",
+                            },
+                          },
+                        },
+                        theme.applyStyles("dark", {
+                          "--folder-size-pulse-opacity": 0.55,
+                        }),
+                      ]}
+                    >
+                      {formatBytes(stats.sizeBytes)}
+                    </Box>
+                  )}
                 </Typography>
               )}
 

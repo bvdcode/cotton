@@ -1,6 +1,13 @@
 import { nodesApi, type NodeResponse } from "./nodesApi";
 import { applyDisplayMetaToFiles } from "../crypto/displayMeta";
 
+interface AllChildrenOptions {
+  nodeType?: string;
+  depth?: number;
+  signal?: AbortSignal;
+  pageSize?: number;
+}
+
 export async function fetchNodeChildren(
   nodeId: string,
   options?: Parameters<typeof nodesApi.getChildren>[1],
@@ -12,23 +19,24 @@ export async function fetchNodeChildren(
 
 export async function fetchAllNodeChildren(
   nodeId: string,
-  options?: { nodeType?: string; depth?: number },
+  options?: AllChildrenOptions,
 ): Promise<NodeResponse> {
   return readAllPages(nodeId, options, fetchNodeChildren);
 }
 
 export async function fetchAllRawNodeChildren(
   nodeId: string,
-  options?: { nodeType?: string; depth?: number },
+  options?: AllChildrenOptions,
 ): Promise<NodeResponse> {
   return readAllPages(nodeId, options, nodesApi.getChildren);
 }
 
 async function readAllPages(
   nodeId: string,
-  options: { nodeType?: string; depth?: number } | undefined,
+  options: AllChildrenOptions | undefined,
   readPage: typeof fetchNodeChildren,
 ): Promise<NodeResponse> {
+  options?.signal?.throwIfAborted();
   const firstPage = await readPage(nodeId, { ...options, page: 1 });
   const content = {
     ...firstPage.content,
@@ -38,6 +46,7 @@ async function readAllPages(
 
   let page = 2;
   while (content.nodes.length + content.files.length < firstPage.totalCount) {
+    options?.signal?.throwIfAborted();
     const response = await readPage(nodeId, { ...options, page });
     if (
       response.content.nodes.length === 0 &&

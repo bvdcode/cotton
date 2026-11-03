@@ -1,3 +1,5 @@
+import { convertHeicBlobToJpeg } from "@shared/heic/convertHeicBlobToJpeg";
+
 const AVATAR_PREFERRED_CHUNK_RATIO = 0.6;
 const AVATAR_MIN_DIMENSION = 64;
 const AVATAR_RESIZE_ATTEMPTS = 6;
@@ -63,24 +65,6 @@ const loadImageFromBlob = async (blob: Blob): Promise<HTMLImageElement> => {
 
     image.src = objectUrl;
   });
-};
-
-const convertHeicBlobToJpeg = async (blob: Blob): Promise<Blob> => {
-  const convertedResult = await heic2any({
-    blob,
-    toType: "image/jpeg",
-    quality: AVATAR_START_QUALITY,
-  });
-
-  const converted = Array.isArray(convertedResult)
-    ? convertedResult[0]
-    : convertedResult;
-
-  if (converted instanceof Blob) {
-    return converted;
-  }
-
-  throw new AvatarImageDecodeError();
 };
 
 const decodeImageWithHeicFallback = async (
@@ -238,4 +222,3 @@ export const prepareAvatarForUpload = async (
 
   return null;
 };
-import heic2any from "heic2any";

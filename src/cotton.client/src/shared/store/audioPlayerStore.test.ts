@@ -1,3 +1,4 @@
+import { createFolder } from "../../test/fileFixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../api/nodesApi", () => ({
@@ -15,7 +16,11 @@ import {
 } from "../api/nodesApi";
 import { useAudioPlayerStore } from "./audioPlayerStore";
 
-const makeNode = (id: string, parentId: string | null, name: string): NodeDto => ({
+const makeNode = (
+  id: string,
+  parentId: string | null,
+  name: string,
+): NodeDto => ({
   id,
   createdAt: "",
   updatedAt: "",
@@ -46,6 +51,7 @@ const makeNodeResponse = (
   files: ReadonlyArray<NodeFileManifestDto>,
 ): NodeResponse => ({
   content: {
+    node: createFolder({ id: "root" }),
     id: "root",
     createdAt: "",
     updatedAt: "",
@@ -64,9 +70,9 @@ describe("audioPlayerStore", () => {
   it("keeps known current track metadata when recursive scan returns a sparse file entry", async () => {
     const mockedNodesApi = vi.mocked(nodesApi);
     mockedNodesApi.getNode.mockResolvedValue(makeNode("root", null, "Music"));
-    mockedNodesApi.getChildren.mockResolvedValue(makeNodeResponse([
-      makeAudioFile("track-1", {}),
-    ]));
+    mockedNodesApi.getChildren.mockResolvedValue(
+      makeNodeResponse([makeAudioFile("track-1", {})]),
+    );
 
     useAudioPlayerStore.getState().openFromSelection({
       fileId: "track-1",

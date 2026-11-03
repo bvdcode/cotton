@@ -7,6 +7,6 @@ namespace Cotton.Server.Handlers.Nodes
 {
     public record UpdateNodeMetadataResult(
         UpdateNodeMetadataStatus Status,
-        NodeDto? Node = null,
+        IReadOnlyList<NodeDto>? Nodes = null,
         string? Error = null);
 }

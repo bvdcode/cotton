@@ -4,10 +4,8 @@ import { useTranslation } from "react-i18next";
 import { fetchServerSettings } from "../../../shared/api/queries/serverSettings";
 import { queryClient } from "../../../shared/api/queries/queryClient";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
-import type {
-  NodeContentDto,
-  NodeFileManifestDto,
-} from "../../../shared/api/nodesApi";
+import type { NodeContentDto } from "../../../shared/api/nodesApi";
+import type { ServerSettings } from "../../../shared/api/settingsApi";
 import {
   isFileEncrypted,
   isFolderEncryptionPolicyEnabled,
@@ -17,23 +15,44 @@ import { refreshNodeContent } from "../../../shared/store/nodesActions";
 import {
   collectEncryptedFilesInFoldersForClientEncryption,
   collectPlainFilesInFoldersForClientEncryption,
+  type ClientEncryptionFolderScanResult,
 } from "../../../shared/utils/clientEncryptionFolderScan";
 import {
   decryptExistingFileWithTask,
   encryptExistingFileWithTask,
   taskManager,
-  type AppTaskHandle,
 } from "../../../shared/tasks";
 
-type ToastVariant = "info" | "error";
+type FileOperation = "encrypt" | "decrypt";
 
 interface UseFolderClientEncryptionActionsOptions {
   nodeId: string | null;
   currentNode: NodeDto | null;
   content: NodeContentDto | undefined;
   folderPolicyEnabled?: boolean;
-  onToast: (message: string, variant?: ToastVariant) => void;
+  onToast: (message: string, variant?: "info" | "error") => void;
 }
+
+const getOperation = (kind: FileOperation) => {
+  switch (kind) {
+    case "encrypt":
+      return {
+        scan: collectPlainFilesInFoldersForClientEncryption,
+        execute: encryptExistingFileWithTask,
+        complete: "clientEncryption.toasts.encryptExistingComplete",
+        failed: "clientEncryption.toasts.encryptExistingFailed",
+        incomplete: "clientEncryption.toasts.encryptExistingScanIncomplete",
+      } as const;
+    case "decrypt":
+      return {
+        scan: collectEncryptedFilesInFoldersForClientEncryption,
+        execute: decryptExistingFileWithTask,
+        complete: "clientEncryption.toasts.decryptExistingComplete",
+        failed: "clientEncryption.toasts.decryptExistingFailed",
+        incomplete: "clientEncryption.toasts.decryptExistingScanIncomplete",
+      } as const;
+  }
+};
 
 export const useFolderClientEncryptionActions = ({
   nodeId,
@@ -43,16 +62,12 @@ export const useFolderClientEncryptionActions = ({
   onToast,
 }: UseFolderClientEncryptionActionsOptions) => {
   const { t } = useTranslation(["files", "tasks"]);
-  const [isEncryptingPlainFiles, setIsEncryptingPlainFiles] = useState(false);
-  const [isDecryptingEncryptedFiles, setIsDecryptingEncryptedFiles] =
-    useState(false);
-
+  const [running, setRunning] = useState({ encrypt: false, decrypt: false });
   const activeNode = nodeId && currentNode?.id === nodeId ? currentNode : null;
   const activeContent = nodeId && content?.id === nodeId ? content : undefined;
   const folderPolicyEnabled =
     providedFolderPolicyEnabled ??
     isFolderEncryptionPolicyEnabled(activeNode?.metadata);
-
   const plainFiles = useMemo(
     () =>
       folderPolicyEnabled
@@ -62,255 +77,124 @@ export const useFolderClientEncryptionActions = ({
         : [],
     [activeContent?.files, folderPolicyEnabled],
   );
-
   const encryptedFiles = useMemo(
     () =>
       activeContent?.files.filter((file) => isFileEncrypted(file.metadata)) ??
       [],
     [activeContent?.files],
   );
-  const encryptPlainFiles = useCallback(async (): Promise<void> => {
-    if (!nodeId || !activeNode) {
-      return;
-    }
 
-    if (!useVault.getState().isUnlocked) {
-      onToast(
-        t("clientEncryption.toasts.unlockRequired", { ns: "files" }),
-        "error",
-      );
-      return;
-    }
-
-    setIsEncryptingPlainFiles(true);
-
-    let encryptedCount = 0;
-    let failedCount = 0;
-    let scanIncomplete = false;
-
-    try {
-      const settings = await fetchServerSettings(queryClient);
-      const server = {
-        maxChunkSizeBytes: settings.maxChunkSizeBytes,
-        supportedHashAlgorithm: settings.supportedHashAlgorithm,
-      };
-
-      let filesToEncrypt = plainFiles;
+  const run = useCallback(
+    async (kind: FileOperation): Promise<void> => {
+      if (!nodeId || !activeNode) {
+        return;
+      }
+      if (!useVault.getState().isUnlocked) {
+        onToast(
+          t("clientEncryption.toasts.unlockRequired", { ns: "files" }),
+          "error",
+        );
+        return;
+      }
+      const operation = getOperation(kind);
+      setRunning((state) => ({ ...state, [kind]: true }));
       try {
-        const scan = await collectPlainFilesInFoldersForClientEncryption([
-          nodeId,
-        ]);
-        if (scan.truncated) {
-          scanIncomplete = true;
-        }
-        if (scan.files.length > 0) {
-          filesToEncrypt = scan.files;
-        }
-      } catch (error) {
-        reportClientError("Failed to scan folder for plain files", error);
-        scanIncomplete = true;
-      }
-      const refreshedParents = new Set<string>([nodeId]);
-      const taskHandles = createExistingFileTaskHandles(
-        filesToEncrypt,
-        "encrypt",
-        activeNode.name,
-      );
-
-      for (const [index, file] of filesToEncrypt.entries()) {
+        let settings: ServerSettings;
         try {
-          await encryptExistingFileWithTask({
-            file: toEncryptionTaskFile(file),
-            targetNodeId: file.nodeId,
-            scopeLabel: activeNode.name,
-            server,
-            task: taskHandles[index],
-          });
-          refreshedParents.add(file.nodeId);
-          encryptedCount += 1;
-        } catch {
-          failedCount += 1;
+          settings = await fetchServerSettings(queryClient);
+        } catch (error) {
+          reportClientError(
+            "Failed to load settings for file operation",
+            error,
+          );
+          onToast(
+            t("errors.serverSettingsNotLoaded", { ns: "tasks" }),
+            "error",
+          );
+          return;
         }
-      }
 
-      for (const parentId of refreshedParents) {
-        void refreshNodeContent(parentId);
-      }
-    } catch {
-      onToast(t("errors.serverSettingsNotLoaded", { ns: "tasks" }), "error");
-      return;
-    } finally {
-      setIsEncryptingPlainFiles(false);
-    }
-
-    if (encryptedCount > 0) {
-      onToast(
-        t("clientEncryption.toasts.encryptExistingComplete", {
-          ns: "files",
-          count: encryptedCount,
-        }),
-      );
-    }
-
-    if (failedCount > 0) {
-      onToast(
-        t("clientEncryption.toasts.encryptExistingFailed", {
-          ns: "files",
-          count: failedCount,
-        }),
-        "error",
-      );
-    }
-
-    if (scanIncomplete) {
-      onToast(
-        t("clientEncryption.toasts.encryptExistingScanIncomplete", {
-          ns: "files",
-        }),
-        "error",
-      );
-    }
-  }, [activeNode, nodeId, onToast, plainFiles, t]);
-
-  const decryptEncryptedFiles = useCallback(async (): Promise<void> => {
-    if (!nodeId || !activeNode) {
-      return;
-    }
-
-    if (!useVault.getState().isUnlocked) {
-      onToast(
-        t("clientEncryption.toasts.unlockRequired", { ns: "files" }),
-        "error",
-      );
-      return;
-    }
-
-    setIsDecryptingEncryptedFiles(true);
-
-    let decryptedCount = 0;
-    let failedCount = 0;
-    let scanIncomplete = false;
-
-    try {
-      const settings = await fetchServerSettings(queryClient);
-      const server = {
-        maxChunkSizeBytes: settings.maxChunkSizeBytes,
-        supportedHashAlgorithm: settings.supportedHashAlgorithm,
-      };
-
-      let filesToDecrypt = encryptedFiles;
-      try {
-        const scan = await collectEncryptedFilesInFoldersForClientEncryption([
-          nodeId,
-        ]);
-        if (scan.truncated) {
-          scanIncomplete = true;
-        }
-        if (scan.files.length > 0) {
-          filesToDecrypt = scan.files;
-        }
-      } catch (error) {
-        reportClientError("Failed to scan folder for encrypted files", error);
-        scanIncomplete = true;
-      }
-      const refreshedParents = new Set<string>([nodeId]);
-      const taskHandles = createExistingFileTaskHandles(
-        filesToDecrypt,
-        "decrypt",
-        activeNode.name,
-      );
-
-      for (const [index, file] of filesToDecrypt.entries()) {
+        let scan: ClientEncryptionFolderScanResult;
         try {
-          await decryptExistingFileWithTask({
-            file: toDecryptionTaskFile(file),
-            targetNodeId: file.nodeId,
-            scopeLabel: activeNode.name,
-            server,
-            task: taskHandles[index],
-          });
-          refreshedParents.add(file.nodeId);
-          decryptedCount += 1;
-        } catch {
-          failedCount += 1;
+          scan = await operation.scan([nodeId]);
+        } catch (error) {
+          reportClientError("Failed to scan folder for file operation", error);
+          onToast(t(operation.incomplete, { ns: "files" }), "error");
+          return;
         }
+
+        const server = {
+          maxChunkSizeBytes: settings.maxChunkSizeBytes,
+          supportedHashAlgorithm: settings.supportedHashAlgorithm,
+        };
+        const tasks = scan.files.map((file) =>
+          taskManager.createTask({
+            kind,
+            label: file.name,
+            scopeLabel: activeNode.name,
+            bytesTotal: file.sizeBytes,
+          }),
+        );
+        const refreshedParents = new Set<string>([nodeId]);
+        let completed = 0;
+        let failed = 0;
+        for (const [index, file] of scan.files.entries()) {
+          try {
+            await operation.execute({
+              file,
+              targetNodeId: file.nodeId,
+              scopeLabel: activeNode.name,
+              server,
+              task: tasks[index],
+            });
+            refreshedParents.add(file.nodeId);
+            completed += 1;
+          } catch (error) {
+            reportClientError("Folder file operation failed", error);
+            failed += 1;
+          }
+        }
+
+        if (completed > 0) {
+          onToast(t(operation.complete, { ns: "files", count: completed }));
+        }
+        if (failed > 0) {
+          onToast(t(operation.failed, { ns: "files", count: failed }), "error");
+        }
+        if (scan.truncated) {
+          onToast(t(operation.incomplete, { ns: "files" }), "error");
+        }
+
+        try {
+          await Promise.all(
+            [...refreshedParents].map((parentId) =>
+              refreshNodeContent(parentId),
+            ),
+          );
+        } catch (error) {
+          reportClientError(
+            "Failed to refresh folders after file operation",
+            error,
+          );
+          onToast(t("errors.loadContentsFailed", { ns: "files" }), "error");
+        }
+      } finally {
+        setRunning((state) => ({ ...state, [kind]: false }));
       }
+    },
+    [activeNode, nodeId, onToast, t],
+  );
 
-      for (const parentId of refreshedParents) {
-        void refreshNodeContent(parentId);
-      }
-    } catch {
-      onToast(t("errors.serverSettingsNotLoaded", { ns: "tasks" }), "error");
-      return;
-    } finally {
-      setIsDecryptingEncryptedFiles(false);
-    }
-
-    if (decryptedCount > 0) {
-      onToast(
-        t("clientEncryption.toasts.decryptExistingComplete", {
-          ns: "files",
-          count: decryptedCount,
-        }),
-      );
-    }
-
-    if (failedCount > 0) {
-      onToast(
-        t("clientEncryption.toasts.decryptExistingFailed", {
-          ns: "files",
-          count: failedCount,
-        }),
-        "error",
-      );
-    }
-
-    if (scanIncomplete) {
-      onToast(
-        t("clientEncryption.toasts.decryptExistingScanIncomplete", {
-          ns: "files",
-        }),
-        "error",
-      );
-    }
-  }, [activeNode, encryptedFiles, nodeId, onToast, t]);
+  const encryptPlainFiles = useCallback(() => run("encrypt"), [run]);
+  const decryptEncryptedFiles = useCallback(() => run("decrypt"), [run]);
 
   return {
     folderPolicyEnabled,
     plainFiles,
     encryptedFiles,
-    isEncryptingPlainFiles,
-    isDecryptingEncryptedFiles,
+    isEncryptingPlainFiles: running.encrypt,
+    isDecryptingEncryptedFiles: running.decrypt,
     encryptPlainFiles,
     decryptEncryptedFiles,
   };
 };
-
-const toEncryptionTaskFile = (file: NodeFileManifestDto) => ({
-  id: file.id,
-  name: file.name,
-  contentType: file.contentType,
-  sizeBytes: file.sizeBytes,
-});
-
-const toDecryptionTaskFile = (file: NodeFileManifestDto) => ({
-  id: file.id,
-  name: file.name,
-  contentType: file.contentType,
-  sizeBytes: file.sizeBytes,
-  metadata: file.metadata,
-});
-
-const createExistingFileTaskHandles = (
-  files: ReadonlyArray<NodeFileManifestDto>,
-  kind: "encrypt" | "decrypt",
-  scopeLabel: string,
-): AppTaskHandle[] =>
-  files.map((file) =>
-    taskManager.createTask({
-      kind,
-      label: file.name,
-      scopeLabel,
-      bytesTotal: file.sizeBytes,
-    }),
-  );

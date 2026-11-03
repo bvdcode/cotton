@@ -65,26 +65,24 @@ namespace Cotton.Server.Services
             IQueryable<Chunk> chunks,
             CancellationToken cancellationToken)
         {
-            IQueryable<LogicalChunkReference> logicalChunkReferences = BuildLogicalChunkReferences();
+            IQueryable<LogicalChunkReference> logicalChunkReferences = BuildLogicalChunkReferences(chunks);
 
-            return await (
-                from chunk in chunks
-                join reference in logicalChunkReferences on chunk.Hash equals reference.ChunkHash
-                group new { chunk, reference } by 1 into g
-                select new ReferencedChunkStats
+            return await logicalChunkReferences
+                .GroupBy(_ => 1)
+                .Select(g => new ReferencedChunkStats
                 {
                     UniqueChunkCount = g.LongCount(),
-                    UniquePlainSizeBytes = g.Sum(x => x.chunk.PlainSizeBytes),
-                    UniqueStoredSizeBytes = g.Sum(x => x.chunk.StoredSizeBytes),
-                    LogicalChunkCount = g.Sum(x => x.reference.RefCount),
-                    LogicalPlainSizeBytes = g.Sum(x => x.chunk.PlainSizeBytes * x.reference.RefCount),
-                    DeduplicatedUniqueChunkCount = g.Where(x => x.reference.RefCount > 1).LongCount(),
+                    UniquePlainSizeBytes = g.Sum(x => x.PlainSizeBytes),
+                    UniqueStoredSizeBytes = g.Sum(x => x.StoredSizeBytes),
+                    LogicalChunkCount = g.Sum(x => x.RefCount),
+                    LogicalPlainSizeBytes = g.Sum(x => x.PlainSizeBytes * x.RefCount),
+                    DeduplicatedUniqueChunkCount = g.Where(x => x.RefCount > 1).LongCount(),
                 })
                 .FirstOrDefaultAsync(cancellationToken)
                 ?? new ReferencedChunkStats();
         }
 
-        private IQueryable<LogicalChunkReference> BuildLogicalChunkReferences()
+        private IQueryable<LogicalChunkReference> BuildLogicalChunkReferences(IQueryable<Chunk> chunks)
         {
             var manifestReferenceCounts = _dbContext.NodeFiles
                 .AsNoTracking()
@@ -96,20 +94,25 @@ namespace Cotton.Server.Services
                 });
 
             var logicalChunkReferenceRows =
-                from manifestChunk in _dbContext.FileManifestChunks.AsNoTracking()
+                from chunk in chunks
+                join manifestChunk in _dbContext.FileManifestChunks.AsNoTracking()
+                    on chunk.Hash equals manifestChunk.ChunkHash
                 join manifestReference in manifestReferenceCounts
                     on manifestChunk.FileManifestId equals manifestReference.FileManifestId
                 select new
                 {
-                    manifestChunk.ChunkHash,
+                    chunk.Hash,
+                    chunk.PlainSizeBytes,
+                    chunk.StoredSizeBytes,
                     manifestReference.RefCount,
                 };
 
             return logicalChunkReferenceRows
-                .GroupBy(x => x.ChunkHash)
+                .GroupBy(x => new { x.Hash, x.PlainSizeBytes, x.StoredSizeBytes })
                 .Select(g => new LogicalChunkReference
                 {
-                    ChunkHash = g.Key,
+                    PlainSizeBytes = g.Key.PlainSizeBytes,
+                    StoredSizeBytes = g.Key.StoredSizeBytes,
                     RefCount = g.Sum(x => x.RefCount),
                 });
         }
@@ -142,7 +145,8 @@ namespace Cotton.Server.Services
 
         private class LogicalChunkReference
         {
-            public byte[] ChunkHash { get; init; } = null!;
+            public long PlainSizeBytes { get; init; }
+            public long StoredSizeBytes { get; init; }
             public long RefCount { get; init; }
         }
 

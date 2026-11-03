@@ -22,6 +22,7 @@ export const extractErrorMessage = <T>(error: T): string | null => {
 export const getMoveTarget = async (nodeId: string): Promise<{
   node: NodeDto;
   encryptsNewFiles: boolean;
+  ancestors: NodeDto[];
 }> => {
   const [node, ancestors] = await Promise.all([
     nodesApi.getNode(nodeId),
@@ -29,6 +30,7 @@ export const getMoveTarget = async (nodeId: string): Promise<{
   ]);
   return {
     node,
+    ancestors,
     encryptsNewFiles: getFolderEncryptionPolicyState(node, ancestors).effectiveEnabled,
   };
 };

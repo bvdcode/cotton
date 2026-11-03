@@ -4,6 +4,8 @@ Passkeys and OpenID Connect provide alternative ways to establish the standard C
 
 ## Passkeys
 
+WebAuthn options and response verification use **EasyExtensions.Passkeys**, a managed .NET implementation. Cotton owns the challenge lifecycle, credential persistence, account policy, and session issuance. Verification runs in the server process without the `Fido2` or `NSec.Cryptography` packages or a bundled libsodium binary.
+
 Passkey registration is an authenticated WebAuthn ceremony:
 
 1. The server creates registration options bound to the current user and relying party.
@@ -12,6 +14,8 @@ Passkey registration is an authenticated WebAuthn ceremony:
 4. The credential is persisted only after verification succeeds.
 
 Passkey sign-in follows the corresponding assertion ceremony. The challenge is short-lived and single-purpose. The server verifies the signature and advances the authenticator counter according to WebAuthn rules before issuing a Cotton session.
+
+Credentials retain their COSE/CBOR public keys and existing user handles. The library transition does not require a schema migration or passkey re-enrollment. Compatibility tests cover stored ES256, RS256, and Ed25519 credentials. Assertion verification binds the returned credential and user handle to the stored account and checks user-presence, user-verification, signature-counter, and backup-state rules before persistence.
 
 Users can list, label, and remove their credentials, and removal generates a security email when delivery is available. The current passkey-delete path does not perform the same last-sign-in-method check as OIDC unlinking; users must retain another credential or a usable email recovery path.
 

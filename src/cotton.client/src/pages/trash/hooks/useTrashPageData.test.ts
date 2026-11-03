@@ -1,3 +1,4 @@
+import { createFolder } from "../../../test/fileFixtures";
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InterfaceLayoutType, type NodeDto } from "@shared/api/layoutsApi";
@@ -49,6 +50,7 @@ const folder: NodeDto = {
   parentId: root.id,
 };
 const content: NodeContentDto = {
+  node: createFolder({ id: root.id }),
   id: root.id,
   createdAt: root.createdAt,
   updatedAt: root.updatedAt,

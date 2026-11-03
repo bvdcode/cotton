@@ -112,6 +112,7 @@ export interface FileOperations {
  * Pagination props for list views with server-side pagination
  */
 export interface PaginationProps {
+  mode?: "client" | "server";
   query?: {
     sortModel: GridSortModel;
     filterModel: GridFilterModel;
