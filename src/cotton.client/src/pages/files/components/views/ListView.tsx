@@ -36,6 +36,9 @@ export const ListView: React.FC<IFileListView> = ({
   pagination,
   autoHeight = false,
   loading = false,
+  loadingTitle,
+  loadingCaption,
+  emptyStateText,
   selectionMode = false,
   selectedIds,
   onToggleItem,
@@ -321,10 +324,13 @@ export const ListView: React.FC<IFileListView> = ({
             zIndex: 10,
           }}
         >
-          <Loader />
+          <Loader title={loadingTitle} caption={loadingCaption} />
         </Box>
       )}
       <DataGrid
+        localeText={
+          emptyStateText ? { noRowsLabel: emptyStateText } : undefined
+        }
         key={paginationMode}
         apiRef={apiRef}
         sx={{

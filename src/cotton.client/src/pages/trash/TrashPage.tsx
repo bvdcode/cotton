@@ -214,7 +214,6 @@ export const TrashPage: React.FC = () => {
 
   return (
     <TrashPageContent
-      hasContent={hasContent}
       header={
         <TrashPageHeader
           nodeId={nodeId}
@@ -236,7 +235,6 @@ export const TrashPage: React.FC = () => {
       }
       layoutType={layoutType}
       loadError={loadError}
-      loading={loading}
       restore={restore}
     >
       {(!loadError || hasContent) && (

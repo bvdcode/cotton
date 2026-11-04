@@ -17,6 +17,7 @@ const Loader: React.FC<LoaderProps> = ({ overlay, title, caption }) => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
+        textAlign: "center",
         top: 0,
         left: 0,
         opacity: 1,
