@@ -44,6 +44,9 @@ namespace Cotton.Server.Extensions
             builder.Logging.AddFilter(
                 "Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager",
                 LogLevel.Error);
+            builder.Logging.AddFilter(
+                "Microsoft.AspNetCore.DataProtection.Repositories.EphemeralXmlRepository",
+                LogLevel.Error);
             MapsterConfig.Register();
             builder.Services.AddHttpClient(AppVersionTrackerService.GitHubHttpClientName, client =>
             {
