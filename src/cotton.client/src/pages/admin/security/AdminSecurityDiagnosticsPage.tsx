@@ -49,38 +49,36 @@ export const AdminSecurityDiagnosticsPage = () => {
     : null;
 
   return (
-    <Stack>
-      <AdminPageSurface>
-        <Stack
-          spacing={3}
-          divider={<Divider flexItem />}
-          sx={{
-            p: 3,
-          }}
-        >
-          <AdminPageHeader
-            title={t("securityDiagnostics.title")}
-            description={t("securityDiagnostics.description")}
+    <AdminPageSurface>
+      <Stack
+        spacing={3}
+        divider={<Divider flexItem />}
+        sx={{
+          p: 3,
+        }}
+      >
+        <AdminPageHeader
+          title={t("securityDiagnostics.title")}
+          description={t("securityDiagnostics.description")}
+        />
+
+        {diagnosticsQuery.isPending && (
+          <Stack spacing={1.5}>
+            <Skeleton variant="rounded" height={96} />
+            <Skeleton variant="rounded" height={72} />
+            <Skeleton variant="rounded" height={180} />
+          </Stack>
+        )}
+
+        {loadError && <Alert severity="error">{loadError}</Alert>}
+
+        {diagnosticsQuery.data && (
+          <SecurityDiagnosticsContent
+            diagnostics={diagnosticsQuery.data}
+            t={t}
           />
-
-          {diagnosticsQuery.isPending && (
-            <Stack spacing={1.5}>
-              <Skeleton variant="rounded" height={96} />
-              <Skeleton variant="rounded" height={72} />
-              <Skeleton variant="rounded" height={180} />
-            </Stack>
-          )}
-
-          {loadError && <Alert severity="error">{loadError}</Alert>}
-
-          {diagnosticsQuery.data && (
-            <SecurityDiagnosticsContent
-              diagnostics={diagnosticsQuery.data}
-              t={t}
-            />
-          )}
-        </Stack>
-      </AdminPageSurface>
-    </Stack>
+        )}
+      </Stack>
+    </AdminPageSurface>
   );
 };

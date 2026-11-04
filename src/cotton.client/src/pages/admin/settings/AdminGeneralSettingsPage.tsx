@@ -17,46 +17,42 @@ export const AdminGeneralSettingsPage = () => {
   const navigate = useNavigate();
 
   return (
-    <Stack>
-      <AdminPageSurface>
-        <Stack
-          spacing={3}
-          divider={<Divider flexItem />}
-          sx={{
-            p: 3,
-          }}
-        >
-          <AdminPageHeader
-            title={t("settings.general.title")}
-            description={t("settings.general.description")}
-            action={
-              <Tooltip
-                title={t("settings.general.openSetupWizard.description")}
+    <AdminPageSurface>
+      <Stack
+        spacing={3}
+        divider={<Divider flexItem />}
+        sx={{
+          p: 3,
+        }}
+      >
+        <AdminPageHeader
+          title={t("settings.general.title")}
+          description={t("settings.general.description")}
+          action={
+            <Tooltip title={t("settings.general.openSetupWizard.description")}>
+              <IconButton
+                aria-label={t("settings.general.openSetupWizard.title")}
+                onClick={() => navigate("/setup?preview=1")}
               >
-                <IconButton
-                  aria-label={t("settings.general.openSetupWizard.title")}
-                  onClick={() => navigate("/setup?preview=1")}
-                >
-                  <SettingsSuggestIcon />
-                </IconButton>
-              </Tooltip>
-            }
-          />
+                <SettingsSuggestIcon />
+              </IconButton>
+            </Tooltip>
+          }
+        />
 
-          <PublicBaseUrlSetting />
-          <TrustedProxyIpAddressSetting />
-          <TimezoneSetting />
-          <ComputationModeSetting />
-          <ServerUsageSetting />
-          <BooleanSwitchSetting
-            title={t("settings.general.fields.disableVersionCheck")}
-            description={t("settings.general.help.disableVersionCheck")}
-            toastIdPrefix="admin-general:disable-version-check"
-            load={settingsApi.getDisableVersionCheck}
-            save={settingsApi.setDisableVersionCheck}
-          />
-        </Stack>
-      </AdminPageSurface>
-    </Stack>
+        <PublicBaseUrlSetting />
+        <TrustedProxyIpAddressSetting />
+        <TimezoneSetting />
+        <ComputationModeSetting />
+        <ServerUsageSetting />
+        <BooleanSwitchSetting
+          title={t("settings.general.fields.disableVersionCheck")}
+          description={t("settings.general.help.disableVersionCheck")}
+          toastIdPrefix="admin-general:disable-version-check"
+          load={settingsApi.getDisableVersionCheck}
+          save={settingsApi.setDisableVersionCheck}
+        />
+      </Stack>
+    </AdminPageSurface>
   );
 };

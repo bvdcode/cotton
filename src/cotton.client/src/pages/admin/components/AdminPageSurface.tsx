@@ -18,15 +18,16 @@ export const AdminPageSurface = ({
       display: "flex",
       justifyContent: "center",
       height: fullHeight ? "100%" : undefined,
-      minHeight: fullHeight ? 0 : undefined,
+      minHeight: 0,
     }}
   >
     <Paper
       sx={{
         width: `min(100%, ${ADMIN_PAGE_SURFACE_WIDTH}px)`,
-        overflow: "hidden",
+        overflow: fullHeight ? "hidden" : "auto",
+        scrollbarWidth: "thin",
         height: fullHeight ? "100%" : undefined,
-        minHeight: fullHeight ? 0 : undefined,
+        minHeight: 0,
         display: fullHeight ? "flex" : undefined,
         flexDirection: fullHeight ? "column" : undefined,
       }}
