@@ -24,7 +24,8 @@ namespace Cotton.Server.Services
             {
                 int remaining = ListingRequestLimits.MaxTraversedNodes - traversed;
                 parents = await directory.GetNodes(parents).AsNoTracking()
-                    .Select(node => node.Id).Take(remaining + 1).ToListAsync(cancellationToken);
+                    .OrderBy(node => node.Id).Select(node => node.Id)
+                    .Take(remaining + 1).ToListAsync(cancellationToken);
                 traversed += parents.Count;
                 if (traversed > ListingRequestLimits.MaxTraversedNodes)
                 {

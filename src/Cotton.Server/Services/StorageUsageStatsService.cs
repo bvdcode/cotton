@@ -57,7 +57,7 @@ namespace Cotton.Server.Services
                     UniquePlainSizeBytes = g.Sum(x => x.PlainSizeBytes),
                     UniqueStoredSizeBytes = g.Sum(x => x.StoredSizeBytes),
                 })
-                .FirstOrDefaultAsync(cancellationToken)
+                .SingleOrDefaultAsync(cancellationToken)
                 ?? new TotalChunkStats();
         }
 
@@ -78,7 +78,7 @@ namespace Cotton.Server.Services
                     LogicalPlainSizeBytes = g.Sum(x => x.PlainSizeBytes * x.RefCount),
                     DeduplicatedUniqueChunkCount = g.Where(x => x.RefCount > 1).LongCount(),
                 })
-                .FirstOrDefaultAsync(cancellationToken)
+                .SingleOrDefaultAsync(cancellationToken)
                 ?? new ReferencedChunkStats();
         }
 
@@ -139,7 +139,7 @@ namespace Cotton.Server.Services
                     OverdueStoredSizeBytes = g.Where(x => x.GCScheduledAfter <= nowUtc)
                         .Sum(x => (long?)x.StoredSizeBytes) ?? 0L,
                 })
-                .FirstOrDefaultAsync(cancellationToken)
+                .SingleOrDefaultAsync(cancellationToken)
                 ?? new PendingGcStats();
         }
 
