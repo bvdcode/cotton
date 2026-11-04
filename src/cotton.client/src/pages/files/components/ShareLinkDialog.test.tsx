@@ -49,14 +49,17 @@ beforeEach(() => {
 });
 
 describe("ShareLinkDialog", () => {
-  it("keeps standard Escape closing available", () => {
+  it("keeps standard Escape closing available", async () => {
     const close = vi.fn();
     render(<ShareLinkDialog target={target} onClose={close} />);
-    fireEvent.keyDown(screen.getByRole("textbox", { name: "share.options.name" }), {
-      key: "Escape",
-      code: "Escape",
-    });
-    expect(close).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(
+      screen.getByRole("textbox", { name: "share.options.name" }),
+      {
+        key: "Escape",
+        code: "Escape",
+      },
+    );
+    await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
   });
   it("creates a named file link with custom duration without changing profile defaults", async () => {
     render(<ShareLinkDialog target={target} onClose={vi.fn()} />);
@@ -106,7 +109,7 @@ describe("ShareLinkDialog", () => {
     const link = await screen.findByRole("textbox", {
       name: "share.options.link",
     });
-    expect(link).toHaveFocus();
+    await waitFor(() => expect(link).toHaveFocus());
     expect(link).toHaveValue(`${window.location.origin}/s/folder-link`);
     expect(layoutsApi.getNodeShareLink).toHaveBeenCalledExactlyOnceWith(
       "folder-1",
@@ -232,7 +235,9 @@ describe("ShareLinkDialog", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.cancel" }),
     );
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
     fireEvent.click(menuButton);
     fireEvent.click(screen.getByRole("menuitem", { name: /Share/ }));
     expect(quickShare).toHaveBeenCalledTimes(1);
