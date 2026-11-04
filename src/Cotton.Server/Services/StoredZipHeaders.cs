@@ -15,6 +15,7 @@ namespace Cotton.Server.Services
         internal const ushort VersionZip64 = 45;
         internal const uint UInt32Max = uint.MaxValue;
         internal const ushort UInt16Max = ushort.MaxValue;
+        internal const int CentralDirectoryChecksumOffset = 16;
 
         internal static bool RequiresZip64CentralDirectoryMetadata(long sizeBytes, long localHeaderOffset)
         {

@@ -358,7 +358,9 @@ export const getValidated = async <TSchema extends z.ZodTypeAny>(
   return parseValidated(url, response.data, schema);
 };
 
-const retriedRequests = new WeakSet<InternalAxiosRequestConfig>();
+interface AuthRetryRequestConfig extends InternalAxiosRequestConfig {
+  authRetryAttempted?: boolean;
+}
 
 // Request interceptor - attach token
 httpClient.interceptors.request.use(
@@ -380,7 +382,7 @@ httpClient.interceptors.request.use(
 httpClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<JsonValue>) => {
-    const originalRequest = error.config;
+    const originalRequest: AuthRetryRequestConfig | undefined = error.config;
     if (!originalRequest) {
       tryDispatchApiErrorToast(error);
       return Promise.reject(error);
@@ -392,10 +394,7 @@ httpClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (
-      error.response?.status === 401 &&
-      !retriedRequests.has(originalRequest)
-    ) {
+    if (error.response?.status === 401 && !originalRequest.authRetryAttempted) {
       // Don't retry on auth endpoints themselves
       if (url.includes("auth/refresh")) {
         return Promise.reject(error);
@@ -418,7 +417,7 @@ httpClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      retriedRequests.add(originalRequest);
+      originalRequest.authRetryAttempted = true;
 
       try {
         const newToken = await refreshAccessToken();

@@ -13,6 +13,7 @@ namespace Cotton.Server.Services.Search
                     x.Kind,
                     x.Id,
                     x.NodeIdForPath,
+                    x.ParentNodeId,
                     x.Name,
                     x.NameKey,
                 })
@@ -21,6 +22,7 @@ namespace Cotton.Server.Services.Search
                     Kind = x.Key.Kind,
                     Id = x.Key.Id,
                     NodeIdForPath = x.Key.NodeIdForPath,
+                    ParentNodeId = x.Key.ParentNodeId,
                     Name = x.Key.Name,
                     NameKey = x.Key.NameKey,
                     Score = x.Max(hit => hit.Score),

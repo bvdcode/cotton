@@ -39,10 +39,13 @@ export const AvatarUploadControl = ({
       <Avatar
         alt={alt}
         src={src}
+        variant="square"
         sx={{
           width: "100%",
           height: "100%",
-          bgcolor: "primary.main",
+          "&.MuiAvatar-colorDefault": {
+            bgcolor: "primary.main",
+          },
         }}
       >
         {!src && initials}

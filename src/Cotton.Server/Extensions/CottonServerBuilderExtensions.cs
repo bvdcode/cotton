@@ -44,6 +44,9 @@ namespace Cotton.Server.Extensions
             builder.Logging.AddFilter(
                 "Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager",
                 LogLevel.Error);
+            builder.Logging.AddFilter(
+                "Microsoft.AspNetCore.DataProtection.Repositories.EphemeralXmlRepository",
+                LogLevel.Error);
             MapsterConfig.Register();
             builder.Services.AddHttpClient(AppVersionTrackerService.GitHubHttpClientName, client =>
             {
@@ -126,7 +129,7 @@ namespace Cotton.Server.Extensions
                 .AddScoped<ServerSettingsValidator>()
                 .AddScoped<SecurityDiagnosticsService>()
                 .AddScoped<StoragePipelineProbeService>()
-                .AddScoped<IPasskeyClientFactory, PasskeyClientFactory>()
+                .AddScoped<IPasskeyServerFactory, PasskeyServerFactory>()
                 .AddScoped<AuthSessionIssuer>()
                 .AddScoped(sp => new OidcDiscoveryService(sp.GetRequiredService<IHttpClientFactory>().CreateClient(OidcDiscoveryService.HttpClientName)))
                 .AddScoped<RefreshTokenRevocationService>()
@@ -144,6 +147,7 @@ namespace Cotton.Server.Extensions
                 .AddScoped<PublicShareTokenGenerator>()
                 .AddSingleton<ArchiveDownloadTicketStore>()
                 .AddSingleton<StoredZipArchiveWriter>()
+                .AddScoped<ArchiveDownloadResultExecutor>()
                 .AddScoped<StoragePressureGuard>()
                 .AddScoped<DefaultUserContentSeeder>()
                 .AddScoped<ChunkUsageService>()

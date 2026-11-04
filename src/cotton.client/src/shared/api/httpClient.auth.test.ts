@@ -254,6 +254,34 @@ describe("401 response recovery", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
+  it("refreshes at most once per request when the retry also returns 401", async () => {
+    let attempts = 0;
+    const adapter: AxiosAdapter = async (config) => {
+      attempts += 1;
+      const response = createResponse(config, attempts <= 4 ? 401 : 500, {});
+      throw new AxiosError(
+        "Unauthorized",
+        "ERR_BAD_RESPONSE",
+        config,
+        undefined,
+        response,
+      );
+    };
+    const refresh = vi
+      .spyOn(httpClient, "post")
+      .mockResolvedValue(authSessionResponse);
+
+    for (let request = 0; request < 2; request += 1) {
+      await expect(
+        httpClient.get("protected", { adapter }),
+      ).rejects.toMatchObject({
+        response: { status: 401 },
+      });
+      expect(attempts).toBe((request + 1) * 2);
+      expect(refresh).toHaveBeenCalledTimes(request + 1);
+    }
+  });
+
   it("preserves auth state and rejects the original error after a temporary refresh failure", async () => {
     const adapter: AxiosAdapter = async (config) => {
       const response = createResponse(config, 401, {});

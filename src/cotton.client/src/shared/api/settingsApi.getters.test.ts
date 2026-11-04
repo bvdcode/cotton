@@ -202,14 +202,16 @@ describe("settingsApi getters", () => {
     );
   });
 
-  it("normalizes enum and usage responses", async () => {
+  it("preserves declared enum and usage values", async () => {
     vi.spyOn(httpClient, "get")
-      .mockResolvedValueOnce({ data: { serverUsage: ["photos", 3, "bad"] } })
-      .mockResolvedValueOnce({ data: { storageSpaceMode: "limited" } })
-      .mockResolvedValueOnce({ data: { computionMode: "remote" } })
-      .mockResolvedValueOnce({ data: { storageType: "s3" } })
-      .mockResolvedValueOnce({ data: { emailMode: "custom" } })
-      .mockResolvedValueOnce({ data: { geoIpLookupMode: "maxmindlocal" } });
+      .mockResolvedValueOnce({
+        data: { serverUsage: ["Photos", "Media", "Other"] },
+      })
+      .mockResolvedValueOnce({ data: { storageSpaceMode: "Limited" } })
+      .mockResolvedValueOnce({ data: { computionMode: "Remote" } })
+      .mockResolvedValueOnce({ data: { storageType: "S3" } })
+      .mockResolvedValueOnce({ data: { emailMode: "Custom" } })
+      .mockResolvedValueOnce({ data: { geoIpLookupMode: "MaxMindLocal" } });
 
     await expect(settingsApi.getServerUsage()).resolves.toEqual([
       "Photos",

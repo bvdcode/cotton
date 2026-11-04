@@ -2218,7 +2218,6 @@
     },
     "title": "Files",
     "folderSizes": {
-      "calculate": "Calculate folder sizes",
       "calculating": "Calculating folder sizes…",
       "failed": "Could not calculate all folder sizes. Try again."
     },
@@ -2343,6 +2342,8 @@
       "confirmDescription": "Selected items will be moved to Trash and can be restored later."
     },
     "conflicts": {
+      "merge": "Merge",
+      "mergeDescription": "A folder with this name already exists. Merge their contents, or use {{newName}} instead?",
       "title": "Name conflict",
       "description": "An item with this name already exists in this folder. Use {{newName}} instead?",
       "overwriteDescription": "An item with this name already exists in this folder. Replace it, or use {{newName}} instead?",
@@ -2398,6 +2399,24 @@
         "link": "Failed to generate share link.",
         "token": "Failed to extract share token.",
         "copy": "Failed to copy link to clipboard."
+      },
+      "options": {
+        "title": "Share settings",
+        "name": "Link name",
+        "nameHint": "Optional. Leave blank for a random address.",
+        "invalidName": "Use letters, numbers, hyphens or underscores.",
+        "nameTaken": "This link name is already in use.",
+        "duration": "Expires after",
+        "unit": "Unit",
+        "units": {
+          "days": "Days",
+          "hours": "Hours",
+          "minutes": "Minutes",
+          "never": "Never expires"
+        },
+        "invalidDuration": "Choose a duration from 1 minute to 10 years.",
+        "create": "Create link",
+        "link": "Public link"
       }
     },
     "preview": {
@@ -2509,7 +2528,10 @@
         "modelLoadFailed": "Failed to load 3D model",
         "modelUnsupportedType": "This 3D file format is not supported for in-browser preview",
         "pdfTooLarge": "PDF is too large to preview ({{size}}). Maximum size is {{maxSize}}. Please download the file to view it.",
-        "fileTooLarge": "File is too large to preview ({{size}}). Maximum size for text preview is {{maxSize}}. Please download the file to view it."
+        "fileTooLarge": "File is too large to preview ({{size}}). Maximum size for preview is {{maxSize}}. Please download the file to view it."
+      },
+      "office": {
+        "truncated": "Showing the first {{rows}} rows and {{columns}} columns of this sheet."
       }
     },
     "actionsTitle": "Actions",

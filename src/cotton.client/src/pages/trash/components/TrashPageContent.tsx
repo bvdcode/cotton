@@ -9,39 +9,25 @@ import {
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { InterfaceLayoutType } from "@shared/api/layoutsApi";
-import Loader from "@shared/ui/Loader";
 import type { useTrashRestoreActions } from "../hooks";
 import { RestoreConflictDialog } from "./RestoreConflictDialog";
 
 interface TrashPageContentProps {
   children: React.ReactNode;
-  hasContent: boolean;
   header: React.ReactNode;
   layoutType: InterfaceLayoutType;
   loadError: string | null;
-  loading: boolean;
   restore: ReturnType<typeof useTrashRestoreActions>;
 }
 
 export const TrashPageContent: React.FC<TrashPageContentProps> = ({
   children,
-  hasContent,
   header,
   layoutType,
   loadError,
-  loading,
   restore,
 }) => {
   const { t } = useTranslation("trash");
-
-  if (
-    loading &&
-    !hasContent &&
-    !loadError &&
-    layoutType !== InterfaceLayoutType.List
-  ) {
-    return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
-  }
 
   const progressPercent =
     restore.progress.total > 0

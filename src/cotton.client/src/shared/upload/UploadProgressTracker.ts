@@ -4,6 +4,11 @@ import type { UploadTaskInternal } from "./UploadManager";
 import type { UploadExecutionState } from "./UploadTaskRunner";
 
 export class UploadProgressTracker {
+  private readonly speedTasks = new Map<
+    UploadTaskInternal,
+    UploadExecutionState
+  >();
+  private speedInterval: ReturnType<typeof setInterval> | null = null;
   private overallBytesTotal = 0;
   private overallBytesUploaded = 0;
   private overallBytesProcessedForSpeed = 0;
@@ -23,6 +28,7 @@ export class UploadProgressTracker {
   }
 
   beginBatch(): void {
+    this.destroy();
     this.overallBytesTotal = 0;
     this.overallBytesUploaded = 0;
     this.overallBytesProcessedForSpeed = 0;
@@ -119,6 +125,55 @@ export class UploadProgressTracker {
         : taskRate.averageBytesPerSec;
     this.overallBytesProcessedForSpeed += speedDelta;
     this.overallEstimator.update(this.overallBytesProcessedForSpeed, now);
+    this.speedTasks.set(task, state);
+    this.startSpeedRefresh();
+  }
+
+  private startSpeedRefresh(): void {
+    if (this.speedInterval !== null) {
+      return;
+    }
+    this.speedInterval = setInterval(
+      () => this.refreshSpeeds(),
+      uploadConfig.speedRefreshIntervalMs,
+    );
+  }
+
+  private refreshSpeeds(): void {
+    const now = Date.now();
+    const previousOverallSpeed = this.getSpeed();
+    this.overallEstimator.update(this.overallBytesProcessedForSpeed, now);
+    let changed = previousOverallSpeed !== this.getSpeed();
+
+    for (const [task, state] of this.speedTasks) {
+      const speed =
+        task.status === "uploading"
+          ? state.taskEstimator.update(task._bytesProcessedForSpeed ?? 0, now)
+              .rollingBytesPerSec
+          : 0;
+      if (task.uploadSpeedBytesPerSec !== speed) {
+        task.uploadSpeedBytesPerSec = speed;
+        changed = true;
+      }
+      if (speed === 0) {
+        this.speedTasks.delete(task);
+      }
+    }
+
+    if (this.speedTasks.size === 0 && this.getSpeed() === 0) {
+      this.destroy();
+    }
+    if (changed) {
+      this.emit();
+    }
+  }
+
+  destroy(): void {
+    if (this.speedInterval !== null) {
+      clearInterval(this.speedInterval);
+      this.speedInterval = null;
+    }
+    this.speedTasks.clear();
   }
 
   complete(task: UploadTaskInternal, previousBytesUploaded: number): void {

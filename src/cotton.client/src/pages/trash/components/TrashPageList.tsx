@@ -55,6 +55,7 @@ export const TrashPageList: React.FC<TrashPageListProps> = ({
     listError,
     listLoading,
     listTotalCount,
+    paginationModel,
   } = listData;
   const folderOperationAdapter = useMemo<FolderOperations>(
     () => ({
@@ -100,12 +101,20 @@ export const TrashPageList: React.FC<TrashPageListProps> = ({
     () =>
       layoutType === InterfaceLayoutType.List
         ? {
+            mode: "client" as const,
+            model: paginationModel,
             totalCount: listTotalCount,
             loading: listLoading,
             onPaginationModelChange: handlePaginationModelChange,
           }
         : undefined,
-    [handlePaginationModelChange, layoutType, listLoading, listTotalCount],
+    [
+      handlePaginationModelChange,
+      layoutType,
+      listLoading,
+      listTotalCount,
+      paginationModel,
+    ],
   );
   const handleToggleItem = useCallback(
     (
@@ -122,11 +131,16 @@ export const TrashPageList: React.FC<TrashPageListProps> = ({
 
   return (
     <Box
-      sx={
-        layoutType === InterfaceLayoutType.List
-          ? { flex: 1, minHeight: 0, overflow: "hidden", pb: 1 }
-          : { pb: { xs: 1, sm: 2 } }
-      }
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        minHeight: 0,
+        ...(layoutType === InterfaceLayoutType.List && {
+          overflow: "hidden",
+          pb: 1,
+        }),
+      }}
     >
       <FileListViewFactory
         layoutType={layoutType}
@@ -139,11 +153,7 @@ export const TrashPageList: React.FC<TrashPageListProps> = ({
         loading={fileListLoading}
         loadingTitle={t("loading.title")}
         loadingCaption={t("loading.caption")}
-        emptyStateText={
-          !loadError && layoutType === InterfaceLayoutType.Tiles
-            ? t("empty")
-            : undefined
-        }
+        emptyStateText={!loadError ? t("empty") : undefined}
         newFolderName=""
         onNewFolderNameChange={() => {}}
         onConfirmNewFolder={() => Promise.resolve()}

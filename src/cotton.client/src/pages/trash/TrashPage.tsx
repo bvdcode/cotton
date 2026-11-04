@@ -27,6 +27,7 @@ import {
 import { useFileListSourceLogic } from "../files/hooks/useFileListPageLogic";
 import { TrashPageContent } from "./components/TrashPageContent";
 import { TrashPageHeader } from "./components/TrashPageHeader";
+import { useFolderSizeInvalidation } from "@shared/api/queries/useFolderSizeInvalidation";
 import { TrashPageList } from "./components/TrashPageList";
 import { useTrashPageData } from "./hooks/useTrashPageData";
 import {
@@ -60,6 +61,7 @@ export const TrashPage: React.FC = () => {
   const confirm = useConfirm();
   const queryClient = useQueryClient();
   const isTrashRoot = !routeNodeId;
+  useFolderSizeInvalidation(isAuthenticated);
 
   const storedLayoutType = useLocalPreferencesStore(selectTrashLayoutType);
   const layoutType = storedLayoutType ?? InterfaceLayoutType.Tiles;
@@ -200,7 +202,7 @@ export const TrashPage: React.FC = () => {
   const bulkActions = useTrashBulkActions({
     t,
     confirm,
-    content,
+    content: effectiveContent,
     tiles,
     nodeId,
     isTrashRoot,
@@ -212,13 +214,14 @@ export const TrashPage: React.FC = () => {
 
   return (
     <TrashPageContent
-      hasContent={hasContent}
       header={
         <TrashPageHeader
+          nodeId={nodeId}
+          isRoot={isTrashRoot}
           actionsLoading={loading}
           breadcrumbs={breadcrumbs}
           bulkActions={bulkActions}
-          content={content}
+          content={effectiveContent}
           fileSelection={fileSelection}
           loading={layoutType !== InterfaceLayoutType.List && loading}
           onGoHome={goHome}
@@ -232,7 +235,6 @@ export const TrashPage: React.FC = () => {
       }
       layoutType={layoutType}
       loadError={loadError}
-      loading={loading}
       restore={restore}
     >
       {(!loadError || hasContent) && (

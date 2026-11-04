@@ -32,4 +32,5 @@ export const uploadConfig = {
 
   // UI refresh throttling for upload progress callbacks.
   progressEmitIntervalMs: 100,
+  speedRefreshIntervalMs: 500,
 } as const;

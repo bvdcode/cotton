@@ -12,6 +12,7 @@ import { TileItem } from "./TileItem";
 import { useTileDragAndDrop } from "./hooks/useTileDragAndDrop";
 import { useTileGridLayout } from "./hooks/useTileGridLayout";
 import { useTilesKeyboard } from "./useTilesKeyboard";
+import { useTileMovement } from "./hooks/useTileMovement";
 
 const VIRTUALIZATION_THRESHOLD = 80;
 
@@ -76,6 +77,8 @@ export const TilesView: React.FC<IFileListView> = ({
     readOnly,
     onNavigateBack,
   });
+
+  useTileMovement(containerRef, orderedIds, leadingItemCount);
 
   useEffect(() => {
     if (isCreatingFolder) {
@@ -164,34 +167,12 @@ export const TilesView: React.FC<IFileListView> = ({
     />
   );
 
-  if (!loading && !isCreatingFolder && tiles.length === 0 && emptyStateText) {
-    return (
-      <Box
-        sx={{
-          flex: 1,
-          minHeight: 240,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-          gap: 1.5,
-          color: "text.secondary",
-        }}
-      >
-        <FolderOpenOutlinedIcon sx={{ fontSize: 56, opacity: 0.4 }} />
-        <Typography
-          variant="h6"
-          sx={{
-            color: "text.secondary",
-            fontWeight: 500,
-          }}
-        >
-          {emptyStateText}
-        </Typography>
-      </Box>
-    );
-  }
+  const showLoading = loading && tiles.length === 0;
+  const showEmpty =
+    !loading &&
+    !isCreatingFolder &&
+    tiles.length === 0 &&
+    Boolean(emptyStateText);
 
   return (
     <Box
@@ -202,65 +183,81 @@ export const TilesView: React.FC<IFileListView> = ({
       sx={{
         position: "relative",
         pb: { xs: 1, sm: 2 },
+        ...((showLoading || showEmpty) && {
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+        }),
       }}
     >
-      {loading && tiles.length === 0 && (
+      {showLoading && <Loader title={loadingTitle} caption={loadingCaption} />}
+      {showEmpty && (
         <Box
           sx={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            flex: 1,
+            minHeight: 0,
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            minHeight: 200,
-            bgcolor: "background.default",
-            zIndex: 10,
+            textAlign: "center",
+            gap: 1.5,
+            color: "text.secondary",
           }}
         >
-          <Loader title={loadingTitle} caption={loadingCaption} />
+          <FolderOpenOutlinedIcon sx={{ fontSize: 56, opacity: 0.4 }} />
+          <Typography
+            variant="h6"
+            sx={{
+              color: "text.secondary",
+              fontWeight: 500,
+            }}
+          >
+            {emptyStateText}
+          </Typography>
         </Box>
       )}
 
-      {shouldVirtualize ? (
-        <Virtuoso
-          ref={virtuosoRef}
-          customScrollParent={scrollParent ?? undefined}
-          totalCount={Math.ceil((tiles.length + leadingItemCount) / columns)}
-          overscan={600}
-          itemContent={(rowIndex: number) => {
-            const start = rowIndex * columns - leadingItemCount;
-            const firstTileIndex = Math.max(0, start);
-            const rowTiles = tiles.slice(firstTileIndex, start + columns);
+      {!showLoading &&
+        !showEmpty &&
+        (shouldVirtualize ? (
+          <Virtuoso
+            ref={virtuosoRef}
+            customScrollParent={scrollParent ?? undefined}
+            totalCount={Math.ceil((tiles.length + leadingItemCount) / columns)}
+            overscan={600}
+            itemContent={(rowIndex: number) => {
+              const start = rowIndex * columns - leadingItemCount;
+              const firstTileIndex = Math.max(0, start);
+              const rowTiles = tiles.slice(firstTileIndex, start + columns);
 
-            return (
-              <Box
-                sx={{
-                  display: "grid",
-                  gap: `${gapPx}px`,
-                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                  pb: `${gapPx}px`,
-                }}
-              >
-                {rowIndex === 0 && newFolderCard}
-                {rowTiles.map((tile: FileSystemTile, tileOffset: number) =>
-                  renderTile(tile, firstTileIndex + tileOffset),
-                )}
-              </Box>
-            );
-          }}
-          endReached={onLoadMore}
-        />
-      ) : (
-        <Box sx={gridStyles}>
-          {newFolderCard}
-          {tiles.map((tile: FileSystemTile, index: number) =>
-            renderTile(tile, index),
-          )}
-        </Box>
-      )}
+              return (
+                <Box
+                  sx={{
+                    display: "grid",
+                    gap: `${gapPx}px`,
+                    gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                    pb: `${gapPx}px`,
+                  }}
+                >
+                  {rowIndex === 0 && newFolderCard}
+                  {rowTiles.map((tile: FileSystemTile, tileOffset: number) =>
+                    renderTile(tile, firstTileIndex + tileOffset),
+                  )}
+                </Box>
+              );
+            }}
+            endReached={onLoadMore}
+          />
+        ) : (
+          <Box sx={gridStyles}>
+            {newFolderCard}
+            {tiles.map((tile: FileSystemTile, index: number) =>
+              renderTile(tile, index),
+            )}
+          </Box>
+        ))}
     </Box>
   );
 };

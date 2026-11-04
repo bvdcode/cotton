@@ -14,6 +14,11 @@ namespace Cotton.Nodes
     public class NodeContentDto : BaseDto<Guid>
     {
         /// <summary>
+        /// Gets or sets the node whose children were requested.
+        /// </summary>
+        public NodeDto Node { get; set; } = null!;
+
+        /// <summary>
         /// Gets or sets the child nodes returned by the request.
         /// </summary>
         public List<NodeDto> Nodes { get; set; } = [];

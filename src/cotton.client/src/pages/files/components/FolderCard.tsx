@@ -55,6 +55,7 @@ type FolderAction = NonNullable<
 
 type FolderActionOptions = Pick<
   FolderCardProps,
+  | "folder"
   | "onCut"
   | "onCopy"
   | "onDelete"
@@ -141,6 +142,11 @@ const addShareAction = (
       icon: <Share />,
       onClick: options.onShare,
       tooltip: options.t("common:actions.share"),
+      shareTarget: {
+        kind: "folder",
+        id: options.folder.id,
+        name: options.folder.name,
+      },
     });
   }
 };
@@ -252,6 +258,7 @@ export const FolderCard = ({
   const actions = useMemo(
     () =>
       buildFolderActions({
+        folder,
         encryptionPolicyInherited,
         explicitEncryptionPolicyEnabled,
         onCut,
@@ -269,6 +276,7 @@ export const FolderCard = ({
         isPinned,
       }),
     [
+      folder,
       encryptionPolicyInherited,
       explicitEncryptionPolicyEnabled,
       onCut,

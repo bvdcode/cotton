@@ -1,4 +1,4 @@
-import heic2any from "heic2any";
+import { convertHeicBlobToJpeg } from "../heic/convertHeicBlobToJpeg";
 
 const heicUrlCache = new Map<string, string>();
 
@@ -16,7 +16,9 @@ const canBrowserDecode = (url: string): Promise<boolean> =>
 
 export const convertHeicToJpeg = async (url: string): Promise<string> => {
   const cachedUrl = heicUrlCache.get(url);
-  if (cachedUrl) return cachedUrl;
+  if (cachedUrl) {
+    return cachedUrl;
+  }
 
   if (await canBrowserDecode(url)) {
     heicUrlCache.set(url, url);
@@ -25,12 +27,7 @@ export const convertHeicToJpeg = async (url: string): Promise<string> => {
 
   const response = await fetch(url);
   const blob = await response.blob();
-  const converted = await heic2any({
-    blob,
-    toType: "image/jpeg",
-    quality: 0.92,
-  });
-  const resultBlob = Array.isArray(converted) ? converted[0] : converted;
+  const resultBlob = await convertHeicBlobToJpeg(blob);
   const objectUrl = URL.createObjectURL(resultBlob);
   heicUrlCache.set(url, objectUrl);
   return objectUrl;

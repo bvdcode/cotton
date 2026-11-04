@@ -15,6 +15,9 @@ namespace Cotton.Server.Services.Startup
             builder.Logging.AddFilter(
                 "Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager",
                 LogLevel.Error);
+            builder.Logging.AddFilter(
+                "Microsoft.AspNetCore.DataProtection.Repositories.EphemeralXmlRepository",
+                LogLevel.Error);
 
             WebApplication app = builder.Build();
             ILogger logger = app.Services

@@ -131,11 +131,16 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
     <>
       {shouldRenderFileList && (
         <Box
-          sx={
-            layoutType === InterfaceLayoutType.List
-              ? { flex: 1, minHeight: 0, overflow: "hidden", pb: 1 }
-              : {}
-          }
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            minHeight: 0,
+            ...(layoutType === InterfaceLayoutType.List && {
+              overflow: "hidden",
+              pb: 1,
+            }),
+          }}
         >
           <FileListViewFactory
             layoutType={layoutType}
@@ -150,11 +155,7 @@ export const FilesPageList: React.FC<FilesPageListProps> = ({
             loading={isLoading}
             loadingTitle={t("loading.title")}
             loadingCaption={t("loading.caption")}
-            emptyStateText={
-              !error && layoutType === InterfaceLayoutType.Tiles
-                ? t("empty.all")
-                : undefined
-            }
+            emptyStateText={!error ? t("empty.all") : undefined}
             newFolderName={contentOperations.folderOps.newFolderName}
             onNewFolderNameChange={contentOperations.folderOps.setNewFolderName}
             onConfirmNewFolder={

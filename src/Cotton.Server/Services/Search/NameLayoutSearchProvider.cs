@@ -42,6 +42,7 @@ namespace Cotton.Server.Services.Search
                 Kind = LayoutSearchHitKind.Node,
                 Id = x.Id,
                 NodeIdForPath = x.Id,
+                ParentNodeId = x.ParentId,
                 Name = x.Name,
                 NameKey = x.NameKey,
                 Score =
@@ -71,6 +72,7 @@ namespace Cotton.Server.Services.Search
                 Kind = LayoutSearchHitKind.File,
                 Id = x.Id,
                 NodeIdForPath = x.NodeId,
+                ParentNodeId = x.NodeId,
                 Name = x.Name,
                 NameKey = x.NameKey,
                 Score =

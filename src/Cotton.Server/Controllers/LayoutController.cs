@@ -79,10 +79,11 @@ namespace Cotton.Server.Controllers
             [FromQuery] string query,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20,
-            [FromQuery] bool deep = false)
+            [FromQuery] bool deep = false,
+            [FromQuery] Guid? currentNodeId = null)
         {
             Guid userId = User.GetUserId();
-            SearchLayoutsQuery request = new(userId, layoutId, query, page, pageSize, deep);
+            SearchLayoutsQuery request = new(userId, layoutId, query, page, pageSize, deep, currentNodeId);
             PagedResult<SearchResultDto> result = await _mediator.Send(request, HttpContext.RequestAborted);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
             return Ok(result.Payload);
@@ -147,6 +148,28 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPatch("nodes/{nodeId:guid}/metadata/bulk")]
+        [ProducesResponseType<IReadOnlyList<NodeDto>>(StatusCodes.Status200OK)]
+        [ProducesResponseType<CottonResult>(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType<CottonResult>(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> BulkUpdateLayoutNodeMetadata(
+            [FromRoute] Guid nodeId,
+            [FromBody] Dictionary<string, string?>? patch,
+            [FromQuery] bool includeDescendants = false)
+        {
+            UpdateNodeMetadataResult result = await _mediator.Send(
+                new UpdateNodeMetadataRequest(User.GetUserId(), nodeId, patch, includeDescendants),
+                HttpContext.RequestAborted);
+            return result.Status switch
+            {
+                UpdateNodeMetadataStatus.Updated => Ok(result.Nodes),
+                UpdateNodeMetadataStatus.InvalidPatch => CottonResult.BadRequest(result.Error!),
+                UpdateNodeMetadataStatus.NodeNotFound => CottonResult.NotFound(result.Error!),
+                _ => throw new ArgumentOutOfRangeException(nameof(result.Status)),
+            };
+        }
+
+        [Authorize]
         [HttpGet("nodes/{nodeId:guid}")]
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
         {
@@ -185,17 +208,18 @@ namespace Cotton.Server.Controllers
                 };
             }
 
-            return Ok(result.Node!);
+            return Ok(result.Nodes!.Single());
         }
 
         [Authorize]
         [HttpDelete("nodes/{nodeId:guid}")]
         public async Task<IActionResult> DeleteLayoutNode(
             [FromRoute] Guid nodeId,
-            [FromQuery] bool skipTrash = false)
+            [FromQuery] bool skipTrash = false,
+            [FromQuery] bool onlyIfEmpty = false)
         {
             Guid userId = User.GetUserId();
-            DeleteNodeRequest request = new(userId, nodeId, skipTrash);
+            DeleteNodeRequest request = new(userId, nodeId, skipTrash, onlyIfEmpty);
             await _mediator.Send(
                 request,
                 HttpContext.RequestAborted);
@@ -297,6 +321,19 @@ namespace Cotton.Server.Controllers
                     request.Names,
                     request.IncludeTakenNamesOnConflict),
                 cancellationToken);
+            return Ok(result);
+        }
+
+        [Authorize]
+        [HttpGet("nodes/{nodeId:guid}/children/stats")]
+        public async Task<IActionResult> GetChildFolderStats(
+            [FromRoute] Guid nodeId,
+            [FromQuery] NodeType nodeType = NodeType.Default,
+            [FromQuery] int depth = 0)
+        {
+            Dictionary<Guid, FolderStatsDto> result = await _mediator.Send(
+                new GetChildFolderStatsQuery(User.GetUserId(), nodeId, nodeType, depth),
+                HttpContext.RequestAborted);
             return Ok(result);
         }
 

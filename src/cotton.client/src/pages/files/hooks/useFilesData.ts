@@ -40,6 +40,21 @@ export const useFilesData = ({
   const childrenTotalCount = listing.totalCount;
 
   useEffect(() => {
+    const node = listing.node;
+    if (
+      !node ||
+      node.id !== nodeId ||
+      currentNode?.id !== nodeId ||
+      currentNode === node ||
+      cacheOwnerUserId !== currentUserId ||
+      Date.parse(currentNode.updatedAt) > Date.parse(node.updatedAt)
+    ) {
+      return;
+    }
+    useNodesStore.getState().updateNode(node);
+  }, [listing.node, nodeId, currentNode, cacheOwnerUserId, currentUserId]);
+
+  useEffect(() => {
     if (!nodeId || !currentUserId) {
       loadedNodeKeyRef.current = null;
       return;

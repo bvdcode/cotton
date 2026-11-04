@@ -2,6 +2,7 @@ export const ConflictAction = {
   Overwrite: "overwrite",
   OverwriteAll: "overwriteAll",
   Rename: "rename",
+  Merge: "merge",
   Skip: "skip",
   SkipAll: "skipAll",
   Cancel: "cancel",
@@ -13,4 +14,6 @@ export type ConflictAction =
 export interface NameConflictPrompt {
   newName: string;
   canOverwrite: boolean;
+  canMerge: boolean;
+  canApplyToAll: boolean;
 }

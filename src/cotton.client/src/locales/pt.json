@@ -2423,7 +2423,6 @@
       "uploadFailed": "Não foi possível iniciar o envio dos arquivos compartilhados. Recarregue esta página para tentar novamente."
     },
     "folderSizes": {
-      "calculate": "Calcular tamanhos das pastas",
       "calculating": "Calculando tamanhos das pastas…",
       "failed": "Não foi possível calcular os tamanhos de todas as pastas. Tente novamente."
     },
@@ -2549,6 +2548,8 @@
       "confirmDescription": "Os itens selecionados serão movidos para a Lixeira e poderão ser restaurados depois."
     },
     "conflicts": {
+      "merge": "Mesclar",
+      "mergeDescription": "Já existe uma pasta com este nome. Mesclar o conteúdo ou usar {{newName}}?",
       "title": "Conflito de nomes",
       "description": "Já existe um item com este nome nesta pasta. Usar {{newName}} em vez disso?",
       "overwriteDescription": "Já existe um item com este nome nesta pasta. Substituí-lo ou usar {{newName}} em vez disso?",
@@ -2589,6 +2590,24 @@
         "link": "Falha ao gerar o link de compartilhamento.",
         "token": "Falha ao extrair o token de compartilhamento.",
         "copy": "Falha ao copiar o link para a área de transferência."
+      },
+      "options": {
+        "title": "Definições do link",
+        "name": "Nome do link",
+        "nameHint": "Opcional. Deixe vazio para um endereço aleatório.",
+        "invalidName": "Use letras, números, hífen ou sublinhado.",
+        "nameTaken": "Este nome de link já está em uso.",
+        "duration": "Validade",
+        "unit": "Unidade",
+        "units": {
+          "days": "Dias",
+          "hours": "Horas",
+          "minutes": "Minutos",
+          "never": "Sem expiração"
+        },
+        "invalidDuration": "Escolha uma duração de 1 minuto a 10 anos.",
+        "create": "Criar link",
+        "link": "Link público"
       }
     },
     "preview": {
@@ -2700,7 +2719,10 @@
         "modelLoadFailed": "Falha ao carregar o modelo 3D",
         "modelUnsupportedType": "Este formato de arquivo 3D não é suportado para visualização no navegador",
         "pdfTooLarge": "O PDF é grande demais para visualizar ({{size}}). O tamanho máximo é {{maxSize}}. Baixe o arquivo para visualizá-lo.",
-        "fileTooLarge": "O arquivo é grande demais para visualizar ({{size}}). O tamanho máximo para visualização de texto é {{maxSize}}. Baixe o arquivo para visualizá-lo."
+        "fileTooLarge": "O arquivo é grande demais para visualizar ({{size}}). O tamanho máximo para visualização é {{maxSize}}. Baixe o arquivo para visualizá-lo."
+      },
+      "office": {
+        "truncated": "São apresentadas as primeiras {{rows}} linhas e {{columns}} colunas desta folha."
       }
     },
     "actionsTitle": "Ações",

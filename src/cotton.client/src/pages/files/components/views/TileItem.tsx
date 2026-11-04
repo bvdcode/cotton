@@ -159,6 +159,7 @@ const buildFileTileActions = (options: {
       icon: <Share />,
       onClick: () => fileOperations.onShare?.(file.id, file.name),
       tooltip: t("actions.share", { ns: "common" }),
+      shareTarget: { kind: "file", id: file.id, name: file.name },
     });
   }
   if (!readOnly && fileOperations.onStartRename) {

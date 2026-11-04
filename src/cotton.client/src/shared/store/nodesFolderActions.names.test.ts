@@ -37,7 +37,12 @@ async function seedEncryptedSibling(): Promise<NodeDto> {
     metadata: { en: await encryptFolderName("Documents") },
   });
   vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
-    content: { ...parent, nodes: [sibling], files: [] },
+    content: {
+      node: parent,
+      ...parent,
+      nodes: [sibling],
+      files: [],
+    },
     totalCount: 1,
   });
   return sibling;
@@ -102,7 +107,12 @@ describe("folder display-name conflicts under a plain parent", () => {
     });
     vi.spyOn(nodesApi, "getNode").mockResolvedValue(source);
     vi.mocked(nodesApi.getChildren).mockResolvedValue({
-      content: { ...parent, nodes: [source], files: [] },
+      content: {
+        node: parent,
+        ...parent,
+        nodes: [source],
+        files: [],
+      },
       totalCount: 1,
     });
     const rename = vi.spyOn(nodesApi, "renameNode").mockResolvedValue(source);

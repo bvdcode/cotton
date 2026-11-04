@@ -4,18 +4,20 @@ import {
   type NameConflictPrompt,
 } from "../../../shared/types/nameConflict";
 
-interface ConflictDialogState {
+interface ConflictDialogState extends NameConflictPrompt {
   open: boolean;
-  newName: string;
-  canOverwrite: boolean;
 }
 
+const closedState: ConflictDialogState = {
+  open: false,
+  newName: "",
+  canOverwrite: false,
+  canMerge: false,
+  canApplyToAll: false,
+};
+
 export const useFileConflictDialog = () => {
-  const [dialogState, setDialogState] = useState<ConflictDialogState>({
-    open: false,
-    newName: "",
-    canOverwrite: false,
-  });
+  const [dialogState, setDialogState] = useState(closedState);
 
   const resolveRef = useRef<((action: ConflictAction) => void) | null>(null);
   const pendingActionRef = useRef<ConflictAction | null>(null);
@@ -25,9 +27,8 @@ export const useFileConflictDialog = () => {
       return new Promise<ConflictAction>((resolve) => {
         resolveRef.current = resolve;
         setDialogState({
+          ...prompt,
           open: true,
-          newName: prompt.newName,
-          canOverwrite: prompt.canOverwrite,
         });
       });
     },
@@ -45,7 +46,7 @@ export const useFileConflictDialog = () => {
 
     resolveRef.current = null;
     pendingActionRef.current = null;
-    setDialogState({ open: false, newName: "", canOverwrite: false });
+    setDialogState(closedState);
 
     if (pendingResolve && pendingAction) {
       pendingResolve(pendingAction);

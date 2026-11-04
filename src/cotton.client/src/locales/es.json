@@ -2419,7 +2419,6 @@
       "uploadFailed": "No se pudo iniciar la subida de los archivos compartidos. Recarga esta página para volver a intentarlo."
     },
     "folderSizes": {
-      "calculate": "Calcular tamaños de carpetas",
       "calculating": "Calculando tamaños de carpetas…",
       "failed": "No se pudieron calcular los tamaños de todas las carpetas. Inténtalo de nuevo."
     },
@@ -2545,6 +2544,8 @@
       "confirmDescription": "Los elementos seleccionados se moverán a la papelera y podrán restaurarse más tarde."
     },
     "conflicts": {
+      "merge": "Combinar",
+      "mergeDescription": "Ya existe una carpeta con este nombre. ¿Combinar su contenido o usar {{newName}}?",
       "title": "Conflicto de nombres",
       "description": "Ya existe un elemento con este nombre en esta carpeta. ¿Usar {{newName}} en su lugar?",
       "overwriteDescription": "Ya existe un elemento con este nombre en esta carpeta. ¿Reemplazarlo o usar {{newName}} en su lugar?",
@@ -2585,6 +2586,24 @@
         "link": "No se pudo generar el enlace para compartir.",
         "token": "No se pudo extraer el token de compartición.",
         "copy": "No se pudo copiar el enlace al portapapeles."
+      },
+      "options": {
+        "title": "Opciones del enlace",
+        "name": "Nombre del enlace",
+        "nameHint": "Opcional. Déjalo vacío para una dirección aleatoria.",
+        "invalidName": "Usa letras, números, guiones o guiones bajos.",
+        "nameTaken": "Este nombre de enlace ya está en uso.",
+        "duration": "Duración",
+        "unit": "Unidad",
+        "units": {
+          "days": "Días",
+          "hours": "Horas",
+          "minutes": "Minutos",
+          "never": "Sin vencimiento"
+        },
+        "invalidDuration": "Elige una duración entre 1 minuto y 10 años.",
+        "create": "Crear enlace",
+        "link": "Enlace público"
       }
     },
     "preview": {
@@ -2696,7 +2715,10 @@
         "modelLoadFailed": "No se pudo cargar el modelo 3D",
         "modelUnsupportedType": "Este formato de archivo 3D no es compatible con la vista previa en el navegador",
         "pdfTooLarge": "El PDF es demasiado grande para la vista previa ({{size}}). El tamaño máximo es {{maxSize}}. Descarga el archivo para verlo.",
-        "fileTooLarge": "El archivo es demasiado grande para la vista previa ({{size}}). El tamaño máximo para la vista previa de texto es {{maxSize}}. Descarga el archivo para verlo."
+        "fileTooLarge": "El archivo es demasiado grande para la vista previa ({{size}}). El tamaño máximo para la vista previa es {{maxSize}}. Descarga el archivo para verlo."
+      },
+      "office": {
+        "truncated": "Se muestran las primeras {{rows}} filas y {{columns}} columnas de esta hoja."
       }
     },
     "actionsTitle": "Acciones",

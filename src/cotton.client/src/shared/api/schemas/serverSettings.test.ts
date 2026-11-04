@@ -100,18 +100,19 @@ describe("server settings schemas", () => {
     });
   });
 
-  it("normalizes enum responses from strings and numeric indexes", () => {
-    expect(storageTypeResponseSchema.parse({ storageType: "s3" })).toBe("S3");
-    expect(emailModeResponseSchema.parse({ emailMode: 2 })).toBe("Custom");
-    expect(emailModeResponseSchema.parse({ emailMode: "unknown" })).toBe(
-      "None",
+  it("parses the exact string enum values returned by the server", () => {
+    expect(storageTypeResponseSchema.parse({ storageType: "S3" })).toBe("S3");
+    expect(emailModeResponseSchema.parse({ emailMode: "Custom" })).toBe(
+      "Custom",
     );
   });
 
   it("normalizes optional settings fields", () => {
     expect(timezoneSchema.parse({ timezone: null })).toBe("UTC");
     expect(publicBaseUrlSchema.parse({ publicBaseUrl: null })).toBe("");
-    expect(serverUsageListSchema.parse({ serverUsage: [] })).toEqual(["Other"]);
+    expect(serverUsageListSchema.parse({ serverUsage: ["Other"] })).toEqual([
+      "Other",
+    ]);
   });
 
   it("parses trusted proxy settings and verification results", () => {

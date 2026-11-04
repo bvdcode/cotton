@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using LibHeifSharp;
+using Heic.Net;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Bmp;
@@ -11,15 +11,12 @@ using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Formats.Tiff;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
-using System.Runtime.InteropServices;
 
 namespace Cotton.Previews
 {
     public class HeicPreviewGenerator : IPreviewGenerator
     {
         public string Id => "heic";
-
-        private const int Rgba32BytesPerPixel = 4;
 
         private static readonly IImageFormatDetector[] ImageFormatDetectors =
         [
@@ -31,7 +28,7 @@ namespace Cotton.Previews
             new TiffImageFormatDetector(),
         ];
 
-        public int Version => 3;
+        public int Version => 4;
 
         public int Priority => 0;
 
@@ -64,30 +61,15 @@ namespace Cotton.Previews
                 }
             }
 
-            using Image<Rgba32> image = DecodeToImage(buffer.ToArray());
+            using Image<Rgba32> image = DecodeToImage(buffer.GetBuffer().AsMemory(0, checked((int)buffer.Length)));
             return await ImagePreviewGenerator.EncodeMaxResizedWebpAsync(image, size);
         }
 
-        private static Image<Rgba32> DecodeToImage(byte[] bytes)
+        private static Image<Rgba32> DecodeToImage(ReadOnlyMemory<byte> bytes)
         {
-            using HeifContext context = new HeifContext(bytes);
-            using HeifImageHandle handle = context.GetPrimaryImageHandle();
-            using HeifImage decoded = handle.Decode(HeifColorspace.Rgb, HeifChroma.InterleavedRgba32);
-
-            int width = decoded.Width;
-            int height = decoded.Height;
-            HeifPlaneData plane = decoded.GetPlane(HeifChannel.Interleaved);
-
-            int rowBytes = checked(width * Rgba32BytesPerPixel);
-            byte[] pixels = new byte[checked(rowBytes * height)];
-            for (int y = 0; y < height; y++)
-            {
-                int sourceOffset = checked(y * plane.Stride);
-                int targetOffset = checked(y * rowBytes);
-                Marshal.Copy(IntPtr.Add(plane.Scan0, sourceOffset), pixels, targetOffset, rowBytes);
-            }
-
-            return Image.LoadPixelData<Rgba32>(pixels, width, height);
+            HeicDocument document = HeicDocument.Load(bytes);
+            RgbaImage decoded = document.DecodePrimary();
+            return Image.LoadPixelData<Rgba32>(decoded.Pixels.Span, decoded.Width, decoded.Height);
         }
     }
 }

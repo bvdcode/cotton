@@ -18,12 +18,16 @@ vi.mock("react-i18next", () => ({
 function renderDialog(
   onResolve: (action: ConflictAction) => void,
   canOverwrite = true,
+  canApplyToAll = true,
+  canMerge = false,
 ): void {
   render(
     <FileConflictDialog
       open
       newName="a-very-long-generated-file-name.jpg"
       canOverwrite={canOverwrite}
+      canApplyToAll={canApplyToAll}
+      canMerge={canMerge}
       onResolve={onResolve}
       onExited={vi.fn()}
     />,
@@ -31,6 +35,28 @@ function renderDialog(
 }
 
 describe("FileConflictDialog", () => {
+  it("hides actions for all when only the current item remains", () => {
+    renderDialog(vi.fn(), true, false);
+    expect(
+      screen.queryByRole("button", { name: "conflicts.skipAll" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "conflicts.overwriteAll" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "conflicts.overwrite" }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers merge for matching folders", () => {
+    const onResolve = vi.fn();
+    renderDialog(onResolve, false, false, true);
+    fireEvent.click(screen.getByRole("button", { name: "conflicts.merge" }));
+    expect(onResolve).toHaveBeenCalledWith(ConflictAction.Merge);
+    expect(
+      screen.queryByRole("button", { name: "conflicts.skipAll" }),
+    ).not.toBeInTheDocument();
+  });
   it("preserves every conflict resolution action", () => {
     const onResolve = vi.fn();
     renderDialog(onResolve);
@@ -70,6 +96,9 @@ describe("FileConflictDialog", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "conflicts.overwriteAll" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "conflicts.merge" }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", {

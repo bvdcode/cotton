@@ -1,4 +1,6 @@
 import { reportClientError } from "@shared/utils/clientDiagnostics";
+import { queryClient } from "../api/queries/queryClient";
+import { findCachedChildFolder } from "../api/queries/folderNavigation";
 import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import { layoutsApi, type NodeDto } from "../api/layoutsApi";
 import { isAxiosError } from "../api/httpClient";
@@ -15,6 +17,7 @@ export { createFolder, deleteFolder, renameFolder } from "./nodesFolderActions";
 const tFileError = (key: string): string => translateError("files", key);
 
 type ResolveSnapshot = {
+  cacheOwnerUserId: string | null;
   currentNode: NodeDto | null;
   ancestors: NodeDto[];
   contentByNodeId: Record<string, NodeContentDto | undefined>;
@@ -54,7 +57,13 @@ async function resolveNodeAndAncestors(
     if (!state.currentNode) return null;
     const parentContent = state.contentByNodeId[state.currentNode.id];
     const found =
-      parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
+      parentContent?.nodes.find((item) => item.id === nodeId) ??
+      findCachedChildFolder(
+        queryClient,
+        state.currentNode.id,
+        nodeId,
+        state.cacheOwnerUserId,
+      );
     if (!found) return null;
 
     const ancestors = getCachedAncestors();

@@ -190,7 +190,7 @@ namespace Cotton.Server.Handlers.Server
                     ChunkCount = g.LongCount(),
                     SizeBytes = g.Sum(x => x.StoredSizeBytes),
                 })
-                .FirstOrDefaultAsync(cancellationToken);
+                .SingleOrDefaultAsync(cancellationToken);
         }
 
         private static Task<List<HourlyGcAggregate>> LoadScheduledHourlyAggregatesAsync(

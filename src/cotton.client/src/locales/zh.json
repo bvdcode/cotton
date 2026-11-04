@@ -2429,7 +2429,6 @@
       "uploadFailed": "无法开始上传分享的文件。请刷新此页面重试。"
     },
     "folderSizes": {
-      "calculate": "计算文件夹大小",
       "calculating": "正在计算文件夹大小…",
       "failed": "无法计算所有文件夹的大小。请重试。"
     },
@@ -2555,6 +2554,8 @@
       "confirmDescription": "所选项目将被移到回收站，可在之后还原。"
     },
     "conflicts": {
+      "merge": "合并",
+      "mergeDescription": "已存在同名文件夹。要合并内容，还是改用 {{newName}}？",
       "title": "名称冲突",
       "description": "此文件夹中已存在同名项目。是否改用 {{newName}}？",
       "overwriteDescription": "此文件夹中已存在同名项目。替换它，还是改用 {{newName}}？",
@@ -2595,6 +2596,24 @@
         "link": "生成分享链接失败。",
         "token": "提取分享令牌失败。",
         "copy": "复制链接到剪贴板失败。"
+      },
+      "options": {
+        "title": "分享设置",
+        "name": "链接名称",
+        "nameHint": "可选。留空将生成随机地址。",
+        "invalidName": "请使用字母、数字、连字符或下划线。",
+        "nameTaken": "此链接名称已被使用。",
+        "duration": "有效期",
+        "unit": "单位",
+        "units": {
+          "days": "天",
+          "hours": "小时",
+          "minutes": "分钟",
+          "never": "永不过期"
+        },
+        "invalidDuration": "请选择 1 分钟到 10 年之间的有效期。",
+        "create": "创建链接",
+        "link": "公开链接"
       }
     },
     "preview": {
@@ -2706,7 +2725,10 @@
         "modelLoadFailed": "加载 3D 模型失败",
         "modelUnsupportedType": "此 3D 文件格式不支持在浏览器中预览",
         "pdfTooLarge": "PDF 文件过大，无法预览（{{size}}）。最大允许大小为 {{maxSize}}。请下载文件后查看。",
-        "fileTooLarge": "文件过大，无法预览（{{size}}）。文本预览的最大大小为 {{maxSize}}。请下载文件后查看。"
+        "fileTooLarge": "文件过大，无法预览（{{size}}）。预览的最大大小为 {{maxSize}}。请下载文件后查看。"
+      },
+      "office": {
+        "truncated": "显示此工作表的前 {{rows}} 行和 {{columns}} 列。"
       }
     },
     "actionsTitle": "操作",

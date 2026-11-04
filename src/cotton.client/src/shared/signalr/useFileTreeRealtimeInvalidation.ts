@@ -72,9 +72,7 @@ export const useFileTreeRealtimeInvalidation = ({
       return;
     }
 
-    eventHub.start().catch(() => {
-      // Connection retries are managed by SignalR.
-    });
+    void eventHub.start();
 
     const unsubscribes = FILE_AND_NODE_MUTATION_HUB_METHODS.map((method) =>
       eventHub.on(method, (...args: JsonValue[]) => {

@@ -161,10 +161,12 @@ describe("folder display-name conflicts", () => {
         confirmConflict: confirm,
       });
 
-      expect(confirm).toHaveBeenCalledWith({
-        newName: "Documents (1)",
-        canOverwrite: false,
-      });
+      expect(confirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newName: "Documents (1)",
+          canOverwrite: false,
+        }),
+      );
       const send = operation === "move" ? mocks.move : mocks.copy;
       expect(send).toHaveBeenCalledOnce();
       expect(send).toHaveBeenCalledWith(source.id, {
@@ -206,10 +208,12 @@ describe("folder display-name conflicts", () => {
     });
 
     expect(result.succeeded).toHaveLength(2);
-    expect(confirm).toHaveBeenCalledWith({
-      newName: "Documents (1)",
-      canOverwrite: false,
-    });
+    expect(confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newName: "Documents (1)",
+        canOverwrite: false,
+      }),
+    );
     const request: MoveNodeRequest = mocks.copy.mock.calls[1][1];
     const encryptedName = request.metadata?.[DISPLAY_META_KEY];
     if (typeof encryptedName !== "string") {
