@@ -8,7 +8,7 @@ import PolicyIcon from "@mui/icons-material/Policy";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import SettingsIcon from "@mui/icons-material/Settings";
 import StorageIcon from "@mui/icons-material/Storage";
-import { Box, useMediaQuery } from "@mui/material";
+import { Box, Fade, useMediaQuery } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
 import { ADMIN_GENERAL_SETTINGS_ROUTE } from "@shared/config/adminRoutes";
 import type { SelectChangeEvent } from "@mui/material/Select";
@@ -32,6 +32,7 @@ export const AdminLayoutPage = () => {
   const { t } = useTranslation("admin");
   const navigate = useNavigate();
   const location = useLocation();
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const defaultExpanded = useMediaQuery((theme: Theme) =>
     theme.breakpoints.up("lg"),
   );
@@ -180,10 +181,9 @@ export const AdminLayoutPage = () => {
               md: `${navWidth}px minmax(0, 1fr)`,
             },
             gap: 2,
-            transition: theme.transitions.create([
-              "width",
-              "grid-template-columns",
-            ]),
+            transition: reducedMotion
+              ? "none"
+              : theme.transitions.create(["width", "grid-template-columns"]),
           }),
         ]}
       >
@@ -195,19 +195,24 @@ export const AdminLayoutPage = () => {
           toggleLabel={t(expanded ? "menu.collapse" : "menu.expand")}
         />
 
-        <Box
-          sx={{
-            minHeight: 0,
-            minWidth: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignSelf: "stretch",
-            overflowY: "auto",
-            overflowX: "hidden",
-          }}
+        <Fade
+          in
+          key={location.pathname}
+          timeout={reducedMotion ? 0 : undefined}
         >
-          <Outlet />
-        </Box>
+          <Box
+            sx={{
+              minHeight: 0,
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignSelf: "stretch",
+              overflow: "hidden",
+            }}
+          >
+            <Outlet />
+          </Box>
+        </Fade>
       </Box>
     </Box>
   );

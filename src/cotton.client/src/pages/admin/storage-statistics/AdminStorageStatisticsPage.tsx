@@ -68,96 +68,92 @@ export const AdminStorageStatisticsPage = () => {
       t("storageStatistics.errors.triggerGcFailed")
     : null;
   return (
-    <Stack spacing={2}>
-      <AdminPageSurface>
-        <Stack
-          spacing={3}
+    <AdminPageSurface>
+      <Stack
+        spacing={3}
+        sx={{
+          p: 3,
+        }}
+      >
+        <AdminPageHeader
+          title={t("storageStatistics.title")}
+          description={t("storageStatistics.description")}
+          action={
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: "wrap", justifyContent: { md: "flex-end" } }}
+            >
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={bucket}
+                onChange={handleBucketChange}
+                disabled={isLoading || isTriggering}
+              >
+                <ToggleButton value="hour">
+                  {t("storageStatistics.bucket.hour")}
+                </ToggleButton>
+                <ToggleButton value="day">
+                  {t("storageStatistics.bucket.day")}
+                </ToggleButton>
+              </ToggleButtonGroup>
+
+              <Button
+                variant="contained"
+                onClick={handleTriggerGarbageCollector}
+                disabled={isLoading || isTriggering}
+                startIcon={
+                  isTriggering ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <DeleteSweepIcon />
+                  )
+                }
+              >
+                {isTriggering
+                  ? t("storageStatistics.actions.triggeringGc")
+                  : t("storageStatistics.actions.triggerGc")}
+              </Button>
+
+              <Button
+                variant="outlined"
+                onClick={refreshTimeline}
+                disabled={isLoading || isTriggering}
+              >
+                {t("storageStatistics.actions.refresh")}
+              </Button>
+            </Stack>
+          }
+        />
+
+        {loadErrorMessage && <Alert severity="error">{loadErrorMessage}</Alert>}
+
+        {triggerErrorMessage && (
+          <Alert severity="error">{triggerErrorMessage}</Alert>
+        )}
+
+        <Box
           sx={{
-            p: 3,
+            minHeight: 4,
           }}
         >
-          <AdminPageHeader
-            title={t("storageStatistics.title")}
-            description={t("storageStatistics.description")}
-            action={
-              <Stack
-                direction="row"
-                spacing={1}
-                useFlexGap
-                sx={{ flexWrap: "wrap", justifyContent: { md: "flex-end" } }}
-              >
-                <ToggleButtonGroup
-                  size="small"
-                  exclusive
-                  value={bucket}
-                  onChange={handleBucketChange}
-                  disabled={isLoading || isTriggering}
-                >
-                  <ToggleButton value="hour">
-                    {t("storageStatistics.bucket.hour")}
-                  </ToggleButton>
-                  <ToggleButton value="day">
-                    {t("storageStatistics.bucket.day")}
-                  </ToggleButton>
-                </ToggleButtonGroup>
-
-                <Button
-                  variant="contained"
-                  onClick={handleTriggerGarbageCollector}
-                  disabled={isLoading || isTriggering}
-                  startIcon={
-                    isTriggering ? (
-                      <CircularProgress size={16} color="inherit" />
-                    ) : (
-                      <DeleteSweepIcon />
-                    )
-                  }
-                >
-                  {isTriggering
-                    ? t("storageStatistics.actions.triggeringGc")
-                    : t("storageStatistics.actions.triggerGc")}
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  onClick={refreshTimeline}
-                  disabled={isLoading || isTriggering}
-                >
-                  {t("storageStatistics.actions.refresh")}
-                </Button>
-              </Stack>
-            }
-          />
-
-          {loadErrorMessage && (
-            <Alert severity="error">{loadErrorMessage}</Alert>
-          )}
-
-          {triggerErrorMessage && (
-            <Alert severity="error">{triggerErrorMessage}</Alert>
-          )}
-
-          <Box
+          <LinearProgress
             sx={{
-              minHeight: 4,
+              opacity: isLoading ? 1 : 0,
+              transition: "opacity 120ms ease",
             }}
-          >
-            <LinearProgress
-              sx={{
-                opacity: isLoading ? 1 : 0,
-                transition: "opacity 120ms ease",
-              }}
-            />
-          </Box>
+          />
+        </Box>
 
-          {timeline !== null && (
-            <Stack spacing={2}>
-              <StorageSummaryCards timeline={timeline} />
-              <GcTimelineChart timeline={timeline} bucket={bucket} />
-            </Stack>
-          )}
-        </Stack>
-      </AdminPageSurface>
-    </Stack>
+        {timeline !== null && (
+          <Stack spacing={2}>
+            <StorageSummaryCards timeline={timeline} />
+            <GcTimelineChart timeline={timeline} bucket={bucket} />
+          </Stack>
+        )}
+      </Stack>
+    </AdminPageSurface>
   );
 };
