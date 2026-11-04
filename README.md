@@ -14,6 +14,8 @@ Content-addressed storage, streaming AES-GCM encryption, deduplication, and rich
 
 **HEIC, PDF, Office, SVG, TGS, 3D, and passkeys — built in.**
 
+**No native renderer DLLs. No extra preview services.** Encryption, storage, document rendering, image decoding, and passkey verification run together in .NET.
+
 <p>
   <a href="#quick-start"><img alt="Docker" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Docker&color=2496ED&logo=docker&logoColor=white"></a>
   <a href="https://play.google.com/apps/testing/dev.cottoncloud.app"><img alt="Google Play" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Google%20Play&color=01875F&logo=googleplay&logoColor=white"></a>
@@ -90,9 +92,9 @@ A file should not become an opaque blob you are afraid to touch once it enters t
 
 ---
 
-## Managed .NET, From Storage To Previews
+## 100% .NET, From Storage To Previews
 
-**The published server has no native binaries supplied by third-party NuGet packages.** Document rendering, image processing, 3D thumbnails, and passkey verification run in the application through managed libraries.
+**No native application-library dependencies.** Document rendering, image processing, 3D thumbnails, and passkey verification run inside Cotton. The published server's third-party NuGet packages supply no native runtime binaries.
 
 | Capability | Implementation |
 | --- | --- |
@@ -106,6 +108,15 @@ A file should not become an opaque blob you are afraid to touch once it enters t
 | Passkeys/WebAuthn | EasyExtensions.Passkeys |
 
 These rendering paths run without a separate renderer service, display server, or GPU. Supported document features and preview limits are described in [Previews and Media Processing](docs/technical/18-previews-media.md).
+
+### What You Get
+
+- **Simpler deployment.** No F3D, Xvfb, Mesa/OpenGL, libheif, PDFium, Skia, or libsodium stack to install and keep in sync. One application handles storage, previews, and authentication.
+- **Smaller native attack surface.** No separately shipped native renderer DLLs or model-renderer executables in these paths: no native binary loading, replacement, or interop boundary for that removed stack. See [Security Hardening](docs/technical/22-security-hardening.md#managed-file-processing).
+- **Lower memory use, measured.** In the published 200 MP HEIC comparison, Heic.NET peaked at **906 MB versus 1683 MB** for libheif/libde265: **46% less whole-process memory**, including the runtime. [Results and method](https://github.com/bvdcode/Heic.NET/blob/3eefb9ffa8c81b13ba6daef37851916fa19c409f/docs/benchmark.md#cross-decoder-results).
+- **Speed from purpose-built code.** Render.NET.Mesh completed the published Spot, Mug, and Robot 512 px preview runs in **509, 527, and 978 ms**, versus **641, 671, and 1235 ms** for F3D with Xvfb. Those full-process measurements include startup, rendering, and PNG output; the renderers produce different images, and the report includes workloads where F3D wins. [Results and method](https://github.com/bvdcode/Render.NET/blob/187f0db9c9a1e3ff272b263fe939b8a62ab05023/docs/benchmarks.md).
+
+Audio/video processing uses FFmpeg/ffprobe; database backup and restore use PostgreSQL client tools. Both ship in the official image. See [Deployment and Operations](docs/technical/27-deployment-operations.md#managed-libraries-and-system-dependencies).
 
 ---
 
