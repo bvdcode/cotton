@@ -16,6 +16,8 @@ import {
   StarBorder,
 } from "@mui/icons-material";
 import type { GridColDef } from "@mui/x-data-grid";
+import { ShareOptionsButton } from "@shared/ui/ShareOptionsButton";
+import type { ShareLinkTarget } from "@shared/utils/shareLinkOptions";
 import {
   isFileEncrypted,
   isFolderEncryptionPolicyEnabled,
@@ -27,20 +29,23 @@ type RowActionButton = {
   icon: React.ReactNode;
   title: string;
   onClick: () => void;
+  shareTarget?: ShareLinkTarget;
 };
 
 const actionButton = (action: RowActionButton): React.ReactElement => (
-  <IconButton
-    key={action.key}
-    size="small"
-    onClick={(event) => {
-      event.stopPropagation();
-      action.onClick();
-    }}
-    title={action.title}
-  >
-    {action.icon}
-  </IconButton>
+  <React.Fragment key={action.key}>
+    <IconButton
+      size="small"
+      onClick={(event) => {
+        event.stopPropagation();
+        action.onClick();
+      }}
+      title={action.title}
+    >
+      {action.icon}
+    </IconButton>
+    {action.shareTarget && <ShareOptionsButton target={action.shareTarget} />}
+  </React.Fragment>
 );
 
 const actionsCell = (
@@ -160,6 +165,7 @@ const buildFolderActionButtons = (
       icon: <Share fontSize="small" />,
       title: options.labels.share,
       onClick: () => operations.onShare?.(row.id, row.name),
+      shareTarget: { kind: "folder", id: row.id, name: row.name },
     });
   }
   if (operations.onCopy) {
@@ -238,6 +244,7 @@ const buildFileActionButtons = (
       icon: <Share fontSize="small" />,
       title: options.labels.share,
       onClick: () => operations.onShare?.(row.id, row.name),
+      shareTarget: { kind: "file", id: row.id, name: row.name },
     });
   }
   if (operations.onStartRename) {

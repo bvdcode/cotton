@@ -2399,6 +2399,24 @@
         "link": "Failed to generate share link.",
         "token": "Failed to extract share token.",
         "copy": "Failed to copy link to clipboard."
+      },
+      "options": {
+        "title": "Share settings",
+        "name": "Link name",
+        "nameHint": "Optional. Leave blank for a random address.",
+        "invalidName": "Use letters, numbers, hyphens or underscores.",
+        "nameTaken": "This link name is already in use.",
+        "duration": "Expires after",
+        "unit": "Unit",
+        "units": {
+          "days": "Days",
+          "hours": "Hours",
+          "minutes": "Minutes",
+          "never": "Never expires"
+        },
+        "invalidDuration": "Choose a duration from 1 minute to 10 years.",
+        "create": "Create link",
+        "link": "Public link"
       }
     },
     "preview": {

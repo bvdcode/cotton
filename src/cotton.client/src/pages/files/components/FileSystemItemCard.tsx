@@ -1,4 +1,15 @@
-import { Box, Menu, MenuItem, Typography } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  Menu,
+  MenuItem,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { MoreHoriz } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
+import { ShareLinkDialog } from "@shared/ui/ShareLinkDialog";
+import type { ShareLinkTarget } from "@shared/utils/shareLinkOptions";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode, MouseEvent } from "react";
 import { memo, useState } from "react";
@@ -7,6 +18,7 @@ export interface FileSystemItemCardAction {
   icon: ReactNode;
   onClick: () => void;
   tooltip?: string;
+  shareTarget?: ShareLinkTarget;
 }
 
 export interface FileSystemItemCardProps {
@@ -120,48 +132,83 @@ const CardActionsMenu = ({
   anchorEl,
   onClose,
   onRunAction,
+  onShareOptions,
   open,
 }: {
   actions: ReadonlyArray<FileSystemItemCardAction>;
   anchorEl: HTMLElement | null;
   onClose: () => void;
   onRunAction: (action: FileSystemItemCardAction) => void;
+  onShareOptions: (target: ShareLinkTarget) => void;
   open: boolean;
-}): React.ReactElement => (
-  <Menu
-    anchorEl={anchorEl}
-    open={open}
-    onClose={onClose}
-    onClick={(event) => event.stopPropagation()}
-    anchorOrigin={{ vertical: "top", horizontal: "right" }}
-    transformOrigin={{ vertical: "bottom", horizontal: "right" }}
-    disablePortal={false}
-    slotProps={{
-      paper: {
-        variant: "outlined",
-        sx: {
-          bgcolor: "background.default",
-          borderColor: "divider",
+}): React.ReactElement => {
+  const { t } = useTranslation("files");
+  return (
+    <Menu
+      anchorEl={anchorEl}
+      open={open}
+      onClose={onClose}
+      onClick={(event) => event.stopPropagation()}
+      anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      transformOrigin={{ vertical: "bottom", horizontal: "right" }}
+      disablePortal={false}
+      slotProps={{
+        paper: {
+          variant: "outlined",
+          sx: {
+            bgcolor: "background.default",
+            borderColor: "divider",
+          },
         },
-      },
-    }}
-  >
-    {actions.map((action, index) => (
-      <MenuItem
-        key={index}
-        onClick={(event) => {
-          event.stopPropagation();
-          onRunAction(action);
-        }}
-        title={action.tooltip}
-        sx={{ gap: 1 }}
-      >
-        {action.icon}
-        <Typography variant="body2">{action.tooltip ?? ""}</Typography>
-      </MenuItem>
-    ))}
-  </Menu>
-);
+      }}
+    >
+      {actions.map((action, index) => (
+        <MenuItem
+          key={index}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRunAction(action);
+          }}
+          title={action.tooltip}
+          aria-haspopup={action.shareTarget ? "dialog" : undefined}
+          aria-keyshortcuts={action.shareTarget ? "ArrowRight" : undefined}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowRight" && action.shareTarget) {
+              event.preventDefault();
+              event.stopPropagation();
+              onShareOptions(action.shareTarget);
+            }
+          }}
+          sx={{ gap: 1 }}
+        >
+          {action.icon}
+          <Typography variant="body2" sx={{ flex: 1 }}>
+            {action.tooltip ?? ""}
+          </Typography>
+          {action.shareTarget && (
+            <Tooltip title={t("share.options.title")}>
+              <IconButton
+                size="small"
+                edge="end"
+                aria-label={t("share.options.title")}
+                tabIndex={-1}
+                onKeyDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (action.shareTarget) {
+                    onShareOptions(action.shareTarget);
+                  }
+                }}
+              >
+                <MoreHoriz fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </MenuItem>
+      ))}
+    </Menu>
+  );
+};
 
 const FileSystemItemCardImpl = ({
   icon,
@@ -179,6 +226,7 @@ const FileSystemItemCardImpl = ({
 }: FileSystemItemCardProps) => {
   const clickable = typeof onClick === "function";
   const [isHovered, setIsHovered] = useState(false);
+  const [shareTarget, setShareTarget] = useState<ShareLinkTarget | null>(null);
   const hasActions = actions.length > 0;
   const {
     actionsOpen,
@@ -266,7 +314,17 @@ const FileSystemItemCardImpl = ({
           anchorEl={menuAnchorEl}
           onClose={handleCloseMenu}
           onRunAction={runAction}
+          onShareOptions={(target) => {
+            handleCloseMenu();
+            setShareTarget(target);
+          }}
           open={actionsOpen}
+        />
+      )}
+      {shareTarget && (
+        <ShareLinkDialog
+          target={shareTarget}
+          onClose={() => setShareTarget(null)}
         />
       )}
     </Box>

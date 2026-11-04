@@ -2590,6 +2590,24 @@
         "link": "Falha ao gerar o link de compartilhamento.",
         "token": "Falha ao extrair o token de compartilhamento.",
         "copy": "Falha ao copiar o link para a área de transferência."
+      },
+      "options": {
+        "title": "Definições do link",
+        "name": "Nome do link",
+        "nameHint": "Opcional. Deixe vazio para um endereço aleatório.",
+        "invalidName": "Use letras, números, hífen ou sublinhado.",
+        "nameTaken": "Este nome de link já está em uso.",
+        "duration": "Validade",
+        "unit": "Unidade",
+        "units": {
+          "days": "Dias",
+          "hours": "Horas",
+          "minutes": "Minutos",
+          "never": "Sem expiração"
+        },
+        "invalidDuration": "Escolha uma duração de 1 minuto a 10 anos.",
+        "create": "Criar link",
+        "link": "Link público"
       }
     },
     "preview": {

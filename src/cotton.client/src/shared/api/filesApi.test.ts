@@ -82,6 +82,23 @@ describe("filesApi chunk manifests", () => {
 });
 
 describe("filesApi.getDownloadLink", () => {
+  it("does not combine concurrent links with different custom names", async () => {
+    const get = vi
+      .spyOn(httpClient, "get")
+      .mockResolvedValue({ data: "/s/photo" });
+    await Promise.all([
+      filesApi.getDownloadLink(fileId, null, "  photo  "),
+      filesApi.getDownloadLink(fileId, null, "photo-2"),
+      filesApi.getDownloadLink(fileId, null),
+    ]);
+    expect(get).toHaveBeenCalledTimes(3);
+    expect(get).toHaveBeenCalledWith(`files/${fileId}/download-link`, {
+      params: { expireAfterMinutes: "", customToken: "photo" },
+    });
+    expect(get).toHaveBeenCalledWith(`files/${fileId}/download-link`, {
+      params: { expireAfterMinutes: "", customToken: "photo-2" },
+    });
+  });
   it("uses the default expiration and returns the response URL", async () => {
     const get = vi.spyOn(httpClient, "get").mockResolvedValue({
       data: "https://download.example/file",

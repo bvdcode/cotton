@@ -115,12 +115,16 @@ export const layoutsApi = {
   getNodeShareLink: async (
     nodeId: Guid,
     expireAfterMinutes: number | null = 1440,
+    customToken?: string,
   ): Promise<string> => {
     const response = await httpClient.get<string>(
       `/layouts/nodes/${nodeId}/share-link`,
       {
         // An empty query value binds to null; Axios omits literal null values.
-        params: { expireAfterMinutes: expireAfterMinutes ?? "" },
+        params: {
+          expireAfterMinutes: expireAfterMinutes ?? "",
+          ...(customToken?.trim() ? { customToken: customToken.trim() } : {}),
+        },
       },
     );
     return response.data;

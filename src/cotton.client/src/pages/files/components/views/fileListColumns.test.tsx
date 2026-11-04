@@ -159,9 +159,16 @@ describe("folder list actions", () => {
       "Restore",
       "Delete",
     ];
-    expect(screen.getAllByRole("button").map((button) => button.title)).toEqual(
-      titles,
-    );
+    expect(screen.getAllByRole("button")).toHaveLength(titles.length + 1);
+    expect(
+      screen.getByRole("button", { name: "share.options.title" }),
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole("button")
+        .map((button) => button.title)
+        .filter(Boolean),
+    ).toEqual(titles);
     for (const title of titles) {
       fireEvent.click(screen.getByTitle(title));
     }

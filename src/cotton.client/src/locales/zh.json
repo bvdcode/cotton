@@ -2596,6 +2596,24 @@
         "link": "生成分享链接失败。",
         "token": "提取分享令牌失败。",
         "copy": "复制链接到剪贴板失败。"
+      },
+      "options": {
+        "title": "分享设置",
+        "name": "链接名称",
+        "nameHint": "可选。留空将生成随机地址。",
+        "invalidName": "请使用字母、数字、连字符或下划线。",
+        "nameTaken": "此链接名称已被使用。",
+        "duration": "有效期",
+        "unit": "单位",
+        "units": {
+          "days": "天",
+          "hours": "小时",
+          "minutes": "分钟",
+          "never": "永不过期"
+        },
+        "invalidDuration": "请选择 1 分钟到 10 年之间的有效期。",
+        "create": "创建链接",
+        "link": "公开链接"
       }
     },
     "preview": {

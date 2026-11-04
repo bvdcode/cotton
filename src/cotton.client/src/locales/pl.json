@@ -2607,6 +2607,24 @@
         "link": "Nie udało się wygenerować linku udostępniania.",
         "token": "Nie udało się wyodrębnić tokena udostępniania.",
         "copy": "Nie udało się skopiować linku do schowka."
+      },
+      "options": {
+        "title": "Ustawienia linku",
+        "name": "Nazwa linku",
+        "nameHint": "Opcjonalnie. Pozostaw puste, aby otrzymać losowy adres.",
+        "invalidName": "Użyj liter, cyfr, myślników lub podkreśleń.",
+        "nameTaken": "Ta nazwa linku jest już zajęta.",
+        "duration": "Okres ważności",
+        "unit": "Jednostka",
+        "units": {
+          "days": "Dni",
+          "hours": "Godziny",
+          "minutes": "Minuty",
+          "never": "Bez wygaśnięcia"
+        },
+        "invalidDuration": "Wybierz okres od 1 minuty do 10 lat.",
+        "create": "Utwórz link",
+        "link": "Link publiczny"
       }
     },
     "preview": {

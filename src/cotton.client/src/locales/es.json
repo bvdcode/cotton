@@ -2586,6 +2586,24 @@
         "link": "No se pudo generar el enlace para compartir.",
         "token": "No se pudo extraer el token de compartición.",
         "copy": "No se pudo copiar el enlace al portapapeles."
+      },
+      "options": {
+        "title": "Opciones del enlace",
+        "name": "Nombre del enlace",
+        "nameHint": "Opcional. Déjalo vacío para una dirección aleatoria.",
+        "invalidName": "Usa letras, números, guiones o guiones bajos.",
+        "nameTaken": "Este nombre de enlace ya está en uso.",
+        "duration": "Duración",
+        "unit": "Unidad",
+        "units": {
+          "days": "Días",
+          "hours": "Horas",
+          "minutes": "Minutos",
+          "never": "Sin vencimiento"
+        },
+        "invalidDuration": "Elige una duración entre 1 minuto y 10 años.",
+        "create": "Crear enlace",
+        "link": "Enlace público"
       }
     },
     "preview": {

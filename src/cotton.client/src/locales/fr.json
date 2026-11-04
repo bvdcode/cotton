@@ -2587,6 +2587,24 @@
         "link": "Échec de la génération du lien de partage.",
         "token": "Échec de l'extraction du jeton de partage.",
         "copy": "Échec de la copie du lien dans le presse-papiers."
+      },
+      "options": {
+        "title": "Paramètres du lien",
+        "name": "Nom du lien",
+        "nameHint": "Facultatif. Laisser vide pour une adresse aléatoire.",
+        "invalidName": "Utilisez des lettres, chiffres, tirets ou traits de soulignement.",
+        "nameTaken": "Ce nom de lien est déjà utilisé.",
+        "duration": "Durée de validité",
+        "unit": "Unité",
+        "units": {
+          "days": "Jours",
+          "hours": "Heures",
+          "minutes": "Minutes",
+          "never": "Sans expiration"
+        },
+        "invalidDuration": "Choisissez une durée de 1 minute à 10 ans.",
+        "create": "Créer le lien",
+        "link": "Lien public"
       }
     },
     "preview": {

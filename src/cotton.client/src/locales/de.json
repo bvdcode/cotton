@@ -2583,6 +2583,24 @@
         "link": "Freigabelink konnte nicht erzeugt werden.",
         "token": "Freigabe-Token konnte nicht extrahiert werden.",
         "copy": "Link konnte nicht in die Zwischenablage kopiert werden."
+      },
+      "options": {
+        "title": "Link-Einstellungen",
+        "name": "Linkname",
+        "nameHint": "Optional. Für eine zufällige Adresse leer lassen.",
+        "invalidName": "Buchstaben, Zahlen, Bindestriche oder Unterstriche verwenden.",
+        "nameTaken": "Dieser Linkname wird bereits verwendet.",
+        "duration": "Gültigkeitsdauer",
+        "unit": "Zeiteinheit",
+        "units": {
+          "days": "Tage",
+          "hours": "Stunden",
+          "minutes": "Minuten",
+          "never": "Unbegrenzt"
+        },
+        "invalidDuration": "Eine Dauer von 1 Minute bis 10 Jahren wählen.",
+        "create": "Link erstellen",
+        "link": "Öffentlicher Link"
       }
     },
     "preview": {

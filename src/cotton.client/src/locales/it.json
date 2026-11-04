@@ -2589,6 +2589,24 @@
         "link": "Impossibile generare il link di condivisione.",
         "token": "Impossibile estrarre il token di condivisione.",
         "copy": "Impossibile copiare il link negli appunti."
+      },
+      "options": {
+        "title": "Impostazioni del link",
+        "name": "Nome del link",
+        "nameHint": "Facoltativo. Lascia vuoto per un indirizzo casuale.",
+        "invalidName": "Usa lettere, numeri, trattini o trattini bassi.",
+        "nameTaken": "Questo nome del link è già in uso.",
+        "duration": "Durata",
+        "unit": "Unità",
+        "units": {
+          "days": "Giorni",
+          "hours": "Ore",
+          "minutes": "Minuti",
+          "never": "Senza scadenza"
+        },
+        "invalidDuration": "Scegli una durata da 1 minuto a 10 anni.",
+        "create": "Crea link",
+        "link": "Link pubblico"
       }
     },
     "preview": {

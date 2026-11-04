@@ -2604,6 +2604,24 @@
         "link": "Vygenerování odkazu ke sdílení se nezdařilo.",
         "token": "Extrakce tokenu ke sdílení se nezdařila.",
         "copy": "Zkopírování odkazu do schránky se nezdařilo."
+      },
+      "options": {
+        "title": "Nastavení odkazu",
+        "name": "Název odkazu",
+        "nameHint": "Volitelné. Pro náhodnou adresu ponechte prázdné.",
+        "invalidName": "Použijte písmena, číslice, pomlčky nebo podtržítka.",
+        "nameTaken": "Tento název odkazu se již používá.",
+        "duration": "Doba platnosti",
+        "unit": "Jednotka",
+        "units": {
+          "days": "Dny",
+          "hours": "Hodiny",
+          "minutes": "Minuty",
+          "never": "Bez vypršení"
+        },
+        "invalidDuration": "Zvolte dobu od 1 minuty do 10 let.",
+        "create": "Vytvořit odkaz",
+        "link": "Veřejný odkaz"
       }
     },
     "preview": {

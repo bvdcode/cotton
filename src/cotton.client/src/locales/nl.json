@@ -2588,6 +2588,24 @@
         "link": "Genereren van deellink mislukt.",
         "token": "Extractie van het deeltoken mislukt.",
         "copy": "Kopiëren van de link naar het klembord mislukt."
+      },
+      "options": {
+        "title": "Linkinstellingen",
+        "name": "Linknaam",
+        "nameHint": "Optioneel. Laat leeg voor een willekeurig adres.",
+        "invalidName": "Gebruik letters, cijfers, streepjes of onderstrepingstekens.",
+        "nameTaken": "Deze linknaam is al in gebruik.",
+        "duration": "Geldigheidsduur",
+        "unit": "Eenheid",
+        "units": {
+          "days": "Dagen",
+          "hours": "Uren",
+          "minutes": "Minuten",
+          "never": "Verloopt nooit"
+        },
+        "invalidDuration": "Kies een duur van 1 minuut tot 10 jaar.",
+        "create": "Link maken",
+        "link": "Openbare link"
       }
     },
     "preview": {
