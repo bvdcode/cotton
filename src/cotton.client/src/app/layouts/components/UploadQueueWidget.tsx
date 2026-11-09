@@ -1,4 +1,11 @@
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Box, Paper } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { taskManager } from "../../../shared/tasks";
@@ -9,6 +16,8 @@ import {
   calculateTaskStats,
   getWidgetTitle,
 } from "./uploadQueueUtils";
+
+const AUTO_COLLAPSE_DELAY_MS = 5_000;
 
 export const TaskQueueWidget = () => {
   const { t } = useTranslation("tasks");
@@ -27,6 +36,28 @@ export const TaskQueueWidget = () => {
   const stats = useMemo(() => calculateTaskStats(tasks), [tasks]);
   const totalSpeed = snapshot.overall.speedBytesPerSec;
   const visible = snapshot.open && stats.total > 0;
+  const activity = JSON.stringify(snapshot);
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resetInactivity = useCallback(() => {
+    if (inactivityTimer.current !== null) {
+      clearTimeout(inactivityTimer.current);
+      inactivityTimer.current = null;
+    }
+    if (visible && !isCollapsed) {
+      inactivityTimer.current = setTimeout(
+        () => setIsCollapsed(true),
+        AUTO_COLLAPSE_DELAY_MS,
+      );
+    }
+  }, [isCollapsed, visible]);
+  useEffect(() => {
+    resetInactivity();
+    return () => {
+      if (inactivityTimer.current !== null) {
+        clearTimeout(inactivityTimer.current);
+      }
+    };
+  }, [activity, resetInactivity]);
 
   const totalProgress = Math.max(
     0,
@@ -47,10 +78,18 @@ export const TaskQueueWidget = () => {
 
   const listHeight = Math.min(tasks.length * 90, 400);
 
-  if (!visible) return null;
+  if (!visible) {
+    return null;
+  }
 
   return (
     <Box
+      onPointerMove={resetInactivity}
+      onPointerDown={resetInactivity}
+      onKeyDownCapture={resetInactivity}
+      onFocusCapture={resetInactivity}
+      onWheel={resetInactivity}
+      onScrollCapture={resetInactivity}
       sx={{
         position: "fixed",
         left: { xs: "50%", sm: "unset" },
