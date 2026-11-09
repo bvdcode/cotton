@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Crypto;
@@ -113,6 +113,7 @@ namespace Cotton.Server.Extensions
             services.AddHostedService(sp => sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
 
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, RoutineIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserPasskeyCredentialIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, OidcProviderIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserExternalIdentityIntegrityDescriptor>();

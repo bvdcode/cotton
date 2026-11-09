@@ -13,6 +13,7 @@ namespace Cotton.Database.Integrity
         private static readonly Type[] ProtectedEntityTypes =
         [
             typeof(User),
+            typeof(Routine),
             typeof(UserPasskeyCredential),
             typeof(OidcProvider),
             typeof(UserExternalIdentity),

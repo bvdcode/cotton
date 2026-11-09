@@ -132,6 +132,14 @@ namespace Cotton.Server.Handlers.Users
         private async Task DeleteDirectUserRecordsAsync(Guid userId, CancellationToken cancellationToken)
         {
             await _dbContext.DownloadTokens.DeleteDownloadTokensForUserAsync(userId, cancellationToken);
+            List<RoutineRun> runs = await _dbContext.RoutineRuns
+                .Where(x => x.Routine.OwnerId == userId).ToListAsync(cancellationToken);
+            _dbContext.RoutineRuns.RemoveRange(runs);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            List<Routine> routines = await _dbContext.Routines
+                .Where(x => x.OwnerId == userId).ToListAsync(cancellationToken);
+            _dbContext.Routines.RemoveRange(routines);
+            await _dbContext.SaveChangesAsync(cancellationToken);
             await _dbContext.NodeShareTokens.DeleteNodeShareTokensForUserAsync(userId, cancellationToken);
             await _dbContext.Notifications.DeleteNotificationsForUserAsync(userId, cancellationToken);
             await _dbContext.UserPasskeyCredentials.DeletePasskeysForUserAsync(userId, cancellationToken);
