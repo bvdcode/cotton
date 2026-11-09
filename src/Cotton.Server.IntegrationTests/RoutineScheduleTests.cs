@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Handlers.Routines;
+using Cotton.Routines;
 
 namespace Cotton.Server.IntegrationTests
 {
@@ -41,6 +42,44 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(descriptor.BuildCanonicalPayload(routine), Is.EqualTo(original));
             routine.Settings = routine.Settings.Replace("false", "true");
             Assert.That(descriptor.BuildCanonicalPayload(routine), Is.Not.EqualTo(original));
+        }
+
+        [Test]
+        public void CalendarDoesNotRepeatTheFallBackHour()
+        {
+            TimeZoneInfo timezone = TimeZoneInfo.FindSystemTimeZoneById("America/Los_Angeles");
+            RoutineCalendarSettings calendar = new() { Frequency = RoutineCalendarFrequency.Daily, Hour = 1, DayOfMonth = 1, Month = 1 };
+            DateTime firstOne = new(2026, 11, 1, 8, 0, 0, DateTimeKind.Utc);
+            DateTime? next = RoutineSchedule.NextCalendar(firstOne, calendar, timezone);
+            Assert.That(next, Is.EqualTo(new DateTime(2026, 11, 2, 9, 0, 0, DateTimeKind.Utc)));
+            Assert.That(RoutineSchedule.IsDue(firstOne, TimeSpan.FromHours(1), firstOne.AddHours(1)), Is.True);
+        }
+
+        [Test]
+        public void CalendarUsesServerTimezoneAndSkipsMissingDates()
+        {
+            RoutineCalendarSettings calendar = new() { Frequency = RoutineCalendarFrequency.Monthly, Hour = 9, DayOfMonth = 31, Month = 1 };
+            DateTime? next = RoutineSchedule.NextCalendar(new DateTime(2026, 1, 31, 9, 0, 0, DateTimeKind.Utc), calendar, TimeZoneInfo.Utc);
+            Assert.That(next, Is.EqualTo(new DateTime(2026, 3, 31, 9, 0, 0, DateTimeKind.Utc)));
+        }
+
+        [Test]
+        public void SpringForwardDoesNotCreateANonexistentCalendarTime()
+        {
+            TimeZoneInfo timezone = TimeZoneInfo.FindSystemTimeZoneById("America/Los_Angeles");
+            RoutineCalendarSettings calendar = new() { Frequency = RoutineCalendarFrequency.Daily, Hour = 2, Minute = 30 };
+            DateTime? next = RoutineSchedule.NextCalendar(new DateTime(2026, 3, 7, 10, 30, 0, DateTimeKind.Utc), calendar, timezone);
+            Assert.That(next, Is.EqualTo(new DateTime(2026, 3, 9, 9, 30, 0, DateTimeKind.Utc)));
+        }
+
+        [Test]
+        public void DelayedStartAndDisabledRoutineAreNotDue()
+        {
+            DateTime now = DateTime.UtcNow;
+            Routine routine = new() { Enabled = true, StartAt = now.AddDays(1) };
+            Assert.That(RoutineSchedule.NextExecution(routine, TimeZoneInfo.Utc), Is.EqualTo(routine.StartAt));
+            routine.Enabled = false;
+            Assert.That(RoutineSchedule.NextExecution(routine, TimeZoneInfo.Utc), Is.Null);
         }
     }
 }

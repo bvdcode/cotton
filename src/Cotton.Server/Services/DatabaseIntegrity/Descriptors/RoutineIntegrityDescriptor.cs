@@ -25,6 +25,19 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
             writer.WriteGuidField(nameof(entity.TargetNodeId), entity.TargetNodeId);
             writer.WriteInt64Field(nameof(entity.Interval), entity.Interval.Ticks);
             writer.WriteNullableDateTimeField(nameof(entity.LastExecutionAt), entity.LastExecutionAt);
+            writer.WriteNullableDateTimeField(nameof(entity.StartAt), entity.StartAt);
+            writer.WriteInt32Field(nameof(entity.ScheduleKind), (int)entity.ScheduleKind);
+            if (entity.CalendarSettings is not null)
+            {
+                RoutineCalendarSettings calendar = JsonSerializer.Deserialize<RoutineCalendarSettings>(entity.CalendarSettings)
+                    ?? throw new InvalidOperationException("Calendar settings are required.");
+                writer.WriteInt32Field(nameof(calendar.Frequency), (int)calendar.Frequency);
+                writer.WriteInt32Field(nameof(calendar.Hour), calendar.Hour);
+                writer.WriteInt32Field(nameof(calendar.Minute), calendar.Minute);
+                writer.WriteInt32Field(nameof(calendar.DayOfWeek), calendar.DayOfWeek);
+                writer.WriteInt32Field(nameof(calendar.DayOfMonth), calendar.DayOfMonth);
+                writer.WriteInt32Field(nameof(calendar.Month), calendar.Month);
+            }
             switch (entity.Type)
             {
                 case RoutineType.DeleteFiles:

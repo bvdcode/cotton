@@ -28,6 +28,15 @@ namespace Cotton.Database.Models
         [Column("interval")]
         public TimeSpan Interval { get; set; }
 
+        [Column("start_at")]
+        public DateTime? StartAt { get; set; }
+
+        [Column("schedule_kind")]
+        public RoutineScheduleKind ScheduleKind { get; set; }
+
+        [Column("calendar_settings", TypeName = "jsonb")]
+        public string? CalendarSettings { get; set; }
+
         [Column("last_execution_at")]
         public DateTime? LastExecutionAt { get; set; }
 

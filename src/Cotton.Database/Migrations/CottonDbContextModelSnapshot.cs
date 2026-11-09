@@ -1062,6 +1062,10 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("CalendarSettings")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("calendar_settings");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -1097,10 +1101,18 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("owner_id");
 
+                    b.Property<int>("ScheduleKind")
+                        .HasColumnType("integer")
+                        .HasColumnName("schedule_kind");
+
                     b.Property<string>("Settings")
                         .IsRequired()
                         .HasColumnType("jsonb")
                         .HasColumnName("settings");
+
+                    b.Property<DateTime?>("StartAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_at");
 
                     b.Property<Guid>("TargetNodeId")
                         .HasColumnType("uuid")
