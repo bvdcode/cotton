@@ -19,9 +19,13 @@ export const useRoutines = () => {
     queryFn: routinesApi.list,
     enabled: !!userId,
   });
-  useEffect(
-    () =>
-      eventHub.on(HUB_METHODS.RoutineProgress, (...args) => {
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+    const unsubscribeProgress = eventHub.on(
+      HUB_METHODS.RoutineProgress,
+      (...args) => {
         const parsed = routineRunSchema.safeParse(args[0]);
         if (!parsed.success) {
           return;
@@ -31,7 +35,10 @@ export const useRoutines = () => {
           current?.map((routine) => {
             if (
               routine.id !== run.routineId ||
-              (routine.latestRun && routine.latestRun.createdAt > run.createdAt)
+              (routine.latestRun &&
+                routine.latestRun.id !== run.id &&
+                Date.parse(routine.latestRun.createdAt) >
+                  Date.parse(run.createdAt))
             ) {
               return routine;
             }
@@ -44,9 +51,20 @@ export const useRoutines = () => {
             queryKey: ["routineRuns", userId, run.routineId],
           });
         }
-      }),
-    [client, userId],
-  );
+      },
+    );
+    const unsubscribeConnected = eventHub.onConnected((isReconnect) => {
+      if (isReconnect) {
+        void client.invalidateQueries({ queryKey: ["routines", userId] });
+        void client.invalidateQueries({ queryKey: ["routineRuns", userId] });
+      }
+    });
+    void eventHub.start();
+    return () => {
+      unsubscribeProgress();
+      unsubscribeConnected();
+    };
+  }, [client, userId]);
   return {
     ...query,
     refresh: () => client.invalidateQueries({ queryKey: key }),

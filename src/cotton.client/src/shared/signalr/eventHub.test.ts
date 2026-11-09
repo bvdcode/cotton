@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   refreshEnabled: vi.fn<() => boolean>(),
   warning: vi.fn(),
   states: [] as Record<"state", HubConnectionState>[],
+  reconnected: [] as Array<() => void>,
 }));
 
 vi.mock("../api/httpClient", () => ({
@@ -48,7 +49,8 @@ vi.mock("@microsoft/signalr", async (importOriginal) => {
           },
           on: vi.fn(),
           off: vi.fn(),
-          onreconnected: vi.fn(),
+          onreconnected: (callback: () => void) =>
+            mocks.reconnected.push(callback),
         };
         mocks.states.push(connection);
         return connection;
@@ -63,6 +65,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.resetAllMocks();
   mocks.states.length = 0;
+  mocks.reconnected.length = 0;
   mocks.refreshEnabled.mockReturnValue(true);
   mocks.start.mockResolvedValue();
   mocks.stop.mockResolvedValue();
@@ -130,4 +133,15 @@ it("leaves an established connection's automatic reconnect in charge", async () 
   await eventHub.start();
   expect(mocks.start).toHaveBeenCalledOnce();
   expect(mocks.stop).not.toHaveBeenCalled();
+});
+
+it("distinguishes the initial connection from a restored connection", async () => {
+  const connected = vi.fn();
+  const unsubscribe = eventHub.onConnected(connected);
+  await eventHub.start();
+  expect(connected).toHaveBeenLastCalledWith(false);
+  mocks.reconnected[0]();
+  expect(connected).toHaveBeenLastCalledWith(true);
+  expect(connected).toHaveBeenCalledTimes(2);
+  unsubscribe();
 });

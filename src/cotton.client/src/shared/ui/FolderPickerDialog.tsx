@@ -33,6 +33,8 @@ interface Props {
   onSelect: (folder: NodeDto) => void;
   onClose: () => void;
 }
+const EMPTY_FOLDERS: NodeDto[] = [];
+
 export const FolderPickerDialog = ({
   initialNodeId,
   onSelect,
@@ -56,7 +58,7 @@ export const FolderPickerDialog = ({
     enabled: open && !!currentId,
   });
   const current = useDecryptedNode(folders.data?.current ?? null);
-  const choices = useDecryptedNodes(folders.data?.folders ?? []);
+  const choices = useDecryptedNodes(folders.data?.folders ?? EMPTY_FOLDERS);
   const navigate = (id: string) => {
     setNodeId(id);
     setPage(1);

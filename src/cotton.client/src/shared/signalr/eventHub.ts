@@ -21,7 +21,7 @@ import {
 } from "./hubMethods";
 
 type HubEventCallback = (...args: JsonValue[]) => void;
-type HubConnectionCallback = () => void;
+type HubConnectionCallback = (isReconnect: boolean) => void;
 
 class EventHubService {
   private connection: HubConnection | null = null;
@@ -144,7 +144,7 @@ class EventHubService {
             return;
           }
           this.resubscribeAll();
-          this.notifyConnected();
+          this.notifyConnected(true);
         });
 
         for (const [method, callbacks] of this.listeners) {
@@ -158,7 +158,7 @@ class EventHubService {
           await this.stopConnection(connection);
           return;
         }
-        this.notifyConnected();
+        this.notifyConnected(false);
         return;
       } catch (e) {
         lastError = e instanceof Error ? e : new Error("Failed to start hub");
@@ -201,9 +201,9 @@ class EventHubService {
     };
   }
 
-  private notifyConnected(): void {
+  private notifyConnected(isReconnect: boolean): void {
     for (const callback of this.connectionListeners) {
-      callback();
+      callback(isReconnect);
     }
   }
 
