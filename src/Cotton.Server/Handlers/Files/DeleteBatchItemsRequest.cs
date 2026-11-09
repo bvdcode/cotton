@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Files
 {
-    public record DeleteBatchItemsRequest(Guid UserId, IReadOnlyList<BatchItemRequestDto> Items, bool SkipTrash)
+    public record DeleteBatchItemsRequest(Guid UserId, IReadOnlyList<BatchItemRequestDto> Items, bool SkipTrash, FileDeletionCondition? Condition = null)
         : IRequest<IReadOnlyList<BatchItemResultDto>>;
 
     public class DeleteBatchItemsRequestHandler(
@@ -50,7 +50,7 @@ namespace Cotton.Server.Handlers.Files
         private async Task<IReadOnlyList<BatchItemResultDto>> DeleteAsync(DeleteBatchItemsRequest request, CancellationToken ct)
         {
             await using IDbContextTransaction tx = await _db.Database.BeginTransactionAsync(ct);
-            DeletionBatch batch = await _mediator.Send(new LoadDeletionBatchQuery(request.UserId, request.Items, request.SkipTrash), ct);
+            DeletionBatch batch = await _mediator.Send(new LoadDeletionBatchQuery(request.UserId, request.Items, request.SkipTrash, request.Condition), ct);
             long removedBytes = 0;
             if (batch.Folders.Count + batch.Files.Count > 0)
             {
