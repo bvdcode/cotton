@@ -3680,7 +3680,8 @@
     "trash": "Prullenbak",
     "profile": "Profiel",
     "settings": "Instellingen",
-    "admin": "Beheer"
+    "admin": "Beheer",
+    "routines": "Routines"
   },
   "resetPassword": {
     "title": "Wachtwoord opnieuw instellen",
@@ -3781,6 +3782,85 @@
       "requiredVersion": "Vereiste versie",
       "requiredVersionRange": "Vereiste vorige versie",
       "lastRecordedVersion": "Laatst geregistreerde versie"
+    }
+  },
+  "routines": {
+    "actionError": "De actie is mislukt. Probeer het opnieuw.",
+    "workingFolder": "Werkmap",
+    "createAndRun": "Maken en starten",
+    "title": "Routines",
+    "create": "Routine maken",
+    "createTitle": "Nieuwe routine",
+    "editTitle": "Routine bewerken",
+    "name": "Naam",
+    "type": "Taaktype",
+    "deleteFiles": "Bestanden verwijderen",
+    "chooseFolder": "Werkmap kiezen",
+    "frequency": "Frequentie",
+    "olderThanDays": "Ouder dan (dagen)",
+    "dateField": "Te controleren datum",
+    "createdAt": "Aanmaakdatum",
+    "updatedAt": "Wijzigingsdatum",
+    "includeSubfolders": "Submappen meenemen",
+    "deletionMode": "Verwijdermethode",
+    "trash": "Naar prullenbak",
+    "permanent": "Definitief verwijderen",
+    "permanentWarning": "Definitief verwijderde bestanden kunnen niet worden hersteld.",
+    "moreSettings": "Meer instellingen",
+    "lessSettings": "Minder instellingen",
+    "enabled": "Ingeschakeld",
+    "paused": "Gepauzeerd",
+    "startAt": "Niet starten vóór",
+    "startHint": "Laat leeg om direct te starten. Tijdzone van server: {{timezone}}.",
+    "calendarMode": "Kalenderschema",
+    "time": "Tijd",
+    "weekday": "Dag van de week",
+    "dayOfMonth": "Dag van de maand",
+    "month": "Maand",
+    "calendarHint": "Tijdzone van server: {{timezone}}. Controle elke 15 minuten. Niet-bestaande datums en tijden worden overgeslagen; een herhaald tijdstip wordt eenmaal uitgevoerd.",
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "loadError": "Gegevens konden niet worden geladen. Vernieuw de pagina.",
+    "saveError": "Routine kon niet worden opgeslagen. Controleer de instellingen.",
+    "runNow": "Nu uitvoeren",
+    "history": "Uitvoeringsgeschiedenis",
+    "noRuns": "Nog geen uitvoeringen.",
+    "counts": "Verwerkt: {{processed}} · Verwijderd: {{deleted}}",
+    "nextRun": "Volgende uitvoering: {{date}}",
+    "condition": "Bestanden ouder dan {{days}} dagen · {{field}}",
+    "deleteRoutine": "Routine verwijderen",
+    "deleteConfirm": "‘{{name}}’ en de geschiedenis verwijderen? Bestanden blijven ongewijzigd.",
+    "refresh": "Vernieuwen",
+    "empty": "Nog geen routines",
+    "home": "Thuismap",
+    "up": "Bovenliggende map",
+    "noSubfolders": "Geen submappen",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "useFolder": "Deze map gebruiken",
+    "intervals": {
+      "1": "Elk uur",
+      "24": "Elke dag",
+      "168": "Elke week",
+      "720": "Elke 30 dagen",
+      "8760": "Elke 365 dagen"
+    },
+    "calendarFrequency": {
+      "0": "Dagelijks",
+      "1": "Wekelijks",
+      "2": "Maandelijks",
+      "3": "Jaarlijks"
+    },
+    "statuses": {
+      "0": "Bezig",
+      "1": "Voltooid",
+      "2": "Mislukt",
+      "3": "Onderbroken"
+    },
+    "errors": {
+      "WorkingFolderUnavailable": "De werkmap ontbreekt, is inactief of staat in de prullenbak.",
+      "ExecutionFailed": "Uitvoering mislukt. Bekijk het serverlogboek.",
+      "Interrupted": "De uitvoering is onderbroken."
     }
   }
 }

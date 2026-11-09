@@ -3476,7 +3476,8 @@
     "trash": "Trash",
     "profile": "Profile",
     "settings": "Settings",
-    "admin": "Admin"
+    "admin": "Admin",
+    "routines": "Routines"
   },
   "resetPassword": {
     "title": "Reset password",
@@ -3577,6 +3578,85 @@
       "requiredVersion": "Required version",
       "requiredVersionRange": "Required previous version",
       "lastRecordedVersion": "Last recorded version"
+    }
+  },
+  "routines": {
+    "actionError": "The action failed. Please try again.",
+    "workingFolder": "Working folder",
+    "createAndRun": "Create and run",
+    "title": "Routines",
+    "create": "Create routine",
+    "createTitle": "New routine",
+    "editTitle": "Edit routine",
+    "name": "Name",
+    "type": "Task type",
+    "deleteFiles": "Delete files",
+    "chooseFolder": "Choose working folder",
+    "frequency": "How often",
+    "olderThanDays": "Older than (days)",
+    "dateField": "Date to check",
+    "createdAt": "Date created",
+    "updatedAt": "Date modified",
+    "includeSubfolders": "Include subfolders",
+    "deletionMode": "Deletion method",
+    "trash": "Move to trash",
+    "permanent": "Delete permanently",
+    "permanentWarning": "Permanently deleted files cannot be restored.",
+    "moreSettings": "More settings",
+    "lessSettings": "Fewer settings",
+    "enabled": "Enabled",
+    "paused": "Paused",
+    "startAt": "Do not start before",
+    "startHint": "Leave empty to run immediately. Server timezone: {{timezone}}.",
+    "calendarMode": "Calendar schedule",
+    "time": "Time",
+    "weekday": "Day of week",
+    "dayOfMonth": "Day of month",
+    "month": "Month",
+    "calendarHint": "Server timezone: {{timezone}}. Checked every 15 minutes. Missing dates and clock times are skipped; a repeated clock time runs once.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loadError": "Could not load data. Try refreshing.",
+    "saveError": "Could not save the routine. Check the settings.",
+    "runNow": "Run now",
+    "history": "Run history",
+    "noRuns": "No runs yet.",
+    "counts": "Processed: {{processed}} · Deleted: {{deleted}}",
+    "nextRun": "Next run: {{date}}",
+    "condition": "Files older than {{days}} days · {{field}}",
+    "deleteRoutine": "Delete routine",
+    "deleteConfirm": "Delete “{{name}}” and its run history? Files will stay unchanged.",
+    "refresh": "Refresh",
+    "empty": "No routines yet",
+    "home": "Home",
+    "up": "Parent folder",
+    "noSubfolders": "No subfolders",
+    "previous": "Previous",
+    "next": "Next",
+    "useFolder": "Use this folder",
+    "intervals": {
+      "1": "Every hour",
+      "24": "Every day",
+      "168": "Every week",
+      "720": "Every 30 days",
+      "8760": "Every 365 days"
+    },
+    "calendarFrequency": {
+      "0": "Daily",
+      "1": "Weekly",
+      "2": "Monthly",
+      "3": "Yearly"
+    },
+    "statuses": {
+      "0": "Running",
+      "1": "Completed",
+      "2": "Failed",
+      "3": "Interrupted"
+    },
+    "errors": {
+      "WorkingFolderUnavailable": "The working folder is missing, inactive, or in trash.",
+      "ExecutionFailed": "Execution failed. See the server log.",
+      "Interrupted": "Execution was interrupted."
     }
   }
 }

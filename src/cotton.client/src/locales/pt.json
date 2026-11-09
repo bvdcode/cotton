@@ -3682,7 +3682,8 @@
     "trash": "Lixeira",
     "profile": "Perfil",
     "settings": "Configurações",
-    "admin": "Administração"
+    "admin": "Administração",
+    "routines": "Rotinas"
   },
   "resetPassword": {
     "title": "Redefinir senha",
@@ -3783,6 +3784,85 @@
       "requiredVersion": "Versão necessária",
       "requiredVersionRange": "Versão anterior necessária",
       "lastRecordedVersion": "Última versão registada"
+    }
+  },
+  "routines": {
+    "actionError": "A ação falhou. Tente novamente.",
+    "workingFolder": "Pasta de trabalho",
+    "createAndRun": "Criar e executar",
+    "title": "Rotinas",
+    "create": "Criar rotina",
+    "createTitle": "Nova rotina",
+    "editTitle": "Editar rotina",
+    "name": "Nome",
+    "type": "Tipo de tarefa",
+    "deleteFiles": "Excluir arquivos",
+    "chooseFolder": "Escolher pasta de trabalho",
+    "frequency": "Frequência",
+    "olderThanDays": "Mais antigos que (dias)",
+    "dateField": "Data a verificar",
+    "createdAt": "Data de criação",
+    "updatedAt": "Data de modificação",
+    "includeSubfolders": "Incluir subpastas",
+    "deletionMode": "Método de exclusão",
+    "trash": "Mover para a lixeira",
+    "permanent": "Excluir permanentemente",
+    "permanentWarning": "Arquivos excluídos permanentemente não podem ser restaurados.",
+    "moreSettings": "Mais configurações",
+    "lessSettings": "Menos configurações",
+    "enabled": "Ativada",
+    "paused": "Pausada",
+    "startAt": "Não iniciar antes de",
+    "startHint": "Deixe vazio para iniciar imediatamente. Fuso do servidor: {{timezone}}.",
+    "calendarMode": "Agendamento por calendário",
+    "time": "Hora",
+    "weekday": "Dia da semana",
+    "dayOfMonth": "Dia do mês",
+    "month": "Mês",
+    "calendarHint": "Fuso do servidor: {{timezone}}. Verificado a cada 15 minutos. Datas e horas inexistentes são ignoradas; um horário repetido executa apenas uma vez.",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "loadError": "Não foi possível carregar os dados. Atualize a página.",
+    "saveError": "Não foi possível salvar a rotina. Verifique as configurações.",
+    "runNow": "Executar agora",
+    "history": "Histórico de execuções",
+    "noRuns": "Nenhuma execução ainda.",
+    "counts": "Processados: {{processed}} · Excluídos: {{deleted}}",
+    "nextRun": "Próxima execução: {{date}}",
+    "condition": "Arquivos com mais de {{days}} dias · {{field}}",
+    "deleteRoutine": "Excluir rotina",
+    "deleteConfirm": "Excluir “{{name}}” e seu histórico? Os arquivos permanecerão inalterados.",
+    "refresh": "Atualizar",
+    "empty": "Nenhuma rotina ainda",
+    "home": "Pasta inicial",
+    "up": "Pasta superior",
+    "noSubfolders": "Nenhuma subpasta",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "useFolder": "Usar esta pasta",
+    "intervals": {
+      "1": "A cada hora",
+      "24": "Todos os dias",
+      "168": "Toda semana",
+      "720": "A cada 30 dias",
+      "8760": "A cada 365 dias"
+    },
+    "calendarFrequency": {
+      "0": "Diária",
+      "1": "Semanal",
+      "2": "Mensal",
+      "3": "Anual"
+    },
+    "statuses": {
+      "0": "Em execução",
+      "1": "Concluída",
+      "2": "Falhou",
+      "3": "Interrompida"
+    },
+    "errors": {
+      "WorkingFolderUnavailable": "A pasta de trabalho está ausente, inativa ou na lixeira.",
+      "ExecutionFailed": "Falha na execução. Consulte o registro do servidor.",
+      "Interrupted": "A execução foi interrompida."
     }
   }
 }

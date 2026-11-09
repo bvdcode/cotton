@@ -3675,7 +3675,8 @@
     "trash": "Papierkorb",
     "profile": "Profil",
     "settings": "Einstellungen",
-    "admin": "Admin"
+    "admin": "Admin",
+    "routines": "Routinen"
   },
   "resetPassword": {
     "title": "Passwort zurücksetzen",
@@ -3776,6 +3777,85 @@
       "requiredVersion": "Erforderliche Version",
       "requiredVersionRange": "Erforderliche vorherige Version",
       "lastRecordedVersion": "Zuletzt aufgezeichnete Version"
+    }
+  },
+  "routines": {
+    "actionError": "Die Aktion ist fehlgeschlagen. Bitte erneut versuchen.",
+    "workingFolder": "Arbeitsordner",
+    "createAndRun": "Erstellen und starten",
+    "title": "Routinen",
+    "create": "Routine erstellen",
+    "createTitle": "Neue Routine",
+    "editTitle": "Routine bearbeiten",
+    "name": "Name",
+    "type": "Aufgabentyp",
+    "deleteFiles": "Dateien löschen",
+    "chooseFolder": "Arbeitsordner wählen",
+    "frequency": "Häufigkeit",
+    "olderThanDays": "Älter als (Tage)",
+    "dateField": "Zu prüfendes Datum",
+    "createdAt": "Erstellungsdatum",
+    "updatedAt": "Änderungsdatum",
+    "includeSubfolders": "Unterordner einbeziehen",
+    "deletionMode": "Löschmethode",
+    "trash": "In den Papierkorb",
+    "permanent": "Endgültig löschen",
+    "permanentWarning": "Endgültig gelöschte Dateien können nicht wiederhergestellt werden.",
+    "moreSettings": "Weitere Einstellungen",
+    "lessSettings": "Weniger Einstellungen",
+    "enabled": "Aktiviert",
+    "paused": "Pausiert",
+    "startAt": "Nicht vor diesem Zeitpunkt starten",
+    "startHint": "Leer lassen für sofortigen Start. Serverzeitzone: {{timezone}}.",
+    "calendarMode": "Kalenderzeitplan",
+    "time": "Uhrzeit",
+    "weekday": "Wochentag",
+    "dayOfMonth": "Tag des Monats",
+    "month": "Monat",
+    "calendarHint": "Serverzeitzone: {{timezone}}. Prüfung alle 15 Minuten. Nicht vorhandene Daten und Uhrzeiten werden übersprungen; doppelte Uhrzeiten werden einmal ausgeführt.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "loadError": "Daten konnten nicht geladen werden. Bitte aktualisieren.",
+    "saveError": "Routine konnte nicht gespeichert werden. Einstellungen prüfen.",
+    "runNow": "Jetzt ausführen",
+    "history": "Ausführungsverlauf",
+    "noRuns": "Noch keine Ausführungen.",
+    "counts": "Verarbeitet: {{processed}} · Gelöscht: {{deleted}}",
+    "nextRun": "Nächste Ausführung: {{date}}",
+    "condition": "Dateien älter als {{days}} Tage · {{field}}",
+    "deleteRoutine": "Routine löschen",
+    "deleteConfirm": "„{{name}}“ und den Verlauf löschen? Dateien bleiben unverändert.",
+    "refresh": "Aktualisieren",
+    "empty": "Noch keine Routinen",
+    "home": "Startordner",
+    "up": "Übergeordneter Ordner",
+    "noSubfolders": "Keine Unterordner",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "useFolder": "Diesen Ordner verwenden",
+    "intervals": {
+      "1": "Jede Stunde",
+      "24": "Jeden Tag",
+      "168": "Jede Woche",
+      "720": "Alle 30 Tage",
+      "8760": "Alle 365 Tage"
+    },
+    "calendarFrequency": {
+      "0": "Täglich",
+      "1": "Wöchentlich",
+      "2": "Monatlich",
+      "3": "Jährlich"
+    },
+    "statuses": {
+      "0": "Wird ausgeführt",
+      "1": "Abgeschlossen",
+      "2": "Fehlgeschlagen",
+      "3": "Unterbrochen"
+    },
+    "errors": {
+      "WorkingFolderUnavailable": "Der Arbeitsordner fehlt, ist inaktiv oder im Papierkorb.",
+      "ExecutionFailed": "Ausführung fehlgeschlagen. Details im Serverprotokoll.",
+      "Interrupted": "Die Ausführung wurde unterbrochen."
     }
   }
 }

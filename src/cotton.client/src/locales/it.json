@@ -3681,7 +3681,8 @@
     "trash": "Cestino",
     "profile": "Profilo",
     "settings": "Impostazioni",
-    "admin": "Amministrazione"
+    "admin": "Amministrazione",
+    "routines": "Routine"
   },
   "resetPassword": {
     "title": "Reimposta password",
@@ -3782,6 +3783,85 @@
       "requiredVersion": "Versione richiesta",
       "requiredVersionRange": "Versione precedente richiesta",
       "lastRecordedVersion": "Ultima versione registrata"
+    }
+  },
+  "routines": {
+    "actionError": "Operazione non riuscita. Riprova.",
+    "workingFolder": "Cartella di lavoro",
+    "createAndRun": "Crea e avvia",
+    "title": "Routine",
+    "create": "Crea routine",
+    "createTitle": "Nuova routine",
+    "editTitle": "Modifica routine",
+    "name": "Nome",
+    "type": "Tipo di attività",
+    "deleteFiles": "Elimina file",
+    "chooseFolder": "Scegli cartella di lavoro",
+    "frequency": "Frequenza",
+    "olderThanDays": "Più vecchi di (giorni)",
+    "dateField": "Data da verificare",
+    "createdAt": "Data di creazione",
+    "updatedAt": "Data di modifica",
+    "includeSubfolders": "Includi sottocartelle",
+    "deletionMode": "Metodo di eliminazione",
+    "trash": "Sposta nel cestino",
+    "permanent": "Elimina definitivamente",
+    "permanentWarning": "I file eliminati definitivamente non possono essere ripristinati.",
+    "moreSettings": "Altre impostazioni",
+    "lessSettings": "Meno impostazioni",
+    "enabled": "Attiva",
+    "paused": "In pausa",
+    "startAt": "Non avviare prima di",
+    "startHint": "Lascia vuoto per avviare subito. Fuso del server: {{timezone}}.",
+    "calendarMode": "Pianificazione calendario",
+    "time": "Ora",
+    "weekday": "Giorno della settimana",
+    "dayOfMonth": "Giorno del mese",
+    "month": "Mese",
+    "calendarHint": "Fuso del server: {{timezone}}. Verifica ogni 15 minuti. Date e ore inesistenti vengono saltate; un’ora ripetuta viene eseguita una sola volta.",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "loadError": "Impossibile caricare i dati. Aggiorna la pagina.",
+    "saveError": "Impossibile salvare la routine. Controlla le impostazioni.",
+    "runNow": "Esegui ora",
+    "history": "Cronologia esecuzioni",
+    "noRuns": "Nessuna esecuzione.",
+    "counts": "Elaborati: {{processed}} · Eliminati: {{deleted}}",
+    "nextRun": "Prossima esecuzione: {{date}}",
+    "condition": "File più vecchi di {{days}} giorni · {{field}}",
+    "deleteRoutine": "Elimina routine",
+    "deleteConfirm": "Eliminare «{{name}}» e la cronologia? I file resteranno invariati.",
+    "refresh": "Aggiorna",
+    "empty": "Nessuna routine",
+    "home": "Cartella principale",
+    "up": "Cartella superiore",
+    "noSubfolders": "Nessuna sottocartella",
+    "previous": "Precedente",
+    "next": "Successivo",
+    "useFolder": "Usa questa cartella",
+    "intervals": {
+      "1": "Ogni ora",
+      "24": "Ogni giorno",
+      "168": "Ogni settimana",
+      "720": "Ogni 30 giorni",
+      "8760": "Ogni 365 giorni"
+    },
+    "calendarFrequency": {
+      "0": "Giornaliera",
+      "1": "Settimanale",
+      "2": "Mensile",
+      "3": "Annuale"
+    },
+    "statuses": {
+      "0": "In esecuzione",
+      "1": "Completata",
+      "2": "Non riuscita",
+      "3": "Interrotta"
+    },
+    "errors": {
+      "WorkingFolderUnavailable": "La cartella di lavoro è assente, inattiva o nel cestino.",
+      "ExecutionFailed": "Esecuzione non riuscita. Consulta il registro del server.",
+      "Interrupted": "L’esecuzione è stata interrotta."
     }
   }
 }

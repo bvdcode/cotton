@@ -3688,7 +3688,8 @@
     "trash": "回收站",
     "profile": "个人资料",
     "settings": "设置",
-    "admin": "管理"
+    "admin": "管理",
+    "routines": "例程"
   },
   "resetPassword": {
     "title": "重置密码",
@@ -3789,6 +3790,85 @@
       "requiredVersion": "所需版本",
       "requiredVersionRange": "所需的上一版本",
       "lastRecordedVersion": "最后记录的版本"
+    }
+  },
+  "routines": {
+    "actionError": "操作失败，请重试。",
+    "workingFolder": "工作文件夹",
+    "createAndRun": "创建并运行",
+    "title": "例程",
+    "create": "创建例程",
+    "createTitle": "新建例程",
+    "editTitle": "编辑例程",
+    "name": "名称",
+    "type": "任务类型",
+    "deleteFiles": "删除文件",
+    "chooseFolder": "选择工作文件夹",
+    "frequency": "执行频率",
+    "olderThanDays": "早于（天）",
+    "dateField": "检查日期",
+    "createdAt": "创建日期",
+    "updatedAt": "修改日期",
+    "includeSubfolders": "包含子文件夹",
+    "deletionMode": "删除方式",
+    "trash": "移到回收站",
+    "permanent": "永久删除",
+    "permanentWarning": "永久删除的文件无法恢复。",
+    "moreSettings": "更多设置",
+    "lessSettings": "收起设置",
+    "enabled": "已启用",
+    "paused": "已暂停",
+    "startAt": "不早于此时间启动",
+    "startHint": "留空则立即运行。服务器时区：{{timezone}}。",
+    "calendarMode": "日历计划",
+    "time": "时间",
+    "weekday": "星期",
+    "dayOfMonth": "每月日期",
+    "month": "月份",
+    "calendarHint": "服务器时区：{{timezone}}。每15分钟检查一次。不存在的日期和时间会跳过；重复的时间只运行一次。",
+    "save": "保存",
+    "cancel": "取消",
+    "loadError": "无法加载数据，请刷新页面。",
+    "saveError": "无法保存例程，请检查设置。",
+    "runNow": "立即运行",
+    "history": "运行历史",
+    "noRuns": "暂无运行记录。",
+    "counts": "已处理：{{processed}} · 已删除：{{deleted}}",
+    "nextRun": "下次运行：{{date}}",
+    "condition": "早于{{days}}天的文件 · {{field}}",
+    "deleteRoutine": "删除例程",
+    "deleteConfirm": "删除“{{name}}”及其运行历史？文件保持不变。",
+    "refresh": "刷新",
+    "empty": "暂无例程",
+    "home": "主文件夹",
+    "up": "上级文件夹",
+    "noSubfolders": "没有子文件夹",
+    "previous": "上一页",
+    "next": "下一页",
+    "useFolder": "使用此文件夹",
+    "intervals": {
+      "1": "每小时",
+      "24": "每天",
+      "168": "每周",
+      "720": "每30天",
+      "8760": "每365天"
+    },
+    "calendarFrequency": {
+      "0": "每天",
+      "1": "每周",
+      "2": "每月",
+      "3": "每年"
+    },
+    "statuses": {
+      "0": "运行中",
+      "1": "已完成",
+      "2": "失败",
+      "3": "已中断"
+    },
+    "errors": {
+      "WorkingFolderUnavailable": "工作文件夹不存在、未启用或已在回收站中。",
+      "ExecutionFailed": "运行失败，请查看服务器日志。",
+      "Interrupted": "运行已中断。"
     }
   }
 }

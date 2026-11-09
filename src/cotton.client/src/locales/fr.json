@@ -3679,7 +3679,8 @@
     "trash": "Corbeille",
     "profile": "Profil",
     "settings": "Paramètres",
-    "admin": "Administration"
+    "admin": "Administration",
+    "routines": "Routines"
   },
   "resetPassword": {
     "title": "Réinitialiser le mot de passe",
@@ -3780,6 +3781,85 @@
       "requiredVersion": "Version requise",
       "requiredVersionRange": "Version précédente requise",
       "lastRecordedVersion": "Dernière version enregistrée"
+    }
+  },
+  "routines": {
+    "actionError": "L’action a échoué. Veuillez réessayer.",
+    "workingFolder": "Dossier de travail",
+    "createAndRun": "Créer et exécuter",
+    "title": "Routines",
+    "create": "Créer une routine",
+    "createTitle": "Nouvelle routine",
+    "editTitle": "Modifier la routine",
+    "name": "Nom",
+    "type": "Type de tâche",
+    "deleteFiles": "Supprimer des fichiers",
+    "chooseFolder": "Choisir le dossier de travail",
+    "frequency": "Fréquence",
+    "olderThanDays": "Plus anciens que (jours)",
+    "dateField": "Date à vérifier",
+    "createdAt": "Date de création",
+    "updatedAt": "Date de modification",
+    "includeSubfolders": "Inclure les sous-dossiers",
+    "deletionMode": "Mode de suppression",
+    "trash": "Déplacer vers la corbeille",
+    "permanent": "Supprimer définitivement",
+    "permanentWarning": "Les fichiers supprimés définitivement ne peuvent pas être restaurés.",
+    "moreSettings": "Plus de paramètres",
+    "lessSettings": "Moins de paramètres",
+    "enabled": "Activée",
+    "paused": "En pause",
+    "startAt": "Ne pas démarrer avant",
+    "startHint": "Laissez vide pour démarrer immédiatement. Fuseau du serveur : {{timezone}}.",
+    "calendarMode": "Calendrier",
+    "time": "Heure",
+    "weekday": "Jour de la semaine",
+    "dayOfMonth": "Jour du mois",
+    "month": "Mois",
+    "calendarHint": "Fuseau du serveur : {{timezone}}. Vérification toutes les 15 minutes. Les dates et heures inexistantes sont ignorées ; une heure répétée ne déclenche qu’une exécution.",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "loadError": "Impossible de charger les données. Actualisez la page.",
+    "saveError": "Impossible d’enregistrer la routine. Vérifiez les paramètres.",
+    "runNow": "Exécuter maintenant",
+    "history": "Historique",
+    "noRuns": "Aucune exécution.",
+    "counts": "Traités : {{processed}} · Supprimés : {{deleted}}",
+    "nextRun": "Prochaine exécution : {{date}}",
+    "condition": "Fichiers de plus de {{days}} jours · {{field}}",
+    "deleteRoutine": "Supprimer la routine",
+    "deleteConfirm": "Supprimer « {{name}} » et son historique ? Les fichiers restent inchangés.",
+    "refresh": "Actualiser",
+    "empty": "Aucune routine",
+    "home": "Dossier personnel",
+    "up": "Dossier parent",
+    "noSubfolders": "Aucun sous-dossier",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "useFolder": "Utiliser ce dossier",
+    "intervals": {
+      "1": "Toutes les heures",
+      "24": "Tous les jours",
+      "168": "Toutes les semaines",
+      "720": "Tous les 30 jours",
+      "8760": "Tous les 365 jours"
+    },
+    "calendarFrequency": {
+      "0": "Quotidienne",
+      "1": "Hebdomadaire",
+      "2": "Mensuelle",
+      "3": "Annuelle"
+    },
+    "statuses": {
+      "0": "En cours",
+      "1": "Terminée",
+      "2": "Échec",
+      "3": "Interrompue"
+    },
+    "errors": {
+      "WorkingFolderUnavailable": "Le dossier de travail est absent, inactif ou dans la corbeille.",
+      "ExecutionFailed": "Échec de l’exécution. Consultez le journal du serveur.",
+      "Interrupted": "L’exécution a été interrompue."
     }
   }
 }
