@@ -72,8 +72,11 @@ export const useFileTreeRealtimeInvalidation = ({
       return;
     }
 
-    void eventHub.start();
-
+    const unsubscribeConnected = eventHub.onConnected((isReconnect) => {
+      if (isReconnect) {
+        scheduleInvalidate();
+      }
+    });
     const unsubscribes = FILE_AND_NODE_MUTATION_HUB_METHODS.map((method) =>
       eventHub.on(method, (...args: JsonValue[]) => {
         const predicate = shouldInvalidateRef.current;
@@ -84,9 +87,11 @@ export const useFileTreeRealtimeInvalidation = ({
         scheduleInvalidate();
       }),
     );
+    void eventHub.start();
 
     return () => {
       clearScheduledInvalidation();
+      unsubscribeConnected();
       for (const unsubscribe of unsubscribes) {
         unsubscribe();
       }

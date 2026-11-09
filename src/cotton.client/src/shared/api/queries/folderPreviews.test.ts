@@ -24,11 +24,13 @@ describe("folder preview updates", () => {
       1000,
     );
     const pageKey = queryKeys.nodeChildren.page("folder-1", "user-1", 2);
+    const completeKey = queryKeys.nodeChildren.complete("folder-1", "user-1");
     const tilesKey = queryKeys.nodeChildren.tiles("folder-1", "user-1");
     const statsKey = queryKeys.nodeChildren.folderInfo("folder-1", "user-1");
     const otherKey = queryKeys.nodeChildren.overview("other", "user-1", 1000);
     client.setQueryData(overviewKey, page("target"));
     client.setQueryData(pageKey, page("target"));
+    client.setQueryData(completeKey, page("target"));
     client.setQueryData<InfiniteData<NodeResponse, number>>(tilesKey, {
       pages: [page("first"), page("target")],
       pageParams: [1, 2],
@@ -47,6 +49,10 @@ describe("folder preview updates", () => {
     ).toBe("ready");
     expect(
       client.getQueryData<NodeResponse>(pageKey)?.content.files[0]
+        .previewHashEncryptedHex,
+    ).toBe("ready");
+    expect(
+      client.getQueryData<NodeResponse>(completeKey)?.content.files[0]
         .previewHashEncryptedHex,
     ).toBe("ready");
     const after = client.getQueryData<InfiniteData<NodeResponse>>(tilesKey);
