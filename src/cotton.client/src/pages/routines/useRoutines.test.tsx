@@ -101,24 +101,25 @@ it("accepts the same run with different fractional precision and rejects an olde
   ).toBe(500);
   expect(result.current.isError).toBe(false);
 });
-it("resynchronizes the list and open history after a missed completion event", async () => {
-  const finished = {
-    ...routine,
-    latestRun: { ...run, status: 1 as const, processedCount: 500 },
-  };
-  const list = vi.spyOn(routinesApi, "list").mockResolvedValue([finished]);
-  const historyKey = ["routineRuns", "user-1", routine.id];
-  client.setQueryData(historyKey, [run]);
-  const { result, unmount } = renderHook(useRoutines, { wrapper });
-  act(() => hub.connected?.(false));
-  expect(list).not.toHaveBeenCalled();
-  act(() => hub.connected?.(true));
-  await waitFor(() =>
-    expect(result.current.data?.[0].latestRun?.status).toBe(1),
-  );
-  expect(list).toHaveBeenCalledOnce();
-  expect(client.getQueryState(historyKey)?.isInvalidated).toBe(true);
-  unmount();
-  expect(hub.offProgress).toHaveBeenCalledOnce();
-  expect(hub.offConnected).toHaveBeenCalledOnce();
-});
+it.each([false, true])(
+  "resynchronizes the list and open history after connection (reconnect: %s)",
+  async (isReconnect) => {
+    const finished = {
+      ...routine,
+      latestRun: { ...run, status: 1 as const, processedCount: 500 },
+    };
+    const list = vi.spyOn(routinesApi, "list").mockResolvedValue([finished]);
+    const historyKey = ["routineRuns", "user-1", routine.id];
+    client.setQueryData(historyKey, [run]);
+    const { result, unmount } = renderHook(useRoutines, { wrapper });
+    act(() => hub.connected?.(isReconnect));
+    await waitFor(() =>
+      expect(result.current.data?.[0].latestRun?.status).toBe(1),
+    );
+    expect(list).toHaveBeenCalledOnce();
+    expect(client.getQueryState(historyKey)?.isInvalidated).toBe(true);
+    unmount();
+    expect(hub.offProgress).toHaveBeenCalledOnce();
+    expect(hub.offConnected).toHaveBeenCalledOnce();
+  },
+);

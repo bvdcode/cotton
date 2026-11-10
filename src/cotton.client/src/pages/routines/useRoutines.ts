@@ -53,11 +53,9 @@ export const useRoutines = () => {
         }
       },
     );
-    const unsubscribeConnected = eventHub.onConnected((isReconnect) => {
-      if (isReconnect) {
-        void client.invalidateQueries({ queryKey: ["routines", userId] });
-        void client.invalidateQueries({ queryKey: ["routineRuns", userId] });
-      }
+    const unsubscribeConnected = eventHub.onConnected(() => {
+      void client.invalidateQueries({ queryKey: ["routines", userId] });
+      void client.invalidateQueries({ queryKey: ["routineRuns", userId] });
     });
     void eventHub.start();
     return () => {
