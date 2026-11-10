@@ -1,3 +1,6 @@
+import { useCurrentNodeNavigation } from "../../../shared/hooks/useCurrentNodeNavigation";
+import { findCachedFile } from "../../../shared/api/queries/nodeCache";
+import { queryClient } from "../../../shared/api/queries/queryClient";
 import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,14 +23,10 @@ export const useFileOperations = (
   visibleContent?: NodeContentDto,
 ) => {
   const { t } = useTranslation(["files", "common"]);
-  const {
-    currentNode,
-    contentByNodeId,
-    updateFileInCache,
-    optimisticRenameFile,
-    optimisticDeleteFile,
-  } = useNodesStore();
+  const { updateFileInCache, optimisticRenameFile, optimisticDeleteFile } =
+    useNodesStore();
 
+  const { currentNode } = useCurrentNodeNavigation();
   const deleteFile = useCallback(
     async (fileId: string) => {
       const parentId = currentNode?.id;
@@ -70,8 +69,16 @@ export const useFileOperations = (
           optimisticRenameFile(parentId, fileId, newName);
         }
 
-        const currentFile = visibleContent?.files.find((file) => file.id === fileId)
-          ?? (parentId ? contentByNodeId[parentId]?.files.find((file) => file.id === fileId) : undefined);
+        const currentFile =
+          visibleContent?.files.find((file) => file.id === fileId) ??
+          (parentId
+            ? findCachedFile(
+                queryClient,
+                useNodesStore.getState().cacheOwnerUserId ?? "",
+                parentId,
+                fileId,
+              )
+            : undefined);
 
         if (currentFile && isFileEncrypted(currentFile.metadata)) {
           const contentType =

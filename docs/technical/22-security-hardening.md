@@ -28,6 +28,16 @@ The share-lookup failure policy is enabled for compact token lengths and omitted
 
 Internal expensive work such as preview reads, probes, and transcodes uses semaphores and bounded queues so requests wait for capacity rather than receiving an abuse response.
 
+## Managed file processing
+
+HEIC decoding, PDF and Office thumbnails, SVG/TGS rendering, 3D thumbnails, and passkey verification run inside Cotton through managed .NET libraries. Heic.NET, Render.NET, ImageSharp, PdfPig, and EasyExtensions.Passkeys replace the former native decoding, graphics, and WebAuthn stack.
+
+These paths do not load separately shipped libheif, PDFium, Skia, or libsodium binaries, or launch an external model renderer. Removing that stack removes its native parser and interop attack surface and its binary-loading and replacement paths. Operators have no separate renderer binaries, display server, or graphics-driver stack to install or patch for these previews.
+
+Managed libraries still process untrusted input inside the application process. Input limits, cancellation, bounded concurrency, package updates, and a restricted runtime identity remain necessary; sharing a process is not an isolation boundary. FFmpeg/ffprobe remain external audio/video tools, PostgreSQL tools handle backups, and runtime cryptography uses platform providers. Protect the application, runtime, tools, and deployment files against unauthorized replacement.
+
+See [Previews and Media Processing](18-previews-media.md), [Passkeys and OIDC](14-passkeys-oidc.md), and [Deployment and Operations](27-deployment-operations.md#managed-libraries-and-system-dependencies).
+
 ## Master-key protection
 
 The root master key is read during bootstrap, validated through the normal storage graph, and removed from process and user environment variables after derivation. Runtime services receive only the derived settings they require.

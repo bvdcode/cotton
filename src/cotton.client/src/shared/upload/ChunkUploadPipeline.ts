@@ -9,10 +9,11 @@ import {
   type PreparedChunk,
   type UploadedChunkSegment,
 } from "./chunkUploadPipelineTypes";
-import type { UploadProgressSnapshot } from "./types";
+import type { SharedUploadContext, UploadProgressSnapshot } from "./types";
 
 interface ChunkUploadPipelineOptions {
   blob: Blob;
+  sharedUpload?: SharedUploadContext & { nodeId: string };
   fileName: string;
   hashSession: ChunkHashSession;
   hashPreparationConcurrency: number;
@@ -233,6 +234,7 @@ export class ChunkUploadPipeline {
         const uploadAttemptId = attemptId;
         const chunkBytes = getChunkLength(prepared.segment);
         await chunksApi.uploadChunk({
+          sharedUpload: this.options.sharedUpload,
           blob: new Blob([prepared.buffer], { type: prepared.contentType }),
           fileName: this.options.fileName,
           hash: prepared.hash,

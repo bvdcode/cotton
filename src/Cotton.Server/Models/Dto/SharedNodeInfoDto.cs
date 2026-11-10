@@ -10,6 +10,12 @@ namespace Cotton.Server.Models.Dto
         /// </summary>
         public string Token { get; set; } = null!;
 
+        public int MaxChunkSizeBytes { get; set; }
+
+        public string SupportedHashAlgorithm { get; set; } = null!;
+
+        public bool AllowUpload { get; set; }
+
         public Guid NodeId { get; set; }
 
         public string Name { get; set; } = null!;

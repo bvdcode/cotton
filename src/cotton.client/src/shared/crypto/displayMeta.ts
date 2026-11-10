@@ -7,8 +7,6 @@ import { encryptMetadata, decryptMetadata } from "./metadataCipher";
 
 export const DISPLAY_META_KEY = "en";
 
-const OPAQUE_FILE_VALUES = Symbol("cotton.opaqueFileValues");
-
 export interface DisplayMeta {
   name: string;
   contentType: string;
@@ -19,13 +17,11 @@ type FileDisplayMetaFields = Pick<
   "name" | "contentType" | "metadata"
 >;
 
-type FileWithOpaqueValues<TFile extends FileDisplayMetaFields> = TFile & {
-  [OPAQUE_FILE_VALUES]?: Pick<NodeFileManifestDto, "name" | "contentType">;
-};
-
 export async function encryptDisplayMeta(meta: DisplayMeta): Promise<string> {
   const normalized = normalizeDisplayMeta(meta);
-  return encryptMetadata(JSON.stringify({ n: normalized.name, c: normalized.contentType }));
+  return encryptMetadata(
+    JSON.stringify({ n: normalized.name, c: normalized.contentType }),
+  );
 }
 
 export async function decryptDisplayMeta(value: string): Promise<DisplayMeta> {
@@ -61,24 +57,11 @@ export async function applyDisplayMetaToFile<
 
   try {
     const displayMeta = await decryptDisplayMeta(encryptedDisplayMeta);
-    const opaque = (file as FileWithOpaqueValues<TFile>)[
-      OPAQUE_FILE_VALUES
-    ] ?? {
-      name: file.name,
-      contentType: file.contentType,
-    };
-    const decorated: FileWithOpaqueValues<TFile> = {
+    return {
       ...file,
       name: displayMeta.name,
       contentType: displayMeta.contentType,
-    } as FileWithOpaqueValues<TFile>;
-    Object.defineProperty(decorated, OPAQUE_FILE_VALUES, {
-      value: opaque,
-      enumerable: false,
-      configurable: false,
-    });
-
-    return decorated;
+    };
   } catch {
     return file;
   }
@@ -95,27 +78,6 @@ export async function applyDisplayMetaToFiles(
   return decorated.some((file, index) => file !== files[index])
     ? decorated
     : files;
-}
-
-export function toPersistableFileDisplayMetadata(
-  file: NodeFileManifestDto,
-): NodeFileManifestDto | null {
-  if (!isFileEncrypted(file.metadata)) {
-    return file;
-  }
-
-  const opaque = (file as FileWithOpaqueValues<NodeFileManifestDto>)[
-    OPAQUE_FILE_VALUES
-  ];
-  if (opaque) {
-    return {
-      ...file,
-      name: opaque.name,
-      contentType: opaque.contentType,
-    };
-  }
-
-  return useVault.getState().isUnlocked ? null : file;
 }
 
 function normalizeDisplayMeta(meta: DisplayMeta): DisplayMeta {

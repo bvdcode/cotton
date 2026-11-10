@@ -1,9 +1,8 @@
+import type { SharedNodeInfoDto } from "@shared/api/sharedFoldersApi";
+
 export type ShareTargetKind = "resolving" | "file" | "folder";
 
-export interface SharedFolderInfo {
-  nodeId: string;
-  name: string;
-}
+export type SharedFolderInfo = SharedNodeInfoDto;
 
 export type SharePageViewState =
   | { kind: "loading" }

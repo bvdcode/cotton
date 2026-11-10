@@ -225,7 +225,7 @@ describe("layoutsApi reads", () => {
     expect(get).toHaveBeenLastCalledWith(
       `/layouts/nodes/${nodeId}/share-link`,
       {
-        params: { expireAfterMinutes: 1440 },
+        params: { expireAfterMinutes: 1440, allowUpload: false },
       },
     );
 
@@ -244,11 +244,11 @@ describe("layoutsApi reads", () => {
   it("threads explicit share-link and recent-file params", async () => {
     const get = vi.spyOn(httpClient, "get").mockResolvedValue({ data: [] });
 
-    await layoutsApi.getNodeShareLink(nodeId, 60);
+    await layoutsApi.getNodeShareLink(nodeId, 60, undefined, true);
     expect(get).toHaveBeenLastCalledWith(
       `/layouts/nodes/${nodeId}/share-link`,
       {
-        params: { expireAfterMinutes: 60 },
+        params: { expireAfterMinutes: 60, allowUpload: true },
       },
     );
 

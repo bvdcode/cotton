@@ -65,8 +65,7 @@ export const createIconColumn = (
           : null
         : null;
 
-    const showPreview =
-      previewUrl && !options.failedPreviews.has(params.row.id);
+    const showPreview = previewUrl && !options.failedPreviews.has(previewUrl);
 
     return (
       <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
@@ -81,7 +80,7 @@ export const createIconColumn = (
             draggable={false}
             onError={() => {
               options.setFailedPreviews((prev) =>
-                new Set(prev).add(params.row.id),
+                new Set(prev).add(previewUrl),
               );
             }}
             sx={{

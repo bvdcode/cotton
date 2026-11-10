@@ -3,14 +3,11 @@ import type { NodeDto } from "../api/layoutsApi";
 
 export type NodesState = {
   cacheOwnerUserId: string | null;
-  currentNode: NodeDto | null;
-  ancestors: NodeDto[];
-  contentByNodeId: Record<string, NodeContentDto | undefined>;
-  ancestorsByNodeId: Record<string, NodeDto[] | undefined>;
+  currentNodeId: string | null;
   rootNodeId: string | null;
+  navigationVersion: number;
   loading: boolean;
   error: string | null;
-  lastUpdatedByNodeId: Record<string, number | undefined>;
   updateNode: (updated: NodeDto) => void;
   moveFolderInCache: (
     updated: NodeDto,

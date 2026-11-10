@@ -1,13 +1,17 @@
+import {
+  seedFolderListing,
+  seedNodeNavigation,
+  getFolderListing,
+  getCurrentNode,
+  getCurrentAncestors,
+} from "../../test/nodeCacheFixtures";
 import { createFolder } from "../../test/fileFixtures";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("./nodesActionInternals", () => ({
-  resetNodesActionsInternals: vi.fn(),
-}));
-
 import type { NodeDto } from "../api/layoutsApi";
 import type { NodeContentDto, NodeFileManifestDto } from "../api/nodesApi";
-import { NODES_STORAGE_KEY } from "../config/storageKeys";
+import { queryClient } from "../api/queries/queryClient";
+import { queryKeys } from "../api/queries/queryKeys";
 import {
   DISPLAY_META_KEY,
   ENCRYPTED_FLAG_KEY,
@@ -15,7 +19,6 @@ import {
   generateMasterKey,
   useVault,
 } from "../crypto";
-import { resetNodesActionsInternals } from "./nodesActionInternals";
 import { useNodesStore } from "./nodesStore";
 
 const makeNode = (id: string, name: string): NodeDto => ({
@@ -58,24 +61,11 @@ const seedParent = (
     nodes,
     files,
   };
-  useNodesStore.setState((prev) => ({
-    ...prev,
-    contentByNodeId: { ...prev.contentByNodeId, [parentId]: content },
-  }));
+  seedFolderListing(parentId, content);
 };
 
 const resetStore = () => {
-  useNodesStore.setState({
-    cacheOwnerUserId: null,
-    rootNodeId: null,
-    currentNode: null,
-    ancestors: [],
-    contentByNodeId: {},
-    ancestorsByNodeId: {},
-    loading: false,
-    error: null,
-    lastUpdatedByNodeId: {},
-  });
+  useNodesStore.getState().reset("user-1");
 };
 
 beforeEach(() => {
@@ -100,14 +90,15 @@ describe("upsertFileInCache", () => {
       .upsertFileInCache("parent-1", uploaded);
 
     expect(updated).toBe(true);
+    expect(getFolderListing("parent-1")?.files.map((f) => f.id)).toEqual([
+      "f1",
+      "f2",
+    ]);
     expect(
-      useNodesStore
-        .getState()
-        .contentByNodeId["parent-1"]?.files.map((f) => f.id),
-    ).toEqual(["f1", "f2"]);
-    expect(useNodesStore.getState().lastUpdatedByNodeId["parent-1"]).toEqual(
-      expect.any(Number),
-    );
+      queryClient.getQueryState(
+        queryKeys.nodeChildren.complete("parent-1", "user-1"),
+      )?.isInvalidated,
+    ).toBe(true);
   });
 
   it("replaces existing uploaded files in cached parent content", () => {
@@ -121,20 +112,18 @@ describe("upsertFileInCache", () => {
       .upsertFileInCache("parent-1", uploaded);
 
     expect(updated).toBe(true);
-    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.files).toEqual(
-      [uploaded],
-    );
+    expect(getFolderListing("parent-1")?.files).toEqual([uploaded]);
   });
 
   it("keeps cache unchanged when the parent content is not cached", () => {
-    const before = useNodesStore.getState().contentByNodeId;
+    const before = getFolderListing("nowhere");
 
     const updated = useNodesStore
       .getState()
       .upsertFileInCache("nowhere", makeFile("f1", "new.txt"));
 
     expect(updated).toBe(false);
-    expect(useNodesStore.getState().contentByNodeId).toBe(before);
+    expect(getFolderListing("nowhere")).toBe(before);
   });
 });
 
@@ -151,8 +140,7 @@ describe("optimisticSetFilePreviewHash", () => {
       .optimisticSetFilePreviewHash("parent-1", "f1", "new-hash");
 
     expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.files[0]
-        ?.previewHashEncryptedHex,
+      getFolderListing("parent-1")?.files[0]?.previewHashEncryptedHex,
     ).toBe("new-hash");
   });
 
@@ -162,14 +150,14 @@ describe("optimisticSetFilePreviewHash", () => {
       [],
       [makeFile("f1", "a.txt", { previewHashEncryptedHex: "stable" })],
     );
-    const before = useNodesStore.getState().contentByNodeId["parent-1"];
+    const before = getFolderListing("parent-1");
 
     const updated = useNodesStore
       .getState()
       .optimisticSetFilePreviewHash("parent-1", "f1", "stable");
 
     expect(updated).toBe(false);
-    expect(useNodesStore.getState().contentByNodeId["parent-1"]).toBe(before);
+    expect(getFolderListing("parent-1")).toBe(before);
   });
 
   it("reports whether a matching file was updated", () => {
@@ -201,23 +189,19 @@ describe("optimisticDeleteFile", () => {
 
     useNodesStore.getState().optimisticDeleteFile("parent-1", "f1");
 
-    expect(
-      useNodesStore
-        .getState()
-        .contentByNodeId["parent-1"]?.files.map((f) => f.id),
-    ).toEqual(["f2"]);
+    expect(getFolderListing("parent-1")?.files.map((f) => f.id)).toEqual([
+      "f2",
+    ]);
   });
 
   it("is a no-op for missing files and parents", () => {
     seedParent("parent-1", [], [makeFile("f1", "a.txt")]);
 
     useNodesStore.getState().optimisticDeleteFile("parent-1", "missing");
-    expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.files.length,
-    ).toBe(1);
+    expect(getFolderListing("parent-1")?.files.length).toBe(1);
 
     useNodesStore.getState().optimisticDeleteFile("nowhere", "anything");
-    expect(useNodesStore.getState().contentByNodeId["nowhere"]).toBeUndefined();
+    expect(getFolderListing("nowhere")).toBeUndefined();
   });
 });
 
@@ -244,9 +228,7 @@ describe("refreshCachedFileDisplayMetadata", () => {
 
     await useNodesStore.getState().refreshCachedFileDisplayMetadata();
 
-    expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.files[0],
-    ).toMatchObject({
+    expect(getFolderListing("parent-1")?.files[0]).toMatchObject({
       name: "private.pdf",
       contentType: "application/pdf",
     });
@@ -258,11 +240,11 @@ describe("refreshCachedFileDisplayMetadata", () => {
       name: "private.pdf",
       contentType: "application/pdf",
     });
+    const persistedEntries = Object.entries(sessionStorage);
     const parent = makeNode("parent-1", "Parent");
-    useNodesStore.setState({
-      currentNode: parent,
-      rootNodeId: parent.id,
-    });
+    useNodesStore.setState({ rootNodeId: parent.id });
+    seedNodeNavigation(parent, []);
+
     seedParent(
       "parent-1",
       [],
@@ -279,17 +261,11 @@ describe("refreshCachedFileDisplayMetadata", () => {
 
     await useNodesStore.getState().refreshCachedFileDisplayMetadata();
 
-    const raw = sessionStorage.getItem(NODES_STORAGE_KEY) ?? "";
-    expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.files[0],
-    ).toMatchObject({
+    expect(getFolderListing("parent-1")?.files[0]).toMatchObject({
       name: "private.pdf",
       contentType: "application/pdf",
     });
-    expect(raw).toContain("11111111-2222-4333-8444-555555555555");
-    expect(raw).toContain("application/octet-stream");
-    expect(raw).not.toContain("private.pdf");
-    expect(raw).not.toContain("application/pdf");
+    expect(Object.entries(sessionStorage)).toEqual(persistedEntries);
   });
 });
 
@@ -298,33 +274,40 @@ describe("reset", () => {
     useNodesStore.setState({
       cacheOwnerUserId: "user-1",
       rootNodeId: "root",
-      currentNode: makeNode("a", "Drafts"),
-      ancestors: [makeNode("p", "Parent")],
-      contentByNodeId: {
-        a: {
-          node: createFolder({ id: "a" }),
-          id: "a",
-          createdAt: "",
-          updatedAt: "",
-          nodes: [],
-          files: [],
-        },
-      },
       loading: true,
       error: "boom",
+    });
+    seedNodeNavigation(makeNode("a", "Drafts"), [makeNode("p", "Parent")]);
+    seedFolderListing("a", {
+      node: createFolder({ id: "a" }),
+      id: "a",
+      createdAt: "",
+      updatedAt: "",
+      nodes: [],
+      files: [],
     });
 
     useNodesStore.getState().reset("user-2");
 
     const state = useNodesStore.getState();
-    expect(resetNodesActionsInternals).toHaveBeenCalledOnce();
     expect(state.cacheOwnerUserId).toBe("user-2");
     expect(state.rootNodeId).toBeNull();
-    expect(state.currentNode).toBeNull();
-    expect(state.ancestors).toEqual([]);
-    expect(state.contentByNodeId).toEqual({});
+    expect(getCurrentNode()).toBeNull();
+    expect(getCurrentAncestors()).toEqual([]);
+    expect(queryClient.getQueriesData({ queryKey: ["nodeChildren"] })).toEqual(
+      [],
+    );
+    expect(
+      queryClient.getQueriesData({ queryKey: ["nodeNavigation"] }),
+    ).toEqual([]);
     expect(state.loading).toBe(false);
     expect(state.error).toBeNull();
+  });
+
+  it("clears the owner on logout", () => {
+    useNodesStore.getState().reset("user-1");
+    useNodesStore.getState().reset(null);
+    expect(useNodesStore.getState().cacheOwnerUserId).toBeNull();
   });
 
   it("keeps the previous owner when called without an argument", () => {

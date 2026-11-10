@@ -1,9 +1,15 @@
+import { queryClient } from "../api/queries/queryClient";
+import { queryKeys } from "../api/queries/queryKeys";
+import {
+  seedFolderListing,
+  seedNodeNavigation,
+  seedNodePath,
+  getFolderListing,
+  getCurrentNode,
+  getCurrentAncestors,
+} from "../../test/nodeCacheFixtures";
 import { createFolder } from "../../test/fileFixtures";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("./nodesActionInternals", () => ({
-  resetNodesActionsInternals: vi.fn(),
-}));
 
 import type { NodeDto } from "../api/layoutsApi";
 import type { NodeContentDto, NodeFileManifestDto } from "../api/nodesApi";
@@ -50,24 +56,11 @@ const seedParent = (
     nodes,
     files,
   };
-  useNodesStore.setState((prev) => ({
-    ...prev,
-    contentByNodeId: { ...prev.contentByNodeId, [parentId]: content },
-  }));
+  seedFolderListing(parentId, content);
 };
 
 const resetStore = () => {
-  useNodesStore.setState({
-    cacheOwnerUserId: null,
-    rootNodeId: null,
-    currentNode: null,
-    ancestors: [],
-    contentByNodeId: {},
-    ancestorsByNodeId: {},
-    loading: false,
-    error: null,
-    lastUpdatedByNodeId: {},
-  });
+  useNodesStore.getState().reset("user-1");
 };
 
 beforeEach(() => {
@@ -90,11 +83,10 @@ describe("addFolderToCache", () => {
       .getState()
       .addFolderToCache("parent-1", makeNode("b", "Photos"));
 
-    expect(
-      useNodesStore
-        .getState()
-        .contentByNodeId["parent-1"]?.nodes.map((n) => n.id),
-    ).toEqual(["a", "b"]);
+    expect(getFolderListing("parent-1")?.nodes.map((n) => n.id)).toEqual([
+      "a",
+      "b",
+    ]);
   });
 
   it("is idempotent when the folder is already present", () => {
@@ -104,9 +96,7 @@ describe("addFolderToCache", () => {
       .getState()
       .addFolderToCache("parent-1", makeNode("a", "Drafts"));
 
-    expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.nodes.length,
-    ).toBe(1);
+    expect(getFolderListing("parent-1")?.nodes.length).toBe(1);
   });
 
   it("is a no-op when the parent has no cached content", () => {
@@ -114,7 +104,7 @@ describe("addFolderToCache", () => {
       .getState()
       .addFolderToCache("nowhere", makeNode("a", "Drafts"));
 
-    expect(useNodesStore.getState().contentByNodeId["nowhere"]).toBeUndefined();
+    expect(getFolderListing("nowhere")).toBeUndefined();
   });
 });
 
@@ -129,31 +119,29 @@ describe("updateNode", () => {
       metadata: { isClientEncryptionEnabled: "true" },
     };
 
-    useNodesStore.setState({
-      currentNode: current,
-      ancestors: [ancestor, child],
-    });
+    seedNodeNavigation(current, [ancestor, child]);
+
     seedParent("current", [child], []);
 
     useNodesStore.getState().updateNode(updatedChild);
 
-    const state = useNodesStore.getState();
-    expect(state.currentNode).toBe(current);
-    expect(state.ancestors[1]).toEqual(updatedChild);
-    expect(state.contentByNodeId.current?.nodes[0]).toEqual(updatedChild);
+    expect(getCurrentNode()).toBe(current);
+    expect(getCurrentAncestors()[1]).toEqual(updatedChild);
+    expect(getFolderListing("current")?.nodes[0]).toEqual(updatedChild);
   });
 
   it("updates the current node without rewriting unchanged content maps", () => {
     const current = makeNode("current", "Current");
     const updated = { ...current, metadata: { key: "value" } };
     seedParent("parent-1", [makeNode("other", "Other")], []);
-    const contentBefore = useNodesStore.getState().contentByNodeId;
+    const contentBefore = getFolderListing("parent-1");
 
-    useNodesStore.setState({ currentNode: current });
+    seedNodeNavigation(current, []);
+
     useNodesStore.getState().updateNode(updated);
 
-    expect(useNodesStore.getState().currentNode).toEqual(updated);
-    expect(useNodesStore.getState().contentByNodeId).toBe(contentBefore);
+    expect(getCurrentNode()).toEqual(updated);
+    expect(getFolderListing("parent-1")).toBe(contentBefore);
   });
 });
 
@@ -163,18 +151,17 @@ describe("moveFolderInCache", () => {
     const updated = { ...folder, parentId: "target" };
     seedParent("source", [folder], []);
     seedParent("target", [], []);
-    useNodesStore.setState({
-      ancestorsByNodeId: {
-        "folder-1": [makeNode("source", "Source")],
-      },
-    });
+    seedNodePath("folder-1", [makeNode("source", "Source")]);
 
     useNodesStore.getState().moveFolderInCache(updated, "source", "target");
 
-    const state = useNodesStore.getState();
-    expect(state.contentByNodeId.source?.nodes).toEqual([]);
-    expect(state.contentByNodeId.target?.nodes).toEqual([updated]);
-    expect(state.ancestorsByNodeId["folder-1"]).toBeUndefined();
+    expect(getFolderListing("source")?.nodes).toEqual([]);
+    expect(getFolderListing("target")?.nodes).toEqual([updated]);
+    expect(
+      queryClient.getQueryState(
+        queryKeys.nodeNavigation.view("folder-1", "user-1"),
+      )?.isInvalidated,
+    ).toBe(true);
   });
 
   it("replaces the folder without removing it when the move is a no-op", () => {
@@ -184,9 +171,7 @@ describe("moveFolderInCache", () => {
 
     useNodesStore.getState().moveFolderInCache(updated, "parent-1", "parent-1");
 
-    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.nodes).toEqual(
-      [updated],
-    );
+    expect(getFolderListing("parent-1")?.nodes).toEqual([updated]);
   });
 });
 
@@ -199,9 +184,8 @@ describe("moveFileInCache", () => {
 
     useNodesStore.getState().moveFileInCache(updated, "source", "target");
 
-    const state = useNodesStore.getState();
-    expect(state.contentByNodeId.source?.files).toEqual([]);
-    expect(state.contentByNodeId.target?.files).toEqual([updated]);
+    expect(getFolderListing("source")?.files).toEqual([]);
+    expect(getFolderListing("target")?.files).toEqual([updated]);
   });
 
   it("replaces the file without removing it when the move is a no-op", () => {
@@ -211,9 +195,7 @@ describe("moveFileInCache", () => {
 
     useNodesStore.getState().moveFileInCache(updated, "parent-1", "parent-1");
 
-    expect(useNodesStore.getState().contentByNodeId["parent-1"]?.files).toEqual(
-      [updated],
-    );
+    expect(getFolderListing("parent-1")?.files).toEqual([updated]);
   });
 });
 
@@ -223,9 +205,7 @@ describe("optimisticRenameFile", () => {
 
     useNodesStore.getState().optimisticRenameFile("parent-1", "f1", "new.txt");
 
-    expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.files[0]?.name,
-    ).toBe("new.txt");
+    expect(getFolderListing("parent-1")?.files[0]?.name).toBe("new.txt");
   });
 
   it("leaves other files alone", () => {
@@ -239,11 +219,10 @@ describe("optimisticRenameFile", () => {
       .getState()
       .optimisticRenameFile("parent-1", "f2", "renamed.txt");
 
-    expect(
-      useNodesStore
-        .getState()
-        .contentByNodeId["parent-1"]?.files.map((f) => f.name),
-    ).toEqual(["a.txt", "renamed.txt"]);
+    expect(getFolderListing("parent-1")?.files.map((f) => f.name)).toEqual([
+      "a.txt",
+      "renamed.txt",
+    ]);
   });
 });
 
@@ -258,14 +237,12 @@ describe("updateFileInCache", () => {
 
     useNodesStore.getState().updateFileInCache("parent-1", updated);
 
-    expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.files[0],
-    ).toEqual(updated);
+    expect(getFolderListing("parent-1")?.files[0]).toEqual(updated);
   });
 
   it("keeps cache unchanged for missing parents or files", () => {
     seedParent("parent-1", [], [makeFile("f1", "old.txt")]);
-    const before = useNodesStore.getState().contentByNodeId;
+    const before = getFolderListing("parent-1");
 
     useNodesStore
       .getState()
@@ -274,6 +251,6 @@ describe("updateFileInCache", () => {
       .getState()
       .updateFileInCache("nowhere", makeFile("f1", "new.txt"));
 
-    expect(useNodesStore.getState().contentByNodeId).toBe(before);
+    expect(getFolderListing("parent-1")).toBe(before);
   });
 });

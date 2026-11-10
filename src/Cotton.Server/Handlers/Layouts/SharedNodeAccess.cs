@@ -8,5 +8,7 @@ namespace Cotton.Server.Handlers.Layouts
         Guid NodeId,
         Guid CreatedByUserId,
         string Name,
-        DateTime? ExpiresAt);
+        DateTime? ExpiresAt,
+        Guid ShareId,
+        bool AllowUpload);
 }

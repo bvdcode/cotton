@@ -18,6 +18,7 @@ const hub = vi.hoisted(() => {
   const listeners = new Map<string, Set<EventCallback>>();
   return {
     listeners,
+    onConnected: vi.fn(() => () => {}),
     start: vi.fn(async (): Promise<void> => undefined),
     on: vi.fn((method: string, callback: EventCallback): (() => void) => {
       method = method.toLowerCase();

@@ -1,4 +1,5 @@
 export const HUB_METHODS = {
+  RoutineProgress: "RoutineProgress",
   NotificationReceived: "OnNotificationReceived",
   SessionRevoked: "SessionRevoked",
   PreferencesUpdated: "PreferencesUpdated",
@@ -37,4 +38,5 @@ export const FILE_AND_NODE_MUTATION_HUB_METHODS = [
 export const SILENCED_HUB_METHODS = [
   ...FILE_AND_NODE_MUTATION_HUB_METHODS,
   HUB_METHODS.PreviewGenerated,
+  HUB_METHODS.RoutineProgress,
 ] as const satisfies ReadonlyArray<HubMethod>;

@@ -30,32 +30,30 @@ export const AdminPrivacySettingsPage = () => {
     telemetrySetting.savedValue;
 
   return (
-    <Stack>
-      <AdminPageSurface>
-        <Stack
-          spacing={3}
-          divider={<Divider flexItem />}
-          sx={{
-            p: 3,
-          }}
-        >
-          <AdminPageHeader
-            title={t("settings.privacy.title")}
-            description={t("settings.privacy.description")}
-          />
+    <AdminPageSurface>
+      <Stack
+        spacing={3}
+        divider={<Divider flexItem />}
+        sx={{
+          p: 3,
+        }}
+      >
+        <AdminPageHeader
+          title={t("settings.privacy.title")}
+          description={t("settings.privacy.description")}
+        />
 
-          <PrivacyTogglesSetting
-            telemetrySetting={telemetrySetting}
-            highlightSettingId={highlightSettingId}
-            highlightKey={location.key}
-          />
-          <GeoIpLookupSetting
-            telemetryEnabled={telemetryEnabled}
-            highlight={highlightSettingId === "geoIpLookupMode"}
-            highlightKey={location.key}
-          />
-        </Stack>
-      </AdminPageSurface>
-    </Stack>
+        <PrivacyTogglesSetting
+          telemetrySetting={telemetrySetting}
+          highlightSettingId={highlightSettingId}
+          highlightKey={location.key}
+        />
+        <GeoIpLookupSetting
+          telemetryEnabled={telemetryEnabled}
+          highlight={highlightSettingId === "geoIpLookupMode"}
+          highlightKey={location.key}
+        />
+      </Stack>
+    </AdminPageSurface>
   );
 };

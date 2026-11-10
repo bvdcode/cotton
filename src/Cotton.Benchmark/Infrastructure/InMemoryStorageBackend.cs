@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
@@ -15,22 +15,22 @@ namespace Cotton.Benchmark.Infrastructure
             // No temporary files are created by this backend.
         }
 
-        public Task<bool> DeleteAsync(string uid)
+        public Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_storage.Remove(uid));
         }
 
-        public Task<bool> ExistsAsync(string uid)
+        public Task<bool> ExistsAsync(string uid, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_storage.ContainsKey(uid));
         }
 
-        public Task<long> GetSizeAsync(string uid)
+        public Task<long> GetSizeAsync(string uid, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_storage.TryGetValue(uid, out byte[]? data) ? data.LongLength : 0L);
         }
 
-        public Task<Stream> ReadAsync(string uid)
+        public Task<Stream> ReadAsync(string uid, CancellationToken cancellationToken = default)
         {
             if (!_storage.TryGetValue(uid, out byte[]? data))
             {
@@ -42,7 +42,7 @@ namespace Cotton.Benchmark.Infrastructure
 
         public async Task<long> WriteAsync(
             string uid,
-            Stream stream, bool overwrite = false)
+            Stream stream, bool overwrite = false, CancellationToken cancellationToken = default)
         {
             using MemoryStream ms = new MemoryStream();
             await stream.CopyToAsync(ms);

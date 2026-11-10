@@ -6,10 +6,12 @@ import type {
   UploadFileToNodeOptions,
   UploadProgressSnapshot,
   UploadServerParams,
+  SharedUploadContext,
 } from "./types";
 
 export async function uploadBlobToChunks(options: {
   blob: Blob;
+  sharedUpload?: SharedUploadContext & { nodeId: string };
   fileName: string;
   server: UploadServerParams;
   client?: UploadFileToNodeOptions;
@@ -29,12 +31,15 @@ export async function uploadBlobToChunks(options: {
   try {
     const pipeline = new ChunkUploadPipeline({
       blob: options.blob,
+      sharedUpload: options.sharedUpload,
       fileName: options.fileName,
       hashSession,
       hashPreparationConcurrency: hashSession.maxParallelPreparations,
       sendChunkHashForValidation:
-        options.client?.sendChunkHashForValidation ??
-        uploadConfig.sendChunkHashForValidation,
+        !options.sharedUpload &&
+        !options.client?.forceDisableDeduplication &&
+        (options.client?.sendChunkHashForValidation ??
+          uploadConfig.sendChunkHashForValidation),
       chunkSizeBytes,
       minRetryChunkSizeBytes: Math.max(
         1,

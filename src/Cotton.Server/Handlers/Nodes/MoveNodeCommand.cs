@@ -1,23 +1,18 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Nodes;
-using Cotton.Topology;
-using Cotton.Files;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
-using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
-using Cotton.Server.Models.Dto;
+using Cotton.Server.Handlers.Moves;
 using Cotton.Server.Services;
-using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Nodes
@@ -36,245 +31,53 @@ namespace Cotton.Server.Handlers.Nodes
     }
 
     public class MoveNodeCommandHandler(
-        CottonDbContext _dbContext,
-        ISyncChangeRecorder _syncChanges,
-        IEventNotificationService _eventNotification,
-        ILayoutMutationGate _layoutGate,
-        ILogger<MoveNodeCommandHandler> _logger)
-        : IRequestHandler<MoveNodeCommand, NodeDto>
+        CottonDbContext db,
+        IMediator mediator,
+        IEventNotificationService notifications,
+        ILayoutMutationGate layoutGate,
+        CommittedMutationEffects effects) : IRequestHandler<MoveNodeCommand, NodeDto>
     {
-        public async Task<NodeDto> Handle(MoveNodeCommand request, CancellationToken cancellationToken)
-        {
-            ValidateRequest(request);
-            Guid sourceLayoutId = await GetSourceLayoutIdOrThrowAsync(request, cancellationToken);
-
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(sourceLayoutId, cancellationToken);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-
-            Node node = await LoadSourceNodeOrThrowAsync(request, cancellationToken);
-            ValidateSourceNode(node);
-            if (node.ParentId == request.ParentId)
-            {
-                return node.Adapt<NodeDto>();
-            }
-
-            Node targetParent = await LoadTargetParentOrThrowAsync(request, cancellationToken);
-            string destinationName = GetDestinationName(request, node);
-            string destinationNameKey = NameValidator.GetNameKey(destinationName);
-            await ValidateTargetParentAsync(
-                request,
-                node,
-                targetParent,
-                destinationNameKey,
-                cancellationToken);
-
-            Guid oldParentId = node.ParentId!.Value;
-            node.Metadata = NodeMetadataPatch.Apply(node.Metadata, request.Metadata);
-            await MoveNodeAsync(node, targetParent, destinationName, oldParentId, cancellationToken);
-            await tx.CommitAsync(cancellationToken);
-
-            await NotifyMoveAsync(node.Id, oldParentId, cancellationToken);
-            return node.Adapt<NodeDto>();
-        }
-
-        private static string GetDestinationName(MoveNodeCommand request, Node node)
-        {
-            if (request.Name is null)
-            {
-                return node.Name;
-            }
-
-            bool valid = NameValidator.TryNormalizeAndValidate(
-                request.Name,
-                out string normalized,
-                out string errorMessage);
-            if (!valid)
-            {
-                throw new BadRequestException<Node>(errorMessage);
-            }
-
-            return normalized;
-        }
-
-        private static void ValidateRequest(MoveNodeCommand request)
+        public async Task<NodeDto> Handle(MoveNodeCommand request, CancellationToken ct)
         {
             if (request.ParentId == Guid.Empty)
             {
                 throw new BadRequestException<Node>("Target parent id is required.");
             }
-
             if (request.ParentId == request.NodeId)
             {
                 throw new BadRequestException<Node>("Cannot move a node into itself.");
             }
-        }
-
-        private async Task<Guid> GetSourceLayoutIdOrThrowAsync(MoveNodeCommand request, CancellationToken ct)
-        {
-            return await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
-                .Select(x => (Guid?)x.LayoutId)
-                .SingleOrDefaultAsync(ct)
+            Guid layoutId = await db.Nodes.AsNoTracking()
+                .Where(node => node.Id == request.NodeId && node.OwnerId == request.UserId)
+                .Select(node => (Guid?)node.LayoutId).SingleOrDefaultAsync(ct)
                 ?? throw new EntityNotFoundException<Node>("Source folder not found.");
-        }
 
-        private async Task<Node> LoadSourceNodeOrThrowAsync(MoveNodeCommand request, CancellationToken ct)
-        {
-            return await _dbContext.Nodes
-                .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
-                .SingleOrDefaultAsync(ct)
+            await using IAsyncDisposable gate = await layoutGate.EnterAsync(layoutId, ct);
+            await using IDbContextTransaction transaction = await db.Database.BeginTransactionAsync(ct);
+            Node folder = await db.Nodes.SingleOrDefaultAsync(node => node.Id == request.NodeId
+                && node.OwnerId == request.UserId, ct)
                 ?? throw new EntityNotFoundException<Node>("Source folder not found.");
-        }
-
-        private static void ValidateSourceNode(Node node)
-        {
-            if (node.Type != NodeType.Default)
+            if (folder.Type != NodeType.Default)
             {
                 throw new EntityNotFoundException<Node>("Source folder is not in the active layout.");
             }
-
-            if (node.ParentId is null)
+            if (folder.ParentId is null)
             {
                 throw new AccessDeniedException<Node>("Cannot move the root node.");
             }
-        }
-
-        private async Task<Node> LoadTargetParentOrThrowAsync(MoveNodeCommand request, CancellationToken ct)
-        {
-            return await _dbContext.Nodes
-                .Where(x => x.Id == request.ParentId && x.OwnerId == request.UserId)
-                .SingleOrDefaultAsync(ct)
+            if (folder.ParentId == request.ParentId)
+            {
+                return folder.Adapt<NodeDto>();
+            }
+            Node parent = await db.Nodes.SingleOrDefaultAsync(node => node.Id == request.ParentId
+                && node.OwnerId == request.UserId, ct)
                 ?? throw new EntityNotFoundException<Node>("Destination folder not found.");
-        }
-
-        private async Task ValidateTargetParentAsync(
-            MoveNodeCommand request,
-            Node node,
-            Node targetParent,
-            string destinationNameKey,
-            CancellationToken ct)
-        {
-            EnsureCompatibleTargetParent(node, targetParent);
-            if (await IsDescendantAsync(targetParent.Id, node.Id, request.UserId, ct))
-            {
-                throw new BadRequestException<Node>("Cannot move a folder into its descendant.");
-            }
-
-            await EnsureNoSiblingCollisionAsync(
-                targetParent.Id,
-                request.UserId,
-                destinationNameKey,
-                node.Type,
-                node.Id,
-                ct);
-        }
-
-        private static void EnsureCompatibleTargetParent(Node node, Node targetParent)
-        {
-            if (targetParent.LayoutId != node.LayoutId)
-            {
-                throw new BadRequestException<Node>("Cannot move a node across layouts.");
-            }
-
-            if (targetParent.Type != node.Type)
-            {
-                throw new BadRequestException<Node>("Target parent has incompatible node type.");
-            }
-        }
-
-        private async Task MoveNodeAsync(
-            Node node,
-            Node targetParent,
-            string destinationName,
-            Guid oldParentId,
-            CancellationToken ct)
-        {
-            node.SetParent(targetParent);
-            node.SetName(destinationName);
-            _syncChanges.StageFolderChange(SyncChangeKind.FolderMoved, node, targetParent.Id, oldParentId);
-            try
-            {
-                await _dbContext.SaveChangesAsync(ct);
-            }
-            catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg
-                && pg.SqlState == PostgresErrorCodes.UniqueViolation)
-            {
-                throw new DuplicateException(node.NameKey);
-            }
-        }
-
-        private async Task<bool> IsDescendantAsync(Guid candidateChildId, Guid possibleAncestorId, Guid userId, CancellationToken ct)
-        {
-            IQueryable<Node> nodes = _dbContext.Nodes.AsNoTracking().AccessibleTo(userId);
-            try
-            {
-                await foreach (var node in NodeHierarchy.ReadAncestorsAsync(
-                    nodes, candidateChildId, node => new { node.Id, node.ParentId }, node => node.ParentId,
-                    possibleAncestorId, int.MaxValue, ct))
-                {
-                    if (node.Id == possibleAncestorId || node.ParentId == possibleAncestorId)
-                    {
-                        return true;
-                    }
-                }
-            }
-            catch (NodeHierarchyException exception)
-            {
-                _logger.LogWarning(exception, "Cannot move a folder within an invalid hierarchy");
-                throw new BadRequestException<Node>("Folder hierarchy contains a cycle.");
-            }
-            return false;
-        }
-
-        private async Task EnsureNoSiblingCollisionAsync(
-            Guid targetParentId,
-            Guid userId,
-            string nameKey,
-            NodeType nodeType,
-            Guid movingNodeId,
-            CancellationToken ct)
-        {
-            bool nodeExists = await _dbContext.Nodes
-                .AnyAsync(x =>
-                    x.ParentId == targetParentId &&
-                    x.OwnerId == userId &&
-                    x.Type == nodeType &&
-                    x.NameKey == nameKey &&
-                    x.Id != movingNodeId,
-                    ct);
-            if (nodeExists)
-            {
-                throw new DuplicateException(
-                    nameKey,
-                    extra: new { conflictKind = RestoreConflictKind.Folder });
-            }
-
-            bool fileExists = await _dbContext.NodeFiles
-                .AnyAsync(x =>
-                    x.NodeId == targetParentId &&
-                    x.OwnerId == userId &&
-                    x.NameKey == nameKey,
-                    ct);
-            if (fileExists)
-            {
-                throw new DuplicateException(
-                    nameKey,
-                    extra: new { conflictKind = RestoreConflictKind.File });
-            }
-        }
-
-        private async Task NotifyMoveAsync(Guid nodeId, Guid oldParentId, CancellationToken ct)
-        {
-            // Best-effort: a notification failure must not turn an already-committed move into a failed response.
-            try
-            {
-                await _eventNotification.NotifyNodeMovedAsync(nodeId, oldParentId, ct);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Move notification failed for node {NodeId}", nodeId);
-            }
+            Guid oldParentId = folder.ParentId.Value;
+            await mediator.Send(new RelocateFolderRequest(folder, parent, request.Name, request.Metadata), ct);
+            await transaction.CommitAsync(ct);
+            await effects.RunAsync(nameof(IEventNotificationService.NotifyNodeMovedAsync),
+                () => notifications.NotifyNodeMovedAsync(folder.Id, oldParentId, CancellationToken.None));
+            return folder.Adapt<NodeDto>();
         }
     }
 }

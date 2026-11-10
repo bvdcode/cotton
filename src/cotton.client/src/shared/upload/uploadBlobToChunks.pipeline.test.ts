@@ -79,6 +79,64 @@ describe("uploadBlobToChunks", () => {
     mocks.uploadChunk.mockResolvedValue(undefined);
   });
 
+  it("always transfers anonymous chunks and never probes ownership, including after an interruption", async () => {
+    mocks.acquire.mockResolvedValue(createWorker());
+    mocks.uploadChunk
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Interrupted"), {
+          isAxiosError: true,
+          response: { status: 504 },
+        }),
+      )
+      .mockResolvedValue(undefined);
+    const access = {
+      token: "public-share",
+      sessionId: "session",
+      nodeId: "folder",
+      server: { maxChunkSizeBytes: 4, supportedHashAlgorithm: "sha256" },
+    };
+    await uploadBlobToChunks({
+      blob: new Blob(["abcd"]),
+      fileName: "file.txt",
+      server: access.server,
+      sharedUpload: access,
+      client: {
+        sendChunkHashForValidation: true,
+        forceDisableDeduplication: true,
+      },
+    });
+    expect(mocks.chunkExists).not.toHaveBeenCalled();
+    expect(mocks.uploadChunk).toHaveBeenCalledTimes(2);
+    for (const [request] of mocks.uploadChunk.mock.calls) {
+      expect(request).toEqual(
+        expect.objectContaining({ sharedUpload: access }),
+      );
+    }
+  });
+
+  it("represents an empty public upload without chunks or network probes", async () => {
+    const worker = createWorker();
+    mocks.acquire.mockResolvedValue(worker);
+    const server = { maxChunkSizeBytes: 4, supportedHashAlgorithm: "sha256" };
+    await expect(
+      uploadBlobToChunks({
+        blob: new Blob([]),
+        fileName: "empty.txt",
+        server,
+        sharedUpload: {
+          token: "public",
+          sessionId: "session",
+          nodeId: "folder",
+          server,
+        },
+      }),
+    ).resolves.toEqual({ chunkHashes: [], fileHash: "file-hash" });
+    expect(mocks.chunkExists).not.toHaveBeenCalled();
+    expect(mocks.uploadChunk).not.toHaveBeenCalled();
+    expect(worker.digestFile).toHaveBeenCalledOnce();
+    expect(mocks.release).toHaveBeenCalledWith(worker);
+  });
+
   it("hashes chunks ahead of blocked network consumers", async () => {
     const worker = createWorker();
     const probeGate = createDeferred<void>();

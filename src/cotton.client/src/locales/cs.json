@@ -1617,6 +1617,8 @@
     },
     "message": "Podívejte se na \"{{name}}\" v Cotton Cloud",
     "folder": {
+      "uploadFailed": "Nahrávání se nepodařilo připravit.",
+      "filesOnly": "Přetáhněte jednotlivé soubory. Nahrávání složek není pro tento odkaz dostupné.",
       "title": "Sdílená složka",
       "message": "Podívejte se na složku \"{{name}}\" v Cotton Cloud",
       "empty": "Tato složka je prázdná.",
@@ -2607,6 +2609,7 @@
       },
       "options": {
         "title": "Nastavení odkazu",
+        "allowUpload": "Povolit nahrávání souborů",
         "name": "Název odkazu",
         "nameHint": "Volitelné. Pro náhodnou adresu ponechte prázdné.",
         "invalidName": "Použijte písmena, číslice, pomlčky nebo podtržítka.",
@@ -2614,6 +2617,9 @@
         "duration": "Doba platnosti",
         "unit": "Jednotka",
         "units": {
+          "years": "Roky",
+          "months": "Měsíce",
+          "weeks": "Týdny",
           "days": "Dny",
           "hours": "Hodiny",
           "minutes": "Minuty",
@@ -3720,7 +3726,8 @@
     "trash": "Koš",
     "profile": "Profil",
     "settings": "Nastavení",
-    "admin": "Správa"
+    "admin": "Správa",
+    "routines": "Rutiny"
   },
   "resetPassword": {
     "title": "Obnovit heslo",
@@ -3821,6 +3828,85 @@
       "requiredVersion": "Požadovaná verze",
       "requiredVersionRange": "Požadovaná předchozí verze",
       "lastRecordedVersion": "Poslední zaznamenaná verze"
+    }
+  },
+  "routines": {
+    "actionError": "Akci se nepodařilo provést. Zkuste to znovu.",
+    "workingFolder": "Pracovní složka",
+    "createAndRun": "Vytvořit a spustit",
+    "title": "Rutiny",
+    "create": "Vytvořit rutinu",
+    "createTitle": "Nová rutina",
+    "editTitle": "Upravit rutinu",
+    "name": "Název",
+    "type": "Typ úlohy",
+    "deleteFiles": "Odstranit soubory",
+    "chooseFolder": "Vybrat pracovní složku",
+    "frequency": "Četnost",
+    "olderThanDays": "Starší než (dny)",
+    "dateField": "Kontrolované datum",
+    "createdAt": "Datum vytvoření",
+    "updatedAt": "Datum změny",
+    "includeSubfolders": "Zahrnout podsložky",
+    "deletionMode": "Způsob odstranění",
+    "trash": "Přesunout do koše",
+    "permanent": "Trvale odstranit",
+    "permanentWarning": "Trvale odstraněné soubory nelze obnovit.",
+    "moreSettings": "Další nastavení",
+    "lessSettings": "Méně nastavení",
+    "enabled": "Zapnuto",
+    "paused": "Pozastaveno",
+    "startAt": "Nespouštět před",
+    "startHint": "Pro okamžité spuštění ponechte prázdné. Časové pásmo serveru: {{timezone}}.",
+    "calendarMode": "Kalendářní plán",
+    "time": "Čas",
+    "weekday": "Den v týdnu",
+    "dayOfMonth": "Den v měsíci",
+    "month": "Měsíc",
+    "calendarHint": "Časové pásmo serveru: {{timezone}}. Kontrola každých 15 minut. Neexistující data a časy se přeskočí; opakovaný čas se spustí jen jednou.",
+    "save": "Uložit",
+    "cancel": "Zrušit",
+    "loadError": "Data se nepodařilo načíst. Obnovte stránku.",
+    "saveError": "Rutinu se nepodařilo uložit. Zkontrolujte nastavení.",
+    "runNow": "Spustit nyní",
+    "history": "Historie spuštění",
+    "noRuns": "Zatím žádná spuštění.",
+    "counts": "Zpracováno: {{processed}} · Odstraněno: {{deleted}}",
+    "nextRun": "Další spuštění: {{date}}",
+    "condition": "Soubory starší než {{days}} dní · {{field}}",
+    "deleteRoutine": "Odstranit rutinu",
+    "deleteConfirm": "Odstranit „{{name}}“ a její historii? Soubory zůstanou beze změny.",
+    "refresh": "Obnovit",
+    "empty": "Zatím žádné rutiny",
+    "home": "Domovská složka",
+    "up": "Nadřazená složka",
+    "noSubfolders": "Žádné podsložky",
+    "previous": "Předchozí",
+    "next": "Další",
+    "useFolder": "Použít tuto složku",
+    "intervals": {
+      "1": "Každou hodinu",
+      "24": "Každý den",
+      "168": "Každý týden",
+      "720": "Každých 30 dní",
+      "8760": "Každých 365 dní"
+    },
+    "calendarFrequency": {
+      "0": "Denně",
+      "1": "Týdně",
+      "2": "Měsíčně",
+      "3": "Ročně"
+    },
+    "statuses": {
+      "0": "Probíhá",
+      "1": "Dokončeno",
+      "2": "Selhalo",
+      "3": "Přerušeno"
+    },
+    "errors": {
+      "WorkingFolderUnavailable": "Pracovní složka chybí, je neaktivní nebo v koši.",
+      "ExecutionFailed": "Spuštění selhalo. Podrobnosti v protokolu serveru.",
+      "Interrupted": "Spuštění bylo přerušeno."
     }
   }
 }

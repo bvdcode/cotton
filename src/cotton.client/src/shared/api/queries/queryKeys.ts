@@ -12,6 +12,12 @@ const oidcRoot = ["oidc"] as const;
 const nodeChildrenRoot = ["nodeChildren"] as const;
 
 export const queryKeys = {
+  nodeNavigation: {
+    all: () => ["nodeNavigation"] as const,
+    view: (nodeId: string, userId: string) =>
+      ["nodeNavigation", nodeId, userId] as const,
+    root: (userId: string) => ["nodeRoot", userId] as const,
+  },
   nodeChildren: {
     all: (nodeId: string) => [...nodeChildrenRoot, nodeId] as const,
     overview: (nodeId: string, userId: string, pageSize: number) =>

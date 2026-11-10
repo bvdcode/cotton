@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Crypto;
@@ -88,11 +88,13 @@ namespace Cotton.Server.Extensions
         {
             services.AddScoped<FilePreviewRenderer>();
             services.AddScoped<IChunkIngestService, ChunkIngestService>();
+            services.AddSingleton<SharedUploadSessionCache>();
             services.AddScoped<NodeFileHistoryService>();
             services.AddScoped<FileVersionStorageService>();
             services.AddScoped<FileVersionRetentionService>();
             services.AddScoped<FileVersionService>();
             services.AddScoped<IEventNotificationService, EventNotificationService>();
+            services.AddScoped<CommittedMutationEffects>();
             services.AddScoped<ISyncChangeRecorder, SyncChangeRecorder>();
             return services;
         }
@@ -113,6 +115,7 @@ namespace Cotton.Server.Extensions
             services.AddHostedService(sp => sp.GetRequiredService<DatabaseIntegrityFailureReporter>());
 
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserIntegrityDescriptor>();
+            services.AddSingleton<IDatabaseIntegrityDescriptor, RoutineIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserPasskeyCredentialIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, OidcProviderIntegrityDescriptor>();
             services.AddSingleton<IDatabaseIntegrityDescriptor, UserExternalIdentityIntegrityDescriptor>();

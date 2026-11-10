@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Crypto.Internals;
+using Cotton.Crypto.Streams;
 using Cotton.Crypto.Internals.Pipelines;
 using System;
 using System.Buffers;
@@ -221,25 +222,16 @@ namespace Cotton.Crypto
                 throw new ArgumentException("Output stream must be writable.", nameof(output));
             }
 
-            FileHeader header = await AesGcmStreamFormat.ReadFileHeaderAsync(input, NonceSize, TagSize, KeySize, ct).ConfigureAwait(false);
-            if (header.KeyId != _keyId)
-            {
-                if (!leaveInputOpen)
-                {
-                    await input.DisposeAsync().ConfigureAwait(false);
-                }
-                if (!leaveOutputOpen)
-                {
-                    await output.DisposeAsync().ConfigureAwait(false);
-                }
-                throw new InvalidDataException($"Key ID mismatch. Expected {_keyId}, but file has {header.KeyId}.");
-            }
-
             int effectiveWindowCap = ComputeEffectiveWindowCap(DefaultChunkSize);
 
             byte[] fileKey = BufferPool.Rent(KeySize);
             try
             {
+                FileHeader header = await AesGcmStreamFormat.ReadFileHeaderAsync(input, NonceSize, TagSize, KeySize, ct).ConfigureAwait(false);
+                if (header.KeyId != _keyId)
+                {
+                    throw new InvalidDataException($"Key ID mismatch. Expected {_keyId}, but file has {header.KeyId}.");
+                }
                 using (AesGcm gcm = new AesGcm(_masterKeyBytes, TagSize))
                 {
                     Span<byte> tagSpan = stackalloc byte[TagSize];
@@ -280,43 +272,12 @@ namespace Cotton.Crypto
 
             long pauseThreshold = _pipePauseWriterThresholdBytes;
             long resumeThreshold = _pipeResumeWriterThresholdBytes;
-            Pipe pipe = new Pipe(new PipeOptions(
-                pool: MemoryPool<byte>.Shared,
-                readerScheduler: null,
-                writerScheduler: null,
-                pauseWriterThreshold: pauseThreshold,
-                resumeWriterThreshold: resumeThreshold,
-                minimumSegmentSize: 4096,
-                useSynchronizationContext: false));
-
-            Stream readerStream = pipe.Reader.AsStream(leaveOpen: leaveOpen);
-
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    Stream writerStream = pipe.Writer.AsStream(leaveOpen: true);
-                    await EncryptAsync(input, writerStream, chunkSize, leaveInputOpen: leaveOpen, leaveOutputOpen: true, ct).ConfigureAwait(false);
-                    await pipe.Writer.CompleteAsync().ConfigureAwait(false);
-                }
-                catch (OperationCanceledException oce)
-                {
-                    await pipe.Writer.CompleteAsync(oce).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    await pipe.Writer.CompleteAsync(ex).ConfigureAwait(false);
-                }
-                finally
-                {
-                    if (!leaveOpen)
-                    {
-                        await input.DisposeAsync().ConfigureAwait(false);
-                    }
-                }
-            });
-
-            return Task.FromResult<Stream>(readerStream);
+            PipeOptions options = CreatePipeOptions(pauseThreshold, resumeThreshold);
+            Stream result = new TransformReadStream(input,
+                (source, destination, token) => EncryptAsync(source, destination, chunkSize,
+                    leaveInputOpen: true, leaveOutputOpen: true, ct: token),
+                options, leaveOpen, ct);
+            return Task.FromResult(result);
         }
 
         public Task<Stream> DecryptAsync(Stream input, bool leaveOpen = false, CancellationToken ct = default)
@@ -328,45 +289,22 @@ namespace Cotton.Crypto
                 throw new ArgumentException("Input stream must be readable.", nameof(input));
             }
 
-            long pauseThreshold = _pipePauseWriterThresholdBytes;
-            long resumeThreshold = _pipeResumeWriterThresholdBytes;
-            Pipe pipe = new Pipe(new PipeOptions(
+            PipeOptions options = CreatePipeOptions(_pipePauseWriterThresholdBytes, _pipeResumeWriterThresholdBytes);
+            Stream result = new TransformReadStream(input,
+                (source, destination, token) => DecryptAsync(source, destination,
+                    leaveInputOpen: true, leaveOutputOpen: true, ct: token),
+                options, leaveOpen, ct);
+            return Task.FromResult(result);
+        }
+
+        private static PipeOptions CreatePipeOptions(long pauseThreshold, long resumeThreshold)
+        {
+            return new PipeOptions(
                 pool: MemoryPool<byte>.Shared,
-                readerScheduler: null,
-                writerScheduler: null,
                 pauseWriterThreshold: pauseThreshold,
                 resumeWriterThreshold: resumeThreshold,
                 minimumSegmentSize: 4096,
-                useSynchronizationContext: false));
-
-            Stream readerStream = pipe.Reader.AsStream(leaveOpen: leaveOpen);
-
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    Stream writerStream = pipe.Writer.AsStream(leaveOpen: true);
-                    await DecryptAsync(input, writerStream, leaveInputOpen: leaveOpen, leaveOutputOpen: true, ct).ConfigureAwait(false);
-                    await pipe.Writer.CompleteAsync().ConfigureAwait(false);
-                }
-                catch (OperationCanceledException oce)
-                {
-                    await pipe.Writer.CompleteAsync(oce).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    await pipe.Writer.CompleteAsync(ex).ConfigureAwait(false);
-                }
-                finally
-                {
-                    if (!leaveOpen)
-                    {
-                        await input.DisposeAsync().ConfigureAwait(false);
-                    }
-                }
-            });
-
-            return Task.FromResult<Stream>(readerStream);
+                useSynchronizationContext: false);
         }
 
         /// <summary>

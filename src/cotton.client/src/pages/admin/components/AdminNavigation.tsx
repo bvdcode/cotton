@@ -124,6 +124,7 @@ export const DesktopAdminNavigation = ({
         overflow: "auto",
         flex: 1,
         overflowX: "hidden",
+        scrollbarWidth: "thin",
       }}
     >
       <List sx={{ py: 1 }}>

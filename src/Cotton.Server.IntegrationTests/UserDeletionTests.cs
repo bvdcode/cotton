@@ -32,12 +32,29 @@ namespace Cotton.Server.IntegrationTests
                 byte[] ChunkHash,
                 Guid ProviderId) fixture = await SeedUserDeletionFixtureAsync(created.Id);
 
+            await using (AsyncServiceScope scope = _factory!.Services.CreateAsyncScope())
+            {
+                CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                Routine routine = new()
+                {
+                    OwnerId = created.Id, Name = "Cleanup", TargetNodeId = fixture.ChildNodeId,
+                    Settings = JsonSerializer.Serialize(new Cotton.Routines.DeleteFilesRoutineSettings { OlderThanDays = 30 }),
+                };
+                db.RoutineRuns.Add(new RoutineRun { Routine = routine, Status = Cotton.Routines.RoutineRunStatus.Completed });
+                await db.SaveChangesAsync();
+            }
             SetBearer(adminToken);
             Guid? sharedFileId = sharedManifest ? await ShareManifestAsync(fixture.ManifestId) : null;
             HttpResponseMessage deleteResponse = await _client!.DeleteAsync($"/api/v1/users/{created.Id}");
 
             Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
             await AssertUserDeletionFixtureRemovedAsync(created.Id, fixture, sharedFileId);
+            await using (AsyncServiceScope scope = _factory!.Services.CreateAsyncScope())
+            {
+                CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                Assert.That(await db.Routines.AnyAsync(x => x.OwnerId == created.Id), Is.False);
+                Assert.That(await db.RoutineRuns.AnyAsync(), Is.False);
+            }
 
             SetBearer(userToken);
             HttpResponseMessage revokedSessionResponse = await _client.GetAsync("/api/v1/users/me");

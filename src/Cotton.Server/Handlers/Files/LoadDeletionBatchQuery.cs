@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Files;
+using Cotton.Routines;
 using Cotton.Server.Models;
 using Cotton.Server.Services;
 using EasyExtensions.Mediator;
@@ -13,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Files
 {
-    public record LoadDeletionBatchQuery(Guid UserId, IReadOnlyList<BatchItemRequestDto> Items, bool SkipTrash)
+    public record LoadDeletionBatchQuery(Guid UserId, IReadOnlyList<BatchItemRequestDto> Items, bool SkipTrash, FileDeletionCondition? Condition = null)
         : IRequest<DeletionBatch>;
 
     public class LoadDeletionBatchQueryHandler(CottonDbContext _db, NodeSubtreeService _subtree)
@@ -23,6 +24,29 @@ namespace Cotton.Server.Handlers.Files
         {
             Guid[] folderIds = [.. request.Items.Where(x => x.Kind == BatchItemKind.Folder).Select(x => x.Id).Distinct()];
             Guid[] fileIds = [.. request.Items.Where(x => x.Kind == BatchItemKind.File).Select(x => x.Id).Distinct()];
+            if (request.Condition is not null)
+            {
+                if (folderIds.Length != 0)
+                {
+                    throw new InvalidOperationException("Conditional deletion accepts files only.");
+                }
+                FileDeletionCondition condition = request.Condition;
+                bool rootExists = await _db.Nodes.AnyAsync(x => x.Id == condition.RootNodeId
+                    && x.OwnerId == request.UserId && x.Type == NodeType.Default && x.Layout.IsActive, ct);
+                Guid[] allowedNodes = !rootExists ? [] : condition.IncludeSubfolders
+                    ? (await _subtree.CollectSubtreeIdsAsync(request.UserId, condition.RootNodeId, ct)).ToArray()
+                    : [condition.RootNodeId];
+                IQueryable<NodeFile> eligible = _db.NodeFiles.Where(x => x.OwnerId == request.UserId
+                    && fileIds.Contains(x.Id) && allowedNodes.Contains(x.NodeId) && x.Node.Type == NodeType.Default
+                    && (x.OriginalNodeFileId == Guid.Empty || x.Id == x.OriginalNodeFileId));
+                eligible = condition.DateField switch
+                {
+                    RoutineDateField.CreatedAt => eligible.Where(x => x.CreatedAt < condition.OlderThan),
+                    RoutineDateField.UpdatedAt => eligible.Where(x => x.UpdatedAt < condition.OlderThan),
+                    _ => throw new ArgumentOutOfRangeException(nameof(request)),
+                };
+                fileIds = await eligible.Select(x => x.Id).ToArrayAsync(ct);
+            }
             Dictionary<Guid, Node> selectedFolders = await _db.Nodes
                 .Where(x => x.OwnerId == request.UserId && folderIds.Contains(x.Id)
                     && x.ParentId != null && (request.SkipTrash || x.Type == NodeType.Default))

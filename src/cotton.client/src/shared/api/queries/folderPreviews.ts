@@ -27,7 +27,9 @@ export function updateFolderFilePreview(
     {
       queryKey,
       predicate: (query) =>
-        query.queryKey[3] === "overview" || query.queryKey[3] === "page",
+        query.queryKey[3] === "overview" ||
+        query.queryKey[3] === "page" ||
+        query.queryKey[3] === "complete",
     },
     (page) => (page ? updatePage(page) : page),
   );

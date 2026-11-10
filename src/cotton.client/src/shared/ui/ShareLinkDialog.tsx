@@ -1,7 +1,11 @@
 import { Check, ContentCopy } from "@mui/icons-material";
 import {
   Alert,
+  Box,
   Button,
+  Collapse,
+  FormControlLabel,
+  Switch,
   Dialog,
   DialogActions,
   DialogContent,
@@ -13,8 +17,9 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { filesApi } from "@shared/api/filesApi";
 import { isAxiosError } from "@shared/api/httpClient";
@@ -42,11 +47,15 @@ interface ShareLinkDialogProps {
 export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
   const { t } = useTranslation(["files", "common"]);
   const titleId = useId();
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const linkInputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(true);
   const [initialDuration] = useState(() =>
     getShareLinkDuration(
       selectShareLinkExpireAfterMinutes(useUserPreferencesStore.getState()),
     ),
   );
+  const [allowUpload, setAllowUpload] = useState(false);
   const [name, setName] = useState("");
   const [duration, setDuration] = useState(initialDuration.value);
   const [unit, setUnit] = useState<ShareLinkDurationUnit>(initialDuration.unit);
@@ -57,6 +66,11 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
   const minutes = getShareLinkExpirationMinutes(duration, unit);
   const validName = isValidShareLinkName(name);
   const locked = pending || link.length > 0;
+  const closeDialog = () => {
+    if (!pending) {
+      setOpen(false);
+    }
+  };
 
   const createLink = async () => {
     if (minutes === undefined || !validName || locked) {
@@ -79,6 +93,7 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
             target.id,
             minutes,
             name.trim(),
+            allowUpload,
           );
           break;
       }
@@ -114,12 +129,9 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
 
   return (
     <Dialog
-      open
-      onClose={() => {
-        if (!pending) {
-          onClose();
-        }
-      }}
+      open={open}
+      onClose={closeDialog}
+      transitionDuration={reducedMotion ? 0 : undefined}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => {
         if (event.key !== "Escape") {
@@ -130,6 +142,7 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
       maxWidth="xs"
       aria-labelledby={titleId}
       slotProps={{
+        transition: { onExited: onClose },
         paper: {
           component: "form",
           sx: {
@@ -148,13 +161,72 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
         },
       }}
     >
-      <DialogTitle id={titleId}>{t("share.options.title")}</DialogTitle>
+      <DialogTitle
+        id={titleId}
+        aria-label={`${t("share.options.title")} · ${target.name}`}
+      >
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 0.25, sm: 1 }}
+          sx={{ alignItems: { xs: "flex-start", sm: "center" }, minWidth: 0 }}
+        >
+          <Typography
+            component="span"
+            variant="inherit"
+            noWrap
+            sx={{ flexShrink: 0, maxWidth: { xs: "100%", sm: "75%" } }}
+          >
+            {t("share.options.title")}
+          </Typography>
+          <Typography
+            component="span"
+            color="text.secondary"
+            aria-hidden
+            sx={{ display: { xs: "none", sm: "inline" } }}
+          >
+            ·
+          </Typography>
+          <Tooltip title={target.name}>
+            <Typography
+              component="span"
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                minWidth: 0,
+                maxWidth: "100%",
+                display: { xs: "-webkit-box", sm: "block" },
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                whiteSpace: { xs: "normal", sm: "nowrap" },
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                overflowWrap: "anywhere",
+              }}
+            >
+              {target.name}
+            </Typography>
+          </Tooltip>
+        </Stack>
+      </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
-          <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
-            {target.name}
-          </Typography>
-          {error && <Alert severity="error">{error}</Alert>}
+          {target.kind === "folder" && (
+            <FormControlLabel
+              label={t("share.options.allowUpload")}
+              control={
+                <Switch
+                  checked={allowUpload}
+                  disabled={locked}
+                  onChange={(_, checked) => setAllowUpload(checked)}
+                />
+              }
+            />
+          )}
+          {error && (
+            <Collapse in appear timeout={reducedMotion ? 0 : "auto"}>
+              <Alert severity="error">{error}</Alert>
+            </Collapse>
+          )}
           <TextField
             label={t("share.options.name")}
             value={name}
@@ -228,35 +300,44 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
             </Typography>
           )}
           {link && (
-            <TextField
-              label={t("share.options.link")}
-              value={link}
-              autoFocus
-              fullWidth
-              slotProps={{
-                input: {
-                  readOnly: true,
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Tooltip title={copyLabel}>
-                        <IconButton
-                          aria-label={copyLabel}
-                          onClick={() => void copyLink()}
-                          edge="end"
-                        >
-                          {copied ? <Check /> : <ContentCopy />}
-                        </IconButton>
-                      </Tooltip>
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
+            <Collapse
+              in
+              appear
+              timeout={reducedMotion ? 0 : "auto"}
+              onEntered={() => linkInputRef.current?.focus()}
+            >
+              <Box sx={{ pt: 1 }}>
+                <TextField
+                  label={t("share.options.link")}
+                  value={link}
+                  inputRef={linkInputRef}
+                  fullWidth
+                  slotProps={{
+                    input: {
+                      readOnly: true,
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <Tooltip title={copyLabel}>
+                            <IconButton
+                              aria-label={copyLabel}
+                              onClick={() => void copyLink()}
+                              edge="end"
+                            >
+                              {copied ? <Check /> : <ContentCopy />}
+                            </IconButton>
+                          </Tooltip>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+              </Box>
+            </Collapse>
           )}
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button color="inherit" onClick={onClose} disabled={pending}>
+        <Button color="inherit" onClick={closeDialog} disabled={pending}>
           {link ? t("common:actions.close") : t("common:actions.cancel")}
         </Button>
         {!link && (

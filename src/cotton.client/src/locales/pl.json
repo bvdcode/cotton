@@ -1620,6 +1620,8 @@
     },
     "message": "Zobacz \"{{name}}\" w Cotton Cloud",
     "folder": {
+      "uploadFailed": "Nie udało się przygotować przesyłania.",
+      "filesOnly": "Przeciągnij pojedyncze pliki. Ten link nie obsługuje przesyłania folderów.",
       "title": "Udostępniony folder",
       "message": "Zobacz folder \"{{name}}\" w Cotton Cloud",
       "empty": "Ten folder jest pusty.",
@@ -2610,6 +2612,7 @@
       },
       "options": {
         "title": "Ustawienia linku",
+        "allowUpload": "Zezwól na przesyłanie plików",
         "name": "Nazwa linku",
         "nameHint": "Opcjonalnie. Pozostaw puste, aby otrzymać losowy adres.",
         "invalidName": "Użyj liter, cyfr, myślników lub podkreśleń.",
@@ -2617,6 +2620,9 @@
         "duration": "Okres ważności",
         "unit": "Jednostka",
         "units": {
+          "years": "Lata",
+          "months": "Miesiące",
+          "weeks": "Tygodnie",
           "days": "Dni",
           "hours": "Godziny",
           "minutes": "Minuty",
@@ -3723,7 +3729,8 @@
     "trash": "Kosz",
     "profile": "Profil",
     "settings": "Ustawienia",
-    "admin": "Administrator"
+    "admin": "Administrator",
+    "routines": "Rutyny"
   },
   "resetPassword": {
     "title": "Resetuj hasło",
@@ -3824,6 +3831,85 @@
       "requiredVersion": "Wymagana wersja",
       "requiredVersionRange": "Wymagana poprzednia wersja",
       "lastRecordedVersion": "Ostatnia zarejestrowana wersja"
+    }
+  },
+  "routines": {
+    "actionError": "Operacja nie powiodła się. Spróbuj ponownie.",
+    "workingFolder": "Folder roboczy",
+    "createAndRun": "Utwórz i uruchom",
+    "title": "Rutyny",
+    "create": "Utwórz rutynę",
+    "createTitle": "Nowa rutyna",
+    "editTitle": "Edytuj rutynę",
+    "name": "Nazwa",
+    "type": "Typ zadania",
+    "deleteFiles": "Usuwanie plików",
+    "chooseFolder": "Wybierz folder roboczy",
+    "frequency": "Częstotliwość",
+    "olderThanDays": "Starsze niż (dni)",
+    "dateField": "Sprawdzana data",
+    "createdAt": "Data utworzenia",
+    "updatedAt": "Data modyfikacji",
+    "includeSubfolders": "Uwzględnij podfoldery",
+    "deletionMode": "Sposób usuwania",
+    "trash": "Przenieś do kosza",
+    "permanent": "Usuń trwale",
+    "permanentWarning": "Trwale usuniętych plików nie można przywrócić.",
+    "moreSettings": "Więcej ustawień",
+    "lessSettings": "Mniej ustawień",
+    "enabled": "Włączona",
+    "paused": "Wstrzymana",
+    "startAt": "Nie uruchamiaj przed",
+    "startHint": "Pozostaw puste, aby uruchomić od razu. Strefa serwera: {{timezone}}.",
+    "calendarMode": "Harmonogram kalendarzowy",
+    "time": "Godzina",
+    "weekday": "Dzień tygodnia",
+    "dayOfMonth": "Dzień miesiąca",
+    "month": "Miesiąc",
+    "calendarHint": "Strefa serwera: {{timezone}}. Sprawdzanie co 15 minut. Nieistniejące daty i godziny są pomijane; powtórzona godzina uruchamia zadanie tylko raz.",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "loadError": "Nie udało się wczytać danych. Odśwież stronę.",
+    "saveError": "Nie udało się zapisać rutyny. Sprawdź ustawienia.",
+    "runNow": "Uruchom teraz",
+    "history": "Historia uruchomień",
+    "noRuns": "Brak uruchomień.",
+    "counts": "Przetworzono: {{processed}} · Usunięto: {{deleted}}",
+    "nextRun": "Następne uruchomienie: {{date}}",
+    "condition": "Pliki starsze niż {{days}} dni · {{field}}",
+    "deleteRoutine": "Usuń rutynę",
+    "deleteConfirm": "Usunąć „{{name}}” i jej historię? Pliki pozostaną bez zmian.",
+    "refresh": "Odśwież",
+    "empty": "Brak rutyn",
+    "home": "Folder główny",
+    "up": "Folder nadrzędny",
+    "noSubfolders": "Brak podfolderów",
+    "previous": "Poprzednia",
+    "next": "Następna",
+    "useFolder": "Wybierz ten folder",
+    "intervals": {
+      "1": "Co godzinę",
+      "24": "Codziennie",
+      "168": "Co tydzień",
+      "720": "Co 30 dni",
+      "8760": "Co 365 dni"
+    },
+    "calendarFrequency": {
+      "0": "Codziennie",
+      "1": "Co tydzień",
+      "2": "Co miesiąc",
+      "3": "Co rok"
+    },
+    "statuses": {
+      "0": "W toku",
+      "1": "Zakończona",
+      "2": "Niepowodzenie",
+      "3": "Przerwana"
+    },
+    "errors": {
+      "WorkingFolderUnavailable": "Folder roboczy nie istnieje, jest nieaktywny lub znajduje się w koszu.",
+      "ExecutionFailed": "Wykonanie nie powiodło się. Sprawdź dziennik serwera.",
+      "Interrupted": "Wykonanie zostało przerwane."
     }
   }
 }

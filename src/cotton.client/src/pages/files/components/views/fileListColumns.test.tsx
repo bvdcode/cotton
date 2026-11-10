@@ -1,12 +1,18 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { DataGrid } from "@mui/x-data-grid";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
   ENCRYPTED_FLAG_KEY,
   FOLDER_ENCRYPTION_POLICY_KEY,
 } from "@shared/crypto";
-import { createActionsColumn, type FileListRow } from "./fileListColumns";
+import {
+  createActionsColumn,
+  createIconColumn,
+  type FileListRow,
+} from "./fileListColumns";
 import type { ColumnOptions } from "./fileListColumnTypes";
+import { createFile } from "../../../../test/fileFixtures";
 
 const labels = {
   name: "Name",
@@ -54,6 +60,38 @@ const fileRow = (metadata: Record<string, string> = {}): FileListRow => ({
   sizeBytes: 128,
   contentType: "application/pdf",
   metadata,
+});
+
+function PreviewGrid({ hash }: { hash: string }) {
+  const [failedPreviews, setFailedPreviews] = useState(new Set<string>());
+  const row: FileListRow = {
+    ...fileRow(),
+    tile: {
+      kind: "file",
+      file: createFile({ previewHashEncryptedHex: hash }),
+    },
+  };
+  return (
+    <DataGrid
+      rows={[row]}
+      columns={[createIconColumn({ failedPreviews, setFailedPreviews })]}
+      disableVirtualization
+      hideFooter
+    />
+  );
+}
+
+it("shows a new preview after the previous URL failed for the same file", () => {
+  const { container, rerender } = render(<PreviewGrid hash="old" />);
+  fireEvent.error(container.querySelector("img")!);
+  expect(container.querySelector("img")).toBeNull();
+  rerender(<PreviewGrid hash="old" />);
+  expect(container.querySelector("img")).toBeNull();
+  rerender(<PreviewGrid hash="generated" />);
+  expect(container.querySelector("img")).toHaveAttribute(
+    "src",
+    "/api/v1/preview/generated.webp",
+  );
 });
 
 function renderActions(

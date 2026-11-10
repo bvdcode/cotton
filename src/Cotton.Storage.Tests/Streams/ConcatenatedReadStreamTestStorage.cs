@@ -16,22 +16,22 @@ namespace Cotton.Storage.Tests.Streams
             _data[uid] = data;
         }
 
-        public Task<bool> DeleteAsync(string uid)
+        public Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_data.Remove(uid));
         }
 
-        public Task<bool> ExistsAsync(string uid)
+        public Task<bool> ExistsAsync(string uid, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_data.ContainsKey(uid));
         }
 
-        public Task<long> GetSizeAsync(string uid)
+        public Task<long> GetSizeAsync(string uid, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_data.TryGetValue(uid, out byte[]? data) ? data.Length : 0L);
         }
 
-        public Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
+        public Task<Stream> ReadAsync(string uid, PipelineContext? context = null, CancellationToken cancellationToken = default)
         {
             if (!_data.TryGetValue(uid, out byte[]? data))
             {

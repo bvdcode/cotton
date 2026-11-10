@@ -10,6 +10,7 @@ using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
@@ -28,6 +29,7 @@ namespace Cotton.Server.Controllers
     public class LayoutSharingController(
         IMediator _mediator,
         IStoragePipeline _storage,
+        SettingsProvider settings,
         PublicShareLookupFailureLimiter _publicShareLookupFailures) : ControllerBase
     {
         [Authorize]
@@ -35,14 +37,16 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetNodeShareLink(
             [FromRoute] Guid nodeId,
             [FromQuery] ShareLinkExpirationOptions expiration,
-            [FromQuery] string? customToken = "")
+            [FromQuery] string? customToken = "",
+            [FromQuery] bool allowUpload = false)
         {
             Guid userId = User.GetUserId();
             CreateNodeShareLinkRequest request = new(
                 userId,
                 nodeId,
                 expiration.ExpireAfterMinutes,
-                customToken);
+                customToken,
+                allowUpload);
             CreateNodeShareLinkResult result = await _mediator.Send(
                 request,
                 HttpContext.RequestAborted);
@@ -84,6 +88,9 @@ namespace Cotton.Server.Controllers
                 NodeId = nodeShareToken.NodeId,
                 Name = nodeShareToken.Name,
                 ExpiresAt = nodeShareToken.ExpiresAt,
+                AllowUpload = nodeShareToken.AllowUpload,
+                MaxChunkSizeBytes = settings.GetServerSettings().MaxChunkSizeBytes,
+                SupportedHashAlgorithm = Hasher.SupportedHashAlgorithmName.Name!,
             });
         }
 

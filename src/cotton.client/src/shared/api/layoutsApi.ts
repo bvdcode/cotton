@@ -54,6 +54,7 @@ const joinResolverPath = (path: string): string => {
 export const layoutsApi = {
   resolve: async (options?: {
     path?: string | null;
+    signal?: AbortSignal;
     nodeType?: string;
   }): Promise<NodeDto> => {
     const path = options?.path ?? null;
@@ -62,6 +63,7 @@ export const layoutsApi = {
     if (path == null || path.trim().length === 0) {
       const response = await httpClient.get<NodeDto>("layouts/resolver", {
         params: nodeType ? { nodeType } : undefined,
+        signal: options?.signal,
       });
       return response.data;
     }
@@ -116,6 +118,7 @@ export const layoutsApi = {
     nodeId: Guid,
     expireAfterMinutes: number | null = 1440,
     customToken?: string,
+    allowUpload = false,
   ): Promise<string> => {
     const response = await httpClient.get<string>(
       `/layouts/nodes/${nodeId}/share-link`,
@@ -124,6 +127,7 @@ export const layoutsApi = {
         params: {
           expireAfterMinutes: expireAfterMinutes ?? "",
           ...(customToken?.trim() ? { customToken: customToken.trim() } : {}),
+          allowUpload,
         },
       },
     );

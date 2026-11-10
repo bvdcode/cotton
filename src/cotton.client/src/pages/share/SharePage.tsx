@@ -1,3 +1,5 @@
+import { TaskQueueWidget } from "../../app/layouts/components/UploadQueueWidget";
+import { UploadFilePicker } from "../../app/layouts/components/UploadFilePicker";
 import * as React from "react";
 import {
   Alert,
@@ -23,15 +25,13 @@ import { useShareFileInfo } from "./hooks/useShareFileInfo";
 import {
   resolveSharePageViewState,
   type ShareTargetKind,
+  type SharedFolderInfo,
 } from "./utils/sharePageViewState";
 
 type ShareResolutionState = {
   token: string | null;
   targetKind: ShareTargetKind;
-  sharedFolderInfo: {
-    nodeId: string;
-    name: string;
-  } | null;
+  sharedFolderInfo: SharedFolderInfo | null;
 };
 
 type FolderDownloadAction = {
@@ -76,7 +76,7 @@ export const SharePage: React.FC = () => {
 
         setResolutionState({
           token,
-          sharedFolderInfo: { nodeId: info.nodeId, name: info.name },
+          sharedFolderInfo: info,
           targetKind: "folder",
         });
       } catch {
@@ -322,7 +322,14 @@ export const SharePage: React.FC = () => {
             shareIconOnly
           />
 
+          {viewState.folder.allowUpload && (
+            <>
+              <TaskQueueWidget />
+              <UploadFilePicker />
+            </>
+          )}
           <SharedFolderViewer
+            info={viewState.folder}
             token={viewState.token}
             rootNodeId={viewState.folder.nodeId}
             rootName={viewState.folder.name}

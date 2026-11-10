@@ -1,3 +1,4 @@
+import { seedNodeNavigation } from "../../test/nodeCacheFixtures";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NodeDto } from "../api/layoutsApi";
 import { nodesApi } from "../api/nodesApi";
@@ -12,13 +13,8 @@ const parent = makeFolder({ id: "parent", name: "Public" });
 
 beforeEach(() => {
   useVault.getState().lock();
-  useNodesStore.setState({
-    currentNode: parent,
-    ancestors: [],
-    contentByNodeId: {},
-    loading: false,
-    error: null,
-  });
+  useNodesStore.setState({ loading: false, error: null });
+  seedNodeNavigation(parent, []);
 });
 
 afterEach(() => {

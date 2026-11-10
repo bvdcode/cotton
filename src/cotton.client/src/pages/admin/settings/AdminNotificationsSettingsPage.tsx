@@ -185,43 +185,41 @@ export const AdminNotificationsSettingsPage = () => {
   };
 
   return (
-    <Stack>
-      <AdminPageSurface>
-        <Stack
-          spacing={3}
-          divider={<Divider flexItem />}
-          sx={{
-            p: 3,
-          }}
-        >
-          <AdminPageHeader
-            title={t("notificationsSettings.title")}
-            description={t("notificationsSettings.description")}
-          />
+    <AdminPageSurface>
+      <Stack
+        spacing={3}
+        divider={<Divider flexItem />}
+        sx={{
+          p: 3,
+        }}
+      >
+        <AdminPageHeader
+          title={t("notificationsSettings.title")}
+          description={t("notificationsSettings.description")}
+        />
 
-          {loadError && <Alert severity="error">{loadError}</Alert>}
+        {loadError && <Alert severity="error">{loadError}</Alert>}
 
-          <EmailModeSelector
-            value={emailMode}
-            onChange={(next) => void handleEmailModeChange(next)}
+        <EmailModeSelector
+          value={emailMode}
+          onChange={(next) => void handleEmailModeChange(next)}
+          disabled={isBusy || isSmtpBusy}
+          status={modeStatus}
+        />
+
+        {isCustomEmailMode && (
+          <SmtpConfigForm
+            config={emailConfig}
+            onChange={setEmailConfig}
+            onTest={() => void testSmtpSettings()}
+            onSave={() => void saveSmtpSettings()}
+            testing={smtpTesting}
+            saving={smtpStatus === "saving"}
             disabled={isBusy || isSmtpBusy}
-            status={modeStatus}
+            status={smtpStatus}
           />
-
-          {isCustomEmailMode && (
-            <SmtpConfigForm
-              config={emailConfig}
-              onChange={setEmailConfig}
-              onTest={() => void testSmtpSettings()}
-              onSave={() => void saveSmtpSettings()}
-              testing={smtpTesting}
-              saving={smtpStatus === "saving"}
-              disabled={isBusy || isSmtpBusy}
-              status={smtpStatus}
-            />
-          )}
-        </Stack>
-      </AdminPageSurface>
-    </Stack>
+        )}
+      </Stack>
+    </AdminPageSurface>
   );
 };

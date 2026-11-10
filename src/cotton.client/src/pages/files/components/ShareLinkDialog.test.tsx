@@ -49,17 +49,81 @@ beforeEach(() => {
 });
 
 describe("ShareLinkDialog", () => {
-  it("keeps standard Escape closing available", () => {
+  it.each([
+    [7, "weeks", 1],
+    [30, "months", 1],
+    [90, "months", 3],
+    [365, "years", 1],
+    [1095, "years", 3],
+    [3650, "years", 10],
+  ])(
+    "keeps the profile duration of %s days in compact units",
+    async (days, unit, value) => {
+      useUserPreferencesStore.getState().hydrateFromRemote({
+        shareLinkExpireAfterMinutes: String(days * 24 * 60),
+      });
+      render(<ShareLinkDialog target={target} onClose={vi.fn()} />);
+      expect(screen.getByRole("dialog")).toHaveAccessibleName(
+        `share.options.title · ${target.name}`,
+      );
+      expect(screen.getByRole("spinbutton")).toHaveValue(value);
+      expect(screen.getByRole("combobox")).toHaveTextContent(
+        `share.options.units.${unit}`,
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: "share.options.create" }),
+      );
+      await screen.findByRole("textbox", { name: "share.options.link" });
+      expect(filesApi.getDownloadLink).toHaveBeenCalledWith(
+        target.id,
+        days * 24 * 60,
+        "",
+      );
+    },
+  );
+
+  it("only offers uploads for folder links and sends the selected permission", async () => {
+    render(
+      <ShareLinkDialog
+        target={{ kind: "folder", id: "folder", name: "Uploads" }}
+        onClose={vi.fn()}
+      />,
+    );
+    const permission = screen.getByRole("switch", {
+      name: "share.options.allowUpload",
+    });
+    expect(permission).not.toBeChecked();
+    fireEvent.click(permission);
+    fireEvent.click(
+      screen.getByRole("button", { name: "share.options.create" }),
+    );
+    await screen.findByRole("textbox", { name: "share.options.link" });
+    expect(layoutsApi.getNodeShareLink).toHaveBeenCalledWith(
+      "folder",
+      1440,
+      "",
+      true,
+    );
+    expect(permission).toBeDisabled();
+  });
+
+  it("keeps standard Escape closing available", async () => {
     const close = vi.fn();
     render(<ShareLinkDialog target={target} onClose={close} />);
-    fireEvent.keyDown(screen.getByRole("textbox", { name: "share.options.name" }), {
-      key: "Escape",
-      code: "Escape",
-    });
-    expect(close).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(
+      screen.getByRole("textbox", { name: "share.options.name" }),
+      {
+        key: "Escape",
+        code: "Escape",
+      },
+    );
+    await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
   });
   it("creates a named file link with custom duration without changing profile defaults", async () => {
     render(<ShareLinkDialog target={target} onClose={vi.fn()} />);
+    expect(
+      screen.queryByRole("switch", { name: "share.options.allowUpload" }),
+    ).not.toBeInTheDocument();
     expect(filesApi.getDownloadLink).not.toHaveBeenCalled();
     expect(screen.getByRole("spinbutton")).toHaveValue(1);
     fireEvent.change(
@@ -106,12 +170,13 @@ describe("ShareLinkDialog", () => {
     const link = await screen.findByRole("textbox", {
       name: "share.options.link",
     });
-    expect(link).toHaveFocus();
+    await waitFor(() => expect(link).toHaveFocus());
     expect(link).toHaveValue(`${window.location.origin}/s/folder-link`);
     expect(layoutsApi.getNodeShareLink).toHaveBeenCalledExactlyOnceWith(
       "folder-1",
       null,
       "",
+      false,
     );
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.copy" }),
@@ -232,7 +297,9 @@ describe("ShareLinkDialog", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.cancel" }),
     );
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
     fireEvent.click(menuButton);
     fireEvent.click(screen.getByRole("menuitem", { name: /Share/ }));
     expect(quickShare).toHaveBeenCalledTimes(1);

@@ -1,3 +1,4 @@
+import type { SharedUploadContext } from "../upload/types";
 import { httpClient } from "./httpClient";
 
 export const chunksApi = {
@@ -17,6 +18,7 @@ export const chunksApi = {
 
   uploadChunk: async (options: {
     blob: Blob;
+    sharedUpload?: SharedUploadContext & { nodeId: string };
     fileName: string;
     hash?: string | null;
     signal?: AbortSignal;
@@ -26,8 +28,16 @@ export const chunksApi = {
       throw new Error("Chunk hash is required for raw chunk uploads.");
     }
 
-    await httpClient.post("chunks/raw", options.blob, {
-      params: { hash: options.hash },
+    const access = options.sharedUpload;
+    const url = access
+      ? `layouts/shared/${encodeURIComponent(access.token)}/chunks/raw`
+      : "chunks/raw";
+    await httpClient.post(url, options.blob, {
+      params: {
+        hash: options.hash,
+        nodeId: access?.nodeId,
+        sessionId: access?.sessionId,
+      },
       signal: options.signal,
       headers: {
         "Content-Type": "application/octet-stream",

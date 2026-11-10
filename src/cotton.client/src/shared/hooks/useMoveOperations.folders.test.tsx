@@ -1,3 +1,7 @@
+import {
+  seedFolderListing,
+  seedNodeNavigation,
+} from "../../test/nodeCacheFixtures";
 import { createFolder } from "../../test/fileFixtures";
 import { generateMasterKey } from "@shared/crypto/keys";
 import { act, renderHook } from "@testing-library/react";
@@ -130,42 +134,38 @@ describe("useMoveOperations", () => {
     useMoveClipboardStore.setState({ items: [] });
     useNodesStore.setState({
       cacheOwnerUserId: null,
-      currentNode: null,
-      ancestors: [],
       rootNodeId: null,
       loading: false,
       error: null,
-      contentByNodeId: {
-        [sourceParentId]: {
-          node: createFolder({ id: sourceParentId }),
-          id: sourceParentId,
-          createdAt: "2026-05-17T00:00:00Z",
-          updatedAt: "2026-05-17T00:00:00Z",
-          nodes: [],
-          files: [],
-        },
-        root: {
-          node: createFolder({ id: "root" }),
-          id: "root",
-          createdAt: "2026-05-17T00:00:00Z",
-          updatedAt: "2026-05-17T00:00:00Z",
-          nodes: [
-            {
-              id: targetParentId,
-              createdAt: "2026-05-17T00:00:00Z",
-              updatedAt: "2026-05-17T00:00:00Z",
-              layoutId: "layout-1",
-              parentId: null,
-              name: "Vault",
-              metadata: { [FOLDER_ENCRYPTION_POLICY_KEY]: "true" },
-            },
-          ],
-          files: [],
-        },
-      },
-      ancestorsByNodeId: {},
-      lastUpdatedByNodeId: {},
     });
+    seedNodeNavigation(null, []);
+    seedFolderListing(sourceParentId, {
+      node: createFolder({ id: sourceParentId }),
+      id: sourceParentId,
+      createdAt: "2026-05-17T00:00:00Z",
+      updatedAt: "2026-05-17T00:00:00Z",
+      nodes: [],
+      files: [],
+    });
+    seedFolderListing("root", {
+      node: createFolder({ id: "root" }),
+      id: "root",
+      createdAt: "2026-05-17T00:00:00Z",
+      updatedAt: "2026-05-17T00:00:00Z",
+      nodes: [
+        {
+          id: targetParentId,
+          createdAt: "2026-05-17T00:00:00Z",
+          updatedAt: "2026-05-17T00:00:00Z",
+          layoutId: "layout-1",
+          parentId: null,
+          name: "Vault",
+          metadata: { [FOLDER_ENCRYPTION_POLICY_KEY]: "true" },
+        },
+      ],
+      files: [],
+    });
+
     useVault.setState({
       isUnlocked: true,
       masterKey: await generateMasterKey(),

@@ -63,11 +63,12 @@ export const DatabaseBackupHistory = ({ backups }: Props) => {
       </Stack>
       <Box>
         {backups.map((backup, index) => (
-          <Accordion key={backup.backupId}>
+          <Accordion key={backup.backupId} disableGutters>
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               aria-controls={`backup-${backup.backupId}-details`}
               id={`backup-${backup.backupId}-header`}
+              sx={{ px: 0 }}
             >
               <Stack
                 spacing={0.5}
@@ -103,7 +104,7 @@ export const DatabaseBackupHistory = ({ backups }: Props) => {
                 </Typography>
               </Stack>
             </AccordionSummary>
-            <AccordionDetails>
+            <AccordionDetails sx={{ px: 0 }}>
               <Box
                 sx={{
                   display: "grid",

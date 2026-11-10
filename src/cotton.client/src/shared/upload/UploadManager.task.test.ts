@@ -1,3 +1,7 @@
+import {
+  seedFolderListing,
+  getFolderListing,
+} from "../../test/nodeCacheFixtures";
 import { createFolder } from "../../test/fileFixtures";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getRecentClientDiagnostics } from "../utils/clientDiagnostics";
@@ -42,18 +46,8 @@ import { UploadManager } from "./UploadManager";
 
 let manager: UploadManager | null = null;
 
-const resetNodesStore = () => {
-  useNodesStore.setState({
-    cacheOwnerUserId: null,
-    rootNodeId: null,
-    currentNode: null,
-    ancestors: [],
-    contentByNodeId: {},
-    ancestorsByNodeId: {},
-    loading: false,
-    error: null,
-    lastUpdatedByNodeId: {},
-  });
+const resetStore = () => {
+  useNodesStore.getState().reset("user-1");
 };
 
 const makeFileDto = (
@@ -82,13 +76,7 @@ const seedParent = (nodeId: string, files: NodeFileManifestDto[]) => {
     nodes: [],
     files,
   };
-  useNodesStore.setState((prev) => ({
-    ...prev,
-    contentByNodeId: {
-      ...prev.contentByNodeId,
-      [nodeId]: content,
-    },
-  }));
+  seedFolderListing(nodeId, content);
 };
 
 const createManager = () => {
@@ -99,7 +87,7 @@ const createManager = () => {
 describe("UploadManager task facade", () => {
   beforeEach(() => {
     queryClient.clear();
-    resetNodesStore();
+    resetStore();
     sessionStorage.clear();
   });
 
@@ -107,7 +95,7 @@ describe("UploadManager task facade", () => {
     manager?.destroy();
     manager = null;
     queryClient.clear();
-    resetNodesStore();
+    resetStore();
     sessionStorage.clear();
     mocks.getCachedServerSettings.mockReset();
     mocks.getCachedServerSettings.mockReturnValue({
@@ -384,9 +372,7 @@ describe("UploadManager task facade", () => {
     );
     await new Promise((resolve) => setTimeout(resolve, 350));
 
-    expect(useNodesStore.getState().contentByNodeId["node-1"]?.files).toEqual([
-      uploadedFile,
-    ]);
+    expect(getFolderListing("node-1")?.files).toEqual([uploadedFile]);
     expect(mocks.refreshNodeContent).toHaveBeenCalledOnce();
     expect(mocks.refreshNodeContent).toHaveBeenCalledWith("node-1");
   });

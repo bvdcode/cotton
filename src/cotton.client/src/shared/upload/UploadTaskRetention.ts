@@ -9,6 +9,7 @@ const FINISHED_TASK_STATUSES = new Set<AppTaskStatus>(["completed", "failed"]);
 
 export const releaseUploadInputs = (task: UploadTaskInternal): void => {
   delete task._file;
+  delete task._sharedUpload;
   delete task._onFileUploaded;
   delete task._replaceNodeFileId;
 };

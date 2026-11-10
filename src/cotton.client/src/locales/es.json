@@ -1615,6 +1615,8 @@
     },
     "message": "Mira \"{{name}}\" en Cotton Cloud",
     "folder": {
+      "uploadFailed": "No se pudo preparar la subida.",
+      "filesOnly": "Arrastra archivos individuales. Este enlace no permite subir carpetas.",
       "title": "Carpeta compartida",
       "message": "Mira la carpeta \"{{name}}\" en Cotton Cloud",
       "empty": "Esta carpeta está vacía.",
@@ -2589,6 +2591,7 @@
       },
       "options": {
         "title": "Opciones del enlace",
+        "allowUpload": "Permitir subir archivos",
         "name": "Nombre del enlace",
         "nameHint": "Opcional. Déjalo vacío para una dirección aleatoria.",
         "invalidName": "Usa letras, números, guiones o guiones bajos.",
@@ -2596,6 +2599,9 @@
         "duration": "Duración",
         "unit": "Unidad",
         "units": {
+          "years": "Años",
+          "months": "Meses",
+          "weeks": "Semanas",
           "days": "Días",
           "hours": "Horas",
           "minutes": "Minutos",
@@ -3678,7 +3684,8 @@
     "trash": "Papelera",
     "profile": "Perfil",
     "settings": "Ajustes",
-    "admin": "Administración"
+    "admin": "Administración",
+    "routines": "Rutinas"
   },
   "resetPassword": {
     "title": "Restablecer contraseña",
@@ -3779,6 +3786,85 @@
       "requiredVersion": "Versión requerida",
       "requiredVersionRange": "Versión anterior requerida",
       "lastRecordedVersion": "Última versión registrada"
+    }
+  },
+  "routines": {
+    "actionError": "La acción ha fallado. Inténtalo de nuevo.",
+    "workingFolder": "Carpeta de trabajo",
+    "createAndRun": "Crear y ejecutar",
+    "title": "Rutinas",
+    "create": "Crear rutina",
+    "createTitle": "Nueva rutina",
+    "editTitle": "Editar rutina",
+    "name": "Nombre",
+    "type": "Tipo de tarea",
+    "deleteFiles": "Eliminar archivos",
+    "chooseFolder": "Elegir carpeta de trabajo",
+    "frequency": "Frecuencia",
+    "olderThanDays": "Antigüedad superior a (días)",
+    "dateField": "Fecha que comprobar",
+    "createdAt": "Fecha de creación",
+    "updatedAt": "Fecha de modificación",
+    "includeSubfolders": "Incluir subcarpetas",
+    "deletionMode": "Método de eliminación",
+    "trash": "Mover a la papelera",
+    "permanent": "Eliminar permanentemente",
+    "permanentWarning": "Los archivos eliminados permanentemente no se pueden restaurar.",
+    "moreSettings": "Más opciones",
+    "lessSettings": "Menos opciones",
+    "enabled": "Activada",
+    "paused": "En pausa",
+    "startAt": "No iniciar antes de",
+    "startHint": "Deja vacío para ejecutar de inmediato. Zona del servidor: {{timezone}}.",
+    "calendarMode": "Programación de calendario",
+    "time": "Hora",
+    "weekday": "Día de la semana",
+    "dayOfMonth": "Día del mes",
+    "month": "Mes",
+    "calendarHint": "Zona del servidor: {{timezone}}. Se comprueba cada 15 minutos. Se omiten fechas y horas inexistentes; una hora repetida se ejecuta una sola vez.",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "loadError": "No se pudieron cargar los datos. Actualiza la página.",
+    "saveError": "No se pudo guardar la rutina. Revisa las opciones.",
+    "runNow": "Ejecutar ahora",
+    "history": "Historial de ejecuciones",
+    "noRuns": "Todavía no hay ejecuciones.",
+    "counts": "Procesados: {{processed}} · Eliminados: {{deleted}}",
+    "nextRun": "Próxima ejecución: {{date}}",
+    "condition": "Archivos con más de {{days}} días · {{field}}",
+    "deleteRoutine": "Eliminar rutina",
+    "deleteConfirm": "¿Eliminar «{{name}}» y su historial? Los archivos no cambiarán.",
+    "refresh": "Actualizar",
+    "empty": "Todavía no hay rutinas",
+    "home": "Carpeta principal",
+    "up": "Carpeta superior",
+    "noSubfolders": "No hay subcarpetas",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "useFolder": "Usar esta carpeta",
+    "intervals": {
+      "1": "Cada hora",
+      "24": "Cada día",
+      "168": "Cada semana",
+      "720": "Cada 30 días",
+      "8760": "Cada 365 días"
+    },
+    "calendarFrequency": {
+      "0": "Diaria",
+      "1": "Semanal",
+      "2": "Mensual",
+      "3": "Anual"
+    },
+    "statuses": {
+      "0": "En ejecución",
+      "1": "Completada",
+      "2": "Fallida",
+      "3": "Interrumpida"
+    },
+    "errors": {
+      "WorkingFolderUnavailable": "La carpeta de trabajo no existe, está inactiva o en la papelera.",
+      "ExecutionFailed": "La ejecución falló. Consulta el registro del servidor.",
+      "Interrupted": "La ejecución se interrumpió."
     }
   }
 }

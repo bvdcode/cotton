@@ -12,7 +12,7 @@ import {
 } from "react-router-dom";
 import Loader from "../shared/ui/Loader";
 import { AppLayout, PublicLayout } from "./layouts";
-import { Folder, Home, Delete } from "@mui/icons-material";
+import { Folder, Home, Delete, Schedule } from "@mui/icons-material";
 import { SetupGate } from "../features/settings/SetupGate";
 import {
   startupApi,
@@ -24,6 +24,7 @@ import { LoginPage } from "../pages/login/LoginPage";
 import { NotFoundPage } from "../pages/not-found/NotFoundPage";
 import { OnboardingPage } from "../pages/onboarding/OnboardingPage";
 import { SettingsPage } from "../pages/profile";
+import { RoutinesPage } from "../pages/routines/RoutinesPage";
 import { TrashPage } from "../pages/trash";
 import { SearchPage } from "../pages/search/SearchPage";
 import { SharePage } from "../pages/share/SharePage";
@@ -155,6 +156,13 @@ export function AppRoutes() {
       protected: true,
       translationKey: "files",
       element: <FilesPage />,
+    },
+    {
+      path: "/routines",
+      icon: <Schedule />,
+      protected: true,
+      translationKey: "routines",
+      element: <RoutinesPage />,
     },
     {
       path: "/trash",

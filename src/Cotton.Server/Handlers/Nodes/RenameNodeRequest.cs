@@ -27,7 +27,8 @@ namespace Cotton.Server.Handlers.Nodes
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
         ILayoutMutationGate _layoutGate,
-        IEventNotificationService _notifications)
+        IEventNotificationService _notifications,
+        CommittedMutationEffects _effects)
         : IRequestHandler<RenameNodeRequest, RenameNodeResult>
     {
         public async Task<RenameNodeResult> Handle(
@@ -96,7 +97,8 @@ namespace Cotton.Server.Handlers.Nodes
                 nodeDto = node.Adapt<NodeDto>();
             }
 
-            await _notifications.NotifyNodeRenamedAsync(request.UserId, nodeDto, ct);
+            await _effects.RunAsync(nameof(IEventNotificationService.NotifyNodeRenamedAsync),
+                () => _notifications.NotifyNodeRenamedAsync(request.UserId, nodeDto, CancellationToken.None));
             return new RenameNodeResult(
                 RenameNodeStatus.Renamed,
                 nodeDto);

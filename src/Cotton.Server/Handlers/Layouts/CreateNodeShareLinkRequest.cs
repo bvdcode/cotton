@@ -16,7 +16,8 @@ namespace Cotton.Server.Handlers.Layouts
         Guid UserId,
         Guid NodeId,
         int? ExpireAfterMinutes,
-        string? CustomToken) : IRequest<CreateNodeShareLinkResult>;
+        string? CustomToken,
+        bool AllowUpload = false) : IRequest<CreateNodeShareLinkResult>;
 
     public class CreateNodeShareLinkRequestHandler(
         CottonDbContext _dbContext,
@@ -67,6 +68,7 @@ namespace Cotton.Server.Handlers.Layouts
                 CreatedByUserId = request.UserId,
                 ExpiresAt = expiresAt,
                 Token = token,
+                AllowUpload = request.AllowUpload,
             };
 
             await _dbContext.NodeShareTokens.AddAsync(shareToken, ct);

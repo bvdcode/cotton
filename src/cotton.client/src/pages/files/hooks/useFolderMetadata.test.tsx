@@ -1,3 +1,7 @@
+import {
+  seedNodeNavigation,
+  getCurrentNode,
+} from "../../../test/nodeCacheFixtures";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
@@ -70,14 +74,12 @@ beforeEach(() => {
   });
   useNodesStore.setState({
     cacheOwnerUserId: "user",
-    currentNode: parent,
     rootNodeId: parent.id,
-    ancestors: [],
-    ancestorsByNodeId: {},
-    contentByNodeId: {},
     loading: false,
     error: null,
   });
+  seedNodeNavigation(parent, []);
+
   useVault.setState({ isUnlocked: true });
   queryClient.setQueryDefaults(["nodeChildren"], { retry: false });
   queryClient.setQueryData(folderOverviewOptions(parent.id, "user").queryKey, {
@@ -116,9 +118,7 @@ it.each([InterfaceLayoutType.List, InterfaceLayoutType.Tiles])(
       }),
       { wrapper },
     );
-    await waitFor(() =>
-      expect(useNodesStore.getState().currentNode?.id).toBe(oldFolder.id),
-    );
+    await waitFor(() => expect(getCurrentNode()?.id).toBe(oldFolder.id));
     let upload: Promise<void>;
     act(() => {
       upload = result.current.upload.handleUploadFiles(files);
@@ -128,9 +128,7 @@ it.each([InterfaceLayoutType.List, InterfaceLayoutType.Tiles])(
       request.resolve(response(encryptedFolder));
       await upload;
     });
-    await waitFor(() =>
-      expect(useNodesStore.getState().currentNode).toEqual(encryptedFolder),
-    );
+    await waitFor(() => expect(getCurrentNode()).toEqual(encryptedFolder));
     expect(uploadManager.enqueue).toHaveBeenCalledWith(
       [{ file: files[0] }],
       oldFolder.id,
@@ -247,7 +245,7 @@ it("rejects a pending upload after the account changes", async () => {
   useAuthStore.setState({ user: null });
   request.resolve(response(encryptedFolder));
   await expect(upload).rejects.toThrow("account changed");
-  expect(useNodesStore.getState().currentNode).toBe(parent);
+  expect(getCurrentNode()).toBe(parent);
   expect(uploadManager.enqueue).not.toHaveBeenCalled();
 });
 
@@ -256,7 +254,8 @@ it("keeps a newer local metadata update when an older listing is cached", async 
     folderOverviewOptions(oldFolder.id, "user").queryKey,
     response(oldFolder),
   );
-  useNodesStore.setState({ currentNode: encryptedFolder, ancestors: [parent] });
+  seedNodeNavigation(encryptedFolder, [parent]);
+
   const { result } = renderHook(
     () => ({
       data: useFilesData({
@@ -271,7 +270,7 @@ it("keeps a newer local metadata update when an older listing is cached", async 
   await act(async () => {
     await result.current.upload.handleUploadFiles(files);
   });
-  expect(useNodesStore.getState().currentNode).toEqual(encryptedFolder);
+  expect(getCurrentNode()).toEqual(encryptedFolder);
   expect(uploadManager.enqueue).toHaveBeenCalledWith(
     [{ file: files[0] }],
     oldFolder.id,
@@ -295,16 +294,12 @@ it("does not switch the current folder back when a previous listing finishes lat
       useFilesData({ nodeId, layoutType: InterfaceLayoutType.List, loadNode }),
     { wrapper, initialProps: { nodeId: oldFolder.id } },
   );
-  await waitFor(() =>
-    expect(useNodesStore.getState().currentNode?.id).toBe(oldFolder.id),
-  );
+  await waitFor(() => expect(getCurrentNode()?.id).toBe(oldFolder.id));
   rerender({ nodeId: other.id });
-  await waitFor(() =>
-    expect(useNodesStore.getState().currentNode?.id).toBe(other.id),
-  );
+  await waitFor(() => expect(getCurrentNode()?.id).toBe(other.id));
   await act(async () => {
     request.resolve(response(encryptedFolder));
     await request.promise;
   });
-  expect(useNodesStore.getState().currentNode).toEqual(other);
+  expect(getCurrentNode()).toEqual(other);
 });

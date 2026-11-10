@@ -1,5 +1,6 @@
 import type { Guid } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
+import { sharedFoldersApi } from "../api/sharedFoldersApi";
 import { filesApi } from "../api/filesApi";
 import {
   DISPLAY_META_KEY,
@@ -16,6 +17,7 @@ import type {
   UploadFileToNodeCallbacks,
   UploadFileToNodeOptions,
   UploadServerParams,
+  SharedUploadContext,
 } from "./types";
 import { uploadBlobToChunks } from "./uploadBlobToChunks";
 
@@ -23,6 +25,7 @@ export type { UploadServerParams } from "./types";
 
 export async function uploadFileToNode(options: {
   file: File;
+  sharedUpload?: SharedUploadContext;
   nodeId: Guid;
   replaceNodeFileId?: Guid | null;
   server: UploadServerParams;
@@ -64,12 +67,18 @@ export async function uploadFileToNode(options: {
 
   const { chunkHashes, fileHash } = await uploadBlobToChunks({
     blob: uploadBlob,
+    sharedUpload: options.sharedUpload
+      ? { ...options.sharedUpload, nodeId }
+      : undefined,
     fileName: file.name,
     server,
     client: {
       sendChunkHashForValidation:
         options.client?.sendChunkHashForValidation ??
         uploadConfig.sendChunkHashForValidation,
+      forceDisableDeduplication:
+        options.sharedUpload !== undefined ||
+        options.client?.forceDisableDeduplication,
       concurrency:
         options.client?.concurrency ?? uploadConfig.maxChunkUploadConcurrency,
     },
@@ -87,6 +96,10 @@ export async function uploadFileToNode(options: {
     originalNodeFileId: null,
     metadata,
   };
+
+  if (options.sharedUpload) {
+    return sharedFoldersApi.createFile(options.sharedUpload, request);
+  }
 
   if (options.replaceNodeFileId) {
     return filesApi.updateFileContent(options.replaceNodeFileId, request);

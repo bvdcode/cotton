@@ -23,6 +23,9 @@ namespace Cotton.Database.Models
         [Column("node_id")]
         public Guid NodeId { get; set; }
 
+        [Column("allow_upload")]
+        public bool AllowUpload { get; set; }
+
         [Column("expires_at")]
         public DateTime? ExpiresAt { get; set; }
 

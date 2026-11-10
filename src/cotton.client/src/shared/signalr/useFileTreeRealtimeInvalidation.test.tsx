@@ -8,9 +8,15 @@ type EventCallback = (...args: JsonValue[]) => void;
 
 const eventHubMock = vi.hoisted(() => {
   const listeners = new Map<string, Set<EventCallback>>();
+  const connected = new Set<(isReconnect: boolean) => void>();
 
   return {
     listeners,
+    connected,
+    onConnected: vi.fn((callback: (isReconnect: boolean) => void) => {
+      connected.add(callback);
+      return () => connected.delete(callback);
+    }),
     start: vi.fn(async (): Promise<void> => undefined),
     on: vi.fn((method: string, callback: EventCallback): (() => void) => {
       method = method.toLowerCase();
@@ -38,6 +44,7 @@ describe("useFileTreeRealtimeInvalidation", () => {
     vi.useRealTimers();
     vi.clearAllMocks();
     eventHubMock.listeners.clear();
+    eventHubMock.connected.clear();
   });
 
   it("coalesces accepted mutation events and ignores rejected ones", () => {
@@ -78,6 +85,30 @@ describe("useFileTreeRealtimeInvalidation", () => {
 
     expect(eventHubMock.start).not.toHaveBeenCalled();
     expect(eventHubMock.on).not.toHaveBeenCalled();
+  });
+
+  it("refreshes after reconnecting without adding a request on initial connection", () => {
+    vi.useFakeTimers();
+    const onInvalidate = vi.fn();
+    const { unmount } = renderHook(() =>
+      useFileTreeRealtimeInvalidation({ enabled: true, onInvalidate }),
+    );
+    act(() => {
+      for (const callback of eventHubMock.connected) {
+        callback(false);
+      }
+      vi.advanceTimersByTime(1000);
+    });
+    expect(onInvalidate).not.toHaveBeenCalled();
+    act(() => {
+      for (const callback of eventHubMock.connected) {
+        callback(true);
+      }
+      vi.advanceTimersByTime(250);
+    });
+    expect(onInvalidate).toHaveBeenCalledOnce();
+    unmount();
+    expect(eventHubMock.connected.size).toBe(0);
   });
 
   it("flushes a continuous mutation burst at the maximum wait", () => {

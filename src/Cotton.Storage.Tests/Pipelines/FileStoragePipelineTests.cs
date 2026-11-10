@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
@@ -21,22 +21,22 @@ namespace Cotton.Storage.Tests.Pipelines
                 // No-op for in-memory backend
             }
 
-            public Task<bool> DeleteAsync(string uid)
+            public Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(_storage.Remove(uid));
             }
 
-            public Task<bool> ExistsAsync(string uid)
+            public Task<bool> ExistsAsync(string uid, CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(_storage.ContainsKey(uid));
             }
 
-            public Task<long> GetSizeAsync(string uid)
+            public Task<long> GetSizeAsync(string uid, CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(_storage.TryGetValue(uid, out byte[]? data) ? data.Length : 0L);
             }
 
-            public Task<Stream> ReadAsync(string uid)
+            public Task<Stream> ReadAsync(string uid, CancellationToken cancellationToken = default)
             {
                 if (!_storage.TryGetValue(uid, out byte[]? data))
                 {
@@ -47,7 +47,7 @@ namespace Cotton.Storage.Tests.Pipelines
 
             public async Task<long> WriteAsync(
                 string uid,
-                Stream stream, bool overwrite = false)
+                Stream stream, bool overwrite = false, CancellationToken cancellationToken = default)
             {
                 MemoryStream ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
@@ -87,7 +87,7 @@ namespace Cotton.Storage.Tests.Pipelines
         {
             public int Priority => priority;
 
-            public async Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
+            public async Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null, CancellationToken cancellationToken = default)
             {
                 MemoryStream ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
@@ -102,7 +102,7 @@ namespace Cotton.Storage.Tests.Pipelines
                 return new MemoryStream(data) { Position = 0 };
             }
 
-            public async Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
+            public async Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null, CancellationToken cancellationToken = default)
             {
                 MemoryStream ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
@@ -120,12 +120,12 @@ namespace Cotton.Storage.Tests.Pipelines
             public int Priority => 100;
             public int WriteCalls;
 
-            public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
+            public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null, CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(stream);
             }
 
-            public Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
+            public Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null, CancellationToken cancellationToken = default)
             {
                 System.Threading.Interlocked.Increment(ref WriteCalls);
                 return Task.FromResult(stream);
@@ -345,7 +345,7 @@ namespace Cotton.Storage.Tests.Pipelines
             // Act & Assert
             InvalidOperationException? ex = await Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await pipeline.WriteAsync("test-uid", new MemoryStream(data)));
-            Assert.That(ex.Message, Does.Contain("No registered processor produced a valid stream"));
+            Assert.That(ex.Message, Does.Contain("Stream.Null"));
         }
 
         [Test]
