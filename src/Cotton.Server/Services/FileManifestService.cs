@@ -24,7 +24,8 @@ namespace Cotton.Server.Services
         public async Task<List<Chunk>> GetChunksAsync(
             string[] chunkHashes,
             Guid userId,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool forceDisableDeduplication = false)
         {
             List<byte[]> normalizedHashes = [.. chunkHashes.Select(Hasher.FromHexStringHash)];
             List<Chunk> ownedChunks = await _dbContext.Chunks
@@ -43,6 +44,10 @@ namespace Cotton.Server.Services
                 string normalizedHash = Hasher.ToHexStringHash(normalizedHashes[i]);
                 if (!chunkMap.TryGetValue(normalizedHash, out Chunk? chunk))
                 {
+                    if (forceDisableDeduplication)
+                    {
+                        throw new BadRequestException("File content must be uploaded before it can be referenced.");
+                    }
                     chunk = await _chunkIngest.ReuseExistingChunkAsync(userId, normalizedHashes[i], cancellationToken);
                     chunkMap[normalizedHash] = chunk;
                 }

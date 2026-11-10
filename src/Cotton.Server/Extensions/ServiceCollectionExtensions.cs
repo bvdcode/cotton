@@ -88,6 +88,7 @@ namespace Cotton.Server.Extensions
         {
             services.AddScoped<FilePreviewRenderer>();
             services.AddScoped<IChunkIngestService, ChunkIngestService>();
+            services.AddSingleton<SharedUploadSessionCache>();
             services.AddScoped<NodeFileHistoryService>();
             services.AddScoped<FileVersionStorageService>();
             services.AddScoped<FileVersionRetentionService>();

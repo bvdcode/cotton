@@ -9,6 +9,7 @@ using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Jobs;
+using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -47,6 +48,10 @@ namespace Cotton.Server.Handlers.Files
         public bool Validate { get; set; }
 
         public Guid UserId { get; set; }
+
+        public bool ForceDisableDeduplication { get; set; }
+
+        public string? PublicShareToken { get; set; }
     }
 
     public class CreateFileRequestHandler(
@@ -60,7 +65,8 @@ namespace Cotton.Server.Handlers.Files
         UserStorageQuotaService _quota,
         ILayoutMutationGate _layoutGate,
         ISchedulerFactory _scheduler,
-        IEventNotificationService _notifications) : IRequestHandler<CreateFileRequest, NodeFileManifestDto>
+        IEventNotificationService _notifications,
+        IMediator _mediator) : IRequestHandler<CreateFileRequest, NodeFileManifestDto>
     {
         public async Task<NodeFileManifestDto> Handle(CreateFileRequest request, CancellationToken cancellationToken)
         {
@@ -71,8 +77,12 @@ namespace Cotton.Server.Handlers.Files
             Node preTransactionNode = await GetTargetNodeAsync(request, layout.Id, tracking: false, cancellationToken);
             string nameKey = ValidateNameAndGetKey(request.Name);
 
-            List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, request.UserId, cancellationToken);
+            List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, request.UserId, cancellationToken, request.ForceDisableDeduplication);
             byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
+            if (request.ForceDisableDeduplication)
+            {
+                await ValidateUploadedChunksAsync(chunks, proposedHash, cancellationToken);
+            }
             FileManifest fileManifest = await GetOrCreateFileManifestAsync(chunks, request, proposedHash, cancellationToken);
 
             await ValidateContentHashIfRequestedAsync(request, fileManifest, proposedHash, cancellationToken);
@@ -87,6 +97,10 @@ namespace Cotton.Server.Handlers.Files
             await using (IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(
                 cancellationToken))
             {
+                if (request.PublicShareToken is not null)
+                {
+                    await _mediator.Send(new RequireSharedUploadAccessQuery(request.PublicShareToken, request.NodeId), cancellationToken);
+                }
                 Node node = await GetTargetNodeAsync(
                     request,
                     preTransactionNode.LayoutId,
@@ -119,6 +133,18 @@ namespace Cotton.Server.Handlers.Files
             await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
             await _notifications.NotifyFileCreatedAsync(file, cancellationToken);
             return file;
+        }
+
+        private async Task ValidateUploadedChunksAsync(List<Chunk> chunks, byte[] proposedHash, CancellationToken ct)
+        {
+            PipelineContext context = new() { FileSizeBytes = chunks.Sum(chunk => chunk.PlainSizeBytes) };
+            string[] hashes = [.. chunks.Select(chunk => Hasher.ToHexStringHash(chunk.Hash))];
+            await using Stream stream = _storage.GetBlobStream(hashes, context);
+            byte[] actualHash = await Hasher.HashDataAsync(stream, ct);
+            if (!actualHash.SequenceEqual(proposedHash))
+            {
+                throw new BadRequestException("File content hash does not match the uploaded chunks.");
+            }
         }
 
         private async Task<Node> GetTargetNodeAsync(CreateFileRequest request, Guid layoutId, bool tracking, CancellationToken ct)
@@ -208,7 +234,8 @@ namespace Cotton.Server.Handlers.Files
                 proposedHash,
                 request.UserId,
                 request.Validate,
-                ct);
+                ct,
+                computedContentHash: request.ForceDisableDeduplication ? proposedHash : null);
         }
 
         private async Task ValidateContentHashIfRequestedAsync(

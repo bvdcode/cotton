@@ -52,7 +52,9 @@ namespace Cotton.Server.Handlers.Layouts
                 shareToken.NodeId,
                 shareToken.CreatedByUserId,
                 shareToken.Name,
-                shareToken.ExpiresAt);
+                shareToken.ExpiresAt,
+                shareToken.Id,
+                shareToken.AllowUpload);
         }
     }
 }
