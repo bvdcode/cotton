@@ -46,6 +46,5 @@ namespace Cotton.Storage.Streams
                 remaining -= read;
             }
         }
-
     }
 }

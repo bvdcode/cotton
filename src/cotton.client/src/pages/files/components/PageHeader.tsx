@@ -26,7 +26,11 @@ import { formatBytes } from "@shared/utils/formatBytes";
 import type { PageHeaderActionItem, PageHeaderProps } from "./PageHeaderTypes";
 export type { PageHeaderActionItem, PageHeaderProps } from "./PageHeaderTypes";
 
-import { buildPageHeaderActions, buildStatsSummary } from "./PageHeaderActions";
+import {
+  buildPageHeaderActions,
+  buildPageHeaderMeta,
+  buildStatsSummary,
+} from "./PageHeaderActions";
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
   loading,
@@ -61,6 +65,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 }) => {
   const { t } = useTranslation(["files", "trash", "common"]);
   const theme = useTheme();
+  const duration = theme.transitions.duration;
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const nextViewTitleKey = getNextFileBrowserViewTitleKey(viewMode);
   const actionsContainerRef = React.useRef<HTMLDivElement | null>(null);
@@ -75,10 +80,13 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     () => buildStatsSummary(stats, statsNamespace, t),
     [stats, statsNamespace, t],
   );
-  const showSize =
-    stats.sizeBytes > 0 || stats.folders > 0 || isSizeCalculating;
-  const showHeaderMeta =
-    Boolean(statsSummary) || showSize || (selectionMode && selectedCount > 0);
+  const meta = buildPageHeaderMeta(
+    stats,
+    statsSummary,
+    isSizeCalculating,
+    selectionMode,
+    selectedCount,
+  );
 
   const viewIcon = React.useMemo(
     () =>
@@ -96,9 +104,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   const actionTabs = buildPageHeaderActions({
     homeReady: goUpHold.ready,
-    iconTransitionDuration: reducedMotion
-      ? 0
-      : theme.transitions.duration.shortest,
+    iconTransitionDuration: reducedMotion ? 0 : duration.shortest,
     canGoUp,
     customActionItems,
     primaryActionItems,
@@ -156,9 +162,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       },
     });
   }
-  const transitionDuration = reducedMotion
-    ? 0
-    : theme.transitions.duration.shorter;
+  const transitionDuration = reducedMotion ? 0 : duration.shorter;
   const transition = useTransitionActionItems(
     visibleActions,
     actionButtonRefs,
@@ -315,7 +319,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             dropHandlers={breadcrumbsDropHandlers}
           />
 
-          {showHeaderMeta && (
+          {meta.showHeaderMeta && (
             <Divider
               orientation="vertical"
               flexItem
@@ -323,7 +327,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             />
           )}
 
-          {showHeaderMeta && (
+          {meta.showHeaderMeta && (
             <Box
               sx={{
                 display: "flex",
@@ -333,7 +337,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                 minWidth: 0,
               }}
             >
-              {(statsSummary || showSize) && (
+              {meta.showStatistics && (
                 <Typography
                   noWrap
                   sx={{
@@ -349,11 +353,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                     sx={{ display: { xs: "none", md: "inline" } }}
                   >
                     {statsSummary}
-                    {statsSummary &&
-                      showSize &&
+                    {meta.showSeparator &&
                       t("stats.separator", { ns: statsNamespace })}
                   </Box>
-                  {showSize && (
+                  {meta.showSize && (
                     <Box
                       component="span"
                       aria-busy={isSizeCalculating}
@@ -389,7 +392,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                 </Typography>
               )}
 
-              {selectionMode && selectedCount > 0 && (
+              {meta.showSelectionCount && (
                 <Typography
                   noWrap
                   sx={{

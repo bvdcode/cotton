@@ -42,7 +42,7 @@ namespace Cotton.Previews
                 MaximumInputBytes = MaxJsonBytes,
                 MaximumJsonBytes = MaxJsonBytes,
             }, timeout.Token).ConfigureAwait(false);
-            double frame = document.InPoint + (document.OutPoint - document.InPoint) * 0.5;
+            double frame = document.InPoint + ((document.OutPoint - document.InPoint) * 0.5);
             PixelBuffer pixels = TgsRenderer.RenderFrame(document, frame, new SvgRenderOptions
             {
                 Width = size,

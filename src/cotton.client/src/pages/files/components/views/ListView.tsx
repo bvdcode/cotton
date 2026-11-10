@@ -287,14 +287,20 @@ export const ListView: React.FC<IFileListView> = ({
     }
   };
 
+  const moveHandlers = moveSupport
+    ? {
+        onMouseDown: handleContainerMouseDown,
+        onDragStart: handleContainerDragStart,
+        onDragOver: handleContainerDragOver,
+        onDragLeave: handleContainerDragLeave,
+        onDrop: handleContainerDrop,
+      }
+    : {};
+
   return (
     <Box
       ref={containerRef}
-      onMouseDown={moveSupport ? handleContainerMouseDown : undefined}
-      onDragStart={moveSupport ? handleContainerDragStart : undefined}
-      onDragOver={moveSupport ? handleContainerDragOver : undefined}
-      onDragLeave={moveSupport ? handleContainerDragLeave : undefined}
-      onDrop={moveSupport ? handleContainerDrop : undefined}
+      {...moveHandlers}
       sx={{
         width: "100%",
         height: autoHeight ? "auto" : "100%",

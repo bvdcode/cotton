@@ -245,16 +245,14 @@ async function resolveMoveConflict<T>(
     };
   }
 
+  let targetNames: Set<string>;
   try {
-    if (state.targetNames === null) {
-      if (error instanceof DisplayNameConflictError) {
-        state.targetNames = await folderNames.takenNameKeys();
-      } else {
-        const names = await getTargetNames(options.targetParentId);
-        state.targetNames = names.taken;
-        state.targetFolders = names.folders;
-      }
-    }
+    targetNames = await loadConflictTargetNames(
+      options,
+      error,
+      state,
+      folderNames,
+    );
   } catch (loadError) {
     return {
       kind: "failed",
@@ -267,16 +265,17 @@ async function resolveMoveConflict<T>(
   const conflictingName = state.name ?? originalName;
   state.rejectedNames.add(getFileNameKey(conflictingName));
   for (const rejectedName of state.rejectedNames) {
-    state.targetNames.add(rejectedName);
+    targetNames.add(rejectedName);
   }
 
-  const newName = nextAvailableName(originalName, state.targetNames);
-  const targetId =
-    options.item.kind === "folder" && getMoveConflictKind(error) === "Folder"
-      ? error instanceof DisplayNameConflictError
-        ? await folderNames.findFolderId(conflictingName)
-        : state.targetFolders.get(getFileNameKey(conflictingName))
-      : undefined;
+  const newName = nextAvailableName(originalName, targetNames);
+  const targetId = await findMergeTarget(
+    options,
+    error,
+    state,
+    folderNames,
+    conflictingName,
+  );
   const canMerge = targetId !== undefined && targetId !== options.item.id;
   const action = await options.confirmConflict({
     newName,
@@ -285,6 +284,24 @@ async function resolveMoveConflict<T>(
     canApplyToAll: options.hasMoreItems === true,
   });
 
+  return applyConflictAction(
+    action,
+    state,
+    newName,
+    conflictingName,
+    targetId,
+    canMerge,
+  );
+}
+
+function applyConflictAction(
+  action: ConflictAction,
+  state: MoveConflictState,
+  newName: string,
+  conflictingName: string,
+  targetId: string | undefined,
+  canMerge: boolean,
+): ConflictResolution {
   switch (action) {
     case ConflictAction.Merge:
       if (!canMerge || targetId === undefined) {
@@ -310,6 +327,43 @@ async function resolveMoveConflict<T>(
       state.overwrite = true;
       return { kind: "retry" };
   }
+}
+
+async function loadConflictTargetNames<T>(
+  options: MoveConflictOptions,
+  error: T,
+  state: MoveConflictState,
+  folderNames: FolderTransferNames,
+): Promise<Set<string>> {
+  if (state.targetNames === null) {
+    if (error instanceof DisplayNameConflictError) {
+      state.targetNames = await folderNames.takenNameKeys();
+    } else {
+      const names = await getTargetNames(options.targetParentId);
+      state.targetNames = names.taken;
+      state.targetFolders = names.folders;
+    }
+  }
+  return state.targetNames;
+}
+
+async function findMergeTarget<T>(
+  options: MoveConflictOptions,
+  error: T,
+  state: MoveConflictState,
+  folderNames: FolderTransferNames,
+  conflictingName: string,
+): Promise<string | undefined> {
+  if (
+    options.item.kind !== "folder" ||
+    getMoveConflictKind(error) !== "Folder"
+  ) {
+    return undefined;
+  }
+  if (error instanceof DisplayNameConflictError) {
+    return folderNames.findFolderId(conflictingName);
+  }
+  return state.targetFolders.get(getFileNameKey(conflictingName));
 }
 
 function isRetryableConflict<T>(error: T, overwrite: boolean): boolean {

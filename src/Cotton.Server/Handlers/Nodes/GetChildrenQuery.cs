@@ -214,6 +214,5 @@ namespace Cotton.Server.Handlers.Nodes
 
             public string NameKey { get; init; } = string.Empty;
         }
-
     }
 }

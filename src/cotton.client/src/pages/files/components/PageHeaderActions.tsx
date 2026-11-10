@@ -269,3 +269,23 @@ export const buildStatsSummary = (
 
   return parts.join(t("stats.separator", { ns: statsNamespace }));
 };
+
+export function buildPageHeaderMeta(
+  stats: PageHeaderProps["stats"],
+  summary: string | null,
+  isSizeCalculating: boolean,
+  selectionMode: boolean,
+  selectedCount: number,
+) {
+  const showSize =
+    stats.sizeBytes > 0 || stats.folders > 0 || isSizeCalculating;
+  const showSelectionCount = selectionMode && selectedCount > 0;
+  const showStatistics = Boolean(summary) || showSize;
+  return {
+    showSize,
+    showSelectionCount,
+    showStatistics,
+    showSeparator: Boolean(summary) && showSize,
+    showHeaderMeta: showStatistics || showSelectionCount,
+  };
+}

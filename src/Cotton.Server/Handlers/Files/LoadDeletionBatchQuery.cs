@@ -30,22 +30,7 @@ namespace Cotton.Server.Handlers.Files
                 {
                     throw new InvalidOperationException("Conditional deletion accepts files only.");
                 }
-                FileDeletionCondition condition = request.Condition;
-                bool rootExists = await _db.Nodes.AnyAsync(x => x.Id == condition.RootNodeId
-                    && x.OwnerId == request.UserId && x.Type == NodeType.Default && x.Layout.IsActive, ct);
-                Guid[] allowedNodes = !rootExists ? [] : condition.IncludeSubfolders
-                    ? (await _subtree.CollectSubtreeIdsAsync(request.UserId, condition.RootNodeId, ct)).ToArray()
-                    : [condition.RootNodeId];
-                IQueryable<NodeFile> eligible = _db.NodeFiles.Where(x => x.OwnerId == request.UserId
-                    && fileIds.Contains(x.Id) && allowedNodes.Contains(x.NodeId) && x.Node.Type == NodeType.Default
-                    && (x.OriginalNodeFileId == Guid.Empty || x.Id == x.OriginalNodeFileId));
-                eligible = condition.DateField switch
-                {
-                    RoutineDateField.CreatedAt => eligible.Where(x => x.CreatedAt < condition.OlderThan),
-                    RoutineDateField.UpdatedAt => eligible.Where(x => x.UpdatedAt < condition.OlderThan),
-                    _ => throw new ArgumentOutOfRangeException(nameof(request)),
-                };
-                fileIds = await eligible.Select(x => x.Id).ToArrayAsync(ct);
+                fileIds = await LoadEligibleFileIdsAsync(request, fileIds, request.Condition, ct);
             }
             Dictionary<Guid, Node> selectedFolders = await _db.Nodes
                 .Where(x => x.OwnerId == request.UserId && folderIds.Contains(x.Id)
@@ -81,6 +66,26 @@ namespace Cotton.Server.Handlers.Files
                 .Any(selectedFolders.ContainsKey)).ToList();
             return new DeletionBatch(roots, files, tree.Values.Where(x => subtreeIds.Contains(x.Id)).ToList(),
                 selectedFolders.Keys.ToHashSet(), validFileIds);
+        }
+
+        private async Task<Guid[]> LoadEligibleFileIdsAsync(
+            LoadDeletionBatchQuery request, Guid[] fileIds, FileDeletionCondition condition, CancellationToken ct)
+        {
+            bool rootExists = await _db.Nodes.AnyAsync(x => x.Id == condition.RootNodeId
+                && x.OwnerId == request.UserId && x.Type == NodeType.Default && x.Layout.IsActive, ct);
+            Guid[] allowedNodes = !rootExists ? [] : condition.IncludeSubfolders
+                ? (await _subtree.CollectSubtreeIdsAsync(request.UserId, condition.RootNodeId, ct)).ToArray()
+                : [condition.RootNodeId];
+            IQueryable<NodeFile> eligible = _db.NodeFiles.Where(x => x.OwnerId == request.UserId
+                && fileIds.Contains(x.Id) && allowedNodes.Contains(x.NodeId) && x.Node.Type == NodeType.Default
+                && (x.OriginalNodeFileId == Guid.Empty || x.Id == x.OriginalNodeFileId));
+            eligible = condition.DateField switch
+            {
+                RoutineDateField.CreatedAt => eligible.Where(x => x.CreatedAt < condition.OlderThan),
+                RoutineDateField.UpdatedAt => eligible.Where(x => x.UpdatedAt < condition.OlderThan),
+                _ => throw new ArgumentOutOfRangeException(nameof(request)),
+            };
+            return await eligible.Select(x => x.Id).ToArrayAsync(ct);
         }
 
         private async Task<HashSet<Guid>> FilterVersionFoldersAsync(
