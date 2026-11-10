@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
@@ -41,6 +41,7 @@ namespace Cotton.Server.Handlers.WebDav
         IDatabaseIntegrityVerifier _integrity,
         UserStorageQuotaService _quota,
         IEventNotificationService _eventNotification,
+        CommittedMutationEffects _effects,
         ISyncChangeRecorder _syncChanges,
         ILayoutMutationGate _layoutGate,
         ILogger<WebDavPutFileRequestHandler> _logger)
@@ -422,17 +423,19 @@ namespace Cotton.Server.Handlers.WebDav
                 chunkCount,
                 request.UserId);
 
-            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
-            await _scheduler.TriggerJobAsync<GenerateFileEmbeddingsJob>();
-            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
+            await _effects.RunAsync(nameof(GeneratePreviewJob), () => _scheduler.TriggerJobAsync<GeneratePreviewJob>());
+            await _effects.RunAsync(nameof(GenerateFileEmbeddingsJob), () => _scheduler.TriggerJobAsync<GenerateFileEmbeddingsJob>());
+            await _effects.RunAsync(nameof(ExtractFileMetadataJob), () => _scheduler.TriggerJobAsync<ExtractFileMetadataJob>());
 
             if (created)
             {
-                await _eventNotification.NotifyFileCreatedAsync(nodeFileId, ct);
+                await _effects.RunAsync(nameof(IEventNotificationService.NotifyFileCreatedAsync),
+                () => _eventNotification.NotifyFileCreatedAsync(nodeFileId, CancellationToken.None));
             }
             else
             {
-                await _eventNotification.NotifyFileUpdatedAsync(nodeFileId, ct);
+                await _effects.RunAsync(nameof(IEventNotificationService.NotifyFileUpdatedAsync),
+                () => _eventNotification.NotifyFileUpdatedAsync(nodeFileId, CancellationToken.None));
             }
         }
     }

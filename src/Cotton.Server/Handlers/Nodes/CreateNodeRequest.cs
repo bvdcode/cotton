@@ -29,7 +29,8 @@ namespace Cotton.Server.Handlers.Nodes
         ILayoutService _layouts,
         ISyncChangeRecorder _syncChanges,
         ILayoutMutationGate _layoutGate,
-        IEventNotificationService _notifications)
+        IEventNotificationService _notifications,
+        CommittedMutationEffects _effects)
         : IRequestHandler<CreateNodeRequest, CreateNodeResult>
     {
         public async Task<CreateNodeResult> Handle(
@@ -113,7 +114,8 @@ namespace Cotton.Server.Handlers.Nodes
                 nodeDto = node.Adapt<NodeDto>();
             }
 
-            await _notifications.NotifyNodeCreatedAsync(request.UserId, nodeDto, ct);
+            await _effects.RunAsync(nameof(IEventNotificationService.NotifyNodeCreatedAsync),
+                () => _notifications.NotifyNodeCreatedAsync(request.UserId, nodeDto, CancellationToken.None));
             return new CreateNodeResult(
                 CreateNodeStatus.Created,
                 nodeDto);

@@ -1,22 +1,18 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Files;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
-using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
-using Cotton.Server.Models.Dto;
+using Cotton.Server.Handlers.Moves;
 using Cotton.Server.Services;
-using Cotton.Server.Extensions;
-using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Files
@@ -39,205 +35,55 @@ namespace Cotton.Server.Handlers.Files
     }
 
     public class MoveFileCommandHandler(
-        CottonDbContext _dbContext,
-        ISyncChangeRecorder _syncChanges,
-        IEventNotificationService _eventNotification,
-        ILayoutMutationGate _layoutGate,
-        TrashRestoreCoordinator _conflicts,
-        ILogger<MoveFileCommandHandler> _logger)
-        : IRequestHandler<MoveFileCommand, NodeFileManifestDto>
+        CottonDbContext db,
+        IMediator mediator,
+        IEventNotificationService notifications,
+        ILayoutMutationGate layoutGate,
+        CommittedMutationEffects effects) : IRequestHandler<MoveFileCommand, NodeFileManifestDto>
     {
-        public async Task<NodeFileManifestDto> Handle(MoveFileCommand request, CancellationToken cancellationToken)
-        {
-            ValidateRequest(request);
-            Guid sourceLayoutId = await GetSourceLayoutIdAsync(request, cancellationToken);
-
-            await using IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(sourceLayoutId, cancellationToken);
-            await using IDbContextTransaction tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-
-            NodeFile nodeFile = await GetMovableFileAsync(request, cancellationToken);
-            ValidateMovableFile(request, nodeFile);
-
-            Guid? oldParentId = await MoveFileToTargetParentAsync(request, nodeFile, sourceLayoutId, cancellationToken);
-            await tx.CommitAsync(cancellationToken);
-
-            await NotifyMoveIfNeededAsync(nodeFile.Id, oldParentId, cancellationToken);
-            return nodeFile.Adapt<NodeFileManifestDto>();
-        }
-
-        private static void ValidateRequest(MoveFileCommand request)
+        public async Task<NodeFileManifestDto> Handle(MoveFileCommand request, CancellationToken ct)
         {
             if (request.ParentId == Guid.Empty)
             {
                 throw new BadRequestException<NodeFile>("Target parent id is required.");
             }
-        }
-
-        private async Task<Guid> GetSourceLayoutIdAsync(MoveFileCommand request, CancellationToken cancellationToken)
-        {
-            return await _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.Id == request.NodeFileId && x.OwnerId == request.UserId)
-                .Select(x => (Guid?)x.Node.LayoutId)
-                .SingleOrDefaultAsync(cancellationToken)
-                ?? throw new EntityNotFoundException<NodeFile>("Source file not found.");
-        }
-
-        private async Task<NodeFile> GetMovableFileAsync(MoveFileCommand request, CancellationToken cancellationToken)
-        {
-            NodeFile nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .Include(x => x.FileManifest)
-                .Where(x => x.Id == request.NodeFileId && x.OwnerId == request.UserId)
-                .SingleOrDefaultAsync(cancellationToken)
+            Guid layoutId = await db.NodeFiles.AsNoTracking()
+                .Where(file => file.Id == request.NodeFileId && file.OwnerId == request.UserId)
+                .Select(file => (Guid?)file.Node.LayoutId)
+                .SingleOrDefaultAsync(ct)
                 ?? throw new EntityNotFoundException<NodeFile>("Source file not found.");
 
-            return nodeFile;
-        }
-
-        private static void ValidateMovableFile(MoveFileCommand request, NodeFile nodeFile)
-        {
-            if (nodeFile.Node.Type != NodeType.Default)
+            await using IAsyncDisposable gate = await layoutGate.EnterAsync(layoutId, ct);
+            await using IDbContextTransaction transaction = await db.Database.BeginTransactionAsync(ct);
+            NodeFile file = await db.NodeFiles.Include(file => file.Node).Include(file => file.FileManifest)
+                .SingleOrDefaultAsync(file => file.Id == request.NodeFileId && file.OwnerId == request.UserId, ct)
+                ?? throw new EntityNotFoundException<NodeFile>("Source file not found.");
+            if (file.Node.Type != NodeType.Default)
             {
                 throw new EntityNotFoundException<NodeFile>("Source file is not in the active layout.");
             }
-
-            if (!FileETags.MatchesIfMatchHeader(request.ExpectedETag, nodeFile))
+            if (!FileETags.MatchesIfMatchHeader(request.ExpectedETag, file))
             {
                 throw new FilePreconditionFailedException<NodeFile>("File content changed before move.");
             }
-        }
-
-        private async Task<Guid?> MoveFileToTargetParentAsync(
-            MoveFileCommand request,
-            NodeFile nodeFile,
-            Guid sourceLayoutId,
-            CancellationToken cancellationToken)
-        {
-            if (nodeFile.NodeId == request.ParentId)
+            if (file.NodeId == request.ParentId)
             {
-                return null;
+                return file.Adapt<NodeFileManifestDto>();
             }
-
-            Node targetParent = await GetTargetParentAsync(request, cancellationToken);
-            ValidateTargetParent(nodeFile, targetParent);
-
-            string destinationName = GetDestinationName(request, nodeFile);
-            string destinationNameKey = NameValidator.GetNameKey(destinationName);
-            await ResolveSiblingCollisionAsync(
-                request,
-                targetParent.Id,
-                destinationNameKey,
-                cancellationToken);
-
-            Guid oldParentId = nodeFile.NodeId;
-            nodeFile.NodeId = targetParent.Id;
-            nodeFile.SetName(destinationName);
-            nodeFile.Metadata = NodeMetadataPatch.Apply(nodeFile.Metadata, request.Metadata);
-            nodeFile.FileManifest.ResetFailedPreview();
-            _syncChanges.StageFileChange(SyncChangeKind.FileMoved, nodeFile, sourceLayoutId, oldParentId);
-            await SaveMovedFileAsync(nodeFile, cancellationToken);
-            return oldParentId;
-        }
-
-        private static string GetDestinationName(MoveFileCommand request, NodeFile nodeFile)
-        {
-            if (request.Name is null)
-            {
-                return nodeFile.Name;
-            }
-
-            bool valid = NameValidator.TryNormalizeAndValidate(
-                request.Name,
-                out string normalized,
-                out string errorMessage);
-            if (!valid)
-            {
-                throw new BadRequestException<NodeFile>(errorMessage);
-            }
-
-            return normalized;
-        }
-
-        private async Task<Node> GetTargetParentAsync(MoveFileCommand request, CancellationToken cancellationToken)
-        {
-            return await _dbContext.Nodes
-                .Where(x => x.Id == request.ParentId
-                    && x.OwnerId == request.UserId
-                    && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync(cancellationToken)
+            Node parent = await db.Nodes.SingleOrDefaultAsync(node => node.Id == request.ParentId
+                && node.OwnerId == request.UserId && node.Type == NodeType.Default, ct)
                 ?? throw new EntityNotFoundException<Node>("Destination folder not found in the active layout.");
-        }
-
-        private static void ValidateTargetParent(NodeFile nodeFile, Node targetParent)
-        {
-            if (targetParent.LayoutId != nodeFile.Node.LayoutId)
+            Guid oldParentId = file.NodeId;
+            MoveOverwritePolicy overwrite = MoveOverwritePolicy.None;
+            if (request.Overwrite)
             {
-                throw new BadRequestException<Node>("Cannot move a file across layouts.");
+                overwrite = MoveOverwritePolicy.Files;
             }
-        }
-
-        private async Task SaveMovedFileAsync(NodeFile nodeFile, CancellationToken cancellationToken)
-        {
-            try
-            {
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
-            catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg
-                && pg.SqlState == PostgresErrorCodes.UniqueViolation)
-            {
-                throw new DuplicateException(nodeFile.NameKey);
-            }
-        }
-
-        private async Task ResolveSiblingCollisionAsync(
-            MoveFileCommand request,
-            Guid targetParentId,
-            string nameKey,
-            CancellationToken ct)
-        {
-            TrashRestoreCoordinator.ConflictInfo? conflict = await _conflicts.FindConflictAsync(
-                request.UserId,
-                targetParentId,
-                nameKey,
-                ct);
-            if (!conflict.HasValue)
-            {
-                return;
-            }
-
-            if (request.Overwrite && conflict.Value.Kind == RestoreConflictKind.File)
-            {
-                await _conflicts.SendConflictToTrashAsync(request.UserId, conflict.Value, ct);
-                return;
-            }
-
-            throw new DuplicateException(
-                nameKey,
-                extra: new { conflictKind = conflict.Value.Kind });
-        }
-
-        private async Task NotifyMoveIfNeededAsync(Guid nodeFileId, Guid? oldParentId, CancellationToken ct)
-        {
-            if (!oldParentId.HasValue)
-            {
-                return;
-            }
-
-            await NotifyMoveAsync(nodeFileId, oldParentId.Value, ct);
-        }
-
-        private async Task NotifyMoveAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct)
-        {
-            // Best-effort: a notification failure must not turn an already-committed move into a failed response.
-            try
-            {
-                await _eventNotification.NotifyFileMovedAsync(nodeFileId, oldParentId, ct);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Move notification failed for file {NodeFileId}", nodeFileId);
-            }
+            await mediator.Send(new RelocateFileRequest(file, parent, request.Name, request.Metadata, overwrite), ct);
+            await transaction.CommitAsync(ct);
+            await effects.RunAsync(nameof(IEventNotificationService.NotifyFileMovedAsync),
+                () => notifications.NotifyFileMovedAsync(file.Id, oldParentId, CancellationToken.None));
+            return file.Adapt<NodeFileManifestDto>();
         }
     }
 }

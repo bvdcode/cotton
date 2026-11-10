@@ -1,8 +1,9 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
-using Cotton.Topology;
+using Cotton.Server.Handlers.Moves;
+using EasyExtensions.AspNetCore.Exceptions;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
@@ -31,7 +32,7 @@ namespace Cotton.Server.Handlers.WebDav
         IMediator _mediator,
         IWebDavPathResolver _pathResolver,
         IEventNotificationService _eventNotification,
-        ISyncChangeRecorder _syncChanges,
+        CommittedMutationEffects _effects,
         ILayoutMutationGate _layoutGate,
         ILogger<WebDavMoveRequestHandler> _logger)
         : IRequestHandler<WebDavMoveRequest, WebDavMoveResult>
@@ -53,23 +54,25 @@ namespace Cotton.Server.Handlers.WebDav
                 return preparedMove.Failure;
             }
 
-            WebDavMoveResult? moveFailure = await TryPerformMoveAsync(
-                request,
-                preparedMove.Source!,
-                preparedMove.DestinationParent!,
-                preparedMove.OldParentId,
-                ct);
-            if (moveFailure is not null)
+            bool replaced;
+            try
             {
-                return moveFailure;
+                replaced = await PerformMoveAsync(request, preparedMove.Source!, preparedMove.DestinationParent!, ct);
+            }
+            catch (DuplicateException)
+            {
+                return Fail(WebDavMoveError.DestinationExists);
+            }
+            catch (InvalidFolderMoveException)
+            {
+                return Fail(WebDavMoveError.CannotMoveIntoDescendant);
             }
 
-            await _dbContext.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
             await NotifyAfterCommitAsync(request, preparedMove.Source!, preparedMove.OldParentId, ct);
 
             (Guid? NodeId, Guid? NodeFileId) movedIds = GetMovedIds(preparedMove.Source!);
-            return Ok(preparedMove.Created, movedIds.NodeId, movedIds.NodeFileId);
+            return Ok(!replaced, movedIds.NodeId, movedIds.NodeFileId);
         }
 
         private async Task<PreTransactionSourceOutcome> ResolvePreTransactionSourceAsync(WebDavMoveRequest request, CancellationToken ct)
@@ -104,13 +107,7 @@ namespace Cotton.Server.Handlers.WebDav
                 return MovePreparationOutcome.Failed(destinationFailure);
             }
 
-            (bool Created, bool Allowed) overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
-            if (!overwriteResult.Allowed)
-            {
-                return MovePreparationOutcome.Failed(Fail(WebDavMoveError.DestinationExists));
-            }
-
-            return MovePreparationOutcome.Success(source, destination, overwriteResult.Created, GetOldParentId(source));
+            return MovePreparationOutcome.Success(source, destination, GetOldParentId(source));
         }
 
         private async Task<WebDavMoveResult?> ValidateSourceInTransactionAsync(
@@ -171,17 +168,15 @@ namespace Cotton.Server.Handlers.WebDav
         private record MovePreparationOutcome(
             WebDavResolveResult? Source,
             WebDavParentResult? DestinationParent,
-            bool Created,
             Guid? OldParentId,
             WebDavMoveResult? Failure)
         {
             public static MovePreparationOutcome Success(
                 WebDavResolveResult source,
                 WebDavParentResult destinationParent,
-                bool created,
-                Guid? oldParentId) => new(source, destinationParent, created, oldParentId, null);
+                Guid? oldParentId) => new(source, destinationParent, oldParentId, null);
 
-            public static MovePreparationOutcome Failed(WebDavMoveResult failure) => new(null, null, false, null, failure);
+            public static MovePreparationOutcome Failed(WebDavMoveResult failure) => new(null, null, null, failure);
         }
 
         private async Task<Guid> GetSourceLayoutIdAsync(WebDavResolveResult source, CancellationToken ct)
@@ -253,23 +248,15 @@ namespace Cotton.Server.Handlers.WebDav
                 request.UserId);
 
             (Guid? NodeId, Guid? NodeFileId) movedIds = GetMovedIds(sourceResult);
-            // Best-effort: a notification failure must not turn an already-committed move into a failed response.
-            try
+            if (movedIds.NodeId.HasValue && oldParentId.HasValue)
             {
-                if (movedIds.NodeId.HasValue && oldParentId.HasValue)
-                {
-                    await _eventNotification.NotifyNodeMovedAsync(movedIds.NodeId.Value, oldParentId.Value, ct);
-                }
-                else if (movedIds.NodeFileId.HasValue && oldParentId.HasValue)
-                {
-                    await _eventNotification.NotifyFileMovedAsync(movedIds.NodeFileId.Value, oldParentId.Value, ct);
-                }
+                await _effects.RunAsync(nameof(IEventNotificationService.NotifyNodeMovedAsync),
+                    () => _eventNotification.NotifyNodeMovedAsync(movedIds.NodeId.Value, oldParentId.Value, CancellationToken.None));
             }
-            catch (Exception ex)
+            else if (movedIds.NodeFileId.HasValue && oldParentId.HasValue)
             {
-                _logger.LogError(ex,
-                    "WebDAV MOVE: notification failed after committed move (NodeId={NodeId}, NodeFileId={NodeFileId})",
-                    movedIds.NodeId, movedIds.NodeFileId);
+                await _effects.RunAsync(nameof(IEventNotificationService.NotifyFileMovedAsync),
+                    () => _eventNotification.NotifyFileMovedAsync(movedIds.NodeFileId.Value, oldParentId.Value, CancellationToken.None));
             }
         }
 
@@ -301,107 +288,27 @@ namespace Cotton.Server.Handlers.WebDav
             return destParentResult;
         }
 
-        private async Task<(bool Created, bool Allowed)> HandleDestinationOverwriteAsync(WebDavMoveRequest request, CancellationToken ct)
-        {
-            WebDavResolveResult destExists = await _pathResolver.ResolveMetadataAsync(request.UserId, request.DestinationPath, ct);
-            if (destExists.Found && !request.Overwrite)
-            {
-                _logger.LogDebug("WebDAV MOVE: Destination exists and overwrite is false: {Path}", request.DestinationPath);
-                return (false, false);
-            }
-
-            bool created = !destExists.Found;
-            if (destExists.Found && request.Overwrite)
-            {
-                await DeleteExistingDestinationAsync(request.UserId, destExists, ct);
-            }
-
-            return (created, true);
-        }
-
-        private async Task DeleteExistingDestinationAsync(Guid userId, WebDavResolveResult destination, CancellationToken ct)
-        {
-            if (destination.IsCollection && destination.Node is not null)
-            {
-                await _mediator.Send(new DeleteNodeQuery(userId, destination.Node.Id, skipTrash: false), ct);
-                return;
-            }
-
-            if (destination.NodeFile is not null)
-            {
-                await _mediator.Send(new DeleteFileQuery(userId, destination.NodeFile.Id, skipTrash: false), ct);
-            }
-        }
-
-        private async Task<WebDavMoveResult?> TryPerformMoveAsync(
+        private async Task<bool> PerformMoveAsync(
             WebDavMoveRequest request,
-            WebDavResolveResult sourceResult,
-            WebDavParentResult destParentResult,
-            Guid? oldParentId,
+            WebDavResolveResult source,
+            WebDavParentResult destination,
             CancellationToken ct)
         {
-            if (sourceResult.IsCollection && sourceResult.Node is not null)
+            MoveOverwritePolicy overwrite = MoveOverwritePolicy.None;
+            if (request.Overwrite)
             {
-                if (await IsDescendantAsync(destParentResult.ParentNode!.Id, sourceResult.Node.Id, request.UserId, ct))
-                {
-                    _logger.LogWarning("WebDAV MOVE: Attempted to move node {NodeId} into its descendant {DestParentId} for user {UserId}",
-                        sourceResult.Node.Id, destParentResult.ParentNode.Id, request.UserId);
-                    return Fail(WebDavMoveError.CannotMoveIntoDescendant);
-                }
-
-                Node node = await _dbContext.Nodes
-                    .FirstAsync(n => n.Id == sourceResult.Node.Id, ct);
-
-                node.SetParent(destParentResult.ParentNode!);
-                node.SetName(destParentResult.ResourceName!);
-                _syncChanges.StageFolderChange(
-                    SyncChangeKind.FolderMoved,
-                    node,
-                    destParentResult.ParentNode.Id,
-                    oldParentId);
-                return null;
+                overwrite = MoveOverwritePolicy.All;
             }
-
-            if (sourceResult.NodeFile is not null)
+            if (source.IsCollection)
             {
-                NodeFile nodeFile = await _dbContext.NodeFiles
-                    .Include(file => file.FileManifest)
-                    .FirstAsync(f => f.Id == sourceResult.NodeFile.Id, ct);
-
-                nodeFile.NodeId = destParentResult.ParentNode!.Id;
-                nodeFile.SetName(destParentResult.ResourceName!);
-                nodeFile.FileManifest.ResetFailedPreview();
-                _syncChanges.StageFileChange(
-                    SyncChangeKind.FileMoved,
-                    nodeFile,
-                    destParentResult.ParentNode.LayoutId,
-                    oldParentId);
+                Node folder = await _dbContext.Nodes.SingleAsync(node => node.Id == source.Node!.Id, ct);
+                return await _mediator.Send(new RelocateFolderRequest(
+                    folder, destination.ParentNode!, destination.ResourceName, Overwrite: overwrite), ct);
             }
-
-            return null;
-        }
-
-        private async Task<bool> IsDescendantAsync(Guid destParentId, Guid sourceNodeId, Guid userId, CancellationToken ct)
-        {
-            IQueryable<Node> nodes = _dbContext.Nodes.AsNoTracking().AccessibleTo(userId);
-            try
-            {
-                await foreach (var node in NodeHierarchy.ReadAncestorsAsync(
-                    nodes, destParentId, node => new { node.Id, node.ParentId }, node => node.ParentId,
-                    sourceNodeId, NodeHierarchy.DefaultMaxDepth - 1, ct))
-                {
-                    if (node.Id == sourceNodeId || node.ParentId == sourceNodeId)
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-            catch (NodeHierarchyException exception)
-            {
-                _logger.LogWarning(exception, "Cannot move a folder within an invalid hierarchy");
-                return true;
-            }
+            NodeFile file = await _dbContext.NodeFiles.Include(file => file.Node).Include(file => file.FileManifest)
+                .SingleAsync(file => file.Id == source.NodeFile!.Id, ct);
+            return await _mediator.Send(new RelocateFileRequest(
+                file, destination.ParentNode!, destination.ResourceName, Overwrite: overwrite), ct);
         }
     }
 }

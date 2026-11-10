@@ -29,7 +29,8 @@ namespace Cotton.Server.Handlers.Files
         CottonDbContext _dbContext,
         ISyncChangeRecorder _syncChanges,
         ILayoutMutationGate _layoutGate,
-        IEventNotificationService _notifications)
+        IEventNotificationService _notifications,
+        CommittedMutationEffects _effects)
         : IRequestHandler<RenameFileRequest, RenameFileResult>
     {
         public async Task<RenameFileResult> Handle(
@@ -102,7 +103,8 @@ namespace Cotton.Server.Handlers.Files
                 file = nodeFile.Adapt<NodeFileManifestDto>();
             }
 
-            await _notifications.NotifyFileRenamedAsync(file, ct);
+            await _effects.RunAsync(nameof(IEventNotificationService.NotifyFileRenamedAsync),
+                () => _notifications.NotifyFileRenamedAsync(file, CancellationToken.None));
             return new RenameFileResult(
                 RenameFileStatus.Renamed,
                 file);

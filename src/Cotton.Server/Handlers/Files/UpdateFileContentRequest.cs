@@ -41,7 +41,8 @@ namespace Cotton.Server.Handlers.Files
         UserStorageQuotaService _quota,
         ILayoutMutationGate _layoutGate,
         ISchedulerFactory _scheduler,
-        IEventNotificationService _notifications)
+        IEventNotificationService _notifications,
+        CommittedMutationEffects _effects)
         : IRequestHandler<UpdateFileContentRequest, UpdateFileContentResult>
     {
         public async Task<UpdateFileContentResult> Handle(
@@ -143,11 +144,12 @@ namespace Cotton.Server.Handlers.Files
             }
 
             NodeFileManifestDto file = nodeFile.Adapt<NodeFileManifestDto>();
-            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
-            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
-            await _scheduler.TriggerJobAsync<GenerateFileEmbeddingsJob>();
-            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
-            await _notifications.NotifyFileUpdatedAsync(file, ct);
+            await _effects.RunAsync(nameof(ComputeManifestHashesJob), () => _scheduler.TriggerJobAsync<ComputeManifestHashesJob>());
+            await _effects.RunAsync(nameof(GeneratePreviewJob), () => _scheduler.TriggerJobAsync<GeneratePreviewJob>());
+            await _effects.RunAsync(nameof(GenerateFileEmbeddingsJob), () => _scheduler.TriggerJobAsync<GenerateFileEmbeddingsJob>());
+            await _effects.RunAsync(nameof(ExtractFileMetadataJob), () => _scheduler.TriggerJobAsync<ExtractFileMetadataJob>());
+            await _effects.RunAsync(nameof(IEventNotificationService.NotifyFileUpdatedAsync),
+                () => _notifications.NotifyFileUpdatedAsync(file, CancellationToken.None));
 
             return new UpdateFileContentResult(
                 UpdateFileContentStatus.Updated,

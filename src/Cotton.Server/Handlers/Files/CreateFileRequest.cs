@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Files;
@@ -66,6 +66,7 @@ namespace Cotton.Server.Handlers.Files
         ILayoutMutationGate _layoutGate,
         ISchedulerFactory _scheduler,
         IEventNotificationService _notifications,
+        CommittedMutationEffects _effects,
         IMediator _mediator) : IRequestHandler<CreateFileRequest, NodeFileManifestDto>
     {
         public async Task<NodeFileManifestDto> Handle(CreateFileRequest request, CancellationToken cancellationToken)
@@ -127,11 +128,12 @@ namespace Cotton.Server.Handlers.Files
             _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
 
             NodeFileManifestDto file = nodeFile.Adapt<NodeFileManifestDto>();
-            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
-            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
-            await _scheduler.TriggerJobAsync<GenerateFileEmbeddingsJob>();
-            await _scheduler.TriggerJobAsync<ExtractFileMetadataJob>();
-            await _notifications.NotifyFileCreatedAsync(file, cancellationToken);
+            await _effects.RunAsync(nameof(ComputeManifestHashesJob), () => _scheduler.TriggerJobAsync<ComputeManifestHashesJob>());
+            await _effects.RunAsync(nameof(GeneratePreviewJob), () => _scheduler.TriggerJobAsync<GeneratePreviewJob>());
+            await _effects.RunAsync(nameof(GenerateFileEmbeddingsJob), () => _scheduler.TriggerJobAsync<GenerateFileEmbeddingsJob>());
+            await _effects.RunAsync(nameof(ExtractFileMetadataJob), () => _scheduler.TriggerJobAsync<ExtractFileMetadataJob>());
+            await _effects.RunAsync(nameof(IEventNotificationService.NotifyFileCreatedAsync),
+                () => _notifications.NotifyFileCreatedAsync(file, CancellationToken.None));
             return file;
         }
 
