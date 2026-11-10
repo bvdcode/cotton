@@ -47,6 +47,16 @@ namespace Cotton.Server.IntegrationTests
                 new RenameFileRequestDto { Name = "after.txt" });
             renameFile.EnsureSuccessStatusCode();
 
+            HttpResponseMessage createRoutine = await client.PostAsJsonAsync("/api/v1/routines", new RoutineDraftDto
+            {
+                Name = "Cleanup", Enabled = true, TargetNodeId = folder.Id, IntervalHours = 24,
+                Settings = new() { OlderThanDays = 30 },
+            });
+            createRoutine.EnsureSuccessStatusCode();
+            RoutineDto routine = (await createRoutine.Content.ReadFromJsonAsync<RoutineDto>())!;
+            List<RoutineDto> routines = (await client.GetFromJsonAsync<List<RoutineDto>>("/api/v1/routines"))!;
+            Assert.That(routines.Select(item => item.Id), Is.EqualTo(new[] { routine.Id }));
+
             await UseWebDavBasicAuthAsync(client);
             using StringContent putContent = new("webdav-content");
             HttpResponseMessage put = await client.PutAsync("/api/v1/webdav/after/dav.txt", putContent);
@@ -62,8 +72,9 @@ namespace Cotton.Server.IntegrationTests
             {
                 Assert.That(db.Nodes.AsNoTracking().Single(node => node.Id == folder.Id).Name, Is.EqualTo("after"));
                 Assert.That(db.NodeFiles.AsNoTracking().Single(node => node.Id == file.Id).Name, Is.EqualTo("after.txt"));
+                Assert.That(db.Routines.AsNoTracking().Single().Id, Is.EqualTo(routine.Id));
                 Assert.That(application.Services.GetRequiredService<FailingMutationNotifications>().Attempts, Is.EqualTo(7));
-                Assert.That(application.Services.GetRequiredService<FailingSchedulerFactory>().Attempts, Is.EqualTo(14));
+                Assert.That(application.Services.GetRequiredService<FailingSchedulerFactory>().Attempts, Is.EqualTo(15));
             });
         }
     }

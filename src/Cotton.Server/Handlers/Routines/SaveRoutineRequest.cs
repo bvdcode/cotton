@@ -8,6 +8,7 @@ using Cotton.Routines;
 using Cotton.Server.Jobs;
 using Cotton.Server.Providers;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -21,7 +22,8 @@ namespace Cotton.Server.Handlers.Routines
 {
     public record SaveRoutineRequest(Guid UserId, Guid? RoutineId, RoutineDraftDto Draft) : IRequest<RoutineDto>;
 
-    public class SaveRoutineRequestHandler(CottonDbContext db, ISchedulerFactory scheduler, SettingsProvider settings)
+    public class SaveRoutineRequestHandler(CottonDbContext db, ISchedulerFactory scheduler, SettingsProvider settings,
+        CommittedMutationEffects effects)
         : IRequestHandler<SaveRoutineRequest, RoutineDto>
     {
         public async Task<RoutineDto> Handle(SaveRoutineRequest request, CancellationToken ct)
@@ -94,7 +96,7 @@ namespace Cotton.Server.Handlers.Routines
             await db.SaveChangesAsync(ct);
             if (!request.RoutineId.HasValue)
             {
-                await scheduler.TriggerJobAsync<RunRoutinesJob>();
+                await effects.RunAsync(nameof(RunRoutinesJob), () => scheduler.TriggerJobAsync<RunRoutinesJob>());
             }
             return RoutineDto.FromEntity(routine, timezone);
         }
