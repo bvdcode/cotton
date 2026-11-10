@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
@@ -88,7 +88,7 @@ namespace Cotton.Server.IntegrationTests
             public Task<Stream> ReadAsync(
                 string uid,
                 Stream stream,
-                PipelineContext? context = null)
+                PipelineContext? context = null, CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(stream);
             }
@@ -96,7 +96,7 @@ namespace Cotton.Server.IntegrationTests
             public async Task<Stream> WriteAsync(
                 string uid,
                 Stream stream,
-                PipelineContext? context = null)
+                PipelineContext? context = null, CancellationToken cancellationToken = default)
             {
                 _entered.TryAdd(uid, 0);
                 if (uid.StartsWith("blocker-", StringComparison.Ordinal))
@@ -123,16 +123,16 @@ namespace Cotton.Server.IntegrationTests
             private readonly ConcurrentDictionary<string, byte[]> _storage =
                 new(StringComparer.Ordinal);
 
-            public Task<bool> DeleteAsync(string uid) =>
+            public Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken = default) =>
                 Task.FromResult(_storage.TryRemove(uid, out _));
 
-            public Task<bool> ExistsAsync(string uid) =>
+            public Task<bool> ExistsAsync(string uid, CancellationToken cancellationToken = default) =>
                 Task.FromResult(_storage.ContainsKey(uid));
 
-            public Task<long> GetSizeAsync(string uid) =>
+            public Task<long> GetSizeAsync(string uid, CancellationToken cancellationToken = default) =>
                 Task.FromResult(_storage.TryGetValue(uid, out byte[]? data) ? data.Length : 0L);
 
-            public Task<Stream> ReadAsync(string uid)
+            public Task<Stream> ReadAsync(string uid, CancellationToken cancellationToken = default)
             {
                 if (!_storage.TryGetValue(uid, out byte[]? data))
                 {
@@ -144,7 +144,7 @@ namespace Cotton.Server.IntegrationTests
 
             public async Task<long> WriteAsync(
                 string uid,
-                Stream stream, bool overwrite = false)
+                Stream stream, bool overwrite = false, CancellationToken cancellationToken = default)
             {
                 using MemoryStream destination = new();
                 await stream.CopyToAsync(destination);

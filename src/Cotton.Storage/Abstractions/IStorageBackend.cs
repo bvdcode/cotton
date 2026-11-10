@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 namespace Cotton.Storage.Abstractions
@@ -14,15 +14,15 @@ namespace Cotton.Storage.Abstractions
     {
         void CleanupTempFiles(TimeSpan ttl);
 
-        Task<bool> DeleteAsync(string uid);
+        Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken = default);
 
-        Task<bool> ExistsAsync(string uid);
+        Task<bool> ExistsAsync(string uid, CancellationToken cancellationToken = default);
 
-        Task<long> GetSizeAsync(string uid);
+        Task<long> GetSizeAsync(string uid, CancellationToken cancellationToken = default);
 
-        Task<Stream> ReadAsync(string uid);
+        Task<Stream> ReadAsync(string uid, CancellationToken cancellationToken = default);
 
-        Task<long> WriteAsync(string uid, Stream stream, bool overwrite = false);
+        Task<long> WriteAsync(string uid, Stream stream, bool overwrite = false, CancellationToken cancellationToken = default);
 
         IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default);
 

@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
@@ -11,25 +11,25 @@ namespace Cotton.Server.IntegrationTests.Helpers
     {
         private readonly ConcurrentDictionary<string, byte[]> _blobs = new(StringComparer.OrdinalIgnoreCase);
 
-        public Task<bool> DeleteAsync(string uid)
+        public Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uid);
             return Task.FromResult(_blobs.TryRemove(uid, out _));
         }
 
-        public Task<long> GetSizeAsync(string uid)
+        public Task<long> GetSizeAsync(string uid, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uid);
             return Task.FromResult(_blobs.TryGetValue(uid, out byte[]? data) ? data.Length : 0L);
         }
 
-        public Task<bool> ExistsAsync(string uid)
+        public Task<bool> ExistsAsync(string uid, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uid);
             return Task.FromResult(_blobs.ContainsKey(uid));
         }
 
-        public Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
+        public Task<Stream> ReadAsync(string uid, PipelineContext? context = null, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uid);
             if (!_blobs.TryGetValue(uid, out byte[]? data))

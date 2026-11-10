@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Pipelines;
@@ -7,13 +7,13 @@ namespace Cotton.Storage.Abstractions
 {
     public interface IStoragePipeline
     {
-        Task<bool> DeleteAsync(string uid);
+        Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken = default);
 
-        Task<bool> ExistsAsync(string uid);
+        Task<bool> ExistsAsync(string uid, CancellationToken cancellationToken = default);
 
-        Task<long> GetSizeAsync(string uid);
+        Task<long> GetSizeAsync(string uid, CancellationToken cancellationToken = default);
 
-        Task<Stream> ReadAsync(string uid, PipelineContext? context = null);
+        Task<Stream> ReadAsync(string uid, PipelineContext? context = null, CancellationToken cancellationToken = default);
 
         Task<long> WriteAsync(
             string uid,

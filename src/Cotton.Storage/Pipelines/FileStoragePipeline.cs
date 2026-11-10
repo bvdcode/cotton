@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
@@ -12,39 +12,44 @@ namespace Cotton.Storage.Pipelines
         IEnumerable<IStorageProcessor> _processors,
         StorageWriteAdmissionGate _writeAdmissionGate) : IStoragePipeline
     {
-        public Task<bool> ExistsAsync(string uid)
+        public Task<bool> ExistsAsync(string uid, CancellationToken cancellationToken = default)
         {
-            return _backendProvider.GetBackend().ExistsAsync(uid);
+            return _backendProvider.GetBackend().ExistsAsync(uid, cancellationToken);
         }
 
-        public Task<bool> DeleteAsync(string uid)
+        public Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken = default)
         {
-            return _backendProvider.GetBackend().DeleteAsync(uid);
+            return _backendProvider.GetBackend().DeleteAsync(uid, cancellationToken);
         }
 
-        public Task<long> GetSizeAsync(string uid)
+        public Task<long> GetSizeAsync(string uid, CancellationToken cancellationToken = default)
         {
-            return _backendProvider.GetBackend().GetSizeAsync(uid);
+            return _backendProvider.GetBackend().GetSizeAsync(uid, cancellationToken);
         }
 
-        public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
+        public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null, CancellationToken cancellationToken = default)
         {
             IStorageBackend backend = _backendProvider.GetBackend();
             IOrderedEnumerable<IStorageProcessor> orderedProcessors = _processors.OrderBy(p => p.Priority);
-            Stream currentStream = await backend.ReadAsync(uid);
-            foreach (IStorageProcessor? processor in orderedProcessors)
+            Stream currentStream = await backend.ReadAsync(uid, cancellationToken);
+            try
             {
-                currentStream = await processor.ReadAsync(uid, currentStream, context);
-                if (currentStream == Stream.Null)
+                foreach (IStorageProcessor processor in orderedProcessors)
                 {
-                    throw new InvalidOperationException($"Processor {processor} returned Stream.Null for UID {uid} but it should return a valid stream.");
+                    Stream next = await processor.ReadAsync(uid, currentStream, context, cancellationToken);
+                    if (next == Stream.Null)
+                    {
+                        throw new InvalidOperationException($"Processor {processor} returned Stream.Null for UID {uid}.");
+                    }
+                    currentStream = next;
                 }
+                return currentStream;
             }
-            if (currentStream == Stream.Null)
+            catch
             {
-                throw new InvalidOperationException($"No registered processor could retrieve the file with UID {uid}");
+                await currentStream.DisposeAsync().ConfigureAwait(false);
+                throw;
             }
-            return currentStream;
         }
 
         public async Task<long> WriteAsync(
@@ -63,25 +68,32 @@ namespace Cotton.Storage.Pipelines
                     _logger.LogWarning("No storage processors are registered. Writing the stream directly to the backend.");
                 }
                 if (context?.Overwrite != true && orderedProcessors.Length > 0
-                    && await backend.ExistsAsync(uid).ConfigureAwait(false))
+                    && await backend.ExistsAsync(uid, cancellationToken).ConfigureAwait(false))
                 {
                     _logger.LogDebug("File {Uid} deduplicated, skipping processor pipeline", uid);
-                    return await backend.GetSizeAsync(uid).ConfigureAwait(false);
+                    return await backend.GetSizeAsync(uid, cancellationToken).ConfigureAwait(false);
                 }
                 Stream currentStream = stream;
-                foreach (IStorageProcessor? processor in orderedProcessors)
+                try
                 {
-                    if (currentStream == Stream.Null)
+                    foreach (IStorageProcessor processor in orderedProcessors)
                     {
-                        throw new InvalidOperationException($"Processor BEFORE {processor} returned Stream.Null for UID {uid} but it should pass a valid stream to the next processor.");
+                        Stream next = await processor.WriteAsync(uid, currentStream, context, cancellationToken);
+                        if (next == Stream.Null)
+                        {
+                            throw new InvalidOperationException($"Processor {processor} returned Stream.Null for UID {uid}.");
+                        }
+                        currentStream = next;
                     }
-                    currentStream = await processor.WriteAsync(uid, currentStream, context);
+                    return await backend.WriteAsync(uid, currentStream, context?.Overwrite == true, cancellationToken);
                 }
-                if (currentStream == Stream.Null)
+                finally
                 {
-                    throw new InvalidOperationException($"No registered processor produced a valid stream to write for UID {uid}");
+                    if (!ReferenceEquals(currentStream, stream))
+                    {
+                        await currentStream.DisposeAsync().ConfigureAwait(false);
+                    }
                 }
-                return await backend.WriteAsync(uid, currentStream, context?.Overwrite == true);
             }
             finally
             {

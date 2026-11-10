@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Amazon.S3;
@@ -26,7 +26,7 @@ namespace Cotton.Storage.Backends
             return $"{p1}/{p2}/{fileName}.ctn";
         }
 
-        public async Task<bool> DeleteAsync(string uid)
+        public async Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
 
@@ -38,11 +38,11 @@ namespace Cotton.Storage.Backends
             {
                 Key = key,
                 BucketName = bucket
-            });
+            }, cancellationToken);
             return response.HttpStatusCode == HttpStatusCode.NoContent;
         }
 
-        public async Task<Stream> ReadAsync(string uid)
+        public async Task<Stream> ReadAsync(string uid, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
             IAmazonS3 _s3 = _s3Provider.GetS3Client();
@@ -56,7 +56,7 @@ namespace Cotton.Storage.Backends
 
             try
             {
-                GetObjectResponse result = await _s3.GetObjectAsync(request);
+                GetObjectResponse result = await _s3.GetObjectAsync(request, cancellationToken);
                 return new S3ResponseStream(result);
             }
             catch (AmazonS3Exception exception) when (
@@ -67,7 +67,7 @@ namespace Cotton.Storage.Backends
             }
         }
 
-        public async Task<bool> ExistsAsync(string uid)
+        public async Task<bool> ExistsAsync(string uid, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrEmpty(uid);
             IAmazonS3 _s3 = _s3Provider.GetS3Client();
@@ -82,7 +82,7 @@ namespace Cotton.Storage.Backends
 
             try
             {
-                GetObjectMetadataResponse res = await _s3.GetObjectMetadataAsync(req);
+                GetObjectMetadataResponse res = await _s3.GetObjectMetadataAsync(req, cancellationToken);
                 return res.HttpStatusCode == HttpStatusCode.OK;
             }
             catch (AmazonS3Exception s3Ex) when (s3Ex.StatusCode == HttpStatusCode.NotFound)
@@ -91,7 +91,7 @@ namespace Cotton.Storage.Backends
             }
         }
 
-        public async Task<long> GetSizeAsync(string uid)
+        public async Task<long> GetSizeAsync(string uid, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrEmpty(uid);
 
@@ -107,7 +107,7 @@ namespace Cotton.Storage.Backends
 
             try
             {
-                GetObjectMetadataResponse res = await s3.GetObjectMetadataAsync(req).ConfigureAwait(false);
+                GetObjectMetadataResponse res = await s3.GetObjectMetadataAsync(req, cancellationToken).ConfigureAwait(false);
                 return res.ContentLength;
             }
             catch (AmazonS3Exception s3Ex) when (s3Ex.StatusCode == HttpStatusCode.NotFound)
@@ -116,7 +116,7 @@ namespace Cotton.Storage.Backends
             }
         }
 
-        public async Task<long> WriteAsync(string uid, Stream source, bool overwrite = false)
+        public async Task<long> WriteAsync(string uid, Stream source, bool overwrite = false, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
             ArgumentNullException.ThrowIfNull(source);
@@ -124,9 +124,9 @@ namespace Cotton.Storage.Backends
             IAmazonS3 s3 = _s3Provider.GetS3Client();
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
-            if (!overwrite && await ExistsAsync(uid).ConfigureAwait(false))
+            if (!overwrite && await ExistsAsync(uid, cancellationToken).ConfigureAwait(false))
             {
-                return await GetSizeAsync(uid).ConfigureAwait(false);
+                return await GetSizeAsync(uid, cancellationToken).ConfigureAwait(false);
             }
 
             string tmpPath = Path.GetTempFileName();
@@ -145,8 +145,8 @@ namespace Cotton.Storage.Backends
                         source.Seek(0, SeekOrigin.Begin);
                     }
 
-                    await source.CopyToAsync(fs).ConfigureAwait(false);
-                    await fs.FlushAsync().ConfigureAwait(false);
+                    await source.CopyToAsync(fs, cancellationToken).ConfigureAwait(false);
+                    await fs.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }
                 long storedSizeBytes = new FileInfo(tmpPath).Length;
                 PutObjectRequest req = new PutObjectRequest
@@ -156,7 +156,7 @@ namespace Cotton.Storage.Backends
                     FilePath = tmpPath,
                     ContentType = MediaTypeNames.Application.Octet,
                 }.WithFileBodyCompatibility();
-                await s3.PutObjectAsync(req).ConfigureAwait(false);
+                await s3.PutObjectAsync(req, cancellationToken).ConfigureAwait(false);
                 return storedSizeBytes;
             }
             finally

@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Crypto;
@@ -18,14 +18,14 @@ namespace Cotton.Storage.Processors
 
         public int Priority => 1000;
 
-        public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
+        public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null, CancellationToken cancellationToken = default)
         {
-            return _cipher.DecryptAsync(stream);
+            return _cipher.DecryptAsync(stream, ct: cancellationToken);
         }
 
-        public Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
+        public Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null, CancellationToken cancellationToken = default)
         {
-            return _cipher.EncryptAsync(stream, _chunkSizeProvider.ChunkSizeBytes);
+            return _cipher.EncryptAsync(stream, _chunkSizeProvider.ChunkSizeBytes, ct: cancellationToken);
         }
 
         private class StaticEncryptionChunkSizeProvider(int chunkSizeBytes) : IEncryptionChunkSizeProvider

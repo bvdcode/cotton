@@ -1,7 +1,8 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
+using Cotton.Crypto.Streams;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.Models.Enums;
 using System.Buffers;
@@ -40,57 +41,30 @@ namespace Cotton.Storage.Processors
             }
         }
 
-        public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
+        public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null, CancellationToken cancellationToken = default)
         {
             DecompressionStream decompressor = new DecompressionStream(stream);
             return Task.FromResult<Stream>(decompressor);
         }
 
-        public Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
+        public Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(stream);
 
-            Pipe pipe = new Pipe(new PipeOptions(
+            PipeOptions options = new(
                 pool: MemoryPool<byte>.Shared,
-                readerScheduler: null,
-                writerScheduler: null,
-                pauseWriterThreshold: 1024 * 1024 * 1,
+                pauseWriterThreshold: 1024 * 1024,
                 resumeWriterThreshold: 512 * 1024,
                 minimumSegmentSize: 4096,
-                useSynchronizationContext: false));
-
-            Stream readerStream = pipe.Reader.AsStream(leaveOpen: false);
-            _ = Task.Run(async () =>
+                useSynchronizationContext: false);
+            int level = _compressionLevelProvider.Level;
+            Stream result = new TransformReadStream(stream, async (source, destination, token) =>
             {
-                try
-                {
-                    await using Stream writerStream = pipe.Writer.AsStream(leaveOpen: true);
-                    await using (CompressionStream compressor = new CompressionStream(
-                        writerStream,
-                        level: _compressionLevelProvider.Level,
-                        leaveOpen: true))
-                    {
-                        await stream.CopyToAsync(compressor, CompressBufferSize).ConfigureAwait(false);
-                        await compressor.FlushAsync().ConfigureAwait(false);
-                    }
-
-                    await pipe.Writer.CompleteAsync().ConfigureAwait(false);
-                }
-                catch (OperationCanceledException oce)
-                {
-                    await pipe.Writer.CompleteAsync(oce).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    await pipe.Writer.CompleteAsync(ex).ConfigureAwait(false);
-                }
-                finally
-                {
-                    await stream.DisposeAsync().ConfigureAwait(false);
-                }
-            });
-
-            return Task.FromResult<Stream>(readerStream);
+                await using CompressionStream compressor = new(destination, level: level, leaveOpen: true);
+                await source.CopyToAsync(compressor, CompressBufferSize, token).ConfigureAwait(false);
+                await compressor.FlushAsync(token).ConfigureAwait(false);
+            }, options, cancellationToken: cancellationToken);
+            return Task.FromResult(result);
         }
 
         private class StaticCompressionLevelProvider(int level) : ICompressionLevelProvider

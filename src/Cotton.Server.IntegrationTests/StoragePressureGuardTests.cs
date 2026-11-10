@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
@@ -188,13 +188,13 @@ namespace Cotton.Server.IntegrationTests
         private abstract class StorageBackendStub : IStorageBackend
         {
             public void CleanupTempFiles(TimeSpan ttl) => throw new NotImplementedException();
-            public Task<bool> DeleteAsync(string uid) => throw new NotImplementedException();
-            public Task<bool> ExistsAsync(string uid) => throw new NotImplementedException();
-            public Task<long> GetSizeAsync(string uid) => throw new NotImplementedException();
-            public Task<Stream> ReadAsync(string uid) => throw new NotImplementedException();
+            public Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+            public Task<bool> ExistsAsync(string uid, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+            public Task<long> GetSizeAsync(string uid, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+            public Task<Stream> ReadAsync(string uid, CancellationToken cancellationToken = default) => throw new NotImplementedException();
             public Task<long> WriteAsync(
                 string uid,
-                Stream stream, bool overwrite = false) => throw new NotImplementedException();
+                Stream stream, bool overwrite = false, CancellationToken cancellationToken = default) => throw new NotImplementedException();
             public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default) => throw new NotImplementedException();
 
             public IAsyncEnumerable<string> ListKeysByPrefixAsync(char prefix, CancellationToken ct = default) =>

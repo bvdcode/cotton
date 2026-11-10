@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
@@ -123,8 +123,9 @@ namespace Cotton.Storage.Backends
             }
         }
 
-        public Task<bool> DeleteAsync(string uid)
+        public Task<bool> DeleteAsync(string uid, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
 
             var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
@@ -149,8 +150,9 @@ namespace Cotton.Storage.Backends
             }
         }
 
-        public Task<Stream> ReadAsync(string uid)
+        public Task<Stream> ReadAsync(string uid, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
             string dirPath = GetFolderByUid(uid);
             string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
@@ -168,8 +170,9 @@ namespace Cotton.Storage.Backends
             return Task.FromResult<Stream>(new FileStream(filePath, fso));
         }
 
-        public async Task<long> WriteAsync(string uid, Stream stream, bool overwrite = false)
+        public async Task<long> WriteAsync(string uid, Stream stream, bool overwrite = false, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             const int WriteBufferSize = 2 * 1024 * 1024;
 
             var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
@@ -197,8 +200,8 @@ namespace Cotton.Storage.Backends
                 {
                     stream.Seek(default, SeekOrigin.Begin);
                 }
-                await stream.CopyToAsync(tmp, WriteBufferSize).ConfigureAwait(false);
-                await tmp.FlushAsync().ConfigureAwait(false);
+                await stream.CopyToAsync(tmp, WriteBufferSize, cancellationToken).ConfigureAwait(false);
+                await tmp.FlushAsync(cancellationToken).ConfigureAwait(false);
                 storedSizeBytes = tmp.Length;
             }
             catch (Exception)
@@ -209,6 +212,7 @@ namespace Cotton.Storage.Backends
 
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (overwrite && File.Exists(filePath))
                 {
                     File.SetAttributes(filePath, File.GetAttributes(filePath) & ~FileAttributes.ReadOnly);
@@ -225,7 +229,7 @@ namespace Cotton.Storage.Backends
             {
                 _logger.LogDebug(ex, "File {Uid} was written concurrently, deduplicated temp write", uid);
                 TryDelete(tmpFilePath);
-                return await GetSizeAsync(uid).ConfigureAwait(false);
+                return await GetSizeAsync(uid, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -234,16 +238,18 @@ namespace Cotton.Storage.Backends
             }
         }
 
-        public Task<bool> ExistsAsync(string uid)
+        public Task<bool> ExistsAsync(string uid, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
             string dirPath = GetFolderByUid(uid);
             string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
             return Task.FromResult(File.Exists(filePath));
         }
 
-        public Task<long> GetSizeAsync(string uid)
+        public Task<long> GetSizeAsync(string uid, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
 
             var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
