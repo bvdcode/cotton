@@ -13,7 +13,7 @@ interface SharedFolderContentState {
   loadError: string | null;
 }
 
-const REFRESH_DELAY_MS = 300;
+const POST_UPLOAD_REFRESH_DELAYS_MS = [300, 2_000, 8_000];
 
 const createPendingContentState = (
   nodeId: Guid | null,
@@ -27,31 +27,40 @@ const createPendingContentState = (
 export const useSharedFolderContent = (token: string, nodeId: Guid | null) => {
   const { t } = useTranslation(["share", "common"]);
   const [revision, setRevision] = React.useState(0);
-  const refreshTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+  const activeFolder = React.useRef<{
+    token: string;
+    nodeId: Guid | null;
+  } | null>(null);
   const reload = React.useCallback(() => {
-    if (refreshTimer.current) {
-      clearTimeout(refreshTimer.current);
+    if (
+      activeFolder.current?.token !== token ||
+      activeFolder.current.nodeId !== nodeId
+    ) {
+      return;
     }
-    refreshTimer.current = setTimeout(() => {
-      refreshTimer.current = null;
-      setRevision((value) => value + 1);
-    }, REFRESH_DELAY_MS);
-  }, []);
-  React.useEffect(
-    () => () => {
-      if (refreshTimer.current) {
-        clearTimeout(refreshTimer.current);
-      }
-    },
-    [],
-  );
+    refreshTimers.current.forEach(clearTimeout);
+    refreshTimers.current = POST_UPLOAD_REFRESH_DELAYS_MS.map((delay) =>
+      setTimeout(() => setRevision((value) => value + 1), delay),
+    );
+  }, [nodeId, token]);
+  React.useEffect(() => {
+    activeFolder.current = { token, nodeId };
+    return () => {
+      activeFolder.current = null;
+      refreshTimers.current.forEach(clearTimeout);
+      refreshTimers.current = [];
+    };
+  }, [nodeId, token]);
   const [contentState, setContentState] =
     React.useState<SharedFolderContentState>(() =>
       createPendingContentState(nodeId),
     );
 
   React.useEffect(() => {
-    if (!nodeId) return;
+    if (!nodeId) {
+      return;
+    }
 
     let cancelled = false;
 
@@ -63,7 +72,9 @@ export const useSharedFolderContent = (token: string, nodeId: Guid | null) => {
           pageSize: 1000,
         });
 
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setContentState({
           nodeId,
           content: response.content,
@@ -71,7 +82,9 @@ export const useSharedFolderContent = (token: string, nodeId: Guid | null) => {
           loadError: null,
         });
       } catch {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setContentState({
           nodeId,
           content: null,
