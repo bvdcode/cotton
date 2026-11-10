@@ -14,11 +14,13 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// </remarks>
     public class NodeShareTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<NodeShareToken>
     {
-        public const int LatestVersion = 1;
+        public const int LatestVersion = 2;
 
         public override string EntityName => "node_share_tokens";
 
         public override int SchemaVersion => LatestVersion;
+
+        public override IReadOnlyCollection<int> SupportedVersions => [1, 2];
 
         public override string GetEntityKey(NodeShareToken entity)
         {
@@ -26,6 +28,29 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         }
 
         public override void WriteCanonicalData(DatabaseIntegrityCanonicalWriter writer, NodeShareToken entity, int version)
+        {
+            switch (version)
+            {
+                case 1 when !entity.AllowUpload:
+                    WriteVersion1(writer, entity);
+                    break;
+                case 1:
+                    throw new DatabaseIntegrityException(EntityName, GetEntityKey(entity));
+                case 2:
+                    WriteVersion2(writer, entity);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(version), version, "Unsupported share signature version.");
+            }
+        }
+
+        private static void WriteVersion2(DatabaseIntegrityCanonicalWriter writer, NodeShareToken entity)
+        {
+            WriteVersion1(writer, entity);
+            writer.WriteBooleanField(nameof(entity.AllowUpload), entity.AllowUpload);
+        }
+
+        private static void WriteVersion1(DatabaseIntegrityCanonicalWriter writer, NodeShareToken entity)
         {
             writer.WriteGuidField(nameof(entity.Id), entity.Id);
             writer.WriteStringField(nameof(entity.Token), entity.Token);
