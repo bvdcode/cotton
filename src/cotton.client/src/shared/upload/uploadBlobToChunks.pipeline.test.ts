@@ -114,6 +114,29 @@ describe("uploadBlobToChunks", () => {
     }
   });
 
+  it("represents an empty public upload without chunks or network probes", async () => {
+    const worker = createWorker();
+    mocks.acquire.mockResolvedValue(worker);
+    const server = { maxChunkSizeBytes: 4, supportedHashAlgorithm: "sha256" };
+    await expect(
+      uploadBlobToChunks({
+        blob: new Blob([]),
+        fileName: "empty.txt",
+        server,
+        sharedUpload: {
+          token: "public",
+          sessionId: "session",
+          nodeId: "folder",
+          server,
+        },
+      }),
+    ).resolves.toEqual({ chunkHashes: [], fileHash: "file-hash" });
+    expect(mocks.chunkExists).not.toHaveBeenCalled();
+    expect(mocks.uploadChunk).not.toHaveBeenCalled();
+    expect(worker.digestFile).toHaveBeenCalledOnce();
+    expect(mocks.release).toHaveBeenCalledWith(worker);
+  });
+
   it("hashes chunks ahead of blocked network consumers", async () => {
     const worker = createWorker();
     const probeGate = createDeferred<void>();

@@ -22,8 +22,9 @@ namespace Cotton.Server.Handlers.Layouts
             SharedNodeAccess access = await mediator.Send(
                 new RequireSharedUploadAccessQuery(request.Token, request.File.NodeId), ct);
             if (request.SessionId == Guid.Empty || request.File.Hash.Length != Hasher.HashSizeInBytes * 2
-                || request.File.Hash.Any(character => !char.IsAsciiHexDigit(character)) || request.File.ChunkHashes.Count == 0
-                || !sessions.ContainsAll(access.ShareId, request.File.NodeId, request.SessionId, request.File.ChunkHashes))
+                || request.File.Hash.Any(character => !char.IsAsciiHexDigit(character))
+                || (request.File.ChunkHashes.Count > 0
+                    && !sessions.ContainsAll(access.ShareId, request.File.NodeId, request.SessionId, request.File.ChunkHashes)))
             {
                 throw new BadRequestException("Upload session expired or file content has not been uploaded in this session.");
             }

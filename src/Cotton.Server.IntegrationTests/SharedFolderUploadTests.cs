@@ -81,7 +81,7 @@ namespace Cotton.Server.IntegrationTests
             (await UploadAsync(_folder.Id, "guest content")).EnsureSuccessStatusCode();
             Assert.That((await CreateAsync(_folder.Id, [privateHash], privateHash)).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That((await CreateAsync(_folder.Id, [Hash("guest content")], privateHash)).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-            NodeContentDto content = (await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{_folder.Id}/children"))!;
+            NodeContentDto content = (await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{_folder.Id}/children"))!;
             Assert.That(content.Files, Is.Empty);
         }
 
@@ -144,10 +144,56 @@ namespace Cotton.Server.IntegrationTests
         [Test]
         public async Task NameConflictsCannotOverwriteAndEmptyFilesAreSupported()
         {
-            (await UploadAsync(_folder.Id, string.Empty)).EnsureSuccessStatusCode();
-            (await CreateAsync(_folder.Id, [Hash(string.Empty)], Hash(string.Empty))).EnsureSuccessStatusCode();
+            using HttpResponseMessage created = await CreateAsync(_folder.Id, [], Hash(string.Empty));
+            created.EnsureSuccessStatusCode();
+            NodeFileManifestDto file = (await created.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
+            Assert.That(file.SizeBytes, Is.Zero);
+            Assert.That(await _guest.GetByteArrayAsync($"/api/v1/layouts/shared/{_token}/files/{file.Id}/content"), Is.Empty);
             (await UploadAsync(_folder.Id, "replacement")).EnsureSuccessStatusCode();
             Assert.That((await CreateAsync(_folder.Id, [Hash("replacement")], Hash("replacement"))).StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        }
+
+        [Test]
+        public async Task EmptyChunkListCannotReferenceNonEmptyContent()
+        {
+            (await UploadAsync(_folder.Id, "private content")).EnsureSuccessStatusCode();
+            (await CreateAsync(_folder.Id, [Hash("private content")], Hash("private content"))).EnsureSuccessStatusCode();
+            HttpResponseMessage response = await _guest.PostAsJsonAsync(
+                $"/api/v1/layouts/shared/{_token}/files/from-chunks?sessionId={Guid.NewGuid()}", new CreateFileFromChunksRequestDto
+                {
+                    NodeId = _folder.Id, Name = "forged.txt", ContentType = "text/plain",
+                    Hash = Hash("private content"), ChunkHashes = [],
+                });
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task FailedUploadLookupsShareThePublicLinkFailureBudget(bool chunks)
+        {
+            (await UploadAsync(_folder.Id, "allowed")).EnsureSuccessStatusCode();
+            (await CreateAsync(_folder.Id, [Hash("allowed")], Hash("allowed"))).EnsureSuccessStatusCode();
+            string validToken = _token;
+            for (int index = 0; index < 60; index++)
+            {
+                _token = $"s{index:D7}";
+                using HttpResponseMessage failed = chunks
+                    ? await UploadAsync(_folder.Id, "missing")
+                    : await CreateAsync(_folder.Id, [], Hash(string.Empty));
+                Assert.That(failed.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            }
+            _token = validToken;
+            using HttpResponseMessage blockedChunk = await UploadAsync(_folder.Id, "blocked");
+            using HttpResponseMessage blockedFile = await CreateAsync(_folder.Id, [], Hash(string.Empty));
+            using HttpResponseMessage blockedInfo = await _guest.GetAsync($"/api/v1/layouts/shared/{_token}");
+            Assert.Multiple(() =>
+            {
+                Assert.That(blockedChunk.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+                Assert.That(blockedFile.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+                Assert.That(blockedInfo.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+                Assert.That(blockedChunk.Headers.RetryAfter, Is.Not.Null);
+                Assert.That(blockedFile.Headers.RetryAfter, Is.Not.Null);
+            });
         }
 
         [Test]
@@ -157,7 +203,7 @@ namespace Cotton.Server.IntegrationTests
             (await UploadAsync(_folder.Id, "123456")).EnsureSuccessStatusCode();
             HttpResponseMessage response = await CreateAsync(_folder.Id, [Hash("123456")], Hash("123456"));
             Assert.That(response.StatusCode, Is.EqualTo((HttpStatusCode)507));
-            NodeContentDto content = (await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{_folder.Id}/children"))!;
+            NodeContentDto content = (await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{_folder.Id}/children"))!;
             Assert.That(content.Files, Is.Empty);
         }
 
