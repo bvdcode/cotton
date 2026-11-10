@@ -1617,6 +1617,8 @@
     },
     "message": "Bekijk \"{{name}}\" op Cotton Cloud",
     "folder": {
+      "uploadFailed": "De upload kon niet worden voorbereid.",
+      "filesOnly": "Sleep afzonderlijke bestanden. Mappen uploaden is niet beschikbaar voor deze link.",
       "title": "Gedeelde map",
       "message": "Bekijk de map \"{{name}}\" op Cotton Cloud",
       "empty": "Deze map is leeg.",
@@ -2591,6 +2593,7 @@
       },
       "options": {
         "title": "Linkinstellingen",
+        "allowUpload": "Bestanden uploaden toestaan",
         "name": "Linknaam",
         "nameHint": "Optioneel. Laat leeg voor een willekeurig adres.",
         "invalidName": "Gebruik letters, cijfers, streepjes of onderstrepingstekens.",

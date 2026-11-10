@@ -49,6 +49,31 @@ beforeEach(() => {
 });
 
 describe("ShareLinkDialog", () => {
+  it("only offers uploads for folder links and sends the selected permission", async () => {
+    render(
+      <ShareLinkDialog
+        target={{ kind: "folder", id: "folder", name: "Uploads" }}
+        onClose={vi.fn()}
+      />,
+    );
+    const permission = screen.getByRole("switch", {
+      name: "share.options.allowUpload",
+    });
+    expect(permission).not.toBeChecked();
+    fireEvent.click(permission);
+    fireEvent.click(
+      screen.getByRole("button", { name: "share.options.create" }),
+    );
+    await screen.findByRole("textbox", { name: "share.options.link" });
+    expect(layoutsApi.getNodeShareLink).toHaveBeenCalledWith(
+      "folder",
+      1440,
+      "",
+      true,
+    );
+    expect(permission).toBeDisabled();
+  });
+
   it("keeps standard Escape closing available", async () => {
     const close = vi.fn();
     render(<ShareLinkDialog target={target} onClose={close} />);
@@ -63,6 +88,9 @@ describe("ShareLinkDialog", () => {
   });
   it("creates a named file link with custom duration without changing profile defaults", async () => {
     render(<ShareLinkDialog target={target} onClose={vi.fn()} />);
+    expect(
+      screen.queryByRole("switch", { name: "share.options.allowUpload" }),
+    ).not.toBeInTheDocument();
     expect(filesApi.getDownloadLink).not.toHaveBeenCalled();
     expect(screen.getByRole("spinbutton")).toHaveValue(1);
     fireEvent.change(
@@ -115,6 +143,7 @@ describe("ShareLinkDialog", () => {
       "folder-1",
       null,
       "",
+      false,
     );
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.copy" }),

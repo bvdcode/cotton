@@ -26,28 +26,15 @@ import {
   getFileBrowserViewMode,
 } from "@shared/utils/viewMode";
 
-interface BreadcrumbNode {
-  id: Guid;
-  name: string;
-}
-
-type BreadcrumbState = {
-  rootNodeId: Guid;
-  rootName: string;
-  breadcrumbs: BreadcrumbNode[];
-};
-
-const createRootBreadcrumbState = (
-  rootNodeId: Guid,
-  rootName: string,
-): BreadcrumbState => ({
-  rootNodeId,
-  rootName,
-  breadcrumbs: [{ id: rootNodeId, name: rootName }],
-});
+import type { SharedNodeInfoDto } from "@shared/api/sharedFoldersApi";
+import { useSharedFolderNavigation } from "../hooks/useSharedFolderNavigation";
+import { useSharedFolderUpload } from "../hooks/useSharedFolderUpload";
+import { DraggingOverlay } from "../../files/components/DraggingOverlay";
+import { FileConflictDialog } from "../../files/components/FileConflictDialog";
 
 interface SharedFolderViewerProps {
   token: string;
+  info: SharedNodeInfoDto;
   rootNodeId: Guid;
   rootName: string;
   onShareLink: () => Promise<void>;
@@ -58,24 +45,19 @@ interface SharedFolderViewerProps {
 
 export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   token,
+  info,
   rootNodeId,
   rootName,
   onShareLink,
   onDownloadActionChange,
 }) => {
   const { t } = useTranslation(["share", "common"]);
-  const rootBreadcrumbs = React.useMemo<BreadcrumbNode[]>(
-    () => [{ id: rootNodeId, name: rootName }],
-    [rootName, rootNodeId],
-  );
-  const [breadcrumbState, setBreadcrumbState] = React.useState<BreadcrumbState>(
-    () => createRootBreadcrumbState(rootNodeId, rootName),
-  );
-  const breadcrumbs =
-    breadcrumbState.rootNodeId === rootNodeId &&
-    breadcrumbState.rootName === rootName
-      ? breadcrumbState.breadcrumbs
-      : rootBreadcrumbs;
+  const {
+    breadcrumbs,
+    currentNode,
+    handleOpenFolder,
+    handleNavigateBreadcrumb,
+  } = useSharedFolderNavigation(rootNodeId, rootName);
   const [layoutType, setLayoutType] = React.useState<InterfaceLayoutType>(
     InterfaceLayoutType.Tiles,
   );
@@ -85,48 +67,16 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   const [isDownloadingAll, setIsDownloadingAll] = React.useState(false);
   const { previewState, openPreview, closePreview } = useFilePreview();
 
-  const currentNode = React.useMemo(
-    () => breadcrumbs[breadcrumbs.length - 1] ?? null,
-    [breadcrumbs],
-  );
-  const { content, loading, loadError } = useSharedFolderContent(
+  const { content, loading, loadError, reload } = useSharedFolderContent(
     token,
     currentNode?.id ?? null,
   );
 
-  const handleOpenFolder = React.useCallback(
-    (folderId: Guid, folderName: string) => {
-      setBreadcrumbState((current) => {
-        const base =
-          current.rootNodeId === rootNodeId && current.rootName === rootName
-            ? current
-            : createRootBreadcrumbState(rootNodeId, rootName);
-        return {
-          ...base,
-          breadcrumbs: [
-            ...base.breadcrumbs,
-            { id: folderId, name: folderName },
-          ],
-        };
-      });
-    },
-    [rootName, rootNodeId],
-  );
-
-  const handleNavigateBreadcrumb = React.useCallback(
-    (index: number) => {
-      setBreadcrumbState((current) => {
-        const base =
-          current.rootNodeId === rootNodeId && current.rootName === rootName
-            ? current
-            : createRootBreadcrumbState(rootNodeId, rootName);
-        return {
-          ...base,
-          breadcrumbs: base.breadcrumbs.slice(0, index + 1),
-        };
-      });
-    },
-    [rootName, rootNodeId],
+  const upload = useSharedFolderUpload(
+    info,
+    currentNode?.id ?? rootNodeId,
+    currentNode?.name ?? rootName,
+    reload,
   );
 
   const viewMode: FileBrowserViewMode = React.useMemo(
@@ -347,6 +297,7 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
 
   return (
     <Box
+      {...upload.dragHandlers}
       sx={{
         flex: 1,
         minHeight: 0,
@@ -356,7 +307,19 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
         pb: 2,
       }}
     >
+      <DraggingOverlay
+        open={upload.isDragging}
+        {...upload.dragHandlers}
+        label={t("actions.dropFiles", { ns: "files" })}
+      />
+      <FileConflictDialog
+        {...upload.conflicts.dialogState}
+        onResolve={upload.conflicts.handleResolve}
+        onExited={upload.conflicts.handleExited}
+      />
       <PageHeader
+        showUpload={info.allowUpload}
+        onUploadClick={upload.openPicker}
         loading={loading}
         breadcrumbs={breadcrumbs}
         onNavigateBreadcrumb={(breadcrumbIndex) => {

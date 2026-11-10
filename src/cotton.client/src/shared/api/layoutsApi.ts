@@ -116,6 +116,7 @@ export const layoutsApi = {
     nodeId: Guid,
     expireAfterMinutes: number | null = 1440,
     customToken?: string,
+    allowUpload = false,
   ): Promise<string> => {
     const response = await httpClient.get<string>(
       `/layouts/nodes/${nodeId}/share-link`,
@@ -124,6 +125,7 @@ export const layoutsApi = {
         params: {
           expireAfterMinutes: expireAfterMinutes ?? "",
           ...(customToken?.trim() ? { customToken: customToken.trim() } : {}),
+          allowUpload,
         },
       },
     );

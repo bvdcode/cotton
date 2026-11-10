@@ -1612,6 +1612,8 @@
     },
     "message": "Schau dir \"{{name}}\" in der Cotton Cloud an",
     "folder": {
+      "uploadFailed": "Der Upload konnte nicht vorbereitet werden.",
+      "filesOnly": "Ziehen Sie einzelne Dateien hierher. Ordner-Uploads sind für diesen Link nicht verfügbar.",
       "title": "Geteilter Ordner",
       "message": "Schau dir den Ordner \"{{name}}\" in der Cotton Cloud an",
       "empty": "Dieser Ordner ist leer.",
@@ -2586,6 +2588,7 @@
       },
       "options": {
         "title": "Link-Einstellungen",
+        "allowUpload": "Datei-Uploads erlauben",
         "name": "Linkname",
         "nameHint": "Optional. Für eine zufällige Adresse leer lassen.",
         "invalidName": "Buchstaben, Zahlen, Bindestriche oder Unterstriche verwenden.",

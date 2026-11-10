@@ -110,6 +110,7 @@ export class UploadTaskRunner {
     try {
       const uploadedFile = await uploadFileToNode({
         file,
+        sharedUpload: task._sharedUpload,
         nodeId: task.nodeId,
         replaceNodeFileId: task._replaceNodeFileId,
         server,

@@ -1,3 +1,9 @@
+export interface SharedUploadContext {
+  token: string;
+  sessionId: string;
+  server: UploadServerParams;
+}
+
 export interface UploadServerParams {
   maxChunkSizeBytes: number;
   supportedHashAlgorithm: string;
@@ -7,6 +13,7 @@ export interface UploadFileToNodeOptions {
   // When false, skip the pre-upload ownership probe. The upload request still
   // sends the chunk hash so the server can validate the raw body.
   sendChunkHashForValidation?: boolean;
+  forceDisableDeduplication?: boolean;
 
   // Parallel chunk uploads per file.
   concurrency?: number;

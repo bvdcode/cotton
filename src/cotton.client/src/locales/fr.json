@@ -1616,6 +1616,8 @@
     },
     "message": "Découvrez « {{name}} » sur Cotton Cloud",
     "folder": {
+      "uploadFailed": "Impossible de préparer l’envoi.",
+      "filesOnly": "Déposez des fichiers individuels. L’envoi de dossiers est indisponible pour ce lien.",
       "title": "Dossier partagé",
       "message": "Découvrez le dossier « {{name}} » sur Cotton Cloud",
       "empty": "Ce dossier est vide.",
@@ -2590,6 +2592,7 @@
       },
       "options": {
         "title": "Paramètres du lien",
+        "allowUpload": "Autoriser l’envoi de fichiers",
         "name": "Nom du lien",
         "nameHint": "Facultatif. Laisser vide pour une adresse aléatoire.",
         "invalidName": "Utilisez des lettres, chiffres, tirets ou traits de soulignement.",

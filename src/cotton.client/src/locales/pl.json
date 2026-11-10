@@ -1620,6 +1620,8 @@
     },
     "message": "Zobacz \"{{name}}\" w Cotton Cloud",
     "folder": {
+      "uploadFailed": "Nie udało się przygotować przesyłania.",
+      "filesOnly": "Przeciągnij pojedyncze pliki. Ten link nie obsługuje przesyłania folderów.",
       "title": "Udostępniony folder",
       "message": "Zobacz folder \"{{name}}\" w Cotton Cloud",
       "empty": "Ten folder jest pusty.",
@@ -2610,6 +2612,7 @@
       },
       "options": {
         "title": "Ustawienia linku",
+        "allowUpload": "Zezwól na przesyłanie plików",
         "name": "Nazwa linku",
         "nameHint": "Opcjonalnie. Pozostaw puste, aby otrzymać losowy adres.",
         "invalidName": "Użyj liter, cyfr, myślników lub podkreśleń.",

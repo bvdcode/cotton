@@ -1413,6 +1413,8 @@
     },
     "message": "Check out \"{{name}}\" on Cotton Cloud",
     "folder": {
+      "uploadFailed": "Could not prepare the upload.",
+      "filesOnly": "Drop individual files; folder upload is not available for this link.",
       "title": "Shared folder",
       "message": "Check out folder \"{{name}}\" on Cotton Cloud",
       "empty": "This folder is empty.",
@@ -2402,6 +2404,7 @@
       },
       "options": {
         "title": "Share settings",
+        "allowUpload": "Allow file uploads",
         "name": "Link name",
         "nameHint": "Optional. Leave blank for a random address.",
         "invalidName": "Use letters, numbers, hyphens or underscores.",

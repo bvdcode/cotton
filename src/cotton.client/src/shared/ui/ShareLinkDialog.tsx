@@ -4,6 +4,8 @@ import {
   Box,
   Button,
   Collapse,
+  FormControlLabel,
+  Switch,
   Dialog,
   DialogActions,
   DialogContent,
@@ -53,6 +55,7 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
       selectShareLinkExpireAfterMinutes(useUserPreferencesStore.getState()),
     ),
   );
+  const [allowUpload, setAllowUpload] = useState(false);
   const [name, setName] = useState("");
   const [duration, setDuration] = useState(initialDuration.value);
   const [unit, setUnit] = useState<ShareLinkDurationUnit>(initialDuration.unit);
@@ -90,6 +93,7 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
             target.id,
             minutes,
             name.trim(),
+            allowUpload,
           );
           break;
       }
@@ -163,6 +167,18 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
           <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
             {target.name}
           </Typography>
+          {target.kind === "folder" && (
+            <FormControlLabel
+              label={t("share.options.allowUpload")}
+              control={
+                <Switch
+                  checked={allowUpload}
+                  disabled={locked}
+                  onChange={(_, checked) => setAllowUpload(checked)}
+                />
+              }
+            />
+          )}
           {error && (
             <Collapse in appear timeout={reducedMotion ? 0 : "auto"}>
               <Alert severity="error">{error}</Alert>

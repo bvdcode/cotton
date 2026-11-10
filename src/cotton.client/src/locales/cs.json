@@ -1617,6 +1617,8 @@
     },
     "message": "Podívejte se na \"{{name}}\" v Cotton Cloud",
     "folder": {
+      "uploadFailed": "Nahrávání se nepodařilo připravit.",
+      "filesOnly": "Přetáhněte jednotlivé soubory. Nahrávání složek není pro tento odkaz dostupné.",
       "title": "Sdílená složka",
       "message": "Podívejte se na složku \"{{name}}\" v Cotton Cloud",
       "empty": "Tato složka je prázdná.",
@@ -2607,6 +2609,7 @@
       },
       "options": {
         "title": "Nastavení odkazu",
+        "allowUpload": "Povolit nahrávání souborů",
         "name": "Název odkazu",
         "nameHint": "Volitelné. Pro náhodnou adresu ponechte prázdné.",
         "invalidName": "Použijte písmena, číslice, pomlčky nebo podtržítka.",

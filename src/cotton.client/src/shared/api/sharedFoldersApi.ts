@@ -1,3 +1,6 @@
+import type { SharedUploadContext, UploadServerParams } from "../upload/types";
+import type { CreateFileFromChunksRequest } from "./filesApi";
+import type { NodeFileManifestDto } from "./nodesApi";
 import { httpClient } from "./httpClient";
 import type { ArchiveDownloadLinkDto } from "./archiveApi";
 import type { Guid, NodeDto } from "./layoutsApi";
@@ -23,7 +26,8 @@ export interface SharedNodeContentDto {
   files: SharedNodeFileDto[];
 }
 
-export interface SharedNodeInfoDto {
+export interface SharedNodeInfoDto extends UploadServerParams {
+  allowUpload: boolean;
   token: string;
   nodeId: Guid;
   name: string;
@@ -38,6 +42,17 @@ export interface SharedNodeChildrenResult {
 const encodeToken = (token: string): string => encodeURIComponent(token);
 
 export const sharedFoldersApi = {
+  createFile: async (
+    access: SharedUploadContext,
+    file: CreateFileFromChunksRequest,
+  ): Promise<NodeFileManifestDto> => {
+    const response = await httpClient.post<NodeFileManifestDto>(
+      `/layouts/shared/${encodeToken(access.token)}/files/from-chunks`,
+      file,
+      { params: { sessionId: access.sessionId } },
+    );
+    return response.data;
+  },
   getInfo: async (token: string): Promise<SharedNodeInfoDto> => {
     const response = await httpClient.get<SharedNodeInfoDto>(
       `/layouts/shared/${encodeToken(token)}`,

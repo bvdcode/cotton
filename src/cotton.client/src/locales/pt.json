@@ -1619,6 +1619,8 @@
     },
     "message": "Confira \"{{name}}\" no Cotton Cloud",
     "folder": {
+      "uploadFailed": "Não foi possível preparar o envio.",
+      "filesOnly": "Arraste arquivos individuais. Este link não permite enviar pastas.",
       "title": "Pasta compartilhada",
       "message": "Confira a pasta \"{{name}}\" no Cotton Cloud",
       "empty": "Esta pasta está vazia.",
@@ -2593,6 +2595,7 @@
       },
       "options": {
         "title": "Definições do link",
+        "allowUpload": "Permitir envio de arquivos",
         "name": "Nome do link",
         "nameHint": "Opcional. Deixe vazio para um endereço aleatório.",
         "invalidName": "Use letras, números, hífen ou sublinhado.",

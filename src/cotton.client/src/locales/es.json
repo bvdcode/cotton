@@ -1615,6 +1615,8 @@
     },
     "message": "Mira \"{{name}}\" en Cotton Cloud",
     "folder": {
+      "uploadFailed": "No se pudo preparar la subida.",
+      "filesOnly": "Arrastra archivos individuales. Este enlace no permite subir carpetas.",
       "title": "Carpeta compartida",
       "message": "Mira la carpeta \"{{name}}\" en Cotton Cloud",
       "empty": "Esta carpeta está vacía.",
@@ -2589,6 +2591,7 @@
       },
       "options": {
         "title": "Opciones del enlace",
+        "allowUpload": "Permitir subir archivos",
         "name": "Nombre del enlace",
         "nameHint": "Opcional. Déjalo vacío para una dirección aleatoria.",
         "invalidName": "Usa letras, números, guiones o guiones bajos.",

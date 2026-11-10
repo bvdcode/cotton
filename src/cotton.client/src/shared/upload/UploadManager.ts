@@ -35,49 +35,18 @@ import type {
   CreateAppTaskOptions,
 } from "../tasks/types";
 
-export type UploadTaskStatus =
-  "queued" | "uploading" | "finalizing" | "completed" | "failed";
-
-export interface UploadTask {
-  id: string;
-  nodeId: Guid;
-  nodeLabel: string;
-  fileName: string;
-  bytesTotal: number;
-  bytesUploaded: number;
-  progress01: number;
-  status: UploadTaskStatus;
-  error?: string;
-  errorKey?: string;
-  errorParams?: Record<string, string | number>;
-  uploadSpeedBytesPerSec?: number;
-  completedAt?: number;
-}
-
-export interface UploadTaskInternal extends UploadTask {
-  _file?: File;
-  _encrypt: boolean;
-  _replaceNodeFileId?: Guid | null;
-  _onFileUploaded?: (file: NodeFileManifestDto) => void;
-  _startedAt?: number;
-  _sawProgress?: boolean;
-  _laneProbeConsumed?: boolean;
-  _laneProbeTimeout?: ReturnType<typeof setTimeout>;
-  _bytesProcessedForSpeed?: number;
-  _quotaReservationBytes?: number;
-}
-
-export interface EnqueueOptions {
-  encrypt?: boolean;
-  onFileUploaded?: (file: NodeFileManifestDto) => void;
-}
-
-export interface UploadFilePickerContext {
-  nodeId: Guid;
-  nodeLabel: string;
-  multiple?: boolean;
-  accept?: string;
-}
+import type {
+  UploadTaskInternal,
+  EnqueueOptions,
+  UploadFilePickerContext,
+} from "./UploadTaskTypes";
+export type {
+  UploadTask,
+  UploadTaskStatus,
+  UploadTaskInternal,
+  EnqueueOptions,
+  UploadFilePickerContext,
+} from "./UploadTaskTypes";
 
 type Listener = () => void;
 
@@ -226,6 +195,10 @@ export class UploadManager {
     const context = this.pendingFilePickerContext;
     this.pendingFilePickerContext = null;
     if (!context) return;
+    if (context.onFilesSelected) {
+      context.onFilesSelected(files);
+      return;
+    }
     this.enqueue(files, context.nodeId, context.nodeLabel);
   }
 
@@ -241,7 +214,9 @@ export class UploadManager {
     if (startsNewBatch) {
       this.progress.beginBatch();
       this.runner.reset();
-      this.quota.beginBatch();
+      if (!options?.sharedUpload) {
+        this.quota.beginBatch();
+      }
     }
 
     for (const file of list) {
@@ -256,6 +231,7 @@ export class UploadManager {
         progress01: 0,
         status: "queued",
         _file: file.file,
+        _sharedUpload: options?.sharedUpload,
         _encrypt: file.encrypt === true || options?.encrypt === true,
         _replaceNodeFileId: file.replaceNodeFileId,
         _onFileUploaded: options?.onFileUploaded,
@@ -339,7 +315,8 @@ export class UploadManager {
           return;
         }
 
-        const settings = getCachedServerSettings();
+        const settings =
+          next._sharedUpload?.server ?? getCachedServerSettings();
         if (!settings) {
           next.status = "failed";
           next.completedAt = Date.now();
@@ -349,12 +326,12 @@ export class UploadManager {
           continue;
         }
 
-        if (this.quota.shouldRefresh()) {
+        if (!next._sharedUpload && this.quota.shouldRefresh()) {
           this.quota.refresh();
           return;
         }
 
-        if (!this.quota.tryReserve(next)) {
+        if (!next._sharedUpload && !this.quota.tryReserve(next)) {
           releaseUploadInputs(next);
           this.emit();
           continue;
@@ -375,7 +352,9 @@ export class UploadManager {
     uploadedFile: NodeFileManifestDto | undefined,
   ): void {
     if (uploadedFile) {
-      useNodesStore.getState().upsertFileInCache(task.nodeId, uploadedFile);
+      if (!task._sharedUpload) {
+        useNodesStore.getState().upsertFileInCache(task.nodeId, uploadedFile);
+      }
       try {
         task._onFileUploaded?.(uploadedFile);
       } catch (listenerError) {
@@ -393,10 +372,13 @@ export class UploadManager {
     this.progress.complete(task, beforeFinalize);
 
     this.runner.observe(task, true);
+    const refreshPrivateNode = !task._sharedUpload;
     releaseUploadInputs(task);
     this.emit();
 
-    this.scheduleNodeRefresh(task.nodeId);
+    if (refreshPrivateNode) {
+      this.scheduleNodeRefresh(task.nodeId);
+    }
   }
 
   private failUpload(

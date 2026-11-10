@@ -1618,6 +1618,8 @@
     },
     "message": "Dai un'occhiata a \"{{name}}\" su Cotton Cloud",
     "folder": {
+      "uploadFailed": "Impossibile preparare il caricamento.",
+      "filesOnly": "Trascina singoli file. Il caricamento di cartelle non è disponibile per questo link.",
       "title": "Cartella condivisa",
       "message": "Dai un'occhiata alla cartella \"{{name}}\" su Cotton Cloud",
       "empty": "Questa cartella è vuota.",
@@ -2592,6 +2594,7 @@
       },
       "options": {
         "title": "Impostazioni del link",
+        "allowUpload": "Consenti il caricamento di file",
         "name": "Nome del link",
         "nameHint": "Facoltativo. Lascia vuoto per un indirizzo casuale.",
         "invalidName": "Usa lettere, numeri, trattini o trattini bassi.",
