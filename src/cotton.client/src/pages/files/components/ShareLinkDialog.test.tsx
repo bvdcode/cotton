@@ -49,6 +49,39 @@ beforeEach(() => {
 });
 
 describe("ShareLinkDialog", () => {
+  it.each([
+    [7, "weeks", 1],
+    [30, "months", 1],
+    [90, "months", 3],
+    [365, "years", 1],
+    [1095, "years", 3],
+    [3650, "years", 10],
+  ])(
+    "keeps the profile duration of %s days in compact units",
+    async (days, unit, value) => {
+      useUserPreferencesStore.getState().hydrateFromRemote({
+        shareLinkExpireAfterMinutes: String(days * 24 * 60),
+      });
+      render(<ShareLinkDialog target={target} onClose={vi.fn()} />);
+      expect(screen.getByRole("dialog")).toHaveAccessibleName(
+        `share.options.title · ${target.name}`,
+      );
+      expect(screen.getByRole("spinbutton")).toHaveValue(value);
+      expect(screen.getByRole("combobox")).toHaveTextContent(
+        `share.options.units.${unit}`,
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: "share.options.create" }),
+      );
+      await screen.findByRole("textbox", { name: "share.options.link" });
+      expect(filesApi.getDownloadLink).toHaveBeenCalledWith(
+        target.id,
+        days * 24 * 60,
+        "",
+      );
+    },
+  );
+
   it("only offers uploads for folder links and sends the selected permission", async () => {
     render(
       <ShareLinkDialog

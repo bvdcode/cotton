@@ -2599,6 +2599,9 @@
         "duration": "Duración",
         "unit": "Unidad",
         "units": {
+          "years": "Años",
+          "months": "Meses",
+          "weeks": "Semanas",
           "days": "Días",
           "hours": "Horas",
           "minutes": "Minutos",

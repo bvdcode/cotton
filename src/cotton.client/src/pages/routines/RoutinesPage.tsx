@@ -68,7 +68,7 @@ export const RoutinesPage = () => {
       <Paper
         sx={{
           width: "100%",
-          maxWidth: 1200,
+          maxWidth: 800,
           minHeight: 0,
           display: "flex",
           flexDirection: "column",

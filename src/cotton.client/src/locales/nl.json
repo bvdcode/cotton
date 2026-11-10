@@ -2601,6 +2601,9 @@
         "duration": "Geldigheidsduur",
         "unit": "Eenheid",
         "units": {
+          "years": "Jaren",
+          "months": "Maanden",
+          "weeks": "Weken",
           "days": "Dagen",
           "hours": "Uren",
           "minutes": "Minuten",

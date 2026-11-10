@@ -2602,6 +2602,9 @@
         "duration": "Durata",
         "unit": "Unità",
         "units": {
+          "years": "Anni",
+          "months": "Mesi",
+          "weeks": "Settimane",
           "days": "Giorni",
           "hours": "Ore",
           "minutes": "Minuti",

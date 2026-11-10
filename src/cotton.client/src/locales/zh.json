@@ -2609,6 +2609,9 @@
         "duration": "有效期",
         "unit": "单位",
         "units": {
+          "years": "年",
+          "months": "月",
+          "weeks": "周",
           "days": "天",
           "hours": "小时",
           "minutes": "分钟",

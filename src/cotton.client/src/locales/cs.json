@@ -2617,6 +2617,9 @@
         "duration": "Doba platnosti",
         "unit": "Jednotka",
         "units": {
+          "years": "Roky",
+          "months": "Měsíce",
+          "weeks": "Týdny",
           "days": "Dny",
           "hours": "Hodiny",
           "minutes": "Minuty",

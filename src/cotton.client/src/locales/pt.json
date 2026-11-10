@@ -2603,6 +2603,9 @@
         "duration": "Validade",
         "unit": "Unidade",
         "units": {
+          "years": "Anos",
+          "months": "Meses",
+          "weeks": "Semanas",
           "days": "Dias",
           "hours": "Horas",
           "minutes": "Minutos",

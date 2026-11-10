@@ -51,13 +51,13 @@ export const RoutineCard = ({
       variant="outlined"
       sx={{ overflow: "hidden", background: "transparent" }}
     >
-      <Stack spacing={1.5} sx={{ p: 2 }}>
+      <Stack spacing={1} sx={{ p: 2 }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={2}
           sx={{ alignItems: { sm: "flex-start" } }}
         >
-          <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
+          <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
             <Typography
               component="h2"
               variant="subtitle1"
@@ -65,10 +65,17 @@ export const RoutineCard = ({
             >
               {routine.name}
             </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t("condition", {
+                days: routine.settings.olderThanDays,
+                field: dateFieldLabel(),
+              })}
+            </Typography>
             <Stack
-              direction={{ xs: "column", sm: "row" }}
+              direction="row"
               spacing={1.5}
-              sx={{ alignItems: { xs: "stretch", sm: "center" }, minWidth: 0 }}
+              useFlexGap
+              sx={{ alignItems: "center", flexWrap: "wrap", minWidth: 0 }}
             >
               <Tooltip
                 title={folder?.name ?? t("errors.WorkingFolderUnavailable")}
@@ -79,7 +86,6 @@ export const RoutineCard = ({
                   sx={{
                     alignItems: "center",
                     minWidth: 0,
-                    flex: { xs: "initial", sm: 1 },
                   }}
                 >
                   <FolderOutlined fontSize="small" color="action" />
@@ -105,8 +111,6 @@ export const RoutineCard = ({
                     spacing={1}
                     sx={{
                       alignItems: "center",
-                      justifyContent: { xs: "flex-start", sm: "flex-end" },
-                      flex: { xs: "initial", sm: 1 },
                       minWidth: 0,
                     }}
                   >
@@ -126,12 +130,6 @@ export const RoutineCard = ({
                 </Tooltip>
               )}
             </Stack>
-            <Typography variant="body2" color="text.secondary">
-              {t("condition", {
-                days: routine.settings.olderThanDays,
-                field: dateFieldLabel(),
-              })}
-            </Typography>
           </Stack>
           <Stack
             direction="row"

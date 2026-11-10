@@ -2600,6 +2600,9 @@
         "duration": "Durée de validité",
         "unit": "Unité",
         "units": {
+          "years": "Années",
+          "months": "Mois",
+          "weeks": "Semaines",
           "days": "Jours",
           "hours": "Heures",
           "minutes": "Minutes",

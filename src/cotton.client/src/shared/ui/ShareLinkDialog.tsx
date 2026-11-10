@@ -161,12 +161,55 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
         },
       }}
     >
-      <DialogTitle id={titleId}>{t("share.options.title")}</DialogTitle>
+      <DialogTitle
+        id={titleId}
+        aria-label={`${t("share.options.title")} · ${target.name}`}
+      >
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 0.25, sm: 1 }}
+          sx={{ alignItems: { xs: "flex-start", sm: "center" }, minWidth: 0 }}
+        >
+          <Typography
+            component="span"
+            variant="inherit"
+            noWrap
+            sx={{ flexShrink: 0, maxWidth: { xs: "100%", sm: "75%" } }}
+          >
+            {t("share.options.title")}
+          </Typography>
+          <Typography
+            component="span"
+            color="text.secondary"
+            aria-hidden
+            sx={{ display: { xs: "none", sm: "inline" } }}
+          >
+            ·
+          </Typography>
+          <Tooltip title={target.name}>
+            <Typography
+              component="span"
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                minWidth: 0,
+                maxWidth: "100%",
+                display: { xs: "-webkit-box", sm: "block" },
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                whiteSpace: { xs: "normal", sm: "nowrap" },
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                overflowWrap: "anywhere",
+              }}
+            >
+              {target.name}
+            </Typography>
+          </Tooltip>
+        </Stack>
+      </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
-          <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
-            {target.name}
-          </Typography>
           {target.kind === "folder" && (
             <FormControlLabel
               label={t("share.options.allowUpload")}

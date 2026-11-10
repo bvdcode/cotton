@@ -7,6 +7,9 @@ export interface ShareLinkTarget {
 }
 
 export const shareLinkDurationUnits = [
+  { key: "years", minutes: 60 * 24 * 365 },
+  { key: "months", minutes: 60 * 24 * 30 },
+  { key: "weeks", minutes: 60 * 24 * 7 },
   { key: "days", minutes: 60 * 24 },
   { key: "hours", minutes: 60 },
   { key: "minutes", minutes: 1 },

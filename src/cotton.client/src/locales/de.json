@@ -2596,6 +2596,9 @@
         "duration": "Gültigkeitsdauer",
         "unit": "Zeiteinheit",
         "units": {
+          "years": "Jahre",
+          "months": "Monate",
+          "weeks": "Wochen",
           "days": "Tage",
           "hours": "Stunden",
           "minutes": "Minuten",

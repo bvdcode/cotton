@@ -2620,6 +2620,9 @@
         "duration": "Okres ważności",
         "unit": "Jednostka",
         "units": {
+          "years": "Lata",
+          "months": "Miesiące",
+          "weeks": "Tygodnie",
           "days": "Dni",
           "hours": "Godziny",
           "minutes": "Minuty",

@@ -2412,6 +2412,9 @@
         "duration": "Expires after",
         "unit": "Unit",
         "units": {
+          "years": "Years",
+          "months": "Months",
+          "weeks": "Weeks",
           "days": "Days",
           "hours": "Hours",
           "minutes": "Minutes",
