@@ -1,3 +1,4 @@
+import { getFolderListing, getCurrentNode } from "../../test/nodeCacheFixtures";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFile, createFolder } from "../../test/fileFixtures";
 import { loadNode } from "../store/nodesActions";
@@ -19,12 +20,12 @@ const response = (
 });
 
 beforeEach(() => {
-  useNodesStore.getState().reset();
+  useNodesStore.getState().reset("user-1");
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  useNodesStore.getState().reset();
+  useNodesStore.getState().reset("user-1");
 });
 
 describe("folder listing pagination", () => {
@@ -41,10 +42,10 @@ describe("folder listing pagination", () => {
 
     const state = useNodesStore.getState();
     expect(state.error).toBeNull();
-    expect(state.currentNode?.id).toBe(folder.id);
-    expect(
-      state.contentByNodeId[folder.id]?.files.map((file) => file.id),
-    ).toEqual(files.map((file) => file.id));
+    expect(getCurrentNode()?.id).toBe(folder.id);
+    expect(getFolderListing(folder.id)?.files.map((file) => file.id)).toEqual(
+      files.map((file) => file.id),
+    );
     expect(get).toHaveBeenCalledTimes(12);
     for (let page = 1; page <= 10; page += 1) {
       expect(get).toHaveBeenNthCalledWith(
@@ -59,6 +60,7 @@ describe("folder listing pagination", () => {
             includeStats: undefined,
           },
           paramsSerializer: { indexes: null },
+          signal: expect.any(AbortSignal),
         },
       );
     }

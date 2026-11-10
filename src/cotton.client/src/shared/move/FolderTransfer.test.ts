@@ -5,7 +5,6 @@ import { DISPLAY_META_KEY, encryptDisplayMeta } from "../crypto/displayMeta";
 import { encryptFolderName } from "../crypto/folderDisplayMeta";
 import { ENCRYPTED_FLAG_KEY } from "../crypto/fileCipher";
 import { FOLDER_ENCRYPTION_POLICY_KEY } from "../crypto/metadataFlags";
-import { useNodesStore } from "../store/nodesStore";
 import type { MoveClipboardItem } from "../store/moveClipboardStore";
 import { moveCandidatesToTarget } from "../hooks/fileTransferExecution";
 import { ConflictAction } from "../types/nameConflict";
@@ -46,7 +45,7 @@ const options = (
 beforeEach(() => {
   vi.resetAllMocks();
   useVault.getState().lock();
-  useNodesStore.setState({ contentByNodeId: {}, ancestorsByNodeId: {} });
+
   fixture = new TransferFixture();
   fixture.folder("root", null);
   fixture.folder("from", "root");

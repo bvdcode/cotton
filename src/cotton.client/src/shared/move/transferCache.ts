@@ -1,3 +1,5 @@
+import { queryClient } from "../api/queries/queryClient";
+import { removeCachedFolder } from "../api/queries/nodeCache";
 import { useNodesStore } from "../store/nodesStore";
 import type {
   MoveClipboardItem,
@@ -42,17 +44,8 @@ export const applyTransferToCache = (
 };
 
 export function removeMergedFolderFromCache(item: MoveClipboardItem): void {
-  useNodesStore.setState((state) => {
-    const contentByNodeId = { ...state.contentByNodeId };
-    delete contentByNodeId[item.id];
-    for (const [id, content] of Object.entries(contentByNodeId)) {
-      if (content?.nodes.some((node) => node.id === item.id)) {
-        contentByNodeId[id] = {
-          ...content,
-          nodes: content.nodes.filter((node) => node.id !== item.id),
-        };
-      }
-    }
-    return { contentByNodeId };
-  });
+  const owner = useNodesStore.getState().cacheOwnerUserId;
+  if (owner) {
+    removeCachedFolder(queryClient, owner, item.id);
+  }
 }

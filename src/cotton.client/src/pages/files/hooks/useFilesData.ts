@@ -1,3 +1,4 @@
+import { useCurrentNodeNavigation } from "../../../shared/hooks/useCurrentNodeNavigation";
 import { useEffect, useCallback, useRef } from "react";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
 import { useNodesStore } from "../../../shared/store/nodesStore";
@@ -23,8 +24,7 @@ export const useFilesData = ({
 
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
   const cacheOwnerUserId = useNodesStore((s) => s.cacheOwnerUserId);
-  const currentNode = useNodesStore((s) => s.currentNode);
-  const ancestors = useNodesStore((s) => s.ancestors);
+  const { currentNode, ancestors } = useCurrentNodeNavigation();
   const folderPolicy = getFolderEncryptionPolicyState(
     currentNode?.id === nodeId ? currentNode : null,
     ancestors,
@@ -38,21 +38,6 @@ export const useFilesData = ({
   const { refresh } = listing;
 
   const childrenTotalCount = listing.totalCount;
-
-  useEffect(() => {
-    const node = listing.node;
-    if (
-      !node ||
-      node.id !== nodeId ||
-      currentNode?.id !== nodeId ||
-      currentNode === node ||
-      cacheOwnerUserId !== currentUserId ||
-      Date.parse(currentNode.updatedAt) > Date.parse(node.updatedAt)
-    ) {
-      return;
-    }
-    useNodesStore.getState().updateNode(node);
-  }, [listing.node, nodeId, currentNode, cacheOwnerUserId, currentUserId]);
 
   useEffect(() => {
     if (!nodeId || !currentUserId) {

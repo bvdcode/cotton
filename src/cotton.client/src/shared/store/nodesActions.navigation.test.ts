@@ -1,3 +1,8 @@
+import {
+  seedNodeNavigation,
+  getCurrentNode,
+  getCurrentAncestors,
+} from "../../test/nodeCacheFixtures";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createFolder } from "../../test/fileFixtures";
 import { nodesApi, type NodeResponse } from "../api/nodesApi";
@@ -20,14 +25,12 @@ const response: NodeResponse = {
 beforeEach(() => {
   useNodesStore.setState({
     cacheOwnerUserId: "user-1",
-    currentNode: parent,
     rootNodeId: parent.id,
-    ancestors: [],
-    ancestorsByNodeId: {},
-    contentByNodeId: {},
     loading: false,
     error: null,
   });
+  seedNodeNavigation(parent, []);
+
   vi.spyOn(nodesApi, "getNode").mockResolvedValue(child);
   vi.spyOn(nodesApi, "getAncestors").mockResolvedValue([parent]);
   vi.spyOn(nodesApi, "getChildren").mockResolvedValue(response);
@@ -36,14 +39,12 @@ afterEach(() => {
   queryClient.clear();
   useNodesStore.setState({
     cacheOwnerUserId: null,
-    currentNode: null,
     rootNodeId: null,
-    ancestors: [],
-    ancestorsByNodeId: {},
-    contentByNodeId: {},
     loading: false,
     error: null,
   });
+  seedNodeNavigation(null, []);
+
   vi.restoreAllMocks();
 });
 
@@ -54,8 +55,8 @@ it.each([
 ])("uses the cached listing and known parent path: %j", async ({ key }) => {
   queryClient.setQueryData(key, response);
   await loadNode(child.id, { loadChildren: false });
-  expect(useNodesStore.getState().currentNode).toEqual(child);
-  expect(useNodesStore.getState().ancestors).toEqual([parent]);
+  expect(getCurrentNode()).toEqual(child);
+  expect(getCurrentAncestors()).toEqual([parent]);
   expect(nodesApi.getNode).not.toHaveBeenCalled();
   expect(nodesApi.getAncestors).not.toHaveBeenCalled();
   expect(nodesApi.getChildren).not.toHaveBeenCalled();
@@ -70,7 +71,7 @@ it("resolves a child from a later tile page", async () => {
     pageParams: [1, 2],
   });
   await loadNode(child.id, { loadChildren: false });
-  expect(useNodesStore.getState().currentNode).toEqual(child);
+  expect(getCurrentNode()).toEqual(child);
   expect(nodesApi.getNode).not.toHaveBeenCalled();
   expect(nodesApi.getAncestors).not.toHaveBeenCalled();
 });
@@ -81,8 +82,13 @@ it("does not reuse another user's cached listing", async () => {
     response,
   );
   await loadNode(child.id, { loadChildren: false });
-  expect(nodesApi.getNode).toHaveBeenCalledExactlyOnceWith(child.id);
-  expect(nodesApi.getAncestors).toHaveBeenCalledExactlyOnceWith(child.id);
+  expect(nodesApi.getNode).toHaveBeenCalledExactlyOnceWith(
+    child.id,
+    expect.any(AbortSignal),
+  );
+  expect(nodesApi.getAncestors).toHaveBeenCalledExactlyOnceWith(child.id, {
+    signal: expect.any(AbortSignal),
+  });
 });
 
 it("still requests fresh metadata on a forced reload", async () => {
@@ -91,6 +97,11 @@ it("still requests fresh metadata on a forced reload", async () => {
     response,
   );
   await loadNode(child.id, { loadChildren: false, force: true });
-  expect(nodesApi.getNode).toHaveBeenCalledExactlyOnceWith(child.id);
-  expect(nodesApi.getAncestors).toHaveBeenCalledExactlyOnceWith(child.id);
+  expect(nodesApi.getNode).toHaveBeenCalledExactlyOnceWith(
+    child.id,
+    expect.any(AbortSignal),
+  );
+  expect(nodesApi.getAncestors).toHaveBeenCalledExactlyOnceWith(child.id, {
+    signal: expect.any(AbortSignal),
+  });
 });

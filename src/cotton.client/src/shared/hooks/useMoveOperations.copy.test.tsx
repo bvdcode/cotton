@@ -1,3 +1,7 @@
+import {
+  seedFolderListing,
+  getFolderListing,
+} from "../../test/nodeCacheFixtures";
 import { createFolder } from "../../test/fileFixtures";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,7 +12,6 @@ import {
   useMoveClipboardStore,
   type MoveClipboardItem,
 } from "../store/moveClipboardStore";
-import { useNodesStore } from "../store/nodesStore";
 import { ConflictAction } from "../types/nameConflict";
 import { useMoveOperations } from "./useMoveOperations";
 
@@ -95,12 +98,9 @@ const renderOperations = () =>
 beforeEach(() => {
   vi.resetAllMocks();
   useMoveClipboardStore.getState().clear();
-  useNodesStore.setState({
-    contentByNodeId: {
-      source: { ...emptyContent, files: [original] },
-      target: emptyContent,
-    },
-  });
+  seedFolderListing("source", { ...emptyContent, files: [original] });
+  seedFolderListing("target", emptyContent);
+
   useVault.setState({ isUnlocked: false, masterKey: null });
   mocks.copyFile.mockResolvedValue(copied);
   mocks.getNode.mockResolvedValue(target);
@@ -116,12 +116,8 @@ describe("copy and paste", () => {
       parentId: target.id,
     });
     expect(mocks.moveFile).not.toHaveBeenCalled();
-    expect(useNodesStore.getState().contentByNodeId.source?.files).toEqual([
-      original,
-    ]);
-    expect(useNodesStore.getState().contentByNodeId.target?.files).toEqual([
-      copied,
-    ]);
+    expect(getFolderListing("source")?.files).toEqual([original]);
+    expect(getFolderListing("target")?.files).toEqual([copied]);
     expect(useMoveClipboardStore.getState().items).toEqual([item]);
     expect(useMoveClipboardStore.getState().operation).toBe("copy");
     await act(() => result.current.pasteInto("another-target"));
@@ -152,9 +148,7 @@ describe("copy and paste", () => {
         targetNodeId: target.id,
       }),
     );
-    expect(useNodesStore.getState().contentByNodeId.source?.files).toEqual([
-      original,
-    ]);
+    expect(getFolderListing("source")?.files).toEqual([original]);
   });
 
   it("does not copy plaintext into an encrypted destination while the vault is locked", async () => {
@@ -203,9 +197,9 @@ describe("copy and paste", () => {
       parentId: target.id,
       name: expect.stringMatching(/^[a-f0-9-]{36}$/),
     });
-    expect(
-      useNodesStore.getState().contentByNodeId.target?.files[0].metadata,
-    ).toEqual(encrypted.metadata);
+    expect(getFolderListing("target")?.files[0].metadata).toEqual(
+      encrypted.metadata,
+    );
   });
 
   it("resolves same-folder conflicts with a new name without offering to replace the original", async () => {

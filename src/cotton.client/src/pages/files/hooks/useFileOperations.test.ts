@@ -1,3 +1,8 @@
+import {
+  seedFolderListing,
+  seedNodeNavigation,
+  getFolderListing,
+} from "../../../test/nodeCacheFixtures";
 import { createFolder } from "../../../test/fileFixtures";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -121,16 +126,16 @@ describe("useFileOperations", () => {
       updatedAt: "2026-05-17T00:00:01Z",
     };
     mocks.updateFileMetadata.mockResolvedValue(updatedServerFile);
-    useNodesStore.setState({
-      currentNode,
-      contentByNodeId: {
-        "node-1": makeContent({
-          isClientEncrypted: "true",
-          originalContentType: "image/png",
-          en: "old-display-meta",
-        }),
-      },
-    });
+    seedNodeNavigation(currentNode, []);
+    seedFolderListing(
+      "node-1",
+      makeContent({
+        isClientEncrypted: "true",
+        originalContentType: "image/png",
+        en: "old-display-meta",
+      }),
+    );
+
     renderHook(() => useFileOperations());
 
     await act(async () => {
@@ -147,9 +152,7 @@ describe("useFileOperations", () => {
     expect(mocks.applyDisplayMetaToFile).toHaveBeenCalledWith(
       updatedServerFile,
     );
-    expect(
-      useNodesStore.getState().contentByNodeId["node-1"]?.files[0],
-    ).toMatchObject({
+    expect(getFolderListing("node-1")?.files[0]).toMatchObject({
       name: "new-name.png",
       contentType: "image/png",
       metadata: {
@@ -162,12 +165,9 @@ describe("useFileOperations", () => {
   });
 
   it("keeps plaintext files on the normal rename endpoint", async () => {
-    useNodesStore.setState({
-      currentNode,
-      contentByNodeId: {
-        "node-1": makeContent({}),
-      },
-    });
+    seedNodeNavigation(currentNode, []);
+    seedFolderListing("node-1", makeContent({}));
+
     renderHook(() => useFileOperations());
 
     await act(async () => {

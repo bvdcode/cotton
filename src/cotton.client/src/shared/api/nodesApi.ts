@@ -110,8 +110,8 @@ export const nodesApi = {
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
-  getNode: (nodeId: Guid): Promise<NodeDto> =>
-    getValidated(`/layouts/nodes/${nodeId}`, nodeDtoSchema),
+  getNode: (nodeId: Guid, signal?: AbortSignal): Promise<NodeDto> =>
+    getValidated(`/layouts/nodes/${nodeId}`, nodeDtoSchema, { signal }),
 
   getFolderStats: (
     nodeId: Guid,
@@ -140,10 +140,11 @@ export const nodesApi = {
 
   getAncestors: async (
     nodeId: Guid,
-    options?: { nodeType?: string },
+    options?: { nodeType?: string; signal?: AbortSignal },
   ): Promise<NodeDto[]> =>
     getValidated(`/layouts/nodes/${nodeId}/ancestors`, nodeListSchema, {
       params: options?.nodeType ? { nodeType: options.nodeType } : undefined,
+      signal: options?.signal,
     }),
 
   getChildren: async (

@@ -21,7 +21,7 @@ vi.mock("../store/nodesActions", () => ({ refreshNodeContent: mocks.refresh }));
 vi.mock("./uploadFileToNode", () => ({ uploadFileToNode: mocks.upload }));
 
 import { UploadManager } from "./UploadManager";
-import { useNodesStore } from "../store/nodesStore";
+import { queryClient } from "../api/queries/queryClient";
 
 let manager: UploadManager | null = null;
 afterEach(() => {
@@ -45,7 +45,7 @@ describe("public folder upload queue", () => {
       name: "file.txt",
     });
     mocks.upload.mockResolvedValue(file);
-    const before = useNodesStore.getState().contentByNodeId;
+    const before = queryClient.getQueryCache().getAll();
     manager.enqueue(
       [new File(["hello"], "file.txt")],
       "public-folder",
@@ -63,6 +63,6 @@ describe("public folder upload queue", () => {
     expect(mocks.settings).not.toHaveBeenCalled();
     expect(mocks.quota).not.toHaveBeenCalled();
     expect(mocks.refresh).not.toHaveBeenCalled();
-    expect(useNodesStore.getState().contentByNodeId).toBe(before);
+    expect(queryClient.getQueryCache().getAll()).toEqual(before);
   });
 });

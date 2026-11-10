@@ -1,6 +1,5 @@
+import { findCachedNode } from "../../../shared/api/queries/nodeNavigation";
 import { useMemo } from "react";
-import type { NodeDto } from "../../../shared/api/layoutsApi";
-import type { NodeContentDto } from "../../../shared/api/nodesApi";
 import {
   getFolderEncryptionPolicyStateFromParentResolver,
   useVault,
@@ -14,12 +13,16 @@ export const useUploadEncryptionPolicy = () => {
   const isPolicyEnabledForNode = useMemo(
     () =>
       (targetNodeId: string): boolean => {
-        const state = useNodesStore.getState();
-        const target = findNodeById(state, targetNodeId);
-        if (!target) return false;
+        const owner = useNodesStore.getState().cacheOwnerUserId;
+        const target = owner
+          ? findCachedNode(queryClient, owner, targetNodeId)
+          : undefined;
+        if (!target) {
+          return false;
+        }
 
         return getFolderEncryptionPolicyStateFromParentResolver(target, (id) =>
-          findNodeById(state, id),
+          owner ? findCachedNode(queryClient, owner, id) : undefined,
         ).effectiveEnabled;
       },
     [],
@@ -46,7 +49,7 @@ export const useUploadEncryptionPolicy = () => {
         ) {
           throw new Error("The account changed while loading folder metadata");
         }
-        const cached = findNodeById(state, targetNodeId);
+        const cached = findCachedNode(queryClient, userId, targetNodeId);
         const target =
           cached &&
           Date.parse(cached.updatedAt) > Date.parse(content.node.updatedAt)
@@ -55,7 +58,7 @@ export const useUploadEncryptionPolicy = () => {
         state.updateNode(target);
         const policy = getFolderEncryptionPolicyStateFromParentResolver(
           target,
-          (id) => findNodeById(state, id),
+          (id) => findCachedNode(queryClient, userId, id),
         );
         if (!policy.effectiveEnabled) {
           return { encrypt: false, vaultLocked: false };
@@ -69,29 +72,3 @@ export const useUploadEncryptionPolicy = () => {
 
   return { isPolicyEnabledForNode, decideEncrypt };
 };
-
-type NodesStateView = {
-  currentNode: NodeDto | null;
-  ancestors: NodeDto[];
-  contentByNodeId: Record<string, NodeContentDto | undefined>;
-};
-
-function findNodeById(state: NodesStateView, id: string): NodeDto | undefined {
-  if (state.currentNode?.id === id) {
-    return state.currentNode;
-  }
-
-  const ancestor = state.ancestors.find((node) => node.id === id);
-  if (ancestor) {
-    return ancestor;
-  }
-
-  for (const content of Object.values(state.contentByNodeId)) {
-    const found = content?.nodes.find((node) => node.id === id);
-    if (found) {
-      return found;
-    }
-  }
-
-  return undefined;
-}

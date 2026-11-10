@@ -54,6 +54,7 @@ const joinResolverPath = (path: string): string => {
 export const layoutsApi = {
   resolve: async (options?: {
     path?: string | null;
+    signal?: AbortSignal;
     nodeType?: string;
   }): Promise<NodeDto> => {
     const path = options?.path ?? null;
@@ -62,6 +63,7 @@ export const layoutsApi = {
     if (path == null || path.trim().length === 0) {
       const response = await httpClient.get<NodeDto>("layouts/resolver", {
         params: nodeType ? { nodeType } : undefined,
+        signal: options?.signal,
       });
       return response.data;
     }

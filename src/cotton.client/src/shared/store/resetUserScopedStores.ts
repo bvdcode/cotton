@@ -14,17 +14,6 @@ import { clearFolderInfoCache } from "../api/queries/folderInfo";
 import { queryClient } from "../api/queries/queryClient";
 import { useVault } from "../crypto";
 
-const safeClearPersisted = (clearStorage: () => void | Promise<void>): void => {
-  try {
-    const result = clearStorage();
-    if (result instanceof Promise) {
-      void result;
-    }
-  } catch {
-    // best-effort: clearing persisted storage should never block auth flows
-  }
-};
-
 /**
  * Clears all user-scoped client caches (in-memory and persisted) when auth
  * identity changes to prevent cross-user data leak.
@@ -46,7 +35,6 @@ export const resetUserScopedStores = (nextUserId: string | null): void => {
   }
 
   if (nodesOwner !== nextUserId) {
-    safeClearPersisted(useNodesStore.persist.clearStorage);
     useNodesStore.getState().reset(nextUserId);
     useLocalPreferencesStore.getState().setDeveloperSettingsUnlocked(false);
   }

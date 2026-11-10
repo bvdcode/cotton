@@ -1,3 +1,9 @@
+import {
+  seedFolderListing,
+  seedNodeNavigation,
+  getFolderListing,
+  getCurrentNode,
+} from "../../test/nodeCacheFixtures";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../api/nodesApi", () => ({
@@ -27,7 +33,6 @@ import {
   loadNode,
   renameFolder,
 } from "./nodesActions";
-import { resetNodesActionsInternals } from "./nodesActionInternals";
 import { useNodesStore } from "./nodesStore";
 import { generateMasterKey } from "../crypto/keys";
 import { useVault } from "../crypto/vault";
@@ -58,27 +63,12 @@ const seedFolder = (parentId: string, nodes: NodeDto[]) => {
     nodes,
     files: [],
   };
-  useNodesStore.setState((prev) => ({
-    ...prev,
-    contentByNodeId: { ...prev.contentByNodeId, [parentId]: content },
-    loading: false,
-    error: null,
-  }));
+  useNodesStore.setState({ loading: false, error: null });
+  seedFolderListing(parentId, content);
 };
 
 const resetStore = () => {
-  resetNodesActionsInternals();
-  useNodesStore.setState({
-    cacheOwnerUserId: null,
-    rootNodeId: null,
-    currentNode: null,
-    ancestors: [],
-    contentByNodeId: {},
-    ancestorsByNodeId: {},
-    loading: false,
-    error: null,
-    lastUpdatedByNodeId: {},
-  });
+  useNodesStore.getState().reset("user-1");
 };
 
 beforeEach(() => {
@@ -100,7 +90,8 @@ describe("loadNode", () => {
     const fresh = makeNode("folder-1", "New name");
     const child = { ...makeNode("child-1", "Child"), parentId: "folder-1" };
     seedFolder("folder-1", []);
-    useNodesStore.setState({ currentNode: stale, ancestors: [] });
+    seedNodeNavigation(stale, []);
+
     vi.mocked(nodesApi.getNode).mockResolvedValue(fresh);
     vi.mocked(nodesApi.getAncestors).mockResolvedValue([]);
     vi.mocked(nodesApi.getChildren).mockResolvedValue({
@@ -117,15 +108,19 @@ describe("loadNode", () => {
 
     await loadNode("folder-1", { loadChildren: true, force: true });
 
-    expect(nodesApi.getNode).toHaveBeenCalledWith("folder-1");
-    expect(nodesApi.getAncestors).toHaveBeenCalledWith("folder-1");
+    expect(nodesApi.getNode).toHaveBeenCalledWith(
+      "folder-1",
+      expect.any(AbortSignal),
+    );
+    expect(nodesApi.getAncestors).toHaveBeenCalledWith("folder-1", {
+      signal: expect.any(AbortSignal),
+    });
     expect(nodesApi.getChildren).toHaveBeenCalledWith("folder-1", {
+      signal: expect.any(AbortSignal),
       page: 1,
     });
-    expect(useNodesStore.getState().currentNode?.name).toBe("New name");
-    expect(useNodesStore.getState().contentByNodeId["folder-1"]?.nodes).toEqual(
-      [child],
-    );
+    expect(getCurrentNode()?.name).toBe("New name");
+    expect(getFolderListing("folder-1")?.nodes).toEqual([child]);
   });
 });
 
@@ -171,11 +166,10 @@ describe("createFolder", () => {
       parentId: "parent-1",
       name: "Photos",
     });
-    expect(
-      useNodesStore
-        .getState()
-        .contentByNodeId["parent-1"]?.nodes.map((n) => n.name),
-    ).toEqual(["Drafts", "Photos"]);
+    expect(getFolderListing("parent-1")?.nodes.map((n) => n.name)).toEqual([
+      "Drafts",
+      "Photos",
+    ]);
     expect(useNodesStore.getState().loading).toBe(false);
   });
 
@@ -185,7 +179,8 @@ describe("createFolder", () => {
       ...makeNode("parent-1", "Vault"),
       metadata: { isClientEncryptionEnabled: "true" },
     };
-    useNodesStore.setState({ currentNode: encryptedParent });
+    seedNodeNavigation(encryptedParent, []);
+
     seedFolder("parent-1", []);
     vi.mocked(nodesApi.getChildren).mockResolvedValueOnce({
       content: {
@@ -212,9 +207,7 @@ describe("createFolder", () => {
     expect(
       JSON.stringify(vi.mocked(nodesApi.createNode).mock.calls),
     ).not.toContain("Private");
-    expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.nodes[0]?.name,
-    ).toBe(result?.name);
+    expect(getFolderListing("parent-1")?.nodes[0]?.name).toBe(result?.name);
   });
 
   it("inherits an ancestor client-side encryption policy", async () => {
@@ -229,7 +222,8 @@ describe("createFolder", () => {
       parentId: "vault",
       metadata: {},
     };
-    useNodesStore.setState({ ancestors: [vault], currentNode: parent });
+    seedNodeNavigation(parent, [vault]);
+
     seedFolder("parent-1", []);
     vi.mocked(nodesApi.getChildren).mockResolvedValueOnce({
       content: {
@@ -293,11 +287,7 @@ describe("deleteFolder", () => {
 
     expect(ok).toBe(true);
     expect(nodesApi.deleteNode).toHaveBeenCalledWith("a", false);
-    expect(
-      useNodesStore
-        .getState()
-        .contentByNodeId["parent-1"]?.nodes.map((n) => n.id),
-    ).toEqual(["b"]);
+    expect(getFolderListing("parent-1")?.nodes.map((n) => n.id)).toEqual(["b"]);
   });
 
   it("forwards skipTrash for permanent deletion", async () => {
@@ -365,9 +355,7 @@ describe("renameFolder", () => {
 
     expect(ok).toBe(true);
     expect(nodesApi.renameNode).toHaveBeenCalledWith("a", { name: "drafts" });
-    expect(
-      useNodesStore.getState().contentByNodeId["parent-1"]?.nodes[0]?.name,
-    ).toBe("drafts");
+    expect(getFolderListing("parent-1")?.nodes[0]?.name).toBe("drafts");
   });
 
   it("sets the error message on failure", async () => {

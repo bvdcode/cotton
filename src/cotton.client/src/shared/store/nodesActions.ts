@@ -1,435 +1,181 @@
 import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { queryClient } from "../api/queries/queryClient";
-import { findCachedChildFolder } from "../api/queries/folderNavigation";
-import { nodesApi, type NodeContentDto } from "../api/nodesApi";
-import { layoutsApi, type NodeDto } from "../api/layoutsApi";
+import { queryKeys } from "../api/queries/queryKeys";
+import {
+  NODE_NAVIGATION_STALE_TIME,
+  nodeNavigationOptions,
+  rootNodeOptions,
+} from "../api/queries/nodeNavigation";
+import { fetchAllNodeChildren } from "../api/nodeChildren";
+import type { NodeDto } from "../api/layoutsApi";
 import { isAxiosError } from "../api/httpClient";
 import { translateError } from "../i18n/translateError";
-import {
-  ROOT_RESOLVE_MIN_INTERVAL_MS,
-  rootResolveState,
-} from "./nodesActionInternals";
 import { useNodesStore } from "./nodesStore";
-import { fetchAllNodeChildren } from "../api/nodeChildren";
 export { refreshNodeContent } from "./nodesContent";
 export { createFolder, deleteFolder, renameFolder } from "./nodesFolderActions";
 
-const tFileError = (key: string): string => translateError("files", key);
-
-type ResolveSnapshot = {
-  cacheOwnerUserId: string | null;
-  currentNode: NodeDto | null;
-  ancestors: NodeDto[];
-  contentByNodeId: Record<string, NodeContentDto | undefined>;
-  ancestorsByNodeId: Record<string, NodeDto[] | undefined>;
-};
-
-async function resolveNodeAndAncestors(
-  nodeId: string,
-  state: ResolveSnapshot,
-): Promise<{ node: NodeDto; ancestors: NodeDto[] }> {
-  type LocalResolution = {
-    node: NodeDto | null;
-    ancestors: NodeDto[] | null;
-  };
-
-  const getCachedAncestors = (): NodeDto[] | null =>
-    state.ancestorsByNodeId[nodeId] ?? null;
-
-  const tryResolveFromCurrentNode = (): LocalResolution | null => {
-    if (state.currentNode?.id !== nodeId) return null;
-    return {
-      node: state.currentNode,
-      ancestors: getCachedAncestors() ?? state.ancestors,
-    };
-  };
-
-  const tryResolveFromAncestors = (): LocalResolution | null => {
-    const index = state.ancestors.findIndex((item) => item.id === nodeId);
-    if (index < 0) return null;
-    return {
-      node: state.ancestors[index],
-      ancestors: getCachedAncestors() ?? state.ancestors.slice(0, index),
-    };
-  };
-
-  const tryResolveFromCurrentChildren = (): LocalResolution | null => {
-    if (!state.currentNode) return null;
-    const parentContent = state.contentByNodeId[state.currentNode.id];
-    const found =
-      parentContent?.nodes.find((item) => item.id === nodeId) ??
-      findCachedChildFolder(
-        queryClient,
-        state.currentNode.id,
-        nodeId,
-        state.cacheOwnerUserId,
-      );
-    if (!found) return null;
-
-    const ancestors = getCachedAncestors();
-    if (ancestors) {
-      return { node: found, ancestors };
-    }
-
-    if (found.parentId === state.currentNode.id) {
-      return {
-        node: found,
-        ancestors: [...state.ancestors, state.currentNode],
-      };
-    }
-
-    return { node: found, ancestors: null };
-  };
-
-  const tryResolveFromAnyCachedContent = (): LocalResolution | null => {
-    for (const content of Object.values(state.contentByNodeId)) {
-      if (!content) continue;
-      const found = content.nodes.find((n) => n.id === nodeId);
-      if (found) {
-        return { node: found, ancestors: getCachedAncestors() };
-      }
-    }
-    return null;
-  };
-
-  const local =
-    tryResolveFromCurrentNode() ??
-    tryResolveFromAncestors() ??
-    tryResolveFromCurrentChildren() ??
-    tryResolveFromAnyCachedContent();
-
-  const node = local?.node ?? (await nodesApi.getNode(nodeId));
-  const ancestors = local?.ancestors ?? (await nodesApi.getAncestors(nodeId));
-
-  return { node, ancestors };
-}
-
-const scheduleRootResolve = (options?: {
-  loadChildren?: boolean;
-  force?: boolean;
-}): void => {
-  const existingRootId = useNodesStore.getState().rootNodeId;
-  if (!existingRootId) return;
-
-  if (rootResolveState.promise) return;
-
-  const force = options?.force ?? false;
-  if (!force) {
-    const elapsedSinceLastResolve = Date.now() - rootResolveState.lastStartedAt;
-    if (elapsedSinceLastResolve < ROOT_RESOLVE_MIN_INTERVAL_MS) {
-      return;
-    }
-  }
-
-  const loadChildren = options?.loadChildren ?? true;
-  rootResolveState.lastStartedAt = Date.now();
-
-  const ownerAtSchedule = useNodesStore.getState().cacheOwnerUserId;
-  const isStillSameOwner = (): boolean =>
-    useNodesStore.getState().cacheOwnerUserId === ownerAtSchedule;
-
-  const currentPromise = (async () => {
-    try {
-      const root = await layoutsApi.resolve();
-      if (!isStillSameOwner()) return;
-
-      const state = useNodesStore.getState();
-      if (state.rootNodeId === root.id) {
-        return;
-      }
-
-      const previousRootId = state.rootNodeId;
-      useNodesStore.setState({ rootNodeId: root.id });
-
-      const isViewingRoot =
-        state.currentNode == null || state.currentNode.id === previousRootId;
-      if (isViewingRoot && isStillSameOwner()) {
-        await loadNode(root.id, {
-          loadChildren,
-          allowRootRecovery: false,
-        });
-      }
-    } catch (error) {
-      reportClientError("Failed to resolve root node in background", error);
-    }
-  })();
-
-  rootResolveState.promise = currentPromise;
-  void currentPromise.finally(() => {
-    if (rootResolveState.promise === currentPromise) {
-      rootResolveState.promise = null;
-    }
-  });
-};
-
-export const loadRoot = async (options?: {
-  force?: boolean;
-  loadChildren?: boolean;
-}): Promise<NodeDto | null> => {
-  const force = options?.force ?? false;
-  const loadChildren = options?.loadChildren ?? true;
-  const state = useNodesStore.getState();
-
-  if (!force && state.rootNodeId) {
-    const hasCachedContent = state.contentByNodeId[state.rootNodeId];
-    if (!loadChildren || hasCachedContent) {
-      await loadNode(state.rootNodeId, { loadChildren });
-      scheduleRootResolve({ loadChildren });
-      return useNodesStore.getState().currentNode;
-    }
-  }
-
-  try {
-    const root = await layoutsApi.resolve();
-    useNodesStore.setState({ rootNodeId: root.id });
-    await loadNode(root.id, { loadChildren });
-    return root;
-  } catch (error) {
-    reportClientError("Failed to resolve root node", error);
-    useNodesStore.setState({
-      loading: false,
-      error: tFileError("errors.resolveRootFailed"),
-    });
-    return null;
-  }
-};
-
-type LoadNodeOptions = {
-  loadChildren: boolean;
-  allowRootRecovery: boolean;
-  force: boolean;
-};
-
-const resolveLoadNodeOptions = (options?: {
+interface LoadNodeOptions {
   loadChildren?: boolean;
   allowRootRecovery?: boolean;
   force?: boolean;
-}): LoadNodeOptions => ({
-  loadChildren: options?.loadChildren ?? true,
-  allowRootRecovery: options?.allowRootRecovery ?? true,
-  force: options?.force ?? false,
-});
+}
 
-const updateLoadState = (
-  nodeId: string,
-  force: boolean,
-): NodeContentDto | undefined => {
-  const cachedContent = force
-    ? undefined
-    : useNodesStore.getState().contentByNodeId[nodeId];
+function beginNavigation() {
+  const state = useNodesStore.getState();
+  const owner = state.cacheOwnerUserId;
+  const version = state.navigationVersion + 1;
+  useNodesStore.setState({
+    navigationVersion: version,
+    loading: true,
+    error: null,
+  });
+  return {
+    owner,
+    isCurrent: () => {
+      const current = useNodesStore.getState();
+      return (
+        current.cacheOwnerUserId === owner &&
+        current.navigationVersion === version
+      );
+    },
+  };
+}
 
-  useNodesStore.setState(
-    cachedContent ? { error: null } : { loading: true, error: null },
-  );
-  return cachedContent;
-};
+async function resolveRoot(userId: string, force = false): Promise<NodeDto> {
+  const options = rootNodeOptions(userId);
+  const root = await queryClient.fetchQuery({
+    ...options,
+    staleTime: force ? 0 : options.staleTime,
+  });
+  return root;
+}
 
-const refreshChildrenInBackground = (
-  nodeId: string,
-  cachedContent: NodeContentDto | undefined,
-  loadChildren: boolean,
-): void => {
-  if (!loadChildren || !cachedContent) return;
-
-  void (async () => {
-    try {
-      const { content: fresh } = await fetchAllNodeChildren(nodeId);
-      useNodesStore.setState((prev) => ({
-        contentByNodeId: {
-          ...prev.contentByNodeId,
-          [nodeId]: fresh,
-        },
-        lastUpdatedByNodeId: {
-          ...prev.lastUpdatedByNodeId,
-          [nodeId]: Date.now(),
-        },
-      }));
-    } catch {
-      // Cached content is still usable if the background refresh fails.
-    }
-  })();
-};
-
-const tryRecoverRootNodeAsync = async (
-  nodeId: string,
-  statusCode: number | undefined,
-  options: LoadNodeOptions,
-): Promise<boolean> => {
-  if (
-    !shouldAttemptRootRecovery(nodeId, statusCode, options.allowRootRecovery)
-  ) {
-    return false;
+export async function loadRoot(
+  options?: LoadNodeOptions,
+): Promise<NodeDto | null> {
+  const navigation = beginNavigation();
+  if (!navigation.owner) {
+    useNodesStore.setState({ loading: false });
+    return null;
   }
-
   try {
-    clearRootCache();
-    const root = await layoutsApi.resolve();
+    const root = await resolveRoot(navigation.owner, options?.force);
+    if (!navigation.isCurrent()) {
+      return null;
+    }
     useNodesStore.setState({ rootNodeId: root.id });
-    await loadNode(root.id, {
-      loadChildren: options.loadChildren,
-      allowRootRecovery: false,
+    queryClient.setQueryData(
+      queryKeys.nodeNavigation.view(root.id, navigation.owner),
+      { node: root, ancestors: [] },
+    );
+    await loadNode(root.id, options);
+    return root;
+  } catch (error) {
+    if (navigation.isCurrent()) {
+      reportClientError("Failed to resolve root node", error);
+      useNodesStore.setState({
+        loading: false,
+        error: translateError("files", "errors.resolveRootFailed"),
+      });
+    }
+    return null;
+  }
+}
+
+export async function loadNode(
+  nodeId: string,
+  options?: LoadNodeOptions,
+): Promise<void> {
+  const navigation = beginNavigation();
+  if (!navigation.owner) {
+    useNodesStore.setState({ loading: false });
+    return;
+  }
+  const owner = navigation.owner;
+  useNodesStore.setState({ currentNodeId: nodeId });
+  try {
+    if (options?.force) {
+      await Promise.all([
+        queryClient.cancelQueries({
+          queryKey: queryKeys.nodeNavigation.view(nodeId, owner),
+          exact: true,
+        }),
+        queryClient.cancelQueries({
+          queryKey: queryKeys.nodeChildren.complete(nodeId, owner),
+          exact: true,
+        }),
+      ]);
+      if (!navigation.isCurrent()) {
+        return;
+      }
+    }
+    await queryClient.fetchQuery({
+      ...nodeNavigationOptions(nodeId, owner, options?.force),
+      staleTime: options?.force ? 0 : NODE_NAVIGATION_STALE_TIME,
     });
-    return true;
-  } catch (recoveryError) {
-    reportClientError("Failed to recover root node", recoveryError);
+    if (options?.loadChildren !== false && navigation.isCurrent()) {
+      await queryClient.fetchQuery({
+        queryKey: queryKeys.nodeChildren.complete(nodeId, owner),
+        queryFn: ({ signal }) => fetchAllNodeChildren(nodeId, { signal }),
+        staleTime: options?.force ? 0 : NODE_NAVIGATION_STALE_TIME,
+      });
+    }
+    if (navigation.isCurrent()) {
+      useNodesStore.setState({ loading: false, error: null });
+    }
+  } catch (error) {
+    if (!navigation.isCurrent()) {
+      return;
+    }
+    const status = isAxiosError(error) ? error.response?.status : undefined;
+    if (
+      status === 404 &&
+      options?.allowRootRecovery !== false &&
+      useNodesStore.getState().rootNodeId === nodeId
+    ) {
+      useNodesStore.setState({ rootNodeId: null, currentNodeId: null });
+      await loadRoot({ ...options, force: true, allowRootRecovery: false });
+      return;
+    }
+    reportClientError("Failed to load node view", error);
     useNodesStore.setState({
       loading: false,
-      error: tFileError("errors.resolveRootFailed"),
+      error: translateError(
+        "files",
+        status === 404 ? "errors.folderNotFound" : "errors.loadContentsFailed",
+      ),
     });
-    return true;
   }
-};
+}
 
-const shouldAttemptRootRecovery = (
-  nodeId: string,
-  statusCode: number | undefined,
-  allowRootRecovery: boolean,
-): boolean =>
-  allowRootRecovery &&
-  statusCode === 404 &&
-  useNodesStore.getState().rootNodeId === nodeId;
-
-const clearRootCache = () => {
-  useNodesStore.setState({
-    rootNodeId: null,
-    currentNode: null,
-    ancestors: [],
-    contentByNodeId: {},
-    ancestorsByNodeId: {},
-    lastUpdatedByNodeId: {},
-  });
-};
-
-const resolveNodeViewAsync = async (
-  nodeId: string,
-  state: ResolveSnapshot,
-  force: boolean,
-): Promise<{ node: NodeDto; ancestors: NodeDto[] }> =>
-  force
-    ? {
-        node: await nodesApi.getNode(nodeId),
-        ancestors: await nodesApi.getAncestors(nodeId),
+export function resolveRootInBackground(options?: LoadNodeOptions): void {
+  const snapshot = useNodesStore.getState();
+  const owner = snapshot.cacheOwnerUserId;
+  if (!owner || !snapshot.rootNodeId) {
+    return;
+  }
+  void resolveRoot(owner, options?.force)
+    .then(async (root) => {
+      const state = useNodesStore.getState();
+      if (
+        state.cacheOwnerUserId !== owner ||
+        state.navigationVersion !== snapshot.navigationVersion
+      ) {
+        return;
       }
-    : resolveNodeAndAncestors(nodeId, state);
-
-const resolveNodeContentAsync = async (
-  nodeId: string,
-  cachedContent: NodeContentDto | undefined,
-  loadChildren: boolean,
-): Promise<NodeContentDto | undefined> => {
-  if (!loadChildren) {
-    return undefined;
-  }
-
-  return cachedContent ?? (await fetchAllNodeChildren(nodeId)).content;
-};
-
-const applyLoadedNodeState = (
-  nodeId: string,
-  resolved: { node: NodeDto; ancestors: NodeDto[] },
-  content: NodeContentDto | undefined,
-  loadChildren: boolean,
-) => {
-  useNodesStore.setState((prev) => ({
-    currentNode: resolved.node,
-    ancestors: resolved.ancestors,
-    ancestorsByNodeId: {
-      ...prev.ancestorsByNodeId,
-      [nodeId]: resolved.ancestors,
-    },
-    contentByNodeId: loadChildren
-      ? {
-          ...prev.contentByNodeId,
-          [nodeId]: content,
-        }
-      : prev.contentByNodeId,
-    lastUpdatedByNodeId: {
-      ...prev.lastUpdatedByNodeId,
-      [nodeId]: Date.now(),
-    },
-    loading: false,
-    error: null,
-  }));
-};
-
-const scheduleRootResolveIfNeeded = (
-  nodeId: string,
-  options: LoadNodeOptions,
-) => {
-  if (
-    options.allowRootRecovery &&
-    useNodesStore.getState().rootNodeId === nodeId
-  ) {
-    scheduleRootResolve({ loadChildren: options.loadChildren });
-  }
-};
-
-const getLoadNodeErrorMessage = (statusCode: number | undefined): string =>
-  statusCode === 404
-    ? tFileError("errors.folderNotFound")
-    : tFileError("errors.loadContentsFailed");
-
-const handleLoadNodeFailureAsync = async <T>(
-  nodeId: string,
-  error: T,
-  options: LoadNodeOptions,
-): Promise<void> => {
-  const statusCode = isAxiosError(error) ? error.response?.status : undefined;
-  const recovered = await tryRecoverRootNodeAsync(nodeId, statusCode, options);
-  if (recovered) return;
-
-  reportClientError("Failed to load node view", error);
-  useNodesStore.setState({
-    loading: false,
-    error: getLoadNodeErrorMessage(statusCode),
-  });
-};
-
-export const loadNode = async (
-  nodeId: string,
-  options?: {
-    loadChildren?: boolean;
-    allowRootRecovery?: boolean;
-    force?: boolean;
-  },
-): Promise<void> => {
-  const state = useNodesStore.getState();
-  const resolvedOptions = resolveLoadNodeOptions(options);
-  if (state.loading && state.currentNode?.id === nodeId) return;
-
-  const cachedContent = updateLoadState(nodeId, resolvedOptions.force);
-  try {
-    const resolved = await resolveNodeViewAsync(
-      nodeId,
-      state,
-      resolvedOptions.force,
+      useNodesStore.setState({ rootNodeId: root.id });
+      if (
+        root.id !== snapshot.rootNodeId &&
+        state.currentNodeId === snapshot.rootNodeId
+      ) {
+        queryClient.setQueryData(
+          queryKeys.nodeNavigation.view(root.id, owner),
+          { node: root, ancestors: [] },
+        );
+        await loadNode(root.id, options);
+      }
+    })
+    .catch((error: Error) =>
+      reportClientError("Failed to resolve root node in background", error),
     );
-    const content = await resolveNodeContentAsync(
-      nodeId,
-      cachedContent,
-      resolvedOptions.loadChildren,
-    );
-
-    applyLoadedNodeState(
-      nodeId,
-      resolved,
-      content,
-      resolvedOptions.loadChildren,
-    );
-    refreshChildrenInBackground(
-      nodeId,
-      cachedContent,
-      resolvedOptions.loadChildren,
-    );
-    scheduleRootResolveIfNeeded(nodeId, resolvedOptions);
-  } catch (error) {
-    await handleLoadNodeFailureAsync(nodeId, error, resolvedOptions);
-  }
-};
-
-export const resolveRootInBackground = (options?: {
-  loadChildren?: boolean;
-  force?: boolean;
-}): void => {
-  scheduleRootResolve(options);
-};
+}

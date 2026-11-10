@@ -74,7 +74,9 @@ describe("nodesApi reads", () => {
 
     const node = await nodesApi.getNode(nodeId);
 
-    expect(get).toHaveBeenCalledWith(`/layouts/nodes/${nodeId}`, undefined);
+    expect(get).toHaveBeenCalledWith(`/layouts/nodes/${nodeId}`, {
+      signal: undefined,
+    });
     expect(node.id).toBe(nodeId);
   });
 

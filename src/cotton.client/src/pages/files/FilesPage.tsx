@@ -1,3 +1,4 @@
+import { useCurrentNodeNavigation } from "../../shared/hooks/useCurrentNodeNavigation";
 import {
   useDecryptedNode,
   useDecryptedNodes,
@@ -59,13 +60,13 @@ export const FilesPage: React.FC = () => {
   const params = useParams<{ nodeId?: string }>();
 
   const {
-    currentNode: rawCurrentNode,
-    ancestors: rawAncestors,
     rootNodeId,
     loading: nodeLoading,
     error: nodeError,
     optimisticDeleteFile,
   } = useNodesStore();
+  const { currentNode: rawCurrentNode, ancestors: rawAncestors } =
+    useCurrentNodeNavigation();
   const currentNode = useDecryptedNode(rawCurrentNode);
   const ancestors = useDecryptedNodes(rawAncestors);
 
