@@ -2,6 +2,7 @@ import type React from "react";
 import type { ReactElement } from "react";
 import type { FileBreadcrumbs } from "./FileBreadcrumbs";
 import type { FileBrowserViewMode } from "@shared/utils/viewMode";
+import type { useLongPress } from "@shared/hooks/useLongPress";
 import type {
   FileBreadcrumb,
   FileListStats,
@@ -15,6 +16,11 @@ export interface PageHeaderActionItem {
   disabled?: boolean;
   color?: "primary" | "secondary" | "error";
   active?: boolean;
+  hold?: ReturnType<typeof useLongPress> & {
+    icon: ReactElement;
+    title: string;
+    hint?: string;
+  };
   /** Optional DnD drop target handlers (e.g. Up button accepts move drop). */
   onDragOver?: (event: React.DragEvent<HTMLElement>) => void;
   onDragLeave?: (event: React.DragEvent<HTMLElement>) => void;

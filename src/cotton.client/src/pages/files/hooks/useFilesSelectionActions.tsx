@@ -1,19 +1,22 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ContentCut,
   ContentCopy,
   ContentPaste,
   Delete,
   Download,
+  MoreHoriz,
   Share as ShareIcon,
 } from "@mui/icons-material";
 import type { useConfirm } from "material-ui-confirm";
 import type { useTranslation } from "react-i18next";
 import type { NodeDto } from "@shared/api/layoutsApi";
 import type { FileSelectionState } from "@shared/hooks/useFileSelection";
+import { useLongPress } from "@shared/hooks/useLongPress";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import { downloadArchive } from "@shared/utils/fileHandlers";
 import { shareFolder } from "@shared/utils/shareFolder";
+import type { ShareLinkTarget } from "@shared/utils/shareLinkOptions";
 import type { PageHeaderProps } from "../components/PageHeader";
 import { buildSelectionArchiveRequest } from "../filesPageModel";
 import { useDeleteSelectedItems } from "./useDeleteSelectedItems";
@@ -38,6 +41,8 @@ interface UseFilesSelectionActionsOptions {
 
 interface FilesSelectionActions {
   customActionItems: PageHeaderProps["customActionItems"];
+  shareDialogTarget: ShareLinkTarget | null;
+  closeShareDialog: () => void;
   handleDownloadFolder: (folderId: string, folderName: string) => Promise<void>;
   handleShareFolder: (folderId: string, folderName: string) => Promise<void>;
 }
@@ -59,6 +64,23 @@ export const useFilesSelectionActions = ({
   t,
   tiles,
 }: UseFilesSelectionActionsOptions): FilesSelectionActions => {
+  const [shareDialogTarget, setShareDialogTarget] =
+    useState<ShareLinkTarget | null>(null);
+  const closeShareDialog = useCallback(() => setShareDialogTarget(null), []);
+  if (shareDialogTarget && shareDialogTarget.id !== nodeId) {
+    setShareDialogTarget(null);
+  }
+  const shareDisabled = loading || !activeCurrentNode;
+  const shareHold = useLongPress(() => {
+    if (activeCurrentNode) {
+      setShareDialogTarget({
+        kind: "folder",
+        id: activeCurrentNode.id,
+        name: activeCurrentNode.name,
+      });
+    }
+  }, shareDisabled || fileSelection.selectionMode);
+
   const handleShareFolder = useCallback(
     async (folderId: string, folderName: string) => {
       await shareFolder(folderId, folderName, t);
@@ -127,7 +149,12 @@ export const useFilesSelectionActions = ({
         icon: <ShareIcon />,
         title: t("actions.share", { ns: "common" }),
         onClick: handleShareCurrentFolder,
-        disabled: loading || !activeCurrentNode,
+        disabled: shareDisabled,
+        hold: {
+          ...shareHold,
+          icon: <MoreHoriz />,
+          title: t("share.options.title", { ns: "files" }),
+        },
       });
     }
 
@@ -184,7 +211,6 @@ export const useFilesSelectionActions = ({
 
     return items.length > 0 ? items : undefined;
   }, [
-    activeCurrentNode,
     clipboardCount,
     fileSelection.selectedCount,
     fileSelection.selectionMode,
@@ -196,15 +222,25 @@ export const useFilesSelectionActions = ({
     handleShareCurrentFolder,
     loading,
     nodeId,
+    shareDisabled,
+    shareHold,
     t,
   ]);
 
   return useMemo(
     () => ({
       customActionItems,
+      shareDialogTarget,
+      closeShareDialog,
       handleDownloadFolder,
       handleShareFolder,
     }),
-    [customActionItems, handleDownloadFolder, handleShareFolder],
+    [
+      closeShareDialog,
+      customActionItems,
+      handleDownloadFolder,
+      handleShareFolder,
+      shareDialogTarget,
+    ],
   );
 };

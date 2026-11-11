@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { PointerEvent, ReactElement } from "react";
 import { Box, Grow } from "@mui/material";
 import {
   ArrowUpward,
@@ -13,6 +13,7 @@ import {
 } from "@mui/icons-material";
 import type { useTranslation } from "react-i18next";
 import type { PageHeaderProps, PageHeaderActionItem } from "./PageHeader";
+import type { useLongPress } from "@shared/hooks/useLongPress";
 
 type PageHeaderActionFactoryOptions = Pick<
   PageHeaderProps,
@@ -38,8 +39,7 @@ type PageHeaderActionFactoryOptions = Pick<
   | "showUpload"
   | "showViewModeToggle"
 > & {
-  homeReady?: boolean;
-  iconTransitionDuration?: number;
+  goUpHold: ReturnType<typeof useLongPress>;
   nextViewTitleKey: string;
   t: ReturnType<typeof useTranslation>["t"];
   viewIcon: ReactElement;
@@ -55,8 +55,7 @@ export const buildPageHeaderActions = (
       options.onGoUp,
       options.t,
       options.goUpDropHandlers,
-      options.homeReady,
-      options.iconTransitionDuration,
+      options.goUpHold,
     ),
   ];
   actions.push(...(options.primaryActionItems ?? []));
@@ -101,20 +100,16 @@ const createGoUpAction = (
   onGoUp: () => void,
   t: ReturnType<typeof useTranslation>["t"],
   goUpDropHandlers: PageHeaderProps["goUpDropHandlers"],
-  homeReady = false,
-  transitionDuration?: number,
+  hold: ReturnType<typeof useLongPress>,
 ): PageHeaderActionItem => ({
   key: "go-up",
-  icon: (
-    <Box sx={{ display: "inline-flex", position: "relative" }}>
-      <Grow in={!homeReady} timeout={transitionDuration}>
-        <ArrowUpward />
-      </Grow>
-      <Grow in={homeReady} timeout={transitionDuration}>
-        <Home sx={{ position: "absolute", inset: 0 }} />
-      </Grow>
-    </Box>
-  ),
+  icon: <ArrowUpward />,
+  hold: {
+    ...hold,
+    icon: <Home />,
+    title: t("routes:home"),
+    hint: t("actions.goUpHoldHint"),
+  },
   title: t("actions.goUp"),
   onClick: onGoUp,
   disabled: loading || !canGoUp,
@@ -123,6 +118,40 @@ const createGoUpAction = (
   onDrop: goUpDropHandlers?.onDrop,
   dropActive: goUpDropHandlers?.active,
 });
+
+export const buildActionIcon = (
+  { icon, hold }: PageHeaderActionItem,
+  duration: number,
+) => {
+  if (!hold) {
+    return icon;
+  }
+
+  return (
+    <Box sx={{ display: "inline-flex", position: "relative" }}>
+      <Grow in={!hold.ready} timeout={duration}>
+        {icon}
+      </Grow>
+      <Grow in={hold.ready} timeout={duration}>
+        <Box sx={{ display: "inline-flex", position: "absolute", inset: 0 }}>
+          {hold.icon}
+        </Box>
+      </Grow>
+    </Box>
+  );
+};
+
+export const getActionTitle = ({ title, hold }: PageHeaderActionItem) =>
+  hold?.ready ? hold.title : title;
+
+export const buildHoldReleaseHandler =
+  ({ hold }: PageHeaderActionItem, onActivated: () => void) =>
+  (event: PointerEvent<HTMLElement>) => {
+    hold?.handlers.onPointerUp(event);
+    if (hold?.ready) {
+      onActivated();
+    }
+  };
 
 type CreationActionOptions = Pick<
   PageHeaderActionFactoryOptions,

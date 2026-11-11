@@ -27,9 +27,12 @@ import type { PageHeaderActionItem, PageHeaderProps } from "./PageHeaderTypes";
 export type { PageHeaderActionItem, PageHeaderProps } from "./PageHeaderTypes";
 
 import {
+  buildActionIcon,
   buildPageHeaderActions,
   buildPageHeaderMeta,
   buildStatsSummary,
+  getActionTitle,
+  buildHoldReleaseHandler,
 } from "./PageHeaderActions";
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
@@ -67,6 +70,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const theme = useTheme();
   const duration = theme.transitions.duration;
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const iconTransitionDuration = reducedMotion ? 0 : duration.shortest;
   const nextViewTitleKey = getNextFileBrowserViewTitleKey(viewMode);
   const actionsContainerRef = React.useRef<HTMLDivElement | null>(null);
   const goUpHold = useLongPress(onHomeClick, loading || !canGoUp);
@@ -103,8 +107,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   );
 
   const actionTabs = buildPageHeaderActions({
-    homeReady: goUpHold.ready,
-    iconTransitionDuration: reducedMotion ? 0 : duration.shortest,
+    goUpHold,
     canGoUp,
     customActionItems,
     primaryActionItems,
@@ -229,11 +232,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                   }}
                 >
                   <Tooltip
-                    title={
-                      action.key === "go-up"
-                        ? t("actions.goUpHoldHint")
-                        : action.title
-                    }
+                    title={action.hold?.hint ?? action.title}
                     disableInteractive
                   >
                     <Box
@@ -246,16 +245,12 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                         ref={(el) => {
                           actionButtonRefs.current[action.key] = el;
                         }}
-                        aria-label={
-                          action.key === "go-up" && goUpHold.ready
-                            ? t("routes:home")
-                            : action.title
-                        }
+                        aria-label={getActionTitle(action)}
                         aria-pressed={action.active}
                         color={action.color ?? "primary"}
                         disabled={action.disabled || !isVisible}
                         onClick={action.onClick}
-                        {...(action.key === "go-up" ? goUpHold.handlers : {})}
+                        {...action.hold?.handlers}
                         onDragOver={action.onDragOver}
                         onDragLeave={action.onDragLeave}
                         onDrop={action.onDrop}
@@ -268,7 +263,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                           }),
                         })}
                       >
-                        {action.icon}
+                        {buildActionIcon(action, iconTransitionDuration)}
                       </IconButton>
                     </Box>
                   </Tooltip>
@@ -288,14 +283,18 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                 <MenuItem
                   key={action.key}
                   disabled={action.disabled}
+                  {...action.hold?.handlers}
+                  onPointerUp={buildHoldReleaseHandler(action, closeMenu)}
                   onClick={() => {
                     closeMenu();
                     action.onClick();
                   }}
                   sx={{ gap: 1 }}
                 >
-                  {action.icon}
-                  <Typography variant="body2">{action.title}</Typography>
+                  {buildActionIcon(action, iconTransitionDuration)}
+                  <Typography variant="body2">
+                    {getActionTitle(action)}
+                  </Typography>
                 </MenuItem>
               ))}
             </Menu>
