@@ -129,7 +129,7 @@ namespace Cotton.Server.Handlers.Files
 
             if (nodeShareToken.Node.Type != NodeType.Default)
             {
-                return new ShareFileResult(new RedirectResult($"{baseAppUrl}/404"));
+                return new ShareFileResult(new RedirectResult("/404"));
             }
 
             _integrity.RequireValid(_dbContext, nodeShareToken, "share.node-token");
@@ -163,7 +163,7 @@ namespace Cotton.Server.Handlers.Files
             NodeShareToken? nodeShareToken = await LoadNodeShareTokenAsync(token, now, ct);
             if (nodeShareToken is null || nodeShareToken.Node.Type != NodeType.Default)
             {
-                return new ShareFileResult(new RedirectResult($"{baseAppUrl}/404"), IsTokenLookupFailure: true);
+                return new ShareFileResult(new RedirectResult("/404"), IsTokenLookupFailure: true);
             }
 
             _integrity.RequireValid(_dbContext, nodeShareToken, "share.node-token");
@@ -194,7 +194,7 @@ namespace Cotton.Server.Handlers.Files
         private static ShareFileResult BuildNotFoundResult(bool isHtml, string baseAppUrl)
         {
             return isHtml
-                ? new ShareFileResult(new RedirectResult($"{baseAppUrl}/404"))
+                ? new ShareFileResult(new RedirectResult("/404"))
                 : new ShareFileResult(new ApiProblemResult(StatusCodes.Status404NotFound, "File not found", "not_found"));
         }
 

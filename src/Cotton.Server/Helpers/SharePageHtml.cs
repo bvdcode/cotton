@@ -11,7 +11,7 @@ namespace Cotton.Server.Helpers
         public static string Create(string baseAppUrl, string token, string fileName, bool hasPreview)
         {
             string canonicalUrl = $"{baseAppUrl}/s/{Uri.EscapeDataString(token)}";
-            string appShareUrl = $"{baseAppUrl}/share/{Uri.EscapeDataString(token)}";
+            string appShareUrl = $"/share/{Uri.EscapeDataString(token)}";
             string previewUrl = hasPreview
                 ? $"{canonicalUrl}/preview.jpg"
                 : $"{baseAppUrl}/assets/images/social-preview.jpg";
